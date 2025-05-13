@@ -7,15 +7,14 @@
 
 namespace Activitypub\Model;
 
-use WP_Error;
-use Activitypub\Signature;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Signature;
 
 use function Activitypub\is_blog_public;
-use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_attribution_domains;
+use function Activitypub\user_can_activitypub;
 
 /**
  * User class.
@@ -72,6 +71,24 @@ class User extends Actor {
 	protected $webfinger;
 
 	/**
+	 * Constructor.
+	 *
+	 * @param int $user_id Optional. The WordPress user ID. Default null.
+	 */
+	public function __construct( $user_id = null ) {
+		if ( $user_id ) {
+			$this->_id = $user_id;
+
+			/**
+			 * Fires when a model actor is constructed.
+			 *
+			 * @param User $this The User object.
+			 */
+			\do_action( 'activitypub_construct_model_actor', $this );
+		}
+	}
+
+	/**
 	 * The type of the object.
 	 *
 	 * @return string The type of the object.
@@ -85,21 +102,18 @@ class User extends Actor {
 	 *
 	 * @param int $user_id The user ID.
 	 *
-	 * @return WP_Error|User The User object or WP_Error if user not found.
+	 * @return \WP_Error|User The User object or \WP_Error if user not found.
 	 */
 	public static function from_wp_user( $user_id ) {
-		if ( is_user_disabled( $user_id ) ) {
-			return new WP_Error(
+		if ( ! user_can_activitypub( $user_id ) ) {
+			return new \WP_Error(
 				'activitypub_user_not_found',
 				\__( 'User not found', 'activitypub' ),
 				array( 'status' => 404 )
 			);
 		}
 
-		$object      = new static();
-		$object->_id = $user_id;
-
-		return $object;
+		return new static( $user_id );
 	}
 
 	/**
@@ -108,6 +122,12 @@ class User extends Actor {
 	 * @return string The user ID.
 	 */
 	public function get_id() {
+		$id = parent::get_id();
+
+		if ( $id ) {
+			return $id;
+		}
+
 		$permalink = \get_user_option( 'activitypub_use_permalink_as_id', $this->_id );
 
 		if ( '1' === $permalink ) {
@@ -169,11 +189,11 @@ class User extends Actor {
 	/**
 	 * Get the User icon.
 	 *
-	 * @return array The User icon.
+	 * @return string[] The User icon.
 	 */
 	public function get_icon() {
 		$icon = \get_user_option( 'activitypub_icon', $this->_id );
-		if ( wp_attachment_is_image( $icon ) ) {
+		if ( false !== $icon && wp_attachment_is_image( $icon ) ) {
 			return array(
 				'type' => 'Image',
 				'url'  => esc_url( wp_get_attachment_url( $icon ) ),
@@ -196,7 +216,7 @@ class User extends Actor {
 	/**
 	 * Returns the header image.
 	 *
-	 * @return array|null The header image.
+	 * @return string[]|null The header image.
 	 */
 	public function get_image() {
 		$header_image = get_user_option( 'activitypub_header_image', $this->_id );
@@ -226,13 +246,13 @@ class User extends Actor {
 	 * @return false|string The date the user was created.
 	 */
 	public function get_published() {
-		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( \get_the_author_meta( 'registered', $this->_id ) ) );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( \get_the_author_meta( 'registered', $this->_id ) ) );
 	}
 
 	/**
 	 * Returns the public key.
 	 *
-	 * @return array The public key.
+	 * @return string[] The public key.
 	 */
 	public function get_public_key() {
 		return array(
@@ -290,12 +310,12 @@ class User extends Actor {
 	/**
 	 * Returns the endpoints.
 	 *
-	 * @return array|null The endpoints.
+	 * @return string[]|null The endpoints.
 	 */
 	public function get_endpoints() {
 		$endpoints = null;
 
-		if ( ACTIVITYPUB_SHARED_INBOX_FEATURE ) {
+		if ( \get_option( 'activitypub_shared_inbox' ) ) {
 			$endpoints = array(
 				'sharedInbox' => get_rest_url_by_path( 'inbox' ),
 			);
@@ -367,7 +387,7 @@ class User extends Actor {
 	 * Update the username.
 	 *
 	 * @param string $value The new value.
-	 * @return int|WP_Error The updated user ID or WP_Error on failure.
+	 * @return int|\WP_Error The updated user ID or \WP_Error on failure.
 	 */
 	public function update_name( $value ) {
 		$userdata = array(
@@ -416,9 +436,38 @@ class User extends Actor {
 	/**
 	 * Returns the website hosts allowed to credit this blog.
 	 *
-	 * @return array|null The attribution domains or null if not found.
+	 * @return string[]|null The attribution domains or null if not found.
 	 */
 	public function get_attribution_domains() {
 		return get_attribution_domains();
+	}
+
+	/**
+	 * Returns the alsoKnownAs.
+	 *
+	 * @return string[] The alsoKnownAs.
+	 */
+	public function get_also_known_as() {
+		$also_known_as = array(
+			\add_query_arg( 'author', $this->_id, \home_url( '/' ) ),
+			$this->get_url(),
+			$this->get_alternate_url(),
+		);
+
+		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+		$also_known_as = array_merge( $also_known_as, \get_user_option( 'activitypub_also_known_as', $this->_id ) ?: array() );
+
+		return array_unique( $also_known_as );
+	}
+
+	/**
+	 * Returns the movedTo.
+	 *
+	 * @return string The movedTo.
+	 */
+	public function get_moved_to() {
+		$moved_to = \get_user_option( 'activitypub_moved_to', $this->_id );
+
+		return $moved_to && $moved_to !== $this->get_id() ? $moved_to : null;
 	}
 }

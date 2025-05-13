@@ -1,6 +1,7 @@
 .activitypub-settings {
 	max-width: 800px;
 	margin: 0 auto;
+	position: relative;
 }
 
 .settings_page_activitypub .notice {
@@ -44,6 +45,14 @@
 	padding-left: 0;
 }
 
+.activitypub-settings-tabs-scroller {
+	overflow-x: auto;
+	width: 100%;
+	padding-top: 2px;
+	-webkit-overflow-scrolling: touch;
+	scroll-behavior: smooth;
+}
+
 .activitypub-settings-tabs-wrapper {
 	display: inline-flex;
 	vertical-align: top;
@@ -63,6 +72,21 @@
 	padding: .5rem 1rem 1rem;
 	margin: 0 1rem;
 	transition: box-shadow .5s ease-in-out;
+	white-space: nowrap;
+}
+
+.activitypub-settings .row {
+	margin-bottom: 16px;
+}
+
+.activitypub-settings .row > div {
+	max-width: calc(100% - 24px);
+	display: inline-flex;
+	flex-direction: column;
+}
+
+.activitypub-settings .row .description {
+	margin-top: 0;
 }
 
 .wp-header-end {
@@ -179,29 +203,12 @@ input.blog-user-identifier {
 	background-size: cover;
 }
 
-.activitypub-settings
-.logo {
+.activitypub-settings .logo {
 	height: 80px;
 	width: 80px;
 	position: relative;
 	top: 40px;
 	left: 40px;
-}
-
-.settings_page_activitypub .box  {
-	border: 1px solid #c3c4c7;
-	background-color: #fff;
-	padding: 1em 1.5em;
-	margin-bottom: 1.5em;
-}
-
-.settings_page_activitypub .activitypub-welcome-page .box label {
-	font-weight: bold;
-}
-
-.settings_page_activitypub .activitypub-welcome-page input {
-	font-size: 20px;
-	width: 95%;
 }
 
 .settings_page_activitypub .plugin-recommendations {
@@ -222,4 +229,139 @@ input.blog-user-identifier {
 .repost .dashboard-comment-wrap .comment-author,
 .like .dashboard-comment-wrap .comment-author {
 	margin-block: 0;
+}
+
+.extra-fields-nav a + a {
+	margin-left: 8px;
+}
+.rtl .extra-fields-nav a + a {
+	margin-left: auto;
+	margin-right: 8px;
+}
+
+.contextual-help-tabs-wrap dt {
+	font-weight: 600;
+}
+.contextual-help-tabs-wrap .activitypub-block-screenshot {
+	margin: 10px 0;
+}
+.contextual-help-tabs-wrap .activitypub-block-screenshot img {
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	height: auto;
+	max-width: 100%;
+}
+.contextual-help-tabs-wrap .activitypub-block-screenshot figcaption {
+	color: #555;
+	font-style: italic;
+	font-size: 0.9em;
+	margin-top: 5px;
+}
+
+/* Blockquote Styles */
+.contextual-help-tabs-wrap blockquote {
+	border-left: 4px solid #3582c4;
+	background-color: #f6f7f7;
+	padding: 16px 20px;
+	margin: 0 0 20px;
+}
+
+.contextual-help-tabs-wrap blockquote p {
+	margin: 0 0 10px;
+	line-height: 1.5;
+}
+
+.contextual-help-tabs-wrap blockquote p:last-child {
+	margin-bottom: 0;
+}
+
+.contextual-help-tabs-wrap blockquote cite {
+	display: block;
+	font-weight: 600;
+	margin-top: 8px;
+	font-size: 0.9em;
+	color: #50575e;
+}
+
+.contextual-help-tabs-wrap blockquote cite:before {
+	content: "—";
+}
+
+/* Plugin List Styles */
+.plugin-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	align-items: stretch;
+}
+
+.plugin-list .plugin-card {
+	flex: 1 1 300px;
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	border-radius: 4px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	margin: 0;
+}
+
+.plugin-list .plugin-card .desc {
+	flex: 1 1 auto;
+}
+
+.plugin-list .plugin-action-buttons li {
+	margin: 0 0 10px 0;
+}
+.plugin-list .plugin-card .action-links {
+	position: static;
+	margin-left: 148px;
+	width: auto;
+}
+
+.plugin-list .plugin-action-buttons {
+	float: none;
+	margin: 1em 0 0;
+	text-align: left;
+}
+
+.plugin-list .plugin-action-buttons li {
+	display: inline-block;
+	vertical-align: middle;
+}
+
+.plugin-list .plugin-action-buttons li .button {
+	margin-right: 20px;
+}
+
+.plugin-list .plugin-card h3 {
+	margin-right: 24px;
+}
+
+.plugin-list .plugin-card .name,
+.plugin-list .plugin-card .desc,
+.plugin-card .desc > p {
+	margin-right: 0;
+}
+
+.plugin-list .plugin-card .desc p:first-of-type {
+	margin-top: 0;
+}
+
+/* RTL Support for blockquotes */
+.rtl .contextual-help-tabs-wrap blockquote {
+	border-left: none;
+	border-right: 4px solid #3582c4;
+	padding: 16px 20px;
+}
+
+@media screen and (max-width: 782px) {
+	.activitypub-settings {
+		margin: 0 22px;
+	}
+
+	.activitypub-settings .row > div {
+		max-width: calc(100% - 36px);
+		width: 100%;
+	}
 }

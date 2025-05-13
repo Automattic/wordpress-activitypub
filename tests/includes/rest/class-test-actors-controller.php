@@ -12,6 +12,7 @@ use Activitypub\Rest\Actors_Controller;
 /**
  * Tests for Actors REST API endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Actors_Controller
  */
 class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
@@ -167,10 +168,6 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_item_schema
 	 */
 	public function test_response_matches_schema() {
-		if ( ! class_exists( '\WP_HTML_Tag_Processor' ) ) {
-			$this->markTestSkipped( 'WP_HTML_Tag_Processor not available' );
-		}
-
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id );
 		$response = rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();

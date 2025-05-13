@@ -36,7 +36,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test the get_remote_metadata_by_actor function.
 	 *
-	 * @covers ::get_remote_metadata_by_actor
+	 * @covers \ActivityPub\get_remote_metadata_by_actor
 	 */
 	public function test_get_remote_metadata_by_actor() {
 		$metadata = \ActivityPub\get_remote_metadata_by_actor( 'pfefferle@notiz.blog' );
@@ -48,7 +48,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test object_id_to_comment.
 	 *
-	 * @covers ::object_id_to_comment
+	 * @covers \ActivityPub\object_id_to_comment
 	 */
 	public function test_object_id_to_comment_basic() {
 		$single_comment_source_id = 'https://example.com/single';
@@ -80,7 +80,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test object_id_to_comment with invalid source ID.
 	 *
-	 * @covers ::object_id_to_comment
+	 * @covers \ActivityPub\object_id_to_comment
 	 */
 	public function test_object_id_to_comment_none() {
 		$single_comment_source_id = 'https://example.com/none';
@@ -91,7 +91,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test object_id_to_comment with duplicate source ID.
 	 *
-	 * @covers ::object_id_to_comment
+	 * @covers \ActivityPub\object_id_to_comment
 	 */
 	public function test_object_id_to_comment_duplicate() {
 		$duplicate_comment_source_id = 'https://example.com/duplicate';
@@ -129,7 +129,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * Test object_to_uri.
 	 *
 	 * @dataProvider object_to_uri_provider
-	 * @covers ::object_to_uri
+	 * @covers \Activitypub\object_to_uri
 	 *
 	 * @param mixed $input  The input to test.
 	 * @param mixed $output The expected output.
@@ -141,7 +141,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test is_self_ping.
 	 *
-	 * @covers ::is_self_ping
+	 * @covers \Activitypub\is_self_ping
 	 */
 	public function test_is_self_ping() {
 		$this->assertFalse( \Activitypub\is_self_ping( 'https://example.org' ) );
@@ -220,7 +220,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test is_activity with array input.
 	 *
-	 * @covers ::is_activity
+	 * @covers \Activitypub\is_activity
 	 *
 	 * @dataProvider is_activity_data
 	 *
@@ -278,9 +278,56 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
+	 * Test is_activity_object with array input.
+	 *
+	 * @covers \Activitypub\is_activity_object
+	 *
+	 * @dataProvider is_activity_object_data
+	 *
+	 * @param mixed $activity The activity object.
+	 * @param bool  $expected The expected result.
+	 */
+	public function test_is_activity_object( $activity, $expected ) {
+		$this->assertEquals( $expected, \Activitypub\is_activity_object( $activity ) );
+	}
+
+	/**
+	 * Data provider for test_is_activity_object.
+	 *
+	 * @return array[][]
+	 */
+	public function is_activity_object_data() {
+		// Test Activity object.
+		$create = new \Activitypub\Activity\Activity();
+		$create->set_type( 'Create' );
+
+		// Test Base_Object.
+		$note = new \Activitypub\Activity\Base_Object();
+		$note->set_type( 'Note' );
+
+		return array(
+			array( array( 'type' => 'Article' ), true ),
+			array( array( 'type' => 'Image' ), true ),
+			array( array( 'type' => 'Video' ), true ),
+			array( array( 'type' => 'Audio' ), true ),
+			array( array( 'type' => '' ), false ),
+			array( array( 'type' => null ), false ),
+			array( array(), false ),
+			array( $create, false ),
+			array( $note, true ),
+			array( 'string', false ),
+			array( 123, false ),
+			array( true, false ),
+			array( false, false ),
+			array( null, false ),
+			array( new \stdClass(), false ),
+		);
+	}
+
+	/**
 	 * Test is_activity with invalid input.
 	 *
-	 * @covers ::is_activity
+	 * @covers \Activitypub\is_activity
 	 */
 	public function test_is_activity_with_invalid_input() {
 		$invalid_inputs = array(
@@ -301,9 +348,50 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
+	 * Test get comment ancestors.
+	 *
+	 * @covers \Activitypub\get_comment_ancestors
+	 */
+	public function test_get_comment_ancestors() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_type'         => 'comment',
+				'comment_content'      => 'This is a comment.',
+				'comment_author_url'   => 'https://example.com',
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$this->assertEquals( array(), \Activitypub\get_comment_ancestors( $comment_id ) );
+
+		$comment_array = get_comment( $comment_id, ARRAY_A );
+
+		$parent_comment_id = wp_insert_comment(
+			array(
+				'comment_type'         => 'parent comment',
+				'comment_content'      => 'This is a parent comment.',
+				'comment_author_url'   => 'https://example.com',
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$comment_array['comment_parent'] = $parent_comment_id;
+
+		wp_update_comment( $comment_array );
+
+		$this->assertEquals( array( $parent_comment_id ), \Activitypub\get_comment_ancestors( $comment_id ) );
+	}
+
+	/**
 	 * Test is_post_disabled function.
 	 *
-	 * @covers ::is_post_disabled
+	 * @covers \Activitypub\is_post_disabled
 	 */
 	public function test_is_post_disabled() {
 		// Test standard public post.
@@ -356,7 +444,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test is_post_disabled with private visibility.
 	 *
-	 * @covers ::is_post_disabled
+	 * @covers \Activitypub\is_post_disabled
 	 */
 	public function test_is_post_disabled_private_visibility() {
 		$visible_private_post_id = self::factory()->post->create();
@@ -377,7 +465,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test is_post_disabled with invalid post.
 	 *
-	 * @covers ::is_post_disabled
+	 * @covers \Activitypub\is_post_disabled
 	 */
 	public function test_is_post_disabled_invalid_post() {
 		$this->assertTrue( \Activitypub\is_post_disabled( 0 ) );
@@ -388,7 +476,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test get_masked_wp_version function.
 	 *
-	 * @covers ::get_masked_wp_version
+	 * @covers \Activitypub\get_masked_wp_version
 	 * @dataProvider provide_wp_versions
 	 *
 	 * @param string $input    The input version.

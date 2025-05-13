@@ -54,6 +54,11 @@ class Shortcodes {
 		$hash_tags = array();
 
 		foreach ( $tags as $tag ) {
+			// Tag can be empty.
+			if ( ! $tag ) {
+				continue;
+			}
+
 			$hash_tags[] = \sprintf(
 				'<a rel="tag" class="hashtag u-tag u-category" href="%s">%s</a>',
 				\esc_url( \get_tag_link( $tag ) ),
@@ -67,13 +72,13 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_title' Shortcode
 	 *
-	 * @param array  $atts    The Shortcode attributes.
-	 * @param string $content The ActivityPub post-content.
-	 * @param string $tag     The tag/name of the Shortcode.
+	 * @param array  $attributes The Shortcode attributes.
+	 * @param string $content    The ActivityPub post-content.
+	 * @param string $tag        The tag/name of the Shortcode.
 	 *
 	 * @return string The post title.
 	 */
-	public static function title( $atts, $content, $tag ) {
+	public static function title( $attributes, $content, $tag ) {
 		$item = self::get_item();
 
 		if ( ! $item ) {
@@ -86,13 +91,13 @@ class Shortcodes {
 			return '';
 		}
 
-		$atts = shortcode_atts(
+		$attributes = shortcode_atts(
 			array( 'type' => 'plain' ),
-			$atts,
+			$attributes,
 			$tag
 		);
 
-		if ( 'html' !== $atts['type'] ) {
+		if ( 'html' !== $attributes['type'] ) {
 			return $title;
 		}
 
@@ -102,26 +107,26 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_excerpt' Shortcode
 	 *
-	 * @param array  $atts    The Shortcode attributes.
-	 * @param string $content The ActivityPub post-content.
-	 * @param string $tag     The tag/name of the Shortcode.
+	 * @param array  $attributes The Shortcode attributes.
+	 * @param string $content    The ActivityPub post-content.
+	 * @param string $tag        The tag/name of the Shortcode.
 	 *
 	 * @return string The post excerpt.
 	 */
-	public static function excerpt( $atts, $content, $tag ) {
+	public static function excerpt( $attributes, $content, $tag ) {
 		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
 		}
 
-		$atts = shortcode_atts(
+		$attributes = shortcode_atts(
 			array( 'length' => ACTIVITYPUB_EXCERPT_LENGTH ),
-			$atts,
+			$attributes,
 			$tag
 		);
 
-		$excerpt_length = intval( $atts['length'] );
+		$excerpt_length = intval( $attributes['length'] );
 
 		if ( 0 === $excerpt_length ) {
 			$excerpt_length = ACTIVITYPUB_EXCERPT_LENGTH;
@@ -136,13 +141,13 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_content' Shortcode.
 	 *
-	 * @param array  $atts    The Shortcode attributes.
-	 * @param string $content The ActivityPub post-content.
-	 * @param string $tag     The tag/name of the Shortcode.
+	 * @param array  $attributes The Shortcode attributes.
+	 * @param string $content    The ActivityPub post-content.
+	 * @param string $tag        The tag/name of the Shortcode.
 	 *
 	 * @return string The post content.
 	 */
-	public static function content( $atts, $content, $tag ) {
+	public static function content( $attributes, $content, $tag ) {
 		$item = self::get_item();
 
 		if ( ! $item ) {
@@ -152,9 +157,9 @@ class Shortcodes {
 		// Prevent inception.
 		remove_shortcode( 'ap_content' );
 
-		$atts = shortcode_atts(
+		$attributes = shortcode_atts(
 			array( 'apply_filters' => 'yes' ),
-			$atts,
+			$attributes,
 			$tag
 		);
 
@@ -172,18 +177,20 @@ class Shortcodes {
 			$content = \get_post_field( 'post_content', $item );
 		}
 
-		if ( 'yes' === $atts['apply_filters'] ) {
+		if ( 'yes' === $attributes['apply_filters'] ) {
 			/** This filter is documented in wp-includes/post-template.php */
 			$content = \apply_filters( 'the_content', $content );
 		} else {
-			$content = do_blocks( $content );
-			$content = wptexturize( $content );
-			$content = wp_filter_content_tags( $content );
+			if ( site_supports_blocks() ) {
+				$content = \do_blocks( $content );
+			}
+			$content = \wptexturize( $content );
+			$content = \wp_filter_content_tags( $content );
 		}
 
 		// Replace script and style elements.
 		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
-		$content = strip_shortcodes( $content );
+		$content = \strip_shortcodes( $content );
 		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 
 		add_shortcode( 'ap_content', array( 'Activitypub\Shortcodes', 'content' ) );
@@ -194,28 +201,28 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_permalink' Shortcode.
 	 *
-	 * @param array  $atts    The Shortcode attributes.
-	 * @param string $content The ActivityPub post-content.
-	 * @param string $tag     The tag/name of the Shortcode.
+	 * @param array  $attributes The Shortcode attributes.
+	 * @param string $content    The ActivityPub post-content.
+	 * @param string $tag        The tag/name of the Shortcode.
 	 *
 	 * @return string The post permalink.
 	 */
-	public static function permalink( $atts, $content, $tag ) {
+	public static function permalink( $attributes, $content, $tag ) {
 		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
 		}
 
-		$atts = shortcode_atts(
+		$attributes = shortcode_atts(
 			array(
 				'type' => 'url',
 			),
-			$atts,
+			$attributes,
 			$tag
 		);
 
-		if ( 'html' !== $atts['type'] ) {
+		if ( 'html' !== $attributes['type'] ) {
 			return \esc_url( \get_permalink( $item->ID ) );
 		}
 
@@ -228,28 +235,28 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_shortlink' Shortcode.
 	 *
-	 * @param array  $atts    The Shortcode attributes.
-	 * @param string $content The ActivityPub post-content.
-	 * @param string $tag     The tag/name of the Shortcode.
+	 * @param array  $attributes The Shortcode attributes.
+	 * @param string $content    The ActivityPub post-content.
+	 * @param string $tag        The tag/name of the Shortcode.
 	 *
 	 * @return string The post shortlink.
 	 */
-	public static function shortlink( $atts, $content, $tag ) {
+	public static function shortlink( $attributes, $content, $tag ) {
 		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
 		}
 
-		$atts = shortcode_atts(
+		$attributes = shortcode_atts(
 			array(
 				'type' => 'url',
 			),
-			$atts,
+			$attributes,
 			$tag
 		);
 
-		if ( 'html' !== $atts['type'] ) {
+		if ( 'html' !== $attributes['type'] ) {
 			return \esc_url( \wp_get_shortlink( $item->ID ) );
 		}
 
@@ -262,35 +269,35 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_image' Shortcode.
 	 *
-	 * @param array  $atts    The Shortcode attributes.
-	 * @param string $content The ActivityPub post-content.
-	 * @param string $tag     The tag/name of the Shortcode.
+	 * @param array  $attributes The Shortcode attributes.
+	 * @param string $content    The ActivityPub post-content.
+	 * @param string $tag        The tag/name of the Shortcode.
 	 *
 	 * @return string
 	 */
-	public static function image( $atts, $content, $tag ) {
+	public static function image( $attributes, $content, $tag ) {
 		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
 		}
 
-		$atts = shortcode_atts(
+		$attributes = shortcode_atts(
 			array(
 				'type' => 'full',
 			),
-			$atts,
+			$attributes,
 			$tag
 		);
 
 		$size = 'full';
 
 		if ( in_array(
-			$atts['type'],
+			$attributes['type'],
 			array( 'thumbnail', 'medium', 'large', 'full' ),
 			true
 		) ) {
-			$size = $atts['type'];
+			$size = $attributes['type'];
 		}
 
 		$image = \get_the_post_thumbnail_url( $item->ID, $size );
@@ -440,10 +447,8 @@ class Shortcodes {
 			return '';
 		}
 
-		$datetime   = \get_post_datetime( $item );
-		$timeformat = \get_option( 'time_format' );
-
-		$date = $datetime->format( $timeformat );
+		$datetime = \get_post_datetime( $item );
+		$date     = $datetime->format( \get_option( 'time_format' ) );
 
 		if ( ! $date ) {
 			return '';
@@ -464,11 +469,11 @@ class Shortcodes {
 			return '';
 		}
 
-		$datetime   = \get_post_datetime( $item );
-		$dateformat = \get_option( 'date_format' );
-		$timeformat = \get_option( 'time_format' );
+		$datetime    = \get_post_datetime( $item );
+		$date_format = \get_option( 'date_format' );
+		$time_format = \get_option( 'time_format' );
 
-		$date = $datetime->format( $dateformat . ' @ ' . $timeformat );
+		$date = $datetime->format( $date_format . ' @ ' . $time_format );
 
 		if ( ! $date ) {
 			return '';

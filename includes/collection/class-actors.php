@@ -17,7 +17,8 @@ use function Activitypub\object_to_uri;
 use function Activitypub\normalize_url;
 use function Activitypub\normalize_host;
 use function Activitypub\url_to_authorid;
-use function Activitypub\is_user_disabled;
+use function Activitypub\is_user_type_disabled;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Actors collection.
@@ -45,11 +46,11 @@ class Actors {
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_id( $user_id ) {
-		if ( is_string( $user_id ) || is_numeric( $user_id ) ) {
+		if ( is_numeric( $user_id ) ) {
 			$user_id = (int) $user_id;
 		}
 
-		if ( is_user_disabled( $user_id ) ) {
+		if ( ! user_can_activitypub( $user_id ) ) {
 			return new WP_Error(
 				'activitypub_user_not_found',
 				\__( 'Actor not found', 'activitypub' ),
@@ -75,12 +76,30 @@ class Actors {
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_username( $username ) {
-		// Check for blog user.
-		if ( Blog::get_default_username() === $username ) {
-			return new Blog();
+		/**
+		 * Filter the username before we do anything else.
+		 *
+		 * @param null   $pre      The pre-existing value.
+		 * @param string $username The username.
+		 */
+		$pre = apply_filters( 'activitypub_pre_get_by_username', null, $username );
+		if ( null !== $pre ) {
+			return $pre;
 		}
 
-		if ( get_option( 'activitypub_blog_identifier' ) === $username ) {
+		// Check for blog user.
+		if (
+			Blog::get_default_username() === $username ||
+			\get_option( 'activitypub_blog_identifier' ) === $username
+		) {
+			if ( is_user_type_disabled( 'blog' ) ) {
+				return new WP_Error(
+					'activitypub_user_not_found',
+					\__( 'Actor not found', 'activitypub' ),
+					array( 'status' => 404 )
+				);
+			}
+
 			return new Blog();
 		}
 
@@ -108,8 +127,11 @@ class Actors {
 			)
 		);
 
-		if ( $user->results ) {
-			return self::get_by_id( $user->results[0] );
+		if ( $user->get_results() ) {
+			$actor = self::get_by_id( $user->get_results()[0] );
+			if ( ! \is_wp_error( $actor ) ) {
+				return $actor;
+			}
 		}
 
 		$username = str_replace( array( '*', '%' ), '', $username );
@@ -126,8 +148,11 @@ class Actors {
 			)
 		);
 
-		if ( $user->results ) {
-			return self::get_by_id( $user->results[0] );
+		if ( $user->get_results() ) {
+			$actor = self::get_by_id( $user->get_results()[0] );
+			if ( ! \is_wp_error( $actor ) ) {
+				return $actor;
+			}
 		}
 
 		return new WP_Error(
@@ -162,6 +187,9 @@ class Actors {
 			// Extract the scheme.
 			$scheme = \esc_attr( $match[1] );
 		}
+
+		// @todo: handle old domain URIs here before we serve a new domain below when we shouldn't.
+		// Although maybe passing through to ::get_by_username() is enough?
 
 		switch ( $scheme ) {
 			// Check for http(s) URIs.
@@ -216,7 +244,7 @@ class Actors {
 				$host       = normalize_host( \substr( \strrchr( $uri, '@' ), 1 ) );
 				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
-				if ( $blog_host !== $host ) {
+				if ( $blog_host !== $host && get_option( 'activitypub_old_host' ) !== $host ) {
 					return new WP_Error(
 						'activitypub_wrong_host',
 						\__( 'Resource host does not match blog host', 'activitypub' ),
@@ -247,8 +275,6 @@ class Actors {
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_various( $id ) {
-		$user = null;
-
 		if ( is_numeric( $id ) ) {
 			$user = self::get_by_id( $id );
 		} elseif (
@@ -260,13 +286,11 @@ class Actors {
 			filter_var( $id, FILTER_VALIDATE_EMAIL )
 		) {
 			$user = self::get_by_resource( $id );
+		} else {
+			$user = self::get_by_username( $id );
 		}
 
-		if ( $user && ! is_wp_error( $user ) ) {
-			return $user;
-		}
-
-		return self::get_by_username( $id );
+		return $user;
 	}
 
 	/**
@@ -275,6 +299,10 @@ class Actors {
 	 * @return array The Actor collection.
 	 */
 	public static function get_collection() {
+		if ( is_user_type_disabled( 'user' ) ) {
+			return array();
+		}
+
 		$users = \get_users(
 			array(
 				'capability__in' => array( 'activitypub' ),
@@ -284,9 +312,72 @@ class Actors {
 		$return = array();
 
 		foreach ( $users as $user ) {
-			$return[] = User::from_wp_user( $user->ID );
+			$actor = User::from_wp_user( $user->ID );
+
+			if ( \is_wp_error( $actor ) ) {
+				continue;
+			}
+
+			$return[] = $actor;
 		}
 
 		return $return;
+	}
+
+	/**
+	 * Get all active Actors including the Blog Actor.
+	 *
+	 * @return array The actor collection.
+	 */
+	public static function get_all() {
+		$return = array();
+
+		if ( ! is_user_type_disabled( 'user' ) ) {
+			$users = \get_users(
+				array(
+					'capability__in' => array( 'activitypub' ),
+				)
+			);
+
+			foreach ( $users as $user ) {
+				$actor = User::from_wp_user( $user->ID );
+
+				if ( \is_wp_error( $actor ) ) {
+					continue;
+				}
+
+				$return[] = $actor;
+			}
+		}
+
+		// Also include the blog actor if active.
+		if ( ! is_user_type_disabled( 'blog' ) ) {
+			$blog_actor = self::get_by_id( self::BLOG_USER_ID );
+			if ( ! \is_wp_error( $blog_actor ) ) {
+				$return[] = $blog_actor;
+			}
+		}
+
+		return $return;
+	}
+
+	/**
+	 * Returns the actor type based on the user ID.
+	 *
+	 * @param int $user_id The user ID to check.
+	 * @return string The user type.
+	 */
+	public static function get_type_by_id( $user_id ) {
+		$user_id = (int) $user_id;
+
+		if ( self::APPLICATION_USER_ID === $user_id ) {
+			return 'application';
+		}
+
+		if ( self::BLOG_USER_ID === $user_id ) {
+			return 'blog';
+		}
+
+		return 'user';
 	}
 }

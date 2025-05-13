@@ -7,9 +7,12 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
-use Activitypub\Migration;
 use Activitypub\Comment;
+use Activitypub\Migration;
+use Activitypub\Model\Follower;
 use Activitypub\Scheduler;
 
 /**
@@ -17,7 +20,7 @@ use Activitypub\Scheduler;
  *
  * @coversDefaultClass \Activitypub\Migration
  */
-class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
+class Test_Migration extends \WP_UnitTestCase {
 
 	/**
 	 * Test fixture.
@@ -30,7 +33,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	 * Set up the test.
 	 */
 	public static function set_up_before_class() {
-		\remove_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
+		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
 		\remove_action( 'transition_comment_status', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity' ), 20 );
 		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
 
@@ -86,21 +89,6 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 		\add_comment_meta( self::$fixtures['comment'], 'activitypub_status', 'federated' );
-	}
-
-	/**
-	 * Tear down the test.
-	 */
-	public static function tear_down_after_class() {
-		// Clean up posts.
-		foreach ( self::$fixtures['posts'] as $post_id ) {
-			\wp_delete_post( $post_id, true );
-		}
-
-		// Clean up comment.
-		if ( isset( self::$fixtures['comment'] ) ) {
-			\wp_delete_comment( self::$fixtures['comment'], true );
-		}
 	}
 
 	/**
@@ -177,6 +165,23 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		Migration::migrate_actor_mode();
 
 		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
+	}
+
+	/**
+	 * Tests scheduling of migration.
+	 *
+	 * @covers ::maybe_migrate
+	 */
+	public function test_migration_scheduling() {
+		update_option( 'activitypub_db_version', '0.0.1' );
+
+		Migration::maybe_migrate();
+
+		$schedule = \wp_next_scheduled( 'activitypub_migrate', array( '0.0.1' ) );
+		$this->assertNotFalse( $schedule );
+
+		// Clean up.
+		delete_option( 'activitypub_db_version' );
 	}
 
 	/**
@@ -517,5 +522,262 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Test with large offset (no more comments).
 		$result = Migration::create_comment_outbox_items( 1, 1000 );
 		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test update_actor_json_slashing updates unslashed meta values.
+	 *
+	 * @covers ::update_actor_json_slashing
+	 */
+	public function test_update_actor_json_slashing() {
+		$follower = new Follower();
+		$follower->from_array(
+			array(
+				'type'               => 'Person',
+				'name'               => 'Test Follower',
+				'preferred_username' => 'Follower',
+				'summary'            => '<p>unescaped backslash 04\2024</p>',
+			)
+		);
+		$unslashed_json = $follower->to_json();
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'  => Followers::POST_TYPE,
+				'meta_input' => array( '_activitypub_actor_json' => $unslashed_json ),
+			)
+		);
+
+		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+		$this->assertNull( \json_decode( $original_meta, true ) );
+		$this->assertEquals( JSON_ERROR_SYNTAX, \json_last_error() );
+
+		$result = Migration::update_actor_json_slashing();
+
+		// No additional batch should be scheduled.
+		$this->assertNull( $result );
+
+		$updated_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		// Verify the updated value can be successfully decoded.
+		$decoded = \json_decode( $updated_meta, true );
+		$this->assertNotNull( $decoded, 'Updated meta should be valid JSON' );
+		$this->assertEquals( JSON_ERROR_NONE, \json_last_error() );
+	}
+
+	/**
+	 * Test update_comment_author_emails updates emails with webfinger addresses.
+	 *
+	 * @covers ::update_comment_author_emails
+	 */
+	public function test_update_comment_author_emails() {
+		$author_url = 'https://example.com/users/test';
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => self::$fixtures['posts'][0],
+				'comment_author'       => 'Test User',
+				'comment_author_url'   => $author_url,
+				'comment_author_email' => '',
+				'comment_type'         => 'comment',
+				'comment_meta'         => array( 'protocol' => 'activitypub' ),
+			)
+		);
+
+		// Mock the HTTP request.
+		\add_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
+
+		$result = Migration::update_comment_author_emails( 50, 0 );
+
+		$this->assertNull( $result );
+
+		$updated_comment = \get_comment( $comment_id );
+		$this->assertEquals( 'test@example.com', $updated_comment->comment_author_email );
+
+		// Clean up.
+		\remove_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
+		\wp_delete_comment( $comment_id, true );
+	}
+
+	/**
+	 * Test update_comment_author_emails handles batching correctly.
+	 *
+	 * @covers ::update_comment_author_emails
+	 */
+	public function test_update_comment_author_emails_batching() {
+		// Create multiple comments.
+		$comment_ids = array();
+		for ( $i = 0; $i < 3; $i++ ) {
+			$comment_ids[] = self::factory()->comment->create(
+				array(
+					'comment_post_ID'      => self::$fixtures['posts'][0],
+					'comment_author'       => "Test User $i",
+					'comment_author_url'   => "https://example.com/users/test$i",
+					'comment_author_email' => '',
+					'comment_content'      => "Test comment $i",
+					'comment_type'         => 'comment',
+					'comment_meta'         => array( 'protocol' => 'activitypub' ),
+				)
+			);
+		}
+
+		// Mock the HTTP request.
+		\add_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
+
+		// Process first batch of 2 comments.
+		$result = Migration::update_comment_author_emails( 2, 0 );
+		$this->assertEqualSets(
+			array(
+				'batch_size' => 2,
+				'offset'     => 2,
+			),
+			$result
+		);
+
+		// Process second batch with remaining comment.
+		$result = Migration::update_comment_author_emails( 2, 2 );
+		$this->assertNull( $result );
+
+		// Verify all comments were updated.
+		foreach ( $comment_ids as $comment_id ) {
+			$comment = \get_comment( $comment_id );
+			$this->assertEquals( 'test@example.com', $comment->comment_author_email );
+
+			wp_delete_comment( $comment_id, true );
+		}
+
+		_delete_all_data();
+		\remove_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
+	}
+
+	/**
+	 * Mock webfinger response.
+	 *
+	 * @return array
+	 */
+	public function mock_webfinger() {
+		return array(
+			'body'     => wp_json_encode( array( 'subject' => 'acct:test@example.com' ) ),
+			'response' => array( 'code' => 200 ),
+		);
+	}
+
+	/**
+	 * Test add_default_extra_field.
+	 */
+	public function test_add_default_extra_field() {
+		// Create a test user with ActivityPub permission.
+		$user_id = self::factory()->user->create();
+		$user    = get_user_by( 'id', $user_id );
+		$user->add_cap( 'activitypub' );
+
+		// Run the private method over Reflection.
+		$reflection = new \ReflectionClass( Migration::class );
+		$method     = $reflection->getMethod( 'add_default_extra_field' );
+		$method->setAccessible( true );
+		$method->invoke( null );
+
+		// Check the extra field for the user.
+		$user_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'author'         => $user_id,
+				'posts_per_page' => -1,
+			)
+		);
+
+		$this->assertCount( 1, $user_fields, 'There should be one extra field for the user' );
+		$this->assertEquals( 'Powered by', $user_fields[0]->post_title, 'The title should be "Powered by"' );
+		$this->assertEquals( 'WordPress', $user_fields[0]->post_content, 'The content should be "WordPress"' );
+
+		// Check the extra field for the blog user.
+		$blog_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
+				'author'         => 0,
+				'posts_per_page' => -1,
+			)
+		);
+
+		$this->assertCount( 1, $blog_fields, 'There should be one extra field for the blog user' );
+		$this->assertEquals( 'Powered by', $blog_fields[0]->post_title, 'The title should be "Powered by"' );
+		$this->assertEquals( 'WordPress', $blog_fields[0]->post_content, 'The content should be "WordPress"' );
+
+		_delete_all_data();
+	}
+
+	/**
+	 * Test add_default_extra_field with multiple users.
+	 */
+	public function test_add_default_extra_field_multiple_users() {
+		// Create a user without ActivityPub permission.
+		$non_ap_user_id = self::factory()->user->create();
+
+		// Run the private method over Reflection.
+		$reflection = new \ReflectionClass( Migration::class );
+		$method     = $reflection->getMethod( 'add_default_extra_field' );
+		$method->setAccessible( true );
+		$method->invoke( null );
+
+		// Check that the user without ActivityPub permission has no extra field.
+		$non_ap_user_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'author'         => $non_ap_user_id,
+				'posts_per_page' => -1,
+			)
+		);
+
+		$this->assertCount( 0, $non_ap_user_fields, 'User without ActivityPub permission should not have an extra field' );
+
+		_delete_all_data();
+	}
+
+	/**
+	 * Test update_notification_options.
+	 *
+	 * @covers ::update_notification_options
+	 */
+	public function test_update_notification_options() {
+		// Set up test user with the ActivityPub capability.
+		$user_id1 = self::factory()->user->create();
+
+		// Add the ActivityPub capability to the test users.
+		$user1 = get_user_by( 'id', $user_id1 );
+		$user1->add_cap( 'activitypub' );
+
+		// Set up the old notification options.
+		\update_option( 'activitypub_mailer_new_dm', '1' );
+		\update_option( 'activitypub_mailer_new_follower', '0' );
+		\update_option( 'activitypub_mailer_new_mention', '1' ); // This one doesn't get migrated, just added.
+
+		\delete_option( 'activitypub_blog_user_mailer_new_dm' );
+		\delete_option( 'activitypub_blog_user_mailer_new_follower' );
+		\delete_option( 'activitypub_blog_user_mailer_new_mention' );
+
+		// Run the migration method.
+		Migration::update_notification_options();
+
+		// Verify blog user notification options were created with correct values.
+		$this->assertEquals( '1', \get_option( 'activitypub_blog_user_mailer_new_dm' ), 'Blog user new DM option should match old value' );
+		$this->assertEquals( '0', \get_option( 'activitypub_blog_user_mailer_new_follower' ), 'Blog user new follower option should match old value' );
+		$this->assertEquals( '1', \get_option( 'activitypub_blog_user_mailer_new_mention' ), 'Blog user new mention option should be set to 1' );
+
+		// Verify actor notification options were created with correct values.
+		$this->assertEquals( '1', \get_user_option( 'activitypub_mailer_new_dm', $user_id1 ), 'Actor 1 new DM option should match old value' );
+		$this->assertEquals( '0', \get_user_option( 'activitypub_mailer_new_follower', $user_id1 ), 'Actor 1 new follower option should match old value' );
+		$this->assertEquals( '1', \get_user_option( 'activitypub_mailer_new_mention', $user_id1 ), 'Actor 1 new mention option should be set to 1' );
+
+		// Verify old options were deleted.
+		$this->assertFalse( \get_option( 'activitypub_mailer_new_dm' ), 'Old DM option should be deleted' );
+		$this->assertFalse( \get_option( 'activitypub_mailer_new_follower' ), 'Old follower option should be deleted' );
+
+		// Clean up.
+		\delete_option( 'activitypub_blog_user_mailer_new_dm' );
+		\delete_option( 'activitypub_blog_user_mailer_new_follower' );
+		\delete_option( 'activitypub_blog_user_mailer_new_mention' );
+		\delete_user_option( $user_id1, 'activitypub_mailer_new_dm' );
+		\delete_user_option( $user_id1, 'activitypub_mailer_new_follower' );
+		\delete_user_option( $user_id1, 'activitypub_mailer_new_mention' );
+		\wp_delete_user( $user_id1 );
 	}
 }

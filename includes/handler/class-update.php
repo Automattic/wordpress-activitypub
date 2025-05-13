@@ -7,6 +7,7 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Interactions;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -31,7 +32,7 @@ class Update {
 	 * @param array $activity The Activity object.
 	 */
 	public static function handle_update( $activity ) {
-		$object_type = isset( $activity['object']['type'] ) ? $activity['object']['type'] : '';
+		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
 			/*
@@ -78,14 +79,14 @@ class Update {
 	 * @param array $activity The Activity object.
 	 */
 	public static function update_interaction( $activity ) {
-		$commentdata = Interactions::update_comment( $activity );
-		$reaction    = null;
+		$comment_data = Interactions::update_comment( $activity );
+		$reaction     = null;
 
-		if ( ! empty( $commentdata['comment_ID'] ) ) {
+		if ( ! empty( $comment_data['comment_ID'] ) ) {
 			$state    = 1;
-			$reaction = \get_comment( $commentdata['comment_ID'] );
+			$reaction = \get_comment( $comment_data['comment_ID'] );
 		} else {
-			$state = $commentdata;
+			$state = $comment_data;
 		}
 
 		/**
@@ -106,8 +107,19 @@ class Update {
 	 */
 	public static function update_actor( $activity ) {
 		// Update cache.
-		get_remote_metadata_by_actor( $activity['actor'], false );
+		$actor = get_remote_metadata_by_actor( $activity['actor'], false );
 
-		// @todo maybe also update all interactions.
+		if ( ! $actor || \is_wp_error( $actor ) || ! isset( $actor['id'] ) ) {
+			return;
+		}
+
+		$follower = Followers::get_follower_by_actor( $actor['id'] );
+
+		if ( ! $follower ) {
+			return;
+		}
+
+		$follower->from_array( $actor );
+		$follower->upsert();
 	}
 }

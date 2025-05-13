@@ -83,9 +83,9 @@ class Followers {
 		/**
 		 * Fires before a Follower is removed.
 		 *
-		 * @param \Activitypub\Model\Follower $follower The Follower object.
-		 * @param int                         $user_id  The ID of the WordPress User.
-		 * @param string                      $actor    The Actor URL.
+		 * @param Follower $follower The Follower object.
+		 * @param int      $user_id  The ID of the WordPress User.
+		 * @param string   $actor    The Actor URL.
 		 */
 		do_action( 'activitypub_followers_pre_remove_follower', $follower, $user_id, $actor );
 
@@ -98,7 +98,7 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
-	 * @return \Activitypub\Activity\Base_Object|WP_Error|null The Follower object or null
+	 * @return Follower|false|null The Follower object or null
 	 */
 	public static function get_follower( $user_id, $actor ) {
 		global $wpdb;
@@ -128,7 +128,7 @@ class Followers {
 	 *
 	 * @param string $actor The Actor URL.
 	 *
-	 * @return \Activitypub\Activity\Base_Object|WP_Error|null
+	 * @return Follower|false|null The Follower object or false on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
 		global $wpdb;
@@ -152,11 +152,12 @@ class Followers {
 	/**
 	 * Get the Followers of a given user.
 	 *
-	 * @param int   $user_id The ID of the WordPress User.
-	 * @param int   $number  Maximum number of results to return.
-	 * @param int   $page    Page number.
-	 * @param array $args    The WP_Query arguments.
-	 * @return array List of `Follower` objects.
+	 * @param int|null $user_id The ID of the WordPress User.
+	 * @param int      $number  Maximum number of results to return.
+	 * @param int      $page    Page number.
+	 * @param array    $args    The WP_Query arguments.
+	 *
+	 * @return Follower[] List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
 		$data = self::get_followers_with_count( $user_id, $number, $page, $args );
@@ -166,16 +167,16 @@ class Followers {
 	/**
 	 * Get the Followers of a given user, along with a total count for pagination purposes.
 	 *
-	 * @param int   $user_id The ID of the WordPress User.
-	 * @param int   $number  Maximum number of results to return.
-	 * @param int   $page    Page number.
-	 * @param array $args    The WP_Query arguments.
+	 * @param int|null $user_id The ID of the WordPress User.
+	 * @param int      $number  Maximum number of results to return.
+	 * @param int      $page    Page number.
+	 * @param array    $args    The WP_Query arguments.
 	 *
 	 * @return array {
 	 *      Data about the followers.
 	 *
-	 *      @type array $followers List of `Follower` objects.
-	 *      @type int   $total     Total number of followers.
+	 *      @type Follower[] $followers List of `Follower` objects.
+	 *      @type int        $total     Total number of followers.
 	 *  }
 	 */
 	public static function get_followers_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
@@ -206,7 +207,7 @@ class Followers {
 	/**
 	 * Get all Followers.
 	 *
-	 * @return array The Term list of Followers.
+	 * @return Follower[] The Term list of Followers.
 	 */
 	public static function get_all_followers() {
 		$args = array(
@@ -276,7 +277,7 @@ class Followers {
 			return $inboxes;
 		}
 
-		// Get all Followers of a ID of the WordPress User.
+		// Get all Followers of an ID of the WordPress User.
 		$posts = new WP_Query(
 			array(
 				'nopaging'   => true,
@@ -337,54 +338,17 @@ class Followers {
 	 * @return array The list of Inboxes.
 	 */
 	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
-		$args = array(
-			'post_type'      => self::POST_TYPE,
-			'posts_per_page' => $batch_size,
-			'offset'         => $offset,
-			'fields'         => 'ids',
-
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
-				'relation' => 'AND',
-				array(
-					'key'     => '_activitypub_inbox',
-					'compare' => 'EXISTS',
-				),
-				array(
-					'key'     => '_activitypub_inbox',
-					'value'   => '',
-					'compare' => '!=',
-				),
-			),
-		);
+		$inboxes = self::get_inboxes( $actor_id );
 
 		if ( self::maybe_add_inboxes_of_blog_user( $json, $actor_id ) ) {
-			$args['meta_query'][] = array(
-				'relation' => 'OR',
-				array(
-					'key'   => '_activitypub_user_id',
-					'value' => Actors::BLOG_USER_ID,
-				),
-				array(
-					'key'   => '_activitypub_user_id',
-					'value' => $actor_id,
-				),
-			);
-		} else {
-			$args['meta_query'][] = array(
-				'key'   => '_activitypub_user_id',
-				'value' => $actor_id,
-			);
+			$inboxes = array_fill_keys( $inboxes, 1 );
+			foreach ( self::get_inboxes( Actors::BLOG_USER_ID ) as $inbox ) {
+				$inboxes[ $inbox ] = 1;
+			}
+			$inboxes = array_keys( $inboxes );
 		}
 
-		$followers = get_posts( $args );
-		$inboxes   = array();
-
-		foreach ( $followers as $id ) {
-			$inboxes[] = get_post_meta( $id, '_activitypub_inbox', true );
-		}
-
-		return $inboxes;
+		return array_slice( $inboxes, $offset, $batch_size );
 	}
 
 	/**
@@ -405,7 +369,7 @@ class Followers {
 		}
 
 		$activity = json_decode( $json, true );
-		// Only if this is an Update or Delete. Create handles its own Announce in dual user mode.
+		// Only if this is an Update or Delete. Create handles its own "Announce" in dual user mode.
 		if ( ! in_array( $activity['type'] ?? null, array( 'Update', 'Delete' ), true ) ) {
 			return false;
 		}
@@ -419,7 +383,7 @@ class Followers {
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
 	 *
-	 * @return array The Term list of Followers.
+	 * @return Follower[] The Term list of Followers.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		$args = array(
@@ -447,7 +411,7 @@ class Followers {
 	 *
 	 * @param int $number Optional. The number of Followers to return. Default 20.
 	 *
-	 * @return array The Term list of Followers.
+	 * @return Follower[] The Term list of Followers.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
 		$args = array(
@@ -515,5 +479,16 @@ class Followers {
 			'_activitypub_errors',
 			$error_message
 		);
+	}
+
+	/**
+	 * Clear the errors for a Follower.
+	 *
+	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function clear_errors( $post_id ) {
+		return \delete_post_meta( $post_id, '_activitypub_errors' );
 	}
 }

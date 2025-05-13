@@ -43,6 +43,14 @@ class Actor extends Base_Object {
 				'@id'   => 'lemmy:moderators',
 				'@type' => '@id',
 			),
+			'alsoKnownAs'               => array(
+				'@id'   => 'as:alsoKnownAs',
+				'@type' => '@id',
+			),
+			'movedTo'                   => array(
+				'@id'   => 'as:movedTo',
+				'@type' => '@id',
+			),
 			'attributionDomains'        => array(
 				'@id'   => 'toot:attributionDomains',
 				'@type' => '@id',
@@ -51,6 +59,21 @@ class Actor extends Base_Object {
 			'discoverable'              => 'toot:discoverable',
 			'indexable'                 => 'toot:indexable',
 		),
+	);
+
+	/**
+	 * The default types for Actors.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#actor-types
+	 *
+	 * @var array
+	 */
+	const TYPES = array(
+		'Application',
+		'Group',
+		'Organization',
+		'Person',
+		'Service',
 	);
 
 	/**
@@ -143,14 +166,13 @@ class Actor extends Base_Object {
 	protected $endpoints;
 
 	/**
-	 * It's not part of the ActivityPub protocol but it's a quite common
+	 * It's not part of the ActivityPub protocol, but it's a quite common
 	 * practice to handle an actor public key with a publicKey array:
 	 * [
-	 *     'id' => 'https://my-example.com/actor#main-key'
-	 *     'owner' => 'https://my-example.com/actor',
+	 *     'id'           => 'https://my-example.com/actor#main-key'
+	 *     'owner'        => 'https://my-example.com/actor',
 	 *     'publicKeyPem' => '-----BEGIN PUBLIC KEY-----
-	 *                       MIIBI [...]
-	 *                       DQIDAQAB
+	 *                       [...]
 	 *                       -----END PUBLIC KEY-----'
 	 * ]
 	 *
@@ -161,8 +183,8 @@ class Actor extends Base_Object {
 	protected $public_key;
 
 	/**
-	 * It's not part of the ActivityPub protocol but it's a quite common
-	 * practice to lock an account. If anabled, new followers will not be
+	 * It's not part of the ActivityPub protocol, but it's a quite common
+	 * practice to lock an account. If enabled, new followers will not be
 	 * automatically accepted, but will instead require you to manually
 	 * approve them.
 	 *
@@ -185,4 +207,18 @@ class Actor extends Base_Object {
 	 * @var array
 	 */
 	protected $attribution_domains = null;
+
+	/**
+	 * The target of the actor.
+	 *
+	 * @var string|null
+	 */
+	protected $moved_to;
+
+	/**
+	 * The alsoKnownAs of the actor.
+	 *
+	 * @var array
+	 */
+	protected $also_known_as;
 }

@@ -9,10 +9,8 @@
 
 namespace Activitypub\Activity;
 
-use Activitypub\Link;
-
-use function Activitypub\is_actor;
-use function Activitypub\is_activity;
+use Activitypub\Activity\Extended_Object\Event;
+use Activitypub\Activity\Extended_Object\Place;
 
 /**
  * \Activitypub\Activity\Activity implements the common
@@ -20,43 +18,47 @@ use function Activitypub\is_activity;
  *
  * @see https://www.w3.org/TR/activitystreams-core/#activities
  * @see https://www.w3.org/TR/activitystreams-core/#intransitiveactivities
- *
- * @method string|array|null       get_actor()          Gets one or more entities that performed or are expected to perform the activity.
- * @method string|null             get_id()             Gets the object's unique global identifier.
- * @method string                  get_type()           Gets the type of the object.
- * @method string|null             get_name()           Gets the natural language name of the object.
- * @method string|null             get_url()            Gets the URL of the object.
- * @method string|null             get_summary()        Gets the natural language summary of the object.
- * @method string|null             get_published()      Gets the date and time the object was published in ISO 8601 format.
- * @method string|null             get_updated()        Gets the date and time the object was updated in ISO 8601 format.
- * @method string|null             get_attributed_to()  Gets the entity attributed as the original author.
- * @method array|string|null       get_cc()             Gets the secondary recipients of the object.
- * @method array|string|null       get_to()             Gets the primary recipients of the object.
- * @method array|null              get_attachment()     Gets the attachment property of the object.
- * @method array|null              get_icon()           Gets the icon property of the object.
- * @method array|null              get_image()          Gets the image property of the object.
- * @method Base_Object|string|null get_object()         Gets the direct object of the activity.
- * @method array|string|null       get_in_reply_to()    Gets the objects this object is in reply to.
- *
- * @method Activity set_actor( string|array $actor )    Sets one or more entities that performed the activity.
- * @method Activity set_id( string $id )                Sets the object's unique global identifier.
- * @method Activity set_type( string $type )            Sets the type of the object.
- * @method Activity set_name( string $name )            Sets the natural language name of the object.
- * @method Activity set_url( string $url )              Sets the URL of the object.
- * @method Activity set_summary( string $summary )      Sets the natural language summary of the object.
- * @method Activity set_published( string $published )  Sets the date and time the object was published in ISO 8601 format.
- * @method Activity set_updated( string $updated )      Sets the date and time the object was updated in ISO 8601 format.
- * @method Activity set_attributed_to( string $attributed_to ) Sets the entity attributed as the original author.
- * @method Activity set_cc( array|string $cc )          Sets the secondary recipients of the object.
- * @method Activity set_to( array|string $to )          Sets the primary recipients of the object.
- * @method Activity set_attachment( array $attachment ) Sets the attachment property of the object.
- * @method Activity set_icon( array $icon )             Sets the icon property of the object.
- * @method Activity set_image( array $image )           Sets the image property of the object.
- * @method Activity set_content( string $content )      Sets the content property of the object.
  */
 class Activity extends Base_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
+	);
+
+	/**
+	 * The default types for Activities.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
+	 *
+	 * @var array
+	 */
+	const TYPES = array(
+		'Accept',
+		'Add',
+		'Announce',
+		'Arrive',
+		'Block',
+		'Create',
+		'Delete',
+		'Dislike',
+		'Follow',
+		'Flag',
+		'Ignore',
+		'Invite',
+		'Join',
+		'Leave',
+		'Like',
+		'Listen',
+		'Move',
+		'Offer',
+		'Read',
+		'Reject',
+		'Remove',
+		'TentativeAccept',
+		'TentativeReject',
+		'Travel',
+		'Undo',
+		'Update',
+		'View',
 	);
 
 	/**
@@ -156,59 +158,93 @@ class Activity extends Base_Object {
 	 * Set the object and copy Object properties to the Activity.
 	 *
 	 * Any to, bto, cc, bcc, and audience properties specified on the object
-	 * MUST be copied over to the new Create activity by the server.
+	 * MUST be copied over to the new "Create" activity by the server.
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
-	 * @param array|string|Base_Object|Link|null $data Activity object.
+	 * @param array|string|Base_Object|Activity|Actor|null $data     Activity object.
 	 */
 	public function set_object( $data ) {
-		// Convert array to object.
+		$object = $data;
+
+		// Convert array to appropriate object type.
 		if ( is_array( $data ) ) {
-			$data = Generic_Object::init_from_array( $data );
+			$type = $data['type'] ?? null;
+
+			if ( in_array( $type, self::TYPES, true ) ) {
+				$object = self::init_from_array( $data );
+			} elseif ( in_array( $type, Actor::TYPES, true ) ) {
+				$object = Actor::init_from_array( $data );
+			} elseif ( in_array( $type, Base_Object::TYPES, true ) ) {
+				switch ( $type ) {
+					case 'Event':
+						$object = Event::init_from_array( $data );
+						break;
+					case 'Place':
+						$object = Place::init_from_array( $data );
+						break;
+					default:
+						$object = Base_Object::init_from_array( $data );
+						break;
+				}
+			} else {
+				$object = Generic_Object::init_from_array( $data );
+			}
 		}
 
-		// Set object.
-		$this->set( 'object', $data );
+		$this->set( 'object', $object );
+		$this->pre_fill_activity_from_object();
+	}
+
+	/**
+	 * Fills the Activity with the specified activity object.
+	 */
+	public function pre_fill_activity_from_object() {
+		$object = $this->get_object();
 
 		// Check if `$data` is a URL and use it to generate an ID then.
-		if ( is_string( $data ) && filter_var( $data, FILTER_VALIDATE_URL ) && ! $this->get_id() ) {
-			$this->set( 'id', $data . '#activity-' . strtolower( $this->get_type() ) . '-' . time() );
+		if ( is_string( $object ) && filter_var( $object, FILTER_VALIDATE_URL ) && ! $this->get_id() ) {
+			$this->set( 'id', $object . '#activity-' . strtolower( $this->get_type() ) . '-' . time() );
 
 			return;
 		}
 
 		// Check if `$data` is an object and copy some properties otherwise do nothing.
-		if ( ! is_object( $data ) ) {
+		if ( ! is_object( $object ) ) {
 			return;
 		}
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-			$this->set( $i, $data->get( $i ) );
+			$value = $object->get( $i );
+			if ( $value && ! $this->get( $i ) ) {
+				$this->set( $i, $value );
+			}
 		}
 
-		if ( $data->get_published() && ! $this->get_published() ) {
-			$this->set( 'published', $data->get_published() );
+		if ( $object->get_published() && ! $this->get_published() ) {
+			$this->set( 'published', $object->get_published() );
 		}
 
-		if ( $data->get_updated() && ! $this->get_updated() ) {
-			$this->set( 'updated', $data->get_updated() );
+		if ( $object->get_updated() && ! $this->get_updated() ) {
+			$this->set( 'updated', $object->get_updated() );
 		}
 
-		if ( $data->get_attributed_to() && ! $this->get_actor() ) {
-			$this->set( 'actor', $data->get_attributed_to() );
+		if ( $object->get_attributed_to() && ! $this->get_actor() ) {
+			$this->set( 'actor', $object->get_attributed_to() );
 		}
 
-		if ( $data->get_in_reply_to() ) {
-			$this->set( 'in_reply_to', $data->get_in_reply_to() );
+		if ( $this->get_type() !== 'Announce' && $object->get_in_reply_to() && ! $this->get_in_reply_to() ) {
+			$this->set( 'in_reply_to', $object->get_in_reply_to() );
 		}
 
-		if ( $data->get_id() && ! $this->get_id() ) {
-			$id = strtok( $data->get_id(), '#' );
-			if ( $data->get_updated() ) {
-				$updated = $data->get_updated();
+		if ( $object->get_id() && ! $this->get_id() ) {
+			$id = strtok( $object->get_id(), '#' );
+			if ( $object->get_updated() ) {
+				$updated = $object->get_updated();
+			} elseif ( $object->get_published() ) {
+				$updated = $object->get_published();
 			} else {
-				$updated = $data->get_published();
+				$updated = time();
 			}
 			$this->set( 'id', $id . '#activity-' . strtolower( $this->get_type() ) . '-' . $updated );
 		}

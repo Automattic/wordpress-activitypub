@@ -8,7 +8,6 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Model\User;
 
 /**
  * Mailer Class.
@@ -21,15 +20,9 @@ class Mailer {
 		\add_filter( 'comment_notification_subject', array( self::class, 'comment_notification_subject' ), 10, 2 );
 		\add_filter( 'comment_notification_text', array( self::class, 'comment_notification_text' ), 10, 2 );
 
-		// New follower notification.
-		if ( '1' === \get_option( 'activitypub_mailer_new_follower', '0' ) ) {
-			\add_action( 'activitypub_notification_follow', array( self::class, 'new_follower' ) );
-		}
-
-		// Direct message notification.
-		if ( '1' === \get_option( 'activitypub_mailer_new_dm', '0' ) ) {
-			\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		}
+		\add_action( 'activitypub_inbox_follow', array( self::class, 'new_follower' ), 10, 2 );
+		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
+		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );  /** After @see \Activitypub\Handler\Create::handle_create() */
 	}
 
 	/**
@@ -111,42 +104,65 @@ class Mailer {
 	/**
 	 * Send a notification email for every new follower.
 	 *
-	 * @param Notification $notification The notification object.
+	 * @param array $activity The activity object.
+	 * @param int   $user_id  The id of the local blog-user.
 	 */
-	public static function new_follower( $notification ) {
-		$actor = get_remote_metadata_by_actor( $notification->actor );
+	public static function new_follower( $activity, $user_id ) {
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			if ( ! \get_user_option( 'activitypub_mailer_new_follower', $user_id ) ) {
+				return;
+			}
 
+			$email     = \get_userdata( $user_id )->user_email;
+			$admin_url = '/users.php?page=activitypub-followers-list';
+		} else {
+			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_follower', '1' ) ) {
+				return;
+			}
+
+			$email     = \get_option( 'admin_email' );
+			$admin_url = '/options-general.php?page=activitypub&tab=followers';
+		}
+
+		$actor = get_remote_metadata_by_actor( $activity['actor'] );
 		if ( ! $actor || \is_wp_error( $actor ) ) {
 			return;
 		}
 
-		$email     = \get_option( 'admin_email' );
-		$admin_url = '/options-general.php?page=activitypub&tab=followers';
-
-		if ( $notification->target > Actors::BLOG_USER_ID ) {
-			$user = \get_user_by( 'id', $notification->target );
-
-			if ( ! $user ) {
-				return;
-			}
-
-			$email     = $user->user_email;
-			$admin_url = '/users.php?page=activitypub-followers-list';
-		}
+		$actor = self::normalize_actor( $actor );
 
 		$template_args = array_merge(
 			$actor,
 			array(
 				'admin_url' => $admin_url,
-				'target'    => $notification->target,
+				'user_id'   => $user_id,
+				'stats'     => array(
+					'outbox'    => null,
+					'followers' => null,
+					'following' => null,
+				),
 			)
 		);
 
+		foreach ( $template_args['stats'] as $field => $value ) {
+			if ( empty( $actor[ $field ] ) ) {
+				continue;
+			}
+
+			$result = Http::get( $actor[ $field ], true );
+			if ( 200 === \wp_remote_retrieve_response_code( $result ) ) {
+				$body = \json_decode( \wp_remote_retrieve_body( $result ), true );
+				if ( isset( $body['totalItems'] ) ) {
+					$template_args['stats'][ $field ] = $body['totalItems'];
+				}
+			}
+		}
+
 		/* translators: 1: Blog name, 2: Follower name */
-		$subject = \sprintf( \__( '[%1$s] New Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
+		$subject = \sprintf( \__( '[%1$s] New Follower: %2$s', 'activitypub' ), \get_option( 'blogname' ), $actor['name'] );
 
 		\ob_start();
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/new-follower-email.php', false, $template_args );
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-follower.php', false, $template_args );
 		$html_message = \ob_get_clean();
 
 		$alt_function = function ( $mailer ) use ( $actor, $admin_url ) {
@@ -181,40 +197,169 @@ class Mailer {
 			return;
 		}
 
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			if ( ! \get_user_option( 'activitypub_mailer_new_dm', $user_id ) ) {
+				return;
+			}
+
+			$email = \get_userdata( $user_id )->user_email;
+		} else {
+			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_dm', '1' ) ) {
+				return;
+			}
+
+			$email = \get_option( 'admin_email' );
+		}
+
 		$actor = get_remote_metadata_by_actor( $activity['actor'] );
 
 		if ( ! $actor || \is_wp_error( $actor ) || empty( $activity['object']['content'] ) ) {
 			return;
 		}
 
-		$email = \get_option( 'admin_email' );
+		$actor = self::normalize_actor( $actor );
 
-		if ( (int) $user_id > Actors::BLOG_USER_ID ) {
-			$user = \get_user_by( 'id', $user_id );
-
-			if ( ! $user ) {
-				return;
-			}
-
-			$email = $user->user_email;
-		}
-
-		$content = \html_entity_decode(
-			\wp_strip_all_tags(
-				str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
-			),
-			ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
+		$template_args = array(
+			'activity' => $activity,
+			'actor'    => $actor,
+			'user_id'  => $user_id,
 		);
 
 		/* translators: 1: Blog name, 2 Actor name */
-		$subject = \sprintf( \esc_html__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
-		/* translators: 1: Blog name, 2: Actor name */
-		$message = \sprintf( \esc_html__( 'New Direct Message: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), $content ) . "\r\n\r\n";
-		/* translators: Actor name */
-		$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
-		/* translators: Actor URL */
-		$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
+		$subject = \sprintf( \esc_html__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), \esc_html( \get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
 
-		\wp_mail( $email, $subject, $message );
+		\ob_start();
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-dm.php', false, $template_args );
+		$html_message = \ob_get_clean();
+
+		$alt_function = function ( $mailer ) use ( $actor, $activity ) {
+			$content = \html_entity_decode(
+				\wp_strip_all_tags(
+					str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
+				),
+				ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
+			);
+
+			/* translators: Actor name */
+			$message = \sprintf( \esc_html__( 'New Direct Message: %s', 'activitypub' ), $content ) . "\r\n\r\n";
+			/* translators: Actor name */
+			$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
+			/* translators: Message URL */
+			$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $activity['object']['id'] ) ) . "\r\n\r\n";
+
+			$mailer->{'AltBody'} = $message;
+		};
+		\add_action( 'phpmailer_init', $alt_function );
+
+		\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
+
+		\remove_action( 'phpmailer_init', $alt_function );
+	}
+
+	/**
+	 * Send a mention notification.
+	 *
+	 * @param array $activity The activity object.
+	 * @param int   $user_id  The id of the local blog-user.
+	 */
+	public static function mention( $activity, $user_id ) {
+		if (
+			// Only accept messages that have the user in the "cc" field.
+			empty( $activity['cc'] ) ||
+			! in_array( Actors::get_by_id( $user_id )->get_id(), (array) $activity['cc'], true )
+		) {
+			return;
+		}
+
+		if (
+			// Do not send a mention notification if the activity is a reply to a local post or comment.
+			is_activity_reply( $activity ) &&
+			object_id_to_comment( $activity['object']['id'] )
+		) {
+			return;
+		}
+
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			if ( ! \get_user_option( 'activitypub_mailer_new_mention', $user_id ) ) {
+				return;
+			}
+
+			$email = \get_userdata( $user_id )->user_email;
+		} else {
+			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_mention', '1' ) ) {
+				return;
+			}
+
+			$email = \get_option( 'admin_email' );
+		}
+
+		$actor = get_remote_metadata_by_actor( $activity['actor'] );
+		if ( \is_wp_error( $actor ) ) {
+			return;
+		}
+
+		$actor = self::normalize_actor( $actor );
+
+		$template_args = array(
+			'activity' => $activity,
+			'actor'    => $actor,
+			'user_id'  => $user_id,
+		);
+
+		/* translators: 1: Blog name, 2 Actor name */
+		$subject = \sprintf( \esc_html__( '[%1$s] Mention from: %2$s', 'activitypub' ), \esc_html( \get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
+
+		\ob_start();
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-mention.php', false, $template_args );
+		$html_message = \ob_get_clean();
+
+		$alt_function = function ( $mailer ) use ( $actor, $activity ) {
+			$content = \html_entity_decode(
+				\wp_strip_all_tags(
+					str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
+				),
+				ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
+			);
+
+			/* translators: Message content */
+			$message = \sprintf( \esc_html__( 'New Mention: %s', 'activitypub' ), $content ) . "\r\n\r\n";
+			/* translators: Actor name */
+			$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
+			/* translators: Message URL */
+			$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $activity['object']['id'] ) ) . "\r\n\r\n";
+
+			$mailer->{'AltBody'} = $message;
+		};
+		\add_action( 'phpmailer_init', $alt_function );
+
+		\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
+
+		\remove_action( 'phpmailer_init', $alt_function );
+	}
+
+	/**
+	 * Apply defaults to the actor object.
+	 *
+	 * Ensure that the actor object has a name, url, and webfinger.
+	 *
+	 * @param array $actor The actor object.
+	 *
+	 * @return array The inflated actor object.
+	 */
+	private static function normalize_actor( $actor ) {
+		if ( empty( $actor['name'] ) ) {
+			$actor['name'] = $actor['preferredUsername'];
+		}
+
+		if ( empty( $actor['url'] ) ) {
+			$actor['url'] = $actor['id'];
+		}
+		$actor['url'] = object_to_uri( $actor['url'] );
+
+		if ( empty( $actor['webfinger'] ) ) {
+			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . \wp_parse_url( $actor['url'], PHP_URL_HOST );
+		}
+
+		return $actor;
 	}
 }

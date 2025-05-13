@@ -28,6 +28,19 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_by_id.
+	 *
+	 * @covers ::get_by_id
+	 */
+	public function test_get_by_id() {
+		// External user.
+		$user_id = 'obenland@mastodon.social';
+
+		$actor = Actors::get_by_id( $user_id );
+		$this->assertWPError( $actor );
+	}
+
+	/**
 	 * Test get_by_various.
 	 *
 	 * @dataProvider the_resource_provider
@@ -112,5 +125,34 @@ class Test_Actors extends \WP_UnitTestCase {
 			array( 'http://example.org/@blog/s', 'WP_Error' ),
 			array( 'http://example.org/@blogs/', 'WP_Error' ),
 		);
+	}
+
+	/**
+	 * Test get_type_by_id()
+	 *
+	 * @covers ::get_type_by_id
+	 */
+	public function test_get_type_by_id() {
+		$this->assertSame( 'application', Actors::get_type_by_id( Actors::APPLICATION_USER_ID ) );
+		$this->assertSame( 'blog', Actors::get_type_by_id( Actors::BLOG_USER_ID ) );
+		$this->assertSame( 'user', Actors::get_type_by_id( 1 ) );
+		$this->assertSame( 'user', Actors::get_type_by_id( 2 ) );
+	}
+
+	/**
+	 * Test if Actor mode will be respected properly
+	 *
+	 * @covers ::get_type_by_id
+	 */
+	public function test_disabled_blog_profile() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$resource = 'http://example.org/@blog';
+
+		$this->assertEquals( 'Activitypub\Model\Blog', get_class( Actors::get_by_resource( $resource ) ) );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$this->assertWPError( Actors::get_by_resource( $resource ) );
 	}
 }

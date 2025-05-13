@@ -7,6 +7,7 @@
         "composer/installers": "^1.0 || ^2.0"
     },
     "require-dev": {
+        "automattic/jetpack-changelogger": "6.0.0",
         "phpunit/phpunit": "^8 || ^9",
         "phpcompatibility/php-compatibility": "*",
         "phpcompatibility/phpcompatibility-wp": "*",
@@ -32,7 +33,11 @@
         }
     ],
     "extra": {
-        "installer-name": "activitypub"
+        "installer-name": "activitypub",
+        "changelogger": {
+            "changes-dir": ".github/changelog/",
+            "link-template": "https://github.com/Automattic/wordpress-activitypub/compare/${old}...${new}"
+        }
     },
     "scripts": {
         "test": [
@@ -48,6 +53,14 @@
         ],
         "lint:fix": [
             "vendor/bin/phpcbf"
+        ],
+        "changelog:add": [
+            "composer install",
+            "vendor/bin/changelogger add"
+        ],
+        "changelog:write": [
+            "composer install",
+            "vendor/bin/changelogger write --add-pr-num"
         ]
     }
 }

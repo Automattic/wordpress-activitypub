@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Integration;
 /**
  * Test class for Seriously Simple Podcasting integration.
  *
+ * @group integration
  * @coversDefaultClass \Activitypub\Integration\Seriously_Simple_Podcasting
  */
 class Test_Seriously_Simple_Podcasting extends \WP_UnitTestCase {

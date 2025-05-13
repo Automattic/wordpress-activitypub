@@ -19,9 +19,9 @@ class Mention {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 1 );
-		\add_filter( 'comment_text', array( self::class, 'the_content' ), 10, 1 );
-		\add_filter( 'activitypub_extra_field_content', array( self::class, 'the_content' ), 10, 1 );
+		\add_filter( 'the_content', array( self::class, 'the_content' ), 99 );
+		\add_filter( 'comment_text', array( self::class, 'the_content' ) );
+		\add_filter( 'activitypub_extra_field_content', array( self::class, 'the_content' ) );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
 		\add_filter( 'activitypub_activity_object_array', array( self::class, 'filter_activity_object' ), 99 );
 	}
@@ -82,7 +82,7 @@ class Mention {
 
 			$url = isset( $metadata['url'] ) ? object_to_uri( $metadata['url'] ) : object_to_uri( $metadata['id'] );
 
-			return \sprintf( '<a rel="mention" class="u-url mention" href="%s">@<span>%s</span></a>', esc_url( $url ), esc_html( $username ) );
+			return \sprintf( '<a rel="mention" class="u-url mention" href="%1$s">@%2$s</a>', esc_url( $url ), esc_html( $username ) );
 		}
 
 		return $result[0];

@@ -58,6 +58,18 @@ This will start a local WordPress environment with the ActivityPub plugin instal
 
 You can open the WordPress site in your browser by visiting `http://localhost:8076`.
 
+### Composer
+
+Composer is used to install development dependencies for the ActivityPub plugin, to run unit tests, and to manage changelog entries.
+
+To install Composer, follow the instructions on the [Composer website](https://getcomposer.org/).
+
+Once Composer is available on your machin, you can install dependencies for the project like so:
+
+```bash
+composer install
+```
+
 ## Running Tests
 
 You can now run the test suite using either npm or composer:
@@ -99,3 +111,29 @@ Common PHPUnit arguments:
 - `--exclude-group`: Exclude tests with a specific @group annotation
 - `--verbose`: Output more verbose information
 - `--debug`: Display debugging information
+
+### Code Coverage Reports
+
+The coverage configuration is already set up in `phpunit.xml.dist` to analyze the code in the `includes` directory. To generate code coverage reports, you'll need to start wp-env with Xdebug enabled for coverage:
+
+```bash
+# Start the environment with Xdebug enabled.
+npm run env -- start --xdebug=coverage
+```
+```bash
+# Run tests with code coverage.
+npm run env-test -- --coverage-text
+```
+
+The above will display a text-based coverage report in your terminal. For a more detailed HTML report:
+
+```bash
+# Generate HTML coverage report in Docker.
+npm run env-test -- --coverage-html ./coverage
+```
+```bash
+# Open the coverage report in your default browser (macOS).
+open coverage/index.html
+```
+
+The HTML report will be generated directly in the `coverage` directory in your local filesystem. The `index.html` file can then be opened in a browser, showing a detailed analysis of which lines of code are covered by tests.

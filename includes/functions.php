@@ -9,6 +9,7 @@ namespace Activitypub;
 
 use WP_Error;
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
@@ -74,8 +75,8 @@ function get_webfinger_resource( $user_id ) {
 /**
  * Requests the Meta-Data from the Actors profile.
  *
- * @param string $actor  The Actor URL.
- * @param bool   $cached Optional. Whether the result should be cached. Default true.
+ * @param array|string $actor  The Actor array or URL.
+ * @param bool         $cached Optional. Whether the result should be cached. Default true.
  *
  * @return array|WP_Error The Actor profile as array or WP_Error on failure.
  */
@@ -95,89 +96,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		return $pre;
 	}
 
-	if ( is_array( $actor ) ) {
-		if ( array_key_exists( 'id', $actor ) ) {
-			$actor = $actor['id'];
-		} elseif ( array_key_exists( 'url', $actor ) ) {
-			$actor = $actor['url'];
-		} else {
-			return new WP_Error(
-				'activitypub_no_valid_actor_identifier',
-				\__( 'The "actor" identifier is not valid', 'activitypub' ),
-				array(
-					'status' => 404,
-					'actor'  => $actor,
-				)
-			);
-		}
-	}
-
-	if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $actor ) ) {
-		$actor = Webfinger::resolve( $actor );
-	}
-
-	if ( ! $actor ) {
-		return new WP_Error(
-			'activitypub_no_valid_actor_identifier',
-			\__( 'The "actor" identifier is not valid', 'activitypub' ),
-			array(
-				'status' => 404,
-				'actor'  => $actor,
-			)
-		);
-	}
-
-	if ( is_wp_error( $actor ) ) {
-		return $actor;
-	}
-
-	$transient_key = 'activitypub_' . $actor;
-
-	// Only check the cache if needed.
-	if ( $cached ) {
-		$metadata = \get_transient( $transient_key );
-
-		if ( $metadata ) {
-			return $metadata;
-		}
-	}
-
-	if ( ! \wp_http_validate_url( $actor ) ) {
-		$metadata = new WP_Error(
-			'activitypub_no_valid_actor_url',
-			\__( 'The "actor" is no valid URL', 'activitypub' ),
-			array(
-				'status' => 400,
-				'actor'  => $actor,
-			)
-		);
-		return $metadata;
-	}
-
-	$response = Http::get( $actor );
-
-	if ( \is_wp_error( $response ) ) {
-		return $response;
-	}
-
-	$metadata = \wp_remote_retrieve_body( $response );
-	$metadata = \json_decode( $metadata, true );
-
-	if ( ! $metadata ) {
-		$metadata = new WP_Error(
-			'activitypub_invalid_json',
-			\__( 'No valid JSON data', 'activitypub' ),
-			array(
-				'status' => 400,
-				'actor'  => $actor,
-			)
-		);
-		return $metadata;
-	}
-
-	\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
-
-	return $metadata;
+	return Http::get_remote_object( $actor, $cached );
 }
 
 /**
@@ -215,11 +134,12 @@ function url_to_authorid( $url ) {
 	global $wp_rewrite;
 
 	// Check if url hase the same host.
-	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+	$request_host = \wp_parse_url( $url, \PHP_URL_HOST );
+	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== $request_host && get_option( 'activitypub_old_host' ) !== $request_host ) {
 		return null;
 	}
 
-	// First, check to see if there is a 'author=N' to match against.
+	// First, check to see if there is an 'author=N' to match against.
 	if ( \preg_match( '/[?&]author=(\d+)/i', $url, $values ) ) {
 		return \absint( $values[1] );
 	}
@@ -370,6 +290,15 @@ function is_activitypub_request() {
 }
 
 /**
+ * Check if content negotiation is allowed for a request.
+ *
+ * @return bool True if content negotiation is allowed, false otherwise.
+ */
+function should_negotiate_content() {
+	return Query::get_instance()->should_negotiate_content();
+}
+
+/**
  * Check if a post is disabled for ActivityPub.
  *
  * This function checks if the post type supports ActivityPub and if the post is set to be local.
@@ -408,57 +337,71 @@ function is_post_disabled( $post ) {
 }
 
 /**
+ * This function checks if a user is enabled for ActivityPub.
+ *
+ * @param int|string $user_id The user ID.
+ * @return boolean True if the user is enabled, false otherwise.
+ */
+function user_can_activitypub( $user_id ) {
+	if ( ! is_numeric( $user_id ) ) {
+		return false;
+	}
+
+	switch ( $user_id ) {
+		case Actors::APPLICATION_USER_ID:
+			$enabled = true; // Application user is always enabled.
+			break;
+
+		case Actors::BLOG_USER_ID:
+			$enabled = ! is_user_type_disabled( 'blog' );
+			break;
+
+		default:
+			if ( ! \get_user_by( 'id', $user_id ) ) {
+				$enabled = false;
+				break;
+			}
+
+			if ( is_user_type_disabled( 'user' ) ) {
+				$enabled = false;
+				break;
+			}
+
+			$enabled = \user_can( $user_id, 'activitypub' );
+	}
+
+	/**
+	 * Allow plugins to disable users for ActivityPub.
+	 *
+	 * @deprecated 5.7.0 Use the `activitypub_user_can_activitypub` filter instead.
+	 *
+	 * @param boolean $disabled True if the user is disabled, false otherwise.
+	 * @param int     $user_id  The user ID.
+	 */
+	$enabled = ! \apply_filters_deprecated( 'activitypub_is_user_disabled', array( ! $enabled, $user_id ), '5.7.0', 'activitypub_user_can_activitypub' );
+
+	/**
+	 * Allow plugins to enable/disable users for ActivityPub.
+	 *
+	 * @param boolean $enabled True if the user is enabled, false otherwise.
+	 * @param int     $user_id The user ID.
+	 */
+	return apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
+}
+
+/**
  * This function checks if a user is disabled for ActivityPub.
+ *
+ * @deprecated 5.7.0 Use the `user_can_activitypub` function instead.
  *
  * @param int $user_id The user ID.
  *
  * @return boolean True if the user is disabled, false otherwise.
  */
 function is_user_disabled( $user_id ) {
-	$disabled = false;
+	_deprecated_function( __FUNCTION__, 'unreleased', 'user_can_activitypub' );
 
-	switch ( $user_id ) {
-		// if the user is the application user, it's always enabled.
-		case \Activitypub\Collection\Actors::APPLICATION_USER_ID:
-			$disabled = false;
-			break;
-		// if the user is the blog user, it's only enabled in single-user mode.
-		case \Activitypub\Collection\Actors::BLOG_USER_ID:
-			if ( is_user_type_disabled( 'blog' ) ) {
-				$disabled = true;
-				break;
-			}
-
-			$disabled = false;
-			break;
-		// if the user is any other user, it's enabled if it can publish posts.
-		default:
-			if ( ! \get_user_by( 'id', $user_id ) ) {
-				$disabled = true;
-				break;
-			}
-
-			if ( is_user_type_disabled( 'user' ) ) {
-				$disabled = true;
-				break;
-			}
-
-			if ( ! \user_can( $user_id, 'activitypub' ) ) {
-				$disabled = true;
-				break;
-			}
-
-			$disabled = false;
-			break;
-	}
-
-	/**
-	 * Allow plugins to disable users for ActivityPub.
-	 *
-	 * @param boolean $disabled True if the user is disabled, false otherwise.
-	 * @param int     $user_id  The User-ID.
-	 */
-	return apply_filters( 'activitypub_is_user_disabled', $disabled, $user_id );
+	return ! user_can_activitypub( $user_id );
 }
 
 /**
@@ -553,17 +496,6 @@ function is_single_user() {
  * @return boolean True if the site supports the block editor, false otherwise.
  */
 function site_supports_blocks() {
-	if ( \version_compare( \get_bloginfo( 'version' ), '5.9', '<' ) ) {
-		return false;
-	}
-
-	if (
-		! \function_exists( 'register_block_type_from_metadata' ) ||
-		! \function_exists( 'do_blocks' )
-	) {
-		return false;
-	}
-
 	/**
 	 * Allow plugins to disable block editor support,
 	 * thus disabling blocks registered by the ActivityPub plugin.
@@ -581,7 +513,7 @@ function site_supports_blocks() {
  * @return boolean True if the data is JSON, false otherwise.
  */
 function is_json( $data ) {
-	return \is_array( \json_decode( $data, true ) ) ? true : false;
+	return \is_array( \json_decode( $data, true ) );
 }
 
 /**
@@ -596,21 +528,6 @@ function is_blog_public() {
 	 * @param bool $public Whether the blog is public.
 	 */
 	return (bool) apply_filters( 'activitypub_is_blog_public', \get_option( 'blog_public', 1 ) );
-}
-
-/**
- * Sanitize a URL.
- *
- * @param string $value The URL to sanitize.
- *
- * @return string|null The sanitized URL or null if invalid.
- */
-function sanitize_url( $value ) {
-	if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
-		return null;
-	}
-
-	return esc_url_raw( $value );
 }
 
 /**
@@ -722,7 +639,7 @@ function get_active_users( $duration = 1 ) {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
+	if ( ! user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 		return (int) $count;
 	}
 
@@ -754,7 +671,7 @@ function get_total_users() {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
+	if ( ! user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 		return (int) $users;
 	}
 
@@ -909,7 +826,6 @@ function set_wp_object_state( $wp_object, $state ) {
 		 * Allow plugins to mark WordPress objects as federated.
 		 *
 		 * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
-		 * @param string               $state     The state of the object.
 		 */
 		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
 	}
@@ -933,6 +849,7 @@ function get_wp_object_state( $wp_object ) {
 		/**
 		 * Allow plugins to get the federation state of a WordPress object.
 		 *
+		 * @param false                $state     The state of the object.
 		 * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
 		 */
 		return \apply_filters( 'activitypub_get_wp_object_state', false, $wp_object );
@@ -949,12 +866,8 @@ function get_wp_object_state( $wp_object ) {
  * @return string The description of the post type.
  */
 function get_post_type_description( $post_type ) {
-	$description = '';
-
 	switch ( $post_type->name ) {
 		case 'post':
-			$description = '';
-			break;
 		case 'page':
 			$description = '';
 			break;
@@ -962,6 +875,7 @@ function get_post_type_description( $post_type ) {
 			$description = ' - ' . __( 'The attachments that you have uploaded to a post (images, videos, documents or other files).', 'activitypub' );
 			break;
 		default:
+			$description = '';
 			if ( ! empty( $post_type->description ) ) {
 				$description = ' - ' . $post_type->description;
 			}
@@ -970,8 +884,9 @@ function get_post_type_description( $post_type ) {
 	/**
 	 * Allow plugins to get the description of a post type.
 	 *
-	 * @param string        $description The description of the post type.
-	 * @param \WP_Post_Type $post_type   The post type object.
+	 * @param string        $description    The description of the post type.
+	 * @param string        $post_type_name The post type name.
+	 * @param \WP_Post_Type $post_type      The post type object.
 	 */
 	return apply_filters( 'activitypub_post_type_description', $description, $post_type->name, $post_type );
 }
@@ -1079,11 +994,10 @@ function get_comment_ancestors( $comment ) {
  *
  * @param string $formatted Converted number in string format.
  * @param float  $number    The number to convert based on locale.
- * @param int    $decimals  Precision of the number of decimal places.
  *
  * @return string Converted number in string format.
  */
-function custom_large_numbers( $formatted, $number, $decimals ) {
+function custom_large_numbers( $formatted, $number ) {
 	global $wp_locale;
 
 	$decimals      = 0;
@@ -1105,9 +1019,6 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 	} else { // At least a billion.
 		return \number_format( $number / 1000000000, $decimals, $decimal_point, $thousands_sep ) . 'B';
 	}
-
-	// Default fallback. We should not get here.
-	return $formatted;
 }
 
 /**
@@ -1520,14 +1431,7 @@ function get_upload_baseurl() {
  * @return boolean True if Authorized-Fetch is enabled, false otherwise.
  */
 function use_authorized_fetch() {
-	$use = false;
-
-	// Prefer the constant over the option.
-	if ( \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
-		$use = ACTIVITYPUB_AUTHORIZED_FETCH;
-	} else {
-		$use = (bool) \get_option( 'activitypub_authorized_fetch', '0' );
-	}
+	$use = (bool) \get_option( 'activitypub_authorized_fetch' );
 
 	/**
 	 * Filters whether to use Authorized-Fetch.
@@ -1567,14 +1471,23 @@ function is_self_ping( $id ) {
 /**
  * Add an object to the outbox.
  *
- * @param mixed   $data               The object to add to the outbox.
- * @param string  $activity_type      The type of the Activity.
- * @param integer $user_id            The User-ID.
- * @param string  $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+ * @param mixed       $data               The object to add to the outbox.
+ * @param string|null $activity_type      Optional. The type of the Activity or null if `$data` is an Activity. Default null.
+ * @param integer     $user_id            Optional. The User-ID. Default 0.
+ * @param string      $content_visibility Optional. The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`. Default null.
  *
  * @return boolean|int The ID of the outbox item or false on failure.
  */
-function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content_visibility = null ) {
+function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_visibility = null ) {
+	// If the user is disabled, fall back to the blog user when available.
+	if ( ! user_can_activitypub( $user_id ) ) {
+		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
+			$user_id = Actors::BLOG_USER_ID;
+		} else {
+			return false;
+		}
+	}
+
 	$transformer = Transformer_Factory::get_transformer( $data );
 
 	if ( ! $transformer || is_wp_error( $transformer ) ) {
@@ -1587,22 +1500,18 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 		$content_visibility = $transformer->get_content_visibility();
 	}
 
-	$activity_object = $transformer->to_object();
+	if ( $activity_type ) {
+		$activity = $transformer->to_activity( $activity_type );
+		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+	} else {
+		$activity = $transformer->to_object();
+	}
 
-	if ( ! $activity_object || \is_wp_error( $activity_object ) ) {
+	if ( ! $activity || \is_wp_error( $activity ) ) {
 		return false;
 	}
 
-	// If the user is disabled, fall back to the blog user when available.
-	if ( is_user_disabled( $user_id ) ) {
-		if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
-			return false;
-		} else {
-			$user_id = Actors::BLOG_USER_ID;
-		}
-	}
-
-	$outbox_activity_id = Outbox::add( $activity_object, $activity_type, $user_id, $content_visibility );
+	$outbox_activity_id = Outbox::add( $activity, $user_id, $content_visibility );
 
 	if ( ! $outbox_activity_id ) {
 		return false;
@@ -1611,12 +1520,12 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 	/**
 	 * Action triggered after an object has been added to the outbox.
 	 *
-	 * @param int                               $outbox_activity_id The ID of the outbox item.
-	 * @param \Activitypub\Activity\Base_Object $activity_object    The activity object.
-	 * @param int                               $user_id            The User-ID.
-	 * @param string                            $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+	 * @param int      $outbox_activity_id The ID of the outbox item.
+	 * @param Activity $activity           The activity object.
+	 * @param int      $user_id            The User-ID.
+	 * @param string   $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
 	 */
-	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity_object, $user_id, $content_visibility );
+	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity, $user_id, $content_visibility );
 
 	set_wp_object_state( $data, 'federated' );
 
@@ -1638,52 +1547,29 @@ function is_activity( $data ) {
 	 *
 	 * @param array $types The activity types.
 	 */
-	$types = apply_filters(
-		'activitypub_activity_types',
-		array(
-			'Accept',
-			'Add',
-			'Announce',
-			'Arrive',
-			'Block',
-			'Create',
-			'Delete',
-			'Dislike',
-			'Follow',
-			'Flag',
-			'Ignore',
-			'Invite',
-			'Join',
-			'Leave',
-			'Like',
-			'Listen',
-			'Move',
-			'Offer',
-			'Read',
-			'Reject',
-			'Remove',
-			'TentativeAccept',
-			'TentativeReject',
-			'Travel',
-			'Undo',
-			'Update',
-			'View',
-		)
-	);
+	$types = apply_filters( 'activitypub_activity_types', Activity::TYPES );
 
-	if ( is_string( $data ) ) {
-		return in_array( $data, $types, true );
-	}
+	return _is_type_of( $data, $types );
+}
 
-	if ( is_array( $data ) && isset( $data['type'] ) ) {
-		return in_array( $data['type'], $types, true );
-	}
+/**
+ * Check if an `$data` is an Activity Object.
+ *
+ * @see https://www.w3.org/TR/activitystreams-vocabulary/#object-types
+ *
+ * @param array|object|string $data The data to check.
+ *
+ * @return boolean True if the `$data` is an Activity Object, false otherwise.
+ */
+function is_activity_object( $data ) {
+	/**
+	 * Filters the activity object types.
+	 *
+	 * @param array $types The activity object types.
+	 */
+	$types = \apply_filters( 'activitypub_activity_object_types', Base_Object::TYPES );
 
-	if ( is_object( $data ) && $data instanceof Base_Object ) {
-		return in_array( $data->get_type(), $types, true );
-	}
-
-	return false;
+	return _is_type_of( $data, $types );
 }
 
 /**
@@ -1701,17 +1587,20 @@ function is_actor( $data ) {
 	 *
 	 * @param array $types The actor types.
 	 */
-	$types = apply_filters(
-		'activitypub_actor_types',
-		array(
-			'Application',
-			'Group',
-			'Organization',
-			'Person',
-			'Service',
-		)
-	);
+	$types = apply_filters( 'activitypub_actor_types', Actor::TYPES );
 
+	return _is_type_of( $data, $types );
+}
+
+/**
+ * Private helper to check if $data is of a given type set.
+ *
+ * @param array|object|string $data  The data to check.
+ * @param array               $types The types to check against.
+ *
+ * @return boolean True if $data is of one of the types, false otherwise.
+ */
+function _is_type_of( $data, $types ) {
 	if ( is_string( $data ) ) {
 		return in_array( $data, $types, true );
 	}
@@ -1720,9 +1609,21 @@ function is_actor( $data ) {
 		return in_array( $data['type'], $types, true );
 	}
 
-	if ( is_object( $data ) && $data instanceof Base_Object ) {
+	if ( $data instanceof Base_Object ) {
 		return in_array( $data->get_type(), $types, true );
 	}
 
 	return false;
+}
+
+/**
+ * Get an ActivityPub embed HTML for a URL.
+ *
+ * @param string  $url        The URL to get the embed for.
+ * @param boolean $inline_css Whether to inline CSS. Default true.
+ *
+ * @return string|false The embed HTML or false if not found.
+ */
+function get_embed_html( $url, $inline_css = true ) {
+	return Embed::get_html( $url, $inline_css );
 }

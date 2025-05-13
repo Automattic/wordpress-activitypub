@@ -12,9 +12,16 @@ namespace Activitypub\Transformer;
  */
 class Activity_Object extends Base {
 	/**
+	 * The Activity Object.
+	 *
+	 * @var \Activitypub\Activity\Activity
+	 */
+	protected $item;
+
+	/**
 	 * Transform the WordPress Object into an ActivityPub Object.
 	 *
-	 * @return Base_Object The ActivityPub Object.
+	 * @return \Activitypub\Activity\Base_Object|\WP_Error
 	 */
 	public function to_object() {
 		$activity_object = $this->transform_object_properties( $this->item );
@@ -23,9 +30,7 @@ class Activity_Object extends Base {
 			return $activity_object;
 		}
 
-		$activity_object = $this->set_audience( $activity_object );
-
-		return $activity_object;
+		return $this->set_audience( $activity_object );
 	}
 
 	/**
@@ -55,9 +60,9 @@ class Activity_Object extends Base {
 		/**
 		 * Filter the mentions in the post content.
 		 *
-		 * @param array   $mentions The mentions.
-		 * @param string  $content  The post content.
-		 * @param WP_Post $post     The post object.
+		 * @param array                          $mentions The mentions.
+		 * @param string                         $content  The post content.
+		 * @param \Activitypub\Activity\Activity $item     The Activity object.
 		 *
 		 * @return array The filtered mentions.
 		 */

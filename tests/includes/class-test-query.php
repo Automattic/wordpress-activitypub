@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Outbox;
 use Activitypub\Query;
 use WP_UnitTestCase;
 
@@ -15,7 +16,7 @@ use WP_UnitTestCase;
  *
  * @coversDefaultClass \Activitypub\Query
  */
-class Test_Query extends WP_UnitTestCase {
+class Test_Query extends \WP_UnitTestCase {
 	/**
 	 * Test user ID.
 	 *
@@ -158,6 +159,11 @@ class Test_Query extends WP_UnitTestCase {
 
 		// Test with ActivityPub query var.
 		Query::get_instance()->__destruct();
+		$_GET['activitypub'] = '';
+		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
+		unset( $_GET['activitypub'] );
+
+		Query::get_instance()->__destruct();
 		$this->go_to( get_permalink( self::$post_id ) );
 		set_query_var( 'activitypub', '1' );
 		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
@@ -260,6 +266,29 @@ class Test_Query extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test user at URL activity object.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_user_at_url_activity_object() {
+		$user_id = self::factory()->user->create(
+			array(
+				'user_login' => 'testuser',
+				'role'       => 'author',
+			)
+		);
+
+		Query::get_instance()->__destruct();
+		$user   = get_user_by( 'id', $user_id );
+		$at_url = home_url( '/@' . $user->user_login . '/?activitypub' );
+
+		$this->go_to( $at_url );
+		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
+
+		\wp_delete_user( $user_id );
+	}
+
+	/**
 	 * Test user activitypub object.
 	 *
 	 * @covers ::get_activitypub_object
@@ -297,5 +326,77 @@ class Test_Query extends WP_UnitTestCase {
 		delete_post_meta( self::$post_id, 'activitypub_content_visibility' );
 		$this->go_to( get_permalink( self::$post_id ) );
 		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
+	}
+
+	/**
+	 * Test outbox item visibility.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_outbox_item_visibility() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = \current(
+			\get_posts(
+				array(
+					'post_type'      => Outbox::POST_TYPE,
+					'posts_per_page' => 1,
+					'post_status'    => 'pending',
+					'orderby'        => 'date',
+					'order'          => 'DESC',
+				)
+			)
+		);
+
+		Query::get_instance()->__destruct();
+		$this->go_to( get_permalink( $outbox_item->ID ) );
+		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
+
+		// Private Activity.
+		\update_post_meta( $outbox_item->ID, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( get_permalink( $outbox_item->ID ) );
+		$this->assertNull( Query::get_instance()->get_activitypub_object() );
+
+		// Private Activity Type.
+		\update_post_meta( $outbox_item->ID, '_activitypub_activity_type', 'Delete' );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( get_permalink( $outbox_item->ID ) );
+		$this->assertNull( Query::get_instance()->get_activitypub_object() );
+
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test should_negotiate_content method.
+	 *
+	 * @covers ::should_negotiate_content
+	 */
+	public function test_should_negotiate_content() {
+		\add_option( 'permalink_structure', '/%postname%/' );
+
+		$this->assertTrue( Query::get_instance()->should_negotiate_content() );
+
+		\update_option( 'activitypub_content_negotiation', '0' );
+		$_SERVER['REQUEST_URI'] = get_permalink( self::$post_id );
+		$this->assertFalse( Query::get_instance()->should_negotiate_content() );
+
+		\update_option( 'activitypub_content_negotiation', '1' );
+
+		$_SERVER['REQUEST_URI'] = home_url( '/?p=' . self::$post_id );
+		$this->assertTrue( Query::get_instance()->should_negotiate_content() );
+
+		unset( $_SERVER['REQUEST_URI'] );
+
+		\update_option( 'activitypub_content_negotiation', '0' );
+
+		$_SERVER['REQUEST_URI'] = home_url( '/?author=' . self::$user_id );
+		$this->assertTrue( Query::get_instance()->should_negotiate_content() );
+
+		unset( $_SERVER['REQUEST_URI'] );
+
+		\delete_option( 'activitypub_content_negotiation' );
+		\delete_option( 'permalink_structure' );
 	}
 }

@@ -7,6 +7,10 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Extra_Fields;
+use Activitypub\Model\Blog;
+
 /**
  * Class to handle all blog settings fields and callbacks.
  */
@@ -63,10 +67,26 @@ class Blog_Settings_Fields {
 			array( 'label_for' => 'activitypub_blog_description' )
 		);
 
+		\add_settings_field(
+			'activitypub_notifications',
+			\esc_html__( 'Email Notifications', 'activitypub' ),
+			array( self::class, 'notifications_callback' ),
+			'activitypub_blog_settings',
+			'activitypub_blog_profile'
+		);
+
 		add_settings_field(
 			'activitypub_extra_fields',
 			__( 'Extra Fields', 'activitypub' ),
 			array( self::class, 'extra_fields_callback' ),
+			'activitypub_blog_settings',
+			'activitypub_blog_profile'
+		);
+
+		add_settings_field(
+			'activitypub_blog_user_also_known_as',
+			__( 'Account Aliases', 'activitypub' ),
+			array( self::class, 'also_known_as_callback' ),
 			'activitypub_blog_settings',
 			'activitypub_blog_profile'
 		);
@@ -78,7 +98,7 @@ class Blog_Settings_Fields {
 	public static function avatar_callback() {
 		?>
 		<?php if ( has_site_icon() ) : ?>
-			<p><img src="<?php echo esc_url( get_site_icon_url( '50' ) ); ?>" alt="" /></p>
+			<p><img src="<?php echo esc_url( get_site_icon_url( 50 ) ); ?>" alt="" /></p>
 		<?php endif; ?>
 		<p class="description">
 			<?php
@@ -120,6 +140,8 @@ class Blog_Settings_Fields {
 			data-choose-text="<?php esc_attr_e( 'Choose a Header Image', 'activitypub' ); ?>"
 			data-update-text="<?php esc_attr_e( 'Change Header Icon', 'activitypub' ); ?>"
 			data-update="<?php esc_attr_e( 'Set as Header Image', 'activitypub' ); ?>"
+			data-width="1500"
+			data-height="500"
 			data-state="<?php echo esc_attr( (int) get_option( 'activitypub_header_image', 0 ) ); ?>">
 			<?php if ( (int) get_option( 'activitypub_header_image', 0 ) ) : ?>
 				<?php esc_html_e( 'Change Header Image', 'activitypub' ); ?>
@@ -143,7 +165,7 @@ class Blog_Settings_Fields {
 	public static function profile_id_callback() {
 		?>
 		<label for="activitypub_blog_identifier">
-			<input id="activitypub_blog_identifier" class="blog-user-identifier" name="activitypub_blog_identifier" type="text" value="<?php echo esc_attr( get_option( 'activitypub_blog_identifier', \Activitypub\Model\Blog::get_default_username() ) ); ?>" />
+			<input id="activitypub_blog_identifier" class="blog-user-identifier" name="activitypub_blog_identifier" type="text" value="<?php echo esc_attr( get_option( 'activitypub_blog_identifier', Blog::get_default_username() ) ); ?>" />
 			@<?php echo esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>
 		</label>
 		<p class="description">
@@ -178,6 +200,34 @@ class Blog_Settings_Fields {
 	}
 
 	/**
+	 * Notifications field callback.
+	 */
+	public static function notifications_callback() {
+		?>
+		<fieldset id="activitypub-notifications">
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_blog_user_mailer_new_follower" id="activitypub_blog_user_mailer_new_follower" value="1" <?php \checked( '1', \get_option( 'activitypub_blog_user_mailer_new_follower', '1' ) ); ?> />
+					<?php \esc_html_e( 'New Followers', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_blog_user_mailer_new_dm" id="activitypub_blog_user_mailer_new_dm" value="1" <?php \checked( '1', \get_option( 'activitypub_blog_user_mailer_new_dm', '1' ) ); ?> />
+					<?php \esc_html_e( 'Direct Messages', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_blog_user_mailer_new_mention" id="activitypub_blog_user_mailer_new_mention" value="1" <?php \checked( '1', \get_option( 'activitypub_blog_user_mailer_new_mention', '1' ) ); ?> />
+					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
+				</label>
+			</p>
+		</fieldset>
+		<?php
+	}
+
+	/**
 	 * Extra fields callback.
 	 */
 	public static function extra_fields_callback() {
@@ -188,7 +238,7 @@ class Blog_Settings_Fields {
 
 		<table class="widefat striped activitypub-extra-fields" role="presentation" style="margin: 15px 0;">
 		<?php
-		$extra_fields = \Activitypub\Collection\Extra_Fields::get_actor_fields( \Activitypub\Collection\Actors::BLOG_USER_ID );
+		$extra_fields = Extra_Fields::get_actor_fields( Actors::BLOG_USER_ID );
 
 		if ( empty( $extra_fields ) ) :
 			?>
@@ -214,13 +264,36 @@ class Blog_Settings_Fields {
 		<?php endforeach; ?>
 		</table>
 
-		<p>
+		<p class="extra-fields-nav">
 			<a href="<?php echo esc_url( admin_url( '/post-new.php?post_type=ap_extrafield_blog' ) ); ?>" class="button">
 				<?php esc_html_e( 'Add new', 'activitypub' ); ?>
 			</a>
 			<a href="<?php echo esc_url( admin_url( '/edit.php?post_type=ap_extrafield_blog' ) ); ?>">
 				<?php esc_html_e( 'Manage all', 'activitypub' ); ?>
 			</a>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Also Known As field callback.
+	 */
+	public static function also_known_as_callback() {
+		$also_known_as = \get_option( 'activitypub_blog_user_also_known_as' );
+		?>
+		<label for="activitypub_blog_user_also_known_as">
+			<textarea
+				class="large-text"
+				id="activitypub_blog_user_also_known_as"
+				name="activitypub_blog_user_also_known_as"
+				rows="5"
+			><?php echo esc_textarea( implode( PHP_EOL, (array) $also_known_as ) ); ?></textarea>
+		</label>
+		<p class="description">
+			<?php esc_html_e( 'If you’re moving from another account to this one, you’ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn’t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
+		</p>
+		<p class="description">
+			<?php esc_html_e( 'Enter one URL per line.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

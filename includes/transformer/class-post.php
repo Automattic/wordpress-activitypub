@@ -7,12 +7,12 @@
 
 namespace Activitypub\Transformer;
 
-use WP_Post;
-use Activitypub\Shortcodes;
-use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
 use Activitypub\Collection\Interactions;
+use Activitypub\Http;
+use Activitypub\Model\Blog;
+use Activitypub\Shortcodes;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\object_to_uri;
@@ -45,8 +45,6 @@ class Post extends Base {
 
 	/**
 	 * Transforms the WP_Post object to an ActivityPub Object
-	 *
-	 * @see \Activitypub\Activity\Base_Object
 	 *
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
@@ -277,10 +275,16 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
-		// Remove attachments from drafts.
-		if ( 'draft' === \get_post_status( $this->item ) ) {
+		/*
+		 * Remove attachments from the Fediverse if a post was federated and then set back to draft.
+		 * Except in preview mode, where we want to show attachments.
+		 */
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return array();
 		}
+
+		// phpcs:ignore Universal.Operators.DisallowShortTernary
+		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true ) ?: \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
 
 		/**
 		 * Filters the maximum number of media attachments allowed in a post.
@@ -291,12 +295,7 @@ class Post extends Base {
 		 *
 		 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
 		 */
-		$max_media = \intval(
-			\apply_filters(
-				'activitypub_max_image_attachments',
-				\get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
-			)
-		);
+		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
 
 		$media = array(
 			'image' => array(),
@@ -306,7 +305,7 @@ class Post extends Base {
 		$id    = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+		if ( \has_post_thumbnail( $id ) ) {
 			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
 
@@ -315,7 +314,7 @@ class Post extends Base {
 		if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
 			$media = $this->get_block_attachments( $media, $max_media );
 		} else {
-			$media = $this->get_classic_editor_images( $media, $max_media );
+			$media = $this->get_classic_editor_image_embeds( $media, $max_media );
 		}
 
 		$media      = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
@@ -326,8 +325,8 @@ class Post extends Base {
 		/**
 		 * Filter the attachment IDs for a post.
 		 *
-		 * @param array   $media           The media array grouped by type.
-		 * @param WP_Post $this->item The post object.
+		 * @param array    $media The media array grouped by type.
+		 * @param \WP_Post $item  The post object.
 		 *
 		 * @return array The filtered attachment IDs.
 		 */
@@ -338,8 +337,8 @@ class Post extends Base {
 		/**
 		 * Filter the attachments for a post.
 		 *
-		 * @param array   $attachments     The attachments.
-		 * @param WP_Post $this->item The post object.
+		 * @param array    $attachments The attachments.
+		 * @param \WP_Post $item        The post object.
 		 *
 		 * @return array The filtered attachments.
 		 */
@@ -415,12 +414,16 @@ class Post extends Base {
 		$post_tags = \get_the_tags( $this->item->ID );
 		if ( $post_tags ) {
 			foreach ( $post_tags as $post_tag ) {
-				$tag    = array(
+				// Tag can be empty.
+				if ( ! $post_tag ) {
+					continue;
+				}
+
+				$tags[] = array(
 					'type' => 'Hashtag',
 					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
 					'name' => esc_hashtag( $post_tag->name ),
 				);
-				$tags[] = $tag;
 			}
 		}
 
@@ -482,10 +485,10 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		add_filter( 'activitypub_reply_block', '__return_empty_string' );
+		\add_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		// Remove Content from drafts.
-		if ( 'draft' === \get_post_status( $this->item ) ) {
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
@@ -496,11 +499,12 @@ class Post extends Base {
 		 *
 		 * Example: if a plugin adds a filter to `the_content` to add a button to the end of posts, it can also remove that filter here.
 		 *
-		 * @param WP_Post $post The post object.
+		 * @param \WP_Post $post The post object.
 		 */
-		do_action( 'activitypub_before_get_content', $post );
+		\do_action( 'activitypub_before_get_content', $post );
 
-		add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ), 10, 2 );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post    = $this->item;
@@ -525,15 +529,76 @@ class Post extends Base {
 		/**
 		 * Filters the post content before it is transformed for ActivityPub.
 		 *
-		 * @param string  $content The post content to be transformed.
-		 * @param WP_Post $post    The post object being transformed.
+		 * @param string   $content The post content to be transformed.
+		 * @param \WP_Post $post    The post object being transformed.
 		 */
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
 
 		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
 
+		// Get rid of the reply block filter.
+		\remove_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ) );
+		\remove_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ) );
+		\remove_filter( 'activitypub_reply_block', '__return_empty_string' );
+
 		return $content;
+	}
+
+	/**
+	 * Generate HTML @ link for reply block.
+	 *
+	 * @param string $block_content The block content.
+	 * @param array  $block         The block data.
+	 *
+	 * @return string The HTML @ link.
+	 */
+	public function generate_reply_link( $block_content, $block ) {
+		// Return empty string if no URL is provided.
+		if ( empty( $block['attrs']['url'] ) ) {
+			return '';
+		}
+
+		$url = $block['attrs']['url'];
+
+		// Try to get ActivityPub representation. Is likely already cached.
+		$object = Http::get_remote_object( $url );
+		if ( \is_wp_error( $object ) ) {
+			return '';
+		}
+
+		$author_url = $object['attributedTo'] ?? '';
+		if ( ! $author_url ) {
+			return '';
+		}
+
+		// Fetch author information.
+		$author = Http::get_remote_object( $author_url );
+		if ( \is_wp_error( $author ) ) {
+			return '';
+		}
+
+		// Get webfinger identifier.
+		$webfinger = '';
+		if ( ! empty( $author['webfinger'] ) ) {
+			$webfinger = $author['webfinger'];
+		} elseif ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
+			// Construct webfinger-style identifier from username and domain.
+			$domain    = \wp_parse_url( $author['url'], PHP_URL_HOST );
+			$webfinger = '@' . $author['preferredUsername'] . '@' . $domain;
+		}
+
+		if ( ! $webfinger ) {
+			return '';
+		}
+
+		// Generate HTML @ link.
+		return \sprintf(
+			'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
+			\esc_url( $url ),
+			\esc_attr( $webfinger ),
+			\esc_html( '@' . strtok( $webfinger, '@' ) )
+		);
 	}
 
 	/**
@@ -544,6 +609,10 @@ class Post extends Base {
 	 * @return string|null The in-reply-to URL of the post.
 	 */
 	protected function get_in_reply_to() {
+		if ( ! site_supports_blocks() ) {
+			return null;
+		}
+
 		$blocks = \parse_blocks( $this->item->post_content );
 
 		foreach ( $blocks as $block ) {
@@ -564,7 +633,7 @@ class Post extends Base {
 	protected function get_published() {
 		$published = \strtotime( $this->item->post_date_gmt );
 
-		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $published );
 	}
 
 	/**
@@ -577,7 +646,7 @@ class Post extends Base {
 		$updated   = \strtotime( $this->item->post_modified_gmt );
 
 		if ( $updated > $published ) {
-			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+			return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $updated );
 		}
 
 		return null;
@@ -592,9 +661,9 @@ class Post extends Base {
 		/**
 		 * Filter the mentions in the post content.
 		 *
-		 * @param array   $mentions The mentions.
-		 * @param string  $content  The post content.
-		 * @param WP_Post $post     The post object.
+		 * @param array    $mentions The mentions.
+		 * @param string   $content  The post content.
+		 * @param \WP_Post $post     The post object.
 		 *
 		 * @return array The filtered mentions.
 		 */
@@ -660,10 +729,10 @@ class Post extends Base {
 			}
 
 			$mime_type         = $enclosure['mediaType'];
-			$mime_type_parts   = \explode( '/', $mime_type );
-			$enclosure['type'] = \ucfirst( $mime_type_parts[0] );
+			$media_type        = \strtok( $mime_type, '/' );
+			$enclosure['type'] = \ucfirst( $media_type );
 
-			switch ( $mime_type_parts[0] ) {
+			switch ( $media_type ) {
 				case 'image':
 					$media['image'][] = $enclosure;
 					break;
@@ -726,7 +795,7 @@ class Post extends Base {
 
 						$found = false;
 						foreach ( $media['image'] as $i => $image ) {
-							if ( $image['id'] === $block['attrs']['id'] ) {
+							if ( isset( $image['id'] ) && $image['id'] === $block['attrs']['id'] ) {
 								$media['image'][ $i ]['alt'] = $alt;
 								$found                       = true;
 								break;
@@ -781,47 +850,22 @@ class Post extends Base {
 	}
 
 	/**
-	 * Get post images from the classic editor.
-	 * Note that audio/video attachments are only supported in the block editor.
+	 * Get image embeds from the classic editor by parsing HTML.
 	 *
 	 * @param array $media      The media array grouped by type.
 	 * @param int   $max_images The maximum number of images to return.
 	 *
 	 * @return array The attachments.
 	 */
-	protected function get_classic_editor_images( $media, $max_images ) {
-		// Max images can't be negative or zero.
-		if ( $max_images <= 0 ) {
-			return array();
-		}
-
-		if ( \count( $media['image'] ) <= $max_images ) {
-			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_embeds( $max_images ) );
-			} else {
-				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_attachments( $max_images ) );
-			}
-		}
-
-		return $media;
-	}
-
-	/**
-	 * Get image embeds from the classic editor by parsing HTML.
-	 *
-	 * @param int $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachments.
-	 */
-	protected function get_classic_editor_image_embeds( $max_images ) {
+	protected function get_classic_editor_image_embeds( $media, $max_images ) {
 		// If someone calls that function directly, bail.
 		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-			return array();
+			return $media;
 		}
 
 		// Max images can't be negative or zero.
 		if ( $max_images <= 0 ) {
-			return array();
+			return $media;
 		}
 
 		$images  = array();
@@ -883,52 +927,19 @@ class Post extends Base {
 			}
 		}
 
-		return $images;
-	}
-
-	/**
-	 * Get image attachments from the classic editor.
-	 * This is imperfect as the contained images aren't necessarily the
-	 * same as the attachments.
-	 *
-	 * @param int $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachment IDs.
-	 */
-	protected function get_classic_editor_image_attachments( $max_images ) {
-		// Max images can't be negative or zero.
-		if ( $max_images <= 0 ) {
-			return array();
+		if ( \count( $media['image'] ) <= $max_images ) {
+			$media['image'] = \array_merge( $media['image'], $images );
 		}
 
-		$images = array();
-		$query  = new \WP_Query(
-			array(
-				'post_parent'    => $this->item->ID,
-				'post_status'    => 'inherit',
-				'post_type'      => 'attachment',
-				'post_mime_type' => 'image',
-				'order'          => 'ASC',
-				'orderby'        => 'menu_order ID',
-				'posts_per_page' => $max_images,
-			)
-		);
-
-		foreach ( $query->get_posts() as $attachment ) {
-			if ( ! \in_array( $attachment->ID, $images, true ) ) {
-				$images[] = array( 'id' => $attachment->ID );
-			}
-		}
-
-		return $images;
+		return $media;
 	}
 
 	/**
 	 * Filter media IDs by object type.
 	 *
-	 * @param array   $media The media array grouped by type.
-	 * @param string  $type  The object type.
-	 * @param WP_Post $item  The post object.
+	 * @param array    $media The media array grouped by type.
+	 * @param string   $type  The object type.
+	 * @param \WP_Post $item  The post object.
 	 *
 	 * @return array The filtered media IDs.
 	 */
@@ -936,8 +947,8 @@ class Post extends Base {
 		/**
 		 * Filter the object type for media attachments.
 		 *
-		 * @param string  $type      The object type.
-		 * @param WP_Post $item The post object.
+		 * @param string   $type      The object type.
+		 * @param \WP_Post $item The post object.
 		 *
 		 * @return string The filtered object type.
 		 */
@@ -962,12 +973,13 @@ class Post extends Base {
 			return $media;
 		}
 
-		$id              = $media['id'];
-		$attachment      = array();
-		$mime_type       = \get_post_mime_type( $id );
-		$mime_type_parts = \explode( '/', $mime_type );
+		$id         = $media['id'];
+		$attachment = array();
+		$mime_type  = \get_post_mime_type( $id );
+		$media_type = \strtok( $mime_type, '/' );
+
 		// Switching on image/audio/video.
-		switch ( $mime_type_parts[0] ) {
+		switch ( $media_type ) {
 			case 'image':
 				$image_size = 'large';
 
@@ -1008,7 +1020,7 @@ class Post extends Base {
 			case 'audio':
 			case 'video':
 				$attachment = array(
-					'type'      => 'Document',
+					'type'      => \ucfirst( $media_type ),
 					'mediaType' => \esc_attr( $mime_type ),
 					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
 					'name'      => \esc_attr( \get_the_title( $id ) ),
@@ -1108,8 +1120,8 @@ class Post extends Base {
 		 * shortcodes like [ap_title] and [ap_content] that are processed during content
 		 * generation.
 		 *
-		 * @param string  $template  The template string containing shortcodes.
-		 * @param WP_Post $item The WordPress post object being transformed.
+		 * @param string   $template  The template string containing shortcodes.
+		 * @param \WP_Post $item The WordPress post object being transformed.
 		 */
 		return apply_filters( 'activitypub_object_content_template', $template, $this->item );
 	}
@@ -1139,13 +1151,29 @@ class Post extends Base {
 	/**
 	 * Get the shares Collection.
 	 *
-	 * @return array The shares collection.
+	 * @return array The Shares collection.
 	 */
 	public function get_shares() {
 		return array(
 			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $this->item->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ),
+		);
+	}
+
+	/**
+	 * Get the preview of the post.
+	 *
+	 * @return array|null The preview of the post or null if the post is not an Article.
+	 */
+	public function get_preview() {
+		if ( 'Article' !== $this->get_type() ) {
+			return null;
+		}
+
+		return array(
+			'type'    => 'Note',
+			'content' => $this->get_summary(),
 		);
 	}
 }

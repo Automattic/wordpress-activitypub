@@ -1,26 +1,278 @@
-name: "Changelog Updated"
+name: 'Changelog entry'
 on:
-  pull_request:
+  pull_request_target:
     # The specific activity types are listed here to include "labeled" and "unlabeled"
     # (which are not included by default for the "pull_request" trigger).
     # This is needed to allow skipping enforcement of the changelog in PRs with specific labels,
     # as defined in the (optional) "skipLabels" property.
-    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+    types: [opened, edited, synchronize, reopened, ready_for_review, labeled, unlabeled]
 
 jobs:
-  # Enforces the update of a changelog file on every pull request.
+  # Enforces the addition of a changelog entry (a file in the .github/changelog directory) every pull request.
   changelog:
     runs-on: ubuntu-latest
     steps:
-      # CHANGELOG.md
-      - uses: dangoslen/changelog-enforcer@v3
+      - name: 'Check for Skip Changelog label, or if the PR is a draft'
+        id: check-skip-label
+        uses: actions/github-script@v7
         with:
-          skipLabels: 'Skip Changelog'
-          versionPattern: '## \\[((v|V)?\\d*\\.\\d*\\.\\d*-?\\w*|unreleased|Unreleased|UNRELEASED|Dev)\\]'
+          script: |
+            const { payload : { pull_request : { number, labels, draft = false, base : { ref } } } } = context;
 
-      # readme.txt
-      - uses: dangoslen/changelog-enforcer@v3
+            // Check for Skip Changelog label
+            core.debug( 'Changelog check: Check for Skip Changelog label' );
+            const skipLabel = 'Skip Changelog';
+            const prLabels = labels.map( label => label.name );
+            const hasSkipLabel = prLabels.includes( skipLabel );
+
+            if ( hasSkipLabel ) {
+              core.info( `Skipping changelog requirement for this PR (#${ number }) because of the "${ skipLabel }" label.` );
+              core.setOutput( 'skip-changelog', 'true' );
+            } else if ( draft ) {
+              core.info( `Skipping changelog requirement for this PR (#${ number }) because it is a draft.` );
+              core.setOutput( 'skip-changelog', 'true' );
+            } else if ( ref !== 'trunk' ) {
+              core.info( `Skipping changelog requirement for this PR (#${ number }) because it is not against the "trunk" branch.` );
+              core.setOutput( 'skip-changelog', 'true' );
+            } else {
+              core.info( `No "${ skipLabel }" label found for PR #${ number }. Will check for changelog file.` );
+              core.setOutput( 'skip-changelog', 'false' );
+            }
+
+      - name: 'Check for changelog file'
+        if: steps.check-skip-label.outputs.skip-changelog != 'true'
+        id: check-changelog-file
+        uses: actions/github-script@v7
         with:
-          changeLogPath: 'readme.txt'
-          skipLabels: 'Skip Changelog'
-          versionPattern: '^=\\s*((v|V)?\\d+\\.\\d+\\.\\d+|Dev)\\s*='
+          script: |
+            const { repo: { owner, repo }, payload : { pull_request : { number } } } = context;
+
+            // Check for changelog file
+            core.debug( `Changelog check: Get list of files modified in ${ owner }/${ repo } #${ number }.` );
+
+            const fileList = [];
+            for await ( const response of github.paginate.iterator( github.rest.pulls.listFiles, {
+                owner,
+                repo,
+                pull_number: +number,
+                per_page: 100,
+            } ) ) {
+                for ( const file of response.data ) {
+                    fileList.push( file.filename );
+                    if ( file.previous_filename ) {
+                        fileList.push( file.previous_filename );
+                    }
+                }
+            }
+
+            const hasChangelogFile = fileList.some( file => {
+                core.debug( `Checking file: ${ file }` );
+                if ( file.startsWith( '.github/changelog' ) ) {
+                    core.info( `Found changelog file: ${ file }` );
+                    return true;
+                }
+                return false;
+            } );
+
+            if ( hasChangelogFile ) {
+                core.info( `PR #${ number } includes a changelog file.` );
+                core.setOutput('has-changelog-file', 'true');
+            } else {
+                core.info( `PR #${ number } does not include a changelog file.` );
+                core.setOutput('has-changelog-file', 'false');
+            }
+
+      - name: 'Check for changelog information in PR body'
+        id: check-pr-body
+        if: steps.check-skip-label.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { repo: { owner, repo }, payload : { pull_request : { number, body } } } = context;
+
+            // Check if the PR body exists.
+            if ( ! body ) {
+              core.info( `PR #${ number } has no description.` );
+              core.setFailed( 'Your PR does not include a changelog file and has no description to extract changelog information from. Please generate a changelog entry manually by running `composer changelog:add`.' );
+              return;
+            }
+
+            // Check if the "Automatically create a changelog entry" checkbox is checked.
+            const autoCreateRegex = /-\s+\[x\]\s+Automatically\s+create\s+a\s+changelog\s+entry\s+from\s+the\s+details\s+below/i;
+            const isAutoCreateChecked = autoCreateRegex.test( body );
+
+            if (! isAutoCreateChecked ) {
+              core.info( `PR #${ number } does not have the "Automatically create a changelog entry" checkbox checked.` );
+              core.setFailed( 'Your PR does not include a changelog file, and does not have the "Automatically create a changelog entry" checkbox checked. Please check the "Automatically create a changelog entry" checkbox and fill in all required information.' );
+              return;
+            }
+
+            core.info( `PR #${ number } has the "Automatically create a changelog entry" checkbox checked. Checking for changelog details...` );
+
+            // Extract all sections.
+            const significanceSection = body.match(/#### Significance[\s\S]*?(?=####|$)/);
+            const typeSection = body.match(/#### Type[\s\S]*?(?=####|$)/);
+            const messageSection = body.match(/#### Message\s*\n+([\s\S]*?)(?=####|<\/details>|$)/);
+
+            // Bail early if any section is missing.
+            if ( ! significanceSection || ! typeSection || ! messageSection ) {
+              core.setFailed( 'Your PR is missing one or more required sections in the changelog details. Please generate a changelog entry manually by running `composer changelog:add`.' );
+              return;
+            }
+
+            // Process significance section.
+            const significanceMatches = Array.from(
+              significanceSection[0].matchAll( /-\s+\[x\]\s+(Patch|Minor|Major)/gi )
+            );
+            if ( significanceMatches.length !== 1 ) {
+              core.setFailed( 'Your PR must have exactly one significance level checked (Patch, Minor, or Major) in the changelog details.' );
+              return;
+            }
+            const significance = significanceMatches[0][1].toLowerCase();
+
+            // Process type section.
+            const typeMatches = Array.from(
+              typeSection[0].matchAll( /-\s+\[x\]\s+(Added|Changed|Deprecated|Removed|Fixed|Security)/gi )
+            );
+            if ( typeMatches.length !== 1 ) {
+              core.setFailed( 'Your PR must have exactly one type checked (Added, Changed, Deprecated, Removed, Fixed, or Security) in the changelog details.' );
+              return;
+            }
+            const type = typeMatches[0][1].toLowerCase();
+
+            // Process message section
+            let changelogMessage = '';
+            if ( messageSection ) {
+              // Get the message and trim whitespace
+              changelogMessage = messageSection[1].trim();
+
+              // If still empty after trimming, fail
+              if ( ! changelogMessage ) {
+                core.setFailed( 'Your PR has an empty changelog message. Please provide a meaningful message in the changelog details.' );
+                return;
+              }
+            }
+
+            // All information is available, output it
+            core.info( `Extracted changelog information - Significance: ${ significance }, Type: ${ type }, Message: ${ changelogMessage }` );
+            core.setOutput( 'significance', significance );
+            core.setOutput( 'type', type );
+            core.setOutput( 'message', changelogMessage );
+            core.setOutput( 'has-changelog-info', 'true' );
+
+      - name: 'Create changelog file from PR description'
+        id: create-changelog-file
+        if: steps.check-skip-label.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true' && steps.check-pr-body.outputs.has-changelog-info == 'true'
+        env:
+          PR_MESSAGE: '${{ steps.check-pr-body.outputs.message }}'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.API_TOKEN_GITHUB }}
+          script: |
+            const { repo: { owner, repo }, payload : { pull_request : { number, head : { ref, repo: head_repo } } } } = context;
+
+            // Get the changelog information from the previous step.
+            const significance = '${{ steps.check-pr-body.outputs.significance }}';
+            const type = '${{ steps.check-pr-body.outputs.type }}';
+
+            // Get the raw message from the previous step and process it.
+            // We need to handle it as a regular string to avoid template literal syntax issues.
+            // The message is passed through environment variables to avoid syntax issues.
+            const rawMessage = process.env.PR_MESSAGE;
+
+            // Ensure the message is not empty.
+            if ( ! rawMessage ) {
+              core.setFailed( 'Changelog message is missing or empty. Please provide a meaningful message in the PR description.' );
+              return;
+            }
+
+            // Process the message to remove HTML comments and preserve special characters.
+            let message = rawMessage
+              // Remove HTML comments.
+              .replace( /<!--[\s\S]*?-->/g, '' )
+              // Trim whitespace.
+              .trim();
+
+            // Create the changelog file content.
+            const content = [
+              `Significance: ${ significance }`,
+              `Type: ${ type }`,
+              '',
+              message,
+              ''
+            ].join( '\n' );
+
+            const path = `.github/changelog/${ number }-from-description`;
+            core.info( `Creating changelog file: ${ path }` );
+
+            // Check if PR is from a fork
+            const isFromFork = head_repo.full_name !== `${owner}/${repo}`;
+
+            if ( isFromFork ) {
+              core.info( 'PR is from a fork, so we cannot create the changelog file automatically.' );
+              // For forks, we cannot create the file automatically, so we add a helpful comment to the PR,
+              // asking the contributor to create the file manually.
+              const commentBody = `👋 Thanks for your contribution!
+
+              I see you have provided all the required changelog information in your PR description. To complete the process, you'll need to create a changelog file in your branch.
+
+              Please create a file named \`.github/changelog/${number}-from-description\` with this content:
+
+              \`\`\`
+              ${content}
+              \`\`\`
+
+              You can do this by either:
+              1. Running \`composer changelog:add\` in your local repository, or
+              2. Creating the file manually with the content above
+
+              Once you've committed and pushed the file to your PR branch, the checks will pass automatically.`;
+
+              // Check for existing comments first
+              let hasExistingComment = false;
+              for await ( const response of github.paginate.iterator( github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: +number,
+                per_page: 100,
+              } ) ) {
+                for ( const comment of response.data ) {
+                  if ( comment.body.includes('👋 Thanks for your contribution!') ) {
+                    hasExistingComment = true;
+                    break;
+                  }
+                }
+                if ( hasExistingComment ) {
+                  core.info( 'A comment already exists, so we will not add another one.' );
+                  break;
+                }
+              }
+
+              // Only post the comment if we haven't posted one before
+              if ( ! hasExistingComment ) {
+                core.info( 'No existing comment found, so we will add a new one.' );
+                await github.rest.issues.createComment( {
+                  owner,
+                  repo,
+                  issue_number: number,
+                  body: commentBody
+                } );
+              }
+              return;
+            }
+
+            try {
+              // For internal PRs, create the file automatically
+              await github.rest.repos.createOrUpdateFileContents( {
+                owner,
+                repo,
+                path,
+                message: 'Add changelog',
+                content: Buffer.from( content ).toString( 'base64' ),
+                branch: ref
+              } );
+
+              core.info( `Successfully created changelog file: ${ path }`);
+            } catch ( error ) {
+              core.setFailed( `Failed to create changelog file: ${ error.message }` );
+            }

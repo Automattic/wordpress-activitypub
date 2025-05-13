@@ -67,8 +67,8 @@ class Replies_Controller extends \WP_REST_Controller {
 						'page' => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
-							'default'     => 1,
 							'minimum'     => 1,
+							// No default so we can differentiate between Collection and CollectionPage requests.
 						),
 					),
 				),
@@ -143,7 +143,7 @@ class Replies_Controller extends \WP_REST_Controller {
 		$page = $request->get_param( 'page' );
 
 		// If the request parameter page is present get the CollectionPage otherwise the Replies collection.
-		if ( $page <= 1 ) {
+		if ( null === $page ) {
 			$response = Replies::get_collection( $wp_object );
 		} else {
 			$response = Replies::get_collection_page( $wp_object, $page );
@@ -167,13 +167,11 @@ class Replies_Controller extends \WP_REST_Controller {
 			$likes = 0;
 		}
 
-		$response = array(
+		return array(
 			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/likes', $wp_object->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => $likes,
 		);
-
-		return $response;
 	}
 
 	/**
@@ -191,13 +189,11 @@ class Replies_Controller extends \WP_REST_Controller {
 			$shares = 0;
 		}
 
-		$response = array(
+		return array(
 			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $wp_object->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => $shares,
 		);
-
-		return $response;
 	}
 
 	/**

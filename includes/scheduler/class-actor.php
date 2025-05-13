@@ -39,6 +39,7 @@ class Actor {
 		// Profile updates for user options.
 		if ( ! is_user_type_disabled( 'user' ) ) {
 			\add_action( 'profile_update', array( self::class, 'user_update' ) );
+			\add_action( 'added_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
 			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
 		}
@@ -62,13 +63,16 @@ class Actor {
 			return;
 		}
 
+		$blog_prefix = $GLOBALS['wpdb']->get_blog_prefix();
+
 		// The user meta fields that affect a profile.
 		$fields = array(
-			'activitypub_description',
-			'activitypub_header_image',
+			$blog_prefix . 'activitypub_description',
+			$blog_prefix . 'activitypub_header_image',
+			$blog_prefix . 'activitypub_icon',
 			'description',
-			'user_url',
 			'display_name',
+			'user_url',
 		);
 
 		if ( in_array( $meta_key, $fields, true ) ) {
@@ -110,10 +114,12 @@ class Actor {
 	 * @param \WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
-		if ( Extra_Fields::USER_POST_TYPE === $post->post_type ) {
-			self::schedule_profile_update( $post->post_author );
-		} elseif ( Extra_Fields::BLOG_POST_TYPE === $post->post_type ) {
-			self::schedule_profile_update( Actors::BLOG_USER_ID );
+		if ( $post instanceof \WP_Post ) {
+			if ( Extra_Fields::USER_POST_TYPE === $post->post_type ) {
+				self::schedule_profile_update( $post->post_author );
+			} elseif ( Extra_Fields::BLOG_POST_TYPE === $post->post_type ) {
+				self::schedule_profile_update( Actors::BLOG_USER_ID );
+			}
 		}
 	}
 
@@ -127,6 +133,14 @@ class Actor {
 			return;
 		}
 
-		add_to_outbox( Actors::get_by_id( $user_id ), 'Update', $user_id );
+		$actor = Actors::get_by_id( $user_id );
+
+		if ( ! $actor || \is_wp_error( $actor ) ) {
+			return;
+		}
+
+		$actor->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, time() ) );
+
+		add_to_outbox( $actor, 'Update', $user_id );
 	}
 }

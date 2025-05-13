@@ -1,0 +1,166 @@
+/**
+ * ActivityPub embed styles.
+ */
+
+.activitypub-embed {
+	background: #fff;
+	border: 1px solid #e6e6e6;
+	border-radius: 12px;
+	padding: 0;
+	max-width: 100%;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.activitypub-reply-block .activitypub-embed {
+	margin: 1em 0;
+}
+
+.activitypub-embed-header {
+	padding: 15px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.activitypub-embed-header img {
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+}
+
+.activitypub-embed-header-text {
+	flex-grow: 1;
+}
+
+.activitypub-embed-header-text h2 {
+	color: #000;
+	font-size: 15px;
+	font-weight: 600;
+	margin: 0;
+	padding: 0;
+}
+
+.activitypub-embed-header-text .ap-account {
+	color: #687684;
+	font-size: 14px;
+	text-decoration: none;
+}
+
+.activitypub-embed-content {
+	padding: 0 15px 15px;
+}
+
+.activitypub-embed-content .ap-title {
+	font-size: 23px;
+	font-weight: 600;
+	margin: 0 0 10px;
+	padding: 0;
+	color: #000;
+}
+
+.activitypub-embed-content .ap-subtitle {
+	font-size: 15px;
+	color: #000;
+	margin: 0 0 15px;
+}
+
+.activitypub-embed-content .ap-preview {
+	border: 1px solid #e6e6e6;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.activitypub-embed-content .ap-preview img {
+	width: 100%;
+	height: auto;
+	display: block;
+}
+
+.activitypub-embed-content .ap-preview {
+	border-radius: 8px;
+	box-sizing: border-box;
+	display: grid;
+	gap: 2px;
+	grid-template-columns: 1fr 1fr;
+	grid-template-rows: 1fr 1fr;
+	margin: 1em 0 0;
+	min-height: 64px;
+	overflow: hidden;
+	position: relative;
+	width: 100%;
+}
+
+.activitypub-embed-content .ap-preview.layout-1 {
+	grid-template-columns: 1fr;
+	grid-template-rows: 1fr;
+}
+
+.activitypub-embed-content .ap-preview.layout-2 {
+	aspect-ratio: auto;
+	grid-template-rows: 1fr;
+	height: auto;
+}
+
+.activitypub-embed-content .ap-preview.layout-3 > img:first-child {
+	grid-row: span 2;
+}
+
+.activitypub-embed-content .ap-preview img {
+	border: 0;
+	box-sizing: border-box;
+	display: inline-block;
+	height: 100%;
+	object-fit: cover;
+	overflow: hidden;
+	position: relative;
+	width: 100%;
+}
+
+.activitypub-embed-content .ap-preview video,
+.activitypub-embed-content .ap-preview audio {
+	max-width: 100%;
+	display: block;
+	grid-column: 1 / span 2;
+}
+
+.activitypub-embed-content .ap-preview audio {
+	width: 100%;
+}
+
+.activitypub-embed-content .ap-preview-text {
+	padding: 15px;
+}
+
+.activitypub-embed-meta {
+	padding: 15px;
+	border-top: 1px solid #e6e6e6;
+	color: #687684;
+	font-size: 13px;
+	display: flex;
+	gap: 15px;
+}
+
+.activitypub-embed-meta .ap-stat {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+@media only screen and (max-width: 399px) {
+	.activitypub-embed-meta span.ap-stat {
+		display: none !important;
+	}
+}
+
+.activitypub-embed-meta a.ap-stat {
+	color: inherit;
+	text-decoration: none;
+}
+
+.activitypub-embed-meta strong {
+	font-weight: 600;
+	color: #000;
+}
+
+.activitypub-embed-meta .ap-stat-label {
+	color: #687684;
+}

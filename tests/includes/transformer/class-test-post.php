@@ -370,16 +370,6 @@ class Test_Post extends \WP_UnitTestCase {
 			)
 		);
 
-		// For WP versions 6.1 and prior, we only look for attached images.
-		if ( ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
-			wp_update_post(
-				array(
-					'ID'          => $attachment_id,
-					'post_parent' => $post_id,
-				)
-			);
-		}
-
 		$object = Post::transform( get_post( $post_id ) )->to_object();
 
 		$this->assertEquals(
@@ -623,5 +613,45 @@ class Test_Post extends \WP_UnitTestCase {
 		wp_update_attachment_metadata( $id, @wp_generate_attachment_metadata( $id, $upload['file'] ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 
 		return $id;
+	}
+
+	/**
+	 * Test preview property generation.
+	 *
+	 * @covers ::get_preview
+	 */
+	public function test_preview_property() {
+		// Create a test post of type "Article".
+		$post = $this->factory->post->create_and_get(
+			array(
+				'post_title'   => 'Test Article',
+				'post_content' => str_repeat( 'Long content. ', 100 ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$transformer = new Post( $post );
+		$preview     = $transformer->get_preview();
+
+		// Check if the preview for an Article is correctly generated.
+		$this->assertIsArray( $preview );
+		$this->assertEquals( 'Note', $preview['type'] );
+		$this->assertArrayHasKey( 'content', $preview );
+		$this->assertNotEmpty( $preview['content'] );
+
+		// Create a test post of type "Note" (short content).
+		$note_post = $this->factory->post->create_and_get(
+			array(
+				'post_title'   => '',
+				'post_content' => 'Short note content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$note_transformer = new Post( $note_post );
+		$note_preview     = $note_transformer->get_preview();
+
+		// Check if the preview for a Note is null.
+		$this->assertNull( $note_preview );
 	}
 }

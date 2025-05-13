@@ -30,7 +30,7 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		remove_action( 'transition_post_status', array( Post::class, 'schedule_post_activity' ), 33 );
+		remove_action( 'wp_after_insert_post', array( Post::class, 'schedule_post_activity' ), 33 );
 
 		Shortcodes::register();
 
@@ -61,6 +61,8 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 	 */
 	public function test_content() {
 		global $post;
+
+		remove_filter( 'the_content', 'apply_block_hooks_to_content_from_post_object', 8 );
 
 		$post               = $this->post;
 		$post->post_content = '<script>test</script>hallo<script type="javascript">{"asdf": "qwerty"}</script><style></style>';

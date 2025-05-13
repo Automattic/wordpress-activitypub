@@ -9,7 +9,8 @@ namespace Activitypub\WP_Admin;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
-use function Activitypub\is_user_disabled;
+use Activitypub\Sanitize;
+use function Activitypub\user_can_activitypub;
 
 /**
  * ActivityPub Settings Class.
@@ -21,6 +22,10 @@ class Settings {
 	public static function init() {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ), 11 );
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
+
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'handle_welcome_query_arg' ) );
+		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
+		\add_filter( 'screen_options_show_submit', array( self::class, 'screen_options_show_submit' ), 10, 2 );
 	}
 
 	/**
@@ -57,19 +62,12 @@ class Settings {
 			'activitypub',
 			'activitypub_max_image_attachments',
 			array(
-				'type'        => 'integer',
-				'description' => \__( 'Number of images to attach to posts.', 'activitypub' ),
-				'default'     => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
-			)
-		);
-
-		\register_setting(
-			'activitypub',
-			'activitypub_outbox_purge_days',
-			array(
-				'type'        => 'integer',
-				'description' => \__( 'Number of days to keep items in the Outbox.', 'activitypub' ),
-				'default'     => 180,
+				'type'              => 'integer',
+				'description'       => \__( 'Number of images to attach to posts.', 'activitypub' ),
+				'default'           => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
+				'sanitize_callback' => function ( $value ) {
+					return \is_numeric( $value ) ? \absint( $value ) : ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
+				},
 			)
 		);
 
@@ -136,19 +134,75 @@ class Settings {
 				'type'              => 'string',
 				'description'       => \__( 'Websites allowed to credit you.', 'activitypub' ),
 				'default'           => \Activitypub\home_host(),
-				'sanitize_callback' => function ( $value ) {
-					$value = explode( PHP_EOL, $value );
-					$value = array_filter( array_map( 'trim', $value ) );
-					$value = array_filter( array_map( 'esc_attr', $value ) );
-					$value = implode( PHP_EOL, $value );
-
-					return $value;
-				},
+				'sanitize_callback' => array( Sanitize::class, 'host_list' ),
 			)
 		);
 
 		\register_setting(
 			'activitypub',
+			'activitypub_allow_likes',
+			array(
+				'type'              => 'integer',
+				'description'       => \__( 'Allow likes.', 'activitypub' ),
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_allow_reposts',
+			array(
+				'type'              => 'integer',
+				'description'       => \__( 'Allow reposts.', 'activitypub' ),
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_relays',
+			array(
+				'type'              => 'array',
+				'description'       => \__( 'Relays', 'activitypub' ),
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_outbox_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => \__( 'Number of days to keep items in the Outbox.', 'activitypub' ),
+				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_vary_header',
+			array(
+				'type'        => 'boolean',
+				'description' => \__( 'Add the Vary header to the ActivityPub response.', 'activitypub' ),
+				'default'     => true,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_content_negotiation',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable content negotiation.',
+				'default'     => true,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_authorized_fetch',
 			array(
 				'type'        => 'boolean',
@@ -158,22 +212,12 @@ class Settings {
 		);
 
 		\register_setting(
-			'activitypub',
-			'activitypub_mailer_new_follower',
+			'activitypub_advanced',
+			'activitypub_shared_inbox',
 			array(
 				'type'        => 'boolean',
-				'description' => \__( 'Send notifications via e-mail when a new follower is added.', 'activitypub' ),
-				'default'     => '0',
-			)
-		);
-
-		\register_setting(
-			'activitypub',
-			'activitypub_mailer_new_dm',
-			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Send notifications via e-mail when a direct message is received.', 'activitypub' ),
-				'default'     => '0',
+				'description' => \__( 'Enable the shared inbox.', 'activitypub' ),
+				'default'     => false,
 			)
 		);
 
@@ -197,41 +241,7 @@ class Settings {
 				'description'       => \esc_html__( 'The Identifier of the Blog-User', 'activitypub' ),
 				'show_in_rest'      => true,
 				'default'           => Blog::get_default_username(),
-				'sanitize_callback' => function ( $value ) {
-					// Hack to allow dots in the username.
-					$parts     = explode( '.', $value );
-					$sanitized = array();
-
-					foreach ( $parts as $part ) {
-						$sanitized[] = \sanitize_title( $part );
-					}
-
-					$sanitized = implode( '.', $sanitized );
-
-					// Check for login or nicename.
-					$user = new WP_User_Query(
-						array(
-							'search'         => $sanitized,
-							'search_columns' => array( 'user_login', 'user_nicename' ),
-							'number'         => 1,
-							'hide_empty'     => true,
-							'fields'         => 'ID',
-						)
-					);
-
-					if ( $user->results ) {
-						add_settings_error(
-							'activitypub_blog_identifier',
-							'activitypub_blog_identifier',
-							\esc_html__( 'You cannot use an existing author\'s name for the blog profile ID.', 'activitypub' ),
-							'error'
-						);
-
-						return Blog::get_default_username();
-					}
-
-					return $sanitized;
-				},
+				'sanitize_callback' => array( Sanitize::class, 'blog_identifier' ),
 			)
 		);
 
@@ -244,26 +254,87 @@ class Settings {
 				'default'     => null,
 			)
 		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_mailer_new_dm',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send a notification when someone sends a user of the blog a direct message.',
+				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_mailer_new_follower',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send a notification when someone starts to follow a user of the blog.',
+				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_mailer_new_mention',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send a notification when someone mentions a user of the blog.',
+				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_also_known_as',
+			array(
+				'type'              => 'array',
+				'description'       => 'An array of URLs that the blog user is known by.',
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+			)
+		);
 	}
 
 	/**
 	 * Load settings page.
 	 */
 	public static function settings_page() {
+		$show_welcome_tab  = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
+		$show_advanced_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true );
+		$default_tab       = $show_welcome_tab ? 'welcome' : 'settings';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'welcome';
+		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
 
-		$settings_tabs = array(
-			'welcome'  => array(
+		// Redirect welcome tab to settings if skipped.
+		if ( 'welcome' === $tab && ! $show_welcome_tab ) {
+			$tab = 'settings';
+		}
+
+		$settings_tabs = array();
+
+		if ( $show_welcome_tab ) {
+			$settings_tabs['welcome'] = array(
 				'label'    => __( 'Welcome', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php',
-			),
-			'settings' => array(
-				'label'    => __( 'Settings', 'activitypub' ),
-				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
-			),
+			);
+		}
+
+		$settings_tabs['settings'] = array(
+			'label'    => __( 'Settings', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
 		);
-		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || $show_advanced_tab ) {
+			$settings_tabs['advanced'] = array(
+				'label'    => \__( 'Advanced', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',
+			);
+		}
+
+		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
 				'label'    => __( 'Blog Profile', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php',
@@ -284,18 +355,33 @@ class Settings {
 
 		switch ( $tab ) {
 			case 'blog-profile':
-				wp_enqueue_media();
-				wp_enqueue_script( 'activitypub-header-image' );
+				\wp_enqueue_media();
+				\wp_enqueue_script( 'activitypub-header-image' );
 				break;
-			case 'welcome':
-				wp_enqueue_script( 'plugin-install' );
-				add_thickbox();
-				wp_enqueue_script( 'updates' );
+			case 'settings':
+				\update_option( 'activitypub_checklist_settings_visited', '1' );
+				break;
+			default:
+				if ( isset( $_GET['help-tab'] ) && 'getting-started' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+					\update_option( 'activitypub_checklist_fediverse_intro_visited', '1' );
+				} elseif ( isset( $_GET['help-tab'] ) && 'editor-blocks' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+					\update_option( 'activitypub_checklist_blocks_visited', '1' );
+				}
 				break;
 		}
 
-		$labels       = wp_list_pluck( $settings_tabs, 'label' );
-		$args         = array_fill_keys( array_keys( $labels ), '' );
+		if ( ! isset( $settings_tabs[ $tab ] ) ) {
+			$tab = $default_tab;
+		}
+
+		// Only show tabs if there are more than one.
+		if ( \count( $settings_tabs ) <= 1 ) {
+			$labels = array();
+		} else {
+			$labels = \wp_list_pluck( $settings_tabs, 'label' );
+		}
+
+		$args         = \array_fill_keys( \array_keys( $labels ), '' );
 		$args[ $tab ] = 'active';
 		$args['tabs'] = $labels;
 
@@ -307,6 +393,340 @@ class Settings {
 	 * Adds the ActivityPub settings to the Help tab.
 	 */
 	public static function add_settings_help_tab() {
-		require_once ACTIVITYPUB_PLUGIN_DIR . 'includes/help.php';
+		// Getting Started / Introduction to the Fediverse.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'getting-started',
+				'title'   => \__( 'Getting Started', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'getting-started' ),
+			)
+		);
+
+		// Core Features.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'core-features',
+				'title'   => \__( 'Core Features', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'core-features' ),
+			)
+		);
+
+		// Editor Blocks.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'editor-blocks',
+				'title'   => \__( 'Editor Blocks', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'editor-blocks' ),
+			)
+		);
+
+		// Account Migration.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'account-migration',
+				'title'   => \__( 'Account Migration', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'account-migration' ),
+			)
+		);
+
+		// Template Tags.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'template-tags',
+				'title'   => \__( 'Template Tags', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'template-tags' ),
+			)
+		);
+
+		// Recommended Plugins.
+		if ( ! empty( self::get_recommended_plugins() ) ) {
+			\get_current_screen()->add_help_tab(
+				array(
+					'id'      => 'recommended-plugins',
+					'title'   => __( 'Recommended Plugins', 'activitypub' ),
+					'content' =>
+						'<h2>' . esc_html__( 'Supercharge Your Fediverse Experience', 'activitypub' ) . '</h2>' .
+						'<p>' . esc_html__( 'Enhance your WordPress ActivityPub setup with these hand-picked plugins, each adding unique capabilities for a richer Fediverse experience.', 'activitypub' ) . '</p>' .
+						self::render_recommended_plugins_list(),
+				)
+			);
+		}
+
+		// Troubleshooting.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'troubleshooting',
+				'title'   => \__( 'Troubleshooting', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'troubleshooting' ),
+			)
+		);
+
+		// Glossary.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'glossary',
+				'title'   => \__( 'Glossary', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'glossary' ),
+			)
+		);
+
+		// Resources.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'resources',
+				'title'   => \__( 'Resources', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'resources' ),
+			)
+		);
+
+		// Enhanced Help Sidebar.
+		\get_current_screen()->set_help_sidebar(
+			'<p><strong>' . \__( 'For more information:', 'activitypub' ) . '</strong></p>' . "\n" .
+			'<p><a href="https://wordpress.org/support/plugin/activitypub/">' . \esc_html__( 'Get support', 'activitypub' ) . '</a></p>' . "\n" .
+			'<p><a href="https://github.com/Automattic/wordpress-activitypub/issues">' . \esc_html__( 'Report an issue', 'activitypub' ) . '</a></p>' . "\n" .
+			'<p><a href="https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs">' . \esc_html__( 'Documentation', 'activitypub' ) . '</a></p>' . "\n" .
+			'<p><a href="https://github.com/Automattic/wordpress-activitypub/releases">' . \esc_html__( 'View latest changes', 'activitypub' ) . '</a></p>'
+		);
+	}
+
+	/**
+	 * Adds the ActivityPub help tab to the users page.
+	 */
+	public static function add_users_help_tab() {
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'       => 'activitypub',
+				'title'    => \__( 'ActivityPub', 'activitypub' ),
+				'content'  => self::get_help_tab_template( 'users' ),
+				// Add to the end of the list.
+				'priority' => 20,
+			)
+		);
+	}
+
+	/**
+	 * Handle 'welcome' query arg.
+	 */
+	public static function handle_welcome_query_arg() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['welcome'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$welcome_checked = empty( \sanitize_text_field( \wp_unslash( $_GET['welcome'] ) ) ) ? 0 : 1;
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) );
+			exit;
+		}
+	}
+
+	/**
+	 * Add screen option.
+	 *
+	 * @param string $screen_settings The screen settings.
+	 * @param object $screen          The screen object.
+	 *
+	 * @return string The screen settings.
+	 */
+	public static function add_screen_option( $screen_settings, $screen ) {
+		if ( 'settings_page_activitypub' !== $screen->id ) {
+			return $screen_settings;
+		}
+
+		// Verify screen options nonce.
+		if ( isset( $_POST['screenoptionnonce'] ) ) {
+			$nonce = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
+			if ( ! \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
+				return $screen_settings;
+			}
+		}
+
+		if ( isset( $_POST['activitypub_show_welcome_tab'] ) ) {
+			$welcome         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
+			$welcome_checked = empty( $welcome ) ? 0 : 1;
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+		}
+
+		if ( isset( $_POST['activitypub_show_advanced_tab'] ) ) {
+			$advanced_settings         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_advanced_tab'] ) );
+			$advanced_settings_checked = empty( $advanced_settings ) ? 0 : 1;
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', $advanced_settings_checked );
+		}
+
+		$screen_settings = '<fieldset>
+		<legend class="screen-layout">' . \esc_html__( 'Settings Pages', 'activitypub' ) . '</legend>
+		<p>
+			' . \esc_html__( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
+		</p>
+		<div class="metabox-prefs-container">
+			<label for="activitypub_show_welcome_tab">
+				<input name="activitypub_show_welcome_tab" type="hidden" value="0" />
+				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
+				' . \esc_html__( 'Welcome Page', 'activitypub' ) . '
+			</label>
+			<label for="activitypub_show_advanced_tab">
+				<input name="activitypub_show_advanced_tab" type="hidden" value="0" />
+				<input name="activitypub_show_advanced_tab" type="checkbox" id="activitypub_show_advanced_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true ), false ) . ' />
+				' . \esc_html__( 'Advanced Settings', 'activitypub' ) . '
+			</label>
+		</div>
+	</fieldset>';
+
+		return $screen_settings;
+	}
+
+	/**
+	 * Show the submit button on the screen options page.
+	 *
+	 * @param bool   $show_submit Whether to show the submit button.
+	 * @param object $screen      The screen object.
+	 *
+	 * @return bool Whether to show the submit button.
+	 */
+	public static function screen_options_show_submit( $show_submit, $screen ) {
+		if ( 'settings_page_activitypub' !== $screen->id ) {
+			return $show_submit;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Returns an array of recommended plugins for ActivityPub.
+	 */
+	public static function get_recommended_plugins() {
+		$plugins = array();
+
+		if ( ! \is_plugin_active( 'friends/friends.php' ) ) {
+			$plugins['friends'] = array(
+				'slug'        => 'friends',
+				'author'      => 'Alex Kirk',
+				'author_url'  => 'https://profiles.wordpress.org/akirk/',
+				'icon'        => 'https://ps.w.org/friends/assets/icon-256x256.png',
+				'name'        => \__( 'Friends', 'activitypub' ),
+				'description' => \__( 'Follow people on Mastodon or similar platforms and display their posts on your WordPress, making your site a true Fediverse instance.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=friends&TB_iframe=true' ),
+			);
+		}
+
+		if ( ! \is_plugin_active( 'event-bridge-for-activitypub/event-bridge-for-activitypub.php' ) ) {
+			$plugins['event_bridge'] = array(
+				'slug'        => 'event-bridge-for-activitypub',
+				'author'      => 'André Menrath',
+				'author_url'  => 'https://profiles.wordpress.org/andremenrath/',
+				'icon'        => 'https://ps.w.org/event-bridge-for-activitypub/assets/icon-256x256.gif',
+				'name'        => \__( 'Event Bridge for ActivityPub', 'activitypub' ),
+				'description' => \__( 'Make your events discoverable and federate them across decentralized platforms like Mastodon or Gancio.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=event-bridge-for-activitypub&TB_iframe=true' ),
+			);
+		}
+
+		if ( ! \is_plugin_active( 'enable-mastodon-apps/enable-mastodon-apps.php' ) ) {
+			$plugins['enable_mastodon_apps'] = array(
+				'slug'        => 'enable-mastodon-apps',
+				'author'      => 'Alex Kirk',
+				'author_url'  => 'https://profiles.wordpress.org/akirk/',
+				'icon'        => 'https://ps.w.org/enable-mastodon-apps/assets/icon-256x256.png',
+				'name'        => \__( 'Enable Mastodon Apps', 'activitypub' ),
+				'description' => \__( 'Allow Mastodon apps to interact with your WordPress site, letting you write posts from your favorite app.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=enable-mastodon-apps&TB_iframe=true' ),
+			);
+		}
+
+		if ( ! \is_plugin_active( 'hum/hum.php' ) ) {
+			$plugins['hum'] = array(
+				'slug'        => 'hum',
+				'author'      => 'Will Norris',
+				'author_url'  => 'https://profiles.wordpress.org/willnorris/',
+				'icon'        => 'https://s.w.org/plugins/geopattern-icon/hum.svg',
+				'name'        => \__( 'Hum', 'activitypub' ),
+				'description' => \__( 'A personal URL shortener for WordPress, perfect for sharing short links on the Fediverse.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=hum&TB_iframe=true' ),
+			);
+		}
+
+		if ( ! \is_plugin_active( 'webfinger/webfinger.php' ) ) {
+			$plugins['webfinger'] = array(
+				'slug'        => 'webfinger',
+				'author'      => 'Matthias Pfefferle',
+				'author_url'  => 'https://profiles.wordpress.org/pfefferle/',
+				'icon'        => 'https://ps.w.org/webfinger/assets/icon-256x256.png',
+				'name'        => \__( 'WebFinger', 'activitypub' ),
+				'description' => \__( 'WebFinger protocol support for better discovery and compatibility.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=webfinger&TB_iframe=true' ),
+			);
+		}
+
+		if ( ! \is_plugin_active( 'nodeinfo/nodeinfo.php' ) ) {
+			$plugins['nodeinfo'] = array(
+				'slug'        => 'nodeinfo',
+				'author'      => 'Matthias Pfefferle',
+				'author_url'  => 'https://profiles.wordpress.org/pfefferle/',
+				'icon'        => 'https://ps.w.org/nodeinfo/assets/icon-256x256.png',
+				'name'        => \__( 'NodeInfo', 'activitypub' ),
+				'description' => \__( 'Advanced NodeInfo protocol support for better discovery and compatibility.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=nodeinfo&TB_iframe=true' ),
+			);
+		}
+
+		return $plugins;
+	}
+
+	/**
+	 * Render recommended plugins as a beautiful, rich showcase for the help tab.
+	 */
+	public static function render_recommended_plugins_list() {
+		$plugins = self::get_recommended_plugins();
+
+		\ob_start();
+
+		echo '<div class="plugin-list widefat">';
+
+		foreach ( $plugins as $plugin ) :
+			?>
+			<div class="plugin-card plugin-card-<?php echo \esc_attr( $plugin['slug'] ); ?>">
+				<div class="plugin-card-top">
+					<div class="name column-name">
+						<h3>
+							<a href="<?php echo \esc_url( $plugin['install_url'] ); ?>" class="thickbox open-plugin-details-modal">
+								<?php echo \esc_html( $plugin['name'] ); ?>
+								<img src="<?php echo \esc_url( $plugin['icon'] ); ?>" class="plugin-icon" alt="">
+							</a>
+						</h3>
+					</div>
+					<div class="action-links">
+						<ul class="plugin-action-buttons">
+							<li>
+								<a href="<?php echo \esc_url( $plugin['install_url'] ); ?>" class="button thickbox open-plugin-details-modal"><?php \esc_html_e( 'More Details', 'activitypub' ); ?></a>
+							</li>
+						</ul>
+					</div>
+					<div class="desc column-description">
+						<p><?php echo \esc_html( $plugin['description'] ); ?></p>
+						<p class="authors"> <cite>By <a href="<?php echo \esc_url( $plugin['author_url'] ); ?>"><?php echo \esc_html( $plugin['author'] ); ?></a></cite></p>
+					</div>
+				</div>
+			</div>
+			<?php
+		endforeach;
+
+		echo '</div>';
+
+		return \ob_get_clean();
+	}
+
+	/**
+	 * Loads a help tab template.
+	 *
+	 * @param string $template_name The template file name (without ".php").
+	 * @return string Rendered template output.
+	 */
+	private static function get_help_tab_template( $template_name ) {
+		$template_path = ACTIVITYPUB_PLUGIN_DIR . 'templates/help-tab/' . $template_name . '.php';
+		if ( ! file_exists( $template_path ) ) {
+			return '';
+		}
+
+		ob_start();
+		load_template( $template_path, false );
+		return ob_get_clean();
 	}
 }

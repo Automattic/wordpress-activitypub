@@ -471,4 +471,73 @@ class Test_Interactions extends WP_UnitTestCase {
 
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
+
+	/**
+	 * Test that incoming likes and reposts are not collected when disabled.
+	 *
+	 * @covers ::add_reaction
+	 */
+	public function test_no_likes_reposts_when_disabled() {
+		\update_option( 'activitypub_allow_likes', false );
+
+		$activity = array(
+			'id'     => 'https://example.com/activity/1',
+			'type'   => 'Like',
+			'actor'  => 'https://example.com/actor/1',
+			'object' => 'https://example.com/post/1',
+		);
+
+		$result = Interactions::add_reaction( $activity );
+		$this->assertFalse( $result, 'Likes and reposts should not be collected when disabled.' );
+	}
+
+	/**
+	 * Test that incoming reposts are not collected when disabled.
+	 *
+	 * @covers ::add_reaction
+	 */
+	public function test_no_reposts_when_disabled() {
+		\update_option( 'activitypub_allow_reposts', false );
+
+		$activity = array(
+			'id'     => 'https://example.com/activity/2',
+			'type'   => 'Announce',
+			'actor'  => 'https://example.com/actor/2',
+			'object' => 'https://example.com/post/1',
+		);
+
+		$result = Interactions::add_reaction( $activity );
+		$this->assertFalse( $result, 'Reposts should not be collected when disabled.' );
+	}
+
+	/**
+	 * Test activity_to_comment sets webfinger as comment author email.
+	 *
+	 * @covers ::activity_to_comment
+	 */
+	public function test_activity_to_comment_sets_webfinger_email() {
+		$actor_url = 'https://example.com/users/tester';
+		$activity  = array(
+			'type'   => 'Create',
+			'actor'  => $actor_url,
+			'object' => array(
+				'content' => 'Test comment content',
+				'id'      => 'https://example.com/activities/1',
+			),
+		);
+
+		$filter = function () {
+			return array(
+				'body'     => wp_json_encode( array( 'subject' => 'acct:tester@example.com' ) ),
+				'response' => array( 'code' => 200 ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$comment_data = Interactions::activity_to_comment( $activity );
+
+		$this->assertEquals( 'tester@example.com', $comment_data['comment_author_email'] );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
 }

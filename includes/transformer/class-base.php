@@ -7,10 +7,6 @@
 
 namespace Activitypub\Transformer;
 
-use WP_Comment;
-use WP_Post;
-use WP_Term;
-
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Activity\Base_Object;
@@ -27,7 +23,7 @@ abstract class Base {
 	 *
 	 * This is the source object of the transformer.
 	 *
-	 * @var WP_Post|WP_Comment|Base_Object|string|array|WP_Term
+	 * @var \WP_Post|\WP_Comment|Base_Object|string|array|\WP_Term
 	 */
 	protected $item;
 
@@ -36,7 +32,7 @@ abstract class Base {
 	 *
 	 * @deprecated version 5.0.0
 	 *
-	 * @var WP_Post|WP_Comment
+	 * @var \WP_Post|\WP_Comment
 	 */
 	protected $wp_object;
 
@@ -52,7 +48,7 @@ abstract class Base {
 	 *
 	 * This helps to chain the output of the Transformer.
 	 *
-	 * @param WP_Post|WP_Comment|Base_Object|string|array|WP_term $item The item that should be transformed.
+	 * @param \WP_Post|\WP_Comment|Base_Object|string|array|\WP_term $item The item that should be transformed.
 	 *
 	 * @return Base
 	 */
@@ -63,7 +59,7 @@ abstract class Base {
 	/**
 	 * Base constructor.
 	 *
-	 * @param WP_Post|WP_Comment|Base_Object|string|array|WP_Term $item The item that should be transformed.
+	 * @param \WP_Post|\WP_Comment|Base_Object|string|array|\WP_Term $item The item that should be transformed.
 	 */
 	public function __construct( $item ) {
 		$this->item      = $item;
@@ -75,7 +71,7 @@ abstract class Base {
 	 *
 	 * @param Base_Object $activity_object The ActivityPub Object.
 	 *
-	 * @return Base_Object|\WP_Error The transformed ActivityPub Object.
+	 * @return Base_Object|\WP_Error The transformed ActivityPub Object or WP_Error on failure.
 	 */
 	protected function transform_object_properties( $activity_object ) {
 		if ( ! $activity_object || \is_wp_error( $activity_object ) ) {
@@ -90,7 +86,7 @@ abstract class Base {
 			if ( \method_exists( $this, $getter ) ) {
 				$value = \call_user_func( array( $this, $getter ) );
 
-				if ( ! empty( $value ) ) {
+				if ( null !== $value ) {
 					$setter = 'set_' . $var;
 
 					/**
@@ -131,9 +127,7 @@ abstract class Base {
 			return $activity_object;
 		}
 
-		$activity_object = $this->set_audience( $activity_object );
-
-		return $activity_object;
+		return $this->set_audience( $activity_object );
 	}
 
 	/**
@@ -201,6 +195,7 @@ abstract class Base {
 	 * @return string The ID of the WordPress Object.
 	 */
 	public function to_id() {
+		/* @var Attachment|Comment|Json|Post|User $this Object transformer. */
 		return $this->get_id();
 	}
 
@@ -235,6 +230,28 @@ abstract class Base {
 	 */
 	protected function get_locale() {
 		$lang = \strtolower( \strtok( \get_locale(), '_-' ) );
+
+		if ( $this->item instanceof \WP_Post ) {
+			/**
+			 * Deprecates the `activitypub_post_locale` filter.
+			 *
+			 * @param string $lang The locale of the post.
+			 * @param mixed  $item The post object.
+			 *
+			 * @return string The filtered locale of the post.
+			 */
+			$lang = apply_filters_deprecated(
+				'activitypub_post_locale',
+				array(
+					$lang,
+					$this->item->ID,
+					$this->item,
+				),
+				'5.4.0',
+				'activitypub_locale',
+				'Use the `activitypub_locale` filter instead.'
+			);
+		}
 
 		/**
 		 * Filter the locale of the post.
@@ -349,9 +366,9 @@ abstract class Base {
 		/**
 		 * Filter the mentions in the post content.
 		 *
-		 * @param array   $mentions The mentions.
-		 * @param string  $content  The post content.
-		 * @param WP_Post $post     The post object.
+		 * @param array    $mentions The mentions.
+		 * @param string   $content  The post content.
+		 * @param \WP_Post $post     The post object.
 		 *
 		 * @return array The filtered mentions.
 		 */

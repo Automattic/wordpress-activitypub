@@ -8,15 +8,15 @@
 namespace Activitypub\WP_Admin;
 
 use Activitypub\Comment;
-use WP_User_Query;
-use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Model\Blog;
+
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
-use function Activitypub\is_user_disabled;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\site_supports_blocks;
+use function Activitypub\user_can_activitypub;
 use function Activitypub\was_comment_received;
 
 /**
@@ -41,38 +41,37 @@ class Admin {
 		\add_filter( 'comment_row_actions', array( self::class, 'comment_row_actions' ), 10, 2 );
 		\add_filter( 'manage_edit-comments_columns', array( static::class, 'manage_comment_columns' ) );
 		\add_action( 'manage_comments_custom_column', array( static::class, 'manage_comments_custom_column' ), 9, 2 );
-		\add_action( 'admin_comment_types_dropdown', array( static::class, 'comment_types_dropdown' ) );
+		\add_filter( 'admin_comment_types_dropdown', array( static::class, 'comment_types_dropdown' ) );
 
 		\add_filter( 'manage_posts_columns', array( static::class, 'manage_post_columns' ), 10, 2 );
 		\add_action( 'manage_posts_custom_column', array( self::class, 'manage_posts_custom_column' ), 10, 2 );
 
 		\add_filter( 'manage_users_columns', array( self::class, 'manage_users_columns' ) );
-		\add_action( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
+		\add_filter( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
 		}
 
 		\add_filter( 'dashboard_glance_items', array( self::class, 'dashboard_glance_items' ) );
 		\add_filter( 'plugin_action_links_' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'add_plugin_settings_link' ) );
+		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ), 10, 2 );
+
+		if ( site_supports_blocks() ) {
+			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+		}
+
+		\add_action( 'admin_print_footer_scripts-settings_page_activitypub', array( self::class, 'open_help_tab' ) );
+
+		\add_action( 'wp_dashboard_setup', array( self::class, 'add_dashboard_widgets' ) );
 	}
 
 	/**
 	 * Display admin menu notices about configuration problems or conflicts.
 	 */
 	public static function admin_notices() {
-		$permalink_structure = \get_option( 'permalink_structure' );
-		if ( empty( $permalink_structure ) ) {
-			$admin_notice = sprintf(
-				/* translators: %s: Permalink settings URL. */
-				\__( 'ActivityPub needs SEO-friendly URLs to work properly. Please <a href="%s">update your permalink structure</a> to an option other than Plain.', 'activitypub' ),
-				esc_url( admin_url( 'options-permalink.php' ) )
-			);
-			self::show_admin_notice( $admin_notice, 'error' );
-		}
-
 		$current_screen = get_current_screen();
 		if ( ! $current_screen ) {
 			return;
@@ -109,7 +108,7 @@ class Admin {
 	 */
 	public static function followers_list_page() {
 		// User has to be able to publish posts.
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
 		}
 	}
@@ -122,23 +121,14 @@ class Admin {
 	}
 
 	/**
-	 * Add the profile.
-	 *
-	 * @param \WP_User $user The user object.
+	 * Render user settings.
 	 */
-	public static function add_profile( $user ) {
-		$description = \get_user_option( 'activitypub_description', $user->ID );
-
+	public static function add_profile() {
 		wp_enqueue_media();
 		wp_enqueue_script( 'activitypub-header-image' );
 
-		\load_template(
-			ACTIVITYPUB_PLUGIN_DIR . 'templates/user-settings.php',
-			true,
-			array(
-				'description' => $description,
-			)
-		);
+		wp_nonce_field( 'activitypub-user-settings', '_apnonce' );
+		do_settings_sections( 'activitypub_user_settings' );
 	}
 
 	/**
@@ -161,18 +151,42 @@ class Admin {
 			return;
 		}
 
-		$description = ! empty( $_POST['activitypub_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['activitypub_description'] ) ) : false;
-		if ( $description ) {
-			\update_user_option( $user_id, 'activitypub_description', $description );
-		} else {
-			\delete_user_option( $user_id, 'activitypub_description' );
+		// User options that should be processed with `sanitize_textarea_field()`.
+		$textarea_field_user_options = array(
+			'activitypub_blog_user_also_known_as',
+			'activitypub_description',
+		);
+
+		foreach ( $textarea_field_user_options as $option ) {
+			if ( ! empty( $_POST[ $option ] ) ) {
+				\update_user_option( $user_id, $option, sanitize_textarea_field( wp_unslash( $_POST[ $option ] ) ) );
+			} else {
+				\delete_user_option( $user_id, $option );
+			}
 		}
 
-		$header_image = ! empty( $_POST['activitypub_header_image'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_header_image'] ) ) : false;
-		if ( $header_image && \wp_attachment_is_image( $header_image ) ) {
-			\update_user_option( $user_id, 'activitypub_header_image', $header_image );
-		} else {
-			\delete_user_option( $user_id, 'activitypub_header_image' );
+		// User options that should be processed with `sanitize_text_field()`.
+		$text_field_user_options = array(
+			'activitypub_header_image',
+		);
+
+		foreach ( $text_field_user_options as $option ) {
+			if ( ! empty( $_POST[ $option ] ) ) {
+				\update_user_option( $user_id, $option, sanitize_text_field( wp_unslash( $_POST[ $option ] ) ) );
+			} else {
+				\delete_user_option( $user_id, $option );
+			}
+		}
+
+		// User options that have a default value and therefore can't be empty (Empty triggers the default value).
+		$required_user_options = array(
+			'activitypub_mailer_new_dm',
+			'activitypub_mailer_new_follower',
+			'activitypub_mailer_new_mention',
+		);
+
+		foreach ( $required_user_options as $option ) {
+			\update_user_option( $user_id, $option, sanitize_text_field( wp_unslash( $_POST[ $option ] ?? 0 ) ) );
 		}
 	}
 
@@ -209,10 +223,15 @@ class Admin {
 					'assets/js/activitypub-admin.js',
 					ACTIVITYPUB_PLUGIN_FILE
 				),
-				array( 'jquery' ),
+				array( 'jquery', 'wp-util' ),
 				ACTIVITYPUB_PLUGIN_VERSION,
 				false
 			);
+
+			// Plugin cards in help tab.
+			\wp_enqueue_script( 'plugin-install' );
+			\add_thickbox();
+			\wp_enqueue_script( 'updates' );
 		}
 
 		if ( 'index.php' === $hook_suffix ) {
@@ -237,16 +256,16 @@ class Admin {
 		// Disable the edit_comment capability for federated comments.
 		\add_filter(
 			'user_has_cap',
-			function ( $allcaps, $caps, $arg ) {
+			function ( $all_caps, $caps, $arg ) {
 				if ( 'edit_comment' !== $arg[0] ) {
-					return $allcaps;
+					return $all_caps;
 				}
 
 				if ( was_comment_received( $arg[2] ) ) {
 					return false;
 				}
 
-				return $allcaps;
+				return $all_caps;
 			},
 			1,
 			3
@@ -262,22 +281,22 @@ class Admin {
 		// Disable the edit_post capability for federated posts.
 		\add_filter(
 			'user_has_cap',
-			function ( $allcaps, $caps, $arg ) {
+			function ( $all_caps, $caps, $arg ) {
 				if ( 'edit_post' !== $arg[0] ) {
-					return $allcaps;
+					return $all_caps;
 				}
 
 				$post = get_post( $arg[2] );
 
 				if ( ! Extra_Fields::is_extra_field_post_type( $post->post_type ) ) {
-					return $allcaps;
+					return $all_caps;
 				}
 
-				if ( (int) get_current_user_id() !== (int) $post->post_author ) {
+				if ( get_current_user_id() !== (int) $post->post_author ) {
 					return false;
 				}
 
-				return $allcaps;
+				return $all_caps;
 			},
 			1,
 			3
@@ -323,8 +342,7 @@ class Admin {
 	 */
 	public static function comment_row_actions( $actions, $comment ) {
 		if ( was_comment_received( $comment ) ) {
-			unset( $actions['edit'] );
-			unset( $actions['quickedit'] );
+			unset( $actions['edit'], $actions['quickedit'] );
 		}
 
 		if ( in_array( get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
@@ -473,18 +491,18 @@ class Admin {
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
 	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users.
 	 *
-	 * @param string $sendback The URL to send the user back to.
-	 * @param string $action   The requested action.
-	 * @param array  $users    The selected users.
+	 * @param string $send_back The URL to send the user back to.
+	 * @param string $action    The requested action.
+	 * @param array  $users     The selected users.
 	 *
 	 * @return string The URL to send the user back to.
 	 */
-	public static function handle_bulk_request( $sendback, $action, $users ) {
+	public static function handle_bulk_request( $send_back, $action, $users ) {
 		if (
 			'remove_activitypub_cap' !== $action &&
 			'add_activitypub_cap' !== $action
 		) {
-			return $sendback;
+			return $send_back;
 		}
 
 		foreach ( $users as $user_id ) {
@@ -496,7 +514,7 @@ class Admin {
 			}
 		}
 
-		return $sendback;
+		return $send_back;
 	}
 
 	/**
@@ -507,9 +525,9 @@ class Admin {
 	 * @return array The extended glance items.
 	 */
 	public static function dashboard_glance_items( $items ) {
-		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
+		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 2 );
 
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$follower_count = sprintf(
 				// translators: %s: number of followers.
 				_n(
@@ -596,5 +614,134 @@ class Admin {
 		);
 
 		return $actions;
+	}
+
+	/**
+	 * Display plugin upgrade notice to users.
+	 *
+	 * @param array  $data   The plugin data.
+	 * @param object $update The plugin update data.
+	 */
+	public static function plugin_update_message( $data, $update ) {
+		if ( ! isset( $update->upgrade_notice ) ) {
+			return;
+		}
+
+		echo '<br>' . wp_strip_all_tags( $update->upgrade_notice ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	/**
+	 * Adds meta box on wp-admin/tools.php.
+	 */
+	public static function tool_box() {
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
+	}
+
+	/**
+	 * Open the help tab.
+	 *
+	 * This function is used to open the help tab,
+	 * it is triggered by the hash in the URL.
+	 */
+	public static function open_help_tab() {
+		// get all tabs registered for the ActivityPub settings page.
+		$tabs = \get_current_screen()->get_help_tabs();
+		$ids  = \array_values( \wp_list_pluck( $tabs, 'id' ) );
+		$ids  = \array_map(
+			function ( $id ) {
+				return '#tab-link-' . $id;
+			},
+			$ids
+		);
+		?>
+		<script type="text/javascript">
+		function activitypub_open_help_tab(event) {
+			const allowed_ids = <?php echo \wp_json_encode( $ids ); ?>;
+
+			if ( allowed_ids.includes( window.location.hash ) ) {
+				const delay = ( event && event.type === 'hashchange' ) ? 0 : 200;
+
+				setTimeout( function() {
+					document.getElementById( 'contextual-help-link' ).click();
+					document.querySelector( window.location.hash + ' > a[href^="#tab-panel-"]' ).click();
+				}, delay );
+			}
+		}
+		window.addEventListener( 'DOMContentLoaded', activitypub_open_help_tab );
+		window.addEventListener( 'hashchange', activitypub_open_help_tab );
+		</script>
+		<?php
+	}
+
+	/**
+	 * Add Dashboard widgets.
+	 */
+	public static function add_dashboard_widgets() {
+		\wp_add_dashboard_widget( 'activitypub_blog', \__( 'ActivityPub Plugin News', 'activitypub' ), array( self::class, 'blog_dashboard_widget' ) );
+		if ( user_can_activitypub( \get_current_user_id() ) && ! is_user_type_disabled( 'user' ) ) {
+			\wp_add_dashboard_widget( 'activitypub_profile', \__( 'ActivityPub Author profile', 'activitypub' ), array( self::class, 'profile_dashboard_widget' ) );
+		}
+		if ( ! is_user_type_disabled( 'blog' ) ) {
+			\wp_add_dashboard_widget( 'activitypub_blog_profile', \__( 'ActivityPub Blog profile', 'activitypub' ), array( self::class, 'blogprofile_dashboard_widget' ) );
+		}
+	}
+
+	/**
+	 * Add the `ActivityPub.blog` feed as a Dashboard widget.
+	 */
+	public static function blog_dashboard_widget() {
+		echo '<div class="rss-widget">';
+		\wp_widget_rss_output(
+			array(
+				'url'          => 'https://activitypub.blog/feed/',
+				'items'        => 3,
+				'show_summary' => 1,
+				'show_author'  => 0,
+				'show_date'    => 1,
+			)
+		);
+		echo '</div>';
+	}
+
+	/**
+	 * Add the ActivityPub Author profile as a Dashboard widget.
+	 */
+	public static function profile_dashboard_widget() {
+		$user = Actors::get_by_id( \get_current_user_id() );
+		?>
+		<p>
+			<?php \esc_html_e( 'People can follow you by using your author name:', 'activitypub' ); ?>
+		</p>
+		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
+		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
+		<p>
+			<?php \esc_html_e( 'Authors who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
+			<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>">
+			<?php \esc_html_e( 'Customize username on "Edit Profile" page.', 'activitypub' ); ?>
+			</a>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Add the ActivityPub Blog profile as a Dashboard widget.
+	 */
+	public static function blogprofile_dashboard_widget() {
+		$user = new Blog();
+		?>
+		<p>
+			<?php \esc_html_e( 'People can follow your blog by using:', 'activitypub' ); ?>
+		</p>
+		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
+		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
+		<p>
+			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
+			<?php if ( current_user_can( 'manage_options' ) ) : ?>
+			<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>">
+				<?php \esc_html_e( 'Customize the blog profile.', 'activitypub' ); ?>
+			</a>
+			<?php endif; ?>
+		</p>
+		<?php
 	}
 }

@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 use Activitypub\Transformer\Factory;
 
 /**
@@ -48,6 +49,13 @@ class Query {
 	private $is_activitypub_request;
 
 	/**
+	 * Whether the current request is from the old host.
+	 *
+	 * @var bool
+	 */
+	private $is_old_host_request;
+
+	/**
 	 * The constructor.
 	 */
 	private function __construct() {
@@ -84,22 +92,14 @@ class Query {
 			return $this->activitypub_object;
 		}
 
-		$queried_object = $this->get_queried_object();
-
-		if ( ! $queried_object ) {
-			// If the object is not a valid ActivityPub object, try to get a virtual object.
-			$activitypub_object = $this->maybe_get_virtual_object();
-
-			if ( $activitypub_object ) {
-				$this->activitypub_object = $activitypub_object;
-
-				return $this->activitypub_object;
-			}
+		if ( $this->prepare_activitypub_data() ) {
+			return $this->activitypub_object;
 		}
 
-		$transformer = Factory::get_transformer( $queried_object );
+		$queried_object = $this->get_queried_object();
+		$transformer    = Factory::get_transformer( $queried_object );
 
-		if ( $transformer && ! is_wp_error( $transformer ) ) {
+		if ( $transformer && ! \is_wp_error( $transformer ) ) {
 			$this->activitypub_object = $transformer->to_object();
 		}
 
@@ -116,27 +116,55 @@ class Query {
 			return $this->activitypub_object_id;
 		}
 
-		$queried_object              = $this->get_queried_object();
-		$this->activitypub_object_id = null;
-
-		if ( ! $queried_object ) {
-			// If the object is not a valid ActivityPub object, try to get a virtual object.
-			$virtual_object = $this->maybe_get_virtual_object();
-
-			if ( $virtual_object ) {
-				$this->activitypub_object_id = $virtual_object->get_id();
-
-				return $this->activitypub_object_id;
-			}
+		if ( $this->prepare_activitypub_data() ) {
+			return $this->activitypub_object_id;
 		}
 
-		$transformer = Factory::get_transformer( $queried_object );
+		$queried_object = $this->get_queried_object();
+		$transformer    = Factory::get_transformer( $queried_object );
 
-		if ( $transformer && ! is_wp_error( $transformer ) ) {
+		if ( $transformer && ! \is_wp_error( $transformer ) ) {
 			$this->activitypub_object_id = $transformer->to_id();
 		}
 
 		return $this->activitypub_object_id;
+	}
+
+	/**
+	 * Prepare and set both ActivityPub object and ID for Outbox activities and virtual objects.
+	 *
+	 * @return bool True if an object was found and set, false otherwise.
+	 */
+	private function prepare_activitypub_data() {
+		$queried_object = $this->get_queried_object();
+
+		// Check for Outbox Activity.
+		if (
+			$queried_object instanceof \WP_Post &&
+			Outbox::POST_TYPE === $queried_object->post_type
+		) {
+			$activitypub_object = Outbox::maybe_get_activity( $queried_object );
+
+			// Check if the Outbox Activity is public.
+			if ( ! \is_wp_error( $activitypub_object ) ) {
+				$this->activitypub_object    = $activitypub_object;
+				$this->activitypub_object_id = $this->activitypub_object->get_id();
+				return true;
+			}
+		}
+
+		if ( ! $queried_object ) {
+			// If the object is not a valid ActivityPub object, try to get a virtual object.
+			$activitypub_object = $this->maybe_get_virtual_object();
+
+			if ( $activitypub_object ) {
+				$this->activitypub_object    = $activitypub_object;
+				$this->activitypub_object_id = $this->activitypub_object->get_id();
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -188,8 +216,8 @@ class Query {
 	 * Virtual objects are objects that are not stored in the database, but are created on the fly.
 	 * The plugins currently supports two virtual objects: The Blog-Actor and the Application-Actor.
 	 *
-	 * @see \Activitypub\Blog
-	 * @see \Activitypub\Application
+	 * @see \Activitypub\Model\Blog
+	 * @see \Activitypub\Model\Application
 	 *
 	 * @return object|null The virtual object.
 	 */
@@ -203,10 +231,10 @@ class Query {
 		$author_id = url_to_authorid( $url );
 
 		if ( ! is_numeric( $author_id ) ) {
-			return null;
+			$author_id = $url;
 		}
 
-		$user = Actors::get_by_id( $author_id );
+		$user = Actors::get_by_various( $author_id );
 
 		if ( \is_wp_error( $user ) || ! $user ) {
 			return null;
@@ -245,9 +273,13 @@ class Query {
 
 		global $wp_query;
 
-		// One can trigger an ActivityPub request by adding ?activitypub to the URL.
-		if ( isset( $wp_query->query_vars['activitypub'] ) ) {
-			defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
+		// One can trigger an ActivityPub request by adding `?activitypub` to the URL.
+		if (
+			isset( $wp_query->query_vars['activitypub'] ) ||
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			isset( $_GET['activitypub'] )
+		) {
+			\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 			$this->is_activitypub_request = true;
 
 			return true;
@@ -269,7 +301,7 @@ class Query {
 			 * - application/json
 			 */
 			if ( \preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
-				defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
+				\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 				$this->is_activitypub_request = true;
 
 				return true;
@@ -279,5 +311,70 @@ class Query {
 		$this->is_activitypub_request = false;
 
 		return false;
+	}
+
+	/**
+	 * Check if content negotiation is allowed for a request.
+	 *
+	 * @return bool True if content negotiation is allowed, false otherwise.
+	 */
+	public function should_negotiate_content() {
+		$return           = false;
+		$always_negotiate = array( 'p', 'c', 'author', 'actor', 'preview', 'activitypub' );
+		$url              = \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY );
+		$query            = array();
+		\wp_parse_str( $url, $query );
+
+		// Check if any of the query params are in the `$always_negotiate` array.
+		if ( \array_intersect( \array_keys( $query ), $always_negotiate ) ) {
+			$return = true;
+		}
+
+		if ( \get_option( 'activitypub_content_negotiation', '1' ) ) {
+			$return = true;
+		}
+
+		/**
+		 * Filters whether content negotiation should be forced.
+		 *
+		 * @param bool $return Whether content negotiation should be forced.
+		 */
+		return \apply_filters( 'activitypub_should_negotiate_content', $return );
+	}
+
+	/**
+	 * Check if the current request is from the old host.
+	 *
+	 * @return bool True if the request is from the old host, false otherwise.
+	 */
+	public function is_old_host_request() {
+		if ( isset( $this->is_old_host_request ) ) {
+			return $this->is_old_host_request;
+		}
+
+		$old_host = \get_option( 'activitypub_old_host' );
+
+		if ( ! $old_host ) {
+			$this->is_old_host_request = false;
+			return false;
+		}
+
+		$request_host = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+		$referer_host = isset( $_SERVER['HTTP_REFERER'] ) ? \wp_parse_url( \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_REFERER'] ) ), PHP_URL_HOST ) : '';
+
+		// Check if the domain matches either the request domain or referer.
+		$check                     = $old_host === $request_host || $old_host === $referer_host;
+		$this->is_old_host_request = $check;
+
+		return $check;
+	}
+
+	/**
+	 * Fake an old host request.
+	 *
+	 * @param bool $state Optional. The state to set. Default true.
+	 */
+	public function set_old_host_request( $state = true ) {
+		$this->is_old_host_request = $state;
 	}
 }

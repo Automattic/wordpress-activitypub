@@ -22,10 +22,10 @@ use Activitypub\Collection\Followers;
  *
  * @see https://www.w3.org/TR/activitypub/#follow-activity-inbox
  *
- * @method int         get__id()       Gets the post ID of the follower record.
- * @method array|null  get_image()     Gets the follower's profile image data.
- * @method string|null get_inbox()     Gets the follower's ActivityPub inbox URL.
- * @method array|null  get_endpoints() Gets the follower's ActivityPub endpoints.
+ * @method int           get__id()       Gets the post ID of the follower record.
+ * @method string[]|null get_image()     Gets the follower's profile image data.
+ * @method string|null   get_inbox()     Gets the follower's ActivityPub inbox URL.
+ * @method string[]|null get_endpoints() Gets the follower's ActivityPub endpoints.
  *
  * @method Follower set__id( int $id )                Sets the post ID of the follower record.
  * @method Follower set_id( string $guid )            Sets the follower's GUID.
@@ -49,6 +49,21 @@ class Follower extends Actor {
 	 */
 	public function get_errors() {
 		return get_post_meta( $this->_id, '_activitypub_errors', false );
+	}
+
+	/**
+	 * Clear the errors for the current Follower.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public function clear_errors() {
+		if ( ! $this->_id ) {
+			\_doing_it_wrong( __METHOD__, 'Follower ID is not set.', 'unreleased' );
+
+			return false;
+		}
+
+		return Followers::clear_errors( $this->_id );
 	}
 
 	/**
@@ -230,7 +245,7 @@ class Follower extends Actor {
 	protected function get_post_meta_input() {
 		$meta_input                            = array();
 		$meta_input['_activitypub_inbox']      = $this->get_shared_inbox();
-		$meta_input['_activitypub_actor_json'] = $this->to_json();
+		$meta_input['_activitypub_actor_json'] = wp_slash( $this->to_json() );
 
 		return $meta_input;
 	}
@@ -240,7 +255,7 @@ class Follower extends Actor {
 	 *
 	 * Sets a fallback to better handle API and HTML outputs.
 	 *
-	 * @return array The icon.
+	 * @return string[] The icon.
 	 */
 	public function get_icon() {
 		if ( isset( $this->icon['url'] ) ) {
@@ -343,7 +358,7 @@ class Follower extends Actor {
 	 * Convert a Custom-Post-Type input to an Activitypub\Model\Follower.
 	 *
 	 * @param \WP_Post $post The post object.
-	 * @return \Activitypub\Activity\Base_Object|false The Follower object or false on failure.
+	 * @return Follower|false The Follower object or false on failure.
 	 */
 	public static function init_from_cpt( $post ) {
 		$actor_json = get_post_meta( $post->ID, '_activitypub_actor_json', true );
@@ -399,8 +414,10 @@ class Follower extends Actor {
 			\strpos( $name, '@' ) === 0
 		) {
 			// Expected: user@example.com or acct:user@example (WebFinger).
-			$name  = \ltrim( $name, '@' );
-			$name  = \ltrim( $name, 'acct:' );
+			$name = \ltrim( $name, '@' );
+			if ( str_starts_with( $name, 'acct:' ) ) {
+				$name = \substr( $name, 5 );
+			}
 			$parts = \explode( '@', $name );
 			$name  = $parts[0];
 		}

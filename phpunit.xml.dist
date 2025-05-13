@@ -14,4 +14,10 @@
 	<listeners>
 		<listener class="Activitypub\Tests\Activitypub_Testcase_Timer" file="tests/class-activitypub-testcase-timer.php" />
 	</listeners>
+	<coverage>
+		<include>
+			<directory suffix=".php">./includes</directory>
+			<directory suffix=".php">./integration</directory>
+		</include>
+	</coverage>
 </phpunit>

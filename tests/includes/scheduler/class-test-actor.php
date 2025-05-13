@@ -46,8 +46,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function user_meta_provider() {
 		return array(
-			array( 'activitypub_description' ),
-			array( 'activitypub_header_image' ),
 			array( 'description' ),
 			array( 'user_url' ),
 			array( 'display_name' ),
@@ -69,6 +67,49 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 		$id            = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
+	}
+
+	/**
+	 * Test user option update scheduling.
+	 *
+	 * @covers ::user_meta_update
+	 */
+	public function test_user_option_update() {
+		$actor = Actors::get_by_id( self::$user_id );
+		$post  = $this->get_latest_outbox_item( $actor->get_id() );
+		if ( $post ) {
+			\wp_delete_post( $post->ID, true );
+		}
+
+		$attachment_id = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+
+		// Update activitypub_description.
+		$actor->update_summary( 'test summary' );
+
+		$post = $this->get_latest_outbox_item( $actor->get_id() );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $actor->get_id(), $id );
+
+		\wp_delete_post( $post->ID, true );
+
+		// Update activitypub_icon.
+		$actor->update_icon( $attachment_id );
+
+		$post = $this->get_latest_outbox_item( $actor->get_id() );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $actor->get_id(), $id );
+
+		\wp_delete_post( $post->ID, true );
+
+		// Update activitypub_header_image.
+		$actor->update_header( $attachment_id );
+
+		$post = $this->get_latest_outbox_item( $actor->get_id() );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $actor->get_id(), $id );
+
+		\wp_delete_post( $post->ID, true );
+		\wp_delete_attachment( $attachment_id, true );
 	}
 
 	/**
@@ -138,9 +179,10 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 
-		$activity_object = \json_decode( $post->post_content, true );
-		$this->assertArrayHasKey( $field, $activity_object );
-		$this->assertSame( $expected, $activity_object[ $field ] );
+		$activity = \json_decode( $post->post_content, true );
+		$this->assertArrayHasKey( 'object', $activity );
+		$this->assertArrayHasKey( $field, $activity['object'] );
+		$this->assertSame( $expected, $activity['object'][ $field ] );
 	}
 
 	/**
@@ -175,9 +217,10 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 
-		$activity_object = \json_decode( $post->post_content, true );
-		$this->assertArrayHasKey( $field, $activity_object );
-		$this->assertStringContainsString( $value, $activity_object[ $field ] );
+		$activity = \json_decode( $post->post_content, true );
+		$this->assertArrayHasKey( 'object', $activity );
+		$this->assertArrayHasKey( $field, $activity['object'] );
+		$this->assertStringContainsString( $value, $activity['object'][ $field ] );
 	}
 
 	/**
@@ -254,5 +297,27 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\wp_delete_post( $blog_post_id, true );
+	}
+
+	/**
+	 * Test that actor profile updates set the updated attribute.
+	 *
+	 * @covers ::schedule_profile_update
+	 */
+	public function test_actor_profile_update_sets_updated_attribute() {
+		// Update the user's display name to trigger a profile update.
+		self::factory()->user->update_object( self::$user_id, array( 'display_name' => 'Updated Display Name' ) );
+
+		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
+		$post          = $this->get_latest_outbox_item( $activitpub_id );
+
+		// Verify the activity type is Update.
+		$this->assertEquals( 'Update', \get_post_meta( $post->ID, '_activitypub_activity_type', true ) );
+
+		// Get the activity from the outbox.
+		$activity = \json_decode( $post->post_content, true );
+
+		// Verify the updated attribute is set and matches the post's modified date.
+		$this->assertEqualsWithDelta( strtotime( $post->post_modified ), strtotime( $activity['updated'] ), 2, 'Updated attribute does not match post modified date.' );
 	}
 }

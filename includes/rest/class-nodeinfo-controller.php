@@ -7,6 +7,7 @@
 
 namespace Activitypub\Rest;
 
+use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_total_users;
 use function Activitypub\get_active_users;
 use function Activitypub\get_rest_url_by_path;
@@ -144,7 +145,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 			'version'           => '2.0',
 			'software'          => array(
 				'name'    => 'wordpress',
-				'version' => \get_bloginfo( 'version' ),
+				'version' => get_masked_wp_version(),
 			),
 			'protocols'         => array( 'activitypub' ),
 			'services'          => array(
@@ -155,10 +156,10 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 			'usage'             => array(
 				'users'         => array(
 					'total'          => get_total_users(),
-					'activeHalfyear' => get_active_users( '6 month ago' ),
-					'activeMonth'    => get_active_users( '1 month ago' ),
+					'activeHalfyear' => get_active_users( 6 ),
+					'activeMonth'    => get_active_users(),
 				),
-				'localPosts'    => $posts->publish,
+				'localPosts'    => (int) $posts->publish,
 				'localComments' => $comments->approved,
 			),
 			'metadata'          => array(

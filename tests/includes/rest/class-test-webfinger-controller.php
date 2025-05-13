@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Rest;
 /**
  * Tests for WebFinger REST API endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Webfinger_Controller
  */
 class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {

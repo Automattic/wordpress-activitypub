@@ -7,19 +7,23 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 use Activitypub\Comment;
+use Activitypub\Dispatcher;
 use Activitypub\Migration;
 use Activitypub\Scheduler;
-use Activitypub\Collection\Outbox;
-use Activitypub\Activity\Base_Object;
-use WP_UnitTestCase;
+
+use function Activitypub\add_to_outbox;
 
 /**
  * Test class for Scheduler.
  *
  * @coversDefaultClass \Activitypub\Scheduler
  */
-class Test_Scheduler extends WP_UnitTestCase {
+class Test_Scheduler extends \WP_UnitTestCase {
 	/**
 	 * Test user ID.
 	 *
@@ -48,34 +52,95 @@ class Test_Scheduler extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test unschedule events for item.
+	 *
+	 * @covers ::unschedule_events_for_item
+	 */
+	public function test_unschedule_events_for_item() {
+		// Create test activity objects.
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/test-id' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/test-id',
+				'type'    => 'Note',
+				'content' => 'Test Content',
+			)
+		);
+
+		// Add pending activity.
+		$create_item_id = add_to_outbox( $activity, null, self::$user_id );
+
+		// Track scheduled events.
+		$scheduled_events = array();
+		\add_filter(
+			'schedule_event',
+			function ( $event ) use ( &$scheduled_events ) {
+				if ( 'activitypub_retry_activity' === $event->hook ) {
+					$scheduled_events[] = $event->args[1];
+				}
+				return $event;
+			}
+		);
+
+		$schedule_retry = new \ReflectionMethod( Dispatcher::class, 'schedule_retry' );
+		$schedule_retry->setAccessible( true );
+
+		// Invoke the method.
+		$schedule_retry->invoke( null, array( 'https://example.com/inbox' ), $create_item_id ); // null for static methods.
+
+		$this->assertCount( 1, $scheduled_events, 'Should schedule 1 retry event.' );
+		$this->assertContains( $create_item_id, $scheduled_events, "Activity $create_item_id should be scheduled" );
+
+		// Track unscheduled events.
+		\add_filter(
+			'pre_unschedule_event',
+			function ( $pre, $timestamp, $hook, $args ) use ( &$scheduled_events ) {
+				if ( 'activitypub_retry_activity' === $hook ) {
+					$scheduled_events = \array_diff( $scheduled_events, array( $args[1] ) );
+				}
+				return $pre;
+			},
+			10,
+			4
+		);
+
+		Scheduler::unschedule_events_for_item( $create_item_id );
+
+		$this->assertCount( 0, $scheduled_events, 'Should have no retry events.' );
+		$this->assertNotContains( $create_item_id, $scheduled_events, "Activity $create_item_id should no longer be scheduled" );
+
+		\remove_all_filters( 'schedule_event' );
+		\remove_all_filters( 'pre_unschedule_event' );
+	}
+
+	/**
 	 * Test reprocess_outbox method.
 	 *
 	 * @covers ::reprocess_outbox
 	 */
 	public function test_reprocess_outbox() {
 		// Create test activity objects.
-		$activity_object = new Base_Object();
-		$activity_object->set_content( 'Test Content' );
-		$activity_object->set_type( 'Note' );
-		$activity_object->set_id( 'https://example.com/test-id' );
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/test-id' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/test-id',
+				'type'    => 'Note',
+				'content' => 'Test Content',
+			)
+		);
 
 		// Add multiple pending activities.
 		$pending_ids = array();
 		for ( $i = 0; $i < 3; $i++ ) {
-			$pending_ids[] = Outbox::add(
-				$activity_object,
-				'Create',
-				self::$user_id,
-				ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
-			);
+			$pending_ids[] = Outbox::add( $activity, self::$user_id );
 		}
 
-		$pending_ids[] = Outbox::add(
-			$activity_object,
-			'Update',
-			self::$user_id,
-			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
-		);
+		$activity->set_type( 'Update' );
+		$pending_ids[] = Outbox::add( $activity, self::$user_id );
 
 		// Track scheduled events.
 		$scheduled_events = array();
@@ -98,12 +163,7 @@ class Test_Scheduler extends WP_UnitTestCase {
 		$this->assertContains( $pending_ids[3], $scheduled_events, "Activity $pending_ids[3] should be scheduled" );
 
 		// Test with published activities (should not be scheduled).
-		$published_id = Outbox::add(
-			$activity_object,
-			'Create',
-			self::$user_id,
-			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
-		);
+		$published_id = Outbox::add( $activity, self::$user_id );
 		wp_update_post(
 			array(
 				'ID'          => $published_id,
@@ -161,17 +221,18 @@ class Test_Scheduler extends WP_UnitTestCase {
 	 */
 	public function test_reprocess_outbox_scheduling() {
 		// Create a test activity.
-		$activity_object = new Base_Object();
-		$activity_object->set_content( 'Test Content' );
-		$activity_object->set_type( 'Note' );
-		$activity_object->set_id( 'https://example.com/test-id-2' );
-
-		$pending_id = Outbox::add(
-			$activity_object,
-			'Create',
-			self::$user_id,
-			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/test-id' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/test-id',
+				'type'    => 'Note',
+				'content' => 'Test Content',
+			)
 		);
+
+		$pending_id = Outbox::add( $activity, self::$user_id );
 
 		// Track scheduled events and their timing.
 		$scheduled_time = 0;
@@ -189,8 +250,7 @@ class Test_Scheduler extends WP_UnitTestCase {
 		Scheduler::reprocess_outbox();
 
 		// Verify scheduling time.
-		$this->assertGreaterThan( 0, $scheduled_time, 'Event should be scheduled with a future timestamp' );
-		$this->assertGreaterThanOrEqual( time() + 10, $scheduled_time, 'Event should be scheduled at least 10 seconds in the future' );
+		$this->assertSame( $scheduled_time, wp_next_scheduled( 'activitypub_process_outbox', array( $pending_id ) ) );
 
 		// Clean up.
 		wp_delete_post( $pending_id, true );
@@ -344,5 +404,87 @@ class Test_Scheduler extends WP_UnitTestCase {
 		$this->assertFalse(
 			\wp_next_scheduled( 'activitypub_async_batch', array( $callback, 100, 1100 ) )
 		);
+	 * Test async_batch method.
+	 *
+	 * @covers ::async_batch
+	 */
+	public function test_async_batch_with_invalid_callback() {
+		// Set up expectations for _doing_it_wrong notice.
+		$this->setExpectedIncorrectUsage( 'Activitypub\Scheduler::async_batch' );
+
+		// Create a mock callback that implements __invoke but is not in the allowed list.
+		$mock_class = $this->getMockBuilder( 'stdClass' )
+			->addMethods( array( 'callback' ) )
+			->getMock();
+
+		$mock_class->expects( $this->never() )
+			->method( 'callback' );
+
+		// Run async_batch without registered callback.
+		Scheduler::async_batch();
+	}
+
+	/**
+	 * Test schedule_announce_activity method.
+	 *
+	 * @covers ::schedule_announce_activity
+	 */
+	public function test_schedule_announce_activity() {
+		// Set the actor mode to both blog and user mode.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/test-id' );
+
+		// Create a Note object for the activity.
+		$note = new Base_Object();
+		$note->set_type( 'Note' );
+		$note->set_content( 'Test content' );
+		$note->set_id( 'https://example.com/note/1' );
+		$activity->set_object( $note );
+
+		$outbox_activity_id = Outbox::add( $activity, self::$user_id );
+
+		$scheduled_events = array();
+		add_filter(
+			'schedule_event',
+			function ( $event ) use ( &$scheduled_events ) {
+				if ( 'activitypub_process_outbox' === $event->hook ) {
+					$scheduled_events[] = $event->args[0];
+				}
+				return $event;
+			}
+		);
+
+		Scheduler::schedule_announce_activity( $outbox_activity_id, $activity, self::$user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		// Get the most recent outbox item for the blog actor.
+		$announce_outbox_items = get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_author'    => Actors::BLOG_USER_ID,
+				'post_status'    => 'pending',
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				'posts_per_page' => 1,
+			)
+		);
+
+		$this->assertNotEmpty( $announce_outbox_items, 'No announce outbox items found' );
+		$announce_outbox_id = $announce_outbox_items[0]->ID;
+
+		$this->assertCount( 1, $scheduled_events, 'Should schedule 1 event' );
+		$this->assertContains( $announce_outbox_id, $scheduled_events, 'Should schedule the announce outbox activity' );
+
+		// Check for Announce activity in the outbox.
+		$announce_post     = get_post( $announce_outbox_id );
+		$announce_activity = json_decode( $announce_post->post_content, true );
+		$this->assertEquals( 'Announce', $announce_activity['type'] );
+
+		// Clean up.
+		wp_delete_post( $outbox_activity_id, true );
+		wp_delete_post( $announce_outbox_id, true );
+		remove_all_filters( 'schedule_event' );
 	}
 }

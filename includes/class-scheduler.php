@@ -7,13 +7,15 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Scheduler\Post;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
-use Activitypub\Transformer\Factory;
+
 /**
  * Scheduler class.
  *
@@ -22,10 +24,22 @@ use Activitypub\Transformer\Factory;
 class Scheduler {
 
 	/**
+	 * Allowed batch callbacks.
+	 *
+	 * @var array
+	 */
+	private static $batch_callbacks = array();
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_schedulers();
+
+		self::$batch_callbacks = array(
+			'activitypub_send_activity'  => array( Dispatcher::class, 'send_to_followers' ),
+			'activitypub_retry_activity' => array( Dispatcher::class, 'retry_send_to_followers' ),
+		);
 
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
@@ -33,6 +47,8 @@ class Scheduler {
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
+		\add_action( 'activitypub_send_activity', array( self::class, 'async_batch' ), 10, 3 );
+		\add_action( 'activitypub_retry_activity', array( self::class, 'async_batch' ), 10, 3 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 
@@ -92,6 +108,40 @@ class Scheduler {
 	}
 
 	/**
+	 * Unschedule events for an outbox item.
+	 *
+	 * @param int $outbox_item_id The outbox item ID.
+	 */
+	public static function unschedule_events_for_item( $outbox_item_id ) {
+		$event_args = array(
+			$outbox_item_id,
+			Dispatcher::$batch_size,
+			\get_post_meta( $outbox_item_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
+		);
+
+		\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
+
+		$timestamp = \wp_next_scheduled( 'activitypub_process_outbox', array( $outbox_item_id ) );
+		\wp_unschedule_event( $timestamp, 'activitypub_process_outbox', array( $outbox_item_id ) );
+
+		$timestamp = \wp_next_scheduled( 'activitypub_send_activity', $event_args );
+		\wp_unschedule_event( $timestamp, 'activitypub_send_activity', $event_args );
+
+		// Invalidate any retries for this outbox item.
+		foreach ( _get_cron_array() as $timestamp => $cron ) {
+			if ( ! isset( $cron['activitypub_retry_activity'] ) ) {
+				continue;
+			}
+
+			foreach ( $cron['activitypub_retry_activity'] as $event ) {
+				if ( isset( $event['args'][1] ) && $outbox_item_id === $event['args'][1] ) {
+					\wp_unschedule_event( $timestamp, 'activitypub_retry_activity', $event['args'] );
+				}
+			}
+		}
+	}
+
+	/**
 	 * Update followers.
 	 */
 	public static function update_followers() {
@@ -117,6 +167,8 @@ class Scheduler {
 			} else {
 				$follower->from_array( $meta );
 				$follower->update();
+
+				$follower->clear_errors();
 			}
 		}
 	}
@@ -164,15 +216,16 @@ class Scheduler {
 	/**
 	 * Schedule the outbox item for federation.
 	 *
-	 * @param int $id The ID of the outbox item.
+	 * @param int $id     The ID of the outbox item.
+	 * @param int $offset The offset to add to the scheduled time.
 	 */
-	public static function schedule_outbox_activity_for_federation( $id ) {
+	public static function schedule_outbox_activity_for_federation( $id, $offset = 0 ) {
 		$hook = 'activitypub_process_outbox';
 		$args = array( $id );
 
 		if ( false === wp_next_scheduled( $hook, $args ) ) {
 			\wp_schedule_single_event(
-				\time() + 10,
+				\time() + $offset,
 				$hook,
 				$args
 			);
@@ -183,17 +236,6 @@ class Scheduler {
 	 * Reprocess the outbox.
 	 */
 	public static function reprocess_outbox() {
-		// Bail if there is a pending batch.
-		if ( self::next_scheduled_hook( 'activitypub_async_batch' ) ) {
-			return;
-		}
-
-		// Bail if there is a batch in progress.
-		$key = \md5( \serialize( Dispatcher::$callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
-		if ( self::is_locked( $key ) ) {
-			return;
-		}
-
 		$ids = \get_posts(
 			array(
 				'post_type'      => Outbox::POST_TYPE,
@@ -204,6 +246,18 @@ class Scheduler {
 		);
 
 		foreach ( $ids as $id ) {
+			// Bail if there is a pending batch.
+			$offset = \get_post_meta( $id, '_activitypub_outbox_offset', true ) ?: 0; // phpcs:ignore
+			if ( \wp_next_scheduled( 'activitypub_send_activity', array( $id, ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset ) ) ) {
+				return;
+			}
+
+			// Bail if there is a batch in progress.
+			$key = \md5( \serialize( $id ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+			if ( self::is_locked( $key ) ) {
+				return;
+			}
+
 			self::schedule_outbox_activity_for_federation( $id );
 		}
 	}
@@ -262,41 +316,38 @@ class Scheduler {
 	 * The batching part is optional and only comes into play if the callback returns anything.
 	 * Beyond that it's a helper to run a callback asynchronously with locking to prevent simultaneous processing.
 	 *
-	 * @param callable $callback Callable processing routine.
-	 * @params mixed   ...$args  Optional. Parameters that get passed to the callback.
+	 * @params mixed ...$args Optional. Parameters that get passed to the callback.
 	 */
-	public static function async_batch( $callback ) {
+	public static function async_batch() {
+		$args     = \func_get_args(); // phpcs:ignore PHPCompatibility.FunctionUse.ArgumentFunctionsReportCurrentValue
+		$callback = self::$batch_callbacks[ \current_action() ] ?? $args[0] ?? null;
 		if ( ! \is_callable( $callback ) ) {
-			_doing_it_wrong( __METHOD__, 'The first argument must be a valid callback.', '5.2.0' );
+			\_doing_it_wrong( __METHOD__, 'There must be a valid callback associated with the current action.', '5.2.0' );
 			return;
 		}
 
-		$args = \func_get_args(); // phpcs:ignore PHPCompatibility.FunctionUse.ArgumentFunctionsReportCurrentValue
-		$key  = \md5( \serialize( $callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+		$key = \md5( \serialize( $args[0] ?? $args ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 		// Bail if the existing lock is still valid.
 		if ( self::is_locked( $key ) ) {
-			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_async_batch', $args );
+			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, \current_action(), $args );
 			return;
 		}
 
 		self::lock( $key );
 
-		$callback = array_shift( $args ); // Remove $callback from arguments.
-		$next     = \call_user_func_array( $callback, $args );
+		if ( \is_callable( $args[0] ) ) {
+			$callback = \array_shift( $args ); // Remove $callback from arguments.
+		}
+		$next = \call_user_func_array( $callback, $args );
 
 		self::unlock( $key );
 
 		if ( ! empty( $next ) ) {
 			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event(
-				\time() + 30,
-				'activitypub_async_batch',
-				\array_merge( array( $callback ), \array_values( $next ) )
-			);
+			\wp_schedule_single_event( \time() + 30, \current_action(), \array_values( $next ) );
 		}
 	}
-
 
 	/**
 	 * Locks the async batch process for individual callbacks to prevent simultaneous processing.
@@ -350,38 +401,14 @@ class Scheduler {
 	}
 
 	/**
-	 * Get the next scheduled hook.
-	 *
-	 * @param string $hook The hook name.
-	 * @return int|bool The timestamp of the next scheduled hook, or false if none found.
-	 */
-	private static function next_scheduled_hook( $hook ) {
-		$crons = _get_cron_array();
-		if ( empty( $crons ) ) {
-			return false;
-		}
-
-		// Get next event.
-		$next = false;
-		foreach ( $crons as $timestamp => $cron ) {
-			if ( isset( $cron[ $hook ] ) ) {
-				$next = $timestamp;
-				break;
-			}
-		}
-
-		return $next;
-	}
-
-	/**
 	 * Send announces.
 	 *
 	 * @param int      $outbox_activity_id The outbox activity ID.
-	 * @param Activity $activity_object    The activity object.
+	 * @param Activity $activity           The activity object.
 	 * @param int      $actor_id           The actor ID.
 	 * @param int      $content_visibility The content visibility.
 	 */
-	public static function schedule_announce_activity( $outbox_activity_id, $activity_object, $actor_id, $content_visibility ) {
+	public static function schedule_announce_activity( $outbox_activity_id, $activity, $actor_id, $content_visibility ) {
 		// Only if we're in both Blog and User modes.
 		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 			return;
@@ -397,34 +424,32 @@ class Scheduler {
 			return;
 		}
 
-		$activity_type = \get_post_meta( $outbox_activity_id, '_activitypub_activity_type', true );
-
-		// Only if the activity is a Create, Update or Delete.
-		if ( ! in_array( $activity_type, array( 'Create', 'Update', 'Delete' ), true ) ) {
+		// Only if the activity is a Create.
+		if ( 'Create' !== $activity->get_type() ) {
 			return;
 		}
 
-		// Check if the object is an article, image, audio, video, event or document and ignore profile updates and other activities.
-		if ( ! in_array( $activity_object->get_type(), array( 'Note', 'Article', 'Image', 'Audio', 'Video', 'Event', 'Document' ), true ) ) {
+		if ( ! is_object( $activity->get_object() ) ) {
 			return;
 		}
 
-		$transformer = Factory::get_transformer( $activity_object );
-		if ( ! $transformer || \is_wp_error( $transformer ) ) {
+		// Check if the object is an article, image, audio, video, event, or document and ignore profile updates and other activities.
+		if ( ! in_array( $activity->get_object()->get_type(), Base_Object::TYPES, true ) ) {
 			return;
 		}
 
-		$post     = get_post( $outbox_activity_id );
-		$activity = $transformer->to_activity( $activity_type );
-		$activity->set_id( $post->guid );
+		$announce = new Activity();
+		$announce->set_type( 'Announce' );
+		$announce->set_actor( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id() );
+		$announce->set_object( $activity );
 
-		$outbox_activity_id = Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID );
+		$outbox_activity_id = Outbox::add( $announce, Actors::BLOG_USER_ID );
 
 		if ( ! $outbox_activity_id ) {
 			return;
 		}
 
 		// Schedule the outbox item for federation.
-		self::schedule_outbox_activity_for_federation( $outbox_activity_id );
+		self::schedule_outbox_activity_for_federation( $outbox_activity_id, 120 );
 	}
 }

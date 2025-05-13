@@ -1,6 +1,6 @@
-import { useBlockProps, RichText } from '@wordpress/block-editor';
+import { useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, _x, sprintf } from '@wordpress/i18n';
 import { Reactions } from './reactions';
 
 /**
@@ -10,20 +10,45 @@ import { Reactions } from './reactions';
  */
 const generateWhimsicalName = () => {
 	const adjectives = [
-		'Bouncy', 'Cosmic', 'Dancing', 'Fluffy', 'Giggly',
-		'Hoppy', 'Jazzy', 'Magical', 'Nifty', 'Perky',
-		'Quirky', 'Sparkly', 'Twirly', 'Wiggly', 'Zippy',
+		'Bouncy',
+		'Cosmic',
+		'Dancing',
+		'Fluffy',
+		'Giggly',
+		'Hoppy',
+		'Jazzy',
+		'Magical',
+		'Nifty',
+		'Perky',
+		'Quirky',
+		'Sparkly',
+		'Twirly',
+		'Wiggly',
+		'Zippy',
 	];
 	const nouns = [
-		'Badger', 'Capybara', 'Dolphin', 'Echidna', 'Flamingo',
-		'Giraffe', 'Hedgehog', 'Iguana', 'Jellyfish', 'Koala',
-		'Lemur', 'Manatee', 'Narwhal', 'Octopus', 'Penguin',
+		'Badger',
+		'Capybara',
+		'Dolphin',
+		'Echidna',
+		'Flamingo',
+		'Giraffe',
+		'Hedgehog',
+		'Iguana',
+		'Jellyfish',
+		'Koala',
+		'Lemur',
+		'Manatee',
+		'Narwhal',
+		'Octopus',
+		'Penguin',
 	];
-	
-	const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-	const noun = nouns[Math.floor(Math.random() * nouns.length)];
-	
-	return `${adjective} ${noun}`;
+
+	const adjective =
+		adjectives[ Math.floor( Math.random() * adjectives.length ) ];
+	const noun = nouns[ Math.floor( Math.random() * nouns.length ) ];
+
+	return `${ adjective } ${ noun }`;
 };
 
 /**
@@ -44,30 +69,30 @@ const generateDummyReaction = ( index ) => {
 		'#3498DB', // Blue
 		'#E67E22', // Orange
 	];
-	
+
 	const name = generateWhimsicalName();
-	const color = colors[Math.floor(Math.random() * colors.length)];
-	const letter = name.charAt(0);
-	
+	const color = colors[ Math.floor( Math.random() * colors.length ) ];
+	const letter = name.charAt( 0 );
+
 	// Create a data URL for a colored circle with a letter.
-	const canvas = document.createElement('canvas');
+	const canvas = document.createElement( 'canvas' );
 	canvas.width = 64;
 	canvas.height = 64;
-	const ctx = canvas.getContext('2d');
-	
+	const ctx = canvas.getContext( '2d' );
+
 	// Draw colored circle.
 	ctx.fillStyle = color;
 	ctx.beginPath();
-	ctx.arc(32, 32, 32, 0, 2 * Math.PI);
+	ctx.arc( 32, 32, 32, 0, 2 * Math.PI );
 	ctx.fill();
-	
+
 	// Draw letter.
 	ctx.fillStyle = '#FFFFFF';
 	ctx.font = '32px sans-serif';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
-	ctx.fillText(letter, 32, 32);
-	
+	ctx.fillText( letter, 32, 32 );
+
 	return {
 		name,
 		url: '#',
@@ -82,44 +107,64 @@ const generateDummyReaction = ( index ) => {
  */
 const generateDummyReactions = () => ( {
 	likes: {
-		label: '9 likes',
-		items: Array.from( { length: 9 }, ( _, i ) => generateDummyReaction( i ) ),
+		label: sprintf(
+			/* translators: %d: Number of likes */
+			_x( '%d likes', 'number of likes', 'activitypub' ),
+			9
+		),
+		items: Array.from( { length: 9 }, ( _, i ) =>
+			generateDummyReaction( i )
+		),
 	},
 	reposts: {
-		label: '6 reposts',
-		items: Array.from( { length: 6 }, ( _, i ) => generateDummyReaction( i + 9 ) ),
+		label: sprintf(
+			/* translators: %d: Number of reposts */
+			_x( '%d reposts', 'number of reposts', 'activitypub' ),
+			6
+		),
+		items: Array.from( { length: 6 }, ( _, i ) =>
+			generateDummyReaction( i + 9 )
+		),
 	},
 } );
 
 /**
  * Edit component for the Reactions block.
  *
- * @param {Object}   props               Block props.
- * @param {Object}   props.attributes    Block attributes.
- * @param {Function} props.setAttributes Attribute update callback.
+ * @param {Object}   props                            Block props.
+ * @param {Object}   props.attributes                 Block attributes.
+ * @param {Function} props.setAttributes              Attribute update callback.
+ * @param            props.__unstableLayoutClassNames
  * @return {JSX.Element}                 Component to render.
  */
-export default function Edit( { attributes, setAttributes, __unstableLayoutClassNames } ) {
-	const blockProps = useBlockProps( { className: __unstableLayoutClassNames } );
+export default function Edit( { attributes, __unstableLayoutClassNames } ) {
+	const blockProps = useBlockProps( {
+		className: __unstableLayoutClassNames,
+	} );
 	const [ dummyReactions ] = useState( generateDummyReactions() );
 
-	const titleEditor = (
-		<RichText
-			tagName="h6"
-			value={ attributes.title }
-			onChange={ ( title ) => setAttributes( { title } ) }
-			placeholder={ __( 'Fediverse reactions', 'activitypub' ) }
-			disableLineBreaks={ true }
-			allowedFormats={ [] }
-		/>
-	);
+	// Template for InnerBlocks - allows only a heading block
+	const TEMPLATE = [
+		[
+			'core/heading',
+			{
+				level: 6,
+				placeholder: __( 'Fediverse Reactions', 'activitypub' ),
+				content: __( 'Fediverse Reactions', 'activitypub' ),
+			},
+		],
+	];
+
+	const ALLOWED_BLOCKS = [ 'core/heading' ];
 
 	return (
 		<div { ...blockProps }>
-			<Reactions
-				titleComponent={ titleEditor }
-				reactions={ dummyReactions }
+			<InnerBlocks
+				template={ TEMPLATE }
+				allowedBlocks={ ALLOWED_BLOCKS }
+				templateLock={ false }
 			/>
+			<Reactions reactions={ dummyReactions } />
 		</div>
 	);
 }

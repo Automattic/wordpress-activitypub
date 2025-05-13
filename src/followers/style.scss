@@ -30,8 +30,10 @@
 	}
 	img {
 		border-radius: 50%;
-		width: 40px;
-		height: 40px;
+		max-width: 40px;
+		max-height: 40px;
+		overflow: hidden;
+		-moz-force-broken-image-icon: 1;
 		margin-right: var( --wp--preset--spacing--20, .5rem );
 	}
 	.activitypub-link {

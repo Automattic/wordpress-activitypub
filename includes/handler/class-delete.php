@@ -7,10 +7,11 @@
 
 namespace Activitypub\Handler;
 
-use WP_REST_Request;
 use Activitypub\Http;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Interactions;
+
+use function Activitypub\object_to_uri;
 
 /**
  * Handles Delete requests.
@@ -20,24 +21,10 @@ class Delete {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action(
-			'activitypub_inbox_delete',
-			array( self::class, 'handle_delete' )
-		);
-
-		// Defer signature verification for `Delete` requests.
-		\add_filter(
-			'activitypub_defer_signature_verification',
-			array( self::class, 'defer_signature_verification' ),
-			10,
-			2
-		);
-
-		// Side effect.
-		\add_action(
-			'activitypub_delete_actor_interactions',
-			array( self::class, 'delete_interactions' )
-		);
+		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ) );
+		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
+		\add_action( 'activitypub_delete_actor_interactions', array( self::class, 'delete_interactions' ) );
+		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 	}
 
 	/**
@@ -46,7 +33,7 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function handle_delete( $activity ) {
-		$object_type = isset( $activity['object']['type'] ) ? $activity['object']['type'] : '';
+		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
 			/*
@@ -114,7 +101,6 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function maybe_delete_follower( $activity ) {
-		/* @var \Activitypub\Model\Follower $follower Follower object. */
 		$follower = Followers::get_follower_by_actor( $activity['actor'] );
 
 		// Verify that Actor is deleted.
@@ -148,10 +134,8 @@ class Delete {
 	public static function delete_interactions( $actor ) {
 		$comments = Interactions::get_interactions_by_actor( $actor );
 
-		if ( is_array( $comments ) ) {
-			foreach ( $comments as $comment ) {
-				wp_delete_comment( $comment->comment_ID, true );
-			}
+		foreach ( $comments as $comment ) {
+			wp_delete_comment( $comment, true );
 		}
 	}
 
@@ -179,8 +163,8 @@ class Delete {
 	/**
 	 * Defer signature verification for `Delete` requests.
 	 *
-	 * @param bool            $defer   Whether to defer signature verification.
-	 * @param WP_REST_Request $request The request object.
+	 * @param bool             $defer   Whether to defer signature verification.
+	 * @param \WP_REST_Request $request The request object.
 	 *
 	 * @return bool Whether to defer signature verification.
 	 */
@@ -192,5 +176,19 @@ class Delete {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Set the object to the object ID.
+	 *
+	 * @param \Activitypub\Activity\Activity $activity The Activity object.
+	 * @return \Activitypub\Activity\Activity The filtered Activity object.
+	 */
+	public static function outbox_activity( $activity ) {
+		if ( 'Delete' === $activity->get_type() ) {
+			$activity->set_object( object_to_uri( $activity->get_object() ) );
+		}
+
+		return $activity;
 	}
 }

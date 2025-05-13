@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 use Activitypub\Transformer\Factory;
@@ -176,6 +177,17 @@ class Migration {
 		}
 		if ( \version_compare( $version_from_db, '5.2.0', '<' ) ) {
 			Scheduler::register_schedules();
+		}
+		if ( \version_compare( $version_from_db, '5.4.0', '<' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_slashing' ) );
+			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
+			\add_action( 'init', 'flush_rewrite_rules', 20 );
+		}
+		if ( \version_compare( $version_from_db, '5.7.0', '<' ) ) {
+			self::delete_mastodon_api_orphaned_extra_fields();
+		}
+		if ( \version_compare( $version_from_db, '5.8.0', '<' ) ) {
+			self::update_notification_options();
 		}
 
 		/*
@@ -361,7 +373,7 @@ class Migration {
 	}
 
 	/**
-	 * Upate to 4.1.0
+	 * Update to 4.1.0
 	 *
 	 * * Migrate the `activitypub_post_content_type` to only use `activitypub_custom_post_content`.
 	 */
@@ -561,13 +573,108 @@ class Migration {
 	}
 
 	/**
+	 * Update _activitypub_actor_json meta values to ensure they are properly slashed.
+	 *
+	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 100.
+	 * @param int $offset     Optional. Number of meta values to skip. Default 0.
+	 * @return array|null Array with batch size and offset if there are more meta values to process, null otherwise.
+	 */
+	public static function update_actor_json_slashing( $batch_size = 100, $offset = 0 ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$meta_values = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' LIMIT %d OFFSET %d",
+				$batch_size,
+				$offset
+			)
+		);
+
+		foreach ( $meta_values as $meta ) {
+			$json = \json_decode( $meta->meta_value, true );
+
+			// If json_decode fails, try adding slashes.
+			if ( null === $json && \json_last_error() !== JSON_ERROR_NONE ) {
+				$escaped_value = \preg_replace( '#\\\\(?!["\\\\/bfnrtu])#', '\\\\\\\\', $meta->meta_value );
+				$json          = \json_decode( $escaped_value, true );
+
+				// Update the meta if json_decode succeeds with slashes.
+				if ( null !== $json && \json_last_error() === JSON_ERROR_NONE ) {
+					\update_post_meta( $meta->post_id, '_activitypub_actor_json', \wp_slash( $escaped_value ) );
+				}
+			}
+		}
+
+		if ( \count( $meta_values ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Update comment author emails with webfinger addresses for ActivityPub comments.
+	 *
+	 * @param int $batch_size Optional. Number of comments to process per batch. Default 50.
+	 * @param int $offset     Optional. Number of comments to skip. Default 0.
+	 * @return array|null Array with batch size and offset if there are more comments to process, null otherwise.
+	 */
+	public static function update_comment_author_emails( $batch_size = 50, $offset = 0 ) {
+		$comments = \get_comments(
+			array(
+				'number'     => $batch_size,
+				'offset'     => $offset,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query' => array(
+					array(
+						'key'   => 'protocol',
+						'value' => 'activitypub',
+					),
+				),
+			)
+		);
+
+		foreach ( $comments as $comment ) {
+			$comment_author_url = $comment->comment_author_url;
+			if ( empty( $comment_author_url ) ) {
+				continue;
+			}
+
+			$webfinger = Webfinger::uri_to_acct( $comment_author_url );
+			if ( \is_wp_error( $webfinger ) ) {
+				continue;
+			}
+
+			\wp_update_comment(
+				array(
+					'comment_ID'           => $comment->comment_ID,
+					'comment_author_email' => \str_replace( 'acct:', '', $webfinger ),
+				)
+			);
+		}
+
+		if ( count( $comments ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
+			);
+		}
+
+		return null;
+	}
+
+	/**
 	 * Set the defaults needed for the plugin to work.
 	 *
 	 * Add the ActivityPub capability to all users that can publish posts.
 	 */
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
-		self::add_notification_defaults();
+		self::add_default_extra_field();
 	}
 
 	/**
@@ -584,21 +691,21 @@ class Migration {
 			return;
 		}
 
-		$activity = $transformer->to_object();
+		$activity = $transformer->to_activity( $activity_type );
 		if ( ! $activity || \is_wp_error( $activity ) ) {
 			return;
 		}
 
 		// If the user is disabled, fall back to the blog user when available.
-		if ( is_user_disabled( $user_id ) ) {
-			if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
-				return;
-			} else {
+		if ( ! user_can_activitypub( $user_id ) ) {
+			if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 				$user_id = Actors::BLOG_USER_ID;
+			} else {
+				return;
 			}
 		}
 
-		$post_id = Outbox::add( $activity, $activity_type, $user_id, $visibility );
+		$post_id = Outbox::add( $activity, $user_id, $visibility );
 
 		// Immediately set to publish, no federation needed.
 		\wp_publish_post( $post_id );
@@ -622,11 +729,40 @@ class Migration {
 	}
 
 	/**
-	 * Add default notification settings.
+	 * Add a default extra field for the user.
 	 */
-	private static function add_notification_defaults() {
-		\add_option( 'activitypub_mailer_new_follower', '1' );
-		\add_option( 'activitypub_mailer_new_dm', '1' );
+	private static function add_default_extra_field() {
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'activitypub' ),
+			)
+		);
+
+		$title   = \__( 'Powered by', 'activitypub' );
+		$content = 'WordPress';
+
+		// Add a default extra field for each user.
+		foreach ( $users as $user ) {
+			\wp_insert_post(
+				array(
+					'post_type'    => Extra_Fields::USER_POST_TYPE,
+					'post_author'  => $user->ID,
+					'post_status'  => 'publish',
+					'post_title'   => $title,
+					'post_content' => $content,
+				)
+			);
+		}
+
+		\wp_insert_post(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_author'  => 0,
+				'post_status'  => 'publish',
+				'post_title'   => $title,
+				'post_content' => $content,
+			)
+		);
 	}
 
 	/**
@@ -688,5 +824,52 @@ class Migration {
 		) {
 			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		}
+	}
+
+	/**
+	 * Deletes user extra fields where the author is the blog user.
+	 *
+	 * These extra fields were created when the Enable Mastodon Apps integration passed
+	 * an author_url instead of a user_id to the mastodon_api_account filter. This caused
+	 * Extra_Fields::default_actor_extra_fields() to run but fail to cache the fact it ran
+	 * for non-existent users. The result is a number of user extra fields with no author.
+	 *
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/pull/1554
+	 */
+	public static function delete_mastodon_api_orphaned_extra_fields() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete(
+			$wpdb->posts,
+			array(
+				'post_type'   => Extra_Fields::USER_POST_TYPE,
+				'post_author' => Actors::BLOG_USER_ID,
+			)
+		);
+	}
+
+	/**
+	 * Update notification options.
+	 */
+	public static function update_notification_options() {
+		$new_dm       = \get_option( 'activitypub_mailer_new_dm', '1' );
+		$new_follower = \get_option( 'activitypub_mailer_new_follower', '1' );
+
+		// Add the blog user notification options.
+		\add_option( 'activitypub_blog_user_mailer_new_dm', $new_dm );
+		\add_option( 'activitypub_blog_user_mailer_new_follower', $new_follower );
+		\add_option( 'activitypub_blog_user_mailer_new_mention', '1' );
+
+		// Add the actor notification options.
+		foreach ( Actors::get_collection() as $actor ) {
+			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_dm', $new_dm );
+			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_follower', $new_follower );
+			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_mention', '1' );
+		}
+
+		// Delete the old notification options.
+		\delete_option( 'activitypub_mailer_new_dm' );
+		\delete_option( 'activitypub_mailer_new_follower' );
 	}
 }

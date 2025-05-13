@@ -98,18 +98,18 @@ class Signature {
 			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
 		);
 
-		$key      = \openssl_pkey_new( $config );
-		$priv_key = null;
-		$detail   = array();
+		$key         = \openssl_pkey_new( $config );
+		$private_key = null;
+		$detail      = array();
 		if ( $key ) {
-			\openssl_pkey_export( $key, $priv_key );
+			\openssl_pkey_export( $key, $private_key );
 
 			$detail = \openssl_pkey_get_details( $key );
 		}
 
 		// Check if keys are valid.
 		if (
-			empty( $priv_key ) || ! is_string( $priv_key ) ||
+			empty( $private_key ) || ! is_string( $private_key ) ||
 			! isset( $detail['key'] ) || ! is_string( $detail['key'] )
 		) {
 			return array(
@@ -119,7 +119,7 @@ class Signature {
 		}
 
 		$key_pair = array(
-			'private_key' => $priv_key,
+			'private_key' => $private_key,
 			'public_key'  => $detail['key'],
 		);
 
@@ -267,24 +267,15 @@ class Signature {
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		if ( ! isset( $headers['signature'] ) ) {
-			return new WP_Error( 'activitypub_signature', __( 'Request not signed', 'activitypub' ), array( 'status' => 401 ) );
-		}
-
 		if ( array_key_exists( 'signature', $headers ) ) {
 			$signature_block = self::parse_signature_header( $headers['signature'][0] );
 		} elseif ( array_key_exists( 'authorization', $headers ) ) {
 			$signature_block = self::parse_signature_header( $headers['authorization'][0] );
-		}
-
-		if ( ! isset( $signature_block ) || ! $signature_block ) {
+		} else {
 			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
 		$signed_headers = $signature_block['headers'];
-		if ( ! $signed_headers ) {
-			$signed_headers = array( 'date' );
-		}
 
 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
 		if ( ! $signed_data ) {
@@ -300,16 +291,13 @@ class Signature {
 			if ( is_array( $headers['digest'] ) ) {
 				$headers['digest'] = $headers['digest'][0];
 			}
-			$hashalg = 'sha256';
-			$digest  = explode( '=', $headers['digest'], 2 );
-			if ( 'SHA-256' === $digest[0] ) {
-				$hashalg = 'sha256';
-			}
+			$algorithm = 'sha256';
+			$digest    = explode( '=', $headers['digest'], 2 );
 			if ( 'SHA-512' === $digest[0] ) {
-				$hashalg = 'sha512';
+				$algorithm = 'sha512';
 			}
 
-			if ( \base64_encode( \hash( $hashalg, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
+			if ( \base64_encode( \hash( $algorithm, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
 				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
 			}
 		}
@@ -332,7 +320,7 @@ class Signature {
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
-	 * @return WP_Error|string The public key or WP_Error.
+	 * @return resource|WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
 		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) );
@@ -343,9 +331,14 @@ class Signature {
 				array( 'status' => 401 )
 			);
 		}
+
 		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
-			return \rtrim( $actor['publicKey']['publicKeyPem'] );
+			$key_resource = \openssl_pkey_get_public( \rtrim( $actor['publicKey']['publicKeyPem'] ) );
+			if ( $key_resource ) {
+				return $key_resource;
+			}
 		}
+
 		return new WP_Error(
 			'activitypub_no_remote_key_found',
 			__( 'No Public-Key found', 'activitypub' ),
@@ -402,11 +395,7 @@ class Signature {
 			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		}
 
-		if (
-			! empty( $parsed_header['signature'] ) &&
-			! empty( $parsed_header['algorithm'] ) &&
-			empty( $parsed_header['headers'] )
-		) {
+		if ( empty( $parsed_header['headers'] ) ) {
 			$parsed_header['headers'] = array( 'date' );
 		}
 
@@ -473,10 +462,10 @@ class Signature {
 				$d->setTimeZone( new DateTimeZone( 'UTC' ) );
 				$c = $d->format( 'U' );
 
-				$dplus  = time() + ( 3 * HOUR_IN_SECONDS );
-				$dminus = time() - ( 3 * HOUR_IN_SECONDS );
+				$d_plus  = time() + ( 3 * HOUR_IN_SECONDS );
+				$d_minus = time() - ( 3 * HOUR_IN_SECONDS );
 
-				if ( $c > $dplus || $c < $dminus ) {
+				if ( $c > $d_plus || $c < $d_minus ) {
 					// Time out of range.
 					return false;
 				}

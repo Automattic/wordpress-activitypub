@@ -62,6 +62,7 @@ class Webfinger {
 		foreach ( $data['links'] as $link ) {
 			if (
 				'self' === $link['rel'] &&
+				isset( $link['type'] ) &&
 				(
 					'application/activity+json' === $link['type'] ||
 					'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' === $link['type']
@@ -83,6 +84,8 @@ class Webfinger {
 
 	/**
 	 * Transform a URI to an acct <identifier>@<host>.
+	 *
+	 * @see https://swicg.github.io/activitypub-webfinger/#reverse-discovery
 	 *
 	 * @param string $uri The URI (acct:, mailto:, http:, https:).
 	 *

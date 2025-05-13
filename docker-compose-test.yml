@@ -7,10 +7,10 @@ services:
       MYSQL_DATABASE: activitypub-test
       MYSQL_ROOT_PASSWORD: activitypub-test
     healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:3306"]
-        interval: 5s
-        timeout: 2s
-        retries: 5
+      test: ['CMD', 'curl', '-f', 'http://localhost:3306']
+      interval: 5s
+      timeout: 2s
+      retries: 5
 
   test-php:
     build:
@@ -23,4 +23,4 @@ services:
       - test-db
     volumes:
       - .:/app
-    command: ["composer", "run-script", "test"]
+    command: ['composer', 'run-script', 'test']

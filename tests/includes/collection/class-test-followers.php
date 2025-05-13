@@ -29,6 +29,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			'inbox'             => 'https://example.org/users/username/inbox',
 			'name'              => 'username',
 			'preferredUsername' => 'username',
+			'endpoints'         => array( 'sharedInbox' => 'https://example.org/sharedInbox' ),
 		),
 		'jon@example.com'      => array(
 			'id'                => 'https://example.com/author/jon',
@@ -36,6 +37,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			'inbox'             => 'https://example.com/author/jon/inbox',
 			'name'              => 'jon',
 			'preferredUsername' => 'jon',
+			'endpoints'         => array( 'sharedInbox' => 'https://example.org/sharedInbox' ),
 		),
 		'doe@example.org'      => array(
 			'id'                => 'https://example.org/author/doe',
@@ -60,10 +62,12 @@ class Test_Followers extends \WP_UnitTestCase {
 		),
 		'user2@example.com'    => array(
 			'id'                => 'https://user2.example.com',
+			'type'              => 'Person',
 			'url'               => 'https://user2.example.com',
 			'inbox'             => 'https://user2.example.com/inbox',
 			'name'              => 'úser2',
 			'preferredUsername' => 'user2',
+			'summary'           => 'father since 04\24', // @ticket https://github.com/Automattic/wordpress-activitypub/pull/1373
 		),
 		'error@example.com'    => array(
 			'url'               => 'https://error.example.com',
@@ -214,7 +218,7 @@ class Test_Followers extends \WP_UnitTestCase {
 	/**
 	 * Tests delete_follower.
 	 *
-	 * @covers ::delete_follower
+	 * @covers ::remove_follower
 	 */
 	public function test_delete_follower() {
 		$followers  = array(
@@ -256,9 +260,9 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests get_followers_count.
+	 * Tests get_outdated_followers.
 	 *
-	 * @covers ::get_followers_count
+	 * @covers ::get_outdated_followers
 	 */
 	public function test_get_outdated_followers() {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
@@ -390,7 +394,6 @@ class Test_Followers extends \WP_UnitTestCase {
 	/**
 	 * Tests migration of followers from user meta to new format.
 	 *
-	 * @covers ::maybe_migrate
 	 * @dataProvider migration_scenarios_provider
 	 *
 	 * @param array $followers      List of followers to migrate.
@@ -644,10 +647,10 @@ class Test_Followers extends \WP_UnitTestCase {
 			50,
 			0
 		);
-		$this->assertCount( 3, $inboxes, 'Should retrieve exactly 3 inboxes.' );
-		$this->assertContains( self::$actors['username@example.org']['inbox'], $inboxes, 'Should contain first inbox.' );
-		$this->assertContains( self::$actors['jon@example.com']['inbox'], $inboxes, 'Should contain second inbox.' );
-		$this->assertContains( self::$actors['doe@example.org']['inbox'], $inboxes, 'Should contain third inbox.' );
+		// username and jon have sharedInbox endpoints.
+		$this->assertCount( 2, $inboxes, 'Should retrieve exactly 3 inboxes.' );
+		$this->assertContains( self::$actors['username@example.org']['endpoints']['sharedInbox'], $inboxes, 'Should contain first inbox.' );
+		$this->assertContains( self::$actors['doe@example.org']['inbox'], $inboxes, 'Should contain second inbox.' );
 
 		// Test pagination.
 		$inboxes = Followers::get_inboxes_for_activity(
@@ -668,7 +671,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			50,
 			0
 		);
-		$this->assertCount( 4, $inboxes, 'Should include blog user followers in dual mode.' );
+		$this->assertCount( 3, $inboxes, 'Should include blog user followers in dual mode.' );
 		$this->assertContains( self::$actors['sally@example.org']['inbox'], $inboxes, 'Should contain blog user inbox.' );
 	}
 
@@ -709,5 +712,62 @@ class Test_Followers extends \WP_UnitTestCase {
 			array( 'user@example.com', 'user' ),
 			array( 'https://example.com', 'https://example.com' ),
 		);
+	}
+
+	/**
+	 * Tests clear_errors.
+	 *
+	 * @covers ::clear_errors
+	 */
+	public function test_clear_errors() {
+		$follower = 'https://example.com/author/jon';
+		$result   = Followers::add_follower( 1, $follower );
+		$this->assertNotWPError( $result );
+
+		// Add some errors.
+		Followers::add_error( $result->get__id(), 'Test error 1' );
+		Followers::add_error( $result->get__id(), 'Test error 2' );
+
+		// Verify errors were added.
+		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
+		$this->assertCount( 2, $errors );
+
+		// Clear errors.
+		$cleared = Followers::clear_errors( $result->get__id() );
+		$this->assertTrue( $cleared );
+
+		// Verify errors were cleared.
+		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
+		$this->assertEmpty( $errors );
+	}
+
+	/**
+	 * Tests clear_errors with no errors.
+	 *
+	 * @covers ::clear_errors
+	 */
+	public function test_clear_errors_no_errors() {
+		$follower = 'https://example.com/author/jon';
+		$result   = Followers::add_follower( 1, $follower );
+		$this->assertNotWPError( $result );
+
+		// Clear errors when none exist.
+		$cleared = Followers::clear_errors( $result->get__id() );
+		$this->assertFalse( $cleared );
+
+		// Verify no errors exist.
+		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
+		$this->assertEmpty( $errors );
+	}
+
+	/**
+	 * Tests clear_errors with invalid follower ID.
+	 *
+	 * @covers ::clear_errors
+	 */
+	public function test_clear_errors_invalid_id() {
+		// Try to clear errors for non-existent follower.
+		$cleared = Followers::clear_errors( 99999 );
+		$this->assertFalse( $cleared );
 	}
 }
