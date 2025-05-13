@@ -86,7 +86,7 @@ class Test_Surge extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( '<?php', $file, 'File should start with PHP opening tag' );
 		$this->assertStringContainsString( "/* That's all, stop editing! */", $file, 'Comment should be present' );
-		$this->assertStringContainsString( Surge::cache_config(), $file, 'Config line should be present' );
+		$this->assertStringContainsString( Surge::get_cache_config(), $file, 'Config line should be present' );
 	}
 
 	/**
@@ -104,7 +104,7 @@ class Test_Surge extends \WP_UnitTestCase {
 		// phpcs:ignore
 		$actual = \file_get_contents( Surge::get_config_file_path() );
 		$this->assertStringContainsString( '<?php', $actual, 'File should start with PHP opening tag' );
-		$this->assertStringNotContainsString( Surge::cache_config(), $actual, 'Config line should be removed' );
+		$this->assertStringNotContainsString( Surge::get_cache_config(), $actual, 'Config line should be removed' );
 		$this->assertStringContainsString( "/* That's all, stop editing! */", $actual, 'Comment should be present' );
 	}
 
@@ -118,7 +118,7 @@ class Test_Surge extends \WP_UnitTestCase {
 
 		// phpcs:ignore
 		$before = \file_get_contents( Surge::get_config_file_path() );
-		$this->assertStringNotContainsString( Surge::cache_config(), $before );
+		$this->assertStringNotContainsString( Surge::get_cache_config(), $before );
 
 		Surge::init();
 
@@ -127,7 +127,7 @@ class Test_Surge extends \WP_UnitTestCase {
 
 		// phpcs:ignore
 		$after = \file_get_contents( Surge::get_config_file_path() );
-		$this->assertStringContainsString( Surge::cache_config(), $after );
+		$this->assertStringContainsString( Surge::get_cache_config(), $after );
 
 		\remove_all_filters( 'pre_option_active_plugins' );
 	}
@@ -148,7 +148,7 @@ class Test_Surge extends \WP_UnitTestCase {
 	 */
 	public function test_init_with_surge_inactive() {
 		// phpcs:ignore
-		\file_put_contents( Surge::get_config_file_path(), "<?php\n" . Surge::cache_config() . "\n\n/* That's all, stop editing! */" );
+		\file_put_contents( Surge::get_config_file_path(), "<?php\n" . Surge::get_cache_config() . "\n\n/* That's all, stop editing! */" );
 		\add_filter( 'pre_option_active_plugins', array( $this, 'get_inactive_plugins' ) );
 
 		Surge::init();
@@ -158,7 +158,7 @@ class Test_Surge extends \WP_UnitTestCase {
 
 		// phpcs:ignore
 		$after = \file_get_contents( Surge::get_config_file_path() );
-		$this->assertStringNotContainsString( Surge::cache_config(), $after );
+		$this->assertStringNotContainsString( Surge::get_cache_config(), $after );
 
 		\remove_all_filters( 'pre_option_active_plugins' );
 	}
