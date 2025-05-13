@@ -185,6 +185,6 @@ class Surge {
 	 * @return string The cache config.
 	 */
 	public static function cache_config() {
-		return sprintf( "define( 'WP_CACHE_CONFIG', '%s/integration/surge-cache-config.php' );", rtrim( ACTIVITYPUB_PLUGIN_DIR, '/' ) );
+		return \sprintf( "define( 'WP_CACHE_CONFIG', '%s/integration/surge-cache-config.php' );", \rtrim( ACTIVITYPUB_PLUGIN_DIR, '/' ) );
 	}
 }
