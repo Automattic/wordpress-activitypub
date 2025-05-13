@@ -20,7 +20,7 @@ class Surge {
 	 *
 	 * @var string
 	 */
-	public static $cache_config = "define( 'WP_CACHE_CONFIG', '' . ACTIVITYPUB_PLUGIN_DIR . 'integration/surge-cache-config.php' );";
+	public static $cache_config = '';
 
 	/**
 	 * The pattern to find the define for the Surge cache config.
@@ -33,6 +33,8 @@ class Surge {
 	 * Initialize the Surge integration.
 	 */
 	public static function init() {
+		self::$cache_config = sprintf( "define( 'WP_CACHE_CONFIG', '%s/integration/surge-cache-config.php' );", rtrim( ACTIVITYPUB_PLUGIN_DIR, '/' ) );
+
 		\add_action( 'activate_surge/surge.php', array( self::class, 'add_cache_config' ) );
 		\add_action( 'deactivate_surge/surge.php', array( self::class, 'remove_cache_config' ) );
 
