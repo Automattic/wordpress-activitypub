@@ -32,40 +32,11 @@ class Options {
 	 * Delete all options.
 	 */
 	public static function delete() {
-		\delete_option( 'activitypub_actor_mode' );
-		\delete_option( 'activitypub_allow_likes' );
-		\delete_option( 'activitypub_allow_replies' );
-		\delete_option( 'activitypub_attribution_domains' );
-		\delete_option( 'activitypub_authorized_fetch' );
-		\delete_option( 'activitypub_application_user_private_key' );
-		\delete_option( 'activitypub_application_user_public_key' );
-		\delete_option( 'activitypub_blog_user_also_known_as' );
-		\delete_option( 'activitypub_blog_user_mailer_new_dm' );
-		\delete_option( 'activitypub_blog_user_mailer_new_follower' );
-		\delete_option( 'activitypub_blog_user_mailer_new_mention' );
-		\delete_option( 'activitypub_blog_user_moved_to' );
-		\delete_option( 'activitypub_blog_user_private_key' );
-		\delete_option( 'activitypub_blog_user_public_key' );
-		\delete_option( 'activitypub_blog_description' );
-		\delete_option( 'activitypub_blog_identifier' );
-		\delete_option( 'activitypub_content_negotiation' );
-		\delete_option( 'activitypub_custom_post_content' );
-		\delete_option( 'activitypub_db_version' );
-		\delete_option( 'activitypub_default_extra_fields' );
-		\delete_option( 'activitypub_enable_blog_user' );
-		\delete_option( 'activitypub_enable_users' );
-		\delete_option( 'activitypub_header_image' );
-		\delete_option( 'activitypub_last_post_with_permalink_as_id' );
-		\delete_option( 'activitypub_max_image_attachments' );
-		\delete_option( 'activitypub_migration_lock' );
-		\delete_option( 'activitypub_object_type' );
-		\delete_option( 'activitypub_outbox_purge_days' );
-		\delete_option( 'activitypub_shared_inbox' );
-		\delete_option( 'activitypub_support_post_types' );
-		\delete_option( 'activitypub_use_hashtags' );
-		\delete_option( 'activitypub_use_opengraph' );
-		\delete_option( 'activitypub_use_permalink_as_id_for_blog' );
-		\delete_option( 'activitypub_vary_header' );
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"DELETE FROM $wpdb->options WHERE option_name LIKE 'activitypub_%'"
+		);
 	}
 
 	/**
