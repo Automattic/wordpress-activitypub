@@ -108,6 +108,40 @@ class Scheduler {
 	}
 
 	/**
+	 * Unschedule events for an outbox item.
+	 *
+	 * @param int $outbox_item_id The outbox item ID.
+	 */
+	public static function unschedule_events_for_item( $outbox_item_id ) {
+		$event_args = array(
+			$outbox_item_id,
+			Dispatcher::$batch_size,
+			\get_post_meta( $outbox_item_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
+		);
+
+		\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
+
+		$timestamp = \wp_next_scheduled( 'activitypub_process_outbox', array( $outbox_item_id ) );
+		\wp_unschedule_event( $timestamp, 'activitypub_process_outbox', array( $outbox_item_id ) );
+
+		$timestamp = \wp_next_scheduled( 'activitypub_send_activity', $event_args );
+		\wp_unschedule_event( $timestamp, 'activitypub_send_activity', $event_args );
+
+		// Invalidate any retries for this outbox item.
+		foreach ( _get_cron_array() as $timestamp => $cron ) {
+			if ( ! isset( $cron['activitypub_retry_activity'] ) ) {
+				continue;
+			}
+
+			foreach ( $cron['activitypub_retry_activity'] as $event ) {
+				if ( isset( $event['args'][1] ) && $outbox_item_id === $event['args'][1] ) {
+					\wp_unschedule_event( $timestamp, 'activitypub_retry_activity', $event['args'] );
+				}
+			}
+		}
+	}
+
+	/**
 	 * Update followers.
 	 */
 	public static function update_followers() {
