@@ -45,6 +45,14 @@
 	padding-left: 0;
 }
 
+.activitypub-settings-tabs-scroller {
+	overflow-x: auto;
+	width: 100%;
+	padding-top: 2px;
+	-webkit-overflow-scrolling: touch;
+	scroll-behavior: smooth;
+}
+
 .activitypub-settings-tabs-wrapper {
 	display: inline-flex;
 	vertical-align: top;
@@ -64,6 +72,7 @@
 	padding: .5rem 1rem 1rem;
 	margin: 0 1rem;
 	transition: box-shadow .5s ease-in-out;
+	white-space: nowrap;
 }
 
 .activitypub-settings .row {
@@ -385,4 +394,15 @@ input.blog-user-identifier {
 	border-left: none;
 	border-right: 4px solid #3582c4;
 	padding: 16px 20px;
+}
+
+@media screen and (max-width: 782px) {
+	.activitypub-settings {
+		margin: 0 22px;
+	}
+
+	.activitypub-settings .row > div {
+		max-width: calc(100% - 36px);
+		width: 100%;
+	}
 }

@@ -480,6 +480,21 @@ class Settings {
 	}
 
 	/**
+	 * Adds the ActivityPub help tab to the users page.
+	 */
+	public static function add_users_help_tab() {
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'       => 'activitypub',
+				'title'    => \__( 'ActivityPub', 'activitypub' ),
+				'content'  => self::get_help_tab_template( 'users' ),
+				// Add to the end of the list.
+				'priority' => 20,
+			)
+		);
+	}
+
+	/**
 	 * Handle 'welcome' query arg.
 	 */
 	public static function handle_welcome_query_arg() {

@@ -22,22 +22,22 @@ jobs:
     timeout-minutes: 10
 
     steps:
-     - name: Checkout
-       uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-     - name: Setup Node
-       uses: actions/setup-node@v4
-       with:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
           node-version: lts/*
 
-     - name: Wait for prior instances of the workflow to finish
-       uses: softprops/turnstyle@v2
-       env:
+      - name: Wait for prior instances of the workflow to finish
+        uses: softprops/turnstyle@v2
+        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-     - name: 'Automate triage (add labels, clean labels, ...).'
-       uses: automattic/action-repo-gardening@trunk
-       with:
+      - name: 'Automate triage (add labels, clean labels, ...).'
+        uses: automattic/action-repo-gardening@trunk
+        with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           slack_token: ${{ secrets.SLACK_TOKEN }}
           slack_team_channel: ${{ secrets.SLACK_TEAM_CHANNEL }}
@@ -45,21 +45,21 @@ jobs:
           slack_quality_channel: ${{ secrets.SLACK_QUALITY_CHANNEL }}
           tasks: 'addLabels,cleanLabels,assignIssues,flagOss,gatherSupportReferences,replyToCustomersReminder,triageIssues'
           add_labels: '[
-              {"path": "src/followers", "label": "[Block] Followers"},
-              {"path": "src/follow-me", "label": "[Block] Follow Me"},
-              {"path": "src/remote-reply", "label": "[Block] Remote reply"},
-              {"path": "src/reply", "label": "[Block] Federated reply"},
-              {"path": "src/reply-intent", "label": "[Block] Federated reply"},
-              {"path": "src/editor-plugin", "label": "[Block] Post settings"},
-              {"path": "src/reactions", "label": "[Block] Reactions"},
-              {"path": "src/reactions", "label": "[Feature] Reactions"},
-              {"path": "src", "label": "[Focus] Editor"},
-              {"path": "integration", "label": "[Focus] Compatibility"},
-              {"path": "includes/class-mailer.php", "label": "[Feature] Notifications"},
-              {"path": "includes/class-blocks.php", "label": "[Focus] Editor"},
-              {"path": "includes/collection", "label": "[Feature] Collections"},
-              {"path": "includes/rest", "label": "[Feature] REST API"},
-              {"path": "includes/wp-admin", "label": "[Feature] WP Admin"},
-              {"path": "includes/wp-admin/import", "label": "[Feature] Import"},
-              {"path": "includes/wp-admin/class-health-check.php", "label": "[Feature] Health Check"}
+            {"path": "src/followers", "label": "[Block] Followers"},
+            {"path": "src/follow-me", "label": "[Block] Follow Me"},
+            {"path": "src/remote-reply", "label": "[Block] Remote reply"},
+            {"path": "src/reply", "label": "[Block] Federated reply"},
+            {"path": "src/reply-intent", "label": "[Block] Federated reply"},
+            {"path": "src/editor-plugin", "label": "[Block] Post settings"},
+            {"path": "src/reactions", "label": "[Block] Reactions"},
+            {"path": "src/reactions", "label": "[Feature] Reactions"},
+            {"path": "src", "label": "[Focus] Editor"},
+            {"path": "integration", "label": "[Focus] Compatibility"},
+            {"path": "includes/class-mailer.php", "label": "[Feature] Notifications"},
+            {"path": "includes/class-blocks.php", "label": "[Focus] Editor"},
+            {"path": "includes/collection", "label": "[Feature] Collections"},
+            {"path": "includes/rest", "label": "[Feature] REST API"},
+            {"path": "includes/wp-admin", "label": "[Feature] WP Admin"},
+            {"path": "includes/wp-admin/import", "label": "[Feature] Import"},
+            {"path": "includes/wp-admin/class-health-check.php", "label": "[Feature] Health Check"}
             ]'
