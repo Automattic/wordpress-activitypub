@@ -224,7 +224,7 @@ class Welcome_Fields {
 	 */
 	public static function render_step_site_health() {
 		$health_issues = Health_Check::count_results();
-		$total_issues  = $health_issues['critical'] + $health_issues['warning'];
+		$total_issues  = $health_issues['critical'] + $health_issues['recommended'];
 		$checked       = '0' === \get_option( 'activitypub_checklist_health_check_issues', (string) $health_issues['critical'] );
 		$step_class    = $checked ? 'activitypub-step-completed' : '';
 		$next_step     = self::get_next_incomplete_step();
