@@ -177,8 +177,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		Migration::maybe_migrate();
 
-		$schedule = \wp_next_scheduled( 'activitypub_migrate', array( '0.0.1' ) );
-		$this->assertNotFalse( $schedule );
+		$this->assertNotFalse( \wp_next_scheduled( 'activitypub_migrate_from_0_17' ) );
 
 		// Clean up.
 		delete_option( 'activitypub_db_version' );

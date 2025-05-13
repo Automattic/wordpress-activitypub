@@ -37,8 +37,12 @@ class Scheduler {
 		self::register_schedulers();
 
 		self::$batch_callbacks = array(
-			'activitypub_send_activity'  => array( Dispatcher::class, 'send_to_followers' ),
-			'activitypub_retry_activity' => array( Dispatcher::class, 'retry_send_to_followers' ),
+			'activitypub_send_activity'               => array( Dispatcher::class, 'send_to_followers' ),
+			'activitypub_retry_activity'              => array( Dispatcher::class, 'retry_send_to_followers' ),
+			'activitypub_migrate_from_0_17'           => array( Migration::class, 'migrate_from_0_17' ),
+			'activitypub_update_comment_counts'       => array( Migration::class, 'update_comment_counts' ),
+			'activitypub_create_post_outbox_items'    => array( Migration::class, 'create_post_outbox_items' ),
+			'activitypub_create_comment_outbox_items' => array( Migration::class, 'create_comment_outbox_items' ),
 		);
 
 		// Follower Cleanups.
@@ -49,6 +53,10 @@ class Scheduler {
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'async_batch' ), 10, 3 );
 		\add_action( 'activitypub_retry_activity', array( self::class, 'async_batch' ), 10, 3 );
+		\add_action( 'activitypub_migrate_from_0_17', array( self::class, 'async_batch' ) );
+		\add_action( 'activitypub_update_comment_counts', array( self::class, 'async_batch' ), 10, 2 );
+		\add_action( 'activitypub_create_post_outbox_items', array( self::class, 'async_batch' ), 10, 2 );
+		\add_action( 'activitypub_create_comment_outbox_items', array( self::class, 'async_batch' ), 10, 2 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 
@@ -326,7 +334,7 @@ class Scheduler {
 			return;
 		}
 
-		$key = \md5( \serialize( $args[0] ?? $args ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+		$key = \md5( \serialize( $callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 		// Bail if the existing lock is still valid.
 		if ( self::is_locked( $key ) ) {

@@ -137,7 +137,7 @@ class Migration {
 			self::migrate_from_0_16();
 		}
 		if ( \version_compare( $version_from_db, '1.0.0', '<' ) ) {
-			\wp_schedule_single_event( \time(), 'activitypub_async_batch', array( array( self::class, 'migrate_from_0_17' ) ) );
+			\wp_schedule_single_event( \time(), 'activitypub_migrate_from_0_17' );
 		}
 		if ( \version_compare( $version_from_db, '1.3.0', '<' ) ) {
 			self::migrate_from_1_2_0();
@@ -158,7 +158,7 @@ class Migration {
 			self::migrate_to_4_1_0();
 		}
 		if ( \version_compare( $version_from_db, '4.5.0', '<' ) ) {
-			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_async_batch', array( array( self::class, 'update_comment_counts' ) ) );
+			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_update_comment_counts' );
 		}
 		if ( \version_compare( $version_from_db, '4.7.1', '<' ) ) {
 			self::migrate_to_4_7_1();
@@ -171,8 +171,8 @@ class Migration {
 		}
 		if ( \version_compare( $version_from_db, '5.0.0', '<' ) ) {
 			Scheduler::register_schedules();
-			\wp_schedule_single_event( \time(), 'activitypub_async_batch', array( array( self::class, 'create_post_outbox_items' ) ) );
-			\wp_schedule_single_event( \time() + 15, 'activitypub_async_batch', array( array( self::class, 'create_comment_outbox_items' ) ) );
+			\wp_schedule_single_event( \time(), 'activitypub_create_post_outbox_items' );
+			\wp_schedule_single_event( \time() + 15, 'activitypub_create_comment_outbox_items' );
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.2.0', '<' ) ) {

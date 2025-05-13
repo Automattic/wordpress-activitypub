@@ -361,15 +361,15 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		// Set a lock.
 		Scheduler::lock( $key );
 
-		Scheduler::async_batch( $callback, 10, 0 );
+		\do_action( 'activitypub_update_comment_counts', 10, 0 );
 
 		// Verify a scheduled event was created.
-		$next_scheduled = wp_next_scheduled( 'activitypub_async_batch', array( $callback, 10, 0 ) );
+		$next_scheduled = wp_next_scheduled( 'activitypub_update_comment_counts', array( 10, 0 ) );
 		$this->assertNotFalse( $next_scheduled );
 
 		// Clean up.
 		delete_option( 'activitypub_migration_lock' );
-		wp_clear_scheduled_hook( 'activitypub_async_batch', array( $callback, 10, 0 ) );
+		wp_clear_scheduled_hook( 'activitypub_update_comment_counts', array( 10, 0 ) );
 	}
 
 	/**
@@ -385,8 +385,10 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		// Test that lock prevents simultaneous upgrades.
 		Scheduler::lock( $key );
-		Scheduler::async_batch( $callback );
-		$scheduled = \wp_next_scheduled( 'activitypub_async_batch', array( $callback ) );
+
+		\do_action( 'activitypub_create_post_outbox_items', 10, 0 );
+
+		$scheduled = \wp_next_scheduled( 'activitypub_create_post_outbox_items', array( 10, 0 ) );
 		$this->assertNotFalse( $scheduled );
 		Scheduler::unlock( $key );
 
@@ -395,15 +397,18 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		\add_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33, 3 );
 
 		// Test scheduling next batch when callback returns more work.
-		Scheduler::async_batch( $callback, 1, 0 ); // Small batch size to force multiple batches.
-		$scheduled = \wp_next_scheduled( 'activitypub_async_batch', array( $callback, 1, 1 ) );
+		\do_action( 'activitypub_create_post_outbox_items', 1, 0 ); // Small batch size to force multiple batches.
+		$scheduled = \wp_next_scheduled( 'activitypub_create_post_outbox_items', array( 1, 1 ) );
 		$this->assertNotFalse( $scheduled );
 
 		// Test no scheduling when callback returns null (no more work).
-		Scheduler::async_batch( $callback, 100, 1000 ); // Large offset to ensure no posts found.
+		\do_action( 'activitypub_create_post_outbox_items', 100, 1000 ); // Large offset to ensure no posts found.
 		$this->assertFalse(
-			\wp_next_scheduled( 'activitypub_async_batch', array( $callback, 100, 1100 ) )
+			\wp_next_scheduled( 'activitypub_create_post_outbox_items', array( 100, 1100 ) )
 		);
+	}
+
+	/**
 	 * Test async_batch method.
 	 *
 	 * @covers ::async_batch
