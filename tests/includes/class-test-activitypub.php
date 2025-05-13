@@ -228,13 +228,13 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	 * @covers ::render_activitypub_template
 	 */
 	public function test_outbox_post_type_non_activitypub_request_returns_406() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'post_status' => 'publish',
-				'post_author' => self::$user_id,
-			)
+		$data    = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://example.com/' . self::$user_id,
+			'type'     => 'Note',
+			'content'  => '<p>This is a note</p>',
 		);
+		$post_id = \Activitypub\add_to_outbox( $data, 'Create', self::$user_id );
 
 		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
 		$this->go_to( '/?p=' . $post_id );
