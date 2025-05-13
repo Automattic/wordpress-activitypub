@@ -19,6 +19,17 @@ class Welcome_Fields {
 	public static function init() {
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_welcome_fields' ) );
 		\add_action( 'admin_print_styles-settings_page_activitypub', array( self::class, 'enqueue_styles' ) );
+
+		\add_action( 'add_option_activitypub_checklist_health_check_issues', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'update_option_activitypub_checklist_health_check_issues', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'add_option_activitypub_checklist_fediverse_intro_visited', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'update_option_activitypub_checklist_fediverse_intro_visited', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'add_option_activitypub_checklist_settings_visited', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'update_option_activitypub_checklist_settings_visited', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'add_option_activitypub_checklist_profile_setup_visited', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'update_option_activitypub_checklist_profile_setup_visited', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'add_option_activitypub_checklist_blocks_visited', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'update_option_activitypub_checklist_blocks_visited', array( self::class, 'resolve_checklist' ) );
 	}
 
 	/**
@@ -40,11 +51,6 @@ class Welcome_Fields {
 	 * Register welcome fields.
 	 */
 	public static function register_welcome_fields() {
-		// Once we got to 0 issues, we won't update the option again. That step is completed.
-		if ( '0' !== \get_option( 'activitypub_checklist_health_check_issues' ) ) {
-			\update_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) );
-		}
-
 		\add_settings_section(
 			'activitypub_welcome_header',
 			'',
@@ -72,6 +78,14 @@ class Welcome_Fields {
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_mode' ), 40 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_setup' ), 50 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_features' ), 60 );
+
+		/*
+		 * Keep track of health check issues. This is used to determine if the site health step is complete.
+		 *
+		 * This needs to happen after onboarding steps were registered, so that we can compare the number of completed
+		 * steps with the number of registered steps.
+		 */
+		\update_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) );
 	}
 
 	/**
@@ -108,7 +122,7 @@ class Welcome_Fields {
 		$count = 1; // Plugin is already installed.
 
 		// We're looking for 0 issues.
-		if ( '0' !== \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
+		if ( '0' === \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
 			++$count;
 		}
 
@@ -273,7 +287,7 @@ class Welcome_Fields {
 				</div>
 				<div class="step-action">
 					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&help-tab=getting-started#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
-						<?php \esc_html_e( 'Watch now', 'activitypub' ); ?>
+						<?php \esc_html_e( 'View intro', 'activitypub' ); ?>
 					</a>
 				</div>
 			</div>
@@ -396,5 +410,14 @@ class Welcome_Fields {
 			</a>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Resolve the welcome checklist.
+	 */
+	public static function resolve_checklist() {
+		if ( self::get_total_steps_count() === self::get_completed_steps_count() ) {
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', 0 );
+		}
 	}
 }
