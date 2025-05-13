@@ -1,7 +1,7 @@
 changelog:
   exclude:
     labels:
-      - "Skip Changelog"
-      - "Release"
+      - 'Skip Changelog'
+      - 'Release'
     authors:
       - dependabot[bot]

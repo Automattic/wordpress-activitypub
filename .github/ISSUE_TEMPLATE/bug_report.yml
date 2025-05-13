@@ -1,6 +1,6 @@
 name: Bug Report
 description: Helps us improve our product!
-labels: [ 'Needs triage', '[Type] Bug' ]
+labels: ['Needs triage', '[Type] Bug']
 type: 'Bug'
 body:
   - type: markdown
@@ -20,7 +20,7 @@ body:
   - type: textarea
     id: summary
     attributes:
-        label: Quick summary
+      label: Quick summary
   - type: textarea
     id: steps
     attributes:
@@ -63,7 +63,8 @@ body:
     id: severity
     attributes:
       label: Severity
-      description: What is the severity of this issue? Please take a look at the descriptions below for further context.<br>
+      description:
+        What is the severity of this issue? Please take a look at the descriptions below for further context.<br>
         <br> - **Critical:** Prevents core functionality or has severe impact on the website/platform.
         <br> - **Major:** Significantly impairs important features or has notable impact on the website/platform.
         <br> - **Moderate:** Affects non-critical features or has limited impact on the website/platform.

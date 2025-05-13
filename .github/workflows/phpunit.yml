@@ -8,13 +8,13 @@ jobs:
   phpunit:
     runs-on: ubuntu-latest
     services:
-     mysql:
-       image: mariadb:10.4
-       env:
-         MYSQL_ROOT_PASSWORD: root
-       ports:
-         - 3306:3306
-       options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=10s --health-retries=10
+      mysql:
+        image: mariadb:10.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=10s --health-retries=10
     strategy:
       matrix:
         php-versions: ['7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4']

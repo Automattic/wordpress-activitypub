@@ -122,8 +122,22 @@ function plugin_init() {
 	if ( \defined( 'ICL_SITEPRESS_VERSION' ) ) {
 		WPML::init();
 	}
+
+	/**
+	 * Load the Surge integration.
+	 *
+	 * Only load code that needs Surge to run once Surge is loaded and initialized.
+	 *
+	 * @see https://wordpress.org/plugins/surge/
+	 */
+	Surge::init();
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
+
+// Register activation and deactivation hooks for Surge integration.
+\register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'add_cache_config' ) );
+\register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'remove_cache_config' ) );
+
 
 /**
  * Register the Stream Connector for ActivityPub.
