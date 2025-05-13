@@ -2,15 +2,13 @@
 /**
  * Options file.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
-namespace ActivityPub;
+namespace Activitypub;
 
 /**
  * Options class.
- *
- * @package ActivityPub
  */
 class Options {
 
@@ -30,6 +28,15 @@ class Options {
 		\add_filter( 'option_activitypub_max_image_attachments', array( self::class, 'default_max_image_attachments' ) );
 	}
 
+	/**
+	 * Delete all options.
+	 */
+	public static function delete() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->query( "DELETE FROM $wpdb->options WHERE option_name LIKE 'activitypub_%'" );
+	}
 
 	/**
 	 * Pre-get option filter for the Actor-Mode.

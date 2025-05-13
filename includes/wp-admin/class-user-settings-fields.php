@@ -25,11 +25,18 @@ class User_Settings_Fields {
 	 * Register all settings fields.
 	 */
 	public static function register_settings() {
+		// Mark checklist item as done.
+		\update_option( 'activitypub_checklist_profile_setup_visited', '1' );
+
 		\add_settings_section(
 			'activitypub_user_profile',
 			\esc_html__( 'ActivityPub', 'activitypub' ),
 			array( self::class, 'section_description' ),
-			'activitypub_user_settings'
+			'activitypub_user_settings',
+			array(
+				'before_section' => '<section id="activitypub">',
+				'after_section'  => '</section>',
+			)
 		);
 
 		\add_settings_field(

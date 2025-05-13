@@ -7,11 +7,12 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Scheduler;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
+use Activitypub\Dispatcher;
+use Activitypub\Scheduler;
 
 use function Activitypub\add_to_outbox;
 
@@ -46,6 +47,70 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	 */
 	public static function wpTearDownAfterClass() {
 		wp_delete_user( self::$user_id );
+	}
+
+	/**
+	 * Test unschedule events for item.
+	 *
+	 * @covers ::unschedule_events_for_item
+	 */
+	public function test_unschedule_events_for_item() {
+		// Create test activity objects.
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/test-id' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/test-id',
+				'type'    => 'Note',
+				'content' => 'Test Content',
+			)
+		);
+
+		// Add pending activity.
+		$create_item_id = add_to_outbox( $activity, null, self::$user_id );
+
+		// Track scheduled events.
+		$scheduled_events = array();
+		\add_filter(
+			'schedule_event',
+			function ( $event ) use ( &$scheduled_events ) {
+				if ( 'activitypub_retry_activity' === $event->hook ) {
+					$scheduled_events[] = $event->args[1];
+				}
+				return $event;
+			}
+		);
+
+		$schedule_retry = new \ReflectionMethod( Dispatcher::class, 'schedule_retry' );
+		$schedule_retry->setAccessible( true );
+
+		// Invoke the method.
+		$schedule_retry->invoke( null, array( 'https://example.com/inbox' ), $create_item_id ); // null for static methods.
+
+		$this->assertCount( 1, $scheduled_events, 'Should schedule 1 retry event.' );
+		$this->assertContains( $create_item_id, $scheduled_events, "Activity $create_item_id should be scheduled" );
+
+		// Track unscheduled events.
+		\add_filter(
+			'pre_unschedule_event',
+			function ( $pre, $timestamp, $hook, $args ) use ( &$scheduled_events ) {
+				if ( 'activitypub_retry_activity' === $hook ) {
+					$scheduled_events = \array_diff( $scheduled_events, array( $args[1] ) );
+				}
+				return $pre;
+			},
+			10,
+			4
+		);
+
+		Scheduler::unschedule_events_for_item( $create_item_id );
+
+		$this->assertCount( 0, $scheduled_events, 'Should have no retry events.' );
+		$this->assertNotContains( $create_item_id, $scheduled_events, "Activity $create_item_id should no longer be scheduled" );
+
+		\remove_all_filters( 'schedule_event' );
+		\remove_all_filters( 'pre_unschedule_event' );
 	}
 
 	/**
