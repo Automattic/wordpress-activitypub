@@ -132,6 +132,7 @@ const FacepileRow = ( { reactions } ) => {
 								className={ classes }
 								width="32"
 								height="32"
+								onError={ (e) => { e.target.src = defaultAvatarUrl; } }
 							/>
 						</a>
 					</li>
