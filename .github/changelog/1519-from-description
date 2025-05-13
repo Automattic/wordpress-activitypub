@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Properly remove retries schedules, with the invalidation of an Outbox-Item.

@@ -13,6 +13,7 @@ use WP_UnitTestCase;
 /**
  * Test Akismet Integration class.
  *
+ * @group integration
  * @coversDefaultClass \Activitypub\Integration\Akismet
  */
 class Test_Akismet extends WP_UnitTestCase {
