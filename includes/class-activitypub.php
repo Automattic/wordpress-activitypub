@@ -175,7 +175,7 @@ class Activitypub {
 		if ( $activitypub_template && use_authorized_fetch() ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
-				header( 'HTTP/1.1 401 Unauthorized' );
+				\status_header( 401 );
 
 				// Fallback as template_loader can't return http headers.
 				return $template;
