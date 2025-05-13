@@ -231,47 +231,6 @@ input.blog-user-identifier {
 	margin-block: 0;
 }
 
-.activitypub-settings .welcome-tab-close {
-	position: absolute;
-	top: 0px;
-	right: 0px;
-	font-size: 13px;
-	padding: 0 5px 0 20px;
-	text-decoration: none;
-	z-index: 1;
-}
-
-.activitypub-settings .welcome-tab-close::before {
-	position: absolute;
-	top: 0px;
-	left: 0;
-	transition: all .1s ease-in-out;
-	font: normal 16px/20px dashicons;
-	content: '\f335';
-	font-size: 20px;
-}
-
-.activitypub-notice .count {
-	display: inline-block;
-	vertical-align: top;
-	box-sizing: border-box;
-	margin: 1px 0 -1px 2px;
-	padding: 0 5px;
-	min-width: 18px;
-	height: 18px;
-	border-radius: 9px;
-	background-color: #dba617;
-	color: #fff;
-	font-size: 11px;
-	line-height: 1.6;
-	text-align: center;
-	z-index: 26;
-}
-
-.activitypub-notice .dashicons-warning {
-	color: #dba617;
-}
-
 .extra-fields-nav a + a {
 	margin-left: 8px;
 }
