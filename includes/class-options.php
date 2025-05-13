@@ -33,10 +33,9 @@ class Options {
 	 */
 	public static function delete() {
 		global $wpdb;
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			"DELETE FROM $wpdb->options WHERE option_name LIKE 'activitypub_%'"
-		);
+		$wpdb->query( "DELETE FROM $wpdb->options WHERE option_name LIKE 'activitypub_%'" );
 	}
 
 	/**
