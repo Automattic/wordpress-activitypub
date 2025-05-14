@@ -417,7 +417,7 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 = 5.9.0 =
 
-This update significantly enhances ActivityPub integration by adding audio, video, and multi-image embeds, improved onboarding, better editor previews, and expanded documentation. User experience is refined through mobile-friendly settings, better error handling, optimized caching plugin compatibility, and customizable media-sharing options. Several performance and reliability fixes address avatar handling, email notifications, and interaction processing.
+Experience our new onboarding flow and improved help docs—making it easier than ever to connect your site to the Fediverse!
 
 == Installation ==
 
