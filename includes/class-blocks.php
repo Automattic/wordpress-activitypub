@@ -188,9 +188,10 @@ class Blocks {
 		$args = array( 'data-attrs' => wp_json_encode( $attrs ) );
 		if ( empty( $content ) ) {
 			if ( ! isset( $attrs['title'] ) ) {
-				$attrs['title'] = \__( 'Fediverse Reactions', 'activitypub' );
+				$content = '<div class="activitypub-reactions"><h6>' . \__( 'Fediverse Reactions', 'activitypub' ) . '</h6><div class="activitypub-reactions-block" ' . get_block_wrapper_attributes( $args ) . '></div></div>';
+			} else {
+				$args['class'] = 'activitypub-reactions-block';
 			}
-			$content = '<div class="activitypub-reactions"><h6>' . \esc_html( $attrs['title'] ) . '</h6><div class="activitypub-reactions-block" ' . get_block_wrapper_attributes( $args ) . '></div></div>';
 		}
 
 		return sprintf(
