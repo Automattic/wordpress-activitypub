@@ -2,7 +2,7 @@
 /**
  * Test file for Activity Object transformer.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Transformer;

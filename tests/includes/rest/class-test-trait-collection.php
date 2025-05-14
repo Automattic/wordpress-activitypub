@@ -2,7 +2,7 @@
 /**
  * Test Collection Trait.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Rest;

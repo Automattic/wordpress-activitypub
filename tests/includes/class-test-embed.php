@@ -2,10 +2,10 @@
 /**
  * Test the Embed class.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
-namespace ActivityPub;
+namespace Activitypub;
 
 use PHPUnit\Framework\TestCase;
 

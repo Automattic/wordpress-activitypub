@@ -11,7 +11,7 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use function Activitypub\get_masked_wp_version;
-use function ActivityPub\get_rest_url_by_path;
+use function Activitypub\get_rest_url_by_path;
 
 /**
  * ActivityPub Outbox Controller.
