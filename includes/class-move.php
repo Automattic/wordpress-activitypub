@@ -65,7 +65,7 @@ class Move {
 	/**
 	 * Move an ActivityPub Actor from one location (internal) to another (external).
 	 *
-	 * This helps migrating local profiles to a new external profile:
+	 * This helps with migrating local profiles to a new external profile:
 	 *
 	 * `Move::externally( 'https://example.com/?author=123', 'https://mastodon.example/users/foo' );`
 	 *
@@ -119,7 +119,7 @@ class Move {
 	 *
 	 * Move an ActivityPub Actor from one location (internal) to another (internal).
 	 *
-	 * This helps migrating abandoned profiles to `Move` to other profiles:
+	 * This helps with migrating abandoned profiles to `Move` to other profiles:
 	 *
 	 * `Move::internally( 'https://example.com/?author=123', 'https://example.com/?author=321' );`
 	 *
@@ -236,7 +236,7 @@ class Move {
 			if ( $actor instanceof Blog ) {
 				\update_option( 'activitypub_blog_user_old_host_data', $json, false );
 			} else {
-				\update_user_option( $actor->get__id(), 'activitypub_old_host_data', $json, false );
+				\update_user_option( $actor->get__id(), 'activitypub_old_host_data', $json );
 			}
 
 			$results[] = array(

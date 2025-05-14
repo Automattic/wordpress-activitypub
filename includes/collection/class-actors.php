@@ -88,11 +88,18 @@ class Actors {
 		}
 
 		// Check for blog user.
-		if ( Blog::get_default_username() === $username ) {
-			return new Blog();
-		}
+		if (
+			Blog::get_default_username() === $username ||
+			\get_option( 'activitypub_blog_identifier' ) === $username
+		) {
+			if ( is_user_type_disabled( 'blog' ) ) {
+				return new WP_Error(
+					'activitypub_user_not_found',
+					\__( 'Actor not found', 'activitypub' ),
+					array( 'status' => 404 )
+				);
+			}
 
-		if ( get_option( 'activitypub_blog_identifier' ) === $username ) {
 			return new Blog();
 		}
 
@@ -120,8 +127,8 @@ class Actors {
 			)
 		);
 
-		if ( $user->results ) {
-			$actor = self::get_by_id( $user->results[0] );
+		if ( $user->get_results() ) {
+			$actor = self::get_by_id( $user->get_results()[0] );
 			if ( ! \is_wp_error( $actor ) ) {
 				return $actor;
 			}
@@ -141,8 +148,8 @@ class Actors {
 			)
 		);
 
-		if ( $user->results ) {
-			$actor = self::get_by_id( $user->results[0] );
+		if ( $user->get_results() ) {
+			$actor = self::get_by_id( $user->get_results()[0] );
 			if ( ! \is_wp_error( $actor ) ) {
 				return $actor;
 			}
@@ -268,8 +275,6 @@ class Actors {
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_various( $id ) {
-		$user = null;
-
 		if ( is_numeric( $id ) ) {
 			$user = self::get_by_id( $id );
 		} elseif (

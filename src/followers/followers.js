@@ -104,14 +104,17 @@ function Follower( { name, icon, url, preferredUsername, followLinks = true } ) 
 	if ( ! followLinks ) {
 		extraProps.onClick = event => event.preventDefault();
 	}
+	const { defaultAvatarUrl } = useOptions();
+	const avatar = icon.url || defaultAvatarUrl;
 	return (
 		<ExternalLink className="activitypub-link" href={ url } title={ handle } { ...extraProps }>
 			<img
 				width="40"
 				height="40"
-				src={ icon.url }
+				src={ avatar }
 				className="avatar activitypub-avatar"
 				alt={ name }
+				onError={ (e) => { e.target.src = defaultAvatarUrl; } }
 			/>
 			<span className="activitypub-actor">
 				<strong className="activitypub-name">{ name }</strong>

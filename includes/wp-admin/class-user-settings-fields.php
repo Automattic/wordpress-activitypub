@@ -7,6 +7,9 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Extra_Fields;
+
 /**
  * Class to handle all user settings fields and callbacks.
  */
@@ -22,11 +25,18 @@ class User_Settings_Fields {
 	 * Register all settings fields.
 	 */
 	public static function register_settings() {
+		// Mark checklist item as done.
+		\update_option( 'activitypub_checklist_profile_setup_visited', '1' );
+
 		\add_settings_section(
 			'activitypub_user_profile',
 			\esc_html__( 'ActivityPub', 'activitypub' ),
 			array( self::class, 'section_description' ),
-			'activitypub_user_settings'
+			'activitypub_user_settings',
+			array(
+				'before_section' => '<section id="activitypub">',
+				'after_section'  => '</section>',
+			)
 		);
 
 		\add_settings_field(
@@ -93,7 +103,7 @@ class User_Settings_Fields {
 	 * Profile URL field callback.
 	 */
 	public static function profile_url_callback() {
-		$user = \Activitypub\Collection\Actors::get_by_id( \get_current_user_id() );
+		$user = Actors::get_by_id( \get_current_user_id() );
 		?>
 		<p>
 			<?php
@@ -211,7 +221,7 @@ class User_Settings_Fields {
 	 * Extra fields callback.
 	 */
 	public static function extra_fields_callback() {
-		$extra_fields = \Activitypub\Collection\Extra_Fields::get_actor_fields( \get_current_user_id() );
+		$extra_fields = Extra_Fields::get_actor_fields( \get_current_user_id() );
 		?>
 		<p class="description">
 			<?php \esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>

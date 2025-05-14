@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The blog profile can no longer be queried when the blog actor option is disabled.

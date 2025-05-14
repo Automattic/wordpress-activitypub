@@ -713,4 +713,61 @@ class Test_Followers extends \WP_UnitTestCase {
 			array( 'https://example.com', 'https://example.com' ),
 		);
 	}
+
+	/**
+	 * Tests clear_errors.
+	 *
+	 * @covers ::clear_errors
+	 */
+	public function test_clear_errors() {
+		$follower = 'https://example.com/author/jon';
+		$result   = Followers::add_follower( 1, $follower );
+		$this->assertNotWPError( $result );
+
+		// Add some errors.
+		Followers::add_error( $result->get__id(), 'Test error 1' );
+		Followers::add_error( $result->get__id(), 'Test error 2' );
+
+		// Verify errors were added.
+		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
+		$this->assertCount( 2, $errors );
+
+		// Clear errors.
+		$cleared = Followers::clear_errors( $result->get__id() );
+		$this->assertTrue( $cleared );
+
+		// Verify errors were cleared.
+		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
+		$this->assertEmpty( $errors );
+	}
+
+	/**
+	 * Tests clear_errors with no errors.
+	 *
+	 * @covers ::clear_errors
+	 */
+	public function test_clear_errors_no_errors() {
+		$follower = 'https://example.com/author/jon';
+		$result   = Followers::add_follower( 1, $follower );
+		$this->assertNotWPError( $result );
+
+		// Clear errors when none exist.
+		$cleared = Followers::clear_errors( $result->get__id() );
+		$this->assertFalse( $cleared );
+
+		// Verify no errors exist.
+		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
+		$this->assertEmpty( $errors );
+	}
+
+	/**
+	 * Tests clear_errors with invalid follower ID.
+	 *
+	 * @covers ::clear_errors
+	 */
+	public function test_clear_errors_invalid_id() {
+		// Try to clear errors for non-existent follower.
+		$cleared = Followers::clear_errors( 99999 );
+		$this->assertFalse( $cleared );
+	}
 }

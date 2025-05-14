@@ -10,8 +10,6 @@ namespace Activitypub\Rest;
 use Activitypub\Collection\Actors as Actor_Collection;
 use Activitypub\Webfinger;
 
-use function Activitypub\is_activitypub_request;
-
 /**
  * ActivityPub Actors REST-Class.
  *

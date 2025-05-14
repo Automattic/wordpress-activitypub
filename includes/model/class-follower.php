@@ -52,6 +52,21 @@ class Follower extends Actor {
 	}
 
 	/**
+	 * Clear the errors for the current Follower.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public function clear_errors() {
+		if ( ! $this->_id ) {
+			\_doing_it_wrong( __METHOD__, 'Follower ID is not set.', 'unreleased' );
+
+			return false;
+		}
+
+		return Followers::clear_errors( $this->_id );
+	}
+
+	/**
 	 * Get the Summary.
 	 *
 	 * @return string The Summary.
@@ -399,8 +414,10 @@ class Follower extends Actor {
 			\strpos( $name, '@' ) === 0
 		) {
 			// Expected: user@example.com or acct:user@example (WebFinger).
-			$name  = \ltrim( $name, '@' );
-			$name  = \ltrim( $name, 'acct:' );
+			$name = \ltrim( $name, '@' );
+			if ( str_starts_with( $name, 'acct:' ) ) {
+				$name = \substr( $name, 5 );
+			}
 			$parts = \explode( '@', $name );
 			$name  = $parts[0];
 		}

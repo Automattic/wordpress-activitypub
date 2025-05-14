@@ -1,0 +1,307 @@
+/* ActivityPub Welcome Page Styles */
+
+.activitypub-welcome-container {
+	max-width: 800px;
+	margin: 40px auto;
+	background-color: #fff;
+	border-radius: 8px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	padding: 30px;
+}
+
+/* Header Styles */
+.activitypub-welcome-header {
+	text-align: center;
+	margin-bottom: 30px;
+	position: relative;
+}
+
+/* Progress Circle */
+.activitypub-progress-circle {
+	position: relative;
+	width: 120px;
+	height: 120px;
+	margin: 0 auto 20px;
+}
+
+.activitypub-progress-circle-content {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 16px;
+	font-weight: 500;
+	color: #1e1e1e;
+	z-index: 2;
+}
+
+.activitypub-progress-ring {
+	transform: rotate(-90deg);
+	overflow: visible;
+}
+
+.activitypub-progress-ring-bg {
+	fill: none;
+	stroke: #f0f0f1;
+	stroke-width: 6;
+}
+
+.activitypub-progress-ring-circle {
+	fill: none;
+	stroke: #2271b1;
+	stroke-width: 6;
+	stroke-linecap: round;
+	transition: stroke-dashoffset 0.5s ease;
+}
+
+.activitypub-welcome-title {
+	font-size: 28px;
+	margin: 20px 0 10px;
+	font-weight: 400;
+}
+
+.activitypub-welcome-subtitle {
+	font-size: 16px;
+	color: #646970;
+	margin: 0 0 20px;
+	font-weight: normal;
+}
+
+/* Steps Styles */
+.activitypub-onboarding-step {
+	display: flex;
+	align-items: center;
+	padding: 20px;
+	border-radius: 4px;
+	background-color: #f6f7f7;
+	margin-bottom: 15px;
+	transition: background-color 0.2s ease;
+}
+
+.activitypub-onboarding-step:last-child {
+	margin-bottom: 0;
+}
+
+.activitypub-onboarding-step:hover {
+	background-color: #f0f0f1;
+}
+
+.activitypub-step-completed {
+	background-color: #f0f7ee;
+}
+
+.activitypub-step-completed:hover {
+	background-color: #e2f1dc;
+}
+
+.activitypub-step-completed .step-text h3 {
+	margin: 0;
+}
+.activitypub-step-completed .step-text h3::after {
+	content: ".";
+}
+
+.activitypub-step-completed .step-text p,
+.activitypub-step-completed .step-action {
+	display: none;
+}
+
+.step-indicator {
+	margin-right: 15px;
+	flex-shrink: 0;
+}
+
+.step-icon {
+	width: 24px;
+	height: 24px;
+	font-size: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.activitypub-step-completed .step-icon {
+	color: #008a20;
+}
+
+.dashicons-warning {
+	color: #dba617;
+}
+
+.step-content {
+	flex-grow: 1;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 100%;
+}
+
+.step-text {
+	flex-grow: 1;
+}
+
+.step-text h3 {
+	margin: 0 0 5px;
+	font-size: 16px;
+	font-weight: 500;
+}
+
+.step-text p {
+	margin: 0;
+	color: #646970;
+	font-size: 14px;
+}
+
+.step-action {
+	flex-shrink: 0;
+	margin-left: 20px;
+}
+
+.step-action .button {
+	min-width: 120px;
+	text-align: center;
+}
+
+/* Profiles Section */
+.activitypub-profiles-section {
+	margin-top: 40px;
+	border-top: 1px solid #f0f0f1;
+	padding-top: 30px;
+}
+
+.profiles-description {
+	margin-bottom: 20px;
+	font-size: 16px;
+	color: #1e1e1e;
+}
+
+.activitypub-profiles-container {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	margin-bottom: 30px;
+}
+
+.activitypub-profile-card {
+	flex: 1;
+	min-width: 300px;
+	background-color: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.profile-card-header {
+	background-color: #f0f0f1;
+	padding: 15px;
+	border-bottom: 1px solid #c3c4c7;
+	display: flex;
+	align-items: center;
+}
+
+.profile-icon {
+	margin-right: 10px;
+}
+
+.profile-icon .dashicons {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+}
+
+.profile-card-header h3 {
+	margin: 0;
+	font-size: 16px;
+	font-weight: 500;
+}
+
+.profile-card-content {
+	padding: 15px;
+}
+
+.profile-field {
+	margin-bottom: 15px;
+}
+
+.profile-field label {
+	display: block;
+	margin-bottom: 5px;
+	font-weight: 500;
+	font-size: 13px;
+	color: #646970;
+}
+
+.profile-field input {
+	width: 100%;
+	padding: 8px;
+	font-size: 13px;
+	background-color: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+}
+
+.profile-description {
+	font-size: 13px;
+	color: #646970;
+	margin: 15px 0;
+	line-height: 1.5;
+}
+
+.profile-card-content .button {
+	width: 100%;
+	text-align: center;
+	margin-top: 10px;
+}
+
+/* Footer Styles */
+.activitypub-welcome-footer {
+	margin-top: 30px;
+	text-align: center;
+}
+
+.skip-steps-link {
+	color: #2271b1;
+	text-decoration: none;
+	font-size: 14px;
+}
+
+.skip-steps-link:hover {
+	color: #135e96;
+	text-decoration: underline;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+	.activitypub-welcome-container {
+		margin: 20px;
+		padding: 20px;
+	}
+
+	.step-content {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.step-action {
+		margin-left: 0;
+		margin-top: 15px;
+		width: 100%;
+	}
+
+	.step-action .button {
+		width: 100%;
+		text-align: center;
+	}
+
+	.activitypub-profiles-container {
+		flex-direction: column;
+	}
+
+	.activitypub-profile-card {
+		width: 100%;
+	}
+}

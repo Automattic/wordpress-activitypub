@@ -34,7 +34,7 @@ class Health_Check {
 	 *
 	 * @param string $type The type of results to count.
 	 *
-	 * @return array The number of critical and recommended results.
+	 * @return int|int[] The number of critical and recommended results.
 	 */
 	public static function count_results( $type = 'all' ) {
 		$tests = self::add_tests( array() );
@@ -338,13 +338,13 @@ class Health_Check {
 			'private' => false,
 		);
 
-		$consts = get_defined_constants( true );
+		$constants = get_defined_constants( true );
 
-		if ( ! isset( $consts['user'] ) ) {
+		if ( ! isset( $constants['user'] ) ) {
 			return $info;
 		}
 
-		foreach ( $consts['user'] as $key => $value ) {
+		foreach ( $constants['user'] as $key => $value ) {
 			if ( ! str_starts_with( $key, 'ACTIVITYPUB_' ) ) {
 				continue;
 			}

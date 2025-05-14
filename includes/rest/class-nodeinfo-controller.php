@@ -159,7 +159,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 					'activeHalfyear' => get_active_users( 6 ),
 					'activeMonth'    => get_active_users(),
 				),
-				'localPosts'    => $posts->publish,
+				'localPosts'    => (int) $posts->publish,
 				'localComments' => $comments->approved,
 			),
 			'metadata'          => array(

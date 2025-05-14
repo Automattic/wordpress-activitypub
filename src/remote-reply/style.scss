@@ -1,4 +1,4 @@
-@import "./../shared/lightbox.scss";
+@use "../shared/lightbox.scss";
 .activitypub-remote-profile-delete {
 	padding: 0 5px;
 	color: inherit;
