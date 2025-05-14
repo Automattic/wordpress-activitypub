@@ -190,7 +190,7 @@ class Blocks {
 			if ( ! isset( $attrs['title'] ) ) {
 				$attrs['title'] = \__( 'Fediverse Reactions', 'activitypub' );
 			}
-			$content = '<h6>' . \esc_html( $attrs['title'] ) . '</h6><div class="activitypub-reactions-block"></div>';
+			$content = '<div class="activitypub-reactions"><h6>' . \esc_html( $attrs['title'] ) . '</h6><div class="activitypub-reactions-block" ' . get_block_wrapper_attributes( $args ) . '></div></div>';
 		}
 
 		return sprintf(
