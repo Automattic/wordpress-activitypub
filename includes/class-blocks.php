@@ -186,8 +186,11 @@ class Blocks {
 		}
 
 		$args = array( 'data-attrs' => wp_json_encode( $attrs ) );
-		if ( isset( $attrs['title'] ) ) {
-			$args['class'] = 'activitypub-reactions-block';
+		if ( empty( $content ) ) {
+			if ( ! isset( $attrs['title'] ) ) {
+				$attrs['title'] = \__( 'Fediverse Reactions', 'activitypub' );
+			}
+			$content = '<h6>' . \esc_html( $attrs['title'] ) . '</h6><div class="activitypub-reactions-block"></div>';
 		}
 
 		return sprintf(
