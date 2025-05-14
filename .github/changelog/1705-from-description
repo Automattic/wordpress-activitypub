@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed a bug where Reaction blocks without modified titles did not get displayed correctly.
