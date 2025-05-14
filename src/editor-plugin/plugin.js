@@ -43,6 +43,7 @@ const EditorPlugin = () => {
 	 * @param {JSX.Element} icon    The icon to display.
 	 * @param {string}      text    The label text.
 	 * @param {string}      tooltip The tooltip text.
+	 *
 	 * @returns {JSX.Element} The enhanced label component.
 	 */
 	const enhancedLabel = ( icon, text, tooltip ) => (
