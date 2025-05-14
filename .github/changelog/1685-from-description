@@ -1,4 +1,0 @@
-Significance: patch
-Type: changed
-
-Better error handling when other servers request Outbox items in the wrong format, and 404 pages now show correctly.

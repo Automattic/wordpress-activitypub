@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.9.0] - 2025-05-14
+### Added
+- ActivityPub embeds now support audios, videos, and up to 4 images. [#1645]
+- Added a check to make sure we only attempt to embed activity objects, when processing fallback embeds. [#1642]
+- Add setting to enable or disable how content is tailored for browsers and Fediverse services. [#1639]
+- Adjusted the plugin's default behavior based on the caching plugins installed. [#1640]
+- A guided onboarding flow after plugin activation to help users make key setup decisions and understand Fediverse concepts. [#1625]
+- Author profiles will cap the amount of extra fields they return to 20, to avoid response size errors in clients. [#1660]
+- Fediverse Preview in the Editor now also supports video and audio attachments. [#1596]
+- Guidance for configuring Surge to support ActivityPub caching. [#1648]
+- Help tab section explaining ActivityPub capabilities on the users page. [#1682]
+- Profile sections have been moved from the Welcome page to new Dashboard widgets for easier access. [#1658]
+- The ActivityPub blog news feed to WordPress dashboard. [#1623]
+- The Outbox now skips invalid items instead of trying to process them for output and encountering an error. [#1627]
+
+### Changed
+- Batch processing jobs can now be scheduled with individual hooks. [#1521]
+- Better error handling when other servers request Outbox items in the wrong format, and 404 pages now show correctly. [#1685]
+- Fediverse Previews in the Block Editor now show media items, even if the post has not been published yet. [#1636]
+- Hide interaction buttons in emails when the Classic Editor is used. [#1643]
+- Improve compatibility with third-party caching plugins by sending a `Vary` header. [#1638]
+- Much more comprehensive plugin documentation in the Help tab of ActivityPub Settings. [#1599]
+- NodeInfo endpoint response now correctly formats `localPosts` values. [#1667]
+- Reactions block heading now uses Core's heading block with all its customization options. [#1657]
+- Settings pages are now more mobile-friendly with more space and easier scrolling. [#1684]
+- The number of images shared to the Fediverse can now be chosen on a per-post basis. [#1619]
+- Updated default max attachment count to four, creating better-looking gallery grids for posts with 4 or more images. [#1607]
+- Use a dedicated hook for the "Dismiss Welcome Page Welcome" link. [#1600]
+- Use FEP-c180 schema for error responses. [#1563]
+- Use `Audio` and `Video` type for Attachments, instead of the very generic `Document` type. [#1486]
+
+### Deprecated
+- Deprecated `rest_activitypub_outbox_query` filter in favor of `activitypub_rest_outbox_query`.
+  Deprecated `activitypub_outbox_post` action in favor of `activitypub_rest_outbox_post`. [#1628]
+
+### Fixed
+- Broken avatars in the Reactions and Follower block are now replaced with the default avatar. [#1695]
+- Email notifications for interactions with Brid.gy actors no longer trigger PHP Warnings. [#1677]
+- Improved support for users from more Fediverse platforms in email notifications. [#1612]
+- Improved the handling of Shares and Boosts. [#1626]
+- Issue preventing "Receive reblogs (boosts)" setting from being properly saved. [#1622]
+- Mention emails will no longer be sent for reply Activities. [#1681]
+- Prevent accidental follower removal by resetting errors properly. [#1668]
+- Properly remove retries schedules, with the invalidation of an Outbox-Item. [#1519]
+- The blog profile can no longer be queried when the blog actor option is disabled. [#1661]
+
 ## [5.8.0] - 2025-04-24
 ### Added
 - An option to receive notification emails when an Actor was mentioned in the Fediverse. [#1577]
@@ -1166,6 +1212,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[5.9.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.8.0...5.9.0
 [5.8.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.7.0...5.8.0
 [5.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.1...5.7.0
 [5.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.0...5.6.1

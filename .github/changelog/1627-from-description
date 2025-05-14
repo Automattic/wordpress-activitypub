@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-The Outbox now skips invalid items instead of trying to process them for output and encountering an error.
