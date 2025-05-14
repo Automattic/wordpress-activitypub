@@ -2,10 +2,10 @@
 /**
  * Advanced Settings Fields file.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
-namespace ActivityPub\WP_Admin;
+namespace Activitypub\WP_Admin;
 
 /**
  * Advanced Settings Fields class.

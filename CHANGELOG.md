@@ -375,7 +375,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.2.0] - 2024-11-15
 ### Added
-- Unit tests for the `ActivityPub\Transformer\Post` class
+- Unit tests for the `Activitypub\Transformer\Post` class
 
 ### Changed
 - Reuse constants once they're defined

@@ -2,7 +2,7 @@
 /**
  * Test Akismet Integration.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Integration;

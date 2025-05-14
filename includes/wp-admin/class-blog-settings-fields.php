@@ -2,7 +2,7 @@
 /**
  * ActivityPub Blog Settings Fields Handler.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\WP_Admin;
