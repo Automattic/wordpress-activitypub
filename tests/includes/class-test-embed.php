@@ -5,9 +5,9 @@
  * @package ActivityPub
  */
 
-namespace ActivityPub\Tests;
+namespace Activitypub\Tests;
 
-use ActivityPub\Embed;
+use Activitypub\Embed;
 
 /**
  * Test the Embed class.

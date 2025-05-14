@@ -107,7 +107,7 @@ class Embed {
 						break 2;
 				}
 			}
-			$images = array_slice( $images, 0, 4 );
+			$images = \array_slice( $images, 0, 4 );
 		}
 
 		ob_start();
