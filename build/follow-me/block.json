@@ -59,6 +59,7 @@
   ],
   "editorScript": "file:./index.js",
   "viewScriptModule": "file:./view.js",
+  "viewScript": "wp-api-fetch",
   "style": "file:./style-view.css",
   "render": "file:./render.php"
 }
