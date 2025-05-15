@@ -181,16 +181,12 @@ class Blocks {
 	 * @return string The HTML to render.
 	 */
 	public static function render_post_reactions_block( $attrs, $content ) {
-		if ( ! isset( $attrs['postId'] ) ) {
-			$attrs['postId'] = get_the_ID();
-		}
-		$args = array( 'data-attrs' => wp_json_encode( $attrs ) );
-
 		// Fallback for v1.0.0 blocks.
 		if ( empty( $content ) ) {
 			$title   = $attrs['title'] ?? \__( 'Fediverse Reactions', 'activitypub' );
 			$content = '<h6 class="wp-block-heading">' . \esc_html( $title ) . '</h6>' . "\n"
 						. '<div class="activitypub-reactions-block"></div>';
+			unset( $attrs['title'], $attrs['className'] );
 		}
 
 		// Hide the title if there are no comments.
@@ -209,6 +205,11 @@ class Blocks {
 
 			$content = $tags->get_updated_html();
 		}
+
+		if ( ! isset( $attrs['postId'] ) ) {
+			$attrs['postId'] = get_the_ID();
+		}
+		$args = array( 'data-attrs' => wp_json_encode( $attrs ) );
 
 		return sprintf(
 			'<div %1$s>%2$s</div>',
