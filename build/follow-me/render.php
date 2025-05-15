@@ -145,7 +145,7 @@ $content = Blocks::add_directions_to_button( $content, $attributes );
 							disabled
 						/>
 						<button
-							class="components-button is-primary"
+							type="button"
 							data-wp-on--click="actions.copyToClipboard"
 							aria-label="<?php echo esc_attr__( 'Copy handle to clipboard', 'activitypub' ); ?>"
 						>
@@ -169,7 +169,7 @@ $content = Blocks::add_directions_to_button( $content, $attributes );
 							data-wp-bind--aria-invalid="context.isError"
 						/>
 						<button
-							class="components-button is-primary"
+							type="button"
 							data-wp-on--click="actions.submitRemoteProfile"
 							aria-label="<?php echo esc_attr__( 'Follow', 'activitypub' ); ?>"
 							data-wp-bind--disabled="context.isLoading"

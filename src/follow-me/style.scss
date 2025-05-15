@@ -115,7 +115,7 @@
 
 	&__title {
 		margin: 0 !important;
-		font-size: 1.3rem;
+		font-size: 130%;
 		font-weight: 600;
 		line-height: 1.4;
 	}
@@ -160,20 +160,20 @@
 		h4 {
 			margin-top: 0;
 			margin-bottom: 0.5rem;
-			font-size: 1.1rem;
+			font-size: 110%;
 		}
 	}
 
 	&__description {
 		margin-bottom: 1rem;
 		color: inherit;
-		font-size: 0.95rem;
+		font-size: 95%;
 
 		code {
 			background: #f0f0f0;
 			padding: 0.1rem 0.3rem;
 			border-radius: 3px;
-			font-size: 0.9rem;
+			font-size: 90%;
 		}
 	}
 
@@ -186,7 +186,7 @@
 			flex: 1;
 			border: 1px solid #ddd;
 			border-radius: 4px 0 0 4px;
-			font-size: 1rem;
+			font-size: 100%;
 			margin: 0;
 
 			&[aria-invalid="true"] {
@@ -202,7 +202,7 @@
 
 	&__error {
 		color: #cc1818;
-		font-size: 0.9rem;
+		font-size: 90%;
 		margin-top: 0.5rem;
 	}
 }
