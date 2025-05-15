@@ -10,6 +10,7 @@
 	"supports": {
 		"html": false,
 		"align": true,
+		"interactivity": true,
 		"layout": {
 			"default": {
 				"type": "constrained",
@@ -24,6 +25,6 @@
 	},
 	"textdomain": "activitypub",
 	"editorScript": "file:./index.js",
-	"style": [ "file:./style-index.css", "wp-components" ],
-	"viewScript": "file:./view.js"
+	"style": "file:./style-index.css",
+	"viewScriptModule": "file:./view.js"
 }
