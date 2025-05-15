@@ -53,15 +53,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 * Add the Litespeed Cache htaccess rules.
 	 */
 	public static function add_htaccess_rules() {
-		// Ensure get_home_path() is declared.
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		$htaccess_file = get_home_path() . '.htaccess';
-		$added_rules   = false;
-
-		if ( \wp_is_writable( $htaccess_file ) ) {
-			$added_rules = \insert_with_markers( $htaccess_file, self::$marker, self::$rules );
-		}
+		$added_rules = self::append_with_markers( self::$marker, self::$rules );
 
 		\update_option( self::$option_name, $added_rules );
 	}
@@ -139,5 +131,44 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Append rules to a file with markers.
+	 *
+	 * @param string $marker The marker to identify the rules in the file.
+	 * @param string $rules  The rules to append.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function append_with_markers( $marker, $rules ) {
+		// Ensure get_home_path() is declared.
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+
+		$htaccess_file = get_home_path() . '.htaccess';
+
+		if ( ! \wp_is_writable( $htaccess_file ) ) {
+			return false;
+		}
+
+		global $wp_filesystem;
+		\WP_Filesystem();
+
+		$htaccess = $wp_filesystem->get_contents( $htaccess_file );
+
+		if ( \preg_match( $marker, $htaccess ) ) {
+			return \insert_with_markers( $htaccess_file, $marker, $rules );
+		}
+
+		$start_marker = "# BEGIN {$marker}";
+		$end_marker   = "# END {$marker}";
+
+		// Add marker to the rules.
+		$rules = $start_marker . PHP_EOL . $rules . PHP_EOL . $end_marker;
+
+		// Add rules to the top of the file.
+		$htaccess = $rules . PHP_EOL . PHP_EOL . $htaccess;
+
+		return \wp_filesystem->put_contents( $htaccess_file, $htaccess, FS_CHMOD_FILE );
 	}
 }
