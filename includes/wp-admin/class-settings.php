@@ -358,6 +358,16 @@ class Settings {
 				\wp_enqueue_media();
 				\wp_enqueue_script( 'activitypub-header-image' );
 				break;
+			case 'settings':
+				\update_option( 'activitypub_checklist_settings_visited', '1' );
+				break;
+			default:
+				if ( isset( $_GET['help-tab'] ) && 'getting-started' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+					\update_option( 'activitypub_checklist_fediverse_intro_visited', '1' );
+				} elseif ( isset( $_GET['help-tab'] ) && 'editor-blocks' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+					\update_option( 'activitypub_checklist_blocks_visited', '1' );
+				}
+				break;
 		}
 
 		if ( ! isset( $settings_tabs[ $tab ] ) ) {
@@ -476,6 +486,21 @@ class Settings {
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/issues">' . \esc_html__( 'Report an issue', 'activitypub' ) . '</a></p>' . "\n" .
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs">' . \esc_html__( 'Documentation', 'activitypub' ) . '</a></p>' . "\n" .
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/releases">' . \esc_html__( 'View latest changes', 'activitypub' ) . '</a></p>'
+		);
+	}
+
+	/**
+	 * Adds the ActivityPub help tab to the users page.
+	 */
+	public static function add_users_help_tab() {
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'       => 'activitypub',
+				'title'    => \__( 'ActivityPub', 'activitypub' ),
+				'content'  => self::get_help_tab_template( 'users' ),
+				// Add to the end of the list.
+				'priority' => 20,
+			)
 		);
 	}
 

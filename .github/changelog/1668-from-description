@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Prevent accidental follower removal by resetting errors properly.

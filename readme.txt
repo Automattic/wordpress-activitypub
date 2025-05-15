@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 6.4
 Tested up to: 6.8
-Stable tag: 5.8.0
+Stable tag: 5.9.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -98,7 +98,6 @@ The plugin uses PHP Constants to enable, disable or change its default behaviour
 
 * `ACTIVITYPUB_REST_NAMESPACE` - Change the default Namespace of the REST endpoint. Default: `activitypub/1.0`.
 * `ACTIVITYPUB_EXCERPT_LENGTH` - Change the length of the Excerpt. Default: `400`.
-* `ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS` - show plugin recommendations in the ActivityPub settings. Default: `true`.
 * `ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS` - Change the number of attachments, that should be federated. Default: `4`.
 * `ACTIVITYPUB_HASHTAGS_REGEXP` - Change the default regex to detect hashtext in a text. Default: `(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))`.
 * `ACTIVITYPUB_USERNAME_REGEXP` - Change the default regex to detect @-replies in a text. Default: `(?:([A-Za-z0-9\._-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))`.
@@ -128,6 +127,56 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 5.9.1 - 2025-05-15
+#### Fixed
+- Fixed a bug where Reaction blocks without modified titles did not get displayed correctly.
+
+### 5.9.0 - 2025-05-14
+#### Added
+- ActivityPub embeds now support audios, videos, and up to 4 images.
+- Added a check to make sure we only attempt to embed activity objects, when processing fallback embeds.
+- Add setting to enable or disable how content is tailored for browsers and Fediverse services.
+- Adjusted the plugin's default behavior based on the caching plugins installed.
+- A guided onboarding flow after plugin activation to help users make key setup decisions and understand Fediverse concepts.
+- Author profiles will cap the amount of extra fields they return to 20, to avoid response size errors in clients.
+- Fediverse Preview in the Editor now also supports video and audio attachments.
+- Guidance for configuring Surge to support ActivityPub caching.
+- Help tab section explaining ActivityPub capabilities on the users page.
+- Profile sections have been moved from the Welcome page to new Dashboard widgets for easier access.
+- The ActivityPub blog news feed to WordPress dashboard.
+- The Outbox now skips invalid items instead of trying to process them for output and encountering an error.
+
+#### Changed
+- Batch processing jobs can now be scheduled with individual hooks.
+- Better error handling when other servers request Outbox items in the wrong format, and 404 pages now show correctly.
+- Fediverse Previews in the Block Editor now show media items, even if the post has not been published yet.
+- Hide interaction buttons in emails when the Classic Editor is used.
+- Improve compatibility with third-party caching plugins by sending a `Vary` header.
+- Much more comprehensive plugin documentation in the Help tab of ActivityPub Settings.
+- NodeInfo endpoint response now correctly formats `localPosts` values.
+- Reactions block heading now uses Core's heading block with all its customization options.
+- Settings pages are now more mobile-friendly with more space and easier scrolling.
+- The number of images shared to the Fediverse can now be chosen on a per-post basis.
+- Updated default max attachment count to four, creating better-looking gallery grids for posts with 4 or more images.
+- Use a dedicated hook for the "Dismiss Welcome Page Welcome" link.
+- Use FEP-c180 schema for error responses.
+- Use `Audio` and `Video` type for Attachments, instead of the very generic `Document` type.
+
+#### Deprecated
+- Deprecated `rest_activitypub_outbox_query` filter in favor of `activitypub_rest_outbox_query`.
+  Deprecated `activitypub_outbox_post` action in favor of `activitypub_rest_outbox_post`.
+
+#### Fixed
+- Broken avatars in the Reactions and Follower block are now replaced with the default avatar.
+- Email notifications for interactions with Brid.gy actors no longer trigger PHP Warnings.
+- Improved support for users from more Fediverse platforms in email notifications.
+- Improved the handling of Shares and Boosts.
+- Issue preventing "Receive reblogs (boosts)" setting from being properly saved.
+- Mention emails will no longer be sent for reply Activities.
+- Prevent accidental follower removal by resetting errors properly.
+- Properly remove retries schedules, with the invalidation of an Outbox-Item.
+- The blog profile can no longer be queried when the blog actor option is disabled.
 
 ### 5.8.0 - 2025-04-24
 #### Added
@@ -370,9 +419,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 5.4.0 =
+= 5.9.1 =
 
-Note: This update requires WordPress 6.4+. Please ensure your site meets this requirement before upgrading.
+Fixes cases where the Reactions block doesn't get rendered correctly.
 
 == Installation ==
 

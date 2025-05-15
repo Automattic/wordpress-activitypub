@@ -12,6 +12,7 @@ use Activitypub\Integration\Enable_Mastodon_Apps;
 /**
  * Test class for Enable Mastodon Apps integration.
  *
+ * @group integration
  * @coversDefaultClass \Activitypub\Integration\Enable_Mastodon_Apps
  */
 class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {

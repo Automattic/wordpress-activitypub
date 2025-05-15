@@ -2,7 +2,7 @@
 /**
  * Mailer Class.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub;

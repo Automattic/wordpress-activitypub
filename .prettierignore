@@ -5,10 +5,8 @@ vendor
 
 # Temporary ignores while breaking out each component.
 assets
-src/editor-plugin
 src/followers
 src/reactions
 src/remote-reply
 src/reply
 src/reply-intent
-src/shared

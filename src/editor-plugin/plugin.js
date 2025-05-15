@@ -20,27 +20,37 @@ const notAllowed = (
 	</SVG>
 );
 
-
+/**
+ * Editor plugin for ActivityPub settings in the block editor.
+ *
+ * @returns {JSX.Element|null} The settings panel for ActivityPub or null for sync blocks.
+ */
 const EditorPlugin = () => {
-	const postType = useSelect(
-		( select ) => select( 'core/editor' ).getCurrentPostType(),
-		[]
-	);
+	const postType = useSelect( ( select ) => select( 'core/editor' ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 
 	const labelStyling = {
-		verticalAlign: "middle",
-		gap: "4px",
-		justifyContent: "start",
-		display: "inline-flex",
-		alignItems: "center"
-	}
+		verticalAlign: 'middle',
+		gap: '4px',
+		justifyContent: 'start',
+		display: 'inline-flex',
+		alignItems: 'center',
+	};
 
+	/**
+	 * Enhances a label with an icon and tooltip.
+	 *
+	 * @param {JSX.Element} icon    The icon to display.
+	 * @param {string}      text    The label text.
+	 * @param {string}      tooltip The tooltip text.
+	 *
+	 * @returns {JSX.Element} The enhanced label component.
+	 */
 	const enhancedLabel = ( icon, text, tooltip ) => (
 		<Tooltip text={ tooltip }>
 			<Text style={ labelStyling }>
 				<Icon icon={ icon } />
-				{text}
+				{ text }
 			</Text>
 		</Tooltip>
 	);
@@ -51,10 +61,7 @@ const EditorPlugin = () => {
 	}
 
 	return (
-		<PluginDocumentSettingPanel
-			name="activitypub"
-			title={ __( 'Fediverse ⁂', 'activitypub' ) }
-		>
+		<PluginDocumentSettingPanel name="activitypub" title={ __( 'Fediverse ⁂', 'activitypub' ) }>
 			<TextControl
 				label={ __( 'Content Warning', 'activitypub' ) }
 				value={ meta?.activitypub_content_warning }
@@ -62,23 +69,34 @@ const EditorPlugin = () => {
 					setMeta( { ...meta, activitypub_content_warning: value } );
 				} }
 				placeholder={ __( 'Optional content warning', 'activitypub' ) }
-				help={ __( 'Content warnings do not change the content on your site, only in the fediverse.', 'activitypub' ) }
+				help={ __(
+					'Content warnings do not change the content on your site, only in the fediverse.',
+					'activitypub'
+				) }
 			/>
 
 			<RangeControl
 				label={ __( 'Maximum Image Attachments', 'activitypub' ) }
-				value={ meta?.activitypub_max_image_attachments ?? window._activityPubOptions?.maxImageAttachments ?? 4 }
+				value={
+					meta?.activitypub_max_image_attachments ?? window._activityPubOptions?.maxImageAttachments ?? 4
+				}
 				onChange={ ( value ) => {
 					setMeta( { ...meta, activitypub_max_image_attachments: value } );
 				} }
 				min={ 0 }
 				max={ 10 }
-				help={ __( 'Maximum number of image attachments to include when sharing to the fediverse.', 'activitypub' ) }
+				help={ __(
+					'Maximum number of image attachments to include when sharing to the fediverse.',
+					'activitypub'
+				) }
 			/>
 
 			<RadioControl
 				label={ __( 'Visibility', 'activitypub' ) }
-				help={ __( 'This adjusts the visibility of a post in the fediverse, but note that it won\'t affect how the post appears on the blog.', 'activitypub' ) }
+				help={ __(
+					"This adjusts the visibility of a post in the fediverse, but note that it won't affect how the post appears on the blog.",
+					'activitypub'
+				) }
 				selected={ meta?.activitypub_content_visibility || 'public' }
 				options={ [
 					{
@@ -87,15 +105,18 @@ const EditorPlugin = () => {
 							__( 'Public', 'activitypub' ),
 							__( 'Post will be visible to everyone and appear in public timelines.', 'activitypub' )
 						),
-						value: 'public'
+						value: 'public',
 					},
 					{
 						label: enhancedLabel(
 							people,
 							__( 'Quiet public', 'activitypub' ),
-							__( 'Post will be visible to everyone but will not appear in public timelines.', 'activitypub' )
+							__(
+								'Post will be visible to everyone but will not appear in public timelines.',
+								'activitypub'
+							)
 						),
-						value: 'quiet_public'
+						value: 'quiet_public',
 					},
 					{
 						label: enhancedLabel(
@@ -103,7 +124,7 @@ const EditorPlugin = () => {
 							__( 'Do not federate', 'activitypub' ),
 							__( 'Post will not be shared to the Fediverse.', 'activitypub' )
 						),
-						value: 'local'
+						value: 'local',
 					},
 				] }
 				onChange={ ( value ) => {
@@ -113,8 +134,11 @@ const EditorPlugin = () => {
 			/>
 		</PluginDocumentSettingPanel>
 	);
-}
+};
 
+/**
+ * Opens the Fediverse preview for the current post in a new tab.
+ */
 function onActivityPubPreview() {
 	const previewLink = select( 'core/editor' ).getEditedPostPreviewLink();
 	const fediversePreviewLink = addQueryArgs( previewLink, { activitypub: 'true' } );
@@ -122,6 +146,11 @@ function onActivityPubPreview() {
 	window.open( fediversePreviewLink, '_blank' );
 }
 
+/**
+ * Renders the preview menu item for Fediverse preview.
+ *
+ * @returns {JSX.Element} The preview menu item component.
+ */
 const EditorPreview = () => {
 	// check if post was saved
 	const post_status = useSelect( ( select ) => select( 'core/editor' ).getCurrentPost().status );

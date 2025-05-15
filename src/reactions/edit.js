@@ -155,14 +155,13 @@ export default function Edit( { attributes, __unstableLayoutClassNames } ) {
 		],
 	];
 
-	const ALLOWED_BLOCKS = [ 'core/heading' ];
-
 	return (
 		<div { ...blockProps }>
 			<InnerBlocks
 				template={ TEMPLATE }
-				allowedBlocks={ ALLOWED_BLOCKS }
-				templateLock={ false }
+				allowedBlocks={ [ 'core/heading' ] }
+				templateLock={ 'all' }
+				renderAppender={ false }
 			/>
 			<Reactions reactions={ dummyReactions } />
 		</div>
