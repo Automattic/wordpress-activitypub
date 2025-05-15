@@ -3,66 +3,68 @@
 	position: relative;
 }
 
-.activitypub-follow-me-block-wrapper .activitypub-profile {
-	display: flex;
-	align-items: center;
-	padding: 1em 0;
+.activitypub-follow-me-block-wrapper {
+	.activitypub-profile {
+		display: flex;
+		align-items: center;
+		padding: 1rem 0;
 
-	.has-background > &,
-	.has-border > & {
-		padding-left: 1em;
-		padding-right: 1em;
-	}
+		&__avatar {
+			width: 75px;
+			height: 75px;
+			border-radius: 50%;
+			margin-right: 1rem;
+			object-fit: cover;
+		}
 
-	&__avatar {
-		width: 75px;
-		height: 75px;
-		border-radius: 50%;
-		margin-right: 1em;
-		object-fit: cover;
-	}
+		&__content {
+			flex: 1;
+			margin-right: 1rem;
+			min-width: 0;
+		}
 
-	&__content {
-		flex: 1;
-		margin-right: 1em;
-		min-width: 0;
-	}
+		&__name {
+			font-size: 1.25rem;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
 
-	&__name {
-		font-size: 1.25em;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
+		&__handle {
+			color: inherit;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
 
-	&__handle {
-		color: inherit;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
+		.wp-block-button {
+			flex-shrink: 0;
+			margin: 0;
 
-	.wp-block-button {
-		flex-shrink: 0;
-		margin: 0;
+			&:not(:only-child) {
+				margin-left: 1rem;
+			}
+		}
 
-		&:not(:only-child) {
-			margin-left: 1em;
+		.wp-block-button__link {
+			margin: 0;
+		}
+
+		.is-small {
+			padding: 0.25rem 0.5rem;
+			font-size: 0.8rem;
+		}
+
+		.is-compact {
+			padding: 0.4rem 0.8rem;
+			font-size: 0.9rem;
 		}
 	}
 
-	.wp-block-button__link {
-		margin: 0;
-	}
-
-	.is-small {
-		padding: 0.25em 0.5em;
-		font-size: 0.8em;
-	}
-
-	.is-compact {
-		padding: 0.4em 0.8em;
-		font-size: 0.9em;
+	&.has-background .activitypub-profile,
+	&.has-border .activitypub-profile {
+		padding-left: 1rem;
+		padding-right: 1rem;
 	}
 }
 
@@ -102,14 +104,14 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1em 1em 1em 1.5em;
+		padding: 1rem 1rem 1rem 1.5rem;
 		border-bottom: 1px solid #e2e4e7;
 		flex-shrink: 0;
 	}
 
 	&__title {
 		margin: 0 !important;
-		font-size: 1.3em;
+		font-size: 1.3rem;
 		font-weight: 600;
 		line-height: 1.4;
 	}
@@ -117,7 +119,7 @@
 	&__close {
 		background: none;
 		border: none;
-		padding: 0.5em;
+		padding: 0.5rem;
 		cursor: pointer;
 		color: #555;
 		display: flex;
@@ -133,7 +135,7 @@
 			background: none;
 			border: none;
 			color: #000;
-			padding: 0.5em;
+			padding: 0.5rem;
 		}
 	}
 
@@ -144,7 +146,7 @@
 
 .activitypub-dialog {
 	&__section {
-		padding: 1em 1.5em;
+		padding: 1rem 1.5rem;
 		border-bottom: 1px solid #f0f0f0;
 
 		&:last-child {
@@ -153,34 +155,34 @@
 
 		h4 {
 			margin-top: 0;
-			margin-bottom: 0.5em;
-			font-size: 1.1em;
+			margin-bottom: 0.5rem;
+			font-size: 1.1rem;
 		}
 	}
 
 	&__description {
-		margin-bottom: 1em;
+		margin-bottom: 1rem;
 		color: inherit;
-		font-size: 0.95em;
+		font-size: 0.95rem;
 
 		code {
 			background: #f0f0f0;
-			padding: 0.1em 0.3em;
+			padding: 0.1rem 0.3rem;
 			border-radius: 3px;
-			font-size: 0.9em;
+			font-size: 0.9rem;
 		}
 	}
 
 	&__button-group {
 		display: flex;
 		width: 100%;
-		margin-bottom: 0.5em;
+		margin-bottom: 0.5rem;
 
 		input {
 			flex: 1;
 			border: 1px solid #ddd;
 			border-radius: 4px 0 0 4px;
-			font-size: 1em;
+			font-size: 1rem;
 			margin: 0;
 
 			&[aria-invalid="true"] {
@@ -196,8 +198,8 @@
 
 	&__error {
 		color: #cc1818;
-		font-size: 0.9em;
-		margin-top: 0.5em;
+		font-size: 0.9rem;
+		margin-top: 0.5rem;
 	}
 }
 
