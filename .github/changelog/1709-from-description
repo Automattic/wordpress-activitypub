@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Titles added through a Heading block in the Reactions block now stay properly hidden when there are no reactions.
