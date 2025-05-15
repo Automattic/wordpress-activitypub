@@ -1,8 +1,10 @@
 # This file is for unifying the coding style for different editors and IDEs
 # editorconfig.org
-
+#
 # WordPress Coding Standards
 # https://make.wordpress.org/core/handbook/coding-standards/
+#
+# Be sure to keep this file in sync with the .prettierrc.js file.
 
 root = true
 
@@ -12,6 +14,9 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 indent_style = tab
+
+[*.json]
+indent_style = space
 
 [*.yml]
 indent_style = space
