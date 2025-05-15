@@ -65,15 +65,17 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	 * Test adding htaccess rules.
 	 */
 	public function test_add_htaccess_rules() {
-		// Ensure filter is set for correct htaccess file path
-		\add_filter(
-			'activitypub_litespeed_cache_htaccess_file',
-			function( $file ) { return $this->htaccess_file; }
-		);
+		$function = function () {
+			return $this->htaccess_file;
+		};
+		\add_filter( 'activitypub_litespeed_cache_htaccess_file', $function );
+
 		Litespeed_Cache::add_htaccess_rules();
 		// phpcs:ignore
 		$contents = \file_get_contents( $this->htaccess_file );
 		$this->assertStringContainsString( Litespeed_Cache::$rules, $contents, 'Litespeed rules should be present in htaccess' );
+
+		\remove_filter( 'activitypub_litespeed_cache_htaccess_file', $function );
 	}
 
 	/**
@@ -92,11 +94,11 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	 * Test no duplicate rules.
 	 */
 	public function test_no_duplicate_rules() {
-		// Ensure filter is set for correct htaccess file path
-		\add_filter(
-			'activitypub_litespeed_cache_htaccess_file',
-			function( $file ) { return $this->htaccess_file; }
-		);
+		$function = function () {
+			return $this->htaccess_file;
+		};
+		\add_filter( 'activitypub_litespeed_cache_htaccess_file', $function );
+
 		Litespeed_Cache::add_htaccess_rules();
 		Litespeed_Cache::add_htaccess_rules();
 		// phpcs:ignore
@@ -104,6 +106,8 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 		// Count number of rule blocks.
 		$rule_count = substr_count( $contents, Litespeed_Cache::$rules );
 		$this->assertEquals( 1, $rule_count, 'Litespeed rules should appear only once' );
+
+		\remove_filter( 'activitypub_litespeed_cache_htaccess_file', $function );
 	}
 
 	/**
