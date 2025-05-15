@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 6.4
 Tested up to: 6.8
-Stable tag: 5.9.0
+Stable tag: 5.9.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -127,6 +127,10 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 5.9.1 - 2025-05-15
+#### Fixed
+- Fixed a bug where Reaction blocks without modified titles did not get displayed correctly.
 
 ### 5.9.0 - 2025-05-14
 #### Added
@@ -415,9 +419,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 5.9.0 =
+= 5.9.1 =
 
-Experience our new onboarding flow and improved help docs—making it easier than ever to connect your site to the Fediverse!
+Fixes cases where the Reactions block doesn't get rendered correctly.
 
 == Installation ==
 
