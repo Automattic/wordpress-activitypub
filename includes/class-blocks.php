@@ -213,7 +213,7 @@ class Blocks {
 	 * @param string $user_string The user string. Can be a user ID, 'site', or 'inherit'.
 	 * @return int|null The user ID, or null if the 'inherit' string is not supported in this context.
 	 */
-	private static function get_user_id( $user_string ) {
+	public static function get_user_id( $user_string ) {
 		if ( is_numeric( $user_string ) ) {
 			return absint( $user_string );
 		}
