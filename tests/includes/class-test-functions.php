@@ -36,10 +36,10 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test the get_remote_metadata_by_actor function.
 	 *
-	 * @covers \ActivityPub\get_remote_metadata_by_actor
+	 * @covers \Activitypub\get_remote_metadata_by_actor
 	 */
 	public function test_get_remote_metadata_by_actor() {
-		$metadata = \ActivityPub\get_remote_metadata_by_actor( 'pfefferle@notiz.blog' );
+		$metadata = \Activitypub\get_remote_metadata_by_actor( 'pfefferle@notiz.blog' );
 		$this->assertEquals( 'https://notiz.blog/author/matthias-pfefferle/', $metadata['url'] );
 		$this->assertEquals( 'pfefferle', $metadata['preferredUsername'] );
 		$this->assertEquals( 'Matthias Pfefferle', $metadata['name'] );
@@ -48,7 +48,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test object_id_to_comment.
 	 *
-	 * @covers \ActivityPub\object_id_to_comment
+	 * @covers \Activitypub\object_id_to_comment
 	 */
 	public function test_object_id_to_comment_basic() {
 		$single_comment_source_id = 'https://example.com/single';
@@ -80,7 +80,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test object_id_to_comment with invalid source ID.
 	 *
-	 * @covers \ActivityPub\object_id_to_comment
+	 * @covers \Activitypub\object_id_to_comment
 	 */
 	public function test_object_id_to_comment_none() {
 		$single_comment_source_id = 'https://example.com/none';
@@ -91,7 +91,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test object_id_to_comment with duplicate source ID.
 	 *
-	 * @covers \ActivityPub\object_id_to_comment
+	 * @covers \Activitypub\object_id_to_comment
 	 */
 	public function test_object_id_to_comment_duplicate() {
 		$duplicate_comment_source_id = 'https://example.com/duplicate';

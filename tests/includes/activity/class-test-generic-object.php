@@ -2,7 +2,7 @@
 /**
  * Test Generic Object.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Activity;

@@ -2,7 +2,7 @@
 /**
  * Test file for Scheduler class.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests;

@@ -2,7 +2,7 @@
 /**
  * Test Dispatcher Class.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests;

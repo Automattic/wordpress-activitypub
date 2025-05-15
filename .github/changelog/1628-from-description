@@ -1,5 +1,0 @@
-Significance: minor
-Type: deprecated
-
-Deprecated `rest_activitypub_outbox_query` filter in favor of `activitypub_rest_outbox_query`.
-Deprecated `activitypub_outbox_post` action in favor of `activitypub_rest_outbox_post`.

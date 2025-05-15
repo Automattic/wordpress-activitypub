@@ -2,7 +2,7 @@
 /**
  * Test Post REST Endpoints.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Rest;

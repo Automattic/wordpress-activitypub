@@ -2,7 +2,7 @@
 /**
  * Test file for Base Transformer.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Transformer;
