@@ -26,6 +26,9 @@ $background_color = $attributes['backgroundColor'] ?? $style['color']['backgroun
 $button_style = $attributes['style'] ?? array();
 
 $actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
+if ( is_wp_error( $actor ) ) {
+	return;
+}
 
 // Set up the Interactivity API state.
 $state = wp_interactivity_state(
