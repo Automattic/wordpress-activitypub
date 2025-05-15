@@ -12,7 +12,7 @@ $attributes = wp_parse_args( $attributes );
 
 // Get the user ID from the selected user attribute.
 $selected_user = $attributes['selectedUser'] ?? 'site';
-$user_id       = 'site' === $selected_user ? 0 : intval( $selected_user );
+$user_id       = Blocks::get_user_id( $selected_user );
 $button_only   = $attributes['buttonOnly'] ?? false;
 
 // Generate a unique ID for the block.
