@@ -30,7 +30,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 *
 	 * @var string
 	 */
-	private static $option_name = 'activitypub_integration_litespeed_cache_htaccess_rules';
+	private static $option_name = 'activitypub_litespeed_cache_setup';
 
 	/**
 	 * The marker to identify the rules in the htaccess file.
