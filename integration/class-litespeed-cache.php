@@ -19,7 +19,7 @@ class Litespeed_Cache {
 	 *
 	 * @var string
 	 */
-	private static $rules = '<IfModule LiteSpeed>
+	public static $rules = '<IfModule LiteSpeed>
 RewriteEngine On
 RewriteCond %{HTTP:Accept} application
 RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
@@ -30,14 +30,14 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 *
 	 * @var string
 	 */
-	private static $option_name = 'activitypub_litespeed_cache_setup';
+	public static $option_name = 'activitypub_litespeed_cache_setup';
 
 	/**
 	 * The marker to identify the rules in the htaccess file.
 	 *
 	 * @var string
 	 */
-	private static $marker = 'ActivityPub LiteSpeed Cache';
+	public static $marker = 'ActivityPub LiteSpeed Cache';
 
 	/**
 	 * Initialize the integration.
@@ -62,14 +62,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 * Remove the Litespeed Cache htaccess rules.
 	 */
 	public static function remove_htaccess_rules() {
-		// Ensure get_home_path() is declared.
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		$htaccess_file = \get_home_path() . '.htaccess';
-
-		if ( \wp_is_writable( $htaccess_file ) ) {
-			\insert_with_markers( $htaccess_file, self::$marker, '' );
-		}
+		self::append_with_markers( self::$marker, '' );
 
 		\delete_option( self::$option_name );
 	}
@@ -142,21 +135,21 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 * @return bool True on success, false on failure.
 	 */
 	public static function append_with_markers( $marker, $rules ) {
-		// Ensure get_home_path() is declared.
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		$htaccess_file = \get_home_path() . '.htaccess';
+		$htaccess_file = self::get_htaccess_file_path();
 
 		if ( ! \wp_is_writable( $htaccess_file ) ) {
 			return false;
 		}
+
+		// Ensure get_home_path() is declared.
+		require_once ABSPATH . 'wp-admin/includes/file.php';
 
 		global $wp_filesystem;
 		\WP_Filesystem();
 
 		$htaccess = $wp_filesystem->get_contents( $htaccess_file );
 
-		if ( \preg_match( $marker, $htaccess ) ) {
+		if ( strpos( $htaccess, $marker ) !== false ) {
 			return \insert_with_markers( $htaccess_file, $marker, $rules );
 		}
 
@@ -167,5 +160,27 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		$htaccess = $rules . PHP_EOL . PHP_EOL . $htaccess;
 
 		return $wp_filesystem->put_contents( $htaccess_file, $htaccess, FS_CHMOD_FILE );
+	}
+
+	/**
+	 * Get the htaccess file.
+	 *
+	 * @return string|false The htaccess file or false.
+	 */
+	public static function get_htaccess_file_path() {
+		$htaccess_file = false;
+
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors
+		if ( @file_exists( \get_home_path() . '.htaccess' ) ) {
+			/** The htaccess file resides in ABSPATH */
+			$htaccess_file = \get_home_path() . '.htaccess';
+		}
+
+		/**
+		 * Filter the htaccess file path.
+		 *
+		 * @param string|false $htaccess_file The htaccess file path.
+		 */
+		return \apply_filters( 'activitypub_litespeed_cache_htaccess_file', $htaccess_file );
 	}
 }
