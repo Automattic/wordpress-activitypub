@@ -2,6 +2,9 @@ import { store, getContext } from '@wordpress/interactivity';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import './style.scss';
 
+/** @var {object} wp WordPress global. */
+const { apiFetch } = window.wp;
+
 /**
  * Traps focus within the specified element.
  *
