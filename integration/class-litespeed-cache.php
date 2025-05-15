@@ -65,7 +65,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		// Ensure get_home_path() is declared.
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 
-		$htaccess_file = get_home_path() . '.htaccess';
+		$htaccess_file = \get_home_path() . '.htaccess';
 
 		if ( \wp_is_writable( $htaccess_file ) ) {
 			\insert_with_markers( $htaccess_file, self::$marker, '' );
@@ -145,7 +145,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		// Ensure get_home_path() is declared.
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 
-		$htaccess_file = get_home_path() . '.htaccess';
+		$htaccess_file = \get_home_path() . '.htaccess';
 
 		if ( ! \wp_is_writable( $htaccess_file ) ) {
 			return false;
@@ -163,10 +163,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		$start_marker = "# BEGIN {$marker}";
 		$end_marker   = "# END {$marker}";
 
-		// Add marker to the rules.
-		$rules = $start_marker . PHP_EOL . $rules . PHP_EOL . $end_marker;
-
-		// Add rules to the top of the file.
+		$rules    = $start_marker . PHP_EOL . $rules . PHP_EOL . $end_marker;
 		$htaccess = $rules . PHP_EOL . PHP_EOL . $htaccess;
 
 		return \wp_filesystem->put_contents( $htaccess_file, $htaccess, FS_CHMOD_FILE );
