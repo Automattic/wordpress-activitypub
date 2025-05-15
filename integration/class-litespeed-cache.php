@@ -166,6 +166,6 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		$rules    = $start_marker . PHP_EOL . $rules . PHP_EOL . $end_marker;
 		$htaccess = $rules . PHP_EOL . PHP_EOL . $htaccess;
 
-		return \wp_filesystem->put_contents( $htaccess_file, $htaccess, FS_CHMOD_FILE );
+		return $wp_filesystem->put_contents( $htaccess_file, $htaccess, FS_CHMOD_FILE );
 	}
 }
