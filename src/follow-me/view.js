@@ -11,12 +11,24 @@ const { apiFetch } = window.wp;
  * @param {Element} element The element to trap focus within.
  */
 function trapFocus( element ) {
-	var focusableElements = element.querySelectorAll(
+	const focusableElements = element.querySelectorAll(
 		'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])'
 	);
-	var firstFocusableElement = focusableElements[ 0 ];
-	var lastFocusableElement = focusableElements[ focusableElements.length - 1 ];
-	firstFocusableElement.focus();
+	const firstFocusableElement = focusableElements[ 0 ];
+	const lastFocusableElement = focusableElements[ focusableElements.length - 1 ];
+
+	// If the first focusable element is the close button, set initial focus to the next element instead.
+	if (
+		firstFocusableElement &&
+		firstFocusableElement.classList.contains( 'activitypub-modal__close' ) &&
+		focusableElements.length > 1
+	) {
+		// Set initial focus to the second element, but keep firstFocusableElement as is for tab trapping.
+		focusableElements[ 1 ].focus();
+	} else {
+		// Otherwise focus the first element as usual.
+		firstFocusableElement.focus();
+	}
 
 	element.addEventListener( 'keydown', function ( event ) {
 		if ( event.key !== 'Tab' && event.keyCode !== 9 /* KEYCODE_TAB */ ) {

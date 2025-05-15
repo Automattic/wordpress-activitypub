@@ -1,4 +1,26 @@
 /**
+ * Checks if a CSS variable is defined.
+ *
+ * @param {string} variableName The CSS variable name to check.
+ * @return {boolean} Whether the variable is defined.
+ */
+function isCssVariableDefined( variableName ) {
+	// Return false if we're in a server-side context.
+	if ( typeof window === 'undefined' || ! window.getComputedStyle ) {
+		return false;
+	}
+
+	// Get the computed style of the root element.
+	const styles = window.getComputedStyle( document.documentElement );
+
+	// Get the value of the CSS variable.
+	const value = styles.getPropertyValue( variableName ).trim();
+
+	// If the value is empty, the variable is not defined or is set to an empty value.
+	return value !== '';
+}
+
+/**
  * Gets the background color from a style object.
  *
  * @param {Object|string} color Color object or string.
@@ -7,7 +29,11 @@
 function getBackgroundColor( color ) {
 	// If color is a string, it's a var like this.
 	if ( typeof color === 'string' ) {
-		return `var(--wp--preset--color--${ color })`;
+		const varName = `--wp--preset--color--${ color }`;
+		if ( ! isCssVariableDefined( varName ) ) {
+			return null;
+		}
+		return `var(${ varName })`;
 	}
 
 	return color?.color?.background || null;
@@ -32,7 +58,14 @@ function getLinkColor( text ) {
 	// var(--wp--preset--color--luminous-vivid-amber)
 	// We will receive the top format, we need to output the bottom format.
 	const [ , , color ] = text.split( '|' );
-	return `var(--wp--preset--color--${ color })`;
+	const varName = `--wp--preset--color--${ color }`;
+
+	// Check if the CSS variable is defined before using it.
+	if ( ! isCssVariableDefined( varName ) ) {
+		return null;
+	}
+
+	return `var(${ varName })`;
 }
 
 /**

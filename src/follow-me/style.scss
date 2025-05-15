@@ -30,6 +30,7 @@
 			text-overflow: ellipsis;
 		}
 
+		&__name,
 		&__handle {
 			color: inherit;
 			line-height: 1.2;
@@ -108,7 +109,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem 1rem 1rem 1.5rem;
+		padding: 2rem 2rem 1.5rem 2rem;
 		border-bottom: 1px solid #e2e4e7;
 		flex-shrink: 0;
 	}
@@ -150,11 +151,12 @@
 
 .activitypub-dialog {
 	&__section {
-		padding: 1rem 1.5rem;
+		padding: 1.5rem 2rem;
 		border-bottom: 1px solid #f0f0f0;
 
 		&:last-child {
 			border-bottom: none;
+			padding-bottom: 2rem;
 		}
 
 		h4 {
