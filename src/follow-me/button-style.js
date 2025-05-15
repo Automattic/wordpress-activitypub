@@ -78,19 +78,16 @@ function getStyles( selector, button, text, hover ) {
  * @return {string} CSS styles.
  */
 export function getBlockStyles( base, style, backgroundColor ) {
-	if ( ! style.length ) {
-		return '';
-	}
-
 	const selector = `${ base } .wp-block-button__link`;
+
 	// We grab the background color if set as a good color for our button text.
 	const buttonTextColor =
 		getBackgroundColor( backgroundColor ) ||
 		// Background might be in this form.
 		style?.color?.background;
+
 	// We misuse the link color for the button background.
 	const buttonColor = getLinkColor( style?.elements?.link?.color?.text );
-	// Hover!
 	const buttonHoverColor = getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text );
 
 	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
@@ -107,7 +104,7 @@ export function getPopupStyles( style ) {
 	const buttonColor = getLinkColor( style?.elements?.link?.color?.text ) || '#111';
 	const buttonTextColor = '#fff';
 	const buttonHoverColor = getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text ) || '#333';
-	const selector = '.activitypub-dialog__button-group .components-button';
+	const selector = '.activitypub-dialog__button-group .wp-block-button';
 
 	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
 }
