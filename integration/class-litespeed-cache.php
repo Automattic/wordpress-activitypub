@@ -108,7 +108,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 			'test'        => 'test_litespeed_cache_integration',
 		);
 
-		if ( 0 === \get_option( self::$option_name, '0' ) ) {
+		if ( '0' === \get_option( self::$option_name, '0' ) ) {
 			$result['status']         = 'critical';
 			$result['label']          = \__( 'Litespeed Cache might not be properly configured.', 'activitypub' );
 			$result['badge']['color'] = 'red';
