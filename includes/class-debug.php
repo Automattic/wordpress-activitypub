@@ -19,8 +19,11 @@ class Debug {
 	public static function init() {
 		if ( \WP_DEBUG && \WP_DEBUG_LOG ) {
 			\add_action( 'activitypub_safe_remote_post_response', array( self::class, 'log_remote_post_responses' ), 10, 2 );
+
 			\add_action( 'activitypub_inbox', array( self::class, 'log_inbox' ), 10, 3 );
 			\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'log_inbox' ), 10, 3 );
+
+			\add_action( 'activitypub_add_to_outbox_failed', array( self::class, 'log_outbox_error' ), 10, 3 );
 
 			\add_action( 'activitypub_sent_to_inbox', array( self::class, 'log_sent_to_inbox' ), 10, 2 );
 		}
@@ -51,8 +54,20 @@ class Debug {
 			$actor = $data['actor'] ?? '';
 			$url   = object_to_uri( $actor );
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions
-			\error_log( "[INBOX] Request From: {$url} with Activity: " . \print_r( $data, true ) );
+			\error_log( "[INBOX] Request from: {$url} with Activity: " . \print_r( $data, true ) );
 		}
+	}
+
+	/**
+	 * Log failed outbox requests.
+	 *
+	 * @param array  $data    The Activity array.
+	 * @param string $type    The type of the request.
+	 * @param int    $user_id The ID of the local blog user.
+	 */
+	public static function log_outbox_error( $data, $type, $user_id ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions
+		\error_log( "[OUTBOX] Failed to add {$type}-Activity from: {$user_id} with Activity: " . \print_r( $data, true ) );
 	}
 
 	/**

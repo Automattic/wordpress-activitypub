@@ -1508,12 +1508,14 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 	}
 
 	if ( ! $activity || \is_wp_error( $activity ) ) {
+		\do_action( 'activitypub_add_to_outbox_failed', $data, $activity_type, $user_id, $content_visibility );
 		return false;
 	}
 
 	$outbox_activity_id = Outbox::add( $activity, $user_id, $content_visibility );
 
 	if ( ! $outbox_activity_id ) {
+		\do_action( 'activitypub_add_to_outbox_failed', $data, $activity_type, $user_id, $content_visibility );
 		return false;
 	}
 
