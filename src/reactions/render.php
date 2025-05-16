@@ -10,19 +10,23 @@ use Activitypub\Comment;
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
 
+/* @var string $content Inner blocks content. */
+if ( empty( $content ) ) {
+	// Fallback for v1.0.0 blocks.
+	$_title  = $attributes['title'] ?? \__( 'Fediverse Reactions', 'activitypub' );
+	$content = '<h6 class="wp-block-heading">' . \esc_html( $_title ) . '</h6>';
+	unset( $attributes['title'], $attributes['className'] );
+}
+
+
 // Get the post ID from attributes or use the current post.
 $_post_id = $attributes['postId'] ?? get_the_ID();
 
 // Generate a unique ID for the block.
 $block_id = 'activitypub-reactions-block-' . wp_unique_id();
 
-// Initialize the reactions data.
 $reactions = array();
 
-// Maximum number of reactions to display in the facepile.
-$max_reactions = 30;
-
-// Fetch reactions data from the server.
 foreach ( Comment::get_comment_types() as $type_object ) {
 	$comments = \get_comments(
 		array(
@@ -49,9 +53,6 @@ foreach ( Comment::get_comment_types() as $type_object ) {
 	);
 	// phpcs:enable WordPress.WP.I18n
 
-	// Limit the number of reactions to display in the facepile.
-	$display_comments = array_slice( $comments, 0, $max_reactions );
-
 	$reactions[ $type_object['collection'] ] = array(
 		'label' => $label,
 		'items' => \array_map(
@@ -62,7 +63,7 @@ foreach ( Comment::get_comment_types() as $type_object ) {
 					'avatar' => \get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
 				);
 			},
-			$display_comments
+			$comments
 		),
 	);
 }
@@ -93,25 +94,23 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		'data-wp-init'        => 'callbacks.initReactions',
 	)
 );
-
-/* @var string $content Inner blocks content. */
 ?>
+
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
 	<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 
 	<div class="activitypub-reactions">
-		<div class="reaction-group" data-wp-context="{ reactionType: 'likes' }">
+		<?php foreach ( $reactions as $_type => $reaction ) : ?>
+		<div class="reaction-group" data-wp-context="{ reactionType: '<?php echo esc_attr( $_type ); ?>' }" data-wp-bind--hidden="!context.reactions.<?php echo esc_attr( $_type ); ?>.items.length">
 			<ul class="reaction-avatars">
-				<template data-wp-each="context.reactions.likes.items">
+				<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
 					<li>
 						<a
 							data-wp-bind--href="context.item.url"
-							data-debug-url="true"
 							target="_blank"
-							href="#"
 							rel="noopener noreferrer"
-							data-wp-on--mouseenter="actions.startWave({postId: context.postId, startIndex: index, isEntering: true, reactionType: 'likes'})"
-							data-wp-on--mouseleave="actions.startWave({postId: context.postId, startIndex: index, isEntering: false, reactionType: 'likes'})"
+							data-wp-on--mouseenter="actions.startWave({postId: context.postId, startIndex: index, isEntering: true, reactionType: context.reactionType})"
+							data-wp-on--mouseleave="actions.startWave({postId: context.postId, startIndex: index, isEntering: false, reactionType: context.reactionType})"
 						>
 							<img
 								data-wp-bind--src="context.item.avatar"
@@ -129,45 +128,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			</ul>
 			<button
 				class="reaction-label"
-				data-wp-bind--aria-label="context.reactions.likes.label"
+				data-wp-bind--aria-label="context.reactions.<?php echo esc_attr( $_type ); ?>.label"
 			>
-				<span data-wp-text="context.reactions.likes.label"></span>
+				<span data-wp-text="context.reactions.<?php echo esc_attr( $_type ); ?>.label"></span>
 			</button>
 		</div>
-
-		<div class="reaction-group" data-wp-context="{ reactionType: 'reposts' }">
-			<ul class="reaction-avatars">
-				<template data-wp-each="context.reactions.reposts.items">
-					<li>
-						<a
-							data-wp-bind--href="context.item.url"
-							data-debug-url="true"
-							target="_blank"
-							href="#"
-							rel="noopener noreferrer"
-							data-wp-on--mouseenter="actions.startWave({postId: context.postId, startIndex: index, isEntering: true, reactionType: 'reposts'})"
-							data-wp-on--mouseleave="actions.startWave({postId: context.postId, startIndex: index, isEntering: false, reactionType: 'reposts'})"
-						>
-							<img
-								data-wp-bind--src="context.item.avatar"
-								data-wp-bind--alt="context.item.name"
-								class="reaction-avatar"
-								width="32"
-								height="32"
-								data-wp-on--error="callbacks.setDefaultAvatar"
-								src=""
-								alt=""
-							/>
-						</a>
-					</li>
-				</template>
-			</ul>
-			<button
-				class="reaction-label"
-				data-wp-bind--aria-label="context.reactions.reposts.label"
-			>
-				<span data-wp-text="context.reactions.reposts.label"></span>
-			</button>
-		</div>
+		<?php endforeach; ?>
 	</div>
 </div>

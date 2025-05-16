@@ -1,6 +1,6 @@
 import { store, getContext } from '@wordpress/interactivity';
 
-const { actions, callbacks, state } = store( 'activitypub/reactions', {
+const { actions, state } = store( 'activitypub/reactions', {
 	actions: {
 		/**
 		 * Fetches reactions for a post.
@@ -48,7 +48,6 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 * @param {Object} context The context object.
 		 */
 		startWave: ({ postId, startIndex, isEntering, reactionType }) => {
-			const { actions } = getContext('activitypub/reactions');
 			const context = getContext();
 
 			if (!context.reactions || !context.reactions[reactionType]) return;
@@ -293,6 +292,11 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		setDefaultAvatar: (event) => {
 			const { target } = event;
 			target.src = state.defaultAvatarUrl;
+		},
+
+		logReactions: () => {
+			const context = getContext();
+			console.log('Reactions context:', context);
 		},
 	}
 } );
