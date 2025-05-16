@@ -129,7 +129,7 @@ For reasons of data protection, it is not possible to see the followers of other
 == Changelog ==
 
 ### 5.9.2 - 2025-05-16
-#### Changed
+#### Fixed
 - Titles added through a Heading block in the Reactions block now stay properly hidden when there are no reactions.
 
 ### 5.9.1 - 2025-05-15
