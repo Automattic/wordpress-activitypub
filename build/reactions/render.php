@@ -89,7 +89,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	array(
 		'id'                  => $block_id,
 		'data-wp-interactive' => 'activitypub/reactions',
-		'data-wp-context'     => \wp_json_encode( $context ),
+		'data-wp-context'     => \wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
 		'data-wp-init'        => 'callbacks.initReactions',
 	)
 );
@@ -129,7 +129,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			</ul>
 			<button
 				class="reaction-label"
-				data-wp--bind--aria-label="context.reactions.likes.label"
+				data-wp-bind--aria-label="context.reactions.likes.label"
 			>
 				<span data-wp-text="context.reactions.likes.label"></span>
 			</button>
@@ -164,7 +164,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			</ul>
 			<button
 				class="reaction-label"
-				data-wp--bind--aria-label="context.reactions.reposts.label"
+				data-wp-bind--aria-label="context.reactions.reposts.label"
 			>
 				<span data-wp-text="context.reactions.reposts.label"></span>
 			</button>
