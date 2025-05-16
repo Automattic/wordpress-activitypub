@@ -181,6 +181,10 @@ class Blocks {
 	 * @return string The HTML to render.
 	 */
 	public static function render_post_reactions_block( $attrs, $content ) {
+		if ( ! isset( $attrs['postId'] ) ) {
+			$attrs['postId'] = \get_the_ID();
+		}
+
 		// Fallback for v1.0.0 blocks.
 		if ( empty( $content ) ) {
 			$title   = $attrs['title'] ?? \__( 'Fediverse Reactions', 'activitypub' );
@@ -199,6 +203,7 @@ class Blocks {
 		);
 		if ( ! $has_comments ) {
 			$tags = new \WP_HTML_Tag_Processor( $content );
+
 			while ( $tags->next_tag( array( 'class_name' => 'wp-block-heading' ) ) ) {
 				$tags->set_attribute( 'hidden', true );
 			}
@@ -206,14 +211,9 @@ class Blocks {
 			$content = $tags->get_updated_html();
 		}
 
-		if ( ! isset( $attrs['postId'] ) ) {
-			$attrs['postId'] = \get_the_ID();
-		}
-		$args = array( 'data-attrs' => \wp_json_encode( $attrs ) );
-
-		return sprintf(
+		return \sprintf(
 			'<div %1$s>%2$s</div>',
-			get_block_wrapper_attributes( $args ),
+			\get_block_wrapper_attributes( array( 'data-attrs' => \wp_json_encode( $attrs ) ) ),
 			$content
 		);
 	}
