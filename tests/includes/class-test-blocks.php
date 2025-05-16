@@ -233,11 +233,14 @@ class Test_Blocks extends \WP_UnitTestCase {
 			$post_id
 		);
 		$output       = do_blocks( $block_markup );
-		$expected     = '<div class="wp-block-activitypub-reactions is-layout-constrained wp-block-reactions-is-layout-constrained" data-attrs="{&quot;postId&quot;:9}">
+		$expected     = sprintf(
+			'<div class="wp-block-activitypub-reactions is-layout-constrained wp-block-reactions-is-layout-constrained" data-attrs="{&quot;postId&quot;:%d}">
 
 <h3 class="wp-block-heading">Fediverse Custom</h3>
 <div class="activitypub-reactions-block"></div>
-</div>';
+</div>',
+			$post_id
+		);
 
 		$this->assertSame( $expected, $output );
 	}
