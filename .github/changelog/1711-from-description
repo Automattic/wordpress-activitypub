@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+The actor of the replied-to post is now included in cc or to based on the post's visibility.
