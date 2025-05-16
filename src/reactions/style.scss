@@ -8,7 +8,11 @@
 		gap: 0.75em;
 		justify-content: flex-start;
 
-		// When content overflows, switch to space-between
+		&[hidden] {
+			display: none;
+		}
+
+		// When content overflows, switch to space-between.
 		&:has(.reaction-avatars:not(:empty)) {
 			@media (max-width: 782px) {
 				justify-content: space-between;
@@ -47,8 +51,8 @@
 			border-radius: 50%;
 			border: 0.5px solid var( --wp--preset--color--contrast, rgba(255, 255, 255, 0.8) );
 			box-shadow:
-				0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border
-				0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
+				0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border.
+				0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow.
 			transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 			will-change: transform;
 
@@ -71,6 +75,21 @@
 		}
 	}
 
+	.reaction-more {
+		display: inline-flex;
+		align-items: center;
+		font-size: var( --wp--preset--font-size--small, 0.875rem );
+		color: var( --wp--preset--color--contrast, var( --wp--preset--color--secondary, #2271b1 ) );
+		margin-left: 0.5em;
+		font-weight: 500;
+
+		span {
+			padding: 0.25em 0.5em;
+			border-radius: 1em;
+			background-color: var( --wp--preset--color--tertiary, #f0f0f1 );
+		}
+	}
+
 	.reaction-label.components-button {
 		white-space: nowrap;
 		height: auto;
@@ -88,6 +107,137 @@
 			box-shadow: none;
 			outline: 1px solid var( --wp--preset--color--contrast, #135e96 );
 			outline-offset: 2px;
+		}
+	}
+}
+
+.activitypub-reactions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin-top: 16px;
+
+	.reaction-group {
+		display: flex;
+		align-items: center;
+		position: relative;
+	}
+
+	.reaction-avatars {
+		display: flex;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+
+		li {
+			margin-right: -10px;
+			transition: transform 0.2s ease;
+
+			&:hover {
+				z-index: 2;
+				transform: translateY(-2px);
+			}
+		}
+	}
+
+	.reaction-avatar {
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		border: 2px solid #fff;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+	}
+
+	.reaction-label {
+		margin-left: 12px;
+		font-size: 14px;
+		font-weight: 500;
+		color: #1e1e1e;
+		background: none;
+		border: none;
+		padding: 4px 8px;
+		cursor: pointer;
+		border-radius: 4px;
+		transition: background-color 0.2s ease;
+
+		&:hover {
+			background-color: rgba(0, 0, 0, 0.05);
+		}
+	}
+
+	.reaction-popover {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		z-index: 100;
+		background: #fff;
+		border-radius: 8px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		padding: 12px;
+		margin-top: 8px;
+		min-width: 200px;
+		max-width: 300px;
+		max-height: 300px;
+		overflow-y: auto;
+	}
+
+	.reaction-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+
+		li {
+			margin-bottom: 8px;
+
+			&:last-child {
+				margin-bottom: 0;
+			}
+
+			a {
+				display: flex;
+				align-items: center;
+				text-decoration: none;
+				color: #1e1e1e;
+				padding: 4px;
+				border-radius: 4px;
+				transition: background-color 0.2s ease;
+
+				&:hover {
+					background-color: rgba(0, 0, 0, 0.05);
+				}
+			}
+		}
+	}
+
+	.reaction-name {
+		margin-left: 8px;
+		font-size: 14px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.reaction-close {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		background: none;
+		border: none;
+		font-size: 18px;
+		line-height: 1;
+		padding: 4px;
+		cursor: pointer;
+		color: #757575;
+		border-radius: 50%;
+		width: 24px;
+		height: 24px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: background-color 0.2s ease;
+
+		&:hover {
+			background-color: rgba(0, 0, 0, 0.05);
 		}
 	}
 }
