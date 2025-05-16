@@ -165,36 +165,25 @@ class Blocks {
 		);
 
 		\register_block_type_from_metadata(
-			ACTIVITYPUB_PLUGIN_DIR . '/build/reactions',
-			array(
-				'render_callback' => array( self::class, 'render_post_reactions_block' ),
-			)
+			ACTIVITYPUB_PLUGIN_DIR . '/build/reactions'
 		);
 	}
 
 	/**
-	 * Render the post reactions block.
+	 * Renders the post reactions block.
 	 *
-	 * @param array  $attrs   The block attributes.
-	 * @param string $content Inner blocks.
+	 * @since 1.0.0
 	 *
-	 * @return string The HTML to render.
+	 * @param array    $attributes Block attributes.
+	 * @param string   $content    Block content.
+	 * @param WP_Block $block      Block instance.
+	 *
+	 * @return string Rendered block HTML.
 	 */
-	public static function render_post_reactions_block( $attrs, $content ) {
-		if ( ! isset( $attrs['postId'] ) ) {
-			$attrs['postId'] = get_the_ID();
-		}
-
-		$args = array( 'data-attrs' => wp_json_encode( $attrs ) );
-		if ( isset( $attrs['title'] ) ) {
-			$args['class'] = 'activitypub-reactions-block';
-		}
-
-		return sprintf(
-			'<div %1$s>%2$s</div>',
-			get_block_wrapper_attributes( $args ),
-			$content
-		);
+	public static function render_post_reactions_block( $attributes, $content, $block ) {
+		// This function is no longer used as we now use render.php for server-side rendering.
+		// Keeping this function as a stub for backward compatibility.
+		return $content;
 	}
 
 	/**
