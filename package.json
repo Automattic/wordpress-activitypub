@@ -1,51 +1,51 @@
 {
-    "name": "wordpress-activitypub",
-    "description": "The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/automattic/wordpress-activitypub.git"
-    },
-    "author": {
-        "name": "Matthias Pfefferle",
-        "web": "https://notiz.blog"
-    },
-    "scripts": {
-        "dev": "wp-scripts start",
-        "build": "wp-scripts format && wp-scripts build",
-        "format": "wp-scripts format",
-        "lint:css": "wp-scripts lint-style",
-        "lint:js": "wp-scripts lint-js",
-        "env": "wp-env",
-        "env-start": "wp-env start && wp-env run cli wp rewrite structure '/%year%/%monthnum%/%postname%/'",
-        "env-stop": "wp-env stop",
-        "env-test": "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit",
-        "release": "node bin/release.js"
-    },
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/automattic/wordpress-activitypub/issues"
-    },
-    "homepage": "https://github.com/automattic/wordpress-activitypub#readme",
-    "devDependencies": {
-        "@wordpress/api-fetch": "^7.22.0",
-        "@wordpress/block-editor": "^14.17.0",
-        "@wordpress/blocks": "^14.0.0",
-        "@wordpress/components": "^29.1.1",
-        "@wordpress/compose": "^7.22.0",
-        "@wordpress/core-data": "^7.22.0",
-        "@wordpress/data": "^10.0.0",
-        "@wordpress/dom-ready": "^4.0.0",
-        "@wordpress/editor": "^14.22.0",
-        "@wordpress/element": "^6.0.0",
-        "@wordpress/env": "^10.10.0",
-        "@wordpress/i18n": "^5.22.0",
-        "@wordpress/icons": "^10.10.0",
-        "@wordpress/plugins": "^7.22.0",
-        "@wordpress/prettier-config": "^4.23.0",
-        "@wordpress/primitives": "^4.22.0",
-        "@wordpress/scripts": "^27.0.0",
-        "@wordpress/url": "^4.22.0",
-        "classnames": "^2.3.2",
-        "prettier": "npm:wp-prettier@^3.0.3"
-    }
+	"name": "wordpress-activitypub",
+	"description": "The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/automattic/wordpress-activitypub.git"
+	},
+	"author": {
+		"name": "Matthias Pfefferle",
+		"web": "https://notiz.blog"
+	},
+	"scripts": {
+		"dev": "wp-scripts start",
+		"build": "wp-scripts format && wp-scripts build",
+		"format": "wp-scripts format",
+		"lint:css": "wp-scripts lint-style",
+		"lint:js": "wp-scripts lint-js",
+		"env": "wp-env",
+		"env-start": "wp-env start && wp-env run cli wp rewrite structure '/%year%/%monthnum%/%postname%/'",
+		"env-stop": "wp-env stop",
+		"env-test": "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit",
+		"release": "node bin/release.js"
+	},
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/automattic/wordpress-activitypub/issues"
+	},
+	"homepage": "https://github.com/automattic/wordpress-activitypub#readme",
+	"devDependencies": {
+		"@wordpress/api-fetch": "^7.22.0",
+		"@wordpress/block-editor": "^14.17.0",
+		"@wordpress/blocks": "^14.0.0",
+		"@wordpress/components": "^29.1.1",
+		"@wordpress/compose": "^7.22.0",
+		"@wordpress/core-data": "^7.22.0",
+		"@wordpress/data": "^10.0.0",
+		"@wordpress/dom-ready": "^4.0.0",
+		"@wordpress/editor": "^14.22.0",
+		"@wordpress/element": "^6.0.0",
+		"@wordpress/env": "^10.10.0",
+		"@wordpress/i18n": "^5.22.0",
+		"@wordpress/icons": "^10.10.0",
+		"@wordpress/plugins": "^7.22.0",
+		"@wordpress/prettier-config": "^4.23.0",
+		"@wordpress/primitives": "^4.22.0",
+		"@wordpress/scripts": "^27.0.0",
+		"@wordpress/url": "^4.22.0",
+		"classnames": "^2.3.2",
+		"prettier": "npm:wp-prettier@^3.0.3"
+	}
 }
