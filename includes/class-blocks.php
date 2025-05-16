@@ -207,9 +207,9 @@ class Blocks {
 		}
 
 		if ( ! isset( $attrs['postId'] ) ) {
-			$attrs['postId'] = get_the_ID();
+			$attrs['postId'] = \get_the_ID();
 		}
-		$args = array( 'data-attrs' => wp_json_encode( $attrs ) );
+		$args = array( 'data-attrs' => \wp_json_encode( $attrs ) );
 
 		return sprintf(
 			'<div %1$s>%2$s</div>',
