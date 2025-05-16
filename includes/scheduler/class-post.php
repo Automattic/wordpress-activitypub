@@ -79,7 +79,7 @@ class Post {
 			return;
 		}
 
-		// If the post was not federated befor but is an Update activity, it should be a Create activity.
+		// If the post was not federated before but is an Update activity, it should be a Create activity.
 		if ( get_wp_object_state( $post ) === 'federated' && 'Update' === $type ) {
 			$type = 'Create';
 		}
