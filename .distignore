@@ -7,6 +7,8 @@
 .github
 .gitignore
 .php_cs
+.prettierignore
+.prettierrc.js
 .svnignore
 .travis.yml
 .wordpress-org
