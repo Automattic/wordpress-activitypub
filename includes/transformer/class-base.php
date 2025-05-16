@@ -120,7 +120,7 @@ abstract class Base {
 	/**
 	 * Transform the item into an ActivityPub Object.
 	 *
-	 * @return Base_Object|object The Activity-Object.
+	 * @return Base_Object The Activity-Object.
 	 */
 	public function to_object() {
 		$activity_object = new Base_Object();
@@ -393,5 +393,14 @@ abstract class Base {
 			$content,
 			$this->item
 		);
+	}
+
+	/**
+	 * Returns the in reply to.
+	 *
+	 * @return string|null The in reply to.
+	 */
+	protected function get_in_reply_to() {
+		return null;
 	}
 }
