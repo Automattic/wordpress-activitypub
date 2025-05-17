@@ -72,7 +72,7 @@ foreach ( Comment::get_comment_types() as $type_object ) {
 }
 
 // Set up the Interactivity API state.
-$state = wp_interactivity_state(
+wp_interactivity_state(
 	'activitypub/reactions',
 	array(
 		'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
@@ -82,11 +82,8 @@ $state = wp_interactivity_state(
 
 // Initialize the context for the block.
 $context = array(
-	'postId'         => $_post_id,
-	'reactions'      => $reactions,
-	'activeIndices'  => array(),
-	'rotationStates' => array(),
-	'timeoutRefs'    => array(),
+	'postId'    => $_post_id,
+	'reactions' => $reactions,
 );
 
 // Add the block wrapper attributes.
@@ -105,7 +102,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 	<div class="activitypub-reactions">
 		<?php foreach ( $reactions as $_type => $reaction ) : ?>
-		<div class="reaction-group" data-wp-context="{ reactionType: '<?php echo esc_attr( $_type ); ?>' }" data-wp-bind--hidden="!context.reactions.<?php echo esc_attr( $_type ); ?>.items.length">
+		<div class="reaction-group" data-wp-bind--hidden="!context.reactions.<?php echo esc_attr( $_type ); ?>.items.length">
 			<ul class="reaction-avatars">
 				<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
 					<li>
@@ -113,8 +110,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							data-wp-bind--href="context.item.url"
 							target="_blank"
 							rel="noopener noreferrer"
-							data-wp-on--mouseenter="actions.startWave({postId: context.postId, startIndex: index, isEntering: true, reactionType: context.reactionType})"
-							data-wp-on--mouseleave="actions.startWave({postId: context.postId, startIndex: index, isEntering: false, reactionType: context.reactionType})"
 						>
 							<img
 								data-wp-bind--src="context.item.avatar"
