@@ -102,7 +102,6 @@
 		&:hover {
 			background-color: rgba(0, 0, 0, 0.05);
 			color: var(--wp--preset--color--contrast, var(--wp--preset--color--secondary, #135e96));
-			text-decoration: underline;
 		}
 
 		&:focus:not(:disabled) {
