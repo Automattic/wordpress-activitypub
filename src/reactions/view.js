@@ -3,7 +3,7 @@ import { store, getContext, withScope } from '@wordpress/interactivity';
 /** @var {Object} window.wp WordPress global object */
 const { apiFetch } = window.wp;
 
-const { callbacks, state } = store( 'activitypub/reactions', {
+const { actions, callbacks, state } = store( 'activitypub/reactions', {
 	actions: {
 		/**
 		 * Fetches reactions for a post.
@@ -22,6 +22,46 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 			} catch ( error ) {
 				console.error( 'Error fetching reactions:', error );
 			}
+		},
+
+		/**
+		 * Opens the reactions modal.
+		 *
+		 * @param {Object} event The click event.
+		 */
+		openModal: ( event ) => {
+			const context = getContext();
+			const reactionType = event.target.closest( '[data-reaction-type]' ).getAttribute( 'data-reaction-type' );
+
+			// Set modal properties.
+			context.modal.isOpen = true;
+			context.modal.reactionType = reactionType;
+			context.modal.items = context.reactions[ reactionType ].items;
+
+			// Add body class to prevent scrolling.
+			document.body.classList.add( 'modal-open' );
+
+			// Add event listener to trap focus within the modal.
+			setTimeout( () => {
+				document.addEventListener( 'keydown', callbacks.handleModalKeydown );
+			}, 100 );
+		},
+
+		/**
+		 * Closes the reactions modal.
+		 */
+		closeModal: () => {
+			const context = getContext();
+
+			if ( context.modal ) {
+				context.modal.isOpen = false;
+			}
+
+			// Remove body class to allow scrolling again.
+			document.body.classList.remove( 'modal-open' );
+
+			// Remove event listener when modal is closed.
+			document.removeEventListener( 'keydown', callbacks.handleModalKeydown );
 		},
 	},
 	callbacks: {
@@ -96,13 +136,47 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 		},
 
 		/**
-		 * Sets the default avatar URL when an image fails to load.
+		 * Sets the default avatar when the avatar image fails to load.
 		 *
-		 * @param {Object} event - The error event object.
+		 * @param {Object} event The error event.
 		 */
 		setDefaultAvatar: ( event ) => {
 			const { target } = event;
 			target.src = state.defaultAvatarUrl;
+		},
+
+		/**
+		 * Handles keydown events for the modal.
+		 *
+		 * @param {Object} event The keydown event.
+		 */
+		handleModalKeydown: ( event ) => {
+			const context = getContext();
+
+			// Close modal on Escape key.
+			if ( event.key === 'Escape' && context.modal && context.modal.isOpen ) {
+				actions.closeModal();
+				event.preventDefault();
+			}
+		},
+
+		/**
+		 * Handles click on the reaction count button to open the modal.
+		 *
+		 * @param {Object} event The click event.
+		 */
+		handleReactionCountClick: ( event ) => {
+			const reactionType = event.target.closest( '[data-reaction-type]' ).getAttribute( 'data-reaction-type' );
+			actions.openModal( event );
+		},
+
+		/**
+		 * Prevents propagation of click events within the modal content.
+		 *
+		 * @param {Object} event The click event.
+		 */
+		handleModalContentClick: ( event ) => {
+			event.stopPropagation();
 		},
 	},
 } );
