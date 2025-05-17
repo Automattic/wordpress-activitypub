@@ -1,8 +1,8 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
-	"apiVersion": 3,
 	"name": "activitypub/reactions",
-	"version": "2.0.0",
+	"apiVersion": 3,
+	"version": "3.0.0",
 	"title": "Fediverse Reactions",
 	"category": "widgets",
 	"icon": "heart",
@@ -18,6 +18,9 @@
 				"justifyContent": "center"
 			}
 		}
+	},
+	"blockHooks": {
+		"core/post-content": "after"
 	},
 	"textdomain": "activitypub",
 	"editorScript": "file:./index.js",
