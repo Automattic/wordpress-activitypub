@@ -5,7 +5,7 @@ import { useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 
 /**
  * Save function for the reactions block.
- * 
+ *
  * With server-side rendering via render.php, we only need to output
  * the InnerBlocks content and a placeholder div.
  *

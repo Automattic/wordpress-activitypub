@@ -7,7 +7,6 @@ vendor
 assets
 src/follow-me
 src/followers
-src/reactions
 src/remote-reply
 src/reply
 src/reply-intent

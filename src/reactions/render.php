@@ -115,10 +115,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							<img
 								data-wp-bind--src="context.item.avatar"
 								data-wp-bind--alt="context.item.name"
-								class="reaction-avatar"
-								width="32"
-								height="32"
 								data-wp-on--error="callbacks.setDefaultAvatar"
+								class="reaction-avatar"
+								height="32"
+								width="32"
 								src=""
 								alt=""
 							/>
