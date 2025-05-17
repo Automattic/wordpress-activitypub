@@ -3,7 +3,7 @@ import { store, getContext, withScope } from '@wordpress/interactivity';
 /** @var {Object} window.wp WordPress global object */
 const { apiFetch } = window.wp;
 
-const { actions, callbacks, state } = store( 'activitypub/reactions', {
+const { callbacks, state } = store( 'activitypub/reactions', {
 	actions: {
 		/**
 		 * Fetches reactions for a post.
@@ -22,146 +22,6 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			} catch ( error ) {
 				console.error( 'Error fetching reactions:', error );
 			}
-		},
-
-		/**
-		 * Clears all timeouts for a specific post.
-		 *
-		 * @param {Object} context The context object.
-		 */
-		clearTimeouts: ( { postId } ) => {
-			const context = getContext();
-
-			if ( ! context.timeoutRefs ) {
-				context.timeoutRefs = {};
-			}
-
-			if ( context.timeoutRefs[ postId ] ) {
-				context.timeoutRefs[ postId ].forEach( ( timeout ) => clearTimeout( timeout ) );
-				context.timeoutRefs[ postId ] = [];
-			}
-		},
-
-		/**
-		 * Starts a wave animation on avatar hover.
-		 *
-		 * @param {Object} context The context object.
-		 */
-		startWave: ( { postId, startIndex, isEntering, reactionType } ) => {
-			const context = getContext();
-
-			if ( ! context.reactions || ! context.reactions[ reactionType ] ) return;
-
-			actions.clearTimeouts( { postId } );
-
-			const delay = 100; // 100ms between each avatar.
-			const totalAvatars = context.reactions[ reactionType ].items.length;
-
-			// Initialize context objects if they don't exist.
-			if ( ! context.activeIndices ) context.activeIndices = {};
-			if ( ! context.rotationStates ) context.rotationStates = {};
-			if ( ! context.timeoutRefs ) context.timeoutRefs = {};
-
-			if ( ! context.activeIndices[ postId ] ) context.activeIndices[ postId ] = {};
-			if ( ! context.rotationStates[ postId ] ) context.rotationStates[ postId ] = {};
-			if ( ! context.timeoutRefs[ postId ] ) context.timeoutRefs[ postId ] = [];
-
-			if ( ! context.activeIndices[ postId ][ reactionType ] ) {
-				context.activeIndices[ postId ][ reactionType ] = new Set();
-			}
-
-			if ( ! context.rotationStates[ postId ][ reactionType ] ) {
-				context.rotationStates[ postId ][ reactionType ] = new Map();
-			}
-
-			if ( isEntering ) {
-				const updatedRotation = new Map( context.rotationStates[ postId ][ reactionType ] );
-				updatedRotation.set( startIndex, 'clockwise' );
-				context.rotationStates[ postId ][ reactionType ] = updatedRotation;
-			}
-
-			// Helper function to create wave in either direction.
-			const createWave = ( direction ) => {
-				const isRightward = direction === 'right';
-				const start = isRightward ? startIndex : startIndex - 1;
-				const end = isRightward ? totalAvatars - 1 : 0;
-				const step = isRightward ? 1 : -1;
-
-				for ( let i = start; isRightward ? i <= end : i >= end; i += step ) {
-					const delayMultiplier = Math.abs( i - startIndex );
-					const timeout = setTimeout( () => {
-						const updatedActiveIndices = new Set( context.activeIndices[ postId ][ reactionType ] );
-
-						if ( isEntering ) {
-							updatedActiveIndices.add( i );
-						} else {
-							updatedActiveIndices.delete( i );
-						}
-
-						context.activeIndices[ postId ][ reactionType ] = updatedActiveIndices;
-
-						if ( isEntering && i !== startIndex ) {
-							const updatedRotation = new Map( context.rotationStates[ postId ][ reactionType ] );
-							const neighborIndex = i - step;
-							const neighborRotation = updatedRotation.get( neighborIndex );
-
-							updatedRotation.set( i, neighborRotation === 'clockwise' ? 'counter' : 'clockwise' );
-
-							context.rotationStates[ postId ][ reactionType ] = updatedRotation;
-						}
-					}, delayMultiplier * delay );
-
-					context.timeoutRefs[ postId ].push( timeout );
-				}
-			};
-
-			// Create waves in both directions.
-			createWave( 'right' );
-			createWave( 'left' );
-
-			// Clear rotations when wave finishes retracting.
-			if ( ! isEntering ) {
-				const maxDelay = Math.max( ( totalAvatars - startIndex ) * delay, startIndex * delay );
-
-				const timeout = setTimeout( () => {
-					context.rotationStates[ postId ][ reactionType ] = new Map();
-				}, maxDelay + delay );
-
-				context.timeoutRefs[ postId ].push( timeout );
-			}
-		},
-	},
-	selectors: {
-		/**
-		 * Gets the avatar class for a reaction avatar.
-		 *
-		 * @param {Object} context The context object.
-		 * @return {string} The avatar class.
-		 */
-		getAvatarClass: ( { postId, index, reactionType } ) => {
-			const context = getContext();
-
-			if (
-				! context.activeIndices ||
-				! context.activeIndices[ postId ] ||
-				! context.activeIndices[ postId ][ reactionType ] ||
-				! context.rotationStates ||
-				! context.rotationStates[ postId ] ||
-				! context.rotationStates[ postId ][ reactionType ]
-			) {
-				return 'reaction-avatar';
-			}
-
-			const rotationClass = context.rotationStates[ postId ][ reactionType ].get( index );
-			const classes = [
-				'reaction-avatar',
-				context.activeIndices[ postId ][ reactionType ].has( index ) ? 'wave-active' : '',
-				rotationClass ? `rotate-${ rotationClass }` : '',
-			]
-				.filter( Boolean )
-				.join( ' ' );
-
-			return classes;
 		},
 	},
 	callbacks: {
@@ -220,8 +80,6 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 * Initializes the reactions component.
 		 */
 		initReactions: () => {
-			const { postId } = getContext();
-
 			// Calculate visible avatars after the component is initialized.
 			setTimeout(
 				withScope( () => {
@@ -235,11 +93,6 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 				} ),
 				100
 			);
-
-			// Cleanup function to clear timeouts when component unmounts.
-			return () => {
-				actions.clearTimeouts( { postId } );
-			};
 		},
 
 		/**
