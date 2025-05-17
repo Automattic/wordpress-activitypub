@@ -1,24 +1,24 @@
-import { store, getContext } from '@wordpress/interactivity';
+import { store, getContext, withScope } from '@wordpress/interactivity';
 
-const { actions, state } = store( 'activitypub/reactions', {
+/** @var {Object} window.wp WordPress global object */
+const { apiFetch } = window.wp;
+
+const { actions, callbacks, state } = store( 'activitypub/reactions', {
 	actions: {
 		/**
 		 * Fetches reactions for a post.
-		 *
-		 * @param {Object} context The context object.
 		 */
-		fetchReactions: async ( context ) => {
-			const { postId } = getContext();
+		fetchReactions: async () => {
+			const context = getContext();
+			const { namespace } = state;
 
-			if ( ! postId ) return;
+			if ( ! context.postId ) return;
 
 			try {
-				const response = await fetch( `/wp-json/activitypub/v1/posts/${ postId }/reactions` );
-				if ( ! response.ok ) throw new Error( 'Failed to fetch reactions.' );
-
-				const data = await response.json();
-				// Update the state with the new reactions data.
-				context.reactions = data;
+				// Update the state with the new Reactions data.
+				context.reactions = await apiFetch( {
+					path: `/${ namespace }/posts/${ context.postId }/reactions`,
+				} );
 			} catch ( error ) {
 				console.error( 'Error fetching reactions:', error );
 			}
@@ -130,15 +130,6 @@ const { actions, state } = store( 'activitypub/reactions', {
 				context.timeoutRefs[ postId ].push( timeout );
 			}
 		},
-
-		/**
-		 * Refreshes reactions data from the server.
-		 *
-		 * @param {Object} context The context object.
-		 */
-		refreshReactions: ( { postId } ) => {
-			actions.fetchReactions( { postId } ).then( ( r ) => {} );
-		},
 	},
 	selectors: {
 		/**
@@ -172,34 +163,6 @@ const { actions, state } = store( 'activitypub/reactions', {
 
 			return classes;
 		},
-
-		/**
-		 * Gets the reactions for a post.
-		 *
-		 * @param {Object} context The context object.
-		 * @return {Object} The reactions object.
-		 */
-		getReactions: ( { postId } ) => {
-			const context = getContext();
-			return context.reactions || {};
-		},
-
-		/**
-		 * Checks if reactions exist for a specific type.
-		 *
-		 * @param {Object} context The context object.
-		 * @param {string} reactionType The reaction type to check.
-		 * @return {boolean} Whether reactions exist for the given type.
-		 */
-		hasReactions: ( { reactionType } ) => {
-			const context = getContext();
-			return !! (
-				context.reactions &&
-				context.reactions[ reactionType ] &&
-				context.reactions[ reactionType ].items &&
-				context.reactions[ reactionType ].items.length > 0
-			);
-		},
 	},
 	callbacks: {
 		/**
@@ -220,44 +183,36 @@ const { actions, state } = store( 'activitypub/reactions', {
 					return;
 				}
 
-				const groupSelector = `.reaction-group[data-wp-context*="${ reactionType }"]`;
-				const container = document.querySelector( groupSelector );
-				if ( ! container ) {
-					return;
-				}
+				document.querySelectorAll( `.reaction-group` ).forEach( ( container ) => {
+					const label = container.querySelector( '.reaction-label' );
+					const containerWidth = container.offsetWidth;
+					const labelWidth = label.offsetWidth || 0;
+					const availableWidth = containerWidth - labelWidth - BUTTON_GAP;
 
-				const label = container.querySelector( '.reaction-label' );
-				if ( ! label ) {
-					return;
-				}
+					// Calculate how many avatars can fit
+					// First avatar takes full width, rest take effective width
+					const maxAvatars = Math.max(
+						1,
+						Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH )
+					);
 
-				const containerWidth = container.offsetWidth;
-				const labelWidth = label.offsetWidth || 0;
-				const availableWidth = containerWidth - labelWidth - BUTTON_GAP;
+					// Ensure we don't show more than we have
+					const items = context.reactions[ reactionType ].items;
+					const visibleCount = Math.min( maxAvatars, items.length );
 
-				// Calculate how many avatars can fit
-				// First avatar takes full width, rest take effective width
-				const maxAvatars = Math.max(
-					1,
-					Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH )
-				);
-
-				// Ensure we don't show more than we have
-				const items = context.reactions[ reactionType ].items;
-				const visibleCount = Math.min( maxAvatars, items.length );
-
-				// Update the DOM to show only the calculated number of avatars
-				const avatarsList = container.querySelector( '.reaction-avatars' );
-				if ( avatarsList ) {
-					const avatarItems = avatarsList.querySelectorAll( 'li' );
-					avatarItems.forEach( ( item, index ) => {
-						if ( index < visibleCount ) {
-							item.style.display = '';
-						} else {
-							item.style.display = 'none';
-						}
-					} );
-				}
+					// Update the DOM to show only the calculated number of avatars
+					const avatarsList = container.querySelector( '.reaction-avatars' );
+					if ( avatarsList ) {
+						const avatarItems = avatarsList.querySelectorAll( 'li' );
+						avatarItems.forEach( ( item, index ) => {
+							if ( index < visibleCount ) {
+								item.style.display = '';
+							} else {
+								item.style.display = 'none';
+							}
+						} );
+					}
+				} );
 			} );
 		},
 
@@ -265,9 +220,21 @@ const { actions, state } = store( 'activitypub/reactions', {
 		 * Initializes the reactions component.
 		 */
 		initReactions: () => {
-			// Log the context to help with debugging
-
 			const { postId } = getContext();
+
+			// Calculate visible avatars after the component is initialized.
+			setTimeout(
+				withScope( () => {
+					// Set up resize observer to recalculate on window resize.
+					const resizeObserver = new ResizeObserver( withScope( callbacks.calculateVisibleAvatars ) );
+
+					// Observe both reaction groups.
+					document.querySelectorAll( '.reaction-group' ).forEach( ( group ) => {
+						resizeObserver.observe( group );
+					} );
+				} ),
+				100
+			);
 
 			// Cleanup function to clear timeouts when component unmounts.
 			return () => {
@@ -283,11 +250,6 @@ const { actions, state } = store( 'activitypub/reactions', {
 		setDefaultAvatar: ( event ) => {
 			const { target } = event;
 			target.src = state.defaultAvatarUrl;
-		},
-
-		logReactions: () => {
-			const context = getContext();
-			console.log( 'Reactions context:', context );
 		},
 	},
 } );

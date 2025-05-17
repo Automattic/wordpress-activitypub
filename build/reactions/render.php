@@ -40,6 +40,9 @@ foreach ( Comment::get_comment_types() as $type_object ) {
 		continue;
 	}
 
+	// repeat entries in the array 100times.
+	$comments = array_fill( 0, 100, $comments[0] );
+
 	$count = \count( $comments );
 	// phpcs:disable WordPress.WP.I18n
 	$label = \sprintf(
@@ -63,7 +66,7 @@ foreach ( Comment::get_comment_types() as $type_object ) {
 					'avatar' => \get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
 				);
 			},
-			$comments
+			\array_slice( $comments, 0, 20 )
 		),
 	);
 }
@@ -73,6 +76,7 @@ $state = wp_interactivity_state(
 	'activitypub/reactions',
 	array(
 		'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+		'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
 	)
 );
 
@@ -115,10 +119,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							<img
 								data-wp-bind--src="context.item.avatar"
 								data-wp-bind--alt="context.item.name"
-								class="reaction-avatar"
-								width="32"
-								height="32"
 								data-wp-on--error="callbacks.setDefaultAvatar"
+								class="reaction-avatar"
+								height="32"
+								width="32"
 								src=""
 								alt=""
 							/>
