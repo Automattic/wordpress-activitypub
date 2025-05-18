@@ -68,7 +68,7 @@ foreach ( Comment::get_comment_types() as $type_object ) {
 					'avatar' => get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
 				);
 			},
-			$comments // Load all comments without slicing
+			$comments
 		),
 	);
 }
@@ -79,14 +79,26 @@ wp_interactivity_state(
 	array(
 		'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
 		'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
+		'reactions'        => array(
+			$_post_id => $reactions,
+		),
 	)
+);
+
+// Render the 20 most recent reactions.
+$reactions = array_map(
+	function ( $reaction ) {
+		$reaction['items'] = array_slice( array_reverse( $reaction['items'] ), 0, 20 );
+
+		return $reaction;
+	},
+	$reactions
 );
 
 // Initialize the context for the block.
 $context = array(
-	'postId'    => $_post_id,
-	'reactions' => $reactions,
-	'modal'     => array(
+	'postId' => $_post_id,
+	'modal'  => array(
 		'isOpen'       => false,
 		'reactionType' => null,
 		'items'        => array(),
@@ -109,45 +121,36 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 
 	<div class="activitypub-reactions">
-		<?php foreach ( $reactions as $_type => $reaction ) : ?>
-		<div class="reaction-group" data-wp-bind--hidden="!context.reactions.<?php echo esc_attr( $_type ); ?>.items.length" data-reaction-type="<?php echo esc_attr( $_type ); ?>">
+		<?php
+		foreach ( $reactions as $_type => $reaction ) :
+			/* translators: %s: reaction type. */
+			$aria_label = sprintf( __( 'View all %s', 'activitypub' ), $_type );
+			?>
+		<div class="reaction-group" data-wp-bind--hidden="callbacks.hideReactionGroup" data-wp-context='{ "reactionType": "<?php echo esc_attr( $_type ); ?>", "postId": "<?php echo esc_attr( $_post_id ); ?>" }'>
 			<ul class="reaction-avatars">
-				<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
+				<?php foreach ( $reaction['items'] as $_item ) : ?>
 					<li>
 						<a
-							data-wp-bind--href="context.item.url"
+							href="<?php echo esc_url( $_item['url'] ); ?>"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
 							<img
-								data-wp-bind--src="context.item.avatar"
-								data-wp-bind--alt="context.item.name"
-								data-wp-on--error="callbacks.setDefaultAvatar"
 								class="reaction-avatar"
 								height="32"
 								width="32"
-								src=""
-								alt=""
+								src="<?php echo esc_url( $_item['avatar'] ); ?>"
+								alt="<?php echo esc_attr( $_item['name'] ); ?>"
 							/>
 						</a>
 					</li>
-				</template>
+				<?php endforeach; ?>
 			</ul>
 			<button
 				class="reaction-label"
 				data-reaction-type="<?php echo esc_attr( $_type ); ?>"
 				data-wp-on--click="actions.openModal"
-				aria-label="
-				<?php
-				echo esc_attr(
-					sprintf(
-						/* translators: %s: reaction type. */
-						__( 'View all %s', 'activitypub' ),
-						$_type
-					)
-				);
-				?>
-				"
+				aria-label="<?php echo esc_attr( $aria_label ); ?>"
 			>
 				<?php echo esc_html( $reaction['label'] ); ?>
 			</button>

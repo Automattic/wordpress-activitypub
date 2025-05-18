@@ -36,7 +36,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			// Set modal properties.
 			context.modal.isOpen = true;
 			context.modal.reactionType = reactionType;
-			context.modal.items = context.reactions[ reactionType ].items;
+			context.modal.items = state.reactions[ context.postId ][ reactionType ].items;
 
 			// Add body class to prevent scrolling.
 			document.body.classList.add( 'modal-open' );
@@ -79,7 +79,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 
 			// Process each reaction group
 			[ 'likes', 'reposts' ].forEach( ( reactionType ) => {
-				if ( ! context.reactions?.[ reactionType ]?.items?.length ) {
+				if ( ! state.reactions?.[ context.postId ][ reactionType ]?.items?.length ) {
 					return;
 				}
 
@@ -97,7 +97,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 					);
 
 					// Ensure we don't show more than we have
-					const items = context.reactions[ reactionType ].items;
+					const items = state.reactions[ context.postId ][ reactionType ].items;
 					const visibleCount = Math.min( maxAvatars, items.length );
 
 					// Update the DOM to show only the calculated number of avatars
@@ -141,8 +141,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 * @param {Object} event The error event.
 		 */
 		setDefaultAvatar: ( event ) => {
-			const { target } = event;
-			target.src = state.defaultAvatarUrl;
+			event.target.src = state.defaultAvatarUrl;
 		},
 
 		/**
@@ -177,6 +176,12 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 */
 		handleModalContentClick: ( event ) => {
 			event.stopPropagation();
+		},
+
+		hideReactionGroup: ( event ) => {
+			const { postId, reactionType } = getContext();
+
+			return ! state.reactions[ postId ][ reactionType ].items.length;
 		},
 	},
 } );
