@@ -3,12 +3,17 @@ import { store, getContext, withScope } from '@wordpress/interactivity';
 /** @var {Object} window.wp WordPress global object */
 const { apiFetch } = window.wp;
 
+/**
+ * @var {Object} state
+ * @var {Object} state.reactions Reactions data.
+ * @var {String} state.defaultAvatarUrl Default avatar URL.
+ */
 const { actions, callbacks, state } = store( 'activitypub/reactions', {
 	actions: {
 		/**
 		 * Fetches reactions for a post.
 		 */
-		fetchReactions: async () => {
+		async fetchReactions() {
 			const context = getContext();
 			const { namespace } = state;
 
@@ -29,47 +34,40 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 *
 		 * @param {Object} event The click event.
 		 */
-		openModal: ( event ) => {
-			const context = getContext();
+		openModal( event ) {
+			const { modal, postId } = getContext();
 			const reactionType = event.target.closest( '[data-reaction-type]' ).getAttribute( 'data-reaction-type' );
 
 			// Set modal properties.
-			context.modal.isOpen = true;
-			context.modal.reactionType = reactionType;
-			context.modal.items = state.reactions[ context.postId ][ reactionType ].items;
-
-			// Add body class to prevent scrolling.
-			document.body.classList.add( 'modal-open' );
-
-			// Add event listener to trap focus within the modal.
-			setTimeout( () => {
-				document.addEventListener( 'keydown', callbacks.handleModalKeydown );
-			}, 100 );
+			modal.isOpen = true;
+			modal.reactionType = reactionType;
+			modal.items = state.reactions[ postId ][ reactionType ].items;
 		},
 
 		/**
 		 * Closes the reactions modal.
 		 */
-		closeModal: () => {
-			const context = getContext();
+		closeModal() {
+			const { blockId, modal } = getContext();
 
-			if ( context.modal ) {
-				context.modal.isOpen = false;
+			modal.isOpen = false;
+
+			// Return focus to the button that opened the modal.
+			const blockWrapper = document.getElementById( blockId );
+			if ( blockWrapper ) {
+				const openButton = blockWrapper.querySelector( '.reaction-label' );
+				if ( openButton ) {
+					openButton.focus();
+				}
 			}
-
-			// Remove body class to allow scrolling again.
-			document.body.classList.remove( 'modal-open' );
-
-			// Remove event listener when modal is closed.
-			document.removeEventListener( 'keydown', callbacks.handleModalKeydown );
 		},
 	},
 	callbacks: {
 		/**
 		 * Calculates and sets the number of visible avatars based on container width.
 		 */
-		calculateVisibleAvatars: () => {
-			const context = getContext();
+		calculateVisibleAvatars() {
+			const { postId } = getContext();
 
 			// Constants for calculations
 			const AVATAR_WIDTH = 32; // Width of each avatar
@@ -79,7 +77,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 
 			// Process each reaction group
 			[ 'likes', 'reposts' ].forEach( ( reactionType ) => {
-				if ( ! state.reactions?.[ context.postId ][ reactionType ]?.items?.length ) {
+				if ( ! state.reactions?.[ postId ][ reactionType ]?.items?.length ) {
 					return;
 				}
 
@@ -97,7 +95,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 					);
 
 					// Ensure we don't show more than we have
-					const items = state.reactions[ context.postId ][ reactionType ].items;
+					const items = state.reactions[ postId ][ reactionType ].items;
 					const visibleCount = Math.min( maxAvatars, items.length );
 
 					// Update the DOM to show only the calculated number of avatars
@@ -106,9 +104,9 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 						const avatarItems = avatarsList.querySelectorAll( 'li' );
 						avatarItems.forEach( ( item, index ) => {
 							if ( index < visibleCount ) {
-								item.style.display = '';
+								item.setAttribute( 'hidden', 'hidden' );
 							} else {
-								item.style.display = 'none';
+								item.removeAttribute( 'hidden' );
 							}
 						} );
 					}
@@ -117,21 +115,24 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		},
 
 		/**
-		 * Initializes the reactions component.
+		 * Initializes the Reactions component.
 		 */
-		initReactions: () => {
-			const context = getContext();
-			console.log( context, context.reactions.length );
+		initReactions() {
 			// Calculate visible avatars after the component is initialized.
 			setTimeout(
 				withScope( () => {
+					const { blockId } = getContext();
+
 					// Set up resize observer to recalculate on window resize.
 					const resizeObserver = new ResizeObserver( withScope( callbacks.calculateVisibleAvatars ) );
 
 					// Observe both reaction groups.
-					document.querySelectorAll( '.reaction-group' ).forEach( ( group ) => {
-						resizeObserver.observe( group );
-					} );
+					const blockWrapper = document.getElementById( blockId );
+					if ( blockWrapper ) {
+						blockWrapper.querySelectorAll( '.reaction-group' ).forEach( ( group ) => {
+							resizeObserver.observe( group );
+						} );
+					}
 				} ),
 				100
 			);
@@ -142,48 +143,53 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 *
 		 * @param {Object} event The error event.
 		 */
-		setDefaultAvatar: ( event ) => {
+		setDefaultAvatar( event ) {
 			event.target.src = state.defaultAvatarUrl;
 		},
 
 		/**
-		 * Handles keydown events for the modal.
+		 * Close modal when pressing the ESC key.
 		 *
-		 * @param {Object} event The keydown event.
+		 * @param {String} key Keyboard event key.
 		 */
-		handleModalKeydown: ( event ) => {
-			const context = getContext();
+		documentKeydown( { key } ) {
+			const { modal } = getContext();
 
-			// Close modal on Escape key.
-			if ( event.key === 'Escape' && context.modal && context.modal.isOpen ) {
+			if ( modal.isOpen && key === 'Escape' ) {
 				actions.closeModal();
-				event.preventDefault();
 			}
 		},
 
 		/**
-		 * Handles click on the reaction count button to open the modal.
+		 * Close modal when clicking outside.
 		 *
-		 * @param {Object} event The click event.
+		 * @param {Event} event Click event.
 		 */
-		handleReactionCountClick: ( event ) => {
-			const reactionType = event.target.closest( '[data-reaction-type]' ).getAttribute( 'data-reaction-type' );
-			actions.openModal( event );
-		},
+		documentClick( event ) {
+			const { blockId, modal } = getContext();
+			if ( ! modal.isOpen ) {
+				return;
+			}
 
-		/**
-		 * Prevents propagation of click events within the modal content.
-		 *
-		 * @param {Object} event The click event.
-		 */
-		handleModalContentClick: ( event ) => {
-			event.stopPropagation();
-		},
+			// Get the block wrapper element.
+			const blockWrapper = document.getElementById( blockId );
+			if ( ! blockWrapper ) {
+				return;
+			}
 
-		hideReactionGroup: ( event ) => {
-			const { postId, reactionType } = getContext();
+			// If the click was on the button or its children, we should not close the modal.
+			const toggleButton = blockWrapper.querySelector( '.reaction-label[data-wp-on--click="actions.openModal"]' );
+			if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
+				return;
+			}
 
-			return ! state.reactions[ postId ][ reactionType ].items.length;
+			// Check if the click was inside the modal frame.
+			const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
+			if ( ! modalFrame || modalFrame.contains( event.target ) ) {
+				return;
+			}
+
+			actions.closeModal();
 		},
 	},
 } );
