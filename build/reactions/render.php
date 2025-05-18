@@ -5,6 +5,7 @@
  * @package ActivityPub
  */
 
+use Activitypub\Blocks;
 use Activitypub\Comment;
 
 /* @var array $attributes Block attributes. */
@@ -17,7 +18,11 @@ if ( empty( $content ) ) {
 	$content = '<h6 class="wp-block-heading">' . esc_html( $_title ) . '</h6>';
 	unset( $attributes['title'], $attributes['className'] );
 }
-
+$content = Blocks::add_directions_to_element(
+	$content,
+	array( 'class_name' => 'wp-block-heading' ),
+	array( 'data-wp-bind--hidden' => '!context.hasReactions' )
+);
 
 // Get the post ID from attributes or use the current post.
 $_post_id = $attributes['postId'] ?? get_the_ID();
@@ -97,8 +102,9 @@ $reactions = array_map(
 
 // Initialize the context for the block.
 $context = array(
-	'postId' => $_post_id,
-	'modal'  => array(
+	'hasReactions' => ! empty( $reactions ),
+	'postId'       => $_post_id,
+	'modal'        => array(
 		'isOpen'       => false,
 		'reactionType' => null,
 		'items'        => array(),
