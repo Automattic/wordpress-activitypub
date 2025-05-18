@@ -24,7 +24,7 @@ $content = Blocks::add_directions_to_element(
 	array( 'data-wp-bind--hidden' => '!context.hasReactions' )
 );
 
-// Get the post ID from attributes or use the current post.
+// Get the Post ID from attributes or use the current post.
 $_post_id = $attributes['postId'] ?? get_the_ID();
 
 // Generate a unique ID for the block.
@@ -45,8 +45,8 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 		continue;
 	}
 
-	// repeat entries in the array 100times.
-	$comments = array_fill( 0, 2, $comments[0] );
+	// repeat entries in the array 100 times.
+	$comments = array_fill( 0, 50, $comments[0] );
 
 	$count = count( $comments );
 	// phpcs:disable WordPress.WP.I18n
@@ -102,6 +102,7 @@ $reactions = array_map(
 
 // Initialize the context for the block.
 $context = array(
+	'blockId'      => $block_id,
 	'hasReactions' => ! empty( $reactions ),
 	'reactions'    => $reactions,
 	'postId'       => $_post_id,
@@ -116,10 +117,12 @@ $context = array(
 // Add the block wrapper attributes.
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
-		'id'                  => $block_id,
-		'data-wp-interactive' => 'activitypub/reactions',
-		'data-wp-context'     => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
-		'data-wp-init'        => 'callbacks.initReactions',
+		'id'                           => $block_id,
+		'data-wp-interactive'          => 'activitypub/reactions',
+		'data-wp-context'              => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
+		'data-wp-init'                 => 'callbacks.initReactions',
+		'data-wp-on-document--keydown' => 'callbacks.documentKeydown',
+		'data-wp-on-document--click'   => 'callbacks.documentClick',
 	)
 );
 ?>
@@ -171,7 +174,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	</div>
 
 	<div
-		class="activitypub-modal__overlay"
+		class="activitypub-modal__overlay compact"
 		data-wp-bind--hidden="!context.modal.isOpen"
 		data-wp-on--click="actions.closeModal"
 		role="dialog"
@@ -202,8 +205,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 									data-wp-bind--src="context.item.avatar"
 									data-wp-bind--alt="context.item.name"
 									data-wp-on--error="callbacks.setDefaultAvatar"
-									height="48"
-									width="48"
+									height="32"
+									width="32"
 									src=""
 									alt=""
 								/>
