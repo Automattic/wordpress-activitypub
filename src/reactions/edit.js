@@ -2,6 +2,7 @@ import { useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { useState } from '@wordpress/element';
 import { __, _x, sprintf } from '@wordpress/i18n';
 import { Reactions } from './reactions';
+import './style.scss';
 
 /**
  * Generate a whimsical name using an adjective and noun combination.

@@ -4,7 +4,6 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
 import { useOptions } from '../shared/use-options';
 
 /**
@@ -149,7 +148,7 @@ const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
 		noArrow={ false }
 		offset={ 10 }
 	>
-		<ul className="activitypub-reaction-list">
+		<ul className="reactions-list">
 			{ reactions.map( ( reaction, index ) => (
 				<li key={ index }>
 					<a href={ reaction.url } className="reaction-item" target="_blank" rel="noopener noreferrer">
@@ -171,10 +170,10 @@ const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
  * @return {JSX.Element}            The rendered component.
  */
 const ReactionList = ( { reactions, type } ) => (
-	<ul className="activitypub-reaction-list">
+	<ul className="reactions-list">
 		{ reactions.map( ( reaction, index ) => (
-			<li key={ index }>
-				<a href={ reaction.url } className="reaction-item" target="_blank" rel="noopener noreferrer">
+			<li key={ index } className="reaction-item">
+				<a href={ reaction.url } target="_blank" rel="noopener noreferrer">
 					<img src={ reaction.avatar } alt={ reaction.name } width="32" height="32" />
 					<span>{ reaction.name }</span>
 				</a>
