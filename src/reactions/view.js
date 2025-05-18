@@ -120,6 +120,8 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 * Initializes the reactions component.
 		 */
 		initReactions: () => {
+			const context = getContext();
+			console.log( context, context.reactions.length );
 			// Calculate visible avatars after the component is initialized.
 			setTimeout(
 				withScope( () => {

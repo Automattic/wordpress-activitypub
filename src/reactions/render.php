@@ -32,11 +32,11 @@ $block_id = 'activitypub-reactions-block-' . wp_unique_id();
 
 $reactions = array();
 
-foreach ( Comment::get_comment_types() as $type_object ) {
+foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 	$comments = get_comments(
 		array(
 			'post_id' => $_post_id,
-			'type'    => $type_object['type'],
+			'type'    => $_type,
 			'status'  => 'approve',
 		)
 	);
@@ -46,7 +46,7 @@ foreach ( Comment::get_comment_types() as $type_object ) {
 	}
 
 	// repeat entries in the array 100times.
-	$comments = array_fill( 0, 100, $comments[0] );
+	$comments = array_fill( 0, 2, $comments[0] );
 
 	$count = count( $comments );
 	// phpcs:disable WordPress.WP.I18n
@@ -61,7 +61,7 @@ foreach ( Comment::get_comment_types() as $type_object ) {
 	);
 	// phpcs:enable WordPress.WP.I18n
 
-	$reactions[ $type_object['collection'] ] = array(
+	$reactions[ $_type ] = array(
 		'label' => $label,
 		'count' => $count,
 		'items' => array_map(
@@ -103,6 +103,7 @@ $reactions = array_map(
 // Initialize the context for the block.
 $context = array(
 	'hasReactions' => ! empty( $reactions ),
+	'reactions'    => $reactions,
 	'postId'       => $_post_id,
 	'modal'        => array(
 		'isOpen'       => false,
@@ -129,28 +130,33 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<div class="activitypub-reactions">
 		<?php
 		foreach ( $reactions as $_type => $reaction ) :
+
 			/* translators: %s: reaction type. */
-			$aria_label = sprintf( __( 'View all %s', 'activitypub' ), $_type );
+			$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
 			?>
-		<div class="reaction-group" data-wp-bind--hidden="callbacks.hideReactionGroup" data-wp-context='{ "reactionType": "<?php echo esc_attr( $_type ); ?>", "postId": "<?php echo esc_attr( $_post_id ); ?>" }'>
+		<div class="reaction-group" data-wp-bind--hidden="!context.hasReactions">
 			<ul class="reaction-avatars">
-				<?php foreach ( $reaction['items'] as $_item ) : ?>
+				<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
 					<li>
 						<a
-							href="<?php echo esc_url( $_item['url'] ); ?>"
+							data-wp-bind--href="context.item.url"
+							data-wp-bind--title="context.item.name"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
 							<img
+								data-wp-bind--src="context.item.avatar"
+								data-wp-bind--alt="context.item.name"
+								data-wp-on--error="callbacks.setDefaultAvatar"
 								class="reaction-avatar"
 								height="32"
 								width="32"
-								src="<?php echo esc_url( $_item['avatar'] ); ?>"
-								alt="<?php echo esc_attr( $_item['name'] ); ?>"
+								src=""
+								alt=""
 							/>
 						</a>
 					</li>
-				<?php endforeach; ?>
+				</template>
 			</ul>
 			<button
 				class="reaction-label"
