@@ -9,12 +9,14 @@ use Activitypub\Blocks;
 use Activitypub\Comment;
 
 /* @var array $attributes Block attributes. */
-$attributes = wp_parse_args( $attributes );
+$attributes = wp_parse_args( $attributes, array(
+	'align' => null,
+) );
 
 /* @var string $content Inner blocks content. */
 if ( empty( $content ) ) {
 	// Fallback for v1.0.0 blocks.
-	$_title  = $attributes['title'] ?? \__( 'Fediverse Reactions', 'activitypub' );
+	$_title  = $attributes['title'] ?? __( 'Fediverse Reactions', 'activitypub' );
 	$content = '<h6 class="wp-block-heading">' . esc_html( $_title ) . '</h6>';
 	unset( $attributes['title'], $attributes['className'] );
 }
@@ -90,10 +92,17 @@ wp_interactivity_state(
 	)
 );
 
-// Render the 20 most recent reactions.
+// Render a subset of the most recent reactions.
 $reactions = array_map(
-	function ( $reaction ) {
-		$reaction['items'] = array_slice( array_reverse( $reaction['items'] ), 0, 20 );
+	function ( $reaction ) use ( $attributes ) {
+		$count = 20;
+		if ( 'wide' === $attributes['align'] ) {
+			$count = 40;
+		} elseif ( 'full' === $attributes['align'] ) {
+			$count = 60;
+		}
+
+		$reaction['items'] = array_slice( array_reverse( $reaction['items'] ), 0, $count );
 
 		return $reaction;
 	},
