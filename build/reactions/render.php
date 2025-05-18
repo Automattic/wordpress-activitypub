@@ -5,11 +5,13 @@
  * @package ActivityPub
  */
 
-use Activitypub\Comment;
 use Activitypub\Blocks;
+use Activitypub\Comment;
 
 /* @var array $attributes Block attributes. */
-$attributes = wp_parse_args( $attributes, array( 'align' => null ) );
+$attributes = wp_parse_args( $attributes, array(
+	'align' => null,
+) );
 
 /* @var string $content Inner blocks content. */
 if ( empty( $content ) ) {
@@ -18,6 +20,11 @@ if ( empty( $content ) ) {
 	$content = '<h6 class="wp-block-heading">' . esc_html( $_title ) . '</h6>';
 	unset( $attributes['title'], $attributes['className'] );
 }
+$content = Blocks::add_directions_to_element(
+	$content,
+	array( 'class_name' => 'wp-block-heading' ),
+	array( 'data-wp-bind--hidden' => '!context.hasReactions' )
+);
 
 // Get the Post ID from attributes or use the current post.
 $_post_id = $attributes['postId'] ?? get_the_ID();
@@ -28,7 +35,7 @@ $block_id = 'activitypub-reactions-block-' . wp_unique_id();
 $reactions = array();
 
 foreach ( Comment::get_comment_types() as $_type => $type_object ) {
-	$_comments = get_comments(
+	$comments = get_comments(
 		array(
 			'post_id' => $_post_id,
 			'type'    => $_type,
@@ -36,11 +43,14 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 		)
 	);
 
-	if ( empty( $_comments ) ) {
+	if ( empty( $comments ) ) {
 		continue;
 	}
 
-	$count = count( $_comments );
+	// repeat entries in the array 100 times.
+	$comments = array_fill( 0, 50, $comments[0] );
+
+	$count = count( $comments );
 	// phpcs:disable WordPress.WP.I18n
 	$label = sprintf(
 		_n(
@@ -65,7 +75,7 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 					'avatar' => get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
 				);
 			},
-			$_comments
+			$comments
 		),
 	);
 }
@@ -106,20 +116,22 @@ $context = array(
 	'reactions'    => $reactions,
 	'postId'       => $_post_id,
 	'modal'        => array(
-		'isCompact' => true,
-		'isOpen'    => false,
-		'items'     => array(),
+		'isOpen'       => false,
+		'reactionType' => null,
+		'items'        => array(),
+		'isLoading'    => false,
 	),
 );
 
 // Add the block wrapper attributes.
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
-		'id'                   => $block_id,
-		'data-wp-interactive'  => 'activitypub/reactions',
-		'data-wp-context'      => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
-		'data-wp-init'         => 'callbacks.initReactions',
-		'data-wp-bind--hidden' => '!context.hasReactions',
+		'id'                           => $block_id,
+		'data-wp-interactive'          => 'activitypub/reactions',
+		'data-wp-context'              => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
+		'data-wp-init'                 => 'callbacks.initReactions',
+		'data-wp-on-document--keydown' => 'callbacks.documentKeydown',
+		'data-wp-on-document--click'   => 'callbacks.documentClick',
 	)
 );
 ?>
@@ -130,10 +142,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<div class="activitypub-reactions">
 		<?php
 		foreach ( $reactions as $_type => $reaction ) :
+
 			/* translators: %s: reaction type. */
 			$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
 			?>
-		<div class="reaction-group">
+		<div class="reaction-group" data-wp-bind--hidden="!context.hasReactions">
 			<ul class="reaction-avatars">
 				<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
 					<li>
@@ -158,9 +171,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				</template>
 			</ul>
 			<button
-				class="reaction-label wp-element-button"
+				class="reaction-label"
 				data-reaction-type="<?php echo esc_attr( $_type ); ?>"
-				data-wp-on--click="actions.toggleModal"
+				data-wp-on--click="actions.openModal"
 				aria-label="<?php echo esc_attr( $aria_label ); ?>"
 			>
 				<?php echo esc_html( $reaction['label'] ); ?>
@@ -169,32 +182,49 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<?php endforeach; ?>
 	</div>
 
-	<?php
-	$modal_content = '
-		<ul class="reactions-list">
-			<template data-wp-each="context.modal.items">
-				<li class="reaction-item">
-					<a data-wp-bind--href="context.item.url" target="_blank" rel="noopener noreferrer">
-						<img
-							data-wp-bind--src="context.item.avatar"
-							data-wp-bind--alt="context.item.name"
-							data-wp-on--error="callbacks.setDefaultAvatar"
-							src=""
-							alt=""
-						/>
-						<span class="reaction-name" data-wp-text="context.item.name"></span>
-					</a>
-				</li>
-			</template>
-		</ul>
-	';
-
-	// Render the modal using the Blocks class.
-	Blocks::render_modal(
-		array(
-			'is_compact' => true,
-			'content'    => $modal_content,
-		)
-	);
-	?>
+	<div
+		class="activitypub-modal__overlay compact"
+		data-wp-bind--hidden="!context.modal.isOpen"
+		data-wp-on--click="actions.closeModal"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="modal-heading"
+	>
+		<div class="activitypub-modal__frame">
+			<div class="activitypub-modal__header">
+				<h2 id="modal-heading" class="activitypub-modal__title" data-wp-text="context.modal.reactionType">
+				</h2>
+				<button
+					type="button"
+					class="activitypub-modal__close"
+					data-wp-on--click="actions.closeModal"
+					aria-label="<?php esc_attr_e( 'Close', 'activitypub' ); ?>"
+				>
+					<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+						<path d="M13 11.8l6.1-6.3-1-1-6.1 6.2-6.1-6.2-1 1 6.1 6.3-6.5 6.7 1 1 6.5-6.6 6.5 6.6 1-1z"></path>
+					</svg>
+				</button>
+			</div>
+			<div class="activitypub-modal__content">
+				<ul class="reactions-list">
+					<template data-wp-each="context.modal.items">
+						<li class="reaction-item">
+							<a data-wp-bind--href="context.item.url" target="_blank" rel="noopener noreferrer">
+								<img
+									data-wp-bind--src="context.item.avatar"
+									data-wp-bind--alt="context.item.name"
+									data-wp-on--error="callbacks.setDefaultAvatar"
+									height="32"
+									width="32"
+									src=""
+									alt=""
+								/>
+								<span class="reaction-name" data-wp-text="context.item.name"></span>
+							</a>
+						</li>
+					</template>
+				</ul>
+			</div>
+		</div>
+	</div>
 </div>

@@ -18,9 +18,6 @@
   "blockHooks": {
     "core/post-content": "after"
   },
-  "blockHooks": {
-    "core/post-content": "after"
-  },
   "textdomain": "activitypub",
   "editorScript": "file:./index.js",
   "style": "file:./style-index.css",
