@@ -1,4 +1,6 @@
 .wp-block-activitypub-reactions {
+	position: relative;
+
 	// Main container for reactions
 	.activitypub-reactions {
 		display: flex;
