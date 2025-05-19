@@ -242,7 +242,7 @@ class Http {
 		 * @param array|string|null $url_or_object The Object or the Object URL.
 		 */
 		$response = apply_filters( 'activitypub_pre_http_get_remote_object', null, $url_or_object );
-		if ( $response && ! \is_wp_error( $response ) ) {
+		if ( null !== $response ) {
 			return $response;
 		}
 
