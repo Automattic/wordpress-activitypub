@@ -176,7 +176,7 @@ abstract class Base {
 
 		$mentions = array_values( $this->get_mentions() );
 
-		if ( \method_exists( $this, 'get_in_reply_to' ) && $this->get_in_reply_to() ) {
+		if ( $this->get_in_reply_to() ) {
 			$object = Http::get_remote_object( $this->get_in_reply_to() );
 			if ( $object && ! \is_wp_error( $object ) && isset( $object['attributedTo'] ) ) {
 				$replied_to = array( object_to_uri( $object['attributedTo'] ) );
@@ -398,7 +398,7 @@ abstract class Base {
 	/**
 	 * Returns the in reply to.
 	 *
-	 * @return string|null The in reply to.
+	 * @return string|array|null The in reply to.
 	 */
 	protected function get_in_reply_to() {
 		return null;
