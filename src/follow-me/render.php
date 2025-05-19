@@ -6,6 +6,7 @@
  */
 
 use Activitypub\Blocks;
+use Activitypub\Collection\Actors;
 
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
@@ -25,7 +26,7 @@ $background_color = $attributes['backgroundColor'] ?? $style['color']['backgroun
 // Get button style from block attributes.
 $button_style = $attributes['style'] ?? array();
 
-$actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
+$actor = Actors::get_by_id( $user_id );
 if ( is_wp_error( $actor ) ) {
 	return;
 }
@@ -79,7 +80,17 @@ if ( empty( $content ) ) {
 	$button_text = $attributes['buttonText'] ?? __( 'Follow', 'activitypub' );
 	$content     = '<div class="wp-block-button"><button class="wp-block-button__link wp-element-button">' . esc_html( $button_text ) . '</button></div>';
 }
-$content = Blocks::add_directions_to_button( $content, $attributes );
+$content = Blocks::add_directions(
+	$content,
+	array( 'class_name' => 'wp-element-button' ),
+	array(
+		'data-wp-on--click'           => 'actions.toggleModal',
+		'data-wp-bind--aria-expanded' => 'context.isModalOpen',
+		'aria-label'                  => __( 'Follow me on the Fediverse', 'activitypub' ),
+		'aria-haspopup'               => 'dialog',
+		'aria-controls'               => 'modal-heading',
+	)
+);
 
 ?>
 <div
