@@ -1,18 +1,22 @@
-_site
-.sass-cache
-.jekyll-cache
-.jekyll-metadata
+# Directories
+/build/**/*.map
 /coverage/
 /node_modules/
 /vendor/
-package-lock.json
-composer.lock
-.DS_Store
-.cursor
+_site
 .idea/
+
+# Files
+.cursor
+.DS_Store
+.jekyll-cache
+.jekyll-metadata
 .php_cs.cache
 .phpunit.result.cache
+.sass-cache
 .vscode/settings.json
 .windsurf
 .windsurfrules
 .wp-env.override.json
+composer.lock
+package-lock.json
