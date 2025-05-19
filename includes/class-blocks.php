@@ -182,30 +182,38 @@ class Blocks {
 	 */
 	public static function render_post_reactions_block( $attrs, $content ) {
 		if ( ! isset( $attrs['postId'] ) ) {
-			$attrs['postId'] = get_the_ID();
+			$attrs['postId'] = \get_the_ID();
 		}
 
-		$args = array( 'data-attrs' => wp_json_encode( $attrs ) );
+		// Fallback for v1.0.0 blocks.
 		if ( empty( $content ) ) {
-			if ( isset( $attrs['title'] ) ) {
-				$content = '<div class="activitypub-reactions"><div class="activitypub-reactions-block" ' . \get_block_wrapper_attributes( $args ) . '></div></div>';
-			} else {
-				$has_comments = \get_comments(
-					array(
-						'post_id' => $attrs['postId'],
-						'fields'  => 'ids',
-						'type'    => Comment::get_comment_type_slugs(),
-					)
-				);
-				if ( $has_comments ) {
-					$content = '<div class="activitypub-reactions"><h6>' . \__( 'Fediverse Reactions', 'activitypub' ) . '</h6><div class="activitypub-reactions-block" ' . \get_block_wrapper_attributes( $args ) . '></div></div>';
-				}
-			}
+			$title   = $attrs['title'] ?? \__( 'Fediverse Reactions', 'activitypub' );
+			$content = '<h6 class="wp-block-heading">' . \esc_html( $title ) . '</h6>' . "\n"
+						. '<div class="activitypub-reactions-block"></div>';
+			unset( $attrs['title'], $attrs['className'] );
 		}
 
-		return sprintf(
+		// Hide the title if there are no comments.
+		$has_comments = \get_comments(
+			array(
+				'post_id' => $attrs['postId'],
+				'fields'  => 'ids',
+				'type'    => Comment::get_comment_type_slugs(),
+			)
+		);
+		if ( ! $has_comments ) {
+			$tags = new \WP_HTML_Tag_Processor( $content );
+
+			while ( $tags->next_tag( array( 'class_name' => 'wp-block-heading' ) ) ) {
+				$tags->set_attribute( 'hidden', true );
+			}
+
+			$content = $tags->get_updated_html();
+		}
+
+		return \sprintf(
 			'<div %1$s>%2$s</div>',
-			get_block_wrapper_attributes( $args ),
+			\get_block_wrapper_attributes( array( 'data-attrs' => \wp_json_encode( $attrs ) ) ),
 			$content
 		);
 	}
