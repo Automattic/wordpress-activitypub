@@ -434,33 +434,26 @@ class Blocks {
 	}
 
 	/**
-	 * Add directions to the button.
+	 * Add Interactivity directions to the specified element.
 	 *
-	 * @param string $content    The block content.
-	 * @param array  $attributes The block attributes.
+	 * @param string   $content    The block content.
+	 * @param string[] $selector   The selector for the element to add directions to.
+	 * @param string[] $attributes The attributes to add to the element.
 	 *
 	 * @return string The updated content.
 	 */
-	public static function add_directions_to_button( $content, $attributes ) {
+	public static function add_directions( $content, $selector, $attributes ) {
 		$tags = new \WP_HTML_Tag_Processor( $content );
 
-		$button_class = '';
-		if ( isset( $attributes['buttonSize'] ) && 'small' === $attributes['buttonSize'] ) {
-			$button_class = 'is-small';
-		} elseif ( isset( $attributes['buttonSize'] ) && 'compact' === $attributes['buttonSize'] ) {
-			$button_class = 'is-compact';
-		}
+		while ( $tags->next_tag( $selector ) ) {
+			foreach ( $attributes as $key => $value ) {
+				if ( 'class' === $key ) {
+					$tags->add_class( $value );
+					continue;
+				}
 
-		while ( $tags->next_tag( array( 'class_name' => 'wp-element-button' ) ) ) {
-			if ( $button_class ) {
-				$tags->add_class( $button_class );
+				$tags->set_attribute( $key, $value );
 			}
-
-			$tags->set_attribute( 'data-wp-on--click', 'actions.toggleModal' );
-			$tags->set_attribute( 'data-wp-bind--aria-expanded', 'context.isModalOpen' );
-			$tags->set_attribute( 'aria-haspopup', 'dialog' );
-			$tags->set_attribute( 'aria-controls', 'modal-heading' );
-			$tags->set_attribute( 'aria-label', \__( 'Follow me on the Fediverse', 'activitypub' ) );
 		}
 
 		return $tags->get_updated_html();
