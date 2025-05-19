@@ -10,18 +10,31 @@ const v1 = {
 
 	supports: {
 		html: false,
-		align: true,
-		layout: {
-			default: {
-				type: 'constrained',
-				orientation: 'vertical',
-				justifyContent: 'center',
+		color: {
+			gradients: true,
+			link: true,
+			__experimentalDefaultControls: {
+				background: true,
+				text: true,
+				link: true,
+			},
+		},
+		__experimentalBorder: {
+			radius: true,
+			width: true,
+			color: true,
+			style: true,
+		},
+		typography: {
+			fontSize: true,
+			__experimentalDefaultControls: {
+				fontSize: true,
 			},
 		},
 	},
 
 	isEligible( attributes ) {
-		// Run migration if title attribute exists.
+		// Run migration if the title attribute exists.
 		return !! attributes.title;
 	},
 
