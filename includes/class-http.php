@@ -236,7 +236,7 @@ class Http {
 	 */
 	public static function get_remote_object( $url_or_object, $cached = true ) {
 		/**
-		 * Filters the URL before making a GET request.
+		 * Filters the preemptive return value of a remote object request.
 		 *
 		 * @param array|string|null $response      The response.
 		 * @param array|string|null $url_or_object The Object or the Object URL.
