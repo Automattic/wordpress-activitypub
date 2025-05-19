@@ -1,5 +1,16 @@
 /**
+ * Cache for computed styles and CSS variable checks.
+ */
+const cssCache = {
+	computedStyles: null,
+	variables: {},
+};
+
+/**
  * Checks if a CSS variable is defined.
+ *
+ * Uses a caching mechanism to avoid frequent getComputedStyle calls,
+ * which can cause layout thrashing when called repeatedly.
  *
  * @param {string} variableName The CSS variable name to check.
  * @return {boolean} Whether the variable is defined.
@@ -10,14 +21,24 @@ function isCssVariableDefined( variableName ) {
 		return false;
 	}
 
-	// Get the computed style of the root element.
-	const styles = window.getComputedStyle( document.documentElement );
+	// Check if we've already cached this variable.
+	if ( cssCache.variables.hasOwnProperty( variableName ) ) {
+		return cssCache.variables[ variableName ];
+	}
+
+	// Get the computed style of the root element (cached).
+	if ( ! cssCache.computedStyles ) {
+		cssCache.computedStyles = window.getComputedStyle( document.documentElement );
+	}
 
 	// Get the value of the CSS variable.
-	const value = styles.getPropertyValue( variableName ).trim();
+	const value = cssCache.computedStyles.getPropertyValue( variableName ).trim();
+
+	// Cache the result.
+	cssCache.variables[ variableName ] = value !== '';
 
 	// If the value is empty, the variable is not defined or is set to an empty value.
-	return value !== '';
+	return cssCache.variables[ variableName ];
 }
 
 /**
