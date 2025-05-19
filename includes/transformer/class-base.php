@@ -170,7 +170,7 @@ abstract class Base {
 		$replied_to = null;
 
 		$actor = Actors::get_by_resource( $this->get_attributed_to() );
-		if ( $actor && ! \is_wp_error( $actor ) ) {
+		if ( ! \is_wp_error( $actor ) ) {
 			$followers = $actor->get_followers();
 		}
 
