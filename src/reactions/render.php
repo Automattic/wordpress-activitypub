@@ -9,9 +9,7 @@ use Activitypub\Blocks;
 use Activitypub\Comment;
 
 /* @var array $attributes Block attributes. */
-$attributes = wp_parse_args( $attributes, array(
-	'align' => null,
-) );
+$attributes = wp_parse_args( $attributes, array( 'align' => null ) );
 
 /* @var string $content Inner blocks content. */
 if ( empty( $content ) ) {
@@ -20,7 +18,7 @@ if ( empty( $content ) ) {
 	$content = '<h6 class="wp-block-heading">' . esc_html( $_title ) . '</h6>';
 	unset( $attributes['title'], $attributes['className'] );
 }
-$content = Blocks::add_directions_to_element(
+$content = Blocks::add_directions(
 	$content,
 	array( 'class_name' => 'wp-block-heading' ),
 	array( 'data-wp-bind--hidden' => '!context.hasReactions' )

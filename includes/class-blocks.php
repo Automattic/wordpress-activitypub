@@ -170,32 +170,6 @@ class Blocks {
 	}
 
 	/**
-	 * Add directions to the specified element.
-	 *
-	 * @param string $content    The block content.
-	 * @param array  $selector   The block selector.
-	 * @param array  $attributes The block attributes.
-	 *
-	 * @return string The updated content.
-	 */
-	public static function add_directions_to_element( $content, $selector, $attributes ) {
-		$tags = new \WP_HTML_Tag_Processor( $content );
-
-		while ( $tags->next_tag( $selector ) ) {
-			foreach ( $attributes as $key => $value ) {
-				if ( 'class' === $key ) {
-					$tags->add_class( $value );
-					continue;
-				}
-
-				$tags->set_attribute( $key, $value );
-			}
-		}
-
-		return $tags->get_updated_html();
-	}
-
-	/**
 	 * Render the post reactions block.
 	 *
 	 * @param array  $attrs   The block attributes.
@@ -499,5 +473,31 @@ class Blocks {
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Add Interactivity directions to the specified element.
+	 *
+	 * @param string   $content    The block content.
+	 * @param string[] $selector   The selector for the element to add directions to.
+	 * @param string[] $attributes The attributes to add to the element.
+	 *
+	 * @return string The updated content.
+	 */
+	public static function add_directions( $content, $selector, $attributes ) {
+		$tags = new \WP_HTML_Tag_Processor( $content );
+
+		while ( $tags->next_tag( $selector ) ) {
+			foreach ( $attributes as $key => $value ) {
+				if ( 'class' === $key ) {
+					$tags->add_class( $value );
+					continue;
+				}
+
+				$tags->set_attribute( $key, $value );
+			}
+		}
+
+		return $tags->get_updated_html();
 	}
 }
