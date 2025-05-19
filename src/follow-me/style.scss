@@ -213,6 +213,81 @@ body.modal-open {
 	overflow: hidden;
 }
 
+/* Dark mode styles. */
+@media (prefers-color-scheme: dark) {
+	.activitypub-modal {
+		&__overlay {
+			color: var(--wp--preset--color--foreground, #d4d4d4);
+		}
+
+		&__frame {
+			background-color: var(--wp--preset--color--background, #1e1e1e);
+			box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+		}
+
+		&__header {
+			border-bottom: 1px solid var(--wp--preset--color--contrast, #2c2c2c);
+		}
+
+		&__close {
+			color: var(--wp--preset--color--tertiary, #aaa);
+			fill: var(--wp--preset--color--tertiary, #aaa);
+
+			&:hover,
+			&:active {
+				background: var(--wp--preset--color--foreground, #d4d4d4);
+				color: var(--wp--preset--color--background, #2c2c2c);
+				fill: var(--wp--preset--color--background, #2c2c2c);
+			}
+		}
+	}
+
+	.activitypub-dialog {
+		&__section {
+			border-bottom: 1px solid var(--wp--preset--color--contrast, #2c2c2c);
+		}
+
+		&__description {
+			color: var(--wp--preset--color--tertiary, #c0c0c0);
+
+			code {
+				background: var(--wp--preset--color--contrast, #2c2c2c);
+				color: var(--wp--preset--color--foreground, #d4d4d4);
+			}
+		}
+
+		&__button-group {
+			input {
+				border: 1px solid var(--wp--preset--color--contrast, #444);
+				background-color: var(--wp--preset--color--background, #2c2c2c);
+				color: var(--wp--preset--color--foreground, #d4d4d4);
+
+				&[aria-invalid="true"] {
+					border-color: var(--wp--preset--color--alert, #e65054);
+				}
+			}
+
+			button:hover,
+			button:active {
+				background: var(--wp--preset--color--foreground, #d4d4d4);
+				color: var(--wp--preset--color--background, #2c2c2c);
+				fill: var(--wp--preset--color--background, #2c2c2c);
+			}
+		}
+
+		&__error {
+			color: var(--wp--preset--color--alert, #e65054);
+		}
+	}
+
+	.activitypub-profile {
+		&__name,
+		&__handle {
+			color: var(--wp--preset--color--foreground, #d4d4d4);
+		}
+	}
+}
+
 /* Animation for modal */
 @keyframes activitypub-modal-appear {
 	from {
