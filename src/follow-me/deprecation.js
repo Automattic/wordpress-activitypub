@@ -6,36 +6,68 @@ import { createBlock } from '@wordpress/blocks';
  */
 const v1 = {
 	attributes: {
+		buttonOnly: {
+			type: 'boolean',
+			default: false,
+		},
 		buttonText: {
 			type: 'string',
 			default: 'Follow',
 		},
-		buttonSize: {
+		selectedUser: {
 			type: 'string',
-			default: 'default',
-			enum: [ 'small', 'default', 'compact' ],
+			default: 'site',
 		},
 	},
 
-	isEligible( attributes ) {
-		// Run migration if buttonText attribute exists.
-		return !! attributes.buttonText;
+	supports: {
+		html: false,
+		color: {
+			gradients: true,
+			link: true,
+			__experimentalDefaultControls: {
+				background: true,
+				text: true,
+				link: true,
+			},
+		},
+		__experimentalBorder: {
+			radius: true,
+			width: true,
+			color: true,
+			style: true,
+		},
+		typography: {
+			fontSize: true,
+			__experimentalDefaultControls: {
+				fontSize: true,
+			},
+		},
 	},
 
+	/**
+	 * Checks if the block is eligible for migration.
+	 *
+	 * @param {Object} attributes The block attributes.
+	 *
+	 * @return {boolean} Whether the block is eligible for migration.
+	 */
+	isEligible( attributes ) {
+		// Run migration if buttonText or buttonOnly is set.
+		return !! attributes.buttonText || !! attributes.buttonOnly;
+	},
+
+	/**
+	 * Migrates the Follow Me block to use a core button block instead of the custom button.
+	 *
+	 * @param {Object} attributes The block attributes.
+	 *
+	 * @return {[Object, Array]} An array with the new block attributes and inner blocks.
+	 */
 	migrate( attributes ) {
-		const { buttonText, buttonSize, ...newAttributes } = attributes;
+		const { buttonText, ...newAttributes } = attributes;
 
-		// Map buttonSize to core/button className.
-		let className = '';
-		if ( buttonSize === 'small' ) {
-			className = 'is-small';
-		} else if ( buttonSize === 'compact' ) {
-			className = 'is-compact';
-		}
-
-		// Create a core button block with the buttonText and buttonSize.
 		const buttonBlock = createBlock( 'core/button', {
-			className,
 			tagName: 'button',
 			text: buttonText,
 		} );
