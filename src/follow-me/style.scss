@@ -178,11 +178,11 @@
 		width: 100%;
 		margin-bottom: 0.5rem;
 
-		input {
+		input[type] {
 			flex: 1;
 			border: 1px solid var(--wp--preset--color--gray, #e2e4e7);
 			border-radius: 4px 0 0 4px;
-			font-size: 100%;
+			line-height: 1;
 			margin: 0;
 
 			&::placeholder {
