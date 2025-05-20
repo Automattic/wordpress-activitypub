@@ -145,74 +145,41 @@ const FacepileRow = ( { reactions } ) => {
 /**
  * A component that renders a dropdown list of reactions.
  *
- * @param {Object}   props           Component props.
- * @param {Array}    props.reactions Array of reaction objects.
- * @param {Object}   props.anchor    Reference to anchor element.
- * @param {Function} props.onClose   Callback when dropdown closes.
- * @return {JSX.Element}            The rendered component.
- */
-const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
-	<Popover
-		anchor={ anchor }
-		placement="bottom-end"
-		onClose={ onClose }
-		className="reaction-dropdown"
-		noArrow={ false }
-		offset={ 10 }
-	>
-		<ul className="activitypub-reaction-list">
-			{ reactions.map( ( reaction, index ) => (
-				<li key={ index }>
-					<a
-						href={ reaction.url }
-						className="reaction-item"
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						<img
-							src={ reaction.avatar }
-							alt={ reaction.name }
-							width="32"
-							height="32"
-						/>
-						<span>{ reaction.name }</span>
-					</a>
-				</li>
-			) ) }
-		</ul>
-	</Popover>
-);
-
-/**
- * A component that renders a dropdown list of reactions.
- *
  * @param {Object} props           Component props.
  * @param {Array}  props.reactions Array of reaction objects.
  * @param {string} props.type      Type of reaction (likes/reposts).
  * @return {JSX.Element}            The rendered component.
  */
-const ReactionList = ( { reactions, type } ) => (
-	<ul className="activitypub-reaction-list">
-		{ reactions.map( ( reaction, index ) => (
-			<li key={ index }>
-				<a
-					href={ reaction.url }
-					className="reaction-item"
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					<img
-						src={ reaction.avatar }
-						alt={ reaction.name }
-						width="32"
-						height="32"
-					/>
-					<span>{ reaction.name }</span>
-				</a>
-			</li>
-		) ) }
-	</ul>
-);
+const ReactionList = ( { reactions, type } ) => {
+	const { defaultAvatarUrl } = useOptions();
+
+	return (
+		<ul className="activitypub-reaction-list">
+			{ reactions.map( ( reaction, index ) => {
+				const avatar = reaction.avatar || defaultAvatarUrl;
+				return (
+					<li key={ index }>
+						<a
+							href={ reaction.url }
+							className="reaction-item"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							<img
+								src={ avatar }
+								alt={ reaction.name }
+								width="32"
+								height="32"
+								onError={ (e) => { e.target.src = defaultAvatarUrl; } }
+							/>
+							<span>{ reaction.name }</span>
+						</a>
+					</li>
+				);
+			} ) }
+		</ul>
+	);
+};
 
 /**
  * A component that renders a reaction group with facepile and dropdown.
