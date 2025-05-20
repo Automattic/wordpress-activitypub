@@ -12,7 +12,7 @@ const { apiFetch } = window.wp;
  */
 function trapFocus( element ) {
 	const focusableElements = element.querySelectorAll(
-		'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])'
+		'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]):not([readonly]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])'
 	);
 	const firstFocusableElement = focusableElements[ 0 ];
 	const lastFocusableElement = focusableElements[ focusableElements.length - 1 ];
