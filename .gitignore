@@ -1,16 +1,11 @@
-# Directories
 /build/**/*.map
 /coverage/
 /node_modules/
 /vendor/
 _site
 .idea/
-
-# Files
 .cursor
 .DS_Store
-.jekyll-cache
-.jekyll-metadata
 .php_cs.cache
 .phpunit.result.cache
 .sass-cache
