@@ -7,9 +7,11 @@
 
 namespace Activitypub\Tests\Transformer;
 
+use Activitypub\Http;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Activity\Generic_Object;
 use Activitypub\Transformer\Base;
-
+use Activitypub\Transformer\Post;
 /**
  * Test class for Base Transformer.
  *
@@ -69,5 +71,147 @@ class Test_Base extends \WP_UnitTestCase {
 
 		// Assert that the sensitive property could be set to false.
 		$this->assertFalse( $transformed_object->get_sensitive(), 'The sensitive property should be set to false.' );
+	}
+
+	/**
+	 * Test that the audience is set correctly.
+	 *
+	 * @dataProvider data_provider_set_audience
+	 *
+	 * @covers ::set_audience
+	 *
+	 * @param string $content_visibility The content visibility.
+	 * @param array  $object_attributes  The object attributes.
+	 * @param array  $expected_audience  The expected audience.
+	 */
+	public function test_set_audience( $content_visibility, $object_attributes, $expected_audience ) {
+		$post_id = $this->factory->post->create(
+			array(
+				'post_title'   => 'Test Post',
+				'post_content' => 'Test content that is longer than the note length limit',
+			)
+		);
+		$post    = \get_post( $post_id );
+
+		$function = function ( $response, $url_or_object ) {
+			if ( ! str_contains( $url_or_object, 'reply' ) ) {
+				return null;
+			}
+
+			return array(
+				'attributedTo' => $url_or_object,
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $function, 10, 2 );
+
+		$getter_methods = array_map(
+			function ( $k ) {
+				return 'get_' . $k;
+			},
+			array_keys( $object_attributes )
+		);
+
+		$transformer = $this->getMockBuilder( Post::class )
+			->setConstructorArgs( array( $post ) )
+			->onlyMethods( $getter_methods )
+			->getMock();
+
+		$transformer->set_content_visibility( $content_visibility );
+
+		foreach ( $object_attributes as $key => $value ) {
+			$transformer->method( 'get_' . $key )->willReturn( $value );
+		}
+
+		$reflection = new \ReflectionObject( $transformer );
+		$method     = $reflection->getMethod( 'set_audience' );
+		$method->setAccessible( true );
+
+		$transformed_object = $method->invoke( $transformer, new Generic_Object() );
+
+		$this->assertEquals( $expected_audience['to'], $transformed_object->get_to() );
+		$this->assertEquals( $expected_audience['cc'], $transformed_object->get_cc() );
+
+		\wp_delete_post( $post_id );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $function );
+	}
+
+	/**
+	 * Data provider for test_set_audience.
+	 *
+	 * @return array[]
+	 */
+	public function data_provider_set_audience() {
+		return array(
+			array(
+				ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				array(
+					'in_reply_to' => 'https://example.com/in-reply-to',
+					'mentions'    => array(
+						'https://example.com/mentions' => 'https://example.com/mentions',
+					),
+				),
+				array(
+					'to' => array(
+						'https://www.w3.org/ns/activitystreams#Public',
+					),
+					'cc' => array(
+						'https://example.com/mentions',
+						'https://example.com/in-reply-to',
+					),
+				),
+			),
+			array(
+				ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				array(
+					'in_reply_to' => 'https://example.com/in-reply-to',
+					'mentions'    => array(
+						'https://example.com/mentions' => 'https://example.com/mentions',
+					),
+				),
+				array(
+					'to' => array(
+						'https://www.w3.org/ns/activitystreams#Public',
+					),
+					'cc' => array(
+						'https://example.com/mentions',
+						'https://example.com/in-reply-to',
+					),
+				),
+			),
+			array(
+				ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+				array(
+					'in_reply_to' => 'https://example.com/in-reply-to',
+					'mentions'    => array(
+						'https://example.com/mentions' => 'https://example.com/mentions',
+					),
+				),
+				array(
+					'cc' => array(
+						'https://www.w3.org/ns/activitystreams#Public',
+					),
+					'to' => array(
+						'https://example.com/mentions',
+						'https://example.com/in-reply-to',
+					),
+				),
+			),
+			array(
+				ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				array(
+					'in_reply_to' => 'https://example.com/in-reply-to',
+					'mentions'    => array(
+						'https://example.com/mentions' => 'https://example.com/mentions',
+					),
+				),
+				array(
+					'to' => array(
+						'https://example.com/mentions',
+						'https://example.com/in-reply-to',
+					),
+					'cc' => null,
+				),
+			),
+		);
 	}
 }
