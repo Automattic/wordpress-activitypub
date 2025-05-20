@@ -1,2 +1,510 @@
-(()=>{"use strict";var e,t={20:(e,t,r)=>{var o=r(609),a=Symbol.for("react.element"),i=(Symbol.for("react.fragment"),Object.prototype.hasOwnProperty),l=o.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentOwner,n={key:!0,ref:!0,__self:!0,__source:!0};t.jsx=function(e,t,r){var o,c={},s=null,m=null;for(o in void 0!==r&&(s=""+r),void 0!==t.key&&(s=""+t.key),void 0!==t.ref&&(m=t.ref),t)i.call(t,o)&&!n.hasOwnProperty(o)&&(c[o]=t[o]);if(e&&e.defaultProps)for(o in t=e.defaultProps)void 0===c[o]&&(c[o]=t[o]);return{$$typeof:a,type:e,key:s,ref:m,props:c,_owner:l.current}}},170:(e,t,r)=>{var o=r(609);const a=window.wp.element,i=window.wp.domReady;var l=r.n(i);const n=window.wp.components,c=window.wp.i18n,s=(0,a.forwardRef)((function({icon:e,size:t=24,...r},o){return(0,a.cloneElement)(e,{width:t,height:t,...r,ref:o})})),m=window.wp.primitives;var p=r(848);const u=(0,p.jsx)(m.SVG,{viewBox:"0 0 24 24",xmlns:"http://www.w3.org/2000/svg",children:(0,p.jsx)(m.Path,{d:"M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21ZM15.5303 8.46967C15.8232 8.76256 15.8232 9.23744 15.5303 9.53033L13.0607 12L15.5303 14.4697C15.8232 14.7626 15.8232 15.2374 15.5303 15.5303C15.2374 15.8232 14.7626 15.8232 14.4697 15.5303L12 13.0607L9.53033 15.5303C9.23744 15.8232 8.76256 15.8232 8.46967 15.5303C8.17678 15.2374 8.17678 14.7626 8.46967 14.4697L10.9393 12L8.46967 9.53033C8.17678 9.23744 8.17678 8.76256 8.46967 8.46967C8.76256 8.17678 9.23744 8.17678 9.53033 8.46967L12 10.9393L14.4697 8.46967C14.7626 8.17678 15.2374 8.17678 15.5303 8.46967Z"})}),d=window.wp.apiFetch;var v=r.n(d);const y=(0,p.jsx)(m.SVG,{xmlns:"http://www.w3.org/2000/svg",viewBox:"0 0 24 24",children:(0,p.jsx)(m.Path,{fillRule:"evenodd",clipRule:"evenodd",d:"M5 4.5h11a.5.5 0 0 1 .5.5v11a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5ZM3 5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5Zm17 3v10.75c0 .69-.56 1.25-1.25 1.25H6v1.5h12.75a2.75 2.75 0 0 0 2.75-2.75V8H20Z"})}),_=(0,p.jsx)(m.SVG,{xmlns:"http://www.w3.org/2000/svg",viewBox:"0 0 24 24",children:(0,p.jsx)(m.Path,{d:"M16.7 7.1l-6.3 8.5-3.3-2.5-.9 1.2 4.5 3.4L17.9 8z"})}),f=(0,p.jsx)(m.SVG,{xmlns:"http://www.w3.org/2000/svg",viewBox:"0 0 24 24",children:(0,p.jsx)(m.Path,{d:"M15.5 9.5a1 1 0 100-2 1 1 0 000 2zm0 1.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-2.25 6v-2a2.75 2.75 0 00-2.75-2.75h-4A2.75 2.75 0 003.75 15v2h1.5v-2c0-.69.56-1.25 1.25-1.25h4c.69 0 1.25.56 1.25 1.25v2h1.5zm7-2v2h-1.5v-2c0-.69-.56-1.25-1.25-1.25H15v-1.5h2.5A2.75 2.75 0 0120.25 15zM9.5 8.5a1 1 0 11-2 0 1 1 0 012 0zm1.5 0a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z",fillRule:"evenodd"})}),b=window.wp.compose,w="fediverse-remote-user";function h(){const[e,t]=(0,a.useState)(function(){const e=localStorage.getItem(w);return e?JSON.parse(e):{}}()),r=(0,a.useCallback)((e=>{!function(e){localStorage.setItem(w,JSON.stringify(e))}(e),t(e)}),[]),o=(0,a.useCallback)((()=>{localStorage.removeItem(w),t({})}),[]);return{template:e?.template||!1,profileURL:e?.profileURL||!1,setRemoteUser:r,deleteRemoteUser:o}}function g(e){try{return new URL(e),!0}catch(e){return!1}}function E({actionText:e,copyDescription:t,handle:r,resourceUrl:i,myProfile:l="",rememberProfile:m=!1}){const p=(0,c.__)("Loading...","activitypub"),u=(0,c.__)("Opening...","activitypub"),d=(0,c.__)("Error","activitypub"),w=(0,c.__)("Invalid","activitypub"),E=l||(0,c.__)("My Profile","activitypub"),[C,R]=(0,a.useState)(e),[x,O]=(0,a.useState)(y),k=(0,b.useCopyToClipboard)(r,(()=>{O(_),setTimeout((()=>O(y)),1e3)})),[L,S]=(0,a.useState)(""),[U,N]=(0,a.useState)(!0),{setRemoteUser:P}=h(),j=(0,a.useCallback)((()=>{let t;if(!g(L)&&!function(e){const t=e.replace(/^@/,"").split("@");return 2===t.length&&g(`https://${t[1]}`)}(L))return R(w),t=setTimeout((()=>R(e)),2e3),()=>clearTimeout(t);const r=i+L;R(p),v()({path:r}).then((({url:t,template:r})=>{U&&P({profileURL:L,template:r}),R(u),setTimeout((()=>{window.open(t,"_blank"),R(e)}),200)})).catch((()=>{R(d),setTimeout((()=>R(e)),2e3)}))}),[L]);return(0,o.createElement)("div",{className:"activitypub__dialog",role:"dialog","aria-labelledby":"dialog-title"},(0,o.createElement)("div",{className:"activitypub-dialog__section"},(0,o.createElement)("h4",{id:"dialog-title"},E),(0,o.createElement)("div",{className:"activitypub-dialog__description",id:"copy-description"},t),(0,o.createElement)("div",{className:"activitypub-dialog__button-group"},(0,o.createElement)("label",{htmlFor:"profile-handle",className:"screen-reader-text"},t),(0,o.createElement)("input",{type:"text",id:"profile-handle",value:r,readOnly:!0}),(0,o.createElement)(n.Button,{ref:k,"aria-label":(0,c.__)("Copy handle to clipboard","activitypub")},(0,o.createElement)(s,{icon:x}),(0,c.__)("Copy","activitypub")))),(0,o.createElement)("div",{className:"activitypub-dialog__section"},(0,o.createElement)("h4",{id:"remote-profile-title"},(0,c.__)("Your Profile","activitypub")),(0,o.createElement)("div",{className:"activitypub-dialog__description",id:"remote-profile-description"},(0,a.createInterpolateElement)((0,c.__)("Or, if you know your own profile, we can start things that way! (eg <code>@yourusername@example.com</code>)","activitypub"),{code:(0,o.createElement)("code",null)})),(0,o.createElement)("div",{className:"activitypub-dialog__button-group"},(0,o.createElement)("label",{htmlFor:"remote-profile",className:"screen-reader-text"},(0,c.__)("Enter your ActivityPub profile","activitypub")),(0,o.createElement)("input",{type:"text",id:"remote-profile",value:L,onKeyDown:e=>{"Enter"===e?.code&&j()},onChange:e=>S(e.target.value),"aria-invalid":C===w}),(0,o.createElement)(n.Button,{onClick:j,"aria-label":(0,c.__)("Submit profile","activitypub")},(0,o.createElement)(s,{icon:f}),C)),m&&(0,o.createElement)("div",{className:"activitypub-dialog__remember"},(0,o.createElement)(n.CheckboxControl,{checked:U,label:(0,c.__)("Remember me for easier comments","activitypub"),onChange:()=>{N(!U)}}))))}function C({selectedComment:e,commentId:t}){const{namespace:r}=window._activityPubOptions||{},a=(0,c.__)("Reply","activitypub"),i=`/${r}/comments/${t}/remote-reply?resource=`,l=(0,c.__)("Copy and paste the Comment URL into the search field of your favorite fediverse app or server.","activitypub");return(0,o.createElement)(E,{actionText:a,copyDescription:l,handle:e,resourceUrl:i,myProfile:(0,c.__)("Original Comment URL","activitypub"),rememberProfile:!0})}function R({profileURL:e,template:t,commentURL:r,deleteRemoteUser:a}){return(0,o.createElement)(o.Fragment,null,(0,o.createElement)(n.Button,{variant:"link",className:"comment-reply-link activitypub-remote-reply__button",onClick:()=>{const e=t.replace("{uri}",r);window.open(e,"_blank")}},/* translators: %s: profile name */ /* translators: %s: profile name */
-(0,c.sprintf)((0,c.__)("Reply as %s","activitypub"),e)),(0,o.createElement)(n.Button,{className:"activitypub-remote-profile-delete",onClick:a,title:(0,c.__)("Delete Remote Profile","activitypub")},(0,o.createElement)(s,{icon:u,size:18})))}function x({selectedComment:e,commentId:t}){const[r,i]=(0,a.useState)(!1),l=(0,c.__)("Remote Reply","activitypub"),{profileURL:s,template:m,deleteRemoteUser:p}=h(),u=s&&m;return(0,o.createElement)(o.Fragment,null,u?(0,o.createElement)(R,{profileURL:s,template:m,commentURL:e,deleteRemoteUser:p}):(0,o.createElement)(n.Button,{variant:"link",className:"comment-reply-link activitypub-remote-reply__button",onClick:()=>i(!0)},(0,c.__)("Reply on the Fediverse","activitypub")),r&&(0,o.createElement)(n.Modal,{className:"activitypub-remote-reply__modal activitypub__modal",onRequestClose:()=>i(!1),title:l},(0,o.createElement)(C,{selectedComment:e,commentId:t})))}let O=1;l()((()=>{[].forEach.call(document.querySelectorAll(".activitypub-remote-reply"),(e=>{const t=JSON.parse(e.dataset.attrs);(0,a.createRoot)(e).render((0,o.createElement)(x,{...t,id:"activitypub-remote-reply-link-"+O++,useId:!0}))}))}))},609:e=>{e.exports=window.React},848:(e,t,r)=>{e.exports=r(20)}},r={};function o(e){var a=r[e];if(void 0!==a)return a.exports;var i=r[e]={exports:{}};return t[e](i,i.exports,o),i.exports}o.m=t,e=[],o.O=(t,r,a,i)=>{if(!r){var l=1/0;for(m=0;m<e.length;m++){for(var[r,a,i]=e[m],n=!0,c=0;c<r.length;c++)(!1&i||l>=i)&&Object.keys(o.O).every((e=>o.O[e](r[c])))?r.splice(c--,1):(n=!1,i<l&&(l=i));if(n){e.splice(m--,1);var s=a();void 0!==s&&(t=s)}}return t}i=i||0;for(var m=e.length;m>0&&e[m-1][2]>i;m--)e[m]=e[m-1];e[m]=[r,a,i]},o.n=e=>{var t=e&&e.__esModule?()=>e.default:()=>e;return o.d(t,{a:t}),t},o.d=(e,t)=>{for(var r in t)o.o(t,r)&&!o.o(e,r)&&Object.defineProperty(e,r,{enumerable:!0,get:t[r]})},o.o=(e,t)=>Object.prototype.hasOwnProperty.call(e,t),(()=>{var e={227:0,739:0};o.O.j=t=>0===e[t];var t=(t,r)=>{var a,i,[l,n,c]=r,s=0;if(l.some((t=>0!==e[t]))){for(a in n)o.o(n,a)&&(o.m[a]=n[a]);if(c)var m=c(o)}for(t&&t(r);s<l.length;s++)i=l[s],o.o(e,i)&&e[i]&&e[i][0](),e[i]=0;return o.O(m)},r=globalThis.webpackChunkwordpress_activitypub=globalThis.webpackChunkwordpress_activitypub||[];r.forEach(t.bind(null,0)),r.push=t.bind(null,r.push.bind(r))})();var a=o.O(void 0,[739],(()=>o(170)));a=o.O(a)})();
+import * as __WEBPACK_EXTERNAL_MODULE__wordpress_interactivity_8e89b257__ from "@wordpress/interactivity";
+/******/ var __webpack_modules__ = ({
+
+/***/ "./src/remote-reply/index.js":
+/*!***********************************!*\
+  !*** ./src/remote-reply/index.js ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _view_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./view.js */ "./src/remote-reply/view.js");
+/**
+ * WordPress dependencies.
+ */
+
+
+// This file is kept minimal as the Interactivity API handles the component initialization.
+// The view.js file contains all the interactivity logic and store definitions.
+
+/***/ }),
+
+/***/ "./src/remote-reply/style.scss":
+/*!*************************************!*\
+  !*** ./src/remote-reply/style.scss ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+// extracted by mini-css-extract-plugin
+
+
+/***/ }),
+
+/***/ "./src/remote-reply/view.js":
+/*!**********************************!*\
+  !*** ./src/remote-reply/view.js ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @wordpress/interactivity */ "@wordpress/interactivity");
+/* harmony import */ var _style_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./style.scss */ "./src/remote-reply/style.scss");
+
+
+
+/** @var {object} wp WordPress global. */
+const {
+  apiFetch
+} = window.wp;
+
+/**
+ * Traps focus within the specified element.
+ *
+ * @param {Element} element The element to trap focus within.
+ */
+function trapFocus(element) {
+  const focusableElements = element.querySelectorAll('a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]):not([readonly]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])');
+  const firstFocusableElement = focusableElements[0];
+  const lastFocusableElement = focusableElements[focusableElements.length - 1];
+
+  // If the first focusable element is the close button, set initial focus to the next element instead.
+  if (firstFocusableElement && firstFocusableElement.classList.contains('activitypub-modal__close') && focusableElements.length > 1) {
+    // Set initial focus to the second element, but keep firstFocusableElement as is for tab trapping.
+    focusableElements[1].focus();
+  } else {
+    // Otherwise focus the first element as usual.
+    firstFocusableElement.focus();
+  }
+  element.addEventListener('keydown', function (event) {
+    if (event.key !== 'Tab' && event.keyCode !== 9 /* KEYCODE_TAB */) {
+      return;
+    }
+    if (event.shiftKey) {
+      /* shift + tab */
+      if (document.activeElement === firstFocusableElement) {
+        lastFocusableElement.focus();
+        event.preventDefault();
+      }
+    } /* tab */else {
+      if (document.activeElement === lastFocusableElement) {
+        firstFocusableElement.focus();
+        event.preventDefault();
+      }
+    }
+  });
+}
+const storageKey = 'fediverse-remote-user';
+
+/**
+ * Retrieve the remote user data from localStorage.
+ *
+ * @returns {Object} Remote user data or empty object, if not set.
+ */
+function getStore() {
+  const data = localStorage.getItem(storageKey);
+  if (!data) {
+    return {};
+  }
+  return JSON.parse(data);
+}
+
+/**
+ * Store remote user data in localStorage.
+ *
+ * @param {Object} data - Remote user data to store.
+ */
+function setStore(data) {
+  localStorage.setItem(storageKey, JSON.stringify(data));
+}
+
+/**
+ * Remove remote user data from localStorage.
+ */
+function deleteStore() {
+  localStorage.removeItem(storageKey);
+}
+const {
+  state,
+  actions,
+  utils
+} = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.store)('activitypub/remote-reply', {
+  actions: {
+    /**
+     * Open the modal.
+     */
+    openModal() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      context.isModalOpen = true;
+      document.body.classList.add('modal-open');
+
+      // Set up the focus trap after modal is open.
+      setTimeout(() => {
+        // Use the blockId to find the specific modal frame for this block.
+        const blockWrapper = document.getElementById(context.blockId);
+        if (blockWrapper) {
+          const modalFrame = blockWrapper.querySelector('.activitypub-modal__frame');
+          if (modalFrame) {
+            trapFocus(modalFrame);
+          }
+        }
+      }, 50);
+    },
+    /**
+     * Close the modal.
+     */
+    closeModal() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      context.isModalOpen = false;
+      context.isError = false;
+      document.body.classList.remove('modal-open');
+
+      // Return focus to the button that opened the modal.
+      const blockWrapper = document.getElementById(context.blockId);
+      if (blockWrapper) {
+        const openButton = blockWrapper.querySelector('.activitypub-remote-reply__button');
+        if (openButton) {
+          openButton.focus();
+        }
+      }
+    },
+    /**
+     * Toggle the modal state.
+     */
+    toggleModal() {
+      const {
+        isModalOpen
+      } = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      isModalOpen ? actions.closeModal() : actions.openModal();
+    },
+    /**
+     * Copy the comment URL to clipboard.
+     */
+    copyToClipboard() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+
+      // Use the Clipboard API to copy text.
+      navigator.clipboard.writeText(context.commentURL).then(() => {
+        // Update button text to show success.
+        context.copyButtonText = state.i18n.copied;
+
+        // Reset button text after 1 second.
+        setTimeout(() => {
+          context.copyButtonText = state.i18n.copy;
+        }, 1000);
+      }, error => {
+        // Log error if copying fails.
+        console.error('Could not copy text: ', error);
+      });
+    },
+    /**
+     * Update the remote profile value.
+     *
+     * @param {Event} event Input event.
+     */
+    updateRemoteProfile(event) {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      context.remoteProfile = event.target.value;
+      // Reset error state when input changes.
+      context.isError = false;
+      context.errorMessage = '';
+    },
+    /**
+     * Handle keydown event for remote profile input.
+     *
+     * @param {Event} event Keydown event.
+     */
+    handleKeyDown(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        actions.submitRemoteProfile();
+      }
+    },
+    /**
+     * Submit the remote profile.
+     */
+    submitRemoteProfile: function* () {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      const {
+        namespace
+      } = state;
+      const input = context.remoteProfile.trim();
+
+      // Validate input.
+      if (!input) {
+        context.isError = true;
+        context.errorMessage = state.i18n.emptyProfileError;
+        return;
+      }
+      if (!utils.isHandle(input) && !utils.isUrl(input)) {
+        context.isError = true;
+        context.errorMessage = state.i18n.invalidProfileError;
+        return;
+      }
+
+      // Set loading state.
+      context.isLoading = true;
+      context.isError = false;
+
+      // Construct the API path.
+      const path = `/${namespace}/comments/${context.commentId}/remote-reply?resource=${encodeURIComponent(input)}`;
+      try {
+        // Make the API request.
+        const response = yield apiFetch({
+          path
+        });
+
+        // Save the remote user if the remember option is checked.
+        if (context.shouldSaveProfile) {
+          setStore({
+            profileURL: input,
+            template: response.template
+          });
+        }
+
+        // Set opening state.
+        context.isLoading = false;
+
+        // Open the remote reply URL in a new tab.
+        window.open(response.url, '_blank');
+
+        // Close the modal after opening the URL.
+        actions.closeModal();
+      } catch (error) {
+        // Handle error.
+        console.error('Error submitting profile:', error);
+        context.isLoading = false;
+        context.isError = true;
+        context.errorMessage = error.message || state.i18n.genericError;
+      }
+    },
+    /**
+     * Toggle the remember profile checkbox.
+     */
+    toggleRememberProfile() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      context.shouldSaveProfile = !context.shouldSaveProfile;
+    },
+    /**
+     * Delete the saved remote user profile.
+     */
+    deleteRemoteUser() {
+      deleteStore();
+      // Refresh the page to update the UI.
+      window.location.reload();
+    },
+    /**
+     * Open the remote user's instance to reply.
+     */
+    openRemoteInstance() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      const url = context.template.replace('{uri}', context.commentURL);
+      window.open(url, '_blank');
+    }
+  },
+  callbacks: {
+    /**
+     * Close modal when pressing ESC key.
+     *
+     * @param {Event} event Keyboard event.
+     */
+    documentKeydown(event) {
+      const {
+        isModalOpen
+      } = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      if (isModalOpen && event.key === 'Escape') {
+        actions.closeModal();
+      }
+    },
+    /**
+     * Close modal when clicking outside.
+     *
+     * @param {Event} event Click event.
+     */
+    documentClick(event) {
+      const {
+        blockId,
+        isModalOpen
+      } = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      if (!isModalOpen) {
+        return;
+      }
+
+      // Get the block wrapper element.
+      const blockWrapper = document.getElementById(blockId);
+      if (!blockWrapper) {
+        return;
+      }
+
+      // If the click was on the button or its children, we should not close the modal.
+      const toggleButton = blockWrapper.querySelector('button[data-wp-on--click="actions.toggleModal"]');
+      if (toggleButton && (toggleButton === event.target || toggleButton.contains(event.target))) {
+        return;
+      }
+
+      // Check if the click was inside the modal frame.
+      const modalFrame = blockWrapper.querySelector('.activitypub-modal__frame');
+      if (!modalFrame || modalFrame.contains(event.target)) {
+        return;
+      }
+      actions.closeModal();
+    },
+    /**
+     * Initialize the component.
+     */
+    init() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      const storedUser = getStore();
+
+      // Set the remote user data from localStorage if available.
+      if (storedUser.profileURL && storedUser.template) {
+        context.hasRemoteUser = true;
+        context.profileURL = storedUser.profileURL;
+        context.template = storedUser.template;
+      }
+    }
+  },
+  utils: {
+    /**
+     * Best guess whether a string is a valid ActivityPub handle.
+     *
+     * @param {string} string - String to check.
+     * @returns {boolean} True if string is a valid handle, false otherwise.
+     */
+    isHandle(string) {
+      // Check if the string starts with '@' and contains a valid URL.
+      const parts = string.replace(/^@/, '').split('@');
+      return parts.length === 2 && utils.isUrl(`https://${parts[1]}`);
+    },
+    /**
+     * Checks if a string is a valid URL.
+     *
+     * @param {string} string - String to check.
+     * @returns {boolean} True if string is a valid URL, false otherwise.
+     */
+    isUrl(string) {
+      try {
+        new URL(string);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+  }
+});
+
+/***/ }),
+
+/***/ "@wordpress/interactivity":
+/*!*******************************************!*\
+  !*** external "@wordpress/interactivity" ***!
+  \*******************************************/
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_MODULE__wordpress_interactivity_8e89b257__;
+
+/***/ })
+
+/******/ });
+/************************************************************************/
+/******/ // The module cache
+/******/ var __webpack_module_cache__ = {};
+/******/ 
+/******/ // The require function
+/******/ function __webpack_require__(moduleId) {
+/******/ 	// Check if module is in cache
+/******/ 	var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 	if (cachedModule !== undefined) {
+/******/ 		return cachedModule.exports;
+/******/ 	}
+/******/ 	// Create a new module (and put it into the cache)
+/******/ 	var module = __webpack_module_cache__[moduleId] = {
+/******/ 		// no module.id needed
+/******/ 		// no module.loaded needed
+/******/ 		exports: {}
+/******/ 	};
+/******/ 
+/******/ 	// Execute the module function
+/******/ 	__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 
+/******/ 	// Return the exports of the module
+/******/ 	return module.exports;
+/******/ }
+/******/ 
+/******/ // expose the modules object (__webpack_modules__)
+/******/ __webpack_require__.m = __webpack_modules__;
+/******/ 
+/************************************************************************/
+/******/ /* webpack/runtime/chunk loaded */
+/******/ (() => {
+/******/ 	var deferred = [];
+/******/ 	__webpack_require__.O = (result, chunkIds, fn, priority) => {
+/******/ 		if(chunkIds) {
+/******/ 			priority = priority || 0;
+/******/ 			for(var i = deferred.length; i > 0 && deferred[i - 1][2] > priority; i--) deferred[i] = deferred[i - 1];
+/******/ 			deferred[i] = [chunkIds, fn, priority];
+/******/ 			return;
+/******/ 		}
+/******/ 		var notFulfilled = Infinity;
+/******/ 		for (var i = 0; i < deferred.length; i++) {
+/******/ 			var [chunkIds, fn, priority] = deferred[i];
+/******/ 			var fulfilled = true;
+/******/ 			for (var j = 0; j < chunkIds.length; j++) {
+/******/ 				if ((priority & 1 === 0 || notFulfilled >= priority) && Object.keys(__webpack_require__.O).every((key) => (__webpack_require__.O[key](chunkIds[j])))) {
+/******/ 					chunkIds.splice(j--, 1);
+/******/ 				} else {
+/******/ 					fulfilled = false;
+/******/ 					if(priority < notFulfilled) notFulfilled = priority;
+/******/ 				}
+/******/ 			}
+/******/ 			if(fulfilled) {
+/******/ 				deferred.splice(i--, 1)
+/******/ 				var r = fn();
+/******/ 				if (r !== undefined) result = r;
+/******/ 			}
+/******/ 		}
+/******/ 		return result;
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/hasOwnProperty shorthand */
+/******/ (() => {
+/******/ 	__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/make namespace object */
+/******/ (() => {
+/******/ 	// define __esModule on exports
+/******/ 	__webpack_require__.r = (exports) => {
+/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 		}
+/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/import chunk loading */
+/******/ (() => {
+/******/ 	// no baseURI
+/******/ 	
+/******/ 	// object to store loaded and loading chunks
+/******/ 	// undefined = chunk not loaded, null = chunk preloaded/prefetched
+/******/ 	// [resolve, Promise] = chunk loading, 0 = chunk loaded
+/******/ 	var installedChunks = {
+/******/ 		"remote-reply/index": 0,
+/******/ 		"remote-reply/style-index": 0
+/******/ 	};
+/******/ 	
+/******/ 	// no install chunk
+/******/ 	
+/******/ 	// no chunk on demand loading
+/******/ 	
+/******/ 	// no prefetching
+/******/ 	
+/******/ 	// no preloaded
+/******/ 	
+/******/ 	// no external install chunk
+/******/ 	
+/******/ 	__webpack_require__.O.j = (chunkId) => (installedChunks[chunkId] === 0);
+/******/ })();
+/******/ 
+/************************************************************************/
+/******/ 
+/******/ // startup
+/******/ // Load entry module and return exports
+/******/ // This entry module depends on other loaded chunks and execution need to be delayed
+/******/ var __webpack_exports__ = __webpack_require__.O(undefined, ["remote-reply/style-index"], () => (__webpack_require__("./src/remote-reply/index.js")))
+/******/ __webpack_exports__ = __webpack_require__.O(__webpack_exports__);
+/******/ 
+
+//# sourceMappingURL=index.js.map
