@@ -43,7 +43,6 @@
 			align-items: center;
 
 			&:not(:only-child) {
-				flex: 0.5;
 				margin-left: 1rem;
 			}
 		}
@@ -68,6 +67,10 @@
 		padding-left: 1rem;
 		padding-right: 1rem;
 	}
+}
+
+body.modal-open {
+	overflow: hidden;
 }
 
 .activitypub-modal {
@@ -125,7 +128,6 @@
 		padding: 0.5rem;
 		cursor: pointer;
 		color: var(--wp--preset--color--gray, #555);
-		fill: var(--wp--preset--color--gray, #555);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -207,10 +209,6 @@
 		font-size: 90%;
 		margin-top: 0.5rem;
 	}
-}
-
-body.modal-open {
-	overflow: hidden;
 }
 
 /* Animation for modal */
