@@ -305,13 +305,11 @@ const ReactionGroup = ( { items, label } ) => {
  * @param {Object}  props           Component props.
  * @param {?number} props.postId    The post ID.
  * @param {?Object} props.reactions Optional reactions data.
- * @param {?string} props.title     Optional title attribute.
  * @return {?JSX.Element}               The rendered component.
  */
 export function Reactions( {
 	postId = null,
 	reactions: providedReactions = null,
-	title = null,
 } ) {
 	const { namespace } = useOptions();
 	const [ reactions, setReactions ] = useState( providedReactions );
@@ -356,7 +354,6 @@ export function Reactions( {
 
 	return (
 		<>
-			{ title && <h6>{ title }</h6> }
 			{ Object.entries( reactions ).map( ( [ key, group ] ) => {
 				if ( ! group.items?.length ) {
 					return null;

@@ -1508,12 +1508,34 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 	}
 
 	if ( ! $activity || \is_wp_error( $activity ) ) {
+		/**
+		 * Action triggered when adding an object to the outbox fails.
+		 *
+		 * @param \WP_Error   $activity           The error object or false.
+		 * @param mixed       $data               The object that failed to be added to the outbox.
+		 * @param string|null $activity_type      The type of the Activity or null if `$data` is an Activity.
+		 * @param int         $user_id            The User ID.
+		 * @param string      $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+		 */
+		\do_action( 'activitypub_add_to_outbox_failed', $activity, $data, $activity_type, $user_id, $content_visibility );
+
 		return false;
 	}
 
 	$outbox_activity_id = Outbox::add( $activity, $user_id, $content_visibility );
 
-	if ( ! $outbox_activity_id ) {
+	if ( ! $outbox_activity_id || \is_wp_error( $outbox_activity_id ) ) {
+		/**
+		 * Action triggered when adding an object to the outbox fails.
+		 *
+		 * @param false|\WP_Error $outbox_activity_id The error object or false.
+		 * @param mixed           $data               The object that failed to be added to the outbox.
+		 * @param string|null     $activity_type      The type of the Activity or null if `$data` is an Activity.
+		 * @param int             $user_id            The User ID.
+		 * @param string          $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+		 */
+		\do_action( 'activitypub_add_to_outbox_failed', $outbox_activity_id, $data, $activity_type, $user_id, $content_visibility );
+
 		return false;
 	}
 

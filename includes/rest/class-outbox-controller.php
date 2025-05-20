@@ -153,7 +153,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		$args = \apply_filters_deprecated( 'rest_activitypub_outbox_query', array( $args, $request ), 'unreleased', 'activitypub_rest_outbox_query' );
+		$args = \apply_filters_deprecated( 'rest_activitypub_outbox_query', array( $args, $request ), '5.9.0', 'activitypub_rest_outbox_query' );
 
 		/**
 		 * Filters WP_Query arguments when querying Outbox items via the REST API.

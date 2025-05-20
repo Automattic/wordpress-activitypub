@@ -235,6 +235,17 @@ class Http {
 	 * @return array|WP_Error The Object data as array or WP_Error on failure.
 	 */
 	public static function get_remote_object( $url_or_object, $cached = true ) {
+		/**
+		 * Filters the preemptive return value of a remote object request.
+		 *
+		 * @param array|string|null $response      The response.
+		 * @param array|string|null $url_or_object The Object or the Object URL.
+		 */
+		$response = apply_filters( 'activitypub_pre_http_get_remote_object', null, $url_or_object );
+		if ( null !== $response ) {
+			return $response;
+		}
+
 		$url = object_to_uri( $url_or_object );
 
 		if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $url ) ) {
