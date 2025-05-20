@@ -157,6 +157,7 @@ $content = Blocks::add_directions(
 						/>
 						<button
 							type="button"
+							class="wp-element-button wp-block-button__link"
 							data-wp-on--click="actions.copyToClipboard"
 							aria-label="<?php echo esc_attr__( 'Copy handle to clipboard', 'activitypub' ); ?>"
 						>
@@ -181,6 +182,7 @@ $content = Blocks::add_directions(
 						/>
 						<button
 							type="button"
+							class="wp-element-button wp-block-button__link"
 							data-wp-on--click="actions.submitRemoteProfile"
 							aria-label="<?php echo esc_attr__( 'Follow', 'activitypub' ); ?>"
 							data-wp-bind--disabled="context.isLoading"
