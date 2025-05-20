@@ -185,6 +185,10 @@
 			font-size: 100%;
 			margin: 0;
 
+			&::placeholder {
+				opacity: 0.5;
+			}
+
 			&[aria-invalid="true"] {
 				border-color: var(--wp--preset--color--vivid-red);
 			}
