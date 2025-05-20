@@ -5,51 +5,6 @@ import './style.scss';
 /** @var {object} wp WordPress global. */
 const { apiFetch } = window.wp;
 
-/**
- * Traps focus within the specified element.
- *
- * @param {Element} element The element to trap focus within.
- */
-function trapFocus( element ) {
-	const focusableElements = element.querySelectorAll(
-		'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]):not([readonly]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])'
-	);
-	const firstFocusableElement = focusableElements[ 0 ];
-	const lastFocusableElement = focusableElements[ focusableElements.length - 1 ];
-
-	// If the first focusable element is the close button, set initial focus to the next element instead.
-	if (
-		firstFocusableElement &&
-		firstFocusableElement.classList.contains( 'activitypub-modal__close' ) &&
-		focusableElements.length > 1
-	) {
-		// Set initial focus to the second element, but keep firstFocusableElement as is for tab trapping.
-		focusableElements[ 1 ].focus();
-	} else {
-		// Otherwise focus the first element as usual.
-		firstFocusableElement.focus();
-	}
-
-	element.addEventListener( 'keydown', function ( event ) {
-		if ( event.key !== 'Tab' && event.keyCode !== 9 /* KEYCODE_TAB */ ) {
-			return;
-		}
-
-		if ( event.shiftKey ) {
-			/* shift + tab */
-			if ( document.activeElement === firstFocusableElement ) {
-				lastFocusableElement.focus();
-				event.preventDefault();
-			}
-		} /* tab */ else {
-			if ( document.activeElement === lastFocusableElement ) {
-				firstFocusableElement.focus();
-				event.preventDefault();
-			}
-		}
-	} );
-}
-
 const { state, actions, utils } = store( 'activitypub/follow-me', {
 	actions: {
 		/**
@@ -67,7 +22,7 @@ const { state, actions, utils } = store( 'activitypub/follow-me', {
 				if ( blockWrapper ) {
 					const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
 					if ( modalFrame ) {
-						trapFocus( modalFrame );
+						utils.trapFocus( modalFrame );
 					}
 				}
 			}, 50 );
@@ -297,5 +252,50 @@ const { state, actions, utils } = store( 'activitypub/follow-me', {
 				return false;
 			}
 		},
+	},
+
+	/**
+	 * Traps focus within the specified element.
+	 *
+	 * @param {Element} element The element to trap focus within.
+	 */
+	trapFocus( element ) {
+		const focusableElements = element.querySelectorAll(
+			'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]):not([readonly]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])'
+		);
+		const firstFocusableElement = focusableElements[ 0 ];
+		const lastFocusableElement = focusableElements[ focusableElements.length - 1 ];
+
+		// If the first focusable element is the close button, set initial focus to the next element instead.
+		if (
+			firstFocusableElement &&
+			firstFocusableElement.classList.contains( 'activitypub-modal__close' ) &&
+			focusableElements.length > 1
+		) {
+			// Set initial focus to the second element, but keep firstFocusableElement as is for tab trapping.
+			focusableElements[ 1 ].focus();
+		} else {
+			// Otherwise focus the first element as usual.
+			firstFocusableElement.focus();
+		}
+
+		element.addEventListener( 'keydown', function ( event ) {
+			if ( event.key !== 'Tab' && event.keyCode !== 9 /* KEYCODE_TAB */ ) {
+				return;
+			}
+
+			if ( event.shiftKey ) {
+				/* shift + tab */
+				if ( document.activeElement === firstFocusableElement ) {
+					lastFocusableElement.focus();
+					event.preventDefault();
+				}
+			} /* tab */ else {
+				if ( document.activeElement === lastFocusableElement ) {
+					firstFocusableElement.focus();
+					event.preventDefault();
+				}
+			}
+		} );
 	},
 } );
