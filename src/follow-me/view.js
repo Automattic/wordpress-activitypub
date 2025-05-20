@@ -79,6 +79,7 @@ const { state, actions, utils } = store( 'activitypub/follow-me', {
 		closeModal() {
 			const context = getContext();
 			context.isModalOpen = false;
+			context.isError = false;
 			document.body.classList.remove( 'modal-open' );
 
 			// Return focus to the button that opened the modal.
