@@ -153,7 +153,9 @@ $content = Blocks::add_directions(
 							type="text"
 							id="profile-handle"
 							value="<?php echo esc_attr( '@' . $actor->get_webfinger() ); ?>"
-							disabled
+							tabindex="-1"
+							readonly
+							aria-readonly="true"
 						/>
 						<button
 							type="button"
