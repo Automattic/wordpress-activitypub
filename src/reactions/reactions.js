@@ -147,18 +147,15 @@ const ReactionList = ( { reactions, type } ) => {
 				const avatar = reaction.avatar || defaultAvatarUrl;
 				return (
 					<li key={ index }>
-						<a
-							href={ reaction.url }
-							className="reaction-item"
-							target="_blank"
-							rel="noopener noreferrer"
-						>
+						<a href={ reaction.url } className="reaction-item" target="_blank" rel="noopener noreferrer">
 							<img
 								src={ avatar }
 								alt={ reaction.name }
 								width="32"
 								height="32"
-								onError={ (e) => { e.target.src = defaultAvatarUrl; } }
+								onError={ ( e ) => {
+									e.target.src = defaultAvatarUrl;
+								} }
 							/>
 							<span>{ reaction.name }</span>
 						</a>

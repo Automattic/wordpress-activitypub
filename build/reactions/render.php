@@ -33,7 +33,7 @@ $block_id = 'activitypub-reactions-block-' . wp_unique_id();
 $reactions = array();
 
 foreach ( Comment::get_comment_types() as $_type => $type_object ) {
-	$comments = get_comments(
+	$_comments = get_comments(
 		array(
 			'post_id' => $_post_id,
 			'type'    => $_type,
@@ -41,14 +41,11 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 		)
 	);
 
-	if ( empty( $comments ) ) {
+	if ( empty( $_comments ) ) {
 		continue;
 	}
 
-	// repeat entries in the array 100 times.
-	$comments = array_fill( 0, 50, $comments[0] );
-
-	$count = count( $comments );
+	$count = count( $_comments );
 	// phpcs:disable WordPress.WP.I18n
 	$label = sprintf(
 		_n(
@@ -73,7 +70,7 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 					'avatar' => get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
 				);
 			},
-			$comments
+			$_comments
 		),
 	);
 }
