@@ -50,7 +50,7 @@ function trapFocus( element ) {
 	} );
 }
 
-const { state, actions } = store( 'activitypub/follow-me', {
+const { state, actions, utils } = store( 'activitypub/follow-me', {
 	actions: {
 		/**
 		 * Open the modal.
@@ -161,7 +161,7 @@ const { state, actions } = store( 'activitypub/follow-me', {
 				return;
 			}
 
-			if ( ! /^(https?:\/\/|@)/.test( input ) ) {
+			if ( ! utils.isHandle( input ) ) {
 				context.isError = true;
 				context.errorMessage = state.i18n.invalidProfileError;
 				return;
@@ -266,6 +266,35 @@ const { state, actions } = store( 'activitypub/follow-me', {
 			}
 
 			actions.closeModal();
+		},
+	},
+	utils: {
+		/**
+		 * Best guess whether a string is a valid ActivityPub handle.
+		 *
+		 * @param {string} string - String to check.
+		 * @returns {boolean} True if string is a valid handle, false otherwise.
+		 */
+		isHandle( string ) {
+			// Check if the string starts with '@' and contains a valid URL.
+			const parts = string.replace( /^@/, '' ).split( '@' );
+
+			return parts.length === 2 && utils.isUrl( `https://${ parts[ 1 ] }` );
+		},
+
+		/**
+		 * Checks if a string is a valid URL.
+		 *
+		 * @param {string} string - String to check.
+		 * @returns {boolean} True if string is a valid URL, false otherwise.
+		 */
+		isUrl( string ) {
+			try {
+				new URL( string );
+				return true;
+			} catch ( _ ) {
+				return false;
+			}
 		},
 	},
 } );
