@@ -133,7 +133,7 @@ $content = Blocks::add_directions(
 				</h2>
 				<button
 					type="button"
-					class="activitypub-modal__close"
+					class="activitypub-modal__close wp-element-button wp-block-button__link"
 					data-wp-on--click="actions.closeModal"
 					aria-label="<?php echo esc_attr__( 'Close dialog', 'activitypub' ); ?>"
 				>
