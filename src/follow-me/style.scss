@@ -1,9 +1,7 @@
 .activitypub-follow-me-block-wrapper {
 	display: block;
 	position: relative;
-}
 
-.activitypub-follow-me-block-wrapper {
 	.activitypub-profile {
 		display: flex;
 		align-items: center;
@@ -95,7 +93,7 @@
 	&__frame {
 		max-width: 660px;
 		width: 100%;
-		background-color: #fff;
+		background-color: var(--wp--preset--color--white);
 		border-radius: 4px;
 		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 		overflow: hidden;
@@ -110,7 +108,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 2rem 2rem 1.5rem 2rem;
-		border-bottom: 1px solid #e2e4e7;
+		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
 		flex-shrink: 0;
 	}
 
@@ -126,20 +124,23 @@
 		border: none;
 		padding: 0.5rem;
 		cursor: pointer;
-		color: #555;
+		color: var(--wp--preset--color--gray, #555);
+		fill: var(--wp--preset--color--gray, #555);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 
 		&:hover {
 			background: none;
-			color: #000;
+			color: var(--wp--preset--color--black);
+			fill: var(--wp--preset--color--black);
 		}
 
 		&:active {
 			background: none;
 			border: none;
-			color: #000;
+			color: var(--wp--preset--color--black);
+			fill: var(--wp--preset--color--black);
 			padding: 0.5rem;
 		}
 	}
@@ -152,7 +153,7 @@
 .activitypub-dialog {
 	&__section {
 		padding: 1.5rem 2rem;
-		border-bottom: 1px solid #f0f0f0;
+		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
 
 		&:last-child {
 			border-bottom: none;
@@ -170,13 +171,6 @@
 		margin-bottom: 1rem;
 		color: inherit;
 		font-size: 95%;
-
-		code {
-			background: #f0f0f0;
-			padding: 0.1rem 0.3rem;
-			border-radius: 3px;
-			font-size: 90%;
-		}
 	}
 
 	&__button-group {
@@ -186,24 +180,25 @@
 
 		input {
 			flex: 1;
-			border: 1px solid #ddd;
+			border: 1px solid var(--wp--preset--color--gray, #e2e4e7);
 			border-radius: 4px 0 0 4px;
 			font-size: 100%;
 			margin: 0;
 
 			&[aria-invalid="true"] {
-				border-color: #cc1818;
+				border-color: var(--wp--preset--color--vivid-red);
 			}
 		}
 
 		button {
 			border-radius: 0 4px 4px 0 !important;
 			margin-left: -1px !important;
+			width: auto;
 		}
 	}
 
 	&__error {
-		color: #cc1818;
+		color: var(--wp--preset--color--vivid-red);
 		font-size: 90%;
 		margin-top: 0.5rem;
 	}
@@ -211,81 +206,6 @@
 
 body.modal-open {
 	overflow: hidden;
-}
-
-/* Dark mode styles. */
-@media (prefers-color-scheme: dark) {
-	.activitypub-modal {
-		&__overlay {
-			color: var(--wp--preset--color--foreground, #d4d4d4);
-		}
-
-		&__frame {
-			background-color: var(--wp--preset--color--background, #1e1e1e);
-			box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-		}
-
-		&__header {
-			border-bottom: 1px solid var(--wp--preset--color--contrast, #2c2c2c);
-		}
-
-		&__close {
-			color: var(--wp--preset--color--tertiary, #aaa);
-			fill: var(--wp--preset--color--tertiary, #aaa);
-
-			&:hover,
-			&:active {
-				background: var(--wp--preset--color--foreground, #d4d4d4);
-				color: var(--wp--preset--color--background, #2c2c2c);
-				fill: var(--wp--preset--color--background, #2c2c2c);
-			}
-		}
-	}
-
-	.activitypub-dialog {
-		&__section {
-			border-bottom: 1px solid var(--wp--preset--color--contrast, #2c2c2c);
-		}
-
-		&__description {
-			color: var(--wp--preset--color--tertiary, #c0c0c0);
-
-			code {
-				background: var(--wp--preset--color--contrast, #2c2c2c);
-				color: var(--wp--preset--color--foreground, #d4d4d4);
-			}
-		}
-
-		&__button-group {
-			input {
-				border: 1px solid var(--wp--preset--color--contrast, #444);
-				background-color: var(--wp--preset--color--background, #2c2c2c);
-				color: var(--wp--preset--color--foreground, #d4d4d4);
-
-				&[aria-invalid="true"] {
-					border-color: var(--wp--preset--color--alert, #e65054);
-				}
-			}
-
-			button:hover,
-			button:active {
-				background: var(--wp--preset--color--foreground, #d4d4d4);
-				color: var(--wp--preset--color--background, #2c2c2c);
-				fill: var(--wp--preset--color--background, #2c2c2c);
-			}
-		}
-
-		&__error {
-			color: var(--wp--preset--color--alert, #e65054);
-		}
-	}
-
-	.activitypub-profile {
-		&__name,
-		&__handle {
-			color: var(--wp--preset--color--foreground, #d4d4d4);
-		}
-	}
 }
 
 /* Animation for modal */
