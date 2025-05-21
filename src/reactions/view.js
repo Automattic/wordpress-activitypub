@@ -176,9 +176,9 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 * @param {String} key Keyboard event key.
 		 */
 		documentKeydown( { key } ) {
-			const { modal } = getContext();
+			const { isModalOpen } = getContext();
 
-			if ( modal.isOpen && key === 'Escape' ) {
+			if ( isModalOpen && key === 'Escape' ) {
 				actions.closeModal();
 			}
 		},
@@ -189,8 +189,8 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 * @param {Event} event Click event.
 		 */
 		documentClick( event ) {
-			const { blockId, modal } = getContext();
-			if ( ! modal.isOpen ) {
+			const { blockId, isModalOpen } = getContext();
+			if ( ! isModalOpen ) {
 				return;
 			}
 
@@ -201,7 +201,9 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			}
 
 			// If the click was on the button or its children, we should not close the modal.
-			const toggleButton = blockWrapper.querySelector( '.reaction-label[data-wp-on--click="actions.openModal"]' );
+			const toggleButton = blockWrapper.querySelector(
+				'.wp-element-button[data-wp-on--click="actions.toggleModal"]'
+			);
 			if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
 				return;
 			}
