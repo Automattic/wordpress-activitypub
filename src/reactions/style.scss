@@ -40,7 +40,7 @@
 		flex-direction: row;
 		align-items: center;
 		list-style: none;
-		margin: 0;
+		margin: 0 !important;
 		padding: 0;
 
 		li {
@@ -100,14 +100,14 @@
 		margin-left: 12px;
 		padding: 0.25rem 0.5rem;
 		font-size: 70%;
-		color: var(--wp--preset--color--contrast, var(--wp--preset--color--secondary, #2271b1));
+		color: var(--wp--preset--color--contrast, #2271b1);
 		transition: background-color 0.2s ease;
 		white-space: nowrap;
 		text-decoration: none;
 
 		&:hover {
 			background-color: rgba(0, 0, 0, 0.05);
-			color: var(--wp--preset--color--contrast, var(--wp--preset--color--secondary, #135e96));
+			color: var(--wp--preset--color--contrast, #135e96);
 		}
 
 		&:focus:not(:disabled) {
@@ -190,10 +190,9 @@
 
 	&__title {
 		margin: 0 !important;
-		font-size: 1.2rem;
+		font-size: 130%;
 		font-weight: 600;
 		line-height: 1.4;
-		text-transform: capitalize;
 	}
 
 	&__close {
@@ -232,11 +231,11 @@
 /* Reactions list styles */
 .reactions-list {
 	list-style: none;
-	margin: 0;
+	margin: 0 !important;
 	padding: 0;
 
 	.reaction-item {
-		margin-bottom: 0.75rem;
+		margin: 0 0 0.75rem 0;
 
 		&:last-child {
 			margin-bottom: 0;
@@ -267,8 +266,7 @@
 		}
 
 		.reaction-name {
-			font-weight: 500;
-			font-size: 0.9rem;
+			font-size: 75%;
 		}
 	}
 }
