@@ -137,7 +137,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<div class="activitypub-reactions">
 		<?php
 		foreach ( $reactions as $_type => $reaction ) :
-
 			/* translators: %s: reaction type. */
 			$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
 			?>
