@@ -56,11 +56,11 @@ const ReactionList = ( { reactions } ) => {
 	const { defaultAvatarUrl } = useOptions();
 
 	return (
-		<ul className="activitypub-reaction-list">
+		<ul className="reactions-list">
 			{ reactions.map( ( reaction, index ) => {
 				const avatar = reaction.avatar || defaultAvatarUrl;
 				return (
-					<li key={ index }>
+					<li key={ index } className="reaction-item">
 						<a href={ reaction.url } className="reaction-item" target="_blank" rel="noopener noreferrer">
 							<img
 								src={ avatar }
@@ -71,7 +71,7 @@ const ReactionList = ( { reactions } ) => {
 									e.target.src = defaultAvatarUrl;
 								} }
 							/>
-							<span>{ reaction.name }</span>
+							<span className="reaction-name">{ reaction.name }</span>
 						</a>
 					</li>
 				);
