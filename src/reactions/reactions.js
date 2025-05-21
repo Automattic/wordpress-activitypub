@@ -19,20 +19,12 @@ const FacepileRow = ( { reactions } ) => {
 	return (
 		<ul className="reaction-avatars">
 			{ reactions.map( ( reaction, index ) => {
-				const classes = [
-					'reaction-avatar',
-				]
-					.filter( Boolean )
-					.join( ' ' );
+				const classes = [ 'reaction-avatar' ].filter( Boolean ).join( ' ' );
 				const avatar = reaction.avatar || defaultAvatarUrl;
 
 				return (
 					<li key={ index }>
-						<a
-							href={ reaction.url }
-							target="_blank"
-							rel="noopener noreferrer"
-						>
+						<a href={ reaction.url } target="_blank" rel="noopener noreferrer">
 							<img
 								src={ avatar }
 								alt={ reaction.name }
