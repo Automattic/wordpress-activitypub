@@ -1,11 +1,14 @@
 .wp-block-activitypub-reactions {
+	margin-top: 2rem;
+	margin-bottom: 2rem;
 	position: relative;
 
 	// Main container for reactions
 	.activitypub-reactions {
 		display: flex;
+		flex-direction: column;
 		flex-wrap: wrap;
-		gap: 16px;
+		gap: 1rem;
 		margin-top: 16px;
 	}
 
@@ -16,7 +19,7 @@
 		margin: 0.5em 0;
 		position: relative;
 		width: 100%;
-		gap: 0.75em;
+		gap: 0.5rem;
 		justify-content: flex-start;
 
 		&[hidden] {
@@ -41,9 +44,8 @@
 		padding: 0;
 
 		li {
-			margin: 0;
 			padding: 0;
-			margin-right: -10px;
+			margin: 0 -10px 0 0;
 			transition: transform 0.2s ease;
 
 			&:last-child {
@@ -65,42 +67,43 @@
 		}
 	}
 
-	// Individual avatar image
 	.reaction-avatar {
-		width: 32px;
-		height: 32px;
 		max-width: 32px;
 		max-height: 32px;
 		overflow: hidden;
 		-moz-force-broken-image-icon: 1;
 		border-radius: 50%;
-		border: 2px solid #fff;
-		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+		border: 0.5px solid var( --wp--preset--color--contrast, rgba(255, 255, 255, 0.8) );
+		box-shadow:
+			0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border
+			0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
 		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 		will-change: transform;
 
-		&:hover {
+		&:hover,
+		&:focus-visible {
 			z-index: 1;
 			position: relative;
+			transform: translateY(-5px);
 		}
 	}
 
-	// Label showing count of reactions
+	// Label showing count of reactions.
 	.reaction-label {
-		margin-left: 12px;
-		font-size: 14px;
-		font-weight: 500;
-		color: var(--wp--preset--color--contrast, var(--wp--preset--color--secondary, #2271b1));
 		background: none;
 		border: none;
-		padding: 4px 8px;
-		cursor: pointer;
 		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		flex: 0 0 auto;
+		margin-left: 12px;
+		padding: 0.25rem 0.5rem;
+		font-size: 70%;
+		color: var(--wp--preset--color--contrast, var(--wp--preset--color--secondary, #2271b1));
 		transition: background-color 0.2s ease;
 		white-space: nowrap;
-		height: auto;
 		text-decoration: none;
-		flex: 0 0 auto;
 
 		&:hover {
 			background-color: rgba(0, 0, 0, 0.05);
@@ -111,70 +114,6 @@
 			box-shadow: none;
 			outline: 1px solid var(--wp--preset--color--contrast, #135e96);
 			outline-offset: 2px;
-		}
-	}
-}
-
-/**
- * Reactions Block styles.
- */
-
-.activitypub-reactions-block {
-	margin-top: 2rem;
-	margin-bottom: 2rem;
-
-	.activitypub-reactions {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.reaction-group {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.reaction-avatars {
-		display: flex;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-
-		li {
-			margin-right: -10px;
-			transition: transform 0.2s ease;
-
-			&:hover {
-				z-index: 2;
-				transform: scale(1.1);
-			}
-		}
-
-		img.reaction-avatar {
-			width: 32px;
-			height: 32px;
-			border-radius: 50%;
-			border: 2px solid #fff;
-			box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-		}
-	}
-
-	.reaction-label {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		background: none;
-		border: none;
-		padding: 0.25rem 0.5rem;
-		cursor: pointer;
-		font-size: 0.875rem;
-		color: #555;
-		border-radius: 4px;
-		transition: background-color 0.2s ease;
-
-		&:hover {
-			background-color: rgba(0, 0, 0, 0.05);
 		}
 	}
 }
