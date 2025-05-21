@@ -31,22 +31,6 @@ class Migration {
 	}
 
 	/**
-	 * Get the target version.
-	 *
-	 * This is the version that the database structure will be updated to.
-	 * It is the same as the plugin version.
-	 *
-	 * @deprecated 4.2.0 Use constant ACTIVITYPUB_PLUGIN_VERSION directly.
-	 *
-	 * @return string The target version.
-	 */
-	public static function get_target_version() {
-		_deprecated_function( __FUNCTION__, '4.2.0', 'ACTIVITYPUB_PLUGIN_VERSION' );
-
-		return ACTIVITYPUB_PLUGIN_VERSION;
-	}
-
-	/**
 	 * The current version of the database structure.
 	 *
 	 * @return string The current version.

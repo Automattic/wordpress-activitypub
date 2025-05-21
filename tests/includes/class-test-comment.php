@@ -526,34 +526,6 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_comment_type_names to maintain backwards compatibility.
-	 *
-	 * @covers ::get_comment_type_names
-	 */
-	public function test_get_comment_type_names() {
-		$this->setExpectedDeprecated( 'Activitypub\Comment::get_comment_type_names' );
-
-		// Get both types of results.
-		$names = Comment::get_comment_type_names();
-		$slugs = Comment::get_comment_type_slugs();
-
-		// Test that we get an array.
-		$this->assertIsArray( $names );
-
-		// Test that the array is not empty.
-		$this->assertNotEmpty( $names );
-
-		// Test that it returns exactly the same as get_comment_type_slugs().
-		$this->assertEquals( $slugs, $names );
-
-		// Verify it returns slugs and not singular names.
-		$this->assertContains( 'repost', $names );
-		$this->assertContains( 'like', $names );
-		$this->assertNotContains( 'Repost', $names );
-		$this->assertNotContains( 'Like', $names );
-	}
-
-	/**
 	 * Test object_id_to_comment method.
 	 *
 	 * @covers ::object_id_to_comment
