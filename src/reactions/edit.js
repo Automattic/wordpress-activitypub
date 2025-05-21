@@ -4,12 +4,7 @@ import { select } from '@wordpress/data';
 import { Reactions } from './reactions';
 import './style.scss';
 
-/**
- * @typedef {Object} JSX
- * @typedef {import('react').ReactElement} JSX.Element
- */
-
-// Generate reaction items with SVG avatars
+// Generate reaction items with SVG avatars.
 const generateReactionItems = ( count, prefix, startChar, colors ) =>
 	Array.from( { length: count }, ( _, i ) => ( {
 		name: `${ prefix } ${ i + 1 }`,
@@ -21,10 +16,10 @@ const generateReactionItems = ( count, prefix, startChar, colors ) =>
 		) }%3C/text%3E%3C/svg%3E`,
 	} ) );
 
-// Colors for avatars
+// Colors for avatars.
 const COLORS = [ 'FF6B6B', '4ECDC4', '45B7D1', '96CEB4', 'D4A5A5', '9B59B6', '3498DB', 'E67E22' ];
 
-// Simple predefined dummy reactions data
+// Simple predefined dummy Reactions data.
 const DUMMY_REACTIONS = {
 	likes: {
 		label: sprintf(
@@ -47,10 +42,9 @@ const DUMMY_REACTIONS = {
 /**
  * Edit component for the Reactions block.
  *
- * @param {Object}   props                            Block props.
- * @param            props.__unstableLayoutClassNames Layout class names.
+ * @param {Object} props                            Block props.
+ * @param          props.__unstableLayoutClassNames Layout class names.
  * @return {JSX.Element} Component to render.
- * @noinspection JSUnusedGlobalSymbols
  */
 export default function Edit( { __unstableLayoutClassNames } ) {
 	const blockProps = useBlockProps( {
@@ -58,7 +52,7 @@ export default function Edit( { __unstableLayoutClassNames } ) {
 	} );
 	const { getCurrentPostId } = select( 'core/editor' );
 
-	// Template for InnerBlocks - allows only a heading block
+	// Template for InnerBlocks - allows only a heading block.
 	const TEMPLATE = [
 		[
 			'core/heading',
