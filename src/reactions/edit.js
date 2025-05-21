@@ -1,33 +1,117 @@
 import { useBlockProps, InnerBlocks } from '@wordpress/block-editor';
+import { useState } from '@wordpress/element';
 import { __, _x, sprintf } from '@wordpress/i18n';
-import { select } from '@wordpress/data';
 import { Reactions } from './reactions';
 import './style.scss';
 
-// Generate reaction items with SVG avatars.
-const generateReactionItems = ( count, prefix, startChar, colors ) =>
-	Array.from( { length: count }, ( _, i ) => ( {
-		name: `${ prefix } ${ i + 1 }`,
+/**
+ * Generate a whimsical name using an adjective and noun combination.
+ *
+ * @return {string} A whimsical name.
+ */
+const generateWhimsicalName = () => {
+	const adjectives = [
+		'Bouncy',
+		'Cosmic',
+		'Dancing',
+		'Fluffy',
+		'Giggly',
+		'Hoppy',
+		'Jazzy',
+		'Magical',
+		'Nifty',
+		'Perky',
+		'Quirky',
+		'Sparkly',
+		'Twirly',
+		'Wiggly',
+		'Zippy',
+	];
+	const nouns = [
+		'Badger',
+		'Capybara',
+		'Dolphin',
+		'Echidna',
+		'Flamingo',
+		'Giraffe',
+		'Hedgehog',
+		'Iguana',
+		'Jellyfish',
+		'Koala',
+		'Lemur',
+		'Manatee',
+		'Narwhal',
+		'Octopus',
+		'Penguin',
+	];
+
+	const adjective = adjectives[ Math.floor( Math.random() * adjectives.length ) ];
+	const noun = nouns[ Math.floor( Math.random() * nouns.length ) ];
+
+	return `${ adjective } ${ noun }`;
+};
+
+/**
+ * Generate a dummy reaction with a random letter and color.
+ *
+ * @return {Object} Reaction object.
+ */
+const generateDummyReaction = () => {
+	const colors = [
+		'#FF6B6B', // Coral
+		'#4ECDC4', // Turquoise
+		'#45B7D1', // Sky Blue
+		'#96CEB4', // Sage
+		'#FFEEAD', // Cream
+		'#D4A5A5', // Dusty Rose
+		'#9B59B6', // Purple
+		'#3498DB', // Blue
+		'#E67E22', // Orange
+	];
+
+	const name = generateWhimsicalName();
+	const color = colors[ Math.floor( Math.random() * colors.length ) ];
+	const letter = name.charAt( 0 );
+
+	// Create a data URL for a colored circle with a letter.
+	const canvas = document.createElement( 'canvas' );
+	canvas.width = 64;
+	canvas.height = 64;
+	const ctx = canvas.getContext( '2d' );
+
+	// Draw colored circle.
+	ctx.fillStyle = color;
+	ctx.beginPath();
+	ctx.arc( 32, 32, 32, 0, 2 * Math.PI );
+	ctx.fill();
+
+	// Draw letter.
+	ctx.fillStyle = '#FFFFFF';
+	ctx.font = '32px sans-serif';
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'middle';
+	ctx.fillText( letter, 32, 32 );
+
+	return {
+		name,
 		url: '#',
-		avatar: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%23${
-			colors[ i % colors.length ]
-		}'/%3E%3Ctext x='32' y='38' font-family='sans-serif' font-size='24' fill='white' text-anchor='middle'%3E${ String.fromCharCode(
-			startChar + i
-		) }%3C/text%3E%3C/svg%3E`,
-	} ) );
+		avatar: canvas.toDataURL(),
+	};
+};
 
-// Colors for avatars.
-const COLORS = [ 'FF6B6B', '4ECDC4', '45B7D1', '96CEB4', 'D4A5A5', '9B59B6', '3498DB', 'E67E22' ];
-
-// Simple predefined dummy Reactions data.
-const DUMMY_REACTIONS = {
+/**
+ * Generate dummy reactions for editor preview.
+ *
+ * @return {Object} Reactions data.
+ */
+const generateDummyReactions = () => ( {
 	likes: {
 		label: sprintf(
 			/* translators: %d: Number of likes */
 			_x( '%d likes', 'number of likes', 'activitypub' ),
 			9
 		),
-		items: generateReactionItems( 9, 'User', 65, COLORS ), // 65 is ASCII for 'A'
+		items: Array.from( { length: 9 }, ( _, i ) => generateDummyReaction( i ) ),
 	},
 	reposts: {
 		label: sprintf(
@@ -35,24 +119,24 @@ const DUMMY_REACTIONS = {
 			_x( '%d reposts', 'number of reposts', 'activitypub' ),
 			6
 		),
-		items: generateReactionItems( 6, 'Reposter', 82, COLORS ), // 82 is ASCII for 'R'
+		items: Array.from( { length: 6 }, ( _, i ) => generateDummyReaction( i + 9 ) ),
 	},
-};
+} );
 
 /**
  * Edit component for the Reactions block.
  *
- * @param {Object} props                            Block props.
- * @param          props.__unstableLayoutClassNames Layout class names.
+ * @param {Object}   props                            Block props.
+ * @param            props.__unstableLayoutClassNames Layout class names.
  * @return {JSX.Element} Component to render.
  */
 export default function Edit( { __unstableLayoutClassNames } ) {
 	const blockProps = useBlockProps( {
 		className: __unstableLayoutClassNames,
 	} );
-	const { getCurrentPostId } = select( 'core/editor' );
+	const [ dummyReactions ] = useState( generateDummyReactions() );
 
-	// Template for InnerBlocks - allows only a heading block.
+	// Template for InnerBlocks - allows only a heading block
 	const TEMPLATE = [
 		[
 			'core/heading',
@@ -72,7 +156,7 @@ export default function Edit( { __unstableLayoutClassNames } ) {
 				templateLock={ 'all' }
 				renderAppender={ false }
 			/>
-			<Reactions postId={ getCurrentPostId() } fallbackReactions={ DUMMY_REACTIONS } />
+			<Reactions reactions={ dummyReactions } />
 		</div>
 	);
 }

@@ -1,10 +1,12 @@
-/**
- * WordPress dependencies
- */
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { useOptions } from '../shared/use-options';
+
+/**
+ * @typedef {Object} JSX
+ * @typedef {import('react').ReactElement} JSX.Element
+ */
 
 /**
  * A component that renders a row of user avatars for a given set of reactions.
@@ -48,10 +50,9 @@ const FacepileRow = ( { reactions } ) => {
  *
  * @param {Object} props           Component props.
  * @param {Array}  props.reactions Array of reaction objects.
- * @param {string} props.type      Type of reaction (likes/reposts).
- * @return {JSX.Element}            The rendered component.
+ * @return {JSX.Element} The rendered component.
  */
-const ReactionList = ( { reactions, type } ) => {
+const ReactionList = ( { reactions } ) => {
 	const { defaultAvatarUrl } = useOptions();
 
 	return (
@@ -160,11 +161,11 @@ const ReactionGroup = ( { items, label } ) => {
  * The Reactions component.
  *
  * @param {Object}  props           Component props.
- * @param {?number} props.postId    The post ID.
+ * @param {?number} props.postId    The Post ID.
  * @param {?Object} props.reactions Optional reactions data.
  * @return {?JSX.Element}               The rendered component.
  */
-export function Reactions( { postId = null, reactions: providedReactions = null, title = null } ) {
+export function Reactions( { postId = null, reactions: providedReactions = null } ) {
 	const { namespace } = useOptions();
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
