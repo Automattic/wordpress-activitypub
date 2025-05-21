@@ -35,16 +35,34 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 * @param {Object} event The click event.
 		 */
 		openModal( { target } ) {
-			const { modal, postId } = getContext();
+			const context = getContext();
 			const button = target.closest( '[data-reaction-type]' );
 			const reactionType = button.getAttribute( 'data-reaction-type' );
 
 			// Set modal properties.
-			modal.isOpen = true;
-			modal.items = state.reactions[ postId ][ reactionType ].items;
+			context.isModalOpen = true;
+			context.modal.items = state.reactions[ context.postId ][ reactionType ].items;
 
 			// Position the compact modal relative to the button.
 			setTimeout( callbacks.positionModal, 0 );
+		},
+
+		/**
+		 * Closes the reactions modal.
+		 */
+		closeModal() {
+			const context = getContext();
+
+			context.isModalOpen = false;
+
+			// Return focus to the button that opened the modal.
+			const blockWrapper = document.getElementById( context.blockId );
+			if ( blockWrapper ) {
+				const openButton = blockWrapper.querySelector( '.reaction-label' );
+				if ( openButton ) {
+					openButton.focus();
+				}
+			}
 		},
 
 		/**
@@ -53,29 +71,9 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 * @param {Object} event The click event.
 		 */
 		toggleModal( event ) {
-			event.stopPropagation();
+			const { isModalOpen } = getContext();
 
-			const { modal } = getContext();
-
-			modal.isOpen ? actions.closeModal() : actions.openModal( event );
-		},
-
-		/**
-		 * Closes the reactions modal.
-		 */
-		closeModal() {
-			const { blockId, modal } = getContext();
-
-			modal.isOpen = false;
-
-			// Return focus to the button that opened the modal.
-			const blockWrapper = document.getElementById( blockId );
-			if ( blockWrapper ) {
-				const openButton = blockWrapper.querySelector( '.reaction-label' );
-				if ( openButton ) {
-					openButton.focus();
-				}
-			}
+			isModalOpen ? actions.closeModal() : actions.openModal( event );
 		},
 	},
 	callbacks: {
