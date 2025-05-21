@@ -210,13 +210,13 @@ class Test_Blocks extends \WP_UnitTestCase {
 	public function test_render_reactions_block_with_deprecated_markup() {
 		$block_markup = '<!-- wp:activitypub/reactions {"title":"What people think about it on the Fediverse!","postId":123} /-->';
 		$output       = do_blocks( $block_markup );
-		$expected     = '<h6 hidden data-wp-bind--hidden="!context.hasReactions" class="wp-block-heading">What people think about it on the Fediverse!</h6>';
+		$expected     = '<h6 class="wp-block-heading">What people think about it on the Fediverse!</h6>';
 
 		$this->assertStringContainsString( $expected, $output );
 
 		$block_markup = '<!-- wp:activitypub/reactions {"postId":123} /-->';
 		$output       = do_blocks( $block_markup );
-		$expected     = '<h6 hidden data-wp-bind--hidden="!context.hasReactions" class="wp-block-heading">Fediverse Reactions</h6>';
+		$expected     = '<h6 class="wp-block-heading">Fediverse Reactions</h6>';
 
 		$this->assertStringContainsString( $expected, $output );
 
