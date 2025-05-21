@@ -17,7 +17,7 @@
 	<rule ref="PHPCompatibility"/>
 	<config name="testVersion" value="7.2-"/>
 	<rule ref="PHPCompatibilityWP"/>
-	<config name="minimum_supported_wp_version" value="6.4"/>
+	<config name="minimum_supported_wp_version" value="6.5"/>
 
 	<config name="text_domain" value="activitypub,default"/>
 
