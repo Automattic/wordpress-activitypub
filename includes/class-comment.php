@@ -564,19 +564,6 @@ class Comment {
 	}
 
 	/**
-	 * Return the registered custom comment type slugs.
-	 *
-	 * @deprecated 4.5.0 Use get_comment_type_slugs instead.
-	 *
-	 * @return array The registered custom comment type slugs.
-	 */
-	public static function get_comment_type_names() {
-		_deprecated_function( __METHOD__, '4.5.0', 'get_comment_type_slugs' );
-
-		return self::get_comment_type_slugs();
-	}
-
-	/**
 	 * Get the custom comment type.
 	 *
 	 * Check if the type is registered, if not, check if it is a custom type.
