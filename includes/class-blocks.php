@@ -151,12 +151,9 @@ class Blocks {
 				'render_callback' => array( self::class, 'render_follower_block' ),
 			)
 		);
-		\register_block_type_from_metadata(
-			ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me',
-			array(
-				'render_callback' => array( self::class, 'render_follow_me_block' ),
-			)
-		);
+
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
+
 		\register_block_type_from_metadata(
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
 			array(
@@ -221,7 +218,7 @@ class Blocks {
 	 * @param string $user_string The user string. Can be a user ID, 'site', or 'inherit'.
 	 * @return int|null The user ID, or null if the 'inherit' string is not supported in this context.
 	 */
-	private static function get_user_id( $user_string ) {
+	public static function get_user_id( $user_string ) {
 		if ( is_numeric( $user_string ) ) {
 			return absint( $user_string );
 		}
@@ -276,40 +273,6 @@ class Blocks {
 	 */
 	protected static function filter_array_by_keys( $data, $keys ) {
 		return array_intersect_key( $data, array_flip( $keys ) );
-	}
-
-	/**
-	 * Render the follow me block.
-	 *
-	 * @param array $attrs The block attributes.
-	 * @return string The HTML to render.
-	 */
-	public static function render_follow_me_block( $attrs ) {
-		$user_id = self::get_user_id( $attrs['selectedUser'] );
-		$user    = Actors::get_by_id( $user_id );
-		if ( is_wp_error( $user ) ) {
-			if ( 'inherit' === $attrs['selectedUser'] ) {
-				// If the user is 'inherit' and we couldn't determine the user, don't render anything.
-				return '<!-- Follow Me block: `inherit` mode does not display on this type of page -->';
-			} else {
-				// If the user is a specific ID and we couldn't find it, render an error message.
-				return '<!-- Follow Me block: user not found -->';
-			}
-		}
-
-		$attrs['profileData'] = self::filter_array_by_keys(
-			$user->to_array(),
-			array( 'icon', 'name', 'webfinger' )
-		);
-
-		$wrapper_attributes = get_block_wrapper_attributes(
-			array(
-				'class'      => 'activitypub-follow-me-block-wrapper',
-				'data-attrs' => wp_json_encode( $attrs ),
-			)
-		);
-		// todo: render more than an empty div?
-		return '<div ' . $wrapper_attributes . '></div>';
 	}
 
 	/**

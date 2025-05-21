@@ -1,7 +1,7 @@
 === ActivityPub ===
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
 Tags: OStatus, fediverse, activitypub, activitystream
-Requires at least: 6.4
+Requires at least: 6.5
 Tested up to: 6.8
 Stable tag: 5.9.2
 Requires PHP: 7.2
