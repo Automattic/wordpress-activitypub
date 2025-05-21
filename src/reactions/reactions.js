@@ -91,51 +91,9 @@ const ReactionList = ( { reactions } ) => {
 const ReactionGroup = ( { items, label } ) => {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const [ buttonRef, setButtonRef ] = useState( null );
-	const [ visibleCount, setVisibleCount ] = useState( items.length );
 	const containerRef = useRef( null );
 
-	// Constants for calculations
-	const AVATAR_WIDTH = 32; // Width of each avatar
-	const AVATAR_OVERLAP = 10; // How much each avatar overlaps
-	const EFFECTIVE_AVATAR_WIDTH = AVATAR_WIDTH - AVATAR_OVERLAP; // Width each additional avatar takes
-	const BUTTON_GAP = 12; // Gap between avatars and button (0.75em)
-
-	useEffect( () => {
-		if ( ! containerRef.current ) {
-			return;
-		}
-
-		const calculateVisibleAvatars = () => {
-			const container = containerRef.current;
-			if ( ! container ) {
-				return;
-			}
-
-			const containerWidth = container.offsetWidth;
-			const labelWidth = buttonRef?.offsetWidth || 0;
-			const availableWidth = containerWidth - labelWidth - BUTTON_GAP;
-
-			// Calculate how many avatars can fit
-			// First avatar takes full width, rest take effective width
-			const maxAvatars = Math.max( 1, Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH ) );
-
-			// Ensure we don't show more than we have
-			setVisibleCount( Math.min( maxAvatars, items.length ) );
-		};
-
-		// Initial calculation
-		calculateVisibleAvatars();
-
-		// Setup resize observer
-		const resizeObserver = new ResizeObserver( calculateVisibleAvatars );
-		resizeObserver.observe( containerRef.current );
-
-		return () => {
-			resizeObserver.disconnect();
-		};
-	}, [ buttonRef, items.length ] );
-
-	const visibleItems = items.slice( 0, visibleCount );
+	const visibleItems = items.slice( 0, 20 );
 
 	return (
 		<div className="reaction-group" ref={ containerRef }>
@@ -163,9 +121,10 @@ const ReactionGroup = ( { items, label } ) => {
  * @param {Object}  props           Component props.
  * @param {?number} props.postId    The Post ID.
  * @param {?Object} props.reactions Optional reactions data.
+ * @param {?Object} props.fallbackReactions Optional fallback reactions data to use if no real reactions are found.
  * @return {?JSX.Element}               The rendered component.
  */
-export function Reactions( { postId = null, reactions: providedReactions = null } ) {
+export function Reactions( { postId = null, reactions: providedReactions = null, fallbackReactions = null } ) {
 	const { namespace } = useOptions();
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
@@ -187,11 +146,25 @@ export function Reactions( { postId = null, reactions: providedReactions = null 
 			path: `/${ namespace }/posts/${ postId }/reactions`,
 		} )
 			.then( ( response ) => {
-				setReactions( response );
+				// Check if the response has any actual reactions
+				const hasReactions = Object.values( response ).some( ( group ) => group.items?.length > 0 );
+
+				// If there are no real reactions and fallback is provided, use the fallback
+				if ( ! hasReactions && fallbackReactions ) {
+					setReactions( fallbackReactions );
+				} else {
+					setReactions( response );
+				}
 				setLoading( false );
 			} )
-			.catch( () => setLoading( false ) );
-	}, [ postId, providedReactions ] );
+			.catch( () => {
+				// On error, use fallback reactions if provided
+				if ( fallbackReactions ) {
+					setReactions( fallbackReactions );
+				}
+				setLoading( false );
+			} );
+	}, [ postId, providedReactions, fallbackReactions, namespace ] );
 
 	if ( loading ) {
 		return null;
