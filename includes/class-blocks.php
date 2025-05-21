@@ -161,9 +161,7 @@ class Blocks {
 			)
 		);
 
-		\register_block_type_from_metadata(
-			ACTIVITYPUB_PLUGIN_DIR . '/build/reactions'
-		);
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
 	}
 
 	/**
