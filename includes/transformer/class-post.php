@@ -606,7 +606,7 @@ class Post extends Base {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
 	 *
-	 * @return string|null The in-reply-to URL of the post.
+	 * @return string|array|null The in-reply-to URL of the post.
 	 */
 	protected function get_in_reply_to() {
 		if ( ! site_supports_blocks() ) {

@@ -45,29 +45,6 @@ class Dispatcher {
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_relays' ), 10, 3 );
-
-		// Fallback for `activitypub_send_to_inboxes` filter.
-		\add_filter(
-			'activitypub_additional_inboxes',
-			function ( $inboxes, $actor_id, $activity ) {
-				/**
-				 * Filters the list of interactees inboxes to send the Activity to.
-				 *
-				 * @param array    $inboxes  The list of inboxes to send to.
-				 * @param int      $actor_id The actor ID.
-				 * @param Activity $activity The ActivityPub Activity.
-				 *
-				 * @deprecated 5.2.0 Use `activitypub_additional_inboxes` instead.
-				 * @deprecated 5.4.0 Use `activitypub_additional_inboxes` instead.
-				 */
-				$inboxes = \apply_filters_deprecated( 'activitypub_send_to_inboxes', array( $inboxes, $actor_id, $activity ), '5.2.0', 'activitypub_additional_inboxes' );
-				$inboxes = \apply_filters_deprecated( 'activitypub_interactees_inboxes', array( $inboxes, $actor_id, $activity ), '5.4.0', 'activitypub_additional_inboxes' );
-
-				return $inboxes;
-			},
-			10,
-			3
-		);
 	}
 
 	/**
@@ -360,23 +337,6 @@ class Dispatcher {
 				$inboxes[] = $actor['inbox'];
 			}
 		}
-
-		return $inboxes;
-	}
-
-	/**
-	 * Adds Blog Actor inboxes to Updates so the Blog User's followers are notified of edits.
-	 *
-	 * @deprecated 5.2.0 Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
-	 *
-	 * @param array    $inboxes  The list of Inboxes.
-	 * @param int      $actor_id The WordPress Actor-ID.
-	 * @param Activity $activity The ActivityPub Activity.
-	 *
-	 * @return array The filtered Inboxes.
-	 */
-	public static function maybe_add_inboxes_of_blog_user( $inboxes, $actor_id, $activity ) { // phpcs:ignore
-		_deprecated_function( __METHOD__, '5.2.0', 'Followers::maybe_add_inboxes_of_blog_user' );
 
 		return $inboxes;
 	}

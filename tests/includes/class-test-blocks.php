@@ -8,7 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Blocks;
-use WP_UnitTestCase;
+use Activitypub\Collection\Interactions;
 
 /**
  * Test class for Blocks.
@@ -200,5 +200,114 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( '<!-- wp:activitypub/reply {"url":"https://mastodon.social/@user/123456","embedPost":true} /-->', $result['post_content'] );
 		$this->assertStringContainsString( "<!-- wp:paragraph -->\n<p>This is a reply</p>\n<!-- /wp:paragraph -->", $result['post_content'] );
+	}
+
+	/**
+	 * Test the reactions block with deprecated markup.
+	 *
+	 * @covers ::render_post_reactions_block
+	 */
+	public function test_render_reactions_block() {
+		$block_markup = '<!-- wp:activitypub/reactions -->
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Fediverse Custom</h3>
+<!-- /wp:heading --><div class="activitypub-reactions-block"></div>
+<!-- /wp:activitypub/reactions -->';
+		$output       = do_blocks( $block_markup );
+		$expected     = '<div class="wp-block-activitypub-reactions is-layout-constrained wp-block-reactions-is-layout-constrained" data-attrs="{&quot;postId&quot;:false}">
+
+<h3 hidden class="wp-block-heading">Fediverse Custom</h3>
+<div class="activitypub-reactions-block"></div>
+</div>';
+
+		$this->assertSame( $expected, $output );
+
+		// Reactions block with reactions.
+		$post_id      = $this->get_post_id_with_reactions();
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/reactions {"postId":%d} -->
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Fediverse Custom</h3>
+<!-- /wp:heading --><div class="activitypub-reactions-block"></div>
+<!-- /wp:activitypub/reactions -->',
+			$post_id
+		);
+		$output       = do_blocks( $block_markup );
+		$expected     = sprintf(
+			'<div class="wp-block-activitypub-reactions is-layout-constrained wp-block-reactions-is-layout-constrained" data-attrs="{&quot;postId&quot;:%d}">
+
+<h3 class="wp-block-heading">Fediverse Custom</h3>
+<div class="activitypub-reactions-block"></div>
+</div>',
+			$post_id
+		);
+
+		$this->assertSame( $expected, $output );
+	}
+
+	/**
+	 * Test the reactions block with deprecated markup.
+	 *
+	 * @covers ::render_post_reactions_block
+	 */
+	public function test_render_reactions_block_with_deprecated_markup() {
+		$block_markup = '<!-- wp:activitypub/reactions {"title":"What people think about it on the Fediverse!","postId":123} /-->';
+		$output       = do_blocks( $block_markup );
+		$expected     = '<div class="wp-block-activitypub-reactions is-layout-constrained wp-block-reactions-is-layout-constrained" data-attrs="{&quot;postId&quot;:123}"><h6 hidden class="wp-block-heading">What people think about it on the Fediverse!</h6>
+<div class="activitypub-reactions-block"></div></div>';
+
+		$this->assertSame( $expected, $output );
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":123} /-->';
+		$output       = do_blocks( $block_markup );
+		$expected     = '<div class="wp-block-activitypub-reactions is-layout-constrained wp-block-reactions-is-layout-constrained" data-attrs="{&quot;postId&quot;:123}"><h6 hidden class="wp-block-heading">Fediverse Reactions</h6>
+<div class="activitypub-reactions-block"></div></div>';
+
+		$this->assertSame( $expected, $output );
+
+		// Reactions block with reactions.
+		$post_id      = $this->get_post_id_with_reactions();
+		$block_markup = sprintf( '<!-- wp:activitypub/reactions {"postId":%d} /-->', $post_id );
+		$output       = do_blocks( $block_markup );
+		$expected     = '<div class="wp-block-activitypub-reactions is-layout-constrained wp-block-reactions-is-layout-constrained" data-attrs="{&quot;postId&quot;:' . $post_id . '}"><h6 class="wp-block-heading">Fediverse Reactions</h6>
+<div class="activitypub-reactions-block"></div></div>';
+
+		$this->assertSame( $expected, $output );
+	}
+
+	/**
+	 * Get a post ID with reactions.
+	 *
+	 * @return int Post ID.
+	 */
+	private function get_post_id_with_reactions() {
+		$post_id = self::factory()->post->create();
+
+		$activity = array(
+			'type'   => 'Like',
+			'actor'  => 'https://example.com/users/test',
+			'object' => get_permalink( $post_id ),
+			'id'     => 'https://example.com/activities/like/123',
+		);
+
+		// Mock actor metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Test User',
+					'preferredUsername' => 'test',
+					'id'                => 'https://example.com/users/test',
+					'url'               => 'https://example.com/@test',
+				);
+			}
+		);
+
+		Interactions::add_reaction( $activity );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+
+		return $post_id;
 	}
 }

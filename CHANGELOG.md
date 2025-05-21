@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.9.2] - 2025-05-16
+### Fixed
+- Titles added through a Heading block in the Reactions block now stay properly hidden when there are no reactions. [#1709]
+
 ## [5.9.1] - 2025-05-15
 ### Fixed
 - Fixed a bug where Reaction blocks without modified titles did not get displayed correctly. [#1705]
@@ -1216,6 +1220,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[5.9.2]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.1...5.9.2
 [5.9.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.0...5.9.1
 [5.9.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.8.0...5.9.0
 [5.8.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.7.0...5.8.0

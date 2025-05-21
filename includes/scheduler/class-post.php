@@ -55,7 +55,11 @@ class Post {
 
 		switch ( $new_status ) {
 			case 'publish':
-				$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
+				if ( $update ) {
+					$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
+				} else {
+					$type = 'Create';
+				}
 				break;
 
 			case 'draft':
@@ -73,6 +77,11 @@ class Post {
 		// Do not send Activities if `$type` is not set or unknown.
 		if ( empty( $type ) ) {
 			return;
+		}
+
+		// If the post was not federated before but is an Update activity, it should be a Create activity.
+		if ( get_wp_object_state( $post ) !== 'federated' && 'Update' === $type ) {
+			$type = 'Create';
 		}
 
 		// Add the post to the outbox.

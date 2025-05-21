@@ -52,21 +52,11 @@
 			transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 			will-change: transform;
 
-			&.wave-active {
-				transform: translateY(-5px);
-
-				&.rotate-clockwise {
-					transform: translateY(-5px) rotate(30deg);
-				}
-
-				&.rotate-counter {
-					transform: translateY(-5px) rotate(-30deg);
-				}
-			}
-
-			&:hover {
+			&:hover,
+			&:focus-visible {
 				z-index: 1;
 				position: relative;
+				transform: translateY(-5px);
 			}
 		}
 	}
