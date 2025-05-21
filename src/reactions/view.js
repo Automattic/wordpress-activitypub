@@ -34,9 +34,9 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 *
 		 * @param {Object} event The click event.
 		 */
-		openModal( event ) {
-			const { modal, postId, blockId } = getContext();
-			const button = event.target.closest( '[data-reaction-type]' );
+		openModal( { target } ) {
+			const { modal, postId } = getContext();
+			const button = target.closest( '[data-reaction-type]' );
 			const reactionType = button.getAttribute( 'data-reaction-type' );
 
 			// Set modal properties.
@@ -44,54 +44,20 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			modal.items = state.reactions[ postId ][ reactionType ].items;
 
 			// Position the compact modal relative to the button.
-			setTimeout( () => {
-				const blockWrapper = document.getElementById( blockId );
-				if ( ! blockWrapper ) {
-					return;
-				}
+			setTimeout( callbacks.positionModal, 0 );
+		},
 
-				const modalOverlay = blockWrapper.querySelector( '.activitypub-modal__overlay' );
-				if ( ! modalOverlay ) {
-					return;
-				}
+		/**
+		 * Toggles the modal open or closed based on its current state.
+		 *
+		 * @param {Object} event The click event.
+		 */
+		toggleModal( event ) {
+			event.stopPropagation();
 
-				// Reset any previously set positioning.
-				modalOverlay.style.top = '';
-				modalOverlay.style.left = '';
-				modalOverlay.style.right = '';
-				modalOverlay.style.bottom = '';
+			const { modal } = getContext();
 
-				// Get button position relative to viewport.
-				const buttonRect = button.getBoundingClientRect();
-
-				// Get viewport dimensions.
-				const viewportWidth = window.innerWidth;
-
-				// Get the block's position to calculate relative positioning.
-				const blockRect = blockWrapper.getBoundingClientRect();
-
-				// Calculate position relative to the block (our positioning context).
-				const relativeTop = buttonRect.bottom - blockRect.top;
-				const relativeLeft = buttonRect.left - blockRect.left;
-
-				// Calculate available space.
-				const spaceRight = viewportWidth - buttonRect.right;
-
-				// Default position (below button, relative to the block).
-				let position = {
-					top: `${ relativeTop + 8 }px`,
-					left: `${ relativeLeft - 2 }px`, // -2 px to account for the button border.
-				};
-
-				// If not enough space to the right, align with the right edge.
-				if ( spaceRight < 250 ) {
-					position.left = 'auto';
-					position.right = `${ blockRect.right - buttonRect.right }px`;
-				}
-
-				// Apply the position.
-				Object.assign( modalOverlay.style, position );
-			}, 0 );
+			modal.isOpen ? actions.closeModal() : actions.openModal( event );
 		},
 
 		/**
@@ -240,6 +206,65 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			}
 
 			actions.closeModal();
+		},
+
+		/**
+		 * Positions the modal relative to the button that opened it.
+		 */
+		positionModal() {
+			const { blockId } = getContext();
+
+			const blockWrapper = document.getElementById( blockId );
+			if ( ! blockWrapper ) {
+				return;
+			}
+
+			const button = blockWrapper.querySelector( '.reaction-label' );
+			if ( ! button ) {
+				return;
+			}
+
+			const modalOverlay = blockWrapper.querySelector( '.activitypub-modal__overlay' );
+			if ( ! modalOverlay ) {
+				return;
+			}
+
+			// Reset any previously set positioning.
+			modalOverlay.style.top = '';
+			modalOverlay.style.left = '';
+			modalOverlay.style.right = '';
+			modalOverlay.style.bottom = '';
+
+			// Get button position relative to viewport.
+			const buttonRect = button.getBoundingClientRect();
+
+			// Get viewport dimensions.
+			const viewportWidth = window.innerWidth;
+
+			// Get the block's position to calculate relative positioning.
+			const blockRect = blockWrapper.getBoundingClientRect();
+
+			// Calculate position relative to the block (our positioning context).
+			const relativeTop = buttonRect.bottom - blockRect.top;
+			const relativeLeft = buttonRect.left - blockRect.left;
+
+			// Calculate available space.
+			const spaceRight = viewportWidth - buttonRect.right;
+
+			// Default position (below button, relative to the block).
+			let position = {
+				top: `${ relativeTop + 8 }px`,
+				left: `${ relativeLeft - 2 }px`, // -2 px to account for the button border.
+			};
+
+			// If not enough space to the right, align with the right edge.
+			if ( spaceRight < 250 ) {
+				position.left = 'auto';
+				position.right = `${ blockRect.right - buttonRect.right }px`;
+			}
+
+			// Apply the position.
+			Object.assign( modalOverlay.style, position );
 		},
 	},
 } );

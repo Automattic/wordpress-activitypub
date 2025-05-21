@@ -168,7 +168,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<button
 				class="reaction-label"
 				data-reaction-type="<?php echo esc_attr( $_type ); ?>"
-				data-wp-on--click="actions.openModal"
+				data-wp-on--click="actions.toggleModal"
 				aria-label="<?php echo esc_attr( $aria_label ); ?>"
 			>
 				<?php echo esc_html( $reaction['label'] ); ?>
