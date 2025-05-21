@@ -1,7 +1,9 @@
-/**
- * WordPress dependencies.
- */
 import { useBlockProps, InnerBlocks } from '@wordpress/block-editor';
+
+/**
+ * @typedef {Object} InnerBlocks
+ * @property {function(): JSX.Element} Content - The InnerBlocks.Content component.
+ */
 
 /**
  * Save function for the reactions block.

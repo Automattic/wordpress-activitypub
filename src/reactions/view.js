@@ -41,7 +41,6 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 
 			// Set modal properties.
 			modal.isOpen = true;
-			modal.reactionType = reactionType;
 			modal.items = state.reactions[ postId ][ reactionType ].items;
 
 			// Position the compact modal relative to the button.
@@ -81,7 +80,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 				// Default position (below button, relative to the block).
 				let position = {
 					top: `${ relativeTop + 8 }px`,
-					left: `${ relativeLeft - 2 }px`, // -2px to account for the button border.
+					left: `${ relativeLeft - 2 }px`, // -2 px to account for the button border.
 				};
 
 				// If not enough space to the right, align with the right edge.
