@@ -83,7 +83,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 * Calculates and sets the number of visible avatars based on container width.
 		 */
 		calculateVisibleAvatars() {
-			const { postId } = getContext();
+			const { blockId, postId } = getContext();
 
 			// Constants for calculations
 			const AVATAR_WIDTH = 32; // Width of each avatar
@@ -91,42 +91,51 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			const EFFECTIVE_AVATAR_WIDTH = AVATAR_WIDTH - AVATAR_OVERLAP; // Width each additional avatar takes
 			const BUTTON_GAP = 12; // Gap between avatars and button (0.75em)
 
-			// Process each reaction group
-			[ 'likes', 'reposts' ].forEach( ( reactionType ) => {
+			// Get all reaction types from the state.
+			const reactionTypes =
+				state.reactions && state.reactions[ postId ] ? Object.keys( state.reactions[ postId ] ) : [];
+
+			// Process each reaction group.
+			reactionTypes.forEach( ( reactionType ) => {
 				if ( ! state.reactions?.[ postId ][ reactionType ]?.items?.length ) {
 					return;
 				}
 
-				document.querySelectorAll( `.reaction-group` ).forEach( ( container ) => {
-					const label = container.querySelector( '.reaction-label' );
-					const containerWidth = container.offsetWidth;
-					const labelWidth = label.offsetWidth || 0;
-					const availableWidth = containerWidth - labelWidth - BUTTON_GAP;
+				document
+					.getElementById( blockId )
+					.querySelectorAll( '.reaction-group' )
+					.forEach( ( container ) => {
+						const label = container.querySelector( '.reaction-label' );
+						const labelWidth = label.offsetWidth || 0;
+						const availableWidth = container.offsetWidth - labelWidth - BUTTON_GAP;
 
-					// Calculate how many avatars can fit
-					// First avatar takes full width, rest take effective width
-					const maxAvatars = Math.max(
-						1,
-						Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH )
-					);
+						// Calculate how many avatars can fit.
+						// The first avatar takes full width, the rest take effective width.
+						let maxAvatars = 1; // Start with 1 for the first avatar.
 
-					// Ensure we don't show more than we have
-					const items = state.reactions[ postId ][ reactionType ].items;
-					const visibleCount = Math.min( maxAvatars, items.length );
+						// If we have space for more than one avatar.
+						if ( availableWidth > AVATAR_WIDTH ) {
+							// Calculate how many additional avatars can fit in the remaining space.
+							maxAvatars += Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH );
+						}
 
-					// Update the DOM to show only the calculated number of avatars
-					const avatarsList = container.querySelector( '.reaction-avatars' );
-					if ( avatarsList ) {
-						const avatarItems = avatarsList.querySelectorAll( 'li' );
-						avatarItems.forEach( ( item, index ) => {
-							if ( index < visibleCount ) {
-								item.setAttribute( 'hidden', 'hidden' );
-							} else {
-								item.removeAttribute( 'hidden' );
-							}
-						} );
-					}
-				} );
+						// Ensure we don't show more than we have.
+						const items = state.reactions[ postId ][ reactionType ].items;
+						const visibleCount = Math.min( maxAvatars, items.length );
+
+						// Update the DOM to show only the calculated number of avatars.
+						const avatarsList = container.querySelector( '.reaction-avatars' );
+						if ( avatarsList ) {
+							const avatarItems = avatarsList.querySelectorAll( 'li' );
+							avatarItems.forEach( ( item, index ) => {
+								if ( index < visibleCount ) {
+									item.removeAttribute( 'hidden' );
+								} else {
+									item.setAttribute( 'hidden', 'hidden' );
+								}
+							} );
+						}
+					} );
 			} );
 		},
 
@@ -150,7 +159,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 						} );
 					}
 				} ),
-				100
+				10
 			);
 		},
 
