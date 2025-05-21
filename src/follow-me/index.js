@@ -1,5 +1,13 @@
 import { registerBlockType } from '@wordpress/blocks';
 import { people } from '@wordpress/icons';
+import deprecated from './deprecation';
 import edit from './edit';
-const save = () => null;
-registerBlockType( 'activitypub/follow-me', { edit, save, icon: people } );
+import save from './save';
+
+// Register the block.
+registerBlockType( 'activitypub/follow-me', {
+	deprecated,
+	edit,
+	icon: people,
+	save,
+} );

@@ -1,52 +1,214 @@
-@use '../shared/lightbox';
-
 .activitypub-follow-me-block-wrapper {
-	width: 100%;
-
-	// extra side padding for border/background colors
-	&.has-border-color, &.has-background {
-		.activitypub-profile {
-			padding-left: 1rem;
-			padding-right: 1rem;
-		}
-	}
+	display: block;
+	position: relative;
 
 	.activitypub-profile {
-
 		display: flex;
 		align-items: center;
-		// right/left padding overridden above for border/background colors
 		padding: 1rem 0;
 
-		.activitypub-profile__avatar {
-			height: 75px;
+		&__avatar {
 			width: 75px;
-			margin-right: 1rem;
+			height: 75px;
 			border-radius: 50%;
+			margin-right: 1rem;
+			object-fit: cover;
 		}
-		.activitypub-profile__content {
+
+		&__content {
 			flex: 1;
+			margin-right: 1rem;
 			min-width: 0;
 		}
-		.activitypub-profile__name, .activitypub-profile__handle {
-			margin: 0;
+
+		&__name {
+			font-size: 1.25em;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		&__name,
+		&__handle {
+			color: inherit;
 			line-height: 1.2;
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis;
 		}
-		.activitypub-profile__name {
-			font-size: 1.25em;
-		}
-		.activitypub-profile__follow {
-			align-self: center;
-			background-color: var(--wp--preset--color--black);
-			color: var(--wp--preset--color--white);
 
-			// Only add left margin to the button when there's profile content.
+		.wp-block-button {
+			margin: 0;
+			display: flex;
+			align-items: center;
+
 			&:not(:only-child) {
 				margin-left: 1rem;
 			}
 		}
+
+		.wp-block-button__link {
+			margin: 0;
+		}
+
+		.is-small {
+			padding: 0.25rem 0.5rem;
+			font-size: 0.8rem;
+		}
+
+		.is-compact {
+			padding: 0.4rem 0.8rem;
+			font-size: 0.9rem;
+		}
+	}
+
+	&.has-background .activitypub-profile,
+	&.has-border .activitypub-profile {
+		padding-left: 1rem;
+		padding-right: 1rem;
+	}
+}
+
+body.modal-open {
+	overflow: hidden;
+}
+
+.activitypub-modal {
+	&__overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+		color: initial;
+		z-index: 100000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+
+		&[hidden] {
+			display: none;
+		}
+	}
+
+	&__frame {
+		max-width: 660px;
+		width: 100%;
+		background-color: var(--wp--preset--color--white);
+		border-radius: 4px;
+		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		max-height: calc(100vh - 2rem);
+		animation: activitypub-modal-appear 0.2s ease-out;
+	}
+
+	&__header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 2rem 2rem 1.5rem 2rem;
+		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
+		flex-shrink: 0;
+
+		.activitypub-modal__close {
+			border: none;
+			padding: 0.5rem;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: auto;
+
+			&:active {
+				border: none;
+				padding: 0.5rem;
+			}
+		}
+	}
+
+	&__title {
+		margin: 0 !important;
+		font-size: 130%;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+
+	&__content {
+		overflow-y: auto;
+	}
+}
+
+.activitypub-dialog {
+	&__section {
+		padding: 1.5rem 2rem;
+		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
+
+		&:last-child {
+			border-bottom: none;
+			padding-bottom: 2rem;
+		}
+
+		h4 {
+			margin-top: 0;
+			margin-bottom: 0.5rem;
+			font-size: 110%;
+		}
+	}
+
+	&__description {
+		margin-bottom: 1rem;
+		color: inherit;
+		font-size: 95%;
+	}
+
+	&__button-group {
+		display: flex;
+		width: 100%;
+		margin-bottom: 0.5rem;
+
+		input[type] {
+			flex: 1;
+			border: 1px solid var(--wp--preset--color--gray, #e2e4e7);
+			border-radius: 4px 0 0 4px;
+			line-height: 1;
+			margin: 0;
+
+			&::placeholder {
+				opacity: 0.5;
+			}
+
+			&[aria-invalid="true"] {
+				border-color: var(--wp--preset--color--vivid-red);
+			}
+		}
+
+		button {
+			border-radius: 0 4px 4px 0 !important;
+			margin-left: -1px !important;
+			min-width: 22.5%;
+			width: auto;
+		}
+	}
+
+	&__error {
+		color: var(--wp--preset--color--vivid-red);
+		font-size: 90%;
+		margin-top: 0.5rem;
+	}
+}
+
+/* Animation for modal */
+@keyframes activitypub-modal-appear {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
 	}
 }
