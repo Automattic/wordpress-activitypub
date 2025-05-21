@@ -5,7 +5,6 @@
  * @package ActivityPub
  */
 
-use Activitypub\Blocks;
 use Activitypub\Comment;
 
 /* @var array $attributes Block attributes. */
@@ -18,11 +17,6 @@ if ( empty( $content ) ) {
 	$content = '<h6 class="wp-block-heading">' . esc_html( $_title ) . '</h6>';
 	unset( $attributes['title'], $attributes['className'] );
 }
-$content = Blocks::add_directions(
-	$content,
-	array( 'class_name' => 'wp-block-heading' ),
-	array( 'data-wp-bind--hidden' => '!context.hasReactions' )
-);
 
 // Get the Post ID from attributes or use the current post.
 $_post_id = $attributes['postId'] ?? get_the_ID();
@@ -125,6 +119,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		'data-wp-init'                 => 'callbacks.initReactions',
 		'data-wp-on-document--keydown' => 'callbacks.documentKeydown',
 		'data-wp-on-document--click'   => 'callbacks.documentClick',
+		'data-wp-bind--hidden'         => '!context.hasReactions',
 	)
 );
 ?>
@@ -138,7 +133,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			/* translators: %s: reaction type. */
 			$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
 			?>
-		<div class="reaction-group" data-wp-bind--hidden="!context.hasReactions">
+		<div class="reaction-group">
 			<ul class="reaction-avatars">
 				<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
 					<li>
