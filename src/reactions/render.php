@@ -110,11 +110,9 @@ $context = array(
 	'hasReactions' => ! empty( $reactions ),
 	'reactions'    => $reactions,
 	'postId'       => $_post_id,
+	'isModalOpen'  => false,
 	'modal'        => array(
-		'isOpen'       => false,
-		'reactionType' => null,
-		'items'        => array(),
-		'isLoading'    => false,
+		'items' => array(),
 	),
 );
 
@@ -178,7 +176,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 	<div
 		class="activitypub-modal__overlay compact"
-		data-wp-bind--hidden="!context.modal.isOpen"
+		data-wp-bind--hidden="!context.isModalOpen"
 		data-wp-on--click="actions.closeModal"
 		role="dialog"
 		aria-modal="true"
@@ -186,8 +184,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	>
 		<div class="activitypub-modal__frame">
 			<div class="activitypub-modal__header">
-				<h2 id="modal-heading" class="activitypub-modal__title" data-wp-text="context.modal.reactionType">
-				</h2>
+				<h2 id="modal-heading" class="activitypub-modal__title"></h2>
 				<button
 					type="button"
 					class="activitypub-modal__close"
