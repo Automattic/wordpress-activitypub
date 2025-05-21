@@ -111,7 +111,7 @@ const generateDummyReactions = () => ( {
 			_x( '%d likes', 'number of likes', 'activitypub' ),
 			9
 		),
-		items: Array.from( { length: 9 }, ( _, i ) => generateDummyReaction( i ) ),
+		items: Array.from( { length: 9 }, generateDummyReaction ),
 	},
 	reposts: {
 		label: sprintf(
@@ -119,7 +119,7 @@ const generateDummyReactions = () => ( {
 			_x( '%d reposts', 'number of reposts', 'activitypub' ),
 			6
 		),
-		items: Array.from( { length: 6 }, ( _, i ) => generateDummyReaction( i + 9 ) ),
+		items: Array.from( { length: 6 }, generateDummyReaction ),
 	},
 } );
 
