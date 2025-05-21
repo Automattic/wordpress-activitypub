@@ -54,10 +54,9 @@ const generateWhimsicalName = () => {
 /**
  * Generate a dummy reaction with a random letter and color.
  *
- * @param {number} index Index for color selection.
- * @return {Object}      Reaction object.
+ * @return {Object} Reaction object.
  */
-const generateDummyReaction = ( index ) => {
+const generateDummyReaction = () => {
 	const colors = [
 		'#FF6B6B', // Coral
 		'#4ECDC4', // Turquoise
@@ -128,12 +127,10 @@ const generateDummyReactions = () => ( {
  * Edit component for the Reactions block.
  *
  * @param {Object}   props                            Block props.
- * @param {Object}   props.attributes                 Block attributes.
- * @param {Function} props.setAttributes              Attribute update callback.
- * @param            props.__unstableLayoutClassNames
- * @return {JSX.Element}                 Component to render.
+ * @param            props.__unstableLayoutClassNames Layout class names.
+ * @return {JSX.Element} Component to render.
  */
-export default function Edit( { attributes, __unstableLayoutClassNames } ) {
+export default function Edit( { __unstableLayoutClassNames } ) {
 	const blockProps = useBlockProps( {
 		className: __unstableLayoutClassNames,
 	} );
