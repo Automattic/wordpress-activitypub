@@ -1,0 +1,221 @@
+import { getContext, store } from '@wordpress/interactivity';
+
+/**
+ * Creates a modal controller object with actions and callbacks.
+ *
+ * @param {string} namespace - The interactivity namespace for the block.
+ * @return {Object} Modal controller with actions and callbacks.
+ */
+export function createModalController( namespace ) {
+	return {
+		actions: {
+			openModal( event ) {
+				const { callbacks } = store( namespace );
+				const context = getContext( namespace );
+
+				// Set modal properties
+				context.isModalOpen = true;
+
+				if ( context.isCompactModal ) {
+					// Position the compact modal relative to the button.
+					setTimeout( callbacks.positionModal, 0 );
+				} else {
+					// Add body class for full-screen modals
+					document.body.classList.add( 'modal-open' );
+
+					// Set up the focus trap after modal is open.
+					setTimeout( () => {
+						// Use the blockId to find the specific modal frame for this block
+						const blockWrapper = document.getElementById( context.blockId );
+						if ( blockWrapper ) {
+							const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
+							if ( modalFrame ) {
+								callbacks.trapFocus( modalFrame );
+							}
+						}
+					}, 50 );
+				}
+
+				// Call the onOpen callback if provided.
+				if ( typeof callbacks.onModalOpen === 'function' ) {
+					callbacks.onModalOpen( event );
+				}
+			},
+
+			closeModal() {
+				const { callbacks } = store( namespace );
+				const context = getContext( namespace );
+
+				// Reset modal state
+				context.isModalOpen = false;
+				document.body.classList.remove( 'modal-open' );
+
+				// Return focus to the button that opened the modal
+				const blockWrapper = document.getElementById( context.blockId );
+				if ( blockWrapper ) {
+					const openButton = blockWrapper.querySelector( '[data-wp-on--click="actions.toggleModal"]' );
+					if ( openButton ) {
+						openButton.focus();
+					}
+				}
+
+				// Call the onClose callback if provided.
+				if ( typeof callbacks.onModalClose === 'function' ) {
+					callbacks.onModalClose();
+				}
+			},
+
+			toggleModal( event ) {
+				const { actions } = store( namespace );
+				const { isModalOpen } = getContext( namespace );
+
+				isModalOpen ? actions.closeModal( event ) : actions.openModal( event );
+			},
+		},
+
+		callbacks: {
+			documentKeydown( event ) {
+				const { actions } = store( namespace );
+				const { isModalOpen } = getContext( namespace );
+
+				if ( isModalOpen && event.key === 'Escape' ) {
+					actions.closeModal( event );
+				}
+			},
+
+			documentClick( event ) {
+				const { actions } = store( namespace );
+				const { blockId, isModalOpen } = getContext( namespace );
+				if ( ! isModalOpen ) {
+					return;
+				}
+
+				// Get the block wrapper element.
+				const blockWrapper = document.getElementById( blockId );
+				if ( ! blockWrapper ) {
+					return;
+				}
+
+				// If the click was on the button or its children, we should not close the modal.
+				const toggleButton = blockWrapper.querySelector(
+					'.wp-element-button[data-wp-on--click="actions.toggleModal"]'
+				);
+				if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
+					return;
+				}
+
+				// Check if the click was inside the modal frame.
+				const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
+				if ( ! modalFrame || modalFrame.contains( event.target ) ) {
+					return;
+				}
+
+				actions.closeModal();
+			},
+
+			/**
+			 * Positions the modal relative to the button that opened it.
+			 */
+			positionModal() {
+				const { blockId } = getContext( namespace );
+
+				const blockWrapper = document.getElementById( blockId );
+				if ( ! blockWrapper ) {
+					return;
+				}
+
+				const button = blockWrapper.querySelector( '[data-wp-on--click="actions.toggleModal"]' );
+				if ( ! button ) {
+					return;
+				}
+
+				const modalOverlay = blockWrapper.querySelector( '.activitypub-modal__overlay' );
+				if ( ! modalOverlay ) {
+					return;
+				}
+
+				// Reset any previously set positioning.
+				modalOverlay.style.top = '';
+				modalOverlay.style.left = '';
+				modalOverlay.style.right = '';
+				modalOverlay.style.bottom = '';
+
+				// Get button position relative to viewport.
+				const buttonRect = button.getBoundingClientRect();
+
+				// Get viewport dimensions.
+				const viewportWidth = window.innerWidth;
+
+				// Get the block's position to calculate relative positioning.
+				const blockRect = blockWrapper.getBoundingClientRect();
+
+				// Calculate position relative to the block (our positioning context).
+				const relativeTop = buttonRect.bottom - blockRect.top;
+				const relativeLeft = buttonRect.left - blockRect.left;
+
+				// Calculate available space.
+				const spaceRight = viewportWidth - buttonRect.right;
+
+				// Default position (below button, relative to the block).
+				let position = {
+					top: `${ relativeTop + 8 }px`,
+					left: `${ relativeLeft - 2 }px`, // -2 px to account for the button border.
+				};
+
+				// If not enough space to the right, align with the right edge.
+				if ( spaceRight < 250 ) {
+					position.left = 'auto';
+					position.right = `${ blockRect.right - buttonRect.right }px`;
+				}
+
+				// Apply the position.
+				Object.assign( modalOverlay.style, position );
+			},
+
+			/**
+			 * Traps focus within the specified element.
+			 *
+			 * @param {Element} element The element to trap focus within.
+			 */
+			trapFocus( element ) {
+				const focusableElements = element.querySelectorAll(
+					'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]):not([readonly]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])'
+				);
+				const firstFocusableElement = focusableElements[ 0 ];
+				const lastFocusableElement = focusableElements[ focusableElements.length - 1 ];
+
+				// If the first focusable element is the close button, set initial focus to the next element instead.
+				if (
+					firstFocusableElement &&
+					firstFocusableElement.classList.contains( 'activitypub-modal__close' ) &&
+					focusableElements.length > 1
+				) {
+					// Set initial focus to the second element, but keep firstFocusableElement as is for tab trapping.
+					focusableElements[ 1 ].focus();
+				} else {
+					// Otherwise focus the first element as usual.
+					firstFocusableElement.focus();
+				}
+
+				element.addEventListener( 'keydown', function ( event ) {
+					if ( event.key !== 'Tab' && event.keyCode !== 9 /* KEYCODE_TAB */ ) {
+						return;
+					}
+
+					if ( event.shiftKey ) {
+						/* shift + tab */
+						if ( document.activeElement === firstFocusableElement ) {
+							lastFocusableElement.focus();
+							event.preventDefault();
+						}
+					} /* tab */ else {
+						if ( document.activeElement === lastFocusableElement ) {
+							firstFocusableElement.focus();
+							event.preventDefault();
+						}
+					}
+				} );
+			},
+		},
+	};
+}
