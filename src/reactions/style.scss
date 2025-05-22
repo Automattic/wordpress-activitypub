@@ -129,8 +129,6 @@
 		align-items: center;
 		justify-content: center;
 		padding: 1rem;
-		margin: 0 !important;
-		max-width: 100% !important;
 
 		&.compact {
 			position: absolute;
@@ -151,9 +149,9 @@
 	}
 
 	&__frame {
-		max-width: 480px;
+		max-width: 660px;
 		width: 100%;
-		background-color: #fff;
+		background-color: var(--wp--preset--color--white, #fff);
 		border-radius: 8px;
 		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 		overflow: hidden;
@@ -175,12 +173,27 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem 1.5rem;
-		border-bottom: 1px solid #e2e4e7;
+		padding: 2rem 2rem 1.5rem 2rem;
+		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
 		flex-shrink: 0;
 
 		.compact & {
 			display: none;
+		}
+
+		.activitypub-modal__close {
+			border: none;
+			padding: 0.5rem;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: auto;
+
+			&:active {
+				border: none;
+				padding: 0.5rem;
+			}
 		}
 	}
 
@@ -191,36 +204,8 @@
 		line-height: 1.4;
 	}
 
-	&__close {
-		background: none;
-		border: none;
-		padding: 0.5rem;
-		margin: -0.5rem;
-		cursor: pointer;
-		color: #555;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-
-		&:hover {
-			background: none;
-			color: #000;
-		}
-
-		&:active {
-			background: none;
-			border: none;
-			color: #000;
-		}
-	}
-
 	&__content {
 		overflow-y: auto;
-		padding: 1rem 1.5rem 1.5rem;
-
-		.compact & {
-			padding: 0.5rem;
-		}
 	}
 }
 
@@ -228,10 +213,10 @@
 .reactions-list {
 	list-style: none;
 	margin: 0 !important;
-	padding: 0;
+	padding: 0.5rem;
 
 	.reaction-item {
-		margin: 0 0 0.75rem 0;
+		margin: 0 0 0.5rem 0;
 
 		&:last-child {
 			margin-bottom: 0;
