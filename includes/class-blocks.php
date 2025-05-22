@@ -436,7 +436,6 @@ class Blocks {
 		<div
 			class="activitypub-modal__overlay<?php echo esc_attr( $compact_class ); ?>"
 			data-wp-bind--hidden="!context.isModalOpen"
-			data-wp-on--click="actions.closeModal"
 			role="dialog"
 			aria-modal="true"
 			<?php echo $args['additional_attr']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
