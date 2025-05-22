@@ -414,31 +414,21 @@ class Blocks {
 	 */
 	public static function render_modal( $args = array() ) {
 		$defaults = array(
-			'id'              => '',
-			'title'           => '',
-			'is_compact'      => false,
-			'content'         => '',
-			'additional_attr' => '',
+
+			'content'    => '',
+			'id'         => 'activitypub-modal-' . wp_unique_id(),
+			'is_compact' => false,
+			'title'      => '',
 		);
 
 		$args = wp_parse_args( $args, $defaults );
-
-		// Generate modal ID if not provided.
-		if ( empty( $args['id'] ) ) {
-			$args['id'] = 'activitypub-modal-' . wp_unique_id();
-		}
-
-		// Compact class for compact modals.
-		$compact_class = $args['is_compact'] ? ' compact' : '';
-
-		// Output the modal HTML.
 		?>
+
 		<div
-			class="activitypub-modal__overlay<?php echo esc_attr( $compact_class ); ?>"
-			data-wp-bind--hidden="!context.isModalOpen"
+			class="activitypub-modal__overlay<?php echo esc_attr( $args['is_compact'] ? ' compact' : '' ); ?>"
+			data-wp-bind--hidden="!context.modal.isOpen"
 			role="dialog"
 			aria-modal="true"
-			<?php echo $args['additional_attr']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		>
 			<div class="activitypub-modal__frame">
 				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>

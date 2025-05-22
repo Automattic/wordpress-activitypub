@@ -61,7 +61,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 $wrapper_context = wp_interactivity_data_wp_context(
 	array(
 		'blockId'         => $block_id,
-		'isModalOpen'     => false,
 		'remoteProfile'   => '',
 		'isLoading'       => false,
 		'isError'         => false,
@@ -72,6 +71,9 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'buttonStyle'     => $button_style,
 		'backgroundColor' => $background_color,
 		'webfinger'       => '@' . $actor->get_webfinger(),
+		'modal'           => array(
+			'isOpen' => false,
+		),
 	)
 );
 
@@ -85,7 +87,7 @@ $content = Blocks::add_directions(
 	array( 'class_name' => 'wp-element-button' ),
 	array(
 		'data-wp-on--click'           => 'actions.toggleModal',
-		'data-wp-bind--aria-expanded' => 'context.isModalOpen',
+		'data-wp-bind--aria-expanded' => 'context.modal.isOpen',
 		'aria-label'                  => __( 'Follow me on the Fediverse', 'activitypub' ),
 		'aria-haspopup'               => 'dialog',
 		'aria-controls'               => 'modal-heading',
@@ -178,7 +180,6 @@ $content = Blocks::add_directions(
 	// Render the modal using the Blocks class.
 	Blocks::render_modal(
 		array(
-			'id'      => $block_id . '-modal',
 			'content' => $modal_content,
 			/* translators: %s: Profile name. */
 			'title'   => sprintf( esc_html__( 'Follow %s', 'activitypub' ), esc_html( $actor->get_name() ) ),
