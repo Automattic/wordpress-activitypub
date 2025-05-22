@@ -1,39 +1,28 @@
-import { getContext, store, getElement } from '@wordpress/interactivity';
+import { getContext, store } from '@wordpress/interactivity';
 
 /**
- * @typedef {Object} context
- * @property {String} blockId - The ID of the block.
- * @property {Object} modal - The modal state.
- * @property {boolean} modal.isOpen - Whether the modal is open.
- * @property {boolean} modal.isCompact - Whether the modal is compact.
- */
-
-/**
- * Set up a modal store with actions and callbacks.
- *
- * The Interactivity API merges all stores that share the same namespace,
- * so these actions and callbacks are added directly to the importing block’s existing store.
+ * Creates a modal controller object with actions and callbacks.
  *
  * @param {string} namespace - The interactivity namespace for the block.
+ * @return {Object} Modal controller with actions and callbacks.
  */
-export function createModalStore( namespace ) {
-	const { actions, callbacks } = store( namespace, {
+export function createModalController( namespace ) {
+	return {
 		actions: {
-			/**
-			 * Open the modal.
-			 *
-			 * @param {Event} event Click event.
-			 */
 			openModal( event ) {
-				const context = getContext();
+				const { callbacks } = store( namespace );
+				const context = getContext( namespace );
 
 				// Set modal properties
-				context.modal.isOpen = true;
+				context.isModalOpen = true;
 
-				if ( context.modal.isCompact ) {
+				if ( context.isCompactModal ) {
 					// Position the compact modal relative to the button.
 					setTimeout( callbacks.positionModal, 0 );
 				} else {
+					// Add body class for full-screen modals
+					document.body.classList.add( 'modal-open' );
+
 					// Set up the focus trap after modal is open.
 					setTimeout( () => {
 						// Use the blockId to find the specific modal frame for this block
@@ -53,14 +42,13 @@ export function createModalStore( namespace ) {
 				}
 			},
 
-			/**
-			 * Close the modal.
-			 */
 			closeModal() {
-				const context = getContext();
+				const { callbacks } = store( namespace );
+				const context = getContext( namespace );
 
 				// Reset modal state
-				context.modal.isOpen = false;
+				context.isModalOpen = false;
+				document.body.classList.remove( 'modal-open' );
 
 				// Return focus to the button that opened the modal
 				const blockWrapper = document.getElementById( context.blockId );
@@ -77,81 +65,28 @@ export function createModalStore( namespace ) {
 				}
 			},
 
-			/**
-			 * Toggle the modal.
-			 *
-			 * @param {Event} event Click event.
-			 */
 			toggleModal( event ) {
-				const { modal } = getContext();
-				event.stopPropagation();
+				const { actions } = store( namespace );
+				const { isModalOpen } = getContext( namespace );
 
-				modal.isOpen ? actions.closeModal() : actions.openModal( event );
+				isModalOpen ? actions.closeModal( event ) : actions.openModal( event );
 			},
 		},
 
 		callbacks: {
-			/**
-			 * Abort controller for keydown and click event listeners.
-			 *
-			 * @type {AbortController | null} Abort controller.
-			 */
-			_abortController: null,
-
-			/**
-			 * Handles modal effects like body class and event listeners.
-			 * This is called via data-wp-watch in the modal HTML.
-			 */
-			handleModalEffects() {
-				const { modal } = getContext();
-
-				// Update body class.
-				if ( modal.isOpen && ! modal.isCompact ) {
-					document.body.classList.add( 'modal-open' );
-				} else {
-					document.body.classList.remove( 'modal-open' );
-				}
-
-				// Remove all existing listeners.
-				if ( callbacks._abortController ) {
-					callbacks._abortController.abort();
-					callbacks._abortController = null;
-				}
-
-				// Add new listeners if modal is open.
-				if ( modal.isOpen ) {
-					callbacks._abortController = new AbortController();
-					const { signal } = callbacks._abortController;
-
-					document.addEventListener( 'keydown', callbacks.documentKeydown, { signal } );
-					document.addEventListener( 'click', callbacks.documentClick, { signal } );
-				}
-
-				return undefined;
-			},
-
-			/**
-			 * Handles keydown events on the document.
-			 *
-			 * @param {Event} event Keydown event.
-			 * @param {String} event.key The key that was pressed.
-			 */
 			documentKeydown( event ) {
-				const { modal } = getContext();
+				const { actions } = store( namespace );
+				const { isModalOpen } = getContext( namespace );
 
-				if ( modal.isOpen && event.key === 'Escape' ) {
-					actions.closeModal();
+				if ( isModalOpen && event.key === 'Escape' ) {
+					actions.closeModal( event );
 				}
 			},
 
-			/**
-			 * Handles click events on the document.
-			 *
-			 * @param {Event} event Click event.
-			 */
 			documentClick( event ) {
-				const { blockId, modal } = getContext();
-				if ( ! modal.isOpen ) {
+				const { actions } = store( namespace );
+				const { blockId, isModalOpen } = getContext( namespace );
+				if ( ! isModalOpen ) {
 					return;
 				}
 
@@ -182,10 +117,15 @@ export function createModalStore( namespace ) {
 			 * Positions the modal relative to the button that opened it.
 			 */
 			positionModal() {
-				const { blockId } = getContext();
+				const { blockId } = getContext( namespace );
 
 				const blockWrapper = document.getElementById( blockId );
 				if ( ! blockWrapper ) {
+					return;
+				}
+
+				const button = blockWrapper.querySelector( '[data-wp-on--click="actions.toggleModal"]' );
+				if ( ! button ) {
 					return;
 				}
 
@@ -201,7 +141,7 @@ export function createModalStore( namespace ) {
 				modalOverlay.style.bottom = '';
 
 				// Get button position relative to viewport.
-				const buttonRect = getElement().ref.getBoundingClientRect();
+				const buttonRect = button.getBoundingClientRect();
 
 				// Get viewport dimensions.
 				const viewportWidth = window.innerWidth;
@@ -277,5 +217,5 @@ export function createModalStore( namespace ) {
 				} );
 			},
 		},
-	} );
+	};
 }

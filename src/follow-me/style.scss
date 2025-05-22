@@ -1,3 +1,5 @@
+@import '../shared/modal/style';
+
 .activitypub-follow-me-block-wrapper {
 	display: block;
 	position: relative;
@@ -69,79 +71,6 @@
 	}
 }
 
-body.modal-open {
-	overflow: hidden;
-}
-
-.activitypub-modal {
-	&__overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background-color: rgba(0, 0, 0, 0.5);
-		color: initial;
-		z-index: 100000;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 1rem;
-
-		&[hidden] {
-			display: none;
-		}
-	}
-
-	&__frame {
-		max-width: 660px;
-		width: 100%;
-		background-color: var(--wp--preset--color--white);
-		border-radius: 8px;
-		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-		overflow: hidden;
-		display: flex;
-		flex-direction: column;
-		max-height: calc(100vh - 2rem);
-		animation: activitypub-modal-appear 0.2s ease-out;
-	}
-
-	&__header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 2rem 2rem 1.5rem 2rem;
-		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
-		flex-shrink: 0;
-
-		.activitypub-modal__close {
-			border: none;
-			padding: 0.5rem;
-			cursor: pointer;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			width: auto;
-
-			&:active {
-				border: none;
-				padding: 0.5rem;
-			}
-		}
-	}
-
-	&__title {
-		margin: 0 !important;
-		font-size: 130%;
-		font-weight: 600;
-		line-height: 1.4;
-	}
-
-	&__content {
-		overflow-y: auto;
-	}
-}
-
 .activitypub-dialog {
 	&__section {
 		padding: 1.5rem 2rem;
@@ -198,17 +127,5 @@ body.modal-open {
 		color: var(--wp--preset--color--vivid-red);
 		font-size: 90%;
 		margin-top: 0.5rem;
-	}
-}
-
-/* Animation for modal */
-@keyframes activitypub-modal-appear {
-	from {
-		opacity: 0;
-		transform: translateY(20px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
 	}
 }
