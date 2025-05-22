@@ -3,7 +3,7 @@
 	margin-bottom: 2rem;
 	position: relative;
 
-	// Main container for reactions
+	// Main container for reactions.
 	.activitypub-reactions {
 		display: flex;
 		flex-direction: column;
@@ -12,7 +12,7 @@
 		margin-top: 16px;
 	}
 
-	// Reaction group for each type (likes, reposts)
+	// Reaction group for each type (likes, reposts).
 	.reaction-group {
 		display: flex;
 		align-items: center;
@@ -22,11 +22,7 @@
 		gap: 0.5rem;
 		justify-content: flex-start;
 
-		&[hidden] {
-			display: none;
-		}
-
-		// When content overflows, switch to space-between
+		// When content overflows, switch to space-between.
 		&:has(.reaction-avatars:not(:empty)) {
 			@media (max-width: 782px) {
 				justify-content: space-between;
@@ -34,7 +30,7 @@
 		}
 	}
 
-	// Container for avatar images
+	// Container for avatar images.
 	.reaction-avatars {
 		display: flex;
 		flex-direction: row;
