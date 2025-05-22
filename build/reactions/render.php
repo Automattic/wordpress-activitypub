@@ -101,14 +101,14 @@ $reactions = array_map(
 
 // Initialize the context for the block.
 $context = array(
-	'blockId'        => $block_id,
-	'hasReactions'   => ! empty( $reactions ),
-	'reactions'      => $reactions,
-	'postId'         => $_post_id,
-	'isModalOpen'    => false,
-	'isCompactModal' => true,
-	'modal'          => array(
-		'items' => array(),
+	'blockId'      => $block_id,
+	'hasReactions' => ! empty( $reactions ),
+	'reactions'    => $reactions,
+	'postId'       => $_post_id,
+	'modal'        => array(
+		'isCompact' => true,
+		'isOpen'    => false,
+		'items'     => array(),
 	),
 );
 
@@ -195,10 +195,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	// Render the modal using the Blocks class.
 	Blocks::render_modal(
 		array(
-			'id'          => $block_id . '-modal',
-			'is_compact'  => true,
-			'content'     => $modal_content,
-			'close_label' => __( 'Close', 'activitypub' ),
+			'is_compact' => true,
+			'content'    => $modal_content,
 		)
 	);
 	?>

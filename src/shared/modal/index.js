@@ -1,6 +1,14 @@
 import { getContext, store } from '@wordpress/interactivity';
 
 /**
+ * @typedef {Object} context
+ * @property {string} context.blockId - The ID of the block.
+ * @property {Object} context.modal - The modal state.
+ * @property {boolean} modal.isOpen - Whether the modal is open.
+ * @property {boolean} modal.isCompact - Whether the modal is compact.
+ */
+
+/**
  * Creates a modal controller object with actions and callbacks.
  *
  * @param {string} namespace - The interactivity namespace for the block.
@@ -14,9 +22,9 @@ export function createModalController( namespace ) {
 				const context = getContext( namespace );
 
 				// Set modal properties
-				context.isModalOpen = true;
+				context.modal.isOpen = true;
 
-				if ( context.isCompactModal ) {
+				if ( context.modal.isCompact ) {
 					// Position the compact modal relative to the button.
 					setTimeout( callbacks.positionModal, 0 );
 				} else {
@@ -47,7 +55,7 @@ export function createModalController( namespace ) {
 				const context = getContext( namespace );
 
 				// Reset modal state
-				context.isModalOpen = false;
+				context.modal.isOpen = false;
 				document.body.classList.remove( 'modal-open' );
 
 				// Return focus to the button that opened the modal
@@ -67,26 +75,26 @@ export function createModalController( namespace ) {
 
 			toggleModal( event ) {
 				const { actions } = store( namespace );
-				const { isModalOpen } = getContext( namespace );
+				const { modal } = getContext( namespace );
 
-				isModalOpen ? actions.closeModal( event ) : actions.openModal( event );
+				modal.isOpen ? actions.closeModal( event ) : actions.openModal( event );
 			},
 		},
 
 		callbacks: {
 			documentKeydown( event ) {
 				const { actions } = store( namespace );
-				const { isModalOpen } = getContext( namespace );
+				const { modal } = getContext( namespace );
 
-				if ( isModalOpen && event.key === 'Escape' ) {
+				if ( modal.isOpen && event.key === 'Escape' ) {
 					actions.closeModal( event );
 				}
 			},
 
 			documentClick( event ) {
 				const { actions } = store( namespace );
-				const { blockId, isModalOpen } = getContext( namespace );
-				if ( ! isModalOpen ) {
+				const { blockId, modal } = getContext( namespace );
+				if ( ! modal.isOpen ) {
 					return;
 				}
 
