@@ -68,6 +68,8 @@ define( 'ACTIVITYPUB_ACTOR_MODE', 'actor' );
 define( 'ACTIVITYPUB_BLOG_MODE', 'blog' );
 define( 'ACTIVITYPUB_ACTOR_AND_BLOG_MODE', 'actor_blog' );
 
+define( 'ACTIVITYPUB_ACTOR_POST_TYPE', 'ap_actor' );
+
 // Post visibility constants.
 define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC', '' );
 define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );

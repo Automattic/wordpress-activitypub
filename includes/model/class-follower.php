@@ -197,7 +197,7 @@ class Follower extends Actor {
 			'guid'         => esc_url_raw( $this->get_id() ),
 			'post_title'   => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
 			'post_author'  => 0,
-			'post_type'    => Followers::POST_TYPE,
+			'post_type'    => ACTIVITYPUB_ACTOR_POST_TYPE,
 			'post_name'    => esc_url_raw( $this->get_id() ),
 			'post_excerpt' => sanitize_text_field( wp_kses( $this->get_summary(), 'user_description' ) ),
 			'post_status'  => 'publish',

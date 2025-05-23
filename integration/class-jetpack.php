@@ -8,6 +8,7 @@
 namespace Activitypub\Integration;
 
 use Activitypub\Comment;
+use Activitypub\Collection\Followers;
 
 /**
  * Jetpack integration class.
@@ -35,7 +36,7 @@ class Jetpack {
 			return $allow_list;
 		}
 		$activitypub_meta_keys = array(
-			'_activitypub_user_id',
+			Followers::FOLLOWER_META_KEY,
 			'_activitypub_inbox',
 			'_activitypub_actor_json',
 		);

@@ -334,7 +334,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( 'https://example.com/post-1', \get_post_meta( $post1, '_activitypub_canonical_url', true ), 'New canonical_url meta should match' );
 		$this->assertEquals( 'Test error', \get_post_meta( $post1, '_activitypub_errors', true ), 'New errors meta should match' );
 		$this->assertEquals( 'https://example.com/inbox', \get_post_meta( $post1, '_activitypub_inbox', true ), 'New inbox meta should match' );
-		$this->assertEquals( '123', \get_post_meta( $post1, '_activitypub_user_id', true ), 'New user_id meta should match' );
+		$this->assertEquals( '123', \get_post_meta( $post1, Followers::FOLLOWER_META_KEY, true ), 'New user_id meta should match' );
 
 		// Check post 2 meta.
 		$this->assertEmpty( \get_post_meta( $post2, 'activitypub_actor_json', true ), 'Old actor_json meta should be empty' );
@@ -347,7 +347,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( 'https://example.com/post-1-2', \get_post_meta( $post2, '_activitypub_canonical_url', true ), 'New canonical_url meta should match' );
 		$this->assertEquals( 'Test error-2', \get_post_meta( $post2, '_activitypub_errors', true ), 'New errors meta should match' );
 		$this->assertEquals( 'https://example.com/inbox-2', \get_post_meta( $post2, '_activitypub_inbox', true ), 'New inbox meta should match' );
-		$this->assertEquals( '123-2', \get_post_meta( $post2, '_activitypub_user_id', true ), 'New user_id meta should match' );
+		$this->assertEquals( '123-2', \get_post_meta( $post2, Followers::FOLLOWER_META_KEY, true ), 'New user_id meta should match' );
 
 		// Verify unrelated meta is unchanged.
 		$this->assertEquals( 'should not change', \get_post_meta( $post1, 'unrelated_meta', true ), 'Unrelated meta should not change' );
@@ -605,7 +605,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$post_id = self::factory()->post->create(
 			array(
-				'post_type'  => Followers::POST_TYPE,
+				'post_type'  => ACTIVITYPUB_ACTOR_POST_TYPE,
 				'meta_input' => array( '_activitypub_actor_json' => $unslashed_json ),
 			)
 		);

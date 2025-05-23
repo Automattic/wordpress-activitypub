@@ -21,8 +21,19 @@ use function Activitypub\get_remote_metadata_by_actor;
  * @author Matthias Pfefferle
  */
 class Followers {
-	const POST_TYPE         = 'ap_follower';
+	/**
+	 * Cache key for the followers inbox.
+	 *
+	 * @var string
+	 */
 	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
+
+	/**
+	 * Meta key for the followers user ID.
+	 *
+	 * @var string
+	 */
+	const FOLLOWER_META_KEY = '_activitypub_follower_of';
 
 	/**
 	 * Add new Follower.
@@ -52,11 +63,11 @@ class Followers {
 			return $id;
 		}
 
-		$post_meta = get_post_meta( $id, '_activitypub_user_id', false );
+		$post_meta = get_post_meta( $id, self::FOLLOWER_META_KEY, false );
 
 		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
 		if ( is_array( $post_meta ) && ! in_array( $user_id, $post_meta ) ) {
-			add_post_meta( $id, '_activitypub_user_id', $user_id );
+			add_post_meta( $id, self::FOLLOWER_META_KEY, $user_id );
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
@@ -89,7 +100,7 @@ class Followers {
 		 */
 		do_action( 'activitypub_followers_pre_remove_follower', $follower, $user_id, $actor );
 
-		return delete_post_meta( $follower->get__id(), '_activitypub_user_id', $user_id );
+		return delete_post_meta( $follower->get__id(), self::FOLLOWER_META_KEY, $user_id );
 	}
 
 	/**
@@ -106,9 +117,10 @@ class Followers {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = '_activitypub_user_id' AND pm.meta_value = %d AND p.guid = %s",
+				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid = %s",
 				array(
-					esc_sql( self::POST_TYPE ),
+					esc_sql( ACTIVITYPUB_ACTOR_POST_TYPE ),
+					esc_sql( self::FOLLOWER_META_KEY ),
 					esc_sql( $user_id ),
 					esc_sql( $actor ),
 				)
@@ -181,7 +193,7 @@ class Followers {
 	 */
 	public static function get_followers_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => self::POST_TYPE,
+			'post_type'      => ACTIVITYPUB_ACTOR_POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',
@@ -189,7 +201,7 @@ class Followers {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
 				array(
-					'key'   => '_activitypub_user_id',
+					'key'   => self::FOLLOWER_META_KEY,
 					'value' => $user_id,
 				),
 			),
@@ -238,13 +250,13 @@ class Followers {
 	public static function count_followers( $user_id ) {
 		$query = new WP_Query(
 			array(
-				'post_type'  => self::POST_TYPE,
+				'post_type'  => ACTIVITYPUB_ACTOR_POST_TYPE,
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
 					'relation' => 'AND',
 					array(
-						'key'   => '_activitypub_user_id',
+						'key'   => self::FOLLOWER_META_KEY,
 						'value' => $user_id,
 					),
 					array(
@@ -281,7 +293,7 @@ class Followers {
 		$posts = new WP_Query(
 			array(
 				'nopaging'   => true,
-				'post_type'  => self::POST_TYPE,
+				'post_type'  => ACTIVITYPUB_ACTOR_POST_TYPE,
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
@@ -291,7 +303,7 @@ class Followers {
 						'compare' => 'EXISTS',
 					),
 					array(
-						'key'   => '_activitypub_user_id',
+						'key'   => self::FOLLOWER_META_KEY,
 						'value' => $user_id,
 					),
 					array(
@@ -387,7 +399,7 @@ class Followers {
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		$args = array(
-			'post_type'      => self::POST_TYPE,
+			'post_type'      => ACTIVITYPUB_ACTOR_POST_TYPE,
 			'posts_per_page' => $number,
 			'orderby'        => 'modified',
 			'order'          => 'ASC',
@@ -415,7 +427,7 @@ class Followers {
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
 		$args = array(
-			'post_type'      => self::POST_TYPE,
+			'post_type'      => ACTIVITYPUB_ACTOR_POST_TYPE,
 			'posts_per_page' => $number,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(

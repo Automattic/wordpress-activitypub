@@ -357,7 +357,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertStringContainsString( $follower, serialize( $db_followers ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 		$follower = current( $db_followers );
-		$meta     = get_post_meta( $follower->get__id(), '_activitypub_user_id', false );
+		$meta     = get_post_meta( $follower->get__id(), Followers::FOLLOWER_META_KEY, false );
 
 		$this->assertCount( 1, $meta );
 	}
@@ -484,7 +484,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
-			add_post_meta( $id, '_activitypub_user_id', 1 );
+			add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
 		$inboxes = Followers::get_inboxes( 1 );
@@ -510,7 +510,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
-			add_post_meta( $id, '_activitypub_user_id', 1 );
+			add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
 		$inboxes2 = Followers::get_inboxes( 1 );
@@ -540,7 +540,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
-			add_post_meta( $id, '_activitypub_user_id', 1 );
+			add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
 		$followers = Followers::get_all_followers();

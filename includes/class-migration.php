@@ -475,7 +475,7 @@ class Migration {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB
 		$followers = $wpdb->get_col(
-			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Followers::POST_TYPE )
+			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", ACTIVITYPUB_ACTOR_POST_TYPE )
 		);
 		foreach ( $followers as $id ) {
 			clean_post_cache( $id );
