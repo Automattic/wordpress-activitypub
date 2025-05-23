@@ -4,7 +4,7 @@ import { createModalController } from '../shared/modal';
 /** @var {Object} window.wp WordPress global object */
 const { apiFetch } = window.wp;
 
-const modalController = createModalController( 'activitypub/reactions' );
+createModalController( 'activitypub/reactions' );
 
 /**
  * @var {Object} state
@@ -31,8 +31,6 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 				console.error( 'Error fetching reactions:', error );
 			}
 		},
-
-		...modalController.actions,
 	},
 	callbacks: {
 		/**
@@ -131,7 +129,5 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 			// Set modal properties.
 			context.modal.items = state.reactions[ context.postId ][ reactionType ].items;
 		},
-
-		...modalController.callbacks,
 	},
 } );
