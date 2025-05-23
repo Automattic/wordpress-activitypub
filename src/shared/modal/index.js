@@ -1,4 +1,4 @@
-import { getContext, store } from '@wordpress/interactivity';
+import { getContext, store, getElement } from '@wordpress/interactivity';
 
 /**
  * @typedef {Object} context
@@ -132,11 +132,6 @@ export function createModalController( namespace ) {
 					return;
 				}
 
-				const button = blockWrapper.querySelector( '[data-wp-on--click="actions.toggleModal"]' );
-				if ( ! button ) {
-					return;
-				}
-
 				const modalOverlay = blockWrapper.querySelector( '.activitypub-modal__overlay' );
 				if ( ! modalOverlay ) {
 					return;
@@ -149,7 +144,7 @@ export function createModalController( namespace ) {
 				modalOverlay.style.bottom = '';
 
 				// Get button position relative to viewport.
-				const buttonRect = button.getBoundingClientRect();
+				const buttonRect = getElement().ref.getBoundingClientRect();
 
 				// Get viewport dimensions.
 				const viewportWidth = window.innerWidth;

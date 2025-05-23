@@ -1,4 +1,4 @@
-import { store, getContext, withScope } from '@wordpress/interactivity';
+import { getContext, getElement, store, withScope } from '@wordpress/interactivity';
 import { createModalController } from '../shared/modal';
 
 /** @var {Object} window.wp WordPress global object */
@@ -42,18 +42,15 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 			// Calculate visible avatars after the component is initialized.
 			setTimeout(
 				withScope( () => {
-					const { blockId } = getContext();
-
 					// Set up resize observer to recalculate on window resize.
 					const resizeObserver = new ResizeObserver( withScope( callbacks.calculateVisibleAvatars ) );
 
 					// Observe both reaction groups.
-					const blockWrapper = document.getElementById( blockId );
-					if ( blockWrapper ) {
-						blockWrapper.querySelectorAll( '.reaction-group' ).forEach( ( group ) => {
+					getElement()
+						.ref.querySelectorAll( '.reaction-group' )
+						.forEach( ( group ) => {
 							resizeObserver.observe( group );
 						} );
-					}
 				} ),
 				10
 			);
@@ -63,7 +60,7 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 		 * Calculates and sets the number of visible avatars based on container width.
 		 */
 		calculateVisibleAvatars() {
-			const { blockId, postId } = getContext();
+			const { postId } = getContext();
 
 			// Constants for calculations
 			const AVATAR_WIDTH = 32; // Width of each avatar
@@ -81,9 +78,8 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 					return;
 				}
 
-				document
-					.getElementById( blockId )
-					.querySelectorAll( '.reaction-group' )
+				getElement()
+					.ref.querySelectorAll( '.reaction-group' )
 					.forEach( ( container ) => {
 						const label = container.querySelector( '.reaction-label' );
 						const labelWidth = label.offsetWidth || 0;
@@ -130,13 +126,10 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 
 		/**
 		 * Opens the modal with the specified reaction type.
-		 *
-		 * @param {Object} event The click event.
 		 */
-		onModalOpen( { target } ) {
+		onModalOpen() {
 			const context = getContext();
-			const button = target.closest( '[data-reaction-type]' );
-			const reactionType = button.getAttribute( 'data-reaction-type' );
+			const reactionType = getElement().ref.dataset.reactionType;
 
 			// Set modal properties.
 			context.modal.items = state.reactions[ context.postId ][ reactionType ].items;
