@@ -39,21 +39,18 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 		 * Initializes the Reactions component.
 		 */
 		initReactions() {
-			// Calculate visible avatars after the component is initialized.
-			setTimeout(
-				withScope( () => {
-					// Set up resize observer to recalculate on window resize.
-					const resizeObserver = new ResizeObserver( withScope( callbacks.calculateVisibleAvatars ) );
+			// Set up resize observer to recalculate on window resize.
+			const resizeObserver = new ResizeObserver( withScope( callbacks.calculateVisibleAvatars ) );
+			getElement()
+				.ref.querySelectorAll( '.reaction-group' )
+				.forEach( ( group ) => {
+					resizeObserver.observe( group );
+				} );
 
-					// Observe both reaction groups.
-					getElement()
-						.ref.querySelectorAll( '.reaction-group' )
-						.forEach( ( group ) => {
-							resizeObserver.observe( group );
-						} );
-				} ),
-				10
-			);
+			// Return a cleanup function to disconnect the observer when the block is unmounted.
+			return () => {
+				resizeObserver.disconnect();
+			};
 		},
 
 		/**

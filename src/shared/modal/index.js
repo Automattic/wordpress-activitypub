@@ -28,9 +28,6 @@ export function createModalController( namespace ) {
 					// Position the compact modal relative to the button.
 					setTimeout( callbacks.positionModal, 0 );
 				} else {
-					// Add body class for full-screen modals
-					document.body.classList.add( 'modal-open' );
-
 					// Set up the focus trap after modal is open.
 					setTimeout( () => {
 						// Use the blockId to find the specific modal frame for this block
@@ -56,7 +53,6 @@ export function createModalController( namespace ) {
 
 				// Reset modal state
 				context.modal.isOpen = false;
-				document.body.classList.remove( 'modal-open' );
 
 				// Return focus to the button that opened the modal
 				const blockWrapper = document.getElementById( context.blockId );
@@ -82,6 +78,36 @@ export function createModalController( namespace ) {
 		},
 
 		callbacks: {
+			/**
+			 * Handles modal effects like body class and event listeners.
+			 * This is called via data-wp-watch in the modal HTML.
+			 */
+			handleModalEffects() {
+				const { modal } = getContext( namespace );
+				const { callbacks } = store( namespace );
+
+				// Update body class.
+				if ( modal.isOpen && ! modal.isCompact ) {
+					document.body.classList.add( 'modal-open' );
+				} else {
+					document.body.classList.remove( 'modal-open' );
+				}
+
+				// Trigger event listeners.
+				if ( modal.isOpen ) {
+					document.addEventListener( 'keydown', callbacks.documentKeydown );
+					document.addEventListener( 'click', callbacks.documentClick );
+
+					// Return a cleanup function.
+					return () => {
+						document.removeEventListener( 'keydown', callbacks.documentKeydown );
+						document.removeEventListener( 'click', callbacks.documentClick );
+					};
+				}
+
+				return undefined;
+			},
+
 			documentKeydown( event ) {
 				const { actions } = store( namespace );
 				const { modal } = getContext( namespace );
