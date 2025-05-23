@@ -170,7 +170,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	</div>
 
 	<?php
-	// Prepare the modal content.
 	$modal_content = '
 		<ul class="reactions-list">
 			<template data-wp-each="context.modal.items">

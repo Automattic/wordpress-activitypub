@@ -1,10 +1,10 @@
 import { getContext, getElement, store, withScope } from '@wordpress/interactivity';
-import { createModalController } from '../shared/modal';
+import { createModalStore } from '../shared/modal';
 
 /** @var {Object} window.wp WordPress global object */
 const { apiFetch } = window.wp;
 
-createModalController( 'activitypub/reactions' );
+createModalStore( 'activitypub/reactions' );
 
 /**
  * @var {Object} state

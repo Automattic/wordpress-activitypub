@@ -1,11 +1,11 @@
 import { store, getContext } from '@wordpress/interactivity';
 import { getBlockStyles, getPopupStyles } from './button-style';
-import { createModalController } from '../shared/modal';
+import { createModalStore } from '../shared/modal';
 
 /** @var {object} wp WordPress global. */
 const { apiFetch } = window.wp;
 
-createModalController( 'activitypub/follow-me' );
+createModalStore( 'activitypub/follow-me' );
 
 const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 	actions: {
