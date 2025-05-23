@@ -9,12 +9,14 @@ import { getContext, store, getElement } from '@wordpress/interactivity';
  */
 
 /**
- * Creates a modal controller object with actions and callbacks.
+ * Set up a modal store with actions and callbacks.
+ *
+ * The Interactivity API merges all stores that share the same namespace,
+ * so these actions and callbacks are added directly to the importing block’s existing store.
  *
  * @param {string} namespace - The interactivity namespace for the block.
- * @return {Object} Modal controller with actions and callbacks.
  */
-export function createModalController( namespace ) {
+export function createModalStore( namespace ) {
 	const { actions, callbacks } = store( namespace, {
 		actions: {
 			openModal( event ) {

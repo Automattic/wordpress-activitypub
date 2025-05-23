@@ -113,9 +113,7 @@ $content = Blocks::add_directions(
 		<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 	</div>
 
-
 	<?php
-	// Prepare the modal content.
 	$modal_content = '
 		<div class="activitypub-dialog__section">
 			<h4>' . esc_html__( 'My Profile', 'activitypub' ) . '</h4>
