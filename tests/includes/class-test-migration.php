@@ -842,4 +842,28 @@ class Test_Migration extends \WP_UnitTestCase {
 		\delete_user_option( $user_id1, 'activitypub_mailer_new_mention' );
 		\wp_delete_user( $user_id1 );
 	}
+
+	/**
+	 * Test migrate followers to AP Actor CPT.
+	 *
+	 * @covers ::migrate_followers_to_ap_actor_cpt
+	 */
+	public function test_migrate_followers_to_ap_actor_cpt() {
+		$follower = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_follower',
+			)
+		);
+
+		\add_post_meta( $follower, '_activitypub_user_id', '5' );
+
+		Migration::migrate_followers_to_ap_actor_cpt();
+
+		\clean_post_cache( $follower );
+
+		$this->assertEquals( ACTIVITYPUB_ACTOR_POST_TYPE, \get_post_type( $follower ) );
+		$this->assertEquals( '5', \get_post_meta( $follower, Followers::FOLLOWER_META_KEY, true ) );
+
+		\wp_delete_post( $follower );
+	}
 }
