@@ -115,13 +115,11 @@ $context = array(
 // Add the block wrapper attributes.
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
-		'id'                           => $block_id,
-		'data-wp-interactive'          => 'activitypub/reactions',
-		'data-wp-context'              => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
-		'data-wp-init'                 => 'callbacks.initReactions',
-		'data-wp-on-document--keydown' => 'callbacks.documentKeydown',
-		'data-wp-on-document--click'   => 'callbacks.documentClick',
-		'data-wp-bind--hidden'         => '!context.hasReactions',
+		'id'                   => $block_id,
+		'data-wp-interactive'  => 'activitypub/reactions',
+		'data-wp-context'      => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
+		'data-wp-init'         => 'callbacks.initReactions',
+		'data-wp-bind--hidden' => '!context.hasReactions',
 	)
 );
 ?>

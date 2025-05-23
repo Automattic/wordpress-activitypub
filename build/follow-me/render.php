@@ -49,12 +49,10 @@ wp_interactivity_state(
 // Add the block wrapper attributes.
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
-		'id'                           => $block_id,
-		'class'                        => 'activitypub-follow-me-block-wrapper',
-		'data-wp-interactive'          => 'activitypub/follow-me',
-		'data-wp-init'                 => 'callbacks.initButtonStyles',
-		'data-wp-on-document--keydown' => 'callbacks.documentKeydown',
-		'data-wp-on-document--click'   => 'callbacks.documentClick',
+		'id'                  => $block_id,
+		'class'               => 'activitypub-follow-me-block-wrapper',
+		'data-wp-interactive' => 'activitypub/follow-me',
+		'data-wp-init'        => 'callbacks.initButtonStyles',
 	)
 );
 
