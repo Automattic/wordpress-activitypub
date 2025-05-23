@@ -5,7 +5,7 @@ import { createModalController } from '../shared/modal';
 /** @var {object} wp WordPress global. */
 const { apiFetch } = window.wp;
 
-const modalController = createModalController( 'activitypub/follow-me' );
+createModalController( 'activitypub/follow-me' );
 
 const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 	actions: {
@@ -108,8 +108,6 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 				context.errorMessage = error.message || state.i18n.genericError;
 			}
 		},
-
-		...modalController.actions,
 	},
 	callbacks: {
 		/**
@@ -168,7 +166,5 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 
 			context.isError = false;
 		},
-
-		...modalController.callbacks,
 	},
 } );

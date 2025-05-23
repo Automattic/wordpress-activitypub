@@ -15,11 +15,10 @@ import { getContext, store, getElement } from '@wordpress/interactivity';
  * @return {Object} Modal controller with actions and callbacks.
  */
 export function createModalController( namespace ) {
-	return {
+	const { actions, callbacks } = store( namespace, {
 		actions: {
 			openModal( event ) {
-				const { callbacks } = store( namespace );
-				const context = getContext( namespace );
+				const context = getContext();
 
 				// Set modal properties
 				context.modal.isOpen = true;
@@ -48,8 +47,7 @@ export function createModalController( namespace ) {
 			},
 
 			closeModal() {
-				const { callbacks } = store( namespace );
-				const context = getContext( namespace );
+				const context = getContext();
 
 				// Reset modal state
 				context.modal.isOpen = false;
@@ -70,8 +68,7 @@ export function createModalController( namespace ) {
 			},
 
 			toggleModal( event ) {
-				const { actions } = store( namespace );
-				const { modal } = getContext( namespace );
+				const { modal } = getContext();
 
 				modal.isOpen ? actions.closeModal( event ) : actions.openModal( event );
 			},
@@ -83,8 +80,7 @@ export function createModalController( namespace ) {
 			 * This is called via data-wp-watch in the modal HTML.
 			 */
 			handleModalEffects() {
-				const { modal } = getContext( namespace );
-				const { callbacks } = store( namespace );
+				const { modal } = getContext();
 
 				// Update body class.
 				if ( modal.isOpen && ! modal.isCompact ) {
@@ -109,8 +105,7 @@ export function createModalController( namespace ) {
 			},
 
 			documentKeydown( event ) {
-				const { actions } = store( namespace );
-				const { modal } = getContext( namespace );
+				const { modal } = getContext();
 
 				if ( modal.isOpen && event.key === 'Escape' ) {
 					actions.closeModal( event );
@@ -118,8 +113,7 @@ export function createModalController( namespace ) {
 			},
 
 			documentClick( event ) {
-				const { actions } = store( namespace );
-				const { blockId, modal } = getContext( namespace );
+				const { blockId, modal } = getContext();
 				if ( ! modal.isOpen ) {
 					return;
 				}
@@ -151,7 +145,7 @@ export function createModalController( namespace ) {
 			 * Positions the modal relative to the button that opened it.
 			 */
 			positionModal() {
-				const { blockId } = getContext( namespace );
+				const { blockId } = getContext();
 
 				const blockWrapper = document.getElementById( blockId );
 				if ( ! blockWrapper ) {
@@ -246,5 +240,5 @@ export function createModalController( namespace ) {
 				} );
 			},
 		},
-	};
+	} );
 }
