@@ -1,58 +1,14 @@
 import { store, getContext } from '@wordpress/interactivity';
 import { getBlockStyles, getPopupStyles } from './button-style';
-import './style.scss';
+import { createModalStore } from '../shared/modal';
 
 /** @var {object} wp WordPress global. */
 const { apiFetch } = window.wp;
 
-const { state, actions, utils } = store( 'activitypub/follow-me', {
+createModalStore( 'activitypub/follow-me' );
+
+const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 	actions: {
-		/**
-		 * Open the modal.
-		 */
-		openModal() {
-			const context = getContext();
-			context.isModalOpen = true;
-			document.body.classList.add( 'modal-open' );
-
-			// Set up the focus trap after modal is open.
-			setTimeout( () => {
-				// Use the blockId to find the specific modal frame for this block.
-				const blockWrapper = document.getElementById( context.blockId );
-				if ( blockWrapper ) {
-					const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
-					if ( modalFrame ) {
-						utils.trapFocus( modalFrame );
-					}
-				}
-			}, 50 );
-		},
-
-		/**
-		 * Close the modal.
-		 */
-		closeModal() {
-			const context = getContext();
-			context.isModalOpen = false;
-			context.isError = false;
-			document.body.classList.remove( 'modal-open' );
-
-			// Return focus to the button that opened the modal.
-			const blockWrapper = document.getElementById( context.blockId );
-			if ( blockWrapper ) {
-				const openButton = blockWrapper.querySelector( '.wp-block-button__link' );
-				if ( openButton ) {
-					openButton.focus();
-				}
-			}
-		},
-
-		toggleModal() {
-			const { isModalOpen } = getContext();
-
-			isModalOpen ? actions.closeModal() : actions.openModal();
-		},
-
 		/**
 		 * Copy the webfinger to clipboard.
 		 */
@@ -117,7 +73,7 @@ const { state, actions, utils } = store( 'activitypub/follow-me', {
 				return;
 			}
 
-			if ( ! utils.isHandle( input ) ) {
+			if ( ! callbacks.isHandle( input ) ) {
 				context.isError = true;
 				context.errorMessage = state.i18n.invalidProfileError;
 				return;
@@ -178,54 +134,6 @@ const { state, actions, utils } = store( 'activitypub/follow-me', {
 		},
 
 		/**
-		 * Close modal when pressing ESC key.
-		 *
-		 * @param {Event} event Keyboard event.
-		 */
-		documentKeydown( event ) {
-			const { isModalOpen } = getContext();
-
-			if ( isModalOpen && event.key === 'Escape' ) {
-				actions.closeModal();
-			}
-		},
-
-		/**
-		 * Close modal when clicking outside.
-		 *
-		 * @param {Event} event Click event.
-		 */
-		documentClick( event ) {
-			const { blockId, isModalOpen } = getContext();
-			if ( ! isModalOpen ) {
-				return;
-			}
-
-			// Get the block wrapper element.
-			const blockWrapper = document.getElementById( blockId );
-			if ( ! blockWrapper ) {
-				return;
-			}
-
-			// If the click was on the button or its children, we should not close the modal.
-			const toggleButton = blockWrapper.querySelector(
-				'.wp-element-button[data-wp-on--click="actions.toggleModal"]'
-			);
-			if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
-				return;
-			}
-
-			// Check if the click was inside the modal frame.
-			const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
-			if ( ! modalFrame || modalFrame.contains( event.target ) ) {
-				return;
-			}
-
-			actions.closeModal();
-		},
-	},
-	utils: {
-		/**
 		 * Best guess whether a string is a valid ActivityPub handle.
 		 *
 		 * @param {string} string - String to check.
@@ -235,7 +143,7 @@ const { state, actions, utils } = store( 'activitypub/follow-me', {
 			// Check if the string starts with '@' and contains a valid URL.
 			const parts = string.replace( /^@/, '' ).split( '@' );
 
-			return parts.length === 2 && utils.isUrl( `https://${ parts[ 1 ] }` );
+			return parts.length === 2 && callbacks.isUrl( `https://${ parts[ 1 ] }` );
 		},
 
 		/**
@@ -252,50 +160,11 @@ const { state, actions, utils } = store( 'activitypub/follow-me', {
 				return false;
 			}
 		},
-	},
 
-	/**
-	 * Traps focus within the specified element.
-	 *
-	 * @param {Element} element The element to trap focus within.
-	 */
-	trapFocus( element ) {
-		const focusableElements = element.querySelectorAll(
-			'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]):not([readonly]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])'
-		);
-		const firstFocusableElement = focusableElements[ 0 ];
-		const lastFocusableElement = focusableElements[ focusableElements.length - 1 ];
+		onModalClose() {
+			const context = getContext();
 
-		// If the first focusable element is the close button, set initial focus to the next element instead.
-		if (
-			firstFocusableElement &&
-			firstFocusableElement.classList.contains( 'activitypub-modal__close' ) &&
-			focusableElements.length > 1
-		) {
-			// Set initial focus to the second element, but keep firstFocusableElement as is for tab trapping.
-			focusableElements[ 1 ].focus();
-		} else {
-			// Otherwise focus the first element as usual.
-			firstFocusableElement.focus();
-		}
-
-		element.addEventListener( 'keydown', function ( event ) {
-			if ( event.key !== 'Tab' && event.keyCode !== 9 /* KEYCODE_TAB */ ) {
-				return;
-			}
-
-			if ( event.shiftKey ) {
-				/* shift + tab */
-				if ( document.activeElement === firstFocusableElement ) {
-					lastFocusableElement.focus();
-					event.preventDefault();
-				}
-			} /* tab */ else {
-				if ( document.activeElement === lastFocusableElement ) {
-					firstFocusableElement.focus();
-					event.preventDefault();
-				}
-			}
-		} );
+			context.isError = false;
+		},
 	},
 } );
