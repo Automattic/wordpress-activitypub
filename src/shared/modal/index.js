@@ -71,6 +71,7 @@ export function createModalStore( namespace ) {
 
 			toggleModal( event ) {
 				const { modal } = getContext();
+				event.stopPropagation();
 
 				modal.isOpen ? actions.closeModal( event ) : actions.openModal( event );
 			},

@@ -1,61 +1,45 @@
 import { store, getContext } from '@wordpress/interactivity';
+import { createModalStore } from '../shared/modal';
 import './style.scss';
 
 /** @var {object} wp WordPress global. */
 const { apiFetch } = window.wp;
 
-const { state, actions, utils } = store( 'activitypub/remote-reply', {
+createModalStore( 'activitypub/remote-reply' );
+
+/**
+ * @typedef {Object} state
+ * @property {String} state.namespace ActivityPub REST Namespace.
+ * @property {Object} state.i18n Internationalization strings.
+ * @property {String} state.i18n.copy "Copy" button text.
+ * @property {String} state.i18n.copied "Copied" button text.
+ * @property {String} state.i18n.emptyProfileError Error message for empty remote profile.
+ * @property {String} state.i18n.invalidProfileError Error message for invalid remote profile.
+ * @property {String} state.i18n.genericError Generic error message.
+ */
+
+/**
+ * @typedef {Object} Context
+ * @property {String} context.blockId The block ID.
+ * @property {String} context.commentId The comment ID.
+ * @property {String} context.commentURL The comment URL.
+ * @property {String} context.copyButtonText The copy button text.
+ * @property {String} context.errorMessage The error message.
+ * @property {boolean} context.hasRemoteUser Whether a remote user is set.
+ * @property {boolean} context.isError Whether there is an error.
+ * @property {boolean} context.isLoading Whether the remote profile is being submitted.
+ * @property {Object} context.modal The modal state.
+ * @property {boolean} context.modal.isOpen Whether the modal is open.
+ * @property {String} context.profileURL The remote profile URL.
+ * @property {String} context.remoteProfile The remote profile.
+ * @property {boolean} context.shouldSaveProfile Whether to save the profile.
+ * @property {String} context.template The template for the remote reply URL.
+ */
+
+const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 	actions: {
 		/**
-		 * Open the modal.
-		 */
-		openModal() {
-			const context = getContext();
-			context.isModalOpen = true;
-			document.body.classList.add( 'modal-open' );
-
-			// Set up the focus trap after modal is open.
-			setTimeout( () => {
-				// Use the blockId to find the specific modal frame for this block.
-				const blockWrapper = document.getElementById( context.blockId );
-				if ( blockWrapper ) {
-					const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
-					if ( modalFrame ) {
-						utils.trapFocus( modalFrame );
-					}
-				}
-			}, 50 );
-		},
-
-		/**
-		 * Close the modal.
-		 */
-		closeModal() {
-			const context = getContext();
-			context.isModalOpen = false;
-			context.isError = false;
-			document.body.classList.remove( 'modal-open' );
-
-			// Return focus to the button that opened the modal.
-			const blockWrapper = document.getElementById( context.blockId );
-			if ( blockWrapper ) {
-				const openButton = blockWrapper.querySelector( '.activitypub-remote-reply__button' );
-				if ( openButton ) {
-					openButton.focus();
-				}
-			}
-		},
-
-		/**
-		 * Toggle the modal state.
-		 */
-		toggleModal() {
-			const { isModalOpen } = getContext();
-			isModalOpen ? actions.closeModal() : actions.openModal();
-		},
-
-		/**
-		 * Copy the comment URL to clipboard.
+		 * Copy the comment URL to the clipboard.
 		 */
 		copyToClipboard() {
 			const context = getContext();
@@ -86,6 +70,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 		updateRemoteProfile( event ) {
 			const context = getContext();
 			context.remoteProfile = event.target.value;
+
 			// Reset error state when input changes.
 			context.isError = false;
 			context.errorMessage = '';
@@ -95,6 +80,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 		 * Handle keydown event for remote profile input.
 		 *
 		 * @param {Event} event Keydown event.
+		 * @param {string} event.key Key pressed.
 		 */
 		handleKeyDown( event ) {
 			if ( event.key === 'Enter' ) {
@@ -106,7 +92,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 		/**
 		 * Submit the remote profile.
 		 */
-		submitRemoteProfile: function* () {
+		*submitRemoteProfile() {
 			const context = getContext();
 			const { namespace } = state;
 			const input = context.remoteProfile.trim();
@@ -118,7 +104,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 				return;
 			}
 
-			if ( ! utils.isHandle( input ) && ! utils.isUrl( input ) ) {
+			if ( ! callbacks.isHandle( input ) && ! callbacks.isUrl( input ) ) {
 				context.isError = true;
 				context.errorMessage = state.i18n.invalidProfileError;
 				return;
@@ -127,6 +113,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 			// Set loading state.
 			context.isLoading = true;
 			context.isError = false;
+			context.errorMessage = '';
 
 			// Construct the API path.
 			const path = `/${ namespace }/comments/${ context.commentId }/remote-reply?resource=${ encodeURIComponent(
@@ -139,7 +126,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 
 				// Save the remote user if the remember option is checked.
 				if ( context.shouldSaveProfile ) {
-					utils.setStore( { profileURL: input, template: response.template } );
+					callbacks.setStore( { profileURL: input, template: response.template } );
 				}
 
 				// Set opening state.
@@ -164,7 +151,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 		 */
 		toggleRememberProfile() {
 			const context = getContext();
-			context.shouldSaveProfile = !context.shouldSaveProfile;
+			context.shouldSaveProfile = ! context.shouldSaveProfile;
 		},
 
 		/**
@@ -173,7 +160,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 		deleteRemoteUser() {
 			const context = getContext();
 
-			utils.deleteStore();
+			callbacks.deleteStore();
 			context.hasRemoteUser = false;
 			context.profileURL = '';
 			context.template = '';
@@ -190,58 +177,11 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 	},
 	callbacks: {
 		/**
-		 * Close modal when pressing ESC key.
-		 *
-		 * @param {Event} event Keyboard event.
-		 */
-		documentKeydown( event ) {
-			const { isModalOpen } = getContext();
-
-			if ( isModalOpen && event.key === 'Escape' ) {
-				actions.closeModal();
-			}
-		},
-
-		/**
-		 * Close modal when clicking outside.
-		 *
-		 * @param {Event} event Click event.
-		 */
-		documentClick( event ) {
-			const { blockId, isModalOpen } = getContext();
-			if ( ! isModalOpen ) {
-				return;
-			}
-
-			// Get the block wrapper element.
-			const blockWrapper = document.getElementById( blockId );
-			if ( ! blockWrapper ) {
-				return;
-			}
-
-			// If the click was on the button or its children, we should not close the modal.
-			const toggleButton = blockWrapper.querySelector(
-				'button[data-wp-on--click="actions.toggleModal"]'
-			);
-			if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
-				return;
-			}
-
-			// Check if the click was inside the modal frame.
-			const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
-			if ( ! modalFrame || modalFrame.contains( event.target ) ) {
-				return;
-			}
-
-			actions.closeModal();
-		},
-
-		/**
 		 * Initialize the component.
 		 */
 		init() {
 			const context = getContext();
-			const storedUser = utils.getStore();
+			const storedUser = callbacks.getStore();
 
 			document.getElementById( context.blockId ).removeAttribute( 'hidden' );
 
@@ -252,8 +192,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 				context.template = storedUser.template;
 			}
 		},
-	},
-	utils: {
+
 		storageKey: 'fediverse-remote-user',
 
 		/**
@@ -262,7 +201,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 		 * @returns {Object} Remote user data or empty object, if not set.
 		 */
 		getStore() {
-			const data = localStorage.getItem( utils.storageKey );
+			const data = localStorage.getItem( callbacks.storageKey );
 			if ( ! data ) {
 				return {};
 			}
@@ -275,14 +214,14 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 		 * @param {Object} data - Remote user data to store.
 		 */
 		setStore( data ) {
-			localStorage.setItem( utils.storageKey, JSON.stringify( data ) );
+			localStorage.setItem( callbacks.storageKey, JSON.stringify( data ) );
 		},
 
 		/**
 		 * Remove remote user data from localStorage.
 		 */
 		deleteStore() {
-			localStorage.removeItem( utils.storageKey );
+			localStorage.removeItem( callbacks.storageKey );
 		},
 
 		/**
@@ -295,7 +234,7 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 			// Check if the string starts with '@' and contains a valid URL.
 			const parts = string.replace( /^@/, '' ).split( '@' );
 
-			return parts.length === 2 && utils.isUrl( `https://${ parts[ 1 ] }` );
+			return parts.length === 2 && callbacks.isUrl( `https://${ parts[ 1 ] }` );
 		},
 
 		/**
@@ -312,50 +251,5 @@ const { state, actions, utils } = store( 'activitypub/remote-reply', {
 				return false;
 			}
 		},
-
-		/**
-		 * Traps focus within the specified element.
-		 *
-		 * @param {Element} element The element to trap focus within.
-		 */
-		trapFocus( element ) {
-			const focusableElements = element.querySelectorAll(
-				'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]):not([readonly]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])'
-			);
-			const firstFocusableElement = focusableElements[ 0 ];
-			const lastFocusableElement = focusableElements[ focusableElements.length - 1 ];
-
-			// If the first focusable element is the close button, set initial focus to the next element instead.
-			if (
-				firstFocusableElement &&
-				firstFocusableElement.classList.contains( 'activitypub-modal__close' ) &&
-				focusableElements.length > 1
-			) {
-				// Set initial focus to the second element, but keep firstFocusableElement as is for tab trapping.
-				focusableElements[ 1 ].focus();
-			} else {
-				// Otherwise focus the first element as usual.
-				firstFocusableElement.focus();
-			}
-
-			element.addEventListener( 'keydown', function ( event ) {
-				if ( event.key !== 'Tab' && event.keyCode !== 9 /* KEYCODE_TAB */ ) {
-					return;
-				}
-
-				if ( event.shiftKey ) {
-					/* shift + tab */
-					if ( document.activeElement === firstFocusableElement ) {
-						lastFocusableElement.focus();
-						event.preventDefault();
-					}
-				} /* tab */ else {
-					if ( document.activeElement === lastFocusableElement ) {
-						firstFocusableElement.focus();
-						event.preventDefault();
-					}
-				}
-			} );
-		}
 	},
 } );
