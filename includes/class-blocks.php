@@ -408,6 +408,52 @@ class Blocks {
 	}
 
 	/**
+	 * Renders a modal component that can be used by different blocks.
+	 *
+	 * @param array $args Arguments for the modal.
+	 */
+	public static function render_modal( $args = array() ) {
+		$defaults = array(
+			'content'    => '',
+			'is_compact' => false,
+			'title'      => '',
+		);
+
+		$args = \wp_parse_args( $args, $defaults );
+		?>
+
+		<div
+			class="activitypub-modal__overlay<?php echo \esc_attr( $args['is_compact'] ? ' compact' : '' ); ?>"
+			data-wp-bind--hidden="!context.modal.isOpen"
+			data-wp-watch="callbacks.handleModalEffects"
+			role="dialog"
+			aria-modal="true"
+		>
+			<div class="activitypub-modal__frame">
+				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
+					<div class="activitypub-modal__header">
+						<h2 class="activitypub-modal__title"><?php echo \esc_html( $args['title'] ); ?></h2>
+						<button
+							type="button"
+							class="activitypub-modal__close wp-element-button wp-block-button__link"
+							data-wp-on--click="actions.closeModal"
+							aria-label="<?php echo \esc_attr__( 'Close dialog', 'activitypub' ); ?>"
+						>
+							<svg fill="currentColor" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+								<path d="M13 11.8l6.1-6.3-1-1-6.1 6.2-6.1-6.2-1 1 6.1 6.3-6.5 6.7 1 1 6.5-6.6 6.5 6.6 1-1z"></path>
+							</svg>
+						</button>
+					</div>
+				<?php endif; ?>
+				<div class="activitypub-modal__content">
+					<?php echo $args['content']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Converts content to blocks before saving to the database.
 	 *
 	 * @param array  $data The post data to be inserted.
