@@ -1,14 +1,28 @@
 .wp-block-activitypub-reactions {
+	margin-top: 2rem;
+	margin-bottom: 2rem;
+	position: relative;
+
+	// Main container for reactions.
+	.activitypub-reactions {
+		display: flex;
+		flex-direction: column;
+		flex-wrap: wrap;
+		gap: 1rem;
+		margin-top: 16px;
+	}
+
+	// Reaction group for each type (likes, reposts).
 	.reaction-group {
 		display: flex;
 		align-items: center;
 		margin: 0.5em 0;
 		position: relative;
 		width: 100%;
-		gap: 0.75em;
+		gap: 0.5rem;
 		justify-content: flex-start;
 
-		// When content overflows, switch to space-between
+		// When content overflows, switch to space-between.
 		&:has(.reaction-avatars:not(:empty)) {
 			@media (max-width: 782px) {
 				justify-content: space-between;
@@ -16,110 +30,249 @@
 		}
 	}
 
+	// Container for avatar images.
 	.reaction-avatars {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
 		list-style: none;
-		margin: 0;
+		margin: 0 !important;
 		padding: 0;
 
 		li {
-			margin: 0;
 			padding: 0;
-			margin-right: -10px;
+			margin: 0 -10px 0 0;
+			transition: transform 0.2s ease;
 
 			&:last-child {
 				margin-right: 0;
 			}
 
-			a {
-				display: block;
-				text-decoration: none;
+			&:hover {
+				z-index: 2;
+				transform: translateY(-2px);
 			}
-		}
 
-		.reaction-avatar {
-			max-width: 32px;
-			max-height: 32px;
-			overflow: hidden;
-			-moz-force-broken-image-icon: 1;
-			border-radius: 50%;
-			border: 0.5px solid var( --wp--preset--color--contrast, rgba(255, 255, 255, 0.8) );
-			box-shadow:
-				0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border
-				0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
-			transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-			will-change: transform;
-
-			&:hover,
-			&:focus-visible {
-				z-index: 1;
-				position: relative;
-				transform: translateY(-5px);
+			a {
+				box-shadow: none;
+				border-radius: 50%;
+				display: block;
+				line-height: 1;
+				text-decoration: none;
 			}
 		}
 	}
 
-	.reaction-label.components-button {
-		white-space: nowrap;
-		height: auto;
-		padding: 0;
-		text-decoration: none;
-		color: var( --wp--preset--color--contrast, --wp--preset--color--secondary, #2271b1 );
+	.reaction-avatar {
+		max-width: 32px;
+		max-height: 32px;
+		overflow: hidden;
+		-moz-force-broken-image-icon: 1;
+		border-radius: 50%;
+		border: 0.5px solid var( --wp--preset--color--contrast, rgba(255, 255, 255, 0.8) );
+		box-shadow:
+			0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border
+			0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
+		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+		will-change: transform;
+
+		&:hover,
+		&:focus-visible {
+			z-index: 1;
+			position: relative;
+			transform: translateY(-5px);
+		}
+	}
+
+	// Label showing count of reactions.
+	.reaction-label {
+		background: none;
+		border: none;
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
 		flex: 0 0 auto;
+		margin-left: 12px;
+		padding: 0.25rem 0.5rem;
+		font-size: 70%;
+		color: var(--wp--preset--color--contrast, #2271b1);
+		transition: background-color 0.2s ease;
+		white-space: nowrap;
+		text-decoration: none;
 
 		&:hover {
-			color: var( --wp--preset--color--contrast, --wp--preset--color--secondary, #135e96 );
-			text-decoration: underline;
+			background-color: rgba(0, 0, 0, 0.05);
+			color: var(--wp--preset--color--contrast, #135e96);
 		}
 
 		&:focus:not(:disabled) {
 			box-shadow: none;
-			outline: 1px solid var( --wp--preset--color--contrast, #135e96 );
+			outline: 1px solid var(--wp--preset--color--contrast, #135e96);
 			outline-offset: 2px;
 		}
 	}
 }
 
-.activitypub-reaction-list {
-	margin: 0;
-	padding: .25em 1.3em .25em 0.7em;
-	list-style: none;
-	width: max-content;
-	max-width: 300px;
-	background-color: var( --wp--preset--color--background, var( --wp--preset--color--custom-background, var( --wp--preset--color--base ) ) );
-
-	ul {
-		margin: 0;
-		padding: 0;
-	}
-
-	li {
-		margin: 0;
-		padding: 0;
-		font-size: var( --wp--preset--font-size--small );
-	}
-
-	a {
+/* Modal styles */
+.activitypub-modal {
+	&__overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+		color: initial;
+		z-index: 100000;
 		display: flex;
 		align-items: center;
-		justify-content: flex-start;
-		gap: .5em;
-		padding: .5em;
-		text-decoration: none;
-		font-size: var( --wp--preset--font-size--small, .75rem );
-		color: var( --wp--preset--color--contrast, var( --wp--preset--color--secondary ) );
+		justify-content: center;
+		padding: 1rem;
 
-		&:hover {
-			text-decoration: underline;
+		&.compact {
+			position: absolute;
+			background-color: transparent;
+			padding: 0;
+			top: auto;
+			left: auto;
+			right: auto;
+			bottom: auto;
+			align-items: flex-start;
+			justify-content: flex-start;
+			z-index: 100;
+		}
+
+		&[hidden] {
+			display: none;
+		}
+	}
+
+	&__frame {
+		max-width: 660px;
+		width: 100%;
+		background-color: var(--wp--preset--color--white, #fff);
+		border-radius: 8px;
+		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		max-height: calc(100vh - 2rem);
+		animation: activitypub-modal-appear 0.2s ease-out;
+
+		.compact & {
+			width: auto;
+			max-width: min-content;
+			min-width: 250px;
+			max-height: 300px;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		}
+	}
+
+	&__header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 2rem 2rem 1.5rem 2rem;
+		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
+		flex-shrink: 0;
+
+		.compact & {
+			display: none;
+		}
+
+		.activitypub-modal__close {
+			border: none;
+			padding: 0.5rem;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: auto;
+
+			&:active {
+				border: none;
+				padding: 0.5rem;
+			}
+		}
+	}
+
+	&__title {
+		margin: 0 !important;
+		font-size: 130%;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+
+	&__content {
+		overflow-y: auto;
+	}
+}
+
+/* Reactions list styles */
+.reactions-list {
+	list-style: none;
+	margin: 0 !important;
+	padding: 0.5rem;
+
+	.reaction-item {
+		margin: 0 0 0.5rem 0;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+
+		a {
+			box-shadow: none;
+			display: flex;
+			align-items: center;
+			gap: 0.75rem;
+			text-decoration: none;
+			color: inherit;
+			transition: background-color 0.2s ease;
+			padding: 0.5rem;
+			border-radius: 4px;
+
+			&:hover {
+				background-color: rgba(0, 0, 0, 0.03);
+			}
 		}
 
 		img {
-			width: 24px;
-			height: 24px;
+			box-shadow: none;
+			width: 36px;
+			height: 36px;
 			border-radius: 50%;
-			flex: none;
+			border: 1px solid #f0f0f0;
 		}
+
+		.reaction-name {
+			font-size: 75%;
+		}
+	}
+}
+
+body.modal-open {
+	overflow: hidden;
+}
+
+.components-popover__content {
+	width: auto;
+	max-width: min-content;
+	min-width: 250px;
+	max-height: 300px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	padding: 0.5rem;
+}
+
+/* Animation for modal */
+@keyframes activitypub-modal-appear {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
 	}
 }

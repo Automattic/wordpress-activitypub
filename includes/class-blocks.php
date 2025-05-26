@@ -161,12 +161,7 @@ class Blocks {
 			)
 		);
 
-		\register_block_type_from_metadata(
-			ACTIVITYPUB_PLUGIN_DIR . '/build/reactions',
-			array(
-				'render_callback' => array( self::class, 'render_post_reactions_block' ),
-			)
-		);
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
 	}
 
 	/**
