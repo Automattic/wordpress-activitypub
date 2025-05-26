@@ -19,7 +19,7 @@ createModalStore( 'activitypub/remote-reply' );
  */
 
 /**
- * @typedef {Object} Context
+ * @typedef {Object} context
  * @property {String} blockId The block ID.
  * @property {String} commentId The comment ID.
  * @property {String} commentURL The comment URL.
@@ -92,6 +92,7 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 * Update the remote profile value.
 		 *
 		 * @param {Event} event Input event.
+		 * @param {String} event.target.value The remote profile value.
 		 */
 		updateRemoteProfile( event ) {
 			const context = getContext();
@@ -106,12 +107,13 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 * Handle keydown event for remote profile input.
 		 *
 		 * @param {Event} event Keydown event.
-		 * @param {string} event.key Key pressed.
+		 * @param {String} event.key Key pressed.
 		 */
 		onInputKeydown( event ) {
 			if ( event.key === 'Enter' ) {
 				event.preventDefault();
-				actions.submitRemoteProfile();
+
+				return actions.submitRemoteProfile();
 			}
 		},
 
