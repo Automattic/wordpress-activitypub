@@ -100,7 +100,7 @@ ob_start();
 				placeholder="<?php echo esc_attr__( '@username@example.com', 'activitypub' ); ?>"
 				data-wp-bind--value="context.remoteProfile"
 				data-wp-on--input="actions.updateRemoteProfile"
-				data-wp-on--keydown="actions.handleKeyDown"
+				data-wp-on--keydown="actions.onInputKeydown"
 				data-wp-bind--aria-invalid="context.isError"
 			/>
 			<button
@@ -143,10 +143,12 @@ $modal_content = ob_get_clean();
 	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 	<?php echo $wrapper_context; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 >
-	<div hidden data-wp-bind--hidden="!context.hasRemoteUser">
-		<button
-			class="comment-reply-link activitypub-remote-reply__button"
-			data-wp-on--click="actions.openRemoteInstance"
+	<div class="activitypub-remote-profile" hidden data-wp-bind--hidden="!context.hasRemoteUser">
+		<a
+			class="comment-reply-link activitypub-remote-profile__button"
+			data-wp-bind--href="state.remoteProfileUrl"
+			href=""
+			target="_blank"
 		>
 			<?php
 			printf(
@@ -155,10 +157,11 @@ $modal_content = ob_get_clean();
 				'<span data-wp-text="context.profileURL"></span>'
 			);
 			?>
-		</button>
+		</a>
 
 		<button
-			class="activitypub-remote-profile-delete"
+			type="button"
+			class="activitypub-remote-profile__close wp-element-button wp-block-button__link"
 			data-wp-on--click="actions.deleteRemoteUser"
 			title="<?php echo esc_attr__( 'Delete Remote Profile', 'activitypub' ); ?>"
 		>
@@ -168,17 +171,21 @@ $modal_content = ob_get_clean();
 		</button>
 	</div>
 
-	<button
+	<a
 		class="comment-reply-link activitypub-remote-reply__button"
 		data-wp-on--click="actions.toggleModal"
+		data-wp-on--keydown="actions.onReplyLinkKeydown"
 		data-wp-bind--hidden="context.hasRemoteUser"
 		data-wp-bind--aria-expanded="context.modal.isOpen"
 		aria-label="<?php echo esc_attr__( 'Reply on the Fediverse', 'activitypub' ); ?>"
 		aria-haspopup="dialog"
 		aria-controls="modal-heading"
+		role="button"
+		tabindex="0"
+		hidden
 	>
 		<?php echo esc_html__( 'Reply on the Fediverse', 'activitypub' ); ?>
-	</button>
+	</a>
 
 	<?php
 	Blocks::render_modal(
