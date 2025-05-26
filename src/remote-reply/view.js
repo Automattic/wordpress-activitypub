@@ -37,7 +37,33 @@ createModalStore( 'activitypub/remote-reply' );
  */
 
 const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
+	state: {
+		/**
+		 * Get the remote profile URL.
+		 *
+		 * @returns {String} The remote profile URL.
+		 */
+		get remoteProfileUrl() {
+			const { commentURL, template } = getContext();
+
+			return template.replace( '{uri}', encodeURIComponent( commentURL ) );
+		},
+	},
 	actions: {
+		/**
+		 * Handle the opening of the modal.
+		 *
+		 * @param {Event} event The event that triggered the modal opening/closing.
+		 * @param {String} event.key The key pressed, if any.
+		 */
+		onReplyLinkKeydown( event ) {
+			// Handle Enter key to open the modal.
+			if ( event.key === 'Enter' || event.key === ' ' ) {
+				event.preventDefault();
+				actions.toggleModal( event);
+			}
+		},
+
 		/**
 		 * Copy the comment URL to the clipboard.
 		 */
@@ -82,7 +108,7 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 * @param {Event} event Keydown event.
 		 * @param {string} event.key Key pressed.
 		 */
-		handleKeyDown( event ) {
+		onInputKeyDown( event ) {
 			if ( event.key === 'Enter' ) {
 				event.preventDefault();
 				actions.submitRemoteProfile();
@@ -124,11 +150,6 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 				// Make the API request.
 				const response = yield apiFetch( { path } );
 
-				// Save the remote user if the remember option is checked.
-				if ( context.shouldSaveProfile ) {
-					callbacks.setStore( { profileURL: input, template: response.template } );
-				}
-
 				// Set opening state.
 				context.isLoading = false;
 
@@ -137,6 +158,13 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 
 				// Close the modal after opening the URL.
 				actions.closeModal();
+
+				// Save the remote user if the remember option is checked.
+				if ( context.shouldSaveProfile ) {
+					callbacks.setStore( { profileURL: input, template: response.template } );
+					context.hasRemoteUser = true;
+					context.profileURL = input;
+				}
 			} catch ( error ) {
 				// Handle error.
 				console.error( 'Error submitting profile:', error );
@@ -165,35 +193,27 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 			context.profileURL = '';
 			context.template = '';
 		},
-
-		/**
-		 * Open the remote user's instance to reply.
-		 */
-		openRemoteInstance() {
-			const context = getContext();
-			const url = context.template.replace( '{uri}', context.commentURL );
-			window.open( url, '_blank' );
-		},
 	},
 	callbacks: {
+		/**
+		 * The storage key for the remote user data.
+		 */
+		storageKey: 'fediverse-remote-user',
+
 		/**
 		 * Initialize the component.
 		 */
 		init() {
 			const context = getContext();
-			const storedUser = callbacks.getStore();
-
-			document.getElementById( context.blockId ).removeAttribute( 'hidden' );
+			const { profileURL, template } = callbacks.getStore();
 
 			// Set the remote user data from localStorage if available.
-			if ( storedUser.profileURL && storedUser.template ) {
+			if ( profileURL && template ) {
 				context.hasRemoteUser = true;
-				context.profileURL = storedUser.profileURL;
-				context.template = storedUser.template;
+				context.profileURL = profileURL;
+				context.template = template;
 			}
 		},
-
-		storageKey: 'fediverse-remote-user',
 
 		/**
 		 * Retrieve the remote user data from localStorage.

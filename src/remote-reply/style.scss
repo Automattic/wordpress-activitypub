@@ -1,18 +1,31 @@
-.activitypub-remote-profile-delete {
-	padding: 0 5px;
-	color: inherit;
-	align-self: center;
-	height: inherit;
-	font-size: inherit;
+.activitypub-remote-reply {
+	margin-top: 24px;
 
-	&:hover {
-		background: inherit;
-		border: inherit;
+	.activitypub-remote-profile {
+		align-items: center;
+		display: flex;
+		gap: 1rem;
+
+		&__button {
+			display: inline-block;
+			margin: 0 !important; // Override Twenty Fifteen/Twenty Sixteen styles.
+		}
+
+		&__close {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 0;
+			width: 24px;
+			height: 24px;
+			line-height: 1;
+			border-radius: 50%;
+		}
 	}
 }
 
-.activitypub-remote-reply {
-	display: flex;
+.activitypub-remote-reply__button[hidden] {
+	display: none !important;
 }
 
 .activitypub-dialog {
@@ -88,23 +101,5 @@
 			position: relative;
 			top: 0;
 		}
-	}
-}
-
-// Remote reply button styles.
-.activitypub-remote-reply__button {
-	padding: 0;
-	margin: 0;
-	background: none;
-	border: none;
-	border-radius: 0;
-	cursor: pointer;
-
-	&:hover, &:active, &:focus {
-		background: none;
-		border: none;
-		text-decoration: underline;
-		padding: 0;
-		margin: 0;
 	}
 }
