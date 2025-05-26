@@ -9,31 +9,31 @@ createModalStore( 'activitypub/remote-reply' );
 
 /**
  * @typedef {Object} state
- * @property {String} state.namespace ActivityPub REST Namespace.
- * @property {Object} state.i18n Internationalization strings.
- * @property {String} state.i18n.copy "Copy" button text.
- * @property {String} state.i18n.copied "Copied" button text.
- * @property {String} state.i18n.emptyProfileError Error message for empty remote profile.
- * @property {String} state.i18n.invalidProfileError Error message for invalid remote profile.
- * @property {String} state.i18n.genericError Generic error message.
+ * @property {String} namespace ActivityPub REST Namespace.
+ * @property {Object} i18n Internationalization strings.
+ * @property {String} i18n.copy "Copy" button text.
+ * @property {String} i18n.copied "Copied" button text.
+ * @property {String} i18n.emptyProfileError Error message for empty remote profile.
+ * @property {String} i18n.invalidProfileError Error message for invalid remote profile.
+ * @property {String} i18n.genericError Generic error message.
  */
 
 /**
  * @typedef {Object} Context
- * @property {String} context.blockId The block ID.
- * @property {String} context.commentId The comment ID.
- * @property {String} context.commentURL The comment URL.
- * @property {String} context.copyButtonText The copy button text.
- * @property {String} context.errorMessage The error message.
- * @property {boolean} context.hasRemoteUser Whether a remote user is set.
- * @property {boolean} context.isError Whether there is an error.
- * @property {boolean} context.isLoading Whether the remote profile is being submitted.
- * @property {Object} context.modal The modal state.
- * @property {boolean} context.modal.isOpen Whether the modal is open.
- * @property {String} context.profileURL The remote profile URL.
- * @property {String} context.remoteProfile The remote profile.
- * @property {boolean} context.shouldSaveProfile Whether to save the profile.
- * @property {String} context.template The template for the remote reply URL.
+ * @property {String} blockId The block ID.
+ * @property {String} commentId The comment ID.
+ * @property {String} commentURL The comment URL.
+ * @property {String} copyButtonText The copy button text.
+ * @property {String} errorMessage The error message.
+ * @property {boolean} hasRemoteUser Whether a remote user is set.
+ * @property {boolean} isError Whether there is an error.
+ * @property {boolean} isLoading Whether the remote profile is being submitted.
+ * @property {Object} modal The modal state.
+ * @property {boolean} modal.isOpen Whether the modal is open.
+ * @property {String} profileURL The remote profile URL.
+ * @property {String} remoteProfile The remote profile.
+ * @property {boolean} shouldSaveProfile Whether to save the profile.
+ * @property {String} template The template for the remote reply URL.
  */
 
 const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
@@ -60,7 +60,7 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 			// Handle Enter key to open the modal.
 			if ( event.key === 'Enter' || event.key === ' ' ) {
 				event.preventDefault();
-				actions.toggleModal( event);
+				actions.toggleModal( event );
 			}
 		},
 
@@ -208,9 +208,7 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 
 			// Set the remote user data from localStorage if available.
 			if ( profileURL && template ) {
-				context.hasRemoteUser = true;
-				context.profileURL = profileURL;
-				context.template = template;
+				Object.assign( context, { hasRemoteUser: true, profileURL, template } );
 			}
 		},
 
@@ -221,10 +219,8 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 */
 		getStore() {
 			const data = localStorage.getItem( callbacks.storageKey );
-			if ( ! data ) {
-				return {};
-			}
-			return JSON.parse( data );
+
+			return data ? JSON.parse( data ) : {};
 		},
 
 		/**
