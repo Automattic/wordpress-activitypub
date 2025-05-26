@@ -120,19 +120,19 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 */
 		*submitRemoteProfile() {
 			const context = getContext();
-			const { namespace } = state;
+			const { namespace, i18n } = state;
 			const profileURL = context.remoteProfile.trim();
 
 			// Validate input.
 			if ( ! profileURL ) {
 				context.isError = true;
-				context.errorMessage = state.i18n.emptyProfileError;
+				context.errorMessage = i18n.emptyProfileError;
 				return;
 			}
 
 			if ( ! callbacks.isHandle( profileURL ) && ! callbacks.isUrl( profileURL ) ) {
 				context.isError = true;
-				context.errorMessage = state.i18n.invalidProfileError;
+				context.errorMessage = i18n.invalidProfileError;
 				return;
 			}
 
@@ -169,7 +169,7 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 				console.error( 'Error submitting profile:', error );
 				context.isLoading = false;
 				context.isError = true;
-				context.errorMessage = error.message || state.i18n.genericError;
+				context.errorMessage = error.message || i18n.genericError;
 			}
 		},
 
