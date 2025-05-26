@@ -147,7 +147,6 @@ $modal_content = ob_get_clean();
 		<a
 			class="comment-reply-link activitypub-remote-profile__link"
 			data-wp-bind--href="state.remoteProfileUrl"
-			href=""
 			target="_blank"
 		>
 			<?php

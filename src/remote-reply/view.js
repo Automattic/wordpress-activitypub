@@ -121,16 +121,16 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		*submitRemoteProfile() {
 			const context = getContext();
 			const { namespace } = state;
-			const input = context.remoteProfile.trim();
+			const profileURL = context.remoteProfile.trim();
 
 			// Validate input.
-			if ( ! input ) {
+			if ( ! profileURL ) {
 				context.isError = true;
 				context.errorMessage = state.i18n.emptyProfileError;
 				return;
 			}
 
-			if ( ! callbacks.isHandle( input ) && ! callbacks.isUrl( input ) ) {
+			if ( ! callbacks.isHandle( profileURL ) && ! callbacks.isUrl( profileURL ) ) {
 				context.isError = true;
 				context.errorMessage = state.i18n.invalidProfileError;
 				return;
@@ -143,27 +143,26 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 
 			// Construct the API path.
 			const path = `/${ namespace }/comments/${ context.commentId }/remote-reply?resource=${ encodeURIComponent(
-				input
+				profileURL
 			) }`;
 
 			try {
 				// Make the API request.
-				const response = yield apiFetch( { path } );
+				const { template, url } = yield apiFetch( { path } );
 
 				// Set opening state.
 				context.isLoading = false;
 
 				// Open the remote reply URL in a new tab.
-				window.open( response.url, '_blank' );
+				window.open( url, '_blank' );
 
 				// Close the modal after opening the URL.
 				actions.closeModal();
 
 				// Save the remote user if the remember option is checked.
 				if ( context.shouldSaveProfile ) {
-					callbacks.setStore( { profileURL: input, template: response.template } );
-					context.hasRemoteUser = true;
-					context.profileURL = input;
+					callbacks.setStore( { profileURL, template } );
+					Object.assign( context, { hasRemoteUser: true, profileURL, template } );
 				}
 			} catch ( error ) {
 				// Handle error.
