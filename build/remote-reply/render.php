@@ -145,7 +145,7 @@ $modal_content = ob_get_clean();
 >
 	<div class="activitypub-remote-profile" hidden data-wp-bind--hidden="!context.hasRemoteUser">
 		<a
-			class="comment-reply-link activitypub-remote-profile__button"
+			class="comment-reply-link activitypub-remote-profile__link"
 			data-wp-bind--href="state.remoteProfileUrl"
 			href=""
 			target="_blank"
@@ -172,7 +172,7 @@ $modal_content = ob_get_clean();
 	</div>
 
 	<a
-		class="comment-reply-link activitypub-remote-reply__button"
+		class="comment-reply-link activitypub-remote-reply__link"
 		data-wp-on--click="actions.toggleModal"
 		data-wp-on--keydown="actions.onReplyLinkKeydown"
 		data-wp-bind--hidden="context.hasRemoteUser"
