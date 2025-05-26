@@ -2,8 +2,8 @@ import { getContext, store, getElement } from '@wordpress/interactivity';
 
 /**
  * @typedef {Object} context
- * @property {string} context.blockId - The ID of the block.
- * @property {Object} context.modal - The modal state.
+ * @property {String} blockId - The ID of the block.
+ * @property {Object} modal - The modal state.
  * @property {boolean} modal.isOpen - Whether the modal is open.
  * @property {boolean} modal.isCompact - Whether the modal is compact.
  */
@@ -19,6 +19,11 @@ import { getContext, store, getElement } from '@wordpress/interactivity';
 export function createModalStore( namespace ) {
 	const { actions, callbacks } = store( namespace, {
 		actions: {
+			/**
+			 * Open the modal.
+			 *
+			 * @param {Event} event Click event.
+			 */
 			openModal( event ) {
 				const context = getContext();
 
@@ -48,6 +53,9 @@ export function createModalStore( namespace ) {
 				}
 			},
 
+			/**
+			 * Close the modal.
+			 */
 			closeModal() {
 				const context = getContext();
 
@@ -69,14 +77,27 @@ export function createModalStore( namespace ) {
 				}
 			},
 
+			/**
+			 * Toggle the modal.
+			 *
+			 * @param {Event} event Click event.
+			 */
 			toggleModal( event ) {
 				const { modal } = getContext();
+				event.stopPropagation();
 
-				modal.isOpen ? actions.closeModal( event ) : actions.openModal( event );
+				modal.isOpen ? actions.closeModal() : actions.openModal( event );
 			},
 		},
 
 		callbacks: {
+			/**
+			 * Abort controller for keydown and click event listeners.
+			 *
+			 * @type {AbortController | null} Abort controller.
+			 */
+			_abortController: null,
+
 			/**
 			 * Handles modal effects like body class and event listeners.
 			 * This is called via data-wp-watch in the modal HTML.
@@ -91,29 +112,43 @@ export function createModalStore( namespace ) {
 					document.body.classList.remove( 'modal-open' );
 				}
 
-				// Trigger event listeners.
-				if ( modal.isOpen ) {
-					document.addEventListener( 'keydown', callbacks.documentKeydown );
-					document.addEventListener( 'click', callbacks.documentClick );
+				// Remove all existing listeners.
+				if ( callbacks._abortController ) {
+					callbacks._abortController.abort();
+					callbacks._abortController = null;
+				}
 
-					// Return a cleanup function.
-					return () => {
-						document.removeEventListener( 'keydown', callbacks.documentKeydown );
-						document.removeEventListener( 'click', callbacks.documentClick );
-					};
+				// Add new listeners if modal is open.
+				if ( modal.isOpen ) {
+					callbacks._abortController = new AbortController();
+					const { signal } = callbacks._abortController;
+
+					document.addEventListener( 'keydown', callbacks.documentKeydown, { signal } );
+					document.addEventListener( 'click', callbacks.documentClick, { signal } );
 				}
 
 				return undefined;
 			},
 
+			/**
+			 * Handles keydown events on the document.
+			 *
+			 * @param {Event} event Keydown event.
+			 * @param {String} event.key The key that was pressed.
+			 */
 			documentKeydown( event ) {
 				const { modal } = getContext();
 
 				if ( modal.isOpen && event.key === 'Escape' ) {
-					actions.closeModal( event );
+					actions.closeModal();
 				}
 			},
 
+			/**
+			 * Handles click events on the document.
+			 *
+			 * @param {Event} event Click event.
+			 */
 			documentClick( event ) {
 				const { blockId, modal } = getContext();
 				if ( ! modal.isOpen ) {
