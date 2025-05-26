@@ -6,11 +6,6 @@
 		display: flex;
 		gap: 1rem;
 
-		&__button {
-			display: inline-block;
-			margin: 0 !important; // Override Twenty Fifteen/Twenty Sixteen styles.
-		}
-
 		&__close {
 			display: inline-flex;
 			align-items: center;
@@ -22,10 +17,20 @@
 			border-radius: 50%;
 		}
 	}
+
+	&__link,
+	.activitypub-remote-profile__link {
+		cursor: pointer;
+		display: inline-block;
+		margin: 0 !important; // Override Twenty Fifteen/Twenty Sixteen styles.
+	}
 }
 
-.activitypub-remote-reply__button[hidden] {
-	display: none !important;
+.activitypub-remote-profile,
+.activitypub-remote-reply__link {
+	&[hidden] {
+		display: none !important;
+	}
 }
 
 .activitypub-dialog {

@@ -108,7 +108,7 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 * @param {Event} event Keydown event.
 		 * @param {string} event.key Key pressed.
 		 */
-		onInputKeyDown( event ) {
+		onInputKeydown( event ) {
 			if ( event.key === 'Enter' ) {
 				event.preventDefault();
 				actions.submitRemoteProfile();
