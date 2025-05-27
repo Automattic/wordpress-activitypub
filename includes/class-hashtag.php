@@ -32,10 +32,7 @@ class Hashtag {
 	 * @return array The filtered activity object array.
 	 */
 	public static function filter_activity_object( $activity ) {
-		/* phpcs:ignore Squiz.PHP.CommentedOutCode.Found
-		Only changed it for Person and Group as long is not merged: https://github.com/mastodon/mastodon/pull/28629
-		*/
-		if ( ! empty( $activity['summary'] ) && in_array( $activity['type'], array( 'Person', 'Group' ), true ) ) {
+		if ( ! empty( $activity['summary'] ) ) {
 			$activity['summary'] = self::the_content( $activity['summary'] );
 		}
 
