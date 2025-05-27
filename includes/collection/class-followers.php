@@ -33,7 +33,7 @@ class Followers {
 	 *
 	 * @var string
 	 */
-	const FOLLOWER_META_KEY = '_activitypub_follower_of';
+	const FOLLOWER_META_KEY = '_activitypub_following';
 
 	/**
 	 * Add new Follower.
