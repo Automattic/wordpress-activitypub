@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Re-enabled HTML support in excerpts and summaries to properly display hashtags and @-replies, now that Mastodon supports it.
