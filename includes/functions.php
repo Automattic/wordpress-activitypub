@@ -1222,12 +1222,8 @@ function generate_post_summary( $post, $length = 500 ) {
 		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
-	/*
-	Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
-	/** This filter is documented in wp-includes/post-template.php
+	// This filter is documented in wp-includes/post-template.php.
 	return \apply_filters( 'the_excerpt', $content );
-	*/
-	return $content;
 }
 
 /**
