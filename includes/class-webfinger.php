@@ -211,17 +211,17 @@ class Webfinger {
 		$webfinger_url = sprintf(
 			'https://%s/.well-known/webfinger?resource=%s',
 			$host,
-			rawurlencode( $identifier )
+			\rawurlencode( $identifier )
 		);
 
-		$response = wp_safe_remote_get(
+		$response = \wp_safe_remote_get(
 			$webfinger_url,
 			array(
 				'headers' => array( 'Accept' => 'application/jrd+json' ),
 			)
 		);
 
-		if ( is_wp_error( $response ) ) {
+		if ( \is_wp_error( $response ) || \wp_remote_retrieve_response_code( $response ) >= 400 ) {
 			return new WP_Error(
 				'webfinger_url_not_accessible',
 				__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
@@ -232,8 +232,8 @@ class Webfinger {
 			);
 		}
 
-		$body = wp_remote_retrieve_body( $response );
-		$data = json_decode( $body, true );
+		$body = \wp_remote_retrieve_body( $response );
+		$data = \json_decode( $body, true );
 
 		\set_transient( $transient_key, $data, WEEK_IN_SECONDS );
 
