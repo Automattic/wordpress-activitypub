@@ -243,7 +243,7 @@ class Health_Check {
 
 			$data       = $url->get_error_data();
 			$author_url = $resource;
-			if ( \is_string( $data['data'] ) ) {
+			if ( isset( $data['data'] ) && \is_string( $data['data'] ) ) {
 				$author_url = $data['data'];
 			}
 
