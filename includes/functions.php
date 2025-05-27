@@ -1212,6 +1212,7 @@ function generate_post_summary( $post, $length = 500 ) {
 
 	$content = \html_entity_decode( $content );
 	$content = \wp_strip_all_tags( $content );
+	$content = \strip_shortcodes( $content );
 	$content = \trim( $content );
 	$content = \preg_replace( '/\R+/m', "\n\n", $content );
 	$content = \preg_replace( '/[\r\t]/', '', $content );
