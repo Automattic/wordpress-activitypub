@@ -92,37 +92,25 @@ class Interactions {
 	 * @return array|false      Comment data or `false` on failure.
 	 */
 	public static function add_reaction( $activity ) {
-		$comment_data = self::activity_to_comment( $activity );
-
-		if ( ! $comment_data ) {
-			return false;
-		}
-
-		$url               = object_to_uri( $activity['object'] );
-		$comment_post_id   = \url_to_postid( $url );
-		$parent_comment_id = url_to_commentid( $url );
-
-		if ( ! $comment_post_id && $parent_comment_id ) {
-			$parent_comment  = \get_comment( $parent_comment_id );
-			$comment_post_id = $parent_comment->comment_post_ID;
-		}
-
+		$comment_post_id = \url_to_postid( object_to_uri( $activity['object'] ) );
 		if ( ! $comment_post_id || is_post_disabled( $comment_post_id ) ) {
-			// Not a reply to a post or comment.
+			// Not a reply to a post.
 			return false;
 		}
 
 		$comment_type = Comment::get_comment_type_by_activity_type( $activity['type'] );
-
 		if ( ! $comment_type ) {
 			// Not a valid comment type.
 			return false;
 		}
 
-		$comment_content = $comment_type['excerpt'];
+		$comment_data = self::activity_to_comment( $activity );
+		if ( ! $comment_data ) {
+			return false;
+		}
 
 		$comment_data['comment_post_ID']           = $comment_post_id;
-		$comment_data['comment_content']           = \esc_html( $comment_content );
+		$comment_data['comment_content']           = \esc_html( $comment_type['excerpt'] );
 		$comment_data['comment_type']              = \esc_attr( $comment_type['type'] );
 		$comment_data['comment_meta']['source_id'] = \esc_url_raw( $activity['id'] );
 
