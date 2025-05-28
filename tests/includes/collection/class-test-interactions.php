@@ -8,7 +8,6 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Interactions;
-use Activitypub\Comment;
 
 /**
  * Test class for Activitypub Interactions.
