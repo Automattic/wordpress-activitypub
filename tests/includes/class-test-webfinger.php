@@ -158,6 +158,8 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the resolve method.
+	 *
 	 * @dataProvider the_resolve_provider
 	 * @covers ::resolve
 	 *
