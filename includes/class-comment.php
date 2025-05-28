@@ -64,14 +64,14 @@ class Comment {
 			'commentId'       => $comment->comment_ID,
 		);
 
-		$block = do_blocks( sprintf( '<!-- wp:activitypub/remote-reply %s /-->', \wp_json_encode( $attributes ) ) );
+		$block = \do_blocks( \sprintf( '<!-- wp:activitypub/remote-reply %s /-->', \wp_json_encode( $attributes ) ) );
 
 		/**
 		 * Filters the HTML markup for the ActivityPub remote comment reply container.
 		 *
 		 * @param string $block The HTML markup for the remote reply container.
 		 */
-		return apply_filters( 'activitypub_comment_reply_link', $block );
+		return \apply_filters( 'activitypub_comment_reply_link', $block );
 	}
 
 	/**
