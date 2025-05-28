@@ -473,25 +473,6 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that likes and reposts are not collected for comments.
-	 *
-	 * @covers ::add_reaction
-	 */
-	public function test_add_like_to_comment() {
-		$comment = self::factory()->comment->create_and_get( array( 'comment_post_ID' => self::$post_id ) );
-
-		$activity = array(
-			'type'   => 'Like',
-			'actor'  => 'https://example.com/users/test',
-			'object' => Comment::generate_id( $comment ),
-			'id'     => 'https://example.com/activities/like/123',
-		);
-
-		$result = Interactions::add_reaction( $activity );
-		$this->assertFalse( $result, 'Likes and reposts should not be collected for comments.' );
-	}
-
-	/**
 	 * Test that incoming likes and reposts are not collected when disabled.
 	 *
 	 * @covers ::add_reaction
