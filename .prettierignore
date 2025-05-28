@@ -6,6 +6,5 @@ vendor
 # Temporary ignores while breaking out each component.
 assets
 src/followers
-src/remote-reply
 src/reply
 src/reply-intent

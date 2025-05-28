@@ -1,0 +1,4 @@
+Significance: major
+Type: changed
+
+"Reply on the Fediverse" now uses the Interactivity API for display on the frontend.

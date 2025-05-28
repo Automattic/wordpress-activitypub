@@ -2,7 +2,6 @@ import { useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { __, _x, sprintf } from '@wordpress/i18n';
 import { select } from '@wordpress/data';
 import { Reactions } from './reactions';
-import './style.scss';
 
 // Generate reaction items with SVG avatars.
 const generateReactionItems = ( count, prefix, startChar, colors ) =>

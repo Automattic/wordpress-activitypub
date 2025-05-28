@@ -6,8 +6,4 @@ import metadata from './block.json';
 import save from './save';
 import './style.scss';
 
-registerBlockType( metadata.name, {
-	deprecated,
-	edit,
-	save,
-} );
+registerBlockType( metadata, { deprecated, edit, save } );
