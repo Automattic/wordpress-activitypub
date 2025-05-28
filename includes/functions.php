@@ -1183,16 +1183,6 @@ function generate_post_summary( $post, $length = 500 ) {
 		return '';
 	}
 
-	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
-
-	if ( $content ) {
-		/** This filter is documented in wp-includes/post-template.php */
-		return \apply_filters( 'the_excerpt', $content );
-	}
-
-	$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
-	$content_parts = \get_extended( $content );
-
 	/**
 	 * Filters the excerpt more value.
 	 *
@@ -1201,15 +1191,26 @@ function generate_post_summary( $post, $length = 500 ) {
 	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[…]' );
 	$length       = $length - strlen( $excerpt_more );
 
-	// Check for the <!--more--> tag.
-	if (
-		! empty( $content_parts['extended'] ) &&
-		! empty( $content_parts['main'] )
-	) {
-		$content = $content_parts['main'] . ' ' . $excerpt_more;
-		$length  = null;
+	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
+
+	if ( $content ) {
+		// Ignore length if excerpt is set.
+		$length = null;
+	} else {
+		$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
+		$content_parts = \get_extended( $content );
+
+		// Check for the <!--more--> tag.
+		if (
+			! empty( $content_parts['extended'] ) &&
+			! empty( $content_parts['main'] )
+		) {
+			$content = \trim( $content_parts['main'] ) . ' ' . $excerpt_more;
+			$length  = null;
+		}
 	}
 
+	$content = \strip_shortcodes( $content );
 	$content = \html_entity_decode( $content );
 	$content = \wp_strip_all_tags( $content );
 	$content = \trim( $content );

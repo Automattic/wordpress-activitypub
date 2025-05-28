@@ -428,6 +428,7 @@ class Blocks {
 			data-wp-watch="callbacks.handleModalEffects"
 			role="dialog"
 			aria-modal="true"
+			hidden
 		>
 			<div class="activitypub-modal__frame">
 				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
