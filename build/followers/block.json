@@ -57,6 +57,7 @@
   "editorStyle": [
     "file:./edit.css"
   ],
+  "viewScriptModule": "file:./view.js",
   "viewScript": "wp-api-fetch",
   "style": [
     "file:./style-index.css"
