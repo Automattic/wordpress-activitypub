@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed a bug in Site Health that caused a PHP warning and missing details for the WebFinger check.

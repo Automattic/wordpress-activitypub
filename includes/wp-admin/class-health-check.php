@@ -241,15 +241,21 @@ class Health_Check {
 				$allowed
 			);
 
+			$data       = $url->get_error_data();
+			$author_url = $resource;
+			if ( isset( $data['data'] ) && \is_string( $data['data'] ) ) {
+				$author_url = $data['data'];
+			}
+
 			$health_messages = array(
 				'webfinger_url_not_accessible'   => \sprintf(
 					$not_accessible,
-					$url->get_error_data()['data']
+					$author_url
 				),
 				'webfinger_url_invalid_response' => \sprintf(
 					// translators: %s: Author URL.
 					$invalid_response,
-					$url->get_error_data()['data']
+					$author_url
 				),
 			);
 			$message         = null;
