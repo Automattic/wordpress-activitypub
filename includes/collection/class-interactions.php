@@ -89,12 +89,20 @@ class Interactions {
 	 *
 	 * @param array $activity Activity array.
 	 *
-	 * @return array|false      Comment data or `false` on failure.
+	 * @return array|false Comment data or `false` on failure.
 	 */
 	public static function add_reaction( $activity ) {
-		$comment_post_id = \url_to_postid( object_to_uri( $activity['object'] ) );
+		$url               = object_to_uri( $activity['object'] );
+		$comment_post_id   = \url_to_postid( $url );
+		$parent_comment_id = url_to_commentid( $url );
+
+		if ( ! $comment_post_id && $parent_comment_id ) {
+			$parent_comment  = \get_comment( $parent_comment_id );
+			$comment_post_id = $parent_comment->comment_post_ID;
+		}
+
 		if ( ! $comment_post_id || is_post_disabled( $comment_post_id ) ) {
-			// Not a reply to a post.
+			// Not a reply to a post or comment.
 			return false;
 		}
 
@@ -110,6 +118,7 @@ class Interactions {
 		}
 
 		$comment_data['comment_post_ID']           = $comment_post_id;
+		$comment_data['comment_parent']            = $parent_comment_id ? $parent_comment_id : 0;
 		$comment_data['comment_content']           = \esc_html( $comment_type['excerpt'] );
 		$comment_data['comment_type']              = \esc_attr( $comment_type['type'] );
 		$comment_data['comment_meta']['source_id'] = \esc_url_raw( $activity['id'] );
