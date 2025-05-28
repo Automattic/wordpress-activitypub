@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
-import { createInterpolateElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { Pagination } from './pagination';
-import { ExternalLink } from '@wordpress/components';
 import { useOptions } from '../shared/use-options';
 
 function getPath( userId, per_page, order, page ) {
@@ -14,7 +11,7 @@ function getPath( userId, per_page, order, page ) {
 		per_page,
 		order,
 		page,
-		context: 'full'
+		context: 'full',
 	};
 	return addQueryArgs( path, args );
 }
@@ -33,7 +30,7 @@ export function Followers( {
 	setPage: passedSetPage,
 	className = '',
 	followLinks = true,
-	followerData = false
+	followerData = false,
 } ) {
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const [ followers, setFollowers ] = useState( [] );
@@ -42,26 +39,12 @@ export function Followers( {
 	const [ localPage, setLocalPage ] = usePage();
 	const page = passedPage || localPage;
 	const setPage = passedSetPage || setLocalPage;
-	const prevLabel = createInterpolateElement(
-		/* translators: arrow for previous followers link */
-		__( '<span>←</span> Less', 'activitypub' ),
-		{
-			span: <span className="wp-block-query-pagination-previous-arrow is-arrow-arrow" aria-hidden="true" />,
-		}
-	);
-	const nextLabel = createInterpolateElement(
-		/* translators: arrow for next followers link */
-		__( 'More <span>→</span>', 'activitypub' ),
-		{
-			span: <span className="wp-block-query-pagination-next-arrow is-arrow-arrow" aria-hidden="true" />,
-		}
-	);
 
 	const setData = ( followers, total ) => {
 		setFollowers( followers );
 		setTotal( total );
 		setPages( Math.ceil( total / per_page ) );
-	}
+	};
 
 	useEffect( () => {
 		if ( followerData && page === 1 ) {
@@ -73,27 +56,56 @@ export function Followers( {
 			.then( ( data ) => setData( data.orderedItems, data.totalItems ) )
 			.catch( () => {} );
 	}, [ userId, per_page, order, page, followerData ] );
+
+	// Create pagination navigation with buttons that match the frontend
+	const renderPagination = () => {
+		if ( pages <= 1 ) {
+			return null;
+		}
+
+		const hidePrevButton = page <= 1;
+		const hideNextButton = page >= pages;
+
+		return (
+			<nav className="followers-pagination" role="navigation">
+				<h1 className="screen-reader-text">{ __( 'Follower navigation', 'activitypub' ) }</h1>
+				<button
+					className="pagination-prev wp-block-button__link wp-element-button"
+					onClick={ () => setPage( page - 1 ) }
+					disabled={ hidePrevButton }
+					aria-label={ __( 'Previous page', 'activitypub' ) }
+				>
+					{ __( 'Previous', 'activitypub' ) }
+				</button>
+
+				<div className="pagination-info">{ `${ page } / ${ pages }` }</div>
+
+				<button
+					className="pagination-next wp-block-button__link wp-element-button"
+					onClick={ () => setPage( page + 1 ) }
+					disabled={ hideNextButton }
+					aria-label={ __( 'Next page', 'activitypub' ) }
+				>
+					{ __( 'Next', 'activitypub' ) }
+				</button>
+			</nav>
+		);
+	};
+
 	return (
-		<div className={ "activitypub-follower-block " + className }>
-			<h3>{ title }</h3>
-				<ul>
-				{ followers && followers.map( ( follower ) => (
-					<li key={ follower.url }>
-						<Follower { ...follower } followLinks={ followLinks } />
-					</li>
-				) ) }
+		<div className={ 'wp-block-activitypub-followers ' + className }>
+			{ title && <h3 className="followers-title">{ title }</h3> }
+			<div className="followers-container">
+				<ul className="followers-list">
+					{ followers &&
+						followers.map( ( follower ) => (
+							<li key={ follower.url } className="follower-item">
+								<Follower { ...follower } followLinks={ followLinks } />
+							</li>
+						) ) }
 				</ul>
-				{ pages > 1 && (
-					<Pagination
-						page={ page }
-						perPage={ per_page }
-						total={ total }
-						pageClick={ setPage }
-						nextLabel={ nextLabel }
-						prevLabel={ prevLabel }
-						compact={ className === 'is-style-compact' }
-					/>
-				) }
+				{ pages > 1 && renderPagination() }
+			</div>
 		</div>
 	);
 }
@@ -102,25 +114,45 @@ function Follower( { name, icon, url, preferredUsername, followLinks = true } ) 
 	const handle = `@${ preferredUsername }`;
 	const extraProps = {};
 	if ( ! followLinks ) {
-		extraProps.onClick = event => event.preventDefault();
+		extraProps.onClick = ( event ) => event.preventDefault();
 	}
 	const { defaultAvatarUrl } = useOptions();
 	const avatar = icon.url || defaultAvatarUrl;
+
 	return (
-		<ExternalLink className="activitypub-link" href={ url } title={ handle } { ...extraProps }>
+		<a
+			className="follower-link"
+			href={ url }
+			title={ handle }
+			target="_blank"
+			rel="external noreferrer noopener"
+			{ ...extraProps }
+		>
 			<img
-				width="40"
-				height="40"
+				width="48"
+				height="48"
 				src={ avatar }
-				className="avatar activitypub-avatar"
+				className="follower-avatar"
 				alt={ name }
-				onError={ (e) => { e.target.src = defaultAvatarUrl; } }
+				onError={ ( e ) => {
+					e.target.src = defaultAvatarUrl;
+				} }
 			/>
-			<span className="activitypub-actor">
-				<strong className="activitypub-name">{ name }</strong>
-				<span className="sep">/</span>
-				<span className="activitypub-handle">{ handle }</span>
-			</span>
-		</ExternalLink>
-	)
+			<div className="follower-info">
+				<span className="follower-name">{ name }</span>
+				<span className="follower-username">{ handle }</span>
+			</div>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				width="24"
+				height="24"
+				className="external-link-icon"
+				aria-hidden="true"
+				focusable="false"
+			>
+				<path d="M18.2 17c0 .7-.6 1.2-1.2 1.2H7c-.7 0-1.2-.6-1.2-1.2V7c0-.7.6-1.2 1.2-1.2h3.2V4.2H7C5.5 4.2 4.2 5.5 4.2 7v10c0 1.5 1.2 2.8 2.8 2.8h10c1.5 0 2.8-1.2 2.8-2.8v-3.6h-1.5V17zM14.9 3v1.5h3.7l-6.4 6.4 1.1 1.1 6.4-6.4v3.7h1.5V3h-6.3z"></path>
+			</svg>
+		</a>
+	);
 }

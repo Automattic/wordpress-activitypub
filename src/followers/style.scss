@@ -1,84 +1,282 @@
-.activitypub-follower-block {
-	&.is-style-compact {
-		.activitypub-handle, .sep {
-			display: none;
-		}
-	}
-	&.is-style-with-lines {
-		ul li {
-			border-bottom: .5px solid;
-			padding-bottom: .5rem;
-			margin-bottom: .5rem;
-			&:last-child {
-				border-bottom: none;
-			}
-		}
-		.activitypub-name, .activitypub-handle {
-			text-decoration: none;
-			&:hover {
-				text-decoration: underline;
-			}
-		}
-	}
-	ul {
-		margin: 0 !important;
-		padding: 0 !important;
-	}
-	li {
-		display: flex;
-		margin-bottom: 1rem;
-	}
-	img {
-		border-radius: 50%;
-		max-width: 40px;
-		max-height: 40px;
-		overflow: hidden;
-		-moz-force-broken-image-icon: 1;
-		margin-right: var( --wp--preset--spacing--20, .5rem );
-	}
-	.activitypub-link {
-		display: flex;
-		flex-flow: row nowrap;
-		align-items: center;
-		max-width: 100%;
-		color: inherit !important;
-		text-decoration: none !important; // overrides core styles for external links
-	}
-	.activitypub-name, .activitypub-handle {
-		text-decoration: underline;
-		text-decoration-thickness: .8px;
-		text-underline-position: under;
+/**
+ * Followers block styles.
+ */
 
-		&:hover {
-			text-decoration: none;
+// Variables
+$primary-color: #0073aa;
+$border-color: #e0e0e0;
+$text-color: #333;
+$text-light: #666;
+$background-light: #f9f9f9;
+$background-hover: #f0f0f0;
+$border-radius: 8px;
+$transition-speed: 0.2s;
+$spacing-base: 16px;
+
+// Base styles for the followers block
+.wp-block-activitypub-followers {
+	margin: $spacing-base 0;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+
+	// Block title
+	.followers-title {
+		margin: 0 0 $spacing-base;
+		padding: 0 0 $spacing-base/2;
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: $text-color;
+		border-bottom: 1px solid $border-color;
+	}
+
+	// Followers container
+	.followers-container {
+		position: relative;
+	}
+
+	// Followers list
+	.followers-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	// Individual follower item
+	.follower-item {
+		margin: 0 0 $spacing-base/2;
+
+		&:last-child {
+			margin-bottom: 0;
 		}
 	}
-	.activitypub-name {
-		font-size: var( --wp--preset--font-size--normal, 16px );
+
+	// Follower link
+	.follower-link {
+		display: flex;
+		align-items: center;
+		padding: $spacing-base/2;
+		text-decoration: none;
+		color: $text-color;
+		border-radius: $border-radius;
+		transition: background-color $transition-speed ease;
+
+		&:hover, &:focus {
+			background-color: $background-hover;
+			outline: none;
+
+			.external-link-icon {
+				opacity: 1;
+			}
+		}
 	}
-	.activitypub-actor {
-		font-size: var( --wp--preset--font-size--small, 13px );
+
+	// Follower avatar
+	.follower-avatar {
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		object-fit: cover;
+		margin-right: $spacing-base;
+		border: 1px solid $border-color;
+	}
+
+	// Follower info
+	.follower-info {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	// Follower name
+	.follower-name {
+		font-weight: 600;
+		margin-bottom: 2px;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
-	.sep {
-		padding: 0 .2rem;
+
+	// Follower username
+	.follower-username {
+		color: $text-light;
+		font-size: 0.9rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
-	.wp-block-query-pagination {
-		margin-top: 1.5rem;
+
+	// External link icon
+	.external-link-icon {
+		width: 16px;
+		height: 16px;
+		margin-left: $spacing-base/2;
+		opacity: 0.5;
+		transition: opacity $transition-speed ease;
+		fill: currentColor;
 	}
-	.activitypub-pager {
-		cursor: default;
-		&.current {
-			opacity: .33;
+
+	// Pagination
+	.followers-pagination {
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
+		align-items: center;
+		margin-top: $spacing-base;
+		padding-top: $spacing-base/2;
+		border-top: 1px solid $border-color;
+
+		.pagination-prev {
+			grid-column: 1;
+			justify-self: start;
+		}
+
+		.pagination-info {
+			grid-column: 2;
+			justify-self: center;
+		}
+
+		.pagination-next {
+			grid-column: 3;
+			justify-self: end;
 		}
 	}
-	.page-numbers {
-		padding: 0 .2rem;
-		&.current {
-			opacity: 1;
-			font-weight: bold;
+
+	// Pagination buttons
+	.pagination-prev,
+	.pagination-next {
+		display: flex;
+		align-items: center;
+		padding: $spacing-base/2 $spacing-base;
+		border-radius: $border-radius;
+		cursor: pointer;
+		font-size: 0.9rem;
+		width: auto;
+
+		&[hidden] {
+			display: none !important;
 		}
+
+		&:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+	}
+
+	// Previous button arrow
+	.pagination-prev {
+		&::before {
+			content: "←";
+			margin-right: $spacing-base/2;
+			font-size: 1.1rem;
+			line-height: 1;
+		}
+	}
+
+	// Next button arrow
+	.pagination-next {
+		&::after {
+			content: "→";
+			margin-left: $spacing-base/2;
+			font-size: 1.1rem;
+			line-height: 1;
+		}
+	}
+
+	// Pagination info
+	.pagination-info {
+		font-size: 0.9rem;
+		color: $text-light;
+	}
+
+	// Loading spinner
+	.followers-loading {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(255, 255, 255, 0.5);
+		border-radius: $border-radius;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1;
+
+		&[aria-hidden="true"] {
+			display: none;
+		}
+	}
+
+	.loading-spinner {
+		width: 40px;
+		height: 40px;
+		border: 3px solid rgba($primary-color, 0.3);
+		border-radius: 50%;
+		border-top-color: $primary-color;
+		animation: spin 1s ease-in-out infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+}
+
+// Card style variation
+.wp-block-activitypub-followers.is-style-card {
+	background-color: white;
+	border-radius: $border-radius;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	padding: $spacing-base;
+
+	.followers-title {
+		text-align: center;
+		border-bottom: none;
+		margin-bottom: $spacing-base;
+	}
+
+	.follower-link {
+		border: 1px solid $border-color;
+		margin-bottom: $spacing-base/2;
+
+		&:hover, &:focus {
+			border-color: darken($border-color, 10%);
+		}
+	}
+}
+
+// Compact style variation
+.wp-block-activitypub-followers.is-style-compact {
+	.follower-link {
+		padding: $spacing-base/4;
+	}
+
+	.follower-avatar {
+		width: 36px;
+		height: 36px;
+		margin-right: $spacing-base/2;
+	}
+
+	.follower-name {
+		font-size: 0.9rem;
+	}
+
+	.follower-username {
+		font-size: 0.8rem;
+	}
+
+	.followers-pagination {
+		margin-top: $spacing-base/2;
+		padding-top: $spacing-base/4;
+	}
+
+	.pagination-prev,
+	.pagination-next {
+		padding: $spacing-base/4 $spacing-base/2;
+		font-size: 0.8rem;
+	}
+
+	.pagination-info {
+		font-size: 0.8rem;
 	}
 }
