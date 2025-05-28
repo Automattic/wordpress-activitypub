@@ -7,6 +7,7 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Model\Follower;
 use WP_Error;
 use WP_Query;
@@ -119,7 +120,7 @@ class Followers {
 			$wpdb->prepare(
 				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid = %s",
 				array(
-					esc_sql( ACTIVITYPUB_ACTOR_POST_TYPE ),
+					esc_sql( Actor::POST_TYPE ),
 					esc_sql( self::FOLLOWER_META_KEY ),
 					esc_sql( $user_id ),
 					esc_sql( $actor ),
@@ -193,7 +194,7 @@ class Followers {
 	 */
 	public static function get_followers_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => ACTIVITYPUB_ACTOR_POST_TYPE,
+			'post_type'      => Actor::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',
@@ -250,7 +251,7 @@ class Followers {
 	public static function count_followers( $user_id ) {
 		$query = new WP_Query(
 			array(
-				'post_type'  => ACTIVITYPUB_ACTOR_POST_TYPE,
+				'post_type'  => Actor::POST_TYPE,
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
@@ -293,7 +294,7 @@ class Followers {
 		$posts = new WP_Query(
 			array(
 				'nopaging'   => true,
-				'post_type'  => ACTIVITYPUB_ACTOR_POST_TYPE,
+				'post_type'  => Actor::POST_TYPE,
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
@@ -399,7 +400,7 @@ class Followers {
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		$args = array(
-			'post_type'      => ACTIVITYPUB_ACTOR_POST_TYPE,
+			'post_type'      => Actor::POST_TYPE,
 			'posts_per_page' => $number,
 			'orderby'        => 'modified',
 			'order'          => 'ASC',
@@ -427,7 +428,7 @@ class Followers {
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
 		$args = array(
-			'post_type'      => ACTIVITYPUB_ACTOR_POST_TYPE,
+			'post_type'      => Actor::POST_TYPE,
 			'posts_per_page' => $number,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(

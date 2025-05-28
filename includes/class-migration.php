@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -479,7 +480,7 @@ class Migration {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB
 		$followers = $wpdb->get_col(
-			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", ACTIVITYPUB_ACTOR_POST_TYPE )
+			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Actor::POST_TYPE )
 		);
 		foreach ( $followers as $id ) {
 			clean_post_cache( $id );
@@ -956,7 +957,7 @@ class Migration {
 
 		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->posts,
-			array( 'post_type' => ACTIVITYPUB_ACTOR_POST_TYPE ),
+			array( 'post_type' => Actor::POST_TYPE ),
 			array( 'post_type' => 'ap_follower' ),
 			array( '%s' ),
 			array( '%s' )

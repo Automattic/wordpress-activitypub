@@ -18,6 +18,13 @@ namespace Activitypub\Activity;
  * @see https://www.w3.org/TR/activitystreams-vocabulary/#actor-types
  */
 class Actor extends Base_Object {
+	/**
+	 * Post type.
+	 *
+	 * @var string
+	 */
+	const POST_TYPE = 'ap_actor';
+
 	// Reduced context for actors. TODO: still unused.
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',

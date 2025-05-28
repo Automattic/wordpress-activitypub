@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Followers;
 
 /**
@@ -24,7 +25,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		self::factory()->post->create_many(
 			25,
 			array(
-				'post_type'  => ACTIVITYPUB_ACTOR_POST_TYPE,
+				'post_type'  => Actor::POST_TYPE,
 				'meta_input' => array(
 					Followers::FOLLOWER_META_KEY => '0',
 					'_activitypub_actor_json'    => wp_json_encode(

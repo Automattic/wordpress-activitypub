@@ -7,7 +7,7 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Collection\Followers;
+use Activitypub\Activity\Actor;
 
 /**
  * Test class for Activitypub Hashtag.
@@ -116,7 +116,7 @@ ENDPRE;
 		$post_id = self::factory()->post->create(
 			array(
 				'post_content' => 'Testing #php and #programming',
-				'post_type'    => ACTIVITYPUB_ACTOR_POST_TYPE,
+				'post_type'    => Actor::POST_TYPE,
 			)
 		);
 
