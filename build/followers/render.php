@@ -14,6 +14,14 @@ use Activitypub\Collection\Followers;
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
 
+/* @var string $content Inner blocks content. */
+if ( empty( $content ) ) {
+	// Fallback for v1.0.0 blocks.
+	$_title  = $attributes['title'] ?? __( 'Fediverse Followers', 'activitypub' );
+	$content = '<h3 class="wp-block-heading">' . esc_html( $_title ) . '</h3>';
+	unset( $attributes['title'], $attributes['className'] );
+}
+
 // Get block attributes from the $attributes variable that WordPress passes to this file.
 $followee_user_id = Blocks::get_user_id( $attributes['selectedUser'] );
 if ( is_null( $followee_user_id ) ) {
@@ -56,7 +64,6 @@ $context = array(
 	'followers' => $followers,
 	'total'     => $follower_data['total'],
 	'pages'     => ceil( $follower_data['total'] / $_per_page ),
-	'title'     => $attributes['title'],
 	'isLoading' => false,
 );
 
@@ -72,7 +79,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 // Generate the HTML for the followers block.
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
-	<h3 class="followers-title" data-wp-text="context.title"></h3>
+	<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 
 	<div class="followers-container">
 		<ul class="followers-list">

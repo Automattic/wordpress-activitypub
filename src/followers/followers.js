@@ -25,7 +25,6 @@ export function Followers( {
 	selectedUser,
 	per_page,
 	order,
-	title,
 	page: passedPage,
 	setPage: passedSetPage,
 	className = '',
@@ -94,7 +93,6 @@ export function Followers( {
 
 	return (
 		<div className={ 'wp-block-activitypub-followers ' + className }>
-			{ title && <h3 className="followers-title">{ title }</h3> }
 			<div className="followers-container">
 				<ul className="followers-list">
 					{ followers &&

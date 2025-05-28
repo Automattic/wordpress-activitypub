@@ -1,6 +1,6 @@
-import { SelectControl, RangeControl, PanelBody, TextControl } from '@wordpress/components';
+import { SelectControl, RangeControl, PanelBody } from '@wordpress/components';
 import { useState, useEffect } from '@wordpress/element';
-import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { __ } from '@wordpress/i18n';
@@ -10,7 +10,7 @@ import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
 import './editor.scss';
 
 export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
-	const { order, per_page, selectedUser, title } = attributes;
+	const { order, per_page, selectedUser } = attributes;
 	const blockProps = useBlockProps();
 	const [ page, setPage ] = useState( 1 );
 	const orderOptions = [
@@ -45,16 +45,22 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		}
 	}, [ selectedUser, usersOptions ] );
 
+	// Template for InnerBlocks - allows only a heading block.
+	const TEMPLATE = [
+		[
+			'core/heading',
+			{
+				level: 3,
+				placeholder: __( 'Fediverse Followers', 'activitypub' ),
+				content: __( 'Fediverse Followers', 'activitypub' ),
+			},
+		],
+	];
+
 	return (
 		<div { ...blockProps }>
 			<InspectorControls key="setting">
 				<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
-					<TextControl
-						label={ __( 'Title', 'activitypub' ) }
-						help={ __( 'Title to display above the list of followers. Blank for none.', 'activitypub' ) }
-						value={ title }
-						onChange={ ( value ) => setAttributes( { title: value } ) }
-					/>
 					{ usersOptions.length > 1 && (
 						<SelectControl
 							label={ __( 'Select User', 'activitypub' ) }
@@ -78,6 +84,14 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 					/>
 				</PanelBody>
 			</InspectorControls>
+
+			<InnerBlocks
+				template={ TEMPLATE }
+				allowedBlocks={ [ 'core/heading' ] }
+				templateLock={ 'all' }
+				renderAppender={ false }
+			/>
+
 			{ selectedUser === 'inherit' ? (
 				authorId ? (
 					<Followers

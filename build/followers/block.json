@@ -13,10 +13,6 @@
     "interactivity": true
   },
   "attributes": {
-    "title": {
-      "type": "string",
-      "default": "Fediverse Followers"
-    },
     "selectedUser": {
       "type": "string",
       "default": "site"
@@ -54,9 +50,7 @@
     }
   ],
   "editorScript": "file:./index.js",
-  "editorStyle": [
-    "file:./edit.css"
-  ],
+  "editorStyle": "file:./index.css",
   "viewScriptModule": "file:./view.js",
   "viewScript": "wp-api-fetch",
   "style": [

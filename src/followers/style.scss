@@ -3,14 +3,9 @@
  */
 
 // Variables
-$primary-color: #0073aa;
 $border-color: #e0e0e0;
-$text-color: #333;
 $text-light: #666;
-$background-light: #f9f9f9;
-$background-hover: #f0f0f0;
 $border-radius: 8px;
-$transition-speed: 0.2s;
 $spacing-base: 16px;
 
 // Base styles for the followers block
@@ -19,12 +14,9 @@ $spacing-base: 16px;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 
 	// Block title
-	.followers-title {
+	.wp-block-heading {
 		margin: 0 0 $spacing-base;
 		padding: 0 0 $spacing-base/2;
-		font-size: 1.25rem;
-		font-weight: 600;
-		color: $text-color;
 		border-bottom: 1px solid $border-color;
 	}
 
@@ -55,12 +47,11 @@ $spacing-base: 16px;
 		align-items: center;
 		padding: $spacing-base/2;
 		text-decoration: none;
-		color: $text-color;
 		border-radius: $border-radius;
-		transition: background-color $transition-speed ease;
+		transition: background-color 0.2s ease;
 
 		&:hover, &:focus {
-			background-color: $background-hover;
+			background-color: var(--wp--preset--secondary ,#f0f0f0);
 			outline: none;
 
 			.external-link-icon {
@@ -111,7 +102,7 @@ $spacing-base: 16px;
 		height: 16px;
 		margin-left: $spacing-base/2;
 		opacity: 0.5;
-		transition: opacity $transition-speed ease;
+		transition: opacity 0.2s ease;
 		fill: currentColor;
 	}
 
@@ -209,9 +200,9 @@ $spacing-base: 16px;
 	.loading-spinner {
 		width: 40px;
 		height: 40px;
-		border: 3px solid rgba($primary-color, 0.3);
+		border: 3px solid rgba( var(--wp--preset--primary, #0073aa), 0.3);
 		border-radius: 50%;
-		border-top-color: $primary-color;
+		border-top-color: var(--wp--preset--primary, #0073aa);
 		animation: spin 1s ease-in-out infinite;
 	}
 
@@ -229,7 +220,7 @@ $spacing-base: 16px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	padding: $spacing-base;
 
-	.followers-title {
+	.wp-block-heading {
 		text-align: center;
 		border-bottom: none;
 		margin-bottom: $spacing-base;
