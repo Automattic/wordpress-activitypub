@@ -10,7 +10,7 @@ import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
 import './editor.scss';
 
 export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
-	const { order, per_page, selectedUser } = attributes;
+	const { className, order, per_page, selectedUser } = attributes;
 	const blockProps = useBlockProps();
 	const [ page, setPage ] = useState( 1 );
 	const orderOptions = [
@@ -85,28 +85,30 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 				</PanelBody>
 			</InspectorControls>
 
-			<InnerBlocks
-				template={ TEMPLATE }
-				allowedBlocks={ [ 'core/heading' ] }
-				templateLock={ 'all' }
-				renderAppender={ false }
-			/>
+			<div className={ 'wp-block-activitypub-followers ' + className }>
+				<InnerBlocks
+					template={ TEMPLATE }
+					allowedBlocks={ [ 'core/heading' ] }
+					templateLock={ 'all' }
+					renderAppender={ false }
+				/>
 
-			{ selectedUser === 'inherit' ? (
-				authorId ? (
-					<Followers
-						{ ...attributes }
-						page={ page }
-						setPage={ setPage }
-						followLinks={ false }
-						selectedUser={ authorId }
-					/>
+				{ selectedUser === 'inherit' ? (
+					authorId ? (
+						<Followers
+							{ ...attributes }
+							page={ page }
+							setPage={ setPage }
+							followLinks={ false }
+							selectedUser={ authorId }
+						/>
+					) : (
+						<InheritModeBlockFallback name={ __( 'Followers', 'activitypub' ) } />
+					)
 				) : (
-					<InheritModeBlockFallback name={ __( 'Followers', 'activitypub' ) } />
-				)
-			) : (
-				<Followers { ...attributes } page={ page } setPage={ setPage } followLinks={ false } />
-			) }
+					<Followers { ...attributes } page={ page } setPage={ setPage } followLinks={ false } />
+				) }
+			</div>
 		</div>
 	);
 }

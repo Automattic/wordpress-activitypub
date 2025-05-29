@@ -214,11 +214,11 @@ $spacing-base: 16px;
 }
 
 // Card style variation
-.wp-block-activitypub-followers.is-style-card {
+.wp-block-activitypub-followers.is-style-card:not(.block-editor-block-list__block) {
 	background-color: white;
 	border-radius: $border-radius;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-	padding: $spacing-base;
+	padding: 1.5 * $spacing-base;
 
 	.wp-block-heading {
 		text-align: center;
@@ -233,6 +233,10 @@ $spacing-base: 16px;
 		&:hover, &:focus {
 			border-color: darken($border-color, 10%);
 		}
+	}
+
+	.followers-pagination {
+		border: none;
 	}
 }
 

@@ -27,7 +27,6 @@ export function Followers( {
 	order,
 	page: passedPage,
 	setPage: passedSetPage,
-	className = '',
 	followLinks = true,
 	followerData = false,
 } ) {
@@ -92,18 +91,16 @@ export function Followers( {
 	};
 
 	return (
-		<div className={ 'wp-block-activitypub-followers ' + className }>
-			<div className="followers-container">
-				<ul className="followers-list">
-					{ followers &&
-						followers.map( ( follower ) => (
-							<li key={ follower.url } className="follower-item">
-								<Follower { ...follower } followLinks={ followLinks } />
-							</li>
-						) ) }
-				</ul>
-				{ pages > 1 && renderPagination() }
-			</div>
+		<div className="followers-container">
+			<ul className="followers-list">
+				{ followers &&
+					followers.map( ( follower ) => (
+						<li key={ follower.url } className="follower-item">
+							<Follower { ...follower } followLinks={ followLinks } />
+						</li>
+					) ) }
+			</ul>
+			{ pages > 1 && renderPagination() }
 		</div>
 	);
 }
