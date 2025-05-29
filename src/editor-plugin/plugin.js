@@ -28,13 +28,12 @@ const notAllowed = (
  */
 const EditorPlugin = () => {
 	const postType = useSelect( ( select ) => select( 'core/editor' ).getCurrentPostType(), [] );
+	const [ meta, setMeta ] = useEntityProp( 'postType', postType || 'default', 'meta' );
 
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {
 		return null;
 	}
-
-	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 	const { maxImageAttachments = 4 } = useOptions();
 	const labelStyling = {
 		verticalAlign: 'middle',
