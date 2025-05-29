@@ -20,21 +20,21 @@ const { actions, state } = store( 'activitypub/followers', {
 		},
 
 		/**
-		 * Check if the previous button should be hidden.
+		 * Check if the previous button should be disabled.
 		 *
 		 * @returns {boolean}
 		 */
-		get hidePrevButton() {
+		get disablePrevButton() {
 			const { page } = getContext();
 			return page <= 1;
 		},
 
 		/**
-		 * Check if the next button should be hidden.
+		 * Check if the next button should be disabled.
 		 *
 		 * @returns {boolean}
 		 */
-		get hideNextButton() {
+		get disableNextButton() {
 			const { page, pages } = getContext();
 			return page >= pages;
 		},

@@ -29,7 +29,6 @@ if ( empty( $content ) ) {
 	}
 }
 
-// Get block attributes from the $attributes variable that WordPress passes to this file.
 $followee_user_id = Blocks::get_user_id( $attributes['selectedUser'] );
 if ( is_null( $followee_user_id ) ) {
 	return '<!-- Followers block: `inherit` mode does not display on this type of page -->';
@@ -129,7 +128,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<button
 				class="pagination-prev wp-block-button__link wp-element-button"
 				data-wp-on--click="actions.prevPage"
-				data-wp-bind--disabled="state.hidePrevButton"
+				data-wp-bind--disabled="state.disablePrevButton"
 				aria-label="<?php esc_attr_e( 'Previous page', 'activitypub' ); ?>"
 				disabled
 			>
@@ -141,7 +140,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<button
 				class="pagination-next wp-block-button__link wp-element-button"
 				data-wp-on--click="actions.nextPage"
-				data-wp-bind--disabled="state.hideNextButton"
+				data-wp-bind--disabled="state.disableNextButton"
 				aria-label="<?php esc_attr_e( 'Next page', 'activitypub' ); ?>"
 			>
 				<?php esc_html_e( 'Next', 'activitypub' ); ?>
