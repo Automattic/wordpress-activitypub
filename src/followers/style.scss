@@ -156,6 +156,28 @@ button {
 				cursor: not-allowed;
 			}
 		}
+
+		@media (max-width: 480px) {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 16px;
+
+			.pagination-info {
+				display: none;
+			}
+
+			.pagination-previous,
+			.pagination-next {
+				flex: 1;
+				min-height: 44px; // Better touch target.
+				font-size: 100%;
+			}
+
+			.pagination-next {
+				justify-content: end;
+			}
+		}
 	}
 
 	// Loading spinner
@@ -170,7 +192,6 @@ button {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		z-index: 1;
 
 		&[aria-hidden="true"] {
 			display: none;
@@ -180,9 +201,9 @@ button {
 	.loading-spinner {
 		width: 40px;
 		height: 40px;
-		border: 3px solid rgba( var(--wp--preset--primary, #0073aa), 0.3);
+		border: 3px solid color-mix(in srgb, var(--wp--preset--color--primary, #0073aa) 30%, transparent);
 		border-radius: 50%;
-		border-top-color: var(--wp--preset--primary, #0073aa);
+		border-top-color: var(--wp--preset--color--primary, #0073aa);
 		animation: spin 1s ease-in-out infinite;
 	}
 
@@ -199,6 +220,11 @@ button {
 	border-radius: 8px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	padding: 24px;
+
+	@media (max-width: 480px) {
+		margin-left: -12px;
+		margin-right: -12px;
+	}
 
 	.wp-block-heading {
 		text-align: center;
@@ -249,6 +275,10 @@ button {
 		.pagination-next {
 			padding: 4px 8px;
 			font-size: 80%;
+
+			@media (max-width: 480px) {
+				font-size: 100%;
+			}
 		}
 
 		.pagination-info {
