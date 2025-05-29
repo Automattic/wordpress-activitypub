@@ -124,9 +124,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<nav class="followers-pagination" role="navigation">
 			<h1 class="screen-reader-text"><?php esc_html_e( 'Follower navigation', 'activitypub' ); ?></h1>
 			<button
-				class="pagination-prev wp-block-button__link wp-element-button"
-				data-wp-on--click="actions.prevPage"
-				data-wp-bind--disabled="state.disablePrevButton"
+				class="pagination-previous wp-block-button__link wp-element-button"
+				data-wp-on--click="actions.previousPage"
+				data-wp-bind--disabled="state.disablePreviousButton"
 				aria-label="<?php esc_attr_e( 'Previous page', 'activitypub' ); ?>"
 				disabled
 			>

@@ -79,6 +79,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 							value={ selectedUser }
 							options={ usersOptions }
 							onChange={ setAttributestAndResetPage( 'selectedUser' ) }
+							__next40pxDefaultSize
+							__nextHasNoMarginBottom
 						/>
 					) }
 					<SelectControl
@@ -86,6 +88,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						value={ order }
 						options={ orderOptions }
 						onChange={ setAttributestAndResetPage( 'order' ) }
+						__next40pxDefaultSize
+						__nextHasNoMarginBottom
 					/>
 					<RangeControl
 						label={ __( 'Number of Followers', 'activitypub' ) }
@@ -93,6 +97,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						onChange={ setAttributestAndResetPage( 'per_page' ) }
 						min={ 1 }
 						max={ 10 }
+						__next40pxDefaultSize
+						__nextHasNoMarginBottom
 					/>
 				</PanelBody>
 			</InspectorControls>
@@ -209,16 +215,16 @@ function Pagination( { page, pages, setPage } ) {
 		return null;
 	}
 
-	const disablePrevButton = page <= 1;
+	const disablePreviousButton = page <= 1;
 	const disableNextButton = page >= pages;
 
 	return (
 		<nav className="followers-pagination" role="navigation">
 			<h1 className="screen-reader-text">{ __( 'Follower navigation', 'activitypub' ) }</h1>
 			<button
-				className="pagination-prev wp-block-button__link wp-element-button"
+				className="pagination-previous wp-block-button__link wp-element-button"
 				onClick={ () => setPage( page - 1 ) }
-				disabled={ disablePrevButton }
+				disabled={ disablePreviousButton }
 				aria-label={ __( 'Previous page', 'activitypub' ) }
 			>
 				{ __( 'Previous', 'activitypub' ) }

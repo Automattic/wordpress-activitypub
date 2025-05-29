@@ -35,12 +35,12 @@ const v1 = {
 	migrate: ( attributes ) => {
 		const { title, ...newAttributes } = attributes;
 
-		const buttonBlock = createBlock( 'core/heading', {
+		const headingBlock = createBlock( 'core/heading', {
 			content: title,
 			level: 3,
 		} );
 
-		return [ newAttributes, [ buttonBlock ] ];
+		return [ newAttributes, [ headingBlock ] ];
 	},
 };
 

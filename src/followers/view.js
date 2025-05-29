@@ -24,7 +24,7 @@ const { actions, state } = store( 'activitypub/followers', {
 		 *
 		 * @returns {boolean}
 		 */
-		get disablePrevButton() {
+		get disablePreviousButton() {
 			const { page } = getContext();
 			return page <= 1;
 		},
@@ -85,7 +85,7 @@ const { actions, state } = store( 'activitypub/followers', {
 		/**
 		 * Navigate to the previous page.
 		 */
-		prevPage() {
+		previousPage() {
 			const context = getContext();
 
 			if ( context.page > 1 ) {
