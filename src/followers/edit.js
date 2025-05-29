@@ -30,11 +30,9 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		{ label: __( 'Old to new', 'activitypub' ), value: 'asc' },
 	];
 	const usersOptions = useUserOptions( { withInherit: true } );
-	const setAttributestAndResetPage = ( key ) => {
-		return ( value ) => {
-			setPage( 1 );
-			setAttributes( { [ key ]: value } );
-		};
+	const setAttributeWithPageReset = ( key ) => ( value ) => {
+		setPage( 1 );
+		setAttributes( { [ key ]: value } );
 	};
 	const authorId = useSelect(
 		( select ) => {
@@ -78,7 +76,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 							label={ __( 'Select User', 'activitypub' ) }
 							value={ selectedUser }
 							options={ usersOptions }
-							onChange={ setAttributestAndResetPage( 'selectedUser' ) }
+							onChange={ setAttributeWithPageReset( 'selectedUser' ) }
 							__next40pxDefaultSize
 							__nextHasNoMarginBottom
 						/>
@@ -87,14 +85,14 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						label={ __( 'Sort', 'activitypub' ) }
 						value={ order }
 						options={ orderOptions }
-						onChange={ setAttributestAndResetPage( 'order' ) }
+						onChange={ setAttributeWithPageReset( 'order' ) }
 						__next40pxDefaultSize
 						__nextHasNoMarginBottom
 					/>
 					<RangeControl
 						label={ __( 'Number of Followers', 'activitypub' ) }
 						value={ per_page }
-						onChange={ setAttributestAndResetPage( 'per_page' ) }
+						onChange={ setAttributeWithPageReset( 'per_page' ) }
 						min={ 1 }
 						max={ 10 }
 						__next40pxDefaultSize

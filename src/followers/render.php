@@ -66,7 +66,7 @@ wp_interactivity_state(
 $context = array(
 	'userId'    => $followee_user_id,
 	'page'      => 1,
-	'perPage'   => $_per_page,
+	'per_page'  => $_per_page,
 	'order'     => $attributes['order'],
 	'followers' => $followers,
 	'total'     => $follower_data['total'],

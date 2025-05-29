@@ -47,7 +47,7 @@ const { actions, state } = store( 'activitypub/followers', {
 		 */
 		async fetchFollowers() {
 			const context = getContext();
-			const { userId, page, perPage, order } = context;
+			const { userId, page, per_page, order } = context;
 
 			// Set loading state.
 			context.isLoading = true;
@@ -56,7 +56,7 @@ const { actions, state } = store( 'activitypub/followers', {
 				// Build the API path and parameters
 				const path = url.addQueryArgs( `${ state.namespace }/actors/${ userId }/followers`, {
 					context: 'full',
-					per_page: perPage,
+					per_page,
 					order,
 					page,
 				} );
@@ -73,7 +73,7 @@ const { actions, state } = store( 'activitypub/followers', {
 				} ) );
 
 				context.total = totalItems;
-				context.pages = Math.ceil( totalItems / perPage );
+				context.pages = Math.ceil( totalItems / per_page );
 			} catch ( error ) {
 				console.error( 'Error fetching followers:', error );
 			} finally {
