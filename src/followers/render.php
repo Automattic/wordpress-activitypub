@@ -5,8 +5,6 @@
  * @package Activitypub
  */
 
-namespace Activitypub\Followers;
-
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;

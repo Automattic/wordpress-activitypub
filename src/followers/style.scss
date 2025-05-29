@@ -7,6 +7,10 @@ $border-color: #e0e0e0;
 $border-radius: 8px;
 $spacing-base: 16px;
 
+button {
+	border: none;
+}
+
 // Base styles for the followers block
 .wp-block-activitypub-followers {
 	margin: $spacing-base 0;

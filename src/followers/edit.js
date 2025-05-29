@@ -9,7 +9,6 @@ import { __ } from '@wordpress/i18n';
 import { useOptions } from '../shared/use-options';
 import { useUserOptions } from '../shared/use-user-options';
 import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
-import './editor.scss';
 
 /**
  * Edit component.

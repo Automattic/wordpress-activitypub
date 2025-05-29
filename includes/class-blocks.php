@@ -258,17 +258,6 @@ class Blocks {
 	}
 
 	/**
-	 * Filter an array by a list of keys.
-	 *
-	 * @param array $data The array to filter.
-	 * @param array $keys The keys to keep.
-	 * @return array The filtered array.
-	 */
-	public static function filter_array_by_keys( $data, $keys ) {
-		return array_intersect_key( $data, array_flip( $keys ) );
-	}
-
-	/**
 	 * Render the reply block.
 	 *
 	 * @param array $attrs The block attributes.
