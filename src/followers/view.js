@@ -66,9 +66,9 @@ const { actions, state } = store( 'activitypub/followers', {
 
 				// Update the context with the new followers.
 				context.followers = orderedItems.map( ( follower ) => ( {
+					handle: '@' + follower.preferredUsername,
 					icon: follower.icon,
 					name: follower.name,
-					preferredUsername: follower.preferredUsername,
 					url: follower.url,
 				} ) );
 

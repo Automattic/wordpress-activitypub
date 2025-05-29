@@ -22,6 +22,7 @@ if ( empty( $content ) ) {
 	$content = '<h3 class="wp-block-heading">' . esc_html( $_title ) . '</h3>';
 	unset( $attributes['title'], $attributes['className'] );
 } else {
+	// Remove the outer div if it exists, to avoid nesting issues with block variation classes.
 	$pattern = '/<div\s+class="wp-block-activitypub-followers[^"]*"[^>]*>(.*?)<\/div>/s';
 	if ( preg_match( $pattern, $content, $matches ) ) {
 		$content = $matches[1];
@@ -45,9 +46,12 @@ $follower_data = Followers::get_followers_with_count( $followee_user_id, $_per_p
 // Prepare Followers data for the Interactivity API context.
 $followers = array_map(
 	function ( $follower ) {
-		$data = $follower->to_array();
-
-		return array_intersect_key( $data, array_flip( array( 'icon', 'name', 'preferredUsername', 'url' ) ) );
+		return array(
+			'handle' => '@' . $follower->get_preferred_username(),
+			'icon'   => $follower->get_icon(),
+			'name'   => $follower->get_name(),
+			'url'    => $follower->get_url(),
+		);
 	},
 	$follower_data['followers']
 );
@@ -94,7 +98,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						class="follower-link"
 						target="_blank"
 						rel="external noreferrer noopener"
-						data-wp-bind--title="context.item.preferredUsername">
+						data-wp-bind--title="context.item.handle">
 
 						<img
 							data-wp-bind--src="context.item.icon.url"
@@ -108,7 +112,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 						<div class="follower-info">
 							<span class="follower-name" data-wp-text="context.item.name"></span>
-							<span class="follower-username" data-wp-text="context.item.preferredUsername"></span>
+							<span class="follower-username" data-wp-text="context.item.handle"></span>
 						</div>
 
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" class="external-link-icon" aria-hidden="true" focusable="false">
