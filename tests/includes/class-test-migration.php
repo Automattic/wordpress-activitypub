@@ -867,4 +867,51 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		\wp_delete_post( $follower );
 	}
+
+	/**
+	 * Test update_actor_json_storage updates unslashed meta values.
+	 *
+	 * @covers ::update_actor_json_storage
+	 */
+	public function test_update_actor_json_storage() {
+		$actor_array = array(
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>unescaped backslash</p>',
+		);
+
+		$follower = new Follower();
+		$follower->from_array( $actor_array );
+		$json = $follower->to_json();
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'  => Actors::POST_TYPE,
+				'meta_input' => array( '_activitypub_actor_json' => $json ),
+			)
+		);
+
+		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertIsObject( \json_decode( $original_meta ) );
+
+		$result = Migration::update_actor_json_storage();
+
+		\clean_post_cache( $post_id );
+
+		// No additional batch should be scheduled.
+		$this->assertNull( $result );
+
+		$post = \get_post( $post_id );
+		$meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertEmpty( $meta, 'Updated meta should be empty' );
+		$this->assertEquals( JSON_ERROR_NONE, \json_last_error() );
+		$this->assertIsObject( \json_decode( $original_meta ) );
+		$this->assertContains( 'Test Follower', \json_decode( \wp_unslash( $post->post_content ), true ) );
+		$this->assertContains( 'u003Cpu003Eunescaped backslashu003C/pu003E', \json_decode( \wp_unslash( $post->post_content ), true ) );
+
+		\wp_delete_post( $post_id );
+	}
 }
