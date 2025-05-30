@@ -7,8 +7,8 @@
 
 namespace Activitypub\Model;
 
-use WP_Error;
 use Activitypub\Activity\Actor;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
@@ -170,7 +170,7 @@ class Follower extends Actor {
 	 */
 	public function save() {
 		if ( ! $this->is_valid() ) {
-			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
+			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		if ( ! $this->get__id() ) {
@@ -197,7 +197,7 @@ class Follower extends Actor {
 			'guid'         => esc_url_raw( $this->get_id() ),
 			'post_title'   => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
 			'post_author'  => 0,
-			'post_type'    => ACTIVITYPUB_ACTOR_POST_TYPE,
+			'post_type'    => Actors::POST_TYPE,
 			'post_name'    => esc_url_raw( $this->get_id() ),
 			'post_excerpt' => sanitize_text_field( wp_kses( $this->get_summary(), 'user_description' ) ),
 			'post_status'  => 'publish',

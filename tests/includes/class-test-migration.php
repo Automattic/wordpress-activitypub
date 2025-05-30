@@ -12,6 +12,7 @@ use Activitypub\Collection\Outbox;
 use Activitypub\Migration;
 use Activitypub\Comment;
 use Activitypub\Model\Follower;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
 /**
@@ -605,7 +606,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$post_id = self::factory()->post->create(
 			array(
-				'post_type'  => ACTIVITYPUB_ACTOR_POST_TYPE,
+				'post_type'  => Actors::POST_TYPE,
 				'meta_input' => array( '_activitypub_actor_json' => $unslashed_json ),
 			)
 		);
@@ -861,7 +862,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		\clean_post_cache( $follower );
 
-		$this->assertEquals( ACTIVITYPUB_ACTOR_POST_TYPE, \get_post_type( $follower ) );
+		$this->assertEquals( Actors::POST_TYPE, \get_post_type( $follower ) );
 		$this->assertEquals( '5', \get_post_meta( $follower, Followers::FOLLOWER_META_KEY, true ) );
 
 		\wp_delete_post( $follower );
