@@ -1,6 +1,6 @@
 import apiFetch from '@wordpress/api-fetch';
 import { InspectorControls, useBlockProps, useInnerBlocksProps } from '@wordpress/block-editor';
-import { __ } from '@wordpress/i18n';
+import { __, _n } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { SelectControl, PanelBody } from '@wordpress/components';
@@ -67,65 +67,54 @@ function fetchProfile( userId ) {
  * @return {JSX.Element} Profile component.
  */
 function EditorProfile( { profile, className, innerBlocksProps } ) {
-	const { webfinger, avatar, name, image, summary } = profile;
+	const { webfinger, avatar, name, image, summary, followers, posts } = profile;
 
-	// Extract the style name from className
-	const getStyleName = () => {
-		if ( ! className ) return 'standard';
-		const match = className.match( /is-style-([a-z-]+)/ );
-		return match ? match[ 1 ] : 'standard';
-	};
+	// Ensure we're checking for the right className format
+	const isButtonOnly = className && className.includes( 'is-style-button-only' );
 
-	const styleName = getStyleName();
-
-	// Profile class based on style
-	const profileClass = `activitypub-profile activitypub-profile--${ styleName }`;
-
-	// Mock stats for the editor preview
-	const mockStats = {
-		posts: 17,
-		followers: 1,
-		following: 5,
+	// Stats for the editor preview - use real followers count if available
+	const stats = {
+		posts: posts || 17,
+		followers: followers || 0,
 	};
 
 	return (
-		<div className={ profileClass }>
-			<div
-				className="activitypub-profile__header"
-				style={ { backgroundImage: image?.url ? `url(${ image.url })` : 'none' } }
-			></div>
+		<div className="activitypub-profile">
+			{ ! isButtonOnly && image?.url && (
+				<div className="activitypub-profile__header" style={ { backgroundImage: `url(${ image.url })` } }></div>
+			) }
 
 			<div className="activitypub-profile__body">
-				<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
+				{ ! isButtonOnly && <img className="activitypub-profile__avatar" src={ avatar } alt={ name } /> }
 
 				<div className="activitypub-profile__content">
-					<div className="activitypub-profile__name">{ name }</div>
-					<div className="activitypub-profile__handle">{ webfinger }</div>
+					{ ! isButtonOnly && (
+						<div className="activitypub-profile__info">
+							<div className="activitypub-profile__name">{ name }</div>
+							<div className="activitypub-profile__handle">{ webfinger }</div>
+						</div>
+					) }
 
-					<div className="activitypub-profile__bio" dangerouslySetInnerHTML={ { __html: summary } } />
-
-					<div className="activitypub-profile__stats">
-						{ Object.entries( mockStats ).map( ( [ key, count ] ) => (
-							<div key={ key } className="activitypub-profile__stat">
-								<span className="activitypub-profile__stat-count">{ count }</span>
-								<span className="activitypub-profile__stat-label">
-									{ key === 'posts'
-										? count === 1
-											? __( 'post', 'activitypub' )
-											: __( 'posts', 'activitypub' )
-										: key === 'followers'
-										? count === 1
-											? __( 'follower', 'activitypub' )
-											: __( 'followers', 'activitypub' )
-										: __( 'following', 'activitypub' ) }
-								</span>
-							</div>
-						) ) }
-					</div>
-				</div>
-
-				<div className="activitypub-profile__button">
 					<div { ...innerBlocksProps } />
+
+					{ ! isButtonOnly && (
+						<div className="activitypub-profile__bio" dangerouslySetInnerHTML={ { __html: summary } } />
+					) }
+
+					{ ! isButtonOnly && (
+						<div className="activitypub-profile__stats">
+							{ Object.entries( stats ).map( ( [ key, count ] ) => (
+								<div key={ key }>
+									<strong>{ count }</strong>{ ' ' }
+									{ key === 'posts'
+										? _n( 'post', 'posts', count, 'activitypub' )
+										: key === 'followers'
+										? _n( 'follower', 'followers', count, 'activitypub' )
+										: _n( 'following', 'following', count, 'activitypub' ) }
+								</div>
+							) ) }
+						</div>
+					) }
 				</div>
 			</div>
 		</div>
@@ -143,12 +132,12 @@ function EditorProfile( { profile, className, innerBlocksProps } ) {
  * @param {number} props.context.postId Post ID.
  * @return {JSX.Element} Edit component.
  */
-export default function Edit( { attributes, setAttributes, context: { postType, postId }, className } ) {
+export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
 	const blockProps = useBlockProps( {
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
 	const usersOptions = useUserOptions( { withInherit: true } );
-	const { selectedUser } = attributes;
+	const { selectedUser, className } = attributes;
 	const isInheritMode = selectedUser === 'inherit';
 	const [ profile, setProfile ] = useState( getNormalizedProfile( DEFAULT_PROFILE_DATA ) );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
@@ -184,6 +173,26 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		const effectiveUserId = isInheritMode ? authorId : userId;
 		fetchProfile( effectiveUserId ).then( ( data ) => {
 			setProfile( getNormalizedProfile( data ) );
+
+			// Convert the full URL to a path if it's a local URL
+			if ( data.followers ) {
+				try {
+					// Extract just the path portion from the URL
+					const { pathname: path } = new URL( data.followers );
+
+					apiFetch( { path: path.replace( 'wp-json/', '' ) } ).then( ( followers ) => {
+						const followersCount = followers?.totalItems || 0;
+
+						// Update the profile with followers counts
+						setProfile( ( prevProfile ) => ( { ...prevProfile, followers: followersCount } ) );
+					} );
+				} catch ( e ) {
+					// If URL parsing fails, just continue without fetching followers
+				}
+			}
+			apiFetch( { path: `/wp/v2/users/${ effectiveUserId }` } ).then( ( { post_count } ) => {
+				setProfile( ( prevProfile ) => ( { ...prevProfile, posts: post_count } ) );
+			} );
 		} );
 	}, [ userId, authorId, isInheritMode ] );
 

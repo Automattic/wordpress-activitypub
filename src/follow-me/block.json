@@ -10,7 +10,7 @@
 	"icon": "groups",
 	"example": {
 		"attributes": {
-			"className": "is-style-standard"
+			"className": "is-style-default"
 		}
 	},
 	"supports": {
@@ -43,8 +43,8 @@
 	},
 	"styles": [
 		{
-			"name": "standard",
-			"label": "Standard",
+			"name": "default",
+			"label": "Default",
 			"isDefault": true
 		},
 		{
@@ -52,8 +52,8 @@
 			"label": "Button"
 		},
 		{
-			"name": "rich",
-			"label": "Rich"
+			"name": "profile",
+			"label": "Profile"
 		}
 	],
 	"attributes": {

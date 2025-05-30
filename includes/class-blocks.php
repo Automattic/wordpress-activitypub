@@ -27,6 +27,7 @@ class Blocks {
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
 		\add_action( 'init', array( self::class, 'register_postmeta' ), 11 );
+		\add_action( 'rest_api_init', array( self::class, 'register_rest_fields' ) );
 
 		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
 	}
@@ -207,6 +208,27 @@ class Blocks {
 			'<div %1$s>%2$s</div>',
 			\get_block_wrapper_attributes( array( 'data-attrs' => \wp_json_encode( $attrs ) ) ),
 			$content
+		);
+	}
+
+	/**
+	 * Register REST fields needed for blocks.
+	 */
+	public static function register_rest_fields() {
+		// Register the post_count field for Follow Me block.
+		register_rest_field(
+			'user',
+			'post_count',
+			array(
+				'get_callback' => function ( $user ) {
+					return (int) count_user_posts( $user['id'], 'post', true );
+				},
+				'schema'       => array(
+					'description' => 'Number of published posts',
+					'type'        => 'integer',
+					'context'     => array( 'view', 'edit' ),
+				),
+			)
 		);
 	}
 

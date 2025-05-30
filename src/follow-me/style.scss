@@ -73,7 +73,7 @@
 	}
 
 	// Style variations - applied to the wrapper
-	&.is-style-standard {
+	&.is-style-default {
 		.activitypub-profile__bio,
 		.activitypub-profile__stats {
 			display: none;
@@ -107,7 +107,7 @@
 		}
 	}
 
-	&.is-style-rich {
+	&.is-style-profile {
 		border-radius: 8px;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 		overflow: hidden;
@@ -167,22 +167,6 @@
 				gap: 16px;
 				margin-top: 1rem;
 				font-size: 0.9em;
-			}
-
-			&__stat {
-				display: flex;
-				flex-direction: column;
-				align-items: center;
-
-				&-count {
-					font-weight: 700;
-					font-size: 1.1em;
-				}
-
-				&-label {
-					color: #666;
-					font-size: 0.9em;
-				}
 			}
 		}
 	}

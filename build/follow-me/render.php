@@ -96,10 +96,10 @@ $content = Blocks::add_directions(
 );
 
 $header_image = $actor->get_image();
-$has_header   = ! empty( $header_image['url'] ) && str_contains( $attributes['className'], 'is-style-rich' );
+$has_header   = ! empty( $header_image['url'] ) && str_contains( $attributes['className'], 'is-style-profile' );
 
 $stats = array(
-	'posts'     => count_user_posts( $user_id ),
+	'posts'     => count_user_posts( $user_id, 'post', true ),
 	'followers' => Followers::count_followers( $user_id ),
 	'following' => null,
 );
