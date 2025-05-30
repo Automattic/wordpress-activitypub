@@ -131,8 +131,10 @@ class Test_Followers extends \WP_UnitTestCase {
 			Followers::add_follower( 1, $follower );
 		}
 
-		$follower = Followers::get_follower( 1, 'https://example.org/author/doe' );
-		update_post_meta( $follower->get__id(), '_activitypub_actor_json', 'invalid json' );
+		$follower           = Followers::get_follower( 1, 'https://example.org/author/doe' );
+		$post               = \get_post( $follower->get__id() );
+		$post->post_content = 'invalid json';
+		\wp_update_post( $post );
 
 		$db_followers = Followers::get_followers( 1 );
 
