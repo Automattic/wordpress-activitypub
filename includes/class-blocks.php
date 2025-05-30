@@ -165,52 +165,6 @@ class Blocks {
 	}
 
 	/**
-	 * Render the post reactions block.
-	 *
-	 * @param array  $attrs   The block attributes.
-	 * @param string $content Inner blocks.
-	 *
-	 * @return string The HTML to render.
-	 */
-	public static function render_post_reactions_block( $attrs, $content ) {
-		if ( ! isset( $attrs['postId'] ) ) {
-			$attrs['postId'] = \get_the_ID();
-		}
-
-		// Fallback for v1.0.0 blocks.
-		if ( empty( $content ) ) {
-			$title   = $attrs['title'] ?? \__( 'Fediverse Reactions', 'activitypub' );
-			$content = '<h6 class="wp-block-heading">' . \esc_html( $title ) . '</h6>' . "\n"
-						. '<div class="activitypub-reactions-block"></div>';
-			unset( $attrs['title'], $attrs['className'] );
-		}
-
-		// Hide the title if there are no comments.
-		$has_comments = \get_comments(
-			array(
-				'post_id' => $attrs['postId'],
-				'fields'  => 'ids',
-				'type'    => Comment::get_comment_type_slugs(),
-			)
-		);
-		if ( ! $has_comments ) {
-			$tags = new \WP_HTML_Tag_Processor( $content );
-
-			while ( $tags->next_tag( array( 'class_name' => 'wp-block-heading' ) ) ) {
-				$tags->set_attribute( 'hidden', true );
-			}
-
-			$content = $tags->get_updated_html();
-		}
-
-		return \sprintf(
-			'<div %1$s>%2$s</div>',
-			\get_block_wrapper_attributes( array( 'data-attrs' => \wp_json_encode( $attrs ) ) ),
-			$content
-		);
-	}
-
-	/**
 	 * Get the user ID from a user string.
 	 *
 	 * @param string $user_string The user string. Can be a user ID, 'site', or 'inherit'.
