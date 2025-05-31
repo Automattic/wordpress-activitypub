@@ -79,7 +79,8 @@ if ( empty( $content ) ) {
 	$button_text = $attributes['buttonText'] ?? __( 'Follow', 'activitypub' );
 	$content     = '<div class="wp-block-button"><button class="wp-block-button__link wp-element-button">' . esc_html( $button_text ) . '</button></div>';
 } else {
-	/* @var array $block Parsed block. */
+	/* @var \WP_Block $block Parsed block.*/
+	$block   = $block ?? null;
 	$content = implode( PHP_EOL, wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
 }
 

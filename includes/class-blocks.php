@@ -166,6 +166,27 @@ class Blocks {
 	}
 
 	/**
+	 * Register REST fields needed for blocks.
+	 */
+	public static function register_rest_fields() {
+		// Register the post_count field for Follow Me block.
+		register_rest_field(
+			'user',
+			'post_count',
+			array(
+				'get_callback' => function ( $user ) {
+					return (int) count_user_posts( $user['id'], 'post', true );
+				},
+				'schema'       => array(
+					'description' => 'Number of published posts',
+					'type'        => 'integer',
+					'context'     => array( 'activitypub' ),
+				),
+			)
+		);
+	}
+
+	/**
 	 * Get the user ID from a user string.
 	 *
 	 * @param string $user_string The user string. Can be a user ID, 'site', or 'inherit'.
