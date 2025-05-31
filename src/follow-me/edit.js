@@ -190,7 +190,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 					// If URL parsing fails, just continue without fetching followers
 				}
 			}
-			apiFetch( { path: `/wp/v2/users/${ effectiveUserId }` } ).then( ( { post_count } ) => {
+			apiFetch( { path: `/wp/v2/users/${ effectiveUserId }/?context=activitypub` } ).then( ( { post_count } ) => {
 				setProfile( ( prevProfile ) => ( { ...prevProfile, posts: post_count } ) );
 			} );
 		} );

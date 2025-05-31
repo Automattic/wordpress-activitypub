@@ -226,7 +226,7 @@ class Blocks {
 				'schema'       => array(
 					'description' => 'Number of published posts',
 					'type'        => 'integer',
-					'context'     => array( 'view', 'edit' ),
+					'context'     => array( 'activitypub' ),
 				),
 			)
 		);
