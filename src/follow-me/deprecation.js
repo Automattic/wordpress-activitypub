@@ -54,7 +54,8 @@ const v1 = {
 	 * @return {boolean} Whether the block is eligible for migration.
 	 */
 	isEligible( attributes ) {
-		return !! attributes.buttonText;
+		// Run migration if buttonText or buttonOnly is set.
+		return !! attributes.buttonText || !! attributes.buttonOnly;
 	},
 
 	/**
@@ -120,13 +121,17 @@ const v2 = {
 		return !! buttonOnly;
 	},
 
-	migrate( { buttonOnly, ...newAttributes } ) {
+	migrate( { buttonOnly, ...newAttributes }, innerBlocks ) {
 		return [
 			{
 				...newAttributes,
-				className: buttonOnly ? 'is-style-button-only' : 'is-style-default',
+
+				// Add new class to exisiting classes
+				className: `${ newAttributes.className || '' } is-style-${
+					buttonOnly ? 'button-only' : 'default'
+				}`.trim(),
 			},
-			[],
+			innerBlocks,
 		];
 	},
 
