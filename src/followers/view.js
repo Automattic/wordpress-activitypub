@@ -20,21 +20,21 @@ const { actions, state } = store( 'activitypub/followers', {
 		},
 
 		/**
-		 * Check if the previous button should be disabled.
+		 * Check if the previous link should be disabled.
 		 *
 		 * @returns {boolean}
 		 */
-		get disablePreviousButton() {
+		get disablePreviousLink() {
 			const { page } = getContext();
 			return page <= 1;
 		},
 
 		/**
-		 * Check if the next button should be disabled.
+		 * Check if the next link should be disabled.
 		 *
 		 * @returns {boolean}
 		 */
-		get disableNextButton() {
+		get disableNextLink() {
 			const { page, pages } = getContext();
 			return page >= pages;
 		},
@@ -84,8 +84,11 @@ const { actions, state } = store( 'activitypub/followers', {
 
 		/**
 		 * Navigate to the previous page.
+		 *
+		 * @param {Event} event - The click event.
 		 */
-		previousPage() {
+		previousPage( event ) {
+			event.preventDefault();
 			const context = getContext();
 
 			if ( context.page > 1 ) {
@@ -98,8 +101,11 @@ const { actions, state } = store( 'activitypub/followers', {
 
 		/**
 		 * Navigate to the next page.
+		 *
+		 * @param {Event} event - The click event.
 		 */
-		nextPage() {
+		nextPage( event ) {
+			event.preventDefault();
 			const context = getContext();
 
 			if ( context.page < context.pages ) {

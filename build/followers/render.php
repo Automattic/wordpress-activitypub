@@ -123,26 +123,25 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<?php if ( $follower_data['total'] > $_per_page ) : ?>
 		<nav class="followers-pagination" role="navigation">
 			<h1 class="screen-reader-text"><?php esc_html_e( 'Follower navigation', 'activitypub' ); ?></h1>
-			<button
-				class="pagination-previous wp-block-button__link wp-element-button"
+			<a
+				class="pagination-previous"
 				data-wp-on--click="actions.previousPage"
-				data-wp-bind--disabled="state.disablePreviousButton"
+				data-wp-bind--aria-disabled="state.disablePreviousLink"
 				aria-label="<?php esc_attr_e( 'Previous page', 'activitypub' ); ?>"
-				disabled
 			>
 				<?php esc_html_e( 'Previous', 'activitypub' ); ?>
-			</button>
+			</a>
 
 			<div class="pagination-info" data-wp-text="state.paginationText"></div>
 
-			<button
-				class="pagination-next wp-block-button__link wp-element-button"
+			<a
+				class="pagination-next"
 				data-wp-on--click="actions.nextPage"
-				data-wp-bind--disabled="state.disableNextButton"
+				data-wp-bind--aria-disabled="state.disableNextLink"
 				aria-label="<?php esc_attr_e( 'Next page', 'activitypub' ); ?>"
 			>
 				<?php esc_html_e( 'Next', 'activitypub' ); ?>
-			</button>
+			</a>
 		</nav>
 
 		<div class="followers-loading" data-wp-bind--aria-hidden="!context.isLoading">

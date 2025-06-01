@@ -213,31 +213,37 @@ function Pagination( { page, pages, setPage } ) {
 		return null;
 	}
 
-	const disablePreviousButton = page <= 1;
-	const disableNextButton = page >= pages;
+	const disablePreviousLink = page <= 1;
+	const disableNextLink = page >= pages;
 
 	return (
 		<nav className="followers-pagination" role="navigation">
 			<h1 className="screen-reader-text">{ __( 'Follower navigation', 'activitypub' ) }</h1>
-			<button
-				className="pagination-previous wp-block-button__link wp-element-button"
-				onClick={ () => setPage( page - 1 ) }
-				disabled={ disablePreviousButton }
+			<a
+				className="pagination-previous"
+				aria-disabled={ disablePreviousLink }
 				aria-label={ __( 'Previous page', 'activitypub' ) }
+				onClick={ ( event ) => {
+					event.preventDefault();
+					setPage( page - 1 );
+				} }
 			>
 				{ __( 'Previous', 'activitypub' ) }
-			</button>
+			</a>
 
 			<div className="pagination-info">{ `${ page } / ${ pages }` }</div>
 
-			<button
-				className="pagination-next wp-block-button__link wp-element-button"
-				onClick={ () => setPage( page + 1 ) }
-				disabled={ disableNextButton }
+			<a
+				className="pagination-next"
+				aria-disabled={ disableNextLink }
 				aria-label={ __( 'Next page', 'activitypub' ) }
+				onClick={ ( event ) => {
+					event.preventDefault();
+					setPage( page + 1 );
+				} }
 			>
 				{ __( 'Next', 'activitypub' ) }
-			</button>
+			</a>
 		</nav>
 	);
 }

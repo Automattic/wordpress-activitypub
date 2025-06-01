@@ -111,57 +111,49 @@ button {
 		.pagination-info {
 			color: var(--wp--preset--color--very-dark-gray, #666);
 			font-size: 90%;
-			grid-column: 2;
 			justify-self: center;
-		}
-
-		.pagination-previous {
-			grid-column: 1;
-			justify-self: start;
-
-			&::before {
-				content: "←";
-				padding-right: 8px;
-				line-height: 1;
-			}
-		}
-
-		.pagination-next {
-			grid-column: 3;
-			justify-self: end;
-
-			&::after {
-				content: "→";
-				padding-left: 8px;
-				line-height: 1;
-			}
 		}
 
 		.pagination-previous,
 		.pagination-next {
-			display: flex;
-			align-items: center;
-			padding: 8px 16px;
-			border-radius: 8px;
 			cursor: pointer;
 			font-size: 90%;
-			width: auto;
+			display: inline-block;
+			padding: 8px 0;
+			min-width: 60px;
 
 			&[hidden] {
 				display: none !important;
 			}
 
-			&:disabled {
+			&[aria-disabled="true"] {
 				opacity: 0.3;
 				cursor: not-allowed;
+				pointer-events: none;
+				text-decoration: none;
+			}
+		}
+
+		.pagination-previous {
+			justify-self: start;
+			padding-right: 8px;
+
+			&::before {
+				content: "←";
+			}
+		}
+
+		.pagination-next {
+			justify-self: end;
+			padding-left: 8px;
+
+			&::after {
+				content: "→";
 			}
 		}
 
 		@media (max-width: 480px) {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			gap: 16px;
+			grid-template-columns: 1fr 1fr;
 
 			.pagination-info {
 				display: none;
@@ -169,13 +161,9 @@ button {
 
 			.pagination-previous,
 			.pagination-next {
-				flex: 1;
-				min-height: 44px; // Better touch target.
+				min-height: 44px;
 				font-size: 100%;
-			}
-
-			.pagination-next {
-				justify-content: end;
+				align-items: center;
 			}
 		}
 	}
