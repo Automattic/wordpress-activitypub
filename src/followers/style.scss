@@ -10,7 +10,16 @@ button {
 	.wp-block-heading {
 		margin: 0 0 16px;
 		padding: 0 0 8px;
-		border-bottom: 1px solid #e0e0e0;
+		border-bottom: 1px solid;
+	}
+
+	.wp-block-heading,
+	.followers-pagination {
+		border-color: var(--wp--preset--color--foreground,
+			var(--wp--preset--color--primary,
+				#e0e0e0
+			)
+		);
 	}
 
 	.followers-container {
@@ -35,9 +44,9 @@ button {
 		display: flex;
 		align-items: center;
 		padding: 8px;
-		border: none; // Twenty Fifteen specific fix.
+		border: none; // Twenty Fifteen.
 		border-radius: 8px;
-		box-shadow: none; // Twenty Sixteen specific fix.
+		box-shadow: none; // Twenty Sixteen.
 		transition: background-color 0.2s ease;
 
 		&:hover, &:focus {
@@ -51,7 +60,7 @@ button {
 						)
 					)
 				);
-			box-shadow: none; // Twenty Seventeen specific fix.
+			box-shadow: none; // Twenty Seventeen.
 			outline: none;
 
 			.external-link-icon {
@@ -105,8 +114,9 @@ button {
 		grid-template-columns: 1fr auto 1fr;
 		align-items: center;
 		margin-top: 16px;
-		padding-top: 8px !important; // Twenty Eleven specific fix.
-		border-top: 1px solid #e0e0e0;
+		padding-top: 8px !important; // Twenty Eleven.
+		border-top-style: solid;
+		border-top-width: 1px;
 
 		.pagination-info {
 			color: var(--wp--preset--color--very-dark-gray, #666);
@@ -116,6 +126,8 @@ button {
 
 		.pagination-previous,
 		.pagination-next {
+			border: none; // Twenty Fifteen.
+			box-shadow: none; // Twenty Sixteen.
 			cursor: pointer;
 			font-size: 90%;
 			display: inline-block;
@@ -231,7 +243,7 @@ button {
 
 	.followers-pagination {
 		border: none;
-		padding-bottom: 0 !important; // Twenty Eleven specific fix.
+		padding-bottom: 0 !important; // Twenty Eleven.
 	}
 }
 
