@@ -51,7 +51,7 @@
 			text-overflow: ellipsis;
 		}
 
-		.wp-block-button {
+		div.wp-block-button { // Twenty Twenty Editor styles specificity.
 			margin: 0 0 0 1rem;
 			display: flex;
 			align-items: center;
@@ -73,7 +73,7 @@
 	}
 
 	// Style variations - applied to the wrapper
-	&.is-style-default {
+	&:not(.is-style-button-only):not(.is-style-profile) {
 		.activitypub-profile__bio,
 		.activitypub-profile__stats {
 			display: none;
@@ -94,7 +94,7 @@
 			display: inline;
 		}
 
-		.wp-block-button {
+		div.wp-block-button {
 			display: inline-block;
 			margin: 0;
 		}

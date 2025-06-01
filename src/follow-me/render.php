@@ -47,14 +47,15 @@ wp_interactivity_state(
 );
 
 // Add the block wrapper attributes.
-$wrapper_attributes = get_block_wrapper_attributes(
-	array(
-		'id'                  => $block_id,
-		'class'               => 'activitypub-follow-me-block-wrapper',
-		'data-wp-interactive' => 'activitypub/follow-me',
-		'data-wp-init'        => 'callbacks.initButtonStyles',
-	)
+$wrapper_attributes = array(
+	'id'                  => $block_id,
+	'class'               => 'activitypub-follow-me-block-wrapper',
+	'data-wp-interactive' => 'activitypub/follow-me',
+	'data-wp-init'        => 'callbacks.initButtonStyles',
 );
+if ( isset( $attributes['buttonOnly'] ) ) {
+	$wrapper_attributes['class'] .= ' is-style-button-only';
+}
 
 $wrapper_context = wp_interactivity_data_wp_context(
 	array(
@@ -107,7 +108,7 @@ $stats = array(
 
 ?>
 <div
-	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+	<?php echo get_block_wrapper_attributes( $wrapper_attributes ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 	<?php echo $wrapper_context; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 >
 	<div class="activitypub-profile">

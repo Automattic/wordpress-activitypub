@@ -1,6 +1,50 @@
+import classnames from 'classnames';
 import { useBlockProps, useInnerBlocksProps } from '@wordpress/block-editor';
 import { createBlock } from '@wordpress/blocks';
 
+/**
+ * The block supports for the Follow Me block in version 1.
+ *
+ * @type {{html: boolean, color: {gradients: boolean, link: boolean, __experimentalDefaultControls: {background: boolean, text: boolean, link: boolean}}, __experimentalBorder: {radius: boolean, width: boolean, color: boolean, style: boolean}, typography: {fontSize: boolean, __experimentalDefaultControls: {fontSize: boolean}}}}
+ */
+const v1BlockSupports = {
+	html: false,
+	color: {
+		gradients: true,
+		link: true,
+		__experimentalDefaultControls: {
+			background: true,
+			text: true,
+			link: true,
+		},
+	},
+	__experimentalBorder: {
+		radius: true,
+		width: true,
+		color: true,
+		style: true,
+	},
+	typography: {
+		fontSize: true,
+		__experimentalDefaultControls: {
+			fontSize: true,
+		},
+	},
+};
+
+const v2BlockSupports = v1BlockSupports;
+
+/**
+ * Migrates the buttonOnly attribute to a block style for the Follow Me block.
+ *
+ * @param {Object} attributes The block attributes.
+ * @return {Object} The migrated block attributes.
+ */
+function migrateButtonOnly( { buttonOnly = false, className = '', ...newAttributes } ) {
+	newAttributes.className = classnames( className, buttonOnly ? 'is-style-button-only' : 'is-style-default' );
+
+	return newAttributes;
+}
 /**
  * Deprecation for the Follow Me block to use a core button block instead of the custom button.
  * This handles the migration of the buttonText and buttonSize attributes to the innerBlock.
@@ -21,30 +65,7 @@ const v1 = {
 		},
 	},
 
-	supports: {
-		html: false,
-		color: {
-			gradients: true,
-			link: true,
-			__experimentalDefaultControls: {
-				background: true,
-				text: true,
-				link: true,
-			},
-		},
-		__experimentalBorder: {
-			radius: true,
-			width: true,
-			color: true,
-			style: true,
-		},
-		typography: {
-			fontSize: true,
-			__experimentalDefaultControls: {
-				fontSize: true,
-			},
-		},
-	},
+	supports: v1BlockSupports,
 
 	/**
 	 * Checks if the block is eligible for migration.
@@ -65,15 +86,13 @@ const v1 = {
 	 *
 	 * @return {[Object, Array]} An array with the new block attributes and inner blocks.
 	 */
-	migrate( attributes ) {
-		const { buttonText, ...newAttributes } = attributes;
-
+	migrate( { buttonText, ...newAttributes } ) {
 		const buttonBlock = createBlock( 'core/button', {
 			tagName: 'button',
 			text: buttonText,
 		} );
 
-		return [ newAttributes, [ buttonBlock ] ];
+		return [ migrateButtonOnly( newAttributes ), [ buttonBlock ] ];
 	},
 };
 
@@ -92,50 +111,34 @@ const v2 = {
 			default: false,
 		},
 	},
-	supports: {
-		html: false,
-		color: {
-			gradients: true,
-			link: true,
-			__experimentalDefaultControls: {
-				background: true,
-				text: true,
-				link: true,
-			},
-		},
-		__experimentalBorder: {
-			radius: true,
-			width: true,
-			color: true,
-			style: true,
-		},
-		typography: {
-			fontSize: true,
-			__experimentalDefaultControls: {
-				fontSize: true,
-			},
-		},
-	},
 
+	supports: v2BlockSupports,
+
+	/**
+	 * Checks if the block is eligible for migration.
+	 *
+	 * @param {Object} attributes The block attributes.
+	 *
+	 * @return {boolean} Whether the block is eligible for migration.
+	 */
 	isEligible( { buttonOnly } ) {
 		return !! buttonOnly;
 	},
 
-	migrate( { buttonOnly, ...newAttributes }, innerBlocks ) {
-		return [
-			{
-				...newAttributes,
+	/**
+	 * Migrates the Follow Me block to use a block style instead of the buttonOnly attribute.
+	 *
+	 * @param {Object} attributes The block attributes.
+	 *
+	 * @return {[Object, Array]} An array with the new block attributes and inner blocks.
+	 */
+	migrate: migrateButtonOnly,
 
-				// Add new class to exisiting classes
-				className: `${ newAttributes.className || '' } is-style-${
-					buttonOnly ? 'button-only' : 'default'
-				}`.trim(),
-			},
-			innerBlocks,
-		];
-	},
-
-	// For dynamic blocks, we can use a simple function that returns null
+	/**
+	 * Save function for the Follow Me block.
+	 *
+	 * @return {JSX.Element} React element to save.
+	 */
 	save() {
 		const blockProps = useBlockProps.save();
 		const innerBlocksProps = useInnerBlocksProps.save( blockProps );
