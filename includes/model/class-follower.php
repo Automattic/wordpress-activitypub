@@ -365,7 +365,7 @@ class Follower extends Actor {
 	 */
 	public static function init_from_cpt( $post ) {
 		/* @var Follower $object Follower object. */
-		$object = self::init_from_json( $post->post_content );
+		$object = self::init_from_json( \wp_unslash( $post->post_content ) );
 
 		if ( is_wp_error( $object ) ) {
 			return false;

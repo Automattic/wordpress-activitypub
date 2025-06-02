@@ -887,8 +887,9 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$post_id = self::factory()->post->create(
 			array(
-				'post_type'  => Actors::POST_TYPE,
-				'meta_input' => array( '_activitypub_actor_json' => $json ),
+				'post_type'    => Actors::POST_TYPE,
+				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
+				'meta_input'   => array( '_activitypub_actor_json' => \wp_slash( $json ) ),
 			)
 		);
 
@@ -910,7 +911,11 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( JSON_ERROR_NONE, \json_last_error() );
 		$this->assertIsObject( \json_decode( $original_meta ) );
 		$this->assertContains( 'Test Follower', \json_decode( \wp_unslash( $post->post_content ), true ) );
-		$this->assertContains( 'u003Cpu003Eunescaped backslashu003C/pu003E', \json_decode( \wp_unslash( $post->post_content ), true ) );
+		$this->assertContains( '<p>unescaped backslash</p>', \json_decode( \wp_unslash( $post->post_content ), true ) );
+
+		$follower = Follower::init_from_cpt( $post );
+
+		$this->assertEquals( 'unescaped backslash', $follower->get_summary() );
 
 		\wp_delete_post( $post_id );
 	}
