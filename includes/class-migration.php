@@ -971,6 +971,7 @@ class Migration {
 	 *
 	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 100.
 	 * @param int $offset     Optional. Number of meta values to skip. Default 0.
+	 *
 	 * @return array|null Array with batch size and offset if there are more meta values to process, null otherwise.
 	 */
 	public static function update_actor_json_storage( $batch_size = 100, $offset = 0 ) {
