@@ -171,29 +171,36 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		}
 
 		const effectiveUserId = isInheritMode ? authorId : userId;
-		fetchProfile( effectiveUserId ).then( ( data ) => {
-			setProfile( getNormalizedProfile( data ) );
+		fetchProfile( effectiveUserId )
+			.then( ( data ) => {
+				setProfile( getNormalizedProfile( data ) );
 
-			// Convert the full URL to a path if it's a local URL
-			if ( data.followers ) {
-				try {
-					// Extract just the path portion from the URL
-					const { pathname: path } = new URL( data.followers );
+				// Convert the full URL to a path if it's a local URL.
+				if ( data.followers ) {
+					try {
+						// Extract just the path portion from the URL
+						const { pathname: path } = new URL( data.followers );
 
-					apiFetch( { path: path.replace( 'wp-json/', '' ) } ).then( ( followers ) => {
-						const followersCount = followers?.totalItems || 0;
+						apiFetch( { path: path.replace( 'wp-json/', '' ) } )
+							.then( ( followers ) => {
+								const followersCount = followers?.totalItems || 0;
 
-						// Update the profile with followers counts
-						setProfile( ( prevProfile ) => ( { ...prevProfile, followers: followersCount } ) );
-					} );
-				} catch ( e ) {
-					// If URL parsing fails, just continue without fetching followers
+								// Update the profile with followers counts.
+								setProfile( ( prevProfile ) => ( { ...prevProfile, followers: followersCount } ) );
+							} )
+							.catch( () => {} );
+					} catch ( e ) {
+						// If URL parsing fails, just continue without fetching followers.
+					}
 				}
-			}
-			apiFetch( { path: `/wp/v2/users/${ effectiveUserId }/?context=activitypub` } ).then( ( { post_count } ) => {
-				setProfile( ( prevProfile ) => ( { ...prevProfile, posts: post_count } ) );
-			} );
-		} );
+
+				apiFetch( { path: `/wp/v2/users/${ effectiveUserId }/?context=activitypub` } )
+					.then( ( { post_count } ) => {
+						setProfile( ( prevProfile ) => ( { ...prevProfile, posts: post_count } ) );
+					} )
+					.catch( () => {} );
+			} )
+			.catch( () => {} );
 	}, [ userId, authorId, isInheritMode ] );
 
 	useEffect( () => {
