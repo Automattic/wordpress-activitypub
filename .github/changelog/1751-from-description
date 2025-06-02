@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Refine the plugin’s handling and storage of remote actor data.
