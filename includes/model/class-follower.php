@@ -209,7 +209,7 @@ class Follower extends Actor {
 
 		if ( ! empty( $post_id ) ) {
 			// If this is an update, prevent the "followed" date from being overwritten by the current date.
-			$post                  = get_post( $post_id );
+			$post                  = \get_post( $post_id );
 			$args['post_date']     = $post->post_date;
 			$args['post_date_gmt'] = $post->post_date_gmt;
 		}
@@ -365,7 +365,7 @@ class Follower extends Actor {
 	 */
 	public static function init_from_cpt( $post ) {
 		/* @var Follower $object Follower object. */
-		$object = self::init_from_json( \wp_unslash( $post->post_content ) );
+		$object = self::init_from_json( $post->post_content );
 
 		if ( is_wp_error( $object ) ) {
 			return false;

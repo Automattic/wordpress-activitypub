@@ -899,19 +899,20 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$result = Migration::update_actor_json_storage();
 
-		\clean_post_cache( $post_id );
-
 		// No additional batch should be scheduled.
 		$this->assertNull( $result );
 
-		$post = \get_post( $post_id );
-		$meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+		\clean_post_cache( $post_id );
+
+		$post    = \get_post( $post_id );
+		$content = \json_decode( $post->post_content, true );
+		$meta    = \get_post_meta( $post_id, '_activitypub_actor_json', true );
 
 		$this->assertEmpty( $meta, 'Updated meta should be empty' );
 		$this->assertEquals( JSON_ERROR_NONE, \json_last_error() );
 		$this->assertIsObject( \json_decode( $original_meta ) );
-		$this->assertContains( 'Test Follower', \json_decode( \wp_unslash( $post->post_content ), true ) );
-		$this->assertContains( '<p>unescaped backslash</p>', \json_decode( \wp_unslash( $post->post_content ), true ) );
+		$this->assertContains( 'Test Follower', $content );
+		$this->assertContains( '<p>unescaped backslash</p>', $content );
 
 		$follower = Follower::init_from_cpt( $post );
 

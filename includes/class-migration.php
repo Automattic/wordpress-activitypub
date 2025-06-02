@@ -994,7 +994,7 @@ class Migration {
 			if ( \json_last_error() === JSON_ERROR_NONE ) {
 				$post = \get_post( $meta->post_id );
 				if ( $post ) {
-					$post->post_content = \wp_slash( $meta->meta_value );
+					$post->post_content = $meta->meta_value;
 
 					$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 					if ( $has_kses ) {
