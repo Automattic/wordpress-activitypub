@@ -98,6 +98,7 @@ class Post_Controller extends \WP_REST_Controller {
 					'post_id' => $post_id,
 					'type'    => $type_object['type'],
 					'status'  => 'approve',
+					'parent'  => 0,
 				)
 			);
 

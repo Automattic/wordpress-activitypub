@@ -89,7 +89,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$id = $origin_follower->upsert();
 
 		// Add the user ID meta value.
-		add_post_meta( $id, '_activitypub_user_id', $this->user_id );
+		add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		$filter = function ( $preempt, $args, $url ) use ( $target, $target_object, $origin, $origin_object ) {
 			if ( $url === $target ) {
@@ -154,7 +154,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$id = $origin_follower->upsert();
 
 		// Add the user ID meta value.
-		add_post_meta( $id, '_activitypub_user_id', $this->user_id );
+		add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		$filter = function () {
 			return array(
@@ -207,7 +207,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$id = $test_follower->upsert();
 
 		// Add the user ID meta value.
-		add_post_meta( $id, '_activitypub_user_id', $this->user_id );
+		add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		// Store initial followers count.
 		$initial_followers = Followers::get_followers( $this->user_id );
@@ -256,9 +256,9 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin_id = $origin_follower->upsert();
 
 		// Add user IDs.
-		\add_post_meta( $origin_id, '_activitypub_user_id', $this->user_id );
-		\add_post_meta( $origin_id, '_activitypub_user_id', $this->user_id_2 );
-		\add_post_meta( $target_id, '_activitypub_user_id', $this->user_id );
+		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, $this->user_id );
+		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, $this->user_id_2 );
+		\add_post_meta( $target_id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		// Clear the cache.
 		\wp_cache_delete( $origin_id, 'posts' );
@@ -317,7 +317,7 @@ class Test_Move extends \WP_UnitTestCase {
 		Move::handle_move( $activity );
 
 		// Check if the user IDs were moved correctly.
-		$target_users = \get_post_meta( $target_id, '_activitypub_user_id', false );
+		$target_users = \get_post_meta( $target_id, Followers::FOLLOWER_META_KEY, false );
 
 		$this->assertContains( (string) $this->user_id, $target_users );
 		$this->assertContains( (string) $this->user_id_2, $target_users );

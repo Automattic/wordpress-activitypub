@@ -88,14 +88,14 @@ class Move {
 		 * move users and delete the origin follower.
 		 */
 		if ( $target_follower && $origin_follower ) {
-			$origin_users = \get_post_meta( $origin_follower->get__id(), '_activitypub_user_id', false );
-			$target_users = \get_post_meta( $target_follower->get__id(), '_activitypub_user_id', false );
+			$origin_users = \get_post_meta( $origin_follower->get__id(), Followers::FOLLOWER_META_KEY, false );
+			$target_users = \get_post_meta( $target_follower->get__id(), Followers::FOLLOWER_META_KEY, false );
 
 			// Get all user ids from $origin_users that are not in $target_users.
 			$users = \array_diff( $origin_users, $target_users );
 
 			foreach ( $users as $user_id ) {
-				\add_post_meta( $target_follower->get__id(), '_activitypub_user_id', $user_id );
+				\add_post_meta( $target_follower->get__id(), Followers::FOLLOWER_META_KEY, $user_id );
 			}
 
 			$origin_follower->delete();
