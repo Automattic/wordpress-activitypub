@@ -217,6 +217,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 							value={ attributes.selectedUser }
 							options={ usersOptions }
 							onChange={ ( value ) => setAttributes( { selectedUser: value } ) }
+							__next40pxDefaultSize
+							__nextHasNoMarginBottom
 						/>
 					) }
 				</PanelBody>
