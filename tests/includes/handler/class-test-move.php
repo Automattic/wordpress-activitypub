@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Model\Follower;
 use Activitypub\Handler\Move;
@@ -323,7 +324,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertContains( (string) $this->user_id_2, $target_users );
 
 		// Check if the origin follower was deleted.
-		$this->assertNull( Followers::get_follower_by_actor( $origin, true ) );
+		$this->assertNull( Actors::get_remote_actor_by_uri( $origin, true ) );
 
 		remove_filter( 'pre_http_request', $filter );
 	}

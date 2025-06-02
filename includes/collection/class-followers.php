@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Model\Follower;
+use Activitypub\Collection\Actors;
 
 use function Activitypub\is_tombstone;
 use function Activitypub\get_remote_metadata_by_actor;
@@ -52,24 +53,18 @@ class Followers {
 			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		$follower = new Follower();
-		$follower->from_array( $meta );
-
-		$id = $follower->upsert();
-
-		if ( is_wp_error( $id ) ) {
-			return $id;
+		$post_id = Actors::add_remote_actor( $meta );
+		if ( is_wp_error( $post_id ) ) {
+			return $post_id;
 		}
 
-		$post_meta = get_post_meta( $id, self::FOLLOWER_META_KEY, false );
-
-		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
-		if ( is_array( $post_meta ) && ! in_array( $user_id, $post_meta ) ) {
-			add_post_meta( $id, self::FOLLOWER_META_KEY, $user_id );
+		$post_meta = get_post_meta( $post_id, self::FOLLOWER_META_KEY, false );
+		if ( is_array( $post_meta ) && ! in_array( $user_id, $post_meta, true ) ) {
+			add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
-		return $follower;
+		return get_post( $post_id );
 	}
 
 	/**
@@ -113,7 +108,7 @@ class Followers {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$post_id = $wpdb->get_var(
+		$id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid = %s",
 				array(
@@ -125,9 +120,8 @@ class Followers {
 			)
 		);
 
-		if ( $post_id ) {
-			$post = get_post( $post_id );
-			return Follower::init_from_cpt( $post );
+		if ( $id ) {
+			return Actors::get_remote_actor_by_id( $id );
 		}
 
 		return null;
@@ -141,22 +135,7 @@ class Followers {
 	 * @return Follower|false|null The Follower object or false on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s",
-				esc_sql( $actor )
-			)
-		);
-
-		if ( $post_id ) {
-			$post = get_post( $post_id );
-			return Follower::init_from_cpt( $post );
-		}
-
-		return null;
+		return Actors::get_remote_actor_by_uri( $actor );
 	}
 
 	/**

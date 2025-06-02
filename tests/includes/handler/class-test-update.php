@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Handler\Update;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Model\Follower;
 use WP_UnitTestCase;
@@ -77,12 +78,12 @@ class Test_Update extends WP_UnitTestCase {
 		Update::update_actor( $activity );
 
 		// Check that the follower was correctly updated.
-		$follower = Followers::get_follower_by_actor( $actor_url );
+		$follower = Actors::get_remote_actor_by_uri( $actor_url );
 
 		$this->assertNull( $follower );
 
 		$follower_initial = Followers::add_follower( $this->user_id, $actor_url );
-		$follower_from_db = Followers::get_follower_by_actor( $actor_url );
+		$follower_from_db = Actors::get_remote_actor_by_uri( $actor_url );
 
 		$this->assertInstanceOf( Follower::class, $follower_initial );
 		$this->assertInstanceOf( Follower::class, $follower_from_db );
@@ -105,7 +106,7 @@ class Test_Update extends WP_UnitTestCase {
 
 		Update::update_actor( $activity );
 
-		$follower = Followers::get_follower_by_actor( $actor_url );
+		$follower = Actors::get_remote_actor_by_uri( $actor_url );
 
 		$this->assertInstanceOf( Follower::class, $follower );
 		$this->assertEquals( $activity['object']['name'], $follower->get_name() );
@@ -140,7 +141,7 @@ class Test_Update extends WP_UnitTestCase {
 		Update::update_actor( $activity );
 
 		// Check that no follower was created.
-		$follower = Followers::get_follower_by_actor( 'https://example.com/nonexistent' );
+		$follower = Actors::get_remote_actor_by_uri( 'https://example.com/nonexistent' );
 		$this->assertNull( $follower );
 
 		remove_filter( 'pre_http_request', $fake_request, 10 );

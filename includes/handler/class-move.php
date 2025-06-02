@@ -8,6 +8,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Http;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 use function Activitypub\object_to_uri;
@@ -50,8 +51,8 @@ class Move {
 			return;
 		}
 
-		$target_follower = Followers::get_follower_by_actor( $target );
-		$origin_follower = Followers::get_follower_by_actor( $origin );
+		$target_follower = Actors::get_remote_actor_by_uri( $target );
+		$origin_follower = Actors::get_remote_actor_by_uri( $origin );
 
 		/*
 		 * If the new target is followed, but the origin is not,

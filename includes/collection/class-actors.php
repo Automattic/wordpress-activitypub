@@ -12,6 +12,7 @@ use WP_User_Query;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
+use Activitypub\Activity\Actor;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\normalize_url;
@@ -388,5 +389,126 @@ class Actors {
 		}
 
 		return 'user';
+	}
+
+	/**
+	 * Create or update a remote Actor (e.g., a follower) as a custom post type.
+	 *
+	 * @param array $actor_data The ActivityPub actor object as associative array (must include 'id').
+	 *
+	 * @return int|\WP_Error The post ID or WP_Error.
+	 */
+	public static function add_remote_actor( $actor_data ) {
+		if ( empty( $actor_data['id'] ) ) {
+			return new \WP_Error( 'activitypub_missing_actor_id', __( 'Actor data missing ID', 'activitypub' ) );
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s",
+				esc_sql( $actor_data['id'] )
+			)
+		);
+
+		if ( $post_id ) {
+			$post = get_post( $post_id );
+			return $post->ID;
+		}
+
+		$inbox = null;
+		if ( ! empty( $actor_data['sharedInbox'] ) ) {
+			$inbox = $actor_data['sharedInbox'];
+		} elseif ( ! empty( $actor_data['inbox'] ) ) {
+			$inbox = $actor_data['inbox'];
+		}
+
+		$args = array(
+			'guid'         => \esc_url_raw( $actor_data['id'] ),
+			'post_title'   => \wp_strip_all_tags( \sanitize_text_field( $actor_data['name'] ?? $actor_data['preferredUsername'] ) ),
+			'post_author'  => 0,
+			'post_type'    => self::POST_TYPE,
+			'post_name'    => \esc_url_raw( $actor_data['id'] ),
+			'post_content' => \wp_slash( wp_json_encode( $actor_data ) ),
+			'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_data['summary'] ?? '', 'user_description' ) ),
+			'post_status'  => 'publish',
+			'meta_input'   => array(
+				'_activitypub_inbox' => $inbox,
+			),
+		);
+
+		if ( ! empty( $post_id ) ) {
+			// If this is an update, prevent the "followed" date from being overwritten by the current date.
+			$post                  = \get_post( $post_id );
+			$args['post_date']     = $post->post_date;
+			$args['post_date_gmt'] = $post->post_date_gmt;
+		}
+
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			// Prevent KSES from corrupting JSON in post_content.
+			\kses_remove_filters();
+		}
+
+		$post_id = \wp_insert_post( $args );
+
+		if ( $has_kses ) {
+			// Restore KSES filters.
+			\kses_init_filters();
+		}
+
+		return $post_id;
+	}
+
+	/**
+	 * Get a remote Actor object by actor URL (guid).
+	 *
+	 * @param string $actor_uri The actor URI.
+	 *
+	 * @return \Activitypub\Model\Actor|\WP_Error
+	 */
+	public static function get_remote_actor_by_uri( $actor_uri ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				esc_sql( $actor_uri ),
+				esc_sql( self::POST_TYPE )
+			)
+		);
+
+		if ( ! $post_id ) {
+			return new \WP_Error( 'activitypub_actor_not_found', __( 'Remote actor not found', 'activitypub' ) );
+		}
+
+		$post = get_post( $post_id );
+
+		if ( ! $post ) {
+			return new \WP_Error( 'activitypub_actor_not_found', __( 'Remote actor not found', 'activitypub' ) );
+		}
+
+		// Return Activity\Actor object.
+		return Actor::init_from_array( $post->post_content );
+	}
+
+	/**
+	 * Get a remote Actor object by actor URL (guid).
+	 *
+	 * @param int $actor_id The actor ID.
+	 *
+	 * @return \Activitypub\Model\Actor|\WP_Error
+	 */
+	public static function get_remote_actor_by_id( $actor_id ) {
+		$post = \get_post( $actor_id );
+
+		if ( ! $post ) {
+			return new \WP_Error( 'activitypub_actor_not_found', __( 'Remote actor not found', 'activitypub' ) );
+		}
+
+		// Return Activity\Actor object.
+		return Actor::init_from_array( $post->post_content );
 	}
 }
