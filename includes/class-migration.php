@@ -989,7 +989,7 @@ class Migration {
 			$json = \json_decode( $meta->meta_value, true );
 
 			// If json_decode fails, try adding slashes.
-			if ( $json && \json_last_error() === JSON_ERROR_NONE ) {
+			if ( \json_last_error() === JSON_ERROR_NONE ) {
 				$post = \get_post( $meta->post_id );
 				if ( $post ) {
 					$post->post_content = \wp_slash( $meta->meta_value );
