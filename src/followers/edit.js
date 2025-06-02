@@ -22,7 +22,7 @@ import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
  * @return {JSX.Element} Edit component.
  */
 export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
-	const { className, order, per_page, selectedUser } = attributes;
+	const { className = '', order, per_page, selectedUser } = attributes;
 	const blockProps = useBlockProps();
 	const [ page, setPage ] = useState( 1 );
 	const orderOptions = [
@@ -181,19 +181,22 @@ function Followers( {
 		const path = getPath( userId, per_page, order, page );
 		apiFetch( { path } )
 			.then( ( { orderedItems, totalItems } ) => setData( orderedItems, totalItems ) )
-			.catch( () => {} );
+			.catch( () => setData( [], 0 ) );
 	}, [ userId, per_page, order, page, followerData ] );
 
 	return (
 		<div className="followers-container">
-			<ul className="followers-list">
-				{ followers &&
-					followers.map( ( follower ) => (
+			{ followers.length ? (
+				<ul className="followers-list">
+					{ followers.map( ( follower ) => (
 						<li key={ follower.url } className="follower-item">
 							<Follower { ...follower } />
 						</li>
 					) ) }
-			</ul>
+				</ul>
+			) : (
+				<p className="followers-placeholder">{ __( 'No followers found.', 'activitypub' ) }</p>
+			) }
 
 			<Pagination page={ page } pages={ pages } setPage={ setPage } />
 		</div>
