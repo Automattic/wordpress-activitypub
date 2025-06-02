@@ -11,8 +11,15 @@ import { useOptions } from './use-options';
  * @returns {Array} List of user option objects.
  */
 export function useUserOptions( { withInherit = false } ) {
+	/**
+	 * ActivityPub options.
+	 *
+	 * @type {Object}
+	 * @property {boolean} enabled.users - Whether users are enabled.
+	 * @property {boolean} enabled.site - Whether the blog user is enabled.
+	 */
 	const { enabled } = useOptions();
-	const users = enabled?.users ? useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) ) : [];
+	const users = enabled?.users ? useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ), [] ) : [];
 
 	/**
 	 * Memoized computation of user options for block settings.
@@ -42,10 +49,13 @@ export function useUserOptions( { withInherit = false } ) {
 		 * Reduce users into keyword/value pairs for options.
 		 */
 		return users.reduce( ( acc, user ) => {
-			acc.push( {
-				label: user.name,
-				value: `${ user.id }`, // Casting to string because that's how Gutenberg stores the attribute.
-			} );
+			if ( user.capabilities?.activitypub ) {
+				acc.push( {
+					label: user.name,
+					value: `${ user.id }`, // Casting to string because that's how Gutenberg stores the attribute.
+				} );
+			}
+
 			return acc;
 		}, userKeywords );
 	}, [ users ] );
