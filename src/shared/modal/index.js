@@ -55,25 +55,35 @@ export function createModalStore( namespace ) {
 
 			/**
 			 * Close the modal.
+			 *
+			 * @param {Event} event Click event.
 			 */
-			closeModal() {
+			closeModal( event ) {
 				const context = getContext();
 
 				// Reset modal state
 				context.modal.isOpen = false;
 
-				// Return focus to the button that opened the modal
-				const blockWrapper = document.getElementById( context.blockId );
-				if ( blockWrapper ) {
-					const openButton = blockWrapper.querySelector( '[data-wp-on--click="actions.toggleModal"]' );
-					if ( openButton ) {
-						openButton.focus();
+				// Return focus to the button that opened the modal.
+				const button = getElement();
+
+				if ( button.ref.dataset[ 'wpOn-Click' ] === 'actions.toggleModal' ) {
+					button.ref.focus();
+				} else {
+					const blockWrapper = document.getElementById( context.blockId );
+					if ( blockWrapper ) {
+						const openButton = blockWrapper.querySelector(
+							'[data-wp-on--click="actions.toggleModal"], [data-wp-on-async--click="actions.toggleModal"]'
+						);
+						if ( openButton ) {
+							openButton.focus();
+						}
 					}
 				}
 
 				// Call the onClose callback if provided.
 				if ( typeof callbacks.onModalClose === 'function' ) {
-					callbacks.onModalClose();
+					callbacks.onModalClose( event );
 				}
 			},
 
@@ -84,9 +94,8 @@ export function createModalStore( namespace ) {
 			 */
 			toggleModal( event ) {
 				const { modal } = getContext();
-				event.stopPropagation();
 
-				modal.isOpen ? actions.closeModal() : actions.openModal( event );
+				modal.isOpen ? actions.closeModal( event ) : actions.openModal( event );
 			},
 		},
 
