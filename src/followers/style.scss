@@ -158,6 +158,7 @@ button {
 		.pagination-next {
 			justify-self: end;
 			padding-left: 8px;
+			text-align: right;
 
 			&::after {
 				content: "→";
@@ -273,7 +274,8 @@ button {
 
 		.pagination-previous,
 		.pagination-next {
-			padding: 4px 8px;
+			padding-top: 4px;
+			padding-bottom: 4px;
 			font-size: 80%;
 
 			@media (max-width: 480px) {
