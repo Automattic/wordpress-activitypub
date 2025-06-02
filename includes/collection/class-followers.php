@@ -39,7 +39,7 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
-	 * @return Follower|WP_Error The Follower (WP_Post array) or an WP_Error.
+	 * @return Follower|\WP_Error The Follower (WP_Post array) or an WP_Error.
 	 */
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );

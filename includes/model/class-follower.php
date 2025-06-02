@@ -166,7 +166,7 @@ class Follower extends Actor {
 	/**
 	 * Save the current Follower object.
 	 *
-	 * @return int|WP_Error The post ID or an WP_Error.
+	 * @return int|\WP_Error The post ID or an WP_Error.
 	 */
 	public function save() {
 		if ( ! $this->is_valid() ) {
@@ -234,7 +234,7 @@ class Follower extends Actor {
 	/**
 	 * Upsert the current Follower object.
 	 *
-	 * @return int|WP_Error The post ID or an WP_Error.
+	 * @return int|\WP_Error The post ID or an WP_Error.
 	 */
 	public function upsert() {
 		return $this->save();
