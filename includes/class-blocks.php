@@ -174,8 +174,16 @@ class Blocks {
 			'user',
 			'post_count',
 			array(
-				'get_callback' => function ( $user ) {
-					return (int) count_user_posts( $user['id'], 'post', true );
+				/**
+				 * Get the number of published posts.
+				 *
+				 * @param array            $response   Prepared response array.
+				 * @param string           $field_name The field name.
+				 * @param \WP_REST_Request $request    The request object.
+				 * @return int The number of published posts.
+				 */
+				'get_callback' => function ( $response, $field_name, $request ) {
+					return (int) count_user_posts( $request->get_param( 'id' ), 'post', true );
 				},
 				'schema'       => array(
 					'description' => 'Number of published posts',
