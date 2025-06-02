@@ -986,6 +986,7 @@ class Migration {
 		);
 
 		foreach ( $meta_values as $meta ) {
+			// phpcs:ignore
 			$json = \json_decode( $meta->meta_value, true );
 
 			// If json_decode fails, try adding slashes.
