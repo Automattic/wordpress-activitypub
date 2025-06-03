@@ -49,22 +49,22 @@ class Followers {
 			return $meta;
 		}
 
-		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+		if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$post_id = Actors::add_remote_actor( $meta );
-		if ( is_wp_error( $post_id ) ) {
+		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
 
-		$post_meta = get_post_meta( $post_id, self::FOLLOWER_META_KEY, false );
-		if ( is_array( $post_meta ) && ! in_array( $user_id, $post_meta, true ) ) {
-			add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
-			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		$post_meta = \get_post_meta( $post_id, self::FOLLOWER_META_KEY, false );
+		if ( \is_array( $post_meta ) && ! \in_array( $user_id, $post_meta, true ) ) {
+			\add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
+			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
-		return get_post( $post_id );
+		return \get_post( $post_id );
 	}
 
 	/**
@@ -76,7 +76,7 @@ class Followers {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_follower( $user_id, $actor ) {
-		wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 
 		$follower = self::get_follower( $user_id, $actor );
 
@@ -91,9 +91,9 @@ class Followers {
 		 * @param int      $user_id  The ID of the WordPress User.
 		 * @param string   $actor    The Actor URL.
 		 */
-		do_action( 'activitypub_followers_pre_remove_follower', $follower, $user_id, $actor );
+		\do_action( 'activitypub_followers_pre_remove_follower', $follower, $user_id, $actor );
 
-		return delete_post_meta( $follower->get__id(), self::FOLLOWER_META_KEY, $user_id );
+		return \delete_post_meta( $follower->get__id(), self::FOLLOWER_META_KEY, $user_id );
 	}
 
 	/**
@@ -112,10 +112,10 @@ class Followers {
 			$wpdb->prepare(
 				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid = %s",
 				array(
-					esc_sql( Actors::POST_TYPE ),
-					esc_sql( self::FOLLOWER_META_KEY ),
-					esc_sql( $user_id ),
-					esc_sql( $actor ),
+					\esc_sql( Actors::POST_TYPE ),
+					\esc_sql( self::FOLLOWER_META_KEY ),
+					\esc_sql( $user_id ),
+					\esc_sql( $actor ),
 				)
 			)
 		);
@@ -184,13 +184,13 @@ class Followers {
 			),
 		);
 
-		$args      = wp_parse_args( $args, $defaults );
+		$args      = \wp_parse_args( $args, $defaults );
 		$query     = new \WP_Query( $args );
 		$total     = $query->found_posts;
-		$followers = array_map( array( Follower::class, 'init_from_cpt' ), $query->get_posts() );
-		$followers = array_filter( $followers );
+		$followers = \array_map( array( Follower::class, 'init_from_cpt' ), $query->get_posts() );
+		$followers = \array_filter( $followers );
 
-		return compact( 'followers', 'total' );
+		return \compact( 'followers', 'total' );
 	}
 
 	/**
@@ -251,8 +251,8 @@ class Followers {
 	 * @return array The list of Inboxes.
 	 */
 	public static function get_inboxes( $user_id ) {
-		$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
-		$inboxes   = wp_cache_get( $cache_key, 'activitypub' );
+		$cache_key = \sprintf( self::CACHE_KEY_INBOXES, $user_id );
+		$inboxes   = \wp_cache_get( $cache_key, 'activitypub' );
 
 		if ( $inboxes ) {
 			return $inboxes;
@@ -302,8 +302,8 @@ class Followers {
 			)
 		);
 
-		$inboxes = array_filter( $results );
-		wp_cache_set( $cache_key, $inboxes, 'activitypub' );
+		$inboxes = \array_filter( $results );
+		\wp_cache_set( $cache_key, $inboxes, 'activitypub' );
 
 		return $inboxes;
 	}
@@ -322,14 +322,14 @@ class Followers {
 		$inboxes = self::get_inboxes( $actor_id );
 
 		if ( self::maybe_add_inboxes_of_blog_user( $json, $actor_id ) ) {
-			$inboxes = array_fill_keys( $inboxes, 1 );
+			$inboxes = \array_fill_keys( $inboxes, 1 );
 			foreach ( self::get_inboxes( Actors::BLOG_USER_ID ) as $inbox ) {
 				$inboxes[ $inbox ] = 1;
 			}
-			$inboxes = array_keys( $inboxes );
+			$inboxes = \array_keys( $inboxes );
 		}
 
-		return array_slice( $inboxes, $offset, $batch_size );
+		return \array_slice( $inboxes, $offset, $batch_size );
 	}
 
 	/**
@@ -349,9 +349,9 @@ class Followers {
 			return false;
 		}
 
-		$activity = json_decode( $json, true );
+		$activity = \json_decode( $json, true );
 		// Only if this is an Update or Delete. Create handles its own "Announce" in dual user mode.
-		if ( ! in_array( $activity['type'] ?? null, array( 'Update', 'Delete' ), true ) ) {
+		if ( ! \in_array( $activity['type'] ?? null, array( 'Update', 'Delete' ), true ) ) {
 			return false;
 		}
 
@@ -376,15 +376,15 @@ class Followers {
 			'date_query'     => array(
 				array(
 					'column' => 'post_modified_gmt',
-					'before' => gmdate( 'Y-m-d', \time() - $older_than ),
+					'before' => \gmdate( 'Y-m-d', \time() - $older_than ),
 				),
 			),
 		);
 
 		$posts = new \WP_Query( $args );
-		$items = array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
+		$items = \array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
 
-		return array_filter( $items );
+		return \array_filter( $items );
 	}
 
 	/**
@@ -418,9 +418,9 @@ class Followers {
 		);
 
 		$posts = new \WP_Query( $args );
-		$items = array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
+		$items = \array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
 
-		return array_filter( $items );
+		return \array_filter( $items );
 	}
 
 	/**
@@ -435,12 +435,12 @@ class Followers {
 	 * @return int|false The meta ID on success, false on failure.
 	 */
 	public static function add_error( $post_id, $error ) {
-		if ( is_string( $error ) ) {
+		if ( \is_string( $error ) ) {
 			$error_message = $error;
-		} elseif ( is_wp_error( $error ) ) {
+		} elseif ( \is_wp_error( $error ) ) {
 			$error_message = $error->get_error_message();
 		} else {
-			$error_message = __(
+			$error_message = \__(
 				'Unknown Error or misconfigured Error-Message',
 				'activitypub'
 			);
