@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -993,8 +994,6 @@ class Migration {
 		}
 
 		foreach ( $meta_values as $meta ) {
-			\json_decode( $meta->meta_value, true );
-
 			$post = \get_post( $meta->post_id );
 
 			if ( ! $post ) {
@@ -1002,20 +1001,22 @@ class Migration {
 				continue;
 			}
 
-			if ( \json_last_error() === JSON_ERROR_NONE ) {
-				$post->post_content = $meta->meta_value;
+			$meta_value   = \json_decode( $meta->meta_value, true );
+			$post_content = '';
 
-				\wp_update_post( $post );
+			if ( \json_last_error() === JSON_ERROR_NONE ) {
+				$post_content = $meta_value;
 			} else {
 				$meta = Http::get_remote_object( $post->guid );
 
 				if ( ! \is_wp_error( $meta ) ) {
-					$post->post_content = \wp_json_encode( \wp_slash( $meta ) );
-					\wp_update_post( $post );
+					$post_content = $meta;
 				}
 			}
 
-			\delete_post_meta( $meta->post_id, '_activitypub_actor_json' );
+			$post->post_content = \wp_slash( \wp_json_encode( $post_content ) );
+			\wp_insert_post( $post );
+			\delete_post_meta( $post->ID, '_activitypub_actor_json' );
 		}
 
 		if ( $has_kses ) {
