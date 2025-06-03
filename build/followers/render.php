@@ -135,7 +135,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<h1 class="screen-reader-text"><?php esc_html_e( 'Follower navigation', 'activitypub' ); ?></h1>
 			<a
 				class="pagination-previous"
-				data-wp-on--click="actions.previousPage"
+				data-wp-on-async--click="actions.previousPage"
 				data-wp-bind--aria-disabled="state.disablePreviousLink"
 				aria-label="<?php esc_attr_e( 'Previous page', 'activitypub' ); ?>"
 			>
@@ -146,7 +146,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 			<a
 				class="pagination-next"
-				data-wp-on--click="actions.nextPage"
+				data-wp-on-async--click="actions.nextPage"
 				data-wp-bind--aria-disabled="state.disableNextLink"
 				aria-label="<?php esc_attr_e( 'Next page', 'activitypub' ); ?>"
 			>

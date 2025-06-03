@@ -162,7 +162,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				class="reaction-label wp-element-button"
 				data-reaction-type="<?php echo esc_attr( $_type ); ?>"
 				data-wp-on--click="actions.toggleModal"
+				data-wp-bind--aria-expanded="context.modal.isOpen"
 				aria-label="<?php echo esc_attr( $aria_label ); ?>"
+				aria-haspopup="dialog"
+				aria-controls="modal-heading"
 			>
 				<?php echo esc_html( $reaction['label'] ); ?>
 			</button>
