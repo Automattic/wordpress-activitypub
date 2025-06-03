@@ -13,19 +13,19 @@ use function Activitypub\object_to_uri;
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
 
-/* @var string $content Inner blocks content. */
+/* @var \WP_Block $block Current block. */
+$block = $block ?? '';
+
+/* @var string $content Block content. */
 $content = $content ?? '';
+
 if ( empty( $content ) ) {
 	// Fallback for v1.0.0 blocks.
 	$_title  = $attributes['title'] ?? __( 'Fediverse Followers', 'activitypub' );
 	$content = '<h3 class="wp-block-heading">' . esc_html( $_title ) . '</h3>';
 	unset( $attributes['title'], $attributes['className'] );
 } else {
-	// Remove the outer div if it exists, to avoid nesting issues with block variation classes.
-	$pattern = '/<div\s+class="wp-block-activitypub-followers[^"]*"[^>]*>(.*?)<\/div>/s';
-	if ( preg_match( $pattern, $content, $matches ) ) {
-		$content = $matches[1];
-	}
+	$content = implode( PHP_EOL, wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
 }
 
 $user_id = Blocks::get_user_id( $attributes['selectedUser'] );
