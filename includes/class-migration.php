@@ -1002,7 +1002,7 @@ class Migration {
 			}
 
 			$meta_value   = \json_decode( $meta->meta_value, true );
-			$post_content = '';
+			$post_content = null;
 
 			if ( \json_last_error() === JSON_ERROR_NONE ) {
 				$post_content = $meta_value;
@@ -1014,12 +1014,14 @@ class Migration {
 				}
 			}
 
-			\wp_update_post(
-				array(
-					'ID'           => $post->ID,
-					'post_content' => \wp_slash( \wp_json_encode( $post_content ) ),
-				)
-			);
+			if ( $post_content ) {
+				\wp_update_post(
+					array(
+						'ID'           => $post->ID,
+						'post_content' => \wp_slash( \wp_json_encode( $post_content ) ),
+					)
+				);
+			}
 
 			\delete_post_meta( $post->ID, '_activitypub_actor_json' );
 		}
