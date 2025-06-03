@@ -11,12 +11,19 @@ use Activitypub\Blocks;
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes, array( 'align' => null ) );
 
-/* @var string $content Inner blocks content. */
+/* @var \WP_Block $block Current block. */
+$block = $block ?? '';
+
+/* @var string $content Block content. */
+$content = $content ?? '';
+
 if ( empty( $content ) ) {
 	// Fallback for v1.0.0 blocks.
 	$_title  = $attributes['title'] ?? __( 'Fediverse Reactions', 'activitypub' );
 	$content = '<h6 class="wp-block-heading">' . esc_html( $_title ) . '</h6>';
 	unset( $attributes['title'], $attributes['className'] );
+} else {
+	$content = implode( PHP_EOL, wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
 }
 
 // Get the Post ID from attributes or use the current post.
@@ -71,6 +78,11 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 	);
 }
 
+if ( empty( $reactions ) ) {
+	echo '<!-- Reactions block: No reactions found. -->';
+	return;
+}
+
 // Set up the Interactivity API state.
 wp_interactivity_state(
 	'activitypub/reactions',
@@ -102,11 +114,10 @@ $reactions = array_map(
 
 // Initialize the context for the block.
 $context = array(
-	'blockId'      => $block_id,
-	'hasReactions' => ! empty( $reactions ),
-	'reactions'    => $reactions,
-	'postId'       => $_post_id,
-	'modal'        => array(
+	'blockId'   => $block_id,
+	'reactions' => $reactions,
+	'postId'    => $_post_id,
+	'modal'     => array(
 		'isCompact' => true,
 		'isOpen'    => false,
 		'items'     => array(),
@@ -116,11 +127,10 @@ $context = array(
 // Add the block wrapper attributes.
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
-		'id'                   => $block_id,
-		'data-wp-interactive'  => 'activitypub/reactions',
-		'data-wp-context'      => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
-		'data-wp-init'         => 'callbacks.initReactions',
-		'data-wp-bind--hidden' => '!context.hasReactions',
+		'id'                  => $block_id,
+		'data-wp-interactive' => 'activitypub/reactions',
+		'data-wp-context'     => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
+		'data-wp-init'        => 'callbacks.initReactions',
 	)
 );
 ?>

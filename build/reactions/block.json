@@ -13,6 +13,13 @@
       "wide",
       "full"
     ],
+    "layout": {
+      "default": {
+        "type": "constrained",
+        "orientation": "vertical",
+        "justifyContent": "center"
+      }
+    },
     "interactivity": true
   },
   "blockHooks": {
