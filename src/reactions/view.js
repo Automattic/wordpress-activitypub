@@ -7,24 +7,10 @@ const { apiFetch } = window.wp;
 createModalStore( 'activitypub/reactions' );
 
 /**
- * @typedef {Object} state
- * @property {String} defaultAvatarUrl Default avatar URL.
- * @property {String} namespace ActivityPub REST Namespace.
- * @property {Object} reactions Reactions data, keyed by post ID.
+ * @var {Object} state
+ * @var {Object} state.reactions Reactions data.
+ * @var {String} state.defaultAvatarUrl Default avatar URL.
  */
-
-/**
- * @typedef {Object} context
- * @property {String} blockId The block ID.
- * @property {boolean} hasReactions Whether the post has reactions.
- * @property {String} postId The post ID.
- * @property {Object} reactions Reactions data, keyed by reaction type.
- * @property {Object} modal The modal state.
- * @property {boolean} modal.isCompact Whether the modal is compact.
- * @property {boolean} modal.isOpen Whether the modal is open.
- * @property {String} modal.items The list of avatars & names to display in the modal.
- */
-
 const { callbacks, state } = store( 'activitypub/reactions', {
 	actions: {
 		/**

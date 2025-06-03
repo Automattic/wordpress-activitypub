@@ -7,31 +7,6 @@ const { apiFetch } = window.wp;
 
 createModalStore( 'activitypub/follow-me' );
 
-/**
- * @typedef {Object} state
- * @property {String} namespace ActivityPub REST Namespace.
- * @property {Object} i18n Internationalization strings.
- * @property {String} i18n.copy "Copy" button text.
- * @property {String} i18n.copied "Copied" button text.
- * @property {String} i18n.emptyProfileError Error message for empty remote profile.
- * @property {String} i18n.invalidProfileError Error message for invalid remote profile.
- * @property {String} i18n.genericError Generic error message.
- */
-
-/**
- * @typedef {Object} context
- * @property {String} blockId The block ID.
- * @property {String} userId The user ID.
- * @property {String} webfinger The user's webfinger.
- * @property {String} remoteProfile The remote profile.
- * @property {String} copyButtonText The copy button text.
- * @property {String} errorMessage Error message to display below the remote profile input.
- * @property {boolean} isError Whether there is an error in the remote profile input.
- * @property {boolean} isLoading Whether the remote profile is being submitted.
- * @property {Object} modal The modal state.
- * @property {boolean} modal.isOpen Whether the modal is open.
- */
-
 const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 	actions: {
 		/**
@@ -62,7 +37,6 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 		 * Update the remote profile value.
 		 *
 		 * @param {Event} event Input event.
-		 * @param {String} event.target.value The remote profile value.
 		 */
 		updateRemoteProfile( event ) {
 			const context = getContext();
@@ -76,7 +50,6 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 		 * Handle keydown event for remote profile input.
 		 *
 		 * @param {Event} event Keydown event.
-		 * @param {String} event.key Key pressed.
 		 */
 		handleKeyDown( event ) {
 			if ( event.key === 'Enter' ) {

@@ -6,30 +6,8 @@ import { store, getContext } from '@wordpress/interactivity';
  */
 const { apiFetch, url } = window.wp;
 
-/**
- * @typedef {Object} context
- * @property {String} blockId The block ID.
- * @property {String} userId The user ID.
- * @property {Number} page The current page.
- * @property {Number} pages The total number of pages.
- * @property {Number} per_page The number of followers per page.
- * @property {String} order The order of the followers.
- * @property {Number} total The total number of followers.
- * @property {boolean} isLoading Whether the followers are being fetched.
- * @property {Array} followers The list of followers.
- * @property {Object} modal The modal state.
- * @property {boolean} modal.isOpen Whether the modal is open.
- */
-
+// Register the store for the followers block.
 const { actions, state } = store( 'activitypub/followers', {
-	/**
-	 * @typedef {Object} state
-	 * @property {String} defaultAvatarUrl Default avatar URL.
-	 * @property {String} namespace ActivityPub REST Namespace.
-	 * @property {Function} getPaginationText Function to get the pagination text.
-	 * @property {Function} getDisablePreviousLink Function to check if the previous link should be disabled.
-	 * @property {Function} getDisableNextLink Function to check if the next link should be disabled.
-	 */
 	state: {
 		/**
 		 * Get the pagination text.
