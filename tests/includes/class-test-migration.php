@@ -869,7 +869,7 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test update_actor_json_storage updates unslashed meta values.
+	 * Test update_actor_json_storage with valid JSON.
 	 *
 	 * @covers ::update_actor_json_storage
 	 */
@@ -922,7 +922,7 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test update_actor_json_storage updates unslashed meta values.
+	 * Test update_actor_json_storage with broken JSON.
 	 *
 	 * @covers ::update_actor_json_storage
 	 */
