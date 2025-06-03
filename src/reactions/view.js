@@ -16,6 +16,7 @@ createModalStore( 'activitypub/reactions' );
 /**
  * @typedef {Object} context
  * @property {String} blockId The block ID.
+ * @property {boolean} hasReactions Whether the post has reactions.
  * @property {String} postId The post ID.
  * @property {Object} reactions Reactions data, keyed by reaction type.
  * @property {Object} modal The modal state.
