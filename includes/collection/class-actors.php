@@ -515,6 +515,6 @@ class Actors {
 		}
 
 		// Return Activity\Actor object.
-		return Actor::init_from_array( $post->post_content );
+		return Actor::init_from_json( $post->post_content );
 	}
 }
