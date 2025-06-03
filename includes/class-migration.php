@@ -1014,8 +1014,6 @@ class Migration {
 				}
 			}
 
-			$post->post_content = \wp_slash( \wp_json_encode( $post_content ) );
-
 			\wp_update_post(
 				array(
 					'ID'           => $post->ID,
