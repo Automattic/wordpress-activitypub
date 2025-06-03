@@ -878,7 +878,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			'type'               => 'Person',
 			'name'               => 'Test Follower',
 			'preferred_username' => 'Follower',
-			'summary'            => '<p>unescaped backslash</p>',
+			'summary'            => '<p>HTML content</p>',
 		);
 
 		$follower = new Follower();
@@ -912,11 +912,11 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( JSON_ERROR_NONE, \json_last_error() );
 		$this->assertIsObject( \json_decode( $original_meta ) );
 		$this->assertContains( 'Test Follower', $content );
-		$this->assertContains( '<p>unescaped backslash</p>', $content );
+		$this->assertContains( '<p>HTML content</p>', $content );
 
 		$follower = Follower::init_from_cpt( $post );
 
-		$this->assertEquals( 'unescaped backslash', $follower->get_summary() );
+		$this->assertEquals( 'HTML content', $follower->get_summary() );
 
 		\wp_delete_post( $post_id );
 	}

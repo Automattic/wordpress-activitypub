@@ -986,32 +986,41 @@ class Migration {
 			)
 		);
 
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			// Prevent KSES from corrupting JSON in post_content.
+			\kses_remove_filters();
+		}
+
 		foreach ( $meta_values as $meta ) {
-			// phpcs:ignore
-			$json = \json_decode( $meta->meta_value, true );
+			\json_decode( $meta->meta_value, true );
 
-			// If json_decode fails, try adding slashes.
+			$post = \get_post( $meta->post_id );
+
+			if ( ! $post ) {
+				\delete_post_meta( $meta->post_id, '_activitypub_actor_json' );
+				continue;
+			}
+
 			if ( \json_last_error() === JSON_ERROR_NONE ) {
-				$post = \get_post( $meta->post_id );
-				if ( $post ) {
-					$post->post_content = $meta->meta_value;
+				$post->post_content = $meta->meta_value;
 
-					$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
-					if ( $has_kses ) {
-						// Prevent KSES from corrupting JSON in post_content.
-						\kses_remove_filters();
-					}
+				\wp_update_post( $post );
+			} else {
+				$meta = Http::get_remote_object( $post->guid );
 
+				if ( ! \is_wp_error( $meta ) ) {
+					$post->post_content = \wp_json_encode( \wp_slash( $meta ) );
 					\wp_update_post( $post );
-
-					if ( $has_kses ) {
-						// Restore KSES filters.
-						\kses_init_filters();
-					}
-
-					\delete_post_meta( $meta->post_id, '_activitypub_actor_json' );
 				}
 			}
+
+			\delete_post_meta( $meta->post_id, '_activitypub_actor_json' );
+		}
+
+		if ( $has_kses ) {
+			// Restore KSES filters.
+			\kses_init_filters();
 		}
 
 		if ( \count( $meta_values ) === $batch_size ) {
