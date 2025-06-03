@@ -102,7 +102,6 @@ $has_header   = ! empty( $header_image['url'] ) && str_contains( $attributes['cl
 $stats = array(
 	'posts'     => count_user_posts( $user_id, 'post', true ),
 	'followers' => Followers::count_followers( $user_id ),
-	'following' => null,
 );
 
 ?>
