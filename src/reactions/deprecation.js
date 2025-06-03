@@ -33,23 +33,29 @@ const v1 = {
 		},
 	},
 
+	/**
+	 * Checks if the block is eligible for migration.
+	 *
+	 * @param {Object} attributes The block attributes.
+	 * @return {boolean} Whether the block is eligible for migration.
+	 */
 	isEligible( attributes ) {
-		// Run migration if the title attribute exists.
 		return !! attributes.title;
 	},
 
-	migrate( attributes ) {
-		const { title, ...newAttributes } = attributes;
+	/**
+	 * Migrates the block to use a core heading block.
+	 *
+	 * @param {Object} attributes The block attributes.
+	 * @return {[Object, Array]} An array with the new block attributes and inner blocks.
+	 */
+	migrate( { title, ...newAttributes } ) {
+		const headingBlock = createBlock( 'core/heading', {
+			content: title,
+			level: 6,
+		} );
 
-		return [
-			newAttributes,
-			[
-				createBlock( 'core/heading', {
-					content: title,
-					level: 6,
-				} ),
-			],
-		];
+		return [ newAttributes, [ headingBlock ] ];
 	},
 };
 
