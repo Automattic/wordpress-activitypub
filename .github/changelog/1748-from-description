@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Added forward compatibility for Editor Controls, fixing deprecated warnings in the Editor.

@@ -62,7 +62,11 @@ const EditorPlugin = () => {
 	);
 
 	return (
-		<PluginDocumentSettingPanel name="activitypub" title={ __( 'Fediverse ⁂', 'activitypub' ) }>
+		<PluginDocumentSettingPanel
+			name="activitypub"
+			className="block-editor-block-inspector"
+			title={ __( 'Fediverse ⁂', 'activitypub' ) }
+		>
 			<TextControl
 				label={ __( 'Content Warning', 'activitypub' ) }
 				value={ meta?.activitypub_content_warning }
@@ -74,6 +78,8 @@ const EditorPlugin = () => {
 					'Content warnings do not change the content on your site, only in the fediverse.',
 					'activitypub'
 				) }
+				__next40pxDefaultSize
+				__nextHasNoMarginBottom
 			/>
 
 			<RangeControl
@@ -88,6 +94,8 @@ const EditorPlugin = () => {
 					'Maximum number of image attachments to include when sharing to the fediverse.',
 					'activitypub'
 				) }
+				__next40pxDefaultSize
+				__nextHasNoMarginBottom
 			/>
 
 			<RadioControl

@@ -11,8 +11,17 @@ import { useOptions } from './use-options';
  * @returns {Array} List of user option objects.
  */
 export function useUserOptions( { withInherit = false } ) {
+	/**
+	 * ActivityPub options.
+	 *
+	 * @type {Object}
+	 * @property {boolean} enabled.users - Whether users are enabled.
+	 * @property {boolean} enabled.site - Whether the blog user is enabled.
+	 */
 	const { enabled } = useOptions();
-	const users = enabled?.users ? useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) ) : [];
+	const users = enabled?.users
+		? useSelect( ( select ) => select( 'core' ).getUsers( { capabilities: 'activitypub' } ), [] )
+		: [];
 
 	/**
 	 * Memoized computation of user options for block settings.

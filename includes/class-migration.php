@@ -179,6 +179,10 @@ class Migration {
 			self::update_notification_options();
 		}
 
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::migrate_followers_to_ap_actor_cpt();
+		}
+
 		/*
 		 * Add new update routines above this comment. ^
 		 *
@@ -475,7 +479,7 @@ class Migration {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB
 		$followers = $wpdb->get_col(
-			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Followers::POST_TYPE )
+			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Actors::POST_TYPE )
 		);
 		foreach ( $followers as $id ) {
 			clean_post_cache( $id );
@@ -819,7 +823,7 @@ class Migration {
 	}
 
 	/**
-	 * Rename meta keys.
+	 * Rename user meta keys.
 	 *
 	 * @param string $old_key The old comment meta key.
 	 * @param string $new_key The new comment meta key.
@@ -829,6 +833,24 @@ class Migration {
 
 		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->usermeta,
+			array( 'meta_key' => $new_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			array( 'meta_key' => $old_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			array( '%s' ),
+			array( '%s' )
+		);
+	}
+
+	/**
+	 * Update post meta keys.
+	 *
+	 * @param string $old_key The old post meta key.
+	 * @param string $new_key The new post meta key.
+	 */
+	private static function update_postmeta_key( $old_key, $new_key ) {
+		global $wpdb;
+
+		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->postmeta,
 			array( 'meta_key' => $new_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			array( 'meta_key' => $old_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			array( '%s' ),
@@ -924,5 +946,22 @@ class Migration {
 		// Delete the old notification options.
 		\delete_option( 'activitypub_mailer_new_dm' );
 		\delete_option( 'activitypub_mailer_new_follower' );
+	}
+
+	/**
+	 * Migrate followers to the new CPT.
+	 */
+	public static function migrate_followers_to_ap_actor_cpt() {
+		global $wpdb;
+
+		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->posts,
+			array( 'post_type' => Actors::POST_TYPE ),
+			array( 'post_type' => 'ap_follower' ),
+			array( '%s' ),
+			array( '%s' )
+		);
+
+		self::update_postmeta_key( '_activitypub_user_id', Followers::FOLLOWER_META_KEY );
 	}
 }
