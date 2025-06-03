@@ -121,7 +121,7 @@ class Followers {
 		);
 
 		if ( $id ) {
-			return Actors::get_remote_actor_by_id( $id );
+			return Actors::get_imported_by_id( $id );
 		}
 
 		return null;
@@ -135,7 +135,7 @@ class Followers {
 	 * @return Follower|false|null The Follower object or false on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
-		return Actors::get_remote_actor_by_uri( $actor );
+		return Actors::get_imported_by_uri( $actor );
 	}
 
 	/**

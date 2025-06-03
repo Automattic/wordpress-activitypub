@@ -113,7 +113,7 @@ class Update {
 			return;
 		}
 
-		$follower = Actors::get_remote_actor_by_uri( $actor['id'] );
+		$follower = Actors::get_imported_by_uri( $actor['id'] );
 
 		if ( ! $follower ) {
 			return;

@@ -7,8 +7,6 @@
 
 namespace Activitypub\Collection;
 
-use WP_Error;
-use WP_User_Query;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
@@ -53,7 +51,7 @@ class Actors {
 	 *
 	 * @param int $user_id The User-ID.
 	 *
-	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
+	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_id( $user_id ) {
 		if ( is_numeric( $user_id ) ) {
@@ -61,7 +59,7 @@ class Actors {
 		}
 
 		if ( ! user_can_activitypub( $user_id ) ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'activitypub_user_not_found',
 				\__( 'Actor not found', 'activitypub' ),
 				array( 'status' => 404 )
@@ -83,7 +81,7 @@ class Actors {
 	 *
 	 * @param string $username Name of the Actor.
 	 *
-	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
+	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_username( $username ) {
 		/**
@@ -103,7 +101,7 @@ class Actors {
 			\get_option( 'activitypub_blog_identifier' ) === $username
 		) {
 			if ( is_user_type_disabled( 'blog' ) ) {
-				return new WP_Error(
+				return new \WP_Error(
 					'activitypub_user_not_found',
 					\__( 'Actor not found', 'activitypub' ),
 					array( 'status' => 404 )
@@ -119,7 +117,7 @@ class Actors {
 		}
 
 		// Check for 'activitypub_username' meta.
-		$user = new WP_User_Query(
+		$user = new \WP_User_Query(
 			array(
 				'count_total' => false,
 				'number'      => 1,
@@ -147,7 +145,7 @@ class Actors {
 		$username = str_replace( array( '*', '%' ), '', $username );
 
 		// Check for login or nicename.
-		$user = new WP_User_Query(
+		$user = new \WP_User_Query(
 			array(
 				'count_total'    => false,
 				'search'         => $username,
@@ -165,7 +163,7 @@ class Actors {
 			}
 		}
 
-		return new WP_Error(
+		return new \WP_Error(
 			'activitypub_user_not_found',
 			\__( 'Actor not found', 'activitypub' ),
 			array( 'status' => 404 )
@@ -177,13 +175,13 @@ class Actors {
 	 *
 	 * @param string $uri The Actor resource.
 	 *
-	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
+	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_resource( $uri ) {
 		$uri = object_to_uri( $uri );
 
 		if ( ! $uri ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'activitypub_no_uri',
 				\__( 'No URI provided', 'activitypub' ),
 				array( 'status' => 404 )
@@ -242,7 +240,7 @@ class Actors {
 					return self::get_by_id( self::BLOG_USER_ID );
 				}
 
-				return new WP_Error(
+				return new \WP_Error(
 					'activitypub_no_user_found',
 					\__( 'Actor not found', 'activitypub' ),
 					array( 'status' => 404 )
@@ -255,7 +253,7 @@ class Actors {
 				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
 				if ( $blog_host !== $host && get_option( 'activitypub_old_host' ) !== $host ) {
-					return new WP_Error(
+					return new \WP_Error(
 						'activitypub_wrong_host',
 						\__( 'Resource host does not match blog host', 'activitypub' ),
 						array( 'status' => 404 )
@@ -269,7 +267,7 @@ class Actors {
 
 				return self::get_by_username( $identifier );
 			default:
-				return new WP_Error(
+				return new \WP_Error(
 					'activitypub_wrong_scheme',
 					\__( 'Wrong scheme', 'activitypub' ),
 					array( 'status' => 404 )
@@ -282,7 +280,7 @@ class Actors {
 	 *
 	 * @param string $id The Actor resource.
 	 *
-	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
+	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_various( $id ) {
 		if ( is_numeric( $id ) ) {
@@ -394,13 +392,21 @@ class Actors {
 	/**
 	 * Create or update a remote Actor (e.g., a follower) as a custom post type.
 	 *
-	 * @param array $actor_data The ActivityPub actor object as associative array (must include 'id').
+	 * @param array|Actor $actor_data The ActivityPub actor object as associative array (must include 'id').
 	 *
 	 * @return int|\WP_Error The post ID or WP_Error.
 	 */
-	public static function add_remote_actor( $actor_data ) {
-		if ( empty( $actor_data['id'] ) ) {
-			return new \WP_Error( 'activitypub_missing_actor_id', __( 'Actor data missing ID', 'activitypub' ) );
+	public static function import( $actor_data ) {
+		if ( \is_array( $actor_data ) ) {
+			$actor_data = Actor::init_from_array( $actor_data );
+		}
+
+		if ( ! $actor_data instanceof Actor ) {
+			return new \WP_Error(
+				'activitypub_invalid_actor_data',
+				\__( 'Invalid actor data', 'activitypub' ),
+				array( 'status' => 400 )
+			);
 		}
 
 		global $wpdb;
@@ -409,7 +415,7 @@ class Actors {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s",
-				esc_sql( $actor_data['id'] )
+				esc_sql( $actor_data->get_id() )
 			)
 		);
 
@@ -419,20 +425,20 @@ class Actors {
 		}
 
 		$inbox = null;
-		if ( ! empty( $actor_data['sharedInbox'] ) ) {
-			$inbox = $actor_data['sharedInbox'];
-		} elseif ( ! empty( $actor_data['inbox'] ) ) {
-			$inbox = $actor_data['inbox'];
+		if ( ! empty( $actor_data->get_shared_inbox() ) ) {
+			$inbox = $actor_data->get_shared_inbox();
+		} elseif ( ! empty( $actor_data->get_inbox() ) ) {
+			$inbox = $actor_data->get_inbox();
 		}
 
 		$args = array(
-			'guid'         => \esc_url_raw( $actor_data['id'] ),
-			'post_title'   => \wp_strip_all_tags( \sanitize_text_field( $actor_data['name'] ?? $actor_data['preferredUsername'] ) ),
+			'guid'         => \esc_url_raw( $actor_data->get_id() ),
+			'post_title'   => \wp_strip_all_tags( \sanitize_text_field( $actor_data->get_name() ?? $actor_data->get_preferred_username() ) ),
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,
-			'post_name'    => \esc_url_raw( $actor_data['id'] ),
-			'post_content' => \wp_slash( wp_json_encode( $actor_data ) ),
-			'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_data['summary'] ?? '', 'user_description' ) ),
+			'post_name'    => \esc_url_raw( $actor_data->get_id() ),
+			'post_content' => \wp_slash( $actor_data->to_json() ),
+			'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_data->get_summary() ?? '', 'user_description' ) ),
 			'post_status'  => 'publish',
 			'meta_input'   => array(
 				'_activitypub_inbox' => $inbox,
@@ -469,7 +475,7 @@ class Actors {
 	 *
 	 * @return \Activitypub\Model\Actor|\WP_Error
 	 */
-	public static function get_remote_actor_by_uri( $actor_uri ) {
+	public static function get_imported_by_uri( $actor_uri ) {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$post_id = $wpdb->get_var(
@@ -501,7 +507,7 @@ class Actors {
 	 *
 	 * @return \Activitypub\Model\Actor|\WP_Error
 	 */
-	public static function get_remote_actor_by_id( $actor_id ) {
+	public static function get_imported_by_id( $actor_id ) {
 		$post = \get_post( $actor_id );
 
 		if ( ! $post ) {
