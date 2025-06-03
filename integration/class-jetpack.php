@@ -38,7 +38,6 @@ class Jetpack {
 		$activitypub_meta_keys = array(
 			Followers::FOLLOWER_META_KEY,
 			'_activitypub_inbox',
-			'_activitypub_actor_json',
 		);
 		return \array_merge( $allow_list, $activitypub_meta_keys );
 	}

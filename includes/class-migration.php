@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -181,6 +182,7 @@ class Migration {
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			self::migrate_followers_to_ap_actor_cpt();
+			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
 
 		/*
@@ -963,5 +965,75 @@ class Migration {
 		);
 
 		self::update_postmeta_key( '_activitypub_user_id', Followers::FOLLOWER_META_KEY );
+	}
+
+	/**
+	 * Update _activitypub_actor_json meta values to ensure they are properly slashed.
+	 *
+	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 100.
+	 * @param int $offset     Optional. Number of meta values to skip. Default 0.
+	 *
+	 * @return array|null Array with batch size and offset if there are more meta values to process, null otherwise.
+	 */
+	public static function update_actor_json_storage( $batch_size = 100, $offset = 0 ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$meta_values = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' LIMIT %d OFFSET %d",
+				$batch_size,
+				$offset
+			)
+		);
+
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			// Prevent KSES from corrupting JSON in post_content.
+			\kses_remove_filters();
+		}
+
+		foreach ( $meta_values as $meta ) {
+			$post = \get_post( $meta->post_id );
+
+			if ( ! $post ) {
+				\delete_post_meta( $meta->post_id, '_activitypub_actor_json' );
+				continue;
+			}
+
+			$post_content = \json_decode( $meta->meta_value, true );
+
+			if ( \json_last_error() !== JSON_ERROR_NONE ) {
+				$post_content = Http::get_remote_object( $post->guid );
+
+				if ( \is_wp_error( $post_content ) ) {
+					\delete_post_meta( $post->ID, '_activitypub_actor_json' );
+					continue;
+				}
+			}
+
+			\wp_update_post(
+				array(
+					'ID'           => $post->ID,
+					'post_content' => \wp_slash( \wp_json_encode( $post_content ) ),
+				)
+			);
+
+			\delete_post_meta( $post->ID, '_activitypub_actor_json' );
+		}
+
+		if ( $has_kses ) {
+			// Restore KSES filters.
+			\kses_init_filters();
+		}
+
+		if ( \count( $meta_values ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
+			);
+		}
+
+		return null;
 	}
 }

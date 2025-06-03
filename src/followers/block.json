@@ -2,20 +2,17 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"name": "activitypub/followers",
 	"apiVersion": 3,
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"title": "Fediverse Followers",
 	"category": "widgets",
 	"description": "Display your followers from the Fediverse on your website.",
 	"textdomain": "activitypub",
 	"icon": "groups",
 	"supports": {
-		"html": false
+		"html": false,
+		"interactivity": true
 	},
 	"attributes": {
-		"title": {
-			"type": "string",
-			"default": "Fediverse Followers"
-		},
 		"selectedUser": {
 			"type": "string",
 			"default": "site"
@@ -32,11 +29,14 @@
 	},
 	"usesContext": [ "postType", "postId" ],
 	"styles": [
-		{ "name": "default", "label": "No Lines", "isDefault": true },
-		{ "name": "with-lines", "label": "Lines" },
+		{ "name": "default", "label": "Default", "isDefault": true },
+		{ "name": "card", "label": "Card" },
 		{ "name": "compact", "label": "Compact" }
 	],
 	"editorScript": "file:./index.js",
-	"viewScript": "file:./view.js",
-	"style": ["file:./style-view.css","wp-block-query-pagination"]
+	"editorStyle": "file:./index.css",
+	"viewScriptModule": "file:./view.js",
+	"viewScript": "wp-api-fetch",
+	"style": [ "file:./style-index.css" ],
+	"render": "file:./render.php"
 }

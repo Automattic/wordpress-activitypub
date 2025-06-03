@@ -5,6 +5,5 @@ vendor
 
 # Temporary ignores while breaking out each component.
 assets
-src/followers
 src/reply
 src/reply-intent

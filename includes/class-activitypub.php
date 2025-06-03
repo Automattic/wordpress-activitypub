@@ -509,18 +509,6 @@ class Activitypub {
 			)
 		);
 
-		\register_post_meta(
-			Actors::POST_TYPE,
-			'_activitypub_actor_json',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => function ( $value ) {
-					return sanitize_text_field( $value );
-				},
-			)
-		);
-
 		// Register Outbox Post-Type.
 		register_post_type(
 			Outbox::POST_TYPE,

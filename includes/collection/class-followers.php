@@ -229,10 +229,6 @@ class Followers {
 					'key'     => '_activitypub_inbox',
 					'compare' => 'EXISTS',
 				),
-				array(
-					'key'     => '_activitypub_actor_json',
-					'compare' => 'EXISTS',
-				),
 			),
 		);
 		return self::get_followers( null, null, null, $args );
@@ -259,10 +255,6 @@ class Followers {
 					),
 					array(
 						'key'     => '_activitypub_inbox',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'     => '_activitypub_actor_json',
 						'compare' => 'EXISTS',
 					),
 				),
@@ -439,16 +431,7 @@ class Followers {
 					'compare' => 'NOT EXISTS',
 				),
 				array(
-					'key'     => '_activitypub_actor_json',
-					'compare' => 'NOT EXISTS',
-				),
-				array(
 					'key'     => '_activitypub_inbox',
-					'value'   => '',
-					'compare' => '=',
-				),
-				array(
-					'key'     => '_activitypub_actor_json',
 					'value'   => '',
 					'compare' => '=',
 				),
