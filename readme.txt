@@ -70,7 +70,7 @@ The name ActivityPub comes from the two core ideas behind the protocol:
 
 Put together, ActivityPub is a protocol for publishing and subscribing to activities, which enables decentralized social networking — where different servers can interact and users can follow each other across the Fediverse.
 
-= How to handle *XYZ*? =
+= How do I solve… =
 
 We have a **How-To** section in the [docs](https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs/how-to) directory that can help you troubleshoot common issues.
 
