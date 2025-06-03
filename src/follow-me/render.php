@@ -140,7 +140,7 @@ $stats = array(
 						<div>
 							<?php
 							printf(
-							/* translators: %s: Number of posts */
+								/* translators: %s: Number of posts */
 								esc_html( _n( '%s post', '%s posts', (int) $stats['posts'], 'activitypub' ) ),
 								'<strong>' . esc_html( number_format_i18n( $stats['posts'] ) ) . '</strong>'
 							);
@@ -151,20 +151,9 @@ $stats = array(
 						<div>
 							<?php
 							printf(
-							/* translators: %s: Number of followers */
+								/* translators: %s: Number of followers */
 								esc_html( _n( '%s follower', '%s followers', (int) $stats['followers'], 'activitypub' ) ),
 								'<strong>' . esc_html( number_format_i18n( $stats['followers'] ) ) . '</strong>'
-							);
-							?>
-						</div>
-					<?php endif; ?>
-					<?php if ( null !== $stats['following'] ) : ?>
-						<div>
-							<?php
-							printf(
-							/* translators: %s: Number of following */
-								esc_html( _n( '%s following', '%s following', (int) $stats['following'], 'activitypub' ) ),
-								'<strong>' . esc_html( number_format_i18n( $stats['following'] ) ) . '</strong>'
 							);
 							?>
 						</div>
