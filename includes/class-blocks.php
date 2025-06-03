@@ -135,9 +135,9 @@ class Blocks {
 	 * Register the blocks.
 	 */
 	public static function register_blocks() {
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
 
 		\register_block_type_from_metadata(
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
