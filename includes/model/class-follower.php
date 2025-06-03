@@ -195,7 +195,7 @@ class Follower extends Actor {
 		$args = array(
 			'ID'           => $post_id,
 			'guid'         => \esc_url_raw( $this->get_id() ),
-			'post_title'   => \wp_strip_all_tags( \sanitize_text_field( \wp_slash( $this->get_name() ) ) ),
+			'post_title'   => \wp_slash( \wp_strip_all_tags( \sanitize_text_field( $this->get_name() ) ) ),
 			'post_author'  => 0,
 			'post_type'    => Actors::POST_TYPE,
 			'post_name'    => \esc_url_raw( $this->get_id() ),
