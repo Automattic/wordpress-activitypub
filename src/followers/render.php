@@ -30,22 +30,16 @@ if ( empty( $content ) ) {
 
 $user_id = Blocks::get_user_id( $attributes['selectedUser'] );
 if ( is_null( $user_id ) ) {
-	echo '<!-- Followers block: `inherit` mode does not display on this type of page -->';
-	return;
+	return '<!-- Followers block: `inherit` mode does not display on this type of page -->';
 }
 
 $user = Actors::get_by_id( $user_id );
 if ( is_wp_error( $user ) ) {
-	echo '<!-- Followers block: `' . esc_html( $user_id ) . '` not an active ActivityPub user -->';
-	return;
+	return '<!-- Followers block: `' . $user_id . '` not an active ActivityPub user -->';
 }
 
 $_per_page     = absint( $attributes['per_page'] );
 $follower_data = Followers::get_followers_with_count( $user_id, $_per_page );
-if ( empty( $follower_data['followers'] ) ) {
-	echo '<!-- Followers block: no followers found for `' . esc_html( $user->get_name() ) . '` -->';
-	return;
-}
 
 // Prepare Followers data for the Interactivity API context.
 $followers = array_map(
