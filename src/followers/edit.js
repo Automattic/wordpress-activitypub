@@ -19,6 +19,7 @@ import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
  * @param {Object} props.context Block context.
  * @param {string} props.context.postType Post type.
  * @param {number} props.context.postId Post ID.
+ *
  * @return {JSX.Element} Edit component.
  */
 export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {

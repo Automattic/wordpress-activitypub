@@ -46,8 +46,8 @@ $followers = array_map(
 		return array(
 			'handle' => '@' . $follower->get_preferred_username(),
 			'icon'   => $follower->get_icon(),
-			'name'   => $follower->get_name(),
-			'url'    => $follower->get_url(),
+			'name'   => $follower->get_name() ?? $follower->get_preferred_username(),
+			'url'    => object_to_uri( $follower->get_url() ) ?? $follower->get_id(),
 		);
 	},
 	$follower_data['followers']
