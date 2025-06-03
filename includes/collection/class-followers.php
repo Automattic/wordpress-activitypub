@@ -64,7 +64,7 @@ class Followers {
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
-		return \get_post( $post_id );
+		return Actors::get_imported_by_id( $post_id );
 	}
 
 	/**
@@ -367,24 +367,8 @@ class Followers {
 	 * @return Follower[] The Term list of Followers.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
-		$args = array(
-			'post_type'      => Actors::POST_TYPE,
-			'posts_per_page' => $number,
-			'orderby'        => 'modified',
-			'order'          => 'ASC',
-			'post_status'    => 'any', // 'any' includes 'trash'.
-			'date_query'     => array(
-				array(
-					'column' => 'post_modified_gmt',
-					'before' => \gmdate( 'Y-m-d', \time() - $older_than ),
-				),
-			),
-		);
-
-		$posts = new \WP_Query( $args );
-		$items = \array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
-
-		return \array_filter( $items );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated_imports' );
+		return Actors::get_outdated_imports( $number, $older_than );
 	}
 
 	/**
@@ -395,32 +379,8 @@ class Followers {
 	 * @return Follower[] The Term list of Followers.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
-		$args = array(
-			'post_type'      => Actors::POST_TYPE,
-			'posts_per_page' => $number,
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
-				'relation' => 'OR',
-				array(
-					'key'     => '_activitypub_errors',
-					'compare' => 'EXISTS',
-				),
-				array(
-					'key'     => '_activitypub_inbox',
-					'compare' => 'NOT EXISTS',
-				),
-				array(
-					'key'     => '_activitypub_inbox',
-					'value'   => '',
-					'compare' => '=',
-				),
-			),
-		);
-
-		$posts = new \WP_Query( $args );
-		$items = \array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
-
-		return \array_filter( $items );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty_imports' );
+		return Actors::get_faulty_imports( $number );
 	}
 
 	/**
@@ -435,22 +395,8 @@ class Followers {
 	 * @return int|false The meta ID on success, false on failure.
 	 */
 	public static function add_error( $post_id, $error ) {
-		if ( \is_string( $error ) ) {
-			$error_message = $error;
-		} elseif ( \is_wp_error( $error ) ) {
-			$error_message = $error->get_error_message();
-		} else {
-			$error_message = \__(
-				'Unknown Error or misconfigured Error-Message',
-				'activitypub'
-			);
-		}
-
-		return add_post_meta(
-			$post_id,
-			'_activitypub_errors',
-			$error_message
-		);
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::track_error' );
+		return Actors::track_error( $post_id, $error );
 	}
 
 	/**
@@ -461,6 +407,7 @@ class Followers {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function clear_errors( $post_id ) {
-		return \delete_post_meta( $post_id, '_activitypub_errors' );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::clear_errors' );
+		return Actors::clear_errors( $post_id );
 	}
 }

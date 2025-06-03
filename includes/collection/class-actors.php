@@ -517,4 +517,110 @@ class Actors {
 		// Return Activity\Actor object.
 		return Actor::init_from_json( $post->post_content );
 	}
+
+	/**
+	 * This function is used to store errors that occur when
+	 * sending an ActivityPub message to a Follower.
+	 *
+	 * The error will be stored in post meta.
+	 *
+	 * @param int   $post_id The ID of the WordPress Custom-Post-Type.
+	 * @param mixed $error   The error message. Can be a string or a WP_Error.
+	 *
+	 * @return int|false The meta ID on success, false on failure.
+	 */
+	public static function track_error( $post_id, $error ) {
+		if ( \is_string( $error ) ) {
+			$error_message = $error;
+		} elseif ( \is_wp_error( $error ) ) {
+			$error_message = $error->get_error_message();
+		} else {
+			$error_message = \__(
+				'Unknown Error or misconfigured Error-Message',
+				'activitypub'
+			);
+		}
+
+		return add_post_meta(
+			$post_id,
+			'_activitypub_errors',
+			$error_message
+		);
+	}
+
+	/**
+	 * Clear the errors for a Follower.
+	 *
+	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function clear_errors( $post_id ) {
+		return \delete_post_meta( $post_id, '_activitypub_errors' );
+	}
+
+	/**
+	 * Get all Followers that had errors.
+	 *
+	 * @param int $number Optional. The number of Followers to return. Default 20.
+	 *
+	 * @return Follower[] The Term list of Followers.
+	 */
+	public static function get_faulty_imports( $number = 20 ) {
+		$args = array(
+			'post_type'      => self::POST_TYPE,
+			'posts_per_page' => $number,
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				'relation' => 'OR',
+				array(
+					'key'     => '_activitypub_errors',
+					'compare' => 'EXISTS',
+				),
+				array(
+					'key'     => '_activitypub_inbox',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => '_activitypub_inbox',
+					'value'   => '',
+					'compare' => '=',
+				),
+			),
+		);
+
+		$posts = new \WP_Query( $args );
+		$items = \array_map( array( Actor::class, 'init_from_cpt' ), $posts->get_posts() );
+
+		return \array_filter( $items );
+	}
+
+	/**
+	 * Get all Followers that have not been updated for a given time.
+	 *
+	 * @param int $number     Optional. Limits the result. Default 50.
+	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
+	 *
+	 * @return Actor[] The Term list of Actors.
+	 */
+	public static function get_outdated_imports( $number = 50, $older_than = 86400 ) {
+		$args = array(
+			'post_type'      => self::POST_TYPE,
+			'posts_per_page' => $number,
+			'orderby'        => 'modified',
+			'order'          => 'ASC',
+			'post_status'    => 'any', // 'any' includes 'trash'.
+			'date_query'     => array(
+				array(
+					'column' => 'post_modified_gmt',
+					'before' => \gmdate( 'Y-m-d', \time() - $older_than ),
+				),
+			),
+		);
+
+		$posts = new \WP_Query( $args );
+		$items = \array_map( array( Actor::class, 'init_from_cpt' ), $posts->get_posts() );
+
+		return \array_filter( $items );
+	}
 }

@@ -142,9 +142,9 @@ class Scheduler {
 	}
 
 	/**
-	 * Update followers.
+	 * Update imported actors.
 	 */
-	public static function update_followers() {
+	public static function update_imported_actors() {
 		$number = 5;
 
 		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
@@ -156,19 +156,20 @@ class Scheduler {
 		 *
 		 * @param int $number The number of followers to update.
 		 */
-		$number    = apply_filters( 'activitypub_update_followers_number', $number );
-		$followers = Followers::get_outdated_followers( $number );
+		$number = apply_filters( 'activitypub_update_followers_number', $number );
+		$actors = Actors::get_outdated_imports( $number );
 
-		foreach ( $followers as $follower ) {
-			$meta = get_remote_metadata_by_actor( $follower->get_id(), false );
+		foreach ( $actors as $actor ) {
+			$meta = get_remote_metadata_by_actor( $actor->get_id(), false );
 
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				Followers::add_error( $follower->get__id(), $meta );
+				Actors::clear_errors( $id );
 			} else {
-				$follower->from_array( $meta );
-				$follower->update();
-
-				$follower->clear_errors();
+				$id = Actors::import( $meta );
+				if ( \is_wp_error( $id ) ) {
+					continue;
+				}
+				Actors::clear_errors( $id );
 			}
 		}
 	}
@@ -197,7 +198,7 @@ class Scheduler {
 			if ( is_tombstone( $meta ) ) {
 				$follower->delete();
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				if ( $follower->count_errors() >= 5 ) {
+				if ( Actors::count_errors( $follower->get__id() ) >= 5 ) {
 					$follower->delete();
 					\wp_schedule_single_event(
 						\time(),

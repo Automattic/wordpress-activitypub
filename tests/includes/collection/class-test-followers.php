@@ -132,9 +132,15 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		$follower           = Followers::get_follower( 1, 'https://example.org/author/doe' );
-		$post               = \get_post( $follower->get__id() );
-		$post->post_content = 'invalid json';
-		\wp_update_post( $post );
+		$post_id            = method_exists( $follower, 'get__id' ) ? $follower->get__id() : ( isset( $follower->ID ) ? $follower->ID : null );
+		if ( $post_id ) {
+			$post = \get_post( $post_id );
+			if ( $post ) {
+				$post->post_content = 'invalid json';
+				\wp_update_post( $post );
+			}
+		}
+
 
 		$db_followers = Followers::get_followers( 1 );
 
@@ -727,19 +733,20 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertNotWPError( $result );
 
 		// Add some errors.
-		Followers::add_error( $result->get__id(), 'Test error 1' );
-		Followers::add_error( $result->get__id(), 'Test error 2' );
+		$post_id = method_exists( $result, 'get__id' ) ? $result->get__id() : ( isset( $result->ID ) ? $result->ID : null );
+		Followers::add_error( $post_id, 'Test error 1' );
+		Followers::add_error( $post_id, 'Test error 2' );
 
 		// Verify errors were added.
-		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
+		$errors = get_post_meta( $post_id, '_activitypub_errors', false );
 		$this->assertCount( 2, $errors );
 
 		// Clear errors.
-		$cleared = Followers::clear_errors( $result->get__id() );
+		$cleared = Followers::clear_errors( $post_id );
 		$this->assertTrue( $cleared );
 
 		// Verify errors were cleared.
-		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
+		$errors = get_post_meta( $post_id, '_activitypub_errors', false );
 		$this->assertEmpty( $errors );
 	}
 
@@ -754,11 +761,12 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertNotWPError( $result );
 
 		// Clear errors when none exist.
-		$cleared = Followers::clear_errors( $result->get__id() );
+		$post_id = method_exists( $result, 'get__id' ) ? $result->get__id() : ( isset( $result->ID ) ? $result->ID : null );
+		$cleared = Followers::clear_errors( $post_id );
 		$this->assertFalse( $cleared );
 
 		// Verify no errors exist.
-		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
+		$errors = get_post_meta( $post_id, '_activitypub_errors', false );
 		$this->assertEmpty( $errors );
 	}
 
