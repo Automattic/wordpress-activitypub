@@ -61,7 +61,10 @@ const EditorPlugin = () => {
 		return null;
 	}
 
-	// Backwards compatibility for older versions of WordPress.
+	/*
+	 * Backwards compatibility with WordPress 6.5.
+	 * @todo Remove when 6.5 is no longer supported.
+	 */
 	const SettingsPanel = PluginDocumentSettingPanel || DocumentSettingPanel;
 
 	return (
