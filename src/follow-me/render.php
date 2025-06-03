@@ -12,9 +12,18 @@ use Activitypub\Collection\Followers;
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
 
+/* @var WP_Block $block Parsed block.*/
+$block = $block ?? null;
+
+/* @var string $content Inner blocks content. */
+$content = $content ?? '';
+
 // Get the user ID from the selected user attribute.
-$selected_user = $attributes['selectedUser'] ?? 'site';
-$user_id       = Blocks::get_user_id( $selected_user );
+$user_id = Blocks::get_user_id( $attributes['selectedUser'] ?? 'site' );
+$actor   = Actors::get_by_id( $user_id );
+if ( is_wp_error( $actor ) ) {
+	return;
+}
 
 // Generate a unique ID for the block.
 $block_id = 'activitypub-follow-me-block-' . wp_unique_id();
@@ -22,14 +31,7 @@ $block_id = 'activitypub-follow-me-block-' . wp_unique_id();
 // Get block style information.
 $style            = wp_get_global_styles();
 $background_color = $attributes['backgroundColor'] ?? $style['color']['background'] ?? '';
-
-// Get button style from block attributes.
-$button_style = $attributes['style'] ?? array();
-
-$actor = Actors::get_by_id( $user_id );
-if ( is_wp_error( $actor ) ) {
-	return;
-}
+$button_style     = $attributes['style'] ?? array();
 
 // Set up the Interactivity API state.
 wp_interactivity_state(
@@ -75,13 +77,10 @@ $wrapper_context = wp_interactivity_data_wp_context(
 	)
 );
 
-/* @var string $content Inner blocks content. */
 if ( empty( $content ) ) {
 	$button_text = $attributes['buttonText'] ?? __( 'Follow', 'activitypub' );
 	$content     = '<div class="wp-block-button"><button class="wp-block-button__link wp-element-button">' . esc_html( $button_text ) . '</button></div>';
 } else {
-	/* @var \WP_Block $block Parsed block.*/
-	$block   = $block ?? null;
 	$content = implode( PHP_EOL, wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
 }
 
