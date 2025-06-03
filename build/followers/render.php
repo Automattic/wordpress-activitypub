@@ -8,6 +8,7 @@
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use function Activitypub\object_to_uri;
 
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
@@ -27,27 +28,36 @@ if ( empty( $content ) ) {
 	}
 }
 
-$followee_user_id = Blocks::get_user_id( $attributes['selectedUser'] );
-if ( is_null( $followee_user_id ) ) {
+$user_id = Blocks::get_user_id( $attributes['selectedUser'] );
+if ( is_null( $user_id ) ) {
 	return '<!-- Followers block: `inherit` mode does not display on this type of page -->';
 }
 
-$user = Actors::get_by_id( $followee_user_id );
+$user = Actors::get_by_id( $user_id );
 if ( is_wp_error( $user ) ) {
-	return '<!-- Followers block: `' . $followee_user_id . '` not an active ActivityPub user -->';
+	return '<!-- Followers block: `' . $user_id . '` not an active ActivityPub user -->';
 }
 
 $_per_page     = absint( $attributes['per_page'] );
-$follower_data = Followers::get_followers_with_count( $followee_user_id, $_per_page );
+$follower_data = Followers::get_followers_with_count( $user_id, $_per_page );
 
 // Prepare Followers data for the Interactivity API context.
 $followers = array_map(
+	/**
+	 * Prepare follower data for the Interactivity API context.
+	 *
+	 * @param \Activitypub\Model\Follower $follower
+	 *
+	 * @return array
+	 */
 	function ( $follower ) {
+		$preferred_username = $follower->get_preferred_username();
+
 		return array(
-			'handle' => '@' . $follower->get_preferred_username(),
+			'handle' => '@' . $preferred_username,
 			'icon'   => $follower->get_icon(),
-			'name'   => $follower->get_name(),
-			'url'    => $follower->get_url(),
+			'name'   => $follower->get_name() ?? $preferred_username,
+			'url'    => object_to_uri( $follower->get_url() ) ?? $follower->get_id(),
 		);
 	},
 	$follower_data['followers']
@@ -64,7 +74,7 @@ wp_interactivity_state(
 
 // Set initial context data.
 $context = array(
-	'userId'    => $followee_user_id,
+	'userId'    => $user_id,
 	'page'      => 1,
 	'per_page'  => $_per_page,
 	'order'     => $attributes['order'],
