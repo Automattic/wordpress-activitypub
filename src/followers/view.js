@@ -68,8 +68,8 @@ const { actions, state } = store( 'activitypub/followers', {
 				context.followers = orderedItems.map( ( follower ) => ( {
 					handle: '@' + follower.preferredUsername,
 					icon: follower.icon,
-					name: follower.name,
-					url: follower.url,
+					name: follower.name || follower.preferredUsername,
+					url: follower.url || follower.id,
 				} ) );
 
 				context.total = totalItems;
