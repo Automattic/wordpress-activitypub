@@ -994,8 +994,6 @@ class Migration {
 		}
 
 		foreach ( $meta_values as $meta ) {
-			\json_decode( $meta->meta_value, true );
-
 			$post = \get_post( $meta->post_id );
 
 			if ( ! $post ) {
@@ -1003,20 +1001,21 @@ class Migration {
 				continue;
 			}
 
-			if ( \json_last_error() === JSON_ERROR_NONE ) {
-				$post->post_content = $meta->meta_value;
+			$meta_value   = \json_decode( $meta->meta_value, true );
+			$post_content = '';
 
-				\wp_update_post( $post );
+			if ( \json_last_error() === JSON_ERROR_NONE ) {
+				$post_content = $meta_value;
 			} else {
 				$meta = Http::get_remote_object( $post->guid );
 
 				if ( ! \is_wp_error( $meta ) ) {
-					$actor              = Actor::init_from_array( $meta );
-					$post->post_content = \wp_slash( $actor->to_json() );
-					\wp_update_post( $post );
+					$post_content = $meta;
 				}
 			}
 
+			$post->post_content = \wp_slash( \wp_json_encode( $post_content ) );
+			\wp_insert_post( $post );
 			\delete_post_meta( $post->ID, '_activitypub_actor_json' );
 		}
 
