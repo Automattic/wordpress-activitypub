@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -1010,12 +1011,13 @@ class Migration {
 				$meta = Http::get_remote_object( $post->guid );
 
 				if ( ! \is_wp_error( $meta ) ) {
-					$post->post_content = \wp_json_encode( \wp_slash( $meta ) );
+					$actor              = Actor::init_from_array( $meta );
+					$post->post_content = \wp_slash( $actor->to_json() );
 					\wp_update_post( $post );
 				}
 			}
 
-			\delete_post_meta( $meta->post_id, '_activitypub_actor_json' );
+			\delete_post_meta( $post->ID, '_activitypub_actor_json' );
 		}
 
 		if ( $has_kses ) {
