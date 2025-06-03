@@ -1,6 +1,6 @@
 === ActivityPub ===
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
-Tags: OStatus, fediverse, activitypub, activitystream
+Tags: fediverse, activitypub, indieweb, activity pub, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
 Stable tag: 5.9.2
@@ -59,38 +59,20 @@ This plugin connects your WordPress blog to popular social platforms like Mastod
 
 = What is "ActivityPub for WordPress" =
 
-*ActivityPub for WordPress* extends WordPress with some Fediverse features, but it does not compete with platforms like Friendica or Mastodon. If you want to run a **decentralized social network**, please use [Mastodon](https://joinmastodon.org/) or [GNU social](https://gnusocial.network/).
+*ActivityPub for WordPress* adds Fediverse features to WordPress, but it is not a replacement for platforms like Friendica or Mastodon. If you're looking to host a decentralized social network, consider using [Mastodon](https://joinmastodon.org/) or [Friendica](https://friendi.ca/).
 
-= What if you are running your blog in a subdirectory? =
+= Why "ActivityPub"? =
 
-In order for webfinger to work, it must be mapped to the root directory of the URL on which your blog resides.
+The name ActivityPub comes from the two core ideas behind the protocol:
 
-**Apache**
+* Activity: It is based on the concept of activities, like "Create", "Like", "Follow", "Announce", etc. These are structured messages (usually in [ActivityStreams](https://www.w3.org/TR/activitystreams-core/) format) that describe what users do on the network.
+* Pub: Short for publish or publication. It refers to the fact that this is a publish-subscribe (pub-sub) protocol — one user can "follow" another, and receive their published activities.
 
-Add the following to the .htaccess file in the root directory:
+Put together, ActivityPub is a protocol for publishing and subscribing to activities, which enables decentralized social networking — where different servers can interact and users can follow each other across the Fediverse.
 
-	RedirectMatch "^\/\.well-known/(webfinger|nodeinfo)(.*)$" /blog/.well-known/$1$2
+= How do I solve… =
 
-Where 'blog' is the path to the subdirectory at which your blog resides.
-
-**Nginx**
-
-Add the following to the site.conf in sites-available:
-
-	location ~* /.well-known {
-		allow all;
-		try_files $uri $uri/ /blog/?$args;
-	}
-
-Where 'blog' is the path to the subdirectory at which your blog resides.
-
-If you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/), you don't need the redirect, because the index.php will take care of that.
-
-= What if you are running your blog behind a reverse proxy with Apache? =
-
-If you are using a reverse proxy with Apache to run your host you may encounter that you are unable to have followers join the blog. This will occur because the proxy system rewrites the host headers to be the internal DNS name of your server, which the plugin then uses to attempt to sign the replies. The remote site attempting to follow your users is expecting the public DNS name on the replies. In these cases you will need to use the 'ProxyPreserveHost On' directive to ensure the external host name is passed to your internal host.
-
-If you are using SSL between the proxy and internal host you may also need to `SSLProxyCheckPeerName off` if your internal host can not answer with the correct SSL name. This may present a security issue in some environments.
+We have a **How-To** section in the [docs](https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs/how-to) directory that can help you troubleshoot common issues.
 
 = Constants =
 
