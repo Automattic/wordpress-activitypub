@@ -196,10 +196,10 @@ class Scheduler {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
 			if ( is_tombstone( $meta ) ) {
-				// @todo delete actor
+				\wp_delete_post( $actor->ID );
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
 				if ( Actors::count_errors( $actor->ID ) >= 5 ) {
-					$actor->delete();
+					\wp_delete_post( $actor->ID );
 					\wp_schedule_single_event(
 						\time(),
 						'activitypub_delete_actor_interactions',
