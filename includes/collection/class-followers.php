@@ -367,8 +367,8 @@ class Followers {
 	 * @return Follower[] The Term list of Followers.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated_imports' );
-		return Actors::get_outdated_imports( $number, $older_than );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated' );
+		return Actors::get_outdated( $number, $older_than );
 	}
 
 	/**
@@ -379,8 +379,8 @@ class Followers {
 	 * @return Follower[] The Term list of Followers.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty_imports' );
-		return Actors::get_faulty_imports( $number );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty' );
+		return Actors::get_faulty( $number );
 	}
 
 	/**

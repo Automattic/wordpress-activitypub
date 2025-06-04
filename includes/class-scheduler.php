@@ -157,7 +157,7 @@ class Scheduler {
 		 * @param int $number The number of followers to update.
 		 */
 		$number = apply_filters( 'activitypub_update_followers_number', $number );
-		$actors = Actors::get_outdated_imports( $number );
+		$actors = Actors::get_outdated( $number );
 
 		foreach ( $actors as $actor ) {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );
@@ -190,7 +190,7 @@ class Scheduler {
 		 * @param int $number The number of followers to clean up.
 		 */
 		$number = apply_filters( 'activitypub_update_followers_number', $number );
-		$actors = Actors::get_faulty_imports( $number );
+		$actors = Actors::get_faulty( $number );
 
 		foreach ( $actors as $actor ) {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );

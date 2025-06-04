@@ -373,6 +373,7 @@ class Actors {
 	 * Returns the actor type based on the user ID.
 	 *
 	 * @param int $user_id The user ID to check.
+	 *
 	 * @return string The user type.
 	 */
 	public static function get_type_by_id( $user_id ) {
@@ -577,7 +578,7 @@ class Actors {
 	 *
 	 * @return \WP_Post[] The Term list of Followers.
 	 */
-	public static function get_faulty_imports( $number = 20 ) {
+	public static function get_faulty( $number = 20 ) {
 		$args = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
@@ -612,7 +613,7 @@ class Actors {
 	 *
 	 * @return \WP_Post[] The Term list of Actors.
 	 */
-	public static function get_outdated_imports( $number = 50, $older_than = 86400 ) {
+	public static function get_outdated( $number = 50, $older_than = 86400 ) {
 		$args = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
