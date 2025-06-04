@@ -45,6 +45,10 @@ function useSetMeta( metaKey, postType ) {
  */
 const EditorPlugin = () => {
 	const postType = useSelect( ( select ) => select( editorStore ).getCurrentPostType(), [] );
+	// Don't show when editing sync blocks.
+	if ( 'wp_block' === postType ) {
+		return null;
+	}
 
 	const [ contentWarning, setContentWarning ] = useSetMeta( 'activitypub_content_warning', postType );
 	const [ maxImageAttachments, setMaxImageAttachments ] = useSetMeta( 'activitypub_max_image_attachments', postType );
@@ -61,11 +65,6 @@ const EditorPlugin = () => {
 	const handleVisibilityChange = ( value ) => {
 		setContentVisibility( value );
 	};
-
-	// Don't show when editing sync blocks.
-	if ( 'wp_block' === postType ) {
-		return null;
-	}
 
 	const { maxImageAttachments: defaultMaxImageAttachments = 4 } = useOptions();
 
