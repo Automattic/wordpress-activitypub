@@ -1,12 +1,25 @@
 import { PluginDocumentSettingPanel, PluginPreviewMenuItem, store as editorStore } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
 import { TextControl, RadioControl, RangeControl, __experimentalText as Text, Tooltip } from '@wordpress/components';
-import { Icon, globe, people, external, notAllowed } from '@wordpress/icons';
+import { Icon, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
+import { SVG, Path } from '@wordpress/primitives';
 import { useOptions } from '../shared/use-options';
+
+// Defining our own because it's too new in @wordpress/icons
+// https://github.com/WordPress/gutenberg/blob/trunk/packages/icons/src/library/not-allowed.js
+const notAllowed = (
+	<SVG xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+		<Path
+			fillRule="evenodd"
+			clipRule="evenodd"
+			d="M12 18.5A6.5 6.5 0 0 1 6.93 7.931l9.139 9.138A6.473 6.473 0 0 1 12 18.5Zm5.123-2.498a6.5 6.5 0 0 0-9.124-9.124l9.124 9.124ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z"
+		/>
+	</SVG>
+);
 
 /**
  * Custom hook to update metadata in the post editor.
