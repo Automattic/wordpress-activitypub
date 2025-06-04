@@ -478,7 +478,7 @@ class Actors {
 	 */
 	public static function get_remote_by_uri( $actor_uri ) {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
