@@ -1001,22 +1001,24 @@ class Migration {
 				continue;
 			}
 
-			$meta_value   = \json_decode( $meta->meta_value, true );
-			$post_content = '';
+			$post_content = \json_decode( $meta->meta_value, true );
 
-			if ( \json_last_error() === JSON_ERROR_NONE ) {
-				$post_content = $meta_value;
-			} else {
-				$meta = Http::get_remote_object( $post->guid );
+			if ( \json_last_error() !== JSON_ERROR_NONE ) {
+				$post_content = Http::get_remote_object( $post->guid );
 
-				if ( ! \is_wp_error( $meta ) ) {
-					$post_content = $meta;
+				if ( \is_wp_error( $post_content ) ) {
+					\delete_post_meta( $post->ID, '_activitypub_actor_json' );
+					continue;
 				}
 			}
 
-			$post->post_content = \wp_slash( \wp_json_encode( $post_content ) );
-			\wp_insert_post( $post );
-  
+			\wp_update_post(
+				array(
+					'ID'           => $post->ID,
+					'post_content' => \wp_slash( \wp_json_encode( $post_content ) ),
+				)
+			);
+
 			\delete_post_meta( $post->ID, '_activitypub_actor_json' );
 		}
 
