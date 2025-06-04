@@ -21,8 +21,6 @@ class Blocks {
 		// This is already being called on the init hook, so just add it.
 		self::register_blocks();
 
-		\add_action( 'wp_head', array( self::class, 'inject_activitypub_options' ), 11 );
-		\add_action( 'admin_print_scripts', array( self::class, 'inject_activitypub_options' ) );
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
@@ -95,12 +93,24 @@ class Blocks {
 	 * Enqueue the block editor assets.
 	 */
 	public static function enqueue_editor_assets() {
+		$data = array(
+			'namespace'           => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl'    => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'enabled'             => array(
+				'site'  => ! is_user_type_disabled( 'blog' ),
+				'users' => ! is_user_type_disabled( 'user' ),
+			),
+			'maxImageAttachments' => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+		);
+		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
+
 		// Check for our supported post types.
 		$current_screen = \get_current_screen();
 		$ap_post_types  = \get_post_types_by_support( 'activitypub' );
 		if ( ! $current_screen || ! in_array( $current_screen->post_type, $ap_post_types, true ) ) {
 			return;
 		}
+
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/editor-plugin/plugin.asset.php';
 		$plugin_url = plugins_url( 'build/editor-plugin/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		wp_enqueue_script( 'activitypub-block-editor', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
@@ -122,32 +132,12 @@ class Blocks {
 	}
 
 	/**
-	 * Output ActivityPub options as a script tag.
-	 */
-	public static function inject_activitypub_options() {
-		$data = array(
-			'namespace'           => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl'    => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-			'enabled'             => array(
-				'site'  => ! is_user_type_disabled( 'blog' ),
-				'users' => ! is_user_type_disabled( 'user' ),
-			),
-			'maxImageAttachments' => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
-		);
-
-		printf(
-			"\n<script>var _activityPubOptions = %s;</script>",
-			wp_json_encode( $data )
-		);
-	}
-
-	/**
 	 * Register the blocks.
 	 */
 	public static function register_blocks() {
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
-
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
 
 		\register_block_type_from_metadata(
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
@@ -155,8 +145,6 @@ class Blocks {
 				'render_callback' => array( self::class, 'render_reply_block' ),
 			)
 		);
-
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
 	}
 
 	/**

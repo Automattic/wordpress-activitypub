@@ -8,6 +8,7 @@ import { useEntityProp } from '@wordpress/core-data';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 import { SVG, Path } from '@wordpress/primitives';
+import { useOptions } from '../shared/use-options';
 
 // Defining our own because it's too new in @wordpress/icons
 // https://github.com/WordPress/gutenberg/blob/trunk/packages/icons/src/library/not-allowed.js
@@ -28,8 +29,14 @@ const notAllowed = (
  */
 const EditorPlugin = () => {
 	const postType = useSelect( ( select ) => select( 'core/editor' ).getCurrentPostType(), [] );
-	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
+	const [ meta, setMeta ] = useEntityProp( 'postType', postType || 'default', 'meta' );
 
+	// Don't show when editing sync blocks.
+	if ( 'wp_block' === postType ) {
+		return null;
+	}
+
+	const { maxImageAttachments = 4 } = useOptions();
 	const labelStyling = {
 		verticalAlign: 'middle',
 		gap: '4px',
@@ -55,11 +62,6 @@ const EditorPlugin = () => {
 			</Text>
 		</Tooltip>
 	);
-
-	// Don't show when editing sync blocks.
-	if ( 'wp_block' === postType ) {
-		return null;
-	}
 
 	/*
 	 * Backwards compatibility with WordPress 6.5.
@@ -90,9 +92,7 @@ const EditorPlugin = () => {
 
 			<RangeControl
 				label={ __( 'Maximum Image Attachments', 'activitypub' ) }
-				value={
-					meta?.activitypub_max_image_attachments ?? window._activityPubOptions?.maxImageAttachments ?? 4
-				}
+				value={ meta?.activitypub_max_image_attachments ?? maxImageAttachments }
 				onChange={ ( value ) => {
 					setMeta( { ...meta, activitypub_max_image_attachments: value } );
 				} }
