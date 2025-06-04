@@ -1,25 +1,29 @@
-import { PluginDocumentSettingPanel, PluginPreviewMenuItem } from '@wordpress/editor';
+import { PluginDocumentSettingPanel, PluginPreviewMenuItem, store as editorStore } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
 import { TextControl, RadioControl, RangeControl, __experimentalText as Text, Tooltip } from '@wordpress/components';
-import { Icon, globe, people, external } from '@wordpress/icons';
+import { Icon, globe, people, external, notAllowed } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
-import { SVG, Path } from '@wordpress/primitives';
 import { useOptions } from '../shared/use-options';
 
-// Defining our own because it's too new in @wordpress/icons
-// https://github.com/WordPress/gutenberg/blob/trunk/packages/icons/src/library/not-allowed.js
-const notAllowed = (
-	<SVG xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-		<Path
-			fillRule="evenodd"
-			clipRule="evenodd"
-			d="M12 18.5A6.5 6.5 0 0 1 6.93 7.931l9.139 9.138A6.473 6.473 0 0 1 12 18.5Zm5.123-2.498a6.5 6.5 0 0 0-9.124-9.124l9.124 9.124ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z"
-		/>
-	</SVG>
-);
+/**
+ * Custom hook to update metadata in the post editor.
+ *
+ * @param {string} metaKey The key of the metadata to update.
+ * @param {string} postType The type of post to update the metadata for.
+ * @returns {[string, (value: string) => void]} The current value of the metadata and a function to update it.
+ */
+function useSetMeta( metaKey, postType ) {
+	const [ meta, setMeta ] = useEntityProp( 'postType', postType || 'default', 'meta' );
+
+	const setValue = ( value ) => {
+		setMeta( { ...meta, [ metaKey ]: value } );
+	};
+
+	return [ meta?.[ metaKey ], setValue ];
+}
 
 /**
  * Editor plugin for ActivityPub settings in the block editor.
@@ -27,14 +31,31 @@ const notAllowed = (
  * @returns {JSX.Element|null} The settings panel for ActivityPub or null for sync blocks.
  */
 const EditorPlugin = () => {
-	const postType = useSelect( ( select ) => select( 'core/editor' ).getCurrentPostType(), [] );
-	const [ meta, setMeta ] = useEntityProp( 'postType', postType || 'default', 'meta' );
+	const postType = useSelect( ( select ) => select( editorStore ).getCurrentPostType(), [] );
+
+	const [ contentWarning, setContentWarning ] = useSetMeta( 'activitypub_content_warning', postType );
+	const [ maxImageAttachments, setMaxImageAttachments ] = useSetMeta( 'activitypub_max_image_attachments', postType );
+	const [ contentVisibility, setContentVisibility ] = useSetMeta( 'activitypub_content_visibility', postType );
+
+	const handleContentWarningChange = ( value ) => {
+		setContentWarning( value );
+	};
+
+	const handleMaxImageAttachmentsChange = ( value ) => {
+		setMaxImageAttachments( value );
+	};
+
+	const handleVisibilityChange = ( value ) => {
+		setContentVisibility( value );
+	};
 
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {
 		return null;
 	}
-	const { maxImageAttachments = 4 } = useOptions();
+
+	const { maxImageAttachments: defaultMaxImageAttachments = 4 } = useOptions();
+
 	const labelStyling = {
 		verticalAlign: 'middle',
 		gap: '4px',
@@ -69,10 +90,8 @@ const EditorPlugin = () => {
 		>
 			<TextControl
 				label={ __( 'Content Warning', 'activitypub' ) }
-				value={ meta?.activitypub_content_warning }
-				onChange={ ( value ) => {
-					setMeta( { ...meta, activitypub_content_warning: value } );
-				} }
+				value={ contentWarning ?? '' }
+				onChange={ handleContentWarningChange }
 				placeholder={ __( 'Optional content warning', 'activitypub' ) }
 				help={ __(
 					'Content warnings do not change the content on your site, only in the fediverse.',
@@ -84,10 +103,8 @@ const EditorPlugin = () => {
 
 			<RangeControl
 				label={ __( 'Maximum Image Attachments', 'activitypub' ) }
-				value={ meta?.activitypub_max_image_attachments ?? maxImageAttachments }
-				onChange={ ( value ) => {
-					setMeta( { ...meta, activitypub_max_image_attachments: value } );
-				} }
+				value={ maxImageAttachments ?? defaultMaxImageAttachments }
+				onChange={ handleMaxImageAttachmentsChange }
 				min={ 0 }
 				max={ 10 }
 				help={ __(
@@ -104,7 +121,7 @@ const EditorPlugin = () => {
 					"This adjusts the visibility of a post in the fediverse, but note that it won't affect how the post appears on the blog.",
 					'activitypub'
 				) }
-				selected={ meta?.activitypub_content_visibility || 'public' }
+				selected={ contentVisibility || 'public' }
 				options={ [
 					{
 						label: enhancedLabel(
@@ -134,9 +151,7 @@ const EditorPlugin = () => {
 						value: 'local',
 					},
 				] }
-				onChange={ ( value ) => {
-					setMeta( { ...meta, activitypub_content_visibility: value } );
-				} }
+				onChange={ handleVisibilityChange }
 				className="activitypub-visibility"
 			/>
 		</PluginDocumentSettingPanel>
@@ -147,7 +162,7 @@ const EditorPlugin = () => {
  * Opens the Fediverse preview for the current post in a new tab.
  */
 function onActivityPubPreview() {
-	const previewLink = select( 'core/editor' ).getEditedPostPreviewLink();
+	const previewLink = select( editorStore ).getEditedPostPreviewLink();
 	const fediversePreviewLink = addQueryArgs( previewLink, { activitypub: 'true' } );
 
 	window.open( fediversePreviewLink, '_blank' );
@@ -160,7 +175,7 @@ function onActivityPubPreview() {
  */
 const EditorPreview = () => {
 	// check if post was saved
-	const post_status = useSelect( ( select ) => select( 'core/editor' ).getCurrentPost().status );
+	const post_status = useSelect( ( select ) => select( editorStore ).getCurrentPost().status );
 
 	return (
 		<>
