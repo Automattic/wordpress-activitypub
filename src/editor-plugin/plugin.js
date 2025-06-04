@@ -1,4 +1,5 @@
 import { PluginDocumentSettingPanel, PluginPreviewMenuItem } from '@wordpress/editor';
+import { PluginDocumentSettingPanel as DocumentSettingPanel } from '@wordpress/edit-post';
 import { registerPlugin } from '@wordpress/plugins';
 import { TextControl, RadioControl, RangeControl, __experimentalText as Text, Tooltip } from '@wordpress/components';
 import { Icon, globe, people, external } from '@wordpress/icons';
@@ -34,6 +35,7 @@ const EditorPlugin = () => {
 	if ( 'wp_block' === postType ) {
 		return null;
 	}
+
 	const { maxImageAttachments = 4 } = useOptions();
 	const labelStyling = {
 		verticalAlign: 'middle',
@@ -61,8 +63,14 @@ const EditorPlugin = () => {
 		</Tooltip>
 	);
 
+	/*
+	 * Backwards compatibility with WordPress 6.5.
+	 * @todo Remove when 6.5 is no longer supported.
+	 */
+	const SettingsPanel = PluginDocumentSettingPanel || DocumentSettingPanel;
+
 	return (
-		<PluginDocumentSettingPanel
+		<SettingsPanel
 			name="activitypub"
 			className="block-editor-block-inspector"
 			title={ __( 'Fediverse ⁂', 'activitypub' ) }
@@ -139,7 +147,7 @@ const EditorPlugin = () => {
 				} }
 				className="activitypub-visibility"
 			/>
-		</PluginDocumentSettingPanel>
+		</SettingsPanel>
 	);
 };
 
