@@ -208,22 +208,17 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 * @covers ::render_post_reactions_block
 	 */
 	public function test_render_reactions_block_with_deprecated_markup() {
-		$block_markup = '<!-- wp:activitypub/reactions {"title":"What people think about it on the Fediverse!","postId":123} /-->';
+		$post_id = $this->get_post_id_with_reactions();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"title":"What people think about it on the Fediverse!","postId":' . $post_id . '} /-->';
 		$output       = do_blocks( $block_markup );
 		$expected     = '<h6 class="wp-block-heading">What people think about it on the Fediverse!</h6>';
 
 		$this->assertStringContainsString( $expected, $output );
 
-		$block_markup = '<!-- wp:activitypub/reactions {"postId":123} /-->';
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
 		$output       = do_blocks( $block_markup );
 		$expected     = '<h6 class="wp-block-heading">Fediverse Reactions</h6>';
-
-		$this->assertStringContainsString( $expected, $output );
-
-		// Reactions block with reactions.
-		$post_id      = $this->get_post_id_with_reactions();
-		$block_markup = sprintf( '<!-- wp:activitypub/reactions {"postId":%d} /-->', $post_id );
-		$output       = do_blocks( $block_markup );
 
 		$this->assertStringContainsString( $expected, $output );
 	}
@@ -244,7 +239,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
+		\add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function () {
 				return array(
@@ -256,10 +251,18 @@ class Test_Blocks extends \WP_UnitTestCase {
 			}
 		);
 
+		\add_filter(
+			'pre_comment_approved',
+			function () {
+				return '1';
+			}
+		);
+
 		Interactions::add_reaction( $activity );
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'pre_comment_approved' );
 
 		return $post_id;
 	}
