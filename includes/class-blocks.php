@@ -42,13 +42,7 @@ class Blocks {
 					'show_in_rest'      => true,
 					'single'            => true,
 					'type'              => 'string',
-					'sanitize_callback' => function ( $warning ) {
-						if ( $warning ) {
-							return \sanitize_text_field( $warning );
-						}
-
-						return null;
-					},
+					'sanitize_callback' => 'sanitize_text_field',
 				)
 			);
 
