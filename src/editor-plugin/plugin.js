@@ -29,7 +29,7 @@ const notAllowed = (
  * @returns {[string, (value: string) => void]} The current value of the metadata and a function to update it.
  */
 function useSetMeta( metaKey, postType ) {
-	const [ meta, setMeta ] = useEntityProp( 'postType', postType || 'default', 'meta' );
+	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 
 	const setValue = ( value ) => {
 		setMeta( { ...meta, [ metaKey ]: value } );
