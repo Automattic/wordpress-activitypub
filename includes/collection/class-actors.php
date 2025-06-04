@@ -491,14 +491,7 @@ class Actors {
 			return null;
 		}
 
-		$post = \get_post( $post_id );
-
-		if ( ! $post ) {
-			return null;
-		}
-
-		// Return Activity\Actor object.
-		return $post;
+		return \get_post( $post_id );
 	}
 
 	/**
@@ -509,14 +502,7 @@ class Actors {
 	 * @return \WP_Post|\WP_Error
 	 */
 	public static function get_remote_by_id( $actor_id ) {
-		$post = \get_post( $actor_id );
-
-		if ( ! $post ) {
-			return null;
-		}
-
-		// Return Activity\Actor object.
-		return $post;
+		return \get_post( $actor_id );
 	}
 
 	/**
