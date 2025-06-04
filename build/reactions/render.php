@@ -33,6 +33,7 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 			'post_id' => $_post_id,
 			'type'    => $_type,
 			'status'  => 'approve',
+			'parent'  => 0,
 		)
 	);
 

@@ -141,7 +141,6 @@ class Test_Followers extends \WP_UnitTestCase {
 			}
 		}
 
-
 		$db_followers = Followers::get_followers( 1 );
 
 		$this->assertEquals( 2, \count( $db_followers ) );

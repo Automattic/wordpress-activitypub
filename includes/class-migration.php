@@ -1016,6 +1016,7 @@ class Migration {
 
 			$post->post_content = \wp_slash( \wp_json_encode( $post_content ) );
 			\wp_insert_post( $post );
+  
 			\delete_post_meta( $post->ID, '_activitypub_actor_json' );
 		}
 
