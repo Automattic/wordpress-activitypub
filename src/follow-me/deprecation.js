@@ -52,9 +52,9 @@ const v1 = {
 	 *
 	 * @return {boolean} Whether the block is eligible for migration.
 	 */
-	isEligible( attributes ) {
+	isEligible( { buttonText, buttonOnly } ) {
 		// Run migration if buttonText or buttonOnly is set.
-		return !! attributes.buttonText || !! attributes.buttonOnly;
+		return !! buttonText || !! buttonOnly;
 	},
 
 	/**
@@ -64,9 +64,7 @@ const v1 = {
 	 *
 	 * @return {[Object, Array]} An array with the new block attributes and inner blocks.
 	 */
-	migrate( attributes ) {
-		const { buttonText, ...newAttributes } = attributes;
-
+	migrate( { buttonText, ...newAttributes } ) {
 		const buttonBlock = createBlock( 'core/button', {
 			tagName: 'button',
 			text: buttonText,
