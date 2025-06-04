@@ -22,38 +22,33 @@ class Test_Follower extends \WP_UnitTestCase {
 	 * @covers ::clear_errors
 	 */
 	public function test_clear_errors() {
-		// Mock request.
-		$follower = new Follower();
-		$follower->from_array(
-			array(
-				'id'                => 'https://example.com/author/jon',
-				'type'              => 'Person',
-				'name'              => 'Jon Doe',
-				'preferredUsername' => 'jon',
-				'inbox'             => 'https://example.com/author/jon/inbox',
-				'publicKey'         => 'publicKey',
-				'publicKeyPem'      => 'publicKeyPem',
-			)
+		$actor = array(
+			'id'                => 'https://example.com/author/jon',
+			'type'              => 'Person',
+			'name'              => 'Jon Doe',
+			'preferredUsername' => 'jon',
+			'inbox'             => 'https://example.com/author/jon/inbox',
+			'publicKey'         => 'publicKey',
+			'publicKeyPem'      => 'publicKeyPem',
 		);
 
-		$id = $follower->upsert();
-		$this->assertNotWPError( $id );
+		$id = Actors::add( $actor );
 
 		// Add some errors.
-		Actors::track_error( $follower->get__id(), 'Test error 1' );
-		Actors::track_error( $follower->get__id(), 'Test error 2' );
+		Actors::track_error( $id, 'Test error 1' );
+		Actors::track_error( $id, 'Test error 2' );
 
 		// Verify errors were added.
-		$errors = $follower->get_errors();
-		$this->assertCount( 2, $errors );
+		$count = Actors::count_errors( $id );
+		$this->assertEquals( 2, $count );
 
 		// Clear errors.
-		$cleared = $follower->clear_errors();
+		$cleared = Actors::clear_errors( $id );
 		$this->assertTrue( $cleared );
 
 		// Verify errors were cleared.
-		$errors = $follower->get_errors();
-		$this->assertEmpty( $errors );
+		$count = Actors::count_errors( $id );
+		$this->assertEquals( 0, $count );
 	}
 
 	/**

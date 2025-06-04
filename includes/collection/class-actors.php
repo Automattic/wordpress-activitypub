@@ -543,7 +543,7 @@ class Actors {
 	 * @return int The number of errors.
 	 */
 	public static function count_errors( $post_id ) {
-		return \count( \get_post_meta( $post_id, '_activitypub_errors', true ) );
+		return \count( \get_post_meta( $post_id, '_activitypub_errors', false ) );
 	}
 
 	/**
