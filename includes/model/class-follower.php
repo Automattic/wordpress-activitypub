@@ -194,25 +194,39 @@ class Follower extends Actor {
 
 		$args = array(
 			'ID'           => $post_id,
-			'guid'         => esc_url_raw( $this->get_id() ),
-			'post_title'   => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
+			'guid'         => \esc_url_raw( $this->get_id() ),
+			'post_title'   => \wp_slash( \wp_strip_all_tags( \sanitize_text_field( $this->get_name() ) ) ),
 			'post_author'  => 0,
 			'post_type'    => Actors::POST_TYPE,
-			'post_name'    => esc_url_raw( $this->get_id() ),
-			'post_excerpt' => sanitize_text_field( wp_kses( $this->get_summary(), 'user_description' ) ),
+			'post_name'    => \esc_url_raw( $this->get_id() ),
+			'post_content' => \wp_slash( $this->to_json() ),
+			'post_excerpt' => \sanitize_text_field( \wp_kses( \wp_slash( $this->get_summary() ), 'user_description' ) ),
 			'post_status'  => 'publish',
-			'meta_input'   => $this->get_post_meta_input(),
+			'meta_input'   => array(
+				'_activitypub_inbox' => $this->get_shared_inbox(),
+			),
 		);
 
 		if ( ! empty( $post_id ) ) {
 			// If this is an update, prevent the "followed" date from being overwritten by the current date.
-			$post                  = get_post( $post_id );
+			$post                  = \get_post( $post_id );
 			$args['post_date']     = $post->post_date;
 			$args['post_date_gmt'] = $post->post_date_gmt;
 		}
 
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			// Prevent KSES from corrupting JSON in post_content.
+			\kses_remove_filters();
+		}
+
 		$post_id   = wp_insert_post( $args );
 		$this->_id = $post_id;
+
+		if ( $has_kses ) {
+			// Restore KSES filters.
+			\kses_init_filters();
+		}
 
 		return $post_id;
 	}
@@ -237,17 +251,6 @@ class Follower extends Actor {
 	 */
 	public function delete() {
 		wp_delete_post( $this->_id );
-	}
-
-	/**
-	 * Update the post meta.
-	 */
-	protected function get_post_meta_input() {
-		$meta_input                            = array();
-		$meta_input['_activitypub_inbox']      = $this->get_shared_inbox();
-		$meta_input['_activitypub_actor_json'] = wp_slash( $this->to_json() );
-
-		return $meta_input;
 	}
 
 	/**
@@ -361,10 +364,8 @@ class Follower extends Actor {
 	 * @return Follower|false The Follower object or false on failure.
 	 */
 	public static function init_from_cpt( $post ) {
-		$actor_json = get_post_meta( $post->ID, '_activitypub_actor_json', true );
-
 		/* @var Follower $object Follower object. */
-		$object = self::init_from_json( $actor_json );
+		$object = self::init_from_json( $post->post_content );
 
 		if ( is_wp_error( $object ) ) {
 			return false;

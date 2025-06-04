@@ -867,4 +867,112 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		\wp_delete_post( $follower );
 	}
+
+	/**
+	 * Test update_actor_json_storage with valid JSON.
+	 *
+	 * @covers ::update_actor_json_storage
+	 */
+	public function test_update_actor_json_storage() {
+		$actor_array = array(
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>HTML content</p>',
+		);
+
+		$follower = new Follower();
+		$follower->from_array( $actor_array );
+		$json = $follower->to_json();
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => Actors::POST_TYPE,
+				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
+				'meta_input'   => array( '_activitypub_actor_json' => \wp_slash( $json ) ),
+			)
+		);
+
+		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertIsObject( \json_decode( $original_meta ) );
+
+		$result = Migration::update_actor_json_storage();
+
+		// No additional batch should be scheduled.
+		$this->assertNull( $result );
+
+		\clean_post_cache( $post_id );
+
+		$post    = \get_post( $post_id );
+		$content = \json_decode( $post->post_content, true );
+		$meta    = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertEmpty( $meta, 'Updated meta should be empty' );
+		$this->assertEquals( JSON_ERROR_NONE, \json_last_error() );
+		$this->assertIsObject( \json_decode( $original_meta ) );
+		$this->assertContains( 'Test Follower', $content );
+		$this->assertContains( '<p>HTML content</p>', $content );
+
+		$follower = Follower::init_from_cpt( $post );
+
+		$this->assertEquals( 'HTML content', $follower->get_summary() );
+
+		\wp_delete_post( $post_id );
+	}
+
+	/**
+	 * Test update_actor_json_storage with broken JSON.
+	 *
+	 * @covers ::update_actor_json_storage
+	 */
+	public function test_update_actor_json_storage_broken_json() {
+		$actor_array = array(
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>HTML content</p>',
+		);
+
+		$remote_actor = function () use ( $actor_array ) {
+			return $actor_array;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+
+		$follower = new Follower();
+		$follower->from_array( $actor_array );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => Actors::POST_TYPE,
+				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
+				'meta_input'   => array( '_activitypub_actor_json' => 'no json' ),
+			)
+		);
+
+		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertEmpty( \json_decode( $original_meta ) );
+
+		$result = Migration::update_actor_json_storage();
+
+		// No additional batch should be scheduled.
+		$this->assertNull( $result );
+
+		\clean_post_cache( $post_id );
+
+		$post    = \get_post( $post_id );
+		$content = \json_decode( $post->post_content, true );
+		$meta    = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertEmpty( $meta, 'Updated meta should be empty' );
+		$this->assertContains( 'Test Follower', $content );
+		$this->assertContains( '<p>HTML content</p>', $content );
+
+		$follower = Follower::init_from_cpt( $post );
+
+		$this->assertEquals( 'HTML content', $follower->get_summary() );
+
+		\wp_delete_post( $post_id );
+	}
 }

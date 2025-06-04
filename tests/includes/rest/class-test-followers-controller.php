@@ -25,17 +25,19 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		self::factory()->post->create_many(
 			25,
 			array(
-				'post_type'  => Actors::POST_TYPE,
-				'meta_input' => array(
-					Followers::FOLLOWER_META_KEY => '0',
-					'_activitypub_actor_json'    => wp_json_encode(
+				'post_type'    => Actors::POST_TYPE,
+				'post_content' => \wp_slash(
+					\wp_json_encode(
 						array(
 							'id'                => 'https://example.org/actor/1',
 							'type'              => 'Person',
 							'preferredUsername' => 'user1',
 							'name'              => 'User 1',
 						)
-					),
+					)
+				),
+				'meta_input'   => array(
+					Followers::FOLLOWER_META_KEY => '0',
 				),
 			)
 		);
