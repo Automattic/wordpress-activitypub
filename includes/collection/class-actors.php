@@ -441,10 +441,10 @@ class Actors {
 			)
 		);
 
-		if ( ! empty( $post_id ) ) {
+		if ( $post_id ) {
 			// If this is an update, prevent the "followed" date from being overwritten by the current date.
 			$post                  = \get_post( $post_id );
-			$args['ID']            = $post->ID;
+			$args['ID']            = $post_id;
 			$args['post_date']     = $post->post_date;
 			$args['post_date_gmt'] = $post->post_date_gmt;
 		}
@@ -455,7 +455,11 @@ class Actors {
 			\kses_remove_filters();
 		}
 
-		$post_id = \wp_insert_post( $args );
+		if ( $post_id ) {
+			$post_id = \wp_update_post( $args );
+		} else {
+			$post_id = \wp_insert_post( $args );
+		}
 
 		if ( $has_kses ) {
 			// Restore KSES filters.
@@ -508,7 +512,7 @@ class Actors {
 		$post = \get_post( $actor_id );
 
 		if ( ! $post ) {
-			return new \WP_Error( 'activitypub_actor_not_found', __( 'Remote actor not found', 'activitypub' ) );
+			return null;
 		}
 
 		// Return Activity\Actor object.

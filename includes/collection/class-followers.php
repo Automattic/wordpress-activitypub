@@ -59,7 +59,7 @@ class Followers {
 		}
 
 		$post_meta = \get_post_meta( $post_id, self::FOLLOWER_META_KEY, false );
-		if ( \is_array( $post_meta ) && ! \in_array( $user_id, $post_meta, true ) ) {
+		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
 			\add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}

@@ -131,15 +131,10 @@ class Test_Followers extends \WP_UnitTestCase {
 			Followers::add_follower( 1, $follower );
 		}
 
-		$follower = Followers::get_follower( 1, 'https://example.org/author/doe' );
-		$post_id  = method_exists( $follower, 'get__id' ) ? $follower->get__id() : ( isset( $follower->ID ) ? $follower->ID : null );
-		if ( $post_id ) {
-			$post = \get_post( $post_id );
-			if ( $post ) {
-				$post->post_content = 'invalid json';
-				\wp_update_post( $post );
-			}
-		}
+		$follower           = Followers::get_follower( 1, 'https://example.org/author/doe' );
+		$post               = \get_post( $follower->get__id() );
+		$post->post_content = 'invalid json';
+		\wp_update_post( $post );
 
 		$db_followers = Followers::get_followers( 1 );
 
@@ -171,17 +166,17 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * @covers ::add_follower
 	 */
 	public function test_add_follower_error() {
-		$follower = 'error@example.com';
+		$follower = 'error@example.net';
 
 		$result = Followers::add_follower( 1, $follower );
 
-		$this->assertTrue( is_wp_error( $result ) );
+		$this->assertTrue( \is_wp_error( $result ) );
 
-		$follower2 = 'https://error.example.com';
+		$follower2 = 'https://error.example.net';
 
 		$result = Followers::add_follower( 1, $follower2 );
 
-		$this->assertTrue( is_wp_error( $result ) );
+		$this->assertTrue( \is_wp_error( $result ) );
 
 		$db_followers = Followers::get_followers( 1 );
 
@@ -303,9 +298,9 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		clean_post_cache( $post_id );
 
-		$followers = Followers::get_outdated_followers();
-		$this->assertEquals( 1, count( $followers ) );
-		$this->assertEquals( 'https://example.com/author/jon', $followers[0] );
+		$actors = Actors::get_outdated();
+		$this->assertEquals( 1, \count( $actors ) );
+		$this->assertEquals( 'https://example.com/author/jon', $actors[0]->guid );
 	}
 
 	/**
@@ -323,25 +318,25 @@ class Test_Followers extends \WP_UnitTestCase {
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
-			add_post_meta( $follower->get__id(), '_activitypub_errors', 'error ' . $i );
+			\add_post_meta( $follower->get__id(), '_activitypub_errors', 'error ' . $i );
 		}
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
 		$follower->count_errors();
 
-		$followers = Followers::get_faulty_followers();
+		$actors = Actors::get_faulty();
 
-		$this->assertEquals( 1, count( $followers ) );
-		$this->assertEquals( 'http://sally.example.org', $followers[0] );
+		$this->assertEquals( 1, \count( $actors ) );
+		$this->assertEquals( 'http://sally.example.org', $actors[0]->guid );
 
 		$follower->reset_errors();
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
 		$follower->count_errors();
 
-		$followers = Followers::get_faulty_followers();
+		$actors = Actors::get_faulty();
 
-		$this->assertEquals( 0, count( $followers ) );
+		$this->assertEquals( 0, \count( $actors ) );
 	}
 
 	/**
@@ -449,8 +444,8 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		// Clean up.
-		delete_user_meta( $user_id, 'activitypub_followers' );
-		remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
+		\delete_user_meta( $user_id, 'activitypub_followers' );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
 	}
 
 	/**
@@ -669,7 +664,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertCount( 1, $inboxes, 'Should retrieve exactly 1 inbox with batch size 1.' );
 
 		// Test with blog user in dual mode.
-		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		Followers::add_follower( Actors::BLOG_USER_ID, self::$actors['sally@example.org']['id'] );
 
 		$inboxes = Followers::get_inboxes_for_activity(
