@@ -131,8 +131,8 @@ class Test_Followers extends \WP_UnitTestCase {
 			Followers::add_follower( 1, $follower );
 		}
 
-		$follower           = Followers::get_follower( 1, 'https://example.org/author/doe' );
-		$post_id            = method_exists( $follower, 'get__id' ) ? $follower->get__id() : ( isset( $follower->ID ) ? $follower->ID : null );
+		$follower = Followers::get_follower( 1, 'https://example.org/author/doe' );
+		$post_id  = method_exists( $follower, 'get__id' ) ? $follower->get__id() : ( isset( $follower->ID ) ? $follower->ID : null );
 		if ( $post_id ) {
 			$post = \get_post( $post_id );
 			if ( $post ) {

@@ -397,7 +397,7 @@ class Actors {
 	 *
 	 * @return int|\WP_Error The post ID or WP_Error.
 	 */
-	public static function import( $actor_data ) {
+	public static function add( $actor_data ) {
 		if ( \is_array( $actor_data ) ) {
 			$actor_data = Actor::init_from_array( $actor_data );
 		}
@@ -474,9 +474,9 @@ class Actors {
 	 *
 	 * @param string $actor_uri The actor URI.
 	 *
-	 * @return \Activitypub\Model\Actor|\WP_Error
+	 * @return \WP_Post|\WP_Error
 	 */
-	public static function get_imported_by_uri( $actor_uri ) {
+	public static function get_remote_by_uri( $actor_uri ) {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$post_id = $wpdb->get_var(
@@ -491,14 +491,14 @@ class Actors {
 			return new \WP_Error( 'activitypub_actor_not_found', __( 'Remote actor not found', 'activitypub' ) );
 		}
 
-		$post = get_post( $post_id );
+		$post = \get_post( $post_id );
 
 		if ( ! $post ) {
 			return new \WP_Error( 'activitypub_actor_not_found', __( 'Remote actor not found', 'activitypub' ) );
 		}
 
 		// Return Activity\Actor object.
-		return Actor::init_from_array( $post->post_content );
+		return $post;
 	}
 
 	/**
@@ -506,9 +506,9 @@ class Actors {
 	 *
 	 * @param int $actor_id The actor ID.
 	 *
-	 * @return \Activitypub\Model\Actor|\WP_Error
+	 * @return \WP_Post|\WP_Error
 	 */
-	public static function get_imported_by_id( $actor_id ) {
+	public static function get_remote_by_id( $actor_id ) {
 		$post = \get_post( $actor_id );
 
 		if ( ! $post ) {
@@ -516,7 +516,7 @@ class Actors {
 		}
 
 		// Return Activity\Actor object.
-		return Actor::init_from_json( $post->post_content );
+		return $post;
 	}
 
 	/**

@@ -51,8 +51,8 @@ class Move {
 			return;
 		}
 
-		$target_follower = Actors::get_imported_by_uri( $target );
-		$origin_follower = Actors::get_imported_by_uri( $origin );
+		$target_follower = Actors::get_remote_by_uri( $target );
+		$origin_follower = Actors::get_remote_by_uri( $origin );
 
 		/*
 		 * If the new target is followed, but the origin is not,

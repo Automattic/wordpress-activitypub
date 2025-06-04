@@ -324,7 +324,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertContains( (string) $this->user_id_2, $target_users );
 
 		// Check if the origin follower was deleted.
-		$this->assertNull( Actors::get_imported_by_uri( $origin, true ) );
+		$this->assertNull( Actors::get_remote_by_uri( $origin, true ) );
 
 		remove_filter( 'pre_http_request', $filter );
 	}

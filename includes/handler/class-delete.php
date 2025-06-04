@@ -101,7 +101,7 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function maybe_delete_follower( $activity ) {
-		$follower = Actors::get_imported_by_uri( $activity['actor'] );
+		$follower = Actors::get_remote_by_uri( $activity['actor'] );
 
 		// Verify that Actor is deleted.
 		if ( $follower && Http::is_tombstone( $activity['actor'] ) ) {

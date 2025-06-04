@@ -53,7 +53,7 @@ class Followers {
 			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		$post_id = Actors::import( $meta );
+		$post_id = Actors::add( $meta );
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
@@ -64,7 +64,7 @@ class Followers {
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
-		return Actors::get_imported_by_id( $post_id );
+		return Actors::get_remote_by_id( $post_id );
 	}
 
 	/**
@@ -120,11 +120,12 @@ class Followers {
 			)
 		);
 
-		if ( $id ) {
-			return Actors::get_imported_by_id( $id );
+		if ( ! $id ) {
+			return null;
 		}
 
-		return null;
+		$post = Actors::get_remote_by_id( $id );
+		return Follower::init_from_cpt( $post );
 	}
 
 	/**
@@ -135,7 +136,13 @@ class Followers {
 	 * @return Follower|false|null The Follower object or false on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
-		return Actors::get_imported_by_uri( $actor );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_remote_by_uri' );
+		$post = Actors::get_remote_by_uri( $actor );
+		if ( ! $post || is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		return Follower::init_from_cpt( $post );
 	}
 
 	/**
@@ -368,7 +375,12 @@ class Followers {
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated' );
-		return Actors::get_outdated( $number, $older_than );
+		$posts = Actors::get_outdated( $number, $older_than );
+		if ( ! $posts || is_wp_error( $posts ) ) {
+			return $posts;
+		}
+
+		return \array_map( array( Follower::class, 'init_from_cpt' ), $posts );
 	}
 
 	/**
@@ -380,7 +392,12 @@ class Followers {
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty' );
-		return Actors::get_faulty( $number );
+		$posts = Actors::get_faulty( $number );
+		if ( ! $posts || is_wp_error( $posts ) ) {
+			return $posts;
+		}
+
+		return \array_map( array( Follower::class, 'init_from_cpt' ), $posts );
 	}
 
 	/**

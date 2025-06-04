@@ -165,7 +165,7 @@ class Scheduler {
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
 				Actors::clear_errors( $actor->ID );
 			} else {
-				$id = Actors::import( $meta );
+				$id = Actors::add( $meta );
 				if ( \is_wp_error( $id ) ) {
 					continue;
 				}

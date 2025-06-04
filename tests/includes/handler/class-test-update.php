@@ -78,12 +78,12 @@ class Test_Update extends WP_UnitTestCase {
 		Update::update_actor( $activity );
 
 		// Check that the follower was correctly updated.
-		$follower = Actors::get_imported_by_uri( $actor_url );
+		$follower = Actors::get_remote_by_uri( $actor_url );
 
 		$this->assertNull( $follower );
 
 		$follower_initial = Followers::add_follower( $this->user_id, $actor_url );
-		$follower_from_db = Actors::get_imported_by_uri( $actor_url );
+		$follower_from_db = Actors::get_remote_by_uri( $actor_url );
 
 		$this->assertInstanceOf( Follower::class, $follower_initial );
 		$this->assertInstanceOf( Follower::class, $follower_from_db );
@@ -106,7 +106,7 @@ class Test_Update extends WP_UnitTestCase {
 
 		Update::update_actor( $activity );
 
-		$follower = Actors::get_imported_by_uri( $actor_url );
+		$follower = Actors::get_remote_by_uri( $actor_url );
 
 		$this->assertInstanceOf( Follower::class, $follower );
 		$this->assertEquals( $activity['object']['name'], $follower->get_name() );
@@ -141,7 +141,7 @@ class Test_Update extends WP_UnitTestCase {
 		Update::update_actor( $activity );
 
 		// Check that no follower was created.
-		$follower = Actors::get_imported_by_uri( 'https://example.com/nonexistent' );
+		$follower = Actors::get_remote_by_uri( 'https://example.com/nonexistent' );
 		$this->assertNull( $follower );
 
 		remove_filter( 'pre_http_request', $fake_request, 10 );
