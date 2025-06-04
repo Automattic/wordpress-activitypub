@@ -6,8 +6,27 @@ import { store, getContext } from '@wordpress/interactivity';
  */
 const { apiFetch, url } = window.wp;
 
-// Register the store for the followers block.
+/**
+ * @typedef {Object} context
+ * @property {Array} followers The list of followers.
+ * @property {boolean} isLoading Whether the followers are currently being fetched.
+ * @property {String} order The order in which to fetch followers (e.g., 'asc', 'desc').
+ * @property {Number} page The current page of followers.
+ * @property {Number} pages The total number of pages of followers.
+ * @property {Number} per_page The number of followers per page.
+ * @property {Number} total The total number of followers.
+ * @property {String} userId The user ID for which to fetch followers.
+ */
+
 const { actions, state } = store( 'activitypub/followers', {
+	/**
+	 * @typedef {Object} state
+	 * @property {String} defaultAvatarUrl Default avatar URL.
+	 * @property {String} namespace ActivityPub REST Namespace.
+	 * @property {Function} paginationText Get the pagination text.
+	 * @property {Function} disablePreviousLink Whether the previous link should be disabled.
+	 * @property {Function} disableNextLink Whether the next link should be disabled.
+	 */
 	state: {
 		/**
 		 * Get the pagination text.

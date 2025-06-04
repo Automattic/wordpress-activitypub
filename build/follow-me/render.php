@@ -40,8 +40,8 @@ wp_interactivity_state(
 			'copy'                => __( 'Copy', 'activitypub' ),
 			'copied'              => __( 'Copied!', 'activitypub' ),
 			'emptyProfileError'   => __( 'Please enter a profile URL or handle.', 'activitypub' ),
-			'invalidProfileError' => __( 'Please enter a valid profile URL or handle.', 'activitypub' ),
 			'genericError'        => __( 'An error occurred. Please try again.', 'activitypub' ),
+			'invalidProfileError' => __( 'Please enter a valid profile URL or handle.', 'activitypub' ),
 		),
 	)
 );
@@ -58,20 +58,18 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 $wrapper_context = wp_interactivity_data_wp_context(
 	array(
+		'backgroundColor' => $background_color,
 		'blockId'         => $block_id,
-		'remoteProfile'   => '',
-		'isLoading'       => false,
-		'isError'         => false,
-		'errorMessage'    => '',
-		'copyButtonText'  => __( 'Copy', 'activitypub' ),
-		'userId'          => $user_id,
 		'buttonOnly'      => $button_only,
 		'buttonStyle'     => $button_style,
-		'backgroundColor' => $background_color,
+		'copyButtonText'  => __( 'Copy', 'activitypub' ),
+		'errorMessage'    => '',
+		'isError'         => false,
+		'isLoading'       => false,
+		'modal'           => array( 'isOpen' => false ),
+		'remoteProfile'   => '',
+		'userId'          => $user_id,
 		'webfinger'       => '@' . $actor->get_webfinger(),
-		'modal'           => array(
-			'isOpen' => false,
-		),
 	)
 );
 
