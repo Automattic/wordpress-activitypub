@@ -411,8 +411,8 @@ class Actors {
 		}
 
 		$inbox = null;
-		if ( ! empty( $actor_data->get_shared_inbox() ) ) {
-			$inbox = $actor_data->get_shared_inbox();
+		if ( ! empty( $actor_data->get_endpoints()['sharedInbox'] ) ) {
+			$inbox = $actor_data->get_endpoints()['sharedInbox'];
 		} elseif ( ! empty( $actor_data->get_inbox() ) ) {
 			$inbox = $actor_data->get_inbox();
 		}

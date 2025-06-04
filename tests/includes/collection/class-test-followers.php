@@ -650,6 +650,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			50,
 			0
 		);
+
 		// username and jon have sharedInbox endpoints.
 		$this->assertCount( 2, $inboxes, 'Should retrieve exactly 3 inboxes.' );
 		$this->assertContains( self::$actors['username@example.org']['endpoints']['sharedInbox'], $inboxes, 'Should contain first inbox.' );
