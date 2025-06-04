@@ -420,7 +420,7 @@ class Actors {
 		);
 
 		if ( $post_id ) {
-			$post = get_post( $post_id );
+			$post = \get_post( $post_id );
 			return $post->ID;
 		}
 
@@ -549,6 +549,17 @@ class Actors {
 	}
 
 	/**
+	 * Count the errors for a Follower.
+	 *
+	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
+	 *
+	 * @return int The number of errors.
+	 */
+	public static function count_errors( $post_id ) {
+		return \count( \get_post_meta( $post_id, '_activitypub_errors', true ) );
+	}
+
+	/**
 	 * Clear the errors for a Follower.
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
@@ -564,7 +575,7 @@ class Actors {
 	 *
 	 * @param int $number Optional. The number of Followers to return. Default 20.
 	 *
-	 * @return Follower[] The Term list of Followers.
+	 * @return \WP_Post[] The Term list of Followers.
 	 */
 	public static function get_faulty_imports( $number = 20 ) {
 		$args = array(
@@ -590,9 +601,7 @@ class Actors {
 		);
 
 		$posts = new \WP_Query( $args );
-		$items = \array_map( array( Actor::class, 'init_from_cpt' ), $posts->get_posts() );
-
-		return \array_filter( $items );
+		return $posts->get_posts();
 	}
 
 	/**
@@ -601,7 +610,7 @@ class Actors {
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
 	 *
-	 * @return Actor[] The Term list of Actors.
+	 * @return \WP_Post[] The Term list of Actors.
 	 */
 	public static function get_outdated_imports( $number = 50, $older_than = 86400 ) {
 		$args = array(
@@ -619,8 +628,6 @@ class Actors {
 		);
 
 		$posts = new \WP_Query( $args );
-		$items = \array_map( array( Actor::class, 'init_from_cpt' ), $posts->get_posts() );
-
-		return \array_filter( $items );
+		return $posts->get_posts();
 	}
 }

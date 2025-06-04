@@ -160,10 +160,10 @@ class Scheduler {
 		$actors = Actors::get_outdated_imports( $number );
 
 		foreach ( $actors as $actor ) {
-			$meta = get_remote_metadata_by_actor( $actor->get_id(), false );
+			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				Actors::clear_errors( $id );
+				Actors::clear_errors( $actor->ID );
 			} else {
 				$id = Actors::import( $meta );
 				if ( \is_wp_error( $id ) ) {
@@ -189,27 +189,27 @@ class Scheduler {
 		 *
 		 * @param int $number The number of followers to clean up.
 		 */
-		$number    = apply_filters( 'activitypub_update_followers_number', $number );
-		$followers = Followers::get_faulty_followers( $number );
+		$number = apply_filters( 'activitypub_update_followers_number', $number );
+		$actors = Actors::get_faulty_imports( $number );
 
-		foreach ( $followers as $follower ) {
-			$meta = get_remote_metadata_by_actor( $follower->get_url(), false );
+		foreach ( $actors as $actor ) {
+			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
 			if ( is_tombstone( $meta ) ) {
-				$follower->delete();
+				// @todo delete actor
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				if ( Actors::count_errors( $follower->get__id() ) >= 5 ) {
-					$follower->delete();
+				if ( Actors::count_errors( $actor->ID ) >= 5 ) {
+					$actor->delete();
 					\wp_schedule_single_event(
 						\time(),
 						'activitypub_delete_actor_interactions',
-						array( $follower->get_id() )
+						array( $actor->ID )
 					);
 				} else {
-					Followers::add_error( $follower->get__id(), $meta );
+					Actors::track_error( $actor->ID, $meta );
 				}
 			} else {
-				$follower->reset_errors();
+				Actors::clear_errors( $actor->ID );
 			}
 		}
 	}
