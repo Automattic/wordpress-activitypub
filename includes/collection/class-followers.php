@@ -376,10 +376,6 @@ class Followers {
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated' );
 		$posts = Actors::get_outdated( $number, $older_than );
-		if ( ! $posts || is_wp_error( $posts ) ) {
-			return $posts;
-		}
-
 		return \array_map( array( Follower::class, 'init_from_cpt' ), $posts );
 	}
 
@@ -393,10 +389,6 @@ class Followers {
 	public static function get_faulty_followers( $number = 20 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty' );
 		$posts = Actors::get_faulty( $number );
-		if ( ! $posts || is_wp_error( $posts ) ) {
-			return $posts;
-		}
-
 		return \array_map( array( Follower::class, 'init_from_cpt' ), $posts );
 	}
 

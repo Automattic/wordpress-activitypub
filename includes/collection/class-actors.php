@@ -528,7 +528,7 @@ class Actors {
 			);
 		}
 
-		return add_post_meta(
+		return \add_post_meta(
 			$post_id,
 			'_activitypub_errors',
 			$error_message
