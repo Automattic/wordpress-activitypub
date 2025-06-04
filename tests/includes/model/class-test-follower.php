@@ -8,7 +8,7 @@
 namespace Activitypub\Tests\Model;
 
 use Activitypub\Model\Follower;
-use Activitypub\Collection\Followers;
+use Activitypub\Collection\Actors;
 
 /**
  * Tests the Follower class.
@@ -40,8 +40,8 @@ class Test_Follower extends \WP_UnitTestCase {
 		$this->assertNotWPError( $id );
 
 		// Add some errors.
-		Followers::add_error( $follower->get__id(), 'Test error 1' );
-		Followers::add_error( $follower->get__id(), 'Test error 2' );
+		Actors::track_error( $follower->get__id(), 'Test error 1' );
+		Actors::track_error( $follower->get__id(), 'Test error 2' );
 
 		// Verify errors were added.
 		$errors = $follower->get_errors();

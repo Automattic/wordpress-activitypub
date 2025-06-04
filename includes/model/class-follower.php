@@ -63,7 +63,7 @@ class Follower extends Actor {
 			return false;
 		}
 
-		return Followers::clear_errors( $this->_id );
+		return Actors::clear_errors( $this->_id );
 	}
 
 	/**
@@ -99,7 +99,7 @@ class Follower extends Actor {
 	 * Reset (delete) all errors.
 	 */
 	public function reset_errors() {
-		delete_post_meta( $this->_id, '_activitypub_errors' );
+		\delete_post_meta( $this->_id, '_activitypub_errors' );
 	}
 
 	/**
@@ -110,8 +110,8 @@ class Follower extends Actor {
 	public function count_errors() {
 		$errors = $this->get_errors();
 
-		if ( is_array( $errors ) && ! empty( $errors ) ) {
-			return count( $errors );
+		if ( \is_array( $errors ) && ! empty( $errors ) ) {
+			return \count( $errors );
 		}
 
 		return 0;
@@ -125,8 +125,8 @@ class Follower extends Actor {
 	public function get_latest_error_message() {
 		$errors = $this->get_errors();
 
-		if ( is_array( $errors ) && ! empty( $errors ) ) {
-			return reset( $errors );
+		if ( \is_array( $errors ) && ! empty( $errors ) ) {
+			return \reset( $errors );
 		}
 
 		return '';
@@ -316,7 +316,7 @@ class Follower extends Actor {
 			return '';
 		}
 
-		if ( is_array( $icon ) ) {
+		if ( \is_array( $icon ) ) {
 			return $icon['url'];
 		}
 
@@ -335,7 +335,7 @@ class Follower extends Actor {
 			return '';
 		}
 
-		if ( is_array( $image ) ) {
+		if ( \is_array( $image ) ) {
 			return $image['url'];
 		}
 
@@ -367,7 +367,7 @@ class Follower extends Actor {
 		/* @var Follower $object Follower object. */
 		$object = self::init_from_json( $post->post_content );
 
-		if ( is_wp_error( $object ) ) {
+		if ( \is_wp_error( $object ) ) {
 			return false;
 		}
 

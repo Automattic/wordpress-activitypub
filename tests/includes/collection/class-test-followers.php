@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Model\Follower;
 
 /**
  * Test class for Activitypub Followers.
@@ -457,7 +458,7 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * @param string $name The name.
 	 */
 	public function test_extract_name_from_uri( $uri, $name ) {
-		$follower = new \Activitypub\Model\Follower();
+		$follower = new Follower();
 
 		$follower->set_id( $uri );
 
@@ -542,7 +543,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
-			add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
+			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
 		$followers = Followers::get_all_followers();
