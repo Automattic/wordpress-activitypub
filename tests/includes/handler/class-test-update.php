@@ -11,14 +11,13 @@ use Activitypub\Handler\Update;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Model\Follower;
-use WP_UnitTestCase;
 
 /**
  * Update Handler Test Class.
  *
  * @coversDefaultClass \Activitypub\Handler\Update
  */
-class Test_Update extends WP_UnitTestCase {
+class Test_Update extends \WP_UnitTestCase {
 
 	/**
 	 * User ID.
@@ -80,10 +79,10 @@ class Test_Update extends WP_UnitTestCase {
 		// Check that the follower was correctly updated.
 		$follower = Actors::get_remote_by_uri( $actor_url );
 
-		$this->assertNull( $follower );
+		$this->assertNotNull( $follower );
 
-		$follower_initial = Followers::add_follower( $this->user_id, $actor_url );
-		$follower_from_db = Actors::get_remote_by_uri( $actor_url );
+		$follower_initial = Follower::init_from_cpt( Followers::add_follower( $this->user_id, $actor_url ) );
+		$follower_from_db = Follower::init_from_cpt( Actors::get_remote_by_uri( $actor_url ) );
 
 		$this->assertInstanceOf( Follower::class, $follower_initial );
 		$this->assertInstanceOf( Follower::class, $follower_from_db );
@@ -106,14 +105,17 @@ class Test_Update extends WP_UnitTestCase {
 
 		Update::update_actor( $activity );
 
+		\clean_post_cache( $follower_initial->get_id() );
+
 		$follower = Actors::get_remote_by_uri( $actor_url );
+		$follower = Follower::init_from_cpt( $follower );
 
 		$this->assertInstanceOf( Follower::class, $follower );
 		$this->assertEquals( $activity['object']['name'], $follower->get_name() );
 		$this->assertEquals( $activity['object']['preferredUsername'], $follower->get_preferred_username() );
 		$this->assertEquals( $activity['object']['inbox'], $follower->get_inbox() );
 
-		remove_filter( 'pre_http_request', $fake_request, 10 );
+		\remove_filter( 'pre_http_request', $fake_request, 10 );
 	}
 
 	/**
@@ -142,7 +144,7 @@ class Test_Update extends WP_UnitTestCase {
 
 		// Check that no follower was created.
 		$follower = Actors::get_remote_by_uri( 'https://example.com/nonexistent' );
-		$this->assertNull( $follower );
+		$this->assertTrue( \is_wp_error( $follower ) );
 
 		remove_filter( 'pre_http_request', $fake_request, 10 );
 	}

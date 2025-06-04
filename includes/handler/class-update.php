@@ -113,13 +113,6 @@ class Update {
 			return;
 		}
 
-		$follower = Actors::get_remote_by_uri( $actor['id'] );
-
-		if ( ! $follower ) {
-			return;
-		}
-
-		$follower->from_array( $actor );
-		$follower->upsert();
+		Actors::add( $actor );
 	}
 }
