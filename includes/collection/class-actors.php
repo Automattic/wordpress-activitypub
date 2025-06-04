@@ -410,21 +410,6 @@ class Actors {
 			);
 		}
 
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s",
-				esc_sql( $actor_data->get_id() )
-			)
-		);
-
-		if ( $post_id ) {
-			$post = \get_post( $post_id );
-			return $post->ID;
-		}
-
 		$inbox = null;
 		if ( ! empty( $actor_data->get_shared_inbox() ) ) {
 			$inbox = $actor_data->get_shared_inbox();
@@ -446,9 +431,20 @@ class Actors {
 			),
 		);
 
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s",
+				esc_sql( $actor_data->get_id() )
+			)
+		);
+
 		if ( ! empty( $post_id ) ) {
 			// If this is an update, prevent the "followed" date from being overwritten by the current date.
 			$post                  = \get_post( $post_id );
+			$args['ID']            = $post->ID;
 			$args['post_date']     = $post->post_date;
 			$args['post_date_gmt'] = $post->post_date_gmt;
 		}
