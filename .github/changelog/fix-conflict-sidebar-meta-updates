@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Block editor: avoid conflicts with other plugins that save meta data.
