@@ -90,7 +90,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$id = $origin_follower->upsert();
 
 		// Add the user ID meta value.
-		add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		$filter = function ( $preempt, $args, $url ) use ( $target, $target_object, $origin, $origin_object ) {
 			if ( $url === $target ) {
@@ -124,16 +124,16 @@ class Test_Move extends \WP_UnitTestCase {
 
 		Move::handle_move( $activity );
 
-		// Check if the origin follower was updated.
-		$updated_follower = Followers::get_follower( $this->user_id, $target );
+		$old_follower     = Actors::get_remote_by_uri( $origin );
+		$updated_follower = Actors::get_remote_by_uri( $target );
 
+		$this->assertNull( $old_follower );
 		$this->assertNotNull( $updated_follower );
-		$this->assertEquals( $target, $updated_follower->get_id() );
-		$this->assertEquals( 'https://example.com/new-profile/inbox', $updated_follower->get_inbox() );
+		$this->assertEquals( $target, $updated_follower->guid );
 
-		$updated_follower->delete();
+		\wp_delete_post( $updated_follower->ID );
 
-		remove_filter( 'pre_http_request', $filter, 10 );
+		\remove_filter( 'pre_http_request', $filter, 10 );
 	}
 
 	/**

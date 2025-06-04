@@ -484,13 +484,13 @@ class Actors {
 		);
 
 		if ( ! $post_id ) {
-			return new \WP_Error( 'activitypub_actor_not_found', __( 'Remote actor not found', 'activitypub' ) );
+			return null;
 		}
 
 		$post = \get_post( $post_id );
 
 		if ( ! $post ) {
-			return new \WP_Error( 'activitypub_actor_not_found', __( 'Remote actor not found', 'activitypub' ) );
+			return null;
 		}
 
 		// Return Activity\Actor object.

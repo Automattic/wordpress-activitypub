@@ -42,23 +42,23 @@ class Move {
 			return;
 		}
 
-		$target_object = Http::get_remote_object( $target );
-		$origin_object = Http::get_remote_object( $origin );
+		$target_actor_object = Http::get_remote_object( $target );
+		$origin_actor_object = Http::get_remote_object( $origin );
 
-		$verified = self::verify_move( $target_object, $origin_object );
+		$verified = self::verify_move( $target_actor_object, $origin_actor_object );
 
 		if ( ! $verified ) {
 			return;
 		}
 
-		$target_follower = Followers::get_follower_by_actor( $target );
-		$origin_follower = Followers::get_follower_by_actor( $origin );
+		$target_actor_cpt = Actors::get_remote_by_uri( $target );
+		$origin_actor_cpt = Actors::get_remote_by_uri( $origin );
 
 		/*
 		 * If the new target is followed, but the origin is not,
 		 * everything is fine, so we can return.
 		 */
-		if ( $target_follower && ! $origin_follower ) {
+		if ( $target_actor_cpt && ! $origin_actor_cpt ) {
 			return;
 		}
 
@@ -66,21 +66,21 @@ class Move {
 		 * If the new target is not followed, but the origin is,
 		 * update the origin follower to the new target.
 		 */
-		if ( ! $target_follower && $origin_follower ) {
-			$origin_follower->from_array( $target_object );
-			$origin_follower->set_id( $target );
-			$origin_id = $origin_follower->upsert();
-
+		if ( ! $target_actor_cpt && $origin_actor_cpt ) {
 			global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
 				$wpdb->posts,
 				array( 'guid' => sanitize_url( $target ) ),
-				array( 'ID' => sanitize_key( $origin_id ) )
+				array( 'ID' => sanitize_key( $origin_actor_cpt->ID ) )
 			);
 
+			\wp_cache_delete( $origin_actor_cpt->ID, 'posts' );
+
+			Actors::add( $target_actor_object );
+
 			// Clear the cache.
-			wp_cache_delete( $origin_id, 'posts' );
+			\wp_cache_delete( $origin_actor_cpt->ID, 'posts' );
 			return;
 		}
 
@@ -88,18 +88,18 @@ class Move {
 		 * If the new target is followed, and the origin is followed,
 		 * move users and delete the origin follower.
 		 */
-		if ( $target_follower && $origin_follower ) {
-			$origin_users = \get_post_meta( $origin_follower->get__id(), Followers::FOLLOWER_META_KEY, false );
-			$target_users = \get_post_meta( $target_follower->get__id(), Followers::FOLLOWER_META_KEY, false );
+		if ( $target_actor_cpt && $origin_actor_cpt ) {
+			$origin_users = \get_post_meta( $origin_actor_cpt->ID, Followers::FOLLOWER_META_KEY, false );
+			$target_users = \get_post_meta( $target_actor_cpt->ID, Followers::FOLLOWER_META_KEY, false );
 
 			// Get all user ids from $origin_users that are not in $target_users.
 			$users = \array_diff( $origin_users, $target_users );
 
 			foreach ( $users as $user_id ) {
-				\add_post_meta( $target_follower->get__id(), Followers::FOLLOWER_META_KEY, $user_id );
+				\add_post_meta( $target_actor_cpt->ID, Followers::FOLLOWER_META_KEY, $user_id );
 			}
 
-			$origin_follower->delete();
+			\wp_delete_post( $origin_actor_cpt->ID );
 		}
 	}
 
