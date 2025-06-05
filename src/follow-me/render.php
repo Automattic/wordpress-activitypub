@@ -7,14 +7,23 @@
 
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
 
+/* @var WP_Block $block Parsed block.*/
+$block = $block ?? null;
+
+/* @var string $content Inner blocks content. */
+$content = $content ?? '';
+
 // Get the user ID from the selected user attribute.
-$selected_user = $attributes['selectedUser'] ?? 'site';
-$user_id       = Blocks::get_user_id( $selected_user );
-$button_only   = $attributes['buttonOnly'] ?? false;
+$user_id = Blocks::get_user_id( $attributes['selectedUser'] ?? 'site' );
+$actor   = Actors::get_by_id( $user_id );
+if ( is_wp_error( $actor ) ) {
+	return;
+}
 
 // Generate a unique ID for the block.
 $block_id = 'activitypub-follow-me-block-' . wp_unique_id();
@@ -22,14 +31,7 @@ $block_id = 'activitypub-follow-me-block-' . wp_unique_id();
 // Get block style information.
 $style            = wp_get_global_styles();
 $background_color = $attributes['backgroundColor'] ?? $style['color']['background'] ?? '';
-
-// Get button style from block attributes.
-$button_style = $attributes['style'] ?? array();
-
-$actor = Actors::get_by_id( $user_id );
-if ( is_wp_error( $actor ) ) {
-	return;
-}
+$button_style     = $attributes['style'] ?? array();
 
 // Set up the Interactivity API state.
 wp_interactivity_state(
@@ -47,14 +49,15 @@ wp_interactivity_state(
 );
 
 // Add the block wrapper attributes.
-$wrapper_attributes = get_block_wrapper_attributes(
-	array(
-		'id'                  => $block_id,
-		'class'               => 'activitypub-follow-me-block-wrapper',
-		'data-wp-interactive' => 'activitypub/follow-me',
-		'data-wp-init'        => 'callbacks.initButtonStyles',
-	)
+$wrapper_attributes = array(
+	'id'                  => $block_id,
+	'class'               => 'activitypub-follow-me-block-wrapper',
+	'data-wp-interactive' => 'activitypub/follow-me',
+	'data-wp-init'        => 'callbacks.initButtonStyles',
 );
+if ( isset( $attributes['buttonOnly'] ) ) {
+	$wrapper_attributes['class'] .= ' is-style-button-only';
+}
 
 $wrapper_context = wp_interactivity_data_wp_context(
 	array(
@@ -65,7 +68,6 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'errorMessage'    => '',
 		'copyButtonText'  => __( 'Copy', 'activitypub' ),
 		'userId'          => $user_id,
-		'buttonOnly'      => $button_only,
 		'buttonStyle'     => $button_style,
 		'backgroundColor' => $background_color,
 		'webfinger'       => '@' . $actor->get_webfinger(),
@@ -75,11 +77,13 @@ $wrapper_context = wp_interactivity_data_wp_context(
 	)
 );
 
-/* @var string $content Inner blocks content. */
 if ( empty( $content ) ) {
 	$button_text = $attributes['buttonText'] ?? __( 'Follow', 'activitypub' );
 	$content     = '<div class="wp-block-button"><button class="wp-block-button__link wp-element-button">' . esc_html( $button_text ) . '</button></div>';
+} else {
+	$content = implode( PHP_EOL, wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
 }
+
 $content = Blocks::add_directions(
 	$content,
 	array( 'class_name' => 'wp-element-button' ),
@@ -92,25 +96,71 @@ $content = Blocks::add_directions(
 	)
 );
 
+$header_image = $actor->get_image();
+$has_header   = ! empty( $header_image['url'] ) && str_contains( $attributes['className'] ?? '', 'is-style-profile' );
+
+$stats = array(
+	'posts'     => count_user_posts( $user_id, 'post', true ),
+	'followers' => Followers::count_followers( $user_id ),
+);
+
 ?>
 <div
-	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+	<?php echo get_block_wrapper_attributes( $wrapper_attributes ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 	<?php echo $wrapper_context; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 >
 	<div class="activitypub-profile">
-		<?php if ( ! $button_only ) : ?>
+		<?php if ( $has_header ) : ?>
+			<div class="activitypub-profile__header" style="background-image: url('<?php echo esc_url( $header_image['url'] ); ?>');"></div>
+		<?php endif; ?>
+
+		<div class="activitypub-profile__body">
 			<img
 				class="activitypub-profile__avatar"
 				src="<?php echo esc_url( $actor->get_icon()['url'] ); ?>"
 				alt="<?php echo esc_attr( $actor->get_name() ); ?>"
 			/>
-			<div class="activitypub-profile__content">
-				<div class="activitypub-profile__name"><?php echo esc_html( $actor->get_name() ); ?></div>
-				<div class="activitypub-profile__handle"><?php echo esc_html( '@' . $actor->get_webfinger() ); ?></div>
-			</div>
-		<?php endif; ?>
 
-		<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+			<div class="activitypub-profile__content">
+				<div class="activitypub-profile__info">
+					<div class="activitypub-profile__name"><?php echo esc_html( $actor->get_name() ); ?></div>
+					<div class="activitypub-profile__handle"><?php echo esc_html( '@' . $actor->get_webfinger() ); ?></div>
+				</div>
+
+				<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+
+				<?php if ( $actor->get_summary() ) : ?>
+					<div class="activitypub-profile__bio">
+						<?php echo wp_kses_post( $actor->get_summary() ); ?>
+					</div>
+				<?php endif; ?>
+
+				<div class="activitypub-profile__stats">
+					<?php if ( null !== $stats['posts'] ) : ?>
+						<div>
+							<?php
+							printf(
+								/* translators: %s: Number of posts */
+								esc_html( _n( '%s post', '%s posts', (int) $stats['posts'], 'activitypub' ) ),
+								'<strong>' . esc_html( number_format_i18n( $stats['posts'] ) ) . '</strong>'
+							);
+							?>
+						</div>
+					<?php endif; ?>
+					<?php if ( null !== $stats['followers'] ) : ?>
+						<div>
+							<?php
+							printf(
+								/* translators: %s: Number of followers */
+								esc_html( _n( '%s follower', '%s followers', (int) $stats['followers'], 'activitypub' ) ),
+								'<strong>' . esc_html( number_format_i18n( $stats['followers'] ) ) . '</strong>'
+							);
+							?>
+						</div>
+					<?php endif; ?>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<?php
