@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0] - 2025-06-05
+### Added
+- Enhanced markup of the "follow me" block, for a better Webmention and IndieWeb support. [#1771]
+- The actor of the replied-to post is now included in cc or to based on the post's visibility. [#1711]
+
+### Changed
+- "Reply on the Fediverse" now uses the Interactivity API for display on the frontend. [#1721]
+- Bumped minimum required WordPress version to 6.5. [#1703]
+- Default avatar and error handling for the reactions popover list. [#1719]
+- Ensured that publishing a new blog post always sends a Create to the Fediverse. [#1713]
+- Followers block has an updated design, new block variations, and uses the Interactivity API for display on the frontend. [#1747]
+- Follow Me and Followers blocks can now list any user that is Activitypub-enabled, even if they have the Subscriber role. [#1754]
+- Likes and Reposts for comments to a post are no longer attributed to the post itself. [#1735]
+- New system to manage followers and followings more consistently using a unified actor type. [#1726]
+- Re-enabled HTML support in excerpts and summaries to properly display hashtags and @-replies, now that Mastodon supports it. [#1731]
+- Refactored to use CSS for effects instead of JavaScript, simplifying the code. [#1718]
+- Refine the plugin’s handling and storage of remote actor data. [#1751]
+- The Follow Me block now uses the latest Block Editor technology for display on the frontend. [#1691]
+- The Reactions block now uses the latest Block Editor technology for display on the frontend. [#1722]
+
+### Removed
+- Cleaned up the codebase and removed deprecated functions. [#1723]
+
+### Fixed
+- Added forward compatibility for Editor Controls, fixing deprecated warnings in the Editor. [#1748]
+- Avoid type mismatch when updating `activitypub_content_warning` meta values. [#1766]
+- Default number of attachments now works correctly in block editor. [#1765]
+- Fixed a bug in Site Health that caused a PHP warning and missing details for the WebFinger check. [#1733]
+- Fixes a bug in WordPress 6.5 where the plugin settings in the Editor would fail to render, due to a backwards compatibility break. [#1760]
+- Improved automated setup process for the Surge caching plugin. [#1724]
+- Improved excerpt handling by removing shortcodes from summaries. [#1730]
+
 ## [5.9.2] - 2025-05-16
 ### Fixed
 - Titles added through a Heading block in the Reactions block now stay properly hidden when there are no reactions. [#1709]
@@ -1220,6 +1252,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[6.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.2...6.0.0
 [5.9.2]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.1...5.9.2
 [5.9.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.0...5.9.1
 [5.9.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.8.0...5.9.0

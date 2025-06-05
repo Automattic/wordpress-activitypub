@@ -1,4 +1,0 @@
-Significance: minor
-Type: fixed
-
-Fixes a bug in WordPress 6.5 where the plugin settings in the Editor would fail to render, due to a backwards compatibility break.
