@@ -22,7 +22,6 @@ createModalStore( 'activitypub/follow-me' );
  * @typedef {Object} context
  * @property {String} backgroundColor The background color for the button.
  * @property {String} blockId The block ID.
- * @property {String} buttonOnly Whether the button is only visible.
  * @property {String} buttonStyle The button style.
  * @property {String} copyButtonText The copy button text.
  * @property {String} errorMessage The error message.
