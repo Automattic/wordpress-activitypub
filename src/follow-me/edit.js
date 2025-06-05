@@ -1,9 +1,9 @@
 import apiFetch from '@wordpress/api-fetch';
 import { InspectorControls, useBlockProps, useInnerBlocksProps } from '@wordpress/block-editor';
-import { __ } from '@wordpress/i18n';
+import { __, _n } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
-import { SelectControl, PanelBody, ToggleControl } from '@wordpress/components';
+import { SelectControl, PanelBody } from '@wordpress/components';
 import { useEffect, useState } from '@wordpress/element';
 import { useUserOptions } from '../shared/use-user-options';
 import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
@@ -19,6 +19,8 @@ const DEFAULT_PROFILE_DATA = {
 	webfinger: '@well@hello.dolly',
 	name: __( 'Hello Dolly Fan Account', 'activitypub' ),
 	url: '#',
+	image: { url: '' },
+	summary: '',
 };
 
 /**
@@ -64,27 +66,57 @@ function fetchProfile( userId ) {
  * @param {Object} props Component props.
  * @return {JSX.Element} Profile component.
  */
-function EditorProfile( { profile, buttonOnly, innerBlocksProps } ) {
-	const { webfinger, avatar, name } = profile;
+function EditorProfile( { profile, className, innerBlocksProps } ) {
+	const { webfinger, avatar, name, image, summary, followers, posts } = profile;
 
-	if ( buttonOnly ) {
-		return (
-			<div className="activitypub-profile">
-				<div { ...innerBlocksProps } />
-			</div>
-		);
-	}
+	// Ensure we're checking for the right className format
+	const isButtonOnly = className && className.includes( 'is-style-button-only' );
+
+	// Stats for the editor preview - use real followers count if available
+	const stats = {
+		posts: posts || 17,
+		followers: followers || 0,
+	};
 
 	return (
 		<div className="activitypub-profile">
-			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
-			<div className="activitypub-profile__content">
-				<div className="activitypub-profile__name">{ name }</div>
-				<div className="activitypub-profile__handle" title={ webfinger }>
-					{ webfinger }
+			{ ! isButtonOnly && image?.url && (
+				<div className="activitypub-profile__header" style={ { backgroundImage: `url(${ image.url })` } }></div>
+			) }
+
+			<div className="activitypub-profile__body">
+				{ ! isButtonOnly && <img className="activitypub-profile__avatar" src={ avatar } alt={ name } /> }
+
+				<div className="activitypub-profile__content">
+					{ ! isButtonOnly && (
+						<div className="activitypub-profile__info">
+							<div className="activitypub-profile__name">{ name }</div>
+							<div className="activitypub-profile__handle">{ webfinger }</div>
+						</div>
+					) }
+
+					<div { ...innerBlocksProps } />
+
+					{ ! isButtonOnly && (
+						<div className="activitypub-profile__bio" dangerouslySetInnerHTML={ { __html: summary } } />
+					) }
+
+					{ ! isButtonOnly && (
+						<div className="activitypub-profile__stats">
+							{ Object.entries( stats ).map( ( [ key, count ] ) => (
+								<div key={ key }>
+									<strong>{ count }</strong>{ ' ' }
+									{ key === 'posts'
+										? _n( 'post', 'posts', count, 'activitypub' )
+										: key === 'followers'
+										? _n( 'follower', 'followers', count, 'activitypub' )
+										: _n( 'following', 'following', count, 'activitypub' ) }
+								</div>
+							) ) }
+						</div>
+					) }
 				</div>
 			</div>
-			<div { ...innerBlocksProps } />
 		</div>
 	);
 }
@@ -105,7 +137,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
 	const usersOptions = useUserOptions( { withInherit: true } );
-	const { selectedUser, buttonOnly } = attributes;
+	const { selectedUser, className = 'is-style-default' } = attributes;
 	const isInheritMode = selectedUser === 'inherit';
 	const [ profile, setProfile ] = useState( getNormalizedProfile( DEFAULT_PROFILE_DATA ) );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
@@ -139,9 +171,36 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		}
 
 		const effectiveUserId = isInheritMode ? authorId : userId;
-		fetchProfile( effectiveUserId ).then( ( data ) => {
-			setProfile( getNormalizedProfile( data ) );
-		} );
+		fetchProfile( effectiveUserId )
+			.then( ( data ) => {
+				setProfile( getNormalizedProfile( data ) );
+
+				// Convert the full URL to a path if it's a local URL.
+				if ( data.followers ) {
+					try {
+						// Extract just the path portion from the URL
+						const { pathname: path } = new URL( data.followers );
+
+						apiFetch( { path: path.replace( 'wp-json/', '' ) } )
+							.then( ( followers ) => {
+								const followersCount = followers?.totalItems || 0;
+
+								// Update the profile with followers counts.
+								setProfile( ( prevProfile ) => ( { ...prevProfile, followers: followersCount } ) );
+							} )
+							.catch( () => {} );
+					} catch ( e ) {
+						// If URL parsing fails, just continue without fetching followers.
+					}
+				}
+
+				apiFetch( { path: `/wp/v2/users/${ effectiveUserId }/?context=activitypub` } )
+					.then( ( { post_count } ) => {
+						setProfile( ( prevProfile ) => ( { ...prevProfile, posts: post_count } ) );
+					} )
+					.catch( () => {} );
+			} )
+			.catch( () => {} );
 	}, [ userId, authorId, isInheritMode ] );
 
 	useEffect( () => {
@@ -165,26 +224,17 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 							value={ attributes.selectedUser }
 							options={ usersOptions }
 							onChange={ ( value ) => setAttributes( { selectedUser: value } ) }
+							__next40pxDefaultSize
+							__nextHasNoMarginBottom
 						/>
 					) }
-					<ToggleControl
-						label={ __( 'Button Only Mode', 'activitypub' ) }
-						checked={ buttonOnly }
-						onChange={ ( value ) => setAttributes( { buttonOnly: value } ) }
-						help={ __( 'Only show the follow button without profile information', 'activitypub' ) }
-					/>
 				</PanelBody>
 			</InspectorControls>
 
 			{ isInheritMode && ! authorId ? (
 				<InheritModeBlockFallback name={ __( 'Follow Me', 'activitypub' ) } />
 			) : (
-				<EditorProfile
-					profile={ profile }
-					userId={ isInheritMode ? authorId : userId }
-					buttonOnly={ buttonOnly }
-					innerBlocksProps={ innerBlocksProps }
-				/>
+				<EditorProfile profile={ profile } className={ className } innerBlocksProps={ innerBlocksProps } />
 			) }
 		</div>
 	);
