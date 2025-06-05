@@ -137,13 +137,11 @@ class Options {
 	 * Default max image attachments.
 	 *
 	 * @param string $value The value of the option.
-	 * @return string|int
+	 *
+	 * @return string|int The value of the option.
 	 */
 	public static function default_max_image_attachments( $value ) {
-		if (
-			! \is_numeric( $value ) ||
-			( site_supports_blocks() && ! \is_plugin_active( 'classic-editor/classic-editor.php' ) )
-		) {
+		if ( ! \is_numeric( $value ) ) {
 			$value = ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
 		}
 
