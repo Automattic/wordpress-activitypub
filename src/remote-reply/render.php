@@ -26,8 +26,8 @@ $state = wp_interactivity_state(
 			'copied'              => __( 'Copied!', 'activitypub' ),
 			'copy'                => __( 'Copy', 'activitypub' ),
 			'emptyProfileError'   => __( 'Please enter a profile URL or handle.', 'activitypub' ),
-			'invalidProfileError' => __( 'Please enter a valid URL or handle.', 'activitypub' ),
 			'genericError'        => __( 'An error occurred. Please try again.', 'activitypub' ),
+			'invalidProfileError' => __( 'Please enter a valid URL or handle.', 'activitypub' ),
 		),
 	)
 );
@@ -52,13 +52,11 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'hasRemoteUser'     => false,
 		'isError'           => false,
 		'isLoading'         => false,
+		'modal'             => array( 'isOpen' => false ),
 		'profileURL'        => '',
 		'remoteProfile'     => '',
 		'shouldSaveProfile' => true,
 		'template'          => '',
-		'modal'             => array(
-			'isOpen' => false,
-		),
 	)
 );
 
