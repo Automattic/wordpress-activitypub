@@ -107,28 +107,28 @@ $stats = array(
 	<?php echo get_block_wrapper_attributes( $wrapper_attributes ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 	<?php echo $wrapper_context; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 >
-	<div class="activitypub-profile">
+	<div class="activitypub-profile p-author h-card">
 		<?php if ( $has_header ) : ?>
 			<div class="activitypub-profile__header" style="background-image: url('<?php echo esc_url( $header_image['url'] ); ?>');"></div>
 		<?php endif; ?>
 
 		<div class="activitypub-profile__body">
 			<img
-				class="activitypub-profile__avatar"
+				class="activitypub-profile__avatar u-photo"
 				src="<?php echo esc_url( $actor->get_icon()['url'] ); ?>"
 				alt="<?php echo esc_attr( $actor->get_name() ); ?>"
 			/>
 
 			<div class="activitypub-profile__content">
 				<div class="activitypub-profile__info">
-					<div class="activitypub-profile__name"><?php echo esc_html( $actor->get_name() ); ?></div>
-					<div class="activitypub-profile__handle"><?php echo esc_html( '@' . $actor->get_webfinger() ); ?></div>
+					<div class="activitypub-profile__name p-name"><?php echo esc_html( $actor->get_name() ); ?></div>
+					<div class="activitypub-profile__handle p-nickname p-x-webfinger"><?php echo esc_html( '@' . $actor->get_webfinger() ); ?></div>
 				</div>
 
 				<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 
 				<?php if ( $actor->get_summary() ) : ?>
-					<div class="activitypub-profile__bio">
+					<div class="activitypub-profile__bio p-note">
 						<?php echo wp_kses_post( $actor->get_summary() ); ?>
 					</div>
 				<?php endif; ?>
