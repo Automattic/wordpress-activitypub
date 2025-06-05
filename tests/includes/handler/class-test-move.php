@@ -7,9 +7,9 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Model\Follower;
 use Activitypub\Handler\Move;
 use Activitypub\Http;
 
@@ -80,14 +80,7 @@ class Test_Move extends \WP_UnitTestCase {
 			),
 		);
 
-		// Create a follower for the origin.
-		$origin_follower = new Follower();
-		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
-		$origin_follower->set_name( 'Old Profile' );
-		$origin_follower->set_type( 'Person' );
-		$origin_follower->set_id( $origin );
-		$origin_follower->set_url( $origin );
-		$id = $origin_follower->upsert();
+		$id = Actor::add( $origin_object );
 
 		// Add the user ID meta value.
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
@@ -146,16 +139,18 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://example.com/old-profile';
 
 		// Create a follower for the origin.
-		$origin_follower = new Follower();
-		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
-		$origin_follower->set_name( 'Old Profile' );
-		$origin_follower->set_type( 'Person' );
-		$origin_follower->set_id( $origin );
-		$origin_follower->set_url( $origin );
-		$id = $origin_follower->upsert();
+		$id = Actor::add(
+			array(
+				'inbox' => 'https://example.com/old-profile/inbox',
+				'name'  => 'Old Profile',
+				'type'  => 'Person',
+				'id'    => $origin,
+				'url'   => $origin,
+			)
+		);
 
 		// Add the user ID meta value.
-		add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		$filter = function () {
 			return array(
@@ -188,8 +183,8 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertNull( $target_follower );
 
 		// Cleanup.
-		$origin_follower->delete();
-		remove_filter( 'pre_http_request', $filter );
+		\wp_delete_post( $id );
+		\remove_filter( 'pre_http_request', $filter );
 	}
 
 	/**

@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use Activitypub\Migration;
 use Activitypub\Comment;
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -873,17 +874,17 @@ class Test_Migration extends \WP_UnitTestCase {
 			'summary'            => '<p>HTML content</p>',
 		);
 
-		$follower = new Follower();
-		$follower->from_array( $actor_array );
-		$json = $follower->to_json();
+		$post_id = Actors::add( $actor_array );
 
-		$post_id = self::factory()->post->create(
+		\wp_update_post(
 			array(
+				'ID'           => $post_id,
 				'post_type'    => Actors::POST_TYPE,
 				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
-				'meta_input'   => array( '_activitypub_actor_json' => \wp_slash( $json ) ),
 			)
 		);
+
+		\add_post_meta( $post_id, '_activitypub_actor_json', \wp_slash( \wp_json_encode( $actor_array ) ) );
 
 		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
 
@@ -906,9 +907,9 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertContains( 'Test Follower', $content );
 		$this->assertContains( '<p>HTML content</p>', $content );
 
-		$follower = Follower::init_from_cpt( $post );
+		$actor = Actor::init_from_json( $post->post_content );
 
-		$this->assertEquals( 'HTML content', $follower->get_summary() );
+		$this->assertEquals( '<p>HTML content</p>', $actor->get_summary() );
 
 		\wp_delete_post( $post_id );
 	}
@@ -931,16 +932,17 @@ class Test_Migration extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
 
-		$follower = new Follower();
-		$follower->from_array( $actor_array );
+		$post_id = Actors::add( $actor_array );
 
-		$post_id = self::factory()->post->create(
+		\wp_update_post(
 			array(
+				'ID'           => $post_id,
 				'post_type'    => Actors::POST_TYPE,
 				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
-				'meta_input'   => array( '_activitypub_actor_json' => 'no json' ),
 			)
 		);
+
+		\add_post_meta( $post_id, '_activitypub_actor_json', 'no json' );
 
 		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
 
@@ -961,9 +963,9 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertContains( 'Test Follower', $content );
 		$this->assertContains( '<p>HTML content</p>', $content );
 
-		$follower = Follower::init_from_cpt( $post );
+		$actor = Actor::init_from_json( $post->post_content );
 
-		$this->assertEquals( 'HTML content', $follower->get_summary() );
+		$this->assertEquals( '<p>HTML content</p>', $actor->get_summary() );
 
 		\wp_delete_post( $post_id );
 	}

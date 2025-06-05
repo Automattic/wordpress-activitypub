@@ -1033,7 +1033,5 @@ class Migration {
 				'offset'     => $offset + $batch_size,
 			);
 		}
-
-		return null;
 	}
 }
