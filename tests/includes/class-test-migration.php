@@ -7,13 +7,12 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Collection\Followers;
-use Activitypub\Collection\Outbox;
 use Activitypub\Migration;
 use Activitypub\Comment;
-use Activitypub\Model\Follower;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Followers;
+use Activitypub\Collection\Outbox;
 
 /**
  * Test class for Activitypub Migrate.
@@ -593,23 +592,16 @@ class Test_Migration extends \WP_UnitTestCase {
 	 * @covers ::update_actor_json_slashing
 	 */
 	public function test_update_actor_json_slashing() {
-		$follower = new Follower();
-		$follower->from_array(
-			array(
-				'type'               => 'Person',
-				'name'               => 'Test Follower',
-				'preferred_username' => 'Follower',
-				'summary'            => '<p>unescaped backslash 04\2024</p>',
-			)
+		$follower = array(
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>unescaped backslash 04\2024</p>',
 		);
-		$unslashed_json = $follower->to_json();
 
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type'  => Actors::POST_TYPE,
-				'meta_input' => array( '_activitypub_actor_json' => $unslashed_json ),
-			)
-		);
+		$post_id = Actors::add( $follower );
+
+		\add_post_meta( $post_id, '_activitypub_actor_json', \wp_json_encode( $follower ) );
 
 		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
 		$this->assertNull( \json_decode( $original_meta, true ) );
