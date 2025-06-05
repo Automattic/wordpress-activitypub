@@ -189,6 +189,9 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 			}
 		},
 
+		/**
+		 * Callback when modal is closed.
+		 */
 		onModalClose() {
 			const context = getContext();
 

@@ -25,6 +25,7 @@ class Blocks {
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
 		\add_action( 'init', array( self::class, 'register_postmeta' ), 11 );
+		\add_action( 'rest_api_init', array( self::class, 'register_rest_fields' ) );
 
 		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
 	}
@@ -143,6 +144,35 @@ class Blocks {
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
 			array(
 				'render_callback' => array( self::class, 'render_reply_block' ),
+			)
+		);
+	}
+
+	/**
+	 * Register REST fields needed for blocks.
+	 */
+	public static function register_rest_fields() {
+		// Register the post_count field for Follow Me block.
+		register_rest_field(
+			'user',
+			'post_count',
+			array(
+				/**
+				 * Get the number of published posts.
+				 *
+				 * @param array            $response   Prepared response array.
+				 * @param string           $field_name The field name.
+				 * @param \WP_REST_Request $request    The request object.
+				 * @return int The number of published posts.
+				 */
+				'get_callback' => function ( $response, $field_name, $request ) {
+					return (int) count_user_posts( $request->get_param( 'id' ), 'post', true );
+				},
+				'schema'       => array(
+					'description' => 'Number of published posts',
+					'type'        => 'integer',
+					'context'     => array( 'activitypub' ),
+				),
 			)
 		);
 	}
