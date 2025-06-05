@@ -617,4 +617,27 @@ class Actors {
 		$posts = new \WP_Query( $args );
 		return $posts->get_posts();
 	}
+
+	/**
+	 * Convert a Custom-Post-Type input to an Activitypub\Model\Actor.
+	 *
+	 * @param \WP_Post $post The post object.
+	 * @return Actor|false The Actor object or false on failure.
+	 */
+	public static function wp_post_to_actor( $post ) {
+		/* @var Actor $object Actor object. */
+		$object = Actor::init_from_json( $post->post_content );
+
+		if ( \is_wp_error( $object ) ) {
+			return false;
+		}
+
+		$object->set_id( $post->guid );
+		$object->set_name( $post->post_title );
+		$object->set_summary( $post->post_excerpt );
+		$object->set_published( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_date ) ) );
+		$object->set_updated( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) ) );
+
+		return $object;
+	}
 }

@@ -7,10 +7,10 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Handler\Update;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Model\Follower;
 
 /**
  * Update Handler Test Class.
@@ -81,11 +81,11 @@ class Test_Update extends \WP_UnitTestCase {
 
 		$this->assertNotNull( $follower );
 
-		$follower_initial = Follower::init_from_cpt( Followers::add_follower( $this->user_id, $actor_url ) );
-		$follower_from_db = Follower::init_from_cpt( Actors::get_remote_by_uri( $actor_url ) );
+		$follower_initial = Actors::wp_post_to_actor( Followers::add_follower( $this->user_id, $actor_url ) );
+		$follower_from_db = Actors::wp_post_to_actor( Actors::get_remote_by_uri( $actor_url ) );
 
-		$this->assertInstanceOf( Follower::class, $follower_initial );
-		$this->assertInstanceOf( Follower::class, $follower_from_db );
+		$this->assertInstanceOf( Actor::class, $follower_initial );
+		$this->assertInstanceOf( Actor::class, $follower_from_db );
 		$this->assertEquals( $follower_initial->get_id(), $follower_from_db->get_id() );
 		$this->assertEquals( 'Test User', $follower_from_db->get_name() );
 
@@ -108,9 +108,9 @@ class Test_Update extends \WP_UnitTestCase {
 		\clean_post_cache( $follower_initial->get_id() );
 
 		$follower = Actors::get_remote_by_uri( $actor_url );
-		$follower = Follower::init_from_cpt( $follower );
+		$follower = Actors::wp_post_to_actor( $follower );
 
-		$this->assertInstanceOf( Follower::class, $follower );
+		$this->assertInstanceOf( Actor::class, $follower );
 		$this->assertEquals( $activity['object']['name'], $follower->get_name() );
 		$this->assertEquals( $activity['object']['preferredUsername'], $follower->get_preferred_username() );
 		$this->assertEquals( $activity['object']['inbox'], $follower->get_inbox() );
