@@ -371,12 +371,12 @@ class Followers {
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
 	 *
-	 * @return Follower[] The Term list of Followers.
+	 * @return Actor[] The Term list of Actors.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated' );
 		$posts = Actors::get_outdated( $number, $older_than );
-		return \array_map( array( Follower::class, 'init_from_cpt' ), $posts );
+		return \array_map( array( Actors::class, 'wp_post_to_actor' ), $posts );
 	}
 
 	/**
@@ -384,12 +384,12 @@ class Followers {
 	 *
 	 * @param int $number Optional. The number of Followers to return. Default 20.
 	 *
-	 * @return Follower[] The Term list of Followers.
+	 * @return Actor[] The Term list of Actors.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty' );
 		$posts = Actors::get_faulty( $number );
-		return \array_map( array( Follower::class, 'init_from_cpt' ), $posts );
+		return \array_map( array( Actors::class, 'wp_post_to_actor' ), $posts );
 	}
 
 	/**
