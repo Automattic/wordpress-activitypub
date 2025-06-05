@@ -82,18 +82,6 @@ class Test_Follower extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests clear_errors triggers _doing_it_wrong when ID is not set.
-	 *
-	 * @covers ::clear_errors
-	 */
-	public function test_clear_errors_doing_it_wrong() {
-		$this->setExpectedIncorrectUsage( 'Activitypub\Model\Follower::clear_errors' );
-
-		$follower = new Follower();
-		$follower->clear_errors();
-	}
-
-	/**
 	 * Tests save.
 	 *
 	 * @covers ::save

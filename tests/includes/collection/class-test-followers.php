@@ -482,12 +482,9 @@ class Test_Followers extends \WP_UnitTestCase {
 				'publicKeyPem'      => $i,
 			);
 
-			$follower = new \Activitypub\Model\Follower();
-			$follower->from_array( $meta );
+			$id = Actors::add( $meta );
 
-			$id = $follower->upsert();
-
-			add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
+			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
 		$inboxes = Followers::get_inboxes( 1 );
