@@ -31,6 +31,7 @@
       "color": true,
       "style": true
     },
+    "shadow": true,
     "typography": {
       "fontSize": true,
       "__experimentalDefaultControls": {

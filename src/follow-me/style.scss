@@ -110,7 +110,7 @@
 
 	&.is-style-profile {
 		border-radius: 8px;
-		border: 1px solid var( --wp--preset--color--light-gray, var( --wp--preset--color--subtle-background, var( --wp--preset--color--accent, #f0f0f0 ) ) );
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 		overflow: hidden;
 
 		&.has-background {
