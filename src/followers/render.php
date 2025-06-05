@@ -74,14 +74,14 @@ wp_interactivity_state(
 
 // Set initial context data.
 $context = array(
-	'userId'    => $user_id,
-	'page'      => 1,
-	'per_page'  => $_per_page,
-	'order'     => $attributes['order'],
 	'followers' => $followers,
-	'total'     => $follower_data['total'],
-	'pages'     => ceil( $follower_data['total'] / $_per_page ),
 	'isLoading' => false,
+	'order'     => $attributes['order'],
+	'page'      => 1,
+	'pages'     => ceil( $follower_data['total'] / $_per_page ),
+	'per_page'  => $_per_page,
+	'total'     => $follower_data['total'],
+	'userId'    => $user_id,
 );
 
 // Get block wrapper attributes with the data-wp-interactive attribute.

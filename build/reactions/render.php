@@ -115,13 +115,13 @@ $reactions = array_map(
 // Initialize the context for the block.
 $context = array(
 	'blockId'   => $block_id,
-	'reactions' => $reactions,
-	'postId'    => $_post_id,
 	'modal'     => array(
 		'isCompact' => true,
 		'isOpen'    => false,
 		'items'     => array(),
 	),
+	'postId'    => $_post_id,
+	'reactions' => $reactions,
 );
 
 // Add the block wrapper attributes.

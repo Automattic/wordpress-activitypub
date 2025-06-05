@@ -7,6 +7,33 @@ const { apiFetch } = window.wp;
 
 createModalStore( 'activitypub/follow-me' );
 
+/**
+ * @typedef {Object} state
+ * @property {String} namespace ActivityPub REST Namespace.
+ * @property {Object} i18n Internationalization strings.
+ * @property {String} i18n.copy "Copy" button text.
+ * @property {String} i18n.copied "Copied" button text.
+ * @property {String} i18n.emptyProfileError Error message for empty remote profile.
+ * @property {String} i18n.genericError Generic error message.
+ * @property {String} i18n.invalidProfileError Error message for invalid remote profile.
+ */
+
+/**
+ * @typedef {Object} context
+ * @property {String} backgroundColor The background color for the button.
+ * @property {String} blockId The block ID.
+ * @property {String} buttonStyle The button style.
+ * @property {String} copyButtonText The copy button text.
+ * @property {String} errorMessage The error message.
+ * @property {boolean} isError Whether the remote profile input has an error.
+ * @property {boolean} isLoading Whether the remote profile is being submitted.
+ * @property {Object} modal The modal state.
+ * @property {boolean} modal.isOpen Whether the modal is open.
+ * @property {String} template The template for the remote reply URL.
+ * @property {String} userId The user ID.
+ * @property {String} webfinger The webfinger of the user.
+ */
+
 const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 	actions: {
 		/**

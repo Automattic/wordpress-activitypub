@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Avoid type mismatch when updating `activitypub_content_warning` meta values.
