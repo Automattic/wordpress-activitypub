@@ -80,7 +80,7 @@ class Test_Move extends \WP_UnitTestCase {
 			),
 		);
 
-		$id = Actor::add( $origin_object );
+		$id = Actors::add( $origin_object );
 
 		// Add the user ID meta value.
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
@@ -139,7 +139,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://example.com/old-profile';
 
 		// Create a follower for the origin.
-		$id = Actor::add(
+		$id = Actors::add(
 			array(
 				'inbox' => 'https://example.com/old-profile/inbox',
 				'name'  => 'Old Profile',
@@ -194,16 +194,17 @@ class Test_Move extends \WP_UnitTestCase {
 	 */
 	public function test_handle_move_without_target_or_origin() {
 		// Create a test follower to ensure it's not affected.
-		$test_follower = new Follower();
+		$test_follower = new Actor();
 		$test_follower->set_inbox( 'https://example.com/test/inbox' );
 		$test_follower->set_name( 'Test Profile' );
 		$test_follower->set_type( 'Person' );
 		$test_follower->set_id( 'https://example.com/test-profile' );
 		$test_follower->set_url( 'https://example.com/test-profile' );
-		$id = $test_follower->upsert();
+
+		$id = Actors::add( $test_follower );
 
 		// Add the user ID meta value.
-		add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		// Store initial followers count.
 		$initial_followers = Followers::get_followers( $this->user_id );
@@ -237,19 +238,19 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://example.com/old-profile';
 
 		// Create followers for target and origin.
-		$target_follower = new Follower();
+		$target_follower = new Actor();
 		$target_follower->set_inbox( 'https://example.com/new-profile/inbox' );
 		$target_follower->set_type( 'Person' );
 		$target_follower->set_id( $target );
 		$target_follower->set_url( $target );
-		$target_id = $target_follower->upsert();
+		$target_id = Actors::add( $target_follower );
 
-		$origin_follower = new Follower();
+		$origin_follower = new Actor();
 		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
 		$origin_follower->set_type( 'Person' );
 		$origin_follower->set_id( $origin );
 		$origin_follower->set_url( $origin );
-		$origin_id = $origin_follower->upsert();
+		$origin_id = Actors::add( $origin_follower );
 
 		// Add user IDs.
 		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, $this->user_id );
