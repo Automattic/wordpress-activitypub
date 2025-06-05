@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Follow Me and Followers blocks can now list any user that is Activitypub-enabled, even if they have the Subscriber role.
