@@ -163,7 +163,7 @@ class Scheduler {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				Actors::clear_errors( $actor->ID );
+				Actors::track_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
 				$id = Actors::add( $meta );
 				if ( \is_wp_error( $id ) ) {
