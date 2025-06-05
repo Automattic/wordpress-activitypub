@@ -110,7 +110,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-### 6.0.0 - 2025-06-05
+### 6.0.0 - 2025-06-06
 #### Added
 - Enhanced markup of the "follow me" block, for a better Webmention and IndieWeb support.
 - The actor of the replied-to post is now included in cc or to based on the post's visibility.
