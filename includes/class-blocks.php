@@ -89,13 +89,12 @@ class Blocks {
 	 */
 	public static function enqueue_editor_assets() {
 		$data = array(
-			'namespace'           => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl'    => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-			'enabled'             => array(
+			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'enabled'          => array(
 				'site'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
-			'maxImageAttachments' => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
