@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Default number of attachments now works correctly in block editor.
