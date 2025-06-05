@@ -11,6 +11,8 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
+use function Activitypub\extract_name_from_uri;
+
 /**
  * ActivityPub Follower Class.
  *
@@ -48,7 +50,7 @@ class Follower extends Actor {
 	 * @return mixed
 	 */
 	public function get_errors() {
-		return get_post_meta( $this->_id, '_activitypub_errors', false );
+		return \get_post_meta( $this->_id, '_activitypub_errors', false );
 	}
 
 	/**
@@ -173,62 +175,13 @@ class Follower extends Actor {
 			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		if ( ! $this->get__id() ) {
-			global $wpdb;
-
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$post_id = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT ID FROM $wpdb->posts WHERE guid=%s",
-					esc_sql( $this->get_id() )
-				)
-			);
-
-			if ( $post_id ) {
-				$post = get_post( $post_id );
-				$this->set__id( $post->ID );
-			}
+		$id = Actors::add( $this );
+		if ( \is_wp_error( $id ) ) {
+			return $id;
 		}
 
-		$post_id = $this->get__id();
-
-		$args = array(
-			'ID'           => $post_id,
-			'guid'         => \esc_url_raw( $this->get_id() ),
-			'post_title'   => \wp_slash( \wp_strip_all_tags( \sanitize_text_field( $this->get_name() ) ) ),
-			'post_author'  => 0,
-			'post_type'    => Actors::POST_TYPE,
-			'post_name'    => \esc_url_raw( $this->get_id() ),
-			'post_content' => \wp_slash( $this->to_json() ),
-			'post_excerpt' => \sanitize_text_field( \wp_kses( \wp_slash( $this->get_summary() ), 'user_description' ) ),
-			'post_status'  => 'publish',
-			'meta_input'   => array(
-				'_activitypub_inbox' => $this->get_shared_inbox(),
-			),
-		);
-
-		if ( ! empty( $post_id ) ) {
-			// If this is an update, prevent the "followed" date from being overwritten by the current date.
-			$post                  = \get_post( $post_id );
-			$args['post_date']     = $post->post_date;
-			$args['post_date_gmt'] = $post->post_date_gmt;
-		}
-
-		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
-		if ( $has_kses ) {
-			// Prevent KSES from corrupting JSON in post_content.
-			\kses_remove_filters();
-		}
-
-		$post_id   = wp_insert_post( $args );
-		$this->_id = $post_id;
-
-		if ( $has_kses ) {
-			// Restore KSES filters.
-			\kses_init_filters();
-		}
-
-		return $post_id;
+		$this->set__id( $id );
+		return $id;
 	}
 
 	/**
@@ -250,7 +203,7 @@ class Follower extends Actor {
 	 * @see \Activitypub\Rest\Followers::remove_follower()
 	 */
 	public function delete() {
-		wp_delete_post( $this->_id );
+		\wp_delete_post( $this->_id );
 	}
 
 	/**
@@ -390,39 +343,11 @@ class Follower extends Actor {
 	protected function extract_name_from_uri() {
 		// prefer the URL, but fall back to the ID.
 		if ( $this->url ) {
-			$name = $this->url;
+			$uri = $this->url;
 		} else {
-			$name = $this->id;
+			$uri = $this->id;
 		}
 
-		if ( \filter_var( $name, FILTER_VALIDATE_URL ) ) {
-			$name = \rtrim( $name, '/' );
-			$path = \wp_parse_url( $name, PHP_URL_PATH );
-
-			if ( $path ) {
-				if ( \strpos( $name, '@' ) !== false ) {
-					// Expected: https://example.com/@user (default URL pattern).
-					$name = \preg_replace( '|^/@?|', '', $path );
-				} else {
-					// Expected: https://example.com/users/user (default ID pattern).
-					$parts = \explode( '/', $path );
-					$name  = \array_pop( $parts );
-				}
-			}
-		} elseif (
-			\is_email( $name ) ||
-			\strpos( $name, 'acct' ) === 0 ||
-			\strpos( $name, '@' ) === 0
-		) {
-			// Expected: user@example.com or acct:user@example (WebFinger).
-			$name = \ltrim( $name, '@' );
-			if ( str_starts_with( $name, 'acct:' ) ) {
-				$name = \substr( $name, 5 );
-			}
-			$parts = \explode( '@', $name );
-			$name  = $parts[0];
-		}
-
-		return $name;
+		return extract_name_from_uri( $uri );
 	}
 }
