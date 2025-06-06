@@ -185,6 +185,10 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
 
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
+		}
+
 		/*
 		 * Add new update routines above this comment. ^
 		 *
@@ -975,7 +979,7 @@ class Migration {
 	 *
 	 * @return array|null Array with batch size and offset if there are more meta values to process, null otherwise.
 	 */
-	public static function update_actor_json_storage( $batch_size = 100, $offset = 0 ) {
+	public static function update_actor_json_storage( $batch_size = 300, $offset = 0 ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
