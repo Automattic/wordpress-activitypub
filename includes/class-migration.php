@@ -1031,7 +1031,8 @@ class Migration {
 			\kses_init_filters();
 		}
 
-		if ( \count( $meta_values ) === $batch_size ) {
+		$tolerance = 20;
+		if ( abs( count( $meta_values ) - $batch_size ) <= $tolerance ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
