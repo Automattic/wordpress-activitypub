@@ -1029,7 +1029,7 @@ class Migration {
 			\kses_init_filters();
 		}
 
-		if ( count( $meta_values ) === $batch_size ) {
+		if ( \count( $meta_values ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 			);
