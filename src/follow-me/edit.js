@@ -199,7 +199,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						.catch( () => {} );
 				} else {
 					const { namespace } = useOptions();
-					apiFetch( { path: namespace + '/nodeinfo/2.0' } )
+					apiFetch( { path: `/${ namespace }/nodeinfo/2.0` } )
 						.then( ( { usage: { localPosts } } ) => {
 							setProfile( ( prevProfile ) => ( { ...prevProfile, postsCount: localPosts } ) );
 						} )
