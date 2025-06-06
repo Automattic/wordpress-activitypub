@@ -28,88 +28,87 @@
 				justify-content: space-between;
 			}
 		}
-	}
 
-	// Container for avatar images.
-	.reaction-avatars {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		list-style: none;
-		margin: 0 !important;
-		padding: 0;
-
-		li {
+		// Container for avatar images.
+		.reaction-avatars {
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			list-style: none;
+			margin: 0 !important;
 			padding: 0;
-			margin: 0 -10px 0 0;
-			transition: transform 0.2s ease;
 
-			&:last-child {
-				margin-right: 0;
+			li {
+				padding: 0;
+				margin: 0 -10px 0 0;
+				transition: transform 0.2s ease;
+
+				&:last-child {
+					margin-right: 0;
+				}
+
+				&:hover {
+					z-index: 2;
+					transform: translateY(-2px);
+				}
+
+				a {
+					box-shadow: none;
+					border-radius: 50%;
+					display: block;
+					line-height: 1;
+					text-decoration: none;
+				}
 			}
+		}
+
+		.reaction-avatar {
+			max-width: 32px;
+			max-height: 32px;
+			overflow: hidden;
+			-moz-force-broken-image-icon: 1;
+			border-radius: 50%;
+			border: 0.5px solid var(--wp--preset--color--contrast, rgba(255, 255, 255, 0.8));
+			box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border
+			0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
+			transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+			will-change: transform;
+
+			&:hover,
+			&:focus-visible {
+				z-index: 1;
+				position: relative;
+				transform: translateY(-5px);
+			}
+		}
+
+		// Label showing count of reactions.
+		.reaction-label {
+			background: none;
+			border: none;
+			border-radius: 4px;
+			display: flex;
+			align-items: center;
+			gap: 0.25rem;
+			flex: 0 0 auto;
+			margin-left: 12px;
+			padding: 0.25rem 0.5rem;
+			font-size: 70%;
+			color: var(--wp--preset--color--contrast, #2271b1);
+			transition: background-color 0.2s ease;
+			white-space: nowrap;
+			text-decoration: none;
 
 			&:hover {
-				z-index: 2;
-				transform: translateY(-2px);
+				background-color: rgba(0, 0, 0, 0.05);
+				color: var(--wp--preset--color--contrast, #135e96);
 			}
 
-			a {
+			&:focus:not(:disabled) {
 				box-shadow: none;
-				border-radius: 50%;
-				display: block;
-				line-height: 1;
-				text-decoration: none;
+				outline: 1px solid var(--wp--preset--color--contrast, #135e96);
+				outline-offset: 2px;
 			}
-		}
-	}
-
-	.reaction-avatar {
-		max-width: 32px;
-		max-height: 32px;
-		overflow: hidden;
-		-moz-force-broken-image-icon: 1;
-		border-radius: 50%;
-		border: 0.5px solid var( --wp--preset--color--contrast, rgba(255, 255, 255, 0.8) );
-		box-shadow:
-			0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border
-			0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
-		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-		will-change: transform;
-
-		&:hover,
-		&:focus-visible {
-			z-index: 1;
-			position: relative;
-			transform: translateY(-5px);
-		}
-	}
-
-	// Label showing count of reactions.
-	.reaction-label {
-		background: none;
-		border: none;
-		border-radius: 4px;
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		flex: 0 0 auto;
-		margin-left: 12px;
-		padding: 0.25rem 0.5rem;
-		font-size: 70%;
-		color: var(--wp--preset--color--contrast, #2271b1);
-		transition: background-color 0.2s ease;
-		white-space: nowrap;
-		text-decoration: none;
-
-		&:hover {
-			background-color: rgba(0, 0, 0, 0.05);
-			color: var(--wp--preset--color--contrast, #135e96);
-		}
-
-		&:focus:not(:disabled) {
-			box-shadow: none;
-			outline: 1px solid var(--wp--preset--color--contrast, #135e96);
-			outline-offset: 2px;
 		}
 	}
 }

@@ -364,8 +364,14 @@ class Follower extends Actor {
 	 * @return Follower|false The Follower object or false on failure.
 	 */
 	public static function init_from_cpt( $post ) {
+		if ( empty( $post->post_content ) ) {
+			$json = \get_post_meta( $post->ID, '_activitypub_actor_json', true );
+		} else {
+			$json = $post->post_content;
+		}
+
 		/* @var Follower $object Follower object. */
-		$object = self::init_from_json( $post->post_content );
+		$object = self::init_from_json( $json );
 
 		if ( is_wp_error( $object ) ) {
 			return false;
