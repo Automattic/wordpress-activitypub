@@ -2,7 +2,7 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "name": "activitypub/reactions",
   "apiVersion": 3,
-  "version": "3.0.0",
+  "version": "3.0.1",
   "title": "Fediverse Reactions",
   "category": "widgets",
   "icon": "heart",
