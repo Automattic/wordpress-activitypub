@@ -132,12 +132,7 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
 
-		\register_block_type_from_metadata(
-			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
-			array(
-				'render_callback' => array( self::class, 'render_reply_block' ),
-			)
-		);
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reply' );
 	}
 
 	/**

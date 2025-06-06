@@ -1,6 +1,6 @@
 {
   "$schema": "https://schemas.wp.org/trunk/block.json",
-  "apiVersion": 3,
+  "apiVersion": 2,
   "name": "activitypub/reply",
   "version": "0.1.0",
   "title": "Federated Reply",
@@ -11,7 +11,12 @@
     "html": false,
     "inserter": true,
     "reusable": false,
-    "lock": false
+    "lock": false,
+    "innerBlocks": {
+      "allowedBlocks": [
+        "core/embed"
+      ]
+    }
   },
   "textdomain": "activitypub",
   "editorScript": "file:./index.js",
@@ -25,5 +30,6 @@
       "type": "boolean",
       "default": null
     }
-  }
+  },
+  "save": "file:./save.js"
 }

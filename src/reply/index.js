@@ -1,8 +1,8 @@
 import { registerBlockType } from '@wordpress/blocks';
 import { commentReplyLink } from '@wordpress/icons';
 import edit from './edit';
+import save from './save';
 import './editor.scss';
-const save = () => null;
 
 registerBlockType( 'activitypub/reply', {
 	edit,
