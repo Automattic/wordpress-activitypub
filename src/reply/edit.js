@@ -101,7 +101,6 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 			setHelpText( HELP_TEXT.valid );
 		} catch ( error ) {
 			setHelpText( HELP_TEXT.error );
-			setEmbedHtml( null );
 		} finally {
 			setIsCheckingEmbed( false );
 		}
@@ -114,8 +113,6 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 	useEffect( () => {
 		if ( url ) {
 			debouncedCheckUrl( url );
-		} else {
-			setEmbedHtml( null );
 		}
 	}, [ url ] );
 
