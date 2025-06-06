@@ -88,7 +88,6 @@ const v1 = {
 	 */
 	migrate( { buttonText, ...newAttributes } ) {
 		const buttonBlock = createBlock( 'core/button', {
-			tagName: 'button',
 			text: buttonText,
 		} );
 
