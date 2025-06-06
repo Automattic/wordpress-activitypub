@@ -217,8 +217,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	return (
 		<div { ...blockProps }>
 			<InspectorControls key="activitypub-follow-me">
-				<PanelBody title={ __( 'Follow Me Options', 'activitypub' ) }>
-					{ usersOptions.length > 1 && (
+				{ usersOptions.length > 1 && (
+					<PanelBody title={ __( 'Follow Me Options', 'activitypub' ) }>
 						<SelectControl
 							label={ __( 'Select User', 'activitypub' ) }
 							value={ attributes.selectedUser }
@@ -227,8 +227,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 							__next40pxDefaultSize
 							__nextHasNoMarginBottom
 						/>
-					) }
-				</PanelBody>
+					</PanelBody>
+				) }
 			</InspectorControls>
 
 			{ isInheritMode && ! authorId ? (
