@@ -985,7 +985,7 @@ class Migration {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$meta_values = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' LIMIT %d OFFSET %d",
+				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' LIMIT %d OFFSET %d ORDER BY post_id ASC",
 				$batch_size,
 				$offset
 			)
@@ -1031,11 +1031,12 @@ class Migration {
 			\kses_init_filters();
 		}
 
-		$tolerance = 20;
-		if ( abs( count( $meta_values ) - $batch_size ) <= $tolerance ) {
+		$tolerance       = 20;
+		$processed_count = count( $meta_values );
+		if ( $processed_count > 0 && abs( $processed_count - $batch_size ) <= $tolerance ) {
 			return array(
 				'batch_size' => $batch_size,
-				'offset'     => $offset + $batch_size,
+				'offset'     => $offset + $processed_count,
 			);
 		}
 
