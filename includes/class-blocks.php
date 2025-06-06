@@ -159,10 +159,6 @@ class Blocks {
 				 * @return int The number of published posts.
 				 */
 				'get_callback' => function ( $response, $field_name, $request ) {
-					if ( 0 === $request->get_param( 'id' ) ) {
-						return 0;
-					}
-
 					return (int) count_user_posts( $request->get_param( 'id' ), 'post', true );
 				},
 				'schema'       => array(
