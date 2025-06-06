@@ -98,7 +98,7 @@ $header_image = $actor->get_image();
 $has_header   = ! empty( $header_image['url'] ) && str_contains( $attributes['className'] ?? '', 'is-style-profile' );
 
 $stats = array(
-	'posts'     => count_user_posts( $user_id, 'post', true ),
+	'posts'     => $user_id ? count_user_posts( $user_id, 'post', true ) : (int) wp_count_posts()->publish,
 	'followers' => Followers::count_followers( $user_id ),
 );
 

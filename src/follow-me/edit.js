@@ -67,15 +67,15 @@ function fetchProfile( userId ) {
  * @return {JSX.Element} Profile component.
  */
 function EditorProfile( { profile, className, innerBlocksProps } ) {
-	const { webfinger, avatar, name, image, summary, followers, posts } = profile;
+	const { webfinger, avatar, name, image, summary, followersCount, postsCount } = profile;
 
 	// Ensure we're checking for the right className format
 	const isButtonOnly = className && className.includes( 'is-style-button-only' );
 
 	// Stats for the editor preview - use real followers count if available
 	const stats = {
-		posts: posts || 17,
-		followers: followers || 0,
+		posts: postsCount || 0,
+		followers: followersCount || 0,
 	};
 
 	return (
@@ -182,11 +182,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						const { pathname: path } = new URL( data.followers );
 
 						apiFetch( { path: path.replace( 'wp-json/', '' ) } )
-							.then( ( followers ) => {
-								const followersCount = followers?.totalItems || 0;
-
-								// Update the profile with followers counts.
-								setProfile( ( prevProfile ) => ( { ...prevProfile, followers: followersCount } ) );
+							.then( ( { totalItems = 0 } ) => {
+								setProfile( ( prevProfile ) => ( { ...prevProfile, followersCount: totalItems } ) );
 							} )
 							.catch( () => {} );
 					} catch ( e ) {
@@ -194,11 +191,20 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 					}
 				}
 
-				apiFetch( { path: `/wp/v2/users/${ effectiveUserId }/?context=activitypub` } )
-					.then( ( { post_count } ) => {
-						setProfile( ( prevProfile ) => ( { ...prevProfile, posts: post_count } ) );
-					} )
-					.catch( () => {} );
+				if ( effectiveUserId ) {
+					apiFetch( { path: `/wp/v2/users/${ effectiveUserId }/?context=activitypub` } )
+						.then( ( { post_count } ) => {
+							setProfile( ( prevProfile ) => ( { ...prevProfile, postsCount: post_count } ) );
+						} )
+						.catch( () => {} );
+				} else {
+					const { namespace } = useOptions();
+					apiFetch( { path: namespace + '/nodeinfo/2.0' } )
+						.then( ( { usage: { localPosts } } ) => {
+							setProfile( ( prevProfile ) => ( { ...prevProfile, postsCount: localPosts } ) );
+						} )
+						.catch( () => {} );
+				}
 			} )
 			.catch( () => {} );
 	}, [ userId, authorId, isInheritMode ] );
