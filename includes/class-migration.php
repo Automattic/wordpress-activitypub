@@ -985,7 +985,7 @@ class Migration {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$meta_values = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' LIMIT %d OFFSET %d ORDER BY post_id ASC",
+				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' ORDER BY post_id ASC LIMIT %d OFFSET %d",
 				$batch_size,
 				$offset
 			)
