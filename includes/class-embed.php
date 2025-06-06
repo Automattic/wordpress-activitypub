@@ -8,12 +8,12 @@
 namespace Activitypub;
 
 /**
- * Class to handle embedding ActivityPub content
+ * Class to handle embedding ActivityPub content.
  */
 class Embed {
 
 	/**
-	 * Initialize the embed handler
+	 * Initialize the embed handler.
 	 */
 	public static function init() {
 		\add_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ), 10, 3 );
