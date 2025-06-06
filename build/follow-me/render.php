@@ -77,7 +77,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 
 if ( empty( $content ) ) {
 	$button_text = $attributes['buttonText'] ?? __( 'Follow', 'activitypub' );
-	$content     = '<div class="wp-block-button"><button class="wp-block-button__link wp-element-button">' . esc_html( $button_text ) . '</button></div>';
+	$content     = '<div class="wp-block-button"><a class="wp-element-button wp-block-button__link">' . esc_html( $button_text ) . '</a></div>';
 } else {
 	$content = implode( PHP_EOL, wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
 }
