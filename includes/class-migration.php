@@ -974,20 +974,18 @@ class Migration {
 	/**
 	 * Update _activitypub_actor_json meta values to ensure they are properly slashed.
 	 *
-	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 200.
-	 * @param int $offset     Optional. Number of meta values to skip. Default 0.
+	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 100.
 	 *
 	 * @return array|null Array with batch size and offset if there are more meta values to process, null otherwise.
 	 */
-	public static function update_actor_json_storage( $batch_size = 200, $offset = 0 ) {
+	public static function update_actor_json_storage( $batch_size = 100 ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$meta_values = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' ORDER BY post_id ASC LIMIT %d OFFSET %d",
-				$batch_size,
-				$offset
+				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' LIMIT %d",
+				$batch_size
 			)
 		);
 
@@ -1031,12 +1029,9 @@ class Migration {
 			\kses_init_filters();
 		}
 
-		$tolerance       = 20;
-		$processed_count = count( $meta_values );
-		if ( $processed_count > 0 && abs( $processed_count - $batch_size ) <= $tolerance ) {
+		if ( count( $meta_values ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
-				'offset'     => $offset + $processed_count,
 			);
 		}
 
