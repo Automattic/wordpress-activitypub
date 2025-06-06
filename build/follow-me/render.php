@@ -87,10 +87,13 @@ $content = Blocks::add_directions(
 	array( 'class_name' => 'wp-element-button' ),
 	array(
 		'data-wp-on--click'           => 'actions.toggleModal',
+		'data-wp-on-async--keydown'   => 'actions.onKeydown',
 		'data-wp-bind--aria-expanded' => 'context.modal.isOpen',
 		'aria-label'                  => __( 'Follow me on the Fediverse', 'activitypub' ),
 		'aria-haspopup'               => 'dialog',
 		'aria-controls'               => 'modal-heading',
+		'role'                        => 'button',
+		'tabindex'                    => '0',
 	)
 );
 

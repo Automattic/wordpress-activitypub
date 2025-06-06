@@ -171,9 +171,7 @@ const v3 = {
 	 * @return {boolean} Whether the block is eligible for migration.
 	 */
 	isEligible( attributes, innerBlocks ) {
-		return (
-			innerBlocks.length === 1 && ! innerBlocks[ 0 ].isValid && 'button' === innerBlocks[ 0 ].attributes.tagName
-		);
+		return innerBlocks.length === 1 && 'button' === innerBlocks[ 0 ].attributes.tagName;
 	},
 
 	/**
@@ -185,13 +183,11 @@ const v3 = {
 	 * @return {[Object, Array]} An array with the new block attributes and inner blocks.
 	 */
 	migrate( attributes, innerBlocks ) {
-		const { tagName, text, ...buttonAttributes } = innerBlocks[ 0 ].attributes;
-
-		const textMatch = innerBlocks[ 0 ].originalContent.match( /<div class="wp-block-button">(.*?)<\/div>/ );
-		const buttonText = textMatch ? textMatch[ 1 ] : __( 'Follow', 'activitypub' );
+		const { tagName, ...buttonAttributes } = innerBlocks[ 0 ].attributes;
+		const text = innerBlocks[ 0 ].originalContent.replace( /<[^>]*>/g, '' ) ?? __( 'Follow', 'activitypub' );
 
 		// Create a proper button block with the correct structure and the extracted text
-		const buttonBlock = createBlock( 'core/button', { ...buttonAttributes, text: buttonText } );
+		const buttonBlock = createBlock( 'core/button', { ...buttonAttributes, text } );
 
 		return [ attributes, [ buttonBlock ] ];
 	},
