@@ -171,7 +171,9 @@ const v3 = {
 	 * @return {boolean} Whether the block is eligible for migration.
 	 */
 	isEligible( attributes, innerBlocks ) {
-		return ! innerBlocks[ 0 ].isValid && 'button' === innerBlocks[ 0 ].attributes.tagName;
+		return (
+			innerBlocks.length === 1 && ! innerBlocks[ 0 ].isValid && 'button' === innerBlocks[ 0 ].attributes.tagName
+		);
 	},
 
 	/**
