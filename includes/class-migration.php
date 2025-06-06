@@ -974,12 +974,12 @@ class Migration {
 	/**
 	 * Update _activitypub_actor_json meta values to ensure they are properly slashed.
 	 *
-	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 100.
+	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 200.
 	 * @param int $offset     Optional. Number of meta values to skip. Default 0.
 	 *
 	 * @return array|null Array with batch size and offset if there are more meta values to process, null otherwise.
 	 */
-	public static function update_actor_json_storage( $batch_size = 300, $offset = 0 ) {
+	public static function update_actor_json_storage( $batch_size = 200, $offset = 0 ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
