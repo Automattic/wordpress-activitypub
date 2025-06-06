@@ -191,7 +191,7 @@ const v3 = {
 		const buttonText = textMatch ? textMatch[ 1 ] : __( 'Follow', 'activitypub' );
 
 		// Create a proper button block with the correct structure and the extracted text
-		const buttonBlock = createBlock( 'core/button', { buttonAttributes, text: buttonText } );
+		const buttonBlock = createBlock( 'core/button', { ...buttonAttributes, text: buttonText } );
 
 		return [ attributes, [ buttonBlock ] ];
 	},
