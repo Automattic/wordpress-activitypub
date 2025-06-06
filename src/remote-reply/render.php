@@ -62,77 +62,77 @@ $wrapper_context = wp_interactivity_data_wp_context(
 
 ob_start();
 ?>
-	<div class="activitypub-dialog__section">
-		<h4><?php echo esc_html__( 'Original Comment URL', 'activitypub' ); ?></h4>
-		<div class="activitypub-dialog__description">
-			<?php echo esc_html__( 'Copy and paste the Comment URL into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
-		</div>
-		<div class="activitypub-dialog__button-group">
-			<input
-				type="text"
-				id="profile-handle"
-				value="<?php echo esc_attr( $selected_comment ); ?>"
-				tabindex="-1"
-				readonly
-				aria-readonly="true"
-			/>
-			<button
-				type="button"
-				class="wp-element-button wp-block-button__link"
-				data-wp-on--click="actions.copyToClipboard"
-				aria-label="<?php echo esc_attr__( 'Copy URL to clipboard', 'activitypub' ); ?>"
-			>
-				<span data-wp-text="context.copyButtonText"></span>
-			</button>
-		</div>
+<div class="activitypub-dialog__section">
+	<h4><?php echo esc_html__( 'Original Comment URL', 'activitypub' ); ?></h4>
+	<div class="activitypub-dialog__description">
+		<?php echo esc_html__( 'Copy and paste the Comment URL into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
 	</div>
-	<div class="activitypub-dialog__section">
-		<h4><?php echo esc_html__( 'Your Profile', 'activitypub' ); ?></h4>
-		<div class="activitypub-dialog__description">
-			<?php echo esc_html__( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
-		</div>
-		<div class="activitypub-dialog__button-group">
-			<input
-				type="text"
-				id="remote-profile"
-				placeholder="<?php echo esc_attr__( '@username@example.com', 'activitypub' ); ?>"
-				data-wp-bind--value="context.remoteProfile"
-				data-wp-on--input="actions.updateRemoteProfile"
-				data-wp-on--keydown="actions.onInputKeydown"
-				data-wp-bind--aria-invalid="context.isError"
-			/>
-			<button
-				type="button"
-				class="wp-element-button wp-block-button__link"
-				data-wp-on--click="actions.submitRemoteProfile"
-				aria-label="<?php echo esc_attr__( 'Reply', 'activitypub' ); ?>"
-				data-wp-bind--disabled="context.isLoading"
-			>
-				<span data-wp-bind--hidden="context.isLoading">
-					<?php echo esc_html__( 'Reply', 'activitypub' ); ?>
-				</span>
-				<span data-wp-bind--hidden="!context.isLoading">
-					<?php echo esc_html__( 'Loading...', 'activitypub' ); ?>
-				</span>
-			</button>
-		</div>
-		<div
-			class="activitypub-dialog__error"
-			data-wp-bind--hidden="!context.isError"
-			data-wp-text="context.errorMessage"
-		></div>
-		<div class="activitypub-dialog__remember">
-			<label>
-				<input
-					type="checkbox"
-					checked
-					data-wp-bind--checked="context.shouldSaveProfile"
-					data-wp-on--change="actions.toggleRememberProfile"
-				/>
-				<?php echo esc_html__( 'Save my profile for future comments.', 'activitypub' ); ?>
-			</label>
-		</div>
+	<div class="activitypub-dialog__button-group">
+		<input
+			aria-readonly="true"
+			id="profile-handle"
+			readonly
+			tabindex="-1"
+			type="text"
+			value="<?php echo esc_attr( $selected_comment ); ?>"
+		/>
+		<button
+			aria-label="<?php echo esc_attr__( 'Copy URL to clipboard', 'activitypub' ); ?>"
+			class="wp-element-button wp-block-button__link"
+			data-wp-on--click="actions.copyToClipboard"
+			type="button"
+		>
+			<span data-wp-text="context.copyButtonText"></span>
+		</button>
 	</div>
+</div>
+<div class="activitypub-dialog__section">
+	<h4><?php echo esc_html__( 'Your Profile', 'activitypub' ); ?></h4>
+	<div class="activitypub-dialog__description">
+		<?php echo esc_html__( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
+	</div>
+	<div class="activitypub-dialog__button-group">
+		<input
+			data-wp-bind--aria-invalid="context.isError"
+			data-wp-bind--value="context.remoteProfile"
+			data-wp-on--input="actions.updateRemoteProfile"
+			data-wp-on--keydown="actions.onInputKeydown"
+			id="remote-profile"
+			placeholder="<?php echo esc_attr__( '@username@example.com', 'activitypub' ); ?>"
+			type="text"
+		/>
+		<button
+			aria-label="<?php echo esc_attr__( 'Reply', 'activitypub' ); ?>"
+			class="wp-element-button wp-block-button__link"
+			data-wp-bind--disabled="context.isLoading"
+			data-wp-on--click="actions.submitRemoteProfile"
+			type="button"
+		>
+			<span data-wp-bind--hidden="context.isLoading">
+				<?php echo esc_html__( 'Reply', 'activitypub' ); ?>
+			</span>
+			<span data-wp-bind--hidden="!context.isLoading">
+				<?php echo esc_html__( 'Loading...', 'activitypub' ); ?>
+			</span>
+		</button>
+	</div>
+	<div
+		class="activitypub-dialog__error"
+		data-wp-bind--hidden="!context.isError"
+		data-wp-text="context.errorMessage"
+	></div>
+	<div class="activitypub-dialog__remember">
+		<label>
+			<input
+				checked
+				data-wp-bind--checked="context.shouldSaveProfile"
+				data-wp-on--change="actions.toggleRememberProfile"
+				type="checkbox"
+			/>
+			<?php echo esc_html__( 'Save my profile for future comments.', 'activitypub' ); ?>
+		</label>
+	</div>
+</div>
 <?php
 $modal_content = ob_get_clean();
 

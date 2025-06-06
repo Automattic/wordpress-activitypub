@@ -133,6 +133,28 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		'data-wp-init'        => 'callbacks.initReactions',
 	)
 );
+
+ob_start();
+?>
+<ul class="reactions-list">
+	<template data-wp-each="context.modal.items">
+		<li class="reaction-item">
+			<a data-wp-bind--href="context.item.url" target="_blank" rel="noopener noreferrer">
+				<img
+					alt=""
+					data-wp-bind--alt="context.item.name"
+					data-wp-bind--src="context.item.avatar"
+					data-wp-on--error="callbacks.setDefaultAvatar"
+					src=""
+				/>
+				<span class="reaction-name" data-wp-text="context.item.name"></span>
+			</a>
+		</li>
+	</template>
+</ul>
+<?php
+$modal_content = ob_get_clean();
+
 ?>
 
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
@@ -181,25 +203,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	</div>
 
 	<?php
-	$modal_content = '
-		<ul class="reactions-list">
-			<template data-wp-each="context.modal.items">
-				<li class="reaction-item">
-					<a data-wp-bind--href="context.item.url" target="_blank" rel="noopener noreferrer">
-						<img
-							data-wp-bind--src="context.item.avatar"
-							data-wp-bind--alt="context.item.name"
-							data-wp-on--error="callbacks.setDefaultAvatar"
-							src=""
-							alt=""
-						/>
-						<span class="reaction-name" data-wp-text="context.item.name"></span>
-					</a>
-				</li>
-			</template>
-		</ul>
-	';
-
 	// Render the modal using the Blocks class.
 	Blocks::render_modal(
 		array(

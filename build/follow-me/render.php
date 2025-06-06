@@ -102,6 +102,67 @@ $stats = array(
 	'followers' => Followers::count_followers( $user_id ),
 );
 
+ob_start();
+?>
+<div class="activitypub-dialog__section">
+	<h4><?php echo esc_html__( 'My Profile', 'activitypub' ); ?></h4>
+	<div class="activitypub-dialog__description">
+		<?php echo esc_html__( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
+	</div>
+	<div class="activitypub-dialog__button-group">
+		<input
+			aria-readonly="true"
+			id="profile-handle"
+			readonly
+			tabindex="-1"
+			type="text"
+			value="<?php echo esc_attr( '@' . $actor->get_webfinger() ); ?>"
+		/>
+		<button
+			aria-label="<?php echo esc_attr__( 'Copy handle to clipboard', 'activitypub' ); ?>"
+			class="wp-element-button wp-block-button__link"
+			data-wp-on--click="actions.copyToClipboard"
+			type="button"
+		>
+			<span data-wp-text="context.copyButtonText"></span>
+		</button>
+	</div>
+</div>
+<div class="activitypub-dialog__section">
+	<h4><?php echo esc_html__( 'Your Profile', 'activitypub' ); ?></h4>
+	<div class="activitypub-dialog__description">
+		<?php echo esc_html__( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
+	</div>
+	<div class="activitypub-dialog__button-group">
+		<input
+			data-wp-bind--aria-invalid="context.isError"
+			data-wp-bind--value="context.remoteProfile"
+			data-wp-on--input="actions.updateRemoteProfile"
+			data-wp-on--keydown="actions.handleKeyDown"
+			id="remote-profile"
+			placeholder="<?php echo esc_attr__( '@username@example.com', 'activitypub' ); ?>"
+			type="text"
+		/>
+		<button
+			aria-label="<?php echo esc_attr__( 'Follow', 'activitypub' ); ?>"
+			class="wp-element-button wp-block-button__link"
+			data-wp-bind--disabled="context.isLoading"
+			data-wp-on--click="actions.submitRemoteProfile"
+			type="button"
+		>
+			<span data-wp-bind--hidden="context.isLoading"><?php echo esc_html__( 'Follow', 'activitypub' ); ?></span>
+			<span data-wp-bind--hidden="!context.isLoading"><?php echo esc_html__( 'Loading&hellip;', 'activitypub' ); ?></span>
+		</button>
+	</div>
+	<div
+		class="activitypub-dialog__error"
+		data-wp-bind--hidden="!context.isError"
+		data-wp-text="context.errorMessage"
+	></div>
+</div>
+<?php
+$modal_content = ob_get_clean();
+
 ?>
 <div
 	<?php echo get_block_wrapper_attributes( $wrapper_attributes ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
@@ -162,65 +223,6 @@ $stats = array(
 	</div>
 
 	<?php
-	$modal_content = '
-		<div class="activitypub-dialog__section">
-			<h4>' . esc_html__( 'My Profile', 'activitypub' ) . '</h4>
-			<div class="activitypub-dialog__description">
-				' . esc_html__( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ) . '
-			</div>
-			<div class="activitypub-dialog__button-group">
-				<input
-					type="text"
-					id="profile-handle"
-					value="' . esc_attr( '@' . $actor->get_webfinger() ) . '"
-					tabindex="-1"
-					readonly
-					aria-readonly="true"
-				/>
-				<button
-					type="button"
-					class="wp-element-button wp-block-button__link"
-					data-wp-on--click="actions.copyToClipboard"
-					aria-label="' . esc_attr__( 'Copy handle to clipboard', 'activitypub' ) . '"
-				>
-					<span data-wp-text="context.copyButtonText"></span>
-				</button>
-			</div>
-		</div>
-		<div class="activitypub-dialog__section">
-			<h4>' . esc_html__( 'Your Profile', 'activitypub' ) . '</h4>
-			<div class="activitypub-dialog__description">
-				' . esc_html__( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ) . '
-			</div>
-			<div class="activitypub-dialog__button-group">
-				<input
-					type="text"
-					id="remote-profile"
-					placeholder="' . esc_attr__( '@username@example.com', 'activitypub' ) . '"
-					data-wp-bind--value="context.remoteProfile"
-					data-wp-on--input="actions.updateRemoteProfile"
-					data-wp-on--keydown="actions.handleKeyDown"
-					data-wp-bind--aria-invalid="context.isError"
-				/>
-				<button
-					type="button"
-					class="wp-element-button wp-block-button__link"
-					data-wp-on--click="actions.submitRemoteProfile"
-					aria-label="' . esc_attr__( 'Follow', 'activitypub' ) . '"
-					data-wp-bind--disabled="context.isLoading"
-				>
-					<span data-wp-bind--hidden="context.isLoading">' . esc_html__( 'Follow', 'activitypub' ) . '</span>
-					<span data-wp-bind--hidden="!context.isLoading">' . esc_html__( 'Loading&hellip;', 'activitypub' ) . '</span>
-				</button>
-			</div>
-			<div
-				class="activitypub-dialog__error"
-				data-wp-bind--hidden="!context.isError"
-				data-wp-text="context.errorMessage"
-			></div>
-		</div>
-	';
-
 	// Render the modal using the Blocks class.
 	Blocks::render_modal(
 		array(
