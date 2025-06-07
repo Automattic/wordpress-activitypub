@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Ensured that publishing a new blog post always sends a Create to the Fediverse.

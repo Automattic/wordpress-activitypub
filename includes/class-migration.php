@@ -180,8 +180,12 @@ class Migration {
 			self::update_notification_options();
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '6.0.0', '<' ) ) {
 			self::migrate_followers_to_ap_actor_cpt();
+			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
+		}
+
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
 
@@ -971,19 +975,17 @@ class Migration {
 	 * Update _activitypub_actor_json meta values to ensure they are properly slashed.
 	 *
 	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 100.
-	 * @param int $offset     Optional. Number of meta values to skip. Default 0.
 	 *
 	 * @return array|null Array with batch size and offset if there are more meta values to process, null otherwise.
 	 */
-	public static function update_actor_json_storage( $batch_size = 100, $offset = 0 ) {
+	public static function update_actor_json_storage( $batch_size = 100 ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$meta_values = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' LIMIT %d OFFSET %d",
-				$batch_size,
-				$offset
+				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' LIMIT %d",
+				$batch_size
 			)
 		);
 
@@ -1030,7 +1032,6 @@ class Migration {
 		if ( \count( $meta_values ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
-				'offset'     => $offset + $batch_size,
 			);
 		}
 
