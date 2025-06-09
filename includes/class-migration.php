@@ -186,6 +186,7 @@ class Migration {
 		}
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::migrate_followers_to_ap_actor_cpt();
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
 
