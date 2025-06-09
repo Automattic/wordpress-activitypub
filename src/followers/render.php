@@ -11,7 +11,7 @@ use Activitypub\Collection\Followers;
 use function Activitypub\is_activitypub_request;
 use function Activitypub\object_to_uri;
 
-if ( is_activitypub_request() || is_feed() || wp_is_serving_rest_request() ) {
+if ( is_activitypub_request() || is_feed() ) {
 	return;
 }
 
