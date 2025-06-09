@@ -1,5 +1,0 @@
-Significance: patch
-Type: fixed
-
-Avoids the button block breaking for users that don't have the `unfiltered_html` capability.
-Blog users now get their correct post count displayed in the Editor and the front-end.

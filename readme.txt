@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activity pub, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 6.0.0
+Stable tag: 6.0.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -110,7 +110,15 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-### 6.0.0 - 2025-06-06
+### 6.0.1 - 2025-06-09
+#### Fixed
+- Added fallback for follower list during migration to new database schema.
+- Avoids the button block breaking for users that don't have the `unfiltered_html` capability.
+  Blog users now get their correct post count displayed in the Editor and the front-end.
+- Improved follower migration: scheduler now more reliable and won't stop too early.
+- Update the Stream Connector integration to align with the new database schema.
+
+### 6.0.0 - 2025-06-05
 #### Added
 - Enhanced markup of the "follow me" block, for a better Webmention and IndieWeb support.
 - The actor of the replied-to post is now included in cc or to based on the post's visibility.
