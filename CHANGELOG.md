@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.1] - 2025-06-09
+### Fixed
+- Added fallback for follower list during migration to new database schema. [#1781]
+- Avoids the button block breaking for users that don't have the `unfiltered_html` capability.
+  Blog users now get their correct post count displayed in the Editor and the front-end. [#1777]
+- Improved follower migration: scheduler now more reliable and won't stop too early. [#1778]
+- Update the Stream Connector integration to align with the new database schema. [#1787]
+
 ## [6.0.0] - 2025-06-05
 ### Added
 - Enhanced markup of the "follow me" block, for a better Webmention and IndieWeb support. [#1771]
@@ -1252,6 +1260,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[6.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.0...6.0.1
 [6.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.2...6.0.0
 [5.9.2]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.1...5.9.2
 [5.9.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.0...5.9.1

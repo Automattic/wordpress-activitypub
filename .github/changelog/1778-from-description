@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Improved follower migration: scheduler now more reliable and won't stop too early.
