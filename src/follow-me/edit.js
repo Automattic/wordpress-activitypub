@@ -199,9 +199,14 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						} )
 						.catch( () => {} );
 				} else {
-					apiFetch( { path: `/${ namespace }/nodeinfo/2.0` } )
-						.then( ( { usage: { localPosts } } ) => {
-							setProfile( ( prevProfile ) => ( { ...prevProfile, postsCount: localPosts } ) );
+					apiFetch( {
+						path: '/wp/v2/posts',
+						method: 'HEAD',
+						parse: false, // Preserve headers.
+					} )
+						.then( ( response ) => {
+							const postsCount = response.headers.get( 'X-WP-Total' );
+							setProfile( ( prevProfile ) => ( { ...prevProfile, postsCount } ) );
 						} )
 						.catch( () => {} );
 				}
