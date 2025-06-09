@@ -125,7 +125,8 @@ $stats = array(
 			<div class="activitypub-profile__content">
 				<div class="activitypub-profile__info">
 					<div class="activitypub-profile__name p-name"><?php echo esc_html( $actor->get_name() ); ?></div>
-					<div class="activitypub-profile__handle p-nickname p-x-webfinger"><?php echo esc_html( '@' . $actor->get_webfinger() ); ?></div>
+					<?php /** Using `data-wp-text` to avoid @see enrich_content_data() picking it up. */ ?>
+					<div class="activitypub-profile__handle p-nickname p-x-webfinger" data-wp-text="context.webfinger"></div>
 				</div>
 
 				<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
