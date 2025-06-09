@@ -73,7 +73,7 @@ const { actions, state } = store( 'activitypub/followers', {
 
 			try {
 				// Build the API path and parameters
-				const path = url.addQueryArgs( `${ state.namespace }/actors/${ userId }/followers`, {
+				const path = url.addQueryArgs( `/${ state.namespace }/actors/${ userId }/followers`, {
 					context: 'full',
 					per_page,
 					order,
