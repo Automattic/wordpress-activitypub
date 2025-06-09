@@ -8,6 +8,11 @@
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use function Activitypub\is_activitypub_request;
+
+if ( is_activitypub_request() || is_feed() ) {
+	return;
+}
 
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
