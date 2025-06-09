@@ -161,6 +161,8 @@ add_filter( 'wp_stream_connectors', __NAMESPACE__ . '\register_stream_connector'
 add_filter(
 	'wp_stream_posts_exclude_post_types',
 	function ( $post_types ) {
+		$post_types[] = 'ap_actor';
+		// @todo remove in one of the next versions
 		$post_types[] = 'ap_follower';
 		$post_types[] = 'ap_extrafield';
 		$post_types[] = 'ap_extrafield_blog';
