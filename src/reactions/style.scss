@@ -94,19 +94,19 @@
 			margin-left: 12px;
 			padding: 0.25rem 0.5rem;
 			font-size: 70%;
-			color: var(--wp--preset--color--contrast, #2271b1);
+			color: var(--wp--preset--color--contrast, var(--wp--preset--color--accent, currentColor));
 			transition: background-color 0.2s ease;
 			white-space: nowrap;
 			text-decoration: none;
 
 			&:hover {
 				background-color: rgba(0, 0, 0, 0.05);
-				color: var(--wp--preset--color--contrast, #135e96);
+				color: var(--wp--preset--color--contrast, var(--wp--preset--color--accent, currentColor));
 			}
 
 			&:focus:not(:disabled) {
 				box-shadow: none;
-				outline: 1px solid var(--wp--preset--color--contrast, #135e96);
+				outline: 1px solid var(--wp--preset--color--contrast, var(--wp--preset--color--accent, currentColor));
 				outline-offset: 2px;
 			}
 		}
