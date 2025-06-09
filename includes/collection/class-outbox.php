@@ -40,6 +40,9 @@ class Outbox {
 			$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 		}
 
+		// Save activity in the context of an activitypub request.
+		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
+
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
@@ -59,6 +62,8 @@ class Outbox {
 				'activitypub_content_visibility' => $visibility,
 			),
 		);
+
+		\remove_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 		if ( $has_kses ) {
