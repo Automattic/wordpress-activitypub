@@ -1,4 +1,4 @@
-import { store, getContext } from '@wordpress/interactivity';
+import { store, getContext, getElement } from '@wordpress/interactivity';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import { createModalStore } from '../shared/modal';
 
@@ -74,9 +74,23 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 		},
 
 		/**
+		 * Handle the opening of the modal.
+		 *
+		 * @param {Event} event The event that triggered the modal opening/closing.
+		 * @param {String} event.key The key pressed, if any.
+		 */
+		onKeydown( event ) {
+			if ( getElement().ref.tagName === 'A' && ( event.key === 'Enter' || event.key === ' ' ) ) {
+				event.preventDefault();
+				actions.toggleModal( event );
+			}
+		},
+
+		/**
 		 * Handle keydown event for remote profile input.
 		 *
 		 * @param {Event} event Keydown event.
+		 * @param {String} event.key The key pressed.
 		 */
 		handleKeyDown( event ) {
 			if ( event.key === 'Enter' ) {
@@ -126,7 +140,7 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 				window.open( response.url, '_blank' );
 
 				// Close the modal after opening the URL.
-				actions.closeModal();
+				actions.closeModal( new Event( 'click' ) );
 			} catch ( error ) {
 				// Handle error.
 				console.error( 'Error submitting profile:', error );

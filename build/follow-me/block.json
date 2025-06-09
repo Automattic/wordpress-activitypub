@@ -2,7 +2,7 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "name": "activitypub/follow-me",
   "apiVersion": 3,
-  "version": "2.1.0",
+  "version": "2.2.0",
   "title": "Follow me on the Fediverse",
   "category": "widgets",
   "description": "Display your Fediverse profile so that visitors can follow you.",

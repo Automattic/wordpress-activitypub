@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Update the Stream Connector integration to align with the new database schema.

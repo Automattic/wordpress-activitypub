@@ -77,7 +77,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 
 if ( empty( $content ) ) {
 	$button_text = $attributes['buttonText'] ?? __( 'Follow', 'activitypub' );
-	$content     = '<div class="wp-block-button"><button class="wp-block-button__link wp-element-button">' . esc_html( $button_text ) . '</button></div>';
+	$content     = '<div class="wp-block-button"><a class="wp-element-button wp-block-button__link">' . esc_html( $button_text ) . '</a></div>';
 } else {
 	$content = implode( PHP_EOL, wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
 }
@@ -87,10 +87,13 @@ $content = Blocks::add_directions(
 	array( 'class_name' => 'wp-element-button' ),
 	array(
 		'data-wp-on--click'           => 'actions.toggleModal',
+		'data-wp-on-async--keydown'   => 'actions.onKeydown',
 		'data-wp-bind--aria-expanded' => 'context.modal.isOpen',
 		'aria-label'                  => __( 'Follow me on the Fediverse', 'activitypub' ),
 		'aria-haspopup'               => 'dialog',
 		'aria-controls'               => 'modal-heading',
+		'role'                        => 'button',
+		'tabindex'                    => '0',
 	)
 );
 
@@ -98,7 +101,7 @@ $header_image = $actor->get_image();
 $has_header   = ! empty( $header_image['url'] ) && str_contains( $attributes['className'] ?? '', 'is-style-profile' );
 
 $stats = array(
-	'posts'     => count_user_posts( $user_id, 'post', true ),
+	'posts'     => $user_id ? count_user_posts( $user_id, 'post', true ) : (int) wp_count_posts()->publish,
 	'followers' => Followers::count_followers( $user_id ),
 );
 
@@ -122,7 +125,8 @@ $stats = array(
 			<div class="activitypub-profile__content">
 				<div class="activitypub-profile__info">
 					<div class="activitypub-profile__name p-name"><?php echo esc_html( $actor->get_name() ); ?></div>
-					<div class="activitypub-profile__handle p-nickname p-x-webfinger"><?php echo esc_html( '@' . $actor->get_webfinger() ); ?></div>
+					<?php /** Using `data-wp-text` to avoid @see enrich_content_data() turning it into a mention. */ ?>
+					<div class="activitypub-profile__handle p-nickname p-x-webfinger" data-wp-text="context.webfinger"></div>
 				</div>
 
 				<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>

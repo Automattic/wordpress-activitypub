@@ -1,6 +1,7 @@
 import classnames from 'classnames';
 import { useBlockProps, useInnerBlocksProps } from '@wordpress/block-editor';
 import { createBlock } from '@wordpress/blocks';
+import { __ } from '@wordpress/i18n';
 
 /**
  * The block supports for the Follow Me block in version 1.
@@ -45,6 +46,7 @@ function migrateButtonOnly( { buttonOnly = false, className = '', ...newAttribut
 
 	return newAttributes;
 }
+
 /**
  * Deprecation for the Follow Me block to use a core button block instead of the custom button.
  * This handles the migration of the buttonText and buttonSize attributes to the innerBlock.
@@ -88,7 +90,6 @@ const v1 = {
 	 */
 	migrate( { buttonText, ...newAttributes } ) {
 		const buttonBlock = createBlock( 'core/button', {
-			tagName: 'button',
 			text: buttonText,
 		} );
 
@@ -147,4 +148,61 @@ const v2 = {
 	},
 };
 
-export default [ v2, v1 ];
+/**
+ * Deprecation for the Follow Me block.
+ * Handles the case where the button HTML is stripped due to unfiltered_html capability restrictions.
+ */
+const v3 = {
+	attributes: {
+		selectedUser: {
+			type: 'string',
+			default: 'site',
+		},
+	},
+
+	supports: v2BlockSupports,
+
+	/**
+	 * Checks if the block is eligible for migration.
+	 *
+	 * @param {Object} attributes The block attributes.
+	 * @param {array} innerBlocks The inner blocks.
+	 *
+	 * @return {boolean} Whether the block is eligible for migration.
+	 */
+	isEligible( attributes, innerBlocks ) {
+		return innerBlocks.length === 1 && 'button' === innerBlocks[ 0 ].attributes.tagName;
+	},
+
+	/**
+	 * Migrates the Follow Me block to fix the broken button.
+	 *
+	 * @param {Object} attributes The block attributes.
+	 * @param {array} innerBlocks The inner blocks.
+	 *
+	 * @return {[Object, Array]} An array with the new block attributes and inner blocks.
+	 */
+	migrate( attributes, innerBlocks ) {
+		const { tagName, ...buttonAttributes } = innerBlocks[ 0 ].attributes;
+		const text = innerBlocks[ 0 ].originalContent.replace( /<[^>]*>/g, '' ) ?? __( 'Follow', 'activitypub' );
+
+		// Create a proper button block with the correct structure and the extracted text
+		const buttonBlock = createBlock( 'core/button', { ...buttonAttributes, text } );
+
+		return [ attributes, [ buttonBlock ] ];
+	},
+
+	/**
+	 * Save function for the Follow Me block.
+	 *
+	 * @return {JSX.Element} React element to save.
+	 */
+	save() {
+		const blockProps = useBlockProps.save();
+		const innerBlocksProps = useInnerBlocksProps.save( blockProps );
+
+		return <div { ...innerBlocksProps } />;
+	},
+};
+
+export default [ v3, v2, v1 ];

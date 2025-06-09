@@ -67,15 +67,15 @@ function fetchProfile( userId ) {
  * @return {JSX.Element} Profile component.
  */
 function EditorProfile( { profile, className, innerBlocksProps } ) {
-	const { webfinger, avatar, name, image, summary, followers, posts } = profile;
+	const { webfinger, avatar, name, image, summary, followersCount, postsCount } = profile;
 
 	// Ensure we're checking for the right className format
 	const isButtonOnly = className && className.includes( 'is-style-button-only' );
 
 	// Stats for the editor preview - use real followers count if available
 	const stats = {
-		posts: posts || 17,
-		followers: followers || 0,
+		posts: postsCount || 0,
+		followers: followersCount || 0,
 	};
 
 	return (
@@ -137,12 +137,13 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
 	const usersOptions = useUserOptions( { withInherit: true } );
+	const { namespace } = useOptions();
 	const { selectedUser, className = 'is-style-default' } = attributes;
 	const isInheritMode = selectedUser === 'inherit';
 	const [ profile, setProfile ] = useState( getNormalizedProfile( DEFAULT_PROFILE_DATA ) );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 
-	const TEMPLATE = [ [ 'core/button', { text: __( 'Follow', 'activitypub' ), tagName: 'button' } ] ];
+	const TEMPLATE = [ [ 'core/button', { text: __( 'Follow', 'activitypub' ) } ] ];
 
 	const innerBlocksProps = useInnerBlocksProps(
 		{},
@@ -182,11 +183,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						const { pathname: path } = new URL( data.followers );
 
 						apiFetch( { path: path.replace( 'wp-json/', '' ) } )
-							.then( ( followers ) => {
-								const followersCount = followers?.totalItems || 0;
-
-								// Update the profile with followers counts.
-								setProfile( ( prevProfile ) => ( { ...prevProfile, followers: followersCount } ) );
+							.then( ( { totalItems = 0 } ) => {
+								setProfile( ( prevProfile ) => ( { ...prevProfile, followersCount: totalItems } ) );
 							} )
 							.catch( () => {} );
 					} catch ( e ) {
@@ -194,11 +192,24 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 					}
 				}
 
-				apiFetch( { path: `/wp/v2/users/${ effectiveUserId }/?context=activitypub` } )
-					.then( ( { post_count } ) => {
-						setProfile( ( prevProfile ) => ( { ...prevProfile, posts: post_count } ) );
+				if ( effectiveUserId ) {
+					apiFetch( { path: `/wp/v2/users/${ effectiveUserId }/?context=activitypub` } )
+						.then( ( { post_count } ) => {
+							setProfile( ( prevProfile ) => ( { ...prevProfile, postsCount: post_count } ) );
+						} )
+						.catch( () => {} );
+				} else {
+					apiFetch( {
+						path: '/wp/v2/posts',
+						method: 'HEAD',
+						parse: false, // Preserve headers.
 					} )
-					.catch( () => {} );
+						.then( ( response ) => {
+							const postsCount = response.headers.get( 'X-WP-Total' );
+							setProfile( ( prevProfile ) => ( { ...prevProfile, postsCount } ) );
+						} )
+						.catch( () => {} );
+				}
 			} )
 			.catch( () => {} );
 	}, [ userId, authorId, isInheritMode ] );
@@ -217,8 +228,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	return (
 		<div { ...blockProps }>
 			<InspectorControls key="activitypub-follow-me">
-				<PanelBody title={ __( 'Follow Me Options', 'activitypub' ) }>
-					{ usersOptions.length > 1 && (
+				{ usersOptions.length > 1 && (
+					<PanelBody title={ __( 'Follow Me Options', 'activitypub' ) }>
 						<SelectControl
 							label={ __( 'Select User', 'activitypub' ) }
 							value={ attributes.selectedUser }
@@ -227,8 +238,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 							__next40pxDefaultSize
 							__nextHasNoMarginBottom
 						/>
-					) }
-				</PanelBody>
+					</PanelBody>
+				) }
 			</InspectorControls>
 
 			{ isInheritMode && ! authorId ? (
