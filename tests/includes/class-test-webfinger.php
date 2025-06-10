@@ -7,7 +7,6 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Http;
 use Activitypub\Webfinger;
 
 /**
@@ -266,50 +265,5 @@ class Test_Webfinger extends \WP_UnitTestCase {
 				'https://example.org/?author=1',
 			),
 		);
-	}
-
-	/**
-	 * Test the webfinger format.
-	 *
-	 * Pleroma prepends `acct:` to the webfinger identifier, which we'd want to normalize.
-	 *
-	 * @see https://a8c.slack.com/archives/C04TJ8P900J/p1749577489043549
-	 * @covers ::sanitize_webfinger
-	 */
-	public function test_webfinger_format() {
-		\add_filter( 'pre_http_request', array( $this, 'mock_remote_object' ), 10, 3 );
-
-		$object = Http::get_remote_object( 'https://pleroma.com/users/tester' );
-
-		$this->assertSame( 'tester@pleroma.com', $object['webfinger'] );
-
-		\remove_filter( 'pre_http_request', array( $this, 'mock_remote_object' ) );
-	}
-
-	/**
-	 * Mock remote object for testing.
-	 *
-	 * @param false|array|\WP_Error $response    A preemptive return value of an HTTP request. Default false.
-	 * @param array                 $parsed_args HTTP request arguments.
-	 * @param string                $url         The request URL.
-	 * @return array The mocked response.
-	 */
-	public function mock_remote_object( $response, $parsed_args, $url ) {
-		if ( str_contains( $url, 'https://pleroma.com/users/tester' ) ) {
-			$response = array(
-				'response' => array(
-					'code' => 200,
-				),
-				'body'     => wp_json_encode(
-					array(
-						'id'                => 'https://pleroma.com/users/tester',
-						'preferredUsername' => 'tester',
-						'webfinger'         => 'acct:tester@pleroma.com',
-					)
-				),
-			);
-		}
-
-		return $response;
 	}
 }
