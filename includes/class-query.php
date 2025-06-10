@@ -267,50 +267,41 @@ class Query {
 	 * @return bool True if the request is an ActivityPub request, false otherwise.
 	 */
 	public function is_activitypub_request() {
-		if ( isset( $this->is_activitypub_request ) ) {
-			return $this->is_activitypub_request;
-		}
+		if ( ! isset( $this->is_activitypub_request ) ) {
+			global $wp_query;
 
-		global $wp_query;
+			$this->is_activitypub_request = false;
 
-		// One can trigger an ActivityPub request by adding `?activitypub` to the URL.
-		if (
-			isset( $wp_query->query_vars['activitypub'] ) ||
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			isset( $_GET['activitypub'] )
-		) {
-			\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
-			$this->is_activitypub_request = true;
-
-			return true;
-		}
-
-		/*
-		 * The other (more common) option to make an ActivityPub request
-		 * is to send an Accept header.
-		 */
-		if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-			$accept = \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
-
-			/*
-			 * $accept can be a single value, or a comma separated list of values.
-			 * We want to support both scenarios,
-			 * and return true when the header includes at least one of the following:
-			 * - application/activity+json
-			 * - application/ld+json
-			 * - application/json
-			 */
-			if ( \preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
+			// One can trigger an ActivityPub request by adding `?activitypub` to the URL.
+			if ( isset( $wp_query->query_vars['activitypub'] ) || isset( $_GET['activitypub'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 				$this->is_activitypub_request = true;
 
-				return true;
+				// The other (more common) option to make an ActivityPub request  is to send an Accept header.
+			} elseif ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
+				$accept = \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
+
+				/*
+				 * $accept can be a single value, or a comma separated list of values.
+				 * We want to support both scenarios,
+				 * and return true when the header includes at least one of the following:
+				 * - application/activity+json
+				 * - application/ld+json
+				 * - application/json
+				 */
+				if ( \preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
+					\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
+					$this->is_activitypub_request = true;
+				}
 			}
 		}
 
-		$this->is_activitypub_request = false;
-
-		return false;
+		/**
+		 * Filters whether the current request is an ActivityPub request.
+		 *
+		 * @param bool $is_activitypub_request True if the request is an ActivityPub request, false otherwise.
+		 */
+		return \apply_filters( 'activitypub_is_activitypub_request', $this->is_activitypub_request );
 	}
 
 	/**

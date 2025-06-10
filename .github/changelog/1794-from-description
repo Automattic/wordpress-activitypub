@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Blocks updated in 6.0.0 are back to not showing up in feeds and federated posts.
