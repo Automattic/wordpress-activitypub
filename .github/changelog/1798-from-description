@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+"Account Aliases" for get saved correctly again and no longer return empty.
