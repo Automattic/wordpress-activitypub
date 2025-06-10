@@ -657,21 +657,15 @@ class Test_Post extends \WP_UnitTestCase {
 	/**
 	 * Test reply link generation.
 	 *
+	 * Pleroma prepends `acct:` to the webfinger identifier, which we'd want to normalize.
+	 *
+	 * @see https://a8c.slack.com/archives/C04TJ8P900J/p1749577489043549
 	 * @covers ::generate_reply_link
 	 */
 	public function test_generate_reply_link() {
-		// Create a test post of type "Article".
-		$post = self::factory()->post->create_and_get(
-			array(
-				'post_title'   => 'Test Article',
-				'post_content' => '<!-- wp:activitypub/reply {"url":"https://devs.live/notice/AQ8N0Xl57y8bUQAb6e"} /-->',
-				'post_status'  => 'publish',
-			)
-		);
-
 		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ), 10, 2 );
 
-		$transformer = new Post( $post );
+		$transformer = new Post( self::factory()->post->create_and_get() );
 		$reply_link  = $transformer->generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
 
 		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
