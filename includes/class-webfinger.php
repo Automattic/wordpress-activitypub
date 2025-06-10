@@ -18,6 +18,14 @@ use Activitypub\Collection\Actors;
  * @see https://webfinger.net/
  */
 class Webfinger {
+
+	/**
+	 * Initialize the class, registering WordPress hooks.
+	 */
+	public static function init() {
+		\add_filter( 'activitypub_http_get_remote_object_data', array( self::class, 'sanitize_webfinger' ) );
+	}
+
 	/**
 	 * Returns a users WebFinger "resource".
 	 *
@@ -296,5 +304,19 @@ class Webfinger {
 		}
 
 		return 'webfinger_' . md5( $uri );
+	}
+
+	/**
+	 * Sanitize WebFinger data.
+	 *
+	 * @param array $data Remote object data.
+	 * @return array Object with sanitized webfinger.
+	 */
+	public static function sanitize_webfinger( $data ) {
+		if ( isset( $data['webfinger'] ) ) {
+			$data['webfinger'] = \str_replace( 'acct:', '', $data['webfinger'] );
+		}
+
+		return $data;
 	}
 }
