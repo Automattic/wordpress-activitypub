@@ -309,15 +309,6 @@ class Http {
 			);
 		}
 
-		/**
-		 * Filters the remote object data.
-		 *
-		 * @param array        $data          The remote object data.
-		 * @param string       $url           The URL of the remote object.
-		 * @param array|string $url_or_object The Object or the Object URL.
-		 */
-		$data = \apply_filters( 'activitypub_http_get_remote_object_data', $data, $url, $url_or_object );
-
 		\set_transient( $transient_key, $data, WEEK_IN_SECONDS );
 
 		return $data;
