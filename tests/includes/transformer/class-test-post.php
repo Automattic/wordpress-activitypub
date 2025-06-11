@@ -659,7 +659,6 @@ class Test_Post extends \WP_UnitTestCase {
 	 *
 	 * Pleroma prepends `acct:` to the webfinger identifier, which we'd want to normalize.
 	 *
-	 * @see https://a8c.slack.com/archives/C04TJ8P900J/p1749577489043549
 	 * @covers ::generate_reply_link
 	 */
 	public function test_generate_reply_link() {
