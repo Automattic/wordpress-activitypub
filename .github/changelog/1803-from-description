@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Inbox requests that are missing an `algorithm` parameter in their signature no longer create a PHP warning.
