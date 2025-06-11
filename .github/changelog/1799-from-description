@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Webfinger data from Pleroma instances no longer creates unexpected mention markup.
