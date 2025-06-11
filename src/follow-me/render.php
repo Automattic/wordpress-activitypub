@@ -108,9 +108,9 @@ $stats = array(
 ob_start();
 ?>
 <div class="activitypub-dialog__section">
-	<h4><?php echo esc_html__( 'My Profile', 'activitypub' ); ?></h4>
+	<h4><?php esc_html_e( 'My Profile', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">
-		<?php echo esc_html__( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
+		<?php esc_html_e( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
 		<input
@@ -122,7 +122,7 @@ ob_start();
 			value="<?php echo esc_attr( '@' . $actor->get_webfinger() ); ?>"
 		/>
 		<button
-			aria-label="<?php echo esc_attr__( 'Copy handle to clipboard', 'activitypub' ); ?>"
+			aria-label="<?php esc_attr_e( 'Copy handle to clipboard', 'activitypub' ); ?>"
 			class="wp-element-button wp-block-button__link"
 			data-wp-on--click="actions.copyToClipboard"
 			type="button"
@@ -132,9 +132,9 @@ ob_start();
 	</div>
 </div>
 <div class="activitypub-dialog__section">
-	<h4><?php echo esc_html__( 'Your Profile', 'activitypub' ); ?></h4>
+	<h4><?php esc_html_e( 'Your Profile', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">
-		<?php echo esc_html__( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
+		<?php esc_html_e( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
 		<input
@@ -143,18 +143,18 @@ ob_start();
 			data-wp-on--input="actions.updateRemoteProfile"
 			data-wp-on--keydown="actions.handleKeyDown"
 			id="remote-profile"
-			placeholder="<?php echo esc_attr__( '@username@example.com', 'activitypub' ); ?>"
+			placeholder="<?php esc_attr_e( '@username@example.com', 'activitypub' ); ?>"
 			type="text"
 		/>
 		<button
-			aria-label="<?php echo esc_attr__( 'Follow', 'activitypub' ); ?>"
+			aria-label="<?php esc_attr_e( 'Follow', 'activitypub' ); ?>"
 			class="wp-element-button wp-block-button__link"
 			data-wp-bind--disabled="context.isLoading"
 			data-wp-on--click="actions.submitRemoteProfile"
 			type="button"
 		>
-			<span data-wp-bind--hidden="context.isLoading"><?php echo esc_html__( 'Follow', 'activitypub' ); ?></span>
-			<span data-wp-bind--hidden="!context.isLoading"><?php echo esc_html__( 'Loading&hellip;', 'activitypub' ); ?></span>
+			<span data-wp-bind--hidden="context.isLoading"><?php esc_html_e( 'Follow', 'activitypub' ); ?></span>
+			<span data-wp-bind--hidden="!context.isLoading"><?php esc_html_e( 'Loading&hellip;', 'activitypub' ); ?></span>
 		</button>
 	</div>
 	<div

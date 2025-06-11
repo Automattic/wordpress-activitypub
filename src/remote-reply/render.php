@@ -63,9 +63,9 @@ $wrapper_context = wp_interactivity_data_wp_context(
 ob_start();
 ?>
 <div class="activitypub-dialog__section">
-	<h4><?php echo esc_html__( 'Original Comment URL', 'activitypub' ); ?></h4>
+	<h4><?php esc_html_e( 'Original Comment URL', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">
-		<?php echo esc_html__( 'Copy and paste the Comment URL into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
+		<?php esc_html_e( 'Copy and paste the Comment URL into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
 		<input
@@ -77,7 +77,7 @@ ob_start();
 			value="<?php echo esc_attr( $selected_comment ); ?>"
 		/>
 		<button
-			aria-label="<?php echo esc_attr__( 'Copy URL to clipboard', 'activitypub' ); ?>"
+			aria-label="<?php esc_attr_e( 'Copy URL to clipboard', 'activitypub' ); ?>"
 			class="wp-element-button wp-block-button__link"
 			data-wp-on--click="actions.copyToClipboard"
 			type="button"
@@ -87,9 +87,9 @@ ob_start();
 	</div>
 </div>
 <div class="activitypub-dialog__section">
-	<h4><?php echo esc_html__( 'Your Profile', 'activitypub' ); ?></h4>
+	<h4><?php esc_html_e( 'Your Profile', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">
-		<?php echo esc_html__( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
+		<?php esc_html_e( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
 		<input
@@ -98,22 +98,18 @@ ob_start();
 			data-wp-on--input="actions.updateRemoteProfile"
 			data-wp-on--keydown="actions.onInputKeydown"
 			id="remote-profile"
-			placeholder="<?php echo esc_attr__( '@username@example.com', 'activitypub' ); ?>"
+			placeholder="<?php esc_attr_e( '@username@example.com', 'activitypub' ); ?>"
 			type="text"
 		/>
 		<button
-			aria-label="<?php echo esc_attr__( 'Reply', 'activitypub' ); ?>"
+			aria-label="<?php esc_attr_e( 'Reply', 'activitypub' ); ?>"
 			class="wp-element-button wp-block-button__link"
 			data-wp-bind--disabled="context.isLoading"
 			data-wp-on--click="actions.submitRemoteProfile"
 			type="button"
 		>
-			<span data-wp-bind--hidden="context.isLoading">
-				<?php echo esc_html__( 'Reply', 'activitypub' ); ?>
-			</span>
-			<span data-wp-bind--hidden="!context.isLoading">
-				<?php echo esc_html__( 'Loading...', 'activitypub' ); ?>
-			</span>
+			<span data-wp-bind--hidden="context.isLoading"><?php esc_html_e( 'Reply', 'activitypub' ); ?></span>
+			<span data-wp-bind--hidden="!context.isLoading"><?php esc_html_e( 'Loading&hellip;', 'activitypub' ); ?></span>
 		</button>
 	</div>
 	<div
@@ -129,7 +125,7 @@ ob_start();
 				data-wp-on--change="actions.toggleRememberProfile"
 				type="checkbox"
 			/>
-			<?php echo esc_html__( 'Save my profile for future comments.', 'activitypub' ); ?>
+			<?php esc_html_e( 'Save my profile for future comments.', 'activitypub' ); ?>
 		</label>
 	</div>
 </div>
@@ -160,7 +156,7 @@ $modal_content = ob_get_clean();
 			type="button"
 			class="activitypub-remote-profile__close wp-element-button wp-block-button__link"
 			data-wp-on--click="actions.deleteRemoteUser"
-			title="<?php echo esc_attr__( 'Delete Remote Profile', 'activitypub' ); ?>"
+			title="<?php esc_attr_e( 'Delete Remote Profile', 'activitypub' ); ?>"
 		>
 			<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="18" height="18" role="img" aria-hidden="true" focusable="false">
 				<path d="M12 13.06l3.712 3.713 1.061-1.06L13.061 12l3.712-3.712-1.06-1.06L12 10.938 8.288 7.227l-1.061 1.06L10.939 12l-3.712 3.712 1.06 1.061L12 13.061z"></path>
@@ -174,14 +170,14 @@ $modal_content = ob_get_clean();
 		data-wp-on-async--keydown="actions.onReplyLinkKeydown"
 		data-wp-bind--hidden="context.hasRemoteUser"
 		data-wp-bind--aria-expanded="context.modal.isOpen"
-		aria-label="<?php echo esc_attr__( 'Reply on the Fediverse', 'activitypub' ); ?>"
+		aria-label="<?php esc_attr_e( 'Reply on the Fediverse', 'activitypub' ); ?>"
 		aria-haspopup="dialog"
 		aria-controls="modal-heading"
 		role="button"
 		tabindex="0"
 		hidden
 	>
-		<?php echo esc_html__( 'Reply on the Fediverse', 'activitypub' ); ?>
+		<?php esc_html_e( 'Reply on the Fediverse', 'activitypub' ); ?>
 	</a>
 
 	<?php
