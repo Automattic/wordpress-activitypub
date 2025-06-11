@@ -115,7 +115,7 @@ For reasons of data protection, it is not possible to see the followers of other
 - Reactions button color is now a little more theme agnostic.
 
 #### Fixed
-- "Account Aliases" for get saved correctly again and no longer return empty.
+- "Account Aliases" setting in user profiles get saved correctly again and no longer return empty.
 - Blocks updated in 6.0.0 are back to not showing up in feeds and federated posts.
 - Webfinger data from Pleroma instances no longer creates unexpected mention markup.
 

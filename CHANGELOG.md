@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reactions button color is now a little more theme agnostic. [#1795]
 
 ### Fixed
-- "Account Aliases" for get saved correctly again and no longer return empty. [#1798]
+- "Account Aliases" setting in user profiles get saved correctly again and no longer return empty. [#1798]
 - Blocks updated in 6.0.0 are back to not showing up in feeds and federated posts. [#1794]
 - Webfinger data from Pleroma instances no longer creates unexpected mention markup. [#1799]
 
