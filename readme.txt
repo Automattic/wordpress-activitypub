@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activity pub, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 6.0.1
+Stable tag: 6.0.2
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,15 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 6.0.2 - 2025-06-11
+#### Changed
+- Reactions button color is now a little more theme agnostic.
+
+#### Fixed
+- "Account Aliases" setting in user profiles get saved correctly again and no longer return empty.
+- Blocks updated in 6.0.0 are back to not showing up in feeds and federated posts.
+- Webfinger data from Pleroma instances no longer creates unexpected mention markup.
 
 ### 6.0.1 - 2025-06-09
 #### Fixed

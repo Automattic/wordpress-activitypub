@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.2] - 2025-06-11
+### Changed
+- Reactions button color is now a little more theme agnostic. [#1795]
+
+### Fixed
+- "Account Aliases" setting in user profiles get saved correctly again and no longer return empty. [#1798]
+- Blocks updated in 6.0.0 are back to not showing up in feeds and federated posts. [#1794]
+- Webfinger data from Pleroma instances no longer creates unexpected mention markup. [#1799]
+
 ## [6.0.1] - 2025-06-09
 ### Fixed
 - Added fallback for follower list during migration to new database schema. [#1781]
@@ -1260,6 +1269,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[6.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.1...6.0.2
 [6.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.0...6.0.1
 [6.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.2...6.0.0
 [5.9.2]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.1...5.9.2

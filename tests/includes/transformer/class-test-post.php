@@ -8,7 +8,6 @@
 namespace Activitypub\Tests\Transformer;
 
 use Activitypub\Transformer\Post;
-use ReflectionClass;
 
 /**
  * Test class for Post Transformer.
@@ -19,7 +18,7 @@ class Test_Post extends \WP_UnitTestCase {
 	/**
 	 * Reflection method for testing protected method.
 	 *
-	 * @var ReflectionMethod
+	 * @var \ReflectionMethod
 	 */
 	private $reflection_method;
 
@@ -32,7 +31,7 @@ class Test_Post extends \WP_UnitTestCase {
 		update_option( 'activitypub_object_type', 'wordpress-post-format' );
 
 		// Set up reflection method.
-		$reflection              = new ReflectionClass( Post::class );
+		$reflection              = new \ReflectionClass( Post::class );
 		$this->reflection_method = $reflection->getMethod( 'get_type' );
 		$this->reflection_method->setAccessible( true );
 	}
@@ -653,5 +652,51 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Check if the preview for a Note is null.
 		$this->assertNull( $note_preview );
+	}
+
+	/**
+	 * Test reply link generation.
+	 *
+	 * Pleroma prepends `acct:` to the webfinger identifier, which we'd want to normalize.
+	 *
+	 * @covers ::generate_reply_link
+	 */
+	public function test_generate_reply_link() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ), 10, 2 );
+
+		$transformer = new Post( self::factory()->post->create_and_get() );
+		$reply_link  = $transformer->generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
+
+		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ) );
+	}
+
+	/**
+	 * Filter pleroma object.
+	 *
+	 * @param array|string|null $response The response.
+	 * @param array|string|null $url      The Object URL.
+	 * @return string[]
+	 */
+	public function filter_pleroma_object( $response, $url ) {
+		if ( 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' === $url ) {
+			$response = array(
+				'type'         => 'Note',
+				'attributedTo' => 'https://devs.live/users/tester',
+				'content'      => 'Cake day it is',
+			);
+		}
+		if ( 'https://devs.live/users/tester' === $url ) {
+			$response = array(
+				'id'                => 'https://devs.live/users/tester',
+				'type'              => 'Person',
+				'preferredUsername' => 'tester',
+				'url'               => 'https://devs.live/users/tester',
+				'webfinger'         => 'acct:tester@devs.live',
+			);
+		}
+
+		return $response;
 	}
 }

@@ -7,6 +7,11 @@
 
 use Activitypub\Comment;
 use Activitypub\Blocks;
+use function Activitypub\is_activitypub_request;
+
+if ( is_activitypub_request() || is_feed() ) {
+	return;
+}
 
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes, array( 'align' => null ) );
