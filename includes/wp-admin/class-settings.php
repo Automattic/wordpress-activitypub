@@ -303,16 +303,11 @@ class Settings {
 	public static function settings_page() {
 		$show_welcome_tab  = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
 		$show_advanced_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true );
-		$default_tab       = $show_welcome_tab ? 'welcome' : 'settings';
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
-
-		// Redirect welcome tab to settings if skipped.
-		if ( 'welcome' === $tab && ! $show_welcome_tab ) {
-			$tab = 'settings';
-		}
-
-		$settings_tabs = array();
+		$settings_tabs     = array();
+		$settings_tab      = array(
+			'label'    => __( 'Settings', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
+		);
 
 		if ( $show_welcome_tab ) {
 			$settings_tabs['welcome'] = array(
@@ -321,10 +316,7 @@ class Settings {
 			);
 		}
 
-		$settings_tabs['settings'] = array(
-			'label'    => __( 'Settings', 'activitypub' ),
-			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
-		);
+		$settings_tabs['settings'] = $settings_tab;
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || $show_advanced_tab ) {
@@ -350,8 +342,21 @@ class Settings {
 		 *
 		 * @param array $settings_tabs The tabs to display.
 		 */
-		$custom_tabs   = \apply_filters( 'activitypub_admin_settings_tabs', array() );
-		$settings_tabs = \array_merge( $settings_tabs, $custom_tabs );
+		$settings_tabs = \apply_filters( 'activitypub_admin_settings_tabs', $settings_tabs );
+
+		if ( empty( $settings_tabs ) ) {
+			_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', 'unreleased' );
+			$settings_tabs['settings'] = $settings_tab;
+		}
+
+		$tab_keys    = array_keys( $settings_tabs );
+		$default_tab = reset( $tab_keys );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
+
+		if ( ! isset( $settings_tabs[ $tab ] ) ) {
+			$tab = $default_tab;
+		}
 
 		switch ( $tab ) {
 			case 'blog-profile':
@@ -370,14 +375,9 @@ class Settings {
 				break;
 		}
 
-		if ( ! isset( $settings_tabs[ $tab ] ) ) {
-			$tab = $default_tab;
-		}
-
 		// Only show tabs if there are more than one.
-		if ( \count( $settings_tabs ) <= 1 ) {
-			$labels = array();
-		} else {
+		$labels = array();
+		if ( \count( $settings_tabs ) > 1 ) {
 			$labels = \wp_list_pluck( $settings_tabs, 'label' );
 		}
 
