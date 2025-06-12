@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Names containing HTML entities now get displayed correctly in the Reactions block's list of users.
