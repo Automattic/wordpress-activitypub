@@ -235,9 +235,9 @@ class Interactions {
 		}
 
 		// Check Actor-Name.
-		if ( isset( $actor['name'] ) ) {
+		if ( ! empty( $actor['name'] ) ) {
 			$comment_author = $actor['name'];
-		} elseif ( isset( $actor['preferredUsername'] ) ) {
+		} elseif ( ! empty( $actor['preferredUsername'] ) ) {
 			$comment_author = $actor['preferredUsername'];
 		} else {
 			return false;
