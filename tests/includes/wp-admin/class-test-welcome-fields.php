@@ -16,10 +16,10 @@ use Activitypub\WP_Admin\Welcome_Fields;
  */
 class Test_Welcome_Fields extends \WP_UnitTestCase {
 	/**
-	 * Set up before class.
+	 * Set up.
 	 */
-	public static function set_up_before_class() {
-		parent::set_up_before_class();
+	public function set_up() {
+		parent::set_up();
 
 		Welcome_Fields::register_welcome_fields();
 	}
