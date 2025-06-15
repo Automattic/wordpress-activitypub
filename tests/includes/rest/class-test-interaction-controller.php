@@ -217,6 +217,5 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 */
 	public function follow_or_reply_url() {
 		return 'https://custom-follow-or-reply-url.com/?a=b&c=d';
-
 	}
 }
