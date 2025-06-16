@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Model\Blog;
 use Activitypub\Sanitize;
 
 /**
@@ -136,6 +137,7 @@ class Test_Sanitize extends \WP_UnitTestCase {
 			'with_dots'     => array( 'test.blog', 'test.blog' ),
 			'special_chars' => array( 'test@#$%^&*blog', 'testblog' ),
 			'multiple_dots' => array( 'test.blog.name', 'test.blog.name' ),
+			'empty_string'  => array( '', Blog::get_default_username() ),
 		);
 	}
 
