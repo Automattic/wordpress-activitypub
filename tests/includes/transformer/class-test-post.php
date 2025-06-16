@@ -422,6 +422,40 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_attachments with zero max_media_attachments.
+	 *
+	 * @covers ::get_attachments
+	 */
+	public function test_get_attachments_with_zero_max_media_attachments() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:image {"id":123} --><figure class="wp-block-image"><img src="test.jpg" alt="Test alt text" /></figure><!-- /wp:image -->',
+			)
+		);
+
+		\update_post_meta( $post_id, 'activitypub_max_image_attachments', 0 );
+		$post = get_post( $post_id );
+
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_attachment' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( $transformer );
+
+		$this->assertEmpty( $result );
+		$this->assertFalse( (bool) \did_filter( 'activitypub_attachment_ids' ) );
+
+		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
+
+		$result = $method->invoke( $transformer );
+		$this->assertTrue( (bool) \did_filter( 'activitypub_attachment_ids' ) );
+
+		\wp_delete_post( $post_id );
+	}
+
+	/**
 	 * Test get_media_from_blocks adds new image when none exist.
 	 *
 	 * @covers ::get_media_from_blocks

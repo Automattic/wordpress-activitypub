@@ -300,6 +300,10 @@ class Post extends Base {
 		 */
 		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
 
+		if ( 0 === $max_media ) {
+			return array();
+		}
+
 		$media = array(
 			'image' => array(),
 			'audio' => array(),
