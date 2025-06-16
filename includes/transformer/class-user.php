@@ -21,13 +21,7 @@ class User extends Base {
 	 * @return \Activitypub\Activity\Base_Object|\WP_Error The Actor or WP_Error on failure.
 	 */
 	public function to_object() {
-		$activity_object = $this->transform_object_properties( Actors::get_by_id( $this->item->ID ) );
-
-		if ( \is_wp_error( $activity_object ) ) {
-			return $activity_object;
-		}
-
-		return $activity_object;
+		return $this->transform_object_properties( Actors::get_by_id( $this->item->ID ) );
 	}
 
 	/**

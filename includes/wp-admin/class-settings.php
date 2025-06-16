@@ -62,9 +62,12 @@ class Settings {
 			'activitypub',
 			'activitypub_max_image_attachments',
 			array(
-				'type'        => 'integer',
-				'description' => \__( 'Number of images to attach to posts.', 'activitypub' ),
-				'default'     => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
+				'type'              => 'integer',
+				'description'       => \__( 'Number of images to attach to posts.', 'activitypub' ),
+				'default'           => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
+				'sanitize_callback' => function ( $value ) {
+					return \is_numeric( $value ) ? \absint( $value ) : ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
+				},
 			)
 		);
 
@@ -184,7 +187,17 @@ class Settings {
 			array(
 				'type'        => 'boolean',
 				'description' => \__( 'Add the Vary header to the ActivityPub response.', 'activitypub' ),
-				'default'     => false,
+				'default'     => true,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_content_negotiation',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable content negotiation.',
+				'default'     => true,
 			)
 		);
 
@@ -345,10 +358,15 @@ class Settings {
 				\wp_enqueue_media();
 				\wp_enqueue_script( 'activitypub-header-image' );
 				break;
-			case 'welcome':
-				\wp_enqueue_script( 'plugin-install' );
-				\add_thickbox();
-				\wp_enqueue_script( 'updates' );
+			case 'settings':
+				\update_option( 'activitypub_checklist_settings_visited', '1' );
+				break;
+			default:
+				if ( isset( $_GET['help-tab'] ) && 'getting-started' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+					\update_option( 'activitypub_checklist_fediverse_intro_visited', '1' );
+				} elseif ( isset( $_GET['help-tab'] ) && 'editor-blocks' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+					\update_option( 'activitypub_checklist_blocks_visited', '1' );
+				}
 				break;
 		}
 
@@ -375,132 +393,114 @@ class Settings {
 	 * Adds the ActivityPub settings to the Help tab.
 	 */
 	public static function add_settings_help_tab() {
-		$code_html   = array( 'code' => array() );
-		$anchor_html = array(
-			'a' => array(
-				'href'   => true,
-				'target' => true,
-			),
-		);
-
-		if ( user_can_activitypub( \get_current_user_id() ) ) {
-			$webfinger = Actors::get_by_id( \get_current_user_id() )->get_webfinger();
-		} else {
-			$webfinger = ( new Blog() )->get_webfinger();
-		}
-
+		// Getting Started / Introduction to the Fediverse.
 		\get_current_screen()->add_help_tab(
 			array(
-				'id'      => 'template-tags',
-				'title'   => \__( 'Template Tags', 'activitypub' ),
-				'content' => '<h2>' . \esc_html__( 'The following Template Tags are available:', 'activitypub' ) . '</h2>' . "\n" .
-					'<dl>' . "\n" .
-						'<dt><code>[ap_title]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s title.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_content apply_filters="yes"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s content. With <code>apply_filters</code> you can decide if filters (<code>apply_filters( \'the_content\', $content )</code>) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-						'<dt><code>[ap_excerpt length="400"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s excerpt (uses <code>the_excerpt</code> if that is set). If no excerpt is provided, will truncate at <code>length</code> (optional, default = 400).', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-						'<dt><code>[ap_permalink type="url"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s permalink. <code>type</code> can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-						'<dt><code>[ap_shortlink type="url"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s shortlink. <code>type</code> can be either <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-						'<dt><code>[ap_hashtags]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s tags as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_hashcats]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s categories as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_image type=full]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( __( 'The URL for the post&#8217;s featured image, defaults to full size. The type attribute can be any of the following: <code>thumbnail</code>, <code>medium</code>, <code>large</code>, <code>full</code>. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-						'<dt><code>[ap_author]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The author&#8217;s name.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_authorurl]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The URL to the author&#8217;s profile page.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_date]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s date.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_time]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s time.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_datetime]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s date/time formated as "date @ time".', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_blogurl]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The URL to the site.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_blogname]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The name of the site.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_blogdesc]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The description of the site.', 'activitypub' ) . '</dd>' . "\n" .
-					'</dl>' . "\n" .
-					'<p>' . \esc_html__( 'You may also use any Shortcode normally available to you on your site, however be aware that Shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \esc_html__( 'Note: the old Template Tags are now deprecated and automatically converted to the new ones.', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues/new" target="_blank">Let us know</a> if you miss a Template Tag.', 'activitypub' ), $anchor_html ) . '</p>',
+				'id'      => 'getting-started',
+				'title'   => \__( 'Getting Started', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'getting-started' ),
 			)
 		);
 
+		// Core Features.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'core-features',
+				'title'   => \__( 'Core Features', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'core-features' ),
+			)
+		);
+
+		// Editor Blocks.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'editor-blocks',
+				'title'   => \__( 'Editor Blocks', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'editor-blocks' ),
+			)
+		);
+
+		// Account Migration.
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'account-migration',
 				'title'   => \__( 'Account Migration', 'activitypub' ),
-				'content' =>
-					'<h2>' . \esc_html__( 'Migrating Between Mastodon and WordPress', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'The ActivityPub plugin allows you to migrate your account between WordPress and Mastodon (or other ActivityPub-compatible platforms) while bringing your followers with you.', 'activitypub' ) . '</p>' . "\n" .
-
-					'<h3>' . \esc_html__( 'Migrating from Mastodon to WordPress', 'activitypub' ) . '</h3>' . "\n" .
-					'<ol>' . "\n" .
-					'<li>' . \wp_kses(
-						\sprintf(
-							/* translators: %s is the URL to the profile page */
-							\__( 'In your WordPress profile, go to the <a href="%s">Account Aliases</a> section and add your Mastodon profile URL (e.g., <code>https://mastodon.social/@username</code>).', 'activitypub' ),
-							\esc_url( \admin_url( 'profile.php#activitypub_blog_user_also_known_as' ) )
-						),
-						array_merge( $code_html, $anchor_html )
-					) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Save your WordPress profile changes.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Log in to your Mastodon account.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Go to Preferences > Account > Move to a different account.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \wp_kses(
-						\sprintf(
-							/* translators: %s is the user's ActivityPub username */
-							\__( 'Enter your WordPress ActivityPub username (e.g., <code>%s</code>) in the "Handle of the new account" field.', 'activitypub' ),
-							\esc_html( $webfinger )
-						),
-						$code_html
-					) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Confirm the migration in Mastodon by entering your password.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Your followers will be notified and redirected to follow your WordPress account.', 'activitypub' ) . '</li>' . "\n" .
-					'</ol>' . "\n",
+				'content' => self::get_help_tab_template( 'account-migration' ),
 			)
 		);
 
-		/* translators: %s: Link to more information */
-		$info_string = \esc_html__( 'For more information please visit %s.', 'activitypub' );
+		// Template Tags.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'template-tags',
+				'title'   => \__( 'Template Tags', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'template-tags' ),
+			)
+		);
 
+		// Recommended Plugins.
+		if ( ! empty( self::get_recommended_plugins() ) ) {
+			\get_current_screen()->add_help_tab(
+				array(
+					'id'      => 'recommended-plugins',
+					'title'   => __( 'Recommended Plugins', 'activitypub' ),
+					'content' =>
+						'<h2>' . esc_html__( 'Supercharge Your Fediverse Experience', 'activitypub' ) . '</h2>' .
+						'<p>' . esc_html__( 'Enhance your WordPress ActivityPub setup with these hand-picked plugins, each adding unique capabilities for a richer Fediverse experience.', 'activitypub' ) . '</p>' .
+						self::render_recommended_plugins_list(),
+				)
+			);
+		}
+
+		// Troubleshooting.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'troubleshooting',
+				'title'   => \__( 'Troubleshooting', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'troubleshooting' ),
+			)
+		);
+
+		// Glossary.
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'glossary',
 				'title'   => \__( 'Glossary', 'activitypub' ),
-				'content' =>
-					'<h2>' . \esc_html__( 'Fediverse', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'The Fediverse is a new word made of two words: "federation" + "universe"', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \esc_html__( 'It is a federated social network running on free open software on a myriad of computers across the globe. Many independent servers are interconnected and allow people to interact with one another. There&#8217;s no one central site: you choose a server to register. This ensures some decentralization and sovereignty of data. Fediverse (also called Fedi) has no built-in advertisements, no tricky algorithms, no one big corporation dictating the rules. Instead we have small cozy communities of like-minded people. Welcome!', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \sprintf( $info_string, '<a href="https://fediverse.party/" target="_blank">fediverse.party</a>' ) . '</p>' . "\n" .
-
-					'<h2>' . \esc_html__( 'ActivityPub', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'ActivityPub is a decentralized social networking protocol based on the ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended standard published by the W3C Social Web Working Group. It provides a client to server API for creating, updating and deleting content, as well as a federated server to server API for delivering notifications and subscribing to content.', 'activitypub' ) . '</p>' . "\n" .
-
-					'<h2>' . \esc_html__( 'WebFinger', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'WebFinger is used to discover information about people or other entities on the Internet that are identified by a URI using standard Hypertext Transfer Protocol (HTTP) methods over a secure transport. A WebFinger resource returns a JavaScript Object Notation (JSON) object describing the entity that is queried. The JSON object is referred to as the JSON Resource Descriptor (JRD).', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \esc_html__( 'For a person, the type of information that might be discoverable via WebFinger includes a personal profile address, identity service, telephone number, or preferred avatar. For other entities on the Internet, a WebFinger resource might return JRDs containing link relations that enable a client to discover, for example, that a printer can print in color on A4 paper, the physical location of a server, or other static information.', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \wp_kses( \__( 'On Mastodon [and other platforms], user profiles can be hosted either locally on the same website as yours, or remotely on a completely different website. The same username may be used on a different domain. Therefore, a Mastodon user&#8217;s full mention consists of both the username and the domain, in the form <code>@username@domain</code>. In practical terms, <code>@user@example.com</code> is not the same as <code>@user@example.org</code>. If the domain is not included, Mastodon will try to find a local user named <code>@username</code>. However, in order to deliver to someone over ActivityPub, the <code>@username@domain</code> mention is not enough – mentions must be translated to an HTTPS URI first, so that the remote actor&#8217;s inbox and outbox can be found. (This paragraph is copied from the <a href="https://docs.joinmastodon.org/spec/webfinger/" target="_blank">Mastodon Documentation</a>)', 'activitypub' ), array_merge( $code_html, $anchor_html ) ) . '</p>' . "\n" .
-					'<p>' . \sprintf( $info_string, '<a href="https://webfinger.net/" target="_blank">webfinger.net</a>' ) . '</p>' . "\n" .
-
-					'<h2>' . \esc_html__( 'NodeInfo', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'NodeInfo is an effort to create a standardized way of exposing metadata about a server running one of the distributed social networks. The two key goals are being able to get better insights into the user base of distributed social networking and the ability to build tools that allow users to choose the best fitting software and server for their needs.', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \sprintf( $info_string, '<a href="http://nodeinfo.diaspora.software/" target="_blank">nodeinfo.diaspora.software</a>' ) . '</p>',
+				'content' => self::get_help_tab_template( 'glossary' ),
 			)
 		);
 
+		// Resources.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'resources',
+				'title'   => \__( 'Resources', 'activitypub' ),
+				'content' => self::get_help_tab_template( 'resources' ),
+			)
+		);
+
+		// Enhanced Help Sidebar.
 		\get_current_screen()->set_help_sidebar(
 			'<p><strong>' . \__( 'For more information:', 'activitypub' ) . '</strong></p>' . "\n" .
-			'<p>' . \__( '<a href="https://wordpress.org/support/plugin/activitypub/">Get support</a>', 'activitypub' ) . '</p>' . "\n" .
-			'<p>' . \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues">Report an issue</a>', 'activitypub' ) . '</p>'
+			'<p><a href="https://wordpress.org/support/plugin/activitypub/">' . \esc_html__( 'Get support', 'activitypub' ) . '</a></p>' . "\n" .
+			'<p><a href="https://github.com/Automattic/wordpress-activitypub/issues">' . \esc_html__( 'Report an issue', 'activitypub' ) . '</a></p>' . "\n" .
+			'<p><a href="https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs">' . \esc_html__( 'Documentation', 'activitypub' ) . '</a></p>' . "\n" .
+			'<p><a href="https://github.com/Automattic/wordpress-activitypub/releases">' . \esc_html__( 'View latest changes', 'activitypub' ) . '</a></p>'
+		);
+	}
+
+	/**
+	 * Adds the ActivityPub help tab to the users page.
+	 */
+	public static function add_users_help_tab() {
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'       => 'activitypub',
+				'title'    => \__( 'ActivityPub', 'activitypub' ),
+				'content'  => self::get_help_tab_template( 'users' ),
+				// Add to the end of the list.
+				'priority' => 20,
+			)
 		);
 	}
 
@@ -587,5 +587,146 @@ class Settings {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Returns an array of recommended plugins for ActivityPub.
+	 */
+	public static function get_recommended_plugins() {
+		$plugins = array();
+
+		if ( ! \is_plugin_active( 'friends/friends.php' ) ) {
+			$plugins['friends'] = array(
+				'slug'        => 'friends',
+				'author'      => 'Alex Kirk',
+				'author_url'  => 'https://profiles.wordpress.org/akirk/',
+				'icon'        => 'https://ps.w.org/friends/assets/icon-256x256.png',
+				'name'        => \__( 'Friends', 'activitypub' ),
+				'description' => \__( 'Follow people on Mastodon or similar platforms and display their posts on your WordPress, making your site a true Fediverse instance.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=friends&TB_iframe=true' ),
+			);
+		}
+
+		if ( ! \is_plugin_active( 'event-bridge-for-activitypub/event-bridge-for-activitypub.php' ) ) {
+			$plugins['event_bridge'] = array(
+				'slug'        => 'event-bridge-for-activitypub',
+				'author'      => 'André Menrath',
+				'author_url'  => 'https://profiles.wordpress.org/andremenrath/',
+				'icon'        => 'https://ps.w.org/event-bridge-for-activitypub/assets/icon-256x256.gif',
+				'name'        => \__( 'Event Bridge for ActivityPub', 'activitypub' ),
+				'description' => \__( 'Make your events discoverable and federate them across decentralized platforms like Mastodon or Gancio.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=event-bridge-for-activitypub&TB_iframe=true' ),
+			);
+		}
+
+		if ( ! \is_plugin_active( 'enable-mastodon-apps/enable-mastodon-apps.php' ) ) {
+			$plugins['enable_mastodon_apps'] = array(
+				'slug'        => 'enable-mastodon-apps',
+				'author'      => 'Alex Kirk',
+				'author_url'  => 'https://profiles.wordpress.org/akirk/',
+				'icon'        => 'https://ps.w.org/enable-mastodon-apps/assets/icon-256x256.png',
+				'name'        => \__( 'Enable Mastodon Apps', 'activitypub' ),
+				'description' => \__( 'Allow Mastodon apps to interact with your WordPress site, letting you write posts from your favorite app.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=enable-mastodon-apps&TB_iframe=true' ),
+			);
+		}
+
+		if ( ! \is_plugin_active( 'hum/hum.php' ) ) {
+			$plugins['hum'] = array(
+				'slug'        => 'hum',
+				'author'      => 'Will Norris',
+				'author_url'  => 'https://profiles.wordpress.org/willnorris/',
+				'icon'        => 'https://s.w.org/plugins/geopattern-icon/hum.svg',
+				'name'        => \__( 'Hum', 'activitypub' ),
+				'description' => \__( 'A personal URL shortener for WordPress, perfect for sharing short links on the Fediverse.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=hum&TB_iframe=true' ),
+			);
+		}
+
+		if ( ! \is_plugin_active( 'webfinger/webfinger.php' ) ) {
+			$plugins['webfinger'] = array(
+				'slug'        => 'webfinger',
+				'author'      => 'Matthias Pfefferle',
+				'author_url'  => 'https://profiles.wordpress.org/pfefferle/',
+				'icon'        => 'https://ps.w.org/webfinger/assets/icon-256x256.png',
+				'name'        => \__( 'WebFinger', 'activitypub' ),
+				'description' => \__( 'WebFinger protocol support for better discovery and compatibility.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=webfinger&TB_iframe=true' ),
+			);
+		}
+
+		if ( ! \is_plugin_active( 'nodeinfo/nodeinfo.php' ) ) {
+			$plugins['nodeinfo'] = array(
+				'slug'        => 'nodeinfo',
+				'author'      => 'Matthias Pfefferle',
+				'author_url'  => 'https://profiles.wordpress.org/pfefferle/',
+				'icon'        => 'https://ps.w.org/nodeinfo/assets/icon-256x256.png',
+				'name'        => \__( 'NodeInfo', 'activitypub' ),
+				'description' => \__( 'Advanced NodeInfo protocol support for better discovery and compatibility.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=nodeinfo&TB_iframe=true' ),
+			);
+		}
+
+		return $plugins;
+	}
+
+	/**
+	 * Render recommended plugins as a beautiful, rich showcase for the help tab.
+	 */
+	public static function render_recommended_plugins_list() {
+		$plugins = self::get_recommended_plugins();
+
+		\ob_start();
+
+		echo '<div class="plugin-list widefat">';
+
+		foreach ( $plugins as $plugin ) :
+			?>
+			<div class="plugin-card plugin-card-<?php echo \esc_attr( $plugin['slug'] ); ?>">
+				<div class="plugin-card-top">
+					<div class="name column-name">
+						<h3>
+							<a href="<?php echo \esc_url( $plugin['install_url'] ); ?>" class="thickbox open-plugin-details-modal">
+								<?php echo \esc_html( $plugin['name'] ); ?>
+								<img src="<?php echo \esc_url( $plugin['icon'] ); ?>" class="plugin-icon" alt="">
+							</a>
+						</h3>
+					</div>
+					<div class="action-links">
+						<ul class="plugin-action-buttons">
+							<li>
+								<a href="<?php echo \esc_url( $plugin['install_url'] ); ?>" class="button thickbox open-plugin-details-modal"><?php \esc_html_e( 'More Details', 'activitypub' ); ?></a>
+							</li>
+						</ul>
+					</div>
+					<div class="desc column-description">
+						<p><?php echo \esc_html( $plugin['description'] ); ?></p>
+						<p class="authors"> <cite>By <a href="<?php echo \esc_url( $plugin['author_url'] ); ?>"><?php echo \esc_html( $plugin['author'] ); ?></a></cite></p>
+					</div>
+				</div>
+			</div>
+			<?php
+		endforeach;
+
+		echo '</div>';
+
+		return \ob_get_clean();
+	}
+
+	/**
+	 * Loads a help tab template.
+	 *
+	 * @param string $template_name The template file name (without ".php").
+	 * @return string Rendered template output.
+	 */
+	private static function get_help_tab_template( $template_name ) {
+		$template_path = ACTIVITYPUB_PLUGIN_DIR . 'templates/help-tab/' . $template_name . '.php';
+		if ( ! file_exists( $template_path ) ) {
+			return '';
+		}
+
+		ob_start();
+		load_template( $template_path, false );
+		return ob_get_clean();
 	}
 }

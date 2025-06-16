@@ -2,7 +2,7 @@
 /**
  * Test file for Delete handler.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Handler;

@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Exception;
+use Activitypub\Options;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
@@ -90,39 +91,7 @@ class Activitypub {
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
 
-		\delete_option( 'activitypub_actor_mode' );
-		\delete_option( 'activitypub_allow_likes' );
-		\delete_option( 'activitypub_allow_replies' );
-		\delete_option( 'activitypub_attribution_domains' );
-		\delete_option( 'activitypub_authorized_fetch' );
-		\delete_option( 'activitypub_application_user_private_key' );
-		\delete_option( 'activitypub_application_user_public_key' );
-		\delete_option( 'activitypub_blog_user_also_known_as' );
-		\delete_option( 'activitypub_blog_user_mailer_new_dm' );
-		\delete_option( 'activitypub_blog_user_mailer_new_follower' );
-		\delete_option( 'activitypub_blog_user_mailer_new_mention' );
-		\delete_option( 'activitypub_blog_user_moved_to' );
-		\delete_option( 'activitypub_blog_user_private_key' );
-		\delete_option( 'activitypub_blog_user_public_key' );
-		\delete_option( 'activitypub_blog_description' );
-		\delete_option( 'activitypub_blog_identifier' );
-		\delete_option( 'activitypub_custom_post_content' );
-		\delete_option( 'activitypub_db_version' );
-		\delete_option( 'activitypub_default_extra_fields' );
-		\delete_option( 'activitypub_enable_blog_user' );
-		\delete_option( 'activitypub_enable_users' );
-		\delete_option( 'activitypub_header_image' );
-		\delete_option( 'activitypub_last_post_with_permalink_as_id' );
-		\delete_option( 'activitypub_max_image_attachments' );
-		\delete_option( 'activitypub_migration_lock' );
-		\delete_option( 'activitypub_object_type' );
-		\delete_option( 'activitypub_outbox_purge_days' );
-		\delete_option( 'activitypub_shared_inbox' );
-		\delete_option( 'activitypub_support_post_types' );
-		\delete_option( 'activitypub_use_hashtags' );
-		\delete_option( 'activitypub_use_opengraph' );
-		\delete_option( 'activitypub_use_permalink_as_id_for_blog' );
-		\delete_option( 'activitypub_vary_header' );
+		Options::delete();
 	}
 
 	/**
@@ -139,7 +108,11 @@ class Activitypub {
 
 		self::add_headers();
 
-		if ( ! is_activitypub_request() ) {
+		if ( ! is_activitypub_request() || ! should_negotiate_content() ) {
+			if ( \get_query_var( 'p' ) && Outbox::POST_TYPE === \get_post_type( \get_query_var( 'p' ) ) ) {
+				\set_query_var( 'is_404', true );
+				\status_header( 406 );
+			}
 			return $template;
 		}
 
@@ -170,7 +143,7 @@ class Activitypub {
 		if ( $activitypub_template && use_authorized_fetch() ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
-				header( 'HTTP/1.1 401 Unauthorized' );
+				\status_header( 401 );
 
 				// Fallback as template_loader can't return http headers.
 				return $template;
@@ -205,7 +178,7 @@ class Activitypub {
 		if ( ! headers_sent() ) {
 			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 
-			if ( \get_option( 'activitypub_vary_header' ) ) {
+			if ( \get_option( 'activitypub_vary_header', '1' ) ) {
 				// Send Vary header for Accept header.
 				\header( 'Vary: Accept', false );
 			}
@@ -482,7 +455,7 @@ class Activitypub {
 	 */
 	private static function register_post_types() {
 		\register_post_type(
-			Followers::POST_TYPE,
+			Actors::POST_TYPE,
 			array(
 				'labels'           => array(
 					'name'          => _x( 'Followers', 'post_type plural name', 'activitypub' ),
@@ -499,7 +472,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Followers::POST_TYPE,
+			Actors::POST_TYPE,
 			'_activitypub_inbox',
 			array(
 				'type'              => 'string',
@@ -509,7 +482,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Followers::POST_TYPE,
+			Actors::POST_TYPE,
 			'_activitypub_errors',
 			array(
 				'type'              => 'string',
@@ -525,25 +498,13 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Followers::POST_TYPE,
-			'_activitypub_user_id',
+			Actors::POST_TYPE,
+			Followers::FOLLOWER_META_KEY,
 			array(
 				'type'              => 'string',
 				'single'            => false,
 				'sanitize_callback' => function ( $value ) {
 					return esc_sql( $value );
-				},
-			)
-		);
-
-		\register_post_meta(
-			Followers::POST_TYPE,
-			'_activitypub_actor_json',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => function ( $value ) {
-					return sanitize_text_field( $value );
 				},
 			)
 		);

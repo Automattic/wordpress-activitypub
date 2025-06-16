@@ -33,7 +33,7 @@ if ( ! function_exists( 'is_countable' ) ) {
 	 * @return bool True if `$value` is countable, otherwise false.
 	 */
 	function is_countable( $value ) {
-		return is_array( $value ) || $value instanceof \Countable;
+		return is_array( $value ) || $value instanceof Countable;
 	}
 }
 
@@ -94,18 +94,5 @@ if ( ! function_exists( 'str_contains' ) ) {
 		}
 
 		return false !== strpos( $haystack, $needle );
-	}
-}
-
-if ( ! function_exists( 'wp_is_serving_rest_request' ) ) {
-	/**
-	 * Polyfill for `wp_is_serving_rest_request()` function added in WordPress 6.5.
-	 *
-	 * @see https://developer.wordpress.org/reference/functions/wp_is_serving_rest_request/
-	 *
-	 * @return bool True if it's a WordPress REST API request, false otherwise.
-	 */
-	function wp_is_serving_rest_request() {
-		return defined( 'REST_REQUEST' ) && REST_REQUEST;
 	}
 }

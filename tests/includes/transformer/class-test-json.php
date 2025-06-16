@@ -2,7 +2,7 @@
 /**
  * Test file for JSON transformer.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Transformer;

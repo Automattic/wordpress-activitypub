@@ -7,13 +7,12 @@
 
 namespace Activitypub\Transformer;
 
-use WP_Comment;
-use WP_Post;
-use WP_Term;
-
+use Activitypub\Http;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Activity\Base_Object;
+
+use function Activitypub\object_to_uri;
 
 /**
  * WordPress Base Transformer.
@@ -27,7 +26,7 @@ abstract class Base {
 	 *
 	 * This is the source object of the transformer.
 	 *
-	 * @var WP_Post|WP_Comment|Base_Object|string|array|WP_Term
+	 * @var \WP_Post|\WP_Comment|Base_Object|string|array|\WP_Term
 	 */
 	protected $item;
 
@@ -36,7 +35,7 @@ abstract class Base {
 	 *
 	 * @deprecated version 5.0.0
 	 *
-	 * @var WP_Post|WP_Comment
+	 * @var \WP_Post|\WP_Comment
 	 */
 	protected $wp_object;
 
@@ -52,7 +51,7 @@ abstract class Base {
 	 *
 	 * This helps to chain the output of the Transformer.
 	 *
-	 * @param WP_Post|WP_Comment|Base_Object|string|array|WP_term $item The item that should be transformed.
+	 * @param \WP_Post|\WP_Comment|Base_Object|string|array|\WP_term $item The item that should be transformed.
 	 *
 	 * @return Base
 	 */
@@ -63,7 +62,7 @@ abstract class Base {
 	/**
 	 * Base constructor.
 	 *
-	 * @param WP_Post|WP_Comment|Base_Object|string|array|WP_Term $item The item that should be transformed.
+	 * @param \WP_Post|\WP_Comment|Base_Object|string|array|\WP_Term $item The item that should be transformed.
 	 */
 	public function __construct( $item ) {
 		$this->item      = $item;
@@ -121,7 +120,7 @@ abstract class Base {
 	/**
 	 * Transform the item into an ActivityPub Object.
 	 *
-	 * @return Base_Object|object The Activity-Object.
+	 * @return Base_Object The Activity-Object.
 	 */
 	public function to_object() {
 		$activity_object = new Base_Object();
@@ -131,9 +130,7 @@ abstract class Base {
 			return $activity_object;
 		}
 
-		$activity_object = $this->set_audience( $activity_object );
-
-		return $activity_object;
+		return $this->set_audience( $activity_object );
 	}
 
 	/**
@@ -168,28 +165,40 @@ abstract class Base {
 	 * @return Base_Object The ActivityPub Object.
 	 */
 	protected function set_audience( $activity_object ) {
-		$public = 'https://www.w3.org/ns/activitystreams#Public';
-		$actor  = Actors::get_by_resource( $this->get_attributed_to() );
-		if ( ! $actor || is_wp_error( $actor ) ) {
-			$followers = null;
-		} else {
+		$public     = 'https://www.w3.org/ns/activitystreams#Public';
+		$followers  = null;
+		$replied_to = null;
+
+		$actor = Actors::get_by_resource( $this->get_attributed_to() );
+		if ( ! \is_wp_error( $actor ) ) {
 			$followers = $actor->get_followers();
 		}
+
 		$mentions = array_values( $this->get_mentions() );
+
+		if ( $this->get_in_reply_to() ) {
+			$object = Http::get_remote_object( $this->get_in_reply_to() );
+			if ( $object && ! \is_wp_error( $object ) && isset( $object['attributedTo'] ) ) {
+				$replied_to = array( object_to_uri( $object['attributedTo'] ) );
+			}
+		}
 
 		switch ( $this->get_content_visibility() ) {
 			case ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC:
 				$activity_object->add_to( $public );
 				$activity_object->add_cc( $followers );
 				$activity_object->add_cc( $mentions );
+				$activity_object->add_cc( $replied_to );
 				break;
 			case ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC:
 				$activity_object->add_to( $followers );
 				$activity_object->add_to( $mentions );
+				$activity_object->add_to( $replied_to );
 				$activity_object->add_cc( $public );
 				break;
 			case ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE:
 				$activity_object->add_to( $mentions );
+				$activity_object->add_to( $replied_to );
 		}
 
 		return $activity_object;
@@ -236,28 +245,6 @@ abstract class Base {
 	 */
 	protected function get_locale() {
 		$lang = \strtolower( \strtok( \get_locale(), '_-' ) );
-
-		if ( $this->item instanceof \WP_Post ) {
-			/**
-			 * Deprecates the `activitypub_post_locale` filter.
-			 *
-			 * @param string $lang The locale of the post.
-			 * @param mixed  $item The post object.
-			 *
-			 * @return string The filtered locale of the post.
-			 */
-			$lang = apply_filters_deprecated(
-				'activitypub_post_locale',
-				array(
-					$lang,
-					$this->item->ID,
-					$this->item,
-				),
-				'5.4.0',
-				'activitypub_locale',
-				'Use the `activitypub_locale` filter instead.'
-			);
-		}
 
 		/**
 		 * Filter the locale of the post.
@@ -372,9 +359,9 @@ abstract class Base {
 		/**
 		 * Filter the mentions in the post content.
 		 *
-		 * @param array   $mentions The mentions.
-		 * @param string  $content  The post content.
-		 * @param WP_Post $post     The post object.
+		 * @param array    $mentions The mentions.
+		 * @param string   $content  The post content.
+		 * @param \WP_Post $post     The post object.
 		 *
 		 * @return array The filtered mentions.
 		 */
@@ -384,5 +371,14 @@ abstract class Base {
 			$content,
 			$this->item
 		);
+	}
+
+	/**
+	 * Returns the in reply to.
+	 *
+	 * @return string|array|null The in reply to.
+	 */
+	protected function get_in_reply_to() {
+		return null;
 	}
 }

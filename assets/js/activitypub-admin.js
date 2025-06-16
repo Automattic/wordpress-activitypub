@@ -17,5 +17,4 @@ jQuery( function( $ ) {
 			$( '.activate-now' ).removeClass( 'thickbox open-plugin-details-modal' );
 		}, 1200 );
 	} );
-
 } );

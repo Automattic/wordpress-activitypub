@@ -2,10 +2,14 @@
 /**
  * ActivityPub Blog Settings Fields Handler.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\WP_Admin;
+
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Extra_Fields;
+use Activitypub\Model\Blog;
 
 /**
  * Class to handle all blog settings fields and callbacks.
@@ -161,7 +165,7 @@ class Blog_Settings_Fields {
 	public static function profile_id_callback() {
 		?>
 		<label for="activitypub_blog_identifier">
-			<input id="activitypub_blog_identifier" class="blog-user-identifier" name="activitypub_blog_identifier" type="text" value="<?php echo esc_attr( get_option( 'activitypub_blog_identifier', \Activitypub\Model\Blog::get_default_username() ) ); ?>" />
+			<input id="activitypub_blog_identifier" class="blog-user-identifier" name="activitypub_blog_identifier" type="text" value="<?php echo esc_attr( get_option( 'activitypub_blog_identifier', Blog::get_default_username() ) ); ?>" />
 			@<?php echo esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>
 		</label>
 		<p class="description">
@@ -234,7 +238,7 @@ class Blog_Settings_Fields {
 
 		<table class="widefat striped activitypub-extra-fields" role="presentation" style="margin: 15px 0;">
 		<?php
-		$extra_fields = \Activitypub\Collection\Extra_Fields::get_actor_fields( \Activitypub\Collection\Actors::BLOG_USER_ID );
+		$extra_fields = Extra_Fields::get_actor_fields( Actors::BLOG_USER_ID );
 
 		if ( empty( $extra_fields ) ) :
 			?>

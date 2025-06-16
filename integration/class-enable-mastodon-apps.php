@@ -329,7 +329,7 @@ class Enable_Mastodon_Apps {
 
 	/**
 	 * Use our representation of posts to power each status item.
-	 * Includes proper referncing of 3rd party comments that arrived via federation.
+	 * Includes proper referencing of 3rd party comments that arrived via federation.
 	 *
 	 * @param null|Status $status The status, typically null to allow later filters their shot.
 	 * @param int         $post_id The post ID.

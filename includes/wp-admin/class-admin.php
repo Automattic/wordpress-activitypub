@@ -10,6 +10,8 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Comment;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Model\Blog;
+
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
 use function Activitypub\is_user_type_disabled;
@@ -151,7 +153,7 @@ class Admin {
 
 		// User options that should be processed with `sanitize_textarea_field()`.
 		$textarea_field_user_options = array(
-			'activitypub_blog_user_also_known_as',
+			'activitypub_also_known_as',
 			'activitypub_description',
 		);
 
@@ -221,10 +223,15 @@ class Admin {
 					'assets/js/activitypub-admin.js',
 					ACTIVITYPUB_PLUGIN_FILE
 				),
-				array( 'jquery' ),
+				array( 'jquery', 'wp-util' ),
 				ACTIVITYPUB_PLUGIN_VERSION,
 				false
 			);
+
+			// Plugin cards in help tab.
+			\wp_enqueue_script( 'plugin-install' );
+			\add_thickbox();
+			\wp_enqueue_script( 'updates' );
 		}
 
 		if ( 'index.php' === $hook_suffix ) {
@@ -249,16 +256,16 @@ class Admin {
 		// Disable the edit_comment capability for federated comments.
 		\add_filter(
 			'user_has_cap',
-			function ( $allcaps, $caps, $arg ) {
+			function ( $all_caps, $caps, $arg ) {
 				if ( 'edit_comment' !== $arg[0] ) {
-					return $allcaps;
+					return $all_caps;
 				}
 
 				if ( was_comment_received( $arg[2] ) ) {
 					return false;
 				}
 
-				return $allcaps;
+				return $all_caps;
 			},
 			1,
 			3
@@ -274,22 +281,22 @@ class Admin {
 		// Disable the edit_post capability for federated posts.
 		\add_filter(
 			'user_has_cap',
-			function ( $allcaps, $caps, $arg ) {
+			function ( $all_caps, $caps, $arg ) {
 				if ( 'edit_post' !== $arg[0] ) {
-					return $allcaps;
+					return $all_caps;
 				}
 
 				$post = get_post( $arg[2] );
 
 				if ( ! Extra_Fields::is_extra_field_post_type( $post->post_type ) ) {
-					return $allcaps;
+					return $all_caps;
 				}
 
-				if ( (int) get_current_user_id() !== (int) $post->post_author ) {
+				if ( get_current_user_id() !== (int) $post->post_author ) {
 					return false;
 				}
 
-				return $allcaps;
+				return $all_caps;
 			},
 			1,
 			3
@@ -335,8 +342,7 @@ class Admin {
 	 */
 	public static function comment_row_actions( $actions, $comment ) {
 		if ( was_comment_received( $comment ) ) {
-			unset( $actions['edit'] );
-			unset( $actions['quickedit'] );
+			unset( $actions['edit'], $actions['quickedit'] );
 		}
 
 		if ( in_array( get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
@@ -485,18 +491,18 @@ class Admin {
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
 	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users.
 	 *
-	 * @param string $sendback The URL to send the user back to.
-	 * @param string $action   The requested action.
-	 * @param array  $users    The selected users.
+	 * @param string $send_back The URL to send the user back to.
+	 * @param string $action    The requested action.
+	 * @param array  $users     The selected users.
 	 *
 	 * @return string The URL to send the user back to.
 	 */
-	public static function handle_bulk_request( $sendback, $action, $users ) {
+	public static function handle_bulk_request( $send_back, $action, $users ) {
 		if (
 			'remove_activitypub_cap' !== $action &&
 			'add_activitypub_cap' !== $action
 		) {
-			return $sendback;
+			return $send_back;
 		}
 
 		foreach ( $users as $user_id ) {
@@ -508,7 +514,7 @@ class Admin {
 			}
 		}
 
-		return $sendback;
+		return $send_back;
 	}
 
 	/**
@@ -519,7 +525,7 @@ class Admin {
 	 * @return array The extended glance items.
 	 */
 	public static function dashboard_glance_items( $items ) {
-		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
+		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 2 );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$follower_count = sprintf(
@@ -625,7 +631,7 @@ class Admin {
 	}
 
 	/**
-	 * Adds metabox on wp-admin/tools.php.
+	 * Adds meta box on wp-admin/tools.php.
 	 */
 	public static function tool_box() {
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
@@ -649,18 +655,20 @@ class Admin {
 		);
 		?>
 		<script type="text/javascript">
-		document.addEventListener('DOMContentLoaded', function() {
-			// add allowed ids to the hash.
-			const hash = window.location.hash;
+		function activitypub_open_help_tab(event) {
 			const allowed_ids = <?php echo \wp_json_encode( $ids ); ?>;
-			if (allowed_ids.includes(hash)) {
-				// Small delay to ensure the help tab is loaded.
-				setTimeout(function() {
-					document.getElementById('contextual-help-link').click();
-					document.querySelector(hash + ' > a[href^="#tab-panel-"]').click();
-				}, 500);
+
+			if ( allowed_ids.includes( window.location.hash ) ) {
+				const delay = ( event && event.type === 'hashchange' ) ? 0 : 200;
+
+				setTimeout( function() {
+					document.getElementById( 'contextual-help-link' ).click();
+					document.querySelector( window.location.hash + ' > a[href^="#tab-panel-"]' ).click();
+				}, delay );
 			}
-		});
+		}
+		window.addEventListener( 'DOMContentLoaded', activitypub_open_help_tab );
+		window.addEventListener( 'hashchange', activitypub_open_help_tab );
 		</script>
 		<?php
 	}
@@ -670,10 +678,16 @@ class Admin {
 	 */
 	public static function add_dashboard_widgets() {
 		\wp_add_dashboard_widget( 'activitypub_blog', \__( 'ActivityPub Plugin News', 'activitypub' ), array( self::class, 'blog_dashboard_widget' ) );
+		if ( user_can_activitypub( \get_current_user_id() ) && ! is_user_type_disabled( 'user' ) ) {
+			\wp_add_dashboard_widget( 'activitypub_profile', \__( 'ActivityPub Author profile', 'activitypub' ), array( self::class, 'profile_dashboard_widget' ) );
+		}
+		if ( ! is_user_type_disabled( 'blog' ) ) {
+			\wp_add_dashboard_widget( 'activitypub_blog_profile', \__( 'ActivityPub Blog profile', 'activitypub' ), array( self::class, 'blogprofile_dashboard_widget' ) );
+		}
 	}
 
 	/**
-	 * Add the ActivityPub.blog feed as a Dashboard widget.
+	 * Add the `ActivityPub.blog` feed as a Dashboard widget.
 	 */
 	public static function blog_dashboard_widget() {
 		echo '<div class="rss-widget">';
@@ -687,5 +701,47 @@ class Admin {
 			)
 		);
 		echo '</div>';
+	}
+
+	/**
+	 * Add the ActivityPub Author profile as a Dashboard widget.
+	 */
+	public static function profile_dashboard_widget() {
+		$user = Actors::get_by_id( \get_current_user_id() );
+		?>
+		<p>
+			<?php \esc_html_e( 'People can follow you by using your author name:', 'activitypub' ); ?>
+		</p>
+		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
+		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
+		<p>
+			<?php \esc_html_e( 'Authors who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
+			<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>">
+			<?php \esc_html_e( 'Customize username on "Edit Profile" page.', 'activitypub' ); ?>
+			</a>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Add the ActivityPub Blog profile as a Dashboard widget.
+	 */
+	public static function blogprofile_dashboard_widget() {
+		$user = new Blog();
+		?>
+		<p>
+			<?php \esc_html_e( 'People can follow your blog by using:', 'activitypub' ); ?>
+		</p>
+		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
+		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
+		<p>
+			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
+			<?php if ( current_user_can( 'manage_options' ) ) : ?>
+			<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>">
+				<?php \esc_html_e( 'Customize the blog profile.', 'activitypub' ); ?>
+			</a>
+			<?php endif; ?>
+		</p>
+		<?php
 	}
 }

@@ -7,9 +7,6 @@
 
 namespace Activitypub\Rest;
 
-use WP_Error;
-use WP_REST_Server;
-use WP_REST_Response;
 use Activitypub\Signature;
 
 use function Activitypub\use_authorized_fetch;
@@ -77,15 +74,11 @@ class Server {
 			return true;
 		}
 
-		if (
-			// POST-Requests always have to be signed.
-			'GET' !== $request->get_method() ||
-			// GET-Requests only require a signature in secure mode.
-			( 'GET' === $request->get_method() && use_authorized_fetch() )
-		) {
+		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode.
+		if ( 'GET' !== $request->get_method() || use_authorized_fetch() ) {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
-				return new WP_Error(
+				return new \WP_Error(
 					'activitypub_signature_verification',
 					$verified_request->get_error_message(),
 					array( 'status' => 401 )
@@ -99,12 +92,12 @@ class Server {
 	/**
 	 * Callback function to validate incoming ActivityPub requests
 	 *
-	 * @param WP_REST_Response|\WP_HTTP_Response|WP_Error|mixed $response Result to send to the client.
-	 *                                                                    Usually a WP_REST_Response or WP_Error.
-	 * @param array                                             $handler  Route handler used for the request.
-	 * @param \WP_REST_Request                                  $request  Request used to generate the response.
+	 * @param \WP_REST_Response|\WP_HTTP_Response|\WP_Error|mixed $response Result to send to the client.
+	 *                                                                      Usually a WP_REST_Response or WP_Error.
+	 * @param array                                               $handler  Route handler used for the request.
+	 * @param \WP_REST_Request                                    $request  Request used to generate the response.
 	 *
-	 * @return mixed|WP_Error The response, error, or modified response.
+	 * @return mixed|\WP_Error The response, error, or modified response.
 	 */
 	public static function validate_requests( $response, $handler, $request ) {
 		if ( 'HEAD' === $request->get_method() ) {
@@ -131,7 +124,7 @@ class Server {
 			ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS &&
 			in_array( $params['type'], array( 'Create', 'Like', 'Announce' ), true )
 		) {
-			return new WP_Error(
+			return new \WP_Error(
 				'activitypub_server_does_not_accept_incoming_interactions',
 				\__( 'This server does not accept incoming interactions.', 'activitypub' ),
 				// We have to use a 2XX status code here, because otherwise the response will be
@@ -161,7 +154,7 @@ class Server {
 
 		$method = $request->get_method();
 
-		if ( WP_REST_Server::CREATABLE !== $method ) {
+		if ( \WP_REST_Server::CREATABLE !== $method ) {
 			return $order;
 		}
 
@@ -178,11 +171,11 @@ class Server {
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md
 	 *
-	 * @param WP_HTTP_Response $response Result to send to the client. Usually a `WP_REST_Response`.
-	 * @param WP_REST_Server   $server   Server instance.
-	 * @param WP_REST_Request  $request  Request used to generate the response.
+	 * @param \WP_HTTP_Response $response Result to send to the client. Usually a `WP_REST_Response`.
+	 * @param \WP_REST_Server   $server   Server instance.
+	 * @param \WP_REST_Request  $request  Request used to generate the response.
 	 *
-	 * @return WP_HTTP_Response The filtered response.
+	 * @return \WP_HTTP_Response The filtered response.
 	 */
 	public static function filter_output( $response, $server, $request ) {
 		$route = $request->get_route();
@@ -197,11 +190,18 @@ class Server {
 			return $response;
 		}
 
-		$data  = $response->get_data();
+		$data = $response->get_data();
+
+		// Ensure that `$data` was already converted to a response.
+		if ( \is_wp_error( $data ) ) {
+			$response = \rest_convert_error_to_response( $data );
+			$data     = $response->get_data();
+		}
+
 		$error = array(
 			'type'     => 'about:blank',
-			'title'    => isset( $data['code'] ) ? $data['code'] : '',
-			'detail'   => isset( $data['message'] ) ? $data['message'] : '',
+			'title'    => $data['code'] ?? '',
+			'detail'   => $data['message'] ?? '',
 			'status'   => $response->get_status(),
 
 			/*

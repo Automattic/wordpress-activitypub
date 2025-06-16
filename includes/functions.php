@@ -290,6 +290,15 @@ function is_activitypub_request() {
 }
 
 /**
+ * Check if content negotiation is allowed for a request.
+ *
+ * @return bool True if content negotiation is allowed, false otherwise.
+ */
+function should_negotiate_content() {
+	return Query::get_instance()->should_negotiate_content();
+}
+
+/**
  * Check if a post is disabled for ActivityPub.
  *
  * This function checks if the post type supports ActivityPub and if the post is set to be local.
@@ -362,37 +371,12 @@ function user_can_activitypub( $user_id ) {
 	}
 
 	/**
-	 * Allow plugins to disable users for ActivityPub.
-	 *
-	 * @deprecated 5.7.0 Use the `activitypub_user_can_activitypub` filter instead.
-	 *
-	 * @param boolean $disabled True if the user is disabled, false otherwise.
-	 * @param int     $user_id  The user ID.
-	 */
-	$enabled = ! \apply_filters_deprecated( 'activitypub_is_user_disabled', array( ! $enabled, $user_id ), '5.7.0', 'activitypub_user_can_activitypub' );
-
-	/**
 	 * Allow plugins to enable/disable users for ActivityPub.
 	 *
 	 * @param boolean $enabled True if the user is enabled, false otherwise.
 	 * @param int     $user_id The user ID.
 	 */
 	return apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
-}
-
-/**
- * This function checks if a user is disabled for ActivityPub.
- *
- * @deprecated 5.7.0 Use the `user_can_activitypub` function instead.
- *
- * @param int $user_id The user ID.
- *
- * @return boolean True if the user is disabled, false otherwise.
- */
-function is_user_disabled( $user_id ) {
-	_deprecated_function( __FUNCTION__, 'unreleased', 'user_can_activitypub' );
-
-	return ! user_can_activitypub( $user_id );
 }
 
 /**
@@ -504,7 +488,7 @@ function site_supports_blocks() {
  * @return boolean True if the data is JSON, false otherwise.
  */
 function is_json( $data ) {
-	return \is_array( \json_decode( $data, true ) ) ? true : false;
+	return \is_array( \json_decode( $data, true ) );
 }
 
 /**
@@ -857,12 +841,8 @@ function get_wp_object_state( $wp_object ) {
  * @return string The description of the post type.
  */
 function get_post_type_description( $post_type ) {
-	$description = '';
-
 	switch ( $post_type->name ) {
 		case 'post':
-			$description = '';
-			break;
 		case 'page':
 			$description = '';
 			break;
@@ -870,6 +850,7 @@ function get_post_type_description( $post_type ) {
 			$description = ' - ' . __( 'The attachments that you have uploaded to a post (images, videos, documents or other files).', 'activitypub' );
 			break;
 		default:
+			$description = '';
 			if ( ! empty( $post_type->description ) ) {
 				$description = ' - ' . $post_type->description;
 			}
@@ -988,11 +969,10 @@ function get_comment_ancestors( $comment ) {
  *
  * @param string $formatted Converted number in string format.
  * @param float  $number    The number to convert based on locale.
- * @param int    $decimals  Precision of the number of decimal places.
  *
  * @return string Converted number in string format.
  */
-function custom_large_numbers( $formatted, $number, $decimals ) {
+function custom_large_numbers( $formatted, $number ) {
 	global $wp_locale;
 
 	$decimals      = 0;
@@ -1014,9 +994,6 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 	} else { // At least a billion.
 		return \number_format( $number / 1000000000, $decimals, $decimal_point, $thousands_sep ) . 'B';
 	}
-
-	// Default fallback. We should not get here.
-	return $formatted;
 }
 
 /**
@@ -1206,16 +1183,6 @@ function generate_post_summary( $post, $length = 500 ) {
 		return '';
 	}
 
-	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
-
-	if ( $content ) {
-		/** This filter is documented in wp-includes/post-template.php */
-		return \apply_filters( 'the_excerpt', $content );
-	}
-
-	$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
-	$content_parts = \get_extended( $content );
-
 	/**
 	 * Filters the excerpt more value.
 	 *
@@ -1224,15 +1191,26 @@ function generate_post_summary( $post, $length = 500 ) {
 	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[…]' );
 	$length       = $length - strlen( $excerpt_more );
 
-	// Check for the <!--more--> tag.
-	if (
-		! empty( $content_parts['extended'] ) &&
-		! empty( $content_parts['main'] )
-	) {
-		$content = $content_parts['main'] . ' ' . $excerpt_more;
-		$length  = null;
+	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
+
+	if ( $content ) {
+		// Ignore length if excerpt is set.
+		$length = null;
+	} else {
+		$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
+		$content_parts = \get_extended( $content );
+
+		// Check for the <!--more--> tag.
+		if (
+			! empty( $content_parts['extended'] ) &&
+			! empty( $content_parts['main'] )
+		) {
+			$content = \trim( $content_parts['main'] ) . ' ' . $excerpt_more;
+			$length  = null;
+		}
 	}
 
+	$content = \strip_shortcodes( $content );
 	$content = \html_entity_decode( $content );
 	$content = \wp_strip_all_tags( $content );
 	$content = \trim( $content );
@@ -1245,12 +1223,8 @@ function generate_post_summary( $post, $length = 500 ) {
 		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
-	/*
-	Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
-	/** This filter is documented in wp-includes/post-template.php
+	// This filter is documented in wp-includes/post-template.php.
 	return \apply_filters( 'the_excerpt', $content );
-	*/
-	return $content;
 }
 
 /**
@@ -1477,6 +1451,15 @@ function is_self_ping( $id ) {
  * @return boolean|int The ID of the outbox item or false on failure.
  */
 function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_visibility = null ) {
+	// If the user is disabled, fall back to the blog user when available.
+	if ( ! user_can_activitypub( $user_id ) ) {
+		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
+			$user_id = Actors::BLOG_USER_ID;
+		} else {
+			return false;
+		}
+	}
+
 	$transformer = Transformer_Factory::get_transformer( $data );
 
 	if ( ! $transformer || is_wp_error( $transformer ) ) {
@@ -1491,26 +1474,40 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 
 	if ( $activity_type ) {
 		$activity = $transformer->to_activity( $activity_type );
+		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 	} else {
 		$activity = $transformer->to_object();
 	}
 
 	if ( ! $activity || \is_wp_error( $activity ) ) {
-		return false;
-	}
+		/**
+		 * Action triggered when adding an object to the outbox fails.
+		 *
+		 * @param \WP_Error   $activity           The error object or false.
+		 * @param mixed       $data               The object that failed to be added to the outbox.
+		 * @param string|null $activity_type      The type of the Activity or null if `$data` is an Activity.
+		 * @param int         $user_id            The User ID.
+		 * @param string      $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+		 */
+		\do_action( 'activitypub_add_to_outbox_failed', $activity, $data, $activity_type, $user_id, $content_visibility );
 
-	// If the user is disabled, fall back to the blog user when available.
-	if ( ! user_can_activitypub( $user_id ) ) {
-		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
-			$user_id = Actors::BLOG_USER_ID;
-		} else {
-			return false;
-		}
+		return false;
 	}
 
 	$outbox_activity_id = Outbox::add( $activity, $user_id, $content_visibility );
 
-	if ( ! $outbox_activity_id ) {
+	if ( ! $outbox_activity_id || \is_wp_error( $outbox_activity_id ) ) {
+		/**
+		 * Action triggered when adding an object to the outbox fails.
+		 *
+		 * @param false|\WP_Error $outbox_activity_id The error object or false.
+		 * @param mixed           $data               The object that failed to be added to the outbox.
+		 * @param string|null     $activity_type      The type of the Activity or null if `$data` is an Activity.
+		 * @param int             $user_id            The User ID.
+		 * @param string          $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+		 */
+		\do_action( 'activitypub_add_to_outbox_failed', $outbox_activity_id, $data, $activity_type, $user_id, $content_visibility );
+
 		return false;
 	}
 
@@ -1546,19 +1543,27 @@ function is_activity( $data ) {
 	 */
 	$types = apply_filters( 'activitypub_activity_types', Activity::TYPES );
 
-	if ( is_string( $data ) ) {
-		return in_array( $data, $types, true );
-	}
+	return _is_type_of( $data, $types );
+}
 
-	if ( is_array( $data ) && isset( $data['type'] ) ) {
-		return in_array( $data['type'], $types, true );
-	}
+/**
+ * Check if an `$data` is an Activity Object.
+ *
+ * @see https://www.w3.org/TR/activitystreams-vocabulary/#object-types
+ *
+ * @param array|object|string $data The data to check.
+ *
+ * @return boolean True if the `$data` is an Activity Object, false otherwise.
+ */
+function is_activity_object( $data ) {
+	/**
+	 * Filters the activity object types.
+	 *
+	 * @param array $types The activity object types.
+	 */
+	$types = \apply_filters( 'activitypub_activity_object_types', Base_Object::TYPES );
 
-	if ( is_object( $data ) && $data instanceof Base_Object ) {
-		return in_array( $data->get_type(), $types, true );
-	}
-
-	return false;
+	return _is_type_of( $data, $types );
 }
 
 /**
@@ -1578,6 +1583,18 @@ function is_actor( $data ) {
 	 */
 	$types = apply_filters( 'activitypub_actor_types', Actor::TYPES );
 
+	return _is_type_of( $data, $types );
+}
+
+/**
+ * Private helper to check if $data is of a given type set.
+ *
+ * @param array|object|string $data  The data to check.
+ * @param array               $types The types to check against.
+ *
+ * @return boolean True if $data is of one of the types, false otherwise.
+ */
+function _is_type_of( $data, $types ) {
 	if ( is_string( $data ) ) {
 		return in_array( $data, $types, true );
 	}
@@ -1586,7 +1603,7 @@ function is_actor( $data ) {
 		return in_array( $data['type'], $types, true );
 	}
 
-	if ( is_object( $data ) && $data instanceof Base_Object ) {
+	if ( $data instanceof Base_Object ) {
 		return in_array( $data->get_type(), $types, true );
 	}
 

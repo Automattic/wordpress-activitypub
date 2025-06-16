@@ -2,7 +2,7 @@
 /**
  * Test file for Transformer Factory.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Transformer;

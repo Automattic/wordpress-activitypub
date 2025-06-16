@@ -67,32 +67,6 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test deprecated get_by_various.
-	 *
-	 * @dataProvider the_resource_provider
-	 * @covers ::get_by_resource
-	 * @expectedDeprecated Activitypub\Collection\Users::get_by_resource
-	 *
-	 * @param string $item     The resource.
-	 * @param string $expected The expected class.
-	 */
-	public function test_deprecated_get_by_various( $item, $expected ) {
-		$path = wp_parse_url( $item, PHP_URL_PATH ) ?? '';
-
-		if ( str_starts_with( $path, '/blog/' ) ) {
-			add_filter(
-				'home_url',
-				function () {
-					return 'http://example.org/blog/';
-				}
-			);
-		}
-
-		$users = \Activitypub\Collection\Users::get_by_resource( $item );
-		$this->assertInstanceOf( $expected, $users );
-	}
-
-	/**
 	 * Resource provider.
 	 *
 	 * @return array[]
@@ -137,5 +111,22 @@ class Test_Actors extends \WP_UnitTestCase {
 		$this->assertSame( 'blog', Actors::get_type_by_id( Actors::BLOG_USER_ID ) );
 		$this->assertSame( 'user', Actors::get_type_by_id( 1 ) );
 		$this->assertSame( 'user', Actors::get_type_by_id( 2 ) );
+	}
+
+	/**
+	 * Test if Actor mode will be respected properly
+	 *
+	 * @covers ::get_type_by_id
+	 */
+	public function test_disabled_blog_profile() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$resource = 'http://example.org/@blog';
+
+		$this->assertEquals( 'Activitypub\Model\Blog', get_class( Actors::get_by_resource( $resource ) ) );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$this->assertWPError( Actors::get_by_resource( $resource ) );
 	}
 }

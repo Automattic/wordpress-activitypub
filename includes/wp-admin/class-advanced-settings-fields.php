@@ -2,10 +2,10 @@
 /**
  * Advanced Settings Fields file.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
-namespace ActivityPub\WP_Admin;
+namespace Activitypub\WP_Admin;
 
 /**
  * Advanced Settings Fields class.
@@ -49,6 +49,15 @@ class Advanced_Settings_Fields {
 				array( 'label_for' => 'activitypub_vary_header' )
 			);
 		}
+
+		\add_settings_field(
+			'activitypub_content_negotiation',
+			\__( 'Content Negotiation', 'activitypub' ),
+			array( self::class, 'render_content_negotiation_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_content_negotiation' )
+		);
 
 		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
 			\add_settings_field(
@@ -116,7 +125,7 @@ class Advanced_Settings_Fields {
 	 * Render vary header field.
 	 */
 	public static function render_vary_header_field() {
-		$value = \get_option( 'activitypub_vary_header', '0' );
+		$value = \get_option( 'activitypub_vary_header', '1' );
 		?>
 		<p>
 			<label>
@@ -126,6 +135,24 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( 'Enable this if you notice your site showing technical content instead of normal web pages, or if your ActivityPub connections seem unreliable. This setting helps your site deliver the right format of content to different services automatically.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render content negotiation field.
+	 */
+	public static function render_content_negotiation_field() {
+		$value = \get_option( 'activitypub_content_negotiation', '1' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_content_negotiation" name="activitypub_content_negotiation" value="1" <?php checked( '1', $value ); ?> />
+				<?php \esc_html_e( 'Enable content negotiation for browsers and Fediverse services.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Content negotiation ensures your site displays regular web pages to browsers and machine-readable data to Fediverse services. Disable this if your site shows raw technical data to visitors or if ActivityPub connections have issues.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

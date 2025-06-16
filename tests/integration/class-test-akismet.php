@@ -2,7 +2,7 @@
 /**
  * Test Akismet Integration.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Integration;
@@ -13,6 +13,7 @@ use WP_UnitTestCase;
 /**
  * Test Akismet Integration class.
  *
+ * @group integration
  * @coversDefaultClass \Activitypub\Integration\Akismet
  */
 class Test_Akismet extends WP_UnitTestCase {

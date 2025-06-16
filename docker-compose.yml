@@ -16,7 +16,7 @@ services:
     links:
       - db
     ports:
-      - "8076:80"
+      - '8076:80'
     volumes:
       - .:/var/www/html/wp-content/plugins/activitypub
     restart: always

@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
@@ -116,7 +117,7 @@ ENDPRE;
 		$post_id = self::factory()->post->create(
 			array(
 				'post_content' => 'Testing #php and #programming',
-				'post_type'    => Followers::POST_TYPE,
+				'post_type'    => Actors::POST_TYPE,
 			)
 		);
 

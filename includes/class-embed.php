@@ -32,7 +32,8 @@ class Embed {
 	public static function get_html( $url, $inline_css = true ) {
 		// Try to get ActivityPub representation.
 		$object = Http::get_remote_object( $url );
-		if ( is_wp_error( $object ) ) {
+
+		if ( \is_wp_error( $object ) || ! is_activity_object( $object ) ) {
 			return false;
 		}
 
@@ -79,33 +80,53 @@ class Embed {
 		$boosts    = isset( $activity_object['shares']['totalItems'] ) ? (int) $activity_object['shares']['totalItems'] : null;
 		$favorites = isset( $activity_object['likes']['totalItems'] ) ? (int) $activity_object['likes']['totalItems'] : null;
 
-		$image = '';
+		$audio  = null;
+		$images = array();
+		$video  = null;
 		if ( isset( $activity_object['image']['url'] ) ) {
-			$image = $activity_object['image']['url'];
+			$images = array(
+				array(
+					'type' => 'Image',
+					'url'  => $activity_object['image']['url'],
+					'name' => $activity_object['image']['name'] ?? '',
+				),
+			);
 		} elseif ( isset( $activity_object['attachment'] ) ) {
 			foreach ( $activity_object['attachment'] as $attachment ) {
-				if ( isset( $attachment['type'] ) && in_array( $attachment['type'], array( 'Image', 'Document' ), true ) ) {
-					$image = $attachment['url'];
-					break;
+				$type = isset( $attachment['mediaType'] ) ? strtok( $attachment['mediaType'], '/' ) : strtolower( $attachment['type'] );
+
+				switch ( $type ) {
+					case 'image':
+						$images[] = $attachment;
+						break;
+					case 'video':
+						$video = $attachment;
+						break 2;
+					case 'audio':
+						$audio = $attachment;
+						break 2;
 				}
 			}
+			$images = \array_slice( $images, 0, 4 );
 		}
 
 		ob_start();
 		load_template(
-			ACTIVITYPUB_PLUGIN_DIR . 'templates/reply-embed.php',
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/embed.php',
 			false,
 			array(
+				'audio'       => $audio,
 				'author_name' => $author_name,
 				'author_url'  => $author_url,
 				'avatar_url'  => $avatar_url,
+				'boosts'      => $boosts,
+				'content'     => $content,
+				'favorites'   => $favorites,
+				'images'      => $images,
 				'published'   => $published,
 				'title'       => $title,
-				'content'     => $content,
-				'image'       => $image,
-				'boosts'      => $boosts,
-				'favorites'   => $favorites,
 				'url'         => $activity_object['id'],
+				'video'       => $video,
 				'webfinger'   => $author['webfinger'],
 			)
 		);
@@ -130,7 +151,7 @@ class Embed {
 	 */
 	public static function has_real_oembed( $url, $args = array() ) {
 		// Temporarily remove our filter to avoid infinite loops.
-		\remove_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ), 10, 3 );
+		\remove_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ) );
 
 		// Try to get a "real" oEmbed result. If found, it'll be cached to avoid unnecessary HTTP requests in `wp_oembed_get`.
 		$oembed_result = \wp_oembed_get( $url, $args );

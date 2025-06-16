@@ -2,7 +2,7 @@
 /**
  * Test file for Query class.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests;
@@ -366,5 +366,37 @@ class Test_Query extends \WP_UnitTestCase {
 		$this->assertNull( Query::get_instance()->get_activitypub_object() );
 
 		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test should_negotiate_content method.
+	 *
+	 * @covers ::should_negotiate_content
+	 */
+	public function test_should_negotiate_content() {
+		\add_option( 'permalink_structure', '/%postname%/' );
+
+		$this->assertTrue( Query::get_instance()->should_negotiate_content() );
+
+		\update_option( 'activitypub_content_negotiation', '0' );
+		$_SERVER['REQUEST_URI'] = get_permalink( self::$post_id );
+		$this->assertFalse( Query::get_instance()->should_negotiate_content() );
+
+		\update_option( 'activitypub_content_negotiation', '1' );
+
+		$_SERVER['REQUEST_URI'] = home_url( '/?p=' . self::$post_id );
+		$this->assertTrue( Query::get_instance()->should_negotiate_content() );
+
+		unset( $_SERVER['REQUEST_URI'] );
+
+		\update_option( 'activitypub_content_negotiation', '0' );
+
+		$_SERVER['REQUEST_URI'] = home_url( '/?author=' . self::$user_id );
+		$this->assertTrue( Query::get_instance()->should_negotiate_content() );
+
+		unset( $_SERVER['REQUEST_URI'] );
+
+		\delete_option( 'activitypub_content_negotiation' );
+		\delete_option( 'permalink_structure' );
 	}
 }

@@ -8,7 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Blocks;
-use WP_UnitTestCase;
+use Activitypub\Collection\Interactions;
 
 /**
  * Test class for Blocks.
@@ -16,6 +16,30 @@ use WP_UnitTestCase;
  * @coversDefaultClass \Activitypub\Blocks
  */
 class Test_Blocks extends \WP_UnitTestCase {
+	/**
+	 * Test register_post_meta.
+	 *
+	 * @covers ::register_postmeta
+	 */
+	public function test_register_post_meta() {
+		// Empty option should not trigger _doing_it_wrong() notice.
+		\update_option( 'activitypub_max_image_attachments', '' );
+
+		\register_post_meta(
+			'post',
+			'activitypub_max_image_attachments',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'show_in_rest'      => true,
+				'default'           => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		$this->expectedDeprecated();
+		$this->assertSame( ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS, \get_option( 'activitypub_max_image_attachments' ) );
+	}
 
 	/**
 	 * Test the reply block with a valid URL attribute.
@@ -176,5 +200,70 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( '<!-- wp:activitypub/reply {"url":"https://mastodon.social/@user/123456","embedPost":true} /-->', $result['post_content'] );
 		$this->assertStringContainsString( "<!-- wp:paragraph -->\n<p>This is a reply</p>\n<!-- /wp:paragraph -->", $result['post_content'] );
+	}
+
+	/**
+	 * Test the reactions block with deprecated markup.
+	 *
+	 * @covers ::render_post_reactions_block
+	 */
+	public function test_render_reactions_block_with_deprecated_markup() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"title":"What people think about it on the Fediverse!","postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+		$expected     = '<h6 class="wp-block-heading">What people think about it on the Fediverse!</h6>';
+
+		$this->assertStringContainsString( $expected, $output );
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+		$expected     = '<h6 class="wp-block-heading">Fediverse Reactions</h6>';
+
+		$this->assertStringContainsString( $expected, $output );
+	}
+
+	/**
+	 * Get a post ID with reactions.
+	 *
+	 * @return int Post ID.
+	 */
+	private function get_post_id_with_reactions() {
+		$post_id = self::factory()->post->create();
+
+		$activity = array(
+			'type'   => 'Like',
+			'actor'  => 'https://example.com/users/test',
+			'object' => get_permalink( $post_id ),
+			'id'     => 'https://example.com/activities/like/123',
+		);
+
+		// Mock actor metadata.
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Test User',
+					'preferredUsername' => 'test',
+					'id'                => 'https://example.com/users/test',
+					'url'               => 'https://example.com/@test',
+				);
+			}
+		);
+
+		\add_filter(
+			'pre_comment_approved',
+			function () {
+				return '1';
+			}
+		);
+
+		Interactions::add_reaction( $activity );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'pre_comment_approved' );
+
+		return $post_id;
 	}
 }

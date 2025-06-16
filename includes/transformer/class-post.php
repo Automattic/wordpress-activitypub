@@ -7,12 +7,12 @@
 
 namespace Activitypub\Transformer;
 
-use WP_Post;
-use Activitypub\Shortcodes;
-use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
 use Activitypub\Collection\Interactions;
+use Activitypub\Http;
+use Activitypub\Model\Blog;
+use Activitypub\Shortcodes;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\object_to_uri;
@@ -275,10 +275,16 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
-		// Remove attachments from drafts.
-		if ( 'draft' === \get_post_status( $this->item ) ) {
+		/*
+		 * Remove attachments from the Fediverse if a post was federated and then set back to draft.
+		 * Except in preview mode, where we want to show attachments.
+		 */
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return array();
 		}
+
+		// phpcs:ignore Universal.Operators.DisallowShortTernary
+		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true ) ?: \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
 
 		/**
 		 * Filters the maximum number of media attachments allowed in a post.
@@ -289,12 +295,7 @@ class Post extends Base {
 		 *
 		 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
 		 */
-		$max_media = \intval(
-			\apply_filters(
-				'activitypub_max_image_attachments',
-				\get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
-			)
-		);
+		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
 
 		$media = array(
 			'image' => array(),
@@ -304,7 +305,7 @@ class Post extends Base {
 		$id    = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+		if ( \has_post_thumbnail( $id ) ) {
 			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
 
@@ -324,8 +325,8 @@ class Post extends Base {
 		/**
 		 * Filter the attachment IDs for a post.
 		 *
-		 * @param array   $media The media array grouped by type.
-		 * @param WP_Post $item  The post object.
+		 * @param array    $media The media array grouped by type.
+		 * @param \WP_Post $item  The post object.
 		 *
 		 * @return array The filtered attachment IDs.
 		 */
@@ -336,8 +337,8 @@ class Post extends Base {
 		/**
 		 * Filter the attachments for a post.
 		 *
-		 * @param array   $attachments The attachments.
-		 * @param WP_Post $item        The post object.
+		 * @param array    $attachments The attachments.
+		 * @param \WP_Post $item        The post object.
 		 *
 		 * @return array The filtered attachments.
 		 */
@@ -498,7 +499,7 @@ class Post extends Base {
 		 *
 		 * Example: if a plugin adds a filter to `the_content` to add a button to the end of posts, it can also remove that filter here.
 		 *
-		 * @param WP_Post $post The post object.
+		 * @param \WP_Post $post The post object.
 		 */
 		\do_action( 'activitypub_before_get_content', $post );
 
@@ -528,8 +529,8 @@ class Post extends Base {
 		/**
 		 * Filters the post content before it is transformed for ActivityPub.
 		 *
-		 * @param string  $content The post content to be transformed.
-		 * @param WP_Post $post    The post object being transformed.
+		 * @param string   $content The post content to be transformed.
+		 * @param \WP_Post $post    The post object being transformed.
 		 */
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
 
@@ -537,7 +538,7 @@ class Post extends Base {
 		Shortcodes::unregister();
 
 		// Get rid of the reply block filter.
-		\remove_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ), 10, 2 );
+		\remove_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ) );
 		\remove_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ) );
 		\remove_filter( 'activitypub_reply_block', '__return_empty_string' );
 
@@ -561,7 +562,7 @@ class Post extends Base {
 		$url = $block['attrs']['url'];
 
 		// Try to get ActivityPub representation. Is likely already cached.
-		$object = \Activitypub\Http::get_remote_object( $url );
+		$object = Http::get_remote_object( $url );
 		if ( \is_wp_error( $object ) ) {
 			return '';
 		}
@@ -572,7 +573,7 @@ class Post extends Base {
 		}
 
 		// Fetch author information.
-		$author = \Activitypub\Http::get_remote_object( $author_url );
+		$author = Http::get_remote_object( $author_url );
 		if ( \is_wp_error( $author ) ) {
 			return '';
 		}
@@ -580,7 +581,7 @@ class Post extends Base {
 		// Get webfinger identifier.
 		$webfinger = '';
 		if ( ! empty( $author['webfinger'] ) ) {
-			$webfinger = $author['webfinger'];
+			$webfinger = \str_replace( 'acct:', '', $author['webfinger'] );
 		} elseif ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
 			// Construct webfinger-style identifier from username and domain.
 			$domain    = \wp_parse_url( $author['url'], PHP_URL_HOST );
@@ -605,7 +606,7 @@ class Post extends Base {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
 	 *
-	 * @return string|null The in-reply-to URL of the post.
+	 * @return string|array|null The in-reply-to URL of the post.
 	 */
 	protected function get_in_reply_to() {
 		if ( ! site_supports_blocks() ) {
@@ -660,9 +661,9 @@ class Post extends Base {
 		/**
 		 * Filter the mentions in the post content.
 		 *
-		 * @param array   $mentions The mentions.
-		 * @param string  $content  The post content.
-		 * @param WP_Post $post     The post object.
+		 * @param array    $mentions The mentions.
+		 * @param string   $content  The post content.
+		 * @param \WP_Post $post     The post object.
 		 *
 		 * @return array The filtered mentions.
 		 */
@@ -936,9 +937,9 @@ class Post extends Base {
 	/**
 	 * Filter media IDs by object type.
 	 *
-	 * @param array   $media The media array grouped by type.
-	 * @param string  $type  The object type.
-	 * @param WP_Post $item  The post object.
+	 * @param array    $media The media array grouped by type.
+	 * @param string   $type  The object type.
+	 * @param \WP_Post $item  The post object.
 	 *
 	 * @return array The filtered media IDs.
 	 */
@@ -946,8 +947,8 @@ class Post extends Base {
 		/**
 		 * Filter the object type for media attachments.
 		 *
-		 * @param string  $type      The object type.
-		 * @param WP_Post $item The post object.
+		 * @param string   $type      The object type.
+		 * @param \WP_Post $item The post object.
 		 *
 		 * @return string The filtered object type.
 		 */
@@ -976,6 +977,7 @@ class Post extends Base {
 		$attachment = array();
 		$mime_type  = \get_post_mime_type( $id );
 		$media_type = \strtok( $mime_type, '/' );
+
 		// Switching on image/audio/video.
 		switch ( $media_type ) {
 			case 'image':
@@ -1118,8 +1120,8 @@ class Post extends Base {
 		 * shortcodes like [ap_title] and [ap_content] that are processed during content
 		 * generation.
 		 *
-		 * @param string  $template  The template string containing shortcodes.
-		 * @param WP_Post $item The WordPress post object being transformed.
+		 * @param string   $template  The template string containing shortcodes.
+		 * @param \WP_Post $item The WordPress post object being transformed.
 		 */
 		return apply_filters( 'activitypub_object_content_template', $template, $this->item );
 	}

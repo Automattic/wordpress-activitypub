@@ -2,7 +2,7 @@
 /**
  * Test Comments REST Endpoint.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Rest;

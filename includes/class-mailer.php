@@ -2,7 +2,7 @@
 /**
  * Mailer Class.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub;
@@ -22,7 +22,7 @@ class Mailer {
 
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'new_follower' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 10, 2 );
+		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );  /** After @see \Activitypub\Handler\Create::handle_create() */
 	}
 
 	/**
@@ -88,8 +88,26 @@ class Mailer {
 		$post                  = \get_post( $comment->comment_post_ID );
 		$comment_author_domain = \gethostbyaddr( $comment->comment_author_IP );
 
-		/* translators: 1: Comment type, 2: Post title */
-		$notify_message = \sprintf( html_entity_decode( esc_html__( 'New %1$s on your post &#8220;%2$s&#8221;.', 'activitypub' ) ), \esc_html( $comment_type['singular'] ), \esc_html( $post->post_title ) ) . "\r\n\r\n";
+		// Check if this is a reaction to a post or a comment.
+		if ( 0 === (int) $comment->comment_parent ) {
+			$notify_message = \sprintf(
+				/* translators: 1: Comment type, 2: Post title */
+				\html_entity_decode( esc_html__( 'New %1$s on your post &#8220;%2$s&#8221;.', 'activitypub' ) ),
+				\esc_html( $comment_type['singular'] ),
+				\esc_html( $post->post_title )
+			) . PHP_EOL . PHP_EOL;
+
+		} else {
+			$parent_comment = \get_comment( $comment->comment_parent );
+			$notify_message = \sprintf(
+				/* translators: 1: Comment type, 2: Post title, 3: Parent comment author */
+				\html_entity_decode( esc_html__( 'New %1$s on your post &#8220;%2$s&#8221; in reply to %3$s&#8217;s comment.', 'activitypub' ) ),
+				\esc_html( $comment_type['singular'] ),
+				\esc_html( $post->post_title ),
+				\esc_html( $parent_comment->comment_author )
+			) . PHP_EOL . PHP_EOL;
+		}
+
 		/* translators: 1: Website name, 2: Website IP address, 3: Website hostname. */
 		$notify_message .= \sprintf( \esc_html__( 'From: %1$s (IP address: %2$s, %3$s)', 'activitypub' ), \esc_html( $comment->comment_author ), \esc_html( $comment->comment_author_IP ), \esc_html( $comment_author_domain ) ) . "\r\n";
 		/* translators: Reaction author URL. */
@@ -271,6 +289,14 @@ class Mailer {
 			return;
 		}
 
+		if (
+			// Do not send a mention notification if the activity is a reply to a local post or comment.
+			is_activity_reply( $activity ) &&
+			object_id_to_comment( $activity['object']['id'] )
+		) {
+			return;
+		}
+
 		if ( $user_id > Actors::BLOG_USER_ID ) {
 			if ( ! \get_user_option( 'activitypub_mailer_new_mention', $user_id ) ) {
 				return;
@@ -346,6 +372,7 @@ class Mailer {
 		if ( empty( $actor['url'] ) ) {
 			$actor['url'] = $actor['id'];
 		}
+		$actor['url'] = object_to_uri( $actor['url'] );
 
 		if ( empty( $actor['webfinger'] ) ) {
 			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . \wp_parse_url( $actor['url'], PHP_URL_HOST );

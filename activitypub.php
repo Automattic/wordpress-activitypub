@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 5.8.0
+ * Version: 6.0.2
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -19,7 +19,7 @@ namespace Activitypub;
 
 use WP_CLI;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '5.8.0' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '6.0.2' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -40,7 +40,6 @@ Autoloader::register_path( __NAMESPACE__, __DIR__ . '/includes' );
  */
 function rest_init() {
 	Rest\Server::init();
-	Rest\Post::init();
 	( new Rest\Actors_Controller() )->register_routes();
 	( new Rest\Actors_Inbox_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
@@ -52,6 +51,7 @@ function rest_init() {
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
 	( new Rest\Outbox_Controller() )->register_routes();
+	( new Rest\Post_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
 	( new Rest\URL_Validator_Controller() )->register_routes();
 	( new Rest\Webfinger_Controller() )->register_routes();
@@ -150,57 +150,3 @@ function activation_redirect( $plugin ) {
 		'uninstall',
 	)
 );
-
-
-/**
- * `get_plugin_data` wrapper.
- *
- * @deprecated 4.2.0 Use `get_plugin_data` instead.
- *
- * @param array $default_headers Optional. The default plugin headers. Default empty array.
- * @return array The plugin metadata array.
- */
-function get_plugin_meta( $default_headers = array() ) {
-	_deprecated_function( __FUNCTION__, '4.2.0', 'get_plugin_data' );
-
-	if ( ! $default_headers ) {
-		$default_headers = array(
-			'Name'        => 'Plugin Name',
-			'PluginURI'   => 'Plugin URI',
-			'Version'     => 'Version',
-			'Description' => 'Description',
-			'Author'      => 'Author',
-			'AuthorURI'   => 'Author URI',
-			'TextDomain'  => 'Text Domain',
-			'DomainPath'  => 'Domain Path',
-			'Network'     => 'Network',
-			'RequiresWP'  => 'Requires at least',
-			'RequiresPHP' => 'Requires PHP',
-			'UpdateURI'   => 'Update URI',
-		);
-	}
-
-	return \get_file_data( __FILE__, $default_headers, 'plugin' );
-}
-
-/**
- * Plugin Version Number used for caching.
- *
- * @deprecated 4.2.0 Use constant ACTIVITYPUB_PLUGIN_VERSION directly.
- */
-function get_plugin_version() {
-	_deprecated_function( __FUNCTION__, '4.2.0', 'ACTIVITYPUB_PLUGIN_VERSION' );
-
-	return ACTIVITYPUB_PLUGIN_VERSION;
-}
-
-// Check for CLI env, to add the CLI commands.
-if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	WP_CLI::add_command(
-		'activitypub',
-		'\Activitypub\Cli',
-		array(
-			'shortdesc' => 'ActivityPub related commands to manage plugin functionality and the federation of posts and comments.',
-		)
-	);
-}

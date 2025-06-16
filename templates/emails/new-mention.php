@@ -8,6 +8,8 @@
 use Activitypub\Collection\Actors;
 use Activitypub\Embed;
 
+use function Activitypub\site_supports_blocks;
+
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
 
@@ -46,11 +48,13 @@ require __DIR__ . '/parts/header.php';
 	?>
 </div>
 
+<?php if ( site_supports_blocks() && ! is_plugin_active( 'classic-editor/classic-editor.php' ) ) : ?>
 <p>
 	<a class="button" href="<?php echo esc_url( admin_url( 'post-new.php?in_reply_to=' . $args['activity']['object']['id'] ) ); ?>">
 		<?php esc_html_e( 'Reply to the post', 'activitypub' ); ?>
 	</a>
 </p>
+<?php endif; ?>
 
 <?php
 /**
