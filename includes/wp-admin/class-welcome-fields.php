@@ -36,10 +36,10 @@ class Welcome_Fields {
 	 * Enqueue styles.
 	 */
 	public static function enqueue_styles() {
-		add_action(
+		\add_action(
 			'wp_after_load_template',
 			function ( $template ) {
-				if ( str_ends_with( $template, 'welcome.php' ) ) {
+				if ( \str_ends_with( $template, 'welcome.php' ) ) {
 					\wp_enqueue_style(
 						'activitypub-welcome',
 						\plugins_url( 'assets/css/activitypub-welcome.css', ACTIVITYPUB_PLUGIN_FILE ),
