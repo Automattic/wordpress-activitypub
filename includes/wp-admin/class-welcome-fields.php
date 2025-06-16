@@ -36,15 +36,12 @@ class Welcome_Fields {
 	 * Enqueue styles.
 	 */
 	public static function enqueue_styles() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( 'welcome' === ( isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : 'welcome' ) ) {
-			\wp_enqueue_style(
-				'activitypub-welcome',
-				\plugins_url( 'assets/css/activitypub-welcome.css', ACTIVITYPUB_PLUGIN_FILE ),
-				array(),
-				ACTIVITYPUB_PLUGIN_VERSION
-			);
-		}
+		\wp_enqueue_style(
+			'activitypub-welcome',
+			\plugins_url( 'assets/css/activitypub-welcome.css', ACTIVITYPUB_PLUGIN_FILE ),
+			array(),
+			ACTIVITYPUB_PLUGIN_VERSION
+		);
 	}
 
 	/**
