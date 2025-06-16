@@ -235,11 +235,14 @@ class Interactions {
 		}
 
 		// Check Actor-Name.
-		if ( isset( $actor['name'] ) ) {
+		$comment_author = null;
+		if ( ! empty( $actor['name'] ) ) {
 			$comment_author = $actor['name'];
-		} elseif ( isset( $actor['preferredUsername'] ) ) {
+		} elseif ( ! empty( $actor['preferredUsername'] ) ) {
 			$comment_author = $actor['preferredUsername'];
-		} else {
+		}
+
+		if ( empty( $comment_author ) && \get_option( 'require_name_email' ) ) {
 			return false;
 		}
 
@@ -261,7 +264,7 @@ class Interactions {
 		}
 
 		$comment_data = array(
-			'comment_author'       => \esc_attr( $comment_author ),
+			'comment_author'       => $comment_author ?? __( 'Anonymous', 'activitypub' ),
 			'comment_author_url'   => \esc_url_raw( $url ),
 			'comment_content'      => $comment_content,
 			'comment_type'         => 'comment',

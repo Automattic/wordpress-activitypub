@@ -111,7 +111,7 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 
 		$this->assertEquals( 302, $response->get_status() );
 		$this->assertArrayHasKey( 'Location', $response->get_headers() );
-		$this->assertEquals( 'https://custom-follow-or-reply-url.com', $response->get_headers()['Location'] );
+		$this->assertEquals( $this->follow_or_reply_url(), $response->get_headers()['Location'] );
 	}
 
 	/**
@@ -143,7 +143,7 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 
 		$this->assertEquals( 302, $response->get_status() );
 		$this->assertArrayHasKey( 'Location', $response->get_headers() );
-		$this->assertEquals( 'https://custom-follow-or-reply-url.com', $response->get_headers()['Location'] );
+		$this->assertEquals( $this->follow_or_reply_url(), $response->get_headers()['Location'] );
 	}
 
 	/**
@@ -216,6 +216,6 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 * Returns a valid follow URL.
 	 */
 	public function follow_or_reply_url() {
-		return 'https://custom-follow-or-reply-url.com';
+		return 'https://custom-follow-or-reply-url.com/?a=b&c=d';
 	}
 }
