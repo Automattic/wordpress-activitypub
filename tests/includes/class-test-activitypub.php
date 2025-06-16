@@ -300,11 +300,11 @@ class Test_Activitypub extends \WP_UnitTestCase {
 			)
 		);
 
-		\add_post_meta( $post_id, 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
+		\update_post_meta( $post_id, 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
 		$this->assertEmpty( \get_post_meta( $post_id, 'activitypub_max_image_attachments', true ) );
 		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
 
-		\add_post_meta( $post_id, 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS + 3 );
+		\update_post_meta( $post_id, 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS + 3 );
 		$this->assertEquals( ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS + 3, \get_post_meta( $post_id, 'activitypub_max_image_attachments', true ) );
 		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
 
