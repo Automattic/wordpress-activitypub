@@ -124,7 +124,7 @@ class Post_Controller extends \WP_REST_Controller {
 				'items' => \array_map(
 					function ( $comment ) {
 						return array(
-							'name'   => $comment->comment_author,
+							'name'   => html_entity_decode( $comment->comment_author ),
 							'url'    => $comment->comment_author_url,
 							'avatar' => \get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
 						);

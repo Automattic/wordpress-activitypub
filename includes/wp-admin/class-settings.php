@@ -303,16 +303,11 @@ class Settings {
 	public static function settings_page() {
 		$show_welcome_tab  = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
 		$show_advanced_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true );
-		$default_tab       = $show_welcome_tab ? 'welcome' : 'settings';
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
-
-		// Redirect welcome tab to settings if skipped.
-		if ( 'welcome' === $tab && ! $show_welcome_tab ) {
-			$tab = 'settings';
-		}
-
-		$settings_tabs = array();
+		$settings_tabs     = array();
+		$settings_tab      = array(
+			'label'    => __( 'Settings', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
+		);
 
 		if ( $show_welcome_tab ) {
 			$settings_tabs['welcome'] = array(
@@ -321,10 +316,7 @@ class Settings {
 			);
 		}
 
-		$settings_tabs['settings'] = array(
-			'label'    => __( 'Settings', 'activitypub' ),
-			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
-		);
+		$settings_tabs['settings'] = $settings_tab;
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || $show_advanced_tab ) {
@@ -350,8 +342,21 @@ class Settings {
 		 *
 		 * @param array $settings_tabs The tabs to display.
 		 */
-		$custom_tabs   = \apply_filters( 'activitypub_admin_settings_tabs', array() );
-		$settings_tabs = \array_merge( $settings_tabs, $custom_tabs );
+		$settings_tabs = \apply_filters( 'activitypub_admin_settings_tabs', $settings_tabs );
+
+		if ( empty( $settings_tabs ) ) {
+			_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', 'unreleased' );
+			$settings_tabs['settings'] = $settings_tab;
+		}
+
+		$tab_keys    = array_keys( $settings_tabs );
+		$default_tab = reset( $tab_keys );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
+
+		if ( ! isset( $settings_tabs[ $tab ] ) ) {
+			$tab = $default_tab;
+		}
 
 		switch ( $tab ) {
 			case 'blog-profile':
@@ -370,14 +375,9 @@ class Settings {
 				break;
 		}
 
-		if ( ! isset( $settings_tabs[ $tab ] ) ) {
-			$tab = $default_tab;
-		}
-
 		// Only show tabs if there are more than one.
-		if ( \count( $settings_tabs ) <= 1 ) {
-			$labels = array();
-		} else {
+		$labels = array();
+		if ( \count( $settings_tabs ) > 1 ) {
 			$labels = \wp_list_pluck( $settings_tabs, 'label' );
 		}
 
@@ -539,38 +539,46 @@ class Settings {
 			}
 		}
 
-		if ( isset( $_POST['activitypub_show_welcome_tab'] ) ) {
-			$welcome         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
-			$welcome_checked = empty( $welcome ) ? 0 : 1;
-			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+		$screen_options = array(
+			'activitypub_show_welcome_tab'  => __( 'Welcome Page', 'activitypub' ),
+			'activitypub_show_advanced_tab' => __( 'Advanced Settings', 'activitypub' ),
+		);
+
+		/**
+		 * Filters Activitypub settings screen options.
+		 *
+		 * @param string[] $screen_options Screen options. An array of user meta keys and screen option labels.
+		 */
+		$screen_options = \apply_filters( 'activitypub_screen_options', $screen_options );
+		if ( empty( $screen_options ) ) {
+			return $screen_settings;
 		}
 
-		if ( isset( $_POST['activitypub_show_advanced_tab'] ) ) {
-			$advanced_settings         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_advanced_tab'] ) );
-			$advanced_settings_checked = empty( $advanced_settings ) ? 0 : 1;
-			\update_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', $advanced_settings_checked );
+		foreach ( $screen_options as $option => $label ) {
+			if ( isset( $_POST[ $option ] ) ) {
+				$value = \sanitize_text_field( \wp_unslash( $_POST[ $option ] ) );
+				\update_user_meta( \get_current_user_id(), $option, empty( $value ) ? 0 : 1 );
+			}
 		}
 
-		$screen_settings = '<fieldset>
-		<legend class="screen-layout">' . \esc_html__( 'Settings Pages', 'activitypub' ) . '</legend>
-		<p>
-			' . \esc_html__( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
-		</p>
-		<div class="metabox-prefs-container">
-			<label for="activitypub_show_welcome_tab">
-				<input name="activitypub_show_welcome_tab" type="hidden" value="0" />
-				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
-				' . \esc_html__( 'Welcome Page', 'activitypub' ) . '
-			</label>
-			<label for="activitypub_show_advanced_tab">
-				<input name="activitypub_show_advanced_tab" type="hidden" value="0" />
-				<input name="activitypub_show_advanced_tab" type="checkbox" id="activitypub_show_advanced_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true ), false ) . ' />
-				' . \esc_html__( 'Advanced Settings', 'activitypub' ) . '
-			</label>
-		</div>
-	</fieldset>';
+		ob_start();
+		?>
+		<fieldset>
+			<legend class="screen-layout"><?php \esc_html_e( 'Settings Pages', 'activitypub' ); ?></legend>
+			<p><?php \esc_html_e( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ); ?></p>
+			<div class="metabox-prefs-container">
+				<?php foreach ( $screen_options as $option => $label ) : ?>
+					<label for="<?php echo \esc_attr( $option ); ?>">
+						<input name="<?php echo \esc_attr( $option ); ?>" type="hidden" value="0" />
+						<input name="<?php echo \esc_attr( $option ); ?>" type="checkbox" id="<?php echo \esc_attr( $option ); ?>" value="1" <?php \checked( 1, \get_user_meta( \get_current_user_id(), $option, true ) ); ?> />
+						<?php echo \esc_html( $label ); ?>
+					</label>
+				<?php endforeach; ?>
+			</div>
+		</fieldset>
+		<?php
 
-		return $screen_settings;
+		return ob_get_clean();
 	}
 
 	/**

@@ -122,24 +122,24 @@ class Welcome_Fields {
 		$count = 1; // Plugin is already installed.
 
 		// We're looking for 0 issues.
-		if ( '0' === \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
+		if ( self::has_step( 'site_health' ) && '0' === \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
 			++$count;
 		}
 
 		// Check other completed steps.
-		if ( '1' === \get_option( 'activitypub_checklist_fediverse_intro_visited' ) ) {
+		if ( self::has_step( 'fediverse_intro' ) && '1' === \get_option( 'activitypub_checklist_fediverse_intro_visited' ) ) {
 			++$count;
 		}
 
-		if ( '1' === \get_option( 'activitypub_checklist_settings_visited' ) ) {
+		if ( self::has_step( 'profile_mode' ) && '1' === \get_option( 'activitypub_checklist_settings_visited' ) ) {
 			++$count;
 		}
 
-		if ( '1' === \get_option( 'activitypub_checklist_profile_setup_visited' ) ) {
+		if ( self::has_step( 'profile_setup' ) && '1' === \get_option( 'activitypub_checklist_profile_setup_visited' ) ) {
 			++$count;
 		}
 
-		if ( '1' === \get_option( 'activitypub_checklist_blocks_visited' ) ) {
+		if ( self::has_step( 'features' ) && '1' === \get_option( 'activitypub_checklist_blocks_visited' ) ) {
 			++$count;
 		}
 
@@ -165,27 +165,37 @@ class Welcome_Fields {
 	 * Get the next incomplete step.
 	 */
 	private static function get_next_incomplete_step() {
-		if ( '0' !== \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
+		if ( self::has_step( 'site_health' ) && '0' !== \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
 			return 'site_health';
 		}
 
-		if ( false === \get_option( 'activitypub_checklist_fediverse_intro_visited', false ) ) {
+		if ( self::has_step( 'fediverse_intro' ) && ! \get_option( 'activitypub_checklist_fediverse_intro_visited', false ) ) {
 			return 'fediverse_intro';
 		}
 
-		if ( false === \get_option( 'activitypub_checklist_settings_visited', false ) ) {
+		if ( self::has_step( 'profile_mode' ) && ! \get_option( 'activitypub_checklist_settings_visited', false ) ) {
 			return 'profile_mode';
 		}
 
-		if ( false === \get_option( 'activitypub_checklist_profile_setup_visited', false ) ) {
+		if ( self::has_step( 'profile_setup' ) && ! \get_option( 'activitypub_checklist_profile_setup_visited', false ) ) {
 			return 'profile_setup';
 		}
 
-		if ( false === \get_option( 'activitypub_checklist_blocks_visited', false ) ) {
+		if ( self::has_step( 'features' ) && ! \get_option( 'activitypub_checklist_blocks_visited', false ) ) {
 			return 'features';
 		}
 
 		return '';
+	}
+
+	/**
+	 * Check if a step exists.
+	 *
+	 * @param string $step Step slug.
+	 * @return bool
+	 */
+	private static function has_step( $step ) {
+		return \has_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_' . $step ) );
 	}
 
 	/**
