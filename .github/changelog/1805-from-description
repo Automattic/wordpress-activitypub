@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Setting the blog identifier to empty will no longer trigger an error message about it being the same as an existing user name.

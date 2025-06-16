@@ -692,6 +692,13 @@ class Activitypub {
 		if ( 'activitypub_content_visibility' === $meta_key && empty( $meta_value ) ) {
 			\delete_post_meta( $object_id, 'activitypub_content_visibility' );
 		}
+
+		if (
+			'activitypub_max_image_attachments' === $meta_key &&
+			(int) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) === (int) $meta_value
+		) {
+			\delete_post_meta( $object_id, 'activitypub_max_image_attachments' );
+		}
 	}
 
 	/**

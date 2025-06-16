@@ -72,6 +72,10 @@ class Sanitize {
 		$sanitized = \array_map( 'sanitize_title', $parts );
 		$sanitized = \implode( '.', $sanitized );
 
+		if ( empty( $sanitized ) ) {
+			return Blog::get_default_username();
+		}
+
 		// Check for login or nicename.
 		$user = new \WP_User_Query(
 			array(
