@@ -12,7 +12,7 @@ $object = \Activitypub\Query::get_instance()->get_activitypub_object();
  *
  * @param object $object The ActivityPub object.
  */
-\do_action( 'activitypub_json_pre', $object ); 
+\do_action( 'activitypub_json_pre', $object );
 
 \header( 'Content-Type: application/activity+json' );
 echo $object->to_json(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
