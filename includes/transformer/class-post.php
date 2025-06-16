@@ -581,7 +581,7 @@ class Post extends Base {
 		// Get webfinger identifier.
 		$webfinger = '';
 		if ( ! empty( $author['webfinger'] ) ) {
-			$webfinger = $author['webfinger'];
+			$webfinger = \str_replace( 'acct:', '', $author['webfinger'] );
 		} elseif ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
 			// Construct webfinger-style identifier from username and domain.
 			$domain    = \wp_parse_url( $author['url'], PHP_URL_HOST );

@@ -153,7 +153,7 @@ class Admin {
 
 		// User options that should be processed with `sanitize_textarea_field()`.
 		$textarea_field_user_options = array(
-			'activitypub_blog_user_also_known_as',
+			'activitypub_also_known_as',
 			'activitypub_description',
 		);
 
