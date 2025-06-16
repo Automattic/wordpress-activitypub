@@ -695,7 +695,7 @@ class Activitypub {
 
 		if (
 			'activitypub_max_image_attachments' === $meta_key &&
-			\get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) === (int) $meta_value
+			(int) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) === (int) $meta_value
 		) {
 			\delete_post_meta( $object_id, 'activitypub_max_image_attachments' );
 		}
