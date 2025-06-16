@@ -39,6 +39,15 @@ class Actors {
 	const APPLICATION_USER_ID = -1;
 
 	/**
+	 * Post type.
+	 *
+	 * The post type to store remote actors.
+	 *
+	 * @var string
+	 */
+	const POST_TYPE = 'ap_actor';
+
+	/**
 	 * Get the Actor by ID.
 	 *
 	 * @param int $user_id The User-ID.

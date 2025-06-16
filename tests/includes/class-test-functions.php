@@ -547,4 +547,132 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			),
 		);
 	}
+
+	/**
+	 * Test generate_post_summary function.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 * @dataProvider get_post_summary_data
+	 *
+	 * @param string $desc     The description of the test.
+	 * @param object $post     The post object.
+	 * @param string $expected The expected summary.
+	 * @param int    $length   The length of the summary.
+	 */
+	public function test_generate_post_summary( $desc, $post, $expected, $length = 500 ) {
+		\add_shortcode(
+			'activitypub_test_shortcode',
+			function () {
+				return 'mighty short code';
+			}
+		);
+
+		$post_id = \wp_insert_post( $post );
+
+		$this->assertEquals(
+			$expected,
+			\Activitypub\generate_post_summary( $post_id, $length ),
+			$desc
+		);
+
+		\wp_delete_post( $post_id, true );
+		\remove_shortcode( 'activitypub_test_shortcode' );
+	}
+
+	/**
+	 * Data provider for test_generate_post_summary.
+	 *
+	 * @return array[]
+	 */
+	public function get_post_summary_data() {
+		return array(
+			array(
+				'Excerpt',
+				array(
+					'post_excerpt' => 'Hello World',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Content',
+				array(
+					'post_content' => 'Hello World',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Content with more tag',
+				array(
+					'post_content' => 'Hello World <!--more--> More',
+				),
+				'<p>Hello World […]</p>' . PHP_EOL,
+			),
+			array(
+				'Excerpt with shortcode',
+				array(
+					'post_excerpt' => 'Hello World [activitypub_test_shortcode]',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Content with shortcode',
+				array(
+					'post_content' => 'Hello World [activitypub_test_shortcode]',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Excerpt more than limit',
+				array(
+					'post_excerpt' => 'Hello World Hello World Hello World Hello World Hello World',
+				),
+				'<p>Hello World Hello World Hello World Hello World Hello World</p>' . PHP_EOL,
+				10,
+			),
+			array(
+				'Content more than limit',
+				array(
+					'post_content' => 'Hello World Hello World Hello World Hello World Hello World',
+				),
+				'<p>Hello […]</p>' . PHP_EOL,
+				10,
+			),
+			array(
+				'Content more than limit with more tag',
+				array(
+					'post_content' => 'Hello World Hello <!--more--> World Hello World Hello World Hello World',
+				),
+				'<p>Hello World Hello […]</p>' . PHP_EOL,
+				1,
+			),
+			array(
+				'Test HTML content',
+				array(
+					'post_content' => '<p>Hello World</p>',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Test HTML content with anchor',
+				array(
+					'post_content' => 'Hello <a href="https://example.com">World</a>',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Test HTML excerpt',
+				array(
+					'post_excerpt' => '<p>Hello World</p>',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Test HTML excerpt with anchor',
+				array(
+					'post_excerpt' => 'Hello <a href="https://example.com">World</a>',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+		);
+	}
 }

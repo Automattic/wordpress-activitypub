@@ -371,37 +371,12 @@ function user_can_activitypub( $user_id ) {
 	}
 
 	/**
-	 * Allow plugins to disable users for ActivityPub.
-	 *
-	 * @deprecated 5.7.0 Use the `activitypub_user_can_activitypub` filter instead.
-	 *
-	 * @param boolean $disabled True if the user is disabled, false otherwise.
-	 * @param int     $user_id  The user ID.
-	 */
-	$enabled = ! \apply_filters_deprecated( 'activitypub_is_user_disabled', array( ! $enabled, $user_id ), '5.7.0', 'activitypub_user_can_activitypub' );
-
-	/**
 	 * Allow plugins to enable/disable users for ActivityPub.
 	 *
 	 * @param boolean $enabled True if the user is enabled, false otherwise.
 	 * @param int     $user_id The user ID.
 	 */
 	return apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
-}
-
-/**
- * This function checks if a user is disabled for ActivityPub.
- *
- * @deprecated 5.7.0 Use the `user_can_activitypub` function instead.
- *
- * @param int $user_id The user ID.
- *
- * @return boolean True if the user is disabled, false otherwise.
- */
-function is_user_disabled( $user_id ) {
-	_deprecated_function( __FUNCTION__, 'unreleased', 'user_can_activitypub' );
-
-	return ! user_can_activitypub( $user_id );
 }
 
 /**
@@ -1208,16 +1183,6 @@ function generate_post_summary( $post, $length = 500 ) {
 		return '';
 	}
 
-	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
-
-	if ( $content ) {
-		/** This filter is documented in wp-includes/post-template.php */
-		return \apply_filters( 'the_excerpt', $content );
-	}
-
-	$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
-	$content_parts = \get_extended( $content );
-
 	/**
 	 * Filters the excerpt more value.
 	 *
@@ -1226,15 +1191,26 @@ function generate_post_summary( $post, $length = 500 ) {
 	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[…]' );
 	$length       = $length - strlen( $excerpt_more );
 
-	// Check for the <!--more--> tag.
-	if (
-		! empty( $content_parts['extended'] ) &&
-		! empty( $content_parts['main'] )
-	) {
-		$content = $content_parts['main'] . ' ' . $excerpt_more;
-		$length  = null;
+	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
+
+	if ( $content ) {
+		// Ignore length if excerpt is set.
+		$length = null;
+	} else {
+		$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
+		$content_parts = \get_extended( $content );
+
+		// Check for the <!--more--> tag.
+		if (
+			! empty( $content_parts['extended'] ) &&
+			! empty( $content_parts['main'] )
+		) {
+			$content = \trim( $content_parts['main'] ) . ' ' . $excerpt_more;
+			$length  = null;
+		}
 	}
 
+	$content = \strip_shortcodes( $content );
 	$content = \html_entity_decode( $content );
 	$content = \wp_strip_all_tags( $content );
 	$content = \trim( $content );
@@ -1247,12 +1223,8 @@ function generate_post_summary( $post, $length = 500 ) {
 		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
-	/*
-	Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
-	/** This filter is documented in wp-includes/post-template.php
+	// This filter is documented in wp-includes/post-template.php.
 	return \apply_filters( 'the_excerpt', $content );
-	*/
-	return $content;
 }
 
 /**

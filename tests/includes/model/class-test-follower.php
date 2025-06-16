@@ -97,4 +97,36 @@ class Test_Follower extends \WP_UnitTestCase {
 		$follower = new Follower();
 		$follower->clear_errors();
 	}
+
+	/**
+	 * Tests save.
+	 *
+	 * @covers ::save
+	 */
+	public function test_save() {
+		// Mock request.
+		$follower = new Follower();
+		$follower->from_array(
+			array(
+				'id'                => 'https://example.com/author/jon',
+				'type'              => 'Person',
+				'name'              => 'Jon Doe',
+				'preferredUsername' => 'jon',
+				'summary'           => '<p>Summary 02\2024</p>',
+				'inbox'             => 'https://example.com/author/jon/inbox',
+				'publicKey'         => 'publicKey',
+				'publicKeyPem'      => 'publicKeyPem',
+			)
+		);
+
+		$id = $follower->upsert();
+		$this->assertNotWPError( $id );
+
+		\clean_post_cache( $id );
+
+		$post     = \get_post( $id );
+		$follower = Follower::init_from_cpt( $post );
+		$this->assertEquals( 'Summary 02\2024', $follower->get_summary() );
+		$this->assertEquals( '<p>Summary 02\2024</p>', json_decode( $post->post_content )->summary );
+	}
 }

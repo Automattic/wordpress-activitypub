@@ -8,14 +8,13 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Interactions;
-use WP_UnitTestCase;
 
 /**
  * Test class for Activitypub Interactions.
  *
  * @coversDefaultClass \Activitypub\Collection\Interactions
  */
-class Test_Interactions extends WP_UnitTestCase {
+class Test_Interactions extends \WP_UnitTestCase {
 
 	/**
 	 * User ID.
@@ -489,6 +488,8 @@ class Test_Interactions extends WP_UnitTestCase {
 
 		$result = Interactions::add_reaction( $activity );
 		$this->assertFalse( $result, 'Likes and reposts should not be collected when disabled.' );
+
+		\delete_option( 'activitypub_allow_likes' );
 	}
 
 	/**
@@ -508,6 +509,8 @@ class Test_Interactions extends WP_UnitTestCase {
 
 		$result = Interactions::add_reaction( $activity );
 		$this->assertFalse( $result, 'Reposts should not be collected when disabled.' );
+
+		\delete_option( 'activitypub_allow_reposts' );
 	}
 
 	/**

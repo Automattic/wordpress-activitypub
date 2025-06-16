@@ -455,7 +455,7 @@ class Activitypub {
 	 */
 	private static function register_post_types() {
 		\register_post_type(
-			Followers::POST_TYPE,
+			Actors::POST_TYPE,
 			array(
 				'labels'           => array(
 					'name'          => _x( 'Followers', 'post_type plural name', 'activitypub' ),
@@ -472,7 +472,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Followers::POST_TYPE,
+			Actors::POST_TYPE,
 			'_activitypub_inbox',
 			array(
 				'type'              => 'string',
@@ -482,7 +482,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Followers::POST_TYPE,
+			Actors::POST_TYPE,
 			'_activitypub_errors',
 			array(
 				'type'              => 'string',
@@ -498,25 +498,13 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Followers::POST_TYPE,
-			'_activitypub_user_id',
+			Actors::POST_TYPE,
+			Followers::FOLLOWER_META_KEY,
 			array(
 				'type'              => 'string',
 				'single'            => false,
 				'sanitize_callback' => function ( $value ) {
 					return esc_sql( $value );
-				},
-			)
-		);
-
-		\register_post_meta(
-			Followers::POST_TYPE,
-			'_activitypub_actor_json',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => function ( $value ) {
-					return sanitize_text_field( $value );
 				},
 			)
 		);
