@@ -274,7 +274,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test convert object to comment reply to non existent post.
+	 * Test convert object to comment reply to non-existent post.
 	 *
 	 * @covers ::add_comment
 	 */
@@ -542,5 +542,84 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'tester@example.com', $comment_data['comment_author_email'] );
 
 		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Tests author name handling.
+	 *
+	 * @covers ::activity_to_comment
+	 */
+	public function test_activity_to_comment_author() {
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/tester_no_name',
+			'object' => array(
+				'content' => 'Test comment content',
+				'id'      => 'https://example.com/activities/1',
+			),
+		);
+
+		// Mock actor metadata.
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'actor_meta_data_comment_author' ), 10, 2 );
+
+		// No name => preferredUsername.
+		$comment_data = Interactions::activity_to_comment( $activity );
+		$this->assertSame( 'test', $comment_data['comment_author'] );
+
+		// No preferredUsername => Name.
+		$activity['actor'] = 'https://example.com/users/tester_no_preferredUsername';
+		$comment_data      = Interactions::activity_to_comment( $activity );
+		$this->assertSame( 'Test User', $comment_data['comment_author'] );
+
+		// Reject anonymous.
+		\update_option( 'require_name_email', '1' );
+		$activity['actor'] = 'https://example.com/users/tester_anonymous';
+		$this->assertFalse( Interactions::activity_to_comment( $activity ) );
+
+		// Anonymous.
+		\update_option( 'require_name_email', '0' );
+		$activity['actor'] = 'https://example.com/users/tester_anonymous';
+		$comment_data      = Interactions::activity_to_comment( $activity );
+		$this->assertSame( \__( 'Anonymous', 'activitypub' ), $comment_data['comment_author'] );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'actor_meta_data_comment_author' ) );
+		\update_option( 'require_name_email', '1' );
+	}
+
+	/**
+	 * Callback to mock actor meta data.
+	 *
+	 * @param bool   $response The value to return instead of the remote metadata.
+	 * @param string $url      The actor URL.
+	 *
+	 * @return string[]
+	 */
+	public function actor_meta_data_comment_author( $response, $url ) {
+		if ( 'https://example.com/users/tester_no_name' === $url ) {
+			$response = array(
+				'name'              => '',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		}
+		if ( 'https://example.com/users/tester_no_preferredUsername' === $url ) {
+			$response = array(
+				'name'              => 'Test User',
+				'preferredUsername' => '',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		}
+		if ( 'https://example.com/users/tester_anonymous' === $url ) {
+			$response = array(
+				'name'              => '',
+				'preferredUsername' => '',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		}
+
+		return $response;
 	}
 }
