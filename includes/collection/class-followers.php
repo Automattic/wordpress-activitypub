@@ -390,6 +390,7 @@ class Followers {
 	public static function get_faulty_followers( $number = 20 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty' );
 		$posts = Actors::get_faulty( $number );
+
 		return \array_map( array( Actors::class, 'wp_post_to_actor' ), $posts );
 	}
 
