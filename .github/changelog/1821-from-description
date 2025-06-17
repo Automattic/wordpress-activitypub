@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+The image attachment setting is no longer saved to the database if it matches the default value.
