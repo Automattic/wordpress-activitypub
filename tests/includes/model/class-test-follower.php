@@ -35,8 +35,8 @@ class Test_Follower extends \WP_UnitTestCase {
 		$id = Actors::add( $actor );
 
 		// Add some errors.
-		Actors::track_error( $id, 'Test error 1' );
-		Actors::track_error( $id, 'Test error 2' );
+		Actors::add_error( $id, 'Test error 1' );
+		Actors::add_error( $id, 'Test error 2' );
 
 		// Verify errors were added.
 		$count = Actors::count_errors( $id );

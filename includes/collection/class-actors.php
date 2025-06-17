@@ -487,17 +487,6 @@ class Actors {
 	}
 
 	/**
-	 * Get a remote Actor object by actor URL (guid).
-	 *
-	 * @param int $actor_id The actor ID.
-	 *
-	 * @return \WP_Post
-	 */
-	public static function get_remote_by_id( $actor_id ) {
-		return \get_post( $actor_id );
-	}
-
-	/**
 	 * This function is used to store errors that occur when
 	 * sending an ActivityPub message to a Follower.
 	 *
@@ -508,7 +497,7 @@ class Actors {
 	 *
 	 * @return int|false The meta ID on success, false on failure.
 	 */
-	public static function track_error( $post_id, $error ) {
+	public static function add_error( $post_id, $error ) {
 		if ( \is_string( $error ) ) {
 			$error_message = $error;
 		} elseif ( \is_wp_error( $error ) ) {

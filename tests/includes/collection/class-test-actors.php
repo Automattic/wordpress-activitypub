@@ -149,8 +149,8 @@ class Test_Actors extends \WP_UnitTestCase {
 		$this->assertNotWPError( $id );
 
 		// Add some errors.
-		Actors::track_error( $id, 'Test error 1' );
-		Actors::track_error( $id, 'Test error 2' );
+		Actors::add_error( $id, 'Test error 1' );
+		Actors::add_error( $id, 'Test error 2' );
 
 		// Verify errors were added.
 		$errors = \get_post_meta( $id, '_activitypub_errors', false );

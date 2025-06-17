@@ -64,7 +64,7 @@ class Followers {
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
-		return Actors::get_remote_by_id( $post_id );
+		return \get_post( $post_id );
 	}
 
 	/**
@@ -102,7 +102,7 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
-	 * @return Follower|false|null The Follower object or null
+	 * @return Follower|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower( $user_id, $actor ) {
 		global $wpdb;
@@ -121,10 +121,15 @@ class Followers {
 		);
 
 		if ( ! $id ) {
-			return null;
+			return new \WP_Error(
+				'activitypub_follower_not_found',
+				\__( 'Follower not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
-		$post = Actors::get_remote_by_id( $id );
+		$post = \get_post( $id );
+		// @todo refactor to return the WP_Post object
 		return Follower::init_from_cpt( $post );
 	}
 
@@ -406,9 +411,9 @@ class Followers {
 	 * @return int|false The meta ID on success, false on failure.
 	 */
 	public static function add_error( $post_id, $error ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::track_error' );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::add_error' );
 
-		return Actors::track_error( $post_id, $error );
+		return Actors::add_error( $post_id, $error );
 	}
 
 	/**
