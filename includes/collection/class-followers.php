@@ -376,6 +376,7 @@ class Followers {
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated' );
 		$posts = Actors::get_outdated( $number, $older_than );
+
 		return \array_map( array( Actors::class, 'wp_post_to_actor' ), $posts );
 	}
 
