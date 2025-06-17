@@ -405,6 +405,7 @@ class Followers {
 	 */
 	public static function add_error( $post_id, $error ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::track_error' );
+
 		return Actors::track_error( $post_id, $error );
 	}
 
@@ -417,6 +418,7 @@ class Followers {
 	 */
 	public static function clear_errors( $post_id ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::clear_errors' );
+
 		return Actors::clear_errors( $post_id );
 	}
 }

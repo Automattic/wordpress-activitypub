@@ -503,8 +503,8 @@ class Actors {
 	 *
 	 * The error will be stored in post meta.
 	 *
-	 * @param int   $post_id The ID of the WordPress Custom-Post-Type.
-	 * @param mixed $error   The error message. Can be a string or a WP_Error.
+	 * @param int              $post_id The ID of the WordPress Custom-Post-Type.
+	 * @param string|\WP_Error $error   The error message.
 	 *
 	 * @return int|false The meta ID on success, false on failure.
 	 */
