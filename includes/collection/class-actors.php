@@ -595,11 +595,11 @@ class Actors {
 	 * Get all Followers that have not been updated for a given time.
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
-	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
+	 * @param int $older_than Optional. The time in seconds. Default DAY_IN_SECONDS.
 	 *
-	 * @return \WP_Post[] The Term list of Actors.
+	 * @return \WP_Post[] The list of Actors.
 	 */
-	public static function get_outdated( $number = 50, $older_than = 86400 ) {
+	public static function get_outdated( $number = 50, $older_than = DAY_IN_SECONDS ) {
 		$args = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
