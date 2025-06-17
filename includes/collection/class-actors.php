@@ -419,12 +419,12 @@ class Actors {
 
 		$args = array(
 			'guid'         => \esc_url_raw( $actor_data->get_id() ),
-			'post_title'   => \wp_strip_all_tags( $actor_data->get_name() ?? $actor_data->get_preferred_username() ),
+			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor_data->get_name() ?? $actor_data->get_preferred_username() ) ),
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,
 			'post_name'    => \esc_url_raw( $actor_data->get_id() ),
 			'post_content' => \wp_slash( $actor_data->to_json() ),
-			'post_excerpt' => \wp_kses( $actor_data->get_summary(), 'user_description' ),
+			'post_excerpt' => \wp_kses( \wp_slash( $actor_data->get_summary() ), 'user_description' ),
 			'post_status'  => 'publish',
 			'meta_input'   => array(
 				'_activitypub_inbox' => $inbox,
