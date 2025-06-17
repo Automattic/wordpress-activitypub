@@ -431,15 +431,7 @@ class Actors {
 			),
 		);
 
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s",
-				esc_sql( $actor_data->get_id() )
-			)
-		);
+		$post_id = self::get_remote_by_uri( $actor_data->get_id() );
 
 		if ( $post_id ) {
 			// If this is an update, prevent the "followed" date from being overwritten by the current date.
