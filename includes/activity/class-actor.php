@@ -221,4 +221,67 @@ class Actor extends Base_Object {
 	 * @var array
 	 */
 	protected $also_known_as;
+
+	/**
+	 * The Featured-Posts.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
+	 *
+	 * @context {
+	 *   "@id": "http://joinmastodon.org/ns#featured",
+	 *   "@type": "@id"
+	 * }
+	 *
+	 * @var string
+	 */
+	protected $featured;
+
+	/**
+	 * Whether the User is discoverable.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
+	 *
+	 * @context http://joinmastodon.org/ns#discoverable
+	 *
+	 * @var boolean
+	 */
+	protected $discoverable;
+
+	/**
+	 * Whether the User is indexable.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#indexable
+	 *
+	 * @context http://joinmastodon.org/ns#indexable
+	 *
+	 * @var boolean
+	 */
+	protected $indexable;
+
+	/**
+	 * The WebFinger Resource.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/2c59/fep-2c59.md
+	 *
+	 * @var string
+	 */
+	protected $webfinger;
+
+	/**
+	 * URL to the Moderators endpoint.
+	 *
+	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
+	 *
+	 * @var string
+	 */
+	protected $moderators;
+
+	/**
+	 * Restrict posting to mods.
+	 *
+	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
+	 *
+	 * @var boolean
+	 */
+	protected $posting_restricted_to_mods;
 }
