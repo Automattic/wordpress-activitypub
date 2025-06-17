@@ -424,7 +424,7 @@ class Actors {
 			'post_type'    => self::POST_TYPE,
 			'post_name'    => \esc_url_raw( $actor_data->get_id() ),
 			'post_content' => \wp_slash( $actor_data->to_json() ),
-			'post_excerpt' => \sanitize_text_field( \wp_kses( \wp_slash( $actor_data->get_summary() ), 'user_description' ) ),
+			'post_excerpt' => \wp_kses( $actor_data->get_summary(), 'user_description' ),
 			'post_status'  => 'publish',
 			'meta_input'   => array(
 				'_activitypub_inbox' => $inbox,
