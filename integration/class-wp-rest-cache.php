@@ -36,7 +36,7 @@ class WP_Rest_Cache {
 		\add_filter( 'wp_rest_cache/determine_object_type', array( self::class, 'set_object_type' ), 10, 4 );
 		\add_filter( 'wp_rest_cache/is_single_item', array( self::class, 'set_is_single_item' ), 10, 3 );
 		\add_action( 'transition_post_status', array( self::class, 'transition_post_status' ), 10, 3 );
-		\add_action( 'transition_comment_status', array( self::class, 'transition_comment_status' ) );
+		\add_action( 'transition_comment_status', array( self::class, 'transition_comment_status' ), 10, 3 );
 	}
 
 	/**
