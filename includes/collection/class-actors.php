@@ -499,7 +499,7 @@ class Actors {
 	 *
 	 * @param int $actor_id The actor ID.
 	 *
-	 * @return \WP_Post|\WP_Error
+	 * @return \WP_Post
 	 */
 	public static function get_remote_by_id( $actor_id ) {
 		return \get_post( $actor_id );
