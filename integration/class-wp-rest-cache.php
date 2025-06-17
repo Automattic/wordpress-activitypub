@@ -23,7 +23,7 @@ use Activitypub\Comment;
 use WP_Rest_Cache_Plugin\Includes\Caching\Caching;
 
 /**
- * Compatibility with the WP REST Cache plugin
+ * Compatibility with the WP REST Cache plugin.
  *
  * @see https://wordpress.org/plugins/wp-rest-cache/
  */
