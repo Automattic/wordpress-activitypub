@@ -345,7 +345,7 @@ class Welcome_Fields {
 		$checked              = '1' === \get_option( 'activitypub_checklist_profile_setup_visited', false );
 		$step_class           = $checked ? 'activitypub-step-completed' : '';
 		$next_step            = self::get_next_incomplete_step();
-		$button_class         = ( 'profile_mode' === $next_step ) ? 'button-primary' : 'button-secondary';
+		$button_class         = ( 'profile_setup' === $next_step ) ? 'button-primary' : 'button-secondary';
 		?>
 		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
@@ -363,6 +363,10 @@ class Welcome_Fields {
 				<div class="step-action">
 					<?php if ( true === $user_can_activitypub ) : ?>
 						<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
+						</a>
+					<?php elseif ( ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ) : ?>
+						<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
 						</a>
 					<?php else : ?>
