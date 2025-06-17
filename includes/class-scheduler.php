@@ -42,8 +42,8 @@ class Scheduler {
 		);
 
 		// Follower Cleanups.
-		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
-		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
+		\add_action( 'activitypub_update_imported_actors', array( self::class, 'update_imported_actors' ) );
+		\add_action( 'activitypub_cleanup_imported_actors', array( self::class, 'cleanup_imported_actors' ) );
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
@@ -78,12 +78,12 @@ class Scheduler {
 	 * Schedule all ActivityPub schedules.
 	 */
 	public static function register_schedules() {
-		if ( ! \wp_next_scheduled( 'activitypub_update_followers' ) ) {
-			\wp_schedule_event( time(), 'hourly', 'activitypub_update_followers' );
+		if ( ! \wp_next_scheduled( 'activitypub_update_imported_actors' ) ) {
+			\wp_schedule_event( time(), 'hourly', 'activitypub_update_imported_actors' );
 		}
 
-		if ( ! \wp_next_scheduled( 'activitypub_cleanup_followers' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_followers' );
+		if ( ! \wp_next_scheduled( 'activitypub_cleanup_imported_actors' ) ) {
+			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_imported_actors' );
 		}
 
 		if ( ! \wp_next_scheduled( 'activitypub_reprocess_outbox' ) ) {
@@ -101,8 +101,8 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function deregister_schedules() {
-		wp_unschedule_hook( 'activitypub_update_followers' );
-		wp_unschedule_hook( 'activitypub_cleanup_followers' );
+		wp_unschedule_hook( 'activitypub_update_imported_actors' );
+		wp_unschedule_hook( 'activitypub_cleanup_imported_actors' );
 		wp_unschedule_hook( 'activitypub_reprocess_outbox' );
 		wp_unschedule_hook( 'activitypub_outbox_purge' );
 	}
@@ -177,7 +177,7 @@ class Scheduler {
 	/**
 	 * Cleanup followers.
 	 */
-	public static function cleanup_followers() {
+	public static function cleanup_imported_actors() {
 		$number = 5;
 
 		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {

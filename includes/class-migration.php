@@ -190,6 +190,19 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
 
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			wp_unschedule_hook( 'activitypub_update_followers' );
+			wp_unschedule_hook( 'activitypub_cleanup_followers' );
+
+			if ( ! \wp_next_scheduled( 'activitypub_update_imported_actors' ) ) {
+				\wp_schedule_event( time(), 'hourly', 'activitypub_update_imported_actors' );
+			}
+
+			if ( ! \wp_next_scheduled( 'activitypub_cleanup_imported_actors' ) ) {
+				\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_imported_actors' );
+			}
+		}
+
 		/*
 		 * Add new update routines above this comment. ^
 		 *
