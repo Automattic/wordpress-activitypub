@@ -81,8 +81,8 @@ class Test_Update extends \WP_UnitTestCase {
 
 		$this->assertNotNull( $follower );
 
-		$follower_initial = Actors::wp_post_to_actor( Followers::add_follower( $this->user_id, $actor_url ) );
-		$follower_from_db = Actors::wp_post_to_actor( Actors::get_remote_by_uri( $actor_url ) );
+		$follower_initial = Actors::get_actor( Followers::add_follower( $this->user_id, $actor_url ) );
+		$follower_from_db = Actors::get_actor( Actors::get_remote_by_uri( $actor_url ) );
 
 		$this->assertInstanceOf( Actor::class, $follower_initial );
 		$this->assertInstanceOf( Actor::class, $follower_from_db );
@@ -108,7 +108,7 @@ class Test_Update extends \WP_UnitTestCase {
 		\clean_post_cache( $follower_initial->get_id() );
 
 		$follower = Actors::get_remote_by_uri( $actor_url );
-		$follower = Actors::wp_post_to_actor( $follower );
+		$follower = Actors::get_actor( $follower );
 
 		$this->assertInstanceOf( Actor::class, $follower );
 		$this->assertEquals( $activity['object']['name'], $follower->get_name() );

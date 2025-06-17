@@ -613,15 +613,26 @@ class Actors {
 	/**
 	 * Convert a Custom-Post-Type input to an Activitypub\Model\Actor.
 	 *
-	 * @param \WP_Post $post The post object.
-	 * @return Actor|false The Actor object or false on failure.
+	 * @param int|\WP_Post $post The post object.
+	 *
+	 * @return Actor|\WP_Error The Actor object or WP_Error on failure.
 	 */
-	public static function wp_post_to_actor( $post ) {
+	public static function get_actor( $post ) {
+		$post = \get_post( $post );
+
+		if ( ! $post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
 		/* @var Actor $object Actor object. */
 		$object = Actor::init_from_json( $post->post_content );
 
 		if ( \is_wp_error( $object ) ) {
-			return false;
+			return $object;
 		}
 
 		$object->set_id( $post->guid );

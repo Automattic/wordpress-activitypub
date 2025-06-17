@@ -377,7 +377,7 @@ class Followers {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated' );
 		$posts = Actors::get_outdated( $number, $older_than );
 
-		return \array_map( array( Actors::class, 'wp_post_to_actor' ), $posts );
+		return \array_map( array( Actors::class, 'get_actor' ), $posts );
 	}
 
 	/**
@@ -391,7 +391,7 @@ class Followers {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty' );
 		$posts = Actors::get_faulty( $number );
 
-		return \array_map( array( Actors::class, 'wp_post_to_actor' ), $posts );
+		return \array_map( array( Actors::class, 'get_actor' ), $posts );
 	}
 
 	/**
