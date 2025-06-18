@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Signature;
 
 /**
@@ -69,9 +70,7 @@ class Test_Signature_Verification extends \WP_UnitTestCase {
 		$signed_headers  = $signature_block['headers'];
 		$signed_data     = Signature::get_signed_data( $signed_headers, $signature_block, $headers );
 
-		$user = \Activitypub\Collection\Actors::get_by_id( 1 );
-
-		$public_key = Signature::get_public_key_for( $user->get__id() );
+		$public_key = Actors::get_public_key( 1 );
 
 		// Signature_verification.
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, 'rsa-sha256' ) > 0;
@@ -89,8 +88,7 @@ class Test_Signature_Verification extends \WP_UnitTestCase {
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function ( $json, $actor ) {
-				$user       = \Activitypub\Collection\Actors::get_by_id( 1 );
-				$public_key = Signature::get_public_key_for( $user->get__id() );
+				$public_key = Actors::get_public_key( 1 );
 
 				// Return ActivityPub Profile with signature.
 				return array(

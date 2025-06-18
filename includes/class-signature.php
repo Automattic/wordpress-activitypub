@@ -24,161 +24,48 @@ class Signature {
 	/**
 	 * Return the public key for a given user.
 	 *
+	 * @deprecated unreleased Use {@see Actors::get_public_key()}.
+	 *
 	 * @param int  $user_id The WordPress User ID.
 	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
 	 *
-	 * @return mixed The public key.
+	 * @return string The public key.
 	 */
 	public static function get_public_key_for( $user_id, $force = false ) {
-		if ( $force ) {
-			self::generate_key_pair_for( $user_id );
-		}
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_public_key' );
 
-		$key_pair = self::get_keypair_for( $user_id );
-
-		return $key_pair['public_key'];
+		return Actors::get_public_key( $user_id, $force );
 	}
 
 	/**
 	 * Return the private key for a given user.
 	 *
+	 * @deprecated unreleased Use {@see Actors::get_private_key()}.
+	 *
 	 * @param int  $user_id The WordPress User ID.
 	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
 	 *
-	 * @return mixed The private key.
+	 * @return string The private key.
 	 */
 	public static function get_private_key_for( $user_id, $force = false ) {
-		if ( $force ) {
-			self::generate_key_pair_for( $user_id );
-		}
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_private_key' );
 
-		$key_pair = self::get_keypair_for( $user_id );
-
-		return $key_pair['private_key'];
+		return Actors::get_private_key( $user_id, $force );
 	}
 
 	/**
 	 * Return the key pair for a given user.
+	 *
+	 * @deprecated unreleased Use {@see Actors::get_keypair()}.
 	 *
 	 * @param int $user_id The WordPress User ID.
 	 *
 	 * @return array The key pair.
 	 */
 	public static function get_keypair_for( $user_id ) {
-		$option_key = self::get_signature_options_key_for( $user_id );
-		$key_pair   = \get_option( $option_key );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_keypair' );
 
-		if ( ! $key_pair ) {
-			$key_pair = self::generate_key_pair_for( $user_id );
-		}
-
-		return $key_pair;
-	}
-
-	/**
-	 * Generates the pair keys
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return array The key pair.
-	 */
-	protected static function generate_key_pair_for( $user_id ) {
-		$option_key = self::get_signature_options_key_for( $user_id );
-		$key_pair   = self::check_legacy_key_pair_for( $user_id );
-
-		if ( $key_pair ) {
-			\add_option( $option_key, $key_pair );
-
-			return $key_pair;
-		}
-
-		$config = array(
-			'digest_alg'       => 'sha512',
-			'private_key_bits' => 2048,
-			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
-		);
-
-		$key         = \openssl_pkey_new( $config );
-		$private_key = null;
-		$detail      = array();
-		if ( $key ) {
-			\openssl_pkey_export( $key, $private_key );
-
-			$detail = \openssl_pkey_get_details( $key );
-		}
-
-		// Check if keys are valid.
-		if (
-			empty( $private_key ) || ! is_string( $private_key ) ||
-			! isset( $detail['key'] ) || ! is_string( $detail['key'] )
-		) {
-			return array(
-				'private_key' => null,
-				'public_key'  => null,
-			);
-		}
-
-		$key_pair = array(
-			'private_key' => $private_key,
-			'public_key'  => $detail['key'],
-		);
-
-		// Persist keys.
-		\add_option( $option_key, $key_pair );
-
-		return $key_pair;
-	}
-
-	/**
-	 * Return the option key for a given user.
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return string The option key.
-	 */
-	protected static function get_signature_options_key_for( $user_id ) {
-		$id = $user_id;
-
-		if ( $user_id > 0 ) {
-			$user = \get_userdata( $user_id );
-			// Sanitize username because it could include spaces and special chars.
-			$id = sanitize_title( $user->user_login );
-		}
-
-		return 'activitypub_keypair_for_' . $id;
-	}
-
-	/**
-	 * Check if there is a legacy key pair
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return array|bool The key pair or false.
-	 */
-	protected static function check_legacy_key_pair_for( $user_id ) {
-		switch ( $user_id ) {
-			case 0:
-				$public_key  = \get_option( 'activitypub_blog_user_public_key' );
-				$private_key = \get_option( 'activitypub_blog_user_private_key' );
-				break;
-			case -1:
-				$public_key  = \get_option( 'activitypub_application_user_public_key' );
-				$private_key = \get_option( 'activitypub_application_user_private_key' );
-				break;
-			default:
-				$public_key  = \get_user_meta( $user_id, 'magic_sig_public_key', true );
-				$private_key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
-				break;
-		}
-
-		if ( ! empty( $public_key ) && is_string( $public_key ) && ! empty( $private_key ) && is_string( $private_key ) ) {
-			return array(
-				'private_key' => $private_key,
-				'public_key'  => $public_key,
-			);
-		}
-
-		return false;
+		return Actors::get_keypair( $user_id );
 	}
 
 	/**
@@ -194,7 +81,7 @@ class Signature {
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
 		$user = Actors::get_by_id( $user_id );
-		$key  = self::get_private_key_for( $user->get__id() );
+		$key  = Actors::get_private_key( $user_id );
 
 		$url_parts = \wp_parse_url( $url );
 
