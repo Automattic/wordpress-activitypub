@@ -60,6 +60,12 @@ class Interaction_Controller extends \WP_REST_Controller {
 	 * @return string Sanitized URI.
 	 */
 	public function sanitize_uri( $uri ) {
+		// Remove "acct:" prefix if present.
+		if ( str_starts_with( $uri, 'acct:' ) ) {
+			$uri = \substr( $uri, 5 );
+		}
+
+		// Remove "@" prefix if present.
 		$uri = \ltrim( $uri, '@' );
 
 		if ( is_email( $uri ) ) {
