@@ -339,7 +339,6 @@ class Activitypub {
 		 */
 		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment' ) );
 		if ( ! \in_array( $id_or_email->comment_type ?: 'comment', $allowed_comment_types, true ) ) { // phpcs:ignore Universal.Operators.DisallowShortTernary
-			$args['url'] = false;
 			return $args;
 		}
 
