@@ -18,7 +18,6 @@ class Welcome_Fields {
 	 */
 	public static function init() {
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_welcome_fields' ) );
-		\add_action( 'admin_print_styles-settings_page_activitypub', array( self::class, 'enqueue_styles' ) );
 
 		\add_action( 'add_option_activitypub_checklist_health_check_issues', array( self::class, 'resolve_checklist' ) );
 		\add_action( 'update_option_activitypub_checklist_health_check_issues', array( self::class, 'resolve_checklist' ) );
@@ -30,21 +29,6 @@ class Welcome_Fields {
 		\add_action( 'update_option_activitypub_checklist_profile_setup_visited', array( self::class, 'resolve_checklist' ) );
 		\add_action( 'add_option_activitypub_checklist_blocks_visited', array( self::class, 'resolve_checklist' ) );
 		\add_action( 'update_option_activitypub_checklist_blocks_visited', array( self::class, 'resolve_checklist' ) );
-	}
-
-	/**
-	 * Enqueue styles.
-	 */
-	public static function enqueue_styles() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( 'welcome' === ( isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : 'welcome' ) ) {
-			\wp_enqueue_style(
-				'activitypub-welcome',
-				\plugins_url( 'assets/css/activitypub-welcome.css', ACTIVITYPUB_PLUGIN_FILE ),
-				array(),
-				ACTIVITYPUB_PLUGIN_VERSION
-			);
-		}
 	}
 
 	/**
@@ -122,24 +106,24 @@ class Welcome_Fields {
 		$count = 1; // Plugin is already installed.
 
 		// We're looking for 0 issues.
-		if ( '0' === \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
+		if ( self::has_step( 'site_health' ) && '0' === \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
 			++$count;
 		}
 
 		// Check other completed steps.
-		if ( '1' === \get_option( 'activitypub_checklist_fediverse_intro_visited' ) ) {
+		if ( self::has_step( 'fediverse_intro' ) && '1' === \get_option( 'activitypub_checklist_fediverse_intro_visited' ) ) {
 			++$count;
 		}
 
-		if ( '1' === \get_option( 'activitypub_checklist_settings_visited' ) ) {
+		if ( self::has_step( 'profile_mode' ) && '1' === \get_option( 'activitypub_checklist_settings_visited' ) ) {
 			++$count;
 		}
 
-		if ( '1' === \get_option( 'activitypub_checklist_profile_setup_visited' ) ) {
+		if ( self::has_step( 'profile_setup' ) && '1' === \get_option( 'activitypub_checklist_profile_setup_visited' ) ) {
 			++$count;
 		}
 
-		if ( '1' === \get_option( 'activitypub_checklist_blocks_visited' ) ) {
+		if ( self::has_step( 'features' ) && '1' === \get_option( 'activitypub_checklist_blocks_visited' ) ) {
 			++$count;
 		}
 
@@ -165,27 +149,37 @@ class Welcome_Fields {
 	 * Get the next incomplete step.
 	 */
 	private static function get_next_incomplete_step() {
-		if ( '0' !== \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
+		if ( self::has_step( 'site_health' ) && '0' !== \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
 			return 'site_health';
 		}
 
-		if ( false === \get_option( 'activitypub_checklist_fediverse_intro_visited', false ) ) {
+		if ( self::has_step( 'fediverse_intro' ) && ! \get_option( 'activitypub_checklist_fediverse_intro_visited', false ) ) {
 			return 'fediverse_intro';
 		}
 
-		if ( false === \get_option( 'activitypub_checklist_settings_visited', false ) ) {
+		if ( self::has_step( 'profile_mode' ) && ! \get_option( 'activitypub_checklist_settings_visited', false ) ) {
 			return 'profile_mode';
 		}
 
-		if ( false === \get_option( 'activitypub_checklist_profile_setup_visited', false ) ) {
+		if ( self::has_step( 'profile_setup' ) && ! \get_option( 'activitypub_checklist_profile_setup_visited', false ) ) {
 			return 'profile_setup';
 		}
 
-		if ( false === \get_option( 'activitypub_checklist_blocks_visited', false ) ) {
+		if ( self::has_step( 'features' ) && ! \get_option( 'activitypub_checklist_blocks_visited', false ) ) {
 			return 'features';
 		}
 
 		return '';
+	}
+
+	/**
+	 * Check if a step exists.
+	 *
+	 * @param string $step Step slug.
+	 * @return bool
+	 */
+	private static function has_step( $step ) {
+		return \has_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_' . $step ) );
 	}
 
 	/**
@@ -335,7 +329,7 @@ class Welcome_Fields {
 		$checked              = '1' === \get_option( 'activitypub_checklist_profile_setup_visited', false );
 		$step_class           = $checked ? 'activitypub-step-completed' : '';
 		$next_step            = self::get_next_incomplete_step();
-		$button_class         = ( 'profile_mode' === $next_step ) ? 'button-primary' : 'button-secondary';
+		$button_class         = ( 'profile_setup' === $next_step ) ? 'button-primary' : 'button-secondary';
 		?>
 		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
@@ -353,6 +347,10 @@ class Welcome_Fields {
 				<div class="step-action">
 					<?php if ( true === $user_can_activitypub ) : ?>
 						<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
+						</a>
+					<?php elseif ( ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ) : ?>
+						<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
 						</a>
 					<?php else : ?>

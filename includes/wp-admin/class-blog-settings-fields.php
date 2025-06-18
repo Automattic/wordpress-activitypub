@@ -26,6 +26,11 @@ class Blog_Settings_Fields {
 	 * Register all settings fields.
 	 */
 	public static function register_settings() {
+		// If we're in blog mode, and we're on the blog profile tab, mark the profile setup step as done.
+		if ( isset( $_GET['tab'] ) && 'blog-profile' === \sanitize_key( $_GET['tab'] ) && ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			\update_option( 'activitypub_checklist_profile_setup_visited', '1' );
+		}
+
 		add_settings_section(
 			'activitypub_blog_profile',
 			__( 'Blog Profile', 'activitypub' ),

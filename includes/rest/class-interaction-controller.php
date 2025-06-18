@@ -134,6 +134,6 @@ class Interaction_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		return new \WP_REST_Response( null, 302, array( 'Location' => \esc_url( $redirect_url ) ) );
+		return new \WP_REST_Response( null, 302, array( 'Location' => $redirect_url ) );
 	}
 }
