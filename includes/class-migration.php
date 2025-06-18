@@ -194,12 +194,12 @@ class Migration {
 			wp_unschedule_hook( 'activitypub_update_followers' );
 			wp_unschedule_hook( 'activitypub_cleanup_followers' );
 
-			if ( ! \wp_next_scheduled( 'activitypub_update_imported_actors' ) ) {
-				\wp_schedule_event( time(), 'hourly', 'activitypub_update_imported_actors' );
+			if ( ! \wp_next_scheduled( 'activitypub_update_remote_actors' ) ) {
+				\wp_schedule_event( time(), 'hourly', 'activitypub_update_remote_actors' );
 			}
 
-			if ( ! \wp_next_scheduled( 'activitypub_cleanup_imported_actors' ) ) {
-				\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_imported_actors' );
+			if ( ! \wp_next_scheduled( 'activitypub_cleanup_remote_actors' ) ) {
+				\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
 			}
 		}
 
