@@ -48,8 +48,8 @@ class Activitypub {
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
-		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
-		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
+		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
+		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
@@ -680,25 +680,29 @@ class Activitypub {
 	}
 
 	/**
-	 * Delete `activitypub_content_visibility` when updated to an empty value.
+	 * Prevent empty or default meta values.
 	 *
-	 * @param int    $meta_id    ID of updated metadata entry.
-	 * @param int    $object_id  Post ID.
-	 * @param string $meta_key   Metadata key.
-	 * @param mixed  $meta_value Metadata value. This will be a PHP-serialized string representation of the value
-	 *                           if the value is an array, an object, or itself a PHP-serialized string.
+	 * @param null|bool $check      Whether to allow updating metadata for the given type.
+	 * @param int       $object_id  ID of the object metadata is for.
+	 * @param string    $meta_key   Metadata key.
+	 * @param mixed     $meta_value Metadata value. Must be serializable if non-scalar.
 	 */
-	public static function updated_postmeta( $meta_id, $object_id, $meta_key, $meta_value ) {
-		if ( 'activitypub_content_visibility' === $meta_key && empty( $meta_value ) ) {
-			\delete_post_meta( $object_id, 'activitypub_content_visibility' );
+	public static function prevent_empty_post_meta( $check, $object_id, $meta_key, $meta_value ) {
+		$post_metas = array(
+			'activitypub_content_visibility'    => '',
+			'activitypub_content_warning'       => '',
+			'activitypub_max_image_attachments' => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+		);
+
+		if ( isset( $post_metas[ $meta_key ] ) && $post_metas[ $meta_key ] === (string) $meta_value ) {
+			if ( 'update_post_metadata' === current_action() ) {
+				\delete_post_meta( $object_id, $meta_key );
+			}
+
+			$check = true;
 		}
 
-		if (
-			'activitypub_max_image_attachments' === $meta_key &&
-			(int) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) === (int) $meta_value
-		) {
-			\delete_post_meta( $object_id, 'activitypub_max_image_attachments' );
-		}
+		return $check;
 	}
 
 	/**
