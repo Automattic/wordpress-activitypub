@@ -188,9 +188,9 @@ class Http_Signature {
 	/**
 	 * Sign a PSR-7 request with HTTP signatures.
 	 *
-	 * @param string           $covered_fields    Fields to be covered by the signature.
-	 * @param MessageInterface $interface         The message interface to sign.
-	 * @param RequestInterface $original_request  Optional. Original request for context. Default null.
+	 * @param string                $covered_fields    Fields to be covered by the signature.
+	 * @param MessageInterface      $interface         The message interface to sign.
+	 * @param RequestInterface|null $original_request  Optional. Original request for context. Default null.
 	 * @return MessageInterface The signed message interface.
 	 */
 	public function sign_request( string $covered_fields, MessageInterface $interface, RequestInterface $original_request = null ): MessageInterface {
@@ -208,6 +208,7 @@ class Http_Signature {
 		foreach ( array( 'signature-input', 'signature' ) as $header ) {
 			$interface = $interface->withHeader( $header, $signed_headers[ $header ] );
 		}
+
 		return $interface;
 	}
 
@@ -331,7 +332,7 @@ class Http_Signature {
 		if ( $sig_input_dict->isNotEmpty() ) {
 			$indices = $sig_input_dict->indices();
 			foreach ( $indices as $index ) {
-				[$dict_name, $members] = $sig_input_dict->getByIndex( $index );
+				list( $dict_name, $members ) = $sig_input_dict->getByIndex( $index );
 
 				if ( $members instanceof InnerList ) {
 					$components    = $members;
@@ -355,7 +356,7 @@ class Http_Signature {
 		if ( $sig_dict->isNotEmpty() ) {
 			$indices = $sig_dict->indices();
 			foreach ( $indices as $index ) {
-				[$dict_name, $members] = $sig_dict->getByIndex( $index );
+				list( $dict_name, $members ) = $sig_dict->getByIndex( $index );
 				if ( $members instanceof Item ) {
 					$signatures[ $dict_name ] = $members->value();
 				}
@@ -428,7 +429,7 @@ class Http_Signature {
 			$which_headers = $which_request->getTrailers();
 		}
 
-		[$name, $value] = $this->get_field_value( $field_name, $which_request, $which_headers, $parameters );
+		list( $name, $value ) = $this->get_field_value( $field_name, $which_request, $which_headers, $parameters );
 
 		if ( isset( $parameters['bs'] ) ) {
 			$result = $name . ';bs: ';
