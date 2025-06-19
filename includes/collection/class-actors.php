@@ -500,14 +500,12 @@ class Actors {
 	 *
 	 * The error will be stored in post meta.
 	 *
-	 * @param \WP_Post|int     $post  The post object or ID of the WordPress Custom-Post-Type.
-	 * @param string|\WP_Error $error The error message.
+	 * @param int              $post_id The ID of the WordPress Custom-Post-Type.
+	 * @param string|\WP_Error $error   The error message.
 	 *
 	 * @return int|false The meta ID on success, false on failure.
 	 */
-	public static function add_error( $post, $error ) {
-		$post = \get_post( $post );
-
+	public static function add_error( $post_id, $error ) {
 		if ( \is_string( $error ) ) {
 			$error_message = $error;
 		} elseif ( \is_wp_error( $error ) ) {
@@ -520,7 +518,7 @@ class Actors {
 		}
 
 		return \add_post_meta(
-			$post->ID,
+			$post_id,
 			'_activitypub_errors',
 			$error_message
 		);
@@ -529,52 +527,34 @@ class Actors {
 	/**
 	 * Count the errors for an Actor.
 	 *
-	 * @param \WP_Post|int $post The ID of the WordPress Custom-Post-Type.
+	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
 	 * @return int The number of errors.
 	 */
-	public static function count_errors( $post ) {
-		$post = \get_post( $post );
-
-		if ( ! $post ) {
-			return 0;
-		}
-
-		return \count( \get_post_meta( $post->ID, '_activitypub_errors', false ) );
+	public static function count_errors( $post_id ) {
+		return \count( \get_post_meta( $post_id, '_activitypub_errors', false ) );
 	}
 
 	/**
 	 * Get the errors for an Actor.
 	 *
-	 * @param \WP_Post|int $post The ID of the WordPress Custom-Post-Type.
+	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
 	 * @return string[] The errors.
 	 */
-	public static function get_errors( $post ) {
-		$post = \get_post( $post );
-
-		if ( ! $post ) {
-			return array();
-		}
-
-		return \get_post_meta( $post->ID, '_activitypub_errors', false );
+	public static function get_errors( $post_id ) {
+		return \get_post_meta( $post_id, '_activitypub_errors', false );
 	}
 
 	/**
 	 * Clear the errors for an Actor.
 	 *
-	 * @param \WP_Post|int $post The ID of the WordPress Custom-Post-Type.
+	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
 	 * @return bool True on success, false on failure.
 	 */
-	public static function clear_errors( $post ) {
-		$post = \get_post( $post );
-
-		if ( ! $post ) {
-			return false;
-		}
-
-		return \delete_post_meta( $post->ID, '_activitypub_errors' );
+	public static function clear_errors( $post_id ) {
+		return \delete_post_meta( $post_id, '_activitypub_errors' );
 	}
 
 	/**
@@ -662,19 +642,6 @@ class Actors {
 			$json = \get_post_meta( $post->ID, '_activitypub_actor_json', true );
 		}
 
-		/* @var Actor $object Actor object. */
-		$object = Actor::init_from_json( $json );
-
-		if ( \is_wp_error( $object ) ) {
-			return $object;
-		}
-
-		$object->set_id( $post->guid );
-		$object->set_name( $post->post_title );
-		$object->set_summary( $post->post_excerpt );
-		$object->set_published( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_date ) ) );
-		$object->set_updated( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) ) );
-
-		return $object;
+		return Actor::init_from_json( $json );
 	}
 }
