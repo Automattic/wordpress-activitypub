@@ -47,9 +47,9 @@ class Test_Signature_Verification extends \WP_UnitTestCase {
 		// Generate_digest & generate_signature.
 		$digest      = Signature::generate_digest( $activity );
 		$date        = gmdate( 'D, d M Y H:i:s T' );
-		$key_id      = Actors::get_by_id( 1 )->get_id();
+		$actor_id    = Actors::get_by_id( 1 )->get_id();
 		$private_key = Actors::get_private_key( 1 );
-		$signature   = Signature::generate_signature( $key_id, $private_key, 'POST', $remote_actor, $date, $digest );
+		$signature   = Signature::generate_signature( $actor_id, $private_key, 'POST', $remote_actor, $date, $digest );
 
 		$this->assertMatchesRegularExpression( '/keyId="http:\/\/example\.org\/\?author=1#main-key",algorithm="rsa-sha256",headers="\(request-target\) host date digest",signature="[^"]*"/', $signature );
 
@@ -126,9 +126,9 @@ class Test_Signature_Verification extends \WP_UnitTestCase {
 		// Generate_digest & generate_signature.
 		$digest      = Signature::generate_digest( $activity );
 		$date        = gmdate( 'D, d M Y H:i:s T' );
-		$key_id      = Actors::get_by_id( 1 )->get_id();
+		$actor_id    = Actors::get_by_id( 1 )->get_id();
 		$private_key = Actors::get_private_key( 1 );
-		$signature   = Signature::generate_signature( $key_id, $private_key, 'POST', $remote_actor_inbox, $date, $digest );
+		$signature   = Signature::generate_signature( $actor_id, $private_key, 'POST', $remote_actor_inbox, $date, $digest );
 
 		// Signed headers.
 		$url_parts = wp_parse_url( $remote_actor_inbox );

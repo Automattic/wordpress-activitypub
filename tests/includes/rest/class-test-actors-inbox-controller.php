@@ -304,9 +304,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		// Generate_digest & generate_signature.
 		$digest      = Signature::generate_digest( $activity );
 		$date        = gmdate( 'D, d M Y H:i:s T' );
-		$key_id      = Actors::get_by_id( self::$user_id )->get_id();
+		$actor_id    = Actors::get_by_id( self::$user_id )->get_id();
 		$private_key = Actors::get_private_key( self::$user_id );
-		$signature   = Signature::generate_signature( $key_id, $private_key, 'POST', $actor->get_inbox(), $date, $digest );
+		$signature   = Signature::generate_signature( $actor_id, $private_key, 'POST', $actor->get_inbox(), $date, $digest );
 
 		$this->assertMatchesRegularExpression(
 			'/keyId="' . preg_quote( $actor->get_id(), '/' ) . '#main-key",algorithm="rsa-sha256",headers="\(request-target\) host date digest",signature="[^"]*"/',
