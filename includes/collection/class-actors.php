@@ -659,19 +659,6 @@ class Actors {
 			$json = \get_post_meta( $post->ID, '_activitypub_actor_json', true );
 		}
 
-		/* @var Actor $object Actor object. */
-		$object = Actor::init_from_json( $json );
-
-		if ( \is_wp_error( $object ) ) {
-			return $object;
-		}
-
-		$object->set_id( $post->guid );
-		$object->set_name( $post->post_title );
-		$object->set_summary( $post->post_excerpt );
-		$object->set_published( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_date ) ) );
-		$object->set_updated( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) ) );
-
-		return $object;
+		return Actor::init_from_json( $json );
 	}
 }
