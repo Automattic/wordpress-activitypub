@@ -471,7 +471,7 @@ class Actors {
 	 *
 	 * @param string $actor_uri The actor URI.
 	 *
-	 * @return \WP_Post|\WP_Error
+	 * @return \WP_Post|\WP_Error The post object or WP_Error if not found.
 	 */
 	public static function get_remote_by_uri( $actor_uri ) {
 		global $wpdb;
@@ -528,7 +528,7 @@ class Actors {
 	}
 
 	/**
-	 * Count the errors for a Follower.
+	 * Count the errors for an Actor.
 	 *
 	 * @param \WP_Post|int $post The ID of the WordPress Custom-Post-Type.
 	 *
@@ -545,7 +545,7 @@ class Actors {
 	}
 
 	/**
-	 * Get the errors for a Follower.
+	 * Get the errors for an Actor.
 	 *
 	 * @param \WP_Post|int $post The ID of the WordPress Custom-Post-Type.
 	 *
@@ -562,7 +562,7 @@ class Actors {
 	}
 
 	/**
-	 * Clear the errors for a Follower.
+	 * Clear the errors for an Actor.
 	 *
 	 * @param \WP_Post|int $post The ID of the WordPress Custom-Post-Type.
 	 *
@@ -579,11 +579,11 @@ class Actors {
 	}
 
 	/**
-	 * Get all Followers that had errors.
+	 * Get all Actors that had errors.
 	 *
-	 * @param int $number Optional. The number of Followers to return. Default 20.
+	 * @param int $number Optional. The number of Actors to return. Default 20.
 	 *
-	 * @return \WP_Post[] The Term list of Followers.
+	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_faulty( $number = 20 ) {
 		$args = array(
@@ -613,7 +613,7 @@ class Actors {
 	}
 
 	/**
-	 * Get all Followers that have not been updated for a given time.
+	 * Get all Actors that have not been updated for a given time.
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default DAY_IN_SECONDS.
