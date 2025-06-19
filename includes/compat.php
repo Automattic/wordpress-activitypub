@@ -25,6 +25,23 @@ if ( ! function_exists( 'str_starts_with' ) ) {
 	}
 }
 
+if ( ! function_exists( 'str_ends_with' ) ) {
+	/**
+	 * Polyfill for `str_ends_with()` function added in PHP 8.0.
+	 *
+	 * Performs a case-sensitive check indicating if
+	 * the haystack ends with needle.
+	 *
+	 * @param string $haystack The string to search in.
+	 * @param string $needle   The substring to search for in the `$haystack`.
+	 *
+	 * @return bool True if `$haystack` ends with `$needle`, otherwise false.
+	 */
+	function str_ends_with( $haystack, $needle ) {
+		return strlen( $needle ) === 0 || substr( $haystack, - strlen( $needle ) ) === $needle;
+	}
+}
+
 if ( ! function_exists( 'is_countable' ) ) {
 	/**
 	 * Polyfill for `is_countable()` function added in PHP 7.3.

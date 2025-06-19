@@ -95,8 +95,15 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 					'response' => array( 'code' => 200 ),
 					'body'     => wp_json_encode(
 						array(
-							'type' => 'Person',
-							'url'  => 'https://example.org/person',
+							'type'  => 'Person',
+							'url'   => 'https://example.org/person',
+							'links' => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => 'https://example.org/user/person',
+								),
+							),
 						)
 					),
 				);
@@ -112,6 +119,16 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		$this->assertEquals( 302, $response->get_status() );
 		$this->assertArrayHasKey( 'Location', $response->get_headers() );
 		$this->assertEquals( $this->follow_or_reply_url(), $response->get_headers()['Location'] );
+
+		\remove_filter( 'activitypub_interactions_follow_url', array( $this, 'follow_or_reply_url' ) );
+
+		// Test with Webfinger.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_param( 'uri', 'activitypub.blog@activitypub.blog' );
+
+		$this->expectExceptionMessage( 'This Interaction type is not supported yet!' );
+
+		rest_get_server()->dispatch( $request );
 	}
 
 	/**
