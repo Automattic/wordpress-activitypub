@@ -54,6 +54,8 @@ class Test_Follower extends \WP_UnitTestCase {
 	/**
 	 * Tests clear_errors with no errors.
 	 *
+	 * @expectedDeprecated Activitypub\Model\Follower
+	 *
 	 * @covers ::clear_errors
 	 */
 	public function test_clear_errors_no_errors() {
@@ -83,6 +85,8 @@ class Test_Follower extends \WP_UnitTestCase {
 
 	/**
 	 * Tests save.
+	 *
+	 * @expectedDeprecated Activitypub\Model\Follower
 	 *
 	 * @covers ::save
 	 */

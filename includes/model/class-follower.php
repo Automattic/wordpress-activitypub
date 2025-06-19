@@ -45,6 +45,15 @@ class Follower extends Actor {
 	protected $_id; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
+	 * Constructor.
+	 *
+	 * @deprecated Use Actor instead.
+	 */
+	public function __construct() {
+		\_deprecated_class( __CLASS__, 'unreleased', 'Actor' );
+	}
+
+	/**
 	 * Get the errors.
 	 *
 	 * @return mixed

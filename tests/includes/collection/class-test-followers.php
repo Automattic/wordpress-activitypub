@@ -428,22 +428,6 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests extract_name_from_uri.
-	 *
-	 * @dataProvider extract_name_from_uri_content_provider
-	 *
-	 * @param string $uri  The URI.
-	 * @param string $name The name.
-	 */
-	public function test_extract_name_from_uri( $uri, $name ) {
-		$follower = new Follower();
-
-		$follower->set_id( $uri );
-
-		$this->assertEquals( $name, $follower->get_name() );
-	}
-
-	/**
 	 * Tests get_inboxes.
 	 *
 	 * @covers ::get_inboxes
@@ -483,10 +467,7 @@ class Test_Followers extends \WP_UnitTestCase {
 				'publicKeyPem'      => $k,
 			);
 
-			$follower = new \Activitypub\Model\Follower();
-			$follower->from_array( $meta );
-
-			$id = $follower->upsert();
+			$id = Actors::upsert( $meta );
 
 			add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
@@ -513,10 +494,7 @@ class Test_Followers extends \WP_UnitTestCase {
 				'publicKeyPem'      => $i,
 			);
 
-			$follower = new \Activitypub\Model\Follower();
-			$follower->from_array( $meta );
-
-			$id = $follower->upsert();
+			$id = Actors::upsert( $meta );
 
 			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
