@@ -74,7 +74,7 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 				return array(
 					'name'   => html_entity_decode( $comment->comment_author ),
 					'url'    => $comment->comment_author_url,
-					'avatar' => get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
+					'avatar' => get_avatar_url( $comment ),
 				);
 			},
 			$_comments
