@@ -209,17 +209,17 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		$this->assertIsWPError( $follower );
+		$this->assertWPError( $follower );
 
 		$follower = Followers::get_follower( 1, 'https://user2.example.com' );
-		$this->assertIsWPError( $follower );
+		$this->assertWPError( $follower );
 
 		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
 		$follower2 = Followers::get_follower( 2, 'https://user2.example.com' );
 		$this->assertEquals( 'https://user2.example.com', $follower2->guid );
-		$this->assertEquals( 'úser2', $follower2->get_name() );
+		$this->assertEquals( 'úser2', Actors::get_actor( $follower2 )->get_name() );
 	}
 
 	/**
