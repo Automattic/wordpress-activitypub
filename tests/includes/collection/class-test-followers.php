@@ -334,7 +334,6 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$db_followers = Followers::get_followers( 1 );
 
-
 		$this->assertStringContainsString( $follower, serialize( $db_followers ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 		$follower = current( $db_followers );
