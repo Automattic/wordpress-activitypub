@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The Welcome screen now loads with proper styling when shown as a fallback.

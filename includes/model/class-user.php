@@ -30,20 +30,6 @@ class User extends Actor {
 	protected $_id; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
-	 * The Featured-Posts.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
-	 *
-	 * @context {
-	 *   "@id": "http://joinmastodon.org/ns#featured",
-	 *   "@type": "@id"
-	 * }
-	 *
-	 * @var string
-	 */
-	protected $featured;
-
-	/**
 	 * Whether the User is discoverable.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
@@ -53,22 +39,6 @@ class User extends Actor {
 	 * @var boolean
 	 */
 	protected $discoverable = true;
-
-	/**
-	 * Whether the User is indexable.
-	 *
-	 * @context http://joinmastodon.org/ns#indexable
-	 *
-	 * @var boolean
-	 */
-	protected $indexable;
-
-	/**
-	 * The WebFinger Resource.
-	 *
-	 * @var string
-	 */
-	protected $webfinger;
 
 	/**
 	 * Constructor.
