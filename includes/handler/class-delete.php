@@ -105,7 +105,7 @@ class Delete {
 
 		// Verify that Actor is deleted.
 		if ( $follower && Http::is_tombstone( $activity['actor'] ) ) {
-			$follower->delete();
+			Actors::delete( $follower->ID );
 			self::maybe_delete_interactions( $activity );
 		}
 	}

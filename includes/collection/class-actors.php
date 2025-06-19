@@ -466,6 +466,17 @@ class Actors {
 	}
 
 	/**
+	 * Delete a remote Actor object by actor URL (guid).
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function delete( $post_id ) {
+		return \wp_delete_post( $post_id );
+	}
+
+	/**
 	 * Get a remote Actor object by actor URL (guid).
 	 *
 	 * @param string $actor_uri The actor URI.
