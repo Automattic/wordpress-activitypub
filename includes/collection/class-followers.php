@@ -7,8 +7,6 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Collection\Actors;
-
 use function Activitypub\is_tombstone;
 use function Activitypub\get_remote_metadata_by_actor;
 
@@ -87,8 +85,8 @@ class Followers {
 		 * Fires before a Follower is removed.
 		 *
 		 * @param \WP_Post $remote_actor The remote Actor object.
-		 * @param int      $user_id  The ID of the WordPress User.
-		 * @param string   $actor    The Actor URL.
+		 * @param int      $user_id      The ID of the WordPress User.
+		 * @param string   $actor        The Actor URL.
 		 */
 		\do_action( 'activitypub_followers_pre_remove_follower', $remote_actor, $user_id, $actor );
 
@@ -369,7 +367,7 @@ class Followers {
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
 	 *
-	 * @return \WP_Post[] The Term list of Actors.
+	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated' );
@@ -382,7 +380,7 @@ class Followers {
 	 *
 	 * @param int $number Optional. The number of Followers to return. Default 20.
 	 *
-	 * @return \WP_Post[] The Term list of Actors.
+	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty' );

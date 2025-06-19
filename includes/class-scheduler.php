@@ -14,7 +14,6 @@ use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Followers;
 
 /**
  * Scheduler class.
