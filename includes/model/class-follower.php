@@ -50,7 +50,7 @@ class Follower extends Actor {
 	 * @deprecated Use Actor instead.
 	 */
 	public function __construct() {
-		\_deprecated_class( __CLASS__, 'unreleased', 'Actor' );
+		\_deprecated_class( __CLASS__, 'unreleased', Actor::class );
 	}
 
 	/**
