@@ -71,7 +71,8 @@ class Signature {
 	/**
 	 * Generates the Signature for an HTTP Request.
 	 *
-	 * @param int    $user_id     The WordPress User ID.
+	 * @param string $key_id      The key ID.
+	 * @param string $private_key The private key.
 	 * @param string $http_method The HTTP method.
 	 * @param string $url         The URL to send the request to.
 	 * @param string $date        The date the request is sent.
@@ -79,10 +80,7 @@ class Signature {
 	 *
 	 * @return string The signature.
 	 */
-	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
-		$user = Actors::get_by_id( $user_id );
-		$key  = Actors::get_private_key( $user_id );
-
+	public static function generate_signature( $key_id, $private_key, $http_method, $url, $date, $digest = null ) {
 		$url_parts = \wp_parse_url( $url );
 
 		$host = $url_parts['host'];
@@ -107,15 +105,13 @@ class Signature {
 		}
 
 		$signature = null;
-		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
+		\openssl_sign( $signed_string, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 
-		$key_id = $user->get_id() . '#main-key';
-
 		if ( ! empty( $digest ) ) {
-			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="%s"', $key_id, $signature );
+			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="%s"', $key_id . '#main-key', $signature );
 		} else {
-			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"', $key_id, $signature );
+			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"', $key_id . '#main-key', $signature );
 		}
 	}
 
