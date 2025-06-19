@@ -202,7 +202,7 @@ class Follower extends Actor {
 	 * @see \Activitypub\Rest\Followers::remove_follower()
 	 */
 	public function delete() {
-		Actors::delete( $this->_id );
+		Followers::remove_follower( $this->_id, $this->get_id() );
 	}
 
 	/**
