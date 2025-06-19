@@ -8,16 +8,14 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Handler\Follow;
-use Activitypub\Model\Follower;
 use Activitypub\Collection\Outbox;
-use WP_UnitTestCase;
 
 /**
  * Test class for Follow handler.
  *
  * @coversDefaultClass \Activitypub\Handler\Follow
  */
-class Test_Follow extends WP_UnitTestCase {
+class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test user ID.
 	 *

@@ -9,7 +9,6 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Model\Follower;
 
 /**
  * Test class for Activitypub Followers.
