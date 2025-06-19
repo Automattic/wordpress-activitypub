@@ -35,9 +35,15 @@ class Http {
 		 */
 		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
 
-		$date      = \gmdate( 'D, d M Y H:i:s T' );
-		$digest    = Signature::generate_digest( $body );
-		$signature = Signature::generate_signature( $user_id, 'post', $url, $date, $digest );
+		$date = \gmdate( 'D, d M Y H:i:s T' );
+
+		$signer = ( new Http_Signature() )
+			->set_private_key( Signature::get_private_key_for( $user_id ) )
+			->set_public_key( Signature::get_public_key_for( $user_id ) )
+			->set_key_id( Actors::get_by_id( $user_id )->get_id() . '#main-key' )
+			->set_algorithm( 'rsa-sha256' )
+			->set_created( $date );
+		$digest = $signer->create_content_digest_header( $body );
 
 		$wp_version = get_masked_wp_version();
 
@@ -48,6 +54,7 @@ class Http {
 		 */
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
 		$args       = array(
+			'method'              => 'POST',
 			'timeout'             => 100,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
@@ -56,15 +63,16 @@ class Http {
 				'Accept'       => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
 				'Digest'       => $digest,
-				'Signature'    => $signature,
 				'Date'         => $date,
 			),
 			'body'                => $body,
 		);
 
+		$args = $signer->sign_request( '("@method" "@path" "host" "date")', $args );
+
 		$response = \wp_safe_remote_post( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
-
+var_dump($args);exit;
 		if ( $code >= 400 ) {
 			$response = new WP_Error(
 				$code,

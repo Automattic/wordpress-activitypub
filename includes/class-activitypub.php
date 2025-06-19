@@ -58,6 +58,16 @@ class Activitypub {
 
 		self::register_oembed_providers();
 		Embed::init();
+
+		safe_remote_post( 'https://obietester.blog/wp-json/activitypub/1.0/actors/0/inbox',
+			'{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "type": "Like",
+  "id": "https://mymath.rocks/activitypub/helge/like-c62dab9f-34fb-4940-bb72-98e8872f96be",
+  "actor": "https://mastodon.social/@obenland",
+  "object": "https://obietester.blog/?p=16863",
+  "to": ["https://i.calckey.cloud/users/99is5hpneh"]
+}', 1 );
 	}
 
 	/**
