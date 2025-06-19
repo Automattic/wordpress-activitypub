@@ -5,6 +5,12 @@
 	margin-bottom: 2rem;
 	position: relative;
 
+	&.has-background,
+	&.has-border {
+		box-sizing: border-box;
+		padding: 2rem;
+	}
+
 	// Main container for reactions.
 	.activitypub-reactions {
 		display: flex;
@@ -94,19 +100,19 @@
 			margin-left: 12px;
 			padding: 0.25rem 0.5rem;
 			font-size: 70%;
-			color: var(--wp--preset--color--contrast, var(--wp--preset--color--accent, currentColor));
+			color: currentColor;
 			transition: background-color 0.2s ease;
 			white-space: nowrap;
 			text-decoration: none;
 
 			&:hover {
 				background-color: rgba(0, 0, 0, 0.05);
-				color: var(--wp--preset--color--contrast, var(--wp--preset--color--accent, currentColor));
+				color: currentColor;
 			}
 
 			&:focus:not(:disabled) {
 				box-shadow: none;
-				outline: 1px solid var(--wp--preset--color--contrast, var(--wp--preset--color--accent, currentColor));
+				outline: 1px solid currentColor;
 				outline-offset: 2px;
 			}
 		}
