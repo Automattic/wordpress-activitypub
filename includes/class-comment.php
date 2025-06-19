@@ -26,7 +26,6 @@ class Comment {
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
-		\add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
@@ -56,24 +55,23 @@ class Comment {
 			return $link;
 		}
 
-		$attrs = array(
+		if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( 'activitypub/remote-reply' ) ) {
+			\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply' );
+		}
+
+		$attributes = array(
 			'selectedComment' => self::generate_id( $comment ),
 			'commentId'       => $comment->comment_ID,
 		);
 
-		$div = sprintf(
-			'<div class="reply activitypub-remote-reply" data-attrs="%s"></div>',
-			esc_attr( wp_json_encode( $attrs ) )
-		);
+		$block = \do_blocks( \sprintf( '<!-- wp:activitypub/remote-reply %s /-->', \wp_json_encode( $attributes ) ) );
 
 		/**
 		 * Filters the HTML markup for the ActivityPub remote comment reply container.
 		 *
-		 * @param string $div The HTML markup for the remote reply container. Default is a div
-		 *                    with class 'activitypub-remote-reply' and data attributes for
-		 *                    the selected comment ID and internal comment ID.
+		 * @param string $block The HTML markup for the remote reply container.
 		 */
-		return apply_filters( 'activitypub_comment_reply_link', $div );
+		return \apply_filters( 'activitypub_comment_reply_link', $block );
 	}
 
 	/**
@@ -453,60 +451,6 @@ class Comment {
 	}
 
 	/**
-	 * Enqueue scripts for remote comments
-	 */
-	public static function enqueue_scripts() {
-		if ( ! \is_singular() || \is_user_logged_in() ) {
-			// Only on single pages, only for logged-out users.
-			return;
-		}
-
-		if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
-			// Post type does not support ActivityPub.
-			return;
-		}
-
-		if ( ! \comments_open() || ! \get_comments_number() ) {
-			// No comments, no need to load the script.
-			return;
-		}
-
-		if ( ! self::post_has_remote_comments( \get_the_ID() ) ) {
-			// No remote comments, no need to load the script.
-			return;
-		}
-
-		$handle     = 'activitypub-remote-reply';
-		$data       = array(
-			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-		);
-		$js         = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
-		$asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply/index.asset.php';
-
-		if ( \file_exists( $asset_file ) ) {
-			$assets = require_once $asset_file;
-
-			\wp_enqueue_script(
-				$handle,
-				\plugins_url( 'build/remote-reply/index.js', __DIR__ ),
-				$assets['dependencies'],
-				$assets['version'],
-				true
-			);
-			\wp_add_inline_script( $handle, $js, 'before' );
-			\wp_set_script_translations( $handle, 'activitypub' );
-
-			\wp_enqueue_style(
-				$handle,
-				\plugins_url( 'build/remote-reply/style-index.css', __DIR__ ),
-				array( 'wp-components' ),
-				$assets['version']
-			);
-		}
-	}
-
-	/**
 	 * Get the comment type by activity type.
 	 *
 	 * @param string $activity_type The activity type.
@@ -561,19 +505,6 @@ class Comment {
 	 */
 	public static function get_comment_type_slugs() {
 		return array_keys( self::get_comment_types() );
-	}
-
-	/**
-	 * Return the registered custom comment type slugs.
-	 *
-	 * @deprecated 4.5.0 Use get_comment_type_slugs instead.
-	 *
-	 * @return array The registered custom comment type slugs.
-	 */
-	public static function get_comment_type_names() {
-		_deprecated_function( __METHOD__, '4.5.0', 'get_comment_type_slugs' );
-
-		return self::get_comment_type_slugs();
 	}
 
 	/**

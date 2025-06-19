@@ -1,52 +1,240 @@
-@use '../shared/lightbox';
+@import '../shared/modal/style';
 
 .activitypub-follow-me-block-wrapper {
-	width: 100%;
-
-	// extra side padding for border/background colors
-	&.has-border-color, &.has-background {
-		.activitypub-profile {
-			padding-left: 1rem;
-			padding-right: 1rem;
-		}
-	}
+	display: block;
+	margin: 1rem 0;
+	position: relative;
 
 	.activitypub-profile {
-
-		display: flex;
-		align-items: center;
-		// right/left padding overridden above for border/background colors
 		padding: 1rem 0;
 
-		.activitypub-profile__avatar {
-			height: 75px;
-			width: 75px;
-			margin-right: 1rem;
-			border-radius: 50%;
+		&__body {
+			display: flex;
+			flex-wrap: wrap;
 		}
-		.activitypub-profile__content {
+
+		&__avatar {
+			width: 75px;
+			height: 75px;
+			border-radius: 50%;
+			margin-right: 1rem;
+			object-fit: cover;
+		}
+
+		&__content {
+			display: flex;
+			flex: 1;
+			flex-wrap: wrap;
+			justify-content: space-between;
+			align-items: center;
+			min-width: 0;
+		}
+
+		&__info {
+			display: block;
 			flex: 1;
 			min-width: 0;
 		}
-		.activitypub-profile__name, .activitypub-profile__handle {
-			margin: 0;
+
+		&__name {
+			font-size: 1.25em;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		&__name,
+		&__handle {
+			color: inherit;
 			line-height: 1.2;
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis;
 		}
-		.activitypub-profile__name {
-			font-size: 1.25em;
-		}
-		.activitypub-profile__follow {
-			align-self: center;
-			background-color: var(--wp--preset--color--black);
-			color: var(--wp--preset--color--white);
 
-			// Only add left margin to the button when there's profile content.
-			&:not(:only-child) {
-				margin-left: 1rem;
+		div.wp-block-button { // Twenty Twenty Editor styles specificity.
+			margin: 0 0 0 1rem;
+			display: flex;
+			align-items: center;
+		}
+
+		.wp-block-button__link {
+			margin: 0;
+		}
+
+		.is-small {
+			padding: 0.25rem 0.5rem;
+			font-size: 0.8rem;
+		}
+
+		.is-compact {
+			padding: 0.4rem 0.8rem;
+			font-size: 0.9rem;
+		}
+	}
+
+	// Style variations - applied to the wrapper
+	&:not(.is-style-button-only):not(.is-style-profile) {
+		.activitypub-profile__bio,
+		.activitypub-profile__stats {
+			display: none;
+		}
+	}
+
+	&.is-style-button-only {
+		.activitypub-profile {
+			padding: 0;
+		}
+
+		.activitypub-profile__body {
+			display: block;
+			padding: 0;
+		}
+
+		.activitypub-profile__content {
+			display: inline;
+		}
+
+		div.wp-block-button {
+			display: inline-block;
+			margin: 0;
+		}
+		.activitypub-profile__avatar,
+		.activitypub-profile__name,
+		.activitypub-profile__handle,
+		.activitypub-profile__bio,
+		.activitypub-profile__stats {
+			display: none;
+		}
+	}
+
+	&.is-style-profile {
+		border-radius: 8px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		overflow: hidden;
+
+		&.has-background {
+			.activitypub-profile {
+				padding: 0;
 			}
 		}
+
+		.activitypub-profile {
+			padding: 0;
+
+			&__header {
+				width: 100%;
+				height: 120px;
+				background-color: #ccc;
+				background-size: cover;
+				background-position: center;
+			}
+
+			&__body {
+				padding: 1rem;
+			}
+
+			&__avatar {
+				width: 64px;
+				height: 64px;
+			}
+
+			&__content {
+				flex: 1;
+				min-width: 0;
+			}
+
+			&__name {
+				margin-bottom: 0.25rem;
+			}
+
+			&__bio {
+				margin-top: 16px;
+				font-size: 90%;
+				line-height: 1.4;
+				width: 100%;
+
+				p {
+					margin: 0 0 0.5rem;
+
+					&:last-child {
+						margin-bottom: 0;
+					}
+				}
+			}
+
+			&__stats {
+				display: flex;
+				gap: 16px;
+				margin-top: 1rem;
+				font-size: 0.9em;
+				width: 100%;
+			}
+		}
+	}
+
+	&.has-background .activitypub-profile,
+	&.has-border .activitypub-profile {
+		padding-left: 1rem;
+		padding-right: 1rem;
+	}
+}
+
+.activitypub-dialog {
+	&__section {
+		padding: 1.5rem 2rem;
+		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
+
+		&:last-child {
+			border-bottom: none;
+			padding-bottom: 2rem;
+		}
+
+		h4 {
+			margin-top: 0;
+			margin-bottom: 0.5rem;
+			font-size: 110%;
+		}
+	}
+
+	&__description {
+		margin-bottom: 1rem;
+		color: inherit;
+		font-size: 95%;
+	}
+
+	&__button-group {
+		display: flex;
+		width: 100%;
+		margin-bottom: 0.5rem;
+
+		input[type] {
+			flex: 1;
+			border: 1px solid var(--wp--preset--color--gray, #e2e4e7);
+			border-radius: 4px 0 0 4px;
+			line-height: 1;
+			margin: 0;
+
+			&::placeholder {
+				opacity: 0.5;
+			}
+
+			&[aria-invalid="true"] {
+				border-color: var(--wp--preset--color--vivid-red);
+			}
+		}
+
+		button {
+			border-radius: 0 4px 4px 0 !important;
+			margin-left: -1px !important;
+			min-width: 22.5%;
+			width: auto;
+		}
+	}
+
+	&__error {
+		color: var(--wp--preset--color--vivid-red);
+		font-size: 90%;
+		margin-top: 0.5rem;
 	}
 }

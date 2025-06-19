@@ -2,7 +2,7 @@
 /**
  * Test file for Query class.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests;

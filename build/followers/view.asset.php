@@ -1,1 +1,1 @@
-<?php return array('dependencies' => array('react', 'wp-api-fetch', 'wp-components', 'wp-dom-ready', 'wp-element', 'wp-i18n', 'wp-url'), 'version' => 'e1915374b8c762ae4376');
+<?php return array('dependencies' => array('@wordpress/interactivity'), 'version' => '1ee127d6b44f5125a728', 'type' => 'module');

@@ -2,7 +2,7 @@
 /**
  * Test file for Follow handler.
  *
- * @package ActivityPub
+ * @package Activitypub
  */
 
 namespace Activitypub\Tests\Handler;

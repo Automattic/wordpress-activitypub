@@ -15,15 +15,9 @@ namespace Activitypub\Integration;
  * @see https://wordpress.org/plugins/surge/
  */
 class Surge {
-	/**
-	 * The define for the Surge cache config.
-	 *
-	 * @var string
-	 */
-	public static $cache_config = "define( 'WP_CACHE_CONFIG', '' . ACTIVITYPUB_PLUGIN_DIR . 'integration/surge-cache-config.php' );";
 
 	/**
-	 * The pattern to find the define for the Surge cache config.
+	 * The pattern to find the Surge cache config constant.
 	 *
 	 * @var string
 	 */
@@ -43,6 +37,10 @@ class Surge {
 	 * Add the Surge cache config.
 	 */
 	public static function add_cache_config() {
+		if ( \defined( 'WP_CACHE_CONFIG' ) ) {
+			return;
+		}
+
 		$file = self::get_config_file_path();
 
 		if ( ! \wp_is_writable( $file ) ) {
@@ -66,9 +64,9 @@ class Surge {
 		// Add a WP_CACHE_CONFIG to wp-config.php.
 		$anchor = "/* That's all, stop editing!";
 		if ( false !== \strpos( $config, $anchor ) ) {
-			$config = \str_replace( $anchor, self::$cache_config . PHP_EOL . PHP_EOL . $anchor, $config );
+			$config = \str_replace( $anchor, self::get_cache_config() . PHP_EOL . PHP_EOL . $anchor, $config );
 		} elseif ( false !== \strpos( $config, '<?php' ) ) {
-			$config = \str_replace( '<?php', '<?php' . PHP_EOL . PHP_EOL . self::$cache_config . PHP_EOL, $config );
+			$config = \str_replace( '<?php', '<?php' . PHP_EOL . PHP_EOL . self::get_cache_config() . PHP_EOL, $config );
 		}
 
 		$wp_filesystem->put_contents( $file, $config, FS_CHMOD_FILE );
@@ -78,6 +76,10 @@ class Surge {
 	 * Remove the Surge cache config.
 	 */
 	public static function remove_cache_config() {
+		if ( ! \defined( 'WP_CACHE_CONFIG' ) ) {
+			return;
+		}
+
 		$file = self::get_config_file_path();
 
 		if ( ! \wp_is_writable( $file ) ) {
@@ -177,11 +179,20 @@ class Surge {
 				\sprintf(
 					// translators: %s: Plugin directory path.
 					\__( 'To enable the ActivityPub integration with Surge, add the following line to your <code>wp-config.php</code> file: <br /><code>%s</code>', 'activitypub' ),
-					self::$cache_config
+					self::get_cache_config()
 				)
 			);
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Get the cache config.
+	 *
+	 * @return string The cache config.
+	 */
+	public static function get_cache_config() {
+		return \sprintf( "define( 'WP_CACHE_CONFIG', '%s/integration/surge-cache-config.php' );", \rtrim( ACTIVITYPUB_PLUGIN_DIR, '/' ) );
 	}
 }

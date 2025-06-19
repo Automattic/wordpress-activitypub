@@ -41,15 +41,38 @@ class Interaction_Controller extends \WP_REST_Controller {
 					'permission_callback' => '__return_true',
 					'args'                => array(
 						'uri' => array(
-							'description' => 'The URI of the object to interact with.',
-							'type'        => 'string',
-							'format'      => 'uri',
-							'required'    => true,
+							'description'       => 'The URI or webfinger ID of the object to interact with.',
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => array( $this, 'sanitize_uri' ),
 						),
 					),
 				),
 			)
 		);
+	}
+
+	/**
+	 * Sanitize the URI parameter.
+	 *
+	 * @param string $uri The URI or webfinger ID of the object to interact with.
+	 *
+	 * @return string Sanitized URI.
+	 */
+	public function sanitize_uri( $uri ) {
+		// Remove "acct:" prefix if present.
+		if ( str_starts_with( $uri, 'acct:' ) ) {
+			$uri = \substr( $uri, 5 );
+		}
+
+		// Remove "@" prefix if present.
+		$uri = \ltrim( $uri, '@' );
+
+		if ( is_email( $uri ) ) {
+			return \sanitize_text_field( $uri );
+		}
+
+		return \sanitize_url( $uri );
 	}
 
 	/**
@@ -134,6 +157,6 @@ class Interaction_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		return new \WP_REST_Response( null, 302, array( 'Location' => \esc_url( $redirect_url ) ) );
+		return new \WP_REST_Response( null, 302, array( 'Location' => $redirect_url ) );
 	}
 }

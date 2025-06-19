@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Author profiles will cap the amount of extra fields they return to 20, to avoid response size errors in clients.

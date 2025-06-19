@@ -81,7 +81,7 @@ class Embed {
 		$favorites = isset( $activity_object['likes']['totalItems'] ) ? (int) $activity_object['likes']['totalItems'] : null;
 
 		$audio  = null;
-		$images = null;
+		$images = array();
 		$video  = null;
 		if ( isset( $activity_object['image']['url'] ) ) {
 			$images = array(
@@ -97,9 +97,8 @@ class Embed {
 
 				switch ( $type ) {
 					case 'image':
-						$images = \wp_list_filter( $activity_object['attachment'], array( 'type' => 'Image' ) );
-						$images = array_slice( $images, 0, 4 );
-						break 2;
+						$images[] = $attachment;
+						break;
 					case 'video':
 						$video = $attachment;
 						break 2;
@@ -108,6 +107,7 @@ class Embed {
 						break 2;
 				}
 			}
+			$images = \array_slice( $images, 0, 4 );
 		}
 
 		ob_start();

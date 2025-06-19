@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Improve compatibility with third-party caching plugins by sending a `Vary` header.

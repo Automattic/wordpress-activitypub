@@ -283,8 +283,11 @@ class Post extends Base {
 			return array();
 		}
 
-		// phpcs:ignore Universal.Operators.DisallowShortTernary
-		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true ) ?: \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
+		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true );
+
+		if ( ! is_numeric( $max_media ) ) {
+			$max_media = \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
+		}
 
 		/**
 		 * Filters the maximum number of media attachments allowed in a post.
@@ -296,6 +299,10 @@ class Post extends Base {
 		 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
 		 */
 		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
+
+		if ( 0 === $max_media ) {
+			return array();
+		}
 
 		$media = array(
 			'image' => array(),
@@ -581,7 +588,7 @@ class Post extends Base {
 		// Get webfinger identifier.
 		$webfinger = '';
 		if ( ! empty( $author['webfinger'] ) ) {
-			$webfinger = $author['webfinger'];
+			$webfinger = \str_replace( 'acct:', '', $author['webfinger'] );
 		} elseif ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
 			// Construct webfinger-style identifier from username and domain.
 			$domain    = \wp_parse_url( $author['url'], PHP_URL_HOST );
@@ -606,7 +613,7 @@ class Post extends Base {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
 	 *
-	 * @return string|null The in-reply-to URL of the post.
+	 * @return string|array|null The in-reply-to URL of the post.
 	 */
 	protected function get_in_reply_to() {
 		if ( ! site_supports_blocks() ) {
