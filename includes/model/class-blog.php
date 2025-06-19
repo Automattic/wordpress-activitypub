@@ -26,70 +26,11 @@ use function Activitypub\get_attribution_domains;
  */
 class Blog extends Actor {
 	/**
-	 * The Featured-Posts.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
-	 *
-	 * @context {
-	 *   "@id": "http://joinmastodon.org/ns#featured",
-	 *   "@type": "@id"
-	 * }
-	 *
-	 * @var string
-	 */
-	protected $featured;
-
-	/**
-	 * Moderators endpoint.
-	 *
-	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
-	 *
-	 * @var string
-	 */
-	protected $moderators;
-
-	/**
 	 * The User-ID
 	 *
 	 * @var int
 	 */
 	protected $_id = Actors::BLOG_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
-
-	/**
-	 * If the User is indexable.
-	 *
-	 * @context http://joinmastodon.org/ns#indexable
-	 *
-	 * @var boolean
-	 */
-	protected $indexable;
-
-	/**
-	 * The WebFinger Resource.
-	 *
-	 * @var string
-	 */
-	protected $webfinger;
-
-	/**
-	 * Whether the User is discoverable.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
-	 *
-	 * @context http://joinmastodon.org/ns#discoverable
-	 *
-	 * @var boolean
-	 */
-	protected $discoverable;
-
-	/**
-	 * Restrict posting to mods.
-	 *
-	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
-	 *
-	 * @var boolean
-	 */
-	protected $posting_restricted_to_mods;
 
 	/**
 	 * Constructor.
