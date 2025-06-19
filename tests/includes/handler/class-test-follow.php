@@ -79,13 +79,13 @@ class Test_Follow extends WP_UnitTestCase {
 		);
 		$this->assertEmpty( $outbox_posts, 'No outbox entry should be created for WP_Error follower' );
 
-		$follower = array(
-			'actor' => $actor,
-			'type'  => 'Person',
-			'inbox' => 'https://example.com/inbox',
-		);
+		$remote_actor = new \stdClass();
+		$remote_actor->actor = $actor;
+		$remote_actor->type  = 'Person';
+		$remote_actor->inbox = 'https://example.com/inbox';
+		$remote_actor = new \WP_Post( $remote_actor );
 
-		Follow::queue_accept( $actor, $activity_object, self::$user_id, $follower );
+		Follow::queue_accept( $actor, $activity_object, self::$user_id, $remote_actor );
 
 		$outbox_posts = get_posts(
 			array(

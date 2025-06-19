@@ -120,7 +120,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$old_follower     = Actors::get_remote_by_uri( $origin );
 		$updated_follower = Actors::get_remote_by_uri( $target );
 
-		$this->assertNull( $old_follower );
+		$this->assertWPError( $old_follower );
 		$this->assertNotNull( $updated_follower );
 		$this->assertEquals( $target, $updated_follower->guid );
 
@@ -176,11 +176,11 @@ class Test_Move extends \WP_UnitTestCase {
 		// Assert that the original follower still exists and wasn't modified.
 		$existing_follower = Followers::get_follower( $this->user_id, $origin );
 		$this->assertNotNull( $existing_follower );
-		$this->assertEquals( $origin, $existing_follower->get_id() );
+		$this->assertEquals( $origin, $existing_follower->guid );
 
 		// Assert that no new follower was created for the target.
 		$target_follower = Followers::get_follower( $this->user_id, $target );
-		$this->assertNull( $target_follower );
+		$this->assertWPError( $target_follower );
 
 		// Cleanup.
 		\wp_delete_post( $id );
@@ -223,8 +223,11 @@ class Test_Move extends \WP_UnitTestCase {
 		// Verify that our test follower remains unchanged.
 		$existing_follower = Followers::get_follower( $this->user_id, 'https://example.com/test-profile' );
 		$this->assertNotNull( $existing_follower );
-		$this->assertEquals( 'https://example.com/test-profile', $existing_follower->get_id() );
-		$this->assertEquals( 'https://example.com/test/inbox', $existing_follower->get_inbox() );
+
+		$actor = Actors::get_actor( $existing_follower );
+
+		$this->assertEquals( 'https://example.com/test-profile', $actor->get_id() );
+		$this->assertEquals( 'https://example.com/test/inbox', $actor->get_inbox() );
 
 		// Cleanup.
 		$test_follower->delete();
@@ -320,7 +323,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertContains( (string) $this->user_id_2, $target_users );
 
 		// Check if the origin follower was deleted.
-		$this->assertNull( Actors::get_remote_by_uri( $origin, true ) );
+		$this->assertWPError( Actors::get_remote_by_uri( $origin, true ) );
 
 		remove_filter( 'pre_http_request', $filter );
 	}

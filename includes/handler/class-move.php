@@ -58,7 +58,7 @@ class Move {
 		 * If the new target is followed, but the origin is not,
 		 * everything is fine, so we can return.
 		 */
-		if ( $target_object && ! $origin_object ) {
+		if ( ! \is_wp_error( $target_object ) && \is_wp_error( $origin_object ) ) {
 			return;
 		}
 
@@ -66,7 +66,7 @@ class Move {
 		 * If the new target is not followed, but the origin is,
 		 * update the origin follower to the new target.
 		 */
-		if ( ! $target_object && $origin_object ) {
+		if ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
@@ -88,7 +88,7 @@ class Move {
 		 * If the new target is followed, and the origin is followed,
 		 * move users and delete the origin follower.
 		 */
-		if ( $target_object && $origin_object ) {
+		if ( ! \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			$origin_users = \get_post_meta( $origin_object->ID, Followers::FOLLOWER_META_KEY, false );
 			$target_users = \get_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, false );
 
