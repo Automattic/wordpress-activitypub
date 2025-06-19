@@ -418,7 +418,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			2
 		);
 
-		add_user_meta( $user_id, 'activitypub_followers', $followers, true );
+		\add_user_meta( $user_id, 'activitypub_followers', $followers, true );
 
 		\Activitypub\Migration::migrate_from_0_17();
 
@@ -429,7 +429,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			// Verify each valid follower was migrated correctly.
 			$db_follower_ids = array_map(
 				function ( $follower ) {
-					return $follower->get_id();
+					return $follower->guid;
 				},
 				$db_followers
 			);

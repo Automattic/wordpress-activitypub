@@ -594,10 +594,14 @@ class Test_Migration extends \WP_UnitTestCase {
 	 */
 	public function test_update_actor_json_slashing() {
 		$follower = array(
+			'id'                 => 'https://example.com/users/test',
 			'type'               => 'Person',
 			'name'               => 'Test Follower',
 			'preferred_username' => 'Follower',
 			'summary'            => '<p>unescaped backslash 04\2024</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
 		);
 
 		$post_id = Actors::upsert( $follower );
@@ -868,10 +872,26 @@ class Test_Migration extends \WP_UnitTestCase {
 	 */
 	public function test_update_actor_json_storage() {
 		$actor_array = array(
+			'id'                 => 'https://example.com/users/test',
 			'type'               => 'Person',
 			'name'               => 'Test Follower',
 			'preferred_username' => 'Follower',
 			'summary'            => '<p>HTML content</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
+		);
+
+		$remote_actor = function () use ( $actor_array ) {
+			return array(
+				'code' => 200,
+				'body' => $actor_array,
+			);
+		};
+
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			$remote_actor
 		);
 
 		$post_id = Actors::upsert( $actor_array );
@@ -911,6 +931,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$this->assertEquals( '<p>HTML content</p>', $actor->get_summary() );
 
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
 		\wp_delete_post( $post_id );
 	}
 
@@ -921,10 +942,14 @@ class Test_Migration extends \WP_UnitTestCase {
 	 */
 	public function test_update_actor_json_storage_broken_json() {
 		$actor_array = array(
+			'id'                 => 'https://example.com/users/test',
 			'type'               => 'Person',
 			'name'               => 'Test Follower',
 			'preferred_username' => 'Follower',
 			'summary'            => '<p>HTML content</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
 		);
 
 		$remote_actor = function () use ( $actor_array ) {

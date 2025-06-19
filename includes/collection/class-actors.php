@@ -438,7 +438,7 @@ class Actors {
 
 		$post_id = self::get_remote_by_uri( $actor_data->get_id() );
 
-		if ( $post_id ) {
+		if ( ! \is_wp_error( $post_id ) ) {
 			// If this is an update, prevent the "followed" date from being overwritten by the current date.
 			$post                  = \get_post( $post_id );
 			$args['ID']            = $post_id;
@@ -452,10 +452,10 @@ class Actors {
 			\kses_remove_filters();
 		}
 
-		if ( $post_id ) {
-			$post_id = \wp_update_post( $args );
-		} else {
+		if ( \is_wp_error( $post_id ) ) {
 			$post_id = \wp_insert_post( $args );
+		} else {
+			$post_id = \wp_update_post( $args );
 		}
 
 		if ( $has_kses ) {
@@ -485,7 +485,11 @@ class Actors {
 		);
 
 		if ( ! $post_id ) {
-			return null;
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
 		return \get_post( $post_id );
@@ -533,6 +537,10 @@ class Actors {
 	public static function count_errors( $post ) {
 		$post = \get_post( $post );
 
+		if ( ! $post ) {
+			return 0;
+		}
+
 		return \count( \get_post_meta( $post->ID, '_activitypub_errors', false ) );
 	}
 
@@ -541,10 +549,14 @@ class Actors {
 	 *
 	 * @param \WP_Post|int $post The ID of the WordPress Custom-Post-Type.
 	 *
-	 * @return string[]|null The errors.
+	 * @return string[] The errors.
 	 */
 	public static function get_errors( $post ) {
 		$post = \get_post( $post );
+
+		if ( ! $post ) {
+			return array();
+		}
 
 		return \get_post_meta( $post->ID, '_activitypub_errors', false );
 	}
@@ -558,6 +570,10 @@ class Actors {
 	 */
 	public static function clear_errors( $post ) {
 		$post = \get_post( $post );
+
+		if ( ! $post ) {
+			return false;
+		}
 
 		return \delete_post_meta( $post->ID, '_activitypub_errors' );
 	}

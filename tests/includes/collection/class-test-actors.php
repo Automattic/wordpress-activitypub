@@ -137,12 +137,15 @@ class Test_Actors extends \WP_UnitTestCase {
 	 */
 	public function test_clear_errors() {
 		$actor = array(
-			'type'              => 'Person',
 			'id'                => 'https://example.com/author/jon',
+			'type'              => 'Person',
 			'url'               => 'https://example.com/author/jon',
 			'inbox'             => 'https://example.com/author/jon/inbox',
 			'name'              => 'jon',
 			'preferredUsername' => 'jon',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
 		);
 
 		$id = Actors::upsert( $actor );
