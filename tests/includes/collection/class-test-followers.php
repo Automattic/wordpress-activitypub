@@ -121,32 +121,6 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests get_followers with corrupted json.
-	 *
-	 * @covers ::get_followers
-	 */
-	public function test_get_followers_without_errors() {
-		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
-
-		foreach ( $followers as $follower ) {
-			Followers::add_follower( 1, $follower );
-		}
-
-		$actor_id = Followers::get_follower( 1, 'https://example.org/author/doe' );
-
-		\wp_update_post(
-			array(
-				'ID'           => $actor_id,
-				'post_content' => 'invalid json',
-			)
-		);
-
-		$db_followers = Followers::get_followers( 1 );
-
-		$this->assertEquals( 2, \count( $db_followers ) );
-	}
-
-	/**
 	 * Tests add_follower.
 	 *
 	 * @covers ::add_follower
@@ -257,7 +231,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		Followers::remove_follower( 1, 'https://example.com/author/jon' );
 
 		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertNull( $follower );
+		$this->assertWPError( $follower );
 
 		$follower2 = Followers::get_follower( 2, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower2->guid );

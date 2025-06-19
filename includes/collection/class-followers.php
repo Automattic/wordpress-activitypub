@@ -7,7 +7,6 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Model\Follower;
 use Activitypub\Collection\Actors;
 
 use function Activitypub\is_tombstone;
@@ -78,22 +77,22 @@ class Followers {
 	public static function remove_follower( $user_id, $actor ) {
 		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 
-		$follower = self::get_follower( $user_id, $actor );
+		$remote_actor = self::get_follower( $user_id, $actor );
 
-		if ( ! $follower ) {
+		if ( ! $remote_actor ) {
 			return false;
 		}
 
 		/**
 		 * Fires before a Follower is removed.
 		 *
-		 * @param Follower $follower The Follower object.
+		 * @param \WP_Post $remote_actor The remote Actor object.
 		 * @param int      $user_id  The ID of the WordPress User.
 		 * @param string   $actor    The Actor URL.
 		 */
-		\do_action( 'activitypub_followers_pre_remove_follower', $follower, $user_id, $actor );
+		\do_action( 'activitypub_followers_pre_remove_follower', $remote_actor, $user_id, $actor );
 
-		return \delete_post_meta( $follower->get__id(), self::FOLLOWER_META_KEY, $user_id );
+		return \delete_post_meta( $remote_actor->ID, self::FOLLOWER_META_KEY, $user_id );
 	}
 
 	/**
@@ -152,7 +151,7 @@ class Followers {
 	 * @param int      $page    Page number.
 	 * @param array    $args    The WP_Query arguments.
 	 *
-	 * @return Follower[] List of `Follower` objects.
+	 * @return \WP_Post[] List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
 		$data = self::get_followers_with_count( $user_id, $number, $page, $args );
@@ -202,7 +201,7 @@ class Followers {
 	/**
 	 * Get all Followers.
 	 *
-	 * @return Follower[] The Term list of Followers.
+	 * @return \WP_Post[] The list of Followers.
 	 */
 	public static function get_all_followers() {
 		$args = array(

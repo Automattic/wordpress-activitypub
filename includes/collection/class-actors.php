@@ -436,12 +436,11 @@ class Actors {
 			),
 		);
 
-		$post_id = self::get_remote_by_uri( $actor_data->get_id() );
+		$post = self::get_remote_by_uri( $actor_data->get_id() );
 
-		if ( ! \is_wp_error( $post_id ) ) {
+		if ( ! \is_wp_error( $post ) ) {
 			// If this is an update, prevent the "followed" date from being overwritten by the current date.
-			$post                  = \get_post( $post_id );
-			$args['ID']            = $post_id;
+			$args['ID']            = $post->ID;
 			$args['post_date']     = $post->post_date;
 			$args['post_date_gmt'] = $post->post_date_gmt;
 		}
@@ -452,7 +451,7 @@ class Actors {
 			\kses_remove_filters();
 		}
 
-		if ( \is_wp_error( $post_id ) ) {
+		if ( \is_wp_error( $post ) ) {
 			$post_id = \wp_insert_post( $args );
 		} else {
 			$post_id = \wp_update_post( $args );
