@@ -75,8 +75,6 @@ class Move {
 				array( 'ID' => sanitize_key( $origin_object->ID ) )
 			);
 
-			\wp_cache_delete( $origin_object->ID, 'posts' );
-
 			Actors::upsert( $target_json );
 
 			// Clear the cache.
