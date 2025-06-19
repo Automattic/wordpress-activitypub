@@ -351,10 +351,10 @@ class Signature {
 	 *
 	 * @param array $signature_block The signature block.
 	 *
-	 * @return string The signature algorithm.
+	 * @return string|bool The signature algorithm or false if not found.
 	 */
 	public static function get_signature_algorithm( $signature_block ) {
-		if ( isset( $signature_block['algorithm'] ) ) {
+		if ( ! empty( $signature_block['algorithm'] ) ) {
 			switch ( $signature_block['algorithm'] ) {
 				case 'rsa-sha-512':
 					return 'sha512'; // hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12.
