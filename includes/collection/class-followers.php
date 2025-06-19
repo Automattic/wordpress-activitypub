@@ -40,7 +40,7 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
-	 * @return Follower|\WP_Error The Follower (WP_Post array) or an WP_Error.
+	 * @return \WP_Post|\WP_Error The Follower (WP_Post array) or an WP_Error.
 	 */
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
@@ -102,7 +102,7 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
-	 * @return Follower|\WP_Error The Follower object or WP_Error on failure.
+	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower( $user_id, $actor ) {
 		global $wpdb;
@@ -128,9 +128,7 @@ class Followers {
 			);
 		}
 
-		$post = \get_post( $id );
-		// @todo refactor to return the WP_Post object
-		return Follower::init_from_cpt( $post );
+		return \get_post( $id );
 	}
 
 	/**
@@ -138,16 +136,12 @@ class Followers {
 	 *
 	 * @param string $actor The Actor URL.
 	 *
-	 * @return Follower|false|null The Follower object or false on failure.
+	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_remote_by_uri' );
-		$post = Actors::get_remote_by_uri( $actor );
-		if ( ! $post || is_wp_error( $post ) ) {
-			return $post;
-		}
 
-		return Follower::init_from_cpt( $post );
+		return Actors::get_remote_by_uri( $actor );
 	}
 
 	/**
@@ -162,6 +156,7 @@ class Followers {
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
 		$data = self::get_followers_with_count( $user_id, $number, $page, $args );
+
 		return $data['followers'];
 	}
 
@@ -176,7 +171,7 @@ class Followers {
 	 * @return array {
 	 *      Data about the followers.
 	 *
-	 *      @type Follower[] $followers List of `Follower` objects.
+	 *      @type \WP_Post[] $followers List of `Follower` objects.
 	 *      @type int        $total     Total number of followers.
 	 *  }
 	 */
@@ -199,8 +194,7 @@ class Followers {
 		$args      = \wp_parse_args( $args, $defaults );
 		$query     = new \WP_Query( $args );
 		$total     = $query->found_posts;
-		$followers = \array_map( array( Follower::class, 'init_from_cpt' ), $query->get_posts() );
-		$followers = \array_filter( $followers );
+		$followers = \array_filter( $query->get_posts() );
 
 		return \compact( 'followers', 'total' );
 	}
@@ -376,13 +370,12 @@ class Followers {
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
 	 *
-	 * @return Actor[] The Term list of Actors.
+	 * @return \WP_Post[] The Term list of Actors.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated' );
-		$posts = Actors::get_outdated( $number, $older_than );
 
-		return \array_map( array( Actors::class, 'get_actor' ), $posts );
+		return Actors::get_outdated( $number, $older_than );
 	}
 
 	/**
@@ -390,13 +383,12 @@ class Followers {
 	 *
 	 * @param int $number Optional. The number of Followers to return. Default 20.
 	 *
-	 * @return Actor[] The Term list of Actors.
+	 * @return \WP_Post[] The Term list of Actors.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty' );
-		$posts = Actors::get_faulty( $number );
 
-		return \array_map( array( Actors::class, 'get_actor' ), $posts );
+		return Actors::get_faulty( $number );
 	}
 
 	/**

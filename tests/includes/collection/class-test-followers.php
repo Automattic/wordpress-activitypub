@@ -133,7 +133,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		$follower           = Followers::get_follower( 1, 'https://example.org/author/doe' );
-		$post               = \get_post( $follower->get__id() );
+		$post               = \get_post( $follower->ID );
 		$post->post_content = 'invalid json';
 		\wp_update_post( $post );
 
@@ -242,13 +242,13 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower->get_id() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
 		$followers = Followers::get_followers( 1 );
 		$this->assertEquals( 2, count( $followers ) );
 
 		$follower2 = Followers::get_follower( 2, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_id() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower2->guid );
 
 		Followers::remove_follower( 1, 'https://example.com/author/jon' );
 
@@ -256,7 +256,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertNull( $follower );
 
 		$follower2 = Followers::get_follower( 2, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_id() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower2->guid );
 
 		$followers = Followers::get_followers( 1 );
 		$this->assertEquals( 1, count( $followers ) );
@@ -284,7 +284,6 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$post_modified     = gmdate( $mysql_time_format, $time );
 		$post_modified_gmt = gmdate( $mysql_time_format, ( $time + get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) );
-		$post_id           = $follower->get__id();
 
 		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
@@ -292,12 +291,12 @@ class Test_Followers extends \WP_UnitTestCase {
 				array(
 					$post_modified,
 					$post_modified_gmt,
-					$post_id,
+					$follower->ID,
 				)
 			)
 		);
 
-		clean_post_cache( $post_id );
+		clean_post_cache( $follower->ID );
 
 		$actors = Actors::get_outdated();
 		$this->assertEquals( 1, \count( $actors ) );
@@ -319,21 +318,21 @@ class Test_Followers extends \WP_UnitTestCase {
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
-			\add_post_meta( $follower->get__id(), '_activitypub_errors', 'error ' . $i );
+			\add_post_meta( $follower->ID, '_activitypub_errors', 'error ' . $i );
 		}
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		$follower->count_errors();
+		Actors::count_errors( $follower );
 
 		$actors = Actors::get_faulty();
 
 		$this->assertEquals( 1, \count( $actors ) );
 		$this->assertEquals( 'http://sally.example.org', $actors[0]->guid );
 
-		$follower->reset_errors();
+		Actors::clear_errors( $follower );
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		$follower->count_errors();
+		Actors::count_errors( $follower );
 
 		$actors = Actors::get_faulty();
 
@@ -357,10 +356,11 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$db_followers = Followers::get_followers( 1 );
 
+
 		$this->assertStringContainsString( $follower, serialize( $db_followers ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 		$follower = current( $db_followers );
-		$meta     = get_post_meta( $follower->get__id(), Followers::FOLLOWER_META_KEY, false );
+		$meta     = get_post_meta( $follower->ID, Followers::FOLLOWER_META_KEY, false );
 
 		$this->assertCount( 1, $meta );
 	}
