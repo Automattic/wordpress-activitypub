@@ -212,11 +212,15 @@ class Signature {
 		}
 
 		$http_method = \strtolower( $http_method );
+		$created     = \strtotime( $date );
+		$expires     = $created + HOUR_IN_SECONDS;
 
 		if ( ! empty( $digest ) ) {
-			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: $digest";
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: $digest\n(created): $created\n(expires): $expires";
+			$headers_list  = '(request-target) host date digest (created) (expires)';
 		} else {
-			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\n(created): $created\n(expires): $expires";
+			$headers_list  = '(request-target) host date (created) (expires)';
 		}
 
 		$signature = null;
@@ -225,11 +229,14 @@ class Signature {
 
 		$key_id = $user->get_id() . '#main-key';
 
-		if ( ! empty( $digest ) ) {
-			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="%s"', $key_id, $signature );
-		} else {
-			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"', $key_id, $signature );
-		}
+		return \sprintf(
+			'keyId="%s",algorithm="rsa-sha256",created=%d,expires=%d,headers="%s",signature="%s"',
+			$key_id,
+			$created,
+			$expires,
+			$headers_list,
+			$signature
+		);
 	}
 
 	/**
