@@ -77,7 +77,7 @@ class Followers {
 
 		$remote_actor = self::get_follower( $user_id, $actor );
 
-		if ( ! $remote_actor ) {
+		if ( \is_wp_error( $remote_actor ) ) {
 			return false;
 		}
 
