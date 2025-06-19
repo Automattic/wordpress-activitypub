@@ -35,30 +35,30 @@ class Move {
 	 * @param array $activity The JSON "Move" Activity.
 	 */
 	public static function handle_move( $activity ) {
-		$target = self::extract_target( $activity );
-		$origin = self::extract_origin( $activity );
+		$target_uri = self::extract_target( $activity );
+		$origin_uri = self::extract_origin( $activity );
 
-		if ( ! $target || ! $origin ) {
+		if ( ! $target_uri || ! $origin_uri ) {
 			return;
 		}
 
-		$target_actor_object = Http::get_remote_object( $target );
-		$origin_actor_object = Http::get_remote_object( $origin );
+		$target_json = Http::get_remote_object( $target_uri );
+		$origin_json = Http::get_remote_object( $origin_uri );
 
-		$verified = self::verify_move( $target_actor_object, $origin_actor_object );
+		$verified = self::verify_move( $target_json, $origin_json );
 
 		if ( ! $verified ) {
 			return;
 		}
 
-		$target_actor_cpt = Actors::get_remote_by_uri( $target );
-		$origin_actor_cpt = Actors::get_remote_by_uri( $origin );
+		$target_object = Actors::get_remote_by_uri( $target_uri );
+		$origin_object = Actors::get_remote_by_uri( $origin_uri );
 
 		/*
 		 * If the new target is followed, but the origin is not,
 		 * everything is fine, so we can return.
 		 */
-		if ( $target_actor_cpt && ! $origin_actor_cpt ) {
+		if ( $target_object && ! $origin_object ) {
 			return;
 		}
 
@@ -66,21 +66,21 @@ class Move {
 		 * If the new target is not followed, but the origin is,
 		 * update the origin follower to the new target.
 		 */
-		if ( ! $target_actor_cpt && $origin_actor_cpt ) {
+		if ( ! $target_object && $origin_object ) {
 			global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
 				$wpdb->posts,
-				array( 'guid' => sanitize_url( $target ) ),
-				array( 'ID' => sanitize_key( $origin_actor_cpt->ID ) )
+				array( 'guid' => sanitize_url( $target_uri ) ),
+				array( 'ID' => sanitize_key( $origin_object->ID ) )
 			);
 
-			\wp_cache_delete( $origin_actor_cpt->ID, 'posts' );
+			\wp_cache_delete( $origin_object->ID, 'posts' );
 
-			Actors::upsert( $target_actor_object );
+			Actors::upsert( $target_json );
 
 			// Clear the cache.
-			\wp_cache_delete( $origin_actor_cpt->ID, 'posts' );
+			\wp_cache_delete( $origin_object->ID, 'posts' );
 			return;
 		}
 
@@ -88,18 +88,18 @@ class Move {
 		 * If the new target is followed, and the origin is followed,
 		 * move users and delete the origin follower.
 		 */
-		if ( $target_actor_cpt && $origin_actor_cpt ) {
-			$origin_users = \get_post_meta( $origin_actor_cpt->ID, Followers::FOLLOWER_META_KEY, false );
-			$target_users = \get_post_meta( $target_actor_cpt->ID, Followers::FOLLOWER_META_KEY, false );
+		if ( $target_object && $origin_object ) {
+			$origin_users = \get_post_meta( $origin_object->ID, Followers::FOLLOWER_META_KEY, false );
+			$target_users = \get_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, false );
 
 			// Get all user ids from $origin_users that are not in $target_users.
 			$users = \array_diff( $origin_users, $target_users );
 
 			foreach ( $users as $user_id ) {
-				\add_post_meta( $target_actor_cpt->ID, Followers::FOLLOWER_META_KEY, $user_id );
+				\add_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, $user_id );
 			}
 
-			\wp_delete_post( $origin_actor_cpt->ID );
+			\wp_delete_post( $origin_object->ID );
 		}
 	}
 
