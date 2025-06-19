@@ -152,11 +152,11 @@ class Scheduler {
 		}
 
 		/**
-		 * Filter the number of followers to update.
+		 * Filter the number of remote Actors to update.
 		 *
-		 * @param int $number The number of followers to update.
+		 * @param int $number The number of remote Actors to update.
 		 */
-		$number = apply_filters( 'activitypub_update_followers_number', $number );
+		$number = apply_filters( 'activitypub_update_remote_actors_number', $number );
 		$actors = Actors::get_outdated( $number );
 
 		foreach ( $actors as $actor ) {
@@ -185,11 +185,11 @@ class Scheduler {
 		}
 
 		/**
-		 * Filter the number of followers to clean up.
+		 * Filter the number of remote Actors to clean up.
 		 *
-		 * @param int $number The number of followers to clean up.
+		 * @param int $number The number of remote Actors to clean up.
 		 */
-		$number = apply_filters( 'activitypub_update_followers_number', $number );
+		$number = apply_filters( 'activitypub_cleanup_remote_actors_number', $number );
 		$actors = Actors::get_faulty( $number );
 
 		foreach ( $actors as $actor ) {
