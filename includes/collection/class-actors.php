@@ -391,6 +391,23 @@ class Actors {
 	}
 
 	/**
+	 * Create or update a remote Actor (e.g., a follower) from a remote URI.
+	 *
+	 * @param string $uri The Actors remote URI.
+	 *
+	 * @return int|\WP_Error The post ID or WP_Error.
+	 */
+	public static function upsert_from_uri( $uri ) {
+		$actor = Http::get_remote_object( $uri );
+
+		if ( \is_wp_error( $actor ) ) {
+			return $actor;
+		}
+
+		return self::upsert( $actor );
+	}
+
+	/**
 	 * Create or update a remote Actor (e.g., a follower) as a custom post type.
 	 *
 	 * @param array|Actor $actor_data The ActivityPub actor object as associative array (must include 'id').
