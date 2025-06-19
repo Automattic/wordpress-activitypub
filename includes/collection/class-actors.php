@@ -397,7 +397,7 @@ class Actors {
 	 *
 	 * @return int|\WP_Error The post ID or WP_Error.
 	 */
-	public static function add( $actor_data ) {
+	public static function upsert( $actor_data ) {
 		if ( \is_array( $actor_data ) ) {
 			$actor_data = Actor::init_from_array( $actor_data );
 		}
@@ -415,6 +415,12 @@ class Actors {
 			$inbox = $actor_data->get_endpoints()['sharedInbox'];
 		} elseif ( ! empty( $actor_data->get_inbox() ) ) {
 			$inbox = $actor_data->get_inbox();
+		} else {
+			return new \WP_Error(
+				'activitypub_invalid_actor_data',
+				\__( 'Invalid actor data', 'activitypub' ),
+				array( 'status' => 400 )
+			);
 		}
 
 		$args = array(

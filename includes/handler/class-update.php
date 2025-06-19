@@ -113,6 +113,6 @@ class Update {
 			return;
 		}
 
-		Actors::add( $actor );
+		Actors::upsert( $actor );
 	}
 }

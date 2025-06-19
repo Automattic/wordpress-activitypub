@@ -482,7 +482,7 @@ class Test_Followers extends \WP_UnitTestCase {
 				'publicKeyPem'      => $i,
 			);
 
-			$id = Actors::add( $meta );
+			$id = Actors::upsert( $meta );
 
 			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}

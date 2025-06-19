@@ -600,7 +600,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			'summary'            => '<p>unescaped backslash 04\2024</p>',
 		);
 
-		$post_id = Actors::add( $follower );
+		$post_id = Actors::upsert( $follower );
 
 		\add_post_meta( $post_id, '_activitypub_actor_json', \wp_json_encode( $follower ) );
 
@@ -874,7 +874,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			'summary'            => '<p>HTML content</p>',
 		);
 
-		$post_id = Actors::add( $actor_array );
+		$post_id = Actors::upsert( $actor_array );
 
 		\wp_update_post(
 			array(
@@ -932,7 +932,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
 
-		$post_id = Actors::add( $actor_array );
+		$post_id = Actors::upsert( $actor_array );
 
 		\wp_update_post(
 			array(

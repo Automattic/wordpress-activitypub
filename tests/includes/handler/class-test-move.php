@@ -80,7 +80,7 @@ class Test_Move extends \WP_UnitTestCase {
 			),
 		);
 
-		$id = Actors::add( $origin_object );
+		$id = Actors::upsert( $origin_object );
 
 		// Add the user ID meta value.
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
@@ -139,7 +139,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://example.com/old-profile';
 
 		// Create a follower for the origin.
-		$id = Actors::add(
+		$id = Actors::upsert(
 			array(
 				'inbox' => 'https://example.com/old-profile/inbox',
 				'name'  => 'Old Profile',
@@ -201,7 +201,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$test_follower->set_id( 'https://example.com/test-profile' );
 		$test_follower->set_url( 'https://example.com/test-profile' );
 
-		$id = Actors::add( $test_follower );
+		$id = Actors::upsert( $test_follower );
 
 		// Add the user ID meta value.
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
@@ -243,14 +243,14 @@ class Test_Move extends \WP_UnitTestCase {
 		$target_follower->set_type( 'Person' );
 		$target_follower->set_id( $target );
 		$target_follower->set_url( $target );
-		$target_id = Actors::add( $target_follower );
+		$target_id = Actors::upsert( $target_follower );
 
 		$origin_follower = new Actor();
 		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
 		$origin_follower->set_type( 'Person' );
 		$origin_follower->set_id( $origin );
 		$origin_follower->set_url( $origin );
-		$origin_id = Actors::add( $origin_follower );
+		$origin_id = Actors::upsert( $origin_follower );
 
 		// Add user IDs.
 		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, $this->user_id );

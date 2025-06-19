@@ -145,7 +145,7 @@ class Test_Actors extends \WP_UnitTestCase {
 			'preferredUsername' => 'jon',
 		);
 
-		$id = Actors::add( $actor );
+		$id = Actors::upsert( $actor );
 		$this->assertNotWPError( $id );
 
 		// Add some errors.
@@ -182,7 +182,7 @@ class Test_Actors extends \WP_UnitTestCase {
 			'preferredUsername' => 'jon',
 		);
 
-		$id = Actors::add( $actor );
+		$id = Actors::upsert( $actor );
 		$this->assertNotWPError( $id );
 
 		// Clear errors when none exist.

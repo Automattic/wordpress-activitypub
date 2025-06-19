@@ -32,7 +32,7 @@ class Test_Follower extends \WP_UnitTestCase {
 			'publicKeyPem'      => 'publicKeyPem',
 		);
 
-		$id = Actors::add( $actor );
+		$id = Actors::upsert( $actor );
 
 		// Add some errors.
 		Actors::add_error( $id, 'Test error 1' );

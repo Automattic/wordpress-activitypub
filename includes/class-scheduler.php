@@ -165,7 +165,7 @@ class Scheduler {
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
 				Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
-				$id = Actors::add( $meta );
+				$id = Actors::upsert( $meta );
 				if ( \is_wp_error( $id ) ) {
 					continue;
 				}

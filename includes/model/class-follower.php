@@ -175,7 +175,7 @@ class Follower extends Actor {
 			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		$id = Actors::add( $this );
+		$id = Actors::upsert( $this );
 		if ( \is_wp_error( $id ) ) {
 			return $id;
 		}

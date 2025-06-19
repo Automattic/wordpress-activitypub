@@ -77,7 +77,7 @@ class Move {
 
 			\wp_cache_delete( $origin_actor_cpt->ID, 'posts' );
 
-			Actors::add( $target_actor_object );
+			Actors::upsert( $target_actor_object );
 
 			// Clear the cache.
 			\wp_cache_delete( $origin_actor_cpt->ID, 'posts' );

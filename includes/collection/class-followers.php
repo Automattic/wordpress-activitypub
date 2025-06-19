@@ -53,7 +53,7 @@ class Followers {
 			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		$post_id = Actors::add( $meta );
+		$post_id = Actors::upsert( $meta );
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
