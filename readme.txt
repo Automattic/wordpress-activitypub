@@ -1,6 +1,6 @@
 === ActivityPub ===
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
-Tags: fediverse, activitypub, indieweb, activity pub, activitystream, social web
+Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
 Stable tag: 6.0.2

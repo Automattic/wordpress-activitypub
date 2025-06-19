@@ -18,7 +18,6 @@ class Welcome_Fields {
 	 */
 	public static function init() {
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_welcome_fields' ) );
-		\add_action( 'admin_print_styles-settings_page_activitypub', array( self::class, 'enqueue_styles' ) );
 
 		\add_action( 'add_option_activitypub_checklist_health_check_issues', array( self::class, 'resolve_checklist' ) );
 		\add_action( 'update_option_activitypub_checklist_health_check_issues', array( self::class, 'resolve_checklist' ) );
@@ -30,21 +29,6 @@ class Welcome_Fields {
 		\add_action( 'update_option_activitypub_checklist_profile_setup_visited', array( self::class, 'resolve_checklist' ) );
 		\add_action( 'add_option_activitypub_checklist_blocks_visited', array( self::class, 'resolve_checklist' ) );
 		\add_action( 'update_option_activitypub_checklist_blocks_visited', array( self::class, 'resolve_checklist' ) );
-	}
-
-	/**
-	 * Enqueue styles.
-	 */
-	public static function enqueue_styles() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( 'welcome' === ( isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : 'welcome' ) ) {
-			\wp_enqueue_style(
-				'activitypub-welcome',
-				\plugins_url( 'assets/css/activitypub-welcome.css', ACTIVITYPUB_PLUGIN_FILE ),
-				array(),
-				ACTIVITYPUB_PLUGIN_VERSION
-			);
-		}
 	}
 
 	/**

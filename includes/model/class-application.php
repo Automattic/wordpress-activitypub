@@ -48,13 +48,6 @@ class Application extends Actor {
 	protected $indexable = false;
 
 	/**
-	 * The WebFinger Resource.
-	 *
-	 * @var string
-	 */
-	protected $webfinger;
-
-	/**
 	 * Returns the type of the object.
 	 *
 	 * @return string The type of the object.

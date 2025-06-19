@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Unified retrieval of comment avatars and re-used core filters to give access to third-part plugins.
