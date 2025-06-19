@@ -40,7 +40,7 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
-	 * @return \WP_Post|\WP_Error The Follower (WP_Post array) or an WP_Error.
+	 * @return int|\WP_Error The Follower ID or an WP_Error.
 	 */
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
@@ -64,7 +64,7 @@ class Followers {
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
-		return \get_post( $post_id );
+		return $post_id;
 	}
 
 	/**

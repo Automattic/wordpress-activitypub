@@ -112,7 +112,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$db_followers = array_map(
 			function ( $item ) {
-				return $item->get_id();
+				return $item->guid;
 			},
 			$db_followers
 		);
@@ -132,10 +132,14 @@ class Test_Followers extends \WP_UnitTestCase {
 			Followers::add_follower( 1, $follower );
 		}
 
-		$follower           = Followers::get_follower( 1, 'https://example.org/author/doe' );
-		$post               = \get_post( $follower->ID );
-		$post->post_content = 'invalid json';
-		\wp_update_post( $post );
+		$actor_id = Followers::get_follower( 1, 'https://example.org/author/doe' );
+
+		\wp_update_post(
+			array(
+				'ID'           => $actor_id,
+				'post_content' => 'invalid json',
+			)
+		);
 
 		$db_followers = Followers::get_followers( 1 );
 
@@ -202,19 +206,19 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower->get_id() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		$this->assertNull( $follower );
+		$this->assertIsWPError( $follower );
 
 		$follower = Followers::get_follower( 1, 'https://user2.example.com' );
-		$this->assertNull( $follower );
+		$this->assertIsWPError( $follower );
 
 		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower->get_id() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
 		$follower2 = Followers::get_follower( 2, 'https://user2.example.com' );
-		$this->assertEquals( 'https://user2.example.com', $follower2->get_id() );
+		$this->assertEquals( 'https://user2.example.com', $follower2->guid );
 		$this->assertEquals( 'úser2', $follower2->get_name() );
 	}
 
