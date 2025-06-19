@@ -50,7 +50,7 @@ class Follower extends Actor {
 	 * @return mixed
 	 */
 	public function get_errors() {
-		return \get_post_meta( $this->_id, '_activitypub_errors', false );
+		return Actors::get_errors( $this->_id );
 	}
 
 	/**
@@ -59,12 +59,6 @@ class Follower extends Actor {
 	 * @return bool True on success, false on failure.
 	 */
 	public function clear_errors() {
-		if ( ! $this->_id ) {
-			\_doing_it_wrong( __METHOD__, 'Follower ID is not set.', 'unreleased' );
-
-			return false;
-		}
-
 		return Actors::clear_errors( $this->_id );
 	}
 
@@ -99,9 +93,11 @@ class Follower extends Actor {
 
 	/**
 	 * Reset (delete) all errors.
+	 *
+	 * @return bool True on success, false on failure.
 	 */
 	public function reset_errors() {
-		\delete_post_meta( $this->_id, '_activitypub_errors' );
+		return Actors::clear_errors( $this->_id );
 	}
 
 	/**
@@ -110,13 +106,7 @@ class Follower extends Actor {
 	 * @return int The number of errors.
 	 */
 	public function count_errors() {
-		$errors = $this->get_errors();
-
-		if ( \is_array( $errors ) && ! empty( $errors ) ) {
-			return \count( $errors );
-		}
-
-		return 0;
+		return Actors::count_errors( $this->_id );
 	}
 
 	/**
@@ -203,7 +193,7 @@ class Follower extends Actor {
 	 * @see \Activitypub\Rest\Followers::remove_follower()
 	 */
 	public function delete() {
-		\wp_delete_post( $this->_id );
+		Actors::delete( $this->_id );
 	}
 
 	/**

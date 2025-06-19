@@ -410,7 +410,6 @@ class Actors {
 			);
 		}
 
-		$inbox = null;
 		if ( ! empty( $actor_data->get_endpoints()['sharedInbox'] ) ) {
 			$inbox = $actor_data->get_endpoints()['sharedInbox'];
 		} elseif ( ! empty( $actor_data->get_inbox() ) ) {
@@ -531,6 +530,17 @@ class Actors {
 	 */
 	public static function count_errors( $post_id ) {
 		return \count( \get_post_meta( $post_id, '_activitypub_errors', false ) );
+	}
+
+	/**
+	 * Get the errors for a Follower.
+	 *
+	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
+	 *
+	 * @return string[]|null The errors.
+	 */
+	public static function get_errors( $post_id ) {
+		return \get_post_meta( $post_id, '_activitypub_errors', false );
 	}
 
 	/**
