@@ -144,7 +144,7 @@ class Test_Update extends \WP_UnitTestCase {
 
 		// Check that no follower was created.
 		$follower = Actors::get_remote_by_uri( 'https://example.com/nonexistent' );
-		$this->assertNull( $follower );
+		$this->assertWPError( $follower );
 
 		remove_filter( 'pre_http_request', $fake_request, 10 );
 	}
