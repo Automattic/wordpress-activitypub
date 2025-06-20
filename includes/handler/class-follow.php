@@ -56,6 +56,12 @@ class Follow {
 			$activity['actor']
 		);
 
+		if ( \is_wp_error( $remote_actor ) ) {
+			return $remote_actor;
+		}
+
+		$remote_actor = \get_post( $remote_actor );
+
 		/**
 		 * Fires after a new follower has been added.
 		 *

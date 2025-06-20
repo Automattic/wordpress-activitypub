@@ -299,9 +299,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		Actors::count_errors( $follower->ID );
-
-		$actors = Actors::get_faulty();
+		$actors   = Actors::get_faulty();
 
 		$this->assertEquals( 1, \count( $actors ) );
 		$this->assertEquals( 'http://sally.example.org', $actors[0]->guid );
@@ -309,9 +307,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		Actors::clear_errors( $follower->ID );
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		Actors::count_errors( $follower->ID );
-
-		$actors = Actors::get_faulty();
+		$actors   = Actors::get_faulty();
 
 		$this->assertEquals( 0, \count( $actors ) );
 	}

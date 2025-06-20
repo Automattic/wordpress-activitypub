@@ -444,7 +444,6 @@ class Actors {
 			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor_data->get_name() ?? $actor_data->get_preferred_username() ) ),
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,
-			'post_name'    => \esc_url_raw( $actor_data->get_id() ),
 			'post_content' => \wp_slash( $actor_data->to_json() ),
 			'post_excerpt' => \wp_kses( \wp_slash( $actor_data->get_summary() ), 'user_description' ),
 			'post_status'  => 'publish',
@@ -483,6 +482,17 @@ class Actors {
 	}
 
 	/**
+	 * Delete a remote Actor object by actor URL (guid).
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function delete( $post_id ) {
+		return \wp_delete_post( $post_id );
+	}
+
+	/**
 	 * Get a remote Actor object by actor URL (guid).
 	 *
 	 * @param string $actor_uri The actor URI.
@@ -517,8 +527,8 @@ class Actors {
 	 *
 	 * The error will be stored in post meta.
 	 *
-	 * @param int     $post_id The ID of the WordPress Custom-Post-Type.
-	 * @param string|\WP_Error $error The error message.
+	 * @param int              $post_id The ID of the WordPress Custom-Post-Type.
+	 * @param string|\WP_Error $error   The error message.
 	 *
 	 * @return int|false The meta ID on success, false on failure.
 	 */
