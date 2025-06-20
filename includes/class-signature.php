@@ -213,7 +213,7 @@ class Signature {
 
 		$http_method = \strtolower( $http_method );
 		$created     = \strtotime( $date );
-		$expires     = $created + HOUR_IN_SECONDS;
+		$expires     = $created + 5 * MINUTE_IN_SECONDS;
 
 		if ( ! empty( $digest ) ) {
 			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: $digest\n(created): $created\n(expires): $expires";
@@ -230,7 +230,7 @@ class Signature {
 		$key_id = $user->get_id() . '#main-key';
 
 		return \sprintf(
-			'keyId="%s",algorithm="rsa-sha256",created=%d,expires=%d,headers="%s",signature="%s"',
+			'keyId="%s",algorithm="hs2019",created=%d,expires=%d,headers="%s",signature="%s"',
 			$key_id,
 			$created,
 			$expires,
