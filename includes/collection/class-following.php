@@ -21,6 +21,13 @@ class Following {
 	const FOLLOWING_META_KEY = '_activitypub_followed_by';
 
 	/**
+	 * Meta key for pending followers user ID.
+	 *
+	 * @var string
+	 */
+	const PENDING_META_KEY = '_activitypub_followed_by_pending';
+
+	/**
 	 * Follow a user.
 	 *
 	 * @param int $remote_actor_id The ID of the remote Actor.
