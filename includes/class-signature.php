@@ -275,6 +275,11 @@ class Signature {
 			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
+		$public_key = self::get_remote_key( $signature_block['keyId'] );
+		if ( \is_wp_error( $public_key ) ) {
+			return $public_key;
+		}
+
 		$signed_headers = $signature_block['headers'];
 
 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
@@ -282,7 +287,7 @@ class Signature {
 			return new WP_Error( 'activitypub_signature', __( 'Signed request date outside acceptable time window', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
-		$algorithm = self::get_signature_algorithm( $signature_block );
+		$algorithm = self::get_signature_algorithm( $signature_block, $public_key );
 		if ( ! $algorithm ) {
 			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 401 ) );
 		}
@@ -300,12 +305,6 @@ class Signature {
 			if ( \base64_encode( \hash( $algorithm, $body, true ) ) !== $digest[1] ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
 			}
-		}
-
-		$public_key = self::get_remote_key( $signature_block['keyId'] );
-
-		if ( \is_wp_error( $public_key ) ) {
-			return $public_key;
 		}
 
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
@@ -349,18 +348,37 @@ class Signature {
 	/**
 	 * Gets the signature algorithm from the signature header.
 	 *
-	 * @param array $signature_block The signature block.
+	 * @see https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
+	 *
+	 * @param array    $signature_block The signature block.
+	 * @param resource $public_key      The public key resource.
 	 *
 	 * @return string|bool The signature algorithm or false if not found.
 	 */
-	public static function get_signature_algorithm( $signature_block ) {
+	public static function get_signature_algorithm( $signature_block, $public_key ) {
 		if ( ! empty( $signature_block['algorithm'] ) ) {
 			switch ( $signature_block['algorithm'] ) {
 				case 'hs2019':
+					$details = \openssl_pkey_get_details( $public_key );
+
+					if ( ! $details || ! isset( $details['type'] ) ) {
+						return false;
+					}
+
+					switch ( $details['type'] ) {
+						case \OPENSSL_KEYTYPE_RSA:
+							return \OPENSSL_ALGO_SHA256;
+
+						case \OPENSSL_KEYTYPE_EC:
+							return \OPENSSL_ALGO_SHA256; // For ECDSA.
+
+						default:
+							return new \WP_Error( 'unsupported_key_type', 'Only RSA and EC keys are supported. Ed25519 is not available in OpenSSL for PHP.' );
+					}
 				case 'rsa-sha512':
-					return 'sha512'; // https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12.
+					return \OPENSSL_ALGO_SHA512;
 				default:
-					return 'sha256';
+					return \OPENSSL_ALGO_SHA256;
 			}
 		}
 		return false;
