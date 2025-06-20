@@ -259,6 +259,8 @@ class Signature {
 				$route = '/' . $path . $route;
 			}
 
+			$body = $request->get_body();
+
 			$headers                        = $request->get_headers();
 			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $route;
 		} else {
@@ -285,7 +287,7 @@ class Signature {
 			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
-		if ( \in_array( 'digest', $signature_block['headers'], true ) && $request instanceof \WP_REST_Request ) {
+		if ( \in_array( 'digest', $signature_block['headers'], true ) && isset( $body ) ) {
 			if ( is_array( $headers['digest'] ) ) {
 				$headers['digest'] = $headers['digest'][0];
 			}
@@ -293,7 +295,7 @@ class Signature {
 			list( $alg, $digest ) = explode( '=', $headers['digest'], 2 );
 			$algorithm            = 'SHA-512' === $alg ? 'sha512' : 'sha256';
 
-			if ( \base64_encode( \hash( $algorithm, $request->get_body(), true ) ) !== $digest ) { // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+			if ( \base64_encode( \hash( $algorithm, $body, true ) ) !== $digest ) { // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
 			}
 		}
