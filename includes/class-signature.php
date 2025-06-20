@@ -297,7 +297,7 @@ class Signature {
 				$algorithm = 'sha512';
 			}
 
-			if ( \base64_encode( \hash( $algorithm, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
+			if ( \base64_encode( \hash( $algorithm, $body, true ) ) !== $digest[1] ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
 			}
 		}
@@ -351,13 +351,14 @@ class Signature {
 	 *
 	 * @param array $signature_block The signature block.
 	 *
-	 * @return string The signature algorithm.
+	 * @return string|bool The signature algorithm or false if not found.
 	 */
 	public static function get_signature_algorithm( $signature_block ) {
-		if ( $signature_block['algorithm'] ) {
+		if ( ! empty( $signature_block['algorithm'] ) ) {
 			switch ( $signature_block['algorithm'] ) {
-				case 'rsa-sha-512':
-					return 'sha512'; // hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12.
+				case 'hs2019':
+				case 'rsa-sha512':
+					return 'sha512'; // https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12.
 				default:
 					return 'sha256';
 			}

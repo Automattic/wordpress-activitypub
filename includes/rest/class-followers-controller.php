@@ -112,9 +112,9 @@ class Followers_Controller extends Actors_Controller {
 			'orderedItems' => array_map(
 				function ( $item ) use ( $context ) {
 					if ( 'full' === $context ) {
-						return $item->to_array( false );
+						return Actors::get_actor( $item )->to_array( false );
 					}
-					return $item->get_id();
+					return $item->guid;
 				},
 				$data['followers']
 			),
