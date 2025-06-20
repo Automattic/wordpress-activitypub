@@ -77,7 +77,7 @@ class Followers {
 
 		$remote_actor = self::get_follower( $user_id, $actor );
 
-		if ( ! $remote_actor ) {
+		if ( \is_wp_error( $remote_actor ) ) {
 			return false;
 		}
 
@@ -367,7 +367,7 @@ class Followers {
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
 	 *
-	 * @return \WP_Post[] The Term list of Actors.
+	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated' );
@@ -380,7 +380,7 @@ class Followers {
 	 *
 	 * @param int $number Optional. The number of Followers to return. Default 20.
 	 *
-	 * @return \WP_Post[] The Term list of Actors.
+	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty' );
