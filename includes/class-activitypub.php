@@ -332,18 +332,14 @@ class Activitypub {
 			return $args;
 		}
 
+		/**
+		 * Filter allowed comment types for avatars.
+		 *
+		 * @param array $allowed_comment_types Array of allowed comment types.
+		 */
 		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment' ) );
-		if (
-			! empty( $id_or_email->comment_type ) &&
-			! \in_array(
-				$id_or_email->comment_type,
-				(array) $allowed_comment_types,
-				true
-			)
-		) {
-			$args['url'] = false;
-			/** This filter is documented in wp-includes/link-template.php */
-			return \apply_filters( 'get_avatar_data', $args, $id_or_email );
+		if ( ! \in_array( $id_or_email->comment_type ?: 'comment', $allowed_comment_types, true ) ) { // phpcs:ignore Universal.Operators.DisallowShortTernary
+			return $args;
 		}
 
 		// Check if comment has an avatar.
@@ -356,7 +352,8 @@ class Activitypub {
 				$args['class'] = \explode( ' ', $args['class'] );
 			}
 
-			$args['url']     = $avatar;
+			/** This filter is documented in wp-includes/link-template.php */
+			$args['url']     = \apply_filters( 'get_avatar_url', $avatar, $id_or_email, $args );
 			$args['class'][] = 'avatar-activitypub';
 			$args['class'][] = 'u-photo';
 			$args['class']   = \array_unique( $args['class'] );
