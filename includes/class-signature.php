@@ -288,8 +288,8 @@ class Signature {
 		}
 
 		$algorithm = self::get_signature_algorithm( $signature_block, $public_key );
-		if ( ! $algorithm ) {
-			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 401 ) );
+		if ( is_wp_error( $algorithm ) ) {
+			return $algorithm;
 		}
 
 		if ( \in_array( 'digest', $signed_headers, true ) && isset( $body ) ) {
@@ -353,35 +353,34 @@ class Signature {
 	 * @param array    $signature_block The signature block.
 	 * @param resource $public_key      The public key resource.
 	 *
-	 * @return string|bool The signature algorithm or false if not found.
+	 * @return int|\WP_Error The signature algorithm or WP_Error if not found.
 	 */
 	public static function get_signature_algorithm( $signature_block, $public_key ) {
 		if ( ! empty( $signature_block['algorithm'] ) ) {
 			switch ( $signature_block['algorithm'] ) {
 				case 'hs2019':
 					$details = \openssl_pkey_get_details( $public_key );
-
-					if ( ! $details || ! isset( $details['type'] ) ) {
-						return false;
+					if ( ! isset( $details['type'] ) ) {
+						return new \WP_Error(); // TODO: Error message.
 					}
 
 					switch ( $details['type'] ) {
 						case \OPENSSL_KEYTYPE_RSA:
-							return \OPENSSL_ALGO_SHA256;
-
 						case \OPENSSL_KEYTYPE_EC:
-							return \OPENSSL_ALGO_SHA256; // For ECDSA.
-
-						default:
-							return new \WP_Error( 'unsupported_key_type', 'Only RSA and EC keys are supported. Ed25519 is not available in OpenSSL for PHP.' );
+							return \OPENSSL_ALGO_SHA256;
 					}
+
+					return new \WP_Error( 'unsupported_key_type', 'Only RSA and EC keys are supported. Ed25519 is not available in OpenSSL for PHP.', array( 'status' => 401 ) );
+
 				case 'rsa-sha512':
 					return \OPENSSL_ALGO_SHA512;
+
 				default:
 					return \OPENSSL_ALGO_SHA256;
 			}
 		}
-		return false;
+
+		return new \WP_Error( 'unsupported_key_type', 'Unsupported signature algorithm (only rsa-sha256, rsa-sha512, and hs2019 are supported).', array( 'status' => 401 ) );
 	}
 
 	/**
