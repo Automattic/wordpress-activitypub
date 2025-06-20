@@ -14,7 +14,6 @@ use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Followers;
 
 /**
  * Scheduler class.
@@ -42,8 +41,8 @@ class Scheduler {
 		);
 
 		// Follower Cleanups.
-		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
-		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
+		\add_action( 'activitypub_update_remote_actors', array( self::class, 'update_remote_actors' ) );
+		\add_action( 'activitypub_cleanup_remote_actors', array( self::class, 'cleanup_remote_actors' ) );
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
@@ -78,12 +77,12 @@ class Scheduler {
 	 * Schedule all ActivityPub schedules.
 	 */
 	public static function register_schedules() {
-		if ( ! \wp_next_scheduled( 'activitypub_update_followers' ) ) {
-			\wp_schedule_event( time(), 'hourly', 'activitypub_update_followers' );
+		if ( ! \wp_next_scheduled( 'activitypub_update_remote_actors' ) ) {
+			\wp_schedule_event( time(), 'hourly', 'activitypub_update_remote_actors' );
 		}
 
-		if ( ! \wp_next_scheduled( 'activitypub_cleanup_followers' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_followers' );
+		if ( ! \wp_next_scheduled( 'activitypub_cleanup_remote_actors' ) ) {
+			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
 		}
 
 		if ( ! \wp_next_scheduled( 'activitypub_reprocess_outbox' ) ) {
@@ -101,8 +100,8 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function deregister_schedules() {
-		wp_unschedule_hook( 'activitypub_update_followers' );
-		wp_unschedule_hook( 'activitypub_cleanup_followers' );
+		wp_unschedule_hook( 'activitypub_update_remote_actors' );
+		wp_unschedule_hook( 'activitypub_cleanup_remote_actors' );
 		wp_unschedule_hook( 'activitypub_reprocess_outbox' );
 		wp_unschedule_hook( 'activitypub_outbox_purge' );
 	}
@@ -142,9 +141,9 @@ class Scheduler {
 	}
 
 	/**
-	 * Update followers.
+	 * Update remote Actors.
 	 */
-	public static function update_followers() {
+	public static function update_remote_actors() {
 		$number = 5;
 
 		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
@@ -152,31 +151,32 @@ class Scheduler {
 		}
 
 		/**
-		 * Filter the number of followers to update.
+		 * Filter the number of remote Actors to update.
 		 *
-		 * @param int $number The number of followers to update.
+		 * @param int $number The number of remote Actors to update.
 		 */
-		$number    = apply_filters( 'activitypub_update_followers_number', $number );
-		$followers = Followers::get_outdated_followers( $number );
+		$number = apply_filters( 'activitypub_update_remote_actors_number', $number );
+		$actors = Actors::get_outdated( $number );
 
-		foreach ( $followers as $follower ) {
-			$meta = get_remote_metadata_by_actor( $follower->get_id(), false );
+		foreach ( $actors as $actor ) {
+			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				Followers::add_error( $follower->get__id(), $meta );
+				Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
-				$follower->from_array( $meta );
-				$follower->update();
-
-				$follower->clear_errors();
+				$id = Actors::upsert( $meta );
+				if ( \is_wp_error( $id ) ) {
+					continue;
+				}
+				Actors::clear_errors( $id );
 			}
 		}
 	}
 
 	/**
-	 * Cleanup followers.
+	 * Cleanup remote Actors.
 	 */
-	public static function cleanup_followers() {
+	public static function cleanup_remote_actors() {
 		$number = 5;
 
 		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
@@ -184,31 +184,31 @@ class Scheduler {
 		}
 
 		/**
-		 * Filter the number of followers to clean up.
+		 * Filter the number of remote Actors to clean up.
 		 *
-		 * @param int $number The number of followers to clean up.
+		 * @param int $number The number of remote Actors to clean up.
 		 */
-		$number    = apply_filters( 'activitypub_update_followers_number', $number );
-		$followers = Followers::get_faulty_followers( $number );
+		$number = apply_filters( 'activitypub_cleanup_remote_actors_number', $number );
+		$actors = Actors::get_faulty( $number );
 
-		foreach ( $followers as $follower ) {
-			$meta = get_remote_metadata_by_actor( $follower->get_url(), false );
+		foreach ( $actors as $actor ) {
+			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
 			if ( is_tombstone( $meta ) ) {
-				$follower->delete();
+				\wp_delete_post( $actor->ID );
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				if ( $follower->count_errors() >= 5 ) {
-					$follower->delete();
+				if ( Actors::count_errors( $actor->ID ) >= 5 ) {
+					\wp_delete_post( $actor->ID );
 					\wp_schedule_single_event(
 						\time(),
 						'activitypub_delete_actor_interactions',
-						array( $follower->get_id() )
+						array( $actor->ID )
 					);
 				} else {
-					Followers::add_error( $follower->get__id(), $meta );
+					Actors::add_error( $actor->ID, $meta );
 				}
 			} else {
-				$follower->reset_errors();
+				Actors::clear_errors( $actor->ID );
 			}
 		}
 	}

@@ -277,6 +277,121 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Data provider for signature algorithm tests.
+	 *
+	 * @return string[][] Test data.
+	 */
+	public function signature_algorithm_provider() {
+		return array(
+			'hs2019 algorithm'      => array(
+				array( 'algorithm' => 'hs2019' ),
+				'sha512',
+				'hs2019 algorithm should return sha512.',
+			),
+			'rsa-sha256 algorithm'  => array(
+				array( 'algorithm' => 'rsa-sha256' ),
+				'sha256',
+				'rsa-sha256 algorithm should return sha256.',
+			),
+			'unknown algorithm'     => array(
+				array( 'algorithm' => 'unknown-algorithm' ),
+				'sha256',
+				'Unknown algorithm should return sha256.',
+			),
+			'empty algorithm'       => array(
+				array( 'algorithm' => '' ),
+				false,
+				'Empty algorithm should return false.',
+			),
+			'missing algorithm key' => array(
+				array(),
+				false,
+				'Missing algorithm key should return false.',
+			),
+		);
+	}
+
+	/**
+	 * Test signature algorithm detection.
+	 *
+	 * @covers ::get_signature_algorithm
+	 * @dataProvider signature_algorithm_provider
+	 *
+	 * @param array        $signature_block The signature block to test.
+	 * @param string|false $expected        The expected result.
+	 * @param string       $message         The assertion message.
+	 */
+	public function test_get_signature_algorithm( $signature_block, $expected, $message ) {
+		$this->assertEquals( $expected, Signature::get_signature_algorithm( $signature_block ), $message );
+	}
+
+	/**
+	 * Test full signature verification with hs2019 algorithm.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers ::get_signature_algorithm
+	 * @covers ::parse_signature_header
+	 * @covers ::get_signed_data
+	 */
+	public function test_verify_signature_with_hs2019() {
+		// Mock a request with hs2019 algorithm signature.
+		$key = openssl_pkey_new(
+			array(
+				'digest_alg'       => 'sha512',
+				'private_key_bits' => 2048,
+				'private_key_type' => OPENSSL_KEYTYPE_RSA,
+			)
+		);
+
+		// Extract the public key.
+		$key_details = openssl_pkey_get_details( $key );
+		$public_key  = $key_details['key'];
+
+		// Create a string to sign.
+		$date           = gmdate( 'D, d M Y H:i:s T' );
+		$string_to_sign = "(request-target): post /wp-json/activitypub/1.0/inbox\nhost: example.org\ndate: {$date}";
+
+		// Sign the string.
+		$signature = '';
+		openssl_sign( $string_to_sign, $signature, $key, OPENSSL_ALGO_SHA512 );
+
+		// Create the mock request as a $_SERVER-like array.
+		// This will be passed through format_server_request().
+		$request = array(
+			'REQUEST_METHOD' => 'POST',
+			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
+			'HTTP_HOST'      => 'example.org',
+			'HTTP_DATE'      => $date,
+			'HTTP_SIGNATURE' => sprintf(
+				'keyId="https://example.com/users/test#main-key",algorithm="hs2019",headers="(request-target) host date",signature="%s"',
+				base64_encode( $signature ) // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+			),
+		);
+
+		// Add filter to mock the remote key retrieval.
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () use ( $public_key ) {
+				return array(
+					'name'      => 'Test User',
+					'url'       => 'https://example.com/users/test',
+					'publicKey' => array(
+						'id'           => 'https://example.com/users/test#main-key',
+						'owner'        => 'https://example.com/users/test',
+						'publicKeyPem' => $public_key,
+					),
+				);
+			}
+		);
+
+		// Verify the signature.
+		$this->assertTrue( Signature::verify_http_signature( $request ) );
+
+		// Remove the filter.
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+	}
+
+	/**
 	 * Pre get remote metadata by actor.
 	 *
 	 * @param mixed  $value The value.

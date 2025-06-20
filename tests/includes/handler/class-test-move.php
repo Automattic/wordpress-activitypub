@@ -7,8 +7,9 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Activity\Actor;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Model\Follower;
 use Activitypub\Handler\Move;
 use Activitypub\Http;
 
@@ -79,17 +80,10 @@ class Test_Move extends \WP_UnitTestCase {
 			),
 		);
 
-		// Create a follower for the origin.
-		$origin_follower = new Follower();
-		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
-		$origin_follower->set_name( 'Old Profile' );
-		$origin_follower->set_type( 'Person' );
-		$origin_follower->set_id( $origin );
-		$origin_follower->set_url( $origin );
-		$id = $origin_follower->upsert();
+		$id = Actors::upsert( $origin_object );
 
 		// Add the user ID meta value.
-		add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		$filter = function ( $preempt, $args, $url ) use ( $target, $target_object, $origin, $origin_object ) {
 			if ( $url === $target ) {
@@ -123,16 +117,16 @@ class Test_Move extends \WP_UnitTestCase {
 
 		Move::handle_move( $activity );
 
-		// Check if the origin follower was updated.
-		$updated_follower = Followers::get_follower( $this->user_id, $target );
+		$old_follower     = Actors::get_remote_by_uri( $origin );
+		$updated_follower = Actors::get_remote_by_uri( $target );
 
+		$this->assertWPError( $old_follower );
 		$this->assertNotNull( $updated_follower );
-		$this->assertEquals( $target, $updated_follower->get_id() );
-		$this->assertEquals( 'https://example.com/new-profile/inbox', $updated_follower->get_inbox() );
+		$this->assertEquals( $target, $updated_follower->guid );
 
-		$updated_follower->delete();
+		\wp_delete_post( $updated_follower->ID );
 
-		remove_filter( 'pre_http_request', $filter, 10 );
+		\remove_filter( 'pre_http_request', $filter, 10 );
 	}
 
 	/**
@@ -145,16 +139,18 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://example.com/old-profile';
 
 		// Create a follower for the origin.
-		$origin_follower = new Follower();
-		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
-		$origin_follower->set_name( 'Old Profile' );
-		$origin_follower->set_type( 'Person' );
-		$origin_follower->set_id( $origin );
-		$origin_follower->set_url( $origin );
-		$id = $origin_follower->upsert();
+		$id = Actors::upsert(
+			array(
+				'inbox' => 'https://example.com/old-profile/inbox',
+				'name'  => 'Old Profile',
+				'type'  => 'Person',
+				'id'    => $origin,
+				'url'   => $origin,
+			)
+		);
 
 		// Add the user ID meta value.
-		add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		$filter = function () {
 			return array(
@@ -180,15 +176,15 @@ class Test_Move extends \WP_UnitTestCase {
 		// Assert that the original follower still exists and wasn't modified.
 		$existing_follower = Followers::get_follower( $this->user_id, $origin );
 		$this->assertNotNull( $existing_follower );
-		$this->assertEquals( $origin, $existing_follower->get_id() );
+		$this->assertEquals( $origin, $existing_follower->guid );
 
 		// Assert that no new follower was created for the target.
 		$target_follower = Followers::get_follower( $this->user_id, $target );
-		$this->assertNull( $target_follower );
+		$this->assertWPError( $target_follower );
 
 		// Cleanup.
-		$origin_follower->delete();
-		remove_filter( 'pre_http_request', $filter );
+		\wp_delete_post( $id );
+		\remove_filter( 'pre_http_request', $filter );
 	}
 
 	/**
@@ -198,16 +194,17 @@ class Test_Move extends \WP_UnitTestCase {
 	 */
 	public function test_handle_move_without_target_or_origin() {
 		// Create a test follower to ensure it's not affected.
-		$test_follower = new Follower();
+		$test_follower = new Actor();
 		$test_follower->set_inbox( 'https://example.com/test/inbox' );
 		$test_follower->set_name( 'Test Profile' );
 		$test_follower->set_type( 'Person' );
 		$test_follower->set_id( 'https://example.com/test-profile' );
 		$test_follower->set_url( 'https://example.com/test-profile' );
-		$id = $test_follower->upsert();
+
+		$id = Actors::upsert( $test_follower );
 
 		// Add the user ID meta value.
-		add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		// Store initial followers count.
 		$initial_followers = Followers::get_followers( $this->user_id );
@@ -226,8 +223,11 @@ class Test_Move extends \WP_UnitTestCase {
 		// Verify that our test follower remains unchanged.
 		$existing_follower = Followers::get_follower( $this->user_id, 'https://example.com/test-profile' );
 		$this->assertNotNull( $existing_follower );
-		$this->assertEquals( 'https://example.com/test-profile', $existing_follower->get_id() );
-		$this->assertEquals( 'https://example.com/test/inbox', $existing_follower->get_inbox() );
+
+		$actor = Actors::get_actor( $existing_follower );
+
+		$this->assertEquals( 'https://example.com/test-profile', $actor->get_id() );
+		$this->assertEquals( 'https://example.com/test/inbox', $actor->get_inbox() );
 
 		// Cleanup.
 		$test_follower->delete();
@@ -241,19 +241,19 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://example.com/old-profile';
 
 		// Create followers for target and origin.
-		$target_follower = new Follower();
+		$target_follower = new Actor();
 		$target_follower->set_inbox( 'https://example.com/new-profile/inbox' );
 		$target_follower->set_type( 'Person' );
 		$target_follower->set_id( $target );
 		$target_follower->set_url( $target );
-		$target_id = $target_follower->upsert();
+		$target_id = Actors::upsert( $target_follower );
 
-		$origin_follower = new Follower();
+		$origin_follower = new Actor();
 		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
 		$origin_follower->set_type( 'Person' );
 		$origin_follower->set_id( $origin );
 		$origin_follower->set_url( $origin );
-		$origin_id = $origin_follower->upsert();
+		$origin_id = Actors::upsert( $origin_follower );
 
 		// Add user IDs.
 		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, $this->user_id );
@@ -323,7 +323,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertContains( (string) $this->user_id_2, $target_users );
 
 		// Check if the origin follower was deleted.
-		$this->assertNull( Followers::get_follower_by_actor( $origin, true ) );
+		$this->assertWPError( Actors::get_remote_by_uri( $origin, true ) );
 
 		remove_filter( 'pre_http_request', $filter );
 	}
