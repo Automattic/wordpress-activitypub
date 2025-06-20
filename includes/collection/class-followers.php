@@ -85,8 +85,8 @@ class Followers {
 		 * Fires before a Follower is removed.
 		 *
 		 * @param \WP_Post $remote_actor The remote Actor object.
-		 * @param int      $user_id  The ID of the WordPress User.
-		 * @param string   $actor    The Actor URL.
+		 * @param int      $user_id      The ID of the WordPress User.
+		 * @param string   $actor        The Actor URL.
 		 */
 		\do_action( 'activitypub_followers_pre_remove_follower', $remote_actor, $user_id, $actor );
 
