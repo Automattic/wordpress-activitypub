@@ -304,7 +304,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$signature = \Activitypub\Signature::generate_signature( self::$user_id, 'POST', $actor->get_inbox(), $date, $digest );
 
 		$this->assertMatchesRegularExpression(
-			'/keyId="' . preg_quote( $actor->get_id(), '/' ) . '#main-key",algorithm="rsa-sha256",headers="\(request-target\) host date digest",signature="[^"]*"/',
+			'/keyId="' . preg_quote( $actor->get_id(), '/' ) . '#main-key",algorithm="rsa-sha256",created=\d+,expires=\d+,headers="\(request-target\) host date digest \(created\) \(expires\)",signature="[^"]*"/',
 			$signature
 		);
 

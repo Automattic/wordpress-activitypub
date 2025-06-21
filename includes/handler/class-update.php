@@ -7,7 +7,7 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Followers;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -113,13 +113,6 @@ class Update {
 			return;
 		}
 
-		$follower = Followers::get_follower_by_actor( $actor['id'] );
-
-		if ( ! $follower ) {
-			return;
-		}
-
-		$follower->from_array( $actor );
-		$follower->upsert();
+		Actors::upsert( $actor );
 	}
 }
