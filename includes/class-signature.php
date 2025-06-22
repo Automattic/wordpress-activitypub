@@ -360,17 +360,34 @@ class Signature {
 			switch ( $signature_block['algorithm'] ) {
 				case 'hs2019':
 					$details = \openssl_pkey_get_details( $public_key );
-					if ( ! isset( $details['type'] ) ) {
-						return new \WP_Error(); // TODO: Error message.
-					}
 
-					switch ( $details['type'] ) {
+					switch ( $details['type'] ?? 0 ) {
 						case \OPENSSL_KEYTYPE_RSA:
+							$bits = $details['bits'] ?? 2048;
+
+							if ( $bits >= 4 * KB_IN_BYTES ) {
+								return \OPENSSL_ALGO_SHA512;
+							} elseif ( $bits >= 3 * KB_IN_BYTES ) {
+								return \OPENSSL_ALGO_SHA384;
+							} else {
+								return \OPENSSL_ALGO_SHA256;
+							}
+
 						case \OPENSSL_KEYTYPE_EC:
-							return \OPENSSL_ALGO_SHA256;
+							$curve_name = $details['ec']['curve_name'] ?? '';
+
+							// 3 levels switch statements are fine, right?
+							switch ( $curve_name ) {
+								case 'prime256v1': // aka secp256r1.
+									return \OPENSSL_ALGO_SHA256;
+								case 'secp384r1':
+									return \OPENSSL_ALGO_SHA384;
+								case 'secp521r1':
+									return \OPENSSL_ALGO_SHA512;
+							}
 					}
 
-					return new \WP_Error( 'unsupported_key_type', 'Only RSA and EC keys are supported. Ed25519 is not available in OpenSSL for PHP.', array( 'status' => 401 ) );
+					return new \WP_Error( 'unsupported_key_type', 'Unsupported key type (only RSA and EC keys are supported).', array( 'status' => 401 ) );
 
 				case 'rsa-sha512':
 					return \OPENSSL_ALGO_SHA512;
