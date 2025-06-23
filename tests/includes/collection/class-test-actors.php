@@ -129,4 +129,82 @@ class Test_Actors extends \WP_UnitTestCase {
 
 		$this->assertWPError( Actors::get_by_resource( $resource ) );
 	}
+
+	/**
+	 * Tests clear_errors.
+	 *
+	 * @covers ::clear_errors
+	 */
+	public function test_clear_errors() {
+		$actor = array(
+			'id'                => 'https://example.com/author/jon',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/author/jon',
+			'inbox'             => 'https://example.com/author/jon/inbox',
+			'name'              => 'jon',
+			'preferredUsername' => 'jon',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
+		);
+
+		$id = Actors::upsert( $actor );
+		$this->assertNotWPError( $id );
+
+		// Add some errors.
+		Actors::add_error( $id, 'Test error 1' );
+		Actors::add_error( $id, 'Test error 2' );
+
+		// Verify errors were added.
+		$errors = \get_post_meta( $id, '_activitypub_errors', false );
+		$this->assertCount( 2, $errors );
+
+		// Clear errors.
+		$cleared = Actors::clear_errors( $id );
+		$this->assertTrue( $cleared );
+
+		// Verify errors were cleared.
+		$errors = \get_post_meta( $id, '_activitypub_errors', false );
+		$this->assertEmpty( $errors );
+
+		\wp_delete_post( $id );
+	}
+
+	/**
+	 * Tests clear_errors with no errors.
+	 *
+	 * @covers ::clear_errors
+	 */
+	public function test_clear_errors_no_errors() {
+		$actor = array(
+			'type'              => 'Person',
+			'id'                => 'https://example.com/author/jon',
+			'url'               => 'https://example.com/author/jon',
+			'inbox'             => 'https://example.com/author/jon/inbox',
+			'name'              => 'jon',
+			'preferredUsername' => 'jon',
+		);
+
+		$id = Actors::upsert( $actor );
+		$this->assertNotWPError( $id );
+
+		// Clear errors when none exist.
+		$cleared = Actors::clear_errors( $id );
+		$this->assertFalse( $cleared );
+
+		// Verify no errors exist.
+		$errors = \get_post_meta( $id, '_activitypub_errors', false );
+		$this->assertEmpty( $errors );
+	}
+
+	/**
+	 * Tests clear_errors with invalid follower ID.
+	 *
+	 * @covers ::clear_errors
+	 */
+	public function test_clear_errors_invalid_id() {
+		// Try to clear errors for non-existent follower.
+		$cleared = Actors::clear_errors( 99999 );
+		$this->assertFalse( $cleared );
+	}
 }
