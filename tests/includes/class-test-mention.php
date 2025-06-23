@@ -67,7 +67,7 @@ class Test_Mention extends \WP_UnitTestCase {
 	 */
 	public function the_content_provider() {
 		$code = 'hallo <code>@username@example.org</code> test';
-		$pre  = <<<ENDPRE
+		$pre  = <<<'ENDPRE'
 <pre>
 Please don't mention @username@example.org
   here.

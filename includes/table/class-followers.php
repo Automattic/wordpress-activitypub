@@ -123,14 +123,15 @@ class Followers extends WP_List_Table {
 		);
 
 		foreach ( $followers as $follower ) {
-			$item = array(
-				'icon'       => esc_attr( $follower->get_icon_url() ),
-				'post_title' => esc_attr( $follower->get_name() ),
-				'username'   => esc_attr( $follower->get_preferred_username() ),
-				'url'        => esc_attr( object_to_uri( $follower->get_url() ) ),
-				'identifier' => esc_attr( $follower->get_id() ),
-				'published'  => esc_attr( $follower->get_published() ),
-				'modified'   => esc_attr( $follower->get_updated() ),
+			$actor = Actors::get_actor( $follower );
+			$item  = array(
+				'icon'       => esc_attr( $actor->get_icon()['url'] ?? '' ),
+				'post_title' => esc_attr( $actor->get_name() ),
+				'username'   => esc_attr( $actor->get_preferred_username() ),
+				'url'        => esc_attr( object_to_uri( $actor->get_url() ) ),
+				'identifier' => esc_attr( $actor->get_id() ),
+				'published'  => esc_attr( $actor->get_published() ),
+				'modified'   => esc_attr( $actor->get_updated() ),
 			);
 
 			$this->items[] = $item;

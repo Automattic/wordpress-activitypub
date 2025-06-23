@@ -35,14 +35,14 @@ class Test_Link extends \WP_UnitTestCase {
 	 */
 	public function the_content_provider() {
 		$code     = '<code>text with some https://test.de and <a> tag inside</code>';
-		$style    = <<<ENDSTYLE
+		$style    = <<<'ENDSTYLE'
 <style type="text/css">
 <![CDATA[
 color: #ccc;
 ]]>
 </style>
 ENDSTYLE;
-		$pre      = <<<ENDPRE
+		$pre      = <<<'ENDPRE'
 <pre>
 Please don't https://test.de
   this.

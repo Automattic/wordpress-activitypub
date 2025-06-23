@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Reactions block now supports customizing colors, borders, box-shadows, and typography.
