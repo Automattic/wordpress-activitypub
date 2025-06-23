@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+When verifying signatures on incoming requests, the digest header now gets checked as expected.

@@ -259,6 +259,8 @@ class Signature {
 				$route = '/' . $path . $route;
 			}
 
+			$body = $request->get_body();
+
 			$headers                        = $request->get_headers();
 			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $route;
 		} else {
@@ -275,9 +277,7 @@ class Signature {
 			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
-		$signed_headers = $signature_block['headers'];
-
-		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
+		$signed_data = self::get_signed_data( $signature_block['headers'], $signature_block, $headers );
 		if ( ! $signed_data ) {
 			return new WP_Error( 'activitypub_signature', __( 'Signed request date outside acceptable time window', 'activitypub' ), array( 'status' => 401 ) );
 		}
@@ -287,17 +287,15 @@ class Signature {
 			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
-		if ( \in_array( 'digest', $signed_headers, true ) && isset( $body ) ) {
+		if ( \in_array( 'digest', $signature_block['headers'], true ) && isset( $body ) ) {
 			if ( is_array( $headers['digest'] ) ) {
 				$headers['digest'] = $headers['digest'][0];
 			}
-			$algorithm = 'sha256';
-			$digest    = explode( '=', $headers['digest'], 2 );
-			if ( 'SHA-512' === $digest[0] ) {
-				$algorithm = 'sha512';
-			}
 
-			if ( \base64_encode( \hash( $algorithm, $body, true ) ) !== $digest[1] ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+			list( $alg, $digest ) = explode( '=', $headers['digest'], 2 );
+			$algorithm            = 'SHA-512' === $alg ? 'sha512' : 'sha256';
+
+			if ( \base64_encode( \hash( $algorithm, $body, true ) ) !== $digest ) { // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
 			}
 		}
