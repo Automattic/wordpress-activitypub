@@ -707,7 +707,7 @@ class Comment {
 	 *
 	 * @param array $comment_data The comment data.
 	 *
-	 * @return array The comment data.
+	 * @return array The filtered comment data.
 	 */
 	public static function auto_approve_reaction( $comment_data ) {
 		if (
