@@ -129,17 +129,42 @@ class Http_Message_Signature implements Signature_Standard {
 		}
 
 		// Digest verification.
-		if ( isset( $headers['digest'] ) && null !== $body ) {
-			list( $alg, $digest ) = \explode( '=', $headers['digest'][0], 2 );
-
-			if ( \base64_encode( \hash( \strtolower( $alg ), $body, true ) ) !== $digest ) {
-				return new \WP_Error( 'digest_mismatch', 'The Digest header value does not match the body.' );
-			}
+		$result = $this->verify_content_digest( $headers, $body );
+		if ( \is_wp_error( $result ) ) {
+			return $result;
 		}
 
 		$signature_base = $this->get_signature_base_string( $data['components'], $params, $headers );
 
 		return \openssl_verify( $signature_base, $data['signature'], $public_key, $algorithm ) > 0;
+	}
+
+	/**
+	 * Verify the Content-Digest header against the request body.
+	 *
+	 * @param array       $headers The HTTP headers.
+	 * @param string|null $body    The request body, if applicable.
+	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
+	 */
+	private function verify_content_digest( $headers, $body ) {
+		if ( ! isset( $headers['content-digest'][0] ) || null === $body ) {
+			return true;
+		}
+
+		$raw     = $headers['content-digest'][0];
+		$digests = array_map( 'trim', explode( ',', $raw ) );
+
+		foreach ( $digests as $digest ) {
+			if ( \preg_match( '/^([a-z0-9-]+)=:(.+):$/i', $digest, $matches ) ) {
+				list( , $alg, $encoded ) = $matches;
+
+				if ( \hash_equals( $encoded, \base64_encode( \hash( \strtolower( $alg ), $body, true ) ) ) ) {
+					return true;
+				}
+			}
+		}
+
+		return new \WP_Error( 'digest_mismatch', 'Content-Digest header value does not match body.' );
 	}
 
 	/**
