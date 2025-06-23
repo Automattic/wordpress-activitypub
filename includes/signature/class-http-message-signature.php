@@ -252,7 +252,10 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return string Base string to compare signature with.
 	 */
 	private function get_signature_base_string( $components, $params, $headers ) {
-		$signature_base = '';
+		$signature_base  = '';
+		$quote_component = function ( $component ) {
+			return '"' . $component . '"';
+		};
 
 		foreach ( $components as $component ) {
 			$key = \strtolower( \trim( $component, '"' ) );
@@ -283,6 +286,15 @@ class Http_Message_Signature implements Signature_Standard {
 					$value = $value ? '?' . $value : '';
 					break;
 
+				case '@query-param':
+					$value = '';
+					if ( preg_match( '/@query-param;name=(.+)/', $component, $matches ) ) {
+						$param = $matches[1];
+						$query = wp_parse_args( wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY ) );
+						$value = $query[ $param ] ?? '';
+					}
+					break;
+
 				default:
 					$value = \preg_replace( '/\s+/', ' ', \trim( $headers[ $key ][0] ?? '' ) );
 			}
@@ -290,15 +302,13 @@ class Http_Message_Signature implements Signature_Standard {
 			$signature_base .= $key . ': ' . $value . "\n";
 		}
 
-		$signature_base .= '@signature-params: (' . \implode( ' ', $components ) . ')';
+		$signature_base .= '@signature-params: (' . implode( ' ', array_map( $quote_component, $components ) ) . ')';
 		foreach ( $params as $key => $value ) {
-			if ( \in_array( $key, array( 'created', 'expires' ), true ) ) {
-				$signature_base .= ';' . $key . '=' . $value;
-			} elseif ( \in_array( $key, array( 'nonce', 'alg', 'keyid' ), true ) ) {
-				$signature_base .= ';' . $key . '="' . $value . '"';
-			} elseif ( \is_numeric( $value ) ) {
+			if ( \is_numeric( $value ) ) {
 				$signature_base .= ';' . $key . '=' . $value;
 			} else {
+				// Escape backslashes and double quotes per RFC 9421.
+				$value           = str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
 				$signature_base .= ';' . $key . '="' . $value . '"';
 			}
 		}
