@@ -123,6 +123,10 @@ function plugin_init() {
 		WPML::init();
 	}
 
+	if ( \class_exists( 'WP_Rest_Cache_Plugin\Includes\Plugin' ) ) {
+		WP_Rest_Cache::init();
+	}
+
 	/**
 	 * Load the Surge integration.
 	 *

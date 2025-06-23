@@ -87,7 +87,7 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 				}
 
 				getElement()
-					.ref.querySelectorAll( '.reaction-group' )
+					.ref.querySelectorAll( `.reaction-group[data-reaction-type="${ reactionType }"]` )
 					.forEach( ( container ) => {
 						const label = container.querySelector( '.reaction-label' );
 						const labelWidth = label.offsetWidth || 0;
