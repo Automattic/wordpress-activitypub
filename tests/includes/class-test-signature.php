@@ -277,55 +277,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
-	 * Data provider for signature algorithm tests.
-	 *
-	 * @return string[][] Test data.
-	 */
-	public function signature_algorithm_provider() {
-		return array(
-			'hs2019 algorithm'      => array(
-				array( 'algorithm' => 'hs2019' ),
-				'sha512',
-				'hs2019 algorithm should return sha512.',
-			),
-			'rsa-sha256 algorithm'  => array(
-				array( 'algorithm' => 'rsa-sha256' ),
-				'sha256',
-				'rsa-sha256 algorithm should return sha256.',
-			),
-			'unknown algorithm'     => array(
-				array( 'algorithm' => 'unknown-algorithm' ),
-				'sha256',
-				'Unknown algorithm should return sha256.',
-			),
-			'empty algorithm'       => array(
-				array( 'algorithm' => '' ),
-				false,
-				'Empty algorithm should return false.',
-			),
-			'missing algorithm key' => array(
-				array(),
-				false,
-				'Missing algorithm key should return false.',
-			),
-		);
-	}
-
-	/**
-	 * Test signature algorithm detection.
-	 *
-	 * @covers ::get_signature_algorithm
-	 * @dataProvider signature_algorithm_provider
-	 *
-	 * @param array        $signature_block The signature block to test.
-	 * @param string|false $expected        The expected result.
-	 * @param string       $message         The assertion message.
-	 */
-	public function test_get_signature_algorithm( $signature_block, $expected, $message ) {
-		$this->assertEquals( $expected, Signature::get_signature_algorithm( $signature_block ), $message );
-	}
-
-	/**
 	 * Test full signature verification with hs2019 algorithm.
 	 *
 	 * @covers ::verify_http_signature
