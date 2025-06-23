@@ -709,7 +709,7 @@ class Comment {
 	 *
 	 * @return array The filtered comment data.
 	 */
-	public static function auto_approve_reaction( $comment_data ) {
+	public static function maybe_approve_reaction( $comment_data ) {
 		if (
 			\in_array( $comment_data['comment_type'], self::get_comment_type_slugs(), true ) &&
 			'1' === \get_option( 'activitypub_auto_approve_reactions' )
