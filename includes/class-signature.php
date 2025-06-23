@@ -288,7 +288,7 @@ class Signature {
 		}
 
 		$algorithm = self::get_signature_algorithm( $signature_block, $public_key );
-		if ( is_wp_error( $algorithm ) ) {
+		if ( \is_wp_error( $algorithm ) ) {
 			return $algorithm;
 		}
 
@@ -376,7 +376,8 @@ class Signature {
 
 							// 3 levels switch statements are fine, right?
 							switch ( $curve_name ) {
-								case 'prime256v1': // aka secp256r1.
+								case 'prime256v1':
+								case 'secp256r1':
 									return \OPENSSL_ALGO_SHA256;
 								case 'secp384r1':
 									return \OPENSSL_ALGO_SHA384;
