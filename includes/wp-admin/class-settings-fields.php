@@ -354,7 +354,7 @@ class Settings_Fields {
 			<p>
 				<label>
 					<input type="checkbox" name="activitypub_auto_approve_reactions" value="1" <?php checked( '1', $auto_approve ); ?> />
-					<?php esc_html_e( 'Auto approve reactions.', 'activitypub' ); ?>
+					<?php esc_html_e( 'Auto approve reactions', 'activitypub' ); ?>
 				</label>
 			</p>
 		</fieldset>
