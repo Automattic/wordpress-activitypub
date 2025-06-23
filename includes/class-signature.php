@@ -7,13 +7,9 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Signature\Draft_Cavage_Signature;
 use Activitypub\Signature\Http_Message_Signature;
-use WP_Error;
-use DateTime;
-use DateTimeZone;
-use WP_REST_Request;
-use Activitypub\Collection\Actors;
 
 /**
  * ActivityPub Signature Class.
@@ -237,9 +233,9 @@ class Signature {
 	/**
 	 * Verifies the http signatures
 	 *
-	 * @param WP_REST_Request|array $request The request object or $_SERVER array.
+	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
 	 *
-	 * @return bool|WP_Error A boolean or WP_Error.
+	 * @return bool|\WP_Error A boolean or WP_Error.
 	 */
 	public static function verify_http_signature( $request ) {
 		if ( is_object( $request ) ) { // REST Request object.
@@ -262,12 +258,12 @@ class Signature {
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
-	 * @return resource|WP_Error The public key resource or WP_Error.
+	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
 		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) );
 		if ( \is_wp_error( $actor ) ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'activitypub_no_remote_profile_found',
 				__( 'No Profile found or Profile not accessible', 'activitypub' ),
 				array( 'status' => 401 )
@@ -281,7 +277,7 @@ class Signature {
 			}
 		}
 
-		return new WP_Error(
+		return new \WP_Error(
 			'activitypub_no_remote_key_found',
 			__( 'No Public-Key found', 'activitypub' ),
 			array( 'status' => 401 )
