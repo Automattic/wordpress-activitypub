@@ -28,7 +28,6 @@ class Comment {
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
-		\add_filter( 'preprocess_comment', array( self::class, 'maybe_approve_reaction' ) );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
@@ -674,6 +673,14 @@ class Comment {
 			return $approved;
 		}
 
+		// Maybe auto-approve likes and reposts.
+		if (
+			\in_array( $comment_data['comment_type'], self::get_comment_type_slugs(), true ) &&
+			'1' === \get_option( 'activitypub_auto_approve_reactions' )
+		) {
+			return 1;
+		}
+
 		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {
 			return $approved;
 		}
@@ -697,27 +704,6 @@ class Comment {
 		}
 
 		return $approved;
-	}
-
-	/**
-	 * Auto-approve ActivityPub likes and reposts.
-	 *
-	 * This function automatically approves incoming reactions that are
-	 * registered as "like" or "repost" comment types by the ActivityPub plugin.
-	 *
-	 * @param array $comment_data The comment data.
-	 *
-	 * @return array The filtered comment data.
-	 */
-	public static function maybe_approve_reaction( $comment_data ) {
-		if (
-			\in_array( $comment_data['comment_type'], self::get_comment_type_slugs(), true ) &&
-			'1' === \get_option( 'activitypub_auto_approve_reactions' )
-		) {
-			$comment_data['comment_approved'] = 1;
-		}
-
-		return $comment_data;
 	}
 
 	/**
