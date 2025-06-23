@@ -318,7 +318,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 */
 	public function test_verify_http_signature_with_digest() {
 		// Create a user and get their keypair.
-		$keys = Signature::get_keypair_for( 1 );
+		$keys = Actors::get_keypair( 1 );
 
 		\add_filter(
 			'pre_get_remote_metadata_by_actor',
@@ -345,7 +345,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$date = \gmdate( 'D, d M Y H:i:s T' );
 
 		// Generate a signature that includes the digest.
-		$signature = Signature::generate_signature( 1, 'POST', 'https://example.org/wp-json/activitypub/1.0/inbox', $date, $digest );
+		$signature = Signature::generate_signature( Actors::get_by_id( 1 )->get_id(), $keys['private_key'], 'POST', 'https://example.org/wp-json/activitypub/1.0/inbox', $date, $digest );
 
 		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 		$request->set_body( $body );
