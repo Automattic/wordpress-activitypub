@@ -389,8 +389,8 @@ class Actors {
 
 		return 'user';
 	}
-  
-  /**
+
+	/**
 	 * Create or update a remote Actor (e.g., a follower) as a custom post type.
 	 *
 	 * @param array|Actor $actor_data The ActivityPub actor object as associative array (must include 'id').
@@ -811,5 +811,5 @@ class Actors {
 		}
 
 		return false;
-  }
+	}
 }

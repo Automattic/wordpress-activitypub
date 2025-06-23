@@ -280,9 +280,9 @@ class Test_Actors extends \WP_UnitTestCase {
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
 		$this->assertEquals( $key_pair['private_key'], $private_key );
-  }
-  
-  /**
+	}
+
+	/**
 	 * Tests clear_errors.
 	 *
 	 * @covers ::clear_errors
