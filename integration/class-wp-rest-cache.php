@@ -44,7 +44,7 @@ class WP_Rest_Cache {
 	 *
 	 * @param array $endpoints List of allowed endpoints.
 	 *
-	 * @return array
+	 * @return array Filtered list of allowed endpoints.
 	 */
 	public static function add_activitypub_endpoints( $endpoints ) {
 		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array( 'actors', 'collections', 'comments', 'interactions', 'nodeinfo', 'posts', 'users' );
@@ -60,7 +60,8 @@ class WP_Rest_Cache {
 	 * @param bool   $is_single Whether the current cache represents a single item.
 	 * @param mixed  $data      Data to cache.
 	 * @param string $uri       Request URI.
-	 * @return bool Whether the cache represents a single item
+	 *
+	 * @return bool Whether the cache represents a single item.
 	 */
 	public static function set_is_single_item( $is_single, $data, $uri ) {
 		if ( self::is_activitypub_endpoint( $uri ) ) {
@@ -135,7 +136,8 @@ class WP_Rest_Cache {
 	 * Test, whether the current endpoint is an ActivityPub endpoint.
 	 *
 	 * @param string $uri URI to test.
-	 * @return bool Whether the current endpoint is an ActivityPub endpoint
+	 *
+	 * @return bool Whether the current endpoint is an ActivityPub endpoint.
 	 */
 	private static function is_activitypub_endpoint( $uri ) {
 		$search = '/' . ACTIVITYPUB_REST_NAMESPACE . '/';
