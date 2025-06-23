@@ -266,19 +266,28 @@ class Http_Message_Signature implements Signature_Standard {
 					$value = \set_url_scheme( ( $_SERVER['HTTP_HOST'] ?? '' ) . ( $_SERVER['REQUEST_URI'] ?? '/' ) );
 					break;
 
+				case '@scheme':
+					$value = is_ssl() ? 'https' : 'http';
+					break;
+
+				case '@request-target':
+					$value = $_SERVER['REQUEST_URI'] ?? '/';
+					break;
+
 				case '@path':
 					$value = \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH );
 					break;
 
 				case '@query':
-					$value = \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_QUERY );
+					$value = \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY );
+					$value = $value ? '?' . $value : '';
 					break;
 
 				default:
 					$value = \preg_replace( '/\s+/', ' ', \trim( $headers[ $key ][0] ?? '' ) );
 			}
 
-			$signature_base .= $key . ': ' . $value . PHP_EOL;
+			$signature_base .= $key . ': ' . $value . "\n";
 		}
 
 		$signature_base .= '@signature-params: (' . \implode( ' ', $components ) . ')';
@@ -286,6 +295,10 @@ class Http_Message_Signature implements Signature_Standard {
 			if ( \in_array( $key, array( 'created', 'expires' ), true ) ) {
 				$signature_base .= ';' . $key . '=' . $value;
 			} elseif ( \in_array( $key, array( 'nonce', 'alg', 'keyid' ), true ) ) {
+				$signature_base .= ';' . $key . '="' . $value . '"';
+			} elseif ( \is_numeric( $value ) ) {
+				$signature_base .= ';' . $key . '=' . $value;
+			} else {
 				$signature_base .= ';' . $key . '="' . $value . '"';
 			}
 		}
