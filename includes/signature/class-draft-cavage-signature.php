@@ -103,10 +103,10 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
 			$parsed_header['keyId'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
+		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/im', $signature, $matches ) ) {
 			$parsed_header['(created)'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
+		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/im', $signature, $matches ) ) {
 			$parsed_header['(expires)'] = trim( $matches[1] );
 		}
 		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
@@ -177,19 +177,19 @@ class Draft_Cavage_Signature implements Signature_Standard {
 				}
 			}
 			if ( 'date' === $header ) {
-				if ( empty( $headers[ $header ][0] ) ) {
+				if ( empty( $headers['date'][0] ) ) {
 					continue;
 				}
 
 				// Allow a bit of leeway for misconfigured clocks.
-				$d = new \DateTime( $headers[ $header ][0] );
-				$d->setTimeZone( new \DateTimeZone( 'UTC' ) );
-				$c = $d->format( 'U' );
+				$date = \date_create( $headers['date'][0] );
+				$date->setTimeZone( \timezone_open( 'UTC' ) );
+				$date = $date->format( 'U' );
 
-				$d_plus  = time() + ( 3 * HOUR_IN_SECONDS );
-				$d_minus = time() - ( 3 * HOUR_IN_SECONDS );
+				$max = time() + ( 3 * HOUR_IN_SECONDS );
+				$min = time() - ( 3 * HOUR_IN_SECONDS );
 
-				if ( $c > $d_plus || $c < $d_minus ) {
+				if ( $date > $max || $date < $min ) {
 					// Time out of range.
 					return false;
 				}
