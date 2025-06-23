@@ -8,7 +8,7 @@
 namespace Activitypub\Tests\Model;
 
 use Activitypub\Model\Follower;
-use Activitypub\Collection\Followers;
+use Activitypub\Collection\Actors;
 
 /**
  * Tests the Follower class.
@@ -22,42 +22,39 @@ class Test_Follower extends \WP_UnitTestCase {
 	 * @covers ::clear_errors
 	 */
 	public function test_clear_errors() {
-		// Mock request.
-		$follower = new Follower();
-		$follower->from_array(
-			array(
-				'id'                => 'https://example.com/author/jon',
-				'type'              => 'Person',
-				'name'              => 'Jon Doe',
-				'preferredUsername' => 'jon',
-				'inbox'             => 'https://example.com/author/jon/inbox',
-				'publicKey'         => 'publicKey',
-				'publicKeyPem'      => 'publicKeyPem',
-			)
+		$actor = array(
+			'id'                => 'https://example.com/author/jon',
+			'type'              => 'Person',
+			'name'              => 'Jon Doe',
+			'preferredUsername' => 'jon',
+			'inbox'             => 'https://example.com/author/jon/inbox',
+			'publicKey'         => 'publicKey',
+			'publicKeyPem'      => 'publicKeyPem',
 		);
 
-		$id = $follower->upsert();
-		$this->assertNotWPError( $id );
+		$id = Actors::upsert( $actor );
 
 		// Add some errors.
-		Followers::add_error( $follower->get__id(), 'Test error 1' );
-		Followers::add_error( $follower->get__id(), 'Test error 2' );
+		Actors::add_error( $id, 'Test error 1' );
+		Actors::add_error( $id, 'Test error 2' );
 
 		// Verify errors were added.
-		$errors = $follower->get_errors();
-		$this->assertCount( 2, $errors );
+		$count = Actors::count_errors( $id );
+		$this->assertEquals( 2, $count );
 
 		// Clear errors.
-		$cleared = $follower->clear_errors();
+		$cleared = Actors::clear_errors( $id );
 		$this->assertTrue( $cleared );
 
 		// Verify errors were cleared.
-		$errors = $follower->get_errors();
-		$this->assertEmpty( $errors );
+		$count = Actors::count_errors( $id );
+		$this->assertEquals( 0, $count );
 	}
 
 	/**
 	 * Tests clear_errors with no errors.
+	 *
+	 * @expectedDeprecated Activitypub\Model\Follower
 	 *
 	 * @covers ::clear_errors
 	 */
@@ -87,19 +84,9 @@ class Test_Follower extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests clear_errors triggers _doing_it_wrong when ID is not set.
-	 *
-	 * @covers ::clear_errors
-	 */
-	public function test_clear_errors_doing_it_wrong() {
-		$this->setExpectedIncorrectUsage( 'Activitypub\Model\Follower::clear_errors' );
-
-		$follower = new Follower();
-		$follower->clear_errors();
-	}
-
-	/**
 	 * Tests save.
+	 *
+	 * @expectedDeprecated Activitypub\Model\Follower
 	 *
 	 * @covers ::save
 	 */
