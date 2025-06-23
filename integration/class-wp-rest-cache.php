@@ -78,7 +78,8 @@ class WP_Rest_Cache {
 	 * @param string $cache_key   Object key.
 	 * @param mixed  $data        Data to cache.
 	 * @param string $uri         Request URI.
-	 * @return string Updated object type
+	 *
+	 * @return string Updated object type.
 	 */
 	public static function set_object_type( $object_type, $cache_key, $data, $uri ) {
 		if ( self::is_activitypub_endpoint( $uri ) ) {
