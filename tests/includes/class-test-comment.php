@@ -574,4 +574,25 @@ class Test_Comment extends \WP_UnitTestCase {
 		wp_delete_comment( $id_2, true );
 		wp_delete_comment( $id_3, true );
 	}
+
+	/**
+	 * Test maybe_approve_reaction method.
+	 *
+	 * @covers ::maybe_approve_reaction
+	 */
+	public function test_maybe_approve_reaction() {
+		// Test with a valid comment type.
+		$comment_data = array(
+			'comment_type' => 'like',
+		);
+		$comment_data = Comment::maybe_approve_reaction( $comment_data );
+		$this->assertEquals( 1, $comment_data['comment_approved'] );
+
+		// Test with an invalid comment type.
+		$comment_data = array(
+			'comment_type' => 'invalid',
+		);
+		$comment_data = Comment::maybe_approve_reaction( $comment_data );
+		$this->assertEquals( 0, $comment_data['comment_approved'] );
+	}
 }
