@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The amount of avatars shown in the Reactions block no longer depends on the amount of likes, but is comment type agnostic.
