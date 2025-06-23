@@ -30,110 +30,116 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
-		$input            = $headers['signature-input'][0];
-		$signature_header = $headers['signature'][0];
-
-		if ( ! \preg_match( '/sig1=\\(([^)]*)\\)(.*)/', $input, $matches ) ) {
-			return new \WP_Error( 'invalid_signature_input', 'Invalid Signature-Input format.' );
+		$parsed = $this->parse_signature_labels( $headers );
+		if ( \is_wp_error( $parsed ) ) {
+			return $parsed;
 		}
 
-		$components = \preg_split( '/\\s+/', trim( $matches[1] ) );
-		$params_str = \trim( $matches[2], '; ' );
-		$params     = array();
-		foreach ( \explode( ';', $params_str ) as $param ) {
-			if ( \preg_match( '/(\w+)=("?)([^";]+)\2/', \trim( $param ), $matches ) ) {
-				$params[ \strtolower( $matches[1] ) ] = $matches[3];
+		$errors = new \WP_Error();
+		foreach ( $parsed as $data ) {
+			$result = $this->verify_signature_label( $data, $headers, $body );
+			if ( true === $result ) {
+				return true;
+			}
+
+			$errors->add( $result->get_error_code(), $result->get_error_message() );
+		}
+
+		// No valid signature found.
+		$errors->add_data( array( 'status' => 401 ) );
+
+		return $errors;
+	}
+
+	/**
+	 * Parse the Signature-Input and Signature headers.
+	 *
+	 * @param array $headers The HTTP headers.
+	 * @return array|\WP_Error Parsed signature labels or WP_Error on failure.
+	 */
+	private function parse_signature_labels( array $headers ) {
+		$parsed_inputs = array();
+		\preg_match_all( '/(\w+)=\(([^)]*)\)([^,]*)/', $headers['signature-input'][0], $matches, PREG_SET_ORDER );
+
+		foreach ( $matches as $match ) {
+			$label      = $match[1];
+			$components = \preg_split( '/\s+/', \trim( $match[2] ) );
+			$param_str  = \trim( $match[3], '; ' );
+			$params     = array();
+
+			foreach ( \explode( ';', $param_str ) as $param ) {
+				if ( \preg_match( '/(\w+)=("?)([^";]+)\2/', \trim( $param ), $m ) ) {
+					$params[ \strtolower( $m[1] ) ] = $m[3];
+				}
+			}
+
+			if ( \preg_match( '/' . \preg_quote( $label, '/' ) . '="([^"]+)"/', $headers['signature'][0], $sig_match ) ) {
+				$parsed_inputs[ $label ] = array(
+					'components' => $components,
+					'params'     => $params,
+					'signature'  => \base64_decode( $sig_match[1] ),
+				);
 			}
 		}
 
-		$created = isset( $params['created'] ) ? (int) $params['created'] : null;
-		$expires = isset( $params['expires'] ) ? (int) $params['expires'] : null;
-		$nonce   = $params['nonce'] ?? null;
-		$alg     = \strtolower( $params['alg'] ?? '' );
-		$key_id  = $params['keyid'] ?? null;
-
-		if ( strpos( $alg, 'rsa-pss-' ) === 0 && version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
-			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms is not supported.' );
+		if ( empty( $parsed_inputs ) ) {
+			return new \WP_Error( 'no_valid_labels', 'No valid signature labels found.' );
 		}
 
-		if ( ! $key_id ) {
-			return new \WP_Error( 'missing_keyid', 'Missing keyId in signature parameters.' );
-		}
+		return $parsed_inputs;
+	}
 
-		if ( $created && $created > \time() + MINUTE_IN_SECONDS ) {
+	/**
+	 * Verify a single signature label.
+	 *
+	 * @param array       $data     Parsed signature data.
+	 * @param array       $headers  HTTP headers.
+	 * @param string|null $body     Request body, if applicable.
+	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
+	 */
+	private function verify_signature_label( $data, $headers, $body ) {
+		$params = $data['params'];
+
+		// Timestamp verification.
+		if ( isset( $params['created'] ) && (int) $params['created'] > \time() + MINUTE_IN_SECONDS ) {
 			return new \WP_Error( 'invalid_created', 'The signature creation time is in the future.' );
 		}
-		if ( $expires && $expires < \time() ) {
+		if ( isset( $params['expires'] ) && (int) $params['expires'] < \time() ) {
 			return new \WP_Error( 'expired_signature', 'The signature has expired.' );
 		}
 
-		$signature_string = '';
-		foreach ( $components as $component ) {
-			$key = \strtolower( \trim( $component, '"' ) );
-
-			switch ( $key ) {
-				case '@method':
-					$value = \strtolower( $_SERVER['REQUEST_METHOD'] ?? 'get' );
-					break;
-				case '@target-uri':
-					$value = \set_url_scheme( ( $_SERVER['HTTP_HOST'] ?? '' ) . ( $_SERVER['REQUEST_URI'] ?? '/' ) );
-					break;
-				case '@path':
-					$value = \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH );
-					break;
-				case '@query':
-					$value = \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_QUERY );
-					break;
-				default:
-					$raw   = $headers[ $key ][0] ?? '';
-					$value = \preg_replace( '/\s+/', ' ', \trim( $raw ) );
-			}
-
-			$signature_string .= $key . ': ' . $value . PHP_EOL;
+		// KeyId verification.
+		if ( empty( $params['keyid'] ) ) {
+			return new \WP_Error( 'missing_keyid', 'Missing keyId in signature parameters.' );
 		}
 
-		$signature_string .= '@signature-params: (' . \implode( ' ', $components ) . ')';
-		if ( $created ) {
-			$signature_string .= ';created=' . $created;
-		}
-		if ( $expires ) {
-			$signature_string .= ';expires=' . $expires;
-		}
-		if ( $nonce ) {
-			$signature_string .= ';nonce="' . $nonce . '"';
-		}
-		if ( $alg ) {
-			$signature_string .= ';alg=' . $alg;
-		}
-		$signature_string .= ';keyid="' . $key_id . '"';
-
-		if ( ! \preg_match( '/sig1="([^"]+)"/', $signature_header, $sig_match ) ) {
-			return new \WP_Error( 'invalid_signature_value', 'Malformed Signature header.' );
-		}
-		$signature = \base64_decode( $sig_match[1] );
-
-		$public_key = Signature::get_remote_key( $key_id );
+		$public_key = Signature::get_remote_key( $params['keyid'] );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}
 
-		$algorithm = $this->resolve_algorithm( $alg, $public_key );
+		// Algorithm verification.
+		if ( isset( $params['alg'] ) && \strpos( $params['alg'], 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
+			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms is not supported.' );
+		}
+
+		$algorithm = $this->resolve_algorithm( $params['alg'] ?? '', $public_key );
 		if ( \is_wp_error( $algorithm ) ) {
 			return $algorithm;
 		}
 
 		// Digest verification.
 		if ( isset( $headers['digest'] ) && null !== $body ) {
-			$digest_header                   = $headers['digest'][0];
-			list( $digest_alg, $digest_val ) = \explode( '=', $digest_header, 2 );
-			$calc                            = \base64_encode( \hash( \strtolower( $digest_alg ), $body, true ) );
+			list( $alg, $digest ) = \explode( '=', $headers['digest'][0], 2 );
 
-			if ( $digest_val !== $calc ) {
+			if ( \base64_encode( \hash( \strtolower( $alg ), $body, true ) ) !== $digest ) {
 				return new \WP_Error( 'digest_mismatch', 'The Digest header value does not match the body.' );
 			}
 		}
 
-		return \openssl_verify( $signature_string, $signature, $public_key, $algorithm ) > 0;
+		$signature_base = $this->get_signature_base_string( $data['components'], $params, $headers );
+
+		return \openssl_verify( $signature_base, $data['signature'], $public_key, $algorithm ) > 0;
 	}
 
 	/**
@@ -144,17 +150,16 @@ class Http_Message_Signature implements Signature_Standard {
 	 *
 	 * @return int|\WP_Error OpenSSL algorithm constant or WP_Error.
 	 */
-	protected function resolve_algorithm( $alg_string, $public_key ) {
-		if ( ! $public_key || ! \is_resource( $public_key ) ) {
+	private function resolve_algorithm( $alg_string, $public_key ) {
+		if ( ! \is_resource( $public_key ) ) {
 			return new \WP_Error( 'invalid_key', 'Invalid public key resource.' );
 		}
 
 		$details = \openssl_pkey_get_details( $public_key );
-		if ( ! $details || ! isset( $details['type'] ) ) {
+		if ( ! isset( $details['type'] ) ) {
 			return new \WP_Error( 'invalid_key_details', 'Unable to read public key details.' );
 		}
 
-		$key_type   = $details['type'];
 		$alg_string = \strtolower( $alg_string );
 
 		$map = array(
@@ -205,10 +210,61 @@ class Http_Message_Signature implements Signature_Standard {
 			return new \WP_Error( 'unsupported_alg', 'Unsupported or unknown alg parameter: ' . $alg_string );
 		}
 
-		if ( $map[ $alg_string ]['type'] !== $key_type ) {
+		if ( $map[ $alg_string ]['type'] !== $details['type'] ) {
 			return new \WP_Error( 'alg_key_mismatch', 'Algorithm does not match public key type.' );
 		}
 
 		return $map[ $alg_string ]['algo'];
+	}
+
+	/**
+	 * Returns the base strings to compare the incoming signature with.
+	 *
+	 * @param array $components Signature components.
+	 * @param array $params     Signature params.
+	 * @param array $headers    The HTTP headers.
+	 *
+	 * @return string Base string to compare signature with.
+	 */
+	private function get_signature_base_string( $components, $params, $headers ) {
+		$signature_base = '';
+
+		foreach ( $components as $component ) {
+			$key = \strtolower( \trim( $component, '"' ) );
+
+			switch ( $key ) {
+				case '@method':
+					$value = \strtolower( $_SERVER['REQUEST_METHOD'] ?? 'get' );
+					break;
+
+				case '@target-uri':
+					$value = \set_url_scheme( ( $_SERVER['HTTP_HOST'] ?? '' ) . ( $_SERVER['REQUEST_URI'] ?? '/' ) );
+					break;
+
+				case '@path':
+					$value = \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH );
+					break;
+
+				case '@query':
+					$value = \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_QUERY );
+					break;
+
+				default:
+					$value = \preg_replace( '/\s+/', ' ', \trim( $headers[ $key ][0] ?? '' ) );
+			}
+
+			$signature_base .= $key . ': ' . $value . PHP_EOL;
+		}
+
+		$signature_base .= '@signature-params: (' . \implode( ' ', $components ) . ')';
+		foreach ( $params as $key => $value ) {
+			if ( \in_array( $key, array( 'created', 'expires' ), true ) ) {
+				$signature_base .= ';' . $key . '=' . $value;
+			} elseif ( \in_array( $key, array( 'nonce', 'alg', 'keyid' ), true ) ) {
+				$signature_base .= ';' . $key . '="' . $value . '"';
+			}
+		}
+
+		return $signature_base;
 	}
 }
