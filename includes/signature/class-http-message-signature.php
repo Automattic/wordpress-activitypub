@@ -42,7 +42,9 @@ class Http_Message_Signature implements Signature_Standard {
 				return true;
 			}
 
-			$errors->add( $result->get_error_code(), $result->get_error_message() );
+			if ( \is_wp_error( $result ) ) {
+				$errors->add( $result->get_error_code(), $result->get_error_message() );
+			}
 		}
 
 		// No valid signature found.
@@ -59,12 +61,12 @@ class Http_Message_Signature implements Signature_Standard {
 	 */
 	private function parse_signature_labels( array $headers ) {
 		$parsed_inputs = array();
-		\preg_match_all( '/(\w+)=\(([^)]*)\)([^,]*)/', $headers['signature-input'][0], $matches, PREG_SET_ORDER );
+		\preg_match_all( '/(?P<label>\w+)=\((?P<components>[^)]*)\)(?P<params>[^,]*)/', $headers['signature_input'][0], $matches, PREG_SET_ORDER );
 
 		foreach ( $matches as $match ) {
-			$label      = $match[1];
-			$components = \preg_split( '/\s+/', \trim( $match[2] ) );
-			$param_str  = \trim( $match[3], '; ' );
+			$label      = $match['label'];
+			$components = \preg_split( '/\s+/', \trim( $match['components'] ) );
+			$param_str  = \trim( $match['params'], '; ' );
 			$params     = array();
 
 			foreach ( \explode( ';', $param_str ) as $param ) {
@@ -73,7 +75,7 @@ class Http_Message_Signature implements Signature_Standard {
 				}
 			}
 
-			if ( \preg_match( '/' . \preg_quote( $label, '/' ) . '="([^"]+)"/', $headers['signature'][0], $sig_match ) ) {
+			if ( \preg_match( '/' . \preg_quote( $label, '/' ) . '=:([^:]+):/', $headers['signature'][0], $sig_match ) ) {
 				$parsed_inputs[ $label ] = array(
 					'components' => $components,
 					'params'     => $params,
@@ -136,7 +138,12 @@ class Http_Message_Signature implements Signature_Standard {
 
 		$signature_base = $this->get_signature_base_string( $data['components'], $params, $headers );
 
-		return \openssl_verify( $signature_base, $data['signature'], $public_key, $algorithm ) > 0;
+		$verified = \openssl_verify( $signature_base, $data['signature'], $public_key, $algorithm ) > 0;
+		if ( ! $verified ) {
+			return new \WP_Error( 'activitypub_signature', 'Invalid signature' );
+		}
+
+		return true;
 	}
 
 	/**
@@ -147,18 +154,26 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
 	 */
 	private function verify_content_digest( $headers, $body ) {
-		if ( ! isset( $headers['content-digest'][0] ) || null === $body ) {
+		if ( ! isset( $headers['content_digest'][0] ) || null === $body ) {
 			return true;
 		}
 
-		$raw     = $headers['content-digest'][0];
-		$digests = array_map( 'trim', explode( ',', $raw ) );
+		$digests = array_map( 'trim', explode( ',', $headers['content_digest'][0] ) );
 
 		foreach ( $digests as $digest ) {
-			if ( \preg_match( '/^([a-z0-9-]+)=:(.+):$/i', $digest, $matches ) ) {
+			if ( \preg_match( '/^([a-z0-9-]+)=(.+)$/i', $digest, $matches ) ) {
 				list( , $alg, $encoded ) = $matches;
 
-				if ( \hash_equals( $encoded, \base64_encode( \hash( \strtolower( $alg ), $body, true ) ) ) ) {
+				$map = array(
+					'SHA-256' => 'sha256',
+					'SHA-512' => 'sha512',
+				);
+
+				if ( ! isset( $map[ $alg ] ) ) {
+					return new \WP_Error( 'unsupported_digest', 'Unsupported digest algorithm.' );
+				}
+
+				if ( \hash_equals( $encoded, \base64_encode( \hash( $map[ $alg ], $body, true ) ) ) ) {
 					return true;
 				}
 			}
@@ -176,10 +191,6 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return int|\WP_Error OpenSSL algorithm constant or WP_Error.
 	 */
 	private function resolve_algorithm( $alg_string, $public_key ) {
-		if ( ! \is_resource( $public_key ) ) {
-			return new \WP_Error( 'invalid_key', 'Invalid public key resource.' );
-		}
-
 		$details = \openssl_pkey_get_details( $public_key );
 		if ( ! isset( $details['type'] ) ) {
 			return new \WP_Error( 'invalid_key_details', 'Unable to read public key details.' );
@@ -252,10 +263,7 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return string Base string to compare signature with.
 	 */
 	private function get_signature_base_string( $components, $params, $headers ) {
-		$signature_base  = '';
-		$quote_component = function ( $component ) {
-			return '"' . $component . '"';
-		};
+		$signature_base = '';
 
 		foreach ( $components as $component ) {
 			$key = \strtolower( \trim( $component, '"' ) );
@@ -266,7 +274,11 @@ class Http_Message_Signature implements Signature_Standard {
 					break;
 
 				case '@target-uri':
-					$value = \set_url_scheme( ( $_SERVER['HTTP_HOST'] ?? '' ) . ( $_SERVER['REQUEST_URI'] ?? '/' ) );
+					$value = \set_url_scheme( '//' . ( $_SERVER['HTTP_HOST'] ?? '' ) . ( $_SERVER['REQUEST_URI'] ?? '/' ) );
+					break;
+
+				case '@authority':
+					$value = $_SERVER['HTTP_HOST'] ?? '';
 					break;
 
 				case '@scheme':
@@ -296,13 +308,15 @@ class Http_Message_Signature implements Signature_Standard {
 					break;
 
 				default:
+					/** Canonicalize header names. {@see WP_REST_Request::canonicalize_header_name()} */
+					$key   = \str_replace( '-', '_', $key );
 					$value = \preg_replace( '/\s+/', ' ', \trim( $headers[ $key ][0] ?? '' ) );
 			}
 
-			$signature_base .= $key . ': ' . $value . "\n";
+			$signature_base .= '"' . \str_replace( '_', '-', $key ) . '": ' . $value . "\n";
 		}
 
-		$signature_base .= '@signature-params: (' . implode( ' ', array_map( $quote_component, $components ) ) . ')';
+		$signature_base .= '"@signature-params": (' . implode( ' ', $components ) . ')';
 		foreach ( $params as $key => $value ) {
 			if ( \is_numeric( $value ) ) {
 				$signature_base .= ';' . $key . '=' . $value;

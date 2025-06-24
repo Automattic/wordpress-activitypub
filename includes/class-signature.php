@@ -248,7 +248,7 @@ class Signature {
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		$signature = isset( $headers['signature-input'] ) ? new Http_Message_Signature() : new Draft_Cavage_Signature();
+		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Draft_Cavage_Signature();
 
 		return $signature->verify( $headers, $body ?? null );
 	}
