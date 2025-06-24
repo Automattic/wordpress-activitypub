@@ -181,8 +181,14 @@ class Followers {
 			'order'          => 'DESC',
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
+				'relation' => 'OR',
 				array(
 					'key'   => self::FOLLOWER_META_KEY,
+					'value' => $user_id,
+				),
+				// for backwards compatibility.
+				array(
+					'key'   => '_activitypub_user_id',
 					'value' => $user_id,
 				),
 			),
@@ -232,8 +238,16 @@ class Followers {
 				'meta_query' => array(
 					'relation' => 'AND',
 					array(
-						'key'   => self::FOLLOWER_META_KEY,
-						'value' => $user_id,
+						'relation' => 'OR',
+						array(
+							'key'   => self::FOLLOWER_META_KEY,
+							'value' => $user_id,
+						),
+						// for backwards compatibility.
+						array(
+							'key'   => '_activitypub_user_id',
+							'value' => $user_id,
+						),
 					),
 					array(
 						'key'     => '_activitypub_inbox',
