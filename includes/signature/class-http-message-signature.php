@@ -271,7 +271,7 @@ class Http_Message_Signature implements Signature_Standard {
 
 			switch ( $key ) {
 				case '@method':
-					$value = \strtolower( $_SERVER['REQUEST_METHOD'] ?? 'get' );
+					$value = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 					break;
 
 				case '@target-uri':

@@ -487,7 +487,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$signature_input = "sig1=$params_string";
 
 		// Generate a signature using the RFC-9421 format.
-		$signature_base  = "\"@method\": post\n";
+		$signature_base  = "\"@method\": POST\n";
 		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/inbox\n";
 		$signature_base .= "\"@authority\": example.org\n";
 		$signature_base .= "\"content-digest\": $digest\n";
@@ -591,7 +591,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$signature_input = "get-query=$params_string";
 
 		// Generate a signature using the RFC-9421 format.
-		$signature_base  = "\"@method\": get\n";
+		$signature_base  = "\"@method\": GET\n";
 		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/actors/1/outbox?per_page=1&page=2&context=\n";
 		$signature_base .= "\"@authority\": example.org\n";
 		$signature_base .= "\"@query-param\";name=\"per_page\": 1\n";
@@ -694,7 +694,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$signature_input = "sig1=$params_string";
 
 		// Generate a signature using the RFC-9421 format.
-		$signature_base  = "\"@method\": post\n";
+		$signature_base  = "\"@method\": POST\n";
 		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/inbox\n";
 		$signature_base .= "\"@authority\": example.org\n";
 		$signature_base .= "\"content-digest\": $digest\n";
