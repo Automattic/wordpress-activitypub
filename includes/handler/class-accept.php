@@ -7,6 +7,7 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 
 use function Activitypub\object_to_uri;
