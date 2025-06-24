@@ -574,4 +574,37 @@ class Test_Comment extends \WP_UnitTestCase {
 		wp_delete_comment( $id_2, true );
 		wp_delete_comment( $id_3, true );
 	}
+
+	/**
+	 * Test pre_comment_approved filter.
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_pre_comment_approved_filter() {
+		\add_option( 'activitypub_auto_approve_reactions', '1' );
+
+		$post_id = self::factory()->post->create();
+
+		$comment_data = array(
+			'comment_post_ID'      => $post_id,
+			'comment_author'       => 'John Doe',
+			'comment_author_email' => 'john@example.com',
+			'comment_author_url'   => 'https://example.com',
+			'comment_type'         => 'like',
+			'comment_content'      => 'This is a like.',
+			'comment_approved'     => 0,
+		);
+		$comment_id   = \wp_new_comment( $comment_data );
+		\clean_comment_cache( $comment_id );
+		$this->assertEquals( 1, \get_comment( $comment_id, 'ARRAY_A' )['comment_approved'] );
+
+		\delete_option( 'activitypub_auto_approve_reactions' );
+		\wp_delete_comment( $comment_id, true );
+
+		$comment_id = \wp_new_comment( $comment_data );
+		$this->assertEquals( 0, \get_comment( $comment_id, 'ARRAY_A' )['comment_approved'] );
+
+		\wp_delete_comment( $comment_id, true );
+		\wp_delete_post( $post_id, true );
+	}
 }
