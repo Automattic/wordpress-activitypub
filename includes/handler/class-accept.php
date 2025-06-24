@@ -41,7 +41,13 @@ class Accept {
 	 * @param int   $user_id The id of the local blog-user.
 	 */
 	public static function handle_accept( $accept, $user_id ) {
-		Following::accept( object_to_uri( $accept['object'] ), $user_id );
+		$post = Actors::get_remote_by_uri( object_to_uri( $accept['object'] ) );
+
+		if ( \is_wp_error( $post ) ) {
+			return;
+		}
+
+		Following::accept( $post, $user_id );
 	}
 
 	/**

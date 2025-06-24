@@ -1535,13 +1535,21 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
  * @return int|\WP_Error The ID of the Actor or a WP_Error.
  */
 function follow( $actor, $user_id ) {
-	$id = Actors::create_from_uri( $actor );
+	$post = Actors::get_remote_by_uri( $actor );
 
-	if ( \is_wp_error( $id ) ) {
-		return $id;
+	if ( \is_wp_error( $post ) ) {
+		return $post;
 	}
 
-	return Following::follow( $id, $user_id );
+	Following::follow( $post, $user_id );
+
+	$follow = new Activity();
+	$follow->set_type( 'Follow' );
+	$follow->set_actor( $post->guid );
+	$follow->set_object( $actor );
+	$follow->set_to( array( $actor ) );
+
+	return add_to_outbox( $follow );
 }
 
 /**
