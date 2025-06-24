@@ -495,7 +495,7 @@ class Actors {
 		);
 
 		if ( ! $post_id ) {
-			$object = Http::get_remote_object( $actor_uri );
+			$object = Http::get_remote_object( $actor_uri, false );
 
 			if ( \is_wp_error( $object ) ) {
 				return $object;
