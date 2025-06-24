@@ -441,6 +441,12 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 * @covers ::verify_http_signature
 	 * @covers ::generate_digest
 	 * @covers ::generate_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
+	 * @covers \Activitypub\Signature\Http_Message_Signature::resolve_algorithm
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421() {
 		$keys = self::$test_keys['rsa']['4096'];
@@ -545,6 +551,12 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 * @covers ::verify_http_signature
 	 * @covers ::generate_digest
 	 * @covers ::generate_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
+	 * @covers \Activitypub\Signature\Http_Message_Signature::resolve_algorithm
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421_get_request() {
 		$keys = self::$test_keys['rsa']['2048'];
@@ -621,6 +633,12 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 * @covers ::verify_http_signature
 	 * @covers ::generate_digest
 	 * @covers ::generate_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
+	 * @covers \Activitypub\Signature\Http_Message_Signature::resolve_algorithm
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421_algorithms() {
 		// Test with RSA keys.
