@@ -443,8 +443,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 * @covers ::generate_signature
 	 */
 	public function test_verify_http_signature_rfc9421() {
-		// Create a user and get their keypair.
-		$keys = Signature::get_keypair_for( 1 );
+		$keys = self::$test_keys['rsa']['4096'];
 
 		\add_filter(
 			'pre_get_remote_metadata_by_actor',
@@ -526,13 +525,89 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Request array without body.
 		$request = array(
 			'REQUEST_METHOD'       => 'POST',
-			'REQUEST_URI'          => '/wp-json/activitypub/1.0/inbox',
+			'REQUEST_URI'          => '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox',
 			'HTTP_HOST'            => 'example.org',
 			'HTTP_DATE'            => $date,
 			'HTTP_CONTENT_DIGEST'  => $digest,
 			'HTTP_SIGNATURE_INPUT' => $signature_input,
 			'HTTP_SIGNATURE'       => $signature_header,
 		);
+
+		// The verification should succeed.
+		$this->assertTrue( Signature::verify_http_signature( $request ) );
+
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+	}
+
+	/**
+	 * Test HTTP signature verification with RFC-9421 compliant signatures using GET requests.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers ::generate_digest
+	 * @covers ::generate_signature
+	 */
+	public function test_verify_http_signature_rfc9421_get_request() {
+		$keys = self::$test_keys['rsa']['2048'];
+
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () use ( $keys ) {
+				return array(
+					'name'      => 'Admin',
+					'url'       => 'https://example.org/author/admin',
+					'publicKey' => array(
+						'id'           => 'https://example.org/author/admin#main-key',
+						'owner'        => 'https://example.org/author/admin',
+						'publicKeyPem' => $keys['public_key'],
+					),
+				);
+			}
+		);
+
+		// Create a date for the request.
+		$date = \gmdate( 'D, d M Y H:i:s T' );
+
+		// Create the signature input components.
+		$components    = array( '@method', '@target-uri', '@authority', '@query-param";name="per_page', '@query-param";name="page', '@query-param";name="context', 'date' );
+		$params_string = \sprintf(
+			'(%s);created=%d;keyid="https://example.org/author/admin#main-key";alg="rsa-v1_5-sha256"',
+			'"' . \implode( '" "', $components ) . '"',
+			\time()
+		);
+
+		// Create the signature input header value (includes the label).
+		$signature_input = "get-query=$params_string";
+
+		// Generate a signature using the RFC-9421 format.
+		$signature_base  = "\"@method\": get\n";
+		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/actors/1/outbox?per_page=1&page=2&context=\n";
+		$signature_base .= "\"@authority\": example.org\n";
+		$signature_base .= "\"@query-param\";name=\"per_page\": 1\n";
+		$signature_base .= "\"@query-param\";name=\"page\": 2\n";
+		$signature_base .= "\"@query-param\";name=\"context\": \n"; // Empty parameter.
+		$signature_base .= "\"date\": $date\n";
+		$signature_base .= "\"@signature-params\": $params_string";
+
+		// Sign the signature base.
+		$private_key     = \openssl_pkey_get_private( $keys['private_key'] );
+		$signature_value = '';
+		\openssl_sign( $signature_base, $signature_value, $private_key, \OPENSSL_ALGO_SHA256 );
+		$signature_value = \base64_encode( $signature_value );
+
+		// Create the signature header.
+		$signature_header = "get-query=:$signature_value:";
+
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_SERVER['REQUEST_URI']    = '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox?per_page=1&page=2&context=';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['HTTPS']          = 'on';
+
+		// Create a REST request with RFC-9421 signature headers.
+		$request = new \WP_REST_Request( 'GET', ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox?per_page=1&page=2&context=' );
+		$request->set_header( 'Date', $date );
+		$request->set_header( 'Host', 'example.org' );
+		$request->set_header( 'Signature-Input', $signature_input );
+		$request->set_header( 'Signature', $signature_header );
 
 		// The verification should succeed.
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
@@ -619,7 +694,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$signature_header = "sig1=:$signature_value:";
 
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['REQUEST_URI']    = '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox';
 		$_SERVER['HTTP_HOST']      = 'example.org';
 		$_SERVER['HTTPS']          = 'on';
 

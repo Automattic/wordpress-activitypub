@@ -266,7 +266,8 @@ class Http_Message_Signature implements Signature_Standard {
 		$signature_base = '';
 
 		foreach ( $components as $component ) {
-			$key = \strtolower( \trim( $component, '"' ) );
+			$key = strtok( $component, ';' ); // See https://www.rfc-editor.org/rfc/rfc9421.html#name-query-parameters.
+			$key = \strtolower( \trim( $key, '"' ) );
 
 			switch ( $key ) {
 				case '@method':
@@ -300,10 +301,9 @@ class Http_Message_Signature implements Signature_Standard {
 
 				case '@query-param':
 					$value = '';
-					if ( preg_match( '/@query-param;name=(.+)/', $component, $matches ) ) {
-						$param = $matches[1];
+					if ( preg_match( '/"@query-param";name="(?P<name>[^"]+)"/', $component, $matches ) ) {
 						$query = wp_parse_args( wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY ) );
-						$value = $query[ $param ] ?? '';
+						$value = $query[ $matches['name'] ] ?? '';
 					}
 					break;
 
@@ -313,7 +313,7 @@ class Http_Message_Signature implements Signature_Standard {
 					$value = \preg_replace( '/\s+/', ' ', \trim( $headers[ $key ][0] ?? '' ) );
 			}
 
-			$signature_base .= '"' . \str_replace( '_', '-', $key ) . '": ' . $value . "\n";
+			$signature_base .= $component . ': ' . $value . "\n";
 		}
 
 		$signature_base .= '"@signature-params": (' . implode( ' ', $components ) . ')';
