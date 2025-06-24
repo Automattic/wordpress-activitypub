@@ -122,7 +122,7 @@ class Http_Message_Signature implements Signature_Standard {
 
 		// Algorithm verification.
 		if ( isset( $params['alg'] ) && \strpos( $params['alg'], 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
-			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms is not supported.' );
+			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
 		}
 
 		$algorithm = $this->resolve_algorithm( $params['alg'] ?? '', $public_key );
