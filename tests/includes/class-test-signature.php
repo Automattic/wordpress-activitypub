@@ -98,6 +98,7 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 */
 	public function tear_down() {
 		parent::tear_down();
+
 		\delete_option( 'activitypub_keypair_for_0' );
 		\delete_option( 'activitypub_keypair_for_-1' );
 		\delete_option( 'activitypub_keypair_for_admin' );
@@ -108,6 +109,8 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 		\delete_option( 'activitypub_actor_mode' );
 		\delete_user_meta( 1, 'magic_sig_public_key' );
 		\delete_user_meta( 1, 'magic_sig_private_key' );
+
+		$this->reset__SERVER();
 	}
 
 	/**
@@ -614,6 +617,11 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		// Create the signature header.
 		$signature_header = "sig1=:$signature_value:";
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['HTTPS']          = 'on';
 
 		// Create a REST request with RFC-9421 signature headers.
 		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
