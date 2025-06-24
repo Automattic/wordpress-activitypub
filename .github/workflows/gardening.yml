@@ -59,6 +59,7 @@ jobs:
             {"path": "includes/class-blocks.php", "label": "[Focus] Editor"},
             {"path": "includes/collection", "label": "[Feature] Collections"},
             {"path": "includes/rest", "label": "[Feature] REST API"},
+            {"path": "includes/signature", "label": "[Feature] Signature"},
             {"path": "includes/wp-admin", "label": "[Feature] WP Admin"},
             {"path": "includes/wp-admin/import", "label": "[Feature] Import"},
             {"path": "includes/wp-admin/class-health-check.php", "label": "[Feature] Health Check"}
