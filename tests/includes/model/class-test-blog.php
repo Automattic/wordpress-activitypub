@@ -13,7 +13,7 @@ use Activitypub\Move;
 /**
  * Test class for Activitypub Blog Model.
  *
- * @coversDefaultClass Blog
+ * @coversDefaultClass \Activitypub\Model\Blog
  */
 class Test_Blog extends \WP_UnitTestCase {
 
