@@ -170,7 +170,7 @@ $modal_content = ob_get_clean();
 			/* translators: %s: reaction type. */
 			$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
 			?>
-		<div class="reaction-group">
+		<div class="reaction-group" data-reaction-type="<?php echo esc_attr( $_type ); ?>">
 			<ul class="reaction-avatars">
 				<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
 					<li>

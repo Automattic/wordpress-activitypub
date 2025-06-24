@@ -673,6 +673,14 @@ class Comment {
 			return $approved;
 		}
 
+		// Maybe auto-approve likes and reposts.
+		if (
+			\in_array( $comment_data['comment_type'], self::get_comment_type_slugs(), true ) &&
+			'1' === \get_option( 'activitypub_auto_approve_reactions' )
+		) {
+			return 1;
+		}
+
 		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {
 			return $approved;
 		}
