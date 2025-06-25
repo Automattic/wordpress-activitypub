@@ -34,8 +34,8 @@ class Http_Message_Signature implements Signature_Standard {
 	public function sign( $args, $key_id, $private_key, $url ) {
 		// Standard components to sign.
 		$components  = array(
-			'"@target-uri"' => $url,
 			'"@method"'     => \strtoupper( $args['method'] ),
+			'"@target-uri"' => $url,
 			'"@authority"'  => \wp_parse_url( $url, PHP_URL_HOST ),
 			'"created"'     => \strtotime( $args['headers']['Date'] ), // Required by Mastodon. See https://github.com/mastodon/mastodon/pull/34814.
 		);
@@ -50,9 +50,9 @@ class Http_Message_Signature implements Signature_Standard {
 		}
 
 		$params = array(
+			'created' => $components['"created"'],
 			'keyid'   => $key_id,
 			'alg'     => 'rsa-v1_5-sha256',
-			'created' => $components['"created"'],
 		);
 
 		// Build the signature base string as per RFC-9421.
@@ -62,7 +62,7 @@ class Http_Message_Signature implements Signature_Standard {
 		\openssl_sign( $signature_base, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
-		$args['headers']['Signature-Input'] = 'wp=( ' . \implode( ' ', $identifiers ) . ' );keyid="' . $key_id . '";alg="rsa-v1_5-sha256";created=' . $components['"created"'];
+		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ');created=' . $components['"created"'] . ';keyid="' . $key_id . '";alg="rsa-v1_5-sha256"';
 		$args['headers']['Signature']       = 'wp=:' . $signature . ':';
 
 		return $args;
@@ -214,7 +214,7 @@ class Http_Message_Signature implements Signature_Standard {
 		$digests = \array_map( 'trim', \explode( ',', $headers['content_digest'][0] ) );
 
 		foreach ( $digests as $digest ) {
-			if ( \preg_match( '/^([a-z0-9-]+)=(.+)$/i', $digest, $matches ) ) {
+			if ( \preg_match( '/^([a-z0-9-]+)=:(.+):$/i', $digest, $matches ) ) {
 				list( , $alg, $encoded ) = $matches;
 
 				$map = array(
@@ -323,7 +323,7 @@ class Http_Message_Signature implements Signature_Standard {
 
 		// We only get component names when we verify a signature and have to get their values.
 		if ( \array_is_list( $components ) ) {
-			$components = $this->get_component_values( $components, $headers );
+			$components = $this->get_component_values( $components, \array_merge( $params, $headers ) );
 		}
 
 		foreach ( $components as $component => $value ) {
@@ -360,6 +360,11 @@ class Http_Message_Signature implements Signature_Standard {
 			$key = \strtolower( \trim( $key, '"' ) );
 
 			switch ( $key ) {
+				case 'created':
+				case 'expires':
+					$value = (int) $headers[ $key ] ?? 0;
+					break;
+
 				case '@method':
 					$value = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 					break;

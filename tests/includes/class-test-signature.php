@@ -468,43 +468,20 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			}
 		);
 
-		// Create a request body.
-		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
-
-		// Generate a digest for the body.
-		$this->setExpectedDeprecated( 'Activitypub\Signature::generate_digest' );
-		$digest = Signature::generate_digest( $body );
-
-		// Create a date for the request.
-		$date = \gmdate( 'D, d M Y H:i:s T' );
-
-		// Create the signature input components.
-		$components    = array( '@method', '@target-uri', '@authority', 'content-digest', 'date' );
-		$params_string = \sprintf(
-			'(%s);created=%d;keyid="https://example.org/author/admin#main-key";alg="rsa-v1_5-sha256"',
-			'"' . \implode( '" "', $components ) . '"',
-			\time()
+		$signature = new Signature\Http_Message_Signature();
+		$args      = $signature->sign(
+			array(
+				'method'  => 'POST',
+				'body'    => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
+				'headers' => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host' => 'example.org',
+				),
+			),
+			'https://example.org/author/admin#main-key',
+			\openssl_pkey_get_private( $keys['private_key'] ),
+			'https://example.org/wp-json/activitypub/1.0/inbox'
 		);
-
-		// Create the signature input header value (includes the label).
-		$signature_input = "sig1=$params_string";
-
-		// Generate a signature using the RFC-9421 format.
-		$signature_base  = "\"@method\": POST\n";
-		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/inbox\n";
-		$signature_base .= "\"@authority\": example.org\n";
-		$signature_base .= "\"content-digest\": $digest\n";
-		$signature_base .= "\"date\": $date\n";
-		$signature_base .= "\"@signature-params\": $params_string";
-
-		// Sign the signature base.
-		$private_key     = \openssl_pkey_get_private( $keys['private_key'] );
-		$signature_value = '';
-		\openssl_sign( $signature_base, $signature_value, $private_key, \OPENSSL_ALGO_SHA256 );
-		$signature_value = \base64_encode( $signature_value );
-
-		// Create the signature header.
-		$signature_header = "sig1=:$signature_value:";
 
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
@@ -513,12 +490,8 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		// Create a REST request with RFC-9421 signature headers.
 		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$request->set_body( $body );
-		$request->set_header( 'Date', $date );
-		$request->set_header( 'Content-Digest', $digest );
-		$request->set_header( 'Host', 'example.org' );
-		$request->set_header( 'Signature-Input', $signature_input );
-		$request->set_header( 'Signature', $signature_header );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
 
 		// The verification should succeed.
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
@@ -536,10 +509,10 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			'REQUEST_METHOD'       => 'POST',
 			'REQUEST_URI'          => '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox',
 			'HTTP_HOST'            => 'example.org',
-			'HTTP_DATE'            => $date,
-			'HTTP_CONTENT_DIGEST'  => $digest,
-			'HTTP_SIGNATURE_INPUT' => $signature_input,
-			'HTTP_SIGNATURE'       => $signature_header,
+			'HTTP_DATE'            => $args['headers']['Date'],
+			'HTTP_CONTENT_DIGEST'  => $args['headers']['Content-Digest'],
+			'HTTP_SIGNATURE_INPUT' => $args['headers']['Signature-Input'],
+			'HTTP_SIGNATURE'       => $args['headers']['Signature'],
 		);
 
 		// The verification should succeed.
@@ -679,8 +652,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
 
 		// Generate a digest for the body.
-		$this->setExpectedDeprecated( 'Activitypub\Signature::generate_digest' );
-		$digest = Signature::generate_digest( $body );
+		$digest = 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
 
 		// Create a date for the request.
 		$date = \gmdate( 'D, d M Y H:i:s T' );
