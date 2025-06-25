@@ -318,7 +318,7 @@ class Http_Message_Signature implements Signature_Standard {
 	 *
 	 * @param array $components Signature components.
 	 * @param array $params     Signature params.
-	 * @param array $headers    Optional. The HTTP headers. Defaults to an empty array.
+	 * @param array $headers    Optional. The HTTP headers. Default: empty array.
 	 *
 	 * @return string Base string to compare signature with.
 	 */
@@ -334,7 +334,7 @@ class Http_Message_Signature implements Signature_Standard {
 			$signature_base .= $component . ': ' . $value . "\n";
 		}
 
-		$signature_base .= '"@signature-params": (' . \implode( ' ', $components ) . ')';
+		$signature_base .= '"@signature-params": (' . \implode( ' ', \array_keys( $components ) ) . ')';
 		foreach ( $params as $key => $value ) {
 			if ( \is_numeric( $value ) ) {
 				$signature_base .= ';' . $key . '=' . $value; // No quotes.

@@ -194,7 +194,7 @@ class Signature {
 		$signature   = $use_rfc9421 ? new Http_Message_Signature() : new Draft_Cavage_Signature();
 
 		// Add digest.
-		if ( null !== $args['body'] ) {
+		if ( isset( $args['body'] ) ) {
 			$header_string                     = $use_rfc9421 ? 'Content-Digest' : 'Digest';
 			$args['headers'][ $header_string ] = $signature->generate_digest( $args['body'] );
 		}
