@@ -35,36 +35,35 @@ class Http_Message_Signature implements Signature_Standard {
 	 */
 	public function sign( $key_id, $private_key, $http_method, $url, $date, $digest = null ) {
 		// Standard components to sign.
-		$header_values = array(
+		$headers    = array(
 			'@target-uri' => $url,
 			'@method'     => \strtoupper( $http_method ),
 			'@authority'  => \wp_parse_url( $url, PHP_URL_HOST ),
-			'date'        => $date,
+			'created'     => \strtotime( $date ), // Required by Mastodon. See https://github.com/mastodon/mastodon/pull/34814.
 		);
-		$components    = \array_keys( $header_values );
+		$components = \array_keys( $headers );
 
 		// Add digest if provided.
 		if ( $digest ) {
-			$components[]                    = 'content-digest';
-			$header_values['content-digest'] = $digest;
+			$components[]              = 'content-digest';
+			$headers['content-digest'] = $digest;
 		}
 
-		$created = \strtotime( $date );
-		$params  = array(
+		$params = array(
 			'keyid'   => $key_id,
 			'alg'     => 'rsa-v1_5-sha256',
-			'created' => $created,
+			'created' => $headers['created'],
 		);
 
 		// Build the signature base string as per RFC-9421.
-		$signature_base = $this->get_signature_base_string( $header_values, $params );
+		$signature_base = $this->get_signature_base_string( $headers, $params );
 
 		$signature = null;
 		\openssl_sign( $signature_base, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
 		// Build header values.
-		$signature_input  = 'wp=( ' . \implode( ' ', $components ) . ' );keyid="' . $key_id . '";alg="rsa-v1_5-sha256";created=' . $created;
+		$signature_input  = 'wp=( ' . \implode( ' ', $components ) . ' );keyid="' . $key_id . '";alg="rsa-v1_5-sha256";created=' . $headers['created'];
 		$signature_header = 'wp=:' . $signature . ':';
 
 		return array(
