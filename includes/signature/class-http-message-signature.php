@@ -187,6 +187,7 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return int|\WP_Error OpenSSL algorithm constant or WP_Error.
 	 */
 	private function verify_algorithm( $alg_string, $public_key ) {
+		$alg_string = \strtolower( $alg_string );
 		if ( \strpos( $alg_string, 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
 			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
 		}
@@ -195,8 +196,6 @@ class Http_Message_Signature implements Signature_Standard {
 		if ( ! isset( $details['type'] ) ) {
 			return new \WP_Error( 'invalid_key_details', 'Unable to read public key details.' );
 		}
-
-		$alg_string = \strtolower( $alg_string );
 
 		$map = array(
 			// RSA PKCS#1 v1.5.
