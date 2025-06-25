@@ -389,12 +389,11 @@ class Comment {
 	 * @return string $url
 	 */
 	public static function remote_comment_link( $comment_link, $comment ) {
-		$remote_comment_link = null;
-
 		if ( ! $comment || is_admin() ) {
 			return $comment_link;
 		}
 
+		$remote_comment_link = null;
 		if ( 'comment' === $comment->comment_type ) {
 			$remote_comment_link = self::get_source_url( $comment->comment_ID );
 		}
