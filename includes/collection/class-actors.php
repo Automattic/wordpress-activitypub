@@ -22,6 +22,8 @@ use function Activitypub\user_can_activitypub;
 
 /**
  * Actors collection.
+ *
+ * Provides methods to retrieve, create, update, and manage ActivityPub actors (users, blogs, applications, and remote actors).
  */
 class Actors {
 	/**
@@ -39,9 +41,7 @@ class Actors {
 	const APPLICATION_USER_ID = -1;
 
 	/**
-	 * Post type.
-	 *
-	 * The post type to store remote actors.
+	 * Post type for storing remote actors.
 	 *
 	 * @var string
 	 */
@@ -50,9 +50,9 @@ class Actors {
 	/**
 	 * Get the Actor by ID.
 	 *
-	 * @param int $user_id The User-ID.
+	 * @param int $user_id The user ID.
 	 *
-	 * @return Actor|User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
+	 * @return Actor|User|Blog|Application|\WP_Error Actor object or WP_Error if not found or not permitted.
 	 */
 	public static function get_by_id( $user_id ) {
 		if ( is_numeric( $user_id ) ) {
@@ -80,9 +80,9 @@ class Actors {
 	/**
 	 * Get the Actor by username.
 	 *
-	 * @param string $username Name of the Actor.
+	 * @param string $username Name of the actor.
 	 *
-	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
+	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
 	public static function get_by_username( $username ) {
 		/**
@@ -172,11 +172,11 @@ class Actors {
 	}
 
 	/**
-	 * Get the Actor by resource.
+	 * Get the Actor by resource URI (acct, http(s), etc).
 	 *
-	 * @param string $uri The Actor resource.
+	 * @param string $uri The actor resource URI.
 	 *
-	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
+	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
 	public static function get_by_resource( $uri ) {
 		$uri = object_to_uri( $uri );
@@ -284,11 +284,11 @@ class Actors {
 	}
 
 	/**
-	 * Get the Actor by resource.
+	 * Get the Actor by various identifier types (ID, URI, username, or email).
 	 *
-	 * @param string $id The Actor resource.
+	 * @param string|int $id Actor identifier (user ID, URI, username, or email).
 	 *
-	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
+	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
 	public static function get_by_various( $id ) {
 		if ( is_numeric( $id ) ) {
@@ -310,9 +310,9 @@ class Actors {
 	}
 
 	/**
-	 * Get the Actor collection.
+	 * Get the collection of all local user actors.
 	 *
-	 * @return array The Actor collection.
+	 * @return Actor[] Array of User actor objects.
 	 */
 	public static function get_collection() {
 		if ( is_user_type_disabled( 'user' ) ) {
@@ -341,9 +341,9 @@ class Actors {
 	}
 
 	/**
-	 * Get all active Actors including the Blog Actor.
+	 * Get all active actors, including the Blog actor if enabled.
 	 *
-	 * @return array The actor collection.
+	 * @return array Array of User and Blog actor objects.
 	 */
 	public static function get_all() {
 		$return = array();
@@ -382,7 +382,7 @@ class Actors {
 	 *
 	 * @param int $user_id The user ID to check.
 	 *
-	 * @return string The user type.
+	 * @return string Actor type: 'user', 'blog', or 'application'.
 	 */
 	public static function get_type_by_id( $user_id ) {
 		$user_id = (int) $user_id;
@@ -399,11 +399,11 @@ class Actors {
 	}
 
 	/**
-	 * Upsert a remote Actor (e.g. a follower) as a custom post type.
+	 * Upsert (insert or update) a remote actor as a custom post type.
 	 *
-	 * @param array|Actor $actor The ActivityPub actor object as associative array (must include 'id').
+	 * @param array|Actor $actor ActivityPub actor object (array or actor, must include 'id').
 	 *
-	 * @return int|\WP_Error The post ID or WP_Error.
+	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
 	 */
 	public static function upsert( $actor ) {
 		if ( \is_array( $actor ) ) {
@@ -420,11 +420,11 @@ class Actors {
 	}
 
 	/**
-	 * Create a remote Actor (e.g. a follower) as a custom post type.
+	 * Create a remote actor as a custom post type.
 	 *
-	 * @param array|Actor $actor The ActivityPub actor object as associative array (must include 'id').
+	 * @param array|Actor $actor ActivityPub actor object (array or Actor, must include 'id').
 	 *
-	 * @return int|\WP_Error The post ID or WP_Error.
+	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
 	 */
 	public static function create( $actor ) {
 		if ( \is_array( $actor ) ) {
@@ -456,8 +456,8 @@ class Actors {
 	/**
 	 * Update a remote Actor object by actor URL (guid).
 	 *
-	 * @param int         $post  The post object.
-	 * @param array|Actor $actor The ActivityPub actor object as associative array (must include 'id').
+	 * @param int|\WP_Post $post  The post ID or object.
+	 * @param array|Actor  $actor The ActivityPub actor object as associative array (must include 'id').
 	 *
 	 * @return int|\WP_Error The post ID or WP_Error.
 	 */
@@ -501,7 +501,7 @@ class Actors {
 	}
 
 	/**
-	 * Delete a remote Actor object by actor URL (guid).
+	 * Delete a remote actor object by actor URL (guid).
 	 *
 	 * @param int $post_id The post ID.
 	 *
@@ -512,15 +512,11 @@ class Actors {
 	}
 
 	/**
-	 * Get a remote Actor object by actor URL (guid).
-	 *
-	 * The function will first try to find the actor in the database.
-	 * If not found, it will try to fetch the actor from the remote
-	 * server and store it in the database.
+	 * Get a remote actor post by actor URI (guid).
 	 *
 	 * @param string $actor_uri The actor URI.
 	 *
-	 * @return \WP_Post|\WP_Error The post object or WP_Error if not found.
+	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
 	 */
 	public static function get_remote_by_uri( $actor_uri ) {
 		global $wpdb;
@@ -545,15 +541,11 @@ class Actors {
 	}
 
 	/**
-	 * Lookup a remote Actor object by actor URL (guid).
-	 *
-	 * The function will first try to find the actor in the database.
-	 * If not found, it will try to fetch the actor from the remote
-	 * server and store it in the database.
+	 * Lookup a remote actor post by actor URI (guid), fetching from remote if not found locally.
 	 *
 	 * @param string $actor_uri The actor URI.
 	 *
-	 * @return \WP_Post|\WP_Error The post object or WP_Error if not found.
+	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
 	 */
 	public static function lookup_remote_by_uri( $actor_uri ) {
 		$post = self::get_remote_by_uri( $actor_uri );
@@ -578,8 +570,7 @@ class Actors {
 	}
 
 	/**
-	 * This function is used to store errors that occur when
-	 * sending an ActivityPub message to a Follower.
+	 * Store an error that occurred when sending an ActivityPub message to a follower.
 	 *
 	 * The error will be stored in post meta.
 	 *
@@ -608,7 +599,7 @@ class Actors {
 	}
 
 	/**
-	 * Count the errors for an Actor.
+	 * Count the errors for an actor.
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
@@ -619,18 +610,18 @@ class Actors {
 	}
 
 	/**
-	 * Get the errors for an Actor.
+	 * Get all error messages for an actor.
 	 *
-	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
+	 * @param int $post_id The post ID.
 	 *
-	 * @return string[] The errors.
+	 * @return string[] Array of error messages.
 	 */
 	public static function get_errors( $post_id ) {
 		return \get_post_meta( $post_id, '_activitypub_errors', false );
 	}
 
 	/**
-	 * Clear the errors for an Actor.
+	 * Clear all errors for an actor.
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
@@ -641,11 +632,11 @@ class Actors {
 	}
 
 	/**
-	 * Get all Actors that had errors.
+	 * Get all remote actors (Custom Post Type) that had errors.
 	 *
-	 * @param int $number Optional. The number of Actors to return. Default 20.
+	 * @param int $number Optional. Number of actors to return. Default 20.
 	 *
-	 * @return \WP_Post[] The list of Actors.
+	 * @return \WP_Post[] Array of faulty actor posts.
 	 */
 	public static function get_faulty( $number = 20 ) {
 		$args = array(
@@ -675,12 +666,12 @@ class Actors {
 	}
 
 	/**
-	 * Get all Actors that have not been updated for a given time.
+	 * Get all remote actor posts not updated for a given time.
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default DAY_IN_SECONDS.
 	 *
-	 * @return \WP_Post[] The list of Actors.
+	 * @return \WP_Post[] The list of actors.
 	 */
 	public static function get_outdated( $number = 50, $older_than = DAY_IN_SECONDS ) {
 		$args = array(
@@ -702,11 +693,11 @@ class Actors {
 	}
 
 	/**
-	 * Convert a Custom-Post-Type input to an Activitypub\Model\Actor.
+	 * Convert a custom post type input to an Activitypub\Activity\Actor.
 	 *
-	 * @param int|\WP_Post $post The post object.
+	 * @param int|\WP_Post $post The post ID or object.
 	 *
-	 * @return Actor|\WP_Error The Actor object or WP_Error on failure.
+	 * @return Actor|\WP_Error The actor object or WP_Error on failure.
 	 */
 	public static function get_actor( $post ) {
 		$post = \get_post( $post );
@@ -729,11 +720,11 @@ class Actors {
 	}
 
 	/**
-	 * Prepare actor object for insert/update.
+	 * Prepare actor object for insert or update as a custom post type.
 	 *
 	 * @param Actor $actor The actor data.
 	 *
-	 * @return array|\WP_Error The actor data or WP_Error on failure.
+	 * @return array|\WP_Error Array of post arguments or WP_Error on failure.
 	 */
 	private static function prepare_custom_post_type( $actor ) {
 		if ( ! $actor instanceof Actor ) {
