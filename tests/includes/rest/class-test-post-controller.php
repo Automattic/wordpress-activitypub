@@ -17,7 +17,7 @@ use WP_REST_Response;
  * Test Post REST Endpoints.
  *
  * @group rest
- * @coversDefaultClass \Activitypub\Rest\Post
+ * @coversDefaultClass \Activitypub\Rest\Post_Controller
  */
 class Test_Post_Controller extends WP_UnitTestCase {
 	/**
@@ -43,7 +43,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	/**
 	 * Test initialization of hooks.
 	 *
-	 * @covers ::init
+	 * @covers ::register_routes
 	 */
 	public function test_init() {
 		$routes = $this->server->get_routes();

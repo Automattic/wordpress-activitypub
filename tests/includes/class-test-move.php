@@ -14,7 +14,7 @@ use Activitypub\Move;
 /**
  * Test class for Activitypub Move.
  *
- * @coversDefaultClass Move
+ * @coversDefaultClass \Activitypub\Move
  */
 class Test_Move extends \WP_UnitTestCase {
 

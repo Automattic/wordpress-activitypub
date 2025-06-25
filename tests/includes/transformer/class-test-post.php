@@ -424,7 +424,7 @@ class Test_Post extends \WP_UnitTestCase {
 	/**
 	 * Test get_attachments with zero max_media_attachments.
 	 *
-	 * @covers ::get_attachments
+	 * @covers ::get_attachment
 	 */
 	public function test_get_attachments_with_zero_max_media_attachments() {
 		$post_id = self::factory()->post->create(

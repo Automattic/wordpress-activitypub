@@ -14,7 +14,7 @@ class Test_Compat extends \WP_UnitTestCase {
 	/**
 	 * Test str_starts_with.
 	 *
-	 * @covers str_starts_with
+	 * No coverage because it's a polyfill.
 	 */
 	public function test_str_starts_with() {
 		$this->assertTrue( \str_starts_with( 'abc', 'ab' ) );
@@ -24,7 +24,7 @@ class Test_Compat extends \WP_UnitTestCase {
 	/**
 	 * Test str_ends_with.
 	 *
-	 * @covers str_ends_with
+	 * No coverage because it's a polyfill.
 	 */
 	public function test_str_ends_with() {
 		$this->assertTrue( \str_ends_with( 'abc', 'bc' ) );
