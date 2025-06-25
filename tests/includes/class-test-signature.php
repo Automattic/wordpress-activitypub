@@ -470,7 +470,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
 
 		// Generate a digest for the body.
-		$digest = Signature::generate_digest( $body );
+		$digest = 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
 
 		// Create a date for the request.
 		$date = \gmdate( 'D, d M Y H:i:s T' );
@@ -676,7 +676,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
 
 		// Generate a digest for the body.
-		$digest = Signature::generate_digest( $body );
+		$digest = 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
 
 		// Create a date for the request.
 		$date = \gmdate( 'D, d M Y H:i:s T' );

@@ -157,7 +157,7 @@ class Http_Message_Signature implements Signature_Standard {
 		$digests = \array_map( 'trim', \explode( ',', $headers['content_digest'][0] ) );
 
 		foreach ( $digests as $digest ) {
-			if ( \preg_match( '/^([a-z0-9-]+)=(.+)$/i', $digest, $matches ) ) {
+			if ( \preg_match( '/^([a-z0-9-]+)=:(.+):$/i', $digest, $matches ) ) {
 				list( , $alg, $encoded ) = $matches;
 
 				$map = array(
@@ -269,6 +269,11 @@ class Http_Message_Signature implements Signature_Standard {
 			$key = \strtolower( \trim( $key, '"' ) );
 
 			switch ( $key ) {
+				case 'created':
+				case 'expires':
+					$value = (int) $params[ $key ] ?? 0;
+					break;
+
 				case '@method':
 					$value = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 					break;
