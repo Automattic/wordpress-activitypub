@@ -117,7 +117,6 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		return \openssl_verify( $signed_data, $parsed['signature'], $public_key, $algorithm ) > 0;
 	}
 
-<<<<<<< add/rfc-9421-signature-creation -- Incoming Change
 	/**
 	 * Generates the digest for an HTTP Request.
 	 *
@@ -129,8 +128,6 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		return 'sha256=' . \base64_encode( \hash( 'sha256', $body, true ) );
 	}
 
-=======
->>>>>>> add/basic-rfc-9421 -- Current Change
 	/**
 	 * Gets the signature algorithm from the signature header.
 	 *
