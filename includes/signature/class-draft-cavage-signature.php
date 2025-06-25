@@ -25,15 +25,13 @@ class Draft_Cavage_Signature implements Signature_Standard {
 	/**
 	 * Generate Signature headers for an outgoing HTTP request.
 	 *
-	 * @param string      $key_id      The keyId for the signature.
-	 * @param string      $private_key The private key to sign with.
-	 * @param string      $http_method The HTTP method (e.g., 'post').
-	 * @param string      $url         The request URL.
-	 * @param string      $date        The date header value.
-	 * @param string|null $digest      The digest header value (optional).
-	 * @return string|array Array with 'Signature-Input' and 'Signature' headers.
+	 * @param array  $args        The request arguments.
+	 * @param string $key_id      The keyId for the signature.
+	 * @param string $private_key The private key to sign with.
+	 * @param string $url         The request URL.
+	 * @return array Request arguments with signature headers.
 	 */
-	public function sign( $key_id, $private_key, $http_method, $url, $date, $digest = null ) {
+	public function sign( $args, $key_id, $private_key, $url ) {
 		$url_parts = \wp_parse_url( $url );
 
 		$host = $url_parts['host'];
@@ -49,10 +47,13 @@ class Draft_Cavage_Signature implements Signature_Standard {
 			$path .= '?' . $url_parts['query'];
 		}
 
-		$http_method = \strtolower( $http_method );
+		$http_method = \strtolower( $args['method'] );
+		$date        = $args['headers']['Date'];
 
-		if ( ! empty( $digest ) ) {
-			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: $digest";
+		if ( isset( $args['body'] ) ) {
+			$args['headers']['Digest'] = $this->generate_digest( $args['body'] );
+
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: {$args['headers']['Digest']}";
 			$headers_list  = '(request-target) host date digest';
 		} else {
 			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
@@ -63,12 +64,14 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		\openssl_sign( $signed_string, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
-		return \sprintf(
+		$args['headers']['Signature'] = \sprintf(
 			'keyId="%s",algorithm="rsa-sha256",headers="%s",signature="%s"',
 			$key_id,
 			$headers_list,
 			$signature
 		);
+
+		return $args;
 	}
 
 	/**

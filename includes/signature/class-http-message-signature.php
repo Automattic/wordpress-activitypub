@@ -25,51 +25,47 @@ class Http_Message_Signature implements Signature_Standard {
 	/**
 	 * Generate RFC-9421 compliant Signature-Input and Signature headers for an outgoing HTTP request.
 	 *
-	 * @param string      $key_id      The keyId for the signature.
-	 * @param string      $private_key The private key to sign with.
-	 * @param string      $http_method The HTTP method (e.g., 'post').
-	 * @param string      $url         The request URL.
-	 * @param string      $date        The date header value.
-	 * @param string|null $digest The digest header value (optional).
-	 * @return array Array with 'Signature-Input' and 'Signature' headers.
+	 * @param array  $args        The request arguments.
+	 * @param string $key_id      The keyId for the signature.
+	 * @param string $private_key The private key to sign with.
+	 * @param string $url         The request URL.
+	 * @return array Request arguments with signature headers.
 	 */
-	public function sign( $key_id, $private_key, $http_method, $url, $date, $digest = null ) {
+	public function sign( $args, $key_id, $private_key, $url ) {
 		// Standard components to sign.
-		$headers    = array(
-			'@target-uri' => $url,
-			'@method'     => \strtoupper( $http_method ),
-			'@authority'  => \wp_parse_url( $url, PHP_URL_HOST ),
-			'created'     => \strtotime( $date ), // Required by Mastodon. See https://github.com/mastodon/mastodon/pull/34814.
+		$components  = array(
+			'"@target-uri"' => $url,
+			'"@method"'     => \strtoupper( $args['method'] ),
+			'"@authority"'  => \wp_parse_url( $url, PHP_URL_HOST ),
+			'"created"'     => \strtotime( $args['headers']['Date'] ), // Required by Mastodon. See https://github.com/mastodon/mastodon/pull/34814.
 		);
-		$components = \array_keys( $headers );
+		$identifiers = \array_keys( $components );
 
 		// Add digest if provided.
-		if ( $digest ) {
-			$components[]              = 'content-digest';
-			$headers['content-digest'] = $digest;
+		if ( isset( $args['body'] ) ) {
+			$components['"content-digest"'] = $this->generate_digest( $args['body'] );
+			$identifiers                    = \array_keys( $components );
+
+			$args['headers']['Content-Digest'] = $components['"content-digest"'];
 		}
 
 		$params = array(
 			'keyid'   => $key_id,
 			'alg'     => 'rsa-v1_5-sha256',
-			'created' => $headers['created'],
+			'created' => $components['"created"'],
 		);
 
 		// Build the signature base string as per RFC-9421.
-		$signature_base = $this->get_signature_base_string( $headers, $params );
+		$signature_base = $this->get_signature_base_string( $components, $params );
 
 		$signature = null;
 		\openssl_sign( $signature_base, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
-		// Build header values.
-		$signature_input  = 'wp=( ' . \implode( ' ', $components ) . ' );keyid="' . $key_id . '";alg="rsa-v1_5-sha256";created=' . $headers['created'];
-		$signature_header = 'wp=:' . $signature . ':';
+		$args['headers']['Signature-Input'] = 'wp=( ' . \implode( ' ', $identifiers ) . ' );keyid="' . $key_id . '";alg="rsa-v1_5-sha256";created=' . $components['"created"'];
+		$args['headers']['Signature']       = 'wp=:' . $signature . ':';
 
-		return array(
-			'Signature-Input' => $signature_input,
-			'Signature'       => $signature_header,
-		);
+		return $args;
 	}
 
 	/**

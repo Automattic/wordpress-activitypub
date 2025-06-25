@@ -193,20 +193,7 @@ class Signature {
 		$use_rfc9421 = \get_option( 'activitypub_rfc9421_signature', '0' ) === '1';
 		$signature   = $use_rfc9421 ? new Http_Message_Signature() : new Draft_Cavage_Signature();
 
-		// Add digest.
-		if ( isset( $args['body'] ) ) {
-			$header_string                     = $use_rfc9421 ? 'Content-Digest' : 'Digest';
-			$args['headers'][ $header_string ] = $signature->generate_digest( $args['body'] );
-		}
-
-		if ( $use_rfc9421 ) {
-			$signature_headers = $signature->sign( $key_id, $private_key, $args['method'], $url, $args['headers']['Date'], $args['headers']['Content-Digest'] ?? null );
-			$args['headers']   = \array_merge( $args['headers'], $signature_headers );
-		} else {
-			$args['headers']['Signature'] = $signature->sign( $key_id, $private_key, $args['method'], $url, $args['headers']['Date'], $args['headers']['Digest'] ?? null );
-		}
-
-		return $args;
+		return $signature->sign( $args, $key_id, $private_key, $url );
 	}
 
 	/**
