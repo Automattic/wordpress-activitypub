@@ -36,7 +36,7 @@ class Http {
 		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
 
 		$date        = \gmdate( 'D, d M Y H:i:s T' );
-		$actor_id    = Actors::get_by_id( $user_id )->get_id();
+		$actor_id    = Actors::get_by_id( $user_id )->get_id() . '#main-key';
 		$private_key = Actors::get_private_key( $user_id );
 		$digest      = Signature::generate_digest( $body );
 		$signature   = Signature::generate_signature( $actor_id, $private_key, 'post', $url, $date, $digest );
@@ -126,7 +126,7 @@ class Http {
 		}
 
 		$date        = \gmdate( 'D, d M Y H:i:s T' );
-		$actor_id    = Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id();
+		$actor_id    = Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key';
 		$private_key = Actors::get_private_key( Actors::APPLICATION_USER_ID );
 		$signature   = Signature::generate_signature( $actor_id, $private_key, 'get', $url, $date );
 
