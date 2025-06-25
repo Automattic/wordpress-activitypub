@@ -252,9 +252,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	}
 
 	/**
-	 * Test user_inbox_post verification.
+	 * Test create_item verification.
 	 *
-	 * @covers ::user_inbox_post
+	 * @covers ::create_item
 	 */
 	public function test_user_inbox_post_verification() {
 		add_filter(

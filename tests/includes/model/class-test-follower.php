@@ -13,7 +13,7 @@ use Activitypub\Collection\Actors;
 /**
  * Tests the Follower class.
  *
- * @package Activitypub
+ * @coversDefaultClass \Activitypub\Model\Follower
  */
 class Test_Follower extends \WP_UnitTestCase {
 	/**
