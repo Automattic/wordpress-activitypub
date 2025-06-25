@@ -121,11 +121,7 @@ class Http_Message_Signature implements Signature_Standard {
 		}
 
 		// Algorithm verification.
-		if ( isset( $params['alg'] ) && \strpos( $params['alg'], 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
-			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
-		}
-
-		$algorithm = $this->resolve_algorithm( $params['alg'] ?? '', $public_key );
+		$algorithm = $this->verify_algorithm( $params['alg'] ?? '', $public_key );
 		if ( \is_wp_error( $algorithm ) ) {
 			return $algorithm;
 		}
@@ -158,7 +154,7 @@ class Http_Message_Signature implements Signature_Standard {
 			return true;
 		}
 
-		$digests = array_map( 'trim', explode( ',', $headers['content_digest'][0] ) );
+		$digests = \array_map( 'trim', \explode( ',', $headers['content_digest'][0] ) );
 
 		foreach ( $digests as $digest ) {
 			if ( \preg_match( '/^([a-z0-9-]+)=(.+)$/i', $digest, $matches ) ) {
@@ -190,7 +186,11 @@ class Http_Message_Signature implements Signature_Standard {
 	 *
 	 * @return int|\WP_Error OpenSSL algorithm constant or WP_Error.
 	 */
-	private function resolve_algorithm( $alg_string, $public_key ) {
+	private function verify_algorithm( $alg_string, $public_key ) {
+		if ( \strpos( $alg_string, 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
+			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
+		}
+
 		$details = \openssl_pkey_get_details( $public_key );
 		if ( ! isset( $details['type'] ) ) {
 			return new \WP_Error( 'invalid_key_details', 'Unable to read public key details.' );
@@ -266,7 +266,7 @@ class Http_Message_Signature implements Signature_Standard {
 		$signature_base = '';
 
 		foreach ( $components as $component ) {
-			$key = strtok( $component, ';' ); // See https://www.rfc-editor.org/rfc/rfc9421.html#name-query-parameters.
+			$key = \strtok( $component, ';' ); // See https://www.rfc-editor.org/rfc/rfc9421.html#name-query-parameters.
 			$key = \strtolower( \trim( $key, '"' ) );
 
 			switch ( $key ) {
@@ -302,7 +302,7 @@ class Http_Message_Signature implements Signature_Standard {
 				case '@query-param':
 					$value = '';
 					if ( preg_match( '/"@query-param";name="(?P<name>[^"]+)"/', $component, $matches ) ) {
-						$query = wp_parse_args( wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY ) );
+						$query = \wp_parse_args( \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY ) );
 						$value = $query[ $matches['name'] ] ?? '';
 					}
 					break;
@@ -316,13 +316,13 @@ class Http_Message_Signature implements Signature_Standard {
 			$signature_base .= $component . ': ' . $value . "\n";
 		}
 
-		$signature_base .= '"@signature-params": (' . implode( ' ', $components ) . ')';
+		$signature_base .= '"@signature-params": (' . \implode( ' ', $components ) . ')';
 		foreach ( $params as $key => $value ) {
 			if ( \is_numeric( $value ) ) {
 				$signature_base .= ';' . $key . '=' . $value;
 			} else {
 				// Escape backslashes and double quotes per RFC 9421.
-				$value           = str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
+				$value           = \str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
 				$signature_base .= ';' . $key . '="' . $value . '"';
 			}
 		}
