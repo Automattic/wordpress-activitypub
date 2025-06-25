@@ -52,7 +52,7 @@ class Actors {
 	 *
 	 * @param int $user_id The User-ID.
 	 *
-	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
+	 * @return Actor|User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_id( $user_id ) {
 		if ( is_numeric( $user_id ) ) {
@@ -204,6 +204,14 @@ class Actors {
 			// Check for http(s) URIs.
 			case 'http':
 			case 'https':
+				// Check locally stored remote Actor.
+				$post = self::get_remote_by_uri( $uri, true );
+
+				if ( ! \is_wp_error( $post ) ) {
+					return self::get_actor( $post );
+				}
+
+				// Check for http(s)://blog.example.com/@username.
 				$resource_path = \wp_parse_url( $uri, PHP_URL_PATH );
 
 				if ( $resource_path ) {
@@ -215,7 +223,6 @@ class Actors {
 
 					$resource_path = \trim( $resource_path, '/' );
 
-					// Check for http(s)://blog.example.com/@username.
 					if ( str_starts_with( $resource_path, '@' ) ) {
 						$identifier = \str_replace( '@', '', $resource_path );
 						$identifier = \trim( $identifier, '/' );
@@ -403,18 +410,10 @@ class Actors {
 			$actor = Actor::init_from_array( $actor );
 		}
 
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				esc_sql( $actor->get_id() ),
-				esc_sql( self::POST_TYPE )
-			)
-		);
+		$post = self::get_remote_by_uri( $actor->get_id(), true );
 
-		if ( $post_id ) {
-			return self::update( $post_id, $actor );
+		if ( ! \is_wp_error( $post ) ) {
+			return self::update( $post, $actor );
 		}
 
 		return self::create( $actor );
@@ -535,21 +534,44 @@ class Actors {
 		);
 
 		if ( ! $post_id ) {
-			$object = Http::get_remote_object( $actor_uri, false );
-
-			if ( \is_wp_error( $object ) ) {
-				return $object;
-			}
-
-			$post_id = self::create( $object );
-		}
-
-		if ( ! $post_id ) {
 			return new \WP_Error(
 				'activitypub_actor_not_found',
 				\__( 'Actor not found', 'activitypub' ),
 				array( 'status' => 404 )
 			);
+		}
+
+		return \get_post( $post_id );
+	}
+
+	/**
+	 * Lookup a remote Actor object by actor URL (guid).
+	 *
+	 * The function will first try to find the actor in the database.
+	 * If not found, it will try to fetch the actor from the remote
+	 * server and store it in the database.
+	 *
+	 * @param string $actor_uri The actor URI.
+	 *
+	 * @return \WP_Post|\WP_Error The post object or WP_Error if not found.
+	 */
+	public static function lookup_remote_by_uri( $actor_uri ) {
+		$post = self::get_remote_by_uri( $actor_uri );
+
+		if ( ! \is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		$object = Http::get_remote_object( $actor_uri, false );
+
+		if ( \is_wp_error( $object ) ) {
+			return $object;
+		}
+
+		$post_id = self::create( $object );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
 		}
 
 		return \get_post( $post_id );

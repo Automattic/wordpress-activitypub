@@ -1535,7 +1535,7 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
  * @return int|\WP_Error The ID of the Actor or a WP_Error.
  */
 function follow( $actor, $user_id ) {
-	$post = Actors::get_remote_by_uri( $actor );
+	$post = Actors::lookup_remote_by_uri( $actor );
 
 	if ( \is_wp_error( $post ) ) {
 		return $post;
