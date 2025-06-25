@@ -180,7 +180,39 @@ class Signature {
 	}
 
 	/**
+	 * Sign an HTTP Request.
+	 *
+	 * @param array  $args        An array of HTTP request arguments.
+	 * @param string $url         The request URL.
+	 * @param string $key_id      The key ID.
+	 * @param string $private_key The private key.
+	 *
+	 * @return array Request arguments with signature headers.
+	 */
+	public static function sign_request( $args, $url, $key_id, $private_key ) {
+		$use_rfc9421 = \get_option( 'activitypub_rfc9421_signature', '0' ) === '1';
+		$signature   = $use_rfc9421 ? new Http_Message_Signature() : new Draft_Cavage_Signature();
+
+		// Add digest.
+		if ( null !== $args['body'] ) {
+			$header_string                     = $use_rfc9421 ? 'Content-Digest' : 'Digest';
+			$args['headers'][ $header_string ] = $signature->generate_digest( $args['body'] );
+		}
+
+		if ( $use_rfc9421 ) {
+			$signature_headers = $signature->sign( $key_id, $private_key, $args['method'], $url, $args['headers']['Date'], $args['headers']['Content-Digest'] ?? null );
+			$args['headers']   = \array_merge( $args['headers'], $signature_headers );
+		} else {
+			$args['headers']['Signature'] = $signature->sign( $key_id, $private_key, $args['method'], $url, $args['headers']['Date'], $args['headers']['Digest'] ?? null );
+		}
+
+		return $args;
+	}
+
+	/**
 	 * Generates the Signature for an HTTP Request.
+	 *
+	 * @deprecated unreleased Use {@see Signature::sign_request()}.
 	 *
 	 * @param int    $user_id     The WordPress User ID.
 	 * @param string $http_method The HTTP method.
@@ -191,6 +223,7 @@ class Signature {
 	 * @return string The signature.
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
+		_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request()' );
 		$user = Actors::get_by_id( $user_id );
 		$key  = self::get_private_key_for( $user->get__id() );
 
@@ -328,11 +361,15 @@ class Signature {
 	/**
 	 * Generates the digest for an HTTP Request.
 	 *
+	 * @deprecated unreleased Use {@see Signature::sign_request()}.
+	 *
 	 * @param string $body The body of the request.
 	 *
 	 * @return string The digest.
 	 */
 	public static function generate_digest( $body ) {
+		_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request' );
+
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return "SHA-256=$digest";
 	}

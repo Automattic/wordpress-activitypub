@@ -35,11 +35,10 @@ class Http {
 		 */
 		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
 
-		$date      = \gmdate( 'D, d M Y H:i:s T' );
-		$digest    = Signature::generate_digest( $body );
-		$signature = Signature::generate_signature( $user_id, 'post', $url, $date, $digest );
-
-		$wp_version = get_masked_wp_version();
+		$date        = \gmdate( 'D, d M Y H:i:s T' );
+		$actor_id    = Actors::get_by_id( $user_id )->get_id() . '#main-key';
+		$private_key = Signature::get_private_key_for( $user_id );
+		$wp_version  = get_masked_wp_version();
 
 		/**
 		 * Filters the HTTP headers user agent string.
@@ -48,6 +47,7 @@ class Http {
 		 */
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
 		$args       = array(
+			'method'              => 'POST',
 			'timeout'             => 100,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
@@ -55,12 +55,12 @@ class Http {
 			'headers'             => array(
 				'Accept'       => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
-				'Digest'       => $digest,
-				'Signature'    => $signature,
 				'Date'         => $date,
 			),
 			'body'                => $body,
 		);
+
+		$args = Signature::sign_request( $args, $url, $actor_id, $private_key );
 
 		$response = \wp_safe_remote_post( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
@@ -123,10 +123,10 @@ class Http {
 			}
 		}
 
-		$date      = \gmdate( 'D, d M Y H:i:s T' );
-		$signature = Signature::generate_signature( Actors::APPLICATION_USER_ID, 'get', $url, $date );
-
-		$wp_version = get_masked_wp_version();
+		$date        = \gmdate( 'D, d M Y H:i:s T' );
+		$actor_id    = Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key';
+		$private_key = Signature::get_private_key_for( Actors::APPLICATION_USER_ID );
+		$wp_version  = get_masked_wp_version();
 
 		/**
 		 * Filters the HTTP headers user agent string.
@@ -146,6 +146,7 @@ class Http {
 		$timeout = \apply_filters( 'activitypub_remote_get_timeout', 100 );
 
 		$args = array(
+			'method'              => 'GET',
 			'timeout'             => $timeout,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
@@ -153,10 +154,11 @@ class Http {
 			'headers'             => array(
 				'Accept'       => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
-				'Signature'    => $signature,
 				'Date'         => $date,
 			),
 		);
+
+		$args = Signature::sign_request( $args, $url, $actor_id, $private_key );
 
 		$response = \wp_safe_remote_get( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );

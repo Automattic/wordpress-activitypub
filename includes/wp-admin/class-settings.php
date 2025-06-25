@@ -224,6 +224,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_rfc9421_signature',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Use RFC-9421 signature.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_shared_inbox',
 			array(
 				'type'        => 'boolean',

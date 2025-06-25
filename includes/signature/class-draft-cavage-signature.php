@@ -23,6 +23,55 @@ use Activitypub\Signature;
 class Draft_Cavage_Signature implements Signature_Standard {
 
 	/**
+	 * Generate Signature headers for an outgoing HTTP request.
+	 *
+	 * @param string      $key_id      The keyId for the signature.
+	 * @param string      $private_key The private key to sign with.
+	 * @param string      $http_method The HTTP method (e.g., 'post').
+	 * @param string      $url         The request URL.
+	 * @param string      $date        The date header value.
+	 * @param string|null $digest      The digest header value (optional).
+	 * @return string|array Array with 'Signature-Input' and 'Signature' headers.
+	 */
+	public function sign( $key_id, $private_key, $http_method, $url, $date, $digest = null ) {
+		$url_parts = \wp_parse_url( $url );
+
+		$host = $url_parts['host'];
+		$path = '/';
+
+		// Add path.
+		if ( ! empty( $url_parts['path'] ) ) {
+			$path = $url_parts['path'];
+		}
+
+		// Add query.
+		if ( ! empty( $url_parts['query'] ) ) {
+			$path .= '?' . $url_parts['query'];
+		}
+
+		$http_method = \strtolower( $http_method );
+
+		if ( ! empty( $digest ) ) {
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: $digest";
+			$headers_list  = '(request-target) host date digest';
+		} else {
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
+			$headers_list  = '(request-target) host date';
+		}
+
+		$signature = null;
+		\openssl_sign( $signed_string, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
+		$signature = \base64_encode( $signature );
+
+		return \sprintf(
+			'keyId="%s",algorithm="rsa-sha256",headers="%s",signature="%s"',
+			$key_id,
+			$headers_list,
+			$signature
+		);
+	}
+
+	/**
 	 * Verify the HTTP Signature against a request.
 	 *
 	 * @param array       $headers The HTTP headers.
@@ -68,6 +117,16 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		return \openssl_verify( $signed_data, $parsed['signature'], $public_key, $algorithm ) > 0;
 	}
 
+	/**
+	 * Generates the digest for an HTTP Request.
+	 *
+	 * @param string $body The body of the request.
+	 *
+	 * @return string The digest.
+	 */
+	public function generate_digest( $body ) {
+		return 'sha256=' . \base64_encode( \hash( 'sha256', $body, true ) );
+	}
 
 	/**
 	 * Gets the signature algorithm from the signature header.

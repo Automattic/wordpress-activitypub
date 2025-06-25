@@ -23,6 +23,57 @@ use Activitypub\Signature;
 class Http_Message_Signature implements Signature_Standard {
 
 	/**
+	 * Generate RFC-9421 compliant Signature-Input and Signature headers for an outgoing HTTP request.
+	 *
+	 * @param string      $key_id      The keyId for the signature.
+	 * @param string      $private_key The private key to sign with.
+	 * @param string      $http_method The HTTP method (e.g., 'post').
+	 * @param string      $url         The request URL.
+	 * @param string      $date        The date header value.
+	 * @param string|null $digest The digest header value (optional).
+	 * @return array Array with 'Signature-Input' and 'Signature' headers.
+	 */
+	public function sign( $key_id, $private_key, $http_method, $url, $date, $digest = null ) {
+		// Standard components to sign.
+		$header_values = array(
+			'@target-uri' => $url,
+			'@method'     => \strtoupper( $http_method ),
+			'@authority'  => \wp_parse_url( $url, PHP_URL_HOST ),
+			'date'        => $date,
+		);
+		$components    = \array_keys( $header_values );
+
+		// Add digest if provided.
+		if ( $digest ) {
+			$components[]                    = 'content-digest';
+			$header_values['content-digest'] = $digest;
+		}
+
+		$created = \strtotime( $date );
+		$params  = array(
+			'keyid'   => $key_id,
+			'alg'     => 'rsa-v1_5-sha256',
+			'created' => $created,
+		);
+
+		// Build the signature base string as per RFC-9421.
+		$signature_base = $this->get_signature_base_string( $header_values, $params );
+
+		$signature = null;
+		\openssl_sign( $signature_base, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
+		$signature = \base64_encode( $signature );
+
+		// Build header values.
+		$signature_input  = 'wp=( ' . \implode( ' ', $components ) . ' );keyid="' . $key_id . '";alg="rsa-v1_5-sha256";created=' . $created;
+		$signature_header = 'wp=:' . $signature . ':';
+
+		return array(
+			'Signature-Input' => $signature_input,
+			'Signature'       => $signature_header,
+		);
+	}
+
+	/**
 	 * Verify the HTTP Signature against a request.
 	 *
 	 * @param array       $headers The HTTP headers.
@@ -51,6 +102,17 @@ class Http_Message_Signature implements Signature_Standard {
 		$errors->add_data( array( 'status' => 401 ) );
 
 		return $errors;
+	}
+
+	/**
+	 * Generate a digest for the request body.
+	 *
+	 * @param string $body The request body.
+	 *
+	 * @return string The digest.
+	 */
+	public function generate_digest( $body ) {
+		return 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
 	}
 
 	/**
@@ -121,10 +183,6 @@ class Http_Message_Signature implements Signature_Standard {
 		}
 
 		// Algorithm verification.
-		if ( isset( $params['alg'] ) && \strpos( $params['alg'], 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
-			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
-		}
-
 		$algorithm = $this->resolve_algorithm( $params['alg'] ?? '', $public_key );
 		if ( \is_wp_error( $algorithm ) ) {
 			return $algorithm;
@@ -191,12 +249,16 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return int|\WP_Error OpenSSL algorithm constant or WP_Error.
 	 */
 	private function resolve_algorithm( $alg_string, $public_key ) {
+		$alg_string = \strtolower( $alg_string );
+
+		if ( \strpos( $alg_string, 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
+			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
+		}
+
 		$details = \openssl_pkey_get_details( $public_key );
 		if ( ! isset( $details['type'] ) ) {
 			return new \WP_Error( 'invalid_key_details', 'Unable to read public key details.' );
 		}
-
-		$alg_string = \strtolower( $alg_string );
 
 		$map = array(
 			// RSA PKCS#1 v1.5.
@@ -258,15 +320,49 @@ class Http_Message_Signature implements Signature_Standard {
 	 *
 	 * @param array $components Signature components.
 	 * @param array $params     Signature params.
-	 * @param array $headers    The HTTP headers.
+	 * @param array $headers    Optional. The HTTP headers. Defaults to an empty array.
 	 *
 	 * @return string Base string to compare signature with.
 	 */
-	private function get_signature_base_string( $components, $params, $headers ) {
+	private function get_signature_base_string( $components, $params, $headers = array() ) {
 		$signature_base = '';
 
+		// We only get component names when we verify a signature and have to get their values.
+		if ( \array_is_list( $components ) ) {
+			$components = $this->get_component_values( $components, $headers );
+		}
+
+		foreach ( $components as $component => $value ) {
+			$signature_base .= $component . ': ' . $value . "\n";
+		}
+
+		$signature_base .= '"@signature-params": (' . \implode( ' ', $components ) . ')';
+		foreach ( $params as $key => $value ) {
+			if ( \is_numeric( $value ) ) {
+				$signature_base .= ';' . $key . '=' . $value; // No quotes.
+			} else {
+				// Escape backslashes and double quotes per RFC-9421.
+				$value           = \str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
+				$signature_base .= ';' . $key . '="' . $value . '"'; // Double quotes.
+			}
+		}
+
+		return $signature_base;
+	}
+
+	/**
+	 * Generate signature components.
+	 *
+	 * @param array $components Signature component names.
+	 * @param array $headers    HTTP headers.
+	 *
+	 * @return array Signature components.
+	 */
+	private function get_component_values( $components, $headers ) {
+		$signature_components = array();
+
 		foreach ( $components as $component ) {
-			$key = strtok( $component, ';' ); // See https://www.rfc-editor.org/rfc/rfc9421.html#name-query-parameters.
+			$key = \strtok( $component, ';' ); // See https://www.rfc-editor.org/rfc/rfc9421.html#name-query-parameters.
 			$key = \strtolower( \trim( $key, '"' ) );
 
 			switch ( $key ) {
@@ -283,7 +379,7 @@ class Http_Message_Signature implements Signature_Standard {
 					break;
 
 				case '@scheme':
-					$value = is_ssl() ? 'https' : 'http';
+					$value = \is_ssl() ? 'https' : 'http';
 					break;
 
 				case '@request-target':
@@ -301,8 +397,8 @@ class Http_Message_Signature implements Signature_Standard {
 
 				case '@query-param':
 					$value = '';
-					if ( preg_match( '/"@query-param";name="(?P<name>[^"]+)"/', $component, $matches ) ) {
-						$query = wp_parse_args( wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY ) );
+					if ( \preg_match( '/"@query-param";name="(?P<name>[^"]+)"/', $component, $matches ) ) {
+						$query = \wp_parse_args( \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY ) );
 						$value = $query[ $matches['name'] ] ?? '';
 					}
 					break;
@@ -313,20 +409,9 @@ class Http_Message_Signature implements Signature_Standard {
 					$value = \preg_replace( '/\s+/', ' ', \trim( $headers[ $key ][0] ?? '' ) );
 			}
 
-			$signature_base .= $component . ': ' . $value . "\n";
+			$signature_components[ $component ] = $value;
 		}
 
-		$signature_base .= '"@signature-params": (' . implode( ' ', $components ) . ')';
-		foreach ( $params as $key => $value ) {
-			if ( \is_numeric( $value ) ) {
-				$signature_base .= ';' . $key . '=' . $value;
-			} else {
-				// Escape backslashes and double quotes per RFC 9421.
-				$value           = str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
-				$signature_base .= ';' . $key . '="' . $value . '"';
-			}
-		}
-
-		return $signature_base;
+		return $signature_components;
 	}
 }
