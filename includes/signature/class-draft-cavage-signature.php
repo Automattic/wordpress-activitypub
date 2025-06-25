@@ -86,7 +86,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		$header     = $headers['signature'] ?? $headers['authorization'];
 		$parsed     = $this->parse_signature_header( $header[0] );
 		$public_key = Signature::get_remote_key( $parsed['keyId'] );
-		if ( is_wp_error( $public_key ) ) {
+		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}
 
@@ -96,17 +96,17 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		}
 
 		$algorithm = $this->get_signature_algorithm( $parsed, $public_key );
-		if ( is_wp_error( $algorithm ) ) {
+		if ( \is_wp_error( $algorithm ) ) {
 			return $algorithm;
 		}
 
 		// Digest verification.
 		if ( \in_array( 'digest', $parsed['headers'], true ) && isset( $body ) ) {
-			if ( is_array( $headers['digest'] ) ) {
+			if ( \is_array( $headers['digest'] ) ) {
 				$headers['digest'] = $headers['digest'][0];
 			}
 
-			list( $alg, $digest ) = explode( '=', $headers['digest'], 2 );
+			list( $alg, $digest ) = \explode( '=', $headers['digest'], 2 );
 			$alg                  = 'SHA-512' === $alg ? 'sha512' : 'sha256';
 
 			if ( \base64_encode( \hash( $alg, $body, true ) ) !== $digest ) {
@@ -117,6 +117,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		return \openssl_verify( $signed_data, $parsed['signature'], $public_key, $algorithm ) > 0;
 	}
 
+<<<<<<< add/rfc-9421-signature-creation -- Incoming Change
 	/**
 	 * Generates the digest for an HTTP Request.
 	 *
@@ -128,6 +129,8 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		return 'sha256=' . \base64_encode( \hash( 'sha256', $body, true ) );
 	}
 
+=======
+>>>>>>> add/basic-rfc-9421 -- Current Change
 	/**
 	 * Gets the signature algorithm from the signature header.
 	 *
@@ -135,7 +138,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 	 *
 	 * @return string|bool The signature algorithm or false if not found.
 	 */
-	protected function get_signature_algorithm( $signature_block ) {
+	private function get_signature_algorithm( $signature_block ) {
 		if ( ! empty( $signature_block['algorithm'] ) ) {
 			switch ( $signature_block['algorithm'] ) {
 				case 'hs2019':
@@ -155,7 +158,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 	 *
 	 * @return array Signature parts.
 	 */
-	protected function parse_signature_header( $signature ) {
+	private function parse_signature_header( $signature ) {
 		$parsed_header = array();
 		$matches       = array();
 
@@ -175,7 +178,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 			$parsed_header['headers'] = \explode( ' ', trim( $matches[1] ) );
 		}
 		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+			$parsed_header['signature'] = \base64_decode( \preg_replace( '/\s+/', '', \trim( $matches[1] ) ) );
 		}
 
 		if ( empty( $parsed_header['headers'] ) ) {
@@ -194,7 +197,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 	 *
 	 * @return string signed headers for comparison
 	 */
-	protected function get_signed_data( $signed_headers, $signature_block, $headers ) {
+	private function get_signed_data( $signed_headers, $signature_block, $headers ) {
 		$signed_data = '';
 
 		// This also verifies time-based values by returning false if any of these are out of range.
@@ -209,8 +212,8 @@ class Draft_Cavage_Signature implements Signature_Standard {
 				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
 				continue;
 			}
-			if ( str_contains( $header, '-' ) ) {
-				$signed_data .= $header . ': ' . $headers[ str_replace( '-', '_', $header ) ][0] . "\n";
+			if ( \str_contains( $header, '-' ) ) {
+				$signed_data .= $header . ': ' . $headers[ \str_replace( '-', '_', $header ) ][0] . "\n";
 				continue;
 			}
 			if ( '(created)' === $header ) {
@@ -219,7 +222,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 					return false;
 				}
 
-				if ( ! array_key_exists( '(created)', $headers ) ) {
+				if ( ! \array_key_exists( '(created)', $headers ) ) {
 					$signed_data .= $header . ': ' . $signature_block['(created)'] . "\n";
 					continue;
 				}
@@ -230,7 +233,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 					return false;
 				}
 
-				if ( ! array_key_exists( '(expires)', $headers ) ) {
+				if ( ! \array_key_exists( '(expires)', $headers ) ) {
 					$signed_data .= $header . ': ' . $signature_block['(expires)'] . "\n";
 					continue;
 				}
@@ -245,8 +248,8 @@ class Draft_Cavage_Signature implements Signature_Standard {
 				$date->setTimeZone( \timezone_open( 'UTC' ) );
 				$date = $date->format( 'U' );
 
-				$max = time() + ( 3 * HOUR_IN_SECONDS );
-				$min = time() - ( 3 * HOUR_IN_SECONDS );
+				$max = \time() + ( 3 * HOUR_IN_SECONDS );
+				$min = \time() - ( 3 * HOUR_IN_SECONDS );
 
 				if ( $date > $max || $date < $min ) {
 					// Time out of range.

@@ -27,7 +27,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create(
@@ -289,11 +289,11 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test updated_postmeta method.
+	 * Test prevent_empty_post_meta method.
 	 *
-	 * @covers ::updated_postmeta
+	 * @covers ::prevent_empty_post_meta
 	 */
-	public function test_updated_postmeta() {
+	public function test_prevent_empty_post_meta() {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_author' => 1,

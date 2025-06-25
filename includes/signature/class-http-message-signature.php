@@ -182,7 +182,7 @@ class Http_Message_Signature implements Signature_Standard {
 		}
 
 		// Algorithm verification.
-		$algorithm = $this->resolve_algorithm( $params['alg'] ?? '', $public_key );
+		$algorithm = $this->verify_algorithm( $params['alg'] ?? '', $public_key );
 		if ( \is_wp_error( $algorithm ) ) {
 			return $algorithm;
 		}
@@ -215,7 +215,7 @@ class Http_Message_Signature implements Signature_Standard {
 			return true;
 		}
 
-		$digests = array_map( 'trim', explode( ',', $headers['content_digest'][0] ) );
+		$digests = \array_map( 'trim', \explode( ',', $headers['content_digest'][0] ) );
 
 		foreach ( $digests as $digest ) {
 			if ( \preg_match( '/^([a-z0-9-]+)=(.+)$/i', $digest, $matches ) ) {
@@ -247,9 +247,8 @@ class Http_Message_Signature implements Signature_Standard {
 	 *
 	 * @return int|\WP_Error OpenSSL algorithm constant or WP_Error.
 	 */
-	private function resolve_algorithm( $alg_string, $public_key ) {
+	private function verify_algorithm( $alg_string, $public_key ) {
 		$alg_string = \strtolower( $alg_string );
-
 		if ( \strpos( $alg_string, 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
 			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
 		}
