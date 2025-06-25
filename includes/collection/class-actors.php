@@ -392,57 +392,50 @@ class Actors {
 	}
 
 	/**
-	 * Create or update a remote Actor (e.g., a follower) as a custom post type.
+	 * Upsert a remote Actor (e.g. a follower) as a custom post type.
 	 *
-	 * @param array|Actor $actor_data The ActivityPub actor object as associative array (must include 'id').
+	 * @param array|Actor $actor The ActivityPub actor object as associative array (must include 'id').
 	 *
 	 * @return int|\WP_Error The post ID or WP_Error.
 	 */
-	public static function upsert( $actor_data ) {
-		if ( \is_array( $actor_data ) ) {
-			$actor_data = Actor::init_from_array( $actor_data );
+	public static function upsert( $actor ) {
+		if ( \is_array( $actor ) ) {
+			$actor = Actor::init_from_array( $actor );
 		}
 
-		if ( ! $actor_data instanceof Actor ) {
-			return new \WP_Error(
-				'activitypub_invalid_actor_data',
-				\__( 'Invalid actor data', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		if ( ! empty( $actor_data->get_endpoints()['sharedInbox'] ) ) {
-			$inbox = $actor_data->get_endpoints()['sharedInbox'];
-		} elseif ( ! empty( $actor_data->get_inbox() ) ) {
-			$inbox = $actor_data->get_inbox();
-		} else {
-			return new \WP_Error(
-				'activitypub_invalid_actor_data',
-				\__( 'Invalid actor data', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		$args = array(
-			'guid'         => \esc_url_raw( $actor_data->get_id() ),
-			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor_data->get_name() ?? $actor_data->get_preferred_username() ) ),
-			'post_author'  => 0,
-			'post_type'    => self::POST_TYPE,
-			'post_content' => \wp_slash( $actor_data->to_json() ),
-			'post_excerpt' => \wp_kses( \wp_slash( $actor_data->get_summary() ), 'user_description' ),
-			'post_status'  => 'publish',
-			'meta_input'   => array(
-				'_activitypub_inbox' => $inbox,
-			),
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				esc_sql( $actor->get_id() ),
+				esc_sql( self::POST_TYPE )
+			)
 		);
 
-		$post = self::get_remote_by_uri( $actor_data->get_id() );
+		if ( $post_id ) {
+			return self::update( $post_id, $actor );
+		}
 
-		if ( ! \is_wp_error( $post ) ) {
-			// If this is an update, prevent the "followed" date from being overwritten by the current date.
-			$args['ID']            = $post->ID;
-			$args['post_date']     = $post->post_date;
-			$args['post_date_gmt'] = $post->post_date_gmt;
+		return self::create( $actor );
+	}
+
+	/**
+	 * Create a remote Actor (e.g. a follower) as a custom post type.
+	 *
+	 * @param array|Actor $actor The ActivityPub actor object as associative array (must include 'id').
+	 *
+	 * @return int|\WP_Error The post ID or WP_Error.
+	 */
+	public static function create( $actor ) {
+		if ( \is_array( $actor ) ) {
+			$actor = Actor::init_from_array( $actor );
+		}
+
+		$args = self::prepare_custom_post_type( $actor );
+
+		if ( \is_wp_error( $args ) ) {
+			return $args;
 		}
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
@@ -451,11 +444,54 @@ class Actors {
 			\kses_remove_filters();
 		}
 
-		if ( \is_wp_error( $post ) ) {
-			$post_id = \wp_insert_post( $args );
-		} else {
-			$post_id = \wp_update_post( $args );
+		$post_id = \wp_insert_post( $args );
+
+		if ( $has_kses ) {
+			// Restore KSES filters.
+			\kses_init_filters();
 		}
+
+		return $post_id;
+	}
+
+	/**
+	 * Update a remote Actor object by actor URL (guid).
+	 *
+	 * @param int         $post  The post object.
+	 * @param array|Actor $actor The ActivityPub actor object as associative array (must include 'id').
+	 *
+	 * @return int|\WP_Error The post ID or WP_Error.
+	 */
+	public static function update( $post, $actor ) {
+		if ( \is_array( $actor ) ) {
+			$actor = Actor::init_from_array( $actor );
+		}
+
+		$post = \get_post( $post, ARRAY_A );
+
+		if ( ! $post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$args = self::prepare_custom_post_type( $actor );
+
+		if ( \is_wp_error( $args ) ) {
+			return $args;
+		}
+
+		$args = \wp_parse_args( $args, $post );
+
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			// Prevent KSES from corrupting JSON in post_content.
+			\kses_remove_filters();
+		}
+
+		$post_id = \wp_update_post( $args );
 
 		if ( $has_kses ) {
 			// Restore KSES filters.
@@ -479,6 +515,10 @@ class Actors {
 	/**
 	 * Get a remote Actor object by actor URL (guid).
 	 *
+	 * The function will first try to find the actor in the database.
+	 * If not found, it will try to fetch the actor from the remote
+	 * server and store it in the database.
+	 *
 	 * @param string $actor_uri The actor URI.
 	 *
 	 * @return \WP_Post|\WP_Error The post object or WP_Error if not found.
@@ -501,7 +541,7 @@ class Actors {
 				return $object;
 			}
 
-			$post_id = self::upsert( $object );
+			$post_id = self::create( $object );
 		}
 
 		if ( ! $post_id ) {
@@ -664,5 +704,47 @@ class Actors {
 		}
 
 		return Actor::init_from_json( $json );
+	}
+
+	/**
+	 * Prepare actor object for insert/update.
+	 *
+	 * @param Actor $actor The actor data.
+	 *
+	 * @return array|\WP_Error The actor data or WP_Error on failure.
+	 */
+	private static function prepare_custom_post_type( $actor ) {
+		if ( ! $actor instanceof Actor ) {
+			return new \WP_Error(
+				'activitypub_invalid_actor_data',
+				\__( 'Invalid actor data', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( ! empty( $actor->get_endpoints()['sharedInbox'] ) ) {
+			$inbox = $actor->get_endpoints()['sharedInbox'];
+		} elseif ( ! empty( $actor->get_inbox() ) ) {
+			$inbox = $actor->get_inbox();
+		} else {
+			return new \WP_Error(
+				'activitypub_invalid_actor_data',
+				\__( 'Invalid actor data', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		return array(
+			'guid'         => \esc_url_raw( $actor->get_id() ),
+			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?? $actor->get_preferred_username() ) ),
+			'post_author'  => 0,
+			'post_type'    => self::POST_TYPE,
+			'post_content' => \wp_slash( $actor->to_json() ),
+			'post_excerpt' => \wp_kses( \wp_slash( $actor->get_summary() ), 'user_description' ),
+			'post_status'  => 'publish',
+			'meta_input'   => array(
+				'_activitypub_inbox' => $inbox,
+			),
+		);
 	}
 }
