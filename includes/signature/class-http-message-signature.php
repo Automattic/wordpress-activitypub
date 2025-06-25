@@ -282,7 +282,7 @@ class Http_Message_Signature implements Signature_Standard {
 					break;
 
 				case '@scheme':
-					$value = is_ssl() ? 'https' : 'http';
+					$value = \is_ssl() ? 'https' : 'http';
 					break;
 
 				case '@request-target':
@@ -300,7 +300,7 @@ class Http_Message_Signature implements Signature_Standard {
 
 				case '@query-param':
 					$value = '';
-					if ( preg_match( '/"@query-param";name="(?P<name>[^"]+)"/', $component, $matches ) ) {
+					if ( \preg_match( '/"@query-param";name="(?P<name>[^"]+)"/', $component, $matches ) ) {
 						$query = \wp_parse_args( \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY ) );
 						$value = $query[ $matches['name'] ] ?? '';
 					}
