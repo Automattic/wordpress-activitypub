@@ -50,8 +50,8 @@ class Following {
 
 		$pending = \get_post_meta( $post->ID, self::PENDING_META_KEY, false );
 
-		if ( ! \in_array( $user_id, $following, true ) && ! \in_array( $user_id, $pending, true ) ) {
-			\add_post_meta( $post->ID, self::PENDING_META_KEY, $user_id );
+		if ( ! \in_array( (string) $user_id, $following, true ) && ! \in_array( (string) $user_id, $pending, true ) ) {
+			\add_post_meta( $post->ID, self::PENDING_META_KEY, (string) $user_id );
 		}
 
 		return $post;
