@@ -181,32 +181,16 @@ class Signature {
 	/**
 	 * Get public key from key_id.
 	 *
+	 * @deprecated unreleased Use {@see Actors::get_remote_key()}.
+	 *
 	 * @param string $key_id The URL to the public key.
 	 *
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
-		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) );
-		if ( \is_wp_error( $actor ) ) {
-			return new \WP_Error(
-				'activitypub_no_remote_profile_found',
-				__( 'No Profile found or Profile not accessible', 'activitypub' ),
-				array( 'status' => 401 )
-			);
-		}
+		\_deprecated_function( __METHOD__, 'unreleased', Actors::class . '::get_remote_key()' );
 
-		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
-			$key_resource = \openssl_pkey_get_public( \rtrim( $actor['publicKey']['publicKeyPem'] ) );
-			if ( $key_resource ) {
-				return $key_resource;
-			}
-		}
-
-		return new \WP_Error(
-			'activitypub_no_remote_key_found',
-			__( 'No Public-Key found', 'activitypub' ),
-			array( 'status' => 401 )
-		);
+		return Actors::get_remote_key( $key_id );
 	}
 
 	/**

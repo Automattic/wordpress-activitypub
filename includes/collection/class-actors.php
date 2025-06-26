@@ -12,6 +12,7 @@ use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
 use Activitypub\Activity\Actor;
 
+use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\object_to_uri;
 use function Activitypub\normalize_url;
 use function Activitypub\normalize_host;
@@ -707,6 +708,29 @@ class Actors {
 		}
 
 		return $key_pair;
+	}
+
+	/**
+	 * Get public key from key_id.
+	 *
+	 * @param string $key_id The URL to the public key.
+	 *
+	 * @return resource|\WP_Error The public key resource or WP_Error.
+	 */
+	public static function get_remote_key( $key_id ) {
+		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) );
+		if ( \is_wp_error( $actor ) ) {
+			return new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
+		}
+
+		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
+			$key_resource = \openssl_pkey_get_public( \rtrim( $actor['publicKey']['publicKeyPem'] ) );
+			if ( $key_resource ) {
+				return $key_resource;
+			}
+		}
+
+		return new \WP_Error( 'activitypub_no_remote_key_found', 'No Public-Key found', array( 'status' => 401 ) );
 	}
 
 	/**
