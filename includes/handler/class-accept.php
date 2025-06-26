@@ -79,7 +79,7 @@ class Accept {
 			'object',
 		);
 
-		if ( \array_intersect( $required, \array_keys( $json_params ) ) !== $required ) {
+		if ( ! empty( \array_diff( $required, \array_keys( $json_params ) ) ) ) {
 			return false;
 		}
 
