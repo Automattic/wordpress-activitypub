@@ -17,6 +17,10 @@
 	padding-left: 22px;
 }
 
+.activitypub-settings p.interactions {
+	margin-bottom: 1em;
+}
+
 .activitypub-settings-header {
 	text-align: center;
 	margin: 0 0 1rem;
