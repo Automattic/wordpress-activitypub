@@ -14,6 +14,17 @@ namespace Activitypub\Signature;
  * Interface Signature_Standard.
  */
 interface Signature_Standard {
+
+	/**
+	 * Generate Signature headers for an outgoing HTTP request.
+	 *
+	 * @param array  $args The request arguments.
+	 * @param string $url  The request URL.
+	 *
+	 * @return array Request arguments with signature headers.
+	 */
+	public function sign( $args, $url );
+
 	/**
 	 * Verify the HTTP Signature against a request.
 	 *
@@ -22,4 +33,13 @@ interface Signature_Standard {
 	 * @return bool|\WP_Error
 	 */
 	public function verify( array $headers, $body = null );
+
+	/**
+	 * Generate a digest for the request body.
+	 *
+	 * @param string $body The request body.
+	 *
+	 * @return string The digest.
+	 */
+	public function generate_digest( $body );
 }

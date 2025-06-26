@@ -23,6 +23,57 @@ use Activitypub\Signature;
 class Draft_Cavage_Signature implements Signature_Standard {
 
 	/**
+	 * Generate Signature headers for an outgoing HTTP request.
+	 *
+	 * @param array  $args The request arguments.
+	 * @param string $url  The request URL.
+	 *
+	 * @return array Request arguments with signature headers.
+	 */
+	public function sign( $args, $url ) {
+		$url_parts = \wp_parse_url( $url );
+
+		$host = $url_parts['host'];
+		$path = '/';
+
+		// Add path.
+		if ( ! empty( $url_parts['path'] ) ) {
+			$path = $url_parts['path'];
+		}
+
+		// Add query.
+		if ( ! empty( $url_parts['query'] ) ) {
+			$path .= '?' . $url_parts['query'];
+		}
+
+		$http_method = \strtolower( $args['method'] );
+		$date        = $args['headers']['Date'];
+
+		if ( isset( $args['body'] ) ) {
+			$args['headers']['Digest'] = $this->generate_digest( $args['body'] );
+
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: {$args['headers']['Digest']}";
+			$headers_list  = '(request-target) host date digest';
+		} else {
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
+			$headers_list  = '(request-target) host date';
+		}
+
+		$signature = null;
+		\openssl_sign( $signed_string, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
+		$signature = \base64_encode( $signature );
+
+		$args['headers']['Signature'] = \sprintf(
+			'keyId="%s",algorithm="rsa-sha256",headers="%s",signature="%s"',
+			$args['key_id'],
+			$headers_list,
+			$signature
+		);
+
+		return $args;
+	}
+
+	/**
 	 * Verify the HTTP Signature against a request.
 	 *
 	 * @param array       $headers The HTTP headers.
@@ -71,6 +122,17 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Generates the digest for an HTTP Request.
+	 *
+	 * @param string $body The body of the request.
+	 *
+	 * @return string The digest.
+	 */
+	public function generate_digest( $body ) {
+		return 'sha256=' . \base64_encode( \hash( 'sha256', $body, true ) );
 	}
 
 	/**
