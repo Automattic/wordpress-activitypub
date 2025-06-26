@@ -204,8 +204,6 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 	/**
 	 * Test the reactions block with deprecated markup.
-	 *
-	 * @covers ::render_post_reactions_block
 	 */
 	public function test_render_reactions_block_with_deprecated_markup() {
 		$post_id = $this->get_post_id_with_reactions();

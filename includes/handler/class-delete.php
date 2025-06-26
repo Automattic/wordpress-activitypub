@@ -104,7 +104,7 @@ class Delete {
 		$follower = Actors::get_remote_by_uri( $activity['actor'] );
 
 		// Verify that Actor is deleted.
-		if ( $follower && Http::is_tombstone( $activity['actor'] ) ) {
+		if ( ! is_wp_error( $follower ) && Http::is_tombstone( $activity['actor'] ) ) {
 			Actors::delete( $follower->ID );
 			self::maybe_delete_interactions( $activity );
 		}

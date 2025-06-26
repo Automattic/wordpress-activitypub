@@ -130,7 +130,7 @@ class Test_Announce extends \WP_UnitTestCase {
 	/**
 	 * Test handle announces.
 	 *
-	 * @covers ::handle_announces
+	 * @covers ::handle_announce
 	 *
 	 * @dataProvider data_handle_announces
 	 *

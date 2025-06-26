@@ -13,7 +13,7 @@ use Activitypub\Rest\Collection;
  * Test Collection Trait.
  *
  * @group rest
- * @coversDefaultClass Collection
+ * @coversDefaultClass \Activitypub\Rest\Collection
  */
 class Test_Trait_Collection extends \WP_UnitTestCase {
 
