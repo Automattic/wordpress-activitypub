@@ -1541,7 +1541,10 @@ function follow( $actor, $user_id ) {
 		return $post;
 	}
 
-	Following::follow( $post, $user_id );
+	$result = Following::follow( $post, $user_id );
+	if ( \is_wp_error( $result ) ) {
+		return $result;
+	}
 
 	$follow = new Activity();
 	$follow->set_type( 'Follow' );
