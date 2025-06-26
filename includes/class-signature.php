@@ -188,6 +188,21 @@ class Signature {
 	 * @return array Request arguments with signature headers.
 	 */
 	public static function sign_request( $args, $url ) {
+		// Bail if there's nothing to sign with.
+		if ( ! isset( $args['key_id'], $args['private_key'] ) ) {
+			return $args;
+		}
+
+		$args = \wp_parse_args(
+			$args,
+			array(
+				'method'  => 'GET',
+				'headers' => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+				),
+			)
+		);
+
 		if ( '1' === \get_option( 'activitypub_rfc9421_signature', '0' ) ) {
 			$signature = new Http_Message_Signature();
 			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
