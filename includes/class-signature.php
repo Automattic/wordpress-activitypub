@@ -182,18 +182,20 @@ class Signature {
 	/**
 	 * Sign an HTTP Request.
 	 *
-	 * @param array  $args        An array of HTTP request arguments.
-	 * @param string $url         The request URL.
-	 * @param string $key_id      The key ID.
-	 * @param string $private_key The private key.
+	 * @param array  $args An array of HTTP request arguments.
+	 * @param string $url  The request URL.
 	 *
 	 * @return array Request arguments with signature headers.
 	 */
-	public static function sign_request( $args, $url, $key_id, $private_key ) {
-		$use_rfc9421 = \get_option( 'activitypub_rfc9421_signature', '0' ) === '1';
-		$signature   = $use_rfc9421 ? new Http_Message_Signature() : new Draft_Cavage_Signature();
+	public static function sign_request( $args, $url ) {
+		if ( '1' === \get_option( 'activitypub_rfc9421_signature', '0' ) ) {
+			$signature = new Http_Message_Signature();
+			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
+		} else {
+			$signature = new Draft_Cavage_Signature();
+		}
 
-		return $signature->sign( $args, $key_id, $private_key, $url );
+		return $signature->sign( $args, $url );
 	}
 
 	/**
@@ -302,6 +304,29 @@ class Signature {
 			__( 'No Public-Key found', 'activitypub' ),
 			array( 'status' => 401 )
 		);
+	}
+
+	/**
+	 * If a request with RFC-9421 signature fails, we try again with the draft signature.
+	 *
+	 * @param array  $response    HTTP response.
+	 * @param array  $parsed_args HTTP request arguments.
+	 * @param string $url         The request URL.
+	 *
+	 * @return array The HTTP response.
+	 */
+	public static function maybe_double_knock( $response, $parsed_args, $url ) {
+		// Remove this filter to prevent infinite recursion.
+		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
+
+		if ( 401 === wp_remote_retrieve_response_code( $response ) ) {
+			\unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
+
+			$parsed_args = ( new Draft_Cavage_Signature() )->sign( $parsed_args, $url );
+			$response    = \wp_remote_request( $url, $parsed_args );
+		}
+
+		return $response;
 	}
 
 	/**

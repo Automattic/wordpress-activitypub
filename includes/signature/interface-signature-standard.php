@@ -18,13 +18,11 @@ interface Signature_Standard {
 	/**
 	 * Generate Signature headers for an outgoing HTTP request.
 	 *
-	 * @param array  $args        The request arguments.
-	 * @param string $key_id      The keyId for the signature.
-	 * @param string $private_key The private key to sign with.
-	 * @param string $url         The request URL.
+	 * @param array  $args The request arguments.
+	 * @param string $url  The request URL.
 	 * @return array Request arguments with signature headers.
 	 */
-	public function sign( $args, $key_id, $private_key, $url );
+	public function sign( $args, $url );
 
 	/**
 	 * Verify the HTTP Signature against a request.

@@ -25,13 +25,11 @@ class Draft_Cavage_Signature implements Signature_Standard {
 	/**
 	 * Generate Signature headers for an outgoing HTTP request.
 	 *
-	 * @param array  $args        The request arguments.
-	 * @param string $key_id      The keyId for the signature.
-	 * @param string $private_key The private key to sign with.
-	 * @param string $url         The request URL.
+	 * @param array  $args The request arguments.
+	 * @param string $url  The request URL.
 	 * @return array Request arguments with signature headers.
 	 */
-	public function sign( $args, $key_id, $private_key, $url ) {
+	public function sign( $args, $url ) {
 		$url_parts = \wp_parse_url( $url );
 
 		$host = $url_parts['host'];
@@ -61,12 +59,12 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		}
 
 		$signature = null;
-		\openssl_sign( $signed_string, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
+		\openssl_sign( $signed_string, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
 		$args['headers']['Signature'] = \sprintf(
 			'keyId="%s",algorithm="rsa-sha256",headers="%s",signature="%s"',
-			$key_id,
+			$args['key_id'],
 			$headers_list,
 			$signature
 		);

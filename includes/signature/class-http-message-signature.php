@@ -25,13 +25,11 @@ class Http_Message_Signature implements Signature_Standard {
 	/**
 	 * Generate RFC-9421 compliant Signature-Input and Signature headers for an outgoing HTTP request.
 	 *
-	 * @param array  $args        The request arguments.
-	 * @param string $key_id      The keyId for the signature.
-	 * @param string $private_key The private key to sign with.
-	 * @param string $url         The request URL.
+	 * @param array  $args The request arguments.
+	 * @param string $url  The request URL.
 	 * @return array Request arguments with signature headers.
 	 */
-	public function sign( $args, $key_id, $private_key, $url ) {
+	public function sign( $args, $url ) {
 		// Standard components to sign.
 		$components  = array(
 			'"@method"'     => \strtoupper( $args['method'] ),
@@ -51,7 +49,7 @@ class Http_Message_Signature implements Signature_Standard {
 
 		$params = array(
 			'created' => $components['"created"'],
-			'keyid'   => $key_id,
+			'keyid'   => $args['key_id'],
 			'alg'     => 'rsa-v1_5-sha256',
 		);
 
@@ -59,10 +57,10 @@ class Http_Message_Signature implements Signature_Standard {
 		$signature_base = $this->get_signature_base_string( $components, $params );
 
 		$signature = null;
-		\openssl_sign( $signature_base, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
+		\openssl_sign( $signature_base, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
-		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ');created=' . $components['"created"'] . ';keyid="' . $key_id . '";alg="rsa-v1_5-sha256"';
+		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ');created=' . $components['"created"'] . ';keyid="' . $args['key_id'] . '";alg="rsa-v1_5-sha256"';
 		$args['headers']['Signature']       = 'wp=:' . $signature . ':';
 
 		return $args;

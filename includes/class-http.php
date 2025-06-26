@@ -35,17 +35,12 @@ class Http {
 		 */
 		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
 
-		$date        = \gmdate( 'D, d M Y H:i:s T' );
-		$actor_id    = Actors::get_by_id( $user_id )->get_id() . '#main-key';
-		$private_key = Signature::get_private_key_for( $user_id );
-		$wp_version  = get_masked_wp_version();
-
 		/**
 		 * Filters the HTTP headers user agent string.
 		 *
 		 * @param string $user_agent The user agent string.
 		 */
-		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
+		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
 		$args       = array(
 			'method'              => 'POST',
 			'timeout'             => 100,
@@ -55,12 +50,14 @@ class Http {
 			'headers'             => array(
 				'Accept'       => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
-				'Date'         => $date,
+				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
 			'body'                => $body,
+			'key_id'              => Actors::get_by_id( $user_id )->get_id() . '#main-key',
+			'private_key'         => Signature::get_private_key_for( $user_id ),
 		);
 
-		$args = Signature::sign_request( $args, $url, $actor_id, $private_key );
+		$args = Signature::sign_request( $args, $url );
 
 		$response = \wp_safe_remote_post( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
@@ -123,11 +120,6 @@ class Http {
 			}
 		}
 
-		$date        = \gmdate( 'D, d M Y H:i:s T' );
-		$actor_id    = Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key';
-		$private_key = Signature::get_private_key_for( Actors::APPLICATION_USER_ID );
-		$wp_version  = get_masked_wp_version();
-
 		/**
 		 * Filters the HTTP headers user agent string.
 		 *
@@ -136,7 +128,7 @@ class Http {
 		 *
 		 * @param string $user_agent The user agent string.
 		 */
-		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
+		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
 
 		/**
 		 * Filters the timeout duration for remote GET requests in ActivityPub.
@@ -154,11 +146,13 @@ class Http {
 			'headers'             => array(
 				'Accept'       => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
-				'Date'         => $date,
+				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
+			'key_id'              => Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key',
+			'private_key'         => Signature::get_private_key_for( Actors::APPLICATION_USER_ID ),
 		);
 
-		$args = Signature::sign_request( $args, $url, $actor_id, $private_key );
+		$args = Signature::sign_request( $args, $url );
 
 		$response = \wp_safe_remote_get( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
