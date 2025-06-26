@@ -72,7 +72,7 @@ class Following {
 
 		$following = \get_post_meta( $post->ID, self::PENDING_META_KEY, false );
 
-		if ( ! \is_array( $following ) || ! \in_array( $user_id, $following, true ) ) {
+		if ( ! \is_array( $following ) || ! \in_array( (string) $user_id, $following, true ) ) {
 			return new \WP_Error( 'activitypub_following_not_found', 'Follow request not found' );
 		}
 
