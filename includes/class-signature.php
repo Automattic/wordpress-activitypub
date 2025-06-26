@@ -30,7 +30,7 @@ class Signature {
 	 * @return string The public key.
 	 */
 	public static function get_public_key_for( $user_id, $force = false ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_public_key' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_public_key' );
 
 		return Actors::get_public_key( $user_id, $force );
 	}
@@ -46,7 +46,7 @@ class Signature {
 	 * @return string The private key.
 	 */
 	public static function get_private_key_for( $user_id, $force = false ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_private_key' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_private_key' );
 
 		return Actors::get_private_key( $user_id, $force );
 	}
@@ -61,7 +61,7 @@ class Signature {
 	 * @return array The key pair.
 	 */
 	public static function get_keypair_for( $user_id ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_keypair' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_keypair' );
 
 		return Actors::get_keypair( $user_id );
 	}
