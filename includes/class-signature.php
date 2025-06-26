@@ -7,11 +7,9 @@
 
 namespace Activitypub;
 
-use WP_Error;
-use DateTime;
-use DateTimeZone;
-use WP_REST_Request;
 use Activitypub\Collection\Actors;
+use Activitypub\Signature\Draft_Cavage_Signature;
+use Activitypub\Signature\Http_Message_Signature;
 
 /**
  * ActivityPub Signature Class.
@@ -235,82 +233,24 @@ class Signature {
 	/**
 	 * Verifies the http signatures
 	 *
-	 * @param WP_REST_Request|array $request The request object or $_SERVER array.
+	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
 	 *
-	 * @return bool|WP_Error A boolean or WP_Error.
+	 * @return bool|\WP_Error A boolean or WP_Error.
 	 */
 	public static function verify_http_signature( $request ) {
 		if ( is_object( $request ) ) { // REST Request object.
-			// Check if route starts with "index.php".
-			if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
-				$route = $request->get_route();
-			} else {
-				$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
-			}
-
-			// Fix route for subdirectory installs.
-			$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
-
-			if ( \is_string( $path ) ) {
-				$path = trim( $path, '/' );
-			}
-
-			if ( $path ) {
-				$route = '/' . $path . $route;
-			}
-
-			$body = $request->get_body();
-
+			$body                           = $request->get_body();
 			$headers                        = $request->get_headers();
-			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $route;
+			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
 		} else {
 			$request                        = self::format_server_request( $request );
 			$headers                        = $request['headers']; // $_SERVER array
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		if ( array_key_exists( 'signature', $headers ) ) {
-			$signature_block = self::parse_signature_header( $headers['signature'][0] );
-		} elseif ( array_key_exists( 'authorization', $headers ) ) {
-			$signature_block = self::parse_signature_header( $headers['authorization'][0] );
-		} else {
-			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 401 ) );
-		}
+		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Draft_Cavage_Signature();
 
-		$signed_data = self::get_signed_data( $signature_block['headers'], $signature_block, $headers );
-		if ( ! $signed_data ) {
-			return new WP_Error( 'activitypub_signature', __( 'Signed request date outside acceptable time window', 'activitypub' ), array( 'status' => 401 ) );
-		}
-
-		$algorithm = self::get_signature_algorithm( $signature_block );
-		if ( ! $algorithm ) {
-			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 401 ) );
-		}
-
-		if ( \in_array( 'digest', $signature_block['headers'], true ) && isset( $body ) ) {
-			if ( is_array( $headers['digest'] ) ) {
-				$headers['digest'] = $headers['digest'][0];
-			}
-
-			list( $alg, $digest ) = explode( '=', $headers['digest'], 2 );
-			$algorithm            = 'SHA-512' === $alg ? 'sha512' : 'sha256';
-
-			if ( \base64_encode( \hash( $algorithm, $body, true ) ) !== $digest ) { // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
-			}
-		}
-
-		$public_key = self::get_remote_key( $signature_block['keyId'] );
-
-		if ( \is_wp_error( $public_key ) ) {
-			return $public_key;
-		}
-
-		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
-		if ( ! $verified ) {
-			return new WP_Error( 'activitypub_signature', __( 'Invalid signature', 'activitypub' ), array( 'status' => 401 ) );
-		}
-		return $verified;
+		return $signature->verify( $headers, $body ?? null );
 	}
 
 	/**
@@ -318,12 +258,12 @@ class Signature {
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
-	 * @return resource|WP_Error The public key resource or WP_Error.
+	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
 		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) );
 		if ( \is_wp_error( $actor ) ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'activitypub_no_remote_profile_found',
 				__( 'No Profile found or Profile not accessible', 'activitypub' ),
 				array( 'status' => 401 )
@@ -337,7 +277,7 @@ class Signature {
 			}
 		}
 
-		return new WP_Error(
+		return new \WP_Error(
 			'activitypub_no_remote_key_found',
 			__( 'No Public-Key found', 'activitypub' ),
 			array( 'status' => 401 )
@@ -351,16 +291,9 @@ class Signature {
 	 *
 	 * @return string|bool The signature algorithm or false if not found.
 	 */
-	public static function get_signature_algorithm( $signature_block ) {
-		if ( ! empty( $signature_block['algorithm'] ) ) {
-			switch ( $signature_block['algorithm'] ) {
-				case 'hs2019':
-				case 'rsa-sha512':
-					return 'sha512'; // https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12.
-				default:
-					return 'sha256';
-			}
-		}
+	public static function get_signature_algorithm( $signature_block ) { // phpcs:ignore
+		_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+
 		return false;
 	}
 
@@ -371,34 +304,10 @@ class Signature {
 	 *
 	 * @return array Signature parts.
 	 */
-	public static function parse_signature_header( $signature ) {
-		$parsed_header = array();
-		$matches       = array();
+	public static function parse_signature_header( $signature ) { // phpcs:ignore
+		_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
 
-		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['keyId'] = trim( $matches[1] );
-		}
-		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
-			$parsed_header['(created)'] = trim( $matches[1] );
-		}
-		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
-			$parsed_header['(expires)'] = trim( $matches[1] );
-		}
-		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['algorithm'] = trim( $matches[1] );
-		}
-		if ( \preg_match( '/headers="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['headers'] = \explode( ' ', trim( $matches[1] ) );
-		}
-		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
-		}
-
-		if ( empty( $parsed_header['headers'] ) ) {
-			$parsed_header['headers'] = array( 'date' );
-		}
-
-		return $parsed_header;
+		return array();
 	}
 
 	/**
@@ -410,71 +319,10 @@ class Signature {
 	 *
 	 * @return string signed headers for comparison
 	 */
-	public static function get_signed_data( $signed_headers, $signature_block, $headers ) {
-		$signed_data = '';
+	public static function get_signed_data( $signed_headers, $signature_block, $headers ) { // phpcs:ignore
+		_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
 
-		// This also verifies time-based values by returning false if any of these are out of range.
-		foreach ( $signed_headers as $header ) {
-			if ( 'host' === $header ) {
-				if ( isset( $headers['x_original_host'] ) ) {
-					$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
-					continue;
-				}
-			}
-			if ( '(request-target)' === $header ) {
-				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
-				continue;
-			}
-			if ( str_contains( $header, '-' ) ) {
-				$signed_data .= $header . ': ' . $headers[ str_replace( '-', '_', $header ) ][0] . "\n";
-				continue;
-			}
-			if ( '(created)' === $header ) {
-				if ( ! empty( $signature_block['(created)'] ) && \intval( $signature_block['(created)'] ) > \time() ) {
-					// Created in the future.
-					return false;
-				}
-
-				if ( ! array_key_exists( '(created)', $headers ) ) {
-					$signed_data .= $header . ': ' . $signature_block['(created)'] . "\n";
-					continue;
-				}
-			}
-			if ( '(expires)' === $header ) {
-				if ( ! empty( $signature_block['(expires)'] ) && \intval( $signature_block['(expires)'] ) < \time() ) {
-					// Expired in the past.
-					return false;
-				}
-
-				if ( ! array_key_exists( '(expires)', $headers ) ) {
-					$signed_data .= $header . ': ' . $signature_block['(expires)'] . "\n";
-					continue;
-				}
-			}
-			if ( 'date' === $header ) {
-				if ( empty( $headers[ $header ][0] ) ) {
-					continue;
-				}
-
-				// Allow a bit of leeway for misconfigured clocks.
-				$d = new DateTime( $headers[ $header ][0] );
-				$d->setTimeZone( new DateTimeZone( 'UTC' ) );
-				$c = $d->format( 'U' );
-
-				$d_plus  = time() + ( 3 * HOUR_IN_SECONDS );
-				$d_minus = time() - ( 3 * HOUR_IN_SECONDS );
-
-				if ( $c > $d_plus || $c < $d_minus ) {
-					// Time out of range.
-					return false;
-				}
-			}
-
-			if ( ! empty( $headers[ $header ][0] ) ) {
-				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
-			}
-		}
-		return \rtrim( $signed_data, "\n" );
+		return '';
 	}
 
 	/**
@@ -513,5 +361,34 @@ class Signature {
 			}
 		}
 		return $request;
+	}
+
+	/**
+	 * Returns route.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return string
+	 */
+	private static function get_route( $request ) {
+		// Check if the route starts with "index.php".
+		if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
+			$route = $request->get_route();
+		} else {
+			$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
+		}
+
+		// Fix route for subdirectory installations.
+		$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
+
+		if ( \is_string( $path ) ) {
+			$path = trim( $path, '/' );
+		}
+
+		if ( $path ) {
+			$route = '/' . $path . $route;
+		}
+
+		return $route;
 	}
 }

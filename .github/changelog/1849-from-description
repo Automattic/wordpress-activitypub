@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added basic support for RFC-9421 style signatures for incoming activities.
