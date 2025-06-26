@@ -443,8 +443,9 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$request->set_body( $body );
 		$request->set_header( 'Date', $date );
 		$request->set_header( 'Digest', $digest );
-		$request->set_header( 'Signature', $signature );
 		$request->set_header( 'Host', 'example.org' );
+		$request->set_header( 'Signature', $signature );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
 
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
