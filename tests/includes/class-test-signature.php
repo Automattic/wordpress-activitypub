@@ -770,13 +770,15 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
 
 		// Generate a digest for the body.
+		$this->setExpectedDeprecated( 'Activitypub\Signature::generate_digest' );
 		$digest = Signature::generate_digest( $body );
 
 		// Create a date for the request.
 		$date = \gmdate( 'D, d M Y H:i:s T' );
 
 		// Generate a signature that includes the digest.
-		$signature = Signature::generate_signature( Actors::get_by_id( 1 )->get_id() . '#main-key', $keys['private_key'], 'POST', 'https://example.org/wp-json/activitypub/1.0/inbox', $date, $digest );
+		$this->setExpectedDeprecated( 'Activitypub\Signature::generate_signature' );
+		$signature = Signature::generate_signature( 1, 'POST', 'https://example.org/wp-json/activitypub/1.0/inbox', $date, $digest );
 
 		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 		$request->set_body( $body );

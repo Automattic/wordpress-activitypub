@@ -35,17 +35,6 @@ class Http {
 		 */
 		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
 
-<<<<<<< update/key-signatures -- Incoming Change
-		$date        = \gmdate( 'D, d M Y H:i:s T' );
-		$actor_id    = Actors::get_by_id( $user_id )->get_id() . '#main-key';
-		$private_key = Actors::get_private_key( $user_id );
-		$digest      = Signature::generate_digest( $body );
-		$signature   = Signature::generate_signature( $actor_id, $private_key, 'post', $url, $date, $digest );
-
-		$wp_version = get_masked_wp_version();
-
-=======
->>>>>>> trunk -- Current Change
 		/**
 		 * Filters the HTTP headers user agent string.
 		 *
@@ -65,7 +54,7 @@ class Http {
 			),
 			'body'                => $body,
 			'key_id'              => Actors::get_by_id( $user_id )->get_id() . '#main-key',
-			'private_key'         => Signature::get_private_key_for( $user_id ),
+			'private_key'         => Actors::get_private_key( $user_id ),
 		);
 
 		$args = Signature::sign_request( $args, $url );
@@ -131,16 +120,6 @@ class Http {
 			}
 		}
 
-<<<<<<< update/key-signatures -- Incoming Change
-		$date        = \gmdate( 'D, d M Y H:i:s T' );
-		$actor_id    = Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key';
-		$private_key = Actors::get_private_key( Actors::APPLICATION_USER_ID );
-		$signature   = Signature::generate_signature( $actor_id, $private_key, 'get', $url, $date );
-
-		$wp_version = get_masked_wp_version();
-
-=======
->>>>>>> trunk -- Current Change
 		/**
 		 * Filters the HTTP headers user agent string.
 		 *
@@ -170,7 +149,7 @@ class Http {
 				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
 			'key_id'              => Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key',
-			'private_key'         => Signature::get_private_key_for( Actors::APPLICATION_USER_ID ),
+			'private_key'         => Actors::get_private_key( Actors::APPLICATION_USER_ID ),
 		);
 
 		$args = Signature::sign_request( $args, $url );
