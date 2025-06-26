@@ -203,7 +203,7 @@ class Signature {
 			)
 		);
 
-		if ( '1' === \get_option( 'activitypub_rfc9421_signature', '0' ) ) {
+		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) ) {
 			$signature = new Http_Message_Signature();
 			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 		} else {
@@ -228,6 +228,7 @@ class Signature {
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
 		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request()' );
+
 		$user = Actors::get_by_id( $user_id );
 		$key  = self::get_private_key_for( $user->get__id() );
 
@@ -322,7 +323,7 @@ class Signature {
 	}
 
 	/**
-	 * If a request with RFC-9421 signature fails, we try again with the draft signature.
+	 * If a request with RFC-9421 signature fails, we try again with the Draft Cavage signature.
 	 *
 	 * @param array  $response    HTTP response.
 	 * @param array  $parsed_args HTTP request arguments.
