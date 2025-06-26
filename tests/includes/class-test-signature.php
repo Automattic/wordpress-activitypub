@@ -471,15 +471,15 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$signature = new Signature\Http_Message_Signature();
 		$args      = $signature->sign(
 			array(
-				'method'  => 'POST',
-				'body'    => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
-				'headers' => array(
+				'method'      => 'POST',
+				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
+				'headers'     => array(
 					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
 					'Host' => 'example.org',
 				),
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => \openssl_pkey_get_private( $keys['private_key'] ),
 			),
-			'https://example.org/author/admin#main-key',
-			\openssl_pkey_get_private( $keys['private_key'] ),
 			'https://example.org/wp-json/activitypub/1.0/inbox'
 		);
 

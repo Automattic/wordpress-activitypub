@@ -320,7 +320,7 @@ class Signature {
 		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
 
 		if ( 401 === wp_remote_retrieve_response_code( $response ) ) {
-			\unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
+			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
 
 			$parsed_args = ( new Draft_Cavage_Signature() )->sign( $parsed_args, $url );
 			$response    = \wp_remote_request( $url, $parsed_args );
