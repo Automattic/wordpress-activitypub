@@ -633,7 +633,7 @@ class Actors {
 	 *
 	 * @param int|\WP_Post $post The post object.
 	 *
-	 * @return Actor|\WP_Error The Actor object or WP_Error on failure.
+	 * @return \Activitypub\Activity\Generic_Object|\WP_Error The Actor object or WP_Error on failure.
 	 */
 	public static function get_actor( $post ) {
 		$post = \get_post( $post );
