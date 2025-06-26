@@ -162,6 +162,17 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
+			'activitypub_auto_approve_reactions',
+			array(
+				'type'              => 'integer',
+				'description'       => \__( 'Auto approve Reactions.', 'activitypub' ),
+				'default'           => '0',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_relays',
 			array(
 				'type'              => 'array',

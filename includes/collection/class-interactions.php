@@ -248,10 +248,6 @@ class Interactions {
 
 		$url = object_to_uri( $actor['url'] ?? $actor['id'] );
 
-		if ( ! $url ) {
-			$url = object_to_uri( $actor['id'] );
-		}
-
 		if ( isset( $activity['object']['content'] ) ) {
 			$comment_content = \addslashes( $activity['object']['content'] );
 		}

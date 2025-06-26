@@ -461,4 +461,75 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		return new \WP_Error( 'invalid_url', $url );
 	}
+
+	/**
+	 * Test HTTP signature verification with digest.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers ::generate_digest
+	 * @covers ::generate_signature
+	 */
+	public function test_verify_http_signature_with_digest() {
+		// Create a user and get their keypair.
+		$keys = Signature::get_keypair_for( 1 );
+
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () use ( $keys ) {
+				return array(
+					'name'      => 'Admin',
+					'url'       => 'https://example.org/author/admin',
+					'publicKey' => array(
+						'id'           => 'https://example.org/author/admin#main-key',
+						'owner'        => 'https://example.org/author/admin',
+						'publicKeyPem' => $keys['public_key'],
+					),
+				);
+			}
+		);
+
+		// Create a request body.
+		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
+
+		// Generate a digest for the body.
+		$digest = Signature::generate_digest( $body );
+
+		// Create a date for the request.
+		$date = \gmdate( 'D, d M Y H:i:s T' );
+
+		// Generate a signature that includes the digest.
+		$signature = Signature::generate_signature( 1, 'POST', 'https://example.org/wp-json/activitypub/1.0/inbox', $date, $digest );
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $body );
+		$request->set_header( 'Date', $date );
+		$request->set_header( 'Digest', $digest );
+		$request->set_header( 'Signature', $signature );
+		$request->set_header( 'Host', 'example.org' );
+
+		$this->assertTrue( Signature::verify_http_signature( $request ) );
+
+		// Create a request with a modified body but the original digest.
+		$request->set_body( '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Modified content."}}' );
+
+		// The verification should fail with a WP_Error.
+		$result = Signature::verify_http_signature( $request );
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_signature', $result->get_error_code() );
+		$this->assertEquals( 'Invalid Digest header', $result->get_error_message() );
+
+		// Request array without body.
+		$request = array(
+			'REQUEST_METHOD' => 'POST',
+			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
+			'HTTP_HOST'      => 'example.org',
+			'HTTP_DATE'      => $date,
+			'HTTP_DIGEST'    => $digest,
+			'HTTP_SIGNATURE' => $signature,
+		);
+
+		$this->assertTrue( Signature::verify_http_signature( $request ) );
+
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+	}
 }
