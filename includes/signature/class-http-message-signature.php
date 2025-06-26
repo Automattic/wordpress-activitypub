@@ -27,6 +27,7 @@ class Http_Message_Signature implements Signature_Standard {
 	 *
 	 * @param array  $args The request arguments.
 	 * @param string $url  The request URL.
+	 *
 	 * @return array Request arguments with signature headers.
 	 */
 	public function sign( $args, $url ) {

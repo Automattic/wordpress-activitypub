@@ -212,7 +212,7 @@ class Signature {
 	 * @return string The signature.
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
-		_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request()' );
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request()' );
 		$user = Actors::get_by_id( $user_id );
 		$key  = self::get_private_key_for( $user->get__id() );
 
@@ -380,7 +380,7 @@ class Signature {
 	 * @return string The digest.
 	 */
 	public static function generate_digest( $body ) {
-		_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request' );
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request' );
 
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return "SHA-256=$digest";
