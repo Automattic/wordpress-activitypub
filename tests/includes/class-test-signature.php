@@ -95,6 +95,15 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	}
 
 	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
+		$this->reset__SERVER();
+
+		parent::tear_down();
+	}
+
+	/**
 	 * Test handling of different public key formats.
 	 *
 	 * @covers ::get_remote_key
