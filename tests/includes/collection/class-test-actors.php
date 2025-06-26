@@ -10,7 +10,7 @@ namespace Activitypub\Tests\Collection;
 use Activitypub\Collection\Actors;
 
 /**
- * Test class for Activitypub Actors Collection.
+ * Class Test_Actors
  *
  * @coversDefaultClass \Activitypub\Collection\Actors
  */
@@ -41,7 +41,7 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test create method for Actors.
+	 * Test the create() method for remote actors.
 	 *
 	 * @covers ::create
 	 */
@@ -61,14 +61,14 @@ class Test_Actors extends \WP_UnitTestCase {
 		$this->assertIsInt( $post_id );
 		$this->assertGreaterThan( 0, $post_id );
 		$post = \get_post( $post_id );
-		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertInstanceOf( '\WP_Post', $post );
 		$this->assertEquals( 'https://remote.example.com/actor/jane-create', $post->guid );
 		// Clean up.
 		\wp_delete_post( $post_id, true );
 	}
 
 	/**
-	 * Test update method for Actors.
+	 * Test the update() method for remote actors.
 	 *
 	 * @covers ::update
 	 */
@@ -91,7 +91,7 @@ class Test_Actors extends \WP_UnitTestCase {
 		$update_result         = Actors::update( $post_id, $updated_actor );
 		$this->assertEquals( $post_id, $update_result );
 		$updated_post = \get_post( $post_id );
-		$this->assertInstanceOf( 'WP_Post', $updated_post );
+		$this->assertInstanceOf( '\WP_Post', $updated_post );
 		$actor_obj = Actors::get_actor( $updated_post );
 		$this->assertEquals( 'Jane Doe', $actor_obj->get_name() );
 		// Clean up.
@@ -99,7 +99,7 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test delete method for Actors.
+	 * Test the delete (wp_delete_post) operation for remote actors.
 	 *
 	 * @covers ::delete
 	 */
@@ -118,7 +118,7 @@ class Test_Actors extends \WP_UnitTestCase {
 		$post_id = Actors::create( $actor );
 		$this->assertIsInt( $post_id );
 		$delete_result = \wp_delete_post( $post_id, true );
-		$this->assertInstanceOf( 'WP_Post', $delete_result );
+		$this->assertInstanceOf( '\WP_Post', $delete_result );
 		$deleted_post = \get_post( $post_id );
 		$this->assertNull( $deleted_post );
 	}
