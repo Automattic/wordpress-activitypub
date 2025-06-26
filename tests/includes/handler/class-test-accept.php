@@ -1,6 +1,6 @@
 <?php
 /**
- * Test file for Accept handler.
+ * Unit tests for the Activitypub Accept handler.
  *
  * @package Activitypub
  */
@@ -12,7 +12,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 
 /**
- * Test class for Accept handler.
+ * Class Test_Accept
  *
  * @coversDefaultClass \Activitypub\Handler\Accept
  */

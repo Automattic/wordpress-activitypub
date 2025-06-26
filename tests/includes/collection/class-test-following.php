@@ -1,6 +1,6 @@
 <?php
 /**
- * Test file for Activitypub Following.
+ * Unit tests for the Activitypub Following collection.
  *
  * @package Activitypub
  */
@@ -11,14 +11,14 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 
 /**
- * Test class for Activitypub Following.
+ * Class Test_Following
  *
  * @coversDefaultClass \Activitypub\Collection\Following
  */
 class Test_Following extends \WP_UnitTestCase {
 
 	/**
-	 * Set up the test.
+	 * Set up the test environment.
 	 */
 	public function set_up() {
 		parent::set_up();
@@ -26,7 +26,7 @@ class Test_Following extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests accept method with valid follow request.
+	 * Test the accept() method with a valid follow request.
 	 *
 	 * @covers ::accept
 	 */
