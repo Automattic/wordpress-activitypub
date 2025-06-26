@@ -7,9 +7,6 @@
 
 namespace Activitypub\Tests\Rest;
 
-use Activitypub\Collection\Actors;
-use Activitypub\Signature;
-
 /**
  * Test class for Actors_Inbox_Controller.
  *
@@ -264,7 +261,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 			'pre_get_remote_metadata_by_actor',
 			function ( $json, $actor ) {
 				$user       = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
-				$public_key = Signature::get_public_key_for( $user->get__id() );
+				$public_key = \Activitypub\Signature::get_public_key_for( $user->get__id() );
 
 				// Return ActivityPub Profile with signature.
 				return array(
@@ -302,9 +299,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$activity = $activity->to_json();
 
 		// Generate_digest & generate_signature.
-		$digest    = Signature::generate_digest( $activity );
+		$digest    = \Activitypub\Signature::generate_digest( $activity );
 		$date      = gmdate( 'D, d M Y H:i:s T' );
-		$signature = Signature::generate_signature( self::$user_id, 'POST', $actor->get_inbox(), $date, $digest );
+		$signature = \Activitypub\Signature::generate_signature( self::$user_id, 'POST', $actor->get_inbox(), $date, $digest );
 
 		$this->assertMatchesRegularExpression(
 			'/keyId="' . preg_quote( $actor->get_id(), '/' ) . '#main-key",algorithm="rsa-sha256",headers="\(request-target\) host date digest",signature="[^"]*"/',
