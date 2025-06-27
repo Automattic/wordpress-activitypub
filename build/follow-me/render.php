@@ -24,7 +24,7 @@ $block = $block ?? null;
 $content = $content ?? '';
 
 // Get the user ID from the selected user attribute.
-$user_id = Blocks::get_user_id( $attributes['selectedUser'] ?? 'site' );
+$user_id = Blocks::get_user_id( $attributes['selectedUser'] ?? 'blog' );
 $actor   = Actors::get_by_id( $user_id );
 if ( is_wp_error( $actor ) ) {
 	return;
