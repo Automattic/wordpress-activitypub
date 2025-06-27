@@ -162,6 +162,17 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
+			'activitypub_auto_approve_reactions',
+			array(
+				'type'              => 'integer',
+				'description'       => \__( 'Auto approve Reactions.', 'activitypub' ),
+				'default'           => '0',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_relays',
 			array(
 				'type'              => 'array',
@@ -207,6 +218,16 @@ class Settings {
 			array(
 				'type'        => 'boolean',
 				'description' => \__( 'Require HTTP signature authentication.', 'activitypub' ),
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_rfc9421_signature',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Use RFC-9421 signature.',
 				'default'     => false,
 			)
 		);

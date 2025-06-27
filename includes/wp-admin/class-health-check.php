@@ -326,15 +326,27 @@ class Health_Check {
 			'private' => false,
 		);
 
-		$info['activitypub']['fields']['authorized_fetch'] = array(
-			'label'   => \__( 'Authorized Fetch', 'activitypub' ),
-			'value'   => \esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
+		$info['activitypub']['fields']['activitypub_outbox_purge_days'] = array(
+			'label'   => \__( 'Outbox Retention Period', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_outbox_purge_days', 180 ) ),
 			'private' => false,
 		);
 
 		$info['activitypub']['fields']['vary_header'] = array(
 			'label'   => \__( 'Vary Header', 'activitypub' ),
 			'value'   => \esc_attr( (int) \get_option( 'activitypub_vary_header', '1' ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['content_negotiation'] = array(
+			'label'   => \__( 'Content Negotiation', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_content_negotiation', '1' ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['authorized_fetch'] = array(
+			'label'   => \__( 'Authorized Fetch', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
 			'private' => false,
 		);
 
