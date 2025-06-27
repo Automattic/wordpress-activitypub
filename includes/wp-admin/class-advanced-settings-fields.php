@@ -70,6 +70,15 @@ class Advanced_Settings_Fields {
 			);
 		}
 
+		\add_settings_field(
+			'activitypub_rfc9421_signature',
+			\__( 'Modern Signature Format', 'activitypub' ),
+			array( self::class, 'render_rfc9421_signature_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_rfc9421_signature' )
+		);
+
 		if ( ! defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) ) {
 			\add_settings_field(
 				'activitypub_shared_inbox',
@@ -174,6 +183,24 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( '⚠ Secure mode does not hide the HTML representations of public posts and profiles. While HTML is a less consistent format (that potentially changes often) compared to first-class ActivityPub representations or the REST API, it still poses a potential risk for content scraping.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render RFC-9421 signature field.
+	 */
+	public static function render_rfc9421_signature_field() {
+		$value = \get_option( 'activitypub_rfc9421_signature', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_rfc9421_signature" name="activitypub_rfc9421_signature" value="1" <?php checked( '1', $value ); ?> />
+				<?php \esc_html_e( 'Use modern signature format for Fediverse communications.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Enables a newer standard (RFC-9421) for verifying your site&#8217;s identity when communicating with other Fediverse platforms. This alternative signature format may cause compatibility issues with platforms that do not support it. Keep disabled if you experience connection problems with certain Fediverse servers.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

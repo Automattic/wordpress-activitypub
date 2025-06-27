@@ -23,6 +23,57 @@ use Activitypub\Signature;
 class Draft_Cavage_Signature implements Signature_Standard {
 
 	/**
+	 * Generate Signature headers for an outgoing HTTP request.
+	 *
+	 * @param array  $args The request arguments.
+	 * @param string $url  The request URL.
+	 *
+	 * @return array Request arguments with signature headers.
+	 */
+	public function sign( $args, $url ) {
+		$url_parts = \wp_parse_url( $url );
+
+		$host = $url_parts['host'];
+		$path = '/';
+
+		// Add path.
+		if ( ! empty( $url_parts['path'] ) ) {
+			$path = $url_parts['path'];
+		}
+
+		// Add query.
+		if ( ! empty( $url_parts['query'] ) ) {
+			$path .= '?' . $url_parts['query'];
+		}
+
+		$http_method = \strtolower( $args['method'] );
+		$date        = $args['headers']['Date'];
+
+		if ( isset( $args['body'] ) ) {
+			$args['headers']['Digest'] = $this->generate_digest( $args['body'] );
+
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: {$args['headers']['Digest']}";
+			$headers_list  = '(request-target) host date digest';
+		} else {
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
+			$headers_list  = '(request-target) host date';
+		}
+
+		$signature = null;
+		\openssl_sign( $signed_string, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
+		$signature = \base64_encode( $signature );
+
+		$args['headers']['Signature'] = \sprintf(
+			'keyId="%s",algorithm="rsa-sha256",headers="%s",signature="%s"',
+			$args['key_id'],
+			$headers_list,
+			$signature
+		);
+
+		return $args;
+	}
+
+	/**
 	 * Verify the HTTP Signature against a request.
 	 *
 	 * @param array       $headers The HTTP headers.
@@ -65,27 +116,76 @@ class Draft_Cavage_Signature implements Signature_Standard {
 			}
 		}
 
-		return \openssl_verify( $signed_data, $parsed['signature'], $public_key, $algorithm ) > 0;
+		$verified = \openssl_verify( $signed_data, $parsed['signature'], $public_key, $algorithm ) > 0;
+		if ( ! $verified ) {
+			return new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 401 ) );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Generates the digest for an HTTP Request.
+	 *
+	 * @param string $body The body of the request.
+	 *
+	 * @return string The digest.
+	 */
+	public function generate_digest( $body ) {
+		return 'sha256=' . \base64_encode( \hash( 'sha256', $body, true ) );
 	}
 
 	/**
 	 * Gets the signature algorithm from the signature header.
 	 *
-	 * @param array $signature_block The signature block.
+	 * @param array    $signature_block The signature block.
+	 * @param resource $public_key      The public key resource.
 	 *
-	 * @return string|bool The signature algorithm or false if not found.
+	 * @return int|\WP_Error The signature algorithm or WP_Error if not found.
 	 */
-	private function get_signature_algorithm( $signature_block ) {
+	private function get_signature_algorithm( $signature_block, $public_key ) {
 		if ( ! empty( $signature_block['algorithm'] ) ) {
 			switch ( $signature_block['algorithm'] ) {
 				case 'hs2019':
+					$details = \openssl_pkey_get_details( $public_key );
+
+					switch ( $details['type'] ?? 0 ) {
+						case \OPENSSL_KEYTYPE_RSA:
+							$bits = $details['bits'] ?? 2048;
+
+							if ( $bits >= 4 * KB_IN_BYTES ) {
+								return \OPENSSL_ALGO_SHA512;
+							} elseif ( $bits >= 3 * KB_IN_BYTES ) {
+								return \OPENSSL_ALGO_SHA384;
+							} else {
+								return \OPENSSL_ALGO_SHA256;
+							}
+
+						case \OPENSSL_KEYTYPE_EC:
+							$curve_name = $details['ec']['curve_name'] ?? '';
+
+							// 3 levels switch statements are fine, right?
+							switch ( $curve_name ) {
+								case 'prime256v1':
+								case 'secp256r1':
+									return \OPENSSL_ALGO_SHA256;
+								case 'secp384r1':
+									return \OPENSSL_ALGO_SHA384;
+								case 'secp521r1':
+									return \OPENSSL_ALGO_SHA512;
+							}
+					}
+
+					return new \WP_Error( 'unsupported_key_type', 'Unsupported key type (only RSA and EC keys are supported).', array( 'status' => 401 ) );
+
 				case 'rsa-sha512':
-					return 'sha512';
+					return \OPENSSL_ALGO_SHA512;
 				default:
-					return 'sha256';
+					return \OPENSSL_ALGO_SHA256;
 			}
 		}
-		return false;
+
+		return new \WP_Error( 'unsupported_key_type', 'Unsupported signature algorithm (only rsa-sha256, rsa-sha512, and hs2019 are supported).', array( 'status' => 401 ) );
 	}
 
 	/**

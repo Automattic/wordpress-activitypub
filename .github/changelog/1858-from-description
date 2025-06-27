@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Optional support for RFC-9421 style signatures for outgoing activities, including retry with Draft-Cavage-style signature.

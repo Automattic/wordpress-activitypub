@@ -393,9 +393,12 @@ class Comment {
 			return $comment_link;
 		}
 
-		$public_comment_link = self::get_source_url( $comment->comment_ID );
+		$remote_comment_link = null;
+		if ( 'comment' === $comment->comment_type ) {
+			$remote_comment_link = self::get_source_url( $comment->comment_ID );
+		}
 
-		return $public_comment_link ?? $comment_link;
+		return $remote_comment_link ?? $comment_link;
 	}
 
 

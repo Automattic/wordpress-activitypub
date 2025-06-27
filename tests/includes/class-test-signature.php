@@ -76,6 +76,7 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 4wIDAQAB
 -----END PUBLIC KEY-----
 ';
+
 	/**
 	 * Store test keys for HTTP signatures.
 	 *
@@ -298,49 +299,47 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
-	 * Test full signature verification with hs2019 algorithm.
+	 * Data provider for EC curve tests.
 	 *
-	 * @covers ::verify_http_signature
-	 * @covers ::get_signature_algorithm
-	 * @covers ::parse_signature_header
-	 * @covers ::get_signed_data
+	 * @return array[][] Test data.
 	 */
-	public function test_verify_signature_with_hs2019() {
-		// Mock a request with hs2019 algorithm signature.
-		$key = openssl_pkey_new(
-			array(
-				'digest_alg'       => 'sha512',
-				'private_key_bits' => 2048,
-				'private_key_type' => OPENSSL_KEYTYPE_RSA,
-			)
+	public function provide_ec_curves() {
+		return array(
+			'prime256v1' => array( 'prime256v1', \OPENSSL_ALGO_SHA256 ), // aka secp256r1.
+			'secp384r1'  => array( 'secp384r1', \OPENSSL_ALGO_SHA384 ),
+			'secp521r1'  => array( 'secp521r1', \OPENSSL_ALGO_SHA512 ),
 		);
+	}
 
-		// Extract the public key.
-		$key_details = openssl_pkey_get_details( $key );
-		$public_key  = $key_details['key'];
+	/**
+	 * Test valid hs2019 signatures for EC curves.
+	 *
+	 * @dataProvider provide_ec_curves
+	 * @param string $curve The EC curve name.
+	 * @param int    $algo  The OpenSSL algorithm constant.
+	 */
+	public function test_valid_hs2019_signatures_for_ec_curves( $curve, $algo ) {
+		$public_key  = self::$test_keys['ec'][ $curve ]['public_key'];
+		$private_key = \openssl_pkey_get_private( self::$test_keys['ec'][ $curve ]['private_key'] );
 
-		// Create a string to sign.
-		$date           = gmdate( 'D, d M Y H:i:s T' );
+		$date           = \gmdate( 'D, d M Y H:i:s T' );
 		$string_to_sign = "(request-target): post /wp-json/activitypub/1.0/inbox\nhost: example.org\ndate: {$date}";
 
-		// Sign the string.
 		$signature = '';
-		openssl_sign( $string_to_sign, $signature, $key, OPENSSL_ALGO_SHA512 );
+		\openssl_sign( $string_to_sign, $signature, $private_key, $algo );
 
-		// Create the mock request as a $_SERVER-like array.
-		// This will be passed through format_server_request().
 		$request = array(
 			'REQUEST_METHOD' => 'POST',
 			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
 			'HTTP_HOST'      => 'example.org',
 			'HTTP_DATE'      => $date,
-			'HTTP_SIGNATURE' => sprintf(
+			'HTTP_SIGNATURE' => \sprintf(
 				'keyId="https://example.com/users/test#main-key",algorithm="hs2019",headers="(request-target) host date",signature="%s"',
-				base64_encode( $signature ) // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+				\base64_encode( $signature )
 			),
 		);
 
-		// Add filter to mock the remote key retrieval.
+		// Mock the remote key retrieval for this curve.
 		\add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function () use ( $public_key ) {
@@ -356,10 +355,194 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			}
 		);
 
-		// Verify the signature.
-		$this->assertTrue( Signature::verify_http_signature( $request ) );
+		$this->assertTrue( Signature::verify_http_signature( $request ), "Valid hs2019 signature for curve {$curve} should verify" );
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+	}
 
-		// Remove the filter.
+	/**
+	 * Test invalid hs2019 signatures for EC curves.
+	 */
+	public function test_invalid_hs2019_signatures_for_ec_curves() {
+		$public_key  = self::$test_keys['ec']['prime256v1']['public_key'];
+		$private_key = \openssl_pkey_get_private( self::$test_keys['ec']['prime256v1']['private_key'] );
+
+		$date           = \gmdate( 'D, d M Y H:i:s T' );
+		$string_to_sign = "(request-target): post /wp-json/activitypub/1.0/inbox\nhost: example.org\ndate: {$date}";
+
+		$signature = '';
+		\openssl_sign( $string_to_sign, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
+
+		// Create request with invalid signature (reversed).
+		$request = array(
+			'REQUEST_METHOD' => 'POST',
+			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
+			'HTTP_HOST'      => 'example.org',
+			'HTTP_DATE'      => $date,
+			'HTTP_SIGNATURE' => \sprintf(
+				'keyId="https://example.com/users/test#main-key",algorithm="hs2019",headers="(request-target) host date",signature="%s"',
+				\base64_encode( \strrev( $signature ) )
+			),
+		);
+
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () use ( $public_key ) {
+				return array(
+					'name'      => 'Test User',
+					'url'       => 'https://example.com/users/test',
+					'publicKey' => array(
+						'id'           => 'https://example.com/users/test#main-key',
+						'owner'        => 'https://example.com/users/test',
+						'publicKeyPem' => $public_key,
+					),
+				);
+			}
+		);
+		$this->assertWPError( Signature::verify_http_signature( $request ), 'Invalid hs2019 signature for curve prime256v1 should fail' );
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+	}
+
+	/**
+	 * Data provider for RSA key sizes.
+	 *
+	 * @return array[][] Test data.
+	 */
+	public function provide_rsa_sizes() {
+		return array(
+			'RSA 2048' => array( 2048, \OPENSSL_ALGO_SHA256 ),
+			'RSA 3072' => array( 3072, \OPENSSL_ALGO_SHA384 ),
+			'RSA 4096' => array( 4096, \OPENSSL_ALGO_SHA512 ),
+		);
+	}
+
+	/**
+	 * Test valid hs2019 signatures for RSA keys.
+	 *
+	 * @dataProvider provide_rsa_sizes
+	 * @param int $bits The RSA key size in bits.
+	 * @param int $algo The OpenSSL algorithm constant.
+	 */
+	public function test_valid_hs2019_signatures_for_rsa_sizes( $bits, $algo ) {
+		$public_key  = self::$test_keys['rsa'][ $bits ]['public_key'];
+		$private_key = \openssl_pkey_get_private( self::$test_keys['rsa'][ $bits ]['private_key'] );
+
+		$date           = \gmdate( 'D, d M Y H:i:s T' );
+		$string_to_sign = "(request-target): post /wp-json/activitypub/1.0/inbox\nhost: example.org\ndate: {$date}";
+
+		$signature = '';
+		\openssl_sign( $string_to_sign, $signature, $private_key, $algo );
+
+		$request = array(
+			'REQUEST_METHOD' => 'POST',
+			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
+			'HTTP_HOST'      => 'example.org',
+			'HTTP_DATE'      => $date,
+			'HTTP_SIGNATURE' => \sprintf(
+				'keyId="https://example.com/users/test#main-key",algorithm="hs2019",headers="(request-target) host date",signature="%s"',
+				\base64_encode( $signature )
+			),
+		);
+
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () use ( $public_key ) {
+				return array(
+					'name'      => 'Test User',
+					'url'       => 'https://example.com/users/test',
+					'publicKey' => array(
+						'id'           => 'https://example.com/users/test#main-key',
+						'owner'        => 'https://example.com/users/test',
+						'publicKeyPem' => $public_key,
+					),
+				);
+			}
+		);
+		$this->assertTrue( Signature::verify_http_signature( $request ), "Valid hs2019 signature for RSA {$bits} bits should verify" );
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+	}
+
+	/**
+	 * Test invalid hs2019 signatures for RSA keys.
+	 */
+	public function test_invalid_hs2019_signatures_for_rsa_sizes() {
+		$public_key  = self::$test_keys['rsa'][2048]['public_key'];
+		$private_key = \openssl_pkey_get_private( self::$test_keys['rsa'][2048]['private_key'] );
+
+		$date           = \gmdate( 'D, d M Y H:i:s T' );
+		$string_to_sign = "(request-target): post /wp-json/activitypub/1.0/inbox\nhost: example.org\ndate: {$date}";
+
+		$signature = '';
+		\openssl_sign( $string_to_sign, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
+
+		// Create request with invalid signature (reversed).
+		$request = array(
+			'REQUEST_METHOD' => 'POST',
+			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
+			'HTTP_HOST'      => 'example.org',
+			'HTTP_DATE'      => $date,
+			'HTTP_SIGNATURE' => \sprintf(
+				'keyId="https://example.com/users/test#main-key",algorithm="hs2019",headers="(request-target) host date",signature="%s"',
+				\base64_encode( \strrev( $signature ) )
+			),
+		);
+
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () use ( $public_key ) {
+				return array(
+					'name'      => 'Test User',
+					'url'       => 'https://example.com/users/test',
+					'publicKey' => array(
+						'id'           => 'https://example.com/users/test#main-key',
+						'owner'        => 'https://example.com/users/test',
+						'publicKeyPem' => $public_key,
+					),
+				);
+			}
+		);
+		$this->assertWPError( Signature::verify_http_signature( $request ), 'Invalid hs2019 signature for RSA 2048 bits should fail' );
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+	}
+
+	/**
+	 * Test unsupported EC curve for hs2019.
+	 */
+	public function test_unsupported_ec_curve_for_hs2019() {
+		$public_key  = self::$test_keys['ec']['secp256k1']['public_key'];
+		$private_key = \openssl_pkey_get_private( self::$test_keys['ec']['secp256k1']['private_key'] );
+		$algo        = self::$test_keys['ec']['secp256k1']['algo'];
+
+		$date           = \gmdate( 'D, d M Y H:i:s T' );
+		$string_to_sign = "(request-target): post /wp-json/activitypub/1.0/inbox\nhost: example.org\ndate: {$date}";
+
+		$signature = '';
+		\openssl_sign( $string_to_sign, $signature, $private_key, $algo );
+
+		$request = array(
+			'REQUEST_METHOD' => 'POST',
+			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
+			'HTTP_HOST'      => 'example.org',
+			'HTTP_DATE'      => $date,
+			'HTTP_SIGNATURE' => \sprintf(
+				'keyId="https://example.com/users/test#main-key",algorithm="hs2019",headers="(request-target) host date",signature="%s"',
+				\base64_encode( $signature )
+			),
+		);
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () use ( $public_key ) {
+				return array(
+					'name'      => 'Test User',
+					'url'       => 'https://example.com/users/test',
+					'publicKey' => array(
+						'id'           => 'https://example.com/users/test#main-key',
+						'owner'        => 'https://example.com/users/test',
+						'publicKeyPem' => $public_key,
+					),
+				);
+			}
+		);
+		$this->assertWPError( Signature::verify_http_signature( $request ), 'Unsupported EC curve secp256k1 should fail' );
 		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
 
@@ -393,12 +576,14 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
 
 		// Generate a digest for the body.
+		$this->setExpectedDeprecated( 'Activitypub\Signature::generate_digest' );
 		$digest = Signature::generate_digest( $body );
 
 		// Create a date for the request.
 		$date = \gmdate( 'D, d M Y H:i:s T' );
 
 		// Generate a signature that includes the digest.
+		$this->setExpectedDeprecated( 'Activitypub\Signature::generate_signature' );
 		$signature = Signature::generate_signature( 1, 'POST', 'https://example.org/wp-json/activitypub/1.0/inbox', $date, $digest );
 
 		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
@@ -466,42 +651,20 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			}
 		);
 
-		// Create a request body.
-		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
-
-		// Generate a digest for the body.
-		$digest = 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
-
-		// Create a date for the request.
-		$date = \gmdate( 'D, d M Y H:i:s T' );
-
-		// Create the signature input components.
-		$components    = array( '@method', '@target-uri', '@authority', 'content-digest', 'date' );
-		$params_string = \sprintf(
-			'(%s);created=%d;keyid="https://example.org/author/admin#main-key";alg="rsa-v1_5-sha256"',
-			'"' . \implode( '" "', $components ) . '"',
-			\time()
+		$signature = new Signature\Http_Message_Signature();
+		$args      = $signature->sign(
+			array(
+				'method'      => 'POST',
+				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
+				'headers'     => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host' => 'example.org',
+				),
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => \openssl_pkey_get_private( $keys['private_key'] ),
+			),
+			'https://example.org/wp-json/activitypub/1.0/inbox'
 		);
-
-		// Create the signature input header value (includes the label).
-		$signature_input = "sig1=$params_string";
-
-		// Generate a signature using the RFC-9421 format.
-		$signature_base  = "\"@method\": POST\n";
-		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/inbox\n";
-		$signature_base .= "\"@authority\": example.org\n";
-		$signature_base .= "\"content-digest\": $digest\n";
-		$signature_base .= "\"date\": $date\n";
-		$signature_base .= "\"@signature-params\": $params_string";
-
-		// Sign the signature base.
-		$private_key     = \openssl_pkey_get_private( $keys['private_key'] );
-		$signature_value = '';
-		\openssl_sign( $signature_base, $signature_value, $private_key, \OPENSSL_ALGO_SHA256 );
-		$signature_value = \base64_encode( $signature_value );
-
-		// Create the signature header.
-		$signature_header = "sig1=:$signature_value:";
 
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
@@ -510,12 +673,8 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		// Create a REST request with RFC-9421 signature headers.
 		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$request->set_body( $body );
-		$request->set_header( 'Date', $date );
-		$request->set_header( 'Content-Digest', $digest );
-		$request->set_header( 'Host', 'example.org' );
-		$request->set_header( 'Signature-Input', $signature_input );
-		$request->set_header( 'Signature', $signature_header );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
 
 		// The verification should succeed.
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
@@ -533,10 +692,10 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			'REQUEST_METHOD'       => 'POST',
 			'REQUEST_URI'          => '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox',
 			'HTTP_HOST'            => 'example.org',
-			'HTTP_DATE'            => $date,
-			'HTTP_CONTENT_DIGEST'  => $digest,
-			'HTTP_SIGNATURE_INPUT' => $signature_input,
-			'HTTP_SIGNATURE'       => $signature_header,
+			'HTTP_DATE'            => $args['headers']['Date'],
+			'HTTP_CONTENT_DIGEST'  => $args['headers']['Content-Digest'],
+			'HTTP_SIGNATURE_INPUT' => $args['headers']['Signature-Input'],
+			'HTTP_SIGNATURE'       => $args['headers']['Signature'],
 		);
 
 		// The verification should succeed.

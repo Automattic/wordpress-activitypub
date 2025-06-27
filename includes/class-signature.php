@@ -180,7 +180,43 @@ class Signature {
 	}
 
 	/**
+	 * Sign an HTTP Request.
+	 *
+	 * @param array  $args An array of HTTP request arguments.
+	 * @param string $url  The request URL.
+	 *
+	 * @return array Request arguments with signature headers.
+	 */
+	public static function sign_request( $args, $url ) {
+		// Bail if there's nothing to sign with.
+		if ( ! isset( $args['key_id'], $args['private_key'] ) ) {
+			return $args;
+		}
+
+		$args = \wp_parse_args(
+			$args,
+			array(
+				'method'  => 'GET',
+				'headers' => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+				),
+			)
+		);
+
+		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) ) {
+			$signature = new Http_Message_Signature();
+			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
+		} else {
+			$signature = new Draft_Cavage_Signature();
+		}
+
+		return $signature->sign( $args, $url );
+	}
+
+	/**
 	 * Generates the Signature for an HTTP Request.
+	 *
+	 * @deprecated unreleased Use {@see Signature::sign_request()}.
 	 *
 	 * @param int    $user_id     The WordPress User ID.
 	 * @param string $http_method The HTTP method.
@@ -191,6 +227,8 @@ class Signature {
 	 * @return string The signature.
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request()' );
+
 		$user = Actors::get_by_id( $user_id );
 		$key  = self::get_private_key_for( $user->get__id() );
 
@@ -285,6 +323,29 @@ class Signature {
 	}
 
 	/**
+	 * If a request with RFC-9421 signature fails, we try again with the Draft Cavage signature.
+	 *
+	 * @param array  $response    HTTP response.
+	 * @param array  $parsed_args HTTP request arguments.
+	 * @param string $url         The request URL.
+	 *
+	 * @return array The HTTP response.
+	 */
+	public static function maybe_double_knock( $response, $parsed_args, $url ) {
+		// Remove this filter to prevent infinite recursion.
+		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
+
+		if ( 401 === wp_remote_retrieve_response_code( $response ) ) {
+			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
+
+			$parsed_args = ( new Draft_Cavage_Signature() )->sign( $parsed_args, $url );
+			$response    = \wp_remote_request( $url, $parsed_args );
+		}
+
+		return $response;
+	}
+
+	/**
 	 * Gets the signature algorithm from the signature header.
 	 *
 	 * @param array $signature_block The signature block.
@@ -328,11 +389,15 @@ class Signature {
 	/**
 	 * Generates the digest for an HTTP Request.
 	 *
+	 * @deprecated unreleased Use {@see Signature::sign_request()}.
+	 *
 	 * @param string $body The body of the request.
 	 *
 	 * @return string The digest.
 	 */
 	public static function generate_digest( $body ) {
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request' );
+
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return "SHA-256=$digest";
 	}
