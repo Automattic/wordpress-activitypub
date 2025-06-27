@@ -205,7 +205,7 @@ class Actors {
 			case 'http':
 			case 'https':
 				// Check locally stored remote Actor.
-				$post = self::get_remote_by_uri( $uri, true );
+				$post = self::get_remote_by_uri( $uri );
 
 				if ( ! \is_wp_error( $post ) ) {
 					return self::get_actor( $post );
@@ -410,7 +410,7 @@ class Actors {
 			$actor = Actor::init_from_array( $actor );
 		}
 
-		$post = self::get_remote_by_uri( $actor->get_id(), true );
+		$post = self::get_remote_by_uri( $actor->get_id() );
 
 		if ( ! \is_wp_error( $post ) ) {
 			return self::update( $post, $actor );
