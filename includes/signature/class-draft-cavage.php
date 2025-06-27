@@ -20,7 +20,7 @@ use Activitypub\Signature;
  *
  * @see https://tools.ietf.org/html/draft-cavage-http-signatures-12
  */
-class Draft_Cavage_Signature implements Signature_Standard {
+class Draft_Cavage implements Http_Signature {
 
 	/**
 	 * Generate Signature headers for an outgoing HTTP request.

@@ -8,8 +8,8 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Signature\Draft_Cavage_Signature;
-use Activitypub\Signature\Http_Message_Signature;
+use Activitypub\Signature\Draft_Cavage;
+use Activitypub\Signature\Http_Message;
 
 /**
  * ActivityPub Signature Class.
@@ -204,10 +204,10 @@ class Signature {
 		);
 
 		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) ) {
-			$signature = new Http_Message_Signature();
+			$signature = new Http_Message();
 			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 		} else {
-			$signature = new Draft_Cavage_Signature();
+			$signature = new Draft_Cavage();
 		}
 
 		return $signature->sign( $args, $url );
@@ -286,7 +286,7 @@ class Signature {
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Draft_Cavage_Signature();
+		$signature = isset( $headers['signature_input'] ) ? new Http_Message() : new Draft_Cavage();
 
 		return $signature->verify( $headers, $body ?? null );
 	}
@@ -338,7 +338,7 @@ class Signature {
 		if ( 401 === wp_remote_retrieve_response_code( $response ) ) {
 			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
 
-			$parsed_args = ( new Draft_Cavage_Signature() )->sign( $parsed_args, $url );
+			$parsed_args = ( new Draft_Cavage() )->sign( $parsed_args, $url );
 			$response    = \wp_remote_request( $url, $parsed_args );
 		}
 
