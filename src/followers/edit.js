@@ -160,7 +160,7 @@ function Followers( {
 	setPage: passedSetPage,
 	followerData = false,
 } ) {
-	const userId = selectedUser === 'site' ? 0 : selectedUser;
+	const userId = selectedUser === 'blog' ? 0 : selectedUser;
 	const [ followers, setFollowers ] = useState( [] );
 	const [ pages, setPages ] = useState( 0 );
 	const [ total, setTotal ] = useState( 0 );

@@ -141,7 +141,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	const { selectedUser, className = 'is-style-default' } = attributes;
 	const isInheritMode = selectedUser === 'inherit';
 	const [ profile, setProfile ] = useState( getNormalizedProfile( DEFAULT_PROFILE_DATA ) );
-	const userId = selectedUser === 'site' ? 0 : selectedUser;
+	const userId = selectedUser === 'blog' ? 0 : selectedUser;
 
 	const TEMPLATE = [ [ 'core/button', { text: __( 'Follow', 'activitypub' ) } ] ];
 

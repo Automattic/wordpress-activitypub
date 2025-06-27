@@ -11,7 +11,7 @@
 
 namespace Activitypub\Signature;
 
-use Activitypub\Signature;
+use Activitypub\Collection\Actors;
 
 /**
  * Class Draft_Cavage.
@@ -87,7 +87,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 
 		$header     = $headers['signature'] ?? $headers['authorization'];
 		$parsed     = $this->parse_signature_header( $header[0] );
-		$public_key = Signature::get_remote_key( $parsed['keyId'] );
+		$public_key = Actors::get_remote_key( $parsed['keyId'] );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}
