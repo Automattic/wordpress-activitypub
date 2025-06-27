@@ -8,8 +8,8 @@
 namespace Activitypub\Model;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
-use Activitypub\Signature;
 
 use function Activitypub\is_blog_public;
 use function Activitypub\get_rest_url_by_path;
@@ -228,7 +228,7 @@ class User extends Actor {
 		return array(
 			'id'           => $this->get_id() . '#main-key',
 			'owner'        => $this->get_id(),
-			'publicKeyPem' => Signature::get_public_key_for( $this->get__id() ),
+			'publicKeyPem' => Actors::get_public_key( $this->get__id() ),
 		);
 	}
 
