@@ -157,6 +157,21 @@ class Application_Controller extends \WP_REST_Controller {
 				'indexable'                 => array(
 					'type' => 'boolean',
 				),
+				'implements'                => array(
+					'type'  => 'array',
+					'items' => array(
+						'type'       => 'object',
+						'properties' => array(
+							'href' => array(
+								'type'   => 'string',
+								'format' => 'uri',
+							),
+							'name' => array(
+								'type' => 'string',
+							),
+						),
+					),
+				),
 				'webfinger'                 => array(
 					'type' => 'string',
 				),

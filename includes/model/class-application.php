@@ -46,6 +46,20 @@ class Application extends Actor {
 	protected $indexable = false;
 
 	/**
+	 * List of software capabilities implemented by the Application.
+	 *
+	 * @see https://codeberg.org/silverpill/feps/src/branch/main/844e/fep-844e.md
+	 *
+	 * @var array
+	 */
+	protected $implements = array(
+		array(
+			'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
+			'name' => 'RFC-9421: HTTP Message Signatures',
+		),
+	);
+
+	/**
 	 * Returns the type of the object.
 	 *
 	 * @return string The type of the object.
