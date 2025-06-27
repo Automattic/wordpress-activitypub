@@ -42,13 +42,9 @@ class Following {
 			return new \WP_Error( 'activitypub_remote_actor_not_found', 'Remote actor not found' );
 		}
 
-		$following = \get_post_meta( $post->ID, self::FOLLOWING_META_KEY, false );
-
-		if ( ! \is_array( $following ) ) {
-			$following = array();
-		}
-
-		$pending = \get_post_meta( $post->ID, self::PENDING_META_KEY, false );
+		$all_meta  = get_post_meta( $post->ID );
+		$following = $all_meta[ self::FOLLOWING_META_KEY ] ?? array();
+		$pending   = $all_meta[ self::PENDING_META_KEY ] ?? array();
 
 		if ( ! \in_array( (string) $user_id, $following, true ) && ! \in_array( (string) $user_id, $pending, true ) ) {
 			\add_post_meta( $post->ID, self::PENDING_META_KEY, (string) $user_id );
