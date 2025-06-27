@@ -13,7 +13,7 @@ use Activitypub\Rest\Server;
  * Test class for Server.
  *
  * @group rest
- * @coversDefaultClass Server
+ * @coversDefaultClass \Activitypub\Rest\Server
  */
 class Test_Server extends \WP_Test_REST_TestCase {
 	/**

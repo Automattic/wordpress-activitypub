@@ -8,16 +8,14 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Handler\Follow;
-use Activitypub\Model\Follower;
 use Activitypub\Collection\Outbox;
-use WP_UnitTestCase;
 
 /**
  * Test class for Follow handler.
  *
  * @coversDefaultClass \Activitypub\Handler\Follow
  */
-class Test_Follow extends WP_UnitTestCase {
+class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test user ID.
 	 *
@@ -79,13 +77,13 @@ class Test_Follow extends WP_UnitTestCase {
 		);
 		$this->assertEmpty( $outbox_posts, 'No outbox entry should be created for WP_Error follower' );
 
-		// Test with valid follower.
-		$follower = new Follower();
-		$follower->set_actor( $actor );
-		$follower->set_type( 'Person' );
-		$follower->set_inbox( 'https://example.com/inbox' );
+		$remote_actor        = new \stdClass();
+		$remote_actor->actor = $actor;
+		$remote_actor->type  = 'Person';
+		$remote_actor->inbox = 'https://example.com/inbox';
+		$remote_actor        = new \WP_Post( $remote_actor );
 
-		Follow::queue_accept( $actor, $activity_object, self::$user_id, $follower );
+		Follow::queue_accept( $actor, $activity_object, self::$user_id, $remote_actor );
 
 		$outbox_posts = get_posts(
 			array(

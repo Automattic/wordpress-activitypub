@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added support for the WP Rest Cache plugin to help with caching REST API responses.

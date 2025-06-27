@@ -393,9 +393,12 @@ class Comment {
 			return $comment_link;
 		}
 
-		$public_comment_link = self::get_source_url( $comment->comment_ID );
+		$remote_comment_link = null;
+		if ( 'comment' === $comment->comment_type ) {
+			$remote_comment_link = self::get_source_url( $comment->comment_ID );
+		}
 
-		return $public_comment_link ?? $comment_link;
+		return $remote_comment_link ?? $comment_link;
 	}
 
 
@@ -671,6 +674,14 @@ class Comment {
 	public static function pre_comment_approved( $approved, $comment_data ) {
 		if ( $approved || \is_wp_error( $approved ) ) {
 			return $approved;
+		}
+
+		// Maybe auto-approve likes and reposts.
+		if (
+			\in_array( $comment_data['comment_type'], self::get_comment_type_slugs(), true ) &&
+			'1' === \get_option( 'activitypub_auto_approve_reactions' )
+		) {
+			return 1;
 		}
 
 		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {

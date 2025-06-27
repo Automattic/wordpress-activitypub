@@ -7,17 +7,17 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Handler\Update;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Model\Follower;
-use WP_UnitTestCase;
 
 /**
  * Update Handler Test Class.
  *
  * @coversDefaultClass \Activitypub\Handler\Update
  */
-class Test_Update extends WP_UnitTestCase {
+class Test_Update extends \WP_UnitTestCase {
 
 	/**
 	 * User ID.
@@ -77,15 +77,15 @@ class Test_Update extends WP_UnitTestCase {
 		Update::update_actor( $activity );
 
 		// Check that the follower was correctly updated.
-		$follower = Followers::get_follower_by_actor( $actor_url );
+		$follower = Actors::get_remote_by_uri( $actor_url );
 
-		$this->assertNull( $follower );
+		$this->assertNotNull( $follower );
 
-		$follower_initial = Followers::add_follower( $this->user_id, $actor_url );
-		$follower_from_db = Followers::get_follower_by_actor( $actor_url );
+		$follower_initial = Actors::get_actor( Followers::add_follower( $this->user_id, $actor_url ) );
+		$follower_from_db = Actors::get_actor( Actors::get_remote_by_uri( $actor_url ) );
 
-		$this->assertInstanceOf( Follower::class, $follower_initial );
-		$this->assertInstanceOf( Follower::class, $follower_from_db );
+		$this->assertInstanceOf( Actor::class, $follower_initial );
+		$this->assertInstanceOf( Actor::class, $follower_from_db );
 		$this->assertEquals( $follower_initial->get_id(), $follower_from_db->get_id() );
 		$this->assertEquals( 'Test User', $follower_from_db->get_name() );
 
@@ -105,14 +105,17 @@ class Test_Update extends WP_UnitTestCase {
 
 		Update::update_actor( $activity );
 
-		$follower = Followers::get_follower_by_actor( $actor_url );
+		\clean_post_cache( $follower_initial->get_id() );
 
-		$this->assertInstanceOf( Follower::class, $follower );
+		$follower = Actors::get_remote_by_uri( $actor_url );
+		$follower = Actors::get_actor( $follower );
+
+		$this->assertInstanceOf( Actor::class, $follower );
 		$this->assertEquals( $activity['object']['name'], $follower->get_name() );
 		$this->assertEquals( $activity['object']['preferredUsername'], $follower->get_preferred_username() );
 		$this->assertEquals( $activity['object']['inbox'], $follower->get_inbox() );
 
-		remove_filter( 'pre_http_request', $fake_request, 10 );
+		\remove_filter( 'pre_http_request', $fake_request, 10 );
 	}
 
 	/**
@@ -140,8 +143,8 @@ class Test_Update extends WP_UnitTestCase {
 		Update::update_actor( $activity );
 
 		// Check that no follower was created.
-		$follower = Followers::get_follower_by_actor( 'https://example.com/nonexistent' );
-		$this->assertNull( $follower );
+		$follower = Actors::get_remote_by_uri( 'https://example.com/nonexistent' );
+		$this->assertWPError( $follower );
 
 		remove_filter( 'pre_http_request', $fake_request, 10 );
 	}
