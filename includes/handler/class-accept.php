@@ -7,6 +7,7 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Notification;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
@@ -60,6 +61,15 @@ class Accept {
 		}
 
 		Following::accept( $actor_post, $user_id );
+
+		// Send notification.
+		$notification = new Notification(
+			'accept',
+			$actor_post->guid,
+			$accept,
+			$user_id
+		);
+		$notification->send();
 	}
 
 	/**
