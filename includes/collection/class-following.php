@@ -79,4 +79,25 @@ class Following {
 
 		return $post;
 	}
+
+	/**
+	 * Reject a follow request.
+	 *
+	 * @param \WP_Post|int $post    The ID of the remote Actor.
+	 * @param int          $user_id The ID of the WordPress User.
+	 *
+	 * @return \WP_Post|\WP_Error The ID of the Actor or a WP_Error.
+	 */
+	public static function reject( $post, $user_id ) {
+		$post = \get_post( $post );
+
+		if ( ! $post ) {
+			return new \WP_Error( 'activitypub_remote_actor_not_found', 'Remote actor not found' );
+		}
+
+		\delete_post_meta( $post->ID, self::PENDING_META_KEY, $user_id );
+		\delete_post_meta( $post->ID, self::FOLLOWING_META_KEY, $user_id );
+
+		return $post;
+	}
 }
