@@ -60,6 +60,15 @@ class Accept {
 		}
 
 		Following::accept( $actor_post, $user_id );
+
+		// Send notification.
+		$notification = new Notification(
+			'accept',
+			$actor_post->guid,
+			$accept,
+			$user_id
+		);
+		$notification->send();
 	}
 
 	/**
