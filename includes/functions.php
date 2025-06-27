@@ -1529,28 +1529,34 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 /**
  * Follow a user.
  *
- * @param string $actor   The Actor URL.
- * @param int    $user_id The ID of the WordPress User.
+ * @param string $remote_actor The Actor URL.
+ * @param int    $user_id      The ID of the WordPress User.
  *
  * @return int|\WP_Error The ID of the Actor or a WP_Error.
  */
-function follow( $actor, $user_id ) {
-	$post = Actors::lookup_remote_by_uri( $actor );
+function follow( $remote_actor, $user_id ) {
+	$remote_actor_post = Actors::lookup_remote_by_uri( $remote_actor );
 
-	if ( \is_wp_error( $post ) ) {
-		return $post;
+	if ( \is_wp_error( $remote_actor_post ) ) {
+		return $remote_actor_post;
 	}
 
-	$result = Following::follow( $post, $user_id );
+	$actor = Actors::get_by_id( $user_id );
+
+	if ( \is_wp_error( $actor ) ) {
+		return $actor;
+	}
+
+	$result = Following::follow( $remote_actor_post, $user_id );
 	if ( \is_wp_error( $result ) ) {
 		return $result;
 	}
 
 	$follow = new Activity();
 	$follow->set_type( 'Follow' );
-	$follow->set_actor( $post->guid );
-	$follow->set_object( $actor );
-	$follow->set_to( array( $actor ) );
+	$follow->set_actor( $actor->get_id() );
+	$follow->set_object( $remote_actor );
+	$follow->set_to( array( $remote_actor ) );
 
 	return add_to_outbox( $follow );
 }

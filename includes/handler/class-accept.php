@@ -9,6 +9,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Outbox;
 
 use function Activitypub\object_to_uri;
 
@@ -42,13 +43,23 @@ class Accept {
 	 * @param int   $user_id The id of the local blog-user.
 	 */
 	public static function handle_accept( $accept, $user_id ) {
-		$post = Actors::get_remote_by_uri( object_to_uri( $accept['object'] ) );
+		// Validate that there is a Follow Activity.
+		$outbox_post = Outbox::get_by_guid( $accept['object']['id'] );
 
-		if ( \is_wp_error( $post ) ) {
+		if (
+			\is_wp_error( $outbox_post ) ||
+			'Follow' !== \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true )
+		) {
 			return;
 		}
 
-		Following::accept( $post, $user_id );
+		$actor_post = Actors::get_remote_by_uri( object_to_uri( $accept['object']['actor'] ) );
+
+		if ( \is_wp_error( $actor_post ) ) {
+			return;
+		}
+
+		Following::accept( $actor_post, $user_id );
 	}
 
 	/**
@@ -74,12 +85,23 @@ class Accept {
 			return $valid;
 		}
 
-		$required = array(
+		$required_attributes = array(
 			'actor',
 			'object',
 		);
 
-		if ( ! empty( \array_diff( $required, \array_keys( $json_params ) ) ) ) {
+		if ( ! empty( \array_diff( $required_attributes, \array_keys( $json_params ) ) ) ) {
+			return false;
+		}
+
+		$required_object_attributes = array(
+			'id',
+			'type',
+			'actor',
+			'object',
+		);
+
+		if ( ! empty( \array_diff( $required_object_attributes, \array_keys( $json_params['object'] ) ) ) ) {
 			return false;
 		}
 

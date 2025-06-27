@@ -94,7 +94,12 @@ class Test_Accept extends \WP_UnitTestCase {
 			array(
 				'type'   => 'Accept',
 				'actor'  => 'foo',
-				'object' => 'bar',
+				'object' => array(
+					'id'     => 'bar',
+					'actor'  => 'foo',
+					'type'   => 'Follow',
+					'object' => 'foo',
+				),
 			)
 		);
 		$this->assertTrue( Accept::validate_object( true, 'param', $request ) );
@@ -104,15 +109,26 @@ class Test_Accept extends \WP_UnitTestCase {
 	 * Functional test: handle_accept moves user from pending to following meta.
 	 */
 	public function test_handle_accept_moves_user_from_pending_to_following() {
-		$user_id    = self::$user_id;
-		$object_url = 'https://example.com/actor/123';
+		$user_id     = self::$user_id;
+		$object_guid = 'https://example.com/actor/123';
+		$outbox_guid = 'https://example.com/outbox/123';
+
+		$outbox_post_id = $this->factory->post->create(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'publish',
+				'guid'        => $outbox_guid,
+			)
+		);
+
+		\add_post_meta( $outbox_post_id, '_activitypub_activity_type', 'Follow' );
 
 		// Create remote actor post.
 		$post_id = $this->factory->post->create(
 			array(
 				'post_type'   => Actors::POST_TYPE,
 				'post_status' => 'publish',
-				'guid'        => $object_url,
+				'guid'        => $object_guid,
 			)
 		);
 
@@ -123,11 +139,16 @@ class Test_Accept extends \WP_UnitTestCase {
 		$pending = \get_post_meta( $post_id, Following::PENDING_META_KEY, false );
 		$this->assertContains( (string) $user_id, $pending );
 
-		// Prepare accept array as expected by handle_accept.
+		// Prepare accept array as expected by handle_accept, using the real outbox guid.
 		$accept = array(
 			'type'   => 'Accept',
-			'actor'  => 'https://example.com/actor/123',
-			'object' => $object_url,
+			'actor'  => 'https://example.net/actor/123',
+			'object' => array(
+				'id'     => $outbox_guid,
+				'actor'  => 'https://example.com/actor/123',
+				'type'   => 'Follow',
+				'object' => $object_guid,
+			),
 		);
 
 		// Call the handler.
