@@ -635,4 +635,96 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
+
+	/**
+	 * Test HTTP signature verification with Ed25519 algorithm.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers ::generate_digest
+	 * @covers ::generate_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_algorithm
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
+	 */
+	public function test_verify_http_signature_ed25519() {
+	// Mock the remote key retrieval for Ed25519.
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'      => 'Admin',
+					'url'       => 'https://example.org/author/admin',
+					'publicKey' => array(
+						'id'           => 'https://example.org/author/admin#main-key',
+						'owner'        => 'https://example.org/author/admin',
+						'publicKeyPem' => self::$test_keys['ed25519']['public_key'],
+					),
+				);
+			}
+		);
+		// Create a request body.
+		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
+
+		// Generate a digest for the body.
+		$digest = 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
+
+		// Create a date for the request.
+		$date = \gmdate( 'D, d M Y H:i:s T' );
+
+		// Create the signature input components.
+		$components    = array( '@method', '@target-uri', '@authority', 'content-digest', 'date' );
+		$params_string = \sprintf(
+			'(%s);created=%d;keyid="https://example.org/author/admin#main-key";alg="%s"',
+			'"' . \implode( '" "', $components ) . '"',
+			\time(),
+			self::$test_keys['ed25519']['algo']
+		);
+
+		// Create the signature input header value (includes the label).
+		$signature_input = "sig1=$params_string";
+
+		// Generate a signature using the RFC-9421 format.
+		$signature_base  = "\"@method\": POST\n";
+		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/inbox\n";
+		$signature_base .= "\"@authority\": example.org\n";
+		$signature_base .= "\"content-digest\": $digest\n";
+		$signature_base .= "\"date\": $date\n";
+		$signature_base .= "\"@signature-params\": $params_string";
+
+		// Sign the signature base.
+		$private_key     = \openssl_pkey_get_private( self::$test_keys['ed25519']['private_key'] );
+		$signature_value = '';
+		$openssl_algo    = OPENSSL_ALGO_SHA256;
+		\openssl_sign( $signature_base, $signature_value, $private_key, $openssl_algo );
+		$signature_value = \base64_encode( $signature_value );
+
+		// Create the signature header.
+		$signature_header = "sig1=:$signature_value:";
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['HTTPS']          = 'on';
+
+		// Create a REST request with RFC-9421 signature headers.
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $body );
+		$request->set_header( 'Date', $date );
+		$request->set_header( 'Content-Digest', $digest );
+		$request->set_header( 'Host', 'example.org' );
+		$request->set_header( 'Signature-Input', $signature_input );
+		$request->set_header( 'Signature', $signature_header );
+
+		// Not supported before PHP 8.4.
+		if ( \version_compare( \phpversion(), '8.4', '<' ) ) {
+			$this->assertWPError( Signature::verify_http_signature( $request ) );
+		} else {
+			$this->assertTrue( Signature::verify_http_signature( $request ) );
+		}
+
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+	}
 }

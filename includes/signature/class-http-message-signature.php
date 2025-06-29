@@ -240,12 +240,15 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @param string   $alg_string The alg= parameter value (e.g., 'rsa-pss-sha512').
 	 * @param resource $public_key An OpenSSL public key resource.
 	 *
-	 * @return int|\WP_Error OpenSSL algorithm constant or WP_Error.
+	 * @return int|string|\WP_Error OpenSSL algorithm constant, special algorithm identifier, or WP_Error.
 	 */
 	private function verify_algorithm( $alg_string, $public_key ) {
 		$alg_string = \strtolower( $alg_string );
 		if ( \strpos( $alg_string, 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
 			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
+		}
+		if ( 'ed25519' === $alg_string && ! defined( 'OPENSSL_KEYTYPE_ED25519' ) ) {
+			return new \WP_Error( 'unsupported_ed25519', 'Ed25519 algorithm is not supported.' );
 		}
 
 		$details = \openssl_pkey_get_details( $public_key );
@@ -296,6 +299,13 @@ class Http_Message_Signature implements Signature_Standard {
 				'algo' => OPENSSL_ALGO_SHA512,
 			),
 		);
+
+		if ( \defined( 'OPENSSL_KEYTYPE_ED25519' ) ) {
+			$map['ed25519'] = array(
+				'type' => \OPENSSL_KEYTYPE_ED25519,
+				'algo' => 'Ed25519',
+			);
+		}
 
 		if ( ! isset( $map[ $alg_string ] ) ) {
 			return new \WP_Error( 'unsupported_alg', 'Unsupported or unknown alg parameter: ' . $alg_string );
