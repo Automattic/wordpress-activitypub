@@ -760,8 +760,9 @@ class Actors {
 				'_activitypub_inbox' => $inbox,
 			),
 		);
+	}
 
-  /**
+	/**
 	 * Return the public key for a given actor.
 	 *
 	 * @param int  $user_id The WordPress User ID.
