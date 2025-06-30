@@ -276,7 +276,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]", $template );
 		$this->assertFalse( $content_type );
 
-		$custom = '[ap_title] [ap_content] [ap_hashcats] [ap_authorurl]';
+		$custom = '[ap_title] [ap_content] [ap_authorurl]';
 
 		\update_option( 'activitypub_post_content_type', 'custom' );
 		\update_option( 'activitypub_custom_post_content', $custom );
