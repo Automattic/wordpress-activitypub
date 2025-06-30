@@ -349,6 +349,31 @@ class Actors_Controller extends \WP_REST_Controller {
 					'type'        => 'boolean',
 					'readonly'    => true,
 				),
+				'generator'                 => array(
+					'description' => 'The generator of the object.',
+					'type'        => 'object',
+					'properties'  => array(
+						'type'       => array(
+							'type' => 'string',
+						),
+						'implements' => array(
+							'type'  => 'array',
+							'items' => array(
+								'type'       => 'object',
+								'properties' => array(
+									'href' => array(
+										'type'   => 'string',
+										'format' => 'uri',
+									),
+									'name' => array(
+										'type' => 'string',
+									),
+								),
+							),
+						),
+					),
+					'readonly'    => true,
+				),
 			),
 		);
 
