@@ -11,7 +11,7 @@ const v1 = {
 		},
 		selectedUser: {
 			type: 'string',
-			default: 'site',
+			default: 'blog',
 		},
 		per_page: {
 			type: 'number',

@@ -62,7 +62,7 @@
   "attributes": {
     "selectedUser": {
       "type": "string",
-      "default": "site"
+      "default": "blog"
     }
   },
   "usesContext": [

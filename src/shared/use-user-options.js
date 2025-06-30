@@ -16,7 +16,7 @@ export function useUserOptions( { withInherit = false } ) {
 	 *
 	 * @type {Object}
 	 * @property {boolean} enabled.users - Whether users are enabled.
-	 * @property {boolean} enabled.site - Whether the blog user is enabled.
+	 * @property {boolean} enabled.blog - Whether the blog user is enabled.
 	 */
 	const { enabled } = useOptions();
 	const users = enabled?.users
@@ -32,10 +32,10 @@ export function useUserOptions( { withInherit = false } ) {
 		}
 		const userKeywords = [];
 
-		if ( enabled?.site ) {
+		if ( enabled?.blog ) {
 			userKeywords.push( {
-				label: __( 'Site', 'activitypub' ),
-				value: 'site',
+				label: __( 'Blog', 'activitypub' ),
+				value: 'blog',
 			} );
 		}
 
