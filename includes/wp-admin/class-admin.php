@@ -114,9 +114,26 @@ class Admin {
 	}
 
 	/**
+	 * Load user following list page
+	 */
+	public static function following_list_page() {
+		// User has to be able to publish posts.
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-following-list.php' );
+		}
+	}
+
+	/**
 	 * Adds the follower list to the Help tab.
 	 */
 	public static function add_followers_list_help_tab() {
+		// todo.
+	}
+
+	/**
+	 * Adds the following list to the Help tab.
+	 */
+	public static function add_following_list_help_tab() {
 		// todo.
 	}
 

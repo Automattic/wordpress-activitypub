@@ -18,9 +18,9 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
 }
 
 /**
- * Followers Table-Class.
+ * Following Table-Class.
  */
-class Followers extends WP_List_Table {
+class Following extends WP_List_Table {
 	/**
 	 * User ID.
 	 *
@@ -109,9 +109,9 @@ class Followers extends WP_List_Table {
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-		$followers_with_count = FollowingCollection::get_followings_with_count( $this->user_id, $per_page, $page_num, $args );
-		$followers            = $followers_with_count['followers'];
-		$counter              = $followers_with_count['total'];
+		$following_with_count = FollowingCollection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
+		$following            = $following_with_count['following'];
+		$counter              = $following_with_count['total'];
 
 		$this->items = array();
 		$this->set_pagination_args(
@@ -122,8 +122,8 @@ class Followers extends WP_List_Table {
 			)
 		);
 
-		foreach ( $followers as $follower ) {
-			$actor = Actors::get_actor( $follower );
+		foreach ( $following as $following ) {
+			$actor = Actors::get_actor( $following );
 			$item  = array(
 				'icon'       => esc_attr( $actor->get_icon()['url'] ?? '' ),
 				'post_title' => esc_attr( $actor->get_name() ),
@@ -197,14 +197,14 @@ class Followers extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return sprintf( '<input type="checkbox" name="followers[]" value="%s" />', esc_attr( $item['identifier'] ) );
+		return sprintf( '<input type="checkbox" name="following[]" value="%s" />', esc_attr( $item['identifier'] ) );
 	}
 
 	/**
 	 * Process action.
 	 */
 	public function process_action() {
-		if ( ! isset( $_REQUEST['followers'] ) || ! isset( $_REQUEST['_wpnonce'] ) ) {
+		if ( ! isset( $_REQUEST['following'] ) || ! isset( $_REQUEST['_wpnonce'] ) ) {
 			return;
 		}
 		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
@@ -216,14 +216,14 @@ class Followers extends WP_List_Table {
 			return;
 		}
 
-		$followers = $_REQUEST['followers']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$following = $_REQUEST['following']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
 		if ( $this->current_action() === 'delete' ) {
-			if ( ! is_array( $followers ) ) {
-				$followers = array( $followers );
+			if ( ! is_array( $following ) ) {
+				$following = array( $following );
 			}
-			foreach ( $followers as $follower ) {
-				FollowingCollection::remove_following( $this->user_id, $follower );
+			foreach ( $following as $following ) {
+				FollowingCollection::remove_following( $this->user_id, $following );
 			}
 		}
 	}
@@ -234,6 +234,6 @@ class Followers extends WP_List_Table {
 	 * @return int
 	 */
 	public function get_user_count() {
-		return FollowingCollection::count_followings( $this->user_id );
+		return FollowingCollection::count_following( $this->user_id );
 	}
 }

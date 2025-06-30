@@ -14,14 +14,14 @@ use Activitypub\Http;
  */
 class Following {
 	/**
-	 * Meta key for the followers user ID.
+	 * Meta key for the following user ID.
 	 *
 	 * @var string
 	 */
 	const FOLLOWING_META_KEY = '_activitypub_followed_by';
 
 	/**
-	 * Meta key for pending followers user ID.
+	 * Meta key for pending following user ID.
 	 *
 	 * @var string
 	 */
@@ -97,7 +97,20 @@ class Following {
 
 		\delete_post_meta( $post->ID, self::FOLLOWING_META_KEY, $user_id );
 
-		// @todo Send Reject Activity.
+		// Get Post-ID of the Follow Outbox Activity.
+		$post_id = \WP_Query(
+			array(
+				'post_type'  => Outbox::POST_TYPE,
+				'meta_query' => array(
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $post->ID,
+					),
+				),
+			)
+		);
+
+		Outbox::undo( $post_id );
 
 		return $post;
 	}
@@ -117,7 +130,7 @@ class Following {
 	 *      @type int        $total      Total number of followings.
 	 *  }
 	 */
-	public static function get_followings_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
+	public static function get_following_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
 			'post_type'      => Actors::POST_TYPE,
 			'posts_per_page' => $number,
@@ -131,12 +144,12 @@ class Following {
 			),
 		);
 
-		$args       = \wp_parse_args( $args, $defaults );
-		$query      = new \WP_Query( $args );
-		$total      = $query->found_posts;
-		$followings = \array_filter( $query->get_posts() );
+		$args      = \wp_parse_args( $args, $defaults );
+		$query     = new \WP_Query( $args );
+		$total     = $query->found_posts;
+		$following = \array_filter( $query->get_posts() );
 
-		return \compact( 'followings', 'total' );
+		return \compact( 'following', 'total' );
 	}
 
 	/**
@@ -149,9 +162,20 @@ class Following {
 	 *
 	 * @return \WP_Post[] List of `Following` objects.
 	 */
-	public static function get_followings( $user_id, $number = -1, $page = null, $args = array() ) {
-		$data = self::get_followings_with_count( $user_id, $number, $page, $args );
+	public static function get_following( $user_id, $number = -1, $page = null, $args = array() ) {
+		$data = self::get_following_with_count( $user_id, $number, $page, $args );
 
-		return $data['followings'];
+		return $data['following'];
+	}
+
+	/**
+	 * Get the total number of followings of a given user.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 *
+	 * @return int The total number of followings.
+	 */
+	public static function count_following( $user_id ) {
+		return self::get_following_with_count( $user_id )['total'];
 	}
 }
