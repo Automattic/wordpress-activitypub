@@ -23,6 +23,7 @@ class Actor extends Base_Object {
 		'https://www.w3.org/ns/activitystreams',
 		'https://w3id.org/security/v1',
 		'https://purl.archive.org/socialweb/webfinger',
+		'https://w3id.org/fep/844e',
 		array(
 			'schema'                    => 'http://schema.org#',
 			'toot'                      => 'http://joinmastodon.org/ns#',
