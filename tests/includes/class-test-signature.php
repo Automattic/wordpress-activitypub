@@ -9,6 +9,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Http;
 use Activitypub\Signature;
 use Activitypub\Collection\Actors;
 
@@ -634,5 +635,101 @@ class Test_Signature extends \WP_UnitTestCase {
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
 		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+	}
+
+	/**
+	 * Test RFC-9421 signature verification when it is unsupported.
+	 *
+	 * @covers ::rfc9421_is_unsupported
+	 */
+	public function test_rfc9421_is_unsupported() {
+		\add_option( 'activitypub_rfc9421_unsupported', array( 'sub.www.example.org' => \time() + MINUTE_IN_SECONDS ), '', false );
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+
+		\add_filter( 'pre_http_request', '__return_null' );
+		\add_filter(
+			'http_request_args',
+			function ( $args ) {
+				$this->assertFalse( isset( $args['headers']['Signature-Input'] ) );
+				$this->assertStringContainsString( 'headers="(request-target) host date digest"', $args['headers']['Signature'] );
+
+				return $args;
+			}
+		);
+
+		Http::post( 'https://sub.www.example.org/wp-json/activitypub/1.0/inbox', '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}', 1 );
+
+		// Expired timestamp results in another try.
+		\update_option( 'activitypub_rfc9421_unsupported', array( 'sub.www.example.org' => \time() - MINUTE_IN_SECONDS ), '', false );
+		\remove_all_filters( 'http_request_args' );
+
+		\add_filter(
+			'http_request_args',
+			function ( $args ) {
+				$this->assertTrue( isset( $args['headers']['Signature-Input'] ) );
+				$this->assertStringStartsWith( 'wp=:', $args['headers']['Signature'] );
+
+				return $args;
+			}
+		);
+
+		Http::post( 'https://sub.www.example.org/wp-json/activitypub/1.0/inbox', '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}', 1 );
+
+		$this->assertEmpty( \get_option( 'activitypub_rfc9421_unsupported' ) );
+
+		// Cleanup.
+		\delete_option( 'activitypub_rfc9421_unsupported' );
+		\delete_option( 'activitypub_rfc9421_signature' );
+		\remove_all_filters( 'pre_http_request' );
+		\remove_all_filters( 'http_request_args' );
+	}
+
+	/**
+	 * Test RFC-9421 signature verification when it is unsupported.
+	 *
+	 * @covers ::rfc9421_add_unsupported_host
+	 */
+	public function test_set_rfc9421_unsupported() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+		$url = 'https://example.org/wp-json/activitypub/1.0/inbox';
+
+		// Test domain is not unsupported.
+		$rfc9421_is_unsupported = new \ReflectionMethod( Signature::class, 'rfc9421_is_unsupported' );
+		$rfc9421_is_unsupported->setAccessible( true );
+		$this->assertFalse( $rfc9421_is_unsupported->invoke( null, $url ) );
+
+		\add_filter(
+			'pre_http_request',
+			function ( $response, $args, $url ) {
+				$response = array(
+					'headers'  => array(),
+					'body'     => '',
+					'response' => array(
+						'code'    => 200,
+						'message' => 'OK',
+					),
+				);
+
+				if ( isset( $args['headers']['Signature-Input'] ) ) {
+					$response['response'] = array(
+						'code'    => 401,
+						'message' => 'Unauthorized',
+					);
+				}
+
+				return \apply_filters( 'http_response', $response, $args, $url );
+			},
+			10,
+			3
+		);
+
+		Http::post( $url, '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}', 1 );
+
+		// Domain is set as unsupported.
+		$this->assertTrue( $rfc9421_is_unsupported->invoke( null, $url ) );
+
+		// Cleanup.
+		\delete_option( 'activitypub_rfc9421_signature' );
+		\remove_all_filters( 'pre_http_request' );
 	}
 }
