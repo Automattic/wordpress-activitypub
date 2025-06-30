@@ -208,7 +208,7 @@ class Signature {
 
 		if ( 401 === wp_remote_retrieve_response_code( $response ) ) {
 			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
-			self::set_rfc9421_unsupported( $url );
+			self::rfc9421_add_unsupported_host( $url );
 
 			$parsed_args = ( new Draft_Cavage_Signature() )->sign( $parsed_args, $url );
 			$response    = \wp_remote_request( $url, $parsed_args );
@@ -245,7 +245,7 @@ class Signature {
 	 *
 	 * @param string $url The URL to set.
 	 */
-	private static function set_rfc9421_unsupported( $url ) {
+	private static function rfc9421_add_unsupported_host( $url ) {
 		$list = \get_option( 'activitypub_rfc9421_unsupported', array() );
 		$host = \wp_parse_url( $url, \PHP_URL_HOST );
 
