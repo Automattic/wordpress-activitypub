@@ -63,6 +63,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		\openssl_sign( $signed_string, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
+		$args['headers']['Host']      = $host;
 		$args['headers']['Signature'] = \sprintf(
 			'keyId="%s",algorithm="rsa-sha256",headers="%s",signature="%s"',
 			$args['key_id'],

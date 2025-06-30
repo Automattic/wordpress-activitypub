@@ -31,11 +31,13 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return array Request arguments with signature headers.
 	 */
 	public function sign( $args, $url ) {
+		$host = \wp_parse_url( $url, \PHP_URL_HOST );
+
 		// Standard components to sign.
 		$components  = array(
 			'"@method"'     => \strtoupper( $args['method'] ),
 			'"@target-uri"' => $url,
-			'"@authority"'  => \wp_parse_url( $url, PHP_URL_HOST ),
+			'"@authority"'  => $host,
 			'"created"'     => \strtotime( $args['headers']['Date'] ), // Required by Mastodon. See https://github.com/mastodon/mastodon/pull/34814.
 		);
 		$identifiers = \array_keys( $components );
@@ -61,6 +63,7 @@ class Http_Message_Signature implements Signature_Standard {
 		\openssl_sign( $signature_base, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
+		$args['headers']['Host']            = $host;
 		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ');created=' . $components['"created"'] . ';keyid="' . $args['key_id'] . '";alg="rsa-v1_5-sha256"';
 		$args['headers']['Signature']       = 'wp=:' . $signature . ':';
 
