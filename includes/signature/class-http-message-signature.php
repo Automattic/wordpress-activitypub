@@ -222,7 +222,7 @@ class Http_Message_Signature implements Signature_Standard {
 				);
 
 				if ( ! isset( $map[ $alg ] ) ) {
-					return new \WP_Error( 'unsupported_digest', 'Unsupported digest algorithm.' );
+					return new \WP_Error( 'unsupported_digest', 'WordPress supports SHA-256 and SHA-512 in Digest header. Offered algorithm: ' . $alg );
 				}
 
 				if ( \hash_equals( $encoded, \base64_encode( \hash( $map[ $alg ], $body, true ) ) ) ) {

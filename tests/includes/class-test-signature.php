@@ -349,8 +349,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		// The verification should fail with a WP_Error.
 		$result = Signature::verify_http_signature( $request );
 		$this->assertWPError( $result );
-		$this->assertEquals( 'activitypub_signature', $result->get_error_code() );
-		$this->assertEquals( 'Invalid Digest header', $result->get_error_message() );
+		$this->assertEquals( 'digest_mismatch', $result->get_error_code() );
 
 		// Request array without body.
 		$request = array(
