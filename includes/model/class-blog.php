@@ -10,8 +10,6 @@ namespace Activitypub\Model;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
-use Activitypub\Signature;
-use WP_Query;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -255,7 +253,7 @@ class Blog extends Actor {
 	 * @return string The published date.
 	 */
 	public function get_published() {
-		$first_post = new WP_Query(
+		$first_post = new \WP_Query(
 			array(
 				'orderby' => 'date',
 				'order'   => 'ASC',
@@ -316,7 +314,7 @@ class Blog extends Actor {
 		return array(
 			'id'           => $this->get_id() . '#main-key',
 			'owner'        => $this->get_id(),
-			'publicKeyPem' => Signature::get_public_key_for( $this->get__id() ),
+			'publicKeyPem' => Actors::get_public_key( $this->get__id() ),
 		);
 	}
 

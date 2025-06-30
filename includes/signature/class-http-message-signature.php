@@ -11,7 +11,7 @@
 
 namespace Activitypub\Signature;
 
-use Activitypub\Signature;
+use Activitypub\Collection\Actors;
 
 /**
  * Class Http_Message_Signature.
@@ -171,7 +171,7 @@ class Http_Message_Signature implements Signature_Standard {
 			return new \WP_Error( 'missing_keyid', 'Missing keyId in signature parameters.' );
 		}
 
-		$public_key = Signature::get_remote_key( $params['keyid'] );
+		$public_key = Actors::get_remote_key( $params['keyid'] );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}

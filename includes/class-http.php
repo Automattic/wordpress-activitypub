@@ -54,7 +54,7 @@ class Http {
 			),
 			'body'                => $body,
 			'key_id'              => Actors::get_by_id( $user_id )->get_id() . '#main-key',
-			'private_key'         => Signature::get_private_key_for( $user_id ),
+			'private_key'         => Actors::get_private_key( $user_id ),
 		);
 
 		$args = Signature::sign_request( $args, $url );
@@ -149,7 +149,7 @@ class Http {
 				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
 			'key_id'              => Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key',
-			'private_key'         => Signature::get_private_key_for( Actors::APPLICATION_USER_ID ),
+			'private_key'         => Actors::get_private_key( Actors::APPLICATION_USER_ID ),
 		);
 
 		$args = Signature::sign_request( $args, $url );
