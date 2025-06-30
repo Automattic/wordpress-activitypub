@@ -44,7 +44,7 @@ class Reject {
 	 * @param int   $user_id The id of the local blog-user.
 	 */
 	public static function handle_reject( $reject, $user_id ) {
-		// Validate that there is a Follow Activity.
+		// Validate that there is a preceding Activity.
 		$outbox_post = Outbox::get_by_guid( $reject['object']['id'] );
 
 		if ( \is_wp_error( $outbox_post ) ) {
