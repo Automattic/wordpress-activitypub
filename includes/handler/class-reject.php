@@ -110,12 +110,7 @@ class Reject {
 			return $valid;
 		}
 
-		$required_attributes = array(
-			'actor',
-			'object',
-		);
-
-		if ( ! empty( \array_diff( $required_attributes, \array_keys( $json_params ) ) ) ) {
+		if ( empty( $json_params['actor'] ) || empty( $json_params['object'] ) ) {
 			return false;
 		}
 
