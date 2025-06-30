@@ -100,11 +100,14 @@ class Following {
 		// Get Post-ID of the Follow Outbox Activity.
 		$post_id = \WP_Query(
 			array(
-				'post_type'  => Outbox::POST_TYPE,
-				'meta_query' => array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_author'    => $user_id,
+				'posts_per_page' => 1,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
 					array(
 						'key'   => '_activitypub_object_id',
-						'value' => $post->ID,
+						'value' => $post->guid,
 					),
 				),
 			)
