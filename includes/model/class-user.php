@@ -41,6 +41,22 @@ class User extends Actor {
 	protected $discoverable = true;
 
 	/**
+	 * The generator of the object.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#generator
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md#discovery-through-an-actor
+	 *
+	 * @var array
+	 */
+	protected $generator = array(
+		'type'       => 'Application',
+		'implements' => array(
+			'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
+			'name' => 'RFC-9421: HTTP Message Signatures',
+		),
+	);
+
+	/**
 	 * Constructor.
 	 *
 	 * @param int $user_id Optional. The WordPress user ID. Default null.
