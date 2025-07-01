@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The command-line interface extension, accidentally removed in a recent cleanup, has been restored.
