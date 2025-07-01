@@ -607,4 +607,41 @@ class Test_Comment extends \WP_UnitTestCase {
 		\wp_delete_comment( $comment_id, true );
 		\wp_delete_post( $post_id, true );
 	}
+
+	/**
+	 * Test comment_feed_where.
+	 *
+	 * @covers ::comment_feed_where
+	 */
+	public function test_comment_feed_where() {
+		global $wp_query;
+		if ( ! isset( $wp_query ) ) {
+			$wp_query = new \WP_Query();
+		}
+
+		$original_where = 'WHERE 1=1';
+		$slugs          = \Activitypub\Comment::get_comment_type_slugs();
+
+		// 1. type = 'all'.
+		$wp_query->set( 'type', 'all' );
+		$this->assertEquals(
+			$original_where,
+			\Activitypub\Comment::comment_feed_where( $original_where )
+		);
+
+		// 2. type in allowed types (pick the first available).
+		$test_slug = $slugs[0];
+		$wp_query->set( 'type', $test_slug );
+		$this->assertEquals(
+			$original_where . " AND comment_type = '" . $test_slug . "'",
+			\Activitypub\Comment::comment_feed_where( $original_where )
+		);
+
+		// 3. type not in allowed types.
+		$wp_query->set( 'type', 'foo_bar_baz_not_a_real_type' );
+		$this->assertEquals(
+			$original_where . " AND comment_type = 'comment'",
+			\Activitypub\Comment::comment_feed_where( $original_where )
+		);
+	}
 }

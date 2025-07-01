@@ -25,6 +25,7 @@ class Comment {
 
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
+		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
@@ -338,6 +339,31 @@ class Comment {
 		}
 
 		return $classes;
+	}
+
+	/**
+	 * Filters the comment feed where clause to exclude ActivityPub comment types.
+	 *
+	 * @param string $where The WHERE clause for the comment feed query.
+	 *
+	 * @return string The modified WHERE clause.
+	 */
+	public static function comment_feed_where( $where ) {
+		$comment_type = get_query_var( 'type' );
+
+		if ( 'all' === $comment_type ) {
+			return $where;
+		}
+
+		$comment_types = self::get_comment_type_slugs();
+
+		if ( in_array( $comment_type, $comment_types, true ) ) {
+			$where .= " AND comment_type = '$comment_type'";
+		} else {
+			$where .= " AND comment_type = 'comment'";
+		}
+
+		return $where;
 	}
 
 	/**
