@@ -134,6 +134,7 @@ class Test_Follow extends \WP_UnitTestCase {
 
 		// Clean up.
 		wp_delete_post( $outbox_post->ID, true );
+		wp_delete_post( $remote_actor->ID, true );
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
 }
