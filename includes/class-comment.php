@@ -349,7 +349,7 @@ class Comment {
 	 * @return string The modified WHERE clause.
 	 */
 	public static function comment_feed_where( $where ) {
-		$comment_type = get_query_var( 'type' );
+		$comment_type = \get_query_var( 'type' );
 
 		if ( 'all' === $comment_type ) {
 			return $where;
