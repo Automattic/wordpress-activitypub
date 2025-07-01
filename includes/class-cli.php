@@ -245,7 +245,7 @@ class Cli extends \WP_CLI_Command {
 	 * @param array $args The arguments.
 	 */
 	public function follow( $args ) {
-		$user_id   = get_current_user_id();
+		$user_id   = \get_current_user_id();
 		$follow_id = follow( $args[0], $user_id );
 
 		if ( is_wp_error( $follow_id ) ) {
