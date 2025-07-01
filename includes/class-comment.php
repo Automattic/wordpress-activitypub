@@ -358,7 +358,7 @@ class Comment {
 		$comment_types = self::get_comment_type_slugs();
 
 		if ( in_array( $comment_type, $comment_types, true ) ) {
-			$where .= " AND comment_type = '$comment_type'";
+			$where .= " AND comment_type = '" . esc_sql( $comment_type ) . "'";
 		} else {
 			$where .= " AND comment_type = 'comment'";
 		}
