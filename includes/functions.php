@@ -1558,7 +1558,7 @@ function follow( $remote_actor, $user_id ) {
 	$follow->set_object( $remote_actor );
 	$follow->set_to( array( $remote_actor ) );
 
-	return add_to_outbox( $follow );
+	return add_to_outbox( $follow, null, $user_id );
 }
 
 /**
