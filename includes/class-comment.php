@@ -346,9 +346,9 @@ class Comment {
 	 *
 	 * Also excludes ActivityPub comment types from the feed when no type is specified.
 	 *
-	 * @param string $where The WHERE clause for the comment feed query.
+	 * @param string $where The `WHERE` clause for the comment feed query.
 	 *
-	 * @return string The modified WHERE clause.
+	 * @return string The modified `WHERE` clause.
 	 */
 	public static function comment_feed_where( $where ) {
 		$comment_type = \get_query_var( 'type' );
@@ -360,9 +360,9 @@ class Comment {
 		$comment_types = self::get_comment_type_slugs();
 
 		if ( in_array( $comment_type, $comment_types, true ) ) {
-			$where .= " AND comment_type = '" . esc_sql( $comment_type ) . "'";
+			$where .= sprintf( " AND comment_type = '%s'", esc_sql( $comment_type ) );
 		} else {
-			$where .= " AND comment_type = 'comment'";
+			$where .= sprintf( " AND comment_type NOT IN ('%s')", esc_sql( implode( "', '", $comment_types ) ) );
 		}
 
 		return $where;
