@@ -14,6 +14,7 @@ use Activitypub\Handler\Delete;
 use Activitypub\Handler\Follow;
 use Activitypub\Handler\Like;
 use Activitypub\Handler\Move;
+use Activitypub\Handler\Reject;
 use Activitypub\Handler\Undo;
 use Activitypub\Handler\Update;
 
@@ -37,10 +38,11 @@ class Handler {
 		Create::init();
 		Delete::init();
 		Follow::init();
-		Undo::init();
-		Update::init();
 		Like::init();
 		Move::init();
+		Reject::init();
+		Undo::init();
+		Update::init();
 
 		/**
 		 * Register additional handlers.
