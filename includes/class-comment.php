@@ -359,10 +359,11 @@ class Comment {
 
 		$comment_types = self::get_comment_type_slugs();
 
-		if ( in_array( $comment_type, $comment_types, true ) ) {
-			$where .= sprintf( " AND comment_type = '%s'", esc_sql( $comment_type ) );
+		if ( \in_array( $comment_type, $comment_types, true ) ) {
+			$where .= \sprintf( " AND comment_type = '%s'", \esc_sql( $comment_type ) );
 		} else {
-			$where .= sprintf( " AND comment_type NOT IN ('%s')", esc_sql( implode( "', '", $comment_types ) ) );
+			$comment_types = \array_map( 'esc_sql', $comment_types );
+			$where        .= \sprintf( " AND comment_type NOT IN ('%s')", \implode( "', '", $comment_types ) );
 		}
 
 		return $where;

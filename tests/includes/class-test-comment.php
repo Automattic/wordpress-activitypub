@@ -614,34 +614,40 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::comment_feed_where
 	 */
 	public function test_comment_feed_where() {
-		global $wp_query;
-		if ( ! isset( $wp_query ) ) {
-			$wp_query = new \WP_Query();
+		$post_id = self::factory()->post->create();
+
+		$comment_types = array( 'repost', 'like', 'comment' );
+		foreach ( $comment_types as $comment_type ) {
+			self::factory()->comment->create(
+				array(
+					'comment_approved' => '1',
+					'comment_post_ID'  => $post_id,
+					'comment_type'     => $comment_type,
+					'comment_content'  => 'This is a comment.',
+				)
+			);
 		}
 
-		$original_where = 'WHERE 1=1';
-		$slugs          = \Activitypub\Comment::get_comment_type_slugs();
-
-		// 1. type = 'all'.
-		$wp_query->set( 'type', 'all' );
-		$this->assertEquals(
-			$original_where,
-			\Activitypub\Comment::comment_feed_where( $original_where )
+		$query = new \WP_Query(
+			array(
+				'feed'         => 'comments-rss2',
+				'withcomments' => true,
+			)
 		);
+		$query->get_posts();
 
-		// 2. type in allowed types (pick the first available).
-		$test_slug = $slugs[0];
-		$wp_query->set( 'type', $test_slug );
-		$this->assertEquals(
-			$original_where . sprintf( " AND comment_type = '%s'", esc_sql( $test_slug ) ),
-			\Activitypub\Comment::comment_feed_where( $original_where )
-		);
+		$this->assertSame( 1, $query->comment_count );
+		$this->assertSame( 'comment', $query->comments[0]->comment_type );
 
-		// 3. type not in allowed types.
-		$wp_query->set( 'type', 'foo_bar_baz_not_a_real_type' );
-		$this->assertEquals(
-			$original_where . sprintf( " AND comment_type NOT IN ('%s')", esc_sql( implode( "', '", $slugs ) ) ),
-			\Activitypub\Comment::comment_feed_where( $original_where )
-		);
+		// Test what would happen if we don't filter comment_feed_where.
+		\remove_filter( 'comment_feed_where', array( Comment::class, 'comment_feed_where' ) );
+		$query->get_posts();
+
+		$this->assertSame( 3, $query->comment_count ); // All comments are included.
+		$this->assertEqualSets( $comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
+
+		// Clean up.
+		\add_filter( 'comment_feed_where', array( Comment::class, 'comment_feed_where' ) );
+		\wp_delete_post( $post_id, true );
 	}
 }
