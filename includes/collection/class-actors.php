@@ -548,7 +548,7 @@ class Actors {
 	 *
 	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
 	 */
-	public static function lookup_remote_by_uri( $actor_uri ) {
+	public static function fetch_remote_by_uri( $actor_uri ) {
 		$post = self::get_remote_by_uri( $actor_uri );
 
 		if ( ! \is_wp_error( $post ) ) {
