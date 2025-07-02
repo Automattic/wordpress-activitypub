@@ -206,7 +206,10 @@ class Signature {
 		// Remove this filter to prevent infinite recursion.
 		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
 
-		if ( 401 === wp_remote_retrieve_response_code( $response ) ) {
+		$response_code = \wp_remote_retrieve_response_code( $response );
+
+		// Fall back to Draft Cavage signature for any 4xx responses.
+		if ( $response_code >= 400 && $response_code < 500 ) {
 			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
 			self::rfc9421_add_unsupported_host( $url );
 

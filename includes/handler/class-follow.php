@@ -111,7 +111,7 @@ class Follow {
 
 		$activity = new Activity();
 		$activity->set_type( 'Accept' );
-		$activity->set_actor( $remote_actor->guid );
+		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 		$activity->set_object( $activity_object );
 		$activity->set_to( array( $actor ) );
 
