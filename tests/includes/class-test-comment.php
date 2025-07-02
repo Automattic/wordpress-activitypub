@@ -633,14 +633,14 @@ class Test_Comment extends \WP_UnitTestCase {
 		$test_slug = $slugs[0];
 		$wp_query->set( 'type', $test_slug );
 		$this->assertEquals(
-			$original_where . " AND comment_type = '" . $test_slug . "'",
+			$original_where . sprintf( " AND comment_type = '%s'", esc_sql( $test_slug ) ),
 			\Activitypub\Comment::comment_feed_where( $original_where )
 		);
 
 		// 3. type not in allowed types.
 		$wp_query->set( 'type', 'foo_bar_baz_not_a_real_type' );
 		$this->assertEquals(
-			$original_where . " AND comment_type = 'comment'",
+			$original_where . sprintf( " AND comment_type NOT IN ('%s')", esc_sql( implode( "', '", $slugs ) ) ),
 			\Activitypub\Comment::comment_feed_where( $original_where )
 		);
 	}
