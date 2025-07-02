@@ -342,7 +342,9 @@ class Comment {
 	}
 
 	/**
-	 * Filters the comment feed where clause to exclude ActivityPub comment types.
+	 * Makes the comment feed filterable by comment type.
+	 *
+	 * Also excludes ActivityPub comment types from the feed when no type is specified.
 	 *
 	 * @param string $where The WHERE clause for the comment feed query.
 	 *
