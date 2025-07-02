@@ -103,17 +103,9 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		}
 
 		// Digest verification.
-		if ( \in_array( 'digest', $parsed['headers'], true ) && isset( $body ) ) {
-			if ( \is_array( $headers['digest'] ) ) {
-				$headers['digest'] = $headers['digest'][0];
-			}
-
-			list( $alg, $digest ) = \explode( '=', $headers['digest'], 2 );
-			$alg                  = 'SHA-512' === $alg ? 'sha512' : 'sha256';
-
-			if ( \base64_encode( \hash( $alg, $body, true ) ) !== $digest ) {
-				return new \WP_Error( 'activitypub_signature', 'Invalid Digest header', array( 'status' => 401 ) );
-			}
+		$result = $this->verify_content_digest( $headers, $body );
+		if ( \is_wp_error( $result ) ) {
+			return $result;
 		}
 
 		$verified = \openssl_verify( $signed_data, $parsed['signature'], $public_key, $algorithm ) > 0;
@@ -132,7 +124,7 @@ class Draft_Cavage_Signature implements Signature_Standard {
 	 * @return string The digest.
 	 */
 	public function generate_digest( $body ) {
-		return 'sha256=' . \base64_encode( \hash( 'sha256', $body, true ) );
+		return 'SHA-256=' . \base64_encode( \hash( 'sha256', $body, true ) );
 	}
 
 	/**
@@ -186,6 +178,35 @@ class Draft_Cavage_Signature implements Signature_Standard {
 		}
 
 		return new \WP_Error( 'unsupported_key_type', 'Unsupported signature algorithm (only rsa-sha256, rsa-sha512, and hs2019 are supported).', array( 'status' => 401 ) );
+	}
+
+	/**
+	 * Verify the Content-Digest header against the request body.
+	 *
+	 * @param array       $headers The HTTP headers.
+	 * @param string|null $body    The request body, if applicable.
+	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
+	 */
+	private function verify_content_digest( $headers, $body ) {
+		if ( ! isset( $headers['digest'][0] ) || null === $body ) {
+			return true;
+		}
+
+		list( $alg, $digest ) = \explode( '=', $headers['digest'][0], 2 );
+		$map                  = array(
+			'SHA-256' => 'sha256',
+			'SHA-512' => 'sha512',
+		);
+
+		if ( ! isset( $map[ $alg ] ) ) {
+			return new \WP_Error( 'unsupported_digest', 'WordPress supports SHA-256 and SHA-512 in Digest header. Offered algorithm: ' . $alg, array( 'status' => 401 ) );
+		}
+
+		if ( \hash_equals( $digest, \base64_encode( \hash( $map[ $alg ], $body, true ) ) ) ) {
+			return true;
+		}
+
+		return new \WP_Error( 'digest_mismatch', 'Digest header value does not match body.', array( 'status' => 401 ) );
 	}
 
 	/**
