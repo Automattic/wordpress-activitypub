@@ -616,14 +616,16 @@ class Test_Comment extends \WP_UnitTestCase {
 	public function test_comment_feed_where() {
 		$post_id = self::factory()->post->create();
 
-		$comment_types = array( 'repost', 'like', 'comment' );
+		$comment_types   = Comment::get_comment_type_slugs();
+		$comment_types[] = 'comment';
+
 		foreach ( $comment_types as $comment_type ) {
 			self::factory()->comment->create(
 				array(
 					'comment_approved' => '1',
+					'comment_content'  => 'This is a comment.',
 					'comment_post_ID'  => $post_id,
 					'comment_type'     => $comment_type,
-					'comment_content'  => 'This is a comment.',
 				)
 			);
 		}
@@ -646,8 +648,27 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertSame( 3, $query->comment_count ); // All comments are included.
 		$this->assertEqualSets( $comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
 
-		// Clean up.
+		// Restore the filter.
 		\add_filter( 'comment_feed_where', array( Comment::class, 'comment_feed_where' ) );
+
+		// Test filtering by comment type.
+		foreach ( $comment_types as $comment_type ) {
+			\set_query_var( 'type', $comment_type );
+			$query->get_posts();
+
+			$this->assertSame( 1, $query->comment_count );
+			$this->assertSame( $comment_type, $query->comments[0]->comment_type );
+		}
+
+		// Test filtering by comment type that doesn't exist.
+		\set_query_var( 'type', 'foo_bar_baz_not_a_real_type' );
+		$query->get_posts();
+
+		$this->assertSame( 1, $query->comment_count );
+		$this->assertSame( 'comment', $query->comments[0]->comment_type );
+
+		// Clean up.
 		\wp_delete_post( $post_id, true );
+		\set_query_var( 'type', null );
 	}
 }
