@@ -262,8 +262,8 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function ( $json, $actor ) {
-				$user       = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
-				$public_key = \Activitypub\Collection\Actors::get_public_key( $user->get__id() );
+				$user       = Actors::get_by_id( self::$user_id );
+				$public_key = Actors::get_public_key( $user->get__id() );
 
 				// Return ActivityPub Profile with signature.
 				return array(
@@ -284,7 +284,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$post = get_post( self::$post_id );
 
 		// Test valid request.
-		$actor    = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+		$actor    = Actors::get_by_id( self::$user_id );
 		$object   = \Activitypub\Transformer\Post::transform( $post )->to_object();
 		$activity = new \Activitypub\Activity\Activity( 'Like' );
 		$activity->from_array(

@@ -323,6 +323,15 @@ class Signature {
 	public static function get_signature_algorithm( $signature_block ) { // phpcs:ignore
 		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
 
+		if ( ! empty( $signature_block['algorithm'] ) ) {
+			switch ( $signature_block['algorithm'] ) {
+				case 'rsa-sha-512':
+					return 'sha512'; // hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12.
+				default:
+					return 'sha256';
+			}
+		}
+
 		return false;
 	}
 
@@ -338,7 +347,33 @@ class Signature {
 	public static function parse_signature_header( $signature ) { // phpcs:ignore
 		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
 
-		return array();
+		$parsed_header = array();
+		$matches       = array();
+
+		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['keyId'] = trim( $matches[1] );
+		}
+		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
+			$parsed_header['(created)'] = trim( $matches[1] );
+		}
+		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
+			$parsed_header['(expires)'] = trim( $matches[1] );
+		}
+		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['algorithm'] = trim( $matches[1] );
+		}
+		if ( \preg_match( '/headers="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['headers'] = \explode( ' ', trim( $matches[1] ) );
+		}
+		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+		}
+
+		if ( empty( $parsed_header['headers'] ) ) {
+			$parsed_header['headers'] = array( 'date' );
+		}
+
+		return $parsed_header;
 	}
 
 	/**
@@ -355,7 +390,71 @@ class Signature {
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) { // phpcs:ignore
 		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
 
-		return '';
+		$signed_data = '';
+
+		// This also verifies time-based values by returning false if any of these are out of range.
+		foreach ( $signed_headers as $header ) {
+			if ( 'host' === $header ) {
+				if ( isset( $headers['x_original_host'] ) ) {
+					$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
+					continue;
+				}
+			}
+			if ( '(request-target)' === $header ) {
+				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
+				continue;
+			}
+			if ( str_contains( $header, '-' ) ) {
+				$signed_data .= $header . ': ' . $headers[ str_replace( '-', '_', $header ) ][0] . "\n";
+				continue;
+			}
+			if ( '(created)' === $header ) {
+				if ( ! empty( $signature_block['(created)'] ) && \intval( $signature_block['(created)'] ) > \time() ) {
+					// Created in the future.
+					return false;
+				}
+
+				if ( ! array_key_exists( '(created)', $headers ) ) {
+					$signed_data .= $header . ': ' . $signature_block['(created)'] . "\n";
+					continue;
+				}
+			}
+			if ( '(expires)' === $header ) {
+				if ( ! empty( $signature_block['(expires)'] ) && \intval( $signature_block['(expires)'] ) < \time() ) {
+					// Expired in the past.
+					return false;
+				}
+
+				if ( ! array_key_exists( '(expires)', $headers ) ) {
+					$signed_data .= $header . ': ' . $signature_block['(expires)'] . "\n";
+					continue;
+				}
+			}
+			if ( 'date' === $header ) {
+				if ( empty( $headers[ $header ][0] ) ) {
+					continue;
+				}
+
+				// Allow a bit of leeway for misconfigured clocks.
+				$d = new \DateTime( $headers[ $header ][0] );
+				$d->setTimeZone( new \DateTimeZone( 'UTC' ) );
+				$c = $d->format( 'U' );
+
+				$d_plus  = time() + ( 3 * HOUR_IN_SECONDS );
+				$d_minus = time() - ( 3 * HOUR_IN_SECONDS );
+
+				if ( $c > $d_plus || $c < $d_minus ) {
+					// Time out of range.
+					return false;
+				}
+			}
+
+			if ( ! empty( $headers[ $header ][0] ) ) {
+				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
+			}
+		}
+
+		return \rtrim( $signed_data, "\n" );
 	}
 
 	/**
