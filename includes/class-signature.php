@@ -114,8 +114,8 @@ class Signature {
 		$headers = array();
 
 		foreach ( $server as $key => $value ) {
-			$header_key               = \str_replace( 'http_', '', \strtolower( $key ) );
-			$headers[ $header_key ][] = \wp_unslash( $value );
+			$key               = \str_replace( 'http_', '', \strtolower( $key ) );
+			$headers[ $key ][] = \wp_unslash( $value );
 
 		}
 
