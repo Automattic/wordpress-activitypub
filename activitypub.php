@@ -150,3 +150,14 @@ function activation_redirect( $plugin ) {
 		'uninstall',
 	)
 );
+
+// Check for CLI env, to add the CLI commands.Add commentMore actions.
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	WP_CLI::add_command(
+		'activitypub',
+		'\Activitypub\Cli',
+		array(
+			'shortdesc' => 'ActivityPub related commands to manage plugin functionality and the federation of posts and comments.',
+		)
+	);
+}
