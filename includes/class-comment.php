@@ -351,6 +351,8 @@ class Comment {
 	 * @return string The modified `WHERE` clause.
 	 */
 	public static function comment_feed_where( $where ) {
+		global $wpdb;
+
 		$comment_type = \get_query_var( 'type' );
 
 		if ( 'all' === $comment_type ) {
@@ -360,13 +362,12 @@ class Comment {
 		$comment_types = self::get_comment_type_slugs();
 
 		if ( \in_array( $comment_type, $comment_types, true ) ) {
-			global $wpdb;
-			$where .= $wpdb->prepare( " AND comment_type = %s", $comment_type );
+			$where .= $wpdb->prepare( ' AND comment_type = %s', $comment_type );
 		} else {
 			$comment_types = \array_map( 'esc_sql', $comment_types );
-			global $wpdb;
-			$placeholders = implode( ', ', array_fill( 0, count( $comment_types ), '%s' ) );
-			$where       .= $wpdb->prepare( " AND comment_type NOT IN ($placeholders)", ...$comment_types );
+			$placeholders  = implode( ', ', array_fill( 0, count( $comment_types ), '%s' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared
+			$where .= $wpdb->prepare( sprintf( ' AND comment_type NOT IN (%s)', $placeholders ), ...$comment_types );
 		}
 
 		return $where;
