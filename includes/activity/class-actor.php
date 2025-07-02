@@ -23,6 +23,7 @@ class Actor extends Base_Object {
 		'https://www.w3.org/ns/activitystreams',
 		'https://w3id.org/security/v1',
 		'https://purl.archive.org/socialweb/webfinger',
+		'https://w3id.org/fep/844e',
 		array(
 			'schema'                    => 'http://schema.org#',
 			'toot'                      => 'http://joinmastodon.org/ns#',
@@ -284,4 +285,13 @@ class Actor extends Base_Object {
 	 * @var boolean
 	 */
 	protected $posting_restricted_to_mods;
+
+	/**
+	 * Listing Implemented Specifications on the Application Actor
+	 *
+	 * @see https://codeberg.org/helge/fep/src/commit/e1b2a16707b542ea5ea0cfb390ac1abce89f05bb/fep/aaa3/fep-aaa3.md
+	 *
+	 * @var array
+	 */
+	protected $implemented;
 }

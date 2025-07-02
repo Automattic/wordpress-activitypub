@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Using categories as hashtags has been removed to prevent conflicts with tags of the same name.
