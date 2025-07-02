@@ -675,4 +675,18 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			),
 		);
 	}
+
+	/**
+	 * Test get_user_id function.
+	 *
+	 * @covers \Activitypub\get_user_id
+	 */
+	public function test_get_user_id() {
+		$this->assertFalse( \Activitypub\get_user_id( 90210 ) );
+
+		$user = self::factory()->user->create_and_get();
+		$user->add_cap( 'activitypub' );
+
+		$this->assertIsString( \Activitypub\get_user_id( $user->ID ) );
+	}
 }
