@@ -66,8 +66,7 @@ class Signature {
 			$headers                        = $request->get_headers();
 			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
 		} else {
-			$request                        = self::format_server_request( $request );
-			$headers                        = $request['headers']; // $_SERVER array
+			$headers                        = self::format_server_request( $request );
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
@@ -112,21 +111,15 @@ class Signature {
 	 * @return array $request The formatted request array.
 	 */
 	public static function format_server_request( $server ) {
-		$request = array();
-		foreach ( $server as $param_key => $param_val ) {
-			$req_param = strtolower( $param_key );
-			if ( 'REQUEST_URI' === $req_param ) {
-				$request['headers']['route'][] = $param_val;
-			} else {
-				$header_key                          = str_replace(
-					'http_',
-					'',
-					$req_param
-				);
-				$request['headers'][ $header_key ][] = \wp_unslash( $param_val );
-			}
+		$headers = array();
+
+		foreach ( $server as $key => $value ) {
+			$header_key               = \str_replace( 'http_', '', \strtolower( $key ) );
+			$headers[ $header_key ][] = \wp_unslash( $value );
+
 		}
-		return $request;
+
+		return $headers;
 	}
 
 	/**
