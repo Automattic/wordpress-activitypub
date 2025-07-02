@@ -270,6 +270,13 @@ class Admin {
 			1,
 			3
 		);
+
+		// phpcs:ignore WordPress.Security.NonceVerification
+		if ( Comment::was_received( absint( $_GET['c'] ?? 0 ) ) ) {
+			// Redirect to the pending comments page.
+			\wp_safe_redirect( \admin_url( 'edit-comments.php?comment_status=moderated' ) );
+			exit;
+		}
 	}
 
 	/**
