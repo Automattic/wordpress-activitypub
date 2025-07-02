@@ -616,8 +616,15 @@ class Test_Comment extends \WP_UnitTestCase {
 	public function test_comment_feed_where() {
 		$post_id = self::factory()->post->create();
 
-		$comment_types   = Comment::get_comment_type_slugs();
-		$comment_types[] = 'comment';
+		$core_comment_types = array(
+			'comment',
+			'pingback',
+			'trackback',
+		);
+
+		$activitypub_comment_types = Comment::get_comment_type_slugs();
+
+		$comment_types = \array_merge( $activitypub_comment_types, $core_comment_types );
 
 		foreach ( $comment_types as $comment_type ) {
 			self::factory()->comment->create(
@@ -638,14 +645,14 @@ class Test_Comment extends \WP_UnitTestCase {
 		);
 		$query->get_posts();
 
-		$this->assertSame( 1, $query->comment_count );
-		$this->assertSame( 'comment', $query->comments[0]->comment_type );
+		$this->assertSame( count( $core_comment_types ), $query->comment_count );
+		$this->assertEqualSets( $core_comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
 
 		// Test what would happen if we don't filter comment_feed_where.
 		\remove_filter( 'comment_feed_where', array( Comment::class, 'comment_feed_where' ) );
 		$query->get_posts();
 
-		$this->assertSame( 3, $query->comment_count ); // All comments are included.
+		$this->assertSame( count( $comment_types ), $query->comment_count ); // All comments are included.
 		$this->assertEqualSets( $comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
 
 		// Restore the filter.
@@ -664,8 +671,8 @@ class Test_Comment extends \WP_UnitTestCase {
 		\set_query_var( 'type', 'foo_bar_baz_not_a_real_type' );
 		$query->get_posts();
 
-		$this->assertSame( 1, $query->comment_count );
-		$this->assertSame( 'comment', $query->comments[0]->comment_type );
+		$this->assertSame( count( $core_comment_types ), $query->comment_count );
+		$this->assertEqualSets( $core_comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
 
 		// Clean up.
 		\wp_delete_post( $post_id, true );
