@@ -209,7 +209,7 @@ class Signature {
 		$response_code = \wp_remote_retrieve_response_code( $response );
 
 		// Fall back to Draft Cavage signature for any 4xx responses.
-		if ( 400 <= $response_code && $response_code < 500 ) {
+		if ( $response_code >= 400 && $response_code < 500 ) {
 			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
 			self::rfc9421_add_unsupported_host( $url );
 
