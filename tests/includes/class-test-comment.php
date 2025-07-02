@@ -659,7 +659,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		\add_filter( 'comment_feed_where', array( Comment::class, 'comment_feed_where' ) );
 
 		// Test filtering by comment type.
-		foreach ( $comment_types as $comment_type ) {
+		foreach ( $activitypub_comment_types as $comment_type ) {
 			\set_query_var( 'type', $comment_type );
 			$query->get_posts();
 
