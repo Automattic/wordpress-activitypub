@@ -7,6 +7,7 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Http;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
@@ -22,6 +23,8 @@ use function Activitypub\user_can_activitypub;
 
 /**
  * Actors collection.
+ *
+ * Provides methods to retrieve, create, update, and manage ActivityPub actors (users, blogs, applications, and remote actors).
  */
 class Actors {
 	/**
@@ -39,9 +42,7 @@ class Actors {
 	const APPLICATION_USER_ID = -1;
 
 	/**
-	 * Post type.
-	 *
-	 * The post type to store remote actors.
+	 * Post type for storing remote actors.
 	 *
 	 * @var string
 	 */
@@ -50,9 +51,9 @@ class Actors {
 	/**
 	 * Get the Actor by ID.
 	 *
-	 * @param int $user_id The User-ID.
+	 * @param int $user_id The user ID.
 	 *
-	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
+	 * @return Actor|User|Blog|Application|\WP_Error Actor object or WP_Error if not found or not permitted.
 	 */
 	public static function get_by_id( $user_id ) {
 		if ( is_numeric( $user_id ) ) {
@@ -80,9 +81,9 @@ class Actors {
 	/**
 	 * Get the Actor by username.
 	 *
-	 * @param string $username Name of the Actor.
+	 * @param string $username Name of the actor.
 	 *
-	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
+	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
 	public static function get_by_username( $username ) {
 		/**
@@ -172,11 +173,11 @@ class Actors {
 	}
 
 	/**
-	 * Get the Actor by resource.
+	 * Get the Actor by resource URI (acct, http(s), etc).
 	 *
-	 * @param string $uri The Actor resource.
+	 * @param string $uri The actor resource URI.
 	 *
-	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
+	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
 	public static function get_by_resource( $uri ) {
 		$uri = object_to_uri( $uri );
@@ -204,6 +205,14 @@ class Actors {
 			// Check for http(s) URIs.
 			case 'http':
 			case 'https':
+				// Check locally stored remote Actor.
+				$post = self::get_remote_by_uri( $uri );
+
+				if ( ! \is_wp_error( $post ) ) {
+					return self::get_actor( $post );
+				}
+
+				// Check for http(s)://blog.example.com/@username.
 				$resource_path = \wp_parse_url( $uri, PHP_URL_PATH );
 
 				if ( $resource_path ) {
@@ -215,7 +224,6 @@ class Actors {
 
 					$resource_path = \trim( $resource_path, '/' );
 
-					// Check for http(s)://blog.example.com/@username.
 					if ( str_starts_with( $resource_path, '@' ) ) {
 						$identifier = \str_replace( '@', '', $resource_path );
 						$identifier = \trim( $identifier, '/' );
@@ -277,11 +285,11 @@ class Actors {
 	}
 
 	/**
-	 * Get the Actor by resource.
+	 * Get the Actor by various identifier types (ID, URI, username, or email).
 	 *
-	 * @param string $id The Actor resource.
+	 * @param string|int $id Actor identifier (user ID, URI, username, or email).
 	 *
-	 * @return User|Blog|Application|\WP_Error The Actor or WP_Error if user not found.
+	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
 	public static function get_by_various( $id ) {
 		if ( is_numeric( $id ) ) {
@@ -303,9 +311,9 @@ class Actors {
 	}
 
 	/**
-	 * Get the Actor collection.
+	 * Get the collection of all local user actors.
 	 *
-	 * @return array The Actor collection.
+	 * @return Actor[] Array of User actor objects.
 	 */
 	public static function get_collection() {
 		if ( is_user_type_disabled( 'user' ) ) {
@@ -334,9 +342,9 @@ class Actors {
 	}
 
 	/**
-	 * Get all active Actors including the Blog Actor.
+	 * Get all active actors, including the Blog actor if enabled.
 	 *
-	 * @return array The actor collection.
+	 * @return array Array of User and Blog actor objects.
 	 */
 	public static function get_all() {
 		$return = array();
@@ -375,7 +383,7 @@ class Actors {
 	 *
 	 * @param int $user_id The user ID to check.
 	 *
-	 * @return string The user type.
+	 * @return string Actor type: 'user', 'blog', or 'application'.
 	 */
 	public static function get_type_by_id( $user_id ) {
 		$user_id = (int) $user_id;
@@ -392,57 +400,42 @@ class Actors {
 	}
 
 	/**
-	 * Create or update a remote Actor (e.g., a follower) as a custom post type.
+	 * Upsert (insert or update) a remote actor as a custom post type.
 	 *
-	 * @param array|Actor $actor_data The ActivityPub actor object as associative array (must include 'id').
+	 * @param array|Actor $actor ActivityPub actor object (array or actor, must include 'id').
 	 *
-	 * @return int|\WP_Error The post ID or WP_Error.
+	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
 	 */
-	public static function upsert( $actor_data ) {
-		if ( \is_array( $actor_data ) ) {
-			$actor_data = Actor::init_from_array( $actor_data );
+	public static function upsert( $actor ) {
+		if ( \is_array( $actor ) ) {
+			$actor = Actor::init_from_array( $actor );
 		}
 
-		if ( ! $actor_data instanceof Actor ) {
-			return new \WP_Error(
-				'activitypub_invalid_actor_data',
-				\__( 'Invalid actor data', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		if ( ! empty( $actor_data->get_endpoints()['sharedInbox'] ) ) {
-			$inbox = $actor_data->get_endpoints()['sharedInbox'];
-		} elseif ( ! empty( $actor_data->get_inbox() ) ) {
-			$inbox = $actor_data->get_inbox();
-		} else {
-			return new \WP_Error(
-				'activitypub_invalid_actor_data',
-				\__( 'Invalid actor data', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		$args = array(
-			'guid'         => \esc_url_raw( $actor_data->get_id() ),
-			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor_data->get_name() ?? $actor_data->get_preferred_username() ) ),
-			'post_author'  => 0,
-			'post_type'    => self::POST_TYPE,
-			'post_content' => \wp_slash( $actor_data->to_json() ),
-			'post_excerpt' => \wp_kses( \wp_slash( $actor_data->get_summary() ), 'user_description' ),
-			'post_status'  => 'publish',
-			'meta_input'   => array(
-				'_activitypub_inbox' => $inbox,
-			),
-		);
-
-		$post = self::get_remote_by_uri( $actor_data->get_id() );
+		$post = self::get_remote_by_uri( $actor->get_id() );
 
 		if ( ! \is_wp_error( $post ) ) {
-			// If this is an update, prevent the "followed" date from being overwritten by the current date.
-			$args['ID']            = $post->ID;
-			$args['post_date']     = $post->post_date;
-			$args['post_date_gmt'] = $post->post_date_gmt;
+			return self::update( $post, $actor );
+		}
+
+		return self::create( $actor );
+	}
+
+	/**
+	 * Create a remote actor as a custom post type.
+	 *
+	 * @param array|Actor $actor ActivityPub actor object (array or Actor, must include 'id').
+	 *
+	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
+	 */
+	public static function create( $actor ) {
+		if ( \is_array( $actor ) ) {
+			$actor = Actor::init_from_array( $actor );
+		}
+
+		$args = self::prepare_custom_post_type( $actor );
+
+		if ( \is_wp_error( $args ) ) {
+			return $args;
 		}
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
@@ -451,11 +444,7 @@ class Actors {
 			\kses_remove_filters();
 		}
 
-		if ( \is_wp_error( $post ) ) {
-			$post_id = \wp_insert_post( $args );
-		} else {
-			$post_id = \wp_update_post( $args );
-		}
+		$post_id = \wp_insert_post( $args );
 
 		if ( $has_kses ) {
 			// Restore KSES filters.
@@ -466,7 +455,54 @@ class Actors {
 	}
 
 	/**
-	 * Delete a remote Actor object by actor URL (guid).
+	 * Update a remote Actor object by actor URL (guid).
+	 *
+	 * @param int|\WP_Post $post  The post ID or object.
+	 * @param array|Actor  $actor The ActivityPub actor object as associative array (must include 'id').
+	 *
+	 * @return int|\WP_Error The post ID or WP_Error.
+	 */
+	public static function update( $post, $actor ) {
+		if ( \is_array( $actor ) ) {
+			$actor = Actor::init_from_array( $actor );
+		}
+
+		$post = \get_post( $post, ARRAY_A );
+
+		if ( ! $post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$args = self::prepare_custom_post_type( $actor );
+
+		if ( \is_wp_error( $args ) ) {
+			return $args;
+		}
+
+		$args = \wp_parse_args( $args, $post );
+
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			// Prevent KSES from corrupting JSON in post_content.
+			\kses_remove_filters();
+		}
+
+		$post_id = \wp_update_post( $args );
+
+		if ( $has_kses ) {
+			// Restore KSES filters.
+			\kses_init_filters();
+		}
+
+		return $post_id;
+	}
+
+	/**
+	 * Delete a remote actor object by actor URL (guid).
 	 *
 	 * @param int $post_id The post ID.
 	 *
@@ -477,11 +513,11 @@ class Actors {
 	}
 
 	/**
-	 * Get a remote Actor object by actor URL (guid).
+	 * Get a remote actor post by actor URI (guid).
 	 *
 	 * @param string $actor_uri The actor URI.
 	 *
-	 * @return \WP_Post|\WP_Error The post object or WP_Error if not found.
+	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
 	 */
 	public static function get_remote_by_uri( $actor_uri ) {
 		global $wpdb;
@@ -506,8 +542,36 @@ class Actors {
 	}
 
 	/**
-	 * This function is used to store errors that occur when
-	 * sending an ActivityPub message to a Follower.
+	 * Lookup a remote actor post by actor URI (guid), fetching from remote if not found locally.
+	 *
+	 * @param string $actor_uri The actor URI.
+	 *
+	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
+	 */
+	public static function fetch_remote_by_uri( $actor_uri ) {
+		$post = self::get_remote_by_uri( $actor_uri );
+
+		if ( ! \is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		$object = Http::get_remote_object( $actor_uri, false );
+
+		if ( \is_wp_error( $object ) ) {
+			return $object;
+		}
+
+		$post_id = self::create( $object );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		return \get_post( $post_id );
+	}
+
+	/**
+	 * Store an error that occurred when sending an ActivityPub message to a follower.
 	 *
 	 * The error will be stored in post meta.
 	 *
@@ -536,7 +600,7 @@ class Actors {
 	}
 
 	/**
-	 * Count the errors for an Actor.
+	 * Count the errors for an actor.
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
@@ -547,18 +611,18 @@ class Actors {
 	}
 
 	/**
-	 * Get the errors for an Actor.
+	 * Get all error messages for an actor.
 	 *
-	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
+	 * @param int $post_id The post ID.
 	 *
-	 * @return string[] The errors.
+	 * @return string[] Array of error messages.
 	 */
 	public static function get_errors( $post_id ) {
 		return \get_post_meta( $post_id, '_activitypub_errors', false );
 	}
 
 	/**
-	 * Clear the errors for an Actor.
+	 * Clear all errors for an actor.
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
@@ -569,11 +633,11 @@ class Actors {
 	}
 
 	/**
-	 * Get all Actors that had errors.
+	 * Get all remote actors (Custom Post Type) that had errors.
 	 *
-	 * @param int $number Optional. The number of Actors to return. Default 20.
+	 * @param int $number Optional. Number of actors to return. Default 20.
 	 *
-	 * @return \WP_Post[] The list of Actors.
+	 * @return \WP_Post[] Array of faulty actor posts.
 	 */
 	public static function get_faulty( $number = 20 ) {
 		$args = array(
@@ -603,12 +667,12 @@ class Actors {
 	}
 
 	/**
-	 * Get all Actors that have not been updated for a given time.
+	 * Get all remote actor posts not updated for a given time.
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default DAY_IN_SECONDS.
 	 *
-	 * @return \WP_Post[] The list of Actors.
+	 * @return \WP_Post[] The list of actors.
 	 */
 	public static function get_outdated( $number = 50, $older_than = DAY_IN_SECONDS ) {
 		$args = array(
@@ -630,11 +694,11 @@ class Actors {
 	}
 
 	/**
-	 * Convert a Custom-Post-Type input to an Activitypub\Model\Actor.
+	 * Convert a custom post type input to an Activitypub\Activity\Actor.
 	 *
-	 * @param int|\WP_Post $post The post object.
+	 * @param int|\WP_Post $post The post ID or object.
 	 *
-	 * @return \Activitypub\Activity\Generic_Object|\WP_Error The Actor object or WP_Error on failure.
+	 * @return Actor|\WP_Error The actor object or WP_Error on failure.
 	 */
 	public static function get_actor( $post ) {
 		$post = \get_post( $post );
@@ -654,6 +718,48 @@ class Actors {
 		}
 
 		return Actor::init_from_json( $json );
+	}
+
+	/**
+	 * Prepare actor object for insert or update as a custom post type.
+	 *
+	 * @param Actor $actor The actor data.
+	 *
+	 * @return array|\WP_Error Array of post arguments or WP_Error on failure.
+	 */
+	private static function prepare_custom_post_type( $actor ) {
+		if ( ! $actor instanceof Actor ) {
+			return new \WP_Error(
+				'activitypub_invalid_actor_data',
+				\__( 'Invalid actor data', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( ! empty( $actor->get_endpoints()['sharedInbox'] ) ) {
+			$inbox = $actor->get_endpoints()['sharedInbox'];
+		} elseif ( ! empty( $actor->get_inbox() ) ) {
+			$inbox = $actor->get_inbox();
+		} else {
+			return new \WP_Error(
+				'activitypub_invalid_actor_data',
+				\__( 'Invalid actor data', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		return array(
+			'guid'         => \esc_url_raw( $actor->get_id() ),
+			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?? $actor->get_preferred_username() ) ),
+			'post_author'  => 0,
+			'post_type'    => self::POST_TYPE,
+			'post_content' => \wp_slash( $actor->to_json() ),
+			'post_excerpt' => \wp_kses( \wp_slash( $actor->get_summary() ), 'user_description' ),
+			'post_status'  => 'publish',
+			'meta_input'   => array(
+				'_activitypub_inbox' => $inbox,
+			),
+		);
 	}
 
 	/**

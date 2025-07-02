@@ -10,7 +10,7 @@ namespace Activitypub\Tests\Collection;
 use Activitypub\Collection\Actors;
 
 /**
- * Test class for Activitypub Actors Collection.
+ * Class Test_Actors
  *
  * @coversDefaultClass \Activitypub\Collection\Actors
  */
@@ -114,6 +114,182 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 
 		$actor = Actors::get_by_id( $user_id );
 		$this->assertWPError( $actor );
+	}
+
+	/**
+	 * Test the create() method for remote actors.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_actor() {
+		$actor   = array(
+			'id'                => 'https://remote.example.com/actor/jane-create',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/jane-create',
+			'inbox'             => 'https://remote.example.com/actor/jane-create/inbox',
+			'name'              => 'Jane',
+			'preferredUsername' => 'jane',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+		$post_id = Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+		$this->assertGreaterThan( 0, $post_id );
+		$post = \get_post( $post_id );
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertEquals( 'https://remote.example.com/actor/jane-create', $post->guid );
+		// Clean up.
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test the update() method for remote actors.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_actor() {
+		$actor   = array(
+			'id'                => 'https://remote.example.com/actor/jane-update',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/jane-update',
+			'inbox'             => 'https://remote.example.com/actor/jane-update/inbox',
+			'name'              => 'Jane',
+			'preferredUsername' => 'jane',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+		$post_id = Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+		$updated_actor         = $actor;
+		$updated_actor['name'] = 'Jane Doe';
+		$update_result         = Actors::update( $post_id, $updated_actor );
+		$this->assertEquals( $post_id, $update_result );
+		$updated_post = \get_post( $post_id );
+		$this->assertInstanceOf( '\WP_Post', $updated_post );
+		$actor_obj = Actors::get_actor( $updated_post );
+		$this->assertEquals( 'Jane Doe', $actor_obj->get_name() );
+		// Clean up.
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test the delete (wp_delete_post) operation for remote actors.
+	 *
+	 * @covers ::delete
+	 */
+	public function test_delete_actor() {
+		$actor   = array(
+			'id'                => 'https://remote.example.com/actor/jane-delete',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/jane-delete',
+			'inbox'             => 'https://remote.example.com/actor/jane-delete/inbox',
+			'name'              => 'Jane',
+			'preferredUsername' => 'jane',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+		$post_id = Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+		$delete_result = \wp_delete_post( $post_id, true );
+		$this->assertInstanceOf( '\WP_Post', $delete_result );
+		$deleted_post = \get_post( $post_id );
+		$this->assertNull( $deleted_post );
+	}
+
+	/**
+	 * Test fetch_remote_by_uri.
+	 *
+	 * @covers ::fetch_remote_by_uri
+	 */
+	public function test_fetch_remote_by_uri() {
+		// Create a remote actor.
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/bob',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/bob',
+			'inbox'             => 'https://remote.example.com/actor/bob/inbox',
+			'name'              => 'Bob',
+			'preferredUsername' => 'bob',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		$id = Actors::create( $actor );
+		$this->assertNotWPError( $id );
+
+		// Should find the actor locally.
+		$post = Actors::fetch_remote_by_uri( 'https://remote.example.com/actor/bob' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( 'https://remote.example.com/actor/bob', $post->guid );
+
+		// Delete local post, mock remote fetch.
+		\wp_delete_post( $id );
+
+		add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function ( $pre, $url_or_object ) use ( $actor ) {
+				if ( $url_or_object === $actor['id'] ) {
+					return $actor;
+				}
+				return $pre;
+			},
+			10,
+			2
+		);
+
+		$post = Actors::fetch_remote_by_uri( 'https://remote.example.com/actor/bob' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( 'https://remote.example.com/actor/bob', $post->guid );
+
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\wp_delete_post( $post->ID );
+
+		// Should return WP_Error for invalid URI.
+		$not_found = Actors::fetch_remote_by_uri( '' );
+		$this->assertWPError( $not_found );
+	}
+
+	/**
+	 * Test get_remote_by_uri.
+	 *
+	 * @covers ::get_remote_by_uri
+	 */
+	public function test_get_remote_by_uri() {
+		// Create a remote actor.
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/alice',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/alice',
+			'inbox'             => 'https://remote.example.com/actor/alice/inbox',
+			'name'              => 'Alice',
+			'preferredUsername' => 'alice',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		$id = Actors::create( $actor );
+		$this->assertNotWPError( $id );
+
+		// Should find the actor by guid.
+		$post = Actors::get_remote_by_uri( 'https://remote.example.com/actor/alice' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( 'https://remote.example.com/actor/alice', $post->guid );
+
+		// Should return WP_Error for non-existent URI.
+		$not_found = Actors::get_remote_by_uri( 'https://remote.example.com/actor/doesnotexist' );
+		$this->assertWPError( $not_found );
+
+		// Should return WP_Error for empty URI.
+		$empty = Actors::get_remote_by_uri( '' );
+		$this->assertWPError( $empty );
+
+		// Clean up.
+		\wp_delete_post( $id );
 	}
 
 	/**

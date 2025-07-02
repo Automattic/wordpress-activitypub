@@ -172,6 +172,35 @@ class Outbox {
 	}
 
 	/**
+	 * Get an outbox item by its GUID.
+	 *
+	 * @param string $guid The GUID of the outbox item.
+	 *
+	 * @return \WP_Post The outbox item or WP_Error.
+	 */
+	public static function get_by_guid( $guid ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				esc_sql( $guid ),
+				esc_sql( self::POST_TYPE )
+			)
+		);
+
+		if ( ! $post_id ) {
+			return new \WP_Error(
+				'activitypub_outbox_item_not_found',
+				\__( 'Outbox item not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return \get_post( $post_id );
+	}
+
+	/**
 	 * Reschedule an activity.
 	 *
 	 * @param int|\WP_Post $outbox_item The Outbox post or post ID.

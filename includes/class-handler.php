@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Handler\Accept;
 use Activitypub\Handler\Announce;
 use Activitypub\Handler\Create;
 use Activitypub\Handler\Delete;
@@ -31,6 +32,7 @@ class Handler {
 	 * Register handlers.
 	 */
 	public static function register_handlers() {
+		Accept::init();
 		Announce::init();
 		Create::init();
 		Delete::init();
