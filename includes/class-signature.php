@@ -251,7 +251,7 @@ class Signature {
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
-		\_deprecated_function( __METHOD__, 'unreleased', Actors::class . '::get_remote_key()' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_remote_key()' );
 
 		return Actors::get_remote_key( $key_id );
 	}
