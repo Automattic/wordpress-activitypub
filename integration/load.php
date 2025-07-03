@@ -182,3 +182,12 @@ add_filter(
  * @see https://buddypress.org/
  */
 add_action( 'bp_include', array( __NAMESPACE__ . '\Buddypress', 'init' ), 0 );
+
+/**
+ * Load the W3 Total Cache integration.
+ *
+ * @see https://w3-total-cache.com/
+ */
+if ( function_exists( 'w3tc_add_action' ) ) {
+	\w3tc_add_action( 'wp_loaded', array( __NAMESPACE__ . '\W3_Total_Cache', 'init' ) );
+}
