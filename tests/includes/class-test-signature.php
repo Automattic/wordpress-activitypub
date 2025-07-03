@@ -297,8 +297,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * Test HTTP signature verification with digest.
 	 *
 	 * @covers ::verify_http_signature
-	 * @covers ::generate_digest
-	 * @covers ::generate_signature
 	 */
 	public function test_verify_http_signature_with_digest() {
 		// Create a user and get their keypair.
@@ -319,27 +317,25 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 
-		// Create a request body.
-		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
-
-		// Generate a digest for the body.
-		$this->setExpectedDeprecated( 'Activitypub\Signature::generate_digest' );
-		$digest = Signature::generate_digest( $body );
-
-		// Create a date for the request.
-		$date = \gmdate( 'D, d M Y H:i:s T' );
-
-		// Generate a signature that includes the digest.
-		$this->setExpectedDeprecated( 'Activitypub\Signature::generate_signature' );
-		$signature = Signature::generate_signature( 1, 'POST', 'https://example.org/wp-json/activitypub/1.0/inbox', $date, $digest );
+		$signature = new Signature\Draft_Cavage_Signature();
+		$args      = $signature->sign(
+			array(
+				'method'      => 'POST',
+				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'headers'     => array(
+					'Content-Type' => 'application/activity+json',
+					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host'         => 'example.org',
+				),
+			),
+			'https://example.org/wp-json/activitypub/1.0/inbox'
+		);
 
 		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$request->set_body( $body );
-		$request->set_header( 'Date', $date );
-		$request->set_header( 'Digest', $digest );
-		$request->set_header( 'Host', 'example.org' );
-		$request->set_header( 'Signature', $signature );
-		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
 
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
@@ -356,9 +352,9 @@ class Test_Signature extends \WP_UnitTestCase {
 			'REQUEST_METHOD' => 'POST',
 			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
 			'HTTP_HOST'      => 'example.org',
-			'HTTP_DATE'      => $date,
-			'HTTP_DIGEST'    => $digest,
-			'HTTP_SIGNATURE' => $signature,
+			'HTTP_DATE'      => $args['headers']['Date'],
+			'HTTP_DIGEST'    => $args['headers']['Digest'],
+			'HTTP_SIGNATURE' => $args['headers']['Signature'],
 		);
 
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
@@ -370,8 +366,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * Test HTTP signature verification with RFC-9421 compliant signatures.
 	 *
 	 * @covers ::verify_http_signature
-	 * @covers ::generate_digest
-	 * @covers ::generate_signature
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
 	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
@@ -454,8 +448,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * Test HTTP signature verification with RFC-9421 compliant signatures using GET requests.
 	 *
 	 * @covers ::verify_http_signature
-	 * @covers ::generate_digest
-	 * @covers ::generate_signature
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
 	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
@@ -536,8 +528,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * Test HTTP signature verification with RFC-9421 compliant signatures using different algorithms.
 	 *
 	 * @covers ::verify_http_signature
-	 * @covers ::generate_digest
-	 * @covers ::generate_signature
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
 	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label

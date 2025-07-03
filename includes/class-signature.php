@@ -20,6 +20,174 @@ use Activitypub\Signature\Http_Message_Signature;
 class Signature {
 
 	/**
+	 * Sign an HTTP Request.
+	 *
+	 * @param array  $args An array of HTTP request arguments.
+	 * @param string $url  The request URL.
+	 *
+	 * @return array Request arguments with signature headers.
+	 */
+	public static function sign_request( $args, $url ) {
+		// Bail if there's nothing to sign with.
+		if ( ! isset( $args['key_id'], $args['private_key'] ) ) {
+			return $args;
+		}
+
+		$args = \wp_parse_args(
+			$args,
+			array(
+				'method'  => 'GET',
+				'headers' => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+				),
+			)
+		);
+
+		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && ! self::rfc9421_is_unsupported( $url ) ) {
+			$signature = new Http_Message_Signature();
+			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
+		} else {
+			$signature = new Draft_Cavage_Signature();
+		}
+
+		return $signature->sign( $args, $url );
+	}
+
+	/**
+	 * Verifies the http signatures
+	 *
+	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
+	 *
+	 * @return bool|\WP_Error A boolean or WP_Error.
+	 */
+	public static function verify_http_signature( $request ) {
+		if ( is_object( $request ) ) { // REST Request object.
+			$body                           = $request->get_body();
+			$headers                        = $request->get_headers();
+			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
+		} else {
+			$headers                        = self::format_server_request( $request );
+			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
+		}
+
+		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Draft_Cavage_Signature();
+
+		return $signature->verify( $headers, $body ?? null );
+	}
+
+	/**
+	 * If a request with RFC-9421 signature fails, we try again with the Draft Cavage signature.
+	 *
+	 * @param array  $response    HTTP response.
+	 * @param array  $parsed_args HTTP request arguments.
+	 * @param string $url         The request URL.
+	 *
+	 * @return array The HTTP response.
+	 */
+	public static function maybe_double_knock( $response, $parsed_args, $url ) {
+		// Remove this filter to prevent infinite recursion.
+		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
+
+		$response_code = \wp_remote_retrieve_response_code( $response );
+
+		// Fall back to Draft Cavage signature for any 4xx responses.
+		if ( $response_code >= 400 && $response_code < 500 ) {
+			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
+			self::rfc9421_add_unsupported_host( $url );
+
+			$parsed_args = ( new Draft_Cavage_Signature() )->sign( $parsed_args, $url );
+			$response    = \wp_remote_request( $url, $parsed_args );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Formats the $_SERVER to resemble the WP_REST_REQUEST array,
+	 * for use with verify_http_signature().
+	 *
+	 * @param array $server The $_SERVER array.
+	 *
+	 * @return array $request The formatted request array.
+	 */
+	public static function format_server_request( $server ) {
+		$headers = array();
+
+		foreach ( $server as $key => $value ) {
+			$key               = \str_replace( 'http_', '', \strtolower( $key ) );
+			$headers[ $key ][] = \wp_unslash( $value );
+
+		}
+
+		return $headers;
+	}
+
+	/**
+	 * Returns route.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return string
+	 */
+	private static function get_route( $request ) {
+		// Check if the route starts with "index.php".
+		if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
+			$route = $request->get_route();
+		} else {
+			$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
+		}
+
+		// Fix route for subdirectory installations.
+		$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
+
+		if ( \is_string( $path ) ) {
+			$path = trim( $path, '/' );
+		}
+
+		if ( $path ) {
+			$route = '/' . $path . $route;
+		}
+
+		return $route;
+	}
+
+	/**
+	 * Check if RFC-9421 signature is unsupported for a given host.
+	 *
+	 * @param string $url The URL to check.
+	 *
+	 * @return bool True, if unsupported, false otherwise.
+	 */
+	private static function rfc9421_is_unsupported( $url ) {
+		$host = \wp_parse_url( $url, \PHP_URL_HOST );
+		$list = \get_option( 'activitypub_rfc9421_unsupported', array() );
+
+		if ( isset( $list[ $host ] ) ) {
+			if ( $list[ $host ] > \time() ) {
+				return true;
+			}
+
+			unset( $list[ $host ] );
+			\update_option( 'activitypub_rfc9421_unsupported', $list );
+		}
+
+		return false;
+	}
+
+	/**
+	 * Set RFC-9421 signature unsupported for a given host.
+	 *
+	 * @param string $url The URL to set.
+	 */
+	private static function rfc9421_add_unsupported_host( $url ) {
+		$list = \get_option( 'activitypub_rfc9421_unsupported', array() );
+		$host = \wp_parse_url( $url, \PHP_URL_HOST );
+
+		$list[ $host ] = \time() + MONTH_IN_SECONDS;
+		\update_option( 'activitypub_rfc9421_unsupported', $list, false );
+	}
+
+	/**
 	 * Return the public key for a given user.
 	 *
 	 * @deprecated unreleased Use {@see Actors::get_public_key()}.
@@ -67,37 +235,18 @@ class Signature {
 	}
 
 	/**
-	 * Sign an HTTP Request.
+	 * Get public key from key_id.
 	 *
-	 * @param array  $args An array of HTTP request arguments.
-	 * @param string $url  The request URL.
+	 * @deprecated unreleased Use {@see Actors::get_remote_key()}.
 	 *
-	 * @return array Request arguments with signature headers.
+	 * @param string $key_id The URL to the public key.
+	 *
+	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
-	public static function sign_request( $args, $url ) {
-		// Bail if there's nothing to sign with.
-		if ( ! isset( $args['key_id'], $args['private_key'] ) ) {
-			return $args;
-		}
+	public static function get_remote_key( $key_id ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_remote_key()' );
 
-		$args = \wp_parse_args(
-			$args,
-			array(
-				'method'  => 'GET',
-				'headers' => array(
-					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
-				),
-			)
-		);
-
-		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && ! self::rfc9421_is_unsupported( $url ) ) {
-			$signature = new Http_Message_Signature();
-			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
-		} else {
-			$signature = new Draft_Cavage_Signature();
-		}
-
-		return $signature->sign( $args, $url );
+		return Actors::get_remote_key( $key_id );
 	}
 
 	/**
@@ -156,115 +305,25 @@ class Signature {
 	}
 
 	/**
-	 * Verifies the http signatures
-	 *
-	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
-	 *
-	 * @return bool|\WP_Error A boolean or WP_Error.
-	 */
-	public static function verify_http_signature( $request ) {
-		if ( is_object( $request ) ) { // REST Request object.
-			$body                           = $request->get_body();
-			$headers                        = $request->get_headers();
-			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
-		} else {
-			$request                        = self::format_server_request( $request );
-			$headers                        = $request['headers']; // $_SERVER array
-			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
-		}
-
-		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Draft_Cavage_Signature();
-
-		return $signature->verify( $headers, $body ?? null );
-	}
-
-	/**
-	 * Get public key from key_id.
-	 *
-	 * @deprecated unreleased Use {@see Actors::get_remote_key()}.
-	 *
-	 * @param string $key_id The URL to the public key.
-	 *
-	 * @return resource|\WP_Error The public key resource or WP_Error.
-	 */
-	public static function get_remote_key( $key_id ) {
-		\_deprecated_function( __METHOD__, 'unreleased', Actors::class . '::get_remote_key()' );
-
-		return Actors::get_remote_key( $key_id );
-	}
-
-	/**
-	 * If a request with RFC-9421 signature fails, we try again with the Draft Cavage signature.
-	 *
-	 * @param array  $response    HTTP response.
-	 * @param array  $parsed_args HTTP request arguments.
-	 * @param string $url         The request URL.
-	 *
-	 * @return array The HTTP response.
-	 */
-	public static function maybe_double_knock( $response, $parsed_args, $url ) {
-		// Remove this filter to prevent infinite recursion.
-		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
-
-		$response_code = \wp_remote_retrieve_response_code( $response );
-
-		// Fall back to Draft Cavage signature for any 4xx responses.
-		if ( $response_code >= 400 && $response_code < 500 ) {
-			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
-			self::rfc9421_add_unsupported_host( $url );
-
-			$parsed_args = ( new Draft_Cavage_Signature() )->sign( $parsed_args, $url );
-			$response    = \wp_remote_request( $url, $parsed_args );
-		}
-
-		return $response;
-	}
-
-	/**
-	 * Check if RFC-9421 signature is unsupported for a given host.
-	 *
-	 * @param string $url The URL to check.
-	 *
-	 * @return bool True, if unsupported, false otherwise.
-	 */
-	private static function rfc9421_is_unsupported( $url ) {
-		$host = \wp_parse_url( $url, \PHP_URL_HOST );
-		$list = \get_option( 'activitypub_rfc9421_unsupported', array() );
-
-		if ( isset( $list[ $host ] ) ) {
-			if ( $list[ $host ] > \time() ) {
-				return true;
-			}
-
-			unset( $list[ $host ] );
-			\update_option( 'activitypub_rfc9421_unsupported', $list );
-		}
-
-		return false;
-	}
-
-	/**
-	 * Set RFC-9421 signature unsupported for a given host.
-	 *
-	 * @param string $url The URL to set.
-	 */
-	private static function rfc9421_add_unsupported_host( $url ) {
-		$list = \get_option( 'activitypub_rfc9421_unsupported', array() );
-		$host = \wp_parse_url( $url, \PHP_URL_HOST );
-
-		$list[ $host ] = \time() + MONTH_IN_SECONDS;
-		\update_option( 'activitypub_rfc9421_unsupported', $list, false );
-	}
-
-	/**
 	 * Gets the signature algorithm from the signature header.
+	 *
+	 * @deprecated unreleased Use {@see Signature::verify()}.
 	 *
 	 * @param array $signature_block The signature block.
 	 *
 	 * @return string|bool The signature algorithm or false if not found.
 	 */
 	public static function get_signature_algorithm( $signature_block ) { // phpcs:ignore
-		_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+
+		if ( ! empty( $signature_block['algorithm'] ) ) {
+			switch ( $signature_block['algorithm'] ) {
+				case 'rsa-sha-512':
+					return 'sha512'; // hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12.
+				default:
+					return 'sha256';
+			}
+		}
 
 		return false;
 	}
@@ -272,18 +331,48 @@ class Signature {
 	/**
 	 * Parses the Signature header.
 	 *
+	 * @deprecated unreleased Use {@see Signature::verify()}.
+	 *
 	 * @param string $signature The signature header.
 	 *
 	 * @return array Signature parts.
 	 */
 	public static function parse_signature_header( $signature ) { // phpcs:ignore
-		_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
 
-		return array();
+		$parsed_header = array();
+		$matches       = array();
+
+		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['keyId'] = trim( $matches[1] );
+		}
+		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
+			$parsed_header['(created)'] = trim( $matches[1] );
+		}
+		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
+			$parsed_header['(expires)'] = trim( $matches[1] );
+		}
+		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['algorithm'] = trim( $matches[1] );
+		}
+		if ( \preg_match( '/headers="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['headers'] = \explode( ' ', trim( $matches[1] ) );
+		}
+		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+		}
+
+		if ( empty( $parsed_header['headers'] ) ) {
+			$parsed_header['headers'] = array( 'date' );
+		}
+
+		return $parsed_header;
 	}
 
 	/**
 	 * Gets the header data from the included pseudo headers.
+	 *
+	 * @deprecated unreleased Use {@see Signature::verify()}.
 	 *
 	 * @param array $signed_headers  The signed headers.
 	 * @param array $signature_block The signature block.
@@ -292,9 +381,73 @@ class Signature {
 	 * @return string signed headers for comparison
 	 */
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) { // phpcs:ignore
-		_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
 
-		return '';
+		$signed_data = '';
+
+		// This also verifies time-based values by returning false if any of these are out of range.
+		foreach ( $signed_headers as $header ) {
+			if ( 'host' === $header ) {
+				if ( isset( $headers['x_original_host'] ) ) {
+					$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
+					continue;
+				}
+			}
+			if ( '(request-target)' === $header ) {
+				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
+				continue;
+			}
+			if ( str_contains( $header, '-' ) ) {
+				$signed_data .= $header . ': ' . $headers[ str_replace( '-', '_', $header ) ][0] . "\n";
+				continue;
+			}
+			if ( '(created)' === $header ) {
+				if ( ! empty( $signature_block['(created)'] ) && \intval( $signature_block['(created)'] ) > \time() ) {
+					// Created in the future.
+					return false;
+				}
+
+				if ( ! array_key_exists( '(created)', $headers ) ) {
+					$signed_data .= $header . ': ' . $signature_block['(created)'] . "\n";
+					continue;
+				}
+			}
+			if ( '(expires)' === $header ) {
+				if ( ! empty( $signature_block['(expires)'] ) && \intval( $signature_block['(expires)'] ) < \time() ) {
+					// Expired in the past.
+					return false;
+				}
+
+				if ( ! array_key_exists( '(expires)', $headers ) ) {
+					$signed_data .= $header . ': ' . $signature_block['(expires)'] . "\n";
+					continue;
+				}
+			}
+			if ( 'date' === $header ) {
+				if ( empty( $headers[ $header ][0] ) ) {
+					continue;
+				}
+
+				// Allow a bit of leeway for misconfigured clocks.
+				$d = new \DateTime( $headers[ $header ][0] );
+				$d->setTimeZone( new \DateTimeZone( 'UTC' ) );
+				$c = $d->format( 'U' );
+
+				$d_plus  = time() + ( 3 * HOUR_IN_SECONDS );
+				$d_minus = time() - ( 3 * HOUR_IN_SECONDS );
+
+				if ( $c > $d_plus || $c < $d_minus ) {
+					// Time out of range.
+					return false;
+				}
+			}
+
+			if ( ! empty( $headers[ $header ][0] ) ) {
+				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
+			}
+		}
+
+		return \rtrim( $signed_data, "\n" );
 	}
 
 	/**
@@ -311,60 +464,5 @@ class Signature {
 
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return "SHA-256=$digest";
-	}
-
-	/**
-	 * Formats the $_SERVER to resemble the WP_REST_REQUEST array,
-	 * for use with verify_http_signature().
-	 *
-	 * @param array $server The $_SERVER array.
-	 *
-	 * @return array $request The formatted request array.
-	 */
-	public static function format_server_request( $server ) {
-		$request = array();
-		foreach ( $server as $param_key => $param_val ) {
-			$req_param = strtolower( $param_key );
-			if ( 'REQUEST_URI' === $req_param ) {
-				$request['headers']['route'][] = $param_val;
-			} else {
-				$header_key                          = str_replace(
-					'http_',
-					'',
-					$req_param
-				);
-				$request['headers'][ $header_key ][] = \wp_unslash( $param_val );
-			}
-		}
-		return $request;
-	}
-
-	/**
-	 * Returns route.
-	 *
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return string
-	 */
-	private static function get_route( $request ) {
-		// Check if the route starts with "index.php".
-		if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
-			$route = $request->get_route();
-		} else {
-			$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
-		}
-
-		// Fix route for subdirectory installations.
-		$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
-
-		if ( \is_string( $path ) ) {
-			$path = trim( $path, '/' );
-		}
-
-		if ( $path ) {
-			$route = '/' . $path . $route;
-		}
-
-		return $route;
 	}
 }
