@@ -297,7 +297,7 @@ class Generic_Object {
 				$value = $value->to_array( false );
 			}
 
-			if ( $this->is_namespaced( $key ) && is_array( $value ) ) {
+			if ( is_array( $value ) && $this->is_namespaced( $key ) ) {
 				foreach ( $value as $sub_key => $sub_value ) {
 					$array[ snake_to_camel_case( $key ) . ':' . snake_to_camel_case( $sub_key ) ] = $sub_value;
 				}
