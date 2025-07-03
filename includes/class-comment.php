@@ -23,7 +23,7 @@ class Comment {
 	public static function init() {
 		self::register_comment_types();
 
-		add_filter( 'map_meta_cap', array( self::class, 'map_meta_cap' ), 10, 4 );
+		\add_filter( 'map_meta_cap', array( self::class, 'map_meta_cap' ), 10, 4 );
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
