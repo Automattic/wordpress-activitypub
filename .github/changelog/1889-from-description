@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed a potential error when getting an Activitypub ID based on a user ID.
