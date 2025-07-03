@@ -60,7 +60,7 @@ class Http_Message_Signature implements Signature_Standard {
 		\openssl_sign( $signature_base, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
-		$args['headers']['Signature-Input'] = vsprintf( 'wp=(' . \implode( ' ', $identifiers ) . ');created=%1$d;keyid="%2$s";alg="%3$s"', $params );
+		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ')' . $this->get_params_string( $params );
 		$args['headers']['Signature']       = 'wp=:' . $signature . ':';
 
 		return $args;
@@ -324,17 +324,32 @@ class Http_Message_Signature implements Signature_Standard {
 		}
 
 		$signature_base .= '"@signature-params": (' . \implode( ' ', \array_keys( $components ) ) . ')';
+		$signature_base .= $this->get_params_string( $params );
+
+		return $signature_base;
+	}
+
+	/**
+	 * Returns the signature params in a string format.
+	 *
+	 * @param array $params Signature params.
+	 *
+	 * @return string Signature params.
+	 */
+	private function get_params_string( $params ) {
+		$signature_params = '';
+
 		foreach ( $params as $key => $value ) {
 			if ( \is_numeric( $value ) ) {
-				$signature_base .= ';' . $key . '=' . $value; // No quotes.
+				$signature_params .= ';' . $key . '=' . $value; // No quotes.
 			} else {
 				// Escape backslashes and double quotes per RFC-9421.
-				$value           = \str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
-				$signature_base .= ';' . $key . '="' . $value . '"'; // Double quotes.
+				$value             = \str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
+				$signature_params .= ';' . $key . '="' . $value . '"'; // Double quotes.
 			}
 		}
 
-		return $signature_base;
+		return $signature_params;
 	}
 
 	/**
