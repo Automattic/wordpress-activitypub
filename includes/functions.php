@@ -1258,7 +1258,7 @@ function get_content_warning( $post_id ) {
 function get_user_id( $id ) {
 	$user = Actors::get_by_id( $id );
 
-	if ( ! $user ) {
+	if ( \is_wp_error( $user ) ) {
 		return false;
 	}
 
