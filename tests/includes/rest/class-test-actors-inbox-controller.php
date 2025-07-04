@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Actors;
+
 /**
  * Test class for Actors_Inbox_Controller.
  *
@@ -260,8 +262,8 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function ( $json, $actor ) {
-				$user       = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
-				$public_key = \Activitypub\Signature::get_public_key_for( $user->get__id() );
+				$user       = Actors::get_by_id( self::$user_id );
+				$public_key = Actors::get_public_key( $user->get__id() );
 
 				// Return ActivityPub Profile with signature.
 				return array(
@@ -282,7 +284,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$post = get_post( self::$post_id );
 
 		// Test valid request.
-		$actor    = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+		$actor    = Actors::get_by_id( self::$user_id );
 		$object   = \Activitypub\Transformer\Post::transform( $post )->to_object();
 		$activity = new \Activitypub\Activity\Activity( 'Like' );
 		$activity->from_array(
@@ -296,30 +298,34 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 
 		// Mock remote actor URL.
 		$activity->add_cc( $actor->get_id() );
-		$activity = $activity->to_json();
 
-		// Generate_digest & generate_signature.
-		$digest    = \Activitypub\Signature::generate_digest( $activity );
-		$date      = gmdate( 'D, d M Y H:i:s T' );
-		$signature = \Activitypub\Signature::generate_signature( self::$user_id, 'POST', $actor->get_inbox(), $date, $digest );
+		$signature = new \Activitypub\Signature\Draft_Cavage_Signature();
+		$args      = $signature->sign(
+			array(
+				'method'      => 'POST',
+				'body'        => $activity->to_json(),
+				'key_id'      => $actor->get_id() . '#main-key',
+				'private_key' => Actors::get_private_key( $actor->get__id() ),
+				'headers'     => array(
+					'Content-Type' => 'application/activity+json',
+					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host'         => \wp_parse_url( $actor->get_inbox(), PHP_URL_HOST ),
+				),
+			),
+			$actor->get_inbox()
+		);
 
 		$this->assertMatchesRegularExpression(
 			'/keyId="' . preg_quote( $actor->get_id(), '/' ) . '#main-key",algorithm="rsa-sha256",headers="\(request-target\) host date digest",signature="[^"]*"/',
-			$signature
+			$args['headers']['Signature']
 		);
 
 		// Signed headers.
-		$url_parts = wp_parse_url( $actor->get_inbox() );
-		$route     = $url_parts['path'];
-		$host      = $url_parts['host'];
+		$route = \wp_parse_url( $actor->get_inbox(), PHP_URL_PATH );
 
 		$request = new \WP_REST_Request( 'POST', str_replace( '/wp-json', '', $route ) );
-		$request->set_header( 'content-type', 'application/activity+json' );
-		$request->set_header( 'digest', $digest );
-		$request->set_header( 'signature', $signature );
-		$request->set_header( 'date', $date );
-		$request->set_header( 'host', $host );
-		$request->set_body( $activity );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
 
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 202, $response->get_status() );

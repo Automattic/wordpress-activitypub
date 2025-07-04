@@ -57,6 +57,7 @@ jobs:
             {"path": "integration", "label": "[Focus] Compatibility"},
             {"path": "includes/class-mailer.php", "label": "[Feature] Notifications"},
             {"path": "includes/class-blocks.php", "label": "[Focus] Editor"},
+            {"path": "includes/class-cli.php", "label": "[Feature] CLI"},
             {"path": "includes/collection", "label": "[Feature] Collections"},
             {"path": "includes/rest", "label": "[Feature] REST API"},
             {"path": "includes/signature", "label": "[Feature] Signature"},

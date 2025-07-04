@@ -309,6 +309,7 @@ class Activitypub {
 		$vars[] = 'preview';
 		$vars[] = 'author';
 		$vars[] = 'actor';
+		$vars[] = 'type';
 		$vars[] = 'c';
 		$vars[] = 'p';
 

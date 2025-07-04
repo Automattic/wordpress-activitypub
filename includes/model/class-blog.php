@@ -10,8 +10,6 @@ namespace Activitypub\Model;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
-use Activitypub\Signature;
-use WP_Query;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -31,6 +29,22 @@ class Blog extends Actor {
 	 * @var int
 	 */
 	protected $_id = Actors::BLOG_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
+
+	/**
+	 * The generator of the object.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#generator
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md#discovery-through-an-actor
+	 *
+	 * @var array
+	 */
+	protected $generator = array(
+		'type'       => 'Application',
+		'implements' => array(
+			'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
+			'name' => 'RFC-9421: HTTP Message Signatures',
+		),
+	);
 
 	/**
 	 * Constructor.
@@ -255,7 +269,7 @@ class Blog extends Actor {
 	 * @return string The published date.
 	 */
 	public function get_published() {
-		$first_post = new WP_Query(
+		$first_post = new \WP_Query(
 			array(
 				'orderby' => 'date',
 				'order'   => 'ASC',
@@ -316,7 +330,7 @@ class Blog extends Actor {
 		return array(
 			'id'           => $this->get_id() . '#main-key',
 			'owner'        => $this->get_id(),
-			'publicKeyPem' => Signature::get_public_key_for( $this->get__id() ),
+			'publicKeyPem' => Actors::get_public_key( $this->get__id() ),
 		);
 	}
 

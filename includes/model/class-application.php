@@ -7,8 +7,6 @@
 
 namespace Activitypub\Model;
 
-use WP_Query;
-use Activitypub\Signature;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 
@@ -46,6 +44,20 @@ class Application extends Actor {
 	 * @var boolean
 	 */
 	protected $indexable = false;
+
+	/**
+	 * List of software capabilities implemented by the Application.
+	 *
+	 * @see https://codeberg.org/silverpill/feps/src/branch/main/844e/fep-844e.md
+	 *
+	 * @var array
+	 */
+	protected $implements = array(
+		array(
+			'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
+			'name' => 'RFC-9421: HTTP Message Signatures',
+		),
+	);
 
 	/**
 	 * Returns the type of the object.
@@ -166,7 +178,7 @@ class Application extends Actor {
 	 * @return string The published date.
 	 */
 	public function get_published() {
-		$first_post = new WP_Query(
+		$first_post = new \WP_Query(
 			array(
 				'orderby' => 'date',
 				'order'   => 'ASC',
@@ -219,7 +231,7 @@ class Application extends Actor {
 		return array(
 			'id'           => $this->get_id() . '#main-key',
 			'owner'        => $this->get_id(),
-			'publicKeyPem' => Signature::get_public_key_for( Actors::APPLICATION_USER_ID ),
+			'publicKeyPem' => Actors::get_public_key( Actors::APPLICATION_USER_ID ),
 		);
 	}
 
