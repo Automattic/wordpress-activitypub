@@ -272,10 +272,11 @@ class Admin {
 		);
 
 		// phpcs:ignore WordPress.Security.NonceVerification
-		if ( Comment::was_received( \absint( $_GET['c'] ?? 0 ) ) ) {
+		$comment_id = \absint( $_GET['c'] ?? 0 );
+		if ( Comment::was_received( $comment_id ) ) {
 			$path = 'edit-comments.php';
 
-			switch ( \wp_get_comment_status( \absint( $_GET['c'] ?? 0 ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			switch ( \wp_get_comment_status( $comment_id ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 				case 'spam':
 					$path = 'edit-comments.php?comment_status=spam';
 					break;
