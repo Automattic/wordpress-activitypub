@@ -283,4 +283,50 @@ class Test_Following extends \WP_UnitTestCase {
 
 		\wp_delete_post( $post_id );
 	}
+
+	/**
+	 * Test unfollow removes user from following list.
+	 *
+	 * @covers ::unfollow
+	 */
+	public function test_unfollow_removes_user() {
+		// Create a test post (remote actor).
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'  => 'Test Remote Actor',
+				'post_status' => 'publish',
+				'post_type'   => \Activitypub\Collection\Actors::POST_TYPE,
+			)
+		);
+
+		$user_id = 1;
+
+		// Use global follow() function to add a follow request.
+		$remote_actor_url = \get_post( $post_id )->guid;
+		\Activitypub\follow( $remote_actor_url, $user_id );
+		\clean_post_cache( $post_id );
+
+		// Verify user is in following list (pending or following).
+		$following = \get_post_meta( $post_id, \Activitypub\Collection\Following::FOLLOWING_META_KEY, false );
+		$pending   = \get_post_meta( $post_id, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+		$this->assertTrue( in_array( (string) $user_id, $following, true ) || in_array( (string) $user_id, $pending, true ) );
+
+		// Remove following.
+		$result = \Activitypub\Collection\Following::unfollow( $post_id, $user_id );
+
+		\clean_post_cache( $post_id );
+
+		// Should return WP_Post.
+		$this->assertInstanceOf( '\WP_Post', $result );
+		$this->assertEquals( $post_id, $result->ID );
+
+		// User should no longer be in following list.
+		$following = \get_post_meta( $post_id, \Activitypub\Collection\Following::FOLLOWING_META_KEY, false );
+		$pending   = \get_post_meta( $post_id, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+
+		$this->assertNotContains( (string) $user_id, $following );
+		$this->assertNotContains( (string) $user_id, $pending );
+
+		\wp_delete_post( $post_id );
+	}
 }
