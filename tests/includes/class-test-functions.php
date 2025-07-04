@@ -728,7 +728,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
 
-		$id = \Activitypub\follow( 'https://example.com/users/test', $user_id );
+		\Activitypub\follow( 'https://example.com/users/test', $user_id );
 
 		$outbox_items = \get_posts(
 			array(
