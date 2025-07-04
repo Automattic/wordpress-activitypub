@@ -45,7 +45,7 @@ class Menu {
 				\__( 'Following ⁂', 'activitypub' ),
 				\__( 'Following ⁂', 'activitypub' ),
 				'activitypub',
-				'activitypub-followings-list',
+				'activitypub-following-list',
 				array( Admin::class, 'following_list_page' )
 			);
 

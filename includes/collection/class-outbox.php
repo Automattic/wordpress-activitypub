@@ -158,7 +158,7 @@ class Outbox {
 	 * @return int|bool|\WP_Error The ID of the outbox item or false on failure.
 	 */
 	public static function undo( $outbox_item ) {
-		$outbox_item = get_post( $outbox_item );
+		$outbox_item = \get_post( $outbox_item );
 		$activity    = self::get_activity( $outbox_item );
 
 		if ( \is_wp_error( $activity ) ) {
@@ -231,7 +231,7 @@ class Outbox {
 	 * @return Activity|\WP_Error The Activity object or WP_Error.
 	 */
 	public static function get_activity( $outbox_item ) {
-		$outbox_item = get_post( $outbox_item );
+		$outbox_item = \get_post( $outbox_item );
 		$actor       = self::get_actor( $outbox_item );
 		if ( is_wp_error( $actor ) ) {
 			return $actor;

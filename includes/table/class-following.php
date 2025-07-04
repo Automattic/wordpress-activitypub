@@ -107,8 +107,6 @@ class Following extends WP_List_Table {
 				$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
 			}
 		}
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
-
 		$following_with_count = FollowingCollection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
 		$following            = $following_with_count['following'];
 		$counter              = $following_with_count['total'];
@@ -145,7 +143,7 @@ class Following extends WP_List_Table {
 	 */
 	public function get_bulk_actions() {
 		return array(
-			'unfollow' => __( 'Unfollow', 'activitypub' ),
+			'delete' => __( 'Unfollow', 'activitypub' ),
 		);
 	}
 
@@ -217,13 +215,16 @@ class Following extends WP_List_Table {
 		}
 
 		$following = $_REQUEST['following']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-
-		if ( $this->current_action() === 'unfollow' ) {
+		if ( $this->current_action() === 'delete' ) {
 			if ( ! is_array( $following ) ) {
 				$following = array( $following );
 			}
 			foreach ( $following as $following ) {
-				FollowingCollection::unfollow( $this->user_id, $following );
+				$actor = Actors::get_remote_by_uri( $following );
+				if ( \is_wp_error( $actor ) ) {
+					continue;
+				}
+				FollowingCollection::unfollow( $actor, $this->user_id );
 			}
 		}
 	}

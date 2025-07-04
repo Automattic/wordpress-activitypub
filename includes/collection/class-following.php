@@ -120,11 +120,13 @@ class Following {
 		\delete_post_meta( $post->ID, self::PENDING_META_KEY, $user_id );
 
 		// Get Post-ID of the Follow Outbox Activity.
-		$post_id = new \WP_Query(
+		$post_id_query = new \WP_Query(
 			array(
 				'post_type'      => Outbox::POST_TYPE,
-				'post_author'    => $user_id,
+				'nopaging'       => true,
 				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'number'         => 1,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'     => array(
 					array(
@@ -135,7 +137,11 @@ class Following {
 			)
 		);
 
-		Outbox::undo( $post_id );
+		$post_ids = $post_id_query->get_posts();
+
+		if ( $post_ids ) {
+			Outbox::undo( $post_ids[0] );
+		}
 
 		return $post;
 	}
@@ -164,8 +170,10 @@ class Following {
 			'order'          => 'DESC',
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
-				'key'   => self::FOLLOWING_META_KEY,
-				'value' => $user_id,
+				array(
+					'key'   => self::FOLLOWING_META_KEY,
+					'value' => $user_id,
+				),
 			),
 		);
 
