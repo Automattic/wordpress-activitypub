@@ -102,6 +102,44 @@ class Following {
 	}
 
 	/**
+	 * Remove a follow request.
+	 *
+	 * @param \WP_Post|int $post    The ID of the remote Actor.
+	 * @param int          $user_id The ID of the WordPress User.
+	 *
+	 * @return \WP_Post|\WP_Error The ID of the Actor or a WP_Error.
+	 */
+	public static function unfollow( $post, $user_id ) {
+		$post = \get_post( $post );
+
+		if ( ! $post ) {
+			return new \WP_Error( 'activitypub_remote_actor_not_found', 'Remote actor not found' );
+		}
+
+		\delete_post_meta( $post->ID, self::FOLLOWING_META_KEY, $user_id );
+
+		// Get Post-ID of the Follow Outbox Activity.
+		$post_id = \WP_Query(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_author'    => $user_id,
+				'posts_per_page' => 1,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $post->guid,
+					),
+				),
+			)
+		);
+
+		Outbox::undo( $post_id );
+
+		return $post;
+	}
+
+	/**
 	 * Get the Followings of a given user, along with a total count for pagination purposes.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
