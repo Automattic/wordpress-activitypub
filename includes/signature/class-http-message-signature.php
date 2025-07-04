@@ -36,7 +36,6 @@ class Http_Message_Signature implements Signature_Standard {
 			'"@method"'     => \strtoupper( $args['method'] ),
 			'"@target-uri"' => $url,
 			'"@authority"'  => \wp_parse_url( $url, PHP_URL_HOST ),
-			'"created"'     => \strtotime( $args['headers']['Date'] ), // Required by Mastodon. See https://github.com/mastodon/mastodon/pull/34814.
 		);
 		$identifiers = \array_keys( $components );
 
@@ -49,7 +48,7 @@ class Http_Message_Signature implements Signature_Standard {
 		}
 
 		$params = array(
-			'created' => $components['"created"'],
+			'created' => \strtotime( $args['headers']['Date'] ),
 			'keyid'   => $args['key_id'],
 			'alg'     => 'rsa-v1_5-sha256',
 		);
@@ -61,7 +60,7 @@ class Http_Message_Signature implements Signature_Standard {
 		\openssl_sign( $signature_base, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
-		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ');created=' . $components['"created"'] . ';keyid="' . $args['key_id'] . '";alg="rsa-v1_5-sha256"';
+		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ')' . $this->get_params_string( $params );
 		$args['headers']['Signature']       = 'wp=:' . $signature . ':';
 
 		return $args;
@@ -188,7 +187,8 @@ class Http_Message_Signature implements Signature_Standard {
 			return $result;
 		}
 
-		$signature_base = $this->get_signature_base_string( $data['components'], $params, $headers );
+		$components     = $this->get_component_values( $data['components'], $headers );
+		$signature_base = $this->get_signature_base_string( $components, $params );
 
 		$verified = \openssl_verify( $signature_base, $data['signature'], $public_key, $algorithm ) > 0;
 		if ( ! $verified ) {
@@ -313,34 +313,43 @@ class Http_Message_Signature implements Signature_Standard {
 	 *
 	 * @param array $components Signature components.
 	 * @param array $params     Signature params.
-	 * @param array $headers    Optional. The HTTP headers. Default: empty array.
 	 *
 	 * @return string Base string to compare signature with.
 	 */
-	private function get_signature_base_string( $components, $params, $headers = array() ) {
+	private function get_signature_base_string( $components, $params ) {
 		$signature_base = '';
-
-		// We only get component names when we verify a signature and have to get their values.
-		if ( \array_is_list( $components ) ) {
-			$components = $this->get_component_values( $components, \array_merge( $params, $headers ) );
-		}
 
 		foreach ( $components as $component => $value ) {
 			$signature_base .= $component . ': ' . $value . "\n";
 		}
 
 		$signature_base .= '"@signature-params": (' . \implode( ' ', \array_keys( $components ) ) . ')';
+		$signature_base .= $this->get_params_string( $params );
+
+		return $signature_base;
+	}
+
+	/**
+	 * Returns the signature params in a string format.
+	 *
+	 * @param array $params Signature params.
+	 *
+	 * @return string Signature params.
+	 */
+	private function get_params_string( $params ) {
+		$signature_params = '';
+
 		foreach ( $params as $key => $value ) {
 			if ( \is_numeric( $value ) ) {
-				$signature_base .= ';' . $key . '=' . $value; // No quotes.
+				$signature_params .= ';' . $key . '=' . $value; // No quotes.
 			} else {
 				// Escape backslashes and double quotes per RFC-9421.
-				$value           = \str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
-				$signature_base .= ';' . $key . '="' . $value . '"'; // Double quotes.
+				$value             = \str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
+				$signature_params .= ';' . $key . '="' . $value . '"'; // Double quotes.
 			}
 		}
 
-		return $signature_base;
+		return $signature_params;
 	}
 
 	/**
@@ -359,11 +368,6 @@ class Http_Message_Signature implements Signature_Standard {
 			$key = \strtolower( \trim( $key, '"' ) );
 
 			switch ( $key ) {
-				case 'created':
-				case 'expires':
-					$value = (int) $headers[ $key ] ?? 0;
-					break;
-
 				case '@method':
 					$value = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 					break;
