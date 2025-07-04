@@ -23,7 +23,7 @@ const HELP_TEXT = {
 		</>
 	),
 	valid: __( 'The author will be notified of your response.', 'activitypub' ),
-	error: __( "This URL probably won't receive your reply. We'll still try.", 'activitypub' ),
+	error: __( 'This URL probably won’t receive your reply. We’ll still try.', 'activitypub' ),
 };
 
 /**
@@ -38,10 +38,10 @@ const HELP_TEXT = {
 export default function Edit( { attributes, setAttributes, clientId, isSelected } ) {
 	const { url, embedPost } = attributes;
 	const [ helpText, setHelpText ] = useState( HELP_TEXT.default );
+	const [ isValidEmbed, setIsValidEmbed ] = useState( false );
 	const [ isCheckingEmbed, setIsCheckingEmbed ] = useState( false );
 	const urlInputRef = useRef();
 	const { removeBlock, replaceInnerBlocks } = useDispatch( 'core/block-editor' );
-	const blockProps = useBlockProps();
 
 	// Setup inner blocks.
 	const innerBlocksProps = useInnerBlocksProps(
@@ -53,15 +53,15 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 		}
 	);
 
-	// Update inner blocks when URL or embedPost changes
+	// Update inner blocks when URL, embedPost, or isValidEmbed changes
 	useEffect( () => {
-		if ( url && embedPost ) {
+		if ( url && embedPost && isValidEmbed ) {
 			replaceInnerBlocks( clientId, [ createBlock( 'core/embed', { url } ) ] );
-		} else if ( ! embedPost ) {
-			// Remove all inner blocks if embedding is disabled.
+		} else {
+			// Remove all inner blocks if embedding is disabled or URL is not embeddable
 			replaceInnerBlocks( clientId, [] );
 		}
-	}, [ url, embedPost, clientId, replaceInnerBlocks ] );
+	}, [ url, embedPost, isValidEmbed, clientId, replaceInnerBlocks ] );
 
 	const focusInput = () => {
 		setTimeout( () => urlInputRef.current?.focus(), 50 );
@@ -71,6 +71,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 	const checkUrl = async ( urlToCheck ) => {
 		if ( ! urlToCheck ) {
 			setHelpText( HELP_TEXT.default );
+			setIsValidEmbed( false );
 			return;
 		}
 
@@ -89,18 +90,22 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 					} ),
 				} );
 
+				setIsValidEmbed( !! response );
+				setHelpText( HELP_TEXT.valid );
+
 				// Auto-enable embedding when we get valid embed info.
 				if ( response && response.provider_name && ! embedPost ) {
 					setAttributes( { embedPost: true } );
 				}
 			} catch ( error ) {
 				console.log( 'Could not fetch embed:', error );
+				setIsValidEmbed( false );
+				setHelpText( HELP_TEXT.error );
 				// We'll still allow the reply even if embedding fails.
 			}
-
-			setHelpText( HELP_TEXT.valid );
 		} catch ( error ) {
 			setHelpText( HELP_TEXT.error );
+			setIsValidEmbed( false );
 		} finally {
 			setIsCheckingEmbed( false );
 		}
@@ -136,10 +141,9 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 	};
 
 	// Show embed in both selected and non-selected states when embedPost is true
-	const showEmbed = embedPost && ! isCheckingEmbed;
-
-	// Show link preview when not showing embed or when block is selected
+	const showEmbed = embedPost && ! isCheckingEmbed && isValidEmbed;
 	const showLinkPreview = ! showEmbed || isSelected;
+	const blockProps = { ...useBlockProps(), onClick: focusInput };
 
 	return (
 		<>
