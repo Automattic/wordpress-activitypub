@@ -119,7 +119,7 @@ class Following {
 		\delete_post_meta( $post->ID, self::FOLLOWING_META_KEY, $user_id );
 
 		// Get Post-ID of the Follow Outbox Activity.
-		$post_id = \WP_Query(
+		$post_id = new \WP_Query(
 			array(
 				'post_type'      => Outbox::POST_TYPE,
 				'post_author'    => $user_id,

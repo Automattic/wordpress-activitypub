@@ -155,11 +155,15 @@ class Outbox {
 	 *
 	 * @param int|\WP_Post $outbox_item The Outbox post or post ID.
 	 *
-	 * @return int|bool The ID of the outbox item or false on failure.
+	 * @return int|bool|\WP_Error The ID of the outbox item or false on failure.
 	 */
 	public static function undo( $outbox_item ) {
 		$outbox_item = get_post( $outbox_item );
 		$activity    = self::get_activity( $outbox_item );
+
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
 
 		$type = 'Undo';
 		if ( 'Create' === $activity->get_type() ) {
