@@ -36,12 +36,12 @@ const HELP_TEXT = {
  * @param {boolean} props.isSelected - Whether the block is selected.
  */
 export default function Edit( { attributes, setAttributes, clientId, isSelected } ) {
-	const { url, embedPost } = attributes;
+	const { url = '', embedPost = false } = attributes;
 	const [ helpText, setHelpText ] = useState( HELP_TEXT.default );
 	const [ isValidEmbed, setIsValidEmbed ] = useState( false );
 	const [ isCheckingEmbed, setIsCheckingEmbed ] = useState( false );
 	const urlInputRef = useRef();
-	const { removeBlock, replaceInnerBlocks } = useDispatch( 'core/block-editor' );
+	const { insertAfterBlock, removeBlock, replaceInnerBlocks } = useDispatch( 'core/block-editor' );
 
 	// Setup inner blocks.
 	const innerBlocksProps = useInnerBlocksProps(
@@ -53,12 +53,12 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 		}
 	);
 
-	// Update inner blocks when URL, embedPost, or isValidEmbed changes
+	// Update inner blocks when URL, embedPost, or isValidEmbed changes.
 	useEffect( () => {
 		if ( url && embedPost && isValidEmbed ) {
 			replaceInnerBlocks( clientId, [ createBlock( 'core/embed', { url } ) ] );
 		} else {
-			// Remove all inner blocks if embedding is disabled or URL is not embeddable
+			// Remove all inner blocks if embedding is disabled or URL is not embeddable.
 			replaceInnerBlocks( clientId, [] );
 		}
 	}, [ url, embedPost, isValidEmbed, clientId, replaceInnerBlocks ] );
@@ -104,17 +104,17 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 				// We'll still allow the reply even if embedding fails.
 			}
 		} catch ( error ) {
-			setHelpText( HELP_TEXT.error );
 			setIsValidEmbed( false );
+			setHelpText( HELP_TEXT.error );
 		} finally {
 			setIsCheckingEmbed( false );
 		}
 	};
 
-	// Debounce the URL check to avoid too many requests
+	// Debounce the URL check to avoid too many requests.
 	const debouncedCheckUrl = useDebounce( checkUrl, 250 );
 
-	// Check URL when it changes
+	// Check URL when it changes.
 	useEffect( () => {
 		if ( url ) {
 			debouncedCheckUrl( url );
@@ -132,7 +132,6 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 
 	const onKeyDown = ( event ) => {
 		if ( event.key === 'Enter' ) {
-			const { insertAfterBlock } = useDispatch( 'core/block-editor' );
 			insertAfterBlock( clientId );
 		}
 		if ( ! url && [ 'Backspace', 'Delete' ].includes( event.key ) ) {
@@ -140,10 +139,9 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 		}
 	};
 
-	// Show embed in both selected and non-selected states when embedPost is true
+	// Show embed in both selected and non-selected states when embedPost is true.
 	const showEmbed = embedPost && ! isCheckingEmbed && isValidEmbed;
 	const showLinkPreview = ! showEmbed || isSelected;
-	const blockProps = { ...useBlockProps(), onClick: focusInput };
 
 	return (
 		<>
@@ -151,15 +149,16 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 				<PanelBody title={ __( 'Settings', 'activitypub' ) }>
 					<ToggleControl
 						label={ __( 'Embed Post', 'activitypub' ) }
-						checked={ embedPost }
+						checked={ !! embedPost }
 						onChange={ onEmbedPostChange }
+						disabled={ ! isValidEmbed }
 						help={ __( 'Show embedded content from the URL.', 'activitypub' ) }
 						__nextHasNoMarginBottom
 					/>
 				</PanelBody>
 			</InspectorControls>
 
-			<div { ...blockProps }>
+			<div onClick={ focusInput } { ...useBlockProps() }>
 				{ isSelected && (
 					<TextControl
 						label={ __( 'Your post is a reply to the following URL', 'activitypub' ) }
