@@ -259,7 +259,7 @@ class Embed {
 			return $response;
 		}
 
-		if ( is_wp_error( $response ) && 'oembed_invalid_url' === $response->get_error_code() ) {
+		if ( ( is_wp_error( $response ) && 'oembed_invalid_url' === $response->get_error_code() ) || empty( $response->html ) ) {
 			$url  = $request->get_param( 'url' );
 			$html = self::get_html( $url );
 
