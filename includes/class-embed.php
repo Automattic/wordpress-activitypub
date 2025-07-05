@@ -222,7 +222,7 @@ class Embed {
 		}
 
 		// Try to get ActivityPub representation.
-		$activitypub_html = get_embed_html( $url );
+		$activitypub_html = self::get_html( $url );
 		if ( ! $activitypub_html ) {
 			return $html;
 		}
@@ -255,14 +255,18 @@ class Embed {
 	 * @return \WP_REST_Response|\WP_Error The response to send to the client.
 	 */
 	public static function oembed_fediverse_fallback( $response, $handler, $request ) {
+		if ( '/oembed/1.0/proxy' !== $request->get_route() ) {
+			return $response;
+		}
+
 		if ( is_wp_error( $response ) && 'oembed_invalid_url' === $response->get_error_code() ) {
 			$url  = $request->get_param( 'url' );
-			$html = get_embed_html( $url );
+			$html = self::get_html( $url );
 
 			if ( $html ) {
 				$args = $request->get_params();
 				$data = (object) array(
-					'provider_name' => 'Embed Handler',
+					'provider_name' => 'ActivityPub oEmbed',
 					'html'          => $html,
 					'scripts'       => array(),
 				);
@@ -276,6 +280,12 @@ class Embed {
 				set_transient( 'oembed_' . md5( serialize( $args ) ), $data, $ttl ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 				$response = new \WP_REST_Response( $data );
+			}
+		} elseif ( ! empty( $request->get_param( 'activitypub' ) ) ) {
+			$object = Http::get_remote_object( $request->get_param( 'url' ) );
+
+			if ( \is_wp_error( $object ) || ! is_activity_object( $object ) ) {
+				$response = new \WP_Error( 'oembed_invalid_url', \get_status_header_desc( 404 ), array( 'status' => 404 ) );
 			}
 		}
 

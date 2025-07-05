@@ -87,6 +87,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 				const response = await apiFetch( {
 					path: addQueryArgs( '/oembed/1.0/proxy', {
 						url: urlToCheck,
+						activitypub: true,
 					} ),
 				} );
 
