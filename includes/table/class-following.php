@@ -116,8 +116,8 @@ class Following extends \WP_List_Table {
 			)
 		);
 
-		foreach ( $following as $following ) {
-			$actor = Actors::get_actor( $following );
+		foreach ( $following as $follow_id ) {
+			$actor = Actors::get_actor( $follow_id );
 			$item  = array(
 				'icon'       => \esc_attr( $actor->get_icon()['url'] ?? '' ),
 				'post_title' => \esc_attr( $actor->get_name() ),
