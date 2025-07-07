@@ -44,12 +44,11 @@ class Signature {
 		);
 
 		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && ! self::rfc9421_is_unsupported( $url ) ) {
+			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 			$signature = new Http_Message();
 		} else {
 			$signature = new Draft_Cavage();
 		}
-
-		\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 
 		return $signature->sign( $args, $url );
 	}
@@ -303,83 +302,6 @@ class Signature {
 		} else {
 			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"', $key_id, $signature );
 		}
-	}
-
-	/**
-	 * Verifies the http signatures
-	 *
-	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
-	 *
-	 * @return bool|\WP_Error A boolean or WP_Error.
-	 */
-	public static function verify_http_signature( $request ) {
-		if ( is_object( $request ) ) { // REST Request object.
-			$body                           = $request->get_body();
-			$headers                        = $request->get_headers();
-			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
-		} else {
-			$request                        = self::format_server_request( $request );
-			$headers                        = $request['headers']; // $_SERVER array
-			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
-		}
-
-		$signature = isset( $headers['signature_input'] ) ? new Http_Message() : new Draft_Cavage();
-
-		return $signature->verify( $headers, $body ?? null );
-	}
-
-	/**
-	 * Get public key from key_id.
-	 *
-	 * @param string $key_id The URL to the public key.
-	 *
-	 * @return resource|\WP_Error The public key resource or WP_Error.
-	 */
-	public static function get_remote_key( $key_id ) {
-		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) );
-		if ( \is_wp_error( $actor ) ) {
-			return new \WP_Error(
-				'activitypub_no_remote_profile_found',
-				__( 'No Profile found or Profile not accessible', 'activitypub' ),
-				array( 'status' => 401 )
-			);
-		}
-
-		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
-			$key_resource = \openssl_pkey_get_public( \rtrim( $actor['publicKey']['publicKeyPem'] ) );
-			if ( $key_resource ) {
-				return $key_resource;
-			}
-		}
-
-		return new \WP_Error(
-			'activitypub_no_remote_key_found',
-			__( 'No Public-Key found', 'activitypub' ),
-			array( 'status' => 401 )
-		);
-	}
-
-	/**
-	 * If a request with RFC-9421 signature fails, we try again with the Draft Cavage signature.
-	 *
-	 * @param array  $response    HTTP response.
-	 * @param array  $parsed_args HTTP request arguments.
-	 * @param string $url         The request URL.
-	 *
-	 * @return array The HTTP response.
-	 */
-	public static function maybe_double_knock( $response, $parsed_args, $url ) {
-		// Remove this filter to prevent infinite recursion.
-		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
-
-		if ( 401 === wp_remote_retrieve_response_code( $response ) ) {
-			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
-
-			$parsed_args = ( new Draft_Cavage() )->sign( $parsed_args, $url );
-			$response    = \wp_remote_request( $url, $parsed_args );
-		}
-
-		return $response;
 	}
 
 	/**
