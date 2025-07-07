@@ -50,7 +50,7 @@ class Activitypub {
 
 		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
-		\add_filter( 'default_post_metadata', array( self::class, 'default_post_metadata' ), 10, 4 );
+		\add_filter( 'default_post_metadata', array( self::class, 'default_post_metadata' ), 10, 3 );
 
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
