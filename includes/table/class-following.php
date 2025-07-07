@@ -8,7 +8,7 @@
 namespace Activitypub\Table;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Following as FollowingCollection;
+use Activitypub\Collection\Following as Following_Collection;
 
 use function Activitypub\object_to_uri;
 
@@ -103,7 +103,7 @@ class Following extends \WP_List_Table {
 		if ( isset( $_GET['s'] ) ) {
 			$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
 		}
-		$following_with_count = FollowingCollection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
+		$following_with_count = Following_Collection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
 		$following            = $following_with_count['following'];
 		$counter              = $following_with_count['total'];
 
@@ -220,7 +220,7 @@ class Following extends \WP_List_Table {
 				if ( \is_wp_error( $actor ) ) {
 					continue;
 				}
-				FollowingCollection::unfollow( $actor, $this->user_id );
+				Following_Collection::unfollow( $actor, $this->user_id );
 			}
 		}
 	}
@@ -231,6 +231,6 @@ class Following extends \WP_List_Table {
 	 * @return int
 	 */
 	public function get_user_count() {
-		return FollowingCollection::count_following( $this->user_id );
+		return Following_Collection::count_following( $this->user_id );
 	}
 }
