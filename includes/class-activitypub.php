@@ -726,7 +726,7 @@ class Activitypub {
 
 		// If the post is not federated and older than a year, return local visibility.
 		$date = \get_the_date( 'U', $object_id );
-		if ( $date < \strtotime( '-1 year' ) ) {
+		if ( $date < \strtotime( '-1 month' ) ) {
 			return ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
 		}
 
