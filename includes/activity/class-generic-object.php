@@ -297,8 +297,11 @@ class Generic_Object {
 				$value = $value->to_array( false );
 			}
 
-			// If value is still empty, ignore it for the array and continue.
-			if ( isset( $value ) ) {
+			if ( is_array( $value ) && $this->is_namespaced( $key ) ) {
+				foreach ( $value as $sub_key => $sub_value ) {
+					$array[ snake_to_camel_case( $key ) . ':' . snake_to_camel_case( $sub_key ) ] = $sub_value;
+				}
+			} elseif ( isset( $value ) ) {
 				$array[ snake_to_camel_case( $key ) ] = $value;
 			}
 		}
@@ -372,5 +375,24 @@ class Generic_Object {
 	 */
 	public function get_json_ld_context() {
 		return static::JSON_LD_CONTEXT;
+	}
+
+	/**
+	 * Checks if an attribute is in a namespace.
+	 *
+	 * @param string $attribute The attribute to check.
+	 *
+	 * @return bool Whether the attribute is namespaced.
+	 */
+	private function is_namespaced( $attribute ) {
+		$namespaces = array();
+
+		foreach ( static::JSON_LD_CONTEXT as $context ) {
+			if ( is_array( $context ) ) {
+				$namespaces = \array_merge( $namespaces, $context );
+			}
+		}
+
+		return isset( $namespaces[ $attribute ] ) && \wp_http_validate_url( $namespaces[ $attribute ] );
 	}
 }
