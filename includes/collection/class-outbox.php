@@ -7,7 +7,6 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Dispatcher;
 use Activitypub\Scheduler;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
@@ -180,7 +179,7 @@ class Outbox {
 	 *
 	 * @param string $guid The GUID of the outbox item.
 	 *
-	 * @return \WP_Post The outbox item or WP_Error.
+	 * @return \WP_Post|\WP_Error The outbox item or WP_Error.
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
