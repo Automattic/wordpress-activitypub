@@ -23,6 +23,16 @@ use Activitypub\Collection\Actors;
 class Http_Message_Signature implements Signature_Standard {
 
 	/**
+	 * Digest algorithms.
+	 *
+	 * @var string[]
+	 */
+	private $digest_algorithms = array(
+		'sha-256' => 'sha256',
+		'sha-512' => 'sha512',
+	);
+
+	/**
 	 * Generate RFC-9421 compliant Signature-Input and Signature headers for an outgoing HTTP request.
 	 *
 	 * @param array  $args The request arguments.
@@ -216,16 +226,11 @@ class Http_Message_Signature implements Signature_Standard {
 			if ( \preg_match( '/^([a-z0-9-]+)=:(.+):$/i', $digest, $matches ) ) {
 				list( , $alg, $encoded ) = $matches;
 
-				$map = array(
-					'sha-256' => 'sha256',
-					'sha-512' => 'sha512',
-				);
-
-				if ( ! isset( $map[ $alg ] ) ) {
+				if ( ! isset( $this->digest_algorithms[ $alg ] ) ) {
 					return new \WP_Error( 'unsupported_digest', 'WordPress supports sha-256 and sha-512 in Digest header. Offered algorithm: ' . $alg );
 				}
 
-				if ( \hash_equals( $encoded, \base64_encode( \hash( $map[ $alg ], $body, true ) ) ) ) {
+				if ( \hash_equals( $encoded, \base64_encode( \hash( $this->digest_algorithms[ $alg ], $body, true ) ) ) ) {
 					return true;
 				}
 			}
