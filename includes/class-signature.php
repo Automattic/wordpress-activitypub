@@ -70,7 +70,7 @@ class Signature {
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Draft_Cavage_Signature();
+		$signature = isset( $headers['signature_input'] ) ? new Http_Message() : new Draft_Cavage();
 
 		return $signature->verify( $headers, $body ?? null );
 	}
@@ -95,7 +95,7 @@ class Signature {
 			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
 			self::rfc9421_add_unsupported_host( $url );
 
-			$parsed_args = ( new Draft_Cavage_Signature() )->sign( $parsed_args, $url );
+			$parsed_args = ( new Draft_Cavage() )->sign( $parsed_args, $url );
 			$response    = \wp_remote_request( $url, $parsed_args );
 		}
 
