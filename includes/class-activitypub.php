@@ -720,8 +720,7 @@ class Activitypub {
 		}
 
 		// If the post is federated, return the default visibility.
-		$is_federated = \get_post_meta( $object_id, 'activitypub_status', true );
-		if ( 'federated' === $is_federated ) {
+		if ( 'federated' === \get_post_meta( $object_id, 'activitypub_status', true ) ) {
 			return $meta_value;
 		}
 
