@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Support for sending follow requests to remote actors is now in place, including outbox delivery and status updates—UI integration will follow later.

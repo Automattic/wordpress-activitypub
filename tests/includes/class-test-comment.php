@@ -607,4 +607,75 @@ class Test_Comment extends \WP_UnitTestCase {
 		\wp_delete_comment( $comment_id, true );
 		\wp_delete_post( $post_id, true );
 	}
+
+	/**
+	 * Test comment_feed_where.
+	 *
+	 * @covers ::comment_feed_where
+	 */
+	public function test_comment_feed_where() {
+		$post_id = self::factory()->post->create();
+
+		$core_comment_types = array(
+			'comment',
+			'pingback',
+			'trackback',
+		);
+
+		$activitypub_comment_types = Comment::get_comment_type_slugs();
+
+		$comment_types = \array_merge( $activitypub_comment_types, $core_comment_types );
+
+		foreach ( $comment_types as $comment_type ) {
+			self::factory()->comment->create(
+				array(
+					'comment_approved' => '1',
+					'comment_content'  => 'This is a comment.',
+					'comment_post_ID'  => $post_id,
+					'comment_type'     => $comment_type,
+				)
+			);
+		}
+
+		$query = new \WP_Query(
+			array(
+				'feed'         => 'comments-rss2',
+				'withcomments' => true,
+			)
+		);
+		$query->get_posts();
+
+		$this->assertSame( count( $core_comment_types ), $query->comment_count );
+		$this->assertEqualSets( $core_comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
+
+		// Test what would happen if we don't filter comment_feed_where.
+		\remove_filter( 'comment_feed_where', array( Comment::class, 'comment_feed_where' ) );
+		$query->get_posts();
+
+		$this->assertSame( count( $comment_types ), $query->comment_count ); // All comments are included.
+		$this->assertEqualSets( $comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
+
+		// Restore the filter.
+		\add_filter( 'comment_feed_where', array( Comment::class, 'comment_feed_where' ) );
+
+		// Test filtering by comment type.
+		foreach ( $activitypub_comment_types as $comment_type ) {
+			\set_query_var( 'type', $comment_type );
+			$query->get_posts();
+
+			$this->assertSame( 1, $query->comment_count );
+			$this->assertSame( $comment_type, $query->comments[0]->comment_type );
+		}
+
+		// Test filtering by comment type that doesn't exist.
+		\set_query_var( 'type', 'foo_bar_baz_not_a_real_type' );
+		$query->get_posts();
+
+		$this->assertSame( count( $core_comment_types ), $query->comment_count );
+		$this->assertEqualSets( $core_comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
+		\set_query_var( 'type', null );
+	}
 }

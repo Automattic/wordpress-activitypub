@@ -18,7 +18,7 @@ if ( is_activitypub_request() || is_feed() ) {
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
 
-/* @var \WP_Block $block Current block. */
+/* @var WP_Block $block Current block. */
 $block = $block ?? '';
 
 /* @var string $content Block content. */
@@ -51,18 +51,19 @@ $followers = array_map(
 	/**
 	 * Prepare follower data for the Interactivity API context.
 	 *
-	 * @param \Activitypub\Model\Follower $follower
+	 * @param WP_Post $follower Follower object.
 	 *
 	 * @return array
 	 */
 	function ( $follower ) {
-		$preferred_username = $follower->get_preferred_username();
+		$actor    = Actors::get_actor( $follower );
+		$username = $actor->get_preferred_username();
 
 		return array(
-			'handle' => '@' . $preferred_username,
-			'icon'   => $follower->get_icon(),
-			'name'   => $follower->get_name() ?? $preferred_username,
-			'url'    => object_to_uri( $follower->get_url() ) ?? $follower->get_id(),
+			'handle' => '@' . $username,
+			'icon'   => $actor->get_icon(),
+			'name'   => $actor->get_name() ?? $username,
+			'url'    => object_to_uri( $actor->get_url() ) ?? $actor->get_id(),
 		);
 	},
 	$follower_data['followers']

@@ -32,6 +32,7 @@ class Base_Object extends Generic_Object {
 		array(
 			'Hashtag'   => 'as:Hashtag',
 			'sensitive' => 'as:sensitive',
+			'dcterms'   => 'http://purl.org/dc/terms/',
 		),
 	);
 
@@ -415,6 +416,16 @@ class Base_Object extends Generic_Object {
 	 * @var boolean
 	 */
 	protected $sensitive;
+
+	/**
+	 * The dcterms namespace.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md#sensitive
+	 * @see https://www.dublincore.org/specifications/dublin-core/dcmi-terms/
+	 *
+	 * @var array
+	 */
+	protected $dcterms;
 
 	/**
 	 * Generic getter.
