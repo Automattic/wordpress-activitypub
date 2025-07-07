@@ -107,7 +107,7 @@ class Following {
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
 	 *
-	 * @return \WP_Post|\WP_Error The ID of the Actor or a WP_Error.
+	 * @return \WP_Post|\WP_Error The Actor post or a WP_Error.
 	 */
 	public static function unfollow( $post, $user_id ) {
 		$post = \get_post( $post );
@@ -125,6 +125,7 @@ class Following {
 				'post_type'      => Outbox::POST_TYPE,
 				'nopaging'       => true,
 				'posts_per_page' => 1,
+				'author'         => $user_id,
 				'fields'         => 'ids',
 				'number'         => 1,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -132,6 +133,10 @@ class Following {
 					array(
 						'key'   => '_activitypub_object_id',
 						'value' => $post->guid,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Follow',
 					),
 				),
 			)

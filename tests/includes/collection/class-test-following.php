@@ -9,6 +9,9 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Handler\Accept;
+
+use function Activitypub\follow;
 
 /**
  * Class Test_Following
@@ -328,5 +331,102 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertNotContains( (string) $user_id, $pending );
 
 		\wp_delete_post( $post_id );
+	}
+
+	/**
+	 * Tests unfollow method.
+	 *
+	 * @covers ::unfollow
+	 */
+	public function test_unfollow() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_actor' ), 10, 2 );
+
+		$user_ids = self::factory()->user->create_many( 3 );
+		foreach ( $user_ids as $user_id ) {
+			\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+		}
+
+		$outbox_item_1 = \get_post( follow( 'https://example.com/actor/1', $user_ids[0] ) );
+		$outbox_item_2 = \get_post( follow( 'https://example.com/actor/1', $user_ids[1] ) );
+		$outbox_item_3 = \get_post( follow( 'https://example.com/actor/1', $user_ids[2] ) );
+
+		wp_publish_post( $outbox_item_1 );
+		wp_publish_post( $outbox_item_2 );
+		wp_publish_post( $outbox_item_3 );
+
+		$accept_1 = array(
+			'object' => array(
+				'id'    => $outbox_item_1->guid,
+				'actor' => 'https://example.com/actor/1',
+			),
+		);
+		$accept_2 = array(
+			'object' => array(
+				'id'    => $outbox_item_2->guid,
+				'actor' => 'https://example.com/actor/1',
+			),
+		);
+		$accept_3 = array(
+			'object' => array(
+				'id'    => $outbox_item_3->guid,
+				'actor' => 'https://example.com/actor/1',
+			),
+		);
+
+		Accept::handle_accept( $accept_1, $user_ids[0] );
+		Accept::handle_accept( $accept_2, $user_ids[1] );
+		Accept::handle_accept( $accept_3, $user_ids[2] );
+
+		// User 1 follows https://example.com/actor/1.
+		$following = Following::get_following_with_count( $user_ids[0] );
+		$this->assertCount( 1, $following['following'] );
+		$this->assertSame( 1, $following['total'] );
+
+		// User 3 unfollows https://example.com/actor/1.
+		Following::unfollow( Actors::get_remote_by_uri( 'https://example.com/actor/1' ), $user_ids[2] );
+
+		// User 1 still follows https://example.com/actor/1.
+		$posts = get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'any',
+				'author'      => $user_ids[2],
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => 'https://example.com/actor/1',
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Undo',
+					),
+				),
+			)
+		);
+
+		// There should be an Undo post for user 3.
+		$this->assertCount( 1, $posts );
+	}
+
+	/**
+	 * Mock remote actor.
+	 *
+	 * @param array  $response The response.
+	 * @param string $url      The URL.
+	 *
+	 * @return array
+	 */
+	public function mock_remote_actor( $response, $url ) {
+		if ( 'https://example.com/actor/1' === $url ) {
+			$response = array(
+				'id'    => $url,
+				'type'  => 'Person',
+				'url'   => $url,
+				'name'  => 'John Doe',
+				'inbox' => 'https://example.com/inbox',
+			);
+		}
+
+		return $response;
 	}
 }
