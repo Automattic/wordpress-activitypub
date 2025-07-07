@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Comments received from the Fediverse no longer show an Edit link in the comment list, despite not being editable.
