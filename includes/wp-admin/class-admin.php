@@ -272,9 +272,26 @@ class Admin {
 		);
 
 		// phpcs:ignore WordPress.Security.NonceVerification
-		if ( Comment::was_received( absint( $_GET['c'] ?? 0 ) ) ) {
-			// Redirect to the pending comments page.
-			\wp_safe_redirect( \admin_url( 'edit-comments.php?comment_status=moderated' ) );
+		$comment_id = \absint( $_GET['c'] ?? 0 );
+		if ( Comment::was_received( $comment_id ) ) {
+			$path = 'edit-comments.php';
+
+			switch ( \wp_get_comment_status( $comment_id ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+				case 'spam':
+					$path = 'edit-comments.php?comment_status=spam';
+					break;
+
+				case 'trash':
+					$path = 'edit-comments.php?comment_status=trash';
+					break;
+
+				case 'unapproved':
+					$path = 'edit-comments.php?comment_status=moderated';
+					break;
+			}
+
+			// Redirect to the appropriate comments page.
+			\wp_safe_redirect( \admin_url( $path ) );
 			exit;
 		}
 	}
