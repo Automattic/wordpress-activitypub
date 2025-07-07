@@ -44,8 +44,8 @@ class Signature {
 		);
 
 		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && ! self::rfc9421_is_unsupported( $url ) ) {
-			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 			$signature = new Http_Message();
+			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 		} else {
 			$signature = new Draft_Cavage();
 		}
