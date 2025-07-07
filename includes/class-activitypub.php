@@ -705,7 +705,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Get post meta.
+	 * Adjusts default post meta values.
 	 *
 	 * @param mixed  $meta_value The meta value.
 	 * @param int    $object_id  ID of the object metadata is for.
