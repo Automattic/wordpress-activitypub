@@ -432,6 +432,12 @@ class Actors {
 			$actor = Actor::init_from_array( $actor );
 		}
 
+		// Make sure the actor doesn't already exist.
+		$post = self::get_remote_by_uri( $actor->get_id() );
+		if ( ! \is_wp_error( $post ) ) {
+			return self::update( $post, $actor );
+		}
+
 		$args = self::prepare_custom_post_type( $actor );
 
 		if ( \is_wp_error( $args ) ) {

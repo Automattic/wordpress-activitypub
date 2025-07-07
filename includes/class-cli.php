@@ -239,6 +239,7 @@ class Cli extends \WP_CLI_Command {
 	 * ## EXAMPLES
 	 *
 	 *    $ wp activitypub follow https://example.com/@user
+	 *    $ wp --user=pfefferle activitypub follow https://example.com/@user
 	 *
 	 * @synopsis <remote_user>
 	 *
