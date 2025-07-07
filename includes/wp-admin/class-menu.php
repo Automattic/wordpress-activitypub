@@ -41,15 +41,17 @@ class Menu {
 
 			\add_action( 'load-' . $followers_list_page, array( Admin::class, 'add_followers_list_help_tab' ) );
 
-			$following_list_page = \add_users_page(
-				\__( 'Following ⁂', 'activitypub' ),
-				\__( 'Following ⁂', 'activitypub' ),
-				'activitypub',
-				'activitypub-following-list',
-				array( Admin::class, 'following_list_page' )
-			);
+			if ( \apply_filters( 'activitypub_show_following_ui', false ) ) {
+				$following_list_page = \add_users_page(
+					\__( 'Following ⁂', 'activitypub' ),
+					\__( 'Following ⁂', 'activitypub' ),
+					'activitypub',
+					'activitypub-following-list',
+					array( Admin::class, 'following_list_page' )
+				);
 
-			\add_action( 'load-' . $following_list_page, array( Admin::class, 'add_following_list_help_tab' ) );
+				\add_action( 'load-' . $following_list_page, array( Admin::class, 'add_following_list_help_tab' ) );
+			}
 
 			\add_users_page(
 				\__( 'Extra Fields ⁂', 'activitypub' ),
