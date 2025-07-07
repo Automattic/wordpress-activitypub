@@ -57,6 +57,7 @@ class Post extends Base {
 			$object->set_sensitive( true );
 			$object->set_summary( $content_warning );
 			$object->set_summary_map( null );
+			$object->set_dcterms( array( 'subject' => $content_warning ) );
 		}
 
 		return $object;
