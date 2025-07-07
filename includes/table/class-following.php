@@ -7,7 +7,6 @@
 
 namespace Activitypub\Table;
 
-use WP_List_Table;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as FollowingCollection;
 
@@ -20,7 +19,7 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
 /**
  * Following Table-Class.
  */
-class Following extends WP_List_Table {
+class Following extends \WP_List_Table {
 	/**
 	 * User ID.
 	 *
@@ -123,13 +122,13 @@ class Following extends WP_List_Table {
 		foreach ( $following as $following ) {
 			$actor = Actors::get_actor( $following );
 			$item  = array(
-				'icon'       => esc_attr( $actor->get_icon()['url'] ?? '' ),
-				'post_title' => esc_attr( $actor->get_name() ),
-				'username'   => esc_attr( $actor->get_preferred_username() ),
-				'url'        => esc_attr( object_to_uri( $actor->get_url() ) ),
-				'identifier' => esc_attr( $actor->get_id() ),
-				'published'  => esc_attr( $actor->get_published() ),
-				'modified'   => esc_attr( $actor->get_updated() ),
+				'icon'       => \esc_attr( $actor->get_icon()['url'] ?? '' ),
+				'post_title' => \esc_attr( $actor->get_name() ),
+				'username'   => \esc_attr( $actor->get_preferred_username() ),
+				'url'        => \esc_attr( object_to_uri( $actor->get_url() ) ),
+				'identifier' => \esc_attr( $actor->get_id() ),
+				'published'  => \esc_attr( $actor->get_published() ),
+				'modified'   => \esc_attr( $actor->get_updated() ),
 			);
 
 			$this->items[] = $item;
@@ -143,7 +142,7 @@ class Following extends WP_List_Table {
 	 */
 	public function get_bulk_actions() {
 		return array(
-			'delete' => __( 'Unfollow', 'activitypub' ),
+			'delete' => \__( 'Unfollow', 'activitypub' ),
 		);
 	}
 
@@ -156,7 +155,7 @@ class Following extends WP_List_Table {
 	 */
 	public function column_default( $item, $column_name ) {
 		if ( ! array_key_exists( $column_name, $item ) ) {
-			return __( 'None', 'activitypub' );
+			return \__( 'None', 'activitypub' );
 		}
 		return $item[ $column_name ];
 	}
@@ -195,7 +194,7 @@ class Following extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return sprintf( '<input type="checkbox" name="following[]" value="%s" />', esc_attr( $item['identifier'] ) );
+		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', esc_attr( $item['identifier'] ) );
 	}
 
 	/**
@@ -205,12 +204,12 @@ class Following extends WP_List_Table {
 		if ( ! isset( $_REQUEST['following'] ) || ! isset( $_REQUEST['_wpnonce'] ) ) {
 			return;
 		}
-		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
-		if ( ! wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+		$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+		if ( ! \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
 			return;
 		}
 
-		if ( ! current_user_can( 'edit_user', $this->user_id ) ) {
+		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
 			return;
 		}
 

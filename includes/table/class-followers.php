@@ -7,7 +7,6 @@
 
 namespace Activitypub\Table;
 
-use WP_List_Table;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as FollowerCollection;
 
@@ -20,7 +19,7 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
 /**
  * Followers Table-Class.
  */
-class Followers extends WP_List_Table {
+class Followers extends \WP_List_Table {
 	/**
 	 * User ID.
 	 *
@@ -94,17 +93,17 @@ class Followers extends WP_List_Table {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['orderby'] ) ) {
-			$args['orderby'] = sanitize_text_field( wp_unslash( $_GET['orderby'] ) );
+			$args['orderby'] = \sanitize_text_field( \wp_unslash( $_GET['orderby'] ) );
 		}
 
 		if ( isset( $_GET['order'] ) ) {
-			$args['order'] = sanitize_text_field( wp_unslash( $_GET['order'] ) );
+			$args['order'] = \sanitize_text_field( \wp_unslash( $_GET['order'] ) );
 		}
 
 		if ( isset( $_GET['s'] ) && isset( $_REQUEST['_wpnonce'] ) ) {
-			$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
-			if ( wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-				$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+			$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+			if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+				$args['s'] = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
 			}
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -125,13 +124,13 @@ class Followers extends WP_List_Table {
 		foreach ( $followers as $follower ) {
 			$actor = Actors::get_actor( $follower );
 			$item  = array(
-				'icon'       => esc_attr( $actor->get_icon()['url'] ?? '' ),
-				'post_title' => esc_attr( $actor->get_name() ),
-				'username'   => esc_attr( $actor->get_preferred_username() ),
-				'url'        => esc_attr( object_to_uri( $actor->get_url() ) ),
-				'identifier' => esc_attr( $actor->get_id() ),
-				'published'  => esc_attr( $actor->get_published() ),
-				'modified'   => esc_attr( $actor->get_updated() ),
+				'icon'       => \esc_attr( $actor->get_icon()['url'] ?? '' ),
+				'post_title' => \esc_attr( $actor->get_name() ),
+				'username'   => \esc_attr( $actor->get_preferred_username() ),
+				'url'        => \esc_attr( object_to_uri( $actor->get_url() ) ),
+				'identifier' => \esc_attr( $actor->get_id() ),
+				'published'  => \esc_attr( $actor->get_published() ),
+				'modified'   => \esc_attr( $actor->get_updated() ),
 			);
 
 			$this->items[] = $item;
@@ -145,7 +144,7 @@ class Followers extends WP_List_Table {
 	 */
 	public function get_bulk_actions() {
 		return array(
-			'delete' => __( 'Delete', 'activitypub' ),
+			'delete' => \__( 'Delete', 'activitypub' ),
 		);
 	}
 
@@ -158,7 +157,7 @@ class Followers extends WP_List_Table {
 	 */
 	public function column_default( $item, $column_name ) {
 		if ( ! array_key_exists( $column_name, $item ) ) {
-			return __( 'None', 'activitypub' );
+			return \__( 'None', 'activitypub' );
 		}
 		return $item[ $column_name ];
 	}
@@ -170,7 +169,7 @@ class Followers extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_avatar( $item ) {
-		return sprintf(
+		return \sprintf(
 			'<img src="%s" width="25px;" alt="" />',
 			$item['icon']
 		);
@@ -183,9 +182,9 @@ class Followers extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_url( $item ) {
-		return sprintf(
+		return \sprintf(
 			'<a href="%s" target="_blank">%s</a>',
-			esc_url( $item['url'] ),
+			\esc_url( $item['url'] ),
 			$item['url']
 		);
 	}
@@ -197,7 +196,7 @@ class Followers extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return sprintf( '<input type="checkbox" name="followers[]" value="%s" />', esc_attr( $item['identifier'] ) );
+		return \sprintf( '<input type="checkbox" name="followers[]" value="%s" />', \esc_attr( $item['identifier'] ) );
 	}
 
 	/**
@@ -207,12 +206,12 @@ class Followers extends WP_List_Table {
 		if ( ! isset( $_REQUEST['followers'] ) || ! isset( $_REQUEST['_wpnonce'] ) ) {
 			return;
 		}
-		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
-		if ( ! wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+		$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+		if ( ! \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
 			return;
 		}
 
-		if ( ! current_user_can( 'edit_user', $this->user_id ) ) {
+		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
 			return;
 		}
 
