@@ -253,24 +253,6 @@ class Admin {
 	 * Disables the edit_comment capability for federated comments.
 	 */
 	public static function edit_comment() {
-		// Disable the edit_comment capability for federated comments.
-		\add_filter(
-			'user_has_cap',
-			function ( $all_caps, $caps, $arg ) {
-				if ( 'edit_comment' !== $arg[0] ) {
-					return $all_caps;
-				}
-
-				if ( was_comment_received( $arg[2] ) ) {
-					return false;
-				}
-
-				return $all_caps;
-			},
-			1,
-			3
-		);
-
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$comment_id = \absint( $_GET['c'] ?? 0 );
 		if ( Comment::was_received( $comment_id ) ) {

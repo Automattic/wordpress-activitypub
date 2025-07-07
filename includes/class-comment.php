@@ -23,6 +23,7 @@ class Comment {
 	public static function init() {
 		self::register_comment_types();
 
+		\add_filter( 'map_meta_cap', array( self::class, 'map_meta_cap' ), 10, 4 );
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
@@ -33,6 +34,24 @@ class Comment {
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+	}
+
+	/**
+	 * Remove edit capabilities for comments received via ActivityPub.
+	 *
+	 * @param array  $caps    Array of capabilities.
+	 * @param string $cap     Capability name.
+	 * @param int    $user_id User ID.
+	 * @param array  $args    Array of arguments.
+	 *
+	 * @return array Modified array of capabilities.
+	 */
+	public static function map_meta_cap( $caps, $cap, $user_id, $args ) {
+		if ( 'edit_comment' === $cap && self::was_received( $args[0] ) ) {
+			$caps[] = 'do_not_allow';
+		}
+
+		return $caps;
 	}
 
 	/**
