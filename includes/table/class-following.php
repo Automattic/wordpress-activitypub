@@ -100,11 +100,8 @@ class Following extends \WP_List_Table {
 			$args['order'] = sanitize_text_field( wp_unslash( $_GET['order'] ) );
 		}
 
-		if ( isset( $_GET['s'] ) && isset( $_REQUEST['_wpnonce'] ) ) {
-			$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
-			if ( wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-				$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
-			}
+		if ( isset( $_GET['s'] ) ) {
+			$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
 		}
 		$following_with_count = FollowingCollection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
 		$following            = $following_with_count['following'];
