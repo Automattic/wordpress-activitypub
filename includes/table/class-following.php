@@ -215,8 +215,8 @@ class Following extends \WP_List_Table {
 			if ( ! is_array( $following ) ) {
 				$following = array( $following );
 			}
-			foreach ( $following as $following ) {
-				$actor = Actors::get_remote_by_uri( $following );
+			foreach ( $following as $actor_id ) {
+				$actor = Actors::get_remote_by_uri( $actor_id );
 				if ( \is_wp_error( $actor ) ) {
 					continue;
 				}
