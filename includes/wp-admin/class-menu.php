@@ -41,6 +41,11 @@ class Menu {
 
 			\add_action( 'load-' . $followers_list_page, array( Admin::class, 'add_followers_list_help_tab' ) );
 
+			/**
+			 * Filter to show the following UI.
+			 *
+			 * @param bool $show Show following UI.
+			 */
 			if ( \apply_filters( 'activitypub_show_following_ui', false ) ) {
 				$following_list_page = \add_users_page(
 					\__( 'Following ⁂', 'activitypub' ),
