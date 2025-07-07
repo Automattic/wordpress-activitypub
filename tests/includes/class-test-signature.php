@@ -366,8 +366,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * Test HTTP signature verification with RFC-9421 compliant signatures.
 	 *
 	 * @covers ::verify_http_signature
-	 * @covers ::generate_digest
-	 * @covers ::generate_signature
 	 * @covers \Activitypub\Signature\Http_Message::verify
 	 * @covers \Activitypub\Signature\Http_Message::parse_signature_labels
 	 * @covers \Activitypub\Signature\Http_Message::verify_signature_label
@@ -450,8 +448,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * Test HTTP signature verification with RFC-9421 compliant signatures using GET requests.
 	 *
 	 * @covers ::verify_http_signature
-	 * @covers ::generate_digest
-	 * @covers ::generate_signature
 	 * @covers \Activitypub\Signature\Http_Message::verify
 	 * @covers \Activitypub\Signature\Http_Message::parse_signature_labels
 	 * @covers \Activitypub\Signature\Http_Message::verify_signature_label
@@ -532,8 +528,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * Test HTTP signature verification with RFC-9421 compliant signatures using different algorithms.
 	 *
 	 * @covers ::verify_http_signature
-	 * @covers ::generate_digest
-	 * @covers ::generate_signature
 	 * @covers \Activitypub\Signature\Http_Message::verify
 	 * @covers \Activitypub\Signature\Http_Message::parse_signature_labels
 	 * @covers \Activitypub\Signature\Http_Message::verify_signature_label
