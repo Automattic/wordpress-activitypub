@@ -113,7 +113,7 @@ class Following {
 		$post = \get_post( $post );
 
 		if ( ! $post ) {
-			return new \WP_Error( 'activitypub_remote_actor_not_found', 'Remote actor not found' );
+			return new \WP_Error( 'activitypub_remote_actor_not_found', __( 'Remote actor not found', 'activitypub' ) );
 		}
 
 		\delete_post_meta( $post->ID, self::FOLLOWING_META_KEY, $user_id );
