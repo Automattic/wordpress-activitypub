@@ -105,7 +105,7 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return string The digest.
 	 */
 	public function generate_digest( $body ) {
-		return 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
+		return 'sha-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
 	}
 
 	/**
@@ -217,12 +217,12 @@ class Http_Message_Signature implements Signature_Standard {
 				list( , $alg, $encoded ) = $matches;
 
 				$map = array(
-					'SHA-256' => 'sha256',
-					'SHA-512' => 'sha512',
+					'sha-256' => 'sha256',
+					'sha-512' => 'sha512',
 				);
 
 				if ( ! isset( $map[ $alg ] ) ) {
-					return new \WP_Error( 'unsupported_digest', 'WordPress supports SHA-256 and SHA-512 in Digest header. Offered algorithm: ' . $alg );
+					return new \WP_Error( 'unsupported_digest', 'WordPress supports sha-256 and sha-512 in Digest header. Offered algorithm: ' . $alg );
 				}
 
 				if ( \hash_equals( $encoded, \base64_encode( \hash( $map[ $alg ], $body, true ) ) ) ) {

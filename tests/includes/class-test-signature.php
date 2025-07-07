@@ -571,7 +571,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
 
 		// Generate a digest for the body.
-		$digest = 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
+		$digest = 'sha-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
 
 		// Create a date for the request.
 		$date = \gmdate( 'D, d M Y H:i:s T' );
