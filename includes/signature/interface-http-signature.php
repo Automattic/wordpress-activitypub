@@ -1,6 +1,6 @@
 <?php
 /**
- * Interface for HTTP Signature Standards.
+ * Interface for HTTP Signature.
  *
  * This interface defines the methods required for verifying HTTP signatures
  * according to various standards, such as Draft Cavage and HTTP Message Signature.
@@ -11,9 +11,9 @@
 namespace Activitypub\Signature;
 
 /**
- * Interface Signature_Standard.
+ * Interface Http_Signature.
  */
-interface Signature_Standard {
+interface Http_Signature {
 
 	/**
 	 * Generate Signature headers for an outgoing HTTP request.

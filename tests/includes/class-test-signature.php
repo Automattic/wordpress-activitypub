@@ -317,7 +317,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 
-		$signature = new Signature\Draft_Cavage_Signature();
+		$signature = new Signature\Http_Signature_Draft();
 		$args      = $signature->sign(
 			array(
 				'method'      => 'POST',
@@ -540,6 +540,9 @@ class Test_Signature extends \WP_UnitTestCase {
 		$rsa_keys = self::$test_keys['rsa']['2048'];
 		$this->verify_rfc9421_signature_with_keys( $rsa_keys, 'rsa-v1_5-sha256' );
 
+		$rsa_keys = self::$test_keys['rsa']['2048'];
+		$this->verify_rfc9421_signature_with_keys( $rsa_keys, '' );
+
 		// Test with EC keys.
 		$ec_keys = self::$test_keys['ec']['prime256v1'];
 		$this->verify_rfc9421_signature_with_keys( $ec_keys, 'ecdsa-p256-sha256' );
@@ -571,7 +574,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
 
 		// Generate a digest for the body.
-		$digest = 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
+		$digest = 'sha-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
 
 		// Create a date for the request.
 		$date = \gmdate( 'D, d M Y H:i:s T' );
@@ -579,11 +582,14 @@ class Test_Signature extends \WP_UnitTestCase {
 		// Create the signature input components.
 		$components    = array( '@method', '@target-uri', '@authority', 'content-digest', 'date' );
 		$params_string = \sprintf(
-			'(%s);created=%d;keyid="https://example.org/author/admin#main-key";alg="%s"',
+			'(%s);created=%d;keyid="https://example.org/author/admin#main-key"',
 			'"' . \implode( '" "', $components ) . '"',
-			\time(),
-			$algorithm
+			\time()
 		);
+
+		if ( ! empty( $algorithm ) ) {
+			$params_string .= ';alg="' . $algorithm . '"';
+		}
 
 		// Create the signature input header value (includes the label).
 		$signature_input = "sig1=$params_string";
