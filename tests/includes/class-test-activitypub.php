@@ -321,7 +321,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_author' => 1,
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 years' ) ), // Post older than a year.
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 months' ) ), // Post older than a year.
 			)
 		);
 
@@ -343,7 +343,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 		$recent_post_id = self::factory()->post->create(
 			array(
 				'post_author' => 1,
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-6 months' ) ), // Recent post.
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 weeks' ) ), // Recent post.
 			)
 		);
 		\update_post_meta( $recent_post_id, 'activitypub_status', 'pending' );
