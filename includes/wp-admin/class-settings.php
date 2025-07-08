@@ -356,6 +356,13 @@ class Settings {
 				'label'    => __( 'Followers', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-followers-list.php',
 			);
+
+			if ( \apply_filters( 'activitypub_show_following_ui', false ) ) {
+				$settings_tabs['following'] = array(
+					'label'    => __( 'Following', 'activitypub' ),
+					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-following-list.php',
+				);
+			}
 		}
 
 		/**
