@@ -23,7 +23,7 @@ use Activitypub\Collection\Actors;
 class Http_Message_Signature implements Signature_Standard {
 
 	/**
-	 * Supported algorithms.
+	 * Signature algorithms.
 	 *
 	 * @var int[][]
 	 */
@@ -72,7 +72,7 @@ class Http_Message_Signature implements Signature_Standard {
 	);
 
 	/**
-   * Digest algorithms.
+	 * Digest algorithms.
 	 *
 	 * @var string[]
 	 */
