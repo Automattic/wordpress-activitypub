@@ -210,7 +210,7 @@ class Following extends \WP_List_Table {
 			return;
 		}
 
-		$following = $_REQUEST['following']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$following = \sanitize_url( \wp_unslash( $_REQUEST['following'] ) );
 		if ( $this->current_action() === 'delete' ) {
 			if ( ! is_array( $following ) ) {
 				$following = array( $following );
