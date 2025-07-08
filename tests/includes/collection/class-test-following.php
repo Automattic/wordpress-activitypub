@@ -352,11 +352,11 @@ class Test_Following extends \WP_UnitTestCase {
 		$outbox_item_4 = \get_post( follow( 'https://example.com/actor/1', 0 ) );
 		$outbox_item_5 = \get_post( follow( 'https://example.com/actor/1', -1 ) );
 
-		wp_publish_post( $outbox_item_1 );
-		wp_publish_post( $outbox_item_2 );
-		wp_publish_post( $outbox_item_3 );
-		wp_publish_post( $outbox_item_4 );
-		wp_publish_post( $outbox_item_5 );
+		\wp_publish_post( $outbox_item_1 );
+		\wp_publish_post( $outbox_item_2 );
+		\wp_publish_post( $outbox_item_3 );
+		\wp_publish_post( $outbox_item_4 );
+		\wp_publish_post( $outbox_item_5 );
 
 		$accept_1 = array(
 			'object' => array(
