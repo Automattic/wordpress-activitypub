@@ -34,6 +34,15 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
+		parent::tear_down();
+
+		_delete_all_posts();
+	}
+
+	/**
 	 * Test the get_remote_metadata_by_actor function.
 	 *
 	 * @covers \Activitypub\get_remote_metadata_by_actor
@@ -688,5 +697,49 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		$user->add_cap( 'activitypub' );
 
 		$this->assertIsString( \Activitypub\get_user_id( $user->ID ) );
+	}
+
+	/**
+	 * Tests follow method.
+	 *
+	 * @covers ::follow
+	 */
+	public function test_follow() {
+		$user_id = self::factory()->user->create(
+			array(
+				'role' => 'administrator',
+			)
+		);
+
+		$actor_array = array(
+			'id'                 => 'https://example.com/users/test',
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>HTML content</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
+		);
+
+		$remote_actor = function () use ( $actor_array ) {
+			return $actor_array;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+
+		\Activitypub\follow( 'https://example.com/users/test', $user_id );
+
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
+				'post_status' => 'any',
+			)
+		);
+
+		$this->assertEquals( 1, count( $outbox_items ) );
+		$this->assertEquals( 'Follow', \get_post_meta( $outbox_items[0]->ID, '_activitypub_activity_type', true ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
 	}
 }

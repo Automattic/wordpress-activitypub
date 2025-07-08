@@ -223,6 +223,7 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 
 		// Should find the actor locally.
 		$post = Actors::fetch_remote_by_uri( 'https://remote.example.com/actor/bob' );
+
 		$this->assertInstanceOf( 'WP_Post', $post );
 		$this->assertEquals( 'https://remote.example.com/actor/bob', $post->guid );
 
@@ -242,6 +243,7 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 		);
 
 		$post = Actors::fetch_remote_by_uri( 'https://remote.example.com/actor/bob' );
+
 		$this->assertInstanceOf( 'WP_Post', $post );
 		$this->assertEquals( 'https://remote.example.com/actor/bob', $post->guid );
 
@@ -250,6 +252,7 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 
 		// Should return WP_Error for invalid URI.
 		$not_found = Actors::fetch_remote_by_uri( '' );
+
 		$this->assertWPError( $not_found );
 	}
 

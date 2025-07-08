@@ -1532,7 +1532,7 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
  * @param string $remote_actor The Actor URL.
  * @param int    $user_id      The ID of the WordPress User.
  *
- * @return int|\WP_Error The ID of the Actor or a WP_Error.
+ * @return int|\WP_Error The ID of the Outbox item or a WP_Error.
  */
 function follow( $remote_actor, $user_id ) {
 	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );

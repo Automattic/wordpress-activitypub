@@ -9,6 +9,9 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Handler\Accept;
+
+use function Activitypub\follow;
 
 /**
  * Class Test_Following
@@ -282,5 +285,181 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertEquals( 'Follow request not found', $result->get_error_message() );
 
 		\wp_delete_post( $post_id );
+	}
+
+	/**
+	 * Test unfollow removes user from following list.
+	 *
+	 * @covers ::unfollow
+	 */
+	public function test_unfollow_removes_user() {
+		// Create a test post (remote actor).
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'  => 'Test Remote Actor',
+				'post_status' => 'publish',
+				'post_type'   => \Activitypub\Collection\Actors::POST_TYPE,
+			)
+		);
+
+		$user_id = 1;
+
+		// Use global follow() function to add a follow request.
+		$remote_actor_url = \get_post( $post_id )->guid;
+		\Activitypub\follow( $remote_actor_url, $user_id );
+		\clean_post_cache( $post_id );
+
+		// Verify user is in following list (pending or following).
+		$following = \get_post_meta( $post_id, \Activitypub\Collection\Following::FOLLOWING_META_KEY, false );
+		$pending   = \get_post_meta( $post_id, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+		$this->assertTrue( in_array( (string) $user_id, $following, true ) || in_array( (string) $user_id, $pending, true ) );
+
+		// Remove following.
+		$result = \Activitypub\Collection\Following::unfollow( $post_id, $user_id );
+
+		\clean_post_cache( $post_id );
+
+		// Should return WP_Post.
+		$this->assertInstanceOf( '\WP_Post', $result );
+		$this->assertEquals( $post_id, $result->ID );
+
+		// User should no longer be in following list.
+		$following = \get_post_meta( $post_id, \Activitypub\Collection\Following::FOLLOWING_META_KEY, false );
+		$pending   = \get_post_meta( $post_id, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+
+		$this->assertNotContains( (string) $user_id, $following );
+		$this->assertNotContains( (string) $user_id, $pending );
+
+		\wp_delete_post( $post_id );
+	}
+
+	/**
+	 * Tests unfollow method.
+	 *
+	 * @covers ::unfollow
+	 */
+	public function test_unfollow() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_actor' ), 10, 2 );
+
+		$user_ids = self::factory()->user->create_many( 3 );
+		foreach ( $user_ids as $user_id ) {
+			\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+		}
+
+		$outbox_item_1 = \get_post( follow( 'https://example.com/actor/1', $user_ids[0] ) );
+		$outbox_item_2 = \get_post( follow( 'https://example.com/actor/1', $user_ids[1] ) );
+		$outbox_item_3 = \get_post( follow( 'https://example.com/actor/1', $user_ids[2] ) );
+		$outbox_item_4 = \get_post( follow( 'https://example.com/actor/1', 0 ) );
+		$outbox_item_5 = \get_post( follow( 'https://example.com/actor/1', -1 ) );
+
+		\wp_publish_post( $outbox_item_1 );
+		\wp_publish_post( $outbox_item_2 );
+		\wp_publish_post( $outbox_item_3 );
+		\wp_publish_post( $outbox_item_4 );
+		\wp_publish_post( $outbox_item_5 );
+
+		$accept_1 = array(
+			'object' => array(
+				'id'    => $outbox_item_1->guid,
+				'actor' => 'https://example.com/actor/1',
+			),
+		);
+		$accept_2 = array(
+			'object' => array(
+				'id'    => $outbox_item_2->guid,
+				'actor' => 'https://example.com/actor/1',
+			),
+		);
+		$accept_3 = array(
+			'object' => array(
+				'id'    => $outbox_item_3->guid,
+				'actor' => 'https://example.com/actor/1',
+			),
+		);
+		$accept_4 = array(
+			'object' => array(
+				'id'    => $outbox_item_4->guid,
+				'actor' => 'https://example.com/actor/1',
+			),
+		);
+		$accept_5 = array(
+			'object' => array(
+				'id'    => $outbox_item_5->guid,
+				'actor' => 'https://example.com/actor/1',
+			),
+		);
+
+		Accept::handle_accept( $accept_1, $user_ids[0] );
+		Accept::handle_accept( $accept_2, $user_ids[1] );
+		Accept::handle_accept( $accept_3, $user_ids[2] );
+		Accept::handle_accept( $accept_4, 0 );
+		Accept::handle_accept( $accept_5, -1 );
+
+		// User 1 follows https://example.com/actor/1.
+		$following = Following::get_following_with_count( $user_ids[0] );
+		$this->assertCount( 1, $following['following'] );
+		$this->assertSame( 1, $following['total'] );
+
+		$following = Following::get_following_with_count( -1 );
+		$this->assertCount( 1, $following['following'] );
+		$this->assertSame( 1, $following['total'] );
+
+		// User 3 unfollows https://example.com/actor/1.
+		Following::unfollow( Actors::get_remote_by_uri( 'https://example.com/actor/1' ), $user_ids[2] );
+
+		// User 3 unfollows https://example.com/actor/1.
+		Following::unfollow( Actors::get_remote_by_uri( 'https://example.com/actor/1' ), 0 );
+
+		$following = Following::get_following_with_count( 0 );
+		$this->assertCount( 0, $following['following'] );
+		$this->assertSame( 0, $following['total'] );
+
+		$following = Following::get_following_with_count( -1 );
+		$this->assertCount( 1, $following['following'] );
+		$this->assertSame( 1, $following['total'] );
+
+		// User 1 still follows https://example.com/actor/1.
+		$posts = get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'any',
+				'author'      => $user_ids[2],
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => 'https://example.com/actor/1',
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Undo',
+					),
+				),
+			)
+		);
+
+		// There should be an Undo post for user 3.
+		$this->assertCount( 1, $posts );
+	}
+
+	/**
+	 * Mock remote actor.
+	 *
+	 * @param array  $response The response.
+	 * @param string $url      The URL.
+	 *
+	 * @return array
+	 */
+	public function mock_remote_actor( $response, $url ) {
+		if ( 'https://example.com/actor/1' === $url ) {
+			$response = array(
+				'id'    => $url,
+				'type'  => 'Person',
+				'url'   => $url,
+				'name'  => 'John Doe',
+				'inbox' => 'https://example.com/inbox',
+			);
+		}
+
+		return $response;
 	}
 }

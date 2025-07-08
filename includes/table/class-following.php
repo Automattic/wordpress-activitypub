@@ -8,7 +8,7 @@
 namespace Activitypub\Table;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Followers as FollowerCollection;
+use Activitypub\Collection\Following as Following_Collection;
 
 use function Activitypub\object_to_uri;
 
@@ -17,9 +17,9 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
 }
 
 /**
- * Followers Table-Class.
+ * Following Table-Class.
  */
-class Followers extends \WP_List_Table {
+class Following extends \WP_List_Table {
 	/**
 	 * User ID.
 	 *
@@ -39,8 +39,8 @@ class Followers extends \WP_List_Table {
 
 		parent::__construct(
 			array(
-				'singular' => \__( 'Follower', 'activitypub' ),
-				'plural'   => \__( 'Followers', 'activitypub' ),
+				'singular' => \__( 'Following', 'activitypub' ),
+				'plural'   => \__( 'Followings', 'activitypub' ),
 				'ajax'     => false,
 			)
 		);
@@ -93,24 +93,19 @@ class Followers extends \WP_List_Table {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['orderby'] ) ) {
-			$args['orderby'] = \sanitize_text_field( \wp_unslash( $_GET['orderby'] ) );
+			$args['orderby'] = sanitize_text_field( wp_unslash( $_GET['orderby'] ) );
 		}
 
 		if ( isset( $_GET['order'] ) ) {
-			$args['order'] = \sanitize_text_field( \wp_unslash( $_GET['order'] ) );
+			$args['order'] = sanitize_text_field( wp_unslash( $_GET['order'] ) );
 		}
 
-		if ( isset( $_GET['s'] ) && isset( $_REQUEST['_wpnonce'] ) ) {
-			$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
-			if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-				$args['s'] = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
-			}
+		if ( isset( $_GET['s'] ) ) {
+			$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
 		}
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
-
-		$followers_with_count = FollowerCollection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );
-		$followers            = $followers_with_count['followers'];
-		$counter              = $followers_with_count['total'];
+		$following_with_count = Following_Collection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
+		$following            = $following_with_count['following'];
+		$counter              = $following_with_count['total'];
 
 		$this->items = array();
 		$this->set_pagination_args(
@@ -121,8 +116,8 @@ class Followers extends \WP_List_Table {
 			)
 		);
 
-		foreach ( $followers as $follower ) {
-			$actor = Actors::get_actor( $follower );
+		foreach ( $following as $follow_id ) {
+			$actor = Actors::get_actor( $follow_id );
 			$item  = array(
 				'icon'       => \esc_attr( $actor->get_icon()['url'] ?? '' ),
 				'post_title' => \esc_attr( $actor->get_name() ),
@@ -144,7 +139,7 @@ class Followers extends \WP_List_Table {
 	 */
 	public function get_bulk_actions() {
 		return array(
-			'delete' => \__( 'Delete', 'activitypub' ),
+			'delete' => \__( 'Unfollow', 'activitypub' ),
 		);
 	}
 
@@ -169,7 +164,7 @@ class Followers extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_avatar( $item ) {
-		return \sprintf(
+		return sprintf(
 			'<img src="%s" width="25px;" alt="" />',
 			$item['icon']
 		);
@@ -182,9 +177,9 @@ class Followers extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_url( $item ) {
-		return \sprintf(
+		return sprintf(
 			'<a href="%s" target="_blank">%s</a>',
-			\esc_url( $item['url'] ),
+			esc_url( $item['url'] ),
 			$item['url']
 		);
 	}
@@ -196,14 +191,14 @@ class Followers extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="followers[]" value="%s" />', \esc_attr( $item['identifier'] ) );
+		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', esc_attr( $item['identifier'] ) );
 	}
 
 	/**
 	 * Process action.
 	 */
 	public function process_action() {
-		if ( ! isset( $_REQUEST['followers'] ) || ! isset( $_REQUEST['_wpnonce'] ) ) {
+		if ( ! isset( $_REQUEST['following'] ) || ! isset( $_REQUEST['_wpnonce'] ) ) {
 			return;
 		}
 		$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
@@ -215,14 +210,20 @@ class Followers extends \WP_List_Table {
 			return;
 		}
 
-		$followers = $_REQUEST['followers']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$following_raw = \wp_unslash( $_REQUEST['following'] );
+		$following     = is_array( $following_raw ) ? array_map( 'esc_url_raw', $following_raw ) : array( esc_url_raw( $following_raw ) );
 
 		if ( $this->current_action() === 'delete' ) {
-			if ( ! is_array( $followers ) ) {
-				$followers = array( $followers );
+			if ( ! is_array( $following ) ) {
+				$following = array( $following );
 			}
-			foreach ( $followers as $follower ) {
-				FollowerCollection::remove_follower( $this->user_id, $follower );
+			foreach ( $following as $actor_id ) {
+				$actor = Actors::get_remote_by_uri( $actor_id );
+				if ( \is_wp_error( $actor ) ) {
+					continue;
+				}
+				Following_Collection::unfollow( $actor, $this->user_id );
 			}
 		}
 	}
@@ -233,6 +234,6 @@ class Followers extends \WP_List_Table {
 	 * @return int
 	 */
 	public function get_user_count() {
-		return FollowerCollection::count_followers( $this->user_id );
+		return Following_Collection::count_following( $this->user_id );
 	}
 }
