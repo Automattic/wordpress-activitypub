@@ -23,6 +23,65 @@ use Activitypub\Collection\Actors;
 class Http_Message_Signature implements Http_Signature {
 
 	/**
+	 * Signature algorithms.
+	 *
+	 * @var int[][]
+	 */
+	private $algorithms = array(
+		// RSA PKCS#1 v1.5.
+		'rsa-v1_5-sha256'   => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA256,
+		),
+		'rsa-v1_5-sha384'   => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA384,
+		),
+		'rsa-v1_5-sha512'   => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA512,
+		),
+
+		// RSA PSS (note: not supported in openssl_verify() until PHP 8.1).
+		'rsa-pss-sha256'    => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA256,
+		),
+		'rsa-pss-sha384'    => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA384,
+		),
+		'rsa-pss-sha512'    => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA512,
+		),
+
+		// ECDSA.
+		'ecdsa-p256-sha256' => array(
+			'type' => OPENSSL_KEYTYPE_EC,
+			'algo' => OPENSSL_ALGO_SHA256,
+		),
+		'ecdsa-p384-sha384' => array(
+			'type' => OPENSSL_KEYTYPE_EC,
+			'algo' => OPENSSL_ALGO_SHA384,
+		),
+		'ecdsa-p521-sha512' => array(
+			'type' => OPENSSL_KEYTYPE_EC,
+			'algo' => OPENSSL_ALGO_SHA512,
+		),
+	);
+
+	/**
+	 * Digest algorithms.
+	 *
+	 * @var string[]
+	 */
+	private $digest_algorithms = array(
+		'sha-256' => 'sha256',
+		'sha-512' => 'sha512',
+	);
+
+	/**
 	 * Generate RFC-9421 compliant Signature-Input and Signature headers for an outgoing HTTP request.
 	 *
 	 * @param array  $args The request arguments.
@@ -105,7 +164,7 @@ class Http_Message_Signature implements Http_Signature {
 	 * @return string The digest.
 	 */
 	public function generate_digest( $body ) {
-		return 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
+		return 'sha-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
 	}
 
 	/**
@@ -216,16 +275,11 @@ class Http_Message_Signature implements Http_Signature {
 			if ( \preg_match( '/^([a-z0-9-]+)=:(.+):$/i', $digest, $matches ) ) {
 				list( , $alg, $encoded ) = $matches;
 
-				$map = array(
-					'SHA-256' => 'sha256',
-					'SHA-512' => 'sha512',
-				);
-
-				if ( ! isset( $map[ $alg ] ) ) {
-					return new \WP_Error( 'unsupported_digest', 'WordPress supports SHA-256 and SHA-512 in Digest header. Offered algorithm: ' . $alg );
+				if ( ! isset( $this->digest_algorithms[ $alg ] ) ) {
+					return new \WP_Error( 'unsupported_digest', 'WordPress supports sha-256 and sha-512 in Digest header. Offered algorithm: ' . $alg );
 				}
 
-				if ( \hash_equals( $encoded, \base64_encode( \hash( $map[ $alg ], $body, true ) ) ) ) {
+				if ( \hash_equals( $encoded, \base64_encode( \hash( $this->digest_algorithms[ $alg ], $body, true ) ) ) ) {
 					return true;
 				}
 			}
@@ -243,69 +297,52 @@ class Http_Message_Signature implements Http_Signature {
 	 * @return int|\WP_Error OpenSSL algorithm constant or WP_Error.
 	 */
 	private function verify_algorithm( $alg_string, $public_key ) {
-		$alg_string = \strtolower( $alg_string );
-		if ( \strpos( $alg_string, 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
-			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
-		}
-
 		$details = \openssl_pkey_get_details( $public_key );
 		if ( ! isset( $details['type'] ) ) {
 			return new \WP_Error( 'invalid_key_details', 'Unable to read public key details.' );
 		}
 
-		$map = array(
-			// RSA PKCS#1 v1.5.
-			'rsa-v1_5-sha256'   => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA256,
-			),
-			'rsa-v1_5-sha384'   => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA384,
-			),
-			'rsa-v1_5-sha512'   => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA512,
-			),
+		// If alg_string is empty, determine algorithm based on public key.
+		if ( empty( $alg_string ) ) {
+			switch ( $details['type'] ) {
+				case \OPENSSL_KEYTYPE_RSA:
+					$bits = $details['bits'] ?? 2048;
 
-			// RSA PSS (note: not supported in openssl_verify() until PHP 8.1).
-			'rsa-pss-sha256'    => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA256,
-			),
-			'rsa-pss-sha384'    => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA384,
-			),
-			'rsa-pss-sha512'    => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA512,
-			),
+					if ( $bits >= 4 * KB_IN_BYTES ) {
+						return \OPENSSL_ALGO_SHA512;
+					} elseif ( $bits >= 3 * KB_IN_BYTES ) {
+						return \OPENSSL_ALGO_SHA384;
+					} else {
+						return \OPENSSL_ALGO_SHA256;
+					}
 
-			// ECDSA.
-			'ecdsa-p256-sha256' => array(
-				'type' => OPENSSL_KEYTYPE_EC,
-				'algo' => OPENSSL_ALGO_SHA256,
-			),
-			'ecdsa-p384-sha384' => array(
-				'type' => OPENSSL_KEYTYPE_EC,
-				'algo' => OPENSSL_ALGO_SHA384,
-			),
-			'ecdsa-p521-sha512' => array(
-				'type' => OPENSSL_KEYTYPE_EC,
-				'algo' => OPENSSL_ALGO_SHA512,
-			),
-		);
+				case \OPENSSL_KEYTYPE_EC:
+					switch ( $details['ec']['curve_name'] ?? '' ) {
+						case 'prime256v1':
+						case 'secp256r1':
+							return \OPENSSL_ALGO_SHA256;
+						case 'secp384r1':
+							return \OPENSSL_ALGO_SHA384;
+						case 'secp521r1':
+							return \OPENSSL_ALGO_SHA512;
+					}
+			}
+		}
 
-		if ( ! isset( $map[ $alg_string ] ) ) {
+		$alg_string = \strtolower( $alg_string );
+		if ( \strpos( $alg_string, 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
+			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
+		}
+
+		if ( ! isset( $this->algorithms[ $alg_string ] ) ) {
 			return new \WP_Error( 'unsupported_alg', 'Unsupported or unknown alg parameter: ' . $alg_string );
 		}
 
-		if ( $map[ $alg_string ]['type'] !== $details['type'] ) {
+		if ( $this->algorithms[ $alg_string ]['type'] !== $details['type'] ) {
 			return new \WP_Error( 'alg_key_mismatch', 'Algorithm does not match public key type.' );
 		}
 
-		return $map[ $alg_string ]['algo'];
+		return $this->algorithms[ $alg_string ]['algo'];
 	}
 
 	/**
