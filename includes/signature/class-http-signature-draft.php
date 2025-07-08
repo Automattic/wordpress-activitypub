@@ -14,13 +14,13 @@ namespace Activitypub\Signature;
 use Activitypub\Collection\Actors;
 
 /**
- * Class Draft_Cavage.
+ * Class Http_Signature_Draft.
  *
  * Implements the Draft Cavage signature standard for verifying HTTP signatures.
  *
  * @see https://tools.ietf.org/html/draft-cavage-http-signatures-12
  */
-class Draft_Cavage_Signature implements Signature_Standard {
+class Http_Signature_Draft implements Http_Signature {
 
 	/**
 	 * Generate Signature headers for an outgoing HTTP request.

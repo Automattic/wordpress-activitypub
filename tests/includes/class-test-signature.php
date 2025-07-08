@@ -317,7 +317,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 
-		$signature = new Signature\Draft_Cavage_Signature();
+		$signature = new Signature\Http_Signature_Draft();
 		$args      = $signature->sign(
 			array(
 				'method'      => 'POST',

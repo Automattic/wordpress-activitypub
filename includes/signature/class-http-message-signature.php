@@ -20,7 +20,7 @@ use Activitypub\Collection\Actors;
  *
  * @see https://www.rfc-editor.org/rfc/rfc9421.html
  */
-class Http_Message_Signature implements Signature_Standard {
+class Http_Message_Signature implements Http_Signature {
 
 	/**
 	 * Signature algorithms.
