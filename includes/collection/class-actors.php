@@ -561,7 +561,7 @@ class Actors {
 			return $object;
 		}
 
-		$post_id = self::create( $object );
+		$post_id = self::upsert( $object );
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
