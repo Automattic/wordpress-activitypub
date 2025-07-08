@@ -18,7 +18,7 @@ $following_template = _n( 'You currently follow %s person.', 'You currently foll
 	<form method="post">
 		<input type="hidden" name="page" value="activitypub-following-list" />
 		<?php
-    wp_nonce_field( 'bulk-' . $table->_args['plural'] );
+		wp_nonce_field( 'bulk-' . $table->_args['plural'] );
 		$table->prepare_items();
 		$table->search_box( 'Search', 'search' );
 		$table->display();
