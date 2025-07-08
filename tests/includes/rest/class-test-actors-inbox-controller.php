@@ -299,7 +299,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		// Mock remote actor URL.
 		$activity->add_cc( $actor->get_id() );
 
-		$signature = new \Activitypub\Signature\Draft_Cavage_Signature();
+		$signature = new \Activitypub\Signature\Http_Signature_Draft();
 		$args      = $signature->sign(
 			array(
 				'method'      => 'POST',

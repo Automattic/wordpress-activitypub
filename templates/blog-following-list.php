@@ -18,7 +18,7 @@ $following_template = _n( 'You currently follow %s person.', 'You currently foll
 		<input type="hidden" name="tab" value="following" />
 		<?php
 		$table->prepare_items();
-		$table->search_box( 'Search', 'search' );
+		$table->search_box( __( 'Search', 'activitypub' ), 'search' );
 		$table->display();
 		?>
 		</form>
