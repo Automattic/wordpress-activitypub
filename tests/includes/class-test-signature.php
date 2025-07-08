@@ -635,7 +635,7 @@ class Test_Signature extends \WP_UnitTestCase {
 	/**
 	 * Test RFC-9421 signature verification when it is unsupported.
 	 *
-	 * @covers ::rfc9421_is_unsupported
+	 * @covers ::could_support_rfc9421
 	 */
 	public function test_rfc9421_is_unsupported() {
 		\add_option( 'activitypub_rfc9421_unsupported', array( 'sub.www.example.org' => \time() + MINUTE_IN_SECONDS ), '', false );
@@ -689,9 +689,9 @@ class Test_Signature extends \WP_UnitTestCase {
 		$url = 'https://example.org/wp-json/activitypub/1.0/inbox';
 
 		// Test domain is not unsupported.
-		$rfc9421_is_unsupported = new \ReflectionMethod( Signature::class, 'rfc9421_is_unsupported' );
-		$rfc9421_is_unsupported->setAccessible( true );
-		$this->assertFalse( $rfc9421_is_unsupported->invoke( null, $url ) );
+		$could_support_rfc9421 = new \ReflectionMethod( Signature::class, 'could_support_rfc9421' );
+		$could_support_rfc9421->setAccessible( true );
+		$this->assertTrue( $could_support_rfc9421->invoke( null, $url ) );
 
 		\add_filter(
 			'pre_http_request',
@@ -721,7 +721,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		Http::post( $url, '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}', 1 );
 
 		// Domain is set as unsupported.
-		$this->assertTrue( $rfc9421_is_unsupported->invoke( null, $url ) );
+		$this->assertFalse( $could_support_rfc9421->invoke( null, $url ) );
 
 		// Cleanup.
 		\delete_option( 'activitypub_rfc9421_signature' );

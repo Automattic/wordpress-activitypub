@@ -43,7 +43,7 @@ class Signature {
 			)
 		);
 
-		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && ! self::rfc9421_is_unsupported( $url ) ) {
+		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && self::could_support_rfc9421( $url ) ) {
 			$signature = new Http_Message_Signature();
 			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 		} else {
@@ -152,26 +152,26 @@ class Signature {
 	}
 
 	/**
-	 * Check if RFC-9421 signature is unsupported for a given host.
+	 * Check if RFC-9421 signature could be supported.
 	 *
 	 * @param string $url The URL to check.
 	 *
-	 * @return bool True, if unsupported, false otherwise.
+	 * @return bool True, if RFC-9421 signature could be supported, false otherwise.
 	 */
-	private static function rfc9421_is_unsupported( $url ) {
+	private static function could_support_rfc9421( $url ) {
 		$host = \wp_parse_url( $url, \PHP_URL_HOST );
 		$list = \get_option( 'activitypub_rfc9421_unsupported', array() );
 
 		if ( isset( $list[ $host ] ) ) {
 			if ( $list[ $host ] > \time() ) {
-				return true;
+				return false;
 			}
 
 			unset( $list[ $host ] );
 			\update_option( 'activitypub_rfc9421_unsupported', $list );
 		}
 
-		return false;
+		return true;
 	}
 
 	/**
