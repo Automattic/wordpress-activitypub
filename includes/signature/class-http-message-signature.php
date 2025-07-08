@@ -14,13 +14,13 @@ namespace Activitypub\Signature;
 use Activitypub\Collection\Actors;
 
 /**
- * Class Http_Message.
+ * Class Http_Message_Signature.
  *
  * Implements the HTTP Message Signature standard for verifying HTTP signatures.
  *
  * @see https://www.rfc-editor.org/rfc/rfc9421.html
  */
-class Http_Message implements Http_Signature {
+class Http_Message_Signature implements Http_Signature {
 
 	/**
 	 * Generate RFC-9421 compliant Signature-Input and Signature headers for an outgoing HTTP request.

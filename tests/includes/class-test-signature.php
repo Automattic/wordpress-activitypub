@@ -317,7 +317,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 
-		$signature = new Signature\Draft_Cavage();
+		$signature = new Signature\Http_Signature_Draft();
 		$args      = $signature->sign(
 			array(
 				'method'      => 'POST',
@@ -366,12 +366,12 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * Test HTTP signature verification with RFC-9421 compliant signatures.
 	 *
 	 * @covers ::verify_http_signature
-	 * @covers \Activitypub\Signature\Http_Message::verify
-	 * @covers \Activitypub\Signature\Http_Message::parse_signature_labels
-	 * @covers \Activitypub\Signature\Http_Message::verify_signature_label
-	 * @covers \Activitypub\Signature\Http_Message::verify_content_digest
-	 * @covers \Activitypub\Signature\Http_Message::resolve_algorithm
-	 * @covers \Activitypub\Signature\Http_Message::get_signature_base_string
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
+	 * @covers \Activitypub\Signature\Http_Message_Signature::resolve_algorithm
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421() {
 		$keys = self::$test_keys['rsa']['4096'];
@@ -391,7 +391,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 
-		$signature = new Signature\Http_Message();
+		$signature = new Signature\Http_Message_Signature();
 		$args      = $signature->sign(
 			array(
 				'method'      => 'POST',
@@ -448,12 +448,12 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * Test HTTP signature verification with RFC-9421 compliant signatures using GET requests.
 	 *
 	 * @covers ::verify_http_signature
-	 * @covers \Activitypub\Signature\Http_Message::verify
-	 * @covers \Activitypub\Signature\Http_Message::parse_signature_labels
-	 * @covers \Activitypub\Signature\Http_Message::verify_signature_label
-	 * @covers \Activitypub\Signature\Http_Message::verify_content_digest
-	 * @covers \Activitypub\Signature\Http_Message::resolve_algorithm
-	 * @covers \Activitypub\Signature\Http_Message::get_signature_base_string
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
+	 * @covers \Activitypub\Signature\Http_Message_Signature::resolve_algorithm
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421_get_request() {
 		$keys = self::$test_keys['rsa']['2048'];
@@ -528,12 +528,12 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * Test HTTP signature verification with RFC-9421 compliant signatures using different algorithms.
 	 *
 	 * @covers ::verify_http_signature
-	 * @covers \Activitypub\Signature\Http_Message::verify
-	 * @covers \Activitypub\Signature\Http_Message::parse_signature_labels
-	 * @covers \Activitypub\Signature\Http_Message::verify_signature_label
-	 * @covers \Activitypub\Signature\Http_Message::verify_content_digest
-	 * @covers \Activitypub\Signature\Http_Message::resolve_algorithm
-	 * @covers \Activitypub\Signature\Http_Message::get_signature_base_string
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
+	 * @covers \Activitypub\Signature\Http_Message_Signature::resolve_algorithm
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421_algorithms() {
 		// Test with RSA keys.

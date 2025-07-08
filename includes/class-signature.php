@@ -8,8 +8,8 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Signature\Draft_Cavage;
-use Activitypub\Signature\Http_Message;
+use Activitypub\Signature\Http_Signature_Draft;
+use Activitypub\Signature\Http_Message_Signature;
 
 /**
  * ActivityPub Signature Class.
@@ -44,10 +44,10 @@ class Signature {
 		);
 
 		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && ! self::rfc9421_is_unsupported( $url ) ) {
-			$signature = new Http_Message();
+			$signature = new Http_Message_Signature();
 			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 		} else {
-			$signature = new Draft_Cavage();
+			$signature = new Http_Signature_Draft();
 		}
 
 		return $signature->sign( $args, $url );
@@ -70,7 +70,7 @@ class Signature {
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		$signature = isset( $headers['signature_input'] ) ? new Http_Message() : new Draft_Cavage();
+		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Http_Signature_Draft();
 
 		return $signature->verify( $headers, $body ?? null );
 	}
@@ -95,7 +95,7 @@ class Signature {
 			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
 			self::rfc9421_add_unsupported_host( $url );
 
-			$parsed_args = ( new Draft_Cavage() )->sign( $parsed_args, $url );
+			$parsed_args = ( new Http_Signature_Draft() )->sign( $parsed_args, $url );
 			$response    = \wp_remote_request( $url, $parsed_args );
 		}
 
