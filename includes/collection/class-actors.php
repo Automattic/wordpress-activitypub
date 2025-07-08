@@ -662,8 +662,7 @@ class Actors {
 			),
 		);
 
-		$posts = new \WP_Query( $args );
-		return $posts->get_posts();
+		return ( new \WP_Query() )->query( $args );
 	}
 
 	/**
@@ -689,8 +688,7 @@ class Actors {
 			),
 		);
 
-		$posts = new \WP_Query( $args );
-		return $posts->get_posts();
+		return ( new \WP_Query() )->query( $args );
 	}
 
 	/**
