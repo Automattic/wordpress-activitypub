@@ -310,7 +310,7 @@ class Followers {
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
-				WHERE post_id IN (" . \implode( ', ', \array_fill( 0, \esc_sql( $posts->found_posts ), '%d' ) ) . ")
+				WHERE post_id IN (" . \implode( ', ', \array_fill( 0, \absint( $posts->post_count ), '%d' ) ) . ")
 				AND meta_key = '_activitypub_inbox'
 				AND meta_value IS NOT NULL",
 				$posts->posts
