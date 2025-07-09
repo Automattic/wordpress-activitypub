@@ -181,8 +181,13 @@ class Following {
 			'order'          => 'DESC',
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
+				'relation' => 'OR',
 				array(
 					'key'   => self::FOLLOWING_META_KEY,
+					'value' => $user_id,
+				),
+				array(
+					'key'   => self::PENDING_META_KEY,
 					'value' => $user_id,
 				),
 			),

@@ -359,6 +359,15 @@ input.blog-user-identifier {
 	padding: 16px 20px;
 }
 
+.wp-list-table--activitypub-following .pending th.check-column {
+	border-left: 4px solid #d63638;
+}
+
+.wp-list-table--activitypub-following .pending td,
+.wp-list-table--activitypub-following .pending th {
+	background-color: #fcf9e8;
+}
+
 @media screen and (max-width: 782px) {
 	.activitypub-settings {
 		margin: 0 22px;

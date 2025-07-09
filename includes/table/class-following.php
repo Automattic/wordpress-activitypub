@@ -58,6 +58,7 @@ class Following extends \WP_List_Table {
 			'avatar'     => \__( 'Avatar', 'activitypub' ),
 			'username'   => \__( 'Username', 'activitypub' ),
 			'url'        => \__( 'URL', 'activitypub' ),
+			'status'     => \__( 'Status', 'activitypub' ),
 			'published'  => \__( 'Followed', 'activitypub' ),
 			'modified'   => \__( 'Last updated', 'activitypub' ),
 		);
@@ -116,9 +117,17 @@ class Following extends \WP_List_Table {
 			)
 		);
 
-		foreach ( $following as $follow_id ) {
-			$actor = Actors::get_actor( $follow_id );
-			$item  = array(
+		foreach ( $following as $post ) {
+			$actor      = Actors::get_actor( $post );
+			$class      = 'accepted';
+			$is_pending = $this->is_pending( $post->ID );
+
+			if ( $is_pending ) {
+				$class = 'pending';
+			}
+
+			$item = array(
+				'id'         => $post->ID,
 				'icon'       => \esc_attr( $actor->get_icon()['url'] ?? '' ),
 				'post_title' => \esc_attr( $actor->get_name() ),
 				'username'   => \esc_attr( $actor->get_preferred_username() ),
@@ -126,6 +135,8 @@ class Following extends \WP_List_Table {
 				'identifier' => \esc_attr( $actor->get_id() ),
 				'published'  => \esc_attr( $actor->get_published() ),
 				'modified'   => \esc_attr( $actor->get_updated() ),
+				'class'      => $class,
+				'status'     => $is_pending ? \__( 'Pending', 'activitypub' ) : \__( 'Accepted', 'activitypub' ),
 			);
 
 			$this->items[] = $item;
@@ -235,5 +246,44 @@ class Following extends \WP_List_Table {
 	 */
 	public function get_user_count() {
 		return Following_Collection::count_following( $this->user_id );
+	}
+
+	/**
+	 * Single row.
+	 *
+	 * @param array $item Item.
+	 */
+	public function single_row( $item ) {
+		printf(
+			"<tr id='following-%s' class='%s'>",
+			esc_attr( $item['id'] ),
+			esc_attr( $item['class'] )
+		);
+		$this->single_row_columns( $item );
+		printf( "</tr>\n" );
+	}
+
+	/**
+	 * Returns table classes.
+	 *
+	 * @return array
+	 */
+	public function get_table_classes() {
+		$classes   = parent::get_table_classes();
+		$classes[] = 'wp-list-table--activitypub-following';
+		return $classes;
+	}
+
+	/**
+	 * Check if the item is pending.
+	 *
+	 * @param int $item_id Item ID.
+	 *
+	 * @return bool
+	 */
+	protected function is_pending( $item_id ) {
+		$pending = \get_post_meta( $item_id, Following_Collection::PENDING_META_KEY, false );
+
+		return \is_array( $pending ) && \in_array( (string) $this->user_id, $pending, true );
 	}
 }
