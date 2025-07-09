@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed an issue where links to remote likes and boosts could open raw JSON instead of a proper page.
