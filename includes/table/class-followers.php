@@ -134,6 +134,40 @@ class Followers extends \WP_List_Table {
 	}
 
 	/**
+	 * Returns views.
+	 *
+	 * @return string[]
+	 */
+	public function get_views() {
+		$count = Follower_Collection::count_followers( $this->user_id );
+
+		$path = 'users.php?page=activitypub-followers-list';
+		if ( Actors::BLOG_USER_ID === $this->user_id ) {
+			$path = 'options-general.php?page=activitypub&tab=followers';
+		}
+
+		$links = array(
+			'all' => array(
+				'url'     => admin_url( $path ),
+				'label'   => sprintf(
+					/* translators: %s: Number of users. */
+					\_nx(
+						'All <span class="count">(%s)</span>',
+						'All <span class="count">(%s)</span>',
+						$count,
+						'users',
+						'activitypub'
+					),
+					number_format_i18n( $count )
+				),
+				'current' => true,
+			),
+		);
+
+		return $this->get_views_links( $links );
+	}
+
+	/**
 	 * Returns bulk actions.
 	 *
 	 * @return array
