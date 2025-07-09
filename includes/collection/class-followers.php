@@ -197,7 +197,7 @@ class Followers {
 		$args      = \wp_parse_args( $args, $defaults );
 		$query     = new \WP_Query( $args );
 		$total     = $query->found_posts;
-		$followers = \array_filter( $query->get_posts() );
+		$followers = \array_filter( $query->posts );
 
 		return \compact( 'followers', 'total' );
 	}
@@ -301,9 +301,7 @@ class Followers {
 			)
 		);
 
-		$posts = $posts->get_posts();
-
-		if ( ! $posts ) {
+		if ( ! $posts->posts ) {
 			return array();
 		}
 
@@ -312,10 +310,10 @@ class Followers {
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
-				WHERE post_id IN (" . implode( ', ', array_fill( 0, count( $posts ), '%d' ) ) . ")
+				WHERE post_id IN (" . \implode( ', ', \array_fill( 0, \absint( $posts->post_count ), '%d' ) ) . ")
 				AND meta_key = '_activitypub_inbox'
 				AND meta_value IS NOT NULL",
-				$posts
+				$posts->posts
 			)
 		);
 
