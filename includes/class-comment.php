@@ -48,6 +48,11 @@ class Comment {
 	 */
 	public static function map_meta_cap( $caps, $cap, $user_id, $args ) {
 		if ( 'edit_comment' === $cap && self::was_received( $args[0] ) ) {
+			// Allow quick links in comments list screen.
+			if ( \function_exists( 'get_current_screen' ) && 'edit-comments' === \get_current_screen()->id ) {
+				return $caps;
+			}
+
 			$caps[] = 'do_not_allow';
 		}
 
