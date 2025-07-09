@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Prevent storage of empty or default post meta values.

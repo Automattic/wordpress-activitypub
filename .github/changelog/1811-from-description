@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Likes, comments, and reposts from the Fediverse now require either a name or `preferredUsername` to be set when the Discussion option `require_name_email` is set to true. It falls back to "Anonymous", if not.

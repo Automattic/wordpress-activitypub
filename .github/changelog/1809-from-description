@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Step completion tracking in the Welcome tab now even works when the number of steps gets reduced.

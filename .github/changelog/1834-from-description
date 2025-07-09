@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Interaction attempts that pass a webfinger ID instead of a URL will work again.

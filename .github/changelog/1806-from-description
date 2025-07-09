@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Plugins now have full control over which Settings tabs are shown in Settings > Activitypub.
