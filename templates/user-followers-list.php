@@ -39,6 +39,7 @@ $table->prepare_items();
 	<form method="post">
 		<input type="hidden" name="page" value="<?php echo esc_attr( $_page ); ?>" />
 		<input type="hidden" name="tab" value="<?php echo esc_attr( $_tab ); ?>" />
+		<?php wp_nonce_field( 'bulk-' . $table->_args['plural'] ); ?>
 		<?php $table->display(); ?>
 	</form>
 </div>
