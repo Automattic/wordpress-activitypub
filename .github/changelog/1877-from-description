@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Comment feeds now show only comments by default, with a new `type` filter (e.g., `like`, `all`) to customize which reactions appear.

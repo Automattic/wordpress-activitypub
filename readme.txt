@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 6.0.2
+Stable tag: 7.0.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -110,62 +110,61 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-### 6.0.2 - 2025-06-11
-#### Changed
-- Reactions button color is now a little more theme agnostic.
-
-#### Fixed
-- "Account Aliases" setting in user profiles get saved correctly again and no longer return empty.
-- Blocks updated in 6.0.0 are back to not showing up in feeds and federated posts.
-- Webfinger data from Pleroma instances no longer creates unexpected mention markup.
-
-### 6.0.1 - 2025-06-09
-#### Fixed
-- Added fallback for follower list during migration to new database schema.
-- Avoids the button block breaking for users that don't have the `unfiltered_html` capability.
-  Blog users now get their correct post count displayed in the Editor and the front-end.
-- Improved follower migration: scheduler now more reliable and won't stop too early.
-- Update the Stream Connector integration to align with the new database schema.
-
-### 6.0.0 - 2025-06-05
+### 7.0.0 - 2025-07-09
 #### Added
-- Enhanced markup of the "follow me" block, for a better Webmention and IndieWeb support.
-- The actor of the replied-to post is now included in cc or to based on the post's visibility.
+- Added basic support for handling remote rejections of follow requests.
+- Added basic support for RFC-9421 style signatures for incoming activities.
+- Added initial Following support for Actors, hidden for now until plugins add support.
+- Added missing "Advanced Settings" details to Site Health debug information.
+- Added option to auto-approve reactions like likes and reposts.
+- Added support for namespaced attributes and the dcterms:subject field (FEP-b2b8), as a first step toward phasing out summary-based content warnings.
+- Added support for the WP Rest Cache plugin to help with caching REST API responses.
+- Documented support for FEP-844e.
+- Optional support for RFC-9421 style signatures for outgoing activities, including retry with Draft-Cavage-style signature.
+- Reactions block now supports customizing colors, borders, box-shadows, and typography.
+- Support for sending follow requests to remote actors is now in place, including outbox delivery and status updates—UI integration will follow later.
 
 #### Changed
-- "Reply on the Fediverse" now uses the Interactivity API for display on the frontend.
-- Bumped minimum required WordPress version to 6.5.
-- Default avatar and error handling for the reactions popover list.
-- Ensured that publishing a new blog post always sends a Create to the Fediverse.
-- Followers block has an updated design, new block variations, and uses the Interactivity API for display on the frontend.
-- Follow Me and Followers blocks can now list any user that is Activitypub-enabled, even if they have the Subscriber role.
-- Likes and Reposts for comments to a post are no longer attributed to the post itself.
-- New system to manage followers and followings more consistently using a unified actor type.
-- Re-enabled HTML support in excerpts and summaries to properly display hashtags and @-replies, now that Mastodon supports it.
-- Refactored to use CSS for effects instead of JavaScript, simplifying the code.
-- Refine the plugin’s handling and storage of remote actor data.
-- The Follow Me block now uses the latest Block Editor technology for display on the frontend.
-- The Reactions block now uses the latest Block Editor technology for display on the frontend.
-
-#### Removed
-- Cleaned up the codebase and removed deprecated functions.
+- Comment feeds now show only comments by default, with a new `type` filter (e.g., `like`, `all`) to customize which reactions appear.
+- Consistent naming of Blog user in Block settings.
+- hs2019 signatures for incoming REST API requests now have their algorithm determined based on their public key.
+- Likes, comments, and reposts from the Fediverse now require either a name or `preferredUsername` to be set when the Discussion option `require_name_email` is set to true. It falls back to "Anonymous", if not.
+- Management of public/private keys for Actors now lives in the Actors collection, in preparation for Signature improvements down the line.
+- Notification emails for new reactions received from the Fediverse now link to the moderation page instead of the edit page, preventing errors and making comment management smoother.
+- Plugins now have full control over which Settings tabs are shown in Settings > Activitypub.
+- Reworked follower structure to simplify handling and enable reuse for following mechanism.
+- Screen options in the Activitypub settings page are now filterable.
+- Setting the blog identifier to empty will no longer trigger an error message about it being the same as an existing user name.
+- Step completion tracking in the Welcome tab now even works when the number of steps gets reduced.
+- The image attachment setting is no longer saved to the database if it matches the default value.
+- The welcome page now links to the correct profile when Blog Only mode was selected in the profile mode step.
+- Unified retrieval of comment avatars and re-used core filters to give access to third-part plugins.
 
 #### Fixed
-- Added forward compatibility for Editor Controls, fixing deprecated warnings in the Editor.
-- Avoid type mismatch when updating `activitypub_content_warning` meta values.
-- Default number of attachments now works correctly in block editor.
-- Fixed a bug in Site Health that caused a PHP warning and missing details for the WebFinger check.
-- Fixes a bug in WordPress 6.5 where the plugin settings in the Editor would fail to render, due to a backwards compatibility break.
-- Improved automated setup process for the Surge caching plugin.
-- Improved excerpt handling by removing shortcodes from summaries.
+- Allow interaction redirect URLs that contain an ampersand.
+- Comments received from the Fediverse no longer show an Edit link in the comment list, despite not being editable.
+- Fixed an issue where links to remote likes and boosts could open raw JSON instead of a proper page.
+- Fixed a potential error when getting an Activitypub ID based on a user ID.
+- HTTP signatures using the hs2019 algorithm now get accepted without error.
+- Improved compatibility with older follower data.
+- Inbox requests that are missing an `algorithm` parameter in their signature no longer create a PHP warning.
+- Interaction attempts that pass a webfinger ID instead of a URL will work again.
+- Names containing HTML entities now get displayed correctly in the Reactions block's list of users.
+- Prevent storage of empty or default post meta values.
+- The amount of avatars shown in the Reactions block no longer depends on the amount of likes, but is comment type agnostic.
+- The command-line interface extension, accidentally removed in a recent cleanup, has been restored.
+- The image attachment setting now correctly respects a value of 0, instead of falling back to the default.
+- The Welcome screen now loads with proper styling when shown as a fallback.
+- Using categories as hashtags has been removed to prevent conflicts with tags of the same name.
+- When verifying signatures on incoming requests, the digest header now gets checked as expected.
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
 == Upgrade Notice ==
 
-= 6.0.0 =
+= 7.0.0 =
 
-Enjoy faster load times, refreshed designs, and smarter functionality—our blocks got a major upgrade with the new Interactivity API under the hood! Note: This update requires WordPress 6.5+. Please ensure your site meets this requirement before upgrading.
+HTTP signatures now accept modern RFC 9421 standard with fallback and verification.
 
 == Installation ==
 

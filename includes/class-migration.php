@@ -190,7 +190,7 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '7.0.0', '<' ) ) {
 			wp_unschedule_hook( 'activitypub_update_followers' );
 			wp_unschedule_hook( 'activitypub_cleanup_followers' );
 

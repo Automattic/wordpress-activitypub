@@ -1,4 +1,0 @@
-Significance: major
-Type: changed
-
-Reworked follower structure to simplify handling and enable reuse for following mechanism.

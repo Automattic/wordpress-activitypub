@@ -1,4 +1,0 @@
-Significance: patch
-Type: changed
-
-Notification emails for new reactions received from the Fediverse now link to the moderation page instead of the edit page, preventing errors and making comment management smoother.

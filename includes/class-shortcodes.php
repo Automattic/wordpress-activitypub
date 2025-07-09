@@ -312,7 +312,7 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_hashcats' Shortcode.
 	 *
-	 * @deprecated unreleased
+	 * @deprecated 7.0.0
 	 *
 	 * @return string The post categories as hashtags.
 	 */

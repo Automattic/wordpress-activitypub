@@ -190,7 +190,7 @@ class Signature {
 	/**
 	 * Return the public key for a given user.
 	 *
-	 * @deprecated unreleased Use {@see Actors::get_public_key()}.
+	 * @deprecated 7.0.0 Use {@see Actors::get_public_key()}.
 	 *
 	 * @param int  $user_id The WordPress User ID.
 	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
@@ -198,7 +198,7 @@ class Signature {
 	 * @return string The public key.
 	 */
 	public static function get_public_key_for( $user_id, $force = false ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_public_key' );
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_public_key' );
 
 		return Actors::get_public_key( $user_id, $force );
 	}
@@ -206,7 +206,7 @@ class Signature {
 	/**
 	 * Return the private key for a given user.
 	 *
-	 * @deprecated unreleased Use {@see Actors::get_private_key()}.
+	 * @deprecated 7.0.0 Use {@see Actors::get_private_key()}.
 	 *
 	 * @param int  $user_id The WordPress User ID.
 	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
@@ -214,7 +214,7 @@ class Signature {
 	 * @return string The private key.
 	 */
 	public static function get_private_key_for( $user_id, $force = false ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_private_key' );
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_private_key' );
 
 		return Actors::get_private_key( $user_id, $force );
 	}
@@ -222,14 +222,14 @@ class Signature {
 	/**
 	 * Return the key pair for a given user.
 	 *
-	 * @deprecated unreleased Use {@see Actors::get_keypair()}.
+	 * @deprecated 7.0.0 Use {@see Actors::get_keypair()}.
 	 *
 	 * @param int $user_id The WordPress User ID.
 	 *
 	 * @return array The key pair.
 	 */
 	public static function get_keypair_for( $user_id ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_keypair' );
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_keypair' );
 
 		return Actors::get_keypair( $user_id );
 	}
@@ -237,14 +237,14 @@ class Signature {
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @deprecated unreleased Use {@see Actors::get_remote_key()}.
+	 * @deprecated 7.0.0 Use {@see Actors::get_remote_key()}.
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_remote_key()' );
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_remote_key()' );
 
 		return Actors::get_remote_key( $key_id );
 	}
@@ -252,7 +252,7 @@ class Signature {
 	/**
 	 * Generates the Signature for an HTTP Request.
 	 *
-	 * @deprecated unreleased Use {@see Signature::sign_request()}.
+	 * @deprecated 7.0.0 Use {@see Signature::sign_request()}.
 	 *
 	 * @param int    $user_id     The WordPress User ID.
 	 * @param string $http_method The HTTP method.
@@ -307,7 +307,7 @@ class Signature {
 	/**
 	 * Gets the signature algorithm from the signature header.
 	 *
-	 * @deprecated unreleased Use {@see Signature::verify()}.
+	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
 	 *
 	 * @param array $signature_block The signature block.
 	 *
@@ -331,7 +331,7 @@ class Signature {
 	/**
 	 * Parses the Signature header.
 	 *
-	 * @deprecated unreleased Use {@see Signature::verify()}.
+	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
 	 *
 	 * @param string $signature The signature header.
 	 *
@@ -372,7 +372,7 @@ class Signature {
 	/**
 	 * Gets the header data from the included pseudo headers.
 	 *
-	 * @deprecated unreleased Use {@see Signature::verify()}.
+	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
 	 *
 	 * @param array $signed_headers  The signed headers.
 	 * @param array $signature_block The signature block.
@@ -453,7 +453,7 @@ class Signature {
 	/**
 	 * Generates the digest for an HTTP Request.
 	 *
-	 * @deprecated unreleased Use {@see Signature::sign_request()}.
+	 * @deprecated 7.0.0 Use {@see Signature::sign_request()}.
 	 *
 	 * @param string $body The body of the request.
 	 *
