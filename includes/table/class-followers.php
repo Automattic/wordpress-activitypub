@@ -99,11 +99,8 @@ class Followers extends \WP_List_Table {
 			$args['order'] = \sanitize_text_field( \wp_unslash( $_GET['order'] ) );
 		}
 
-		if ( ! empty( $_GET['s'] ) && isset( $_REQUEST['_wpnonce'] ) ) {
-			$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
-			if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-				$args['s'] = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
-			}
+		if ( ! empty( $_GET['s'] ) ) {
+			$args['s'] = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
 		}
 
 		$followers_with_count = Follower_Collection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );
@@ -276,11 +273,9 @@ class Followers extends \WP_List_Table {
 	}
 
 	/**
-	 * Returns user count.
-	 *
-	 * @return int
+	 * Message to be displayed when there are no followers.
 	 */
-	public function get_user_count() {
-		return Follower_Collection::count_followers( $this->user_id );
+	public function no_items() {
+		\esc_html_e( 'No followers found.', 'activitypub' );
 	}
 }

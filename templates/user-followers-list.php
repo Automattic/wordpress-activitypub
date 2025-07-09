@@ -11,6 +11,8 @@ $table   = new \Activitypub\Table\Followers();
 $_search = \sanitize_text_field( \wp_unslash( $_REQUEST['s'] ?? '' ) );
 $_page   = \sanitize_text_field( \wp_unslash( $_REQUEST['page'] ?? '' ) );
 $_tab    = \sanitize_text_field( \wp_unslash( $_REQUEST['tab'] ?? '' ) );
+
+$table->prepare_items();
 ?>
 <div class="wrap">
 	<h1 class="wp-heading-inline"><?php esc_html_e( 'Author Followers', 'activitypub' ); ?></h1>
@@ -31,10 +33,12 @@ $_tab    = \sanitize_text_field( \wp_unslash( $_REQUEST['tab'] ?? '' ) );
 	<form method="get">
 		<input type="hidden" name="page" value="<?php echo esc_attr( $_page ); ?>" />
 		<input type="hidden" name="tab" value="<?php echo esc_attr( $_tab ); ?>" />
-		<?php
-		$table->prepare_items();
-		$table->search_box( esc_html__( 'Search Followers', 'activitypub' ), 'search' );
-		$table->display();
-		?>
-		</form>
+		<?php $table->search_box( esc_html__( 'Search Followers', 'activitypub' ), 'search' ); ?>
+	</form>
+
+	<form method="post">
+		<input type="hidden" name="page" value="<?php echo esc_attr( $_page ); ?>" />
+		<input type="hidden" name="tab" value="<?php echo esc_attr( $_tab ); ?>" />
+		<?php $table->display(); ?>
+	</form>
 </div>
