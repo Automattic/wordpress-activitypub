@@ -48,7 +48,9 @@ class Comment {
 	 */
 	public static function map_meta_cap( $caps, $cap, $user_id, $args ) {
 		if ( 'edit_comment' === $cap && self::was_received( $args[0] ) ) {
-			$caps[] = 'do_not_allow';
+			if ( ! \is_admin() || ( isset( $GLOBALS['current_screen'] ) && 'comment' === $GLOBALS['current_screen']->id ) ) {
+				$caps[] = 'do_not_allow';
+			}
 		}
 
 		return $caps;

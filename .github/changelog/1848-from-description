@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-hs2019 signatures for incoming REST API requests now have their algorithm determined based on their public key.

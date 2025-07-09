@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Management of public/private keys for Actors now lives in the Actors collection, in preparation for Signature improvements down the line.

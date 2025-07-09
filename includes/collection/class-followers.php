@@ -136,7 +136,7 @@ class Followers {
 	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_remote_by_uri' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_remote_by_uri' );
 
 		return Actors::get_remote_by_uri( $actor );
 	}
@@ -384,7 +384,7 @@ class Followers {
 	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_outdated' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_outdated' );
 
 		return Actors::get_outdated( $number, $older_than );
 	}
@@ -397,7 +397,7 @@ class Followers {
 	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_faulty' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_faulty' );
 
 		return Actors::get_faulty( $number );
 	}
@@ -414,7 +414,7 @@ class Followers {
 	 * @return int|false The meta ID on success, false on failure.
 	 */
 	public static function add_error( $post_id, $error ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::add_error' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::add_error' );
 
 		return Actors::add_error( $post_id, $error );
 	}
@@ -427,7 +427,7 @@ class Followers {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function clear_errors( $post_id ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::clear_errors' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::clear_errors' );
 
 		return Actors::clear_errors( $post_id );
 	}

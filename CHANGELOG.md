@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.0.0] - 2025-07-09
+### Added
+- Added basic support for handling remote rejections of follow requests. [#1865]
+- Added basic support for RFC-9421 style signatures for incoming activities. [#1849]
+- Added initial Following support for Actors, hidden for now until plugins add support. [#1866]
+- Added missing "Advanced Settings" details to Site Health debug information. [#1846]
+- Added option to auto-approve reactions like likes and reposts. [#1847]
+- Added support for namespaced attributes and the dcterms:subject field (FEP-b2b8), as a first step toward phasing out summary-based content warnings. [#1893]
+- Added support for the WP Rest Cache plugin to help with caching REST API responses. [#1630]
+- Documented support for FEP-844e. [#1868]
+- Optional support for RFC-9421 style signatures for outgoing activities, including retry with Draft-Cavage-style signature. [#1858]
+- Reactions block now supports customizing colors, borders, box-shadows, and typography. [#1826]
+- Support for sending follow requests to remote actors is now in place, including outbox delivery and status updates—UI integration will follow later. [#1839]
+
+### Changed
+- Comment feeds now show only comments by default, with a new `type` filter (e.g., `like`, `all`) to customize which reactions appear. [#1877]
+- Consistent naming of Blog user in Block settings. [#1862]
+- hs2019 signatures for incoming REST API requests now have their algorithm determined based on their public key. [#1848]
+- Likes, comments, and reposts from the Fediverse now require either a name or `preferredUsername` to be set when the Discussion option `require_name_email` is set to true. It falls back to "Anonymous", if not. [#1811]
+- Management of public/private keys for Actors now lives in the Actors collection, in preparation for Signature improvements down the line. [#1832]
+- Notification emails for new reactions received from the Fediverse now link to the moderation page instead of the edit page, preventing errors and making comment management smoother. [#1887]
+- Plugins now have full control over which Settings tabs are shown in Settings > Activitypub. [#1806]
+- Reworked follower structure to simplify handling and enable reuse for following mechanism. [#1759]
+- Screen options in the Activitypub settings page are now filterable. [#1802]
+- Setting the blog identifier to empty will no longer trigger an error message about it being the same as an existing user name. [#1805]
+- Step completion tracking in the Welcome tab now even works when the number of steps gets reduced. [#1809]
+- The image attachment setting is no longer saved to the database if it matches the default value. [#1821]
+- The welcome page now links to the correct profile when Blog Only mode was selected in the profile mode step. [#1807]
+- Unified retrieval of comment avatars and re-used core filters to give access to third-part plugins. [#1812]
+
+### Fixed
+- Allow interaction redirect URLs that contain an ampersand. [#1819]
+- Comments received from the Fediverse no longer show an Edit link in the comment list, despite not being editable. [#1895]
+- Fixed an issue where links to remote likes and boosts could open raw JSON instead of a proper page. [#1857]
+- Fixed a potential error when getting an Activitypub ID based on a user ID. [#1889]
+- HTTP signatures using the hs2019 algorithm now get accepted without error. [#1814]
+- Improved compatibility with older follower data. [#1841]
+- Inbox requests that are missing an `algorithm` parameter in their signature no longer create a PHP warning. [#1803]
+- Interaction attempts that pass a webfinger ID instead of a URL will work again. [#1834]
+- Names containing HTML entities now get displayed correctly in the Reactions block's list of users. [#1810]
+- Prevent storage of empty or default post meta values. [#1829]
+- The amount of avatars shown in the Reactions block no longer depends on the amount of likes, but is comment type agnostic. [#1835]
+- The command-line interface extension, accidentally removed in a recent cleanup, has been restored. [#1878]
+- The image attachment setting now correctly respects a value of 0, instead of falling back to the default. [#1822]
+- The Welcome screen now loads with proper styling when shown as a fallback. [#1820]
+- Using categories as hashtags has been removed to prevent conflicts with tags of the same name. [#1873]
+- When verifying signatures on incoming requests, the digest header now gets checked as expected. [#1837]
+
 ## [6.0.2] - 2025-06-11
 ### Changed
 - Reactions button color is now a little more theme agnostic. [#1795]
@@ -1269,6 +1317,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.2...7.0.0
 [6.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.1...6.0.2
 [6.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.0...6.0.1
 [6.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.2...6.0.0

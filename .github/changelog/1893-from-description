@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Added support for namespaced attributes and the dcterms:subject field (FEP-b2b8), as a first step toward phasing out summary-based content warnings.

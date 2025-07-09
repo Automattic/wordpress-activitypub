@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-The image attachment setting now correctly respects a value of 0, instead of falling back to the default.
