@@ -352,6 +352,15 @@ input.blog-user-identifier {
 	margin-top: 0;
 }
 
+/* Actor List Styles */
+.wp-list-table.followers,
+.wp-list-table.following {
+	.column-post_title img {
+		float: left;
+		margin: 1px 10px 0 0;
+	}
+}
+
 /* RTL Support for blockquotes */
 .rtl .contextual-help-tabs-wrap blockquote {
 	border-left: none;
