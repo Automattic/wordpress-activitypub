@@ -316,14 +316,9 @@ class Following extends \WP_List_Table {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$following_raw = \wp_unslash( $_REQUEST['following'] );
-		$following     = is_array( $following_raw ) ? array_map( 'esc_url_raw', $following_raw ) : array( esc_url_raw( $following_raw ) );
-
 		if ( $this->current_action() === 'delete' ) {
-			if ( ! is_array( $following ) ) {
-				$following = array( $following );
-			}
+			$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
+
 			foreach ( $following as $actor_id ) {
 				$actor = Actors::get_remote_by_uri( $actor_id );
 				if ( \is_wp_error( $actor ) ) {
