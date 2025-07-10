@@ -8,6 +8,7 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Following;
 
 use function Activitypub\get_context;
 use function Activitypub\is_single_user;
@@ -65,6 +66,18 @@ class Following_Controller extends Actors_Controller {
 							'minimum'     => 1,
 							'maximum'     => 100,
 						),
+						'order'    => array(
+							'description' => 'Order sort attribute ascending or descending.',
+							'type'        => 'string',
+							'default'     => 'desc',
+							'enum'        => array( 'asc', 'desc' ),
+						),
+						'context'  => array(
+							'description' => 'The context in which the request is made.',
+							'type'        => 'string',
+							'default'     => 'simple',
+							'enum'        => array( 'simple', 'full' ),
+						),
 					),
 				),
 				'schema' => array( $this, 'get_public_item_schema' ),
@@ -91,24 +104,30 @@ class Following_Controller extends Actors_Controller {
 		 */
 		\do_action( 'activitypub_rest_following_pre' );
 
+		$order    = $request->get_param( 'order' );
+		$per_page = $request->get_param( 'per_page' );
+		$page     = $request->get_param( 'page' ) ?? 1;
+		$context  = $request->get_param( 'context' );
+
+		$data = Following::get_following_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
+
 		$response = array(
-			'@context'  => get_context(),
-			'id'        => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user->get__id() ) ),
-			'generator' => 'https://wordpress.org/?v=' . get_masked_wp_version(),
-			'actor'     => $user->get_id(),
-			'type'      => 'OrderedCollection',
+			'@context'     => get_context(),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user->get__id() ) ),
+			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
+			'actor'        => $user->get_id(),
+			'type'         => 'OrderedCollection',
+			'totalItems'   => $data['total'],
+			'orderedItems' => array_map(
+				function ( $item ) use ( $context ) {
+					if ( 'full' === $context ) {
+						return Actors::get_actor( $item )->to_array( false );
+					}
+					return $item->guid;
+				},
+				$data['following']
+			),
 		);
-
-		/**
-		 * Filter the list of following urls.
-		 *
-		 * @param array                   $items The array of following urls.
-		 * @param \Activitypub\Model\User $user  The user object.
-		 */
-		$items = \apply_filters( 'activitypub_rest_following', array(), $user );
-
-		$response['totalItems']   = \is_countable( $items ) ? \count( $items ) : 0;
-		$response['orderedItems'] = $items;
 
 		$response = $this->prepare_collection_response( $response, $request );
 		if ( is_wp_error( $response ) ) {
@@ -154,9 +173,65 @@ class Following_Controller extends Actors_Controller {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
+		// Define the schema for items in the following collection.
 		$item_schema = array(
-			'type'   => 'string',
-			'format' => 'uri',
+			'oneOf' => array(
+				array(
+					'type'   => 'string',
+					'format' => 'uri',
+				),
+				array(
+					'type'       => 'object',
+					'properties' => array(
+						'id'                => array(
+							'type'   => 'string',
+							'format' => 'uri',
+						),
+						'type'              => array(
+							'type' => 'string',
+						),
+						'name'              => array(
+							'type' => 'string',
+						),
+						'icon'              => array(
+							'type'       => 'object',
+							'properties' => array(
+								'type'      => array(
+									'type' => 'string',
+								),
+								'mediaType' => array(
+									'type' => 'string',
+								),
+								'url'       => array(
+									'type'   => 'string',
+									'format' => 'uri',
+								),
+							),
+						),
+						'published'         => array(
+							'type'   => 'string',
+							'format' => 'date-time',
+						),
+						'summary'           => array(
+							'type' => 'string',
+						),
+						'updated'           => array(
+							'type'   => 'string',
+							'format' => 'date-time',
+						),
+						'url'               => array(
+							'type'   => 'string',
+							'format' => 'uri',
+						),
+						'streams'           => array(
+							'type' => 'array',
+						),
+						'preferredUsername' => array(
+							'type' => 'string',
+						),
+					),
+				),
+			),
 		);
 
 		$schema = $this->get_collection_schema( $item_schema );

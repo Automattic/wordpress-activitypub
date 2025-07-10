@@ -7,6 +7,9 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Following;
+
 /**
  * Tests for Following REST API endpoint.
  *
@@ -16,33 +19,49 @@ namespace Activitypub\Tests\Rest;
 class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
 
 	/**
-	 * Set up.
+	 * Set up before class.
 	 */
-	public function set_up() {
-		parent::set_up();
-
-		add_filter(
-			'activitypub_rest_following',
-			function ( $follow_list ) {
-				$users = \Activitypub\Collection\Actors::get_collection();
-
-				foreach ( $users as $user ) {
-					$follow_list[] = $user->get_id();
-				}
-
-				return $follow_list;
-			}
+	public static function set_up_before_class() {
+		self::factory()->post->create_many(
+			25,
+			array(
+				'post_type'    => Actors::POST_TYPE,
+				'post_content' => \wp_slash(
+					\wp_json_encode(
+						array(
+							'id'                => 'https://example.org/actor/1',
+							'type'              => 'Person',
+							'preferredUsername' => 'user1',
+							'name'              => 'User 1',
+						)
+					)
+				),
+				'meta_input'   => array(
+					Following::FOLLOWING_META_KEY => '0',
+				),
+			)
+		);
+		self::factory()->post->create_many(
+			3,
+			array(
+				'post_type'    => Actors::POST_TYPE,
+				'post_content' => \wp_slash(
+					\wp_json_encode(
+						array(
+							'id'                => 'https://example.org/actor/1',
+							'type'              => 'Person',
+							'preferredUsername' => 'user1',
+							'name'              => 'User 1',
+						)
+					)
+				),
+				'meta_input'   => array(
+					Following::PENDING_META_KEY => '1',
+				),
+			)
 		);
 	}
 
-	/**
-	 * Tear down.
-	 */
-	public function tear_down() {
-		remove_all_filters( 'activitypub_rest_following' );
-
-		parent::tear_down();
-	}
 	/**
 	 * Test route registration.
 	 *
@@ -66,13 +85,18 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$schema = $response['schema'];
 
 		// Test specific property types.
-		$this->assertEquals( array( 'string', 'array', 'object' ), $schema['properties']['@context']['type'] );
+		$this->assertContains( 'array', (array) $schema['properties']['@context']['type'] );
+		$this->assertContains( 'object', (array) $schema['properties']['@context']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['id']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['id']['format'] );
-		$this->assertEquals( 'array', $schema['properties']['orderedItems']['type'] );
-		$this->assertEquals( 'string', $schema['properties']['orderedItems']['items']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['generator']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['generator']['format'] );
+		$this->assertEquals( 'string', $schema['properties']['actor']['type'] );
+		$this->assertEquals( 'uri', $schema['properties']['actor']['format'] );
+		$this->assertEquals( 'integer', $schema['properties']['totalItems']['type'] );
+		$this->assertEquals( 'string', $schema['properties']['partOf']['type'] );
+		$this->assertEquals( 'uri', $schema['properties']['partOf']['format'] );
+		$this->assertEquals( 'array', $schema['properties']['orderedItems']['type'] );
 	}
 
 	/**
@@ -84,8 +108,12 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$actor_mode = \get_option( 'activitypub_actor_mode' );
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'context', 'simple' );
 		$response = rest_get_server()->dispatch( $request );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertStringContainsString( 'application/activity+json', $response->get_headers()['Content-Type'] );
@@ -99,19 +127,86 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertArrayHasKey( 'generator', $data );
 		$this->assertArrayHasKey( 'actor', $data );
 		$this->assertArrayHasKey( 'totalItems', $data );
-		$this->assertArrayHasKey( 'orderedItems', $data );
 
 		// Test property values.
-		$this->assertEquals( 'OrderedCollection', $data['type'] );
+		$this->assertEquals( 'OrderedCollectionPage', $data['type'] );
 		$this->assertStringContainsString( 'wordpress.org', $data['generator'] );
+		$this->assertNotEmpty( $data['orderedItems'] );
+		$this->assertEquals( 25, $data['totalItems'] );
+	}
+
+	/**
+	 * Test get_items response with full context.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_full_context() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'context', 'full' );
+		$response = rest_get_server()->dispatch( $request );
 
 		\update_option( 'activitypub_actor_mode', $actor_mode );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data['orderedItems'] );
+
+		// In full context, orderedItems should contain full actor objects.
+		foreach ( $data['orderedItems'] as $item ) {
+			$this->assertIsArray( $item );
+		}
+	}
+
+	/**
+	 * Test get_items with pagination.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_pagination() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+		$request->set_param( 'page', 2 );
+		$request->set_param( 'per_page', 10 );
+		$response = rest_get_server()->dispatch( $request );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
+
+		$data = $response->get_data();
+
+		// Test pagination properties.
+		$this->assertArrayHasKey( 'first', $data );
+		$this->assertArrayHasKey( 'last', $data );
+		$this->assertStringContainsString( 'page=1', $data['first'] );
+		$this->assertIsString( $data['last'] );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+		$request->set_param( 'page', 100 );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'rest_post_invalid_page_number', $response, 400 );
+	}
+
+	/**
+	 * Test get_items with invalid user.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_invalid_user() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/999999/following' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'activitypub_user_not_found', $response, 404 );
 	}
 
 	/**
 	 * Test that the Following response matches its schema.
 	 *
-	 * @covers ::get_item
+	 * @covers ::get_items
 	 * @covers ::get_item_schema
 	 */
 	public function test_response_matches_schema() {
