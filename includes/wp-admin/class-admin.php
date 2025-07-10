@@ -109,7 +109,7 @@ class Admin {
 	public static function followers_list_page() {
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
-			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
 		}
 	}
 

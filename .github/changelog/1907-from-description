@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Minor performance improvement when querying posts of various types, by avoiding double queries.

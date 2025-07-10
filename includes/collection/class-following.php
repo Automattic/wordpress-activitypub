@@ -148,10 +148,8 @@ class Following {
 			)
 		);
 
-		$post_ids = $post_id_query->get_posts();
-
-		if ( $post_ids ) {
-			Outbox::undo( $post_ids[0] );
+		if ( $post_id_query->posts ) {
+			Outbox::undo( $post_id_query->posts[0] );
 		}
 
 		return $post;
@@ -191,7 +189,7 @@ class Following {
 		$args      = \wp_parse_args( $args, $defaults );
 		$query     = new \WP_Query( $args );
 		$total     = $query->found_posts;
-		$following = \array_filter( $query->get_posts() );
+		$following = \array_filter( $query->posts );
 
 		return \compact( 'following', 'total' );
 	}
