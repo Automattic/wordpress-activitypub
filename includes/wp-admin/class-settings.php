@@ -354,7 +354,7 @@ class Settings {
 			);
 			$settings_tabs['followers']    = array(
 				'label'    => __( 'Followers', 'activitypub' ),
-				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-followers-list.php',
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php',
 			);
 
 			if ( \apply_filters( 'activitypub_show_following_ui', false ) ) {
