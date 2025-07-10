@@ -198,12 +198,8 @@ class Scheduler {
 				\wp_delete_post( $actor->ID );
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
 				if ( Actors::count_errors( $actor->ID ) >= 5 ) {
+					\wp_schedule_single_event( \time(), 'activitypub_delete_actor_interactions', array( $actor->guid ) );
 					\wp_delete_post( $actor->ID );
-					\wp_schedule_single_event(
-						\time(),
-						'activitypub_delete_actor_interactions',
-						array( $actor->ID )
-					);
 				} else {
 					Actors::add_error( $actor->ID, $meta );
 				}
