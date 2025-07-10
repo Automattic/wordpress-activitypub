@@ -1,6 +1,6 @@
 <?php
 /**
- * ActivityPub User Followers List template.
+ * ActivityPub Followers List template.
  *
  * @package Activitypub
  */
