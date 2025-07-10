@@ -109,7 +109,7 @@ class Following extends \WP_List_Table {
 		}
 
 		$following_with_count = Following_Collection::get_following_with_count( $this->user_id, $per_page, $page_num, $args, $status );
-		$following            = $following_with_count['following'];
+		$followings           = $following_with_count['following'];
 		$counter              = $following_with_count['total'];
 
 		$this->items = array();
@@ -121,24 +121,24 @@ class Following extends \WP_List_Table {
 			)
 		);
 
-		foreach ( $following as $post ) {
-			$actor      = Actors::get_actor( $post );
+		foreach ( $followings as $following ) {
+			$actor      = Actors::get_actor( $following->ID );
 			$class      = 'approved';
-			$is_pending = $this->is_pending( $post->ID );
+			$is_pending = $this->is_pending( $following->ID );
 
 			if ( $is_pending ) {
 				$class = 'unapproved';
 			}
 
 			$this->items[] = array(
-				'id'         => $post->ID,
+				'id'         => $following->ID,
 				'icon'       => \esc_attr( $actor->get_icon()['url'] ?? '' ),
 				'post_title' => \esc_attr( $actor->get_name() ),
 				'username'   => \esc_attr( $actor->get_preferred_username() ),
 				'url'        => \esc_attr( object_to_uri( $actor->get_url() ) ),
 				'identifier' => \esc_attr( $actor->get_id() ),
-				'published'  => \esc_attr( $actor->get_published() ),
-				'modified'   => \esc_attr( $actor->get_updated() ),
+				'published'  => \esc_attr( $following->post_date_gmt ),
+				'modified'   => \esc_attr( $following->post_modified_gmt ),
 				'class'      => $class,
 				'status'     => $is_pending ? \__( 'Pending', 'activitypub' ) : \__( 'Accepted', 'activitypub' ),
 			);
