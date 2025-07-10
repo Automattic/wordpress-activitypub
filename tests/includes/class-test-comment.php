@@ -643,7 +643,6 @@ class Test_Comment extends \WP_UnitTestCase {
 				'withcomments' => true,
 			)
 		);
-		$query->get_posts();
 
 		$this->assertSame( count( $core_comment_types ), $query->comment_count );
 		$this->assertEqualSets( $core_comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
