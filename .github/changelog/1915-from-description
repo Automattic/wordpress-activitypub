@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-When deleting interactions for cleaned up actors, we use the actor's URL again to retrieve their information instead of our internal ID.
