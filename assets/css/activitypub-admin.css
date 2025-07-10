@@ -354,11 +354,34 @@ input.blog-user-identifier {
 
 /* Actor List Styles */
 .wp-list-table.followers,
-.wp-list-table.following {
+.wp-list-table.followings {
 	.column-post_title img {
 		float: left;
 		margin: 1px 10px 0 0;
 	}
+}
+
+.wp-list-table.followings .unapproved th.check-column {
+	border-left: 4px solid #d63638;
+}
+
+.wp-list-table.followings .unapproved th.check-column input {
+	margin-left: 4px;
+}
+
+.wp-list-table.followings .unapproved td,
+.wp-list-table.followings .unapproved th {
+	background-color: #fcf9e8;
+}
+
+.wp-list-table.followings th,
+.wp-list-table.followings td {
+	box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.wp-list-table.followings tr:last-child th,
+.wp-list-table.followings tr:last-child td {
+	box-shadow: none;
 }
 
 /* RTL Support for blockquotes */
@@ -366,23 +389,6 @@ input.blog-user-identifier {
 	border-left: none;
 	border-right: 4px solid #3582c4;
 	padding: 16px 20px;
-}
-
-.wp-list-table .unapproved th.check-column {
-	border-left: 4px solid #d63638;
-}
-
-.wp-list-table .unapproved th.check-column input {
-	margin-left: 4px;
-}
-
-.wp-list-table .unapproved th {
-	border-top: 1px solid rgba(0,0,0,.03);
-}
-
-.wp-list-table .unapproved td,
-.wp-list-table .unapproved th {
-	background-color: #fcf9e8;
 }
 
 @media screen and (max-width: 782px) {
