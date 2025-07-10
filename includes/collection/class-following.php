@@ -164,6 +164,7 @@ class Following {
 	 * @param int      $number  Maximum number of results to return.
 	 * @param int      $page    Page number.
 	 * @param array    $args    The WP_Query arguments.
+	 * @param string   $filter  Filter by status: 'all', 'pending', 'accepted'.
 	 *
 	 * @return array {
 	 *      Data about the followings.
@@ -172,7 +173,7 @@ class Following {
 	 *      @type int        $total      Total number of followings.
 	 *  }
 	 */
-	public static function get_following_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
+	public static function get_following_with_count( $user_id, $number = -1, $page = null, $args = array(), $filter = 'accepted' ) {
 		$defaults = array(
 			'post_type'      => Actors::POST_TYPE,
 			'posts_per_page' => $number,
@@ -182,16 +183,22 @@ class Following {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
 				'relation' => 'OR',
-				array(
-					'key'   => self::FOLLOWING_META_KEY,
-					'value' => $user_id,
-				),
-				array(
-					'key'   => self::PENDING_META_KEY,
-					'value' => $user_id,
-				),
 			),
 		);
+
+		if ( 'all' === $filter || 'pending' === $filter ) {
+			$defaults['meta_query'][] = array(
+				'key'   => self::PENDING_META_KEY,
+				'value' => $user_id,
+			);
+		}
+
+		if ( 'all' === $filter || 'accepted' === $filter ) {
+			$defaults['meta_query'][] = array(
+				'key'   => self::FOLLOWING_META_KEY,
+				'value' => $user_id,
+			);
+		}
 
 		$args      = \wp_parse_args( $args, $defaults );
 		$query     = new \WP_Query( $args );
@@ -208,11 +215,12 @@ class Following {
 	 * @param int      $number  Maximum number of results to return.
 	 * @param int      $page    Page number.
 	 * @param array    $args    The WP_Query arguments.
+	 * @param string   $filter  Filter by status: 'all', 'pending', 'accepted'.
 	 *
 	 * @return \WP_Post[] List of `Following` objects.
 	 */
-	public static function get_following( $user_id, $number = -1, $page = null, $args = array() ) {
-		$data = self::get_following_with_count( $user_id, $number, $page, $args );
+	public static function get_following( $user_id, $number = -1, $page = null, $args = array(), $filter = 'all' ) {
+		$data = self::get_following_with_count( $user_id, $number, $page, $args, $filter );
 
 		return $data['following'];
 	}
@@ -221,10 +229,11 @@ class Following {
 	 * Get the total number of followings of a given user.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
+	 * @param string   $filter  Filter by status: 'all', 'pending', 'accepted'.
 	 *
 	 * @return int The total number of followings.
 	 */
-	public static function count_following( $user_id ) {
-		return self::get_following_with_count( $user_id )['total'];
+	public static function count_following( $user_id, $filter = 'all' ) {
+		return self::get_following_with_count( $user_id, -1, null, array(), $filter )['total'];
 	}
 }
