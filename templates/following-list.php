@@ -33,7 +33,6 @@ $table->prepare_items();
 	<?php $table->views(); ?>
 	<form method="get">
 		<input type="hidden" name="page" value="<?php echo esc_attr( $_page ); ?>" />
-		<input type="hidden" name="page" value="<?php echo esc_attr( $_page ); ?>" />
 		<input type="hidden" name="tab" value="<?php echo esc_attr( $_tab ); ?>" />
 		<?php $table->search_box( esc_html__( 'Search Followings', 'activitypub' ), 'search' ); ?>
 	</form>
