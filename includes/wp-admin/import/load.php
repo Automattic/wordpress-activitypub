@@ -26,4 +26,13 @@ function load() {
 		\__( 'Import content from Mastodon.', 'activitypub' ),
 		array( __NAMESPACE__ . '\Mastodon', 'dispatch' )
 	);
+
+	if ( \apply_filters( 'activitypub_show_following_ui', false ) ) {
+		\register_importer(
+			'starter-kit',
+			\__( 'Starter Kits (Beta)', 'activitypub' ),
+			\__( 'Automatically follow a collection of users.', 'activitypub' ),
+			array( __NAMESPACE__ . '\Starter_Kit', 'dispatch' )
+		);
+	}
 }
