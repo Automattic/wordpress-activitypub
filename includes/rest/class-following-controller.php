@@ -122,6 +122,21 @@ class Following_Controller extends Actors_Controller {
 			),
 		);
 
+		/**
+		 * Filter the list of following urls
+		 *
+		 * @param array                   $items The array of following urls.
+		 * @param \Activitypub\Model\User $user  The user object.
+		 *
+		 * @deprecated unreleased Please migrate your Followings to the new internal Following structure.
+		 */
+		$items = \apply_filters_deprecated( 'activitypub_rest_following', array( array(), $user ), 'unreleased', 'Please migrate your Followings to the new internal Following structure.' );
+
+		if ( ! empty( $items ) ) {
+			$response['totalItems']   = count( $items );
+			$response['orderedItems'] = $items;
+		}
+
 		$response = $this->prepare_collection_response( $response, $request );
 		if ( is_wp_error( $response ) ) {
 			return $response;
