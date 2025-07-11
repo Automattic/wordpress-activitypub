@@ -199,7 +199,7 @@ class Starter_Kit {
 		\wp_defer_comment_counting( true );
 
 		/**
-		 * Fires when the Mastodon import starts.
+		 * Fires when the Starter Kit import starts.
 		 */
 		\do_action( 'import_start' );
 
@@ -221,7 +221,7 @@ class Starter_Kit {
 		}
 
 		/**
-		 * Fires when the Mastodon import ends.
+		 * Fires when the Starter Kit import ends.
 		 */
 		\do_action( 'import_end' );
 	}
