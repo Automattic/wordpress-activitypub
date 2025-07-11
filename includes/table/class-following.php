@@ -122,13 +122,7 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor      = Actors::get_actor( $following->ID );
-			$class      = 'approved';
-			$is_pending = $this->is_pending( $following->ID );
-
-			if ( $is_pending ) {
-				$class = 'unapproved';
-			}
+			$actor = Actors::get_actor( $following->ID );
 
 			$this->items[] = array(
 				'id'         => $following->ID,
@@ -137,10 +131,6 @@ class Following extends \WP_List_Table {
 				'username'   => \esc_attr( $actor->get_preferred_username() ),
 				'url'        => \esc_attr( object_to_uri( $actor->get_url() ) ),
 				'identifier' => \esc_attr( $actor->get_id() ),
-				'published'  => \esc_attr( $following->post_date_gmt ),
-				'modified'   => \esc_attr( $following->post_modified_gmt ),
-				'class'      => $class,
-				'status'     => $is_pending ? \__( 'Pending', 'activitypub' ) : \__( 'Accepted', 'activitypub' ),
 			);
 		}
 	}
@@ -155,7 +145,7 @@ class Following extends \WP_List_Table {
 		$count_pending  = Following_Collection::count_following( $this->user_id, 'pending' );
 		$count_accepted = Following_Collection::count_following( $this->user_id, 'accepted' );
 		$path           = 'users.php?page=activitypub-following-list';
-		$status         = 'all';
+		$status         = 'accepted';
 
 		if ( Actors::BLOG_USER_ID === $this->user_id ) {
 			$path = 'options-general.php?page=activitypub&tab=following';
@@ -166,23 +156,8 @@ class Following extends \WP_List_Table {
 		}
 
 		$links = array(
-			'all'      => array(
-				'url'     => admin_url( $path ),
-				'label'   => sprintf(
-					/* translators: %s: Number of users. */
-					\_nx(
-						'All <span class="count">(%s)</span>',
-						'All <span class="count">(%s)</span>',
-						$count_all,
-						'users',
-						'activitypub'
-					),
-					number_format_i18n( $count_all )
-				),
-				'current' => 'all' === $status,
-			),
 			'accepted' => array(
-				'url'     => admin_url( $path . '&status=accepted' ),
+				'url'     => admin_url( $path ),
 				'label'   => sprintf(
 					/* translators: %s: Number of users. */
 					_nx(
@@ -349,18 +324,5 @@ class Following extends \WP_List_Table {
 		);
 		$this->single_row_columns( $item );
 		printf( "</tr>\n" );
-	}
-
-	/**
-	 * Check if the item is pending.
-	 *
-	 * @param int $item_id Item ID.
-	 *
-	 * @return bool
-	 */
-	protected function is_pending( $item_id ) {
-		$pending = \get_post_meta( $item_id, Following_Collection::PENDING_META_KEY, false );
-
-		return \is_array( $pending ) && \in_array( (string) $this->user_id, $pending, true );
 	}
 }
