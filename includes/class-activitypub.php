@@ -50,6 +50,7 @@ class Activitypub {
 
 		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
+		\add_filter( 'default_post_metadata', array( self::class, 'default_post_metadata' ), 10, 3 );
 
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
@@ -701,6 +702,35 @@ class Activitypub {
 		}
 
 		return $check;
+	}
+
+	/**
+	 * Adjusts default post meta values.
+	 *
+	 * @param mixed  $meta_value The meta value.
+	 * @param int    $object_id  ID of the object metadata is for.
+	 * @param string $meta_key   Metadata key.
+	 *
+	 * @return mixed The meta value.
+	 */
+	public static function default_post_metadata( $meta_value, $object_id, $meta_key ) {
+		// Check if the meta key is `activitypub_content_visibility`.
+		if ( 'activitypub_content_visibility' !== $meta_key ) {
+			return $meta_value;
+		}
+
+		// If the post is federated, return the default visibility.
+		if ( 'federated' === \get_post_meta( $object_id, 'activitypub_status', true ) ) {
+			return $meta_value;
+		}
+
+		// If the post is not federated and older than a year, return local visibility.
+		$date = \get_the_date( 'U', $object_id );
+		if ( $date < \strtotime( '-1 month' ) ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
+		}
+
+		return $meta_value;
 	}
 
 	/**
