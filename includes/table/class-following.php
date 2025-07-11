@@ -56,8 +56,6 @@ class Following extends \WP_List_Table {
 			'cb'         => '<input type="checkbox" />',
 			'username'   => \__( 'Username', 'activitypub' ),
 			'post_title' => \__( 'Name', 'activitypub' ),
-			'published'  => \__( 'Followed', 'activitypub' ),
-			'modified'   => \__( 'Last updated', 'activitypub' ),
 		);
 	}
 
@@ -70,8 +68,6 @@ class Following extends \WP_List_Table {
 		return array(
 			'username'   => array( 'username', true ),
 			'post_title' => array( 'post_title', true ),
-			'modified'   => array( 'modified', false ),
-			'published'  => array( 'published', false ),
 		);
 	}
 
@@ -81,7 +77,7 @@ class Following extends \WP_List_Table {
 	public function prepare_items() {
 		$columns = $this->get_columns();
 		$hidden  = array();
-		$status  = 'all';
+		$status  = 'accepted';
 
 		$this->process_action();
 		$this->_column_headers = array( $columns, $hidden, $this->get_sortable_columns() );
@@ -108,9 +104,14 @@ class Following extends \WP_List_Table {
 			$status = sanitize_text_field( wp_unslash( $_GET['status'] ) );
 		}
 
-		$following_with_count = Following_Collection::get_following_with_count( $this->user_id, $per_page, $page_num, $args, $status );
-		$followings           = $following_with_count['following'];
-		$counter              = $following_with_count['total'];
+		if ( 'pending' === $status ) {
+			$following_with_count = Following_Collection::get_pending_with_count( $this->user_id, $per_page, $page_num, $args );
+		} else {
+			$following_with_count = Following_Collection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
+		}
+
+		$followings = $following_with_count['following'];
+		$counter    = $following_with_count['total'];
 
 		$this->items = array();
 		$this->set_pagination_args(
@@ -129,6 +130,7 @@ class Following extends \WP_List_Table {
 				'icon'       => \esc_attr( $actor->get_icon()['url'] ?? '' ),
 				'post_title' => \esc_attr( $actor->get_name() ),
 				'username'   => \esc_attr( $actor->get_preferred_username() ),
+				'name'       => \esc_attr( $actor->get_name() ),
 				'url'        => \esc_attr( object_to_uri( $actor->get_url() ) ),
 				'identifier' => \esc_attr( $actor->get_id() ),
 			);
@@ -141,11 +143,9 @@ class Following extends \WP_List_Table {
 	 * @return string[]
 	 */
 	public function get_views() {
-		$count_all      = Following_Collection::count_following( $this->user_id );
-		$count_pending  = Following_Collection::count_following( $this->user_id, 'pending' );
-		$count_accepted = Following_Collection::count_following( $this->user_id, 'accepted' );
-		$path           = 'users.php?page=activitypub-following-list';
-		$status         = 'accepted';
+		$count  = Following_Collection::count( $this->user_id );
+		$path   = 'users.php?page=activitypub-following-list';
+		$status = 'accepted';
 
 		if ( Actors::BLOG_USER_ID === $this->user_id ) {
 			$path = 'options-general.php?page=activitypub&tab=following';
@@ -163,11 +163,11 @@ class Following extends \WP_List_Table {
 					_nx(
 						'Accepted <span class="count">(%s)</span>',
 						'Accepted <span class="count">(%s)</span>',
-						$count_accepted,
+						$count['accepted'],
 						'users',
 						'activitypub'
 					),
-					number_format_i18n( $count_accepted )
+					number_format_i18n( $count['accepted'] )
 				),
 				'current' => 'accepted' === $status,
 			),
@@ -178,11 +178,11 @@ class Following extends \WP_List_Table {
 					_nx(
 						'Pending <span class="count">(%s)</span>',
 						'Pending <span class="count">(%s)</span>',
-						$count_pending,
+						$count['pending'],
 						'users',
 						'activitypub'
 					),
-					number_format_i18n( $count_pending )
+					number_format_i18n( $count['pending'] )
 				),
 				'current' => 'pending' === $status,
 			),
@@ -236,41 +236,9 @@ class Following extends \WP_List_Table {
 		return sprintf(
 			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong><br />',
 			\esc_url( $item['icon'] ),
-			\esc_attr( $item['username'] ),
+			\esc_attr( $item['post_title'] ),
 			\esc_url( $item['url'] ),
-			\esc_html( $item['post_title'] )
-		);
-	}
-
-	/**
-	 * Column published.
-	 *
-	 * @param array $item Item.
-	 * @return string
-	 */
-	public function column_published( $item ) {
-		$published = \strtotime( $item['published'] );
-
-		return \sprintf(
-			'<time datetime="%1$s">%2$s</time>',
-			\esc_attr( \gmdate( 'c', $published ) ),
-			\esc_html( \gmdate( \get_option( 'date_format' ), $published ) )
-		);
-	}
-
-	/**
-	 * Column modified.
-	 *
-	 * @param array $item Item.
-	 * @return string
-	 */
-	public function column_modified( $item ) {
-		$modified = \strtotime( $item['modified'] );
-
-		return \sprintf(
-			'<time datetime="%1$s">%2$s</time>',
-			\esc_attr( \gmdate( 'c', $modified ) ),
-			\esc_html( \gmdate( \get_option( 'date_format' ), $modified ) )
+			\esc_html( $item['username'] )
 		);
 	}
 
@@ -318,9 +286,8 @@ class Following extends \WP_List_Table {
 	 */
 	public function single_row( $item ) {
 		printf(
-			"<tr id='following-%s' class='%s'>",
-			esc_attr( $item['id'] ),
-			esc_attr( $item['class'] )
+			"<tr id='following-%s'>",
+			esc_attr( $item['id'] )
 		);
 		$this->single_row_columns( $item );
 		printf( "</tr>\n" );

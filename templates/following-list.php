@@ -11,6 +11,7 @@ $table   = new \Activitypub\Table\Following();
 $_search = \sanitize_text_field( \wp_unslash( $_REQUEST['s'] ?? '' ) );
 $_page   = \sanitize_text_field( \wp_unslash( $_REQUEST['page'] ?? '' ) );
 $_tab    = \sanitize_text_field( \wp_unslash( $_REQUEST['tab'] ?? '' ) );
+$_status = \sanitize_text_field( \wp_unslash( $_REQUEST['status'] ?? 'accepted' ) );
 
 $table->prepare_items();
 ?>
@@ -34,6 +35,7 @@ $table->prepare_items();
 	<form method="get">
 		<input type="hidden" name="page" value="<?php echo esc_attr( $_page ); ?>" />
 		<input type="hidden" name="tab" value="<?php echo esc_attr( $_tab ); ?>" />
+		<input type="hidden" name="status" value="<?php echo esc_attr( $_status ); ?>" />
 		<?php $table->search_box( esc_html__( 'Search Followings', 'activitypub' ), 'search' ); ?>
 	</form>
 
