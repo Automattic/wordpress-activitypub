@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Scheduler;
+use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 
