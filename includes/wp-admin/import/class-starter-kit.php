@@ -246,10 +246,12 @@ class Starter_Kit {
 			if ( \is_wp_error( $result ) ) {
 				++$skipped;
 			} else {
-				printf( '<p>%s%s</p>', \esc_html__( 'Followed Actor:', 'activitypub' ), \esc_html( $item['id'] ) );
+				printf( '<p>%s%s</p>', \esc_html__( 'Followed ', 'activitypub' ), \esc_html( $item['id'] ) );
 				++$followed;
 			}
 		}
+
+		echo '<hr />';
 
 		/* translators: %d: Number of followed actors */
 		printf( '<p>%s</p>', \esc_html( \sprintf( \_n( 'Followed %s Actor.', 'Followed %s Actors.', $followed, 'activitypub' ), \number_format_i18n( $followed ) ) ) );
