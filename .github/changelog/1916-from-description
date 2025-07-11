@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+The `following` endpoint now returns the actual list of users being followed.
