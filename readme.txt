@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 7.0.0
+Stable tag: 7.0.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,10 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.0.1 - 2025-07-10
+#### Fixed
+- When deleting interactions for cleaned up actors, we use the actor's URL again to retrieve their information instead of our internal ID.
 
 ### 7.0.0 - 2025-07-09
 #### Added
