@@ -203,30 +203,6 @@ class Followers {
 	}
 
 	/**
-	 * Get all Followers.
-	 *
-	 * @deprecated unreleased Use Activitypub\Collection\Actors::get_all() instead.
-	 *
-	 * @return \WP_Post[] The list of Followers.
-	 */
-	public static function get_all_followers() {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_all' );
-
-		$args = array(
-			'nopaging'   => true,
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query' => array(
-				'relation' => 'AND',
-				array(
-					'key'     => '_activitypub_inbox',
-					'compare' => 'EXISTS',
-				),
-			),
-		);
-		return self::get_followers( null, null, null, $args );
-	}
-
-	/**
 	 * Count the total number of followers
 	 *
 	 * @param int $user_id The ID of the WordPress User.
@@ -351,7 +327,33 @@ class Followers {
 	}
 
 	/**
+	 * Get all Followers.
+	 *
+	 * @deprecated unreleased Use Activitypub\Collection\Actors::get_all() instead.
+	 *
+	 * @return \WP_Post[] The list of Followers.
+	 */
+	public static function get_all_followers() {
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_all' );
+
+		$args = array(
+			'nopaging'   => true,
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key'     => '_activitypub_inbox',
+					'compare' => 'EXISTS',
+				),
+			),
+		);
+		return self::get_followers( null, null, null, $args );
+	}
+
+	/**
 	 * Get all Followers that have not been updated for a given time.
+	 *
+	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::get_outdated() instead.
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
@@ -366,6 +368,8 @@ class Followers {
 
 	/**
 	 * Get all Followers that had errors.
+	 *
+	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::get_faulty() instead.
 	 *
 	 * @param int $number Optional. The number of Followers to return. Default 20.
 	 *
@@ -383,6 +387,8 @@ class Followers {
 	 *
 	 * The error will be stored in post meta.
 	 *
+	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::add_error() instead.
+	 *
 	 * @param int   $post_id The ID of the WordPress Custom-Post-Type.
 	 * @param mixed $error   The error message. Can be a string or a WP_Error.
 	 *
@@ -396,6 +402,8 @@ class Followers {
 
 	/**
 	 * Clear the errors for a Follower.
+	 *
+	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::clear_errors() instead.
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
