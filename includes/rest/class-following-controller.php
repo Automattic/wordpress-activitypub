@@ -26,13 +26,6 @@ class Following_Controller extends Actors_Controller {
 	use Collection;
 
 	/**
-	 * Initialize the class, registering WordPress hooks.
-	 */
-	public function __construct() {
-		\add_filter( 'activitypub_rest_following', array( self::class, 'default_following' ), 10, 2 );
-	}
-
-	/**
 	 * Register routes.
 	 */
 	public function register_routes() {
@@ -138,29 +131,6 @@ class Following_Controller extends Actors_Controller {
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
-	}
-
-	/**
-	 * Add the Blog Authors to the following list of the Blog Actor
-	 * if Blog not in single mode.
-	 *
-	 * @param array                   $follow_list The array of following urls.
-	 * @param \Activitypub\Model\User $user        The user object.
-	 *
-	 * @return array The array of following urls.
-	 */
-	public static function default_following( $follow_list, $user ) {
-		if ( 0 !== $user->get__id() || is_single_user() ) {
-			return $follow_list;
-		}
-
-		$users = Actors::get_collection();
-
-		foreach ( $users as $user ) {
-			$follow_list[] = $user->get_id();
-		}
-
-		return $follow_list;
 	}
 
 	/**
