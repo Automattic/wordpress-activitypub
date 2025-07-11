@@ -232,19 +232,19 @@ class Starter_Kit {
 	 * @return true|\WP_Error True on success, WP_Error on failure.
 	 */
 	public static function follow() {
-		$skipped  = array();
+		$skipped  = 0;
 		$followed = 0;
 
 		foreach ( self::$starter_kit['items'] as $item ) {
 			if ( ! is_actor( $item ) ) {
-				$skipped[] = $item['type'] . ': ' . $item['id'];
+				++$skipped;
 				continue;
 			}
 
 			$result = follow( object_to_uri( $item ), self::$author );
 
 			if ( \is_wp_error( $result ) ) {
-				$skipped[] = $item['type'] . ': ' . $item['id'];
+				++$skipped;
 			} else {
 				printf( '<p>%s%s</p>', \esc_html__( 'Followed Actor:', 'activitypub' ), \esc_html( $item['id'] ) );
 				++$followed;
@@ -253,13 +253,8 @@ class Starter_Kit {
 
 		/* translators: %d: Number of followed actors */
 		printf( '<p>%s</p>', \esc_html( \sprintf( \_n( 'Followed %s Actor.', 'Followed %s Actors.', $followed, 'activitypub' ), \number_format_i18n( $followed ) ) ) );
-
-		echo '<hr />';
-
-		if ( ! empty( $skipped ) ) {
-			printf( '<p>%s</p>', \esc_html__( 'Skipped Items:', 'activitypub' ) );
-			printf( '<ul><li>%s</li></ul>', wp_kses( implode( '</li><li>', $skipped ), array( 'li' => array() ) ) );
-		}
+		/* translators: %d: Number of skipped items */
+		printf( '<p>%s</p>', \esc_html( \sprintf( \_n( 'Skipped %s Item.', 'Skipped %s Items.', $skipped, 'activitypub' ), \number_format_i18n( $skipped ) ) ) );
 
 		return true;
 	}
