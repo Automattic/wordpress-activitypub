@@ -189,10 +189,18 @@ class Starter_Kit {
 		\WP_Filesystem();
 
 		global $wp_filesystem;
-		$import_folder = $wp_filesystem->wp_content_dir() . 'import/';
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		self::$starter_kit = \json_decode( \file_get_contents( $file ), true );
+		$file_contents = $wp_filesystem->get_contents( $file );
+		if ( false === $file_contents ) {
+			printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Could not read the uploaded file.', 'activitypub' ) );
+			return;
+		}
+
+		self::$starter_kit = \json_decode( $file_contents, true );
+		if ( null === self::$starter_kit ) {
+			printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Invalid JSON format in the uploaded file.', 'activitypub' ) );
+			return;
+		}
 
 		\wp_suspend_cache_invalidation();
 		\wp_defer_term_counting( true );
@@ -205,13 +213,10 @@ class Starter_Kit {
 
 		$result = self::follow();
 
-		$result = true;
-
 		\wp_suspend_cache_invalidation( false );
 		\wp_defer_term_counting( false );
 		\wp_defer_comment_counting( false );
 
-		$wp_filesystem->delete( $import_folder, true );
 		\wp_import_cleanup( self::$import_id );
 
 		if ( \is_wp_error( $result ) ) {
