@@ -238,6 +238,20 @@ class Actor extends Base_Object {
 	protected $featured;
 
 	/**
+	 * The Featured-Tags.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#featuredTags
+	 *
+	 * @context {
+	 *   "@id": "http://joinmastodon.org/ns#featuredTags",
+	 *   "@type": "@id"
+	 * }
+	 *
+	 * @var string
+	 */
+	protected $featured_tags;
+
+	/**
 	 * Whether the User is discoverable.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
