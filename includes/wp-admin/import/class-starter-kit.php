@@ -246,6 +246,7 @@ class Starter_Kit {
 			if ( \is_wp_error( $result ) ) {
 				$skipped[] = $item['type'] . ': ' . $item['id'];
 			} else {
+				printf( '<p>%s%s</p>', \esc_html__( 'Followed Actor:', 'activitypub' ), \esc_html( $item['id'] ) );
 				++$followed;
 			}
 		}
