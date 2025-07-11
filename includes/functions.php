@@ -1529,12 +1529,20 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 /**
  * Follow a user.
  *
- * @param string $remote_actor The Actor URL.
+ * @param string $remote_actor The Actor URL or WebFinger Resource.
  * @param int    $user_id      The ID of the WordPress User.
  *
  * @return int|\WP_Error The ID of the Outbox item or a WP_Error.
  */
 function follow( $remote_actor, $user_id ) {
+	if ( ! \filter_var( $remote_actor, FILTER_VALIDATE_URL ) ) {
+		$remote_actor = Webfinger::resolve( $remote_actor );
+	}
+
+	if ( \is_wp_error( $remote_actor ) ) {
+		return $remote_actor;
+	}
+
 	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
 
 	if ( \is_wp_error( $remote_actor_post ) ) {

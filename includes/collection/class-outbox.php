@@ -39,6 +39,14 @@ class Outbox {
 			$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 		}
 
+		if ( ! \filter_var( $object_id, FILTER_VALIDATE_URL ) ) {
+			$object_id = Webfinger::resolve( $object_id );
+		}
+
+		if ( \is_wp_error( $object_id ) ) {
+			return $object_id;
+		}
+
 		// Save activity in the context of an activitypub request.
 		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
