@@ -310,4 +310,48 @@ class Test_Activitypub extends \WP_UnitTestCase {
 
 		\wp_delete_post( $post_id, true );
 	}
+
+	/**
+	 * Test get_post_metadata method.
+	 *
+	 * @covers ::get_post_metadata
+	 */
+	public function test_get_post_metadata() {
+		// Create a test post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => 1,
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 months' ) ), // Post older than a year.
+			)
+		);
+
+		// Test 1: When meta_key is not 'activitypub_content_visibility', should return the original value.
+		$result = Activitypub::default_post_metadata( 'original_value', $post_id, 'some_other_key' );
+		$this->assertEquals( 'original_value', $result, 'Should return original value for non-matching meta key.' );
+
+		// Test 2: When post is federated, should return the original value.
+		\update_post_meta( $post_id, 'activitypub_status', 'federated' );
+		$result = Activitypub::default_post_metadata( 'original_value', $post_id, 'activitypub_content_visibility' );
+		$this->assertEquals( 'original_value', $result, 'Should return original value for federated posts.' );
+
+		// Test 3: When post is not federated and older than a year, should return local visibility.
+		\update_post_meta( $post_id, 'activitypub_status', 'pending' );
+		$result = Activitypub::default_post_metadata( 'original_value', $post_id, 'activitypub_content_visibility' );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, $result, 'Should return local visibility for old non-federated posts.' );
+
+		// Test 4: When post is not federated but less than a year old, should return original value.
+		$recent_post_id = self::factory()->post->create(
+			array(
+				'post_author' => 1,
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 weeks' ) ), // Recent post.
+			)
+		);
+		\update_post_meta( $recent_post_id, 'activitypub_status', 'pending' );
+		$result = Activitypub::default_post_metadata( 'original_value', $recent_post_id, 'activitypub_content_visibility' );
+		$this->assertEquals( 'original_value', $result, 'Should return original value for recent non-federated posts.' );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
+		\wp_delete_post( $recent_post_id, true );
+	}
 }
