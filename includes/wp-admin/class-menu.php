@@ -40,6 +40,7 @@ class Menu {
 			);
 
 			\add_action( 'load-' . $followers_list_page, array( Admin::class, 'add_followers_list_help_tab' ) );
+			\add_action( 'load-' . $followers_list_page, array( Screen_Options::class, 'add_followers_list_screen_options' ) );
 
 			/**
 			 * Filter to show the following UI.
@@ -56,6 +57,7 @@ class Menu {
 				);
 
 				\add_action( 'load-' . $following_list_page, array( Admin::class, 'add_following_list_help_tab' ) );
+				\add_action( 'load-' . $following_list_page, array( Screen_Options::class, 'add_following_list_screen_options' ) );
 			}
 
 			\add_users_page(
