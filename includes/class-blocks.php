@@ -255,6 +255,7 @@ class Blocks {
 			$embed = wp_oembed_get( $attrs['url'] );
 			if ( $embed ) {
 				$html .= $embed;
+				\wp_enqueue_script( 'wp-embed' );
 			}
 		}
 
