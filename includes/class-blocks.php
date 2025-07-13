@@ -132,7 +132,12 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
 
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reply' );
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
+			array(
+				'render_callback' => array( self::class, 'render_reply_block' ),
+			)
+		);
 	}
 
 	/**
@@ -296,7 +301,7 @@ class Blocks {
 			<div class="activitypub-modal__frame">
 				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
 					<div class="activitypub-modal__header">
-						<h2 
+						<h2
 							class="activitypub-modal__title"
 							<?php if ( ! empty( $args['id'] ) ) : ?>
 								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
