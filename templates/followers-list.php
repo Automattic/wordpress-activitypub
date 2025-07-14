@@ -17,7 +17,7 @@ $followers_list_table->prepare_items();
 ?>
 <div class="wrap">
 	<?php if ( ! $_tab ) : ?>
-	<h1 class="wp-heading-inline"><?php esc_html_e( 'Author Followers', 'activitypub' ); ?></h1>
+	<h1 class="wp-heading-inline"><?php esc_html_e( 'Followers', 'activitypub' ); ?></h1>
 	<?php endif; ?>
 
 	<?php
