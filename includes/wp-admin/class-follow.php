@@ -48,7 +48,14 @@ class Follow {
 		$actor = Actors::get_actor( $actor );
 
 		if ( \is_wp_error( $actor ) ) {
-			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/search-actor.php', true, array( 'id' => $id, 'actor' => $actor ) );
+			\load_template(
+				ACTIVITYPUB_PLUGIN_DIR . 'templates/search-actor.php',
+				true,
+				array(
+					'id'    => $id,
+					'actor' => $actor,
+				)
+			);
 		} else {
 			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/follow.php', true, array( 'actor' => $actor ) );
 		}
