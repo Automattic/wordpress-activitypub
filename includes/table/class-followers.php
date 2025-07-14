@@ -58,6 +58,7 @@ class Followers extends \WP_List_Table {
 			'cb'         => '<input type="checkbox" />',
 			'username'   => \esc_html__( 'Username', 'activitypub' ),
 			'post_title' => \esc_html__( 'Name', 'activitypub' ),
+			'webfinger'  => \esc_html__( 'Profile', 'activitypub' ),
 			'modified'   => \esc_html__( 'Last updated', 'activitypub' ),
 		);
 	}
@@ -125,8 +126,9 @@ class Followers extends \WP_List_Table {
 		);
 
 		foreach ( $followers as $follower ) {
-			$actor         = Actors::get_actor( $follower );
-			$url           = object_to_uri( $actor->get_url() );
+			$actor = Actors::get_actor( $follower );
+			$url   = object_to_uri( $actor->get_url() );
+
 			$this->items[] = array(
 				'id'         => $follower->ID,
 				'icon'       => $actor->get_icon()['url'] ?? '',
@@ -223,6 +225,22 @@ class Followers extends \WP_List_Table {
 			\esc_attr( $item['username'] ),
 			\esc_url( \admin_url( '/options-general.php?page=activitypub_follow&id=' . $item['id'] ) ),
 			\esc_html( $item['username'] )
+		);
+	}
+
+	/**
+	 * Column webfinger.
+	 *
+	 * @param array $item Item.
+	 * @return string
+	 */
+	public function column_webfinger( $item ) {
+		$webfinger = Sanitize::webfinger( $item['webfinger'] );
+
+		return \sprintf(
+			'<a href="%1$s" target="_blank" title="%1$s">@%2$s</a>',
+			\esc_url( $item['url'] ),
+			\esc_html( $webfinger )
 		);
 	}
 

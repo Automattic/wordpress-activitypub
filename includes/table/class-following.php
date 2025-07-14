@@ -9,6 +9,8 @@ namespace Activitypub\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
+use Activitypub\Sanitize;
+use Activitypub\Webfinger;
 
 use function Activitypub\object_to_uri;
 
@@ -56,6 +58,7 @@ class Following extends \WP_List_Table {
 			'cb'         => '<input type="checkbox" />',
 			'username'   => \__( 'Username', 'activitypub' ),
 			'post_title' => \__( 'Name', 'activitypub' ),
+			'webfinger'  => \__( 'Profile', 'activitypub' ),
 			'modified'   => \__( 'Last updated', 'activitypub' ),
 		);
 	}
@@ -136,6 +139,7 @@ class Following extends \WP_List_Table {
 
 		foreach ( $followings as $following ) {
 			$actor = Actors::get_actor( $following->ID );
+			$url   = object_to_uri( $actor->get_url() );
 
 			$this->items[] = array(
 				'id'         => $following->ID,
@@ -143,7 +147,9 @@ class Following extends \WP_List_Table {
 				'post_title' => $actor->get_name(),
 				'username'   => $actor->get_preferred_username(),
 				'name'       => $actor->get_name(),
-				'url'        => object_to_uri( $actor->get_url() ),
+				'webfinger'  => Webfinger::uri_to_acct( $url ),
+				'url'        => $url,
+				'status'     => Following_Collection::check_status( $this->user_id, $following->ID ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $following->post_modified_gmt,
 			);
@@ -265,7 +271,7 @@ class Following extends \WP_List_Table {
 
 		if (
 			( ! isset( $_GET['status'] ) || Following_Collection::ALL === $_GET['status'] ) &&
-			( Following_Collection::PENDING === Following_Collection::check_status( $this->user_id, $item['id'] ) )
+			( Following_Collection::PENDING === $item['status'] )
 		) {
 			$status = \sprintf( '<strong> — %s</strong>', \esc_html__( 'Pending', 'activitypub' ) );
 		}
@@ -274,9 +280,26 @@ class Following extends \WP_List_Table {
 			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong>%5$s<br />',
 			\esc_url( $item['icon'] ),
 			\esc_attr( $item['post_title'] ),
-			\esc_url( $item['url'] ),
+			\esc_url( \admin_url( '/options-general.php?page=activitypub_follow&id=' . $item['id'] ) ),
 			\esc_html( $item['username'] ),
 			$status
+		);
+	}
+
+	/**
+	 * Column WebFinger.
+	 *
+	 * @param array $item Item.
+	 *
+	 * @return string The WebFinger link.
+	 */
+	public function column_webfinger( $item ) {
+		$webfinger = Sanitize::webfinger( $item['webfinger'] );
+
+		return \sprintf(
+			'<a href="%1$s" target="_blank" title="%1$s">@%2$s</a>',
+			\esc_url( $item['url'] ),
+			\esc_html( $webfinger )
 		);
 	}
 
