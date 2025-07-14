@@ -77,6 +77,8 @@ class Following extends \WP_List_Table {
 	 * Prepare items.
 	 */
 	public function prepare_items() {
+		$status = Following_Collection::ALL;
+
 		$this->process_action();
 
 		$page_num = $this->get_pagenum();
