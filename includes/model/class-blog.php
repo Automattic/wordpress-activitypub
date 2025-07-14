@@ -419,6 +419,15 @@ class Blog extends Actor {
 	}
 
 	/**
+	 * Returns the Featured-Tags-API-Endpoint.
+	 *
+	 * @return string The Featured-Tags-Endpoint.
+	 */
+	public function get_featured_tags() {
+		return get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
+	}
+
+	/**
 	 * Returns whether the site is indexable.
 	 *
 	 * @return bool Whether the site is indexable.
