@@ -169,7 +169,7 @@ class Following extends \WP_List_Table {
 		}
 
 		$links = array(
-			'all' => array(
+			'all'      => array(
 				'url'     => admin_url( $path ),
 				'label'   => sprintf(
 					/* translators: %s: Number of users. */
