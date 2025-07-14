@@ -79,7 +79,7 @@ class Following extends \WP_List_Table {
 	public function prepare_items() {
 		$columns = $this->get_columns();
 		$hidden  = array();
-		$status  = 'accepted';
+		$status  = 'all';
 
 		$this->process_action();
 		$this->_column_headers = array( $columns, $hidden, $this->get_sortable_columns() );
@@ -99,7 +99,15 @@ class Following extends \WP_List_Table {
 		}
 
 		if ( isset( $_GET['s'] ) ) {
-			$args['s'] = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
+			$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
+			$search = \str_replace( 'acct:', '', $search );
+			$search = \str_replace( '@', ' ', $search );
+			$search = \str_replace( 'http://', '', $search );
+			$search = \str_replace( 'https://', '', $search );
+			$search = \str_replace( 'www.', '', $search );
+			$search = \trim( $search );
+
+			$args['s'] = $search;
 		}
 
 		if ( isset( $_GET['status'] ) ) {
@@ -108,8 +116,10 @@ class Following extends \WP_List_Table {
 
 		if ( 'pending' === $status ) {
 			$following_with_count = Following_Collection::get_pending_with_count( $this->user_id, $per_page, $page_num, $args );
-		} else {
+		} elseif ( 'accepted' === $status ) {
 			$following_with_count = Following_Collection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
+		} else {
+			$following_with_count = Following_Collection::get_all_with_count( $this->user_id, $per_page, $page_num, $args );
 		}
 
 		$followings = $following_with_count['following'];
@@ -148,7 +158,7 @@ class Following extends \WP_List_Table {
 	public function get_views() {
 		$count  = Following_Collection::count( $this->user_id );
 		$path   = 'users.php?page=activitypub-following-list';
-		$status = 'accepted';
+		$status = 'all';
 
 		if ( Actors::BLOG_USER_ID === $this->user_id ) {
 			$path = 'options-general.php?page=activitypub&tab=following';
@@ -159,8 +169,23 @@ class Following extends \WP_List_Table {
 		}
 
 		$links = array(
-			'accepted' => array(
+			'all' => array(
 				'url'     => admin_url( $path ),
+				'label'   => sprintf(
+					/* translators: %s: Number of users. */
+					\_nx(
+						'All <span class="count">(%s)</span>',
+						'All <span class="count">(%s)</span>',
+						$count['all'],
+						'users',
+						'activitypub'
+					),
+					\number_format_i18n( $count['all'] )
+				),
+				'current' => 'all' === $status,
+			),
+			'accepted' => array(
+				'url'     => admin_url( $path . '&status=accepted' ),
 				'label'   => sprintf(
 					/* translators: %s: Number of users. */
 					\_nx(
@@ -226,7 +251,7 @@ class Following extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', \esc_attr( $item['identifier'] ) );
+		return \sprintf('<input type="checkbox" name="following[]" value="%s" />', \esc_attr( $item['identifier'] ) );
 	}
 
 	/**

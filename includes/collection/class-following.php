@@ -288,6 +288,67 @@ class Following {
 	}
 
 	/**
+	 * Get all followings of a given user.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 * @param int      $number  Maximum number of results to return.
+	 * @param int      $page    Page number.
+	 * @param array    $args    The WP_Query arguments.
+	 *
+	 * @return \WP_Post[] List of `Following` objects.
+	 */
+	public static function get_all_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
+		$defaults = array(
+			'post_type'      => Actors::POST_TYPE,
+			'posts_per_page' => $number,
+			'paged'          => $page,
+			'orderby'        => 'ID',
+			'order'          => 'DESC',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				'relation' => 'OR',
+				array(
+					'key'   => self::FOLLOWING_META_KEY,
+					'value' => $user_id,
+				),
+				array(
+					'key'   => self::PENDING_META_KEY,
+					'value' => $user_id,
+				),
+			),
+		);
+
+		$args      = \wp_parse_args( $args, $defaults );
+		$query     = new \WP_Query( $args );
+		$total     = $query->found_posts;
+		$following = \array_filter( $query->posts );
+
+		return \compact( 'following', 'total' );
+	}
+
+	/**
+	 * Get all followings of a given user.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 *
+	 * @return \WP_Post[] List of `Following` objects.
+	 */
+	public static function get_all( $user_id ) {
+		return self::get_all_with_count( $user_id, -1, null, array() )['following'];
+	}
+
+	/**
+	 * Get the total number of all followings of a given user.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 *
+	 * @return int The total number of all followings.
+	 */
+	public static function count_all( $user_id ) {
+		return self::get_all_with_count( $user_id, -1, null, array() )['total'];
+	}
+
+	/**
 	 * Get the total number of followings of a given user.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
@@ -296,6 +357,7 @@ class Following {
 	 */
 	public static function count( $user_id ) {
 		return array(
+			'all'      => self::get_all_with_count( $user_id, -1, null, array() )['total'],
 			'accepted' => self::get_following_with_count( $user_id, -1, null, array() )['total'],
 			'pending'  => self::get_pending_with_count( $user_id, -1, null, array() )['total'],
 		);
