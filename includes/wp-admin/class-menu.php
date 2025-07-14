@@ -27,6 +27,22 @@ class Menu {
 		);
 
 		\add_action( 'load-' . $settings_page, array( Settings::class, 'add_settings_help_tab' ) );
+		\add_action(
+			'load-' . $settings_page,
+			function () {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) );
+
+				switch ( $tab ) {
+					case 'followers':
+						Screen_Options::add_followers_list_screen_options();
+						break;
+					case 'following':
+						Screen_Options::add_following_list_screen_options();
+						break;
+				}
+			}
+		);
 		\add_action( 'load-users.php', array( Settings::class, 'add_users_help_tab' ) );
 
 		// User has to be able to publish posts.
