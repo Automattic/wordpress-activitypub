@@ -56,6 +56,7 @@ class Following extends \WP_List_Table {
 			'cb'         => '<input type="checkbox" />',
 			'username'   => \__( 'Username', 'activitypub' ),
 			'post_title' => \__( 'Name', 'activitypub' ),
+			'modified'   => \__( 'Last updated', 'activitypub' ),
 		);
 	}
 
@@ -68,6 +69,7 @@ class Following extends \WP_List_Table {
 		return array(
 			'username'   => array( 'username', true ),
 			'post_title' => array( 'post_title', true ),
+			'modified'   => array( 'modified', false ),
 		);
 	}
 
@@ -89,19 +91,19 @@ class Following extends \WP_List_Table {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['orderby'] ) ) {
-			$args['orderby'] = sanitize_text_field( wp_unslash( $_GET['orderby'] ) );
+			$args['orderby'] = \sanitize_text_field( \wp_unslash( $_GET['orderby'] ) );
 		}
 
 		if ( isset( $_GET['order'] ) ) {
-			$args['order'] = sanitize_text_field( wp_unslash( $_GET['order'] ) );
+			$args['order'] = \sanitize_text_field( \wp_unslash( $_GET['order'] ) );
 		}
 
 		if ( isset( $_GET['s'] ) ) {
-			$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+			$args['s'] = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
 		}
 
 		if ( isset( $_GET['status'] ) ) {
-			$status = sanitize_text_field( wp_unslash( $_GET['status'] ) );
+			$status = \sanitize_text_field( \wp_unslash( $_GET['status'] ) );
 		}
 
 		if ( 'pending' === $status ) {
@@ -127,12 +129,13 @@ class Following extends \WP_List_Table {
 
 			$this->items[] = array(
 				'id'         => $following->ID,
-				'icon'       => \esc_attr( $actor->get_icon()['url'] ?? '' ),
-				'post_title' => \esc_attr( $actor->get_name() ),
-				'username'   => \esc_attr( $actor->get_preferred_username() ),
-				'name'       => \esc_attr( $actor->get_name() ),
-				'url'        => \esc_attr( object_to_uri( $actor->get_url() ) ),
-				'identifier' => \esc_attr( $actor->get_id() ),
+				'icon'       => $actor->get_icon()['url'] ?? '',
+				'post_title' => $actor->get_name(),
+				'username'   => $actor->get_preferred_username(),
+				'name'       => $actor->get_name(),
+				'url'        => object_to_uri( $actor->get_url() ),
+				'identifier' => $actor->get_id(),
+				'modified'   => $following->post_modified_gmt,
 			);
 		}
 	}
@@ -152,7 +155,7 @@ class Following extends \WP_List_Table {
 		}
 
 		if ( isset( $_GET['status'] ) ) {
-			$status = sanitize_text_field( wp_unslash( $_GET['status'] ) );
+			$status = \sanitize_text_field( \wp_unslash( $_GET['status'] ) );
 		}
 
 		$links = array(
@@ -160,14 +163,14 @@ class Following extends \WP_List_Table {
 				'url'     => admin_url( $path ),
 				'label'   => sprintf(
 					/* translators: %s: Number of users. */
-					_nx(
+					\_nx(
 						'Accepted <span class="count">(%s)</span>',
 						'Accepted <span class="count">(%s)</span>',
 						$count['accepted'],
 						'users',
 						'activitypub'
 					),
-					number_format_i18n( $count['accepted'] )
+					\number_format_i18n( $count['accepted'] )
 				),
 				'current' => 'accepted' === $status,
 			),
@@ -175,14 +178,14 @@ class Following extends \WP_List_Table {
 				'url'     => admin_url( $path . '&status=pending' ),
 				'label'   => sprintf(
 					/* translators: %s: Number of users. */
-					_nx(
+					\_nx(
 						'Pending <span class="count">(%s)</span>',
 						'Pending <span class="count">(%s)</span>',
 						$count['pending'],
 						'users',
 						'activitypub'
 					),
-					number_format_i18n( $count['pending'] )
+					\number_format_i18n( $count['pending'] )
 				),
 				'current' => 'pending' === $status,
 			),
@@ -243,6 +246,21 @@ class Following extends \WP_List_Table {
 	}
 
 	/**
+	 * Column modified.
+	 *
+	 * @param array $item Item.
+	 * @return string
+	 */
+	public function column_modified( $item ) {
+		$modified = \strtotime( $item['modified'] );
+		return \sprintf(
+			'<time datetime="%1$s">%2$s</time>',
+			\esc_attr( \gmdate( 'c', $modified ) ),
+			\esc_html( \gmdate( \get_option( 'date_format' ), $modified ) )
+		);
+	}
+
+	/**
 	 * Process action.
 	 */
 	public function process_action() {
@@ -285,11 +303,11 @@ class Following extends \WP_List_Table {
 	 * @param array $item Item.
 	 */
 	public function single_row( $item ) {
-		printf(
+		\printf(
 			"<tr id='following-%s'>",
-			esc_attr( $item['id'] )
+			\esc_attr( $item['id'] )
 		);
 		$this->single_row_columns( $item );
-		printf( "</tr>\n" );
+		\printf( "</tr>\n" );
 	}
 }
