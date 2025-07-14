@@ -9,6 +9,7 @@ namespace Activitypub\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
+use Activitypub\Webfinger;
 
 use function Activitypub\object_to_uri;
 
@@ -124,11 +125,14 @@ class Followers extends \WP_List_Table {
 
 		foreach ( $followers as $follower ) {
 			$actor         = Actors::get_actor( $follower );
+			$url           = object_to_uri( $actor->get_url() );
 			$this->items[] = array(
+				'id'         => $follower->ID,
 				'icon'       => $actor->get_icon()['url'] ?? '',
 				'post_title' => $actor->get_name(),
 				'username'   => $actor->get_preferred_username(),
-				'url'        => object_to_uri( $actor->get_url() ),
+				'url'        => $url,
+				'webfinger'  => Webfinger::uri_to_acct( $url ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $follower->post_modified_gmt,
 			);
@@ -216,7 +220,7 @@ class Followers extends \WP_List_Table {
 			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong><br />',
 			\esc_url( $item['icon'] ),
 			\esc_attr( $item['username'] ),
-			\esc_url( $item['url'] ),
+			\esc_url( \admin_url( '/options-general.php?page=activitypub_follow&id=' . $item['id'] ) ),
 			\esc_html( $item['username'] )
 		);
 	}

@@ -4,16 +4,19 @@
 	position: relative;
 }
 
-.settings_page_activitypub .notice {
+.settings_page_activitypub .notice,
+.settings_page_activitypub_follow .notice {
 	max-width: 800px;
 	margin: 0 auto 30px;
 }
 
-.settings_page_activitypub .update-nag {
+.settings_page_activitypub .update-nag,
+.settings_page_activitypub_follow .update-nag {
 	margin: 25px 20px 15px 22px;
 }
 
-.settings_page_activitypub .wrap {
+.settings_page_activitypub .wrap,
+.settings_page_activitypub_follow .wrap {
 	padding-left: 22px;
 }
 
@@ -45,7 +48,24 @@
 	padding-top: 8px;
 }
 
-.settings_page_activitypub #wpcontent {
+.activitypub-profile__header {
+	position: relative;
+}
+
+.activitypub-profile__follow-indicator {
+	position: absolute;
+	bottom: 10px;
+	right: 10px;
+	background: rgba(0, 0, 0, 0.7);
+	color: white;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.settings_page_activitypub #wpcontent,
+.settings_page_activitypub_follow #wpcontent {
 	padding-left: 0;
 }
 
@@ -359,6 +379,67 @@ input.blog-user-identifier {
 	padding: 16px 20px;
 }
 
+/* Extra Fields Table Styles */
+.activitypub-profile__extra-fields {
+	margin-top: 1rem;
+	padding-top: 1rem;
+	width: 100%;
+}
+
+.activitypub-profile__extra-fields h4 {
+	margin: 0 0 0.75rem 0;
+	font-size: 14px;
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.activitypub-extra-fields-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 0;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.activitypub-extra-fields-table td {
+	padding: 8px 12px;
+	border-bottom: 1px solid #f0f0f1;
+	vertical-align: top;
+	line-height: 1.4;
+}
+
+.activitypub-extra-fields-table tr:last-child td {
+	border-bottom: none;
+}
+
+.activitypub-extra-fields-table .field-name {
+	background: #f6f7f7;
+	font-weight: 600;
+	color: #1d2327;
+	white-space: nowrap;
+	padding-right: 16px;
+}
+
+.activitypub-extra-fields-table .field-value {
+	color: #2c3338;
+	word-break: break-word;
+}
+
+.activitypub-extra-fields-table .field-value a {
+	color: #2271b1;
+	text-decoration: none;
+}
+
+.activitypub-extra-fields-table .field-value a:hover {
+	color: #135e96;
+	text-decoration: underline;
+}
+
+.activitypub-profile__body {
+	background-color: #fff;
+}
+
 @media screen and (max-width: 782px) {
 	.activitypub-settings {
 		margin: 0 22px;
@@ -367,5 +448,22 @@ input.blog-user-identifier {
 	.activitypub-settings .row > div {
 		max-width: calc(100% - 36px);
 		width: 100%;
+	}
+
+	.activitypub-extra-fields-table .field-name,
+	.activitypub-extra-fields-table .field-value {
+		width: auto;
+		display: block;
+		padding: 8px 12px;
+	}
+
+	.activitypub-extra-fields-table .field-name {
+		padding-bottom: 4px;
+		border-bottom: none;
+		background: transparent;
+	}
+
+	.activitypub-extra-fields-table .field-value {
+		padding-top: 0;
 	}
 }

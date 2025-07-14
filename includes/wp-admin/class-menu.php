@@ -26,7 +26,25 @@ class Menu {
 			array( Settings::class, 'settings_page' )
 		);
 
+		$follow_page = \add_options_page(
+			\__( 'Follow ⁂', 'activitypub' ),
+			\__( 'Follow ⁂', 'activitypub' ),
+			'activitypub',
+			'activitypub_follow',
+			array( Follow::class, 'follow_page' )
+		);
+
+		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
+			\add_action(
+				'admin_head',
+				function () {
+					\remove_submenu_page( 'options-general.php', 'activitypub_follow' );
+				}
+			);
+		}
+
 		\add_action( 'load-' . $settings_page, array( Settings::class, 'add_settings_help_tab' ) );
+		\add_action( 'load-' . $follow_page, array( Follow::class, 'add_follow_help_tab' ) );
 		\add_action( 'load-users.php', array( Settings::class, 'add_users_help_tab' ) );
 
 		// User has to be able to publish posts.

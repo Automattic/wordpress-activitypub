@@ -13,6 +13,7 @@ $args = wp_parse_args( $args ?? array() );
 		<h1><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h1>
 	</div>
 
+	<?php if ( ! empty( $args['tabs'] ) ) : ?>
 	<div class="activitypub-settings-tabs-scroller">
 		<nav class="activitypub-settings-tabs-wrapper" aria-label="<?php \esc_attr_e( 'Secondary menu', 'activitypub' ); ?>">
 			<?php
@@ -32,5 +33,6 @@ $args = wp_parse_args( $args ?? array() );
 			?>
 		</nav>
 	</div>
+	<?php endif; ?>
 </div>
 <hr class="wp-header-end">
