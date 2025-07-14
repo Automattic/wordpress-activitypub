@@ -16,7 +16,7 @@ $_status = \sanitize_text_field( \wp_unslash( $_REQUEST['status'] ?? 'accepted' 
 $table->prepare_items();
 ?>
 <div class="wrap">
-	<h1 class="wp-heading-inline"><?php esc_html_e( 'Author Followings', 'activitypub' ); ?></h1>
+	<h1 class="wp-heading-inline"><?php esc_html_e( 'Followings', 'activitypub' ); ?></h1>
 
 	<?php
 	if ( strlen( $_search ) ) :
