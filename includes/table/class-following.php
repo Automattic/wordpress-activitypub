@@ -148,6 +148,20 @@ class Following extends \WP_List_Table {
 	}
 
 	/**
+	 * Override get_column_info to avoid manually setting _column_headers.
+	 *
+	 * @return array Column information.
+	 */
+	protected function get_column_info() {
+		return array(
+			$this->get_columns(),
+			array(),
+			$this->get_sortable_columns(),
+			$this->get_primary_column_name(),
+		);
+	}
+
+	/**
 	 * Returns views.
 	 *
 	 * @return string[]
