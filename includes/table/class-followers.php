@@ -98,7 +98,15 @@ class Followers extends \WP_List_Table {
 		}
 
 		if ( ! empty( $_GET['s'] ) ) {
-			$args['s'] = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
+			$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
+			$search = \str_replace( 'acct:', '', $search );
+			$search = \str_replace( '@', ' ', $search );
+			$search = \str_replace( 'http://', '', $search );
+			$search = \str_replace( 'https://', '', $search );
+			$search = \str_replace( 'www.', '', $search );
+			$search = \trim( $search );
+
+			$args['s'] = $search;
 		}
 
 		$followers_with_count = Follower_Collection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );
