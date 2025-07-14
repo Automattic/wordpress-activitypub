@@ -23,13 +23,13 @@ $actor = $args['actor'];
 			<div class="activitypub-profile__body">
 				<img
 					class="activitypub-profile__avatar u-photo"
-					src="<?php echo esc_url( $actor->get_icon()['url'] ); ?>"
-					alt="<?php echo esc_attr( $actor->get_name() ); ?>"
+					src="<?php echo esc_url( $actor->get_icon()['url'] ?? \get_avatar_url( '' ) ); ?>"
+					alt="<?php echo esc_attr( $actor->get_name() ?? $actor->get_preferred_username() ); ?>"
 				/>
 
 				<div class="activitypub-profile__content">
 					<div class="activitypub-profile__info">
-						<div class="activitypub-profile__name p-name"><?php echo esc_html( $actor->get_name() ); ?></div>
+						<div class="activitypub-profile__name p-name"><?php echo esc_html( $actor->get_name() ?? $actor->get_preferred_username() ); ?></div>
 						<?php /** Using `data-wp-text` to avoid @see enrich_content_data() turning it into a mention. */ ?>
 						<div class="activitypub-profile__handle p-nickname p-x-webfinger" data-wp-text="context.webfinger"></div>
 					</div>
@@ -51,7 +51,7 @@ $actor = $args['actor'];
 						$extra_fields = array_filter(
 							$attachments,
 							function ( $attachment ) {
-								return isset( $attachment['type'] ) && $attachment['type'] === 'PropertyValue';
+								return isset( $attachment['type'] ) && 'PropertyValue' === $attachment['type'];
 							}
 						);
 						if ( ! empty( $extra_fields ) ) :

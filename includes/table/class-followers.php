@@ -9,6 +9,7 @@ namespace Activitypub\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
+use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\object_to_uri;
@@ -271,5 +272,20 @@ class Followers extends \WP_List_Table {
 	 */
 	public function no_items() {
 		\esc_html_e( 'No followers found.', 'activitypub' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
+		$search = Sanitize::webfinger( $search );
+
+		if ( filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
+			$search = Webfinger::resolve( $search );
+		}
+
+		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
+			$actor = Actors::fetch_remote_by_uri( $search );
+			if ( ! is_wp_error( $actor ) ) {
+				\printf( ' Do you maybe want to follow %s?', sprintf( '<a href="%s">%s</a>', \esc_url( \admin_url( '/options-general.php?page=activitypub_follow&id=' . $actor->ID ) ), \esc_html( $actor->post_title ) ) );
+			}
+		}
 	}
 }

@@ -123,4 +123,18 @@ class Sanitize {
 
 		return $value;
 	}
+
+	/**
+	 * Sanitize a webfinger identifier.
+	 *
+	 * @param string $value The value to sanitize.
+	 *
+	 * @return string The sanitized webfinger identifier.
+	 */
+	public static function webfinger( $value ) {
+		$value = \str_replace( 'acct:', '', $value );
+		$value = \trim( $value, '@' );
+
+		return $value;
+	}
 }

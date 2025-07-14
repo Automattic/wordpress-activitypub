@@ -32,7 +32,7 @@ class Follow {
 			$actor = \get_post( $id );
 		} else {
 			$id    = Webfinger::resolve( $id );
-			$actor = Actors::get_remote_by_uri( $id );
+			$actor = Actors::fetch_remote_by_uri( $id );
 		}
 
 		$actor = Actors::get_actor( $actor );
