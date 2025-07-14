@@ -294,6 +294,15 @@ class User extends Actor {
 	}
 
 	/**
+	 * Returns the Featured-Tags-API-Endpoint.
+	 *
+	 * @return string The Featured-Tags-Endpoint.
+	 */
+	public function get_featured_tags() {
+		return get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
+	}
+
+	/**
 	 * Returns the endpoints.
 	 *
 	 * @return string[]|null The endpoints.

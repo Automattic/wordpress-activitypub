@@ -54,11 +54,8 @@ class Following extends \WP_List_Table {
 	public function get_columns() {
 		return array(
 			'cb'         => '<input type="checkbox" />',
-			'post_title' => \__( 'Name', 'activitypub' ),
-			'avatar'     => \__( 'Avatar', 'activitypub' ),
 			'username'   => \__( 'Username', 'activitypub' ),
-			'url'        => \__( 'URL', 'activitypub' ),
-			'published'  => \__( 'Followed', 'activitypub' ),
+			'post_title' => \__( 'Name', 'activitypub' ),
 			'modified'   => \__( 'Last updated', 'activitypub' ),
 		);
 	}
@@ -70,9 +67,9 @@ class Following extends \WP_List_Table {
 	 */
 	public function get_sortable_columns() {
 		return array(
+			'username'   => array( 'username', true ),
 			'post_title' => array( 'post_title', true ),
 			'modified'   => array( 'modified', false ),
-			'published'  => array( 'published', false ),
 		);
 	}
 
@@ -82,6 +79,7 @@ class Following extends \WP_List_Table {
 	public function prepare_items() {
 		$columns = $this->get_columns();
 		$hidden  = array();
+		$status  = Following_Collection::ALL;
 
 		$this->process_action();
 		$this->_column_headers = array( $columns, $hidden, $this->get_sortable_columns() );
@@ -93,19 +91,39 @@ class Following extends \WP_List_Table {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['orderby'] ) ) {
-			$args['orderby'] = sanitize_text_field( wp_unslash( $_GET['orderby'] ) );
+			$args['orderby'] = \sanitize_text_field( \wp_unslash( $_GET['orderby'] ) );
 		}
 
 		if ( isset( $_GET['order'] ) ) {
-			$args['order'] = sanitize_text_field( wp_unslash( $_GET['order'] ) );
+			$args['order'] = \sanitize_text_field( \wp_unslash( $_GET['order'] ) );
 		}
 
 		if ( isset( $_GET['s'] ) ) {
-			$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+			$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
+			$search = \str_replace( 'acct:', '', $search );
+			$search = \str_replace( '@', ' ', $search );
+			$search = \str_replace( 'http://', '', $search );
+			$search = \str_replace( 'https://', '', $search );
+			$search = \str_replace( 'www.', '', $search );
+			$search = \trim( $search );
+
+			$args['s'] = $search;
 		}
-		$following_with_count = Following_Collection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
-		$following            = $following_with_count['following'];
-		$counter              = $following_with_count['total'];
+
+		if ( isset( $_GET['status'] ) ) {
+			$status = \sanitize_text_field( \wp_unslash( $_GET['status'] ) );
+		}
+
+		if ( Following_Collection::PENDING === $status ) {
+			$following_with_count = Following_Collection::get_pending_with_count( $this->user_id, $per_page, $page_num, $args );
+		} elseif ( Following_Collection::ACCEPTED === $status ) {
+			$following_with_count = Following_Collection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
+		} else {
+			$following_with_count = Following_Collection::get_all_with_count( $this->user_id, $per_page, $page_num, $args );
+		}
+
+		$followings = $following_with_count['following'];
+		$counter    = $following_with_count['total'];
 
 		$this->items = array();
 		$this->set_pagination_args(
@@ -116,20 +134,89 @@ class Following extends \WP_List_Table {
 			)
 		);
 
-		foreach ( $following as $follow_id ) {
-			$actor = Actors::get_actor( $follow_id );
-			$item  = array(
-				'icon'       => \esc_attr( $actor->get_icon()['url'] ?? '' ),
-				'post_title' => \esc_attr( $actor->get_name() ),
-				'username'   => \esc_attr( $actor->get_preferred_username() ),
-				'url'        => \esc_attr( object_to_uri( $actor->get_url() ) ),
-				'identifier' => \esc_attr( $actor->get_id() ),
-				'published'  => \esc_attr( $actor->get_published() ),
-				'modified'   => \esc_attr( $actor->get_updated() ),
-			);
+		foreach ( $followings as $following ) {
+			$actor = Actors::get_actor( $following->ID );
 
-			$this->items[] = $item;
+			$this->items[] = array(
+				'id'         => $following->ID,
+				'icon'       => $actor->get_icon()['url'] ?? '',
+				'post_title' => $actor->get_name(),
+				'username'   => $actor->get_preferred_username(),
+				'name'       => $actor->get_name(),
+				'url'        => object_to_uri( $actor->get_url() ),
+				'identifier' => $actor->get_id(),
+				'modified'   => $following->post_modified_gmt,
+			);
 		}
+	}
+
+	/**
+	 * Returns views.
+	 *
+	 * @return string[]
+	 */
+	public function get_views() {
+		$count  = Following_Collection::count( $this->user_id );
+		$path   = 'users.php?page=activitypub-following-list';
+		$status = Following_Collection::ALL;
+
+		if ( Actors::BLOG_USER_ID === $this->user_id ) {
+			$path = 'options-general.php?page=activitypub&tab=following';
+		}
+
+		if ( isset( $_GET['status'] ) ) {
+			$status = \sanitize_text_field( \wp_unslash( $_GET['status'] ) );
+		}
+
+		$links = array(
+			'all'      => array(
+				'url'     => admin_url( $path ),
+				'label'   => sprintf(
+					/* translators: %s: Number of users. */
+					\_nx(
+						'All <span class="count">(%s)</span>',
+						'All <span class="count">(%s)</span>',
+						$count[ Following_Collection::ALL ],
+						'users',
+						'activitypub'
+					),
+					\number_format_i18n( $count[ Following_Collection::ALL ] )
+				),
+				'current' => Following_Collection::ALL === $status,
+			),
+			'accepted' => array(
+				'url'     => admin_url( $path . '&status=' . Following_Collection::ACCEPTED ),
+				'label'   => sprintf(
+					/* translators: %s: Number of users. */
+					\_nx(
+						'Accepted <span class="count">(%s)</span>',
+						'Accepted <span class="count">(%s)</span>',
+						$count[ Following_Collection::ACCEPTED ],
+						'users',
+						'activitypub'
+					),
+					\number_format_i18n( $count[ Following_Collection::ACCEPTED ] )
+				),
+				'current' => Following_Collection::ACCEPTED === $status,
+			),
+			'pending'  => array(
+				'url'     => admin_url( $path . '&status=' . Following_Collection::PENDING ),
+				'label'   => sprintf(
+					/* translators: %s: Number of users. */
+					\_nx(
+						'Pending <span class="count">(%s)</span>',
+						'Pending <span class="count">(%s)</span>',
+						$count[ Following_Collection::PENDING ],
+						'users',
+						'activitypub'
+					),
+					\number_format_i18n( $count[ Following_Collection::PENDING ] )
+				),
+				'current' => Following_Collection::PENDING === $status,
+			),
+		);
+
+		return $this->get_views_links( $links );
 	}
 
 	/**
@@ -152,9 +239,9 @@ class Following extends \WP_List_Table {
 	 */
 	public function column_default( $item, $column_name ) {
 		if ( ! array_key_exists( $column_name, $item ) ) {
-			return \__( 'None', 'activitypub' );
+			return \esc_html__( 'None', 'activitypub' );
 		}
-		return $item[ $column_name ];
+		return \esc_html( $item[ $column_name ] );
 	}
 
 	/**
@@ -163,11 +250,8 @@ class Following extends \WP_List_Table {
 	 * @param array $item Item.
 	 * @return string
 	 */
-	public function column_avatar( $item ) {
-		return sprintf(
-			'<img src="%s" width="25px;" alt="" />',
-			$item['icon']
-		);
+	public function column_cb( $item ) {
+		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', \esc_attr( $item['identifier'] ) );
 	}
 
 	/**
@@ -176,31 +260,49 @@ class Following extends \WP_List_Table {
 	 * @param array $item Item.
 	 * @return string
 	 */
-	public function column_url( $item ) {
+	public function column_username( $item ) {
+		$status = '';
+
+		if (
+			( ! isset( $_GET['status'] ) || Following_Collection::ALL === $_GET['status'] ) &&
+			( Following_Collection::PENDING === Following_Collection::check_status( $this->user_id, $item['id'] ) )
+		) {
+			$status = \sprintf( '<strong> — %s</strong>', \esc_html__( 'Pending', 'activitypub' ) );
+		}
+
 		return sprintf(
-			'<a href="%s" target="_blank">%s</a>',
-			esc_url( $item['url'] ),
-			$item['url']
+			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong>%5$s<br />',
+			\esc_url( $item['icon'] ),
+			\esc_attr( $item['post_title'] ),
+			\esc_url( $item['url'] ),
+			\esc_html( $item['username'] ),
+			$status
 		);
 	}
 
 	/**
-	 * Column cb.
+	 * Column modified.
 	 *
 	 * @param array $item Item.
 	 * @return string
 	 */
-	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', esc_attr( $item['identifier'] ) );
+	public function column_modified( $item ) {
+		$modified = \strtotime( $item['modified'] );
+		return \sprintf(
+			'<time datetime="%1$s">%2$s</time>',
+			\esc_attr( \gmdate( 'c', $modified ) ),
+			\esc_html( \gmdate( \get_option( 'date_format' ), $modified ) )
+		);
 	}
 
 	/**
 	 * Process action.
 	 */
 	public function process_action() {
-		if ( ! isset( $_REQUEST['following'] ) || ! isset( $_REQUEST['_wpnonce'] ) ) {
+		if ( ! isset( $_REQUEST['following'], $_REQUEST['_wpnonce'] ) ) {
 			return;
 		}
+
 		$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
 		if ( ! \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
 			return;
@@ -210,14 +312,9 @@ class Following extends \WP_List_Table {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$following_raw = \wp_unslash( $_REQUEST['following'] );
-		$following     = is_array( $following_raw ) ? array_map( 'esc_url_raw', $following_raw ) : array( esc_url_raw( $following_raw ) );
-
 		if ( $this->current_action() === 'delete' ) {
-			if ( ! is_array( $following ) ) {
-				$following = array( $following );
-			}
+			$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
+
 			foreach ( $following as $actor_id ) {
 				$actor = Actors::get_remote_by_uri( $actor_id );
 				if ( \is_wp_error( $actor ) ) {
@@ -229,11 +326,23 @@ class Following extends \WP_List_Table {
 	}
 
 	/**
-	 * Returns user count.
-	 *
-	 * @return int
+	 * Message to be displayed when there are no followings.
 	 */
-	public function get_user_count() {
-		return Following_Collection::count_following( $this->user_id );
+	public function no_items() {
+		\esc_html_e( 'No followings found.', 'activitypub' );
+	}
+
+	/**
+	 * Single row.
+	 *
+	 * @param array $item Item.
+	 */
+	public function single_row( $item ) {
+		\printf(
+			"<tr id='following-%s'>",
+			\esc_attr( $item['id'] )
+		);
+		$this->single_row_columns( $item );
+		\printf( "</tr>\n" );
 	}
 }

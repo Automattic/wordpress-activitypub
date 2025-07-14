@@ -56,7 +56,6 @@ class Followers extends \WP_List_Table {
 			'cb'         => '<input type="checkbox" />',
 			'username'   => \esc_html__( 'Username', 'activitypub' ),
 			'post_title' => \esc_html__( 'Name', 'activitypub' ),
-			'published'  => \esc_html__( 'Followed', 'activitypub' ),
 			'modified'   => \esc_html__( 'Last updated', 'activitypub' ),
 		);
 	}
@@ -71,7 +70,6 @@ class Followers extends \WP_List_Table {
 			'username'   => array( 'username', true ),
 			'post_title' => array( 'post_title', true ),
 			'modified'   => array( 'modified', false ),
-			'published'  => array( 'published', false ),
 		);
 	}
 
@@ -100,7 +98,15 @@ class Followers extends \WP_List_Table {
 		}
 
 		if ( ! empty( $_GET['s'] ) ) {
-			$args['s'] = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
+			$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
+			$search = \str_replace( 'acct:', '', $search );
+			$search = \str_replace( '@', ' ', $search );
+			$search = \str_replace( 'http://', '', $search );
+			$search = \str_replace( 'https://', '', $search );
+			$search = \str_replace( 'www.', '', $search );
+			$search = \trim( $search );
+
+			$args['s'] = $search;
 		}
 
 		$followers_with_count = Follower_Collection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );
@@ -124,7 +130,6 @@ class Followers extends \WP_List_Table {
 				'username'   => $actor->get_preferred_username(),
 				'url'        => object_to_uri( $actor->get_url() ),
 				'identifier' => $actor->get_id(),
-				'published'  => $follower->post_date_gmt,
 				'modified'   => $follower->post_modified_gmt,
 			);
 		}
@@ -213,21 +218,6 @@ class Followers extends \WP_List_Table {
 			\esc_attr( $item['username'] ),
 			\esc_url( $item['url'] ),
 			\esc_html( $item['username'] )
-		);
-	}
-
-	/**
-	 * Column published.
-	 *
-	 * @param array $item Item.
-	 * @return string
-	 */
-	public function column_published( $item ) {
-		$published = \strtotime( $item['published'] );
-		return \sprintf(
-			'<time datetime="%1$s">%2$s</time>',
-			\esc_attr( \gmdate( 'c', $published ) ),
-			\esc_html( \gmdate( \get_option( 'date_format' ), $published ) )
 		);
 	}
 

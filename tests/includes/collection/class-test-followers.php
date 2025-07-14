@@ -475,6 +475,8 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * Tests get_all_followers.
 	 *
 	 * @covers ::get_all_followers
+	 *
+	 * @expectedDeprecated Activitypub\Collection\Followers::get_all_followers
 	 */
 	public function test_get_all_followers() {
 		for ( $i = 0; $i < 30; $i++ ) {

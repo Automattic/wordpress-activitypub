@@ -1,21 +1,22 @@
 <?php
 /**
- * ActivityPub Followers List template.
+ * ActivityPub Following List template.
  *
  * @package Activitypub
  */
 
 // phpcs:disable WordPress.Security.NonceVerification.Recommended
 
-$table   = new \Activitypub\Table\Followers();
+$table   = new \Activitypub\Table\Following();
 $_search = \sanitize_text_field( \wp_unslash( $_REQUEST['s'] ?? '' ) );
 $_page   = \sanitize_text_field( \wp_unslash( $_REQUEST['page'] ?? '' ) );
 $_tab    = \sanitize_text_field( \wp_unslash( $_REQUEST['tab'] ?? '' ) );
+$_status = \sanitize_text_field( \wp_unslash( $_REQUEST['status'] ?? 'accepted' ) );
 
 $table->prepare_items();
 ?>
 <div class="wrap">
-	<h1 class="wp-heading-inline"><?php esc_html_e( 'Followers', 'activitypub' ); ?></h1>
+	<h1 class="wp-heading-inline"><?php esc_html_e( 'Followings', 'activitypub' ); ?></h1>
 
 	<?php
 	if ( strlen( $_search ) ) :
@@ -29,11 +30,11 @@ $table->prepare_items();
 	<hr class="wp-header-end">
 
 	<?php $table->views(); ?>
-
 	<form method="get">
 		<input type="hidden" name="page" value="<?php echo esc_attr( $_page ); ?>" />
 		<input type="hidden" name="tab" value="<?php echo esc_attr( $_tab ); ?>" />
-		<?php $table->search_box( esc_html__( 'Search Followers', 'activitypub' ), 'search' ); ?>
+		<input type="hidden" name="status" value="<?php echo esc_attr( $_status ); ?>" />
+		<?php $table->search_box( esc_html__( 'Search Followings', 'activitypub' ), 'search' ); ?>
 	</form>
 
 	<form method="post">

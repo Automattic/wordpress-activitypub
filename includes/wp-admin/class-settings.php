@@ -360,7 +360,7 @@ class Settings {
 			if ( \apply_filters( 'activitypub_show_following_ui', false ) ) {
 				$settings_tabs['following'] = array(
 					'label'    => __( 'Following', 'activitypub' ),
-					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-following-list.php',
+					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php',
 				);
 			}
 		}
