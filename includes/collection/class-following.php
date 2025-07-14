@@ -28,6 +28,27 @@ class Following {
 	const PENDING_META_KEY = '_activitypub_followed_by_pending';
 
 	/**
+	 * Pending Status.
+	 *
+	 * @var string
+	 */
+	const PENDING = 'pending';
+
+	/**
+	 * Accepted Status.
+	 *
+	 * @var string
+	 */
+	const ACCEPTED = 'accepted';
+
+	/**
+	 * All Status.
+	 *
+	 * @var string
+	 */
+	const ALL = 'all';
+
+	/**
 	 * Follow a user.
 	 *
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
@@ -357,9 +378,33 @@ class Following {
 	 */
 	public static function count( $user_id ) {
 		return array(
-			'all'      => self::get_all_with_count( $user_id, -1, null, array() )['total'],
-			'accepted' => self::get_following_with_count( $user_id, -1, null, array() )['total'],
-			'pending'  => self::get_pending_with_count( $user_id, -1, null, array() )['total'],
+			self::ALL      => self::get_all_with_count( $user_id, -1, null, array() )['total'],
+			self::ACCEPTED => self::get_following_with_count( $user_id, -1, null, array() )['total'],
+			self::PENDING  => self::get_pending_with_count( $user_id, -1, null, array() )['total'],
 		);
+	}
+
+	/**
+	 * Check the status of a given following.
+	 *
+	 * @param int $user_id The ID of the WordPress User.
+	 * @param int $post_id The ID of the Post.
+	 *
+	 * @return string|false The status of the following.
+	 */
+	public static function check_status( $user_id, $post_id ) {
+		$all_meta  = get_post_meta( $post_id );
+		$following = $all_meta[ self::FOLLOWING_META_KEY ] ?? array();
+		$pending   = $all_meta[ self::PENDING_META_KEY ] ?? array();
+
+		if ( \in_array( (string) $user_id, $following, true ) ) {
+			return self::ACCEPTED;
+		}
+
+		if ( \in_array( (string) $user_id, $pending, true ) ) {
+			return self::PENDING;
+		}
+
+		return false;
 	}
 }

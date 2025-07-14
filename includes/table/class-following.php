@@ -79,7 +79,7 @@ class Following extends \WP_List_Table {
 	public function prepare_items() {
 		$columns = $this->get_columns();
 		$hidden  = array();
-		$status  = 'all';
+		$status  = Following_Collection::ALL;
 
 		$this->process_action();
 		$this->_column_headers = array( $columns, $hidden, $this->get_sortable_columns() );
@@ -114,9 +114,9 @@ class Following extends \WP_List_Table {
 			$status = \sanitize_text_field( \wp_unslash( $_GET['status'] ) );
 		}
 
-		if ( 'pending' === $status ) {
+		if ( Following_Collection::PENDING === $status ) {
 			$following_with_count = Following_Collection::get_pending_with_count( $this->user_id, $per_page, $page_num, $args );
-		} elseif ( 'accepted' === $status ) {
+		} elseif ( Following_Collection::ACCEPTED === $status ) {
 			$following_with_count = Following_Collection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
 		} else {
 			$following_with_count = Following_Collection::get_all_with_count( $this->user_id, $per_page, $page_num, $args );
@@ -158,7 +158,7 @@ class Following extends \WP_List_Table {
 	public function get_views() {
 		$count  = Following_Collection::count( $this->user_id );
 		$path   = 'users.php?page=activitypub-following-list';
-		$status = 'all';
+		$status = Following_Collection::ALL;
 
 		if ( Actors::BLOG_USER_ID === $this->user_id ) {
 			$path = 'options-general.php?page=activitypub&tab=following';
@@ -176,43 +176,43 @@ class Following extends \WP_List_Table {
 					\_nx(
 						'All <span class="count">(%s)</span>',
 						'All <span class="count">(%s)</span>',
-						$count['all'],
+						$count[ Following_Collection::ALL ],
 						'users',
 						'activitypub'
 					),
-					\number_format_i18n( $count['all'] )
+					\number_format_i18n( $count[ Following_Collection::ALL ] )
 				),
-				'current' => 'all' === $status,
+				'current' => Following_Collection::ALL === $status,
 			),
 			'accepted' => array(
-				'url'     => admin_url( $path . '&status=accepted' ),
+				'url'     => admin_url( $path . '&status=' . Following_Collection::ACCEPTED ),
 				'label'   => sprintf(
 					/* translators: %s: Number of users. */
 					\_nx(
 						'Accepted <span class="count">(%s)</span>',
 						'Accepted <span class="count">(%s)</span>',
-						$count['accepted'],
+						$count[ Following_Collection::ACCEPTED ],
 						'users',
 						'activitypub'
 					),
-					\number_format_i18n( $count['accepted'] )
+					\number_format_i18n( $count[ Following_Collection::ACCEPTED ] )
 				),
-				'current' => 'accepted' === $status,
+				'current' => Following_Collection::ACCEPTED === $status,
 			),
 			'pending'  => array(
-				'url'     => admin_url( $path . '&status=pending' ),
+				'url'     => admin_url( $path . '&status=' . Following_Collection::PENDING ),
 				'label'   => sprintf(
 					/* translators: %s: Number of users. */
 					\_nx(
 						'Pending <span class="count">(%s)</span>',
 						'Pending <span class="count">(%s)</span>',
-						$count['pending'],
+						$count[ Following_Collection::PENDING ],
 						'users',
 						'activitypub'
 					),
-					\number_format_i18n( $count['pending'] )
+					\number_format_i18n( $count[ Following_Collection::PENDING ] )
 				),
-				'current' => 'pending' === $status,
+				'current' => Following_Collection::PENDING === $status,
 			),
 		);
 
@@ -261,12 +261,22 @@ class Following extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_username( $item ) {
+		$status = '';
+
+		if (
+			( ! isset( $_GET['status'] ) || Following_Collection::ALL === $_GET['status'] ) &&
+			( Following_Collection::PENDING === Following_Collection::check_status( $this->user_id, $item['id'] ) )
+		) {
+			$status = \sprintf( '<strong> — %s</strong>', \esc_html__( 'Pending', 'activitypub' ) );
+		}
+
 		return sprintf(
-			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong><br />',
+			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong>%5$s<br />',
 			\esc_url( $item['icon'] ),
 			\esc_attr( $item['post_title'] ),
 			\esc_url( $item['url'] ),
-			\esc_html( $item['username'] )
+			\esc_html( $item['username'] ),
+			$status
 		);
 	}
 
