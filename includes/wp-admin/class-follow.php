@@ -26,19 +26,32 @@ class Follow {
 	 * Page.
 	 */
 	public static function follow_page() {
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/admin-header.php', true, array( 'tabs' => array() ) );
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$id = \sanitize_text_field( \wp_unslash( $_GET['id'] ?? '' ) );
-		if ( is_numeric( $id ) ) {
-			$actor = \get_post( $id );
+		$id  = \sanitize_text_field( \wp_unslash( $_GET['id'] ?? '' ) );
+		$_id = $id;
+
+		if ( empty( $_id ) ) {
+			$actor = null;
+		} elseif ( is_numeric( $_id ) ) {
+			$actor = \get_post( $_id );
 		} else {
-			$id    = Webfinger::resolve( $id );
-			$actor = Actors::fetch_remote_by_uri( $id );
+			$_id = Webfinger::resolve( $_id );
+			if ( \is_wp_error( $_id ) ) {
+				$actor = null;
+			} else {
+				$actor = Actors::fetch_remote_by_uri( $_id );
+			}
 		}
 
 		$actor = Actors::get_actor( $actor );
 
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/admin-header.php', true, array( 'tabs' => array() ) );
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/follow.php', true, array( 'actor' => $actor ) );
+		if ( \is_wp_error( $actor ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/search-actor.php', true, array( 'id' => $id, 'actor' => $actor ) );
+		} else {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/follow.php', true, array( 'actor' => $actor ) );
+		}
 	}
 
 	/**

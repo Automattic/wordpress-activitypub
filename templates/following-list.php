@@ -17,6 +17,9 @@ $table->prepare_items();
 ?>
 <div class="wrap">
 	<h1 class="wp-heading-inline"><?php esc_html_e( 'Followings', 'activitypub' ); ?></h1>
+	<a href="<?php echo esc_url( admin_url( '/options-general.php?page=activitypub_follow' ) ); ?>" class="page-title-action">
+		<?php esc_html_e( 'New Follow', 'activitypub' ); ?>
+	</a>
 
 	<?php
 	if ( strlen( $_search ) ) :
