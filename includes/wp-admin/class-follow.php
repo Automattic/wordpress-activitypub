@@ -226,14 +226,14 @@ class Follow {
 			case 'accepted':
 				?>
 				<div class="button disabled" title="<?php echo esc_attr__( 'You are following this user', 'activitypub' ); ?>">
-					<span aria-label="<?php echo esc_attr__( 'You are following this user', 'activitypub' ); ?>">Following</span>
+					<span aria-label="<?php echo esc_attr__( 'You are following this user', 'activitypub' ); ?>"><?php echo esc_html__( '&#x2713; Following', 'activitypub' ); ?></span>
 				</div>
 				<?php
 				break;
 			case 'pending':
 				?>
 				<div class="button disabled" title="<?php echo esc_attr__( 'You have sent a follow request', 'activitypub' ); ?>">
-					<span aria-label="<?php echo esc_attr__( 'You have sent a follow request', 'activitypub' ); ?>">Pending</span>
+					<span aria-label="<?php echo esc_attr__( 'You have sent a follow request', 'activitypub' ); ?>"><?php echo esc_html__( '&#x2D35; Pending', 'activitypub' ); ?></span>
 				</div>
 				<?php
 				break;
