@@ -118,6 +118,7 @@ class Followers extends \WP_List_Table {
 					}
 				}
 				break;
+
 			case 'follow':
 				$redirect_to = \remove_query_arg( array( 'follower', 'followers' ), $redirect_to );
 
@@ -133,6 +134,89 @@ class Followers extends \WP_List_Table {
 					}
 				}
 				break;
+
+			case 'block':
+				// Handle single follower block.
+				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
+					$follower = \esc_url_raw( \wp_unslash( $_GET['follower'] ) );
+					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'block-follower_' . $follower ) ) {
+						// If confirm is not set, show confirmation screen.
+						if ( ! isset( $_GET['confirm'] ) || 'true' !== $_GET['confirm'] ) {
+							$this->show_block_confirmation( $follower );
+							exit;
+						}
+
+						$actor = Actors::get_actor( $follower );
+						if ( \is_wp_error( $actor ) ) {
+							break;
+						}
+
+						// Add actor ID to disallowed keys.
+						$disallowed_keys = \trim( \get_option( 'disallowed_keys' ) );
+						if ( ! empty( $disallowed_keys ) ) {
+							$disallowed_keys .= "\n";
+						}
+						$disallowed_keys .= $actor->get_id();
+						\update_option( 'disallowed_keys', $disallowed_keys );
+
+						// Remove follower relationship.
+						Follower_Collection::remove( $follower, $this->user_id );
+
+						// If user is admin for blog actor, also remove relationships for blog actor.
+						if ( \user_can( $this->user_id, 'manage_options' ) ) {
+							Follower_Collection::remove( $follower, Actors::BLOG_USER_ID );
+						}
+
+						\add_settings_error( 'activitypub', 'account_blocked', \__( 'Account blocked.', 'activitypub' ), 'success' );
+					}
+				}
+
+				// Handle bulk block actions.
+				if ( isset( $_REQUEST['followers'], $_REQUEST['_wpnonce'] ) ) {
+					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+						// If confirm is not set, show confirmation screen.
+						if ( ! isset( $_GET['confirm'] ) || 'true' !== $_GET['confirm'] ) {
+							$this->show_bulk_block_confirmation();
+							exit;
+						}
+
+						$followers       = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ) );
+						$disallowed_keys = \trim( \get_option( 'disallowed_keys' ) );
+
+						foreach ( $followers as $follower ) {
+							$actor = Actors::get_actor( $follower );
+							if ( \is_wp_error( $actor ) ) {
+								continue;
+							}
+
+							// Add actor ID to disallowed keys.
+							$disallowed_keys .= "\n" . $actor->get_id();
+
+							// Remove follower relationship.
+							Follower_Collection::remove( $follower, $this->user_id );
+
+							// If user is admin for blog actor, also remove relationships for blog actor.
+							if ( \user_can( $this->user_id, 'manage_options' ) ) {
+								Follower_Collection::remove( $follower, Actors::BLOG_USER_ID );
+							}
+						}
+
+						\update_option( 'disallowed_keys', \trim( $disallowed_keys ) );
+
+						$count = \count( $followers );
+						/* translators: %d: Number of followers blocked. */
+						$message = \_n( '%d account blocked.', '%d accounts blocked.', $count, 'activitypub' );
+						$message = \sprintf( $message, \number_format_i18n( $count ) );
+
+						\add_settings_error( 'activitypub', 'accounts_blocked', $message, 'success' );
+					}
+				}
+				break;
+
 			default:
 				break;
 		}
@@ -276,6 +360,7 @@ class Followers extends \WP_List_Table {
 	public function get_bulk_actions() {
 		return array(
 			'delete' => \__( 'Delete', 'activitypub' ),
+			'block'  => \__( 'Block', 'activitypub' ),
 		);
 	}
 
@@ -352,6 +437,114 @@ class Followers extends \WP_List_Table {
 	}
 
 	/**
+	 * Shows the block confirmation screen.
+	 *
+	 * @param string $follower The follower identifier to block.
+	 */
+	private function show_block_confirmation( $follower ) {
+		$follower_data = Follower_Collection::get_follower( $this->user_id, $follower );
+		if ( \is_wp_error( $follower_data ) ) {
+			\wp_die( \esc_html__( 'Invalid account.', 'activitypub' ) );
+		}
+		$actor = Actors::get_actor( $follower_data );
+
+		$confirm_url = \wp_nonce_url(
+			\add_query_arg(
+				array(
+					'action'   => 'block',
+					'follower' => $follower,
+					'confirm'  => 'true',
+				)
+			),
+			'block-follower_' . $follower
+		);
+
+		require_once ABSPATH . 'wp-admin/admin-header.php';
+		?>
+		<div class="wrap">
+			<h1><?php \esc_html_e( 'Block Account', 'activitypub' ); ?></h1>
+
+			<p>
+			<?php
+			\printf(
+				/* translators: %s: username */
+				\esc_html__( 'You are about to block &#8220;%s&#8221;.', 'activitypub' ),
+				'<strong>' . \esc_html( $actor->get_preferred_username() ) . '</strong>'
+			);
+			?>
+			</p>
+			<p><?php \esc_html_e( 'This will:', 'activitypub' ); ?></p>
+			<ul class="ul-disc">
+				<li><?php \esc_html_e( 'Add their ID to the comment disallowed list to block incoming requests.', 'activitypub' ); ?></li>
+				<li><?php \esc_html_e( 'Remove them from your followers and following lists.', 'activitypub' ); ?></li>
+				<?php if ( \user_can( $this->user_id, 'manage_options' ) ) : ?>
+					<li><?php \esc_html_e( 'Remove them from the blog actor followers and following lists.', 'activitypub' ); ?></li>
+				<?php endif; ?>
+			</ul>
+			<p><?php \esc_html_e( 'You can unblock this account later by removing their ID from the disallowed comment keys in Settings > Discussion.', 'activitypub' ); ?></p>
+
+			<p class="submit">
+				<a href="<?php echo \esc_url( $confirm_url ); ?>" class="button button-primary"><?php \esc_html_e( 'Confirm Block', 'activitypub' ); ?></a>
+			</p>
+		</div>
+		<?php
+		require_once ABSPATH . 'wp-admin/admin-footer.php';
+	}
+
+	/**
+	 * Shows the bulk block confirmation screen.
+	 */
+	private function show_bulk_block_confirmation() {
+		$followers = \array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['followers'] ?? array() ) );
+		if ( empty( $followers ) ) {
+			\wp_die( \esc_html__( 'No accounts selected.', 'activitypub' ) );
+		}
+
+		$follower_count = count( $followers );
+
+		$confirm_url = \wp_nonce_url(
+			\add_query_arg(
+				array(
+					'action'    => 'block',
+					'followers' => $followers,
+					'confirm'   => 'true',
+				)
+			),
+			'bulk-' . $this->_args['plural']
+		);
+
+		require_once ABSPATH . 'wp-admin/admin-header.php';
+		?>
+		<div class="wrap">
+			<h1><?php \esc_html_e( 'Block Accounts', 'activitypub' ); ?></h1>
+			<p>
+			<?php
+			\printf(
+				/* translators: %d: number of followers */
+				\esc_html( _n( 'You are about to block %d accounts.', 'You are about to block %d accounts.', $follower_count, 'activitypub' ) ),
+				\esc_html( \number_format_i18n( $follower_count ) )
+			);
+			?>
+			</p>
+			<p><?php \esc_html_e( 'This will:', 'activitypub' ); ?></p>
+			<ul class="ul-disc">
+				<li><?php \esc_html_e( 'Add their IDs to the comment disallowed list to block incoming requests.', 'activitypub' ); ?></li>
+				<li><?php \esc_html_e( 'Remove them from your followers and following lists.', 'activitypub' ); ?></li>
+				<?php if ( \user_can( $this->user_id, 'manage_options' ) ) : ?>
+					<li><?php \esc_html_e( 'Remove them from the blog actor followers and following lists.', 'activitypub' ); ?></li>
+				<?php endif; ?>
+			</ul>
+			<p><?php \esc_html_e( 'You can unblock these accounts later by removing their IDs from the disallowed comment keys in Settings > Discussion.', 'activitypub' ); ?></p>
+
+			<p class="submit">
+				<a href="<?php echo \esc_url( $confirm_url ); ?>" class="button button-primary"><?php \esc_html_e( 'Confirm Block', 'activitypub' ); ?></a>
+			</p>
+		</div>
+		<?php
+		require_once ABSPATH . 'wp-admin/admin-footer.php';
+	}
+
+	/**
 	 * Message to be displayed when there are no followers.
 	 */
 	public function no_items() {
@@ -395,6 +588,13 @@ class Followers extends \WP_List_Table {
 				/* translators: %s: username. */
 				\esc_attr( \sprintf( \__( 'Delete %s', 'activitypub' ), $item['username'] ) ),
 				\esc_html__( 'Delete', 'activitypub' )
+			),
+			'block'  => sprintf(
+				'<a href="%s" aria-label="%s" class="activitypub-block-follower">%s</a>',
+				$this->get_action_url( 'block', $item['id'] ),
+				/* translators: %s: username */
+				\esc_attr( \sprintf( \__( 'Block %s', 'activitypub' ), $item['username'] ) ),
+				\esc_html__( 'Block', 'activitypub' )
 			),
 		);
 
