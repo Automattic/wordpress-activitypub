@@ -7,6 +7,11 @@
 
 // phpcs:disable WordPress.Security.NonceVerification.Recommended
 
+/**
+ * Followers list table.
+ *
+ * @global Activitypub\Table\Followers $followers_list_table
+ */
 global $followers_list_table;
 
 $_search = \sanitize_text_field( \wp_unslash( $_REQUEST['s'] ?? '' ) );
