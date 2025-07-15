@@ -358,6 +358,8 @@ class Activitypub {
 			$args['url']     = \apply_filters( 'get_avatar_url', $avatar, $id_or_email, $args );
 			$args['class'][] = 'avatar';
 			$args['class'][] = 'avatar-activitypub';
+			$args['class'][] = 'avatar-' . (int) $args['size'];
+			$args['class'][] = 'photo';
 			$args['class'][] = 'u-photo';
 			$args['class']   = \array_unique( $args['class'] );
 		}
