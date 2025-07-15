@@ -9,7 +9,6 @@
 $args = wp_parse_args( $args ?? array() );
 
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-$post    = $args['post'];
 $follows = $args['follows'];
 $actor   = $args['actor'];
 ?>

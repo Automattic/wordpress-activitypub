@@ -10,6 +10,8 @@ $args = wp_parse_args( $args ?? array() );
 ?>
 
 <div class="activitypub-settings activitypub-settings-page hide-if-no-js">
+	<h2><?php echo esc_html__( 'Follow', 'activitypub' ); ?></h2>
+	<p><?php echo esc_html__( 'Enter the ID of the actor you want to follow.', 'activitypub' ); ?></p>
 	<?php if ( $args['id'] && is_wp_error( $args['actor'] ) ) : ?>
 		<div class="notice notice-error"><p><strong><?php echo esc_html( $args['actor']->get_error_message() ); ?></strong></p></div>
 	<?php endif; ?>
