@@ -31,6 +31,13 @@ class Follow {
 	public $user_id;
 
 	/**
+	 * URL.
+	 *
+	 * @var string
+	 */
+	public $url;
+
+	/**
 	 * Actor.
 	 *
 	 * @var \Activitypub\Model\Actor
@@ -43,8 +50,10 @@ class Follow {
 	public function __construct() {
 		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
 			$this->user_id = Actors::BLOG_USER_ID;
+			$this->url     = \admin_url( 'options-general.php' );
 		} else {
 			$this->user_id = \get_current_user_id();
+			$this->url     = \admin_url( 'users.php' );
 		}
 
 		\wp_enqueue_style( 'activitypub-follow-me', plugins_url( 'build/follow-me/style-index.css', ACTIVITYPUB_PLUGIN_FILE ), array(), ACTIVITYPUB_PLUGIN_VERSION );
@@ -158,12 +167,6 @@ class Follow {
 	 * Search for an actor.
 	 */
 	public function search() {
-		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
-			$url = \admin_url( 'options-general.php' );
-		} else {
-			$url = \admin_url( 'users.php' );
-		}
-
 		if ( $this->id && is_wp_error( $this->actor ) ) {
 			?>
 			<div class="notice notice-error"><p><strong><?php echo esc_html( $this->actor->get_error_message() ); ?></strong></p></div>
@@ -186,12 +189,12 @@ class Follow {
 		</ol>
 
 		<p><?php echo esc_html__( 'Paste either into the search bar above to find and follow the profile.', 'activitypub' ); ?></p>
-		<form method="get" action="<?php echo esc_url( $url ); ?>">
+		<form method="get" action="<?php echo esc_url( $this->url ); ?>">
 			<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-			<input type="hidden" name="page" value="<?php echo \esc_attr( \wp_unslash( $_GET['page'] ?? '' ) ); ?>" />
+			<input type="hidden" name="page" value="<?php echo \esc_attr( \sanitize_text_field( \wp_unslash( $_GET['page'] ?? '' ) ) ); ?>" />
 			<input type="hidden" name="tab" value="follow" />
 			<input type="text" class="regular-text ltr activitypub-profile-search" width="100%" name="id" value="<?php echo esc_attr( $this->id ?? '' ); ?>" placeholder="<?php echo esc_attr__( 'username@domain.tld or https://domain.tld/@username', 'activitypub' ); ?>" />
-			<?php submit_button( esc_attr__( 'Search', 'activitypub' ) ); ?>
+			<?php \submit_button( \esc_attr__( 'Search', 'activitypub' ) ); ?>
 		</form>
 		<?php
 	}
@@ -208,6 +211,16 @@ class Follow {
 	 */
 	public function follow_button() {
 		$status = Following::check_status( $this->user_id, $this->id );
+
+		$url = esc_url(
+			add_query_arg(
+				array(
+					'page' => \sanitize_text_field( \wp_unslash( $_GET['page'] ?? '' ) ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+					'tab'  => 'follow',
+				),
+				$this->url
+			)
+		);
 
 		switch ( $status ) {
 			case 'accepted':
@@ -226,9 +239,12 @@ class Follow {
 				break;
 			default:
 				?>
-				<div class="button">
-					<a aria-label="Follow me on the Fediverse">Follow</a>
-				</div>
+				<form method="post" action="<?php echo esc_url( $url ); ?>">
+					<?php \wp_nonce_field( 'activitypub-follow', 'activitypub-follow-nonce' ); ?>
+					<input type="hidden" name="id" value="<?php echo esc_attr( $this->id ); ?>" />
+					<input type="hidden" name="user_id" value="<?php echo esc_attr( $this->user_id ); ?>" />
+					<?php \submit_button( \esc_attr__( 'Follow', 'activitypub' ) ); ?>
+				</form>
 				<?php
 				break;
 		}

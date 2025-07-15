@@ -52,6 +52,11 @@
 	position: relative;
 }
 
+.activitypub-settings .activitypub-follow-me-block-wrapper p.submit {
+	margin: 0;
+	padding: 0;
+}
+
 .activitypub-profile__follow-indicator {
 	position: absolute;
 	bottom: 10px;
