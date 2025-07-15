@@ -99,7 +99,6 @@ function plugin_admin_init() {
 	// Menus are registered before `admin_init`, because of course they are.
 	\add_action( 'admin_menu', array( __NAMESPACE__ . '\WP_Admin\Menu', 'admin_menu' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Admin', 'init' ) );
-	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Follow', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Health_Check', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings_Fields', 'init' ) );

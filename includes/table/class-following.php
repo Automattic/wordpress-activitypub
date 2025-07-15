@@ -30,13 +30,22 @@ class Following extends \WP_List_Table {
 	private $user_id;
 
 	/**
+	 * Follow URL.
+	 *
+	 * @var string
+	 */
+	private $follow_url;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
-			$this->user_id = Actors::BLOG_USER_ID;
+			$this->user_id    = Actors::BLOG_USER_ID;
+			$this->follow_url = admin_url( 'options-general.php?page=activitypub&tab=follow&id=%s' );
 		} else {
-			$this->user_id = \get_current_user_id();
+			$this->user_id    = \get_current_user_id();
+			$this->follow_url = admin_url( 'users.php?page=activitypub-follow&id=%s' );
 		}
 
 		parent::__construct(
@@ -280,7 +289,7 @@ class Following extends \WP_List_Table {
 			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong>%5$s<br />',
 			\esc_url( $item['icon'] ),
 			\esc_attr( $item['post_title'] ),
-			\esc_url( \admin_url( '/options-general.php?page=activitypub_follow&id=' . $item['id'] ) ),
+			\esc_url( \sprintf( $this->follow_url, $item['id'] ) ),
 			\esc_html( $item['username'] ),
 			$status
 		);
@@ -353,6 +362,21 @@ class Following extends \WP_List_Table {
 	 */
 	public function no_items() {
 		\esc_html_e( 'No followings found.', 'activitypub' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$search = \sanitize_text_field( \wp_unslash( isset( $_GET['s'] ) ? $_GET['s'] : '' ) );
+		$search = Sanitize::webfinger( $search );
+
+		if ( filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
+			$search = Webfinger::resolve( $search );
+		}
+
+		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
+			$actor = Actors::fetch_remote_by_uri( $search );
+			if ( ! is_wp_error( $actor ) ) {
+				\printf( ' Do you maybe want to follow %s?', sprintf( '<a href="%s">%s</a>', \esc_url( sprintf( $this->follow_url, $actor->ID ) ), \esc_html( $actor->post_title ) ) );
+			}
+		}
 	}
 
 	/**
