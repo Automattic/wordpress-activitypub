@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Webfinger;
 
 /**
@@ -23,6 +24,13 @@ class Follow {
 	public $id;
 
 	/**
+	 * User ID.
+	 *
+	 * @var int
+	 */
+	public $user_id;
+
+	/**
 	 * Actor.
 	 *
 	 * @var \Activitypub\Model\Actor
@@ -33,6 +41,12 @@ class Follow {
 	 * Initialize the settings fields.
 	 */
 	public function __construct() {
+		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
+			$this->user_id = Actors::BLOG_USER_ID;
+		} else {
+			$this->user_id = \get_current_user_id();
+		}
+
 		\wp_enqueue_style( 'activitypub-follow-me', plugins_url( 'build/follow-me/style-index.css', ACTIVITYPUB_PLUGIN_FILE ), array(), ACTIVITYPUB_PLUGIN_VERSION );
 	}
 
@@ -94,9 +108,7 @@ class Follow {
 							<div class="activitypub-profile__handle p-nickname p-x-webfinger" data-wp-text="context.webfinger"></div>
 						</div>
 
-						<div class="button">
-							<a aria-label="Follow me on the Fediverse">Follow</a>
-						</div>
+						<?php $this->follow_button(); ?>
 
 						<?php if ( $this->actor->get_summary() ) : ?>
 							<div class="activitypub-profile__bio p-note">
@@ -187,6 +199,37 @@ class Follow {
 			$this->search();
 		} else {
 			$this->preview();
+		}
+	}
+
+	/**
+	 * Follow button.
+	 */
+	public function follow_button() {
+		$status = Following::check_status( $this->user_id, $this->id );
+
+		switch ( $status ) {
+			case 'accepted':
+				?>
+				<div class="button disabled" title="<?php echo esc_attr__( 'You are following this user', 'activitypub' ); ?>">
+					<span aria-label="<?php echo esc_attr__( 'You are following this user', 'activitypub' ); ?>">Following</span>
+				</div>
+				<?php
+				break;
+			case 'pending':
+				?>
+				<div class="button disabled" title="<?php echo esc_attr__( 'You have sent a follow request', 'activitypub' ); ?>">
+					<span aria-label="<?php echo esc_attr__( 'You have sent a follow request', 'activitypub' ); ?>">Pending</span>
+				</div>
+				<?php
+				break;
+			default:
+				?>
+				<div class="button">
+					<a aria-label="Follow me on the Fediverse">Follow</a>
+				</div>
+				<?php
+				break;
 		}
 	}
 }
