@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed missing avatar class so that CSS styles are correctly applied to ActivityPub avatars on the Dashboard.
