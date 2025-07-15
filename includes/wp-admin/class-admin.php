@@ -127,14 +127,14 @@ class Admin {
 	 * Adds the follower list to the Help tab.
 	 */
 	public static function add_followers_list_help_tab() {
-		// todo.
+		$GLOBALS['followers_list_table'] = new \Activitypub\Table\Followers();
 	}
 
 	/**
 	 * Adds the following list to the Help tab.
 	 */
 	public static function add_following_list_help_tab() {
-		// todo.
+		$GLOBALS['following_list_table'] = new \Activitypub\Table\Following();
 	}
 
 	/**
