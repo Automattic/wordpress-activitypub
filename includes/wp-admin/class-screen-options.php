@@ -19,11 +19,29 @@ class Screen_Options {
 	}
 
 	/**
+	 * Add settings list screen options.
+	 *
+	 * @see Menu::admin_menu()
+	 */
+	public static function add_settings_list_options() {
+		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		switch ( $tab ) {
+			case 'followers':
+				self::add_followers_list_options();
+				break;
+			case 'following':
+				self::add_following_list_options();
+				break;
+		}
+	}
+
+	/**
 	 * Add follower list screen options.
 	 *
 	 * @see Menu::admin_menu()
 	 */
-	public static function add_followers_list_screen_options() {
+	public static function add_followers_list_options() {
 		\add_screen_option(
 			'per_page',
 			array(
@@ -39,7 +57,7 @@ class Screen_Options {
 	 *
 	 * @see Menu::admin_menu()
 	 */
-	public static function add_following_list_screen_options() {
+	public static function add_following_list_options() {
 		\add_screen_option(
 			'per_page',
 			array(

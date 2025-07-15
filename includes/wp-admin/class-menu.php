@@ -19,7 +19,7 @@ class Menu {
 	 */
 	public static function admin_menu() {
 		$settings_page = \add_options_page(
-			'Welcome',
+			\_x( 'Welcome', 'page title', 'activitypub' ),
 			'ActivityPub',
 			'manage_options',
 			'activitypub',
@@ -27,23 +27,10 @@ class Menu {
 		);
 
 		\add_action( 'load-' . $settings_page, array( Settings::class, 'add_settings_help_tab' ) );
-		\add_action(
-			'load-' . $settings_page,
-			function () {
-				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-				$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) );
-
-				switch ( $tab ) {
-					case 'followers':
-						Screen_Options::add_followers_list_screen_options();
-						break;
-					case 'following':
-						Screen_Options::add_following_list_screen_options();
-						break;
-				}
-			}
-		);
 		\add_action( 'load-users.php', array( Settings::class, 'add_users_help_tab' ) );
+		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_followers_list_help_tab' ) );
+		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_following_list_help_tab' ) );
+		\add_action( 'load-' . $settings_page, array( Screen_Options::class, 'add_settings_list_options' ) );
 
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
@@ -56,7 +43,7 @@ class Menu {
 			);
 
 			\add_action( 'load-' . $followers_list_page, array( Admin::class, 'add_followers_list_help_tab' ) );
-			\add_action( 'load-' . $followers_list_page, array( Screen_Options::class, 'add_followers_list_screen_options' ) );
+			\add_action( 'load-' . $followers_list_page, array( Screen_Options::class, 'add_followers_list_options' ) );
 
 			/**
 			 * Filter to show the following UI.
@@ -73,7 +60,7 @@ class Menu {
 				);
 
 				\add_action( 'load-' . $following_list_page, array( Admin::class, 'add_following_list_help_tab' ) );
-				\add_action( 'load-' . $following_list_page, array( Screen_Options::class, 'add_following_list_screen_options' ) );
+				\add_action( 'load-' . $following_list_page, array( Screen_Options::class, 'add_following_list_options' ) );
 			}
 
 			\add_users_page(
