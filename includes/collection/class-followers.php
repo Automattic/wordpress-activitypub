@@ -414,4 +414,19 @@ class Followers {
 
 		return Actors::clear_errors( $post_id );
 	}
+
+	/**
+	 * Check the status of a given following.
+	 *
+	 * @param int $post_id The ID of the Post.
+	 * @param int $user_id The ID of the WordPress User.
+	 *
+	 * @return bool The status of the following.
+	 */
+	public static function follows( $post_id, $user_id ) {
+		$all_meta  = \get_post_meta( $post_id );
+		$following = $all_meta[ self::FOLLOWER_META_KEY ] ?? array();
+
+		return \in_array( (string) $user_id, $following, true );
+	}
 }

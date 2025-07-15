@@ -8,6 +8,7 @@
 namespace Activitypub\WP_Admin;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 use Activitypub\Webfinger;
 
 /**
@@ -33,19 +34,19 @@ class Follow {
 		$_id = $id;
 
 		if ( empty( $_id ) ) {
-			$actor = null;
+			$post = null;
 		} elseif ( is_numeric( $_id ) ) {
-			$actor = \get_post( $_id );
+			$post = \get_post( $_id );
 		} else {
 			$_id = Webfinger::resolve( $_id );
 			if ( \is_wp_error( $_id ) ) {
-				$actor = null;
+				$post = null;
 			} else {
-				$actor = Actors::fetch_remote_by_uri( $_id );
+				$post = Actors::fetch_remote_by_uri( $_id );
 			}
 		}
 
-		$actor = Actors::get_actor( $actor );
+		$actor = Actors::get_actor( $post );
 
 		if ( \is_wp_error( $actor ) ) {
 			\load_template(
@@ -57,7 +58,16 @@ class Follow {
 				)
 			);
 		} else {
-			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/follow.php', true, array( 'actor' => $actor ) );
+			\load_template(
+				ACTIVITYPUB_PLUGIN_DIR . 'templates/follow.php',
+				true,
+				array(
+					'id'      => $id,
+					'actor'   => $actor,
+					'post'    => $post,
+					'follows' => Followers::follows( $post->ID, \get_current_user_id() ),
+				)
+			);
 		}
 	}
 

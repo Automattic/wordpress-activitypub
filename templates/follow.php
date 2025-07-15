@@ -8,16 +8,21 @@
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
 
-$actor = $args['actor'];
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+$post    = $args['post'];
+$follows = $args['follows'];
+$actor   = $args['actor'];
 ?>
 
 <div class="activitypub-settings activitypub-settings-page hide-if-no-js">
 	<div class="activitypub-follow-me-block-wrapper is-style-profile wp-block-activitypub-follow-me">
 		<div class="activitypub-profile p-author h-card">
 			<div class="activitypub-profile__header" style="background-image: url('<?php echo esc_url( $actor->get_image()['url'] ?? '' ); ?>');">
-				<div class="activitypub-profile__follow-indicator">
-					<?php echo esc_html__( 'Follows you', 'activitypub' ); ?>
-				</div>
+				<?php if ( $follows ) : ?>
+					<div class="activitypub-profile__follow-indicator">
+						<?php echo esc_html__( 'Follows you', 'activitypub' ); ?>
+					</div>
+				<?php endif; ?>
 			</div>
 
 			<div class="activitypub-profile__body">
