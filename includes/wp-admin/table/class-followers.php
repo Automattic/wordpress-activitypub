@@ -592,7 +592,7 @@ class Followers extends \WP_List_Table {
 			'block'  => sprintf(
 				'<a href="%s" aria-label="%s" class="activitypub-block-follower">%s</a>',
 				$this->get_action_url( 'block', $item['id'] ),
-				/* translators: %s: username */
+				/* translators: %s: username. */
 				\esc_attr( \sprintf( \__( 'Block %s', 'activitypub' ), $item['username'] ) ),
 				\esc_html__( 'Block', 'activitypub' )
 			),
