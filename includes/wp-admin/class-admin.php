@@ -124,6 +124,16 @@ class Admin {
 	}
 
 	/**
+	 * Load user follow page
+	 */
+	public static function follow_page() {
+		// User has to be able to publish posts.
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/follow.php' );
+		}
+	}
+
+	/**
 	 * Adds the follower list to the Help tab.
 	 */
 	public static function add_followers_list_help_tab() {
@@ -134,6 +144,13 @@ class Admin {
 	 * Adds the following list to the Help tab.
 	 */
 	public static function add_following_list_help_tab() {
+		// todo.
+	}
+
+	/**
+	 * Adds the follow page to the Help tab.
+	 */
+	public static function add_follow_help_tab() {
 		// todo.
 	}
 

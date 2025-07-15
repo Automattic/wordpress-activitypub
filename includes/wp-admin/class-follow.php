@@ -158,6 +158,12 @@ class Follow {
 	 * Search for an actor.
 	 */
 	public function search() {
+		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
+			$url = \admin_url( 'options-general.php' );
+		} else {
+			$url = \admin_url( 'users.php' );
+		}
+
 		if ( $this->id && is_wp_error( $this->actor ) ) {
 			?>
 			<div class="notice notice-error"><p><strong><?php echo esc_html( $this->actor->get_error_message() ); ?></strong></p></div>
@@ -180,8 +186,9 @@ class Follow {
 		</ol>
 
 		<p><?php echo esc_html__( 'Paste either into the search bar above to find and follow the profile.', 'activitypub' ); ?></p>
-		<form method="get" action="<?php echo esc_url( admin_url( 'options-general.php' ) ); ?>">
-			<input type="hidden" name="page" value="activitypub" />
+		<form method="get" action="<?php echo esc_url( $url ); ?>">
+			<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+			<input type="hidden" name="page" value="<?php echo \esc_attr( \wp_unslash( $_GET['page'] ?? '' ) ); ?>" />
 			<input type="hidden" name="tab" value="follow" />
 			<input type="text" class="regular-text ltr activitypub-profile-search" width="100%" name="id" value="<?php echo esc_attr( $this->id ?? '' ); ?>" placeholder="<?php echo esc_attr__( 'username@domain.tld or https://domain.tld/@username', 'activitypub' ); ?>" />
 			<?php submit_button( esc_attr__( 'Search', 'activitypub' ) ); ?>
@@ -193,13 +200,7 @@ class Follow {
 	 * Handle the search query.
 	 */
 	public function follow() {
-		$this->id = \sanitize_text_field( \wp_unslash( $_GET['id'] ?? '' ) );
-		$this->actor = Actors::get_actor( $this->id );
-		if ( is_wp_error( $this->actor ) ) {
-			$this->search();
-		} else {
-			$this->preview();
-		}
+		// @todo Implement follow.
 	}
 
 	/**
