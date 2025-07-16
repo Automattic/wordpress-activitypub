@@ -116,7 +116,7 @@ class Followers extends \WP_List_Table {
 					break;
 				case 'all_deleted':
 					$count = \absint( $_REQUEST['count'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
-					/* translators: %d: Number of accounts unfollowed. */
+					/* translators: %d: Number of followers deleted. */
 					$message = \_n( '%d follower deleted.', '%d followers deleted.', $count, 'activitypub' );
 					$message = \sprintf( $message, \number_format_i18n( $count ) );
 					break;
