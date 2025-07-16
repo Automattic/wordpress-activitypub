@@ -9,6 +9,7 @@ namespace Activitypub\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
+use Activitypub\Sanitize;
 
 use function Activitypub\object_to_uri;
 
@@ -191,15 +192,7 @@ class Following extends \WP_List_Table {
 		}
 
 		if ( isset( $_GET['s'] ) ) {
-			$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
-			$search = \str_replace( 'acct:', '', $search );
-			$search = \str_replace( '@', ' ', $search );
-			$search = \str_replace( 'http://', '', $search );
-			$search = \str_replace( 'https://', '', $search );
-			$search = \str_replace( 'www.', '', $search );
-			$search = \trim( $search );
-
-			$args['s'] = $search;
+			$args['s'] = Sanitize::actor_search_term( \wp_unslash( $_GET['s'] ) );
 		}
 
 		if ( isset( $_GET['status'] ) ) {
