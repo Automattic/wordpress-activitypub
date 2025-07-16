@@ -19,7 +19,7 @@ class Menu {
 	 */
 	public static function admin_menu() {
 		$settings_page = \add_options_page(
-			'Welcome',
+			\_x( 'Welcome', 'page title', 'activitypub' ),
 			'ActivityPub',
 			'manage_options',
 			'activitypub',
@@ -28,6 +28,9 @@ class Menu {
 
 		\add_action( 'load-' . $settings_page, array( Settings::class, 'add_settings_help_tab' ) );
 		\add_action( 'load-users.php', array( Settings::class, 'add_users_help_tab' ) );
+		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_followers_list_table' ) );
+		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_following_list_table' ) );
+		\add_action( 'load-' . $settings_page, array( Screen_Options::class, 'add_settings_list_options' ) );
 
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
@@ -39,7 +42,8 @@ class Menu {
 				array( Admin::class, 'followers_list_page' )
 			);
 
-			\add_action( 'load-' . $followers_list_page, array( Admin::class, 'add_followers_list_help_tab' ) );
+			\add_action( 'load-' . $followers_list_page, array( Admin::class, 'add_followers_list_table' ) );
+			\add_action( 'load-' . $followers_list_page, array( Screen_Options::class, 'add_followers_list_options' ) );
 
 			/**
 			 * Filter to show the following UI.
@@ -55,7 +59,8 @@ class Menu {
 					array( Admin::class, 'following_list_page' )
 				);
 
-				\add_action( 'load-' . $following_list_page, array( Admin::class, 'add_following_list_help_tab' ) );
+				\add_action( 'load-' . $following_list_page, array( Admin::class, 'add_following_list_table' ) );
+				\add_action( 'load-' . $following_list_page, array( Screen_Options::class, 'add_following_list_options' ) );
 			}
 
 			\add_users_page(
