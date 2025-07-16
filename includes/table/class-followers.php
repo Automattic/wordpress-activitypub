@@ -181,7 +181,7 @@ class Followers extends \WP_List_Table {
 		}
 
 		if ( ! empty( $_GET['s'] ) ) {
-			$args['s'] = Sanitize::actor_search_term( \wp_unslash( $_GET['s'] ) );
+			$args['s'] = Sanitize::actor_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		}
 
 		$followers_with_count = Follower_Collection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );

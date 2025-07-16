@@ -192,7 +192,7 @@ class Following extends \WP_List_Table {
 		}
 
 		if ( isset( $_GET['s'] ) ) {
-			$args['s'] = Sanitize::actor_search_term( \wp_unslash( $_GET['s'] ) );
+			$args['s'] = Sanitize::actor_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		}
 
 		if ( isset( $_GET['status'] ) ) {

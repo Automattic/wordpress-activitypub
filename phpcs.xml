@@ -24,13 +24,6 @@
 	<rule ref="WordPress"/>
 	<rule ref="VariableAnalysis"/>
 
-	<rule ref="WordPress.Security.ValidatedSanitizedInput">
-		<properties>
-			<property name="customSanitizingFunctions" type="array">
-				<element value="actor_search_term" />
-			</property>
-		</properties>
-	</rule>
 	<rule ref="WordPress.WP.Capabilities">
 		<properties>
 			<property name="custom_capabilities" type="array">
