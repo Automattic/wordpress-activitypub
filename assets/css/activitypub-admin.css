@@ -431,6 +431,11 @@ input.blog-user-identifier {
 	min-width: 0;
 }
 
+.activitypub-follow-wrapper .activitypub-profile__content .submit {
+	padding: 0;
+	margin: 0;
+}
+
 .activitypub-follow-wrapper .activitypub-profile__info {
 	display: block;
 	flex: 1;
