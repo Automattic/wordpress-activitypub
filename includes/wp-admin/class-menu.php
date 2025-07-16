@@ -62,7 +62,7 @@ class Menu {
 				\add_action( 'load-' . $following_list_page, array( Admin::class, 'add_following_list_table' ) );
 				\add_action( 'load-' . $following_list_page, array( Screen_Options::class, 'add_following_list_options' ) );
 
-				$follow_page = \add_users_page(
+				\add_users_page(
 					\__( 'Follow ⁂', 'activitypub' ),
 					\__( 'Follow ⁂', 'activitypub' ),
 					'activitypub',
