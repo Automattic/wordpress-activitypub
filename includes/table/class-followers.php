@@ -77,14 +77,10 @@ class Followers extends \WP_List_Table {
 	 * Prepare items.
 	 */
 	public function prepare_items() {
-		$columns = $this->get_columns();
-		$hidden  = array();
-
 		$this->process_action();
-		$this->_column_headers = array( $columns, $hidden, $this->get_sortable_columns() );
 
 		$page_num = $this->get_pagenum();
-		$per_page = 20;
+		$per_page = $this->get_items_per_page( 'activitypub_followers_per_page' );
 
 		$args = array();
 

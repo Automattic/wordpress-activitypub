@@ -124,17 +124,17 @@ class Admin {
 	}
 
 	/**
-	 * Adds the follower list to the Help tab.
+	 * Creates the followers list table.
 	 */
-	public static function add_followers_list_help_tab() {
-		// todo.
+	public static function add_followers_list_table() {
+		$GLOBALS['followers_list_table'] = new \Activitypub\Table\Followers();
 	}
 
 	/**
-	 * Adds the following list to the Help tab.
+	 * Creates the following list table.
 	 */
-	public static function add_following_list_help_tab() {
-		// todo.
+	public static function add_following_list_table() {
+		$GLOBALS['following_list_table'] = new \Activitypub\Table\Following();
 	}
 
 	/**
