@@ -7,7 +7,8 @@
 
 $follow = new Activitypub\WP_Admin\Follow(
 	Activitypub\Collection\Actors::BLOG_USER_ID,
-	admin_url( 'options-general.php' )
+	admin_url( 'options-general.php?page=activitypub&tab=follow' ),
+	admin_url( 'options-general.php?page=activitypub&tab=following' )
 );
 ?>
 

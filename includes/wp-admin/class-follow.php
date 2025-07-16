@@ -31,11 +31,25 @@ class Follow {
 	public $user_id;
 
 	/**
-	 * Base URL.
+	 * URL.
 	 *
 	 * @var string
 	 */
-	public $base_url;
+	public $url;
+
+	/**
+	 * Redirect URL.
+	 *
+	 * @var string
+	 */
+	public $redirect;
+
+	/**
+	 * Error.
+	 *
+	 * @var \WP_Error
+	 */
+	public $error;
 
 	/**
 	 * Actor.
@@ -45,15 +59,35 @@ class Follow {
 	public $actor;
 
 	/**
+	 * Post.
+	 *
+	 * @var \WP_Post
+	 */
+	public $post;
+
+	/**
+	 * Query arguments.
+	 *
+	 * @var array
+	 */
+	public $query_args;
+
+	/**
 	 * Initialize the settings fields.
 	 *
 	 * @param int    $user_id  User ID.
-	 * @param string $base_url Base URL.
+	 * @param string $url Base URL.
+	 * @param string $redirect Redirect URL.
 	 */
-	public function __construct( $user_id, $base_url ) {
+	public function __construct( $user_id, $url, $redirect ) {
 		$this->user_id  = $user_id;
-		$this->base_url = $base_url;
+		$this->url      = $url;
+		$this->redirect = $redirect;
 
+		$query_string = \wp_parse_url( $url, PHP_URL_QUERY );
+		\parse_str( $query_string, $this->query_args );
+
+		\add_action( 'admin_init', array( $this, 'admin_head' ) );
 		\wp_enqueue_style( 'activitypub-follow-me', plugins_url( 'build/follow-me/style-index.css', ACTIVITYPUB_PLUGIN_FILE ), array(), ACTIVITYPUB_PLUGIN_VERSION );
 	}
 
@@ -61,6 +95,22 @@ class Follow {
 	 * Display the follow page.
 	 */
 	public function display() {
+		if (
+			isset( $_POST ) &&
+			isset( $_POST['activitypub-follow-nonce'] ) &&
+			isset( $_POST['id'] ) &&
+			\wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['activitypub-follow-nonce'] ) ), 'activitypub-follow' )
+		) {
+			$id = \sanitize_text_field( \wp_unslash( $_POST['id'] ) );
+
+			$result = Following::follow( $id, $this->user_id );
+			if ( \is_wp_error( $result ) ) {
+				$this->error = $result;
+			} else {
+				return $this->success();
+			}
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$this->id = \sanitize_text_field( \wp_unslash( $_GET['id'] ?? '' ) );
 
@@ -77,12 +127,17 @@ class Follow {
 			}
 		}
 
+		$this->post  = $post;
 		$this->actor = Actors::get_actor( $post );
 
 		if ( is_wp_error( $this->actor ) ) {
-			$this->search();
+			if ( $this->id ) {
+				$this->error = $this->actor;
+			}
+
+			return $this->search();
 		} else {
-			$this->preview();
+			return $this->preview();
 		}
 	}
 
@@ -166,9 +221,9 @@ class Follow {
 	 * Search for an actor.
 	 */
 	public function search() {
-		if ( $this->id && is_wp_error( $this->actor ) ) {
+		if ( $this->error ) {
 			?>
-			<div class="notice notice-error"><p><strong><?php echo esc_html( $this->actor->get_error_message() ); ?></strong></p></div>
+			<div class="notice notice-error"><p><strong><?php echo esc_html( $this->error->get_error_message() ); ?></strong></p></div>
 			<?php
 		}
 		?>
@@ -188,10 +243,11 @@ class Follow {
 		</ol>
 
 		<p><?php echo esc_html__( 'Paste either into the search bar above to find and follow the profile.', 'activitypub' ); ?></p>
-		<form method="get" action="<?php echo esc_url( $this->base_url ); ?>">
+		<form method="get" action="<?php echo esc_url( $this->url ); ?>">
 			<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-			<input type="hidden" name="page" value="<?php echo \esc_attr( \sanitize_text_field( \wp_unslash( $_GET['page'] ?? '' ) ) ); ?>" />
-			<input type="hidden" name="tab" value="follow" />
+			<?php foreach ( $this->query_args as $key => $value ) : ?>
+				<input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>" />
+			<?php endforeach; ?>
 			<input type="text" class="regular-text ltr activitypub-profile-search" width="100%" name="id" value="<?php echo esc_attr( $this->id ?? '' ); ?>" placeholder="<?php echo esc_attr__( 'username@domain.tld or https://domain.tld/@username', 'activitypub' ); ?>" />
 			<?php \submit_button( \esc_attr__( 'Search', 'activitypub' ) ); ?>
 		</form>
@@ -201,8 +257,12 @@ class Follow {
 	/**
 	 * Handle the search query.
 	 */
-	public function follow() {
-		// @todo Implement follow.
+	public function success() {
+		?>
+		<p>
+			<?php echo esc_html__( 'Follow request successfully sent.', 'activitypub' ); ?>
+		</p>
+		<?php
 	}
 
 	/**
@@ -217,7 +277,7 @@ class Follow {
 					'page' => \sanitize_text_field( \wp_unslash( $_GET['page'] ?? '' ) ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 					'tab'  => 'follow',
 				),
-				$this->base_url
+				$this->url
 			)
 		);
 
@@ -240,8 +300,7 @@ class Follow {
 				?>
 				<form method="post" action="<?php echo esc_url( $url ); ?>">
 					<?php \wp_nonce_field( 'activitypub-follow', 'activitypub-follow-nonce' ); ?>
-					<input type="hidden" name="id" value="<?php echo esc_attr( $this->id ); ?>" />
-					<input type="hidden" name="user_id" value="<?php echo esc_attr( $this->user_id ); ?>" />
+					<input type="hidden" name="id" value="<?php echo esc_attr( $this->post->ID ); ?>" />
 					<?php \submit_button( \esc_attr__( 'Follow', 'activitypub' ) ); ?>
 				</form>
 				<?php
