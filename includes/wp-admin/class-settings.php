@@ -362,10 +362,6 @@ class Settings {
 					'label'    => __( 'Following', 'activitypub' ),
 					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php',
 				);
-				$settings_tabs['follow']    = array(
-					'label'    => __( 'Follow', 'activitypub' ),
-					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-follow.php',
-				);
 			}
 		}
 
@@ -398,13 +394,6 @@ class Settings {
 			case 'settings':
 				\update_option( 'activitypub_checklist_settings_visited', '1' );
 				break;
-			case 'follow':
-				$tab                        = 'following';
-				$settings_tabs['following'] = array(
-					'label'    => __( 'Following', 'activitypub' ),
-					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-follow.php',
-				);
-				break;
 			default:
 				if ( isset( $_GET['help-tab'] ) && 'getting-started' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
 					\update_option( 'activitypub_checklist_fediverse_intro_visited', '1' );
@@ -413,8 +402,6 @@ class Settings {
 				}
 				break;
 		}
-
-		unset( $settings_tabs['follow'] );
 
 		// Only show tabs if there are more than one.
 		$labels = array();

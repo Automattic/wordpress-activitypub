@@ -35,19 +35,19 @@ class Following extends \WP_List_Table {
 	 *
 	 * @var string
 	 */
-	public $follow_url;
+	public $follow_url = '';
 
 	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
-			$this->user_id    = Actors::BLOG_USER_ID;
-			$this->follow_url = admin_url( 'options-general.php?page=activitypub&tab=follow' );
+			$this->user_id = Actors::BLOG_USER_ID;
 		} else {
-			$this->user_id    = \get_current_user_id();
-			$this->follow_url = admin_url( 'users.php?page=activitypub-follow' );
+			$this->user_id = \get_current_user_id();
 		}
+
+		$this->process_action();
 
 		parent::__construct(
 			array(
@@ -91,8 +91,6 @@ class Following extends \WP_List_Table {
 	 */
 	public function prepare_items() {
 		$status = Following_Collection::ALL;
-
-		$this->process_action();
 
 		$page_num = $this->get_pagenum();
 		$per_page = $this->get_items_per_page( 'activitypub_following_per_page' );
@@ -181,7 +179,7 @@ class Following extends \WP_List_Table {
 			$path = 'options-general.php?page=activitypub&tab=following';
 		}
 
-		if ( isset( $_GET['status'] ) ) {
+		if ( ! empty( $_GET['status'] ) ) {
 			$status = \sanitize_text_field( \wp_unslash( $_GET['status'] ) );
 		}
 
@@ -333,29 +331,71 @@ class Following extends \WP_List_Table {
 	 * Process action.
 	 */
 	public function process_action() {
-		if ( ! isset( $_REQUEST['following'], $_REQUEST['_wpnonce'] ) ) {
-			return;
-		}
-
-		$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
-		if ( ! \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-			return;
-		}
-
-		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
-			return;
-		}
-
-		if ( $this->current_action() === 'delete' ) {
-			$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
-
-			foreach ( $following as $actor_id ) {
-				$actor = Actors::get_remote_by_uri( $actor_id );
-				if ( \is_wp_error( $actor ) ) {
-					continue;
+		switch ( $this->current_action() ) {
+			case 'delete':
+				if ( ! isset( $_REQUEST['following'], $_REQUEST['_wpnonce'] ) ) {
+					return;
 				}
-				Following_Collection::unfollow( $actor, $this->user_id );
-			}
+
+				$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+				if ( ! \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+					return;
+				}
+
+				if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
+					return;
+				}
+
+				$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
+
+				foreach ( $following as $actor_id ) {
+					$actor = Actors::get_remote_by_uri( $actor_id );
+					if ( \is_wp_error( $actor ) ) {
+						continue;
+					}
+					Following_Collection::unfollow( $actor, $this->user_id );
+				}
+				break;
+
+			case 'follow':
+				if ( ! isset( $_POST['activitypub-profile'], $_POST['_wpnonce'] ) ) {
+					return;
+				}
+
+				$nonce = \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) );
+				if ( ! \wp_verify_nonce( $nonce, 'activitypub-follow-nonce' ) ) {
+					return;
+				}
+
+				$profile = \sanitize_text_field( \wp_unslash( $_POST['activitypub-profile'] ) );
+
+				$post = Actors::fetch_remote_by_uri( $profile );
+
+				if ( ! \is_wp_error( $post ) ) {
+					$result = Following_Collection::follow( $post, $this->user_id );
+					if ( \is_wp_error( $result ) ) {
+						$query = array(
+							'updated' => true,
+							'action'  => 'followed',
+							'error'   => $post->get_error_message(),
+						);
+					} else {
+						$query = array(
+							'updated' => true,
+							'action'  => 'followed',
+						);
+					}
+				} else {
+					$query = array(
+						'updated' => true,
+						'action'  => 'followed',
+					);
+				}
+
+				\wp_safe_redirect( \add_query_arg( $query ) );
+				break;
+			default:
+				break;
 		}
 	}
 
