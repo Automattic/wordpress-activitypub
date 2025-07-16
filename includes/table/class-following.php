@@ -23,8 +23,6 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
  * Following Table-Class.
  */
 class Following extends \WP_List_Table {
-	use Table;
-
 	/**
 	 * User ID.
 	 *
@@ -140,20 +138,22 @@ class Following extends \WP_List_Table {
 					$result = Following_Collection::follow( $post, $this->user_id );
 					if ( \is_wp_error( $result ) ) {
 						$query = array(
-							'updated' => true,
+							'updated' => 'true',
 							'action'  => 'followed',
 							'error'   => $post->get_error_message(),
 						);
 					} else {
 						$query = array(
-							'updated' => true,
-							'action'  => 'followed',
+							'updated'   => 'true',
+							'action'    => 'followed',
+							'success'   => __( 'Followed', 'activitypub' ),
 						);
 					}
 				} else {
 					$query = array(
-						'updated' => true,
+						'updated' => 'true',
 						'action'  => 'followed',
+						'error'   => $post->get_error_message(),
 					);
 				}
 
@@ -161,6 +161,37 @@ class Following extends \WP_List_Table {
 				break;
 			default:
 				break;
+		}
+	}
+
+	/**
+	 * Process admin notices based on query parameters.
+	 */
+	public function process_admin_notices() {
+		if ( isset( $_REQUEST['updated'] ) && 'true' === $_REQUEST['updated'] && ! empty( $_REQUEST['action'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$message = '';
+			switch ( $_REQUEST['action'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+				case 'deleted':
+					$message = \__( 'Account unfollowed.', 'activitypub' );
+					break;
+				case 'all_deleted':
+					$count = \absint( $_REQUEST['count'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
+					/* translators: %d: Number of accounts unfollowed. */
+					$message = \_n( '%d account unfollowed.', '%d accounts unfollowed.', $count, 'activitypub' );
+					$message = \sprintf( $message, \number_format_i18n( $count ) );
+					break;
+			}
+
+			if ( ! empty( $message ) ) {
+				\wp_admin_notice(
+					$message,
+					array(
+						'type'        => 'success',
+						'dismissible' => true,
+						'id'          => 'message',
+					)
+				);
+			}
 		}
 	}
 
