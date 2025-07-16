@@ -7,6 +7,8 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 
 /**
@@ -253,6 +255,50 @@ class Cli extends \WP_CLI_Command {
 			\WP_CLI::error( $follow->get_error_message() );
 		} else {
 			\WP_CLI::success( 'Follow Scheduled.' );
+		}
+	}
+
+	/**
+	 * Add a follower to a user's followers list for testing purposes.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <actor_url>
+	 *     The URL of the actor to add as a follower.
+	 *
+	 * [--user=<user>]
+	 *     The user to add the follower to. Defaults to the blog actor.
+	 *     ---
+	 *     default: 0
+	 *     ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *    $ wp activitypub add_follower https://example.com/@user
+	 *    $ wp activitypub add_follower https://example.com/@user --user=1
+	 *    $ wp --user=pfefferle activitypub add_follower https://example.com/@user
+	 *
+	 * @synopsis <actor_url> [--user=<user>]
+	 *
+	 * @param array $args       The arguments.
+	 * @param array $assoc_args The associative arguments.
+	 */
+	public function add_follower( $args, $assoc_args ) {
+		$actor_url = $args[0];
+		$user_id   = $assoc_args['user'] ?? get_current_user_id();
+
+		if ( ! $user_id ) {
+			$user_id = Actors::BLOG_USER_ID;
+		}
+
+		\WP_CLI::log( sprintf( 'Adding follower %s to user %d...', $actor_url, $user_id ) );
+
+		$result = Followers::add_follower( $user_id, $actor_url );
+
+		if ( \is_wp_error( $result ) ) {
+			\WP_CLI::error( $result->get_error_message() );
+		} else {
+			\WP_CLI::success( sprintf( 'Follower added successfully (ID: %d).', $result ) );
 		}
 	}
 }
