@@ -46,6 +46,7 @@ class Followers extends \WP_List_Table {
 		);
 
 		\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
+		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
 	}
 
 	/**
@@ -55,11 +56,14 @@ class Followers extends \WP_List_Table {
 		if ( isset( $_REQUEST['updated'] ) && 'true' === $_REQUEST['updated'] && ! empty( $_REQUEST['action'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			$message = '';
 			switch ( $_REQUEST['action'] ) { // phpcs:ignore WordPress.Security.NonceVerification
-				case 'delete':
+				case 'deleted':
 					$message = \__( 'Follower deleted.', 'activitypub' );
 					break;
-				case 'all_delete':
-					$message = \__( 'Followers deleted.', 'activitypub' );
+				case 'all_deleted':
+					$count = \absint( $_REQUEST['count'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
+					/* translators: %d: Number of accounts unfollowed. */
+					$message = \_n( '%d follower deleted.', '%d followers deleted.', $count, 'activitypub' );
+					$message = \sprintf( $message, \number_format_i18n( $count ) );
 					break;
 			}
 
@@ -107,12 +111,9 @@ class Followers extends \WP_List_Table {
 	 * Prepare items.
 	 */
 	public function prepare_items() {
-		$this->process_action();
-
 		$page_num = $this->get_pagenum();
 		$per_page = $this->get_items_per_page( 'activitypub_followers_per_page' );
-
-		$args = array();
+		$args     = array();
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['orderby'] ) ) {
@@ -282,7 +283,7 @@ class Followers extends \WP_List_Table {
 
 						$redirect_args = array(
 							'updated' => 'true',
-							'action'  => 'delete',
+							'action'  => 'deleted',
 						);
 
 						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
@@ -302,7 +303,8 @@ class Followers extends \WP_List_Table {
 
 						$redirect_args = array(
 							'updated' => 'true',
-							'action'  => 'all_delete',
+							'action'  => 'all_deleted',
+							'count'   => \count( $followers ),
 						);
 
 						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
