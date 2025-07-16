@@ -45,8 +45,73 @@ class Following extends \WP_List_Table {
 			)
 		);
 
-		\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
+		\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
+	}
+
+	/**
+	 * Process action.
+	 */
+	public function process_action() {
+		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
+			return;
+		}
+
+		switch ( $this->current_action() ) {
+			case 'delete':
+				// Handle single follower deletion.
+				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
+					$follower = \esc_url_raw( \wp_unslash( $_GET['follower'] ) );
+					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
+						$actor = Actors::get_remote_by_uri( $follower );
+						if ( \is_wp_error( $actor ) ) {
+							break;
+						}
+
+						Following_Collection::unfollow( $actor, $this->user_id );
+
+						$redirect_args = array(
+							'updated' => 'true',
+							'action'  => 'deleted',
+						);
+
+						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
+						exit;
+					}
+				}
+
+				// Handle bulk actions.
+				if ( isset( $_REQUEST['following'], $_REQUEST['_wpnonce'] ) ) {
+					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+						$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
+
+						foreach ( $following as $actor_id ) {
+							$actor = Actors::get_remote_by_uri( $actor_id );
+							if ( \is_wp_error( $actor ) ) {
+								continue;
+							}
+							Following_Collection::unfollow( $actor, $this->user_id );
+						}
+
+						$redirect_args = array(
+							'updated' => 'true',
+							'action'  => 'all_deleted',
+							'count'   => \count( $following ),
+						);
+
+						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
+						exit;
+					}
+				}
+				break;
+
+			default:
+				break;
+		}
 	}
 
 	/**
@@ -323,71 +388,6 @@ class Following extends \WP_List_Table {
 	}
 
 	/**
-	 * Process action.
-	 */
-	public function process_action() {
-		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
-			return;
-		}
-
-		switch ( $this->current_action() ) {
-			case 'delete':
-				// Handle single follower deletion.
-				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
-					$follower = \esc_url_raw( \wp_unslash( $_GET['follower'] ) );
-					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
-
-					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
-						$actor = Actors::get_remote_by_uri( $follower );
-						if ( \is_wp_error( $actor ) ) {
-							break;
-						}
-
-						Following_Collection::unfollow( $actor, $this->user_id );
-
-						$redirect_args = array(
-							'updated' => 'true',
-							'action'  => 'deleted',
-						);
-
-						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
-						exit;
-					}
-				}
-
-				// Handle bulk actions.
-				if ( isset( $_REQUEST['following'], $_REQUEST['_wpnonce'] ) ) {
-					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
-
-					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-						$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
-
-						foreach ( $following as $actor_id ) {
-							$actor = Actors::get_remote_by_uri( $actor_id );
-							if ( \is_wp_error( $actor ) ) {
-								continue;
-							}
-							Following_Collection::unfollow( $actor, $this->user_id );
-						}
-
-						$redirect_args = array(
-							'updated' => 'true',
-							'action'  => 'all_deleted',
-							'count'   => \count( $following ),
-						);
-
-						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
-						exit;
-					}
-				}
-				break;
-
-			default:
-				break;
-		}
-	}
-
-	/**
 	 * Message to be displayed when there are no followings.
 	 */
 	public function no_items() {
@@ -409,9 +409,9 @@ class Following extends \WP_List_Table {
 	}
 
 	/**
-	 * Handles the row actions for each follower item.
+	 * Handles the row actions for each following item.
 	 *
-	 * @param array  $item        The current follower item.
+	 * @param array  $item        The current following item.
 	 * @param string $column_name The current column name.
 	 * @param string $primary     The primary column name.
 	 * @return string HTML for the row actions.

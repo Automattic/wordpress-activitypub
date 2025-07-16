@@ -45,8 +45,63 @@ class Followers extends \WP_List_Table {
 			)
 		);
 
-		\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
+		\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
+	}
+
+	/**
+	 * Process action.
+	 */
+	public function process_action() {
+		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
+			return;
+		}
+
+		switch ( $this->current_action() ) {
+			case 'delete':
+				// Handle single follower deletion.
+				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
+					$follower = \esc_url_raw( \wp_unslash( $_GET['follower'] ) );
+					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
+						Follower_Collection::remove_follower( $this->user_id, $follower );
+
+						$redirect_args = array(
+							'updated' => 'true',
+							'action'  => 'deleted',
+						);
+
+						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
+						exit;
+					}
+				}
+
+				// Handle bulk actions.
+				if ( isset( $_REQUEST['followers'], $_REQUEST['_wpnonce'] ) ) {
+					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+						$followers = \array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['followers'] ) );
+						foreach ( $followers as $follower ) {
+							Follower_Collection::remove_follower( $this->user_id, $follower );
+						}
+
+						$redirect_args = array(
+							'updated' => 'true',
+							'action'  => 'all_deleted',
+							'count'   => \count( $followers ),
+						);
+
+						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
+						exit;
+					}
+				}
+				break;
+
+			default:
+				break;
+		}
 	}
 
 	/**
@@ -261,61 +316,6 @@ class Followers extends \WP_List_Table {
 			\esc_attr( \gmdate( 'c', $modified ) ),
 			\esc_html( \gmdate( \get_option( 'date_format' ), $modified ) )
 		);
-	}
-
-	/**
-	 * Process action.
-	 */
-	public function process_action() {
-		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
-			return;
-		}
-
-		switch ( $this->current_action() ) {
-			case 'delete':
-				// Handle single follower deletion.
-				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
-					$follower = \esc_url_raw( \wp_unslash( $_GET['follower'] ) );
-					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
-
-					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
-						Follower_Collection::remove_follower( $this->user_id, $follower );
-
-						$redirect_args = array(
-							'updated' => 'true',
-							'action'  => 'deleted',
-						);
-
-						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
-						exit;
-					}
-				}
-
-				// Handle bulk actions.
-				if ( isset( $_REQUEST['followers'], $_REQUEST['_wpnonce'] ) ) {
-					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
-
-					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-						$followers = \array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['followers'] ) );
-						foreach ( $followers as $follower ) {
-							Follower_Collection::remove_follower( $this->user_id, $follower );
-						}
-
-						$redirect_args = array(
-							'updated' => 'true',
-							'action'  => 'all_deleted',
-							'count'   => \count( $followers ),
-						);
-
-						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
-						exit;
-					}
-				}
-				break;
-
-			default:
-				break;
-		}
 	}
 
 	/**
