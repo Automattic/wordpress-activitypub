@@ -88,7 +88,6 @@ class Follow {
 		\parse_str( $query_string, $this->query_args );
 
 		\add_action( 'admin_init', array( $this, 'admin_head' ) );
-		\wp_enqueue_style( 'activitypub-follow-me', plugins_url( 'build/follow-me/style-index.css', ACTIVITYPUB_PLUGIN_FILE ), array(), ACTIVITYPUB_PLUGIN_VERSION );
 	}
 
 	/**
@@ -146,11 +145,12 @@ class Follow {
 	 */
 	public function preview() {
 		$actor = $this->actor;
+		$post  = $this->post;
 		?>
-		<div class="activitypub-follow-me-block-wrapper is-style-profile wp-block-activitypub-follow-me">
+		<div class="activitypub-follow-wrapper">
 			<div class="activitypub-profile p-author h-card">
 				<div class="activitypub-profile__header" style="background-image: url('<?php echo esc_url( $actor->get_image()['url'] ?? '' ); ?>');">
-					<?php if ( Followers::follows( $this->id, $this->user_id ) ) : ?>
+					<?php if ( Followers::follows( $post->ID, $this->user_id ) ) : ?>
 						<div class="activitypub-profile__follow-indicator">
 							<?php echo esc_html__( 'Follows you', 'activitypub' ); ?>
 						</div>
@@ -269,7 +269,7 @@ class Follow {
 	 * Follow button.
 	 */
 	public function follow_button() {
-		$status = Following::check_status( $this->user_id, $this->id );
+		$status = Following::check_status( $this->user_id, $this->post->ID );
 
 		$url = esc_url(
 			add_query_arg(
