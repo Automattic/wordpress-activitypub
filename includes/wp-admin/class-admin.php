@@ -124,7 +124,6 @@ class Admin {
 	}
 
 	/**
-	 * Adds the follower list to the Help tab.
 	 * Creates the followers list table.
 	 */
 	public static function add_followers_list_table() {
@@ -136,13 +135,6 @@ class Admin {
 	 */
 	public static function add_following_list_table() {
 		$GLOBALS['following_list_table'] = new \Activitypub\Table\Following();
-	}
-
-	/**
-	 * Adds the follow page to the Help tab.
-	 */
-	public static function add_follow_help_tab() {
-		// todo.
 	}
 
 	/**
