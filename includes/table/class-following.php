@@ -44,6 +44,32 @@ class Following extends \WP_List_Table {
 				'ajax'     => false,
 			)
 		);
+
+		\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
+	}
+
+	/**
+	 * Process admin notices based on query parameters.
+	 */
+	public function process_admin_notices() {
+		if ( isset( $_REQUEST['updated'] ) && 'true' === $_REQUEST['updated'] && ! empty( $_REQUEST['action'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$message = '';
+			switch ( $_REQUEST['action'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+				default:
+					break;
+			}
+
+			if ( ! empty( $message ) ) {
+				\wp_admin_notice(
+					$message,
+					array(
+						'type'        => 'success',
+						'dismissible' => true,
+						'id'          => 'message',
+					)
+				);
+			}
+		}
 	}
 
 	/**
