@@ -13,6 +13,7 @@ use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\object_to_uri;
+use function Activitypub\guess_webfinger_by_uri;
 
 if ( ! \class_exists( '\WP_List_Table' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
@@ -147,17 +148,21 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor = Actors::get_actor( $following->ID );
-			$url   = object_to_uri( $actor->get_url() );
+			$actor     = Actors::get_actor( $following->ID );
+			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
+			$webfinger = Webfinger::uri_to_acct( $url );
+
+			if ( is_wp_error( $webfinger ) ) {
+				$webfinger = guess_webfinger_by_uri( $url );
+			}
 
 			$this->items[] = array(
 				'id'         => $following->ID,
 				'icon'       => $actor->get_icon()['url'] ?? '',
-				'post_title' => $actor->get_name(),
+				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
-				'name'       => $actor->get_name(),
-				'webfinger'  => Webfinger::uri_to_acct( $url ),
 				'url'        => $url,
+				'webfinger'  => $webfinger,
 				'status'     => Following_Collection::check_status( $this->user_id, $following->ID ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $following->post_modified_gmt,
