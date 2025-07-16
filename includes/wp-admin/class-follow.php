@@ -31,11 +31,11 @@ class Follow {
 	public $user_id;
 
 	/**
-	 * URL.
+	 * Base URL.
 	 *
 	 * @var string
 	 */
-	public $url;
+	public $base_url;
 
 	/**
 	 * Actor.
@@ -46,15 +46,13 @@ class Follow {
 
 	/**
 	 * Initialize the settings fields.
+	 *
+	 * @param int    $user_id  User ID.
+	 * @param string $base_url Base URL.
 	 */
-	public function __construct() {
-		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
-			$this->user_id = Actors::BLOG_USER_ID;
-			$this->url     = \admin_url( 'options-general.php' );
-		} else {
-			$this->user_id = \get_current_user_id();
-			$this->url     = \admin_url( 'users.php' );
-		}
+	public function __construct( $user_id, $base_url ) {
+		$this->user_id  = $user_id;
+		$this->base_url = $base_url;
 
 		\wp_enqueue_style( 'activitypub-follow-me', plugins_url( 'build/follow-me/style-index.css', ACTIVITYPUB_PLUGIN_FILE ), array(), ACTIVITYPUB_PLUGIN_VERSION );
 	}
@@ -92,11 +90,12 @@ class Follow {
 	 * Follow dialog.
 	 */
 	public function preview() {
+		$actor = $this->actor;
 		?>
 		<div class="activitypub-follow-me-block-wrapper is-style-profile wp-block-activitypub-follow-me">
 			<div class="activitypub-profile p-author h-card">
-				<div class="activitypub-profile__header" style="background-image: url('<?php echo esc_url( $this->actor->get_image()['url'] ?? '' ); ?>');">
-					<?php if ( $this->actor->get_follows() ) : ?>
+				<div class="activitypub-profile__header" style="background-image: url('<?php echo esc_url( $actor->get_image()['url'] ?? '' ); ?>');">
+					<?php if ( Followers::follows( $this->id, $this->user_id ) ) : ?>
 						<div class="activitypub-profile__follow-indicator">
 							<?php echo esc_html__( 'Follows you', 'activitypub' ); ?>
 						</div>
@@ -106,27 +105,27 @@ class Follow {
 				<div class="activitypub-profile__body">
 					<img
 						class="activitypub-profile__avatar u-photo"
-						src="<?php echo esc_url( $this->actor->get_icon()['url'] ?? \get_avatar_url( '' ) ); ?>"
-						alt="<?php echo esc_attr( $this->actor->get_name() ?? $this->actor->get_preferred_username() ); ?>"
+						src="<?php echo esc_url( $actor->get_icon()['url'] ?? \get_avatar_url( '' ) ); ?>"
+						alt="<?php echo esc_attr( $actor->get_name() ?? $actor->get_preferred_username() ); ?>"
 					/>
 
 					<div class="activitypub-profile__content">
 						<div class="activitypub-profile__info">
-							<div class="activitypub-profile__name p-name"><?php echo esc_html( $this->actor->get_name() ?? $this->actor->get_preferred_username() ); ?></div>
+							<div class="activitypub-profile__name p-name"><?php echo esc_html( $actor->get_name() ?? $actor->get_preferred_username() ); ?></div>
 							<?php /** Using `data-wp-text` to avoid @see enrich_content_data() turning it into a mention. */ ?>
 							<div class="activitypub-profile__handle p-nickname p-x-webfinger" data-wp-text="context.webfinger"></div>
 						</div>
 
 						<?php $this->follow_button(); ?>
 
-						<?php if ( $this->actor->get_summary() ) : ?>
+						<?php if ( $actor->get_summary() ) : ?>
 							<div class="activitypub-profile__bio p-note">
-								<?php echo wp_kses_post( $this->actor->get_summary() ); ?>
+								<?php echo wp_kses_post( $actor->get_summary() ); ?>
 							</div>
 						<?php endif; ?>
 
 						<?php
-						$attachments = $this->actor->get_attachment();
+						$attachments = $actor->get_attachment();
 						if ( ! empty( $attachments ) ) :
 							// Filter for PropertyValue attachments (extra fields).
 							$extra_fields = array_filter(
@@ -189,7 +188,7 @@ class Follow {
 		</ol>
 
 		<p><?php echo esc_html__( 'Paste either into the search bar above to find and follow the profile.', 'activitypub' ); ?></p>
-		<form method="get" action="<?php echo esc_url( $this->url ); ?>">
+		<form method="get" action="<?php echo esc_url( $this->base_url ); ?>">
 			<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 			<input type="hidden" name="page" value="<?php echo \esc_attr( \sanitize_text_field( \wp_unslash( $_GET['page'] ?? '' ) ) ); ?>" />
 			<input type="hidden" name="tab" value="follow" />
@@ -218,7 +217,7 @@ class Follow {
 					'page' => \sanitize_text_field( \wp_unslash( $_GET['page'] ?? '' ) ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 					'tab'  => 'follow',
 				),
-				$this->url
+				$this->base_url
 			)
 		);
 

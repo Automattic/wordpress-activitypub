@@ -1,11 +1,14 @@
 <?php
 /**
- * Admin header template.
+ * Blog follow template.
  *
  * @package Activitypub
  */
 
-$follow = new \Activitypub\WP_Admin\Follow();
+$follow = new Activitypub\WP_Admin\Follow(
+	Activitypub\Collection\Actors::BLOG_USER_ID,
+	admin_url( 'options-general.php' )
+);
 ?>
 
 <div class="activitypub-settings activitypub-settings-page hide-if-no-js">

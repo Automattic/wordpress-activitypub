@@ -364,7 +364,7 @@ class Settings {
 				);
 				$settings_tabs['follow']    = array(
 					'label'    => __( 'Follow', 'activitypub' ),
-					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/follow.php',
+					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-follow.php',
 				);
 			}
 		}
@@ -402,7 +402,7 @@ class Settings {
 				$tab                        = 'following';
 				$settings_tabs['following'] = array(
 					'label'    => __( 'Following', 'activitypub' ),
-					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/follow.php',
+					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-follow.php',
 				);
 				break;
 			default:

@@ -52,7 +52,13 @@
 	position: relative;
 }
 
-.activitypub-settings .activitypub-follow-me-block-wrapper p.submit {
+.activitypub-settings .activitypub-follow-me-block-wrapper,
+.users_page_activitypub-follow .activitypub-follow-me-block-wrapper {
+	max-width: 800px;
+}
+
+.activitypub-settings .activitypub-follow-me-block-wrapper p.submit,
+.users_page_activitypub-follow .activitypub-follow-me-block-wrapper p.submit {
 	margin: 0;
 	padding: 0;
 }
@@ -127,11 +133,6 @@ summary {
 	cursor: pointer;
 	text-decoration: underline;
 	color: #2271b1;
-}
-
-.activitypub-profile-search {
-	width: 100%;
-	font-size: 1rem;
 }
 
 .activitypub-settings-accordion {
