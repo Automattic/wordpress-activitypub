@@ -23,6 +23,8 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
  * Following Table-Class.
  */
 class Following extends \WP_List_Table {
+	use Table;
+
 	/**
 	 * User ID.
 	 *
@@ -120,40 +122,45 @@ class Following extends \WP_List_Table {
 					}
 				}
 				break;
+			case 'follow':
+				if ( ! isset( $_POST['activitypub-profile'], $_POST['_wpnonce'] ) ) {
+					return;
+				}
 
+				$nonce = \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) );
+				if ( ! \wp_verify_nonce( $nonce, 'activitypub-follow-nonce' ) ) {
+					return;
+				}
+
+				$profile = \sanitize_text_field( \wp_unslash( $_POST['activitypub-profile'] ) );
+
+				$post = Actors::fetch_remote_by_uri( $profile );
+
+				if ( ! \is_wp_error( $post ) ) {
+					$result = Following_Collection::follow( $post, $this->user_id );
+					if ( \is_wp_error( $result ) ) {
+						$query = array(
+							'updated' => true,
+							'action'  => 'followed',
+							'error'   => $post->get_error_message(),
+						);
+					} else {
+						$query = array(
+							'updated' => true,
+							'action'  => 'followed',
+						);
+					}
+				} else {
+					$query = array(
+						'updated' => true,
+						'action'  => 'followed',
+					);
+				}
+
+				\wp_safe_redirect( \add_query_arg( $query ) );
+				break;
 			default:
 				break;
-		}
-	}
-
-	/**
-	 * Process admin notices based on query parameters.
-	 */
-	public function process_admin_notices() {
-		if ( isset( $_REQUEST['updated'] ) && 'true' === $_REQUEST['updated'] && ! empty( $_REQUEST['action'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$message = '';
-			switch ( $_REQUEST['action'] ) { // phpcs:ignore WordPress.Security.NonceVerification
-				case 'deleted':
-					$message = \__( 'Account unfollowed.', 'activitypub' );
-					break;
-				case 'all_deleted':
-					$count = \absint( $_REQUEST['count'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
-					/* translators: %d: Number of accounts unfollowed. */
-					$message = \_n( '%d account unfollowed.', '%d accounts unfollowed.', $count, 'activitypub' );
-					$message = \sprintf( $message, \number_format_i18n( $count ) );
-					break;
-			}
-
-			if ( ! empty( $message ) ) {
-				\wp_admin_notice(
-					$message,
-					array(
-						'type'        => 'success',
-						'dismissible' => true,
-						'id'          => 'message',
-					)
-				);
-			}
 		}
 	}
 
@@ -422,78 +429,6 @@ class Following extends \WP_List_Table {
 			\esc_attr( \gmdate( 'c', $modified ) ),
 			\esc_html( \gmdate( \get_option( 'date_format' ), $modified ) )
 		);
-	}
-
-	/**
-	 * Process action.
-	 */
-	public function process_action() {
-		switch ( $this->current_action() ) {
-			case 'delete':
-				if ( ! isset( $_REQUEST['following'], $_REQUEST['_wpnonce'] ) ) {
-					return;
-				}
-
-				$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
-				if ( ! \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-					return;
-				}
-
-				if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
-					return;
-				}
-
-				$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
-
-				foreach ( $following as $actor_id ) {
-					$actor = Actors::get_remote_by_uri( $actor_id );
-					if ( \is_wp_error( $actor ) ) {
-						continue;
-					}
-					Following_Collection::unfollow( $actor, $this->user_id );
-				}
-				break;
-
-			case 'follow':
-				if ( ! isset( $_POST['activitypub-profile'], $_POST['_wpnonce'] ) ) {
-					return;
-				}
-
-				$nonce = \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) );
-				if ( ! \wp_verify_nonce( $nonce, 'activitypub-follow-nonce' ) ) {
-					return;
-				}
-
-				$profile = \sanitize_text_field( \wp_unslash( $_POST['activitypub-profile'] ) );
-
-				$post = Actors::fetch_remote_by_uri( $profile );
-
-				if ( ! \is_wp_error( $post ) ) {
-					$result = Following_Collection::follow( $post, $this->user_id );
-					if ( \is_wp_error( $result ) ) {
-						$query = array(
-							'updated' => true,
-							'action'  => 'followed',
-							'error'   => $post->get_error_message(),
-						);
-					} else {
-						$query = array(
-							'updated' => true,
-							'action'  => 'followed',
-						);
-					}
-				} else {
-					$query = array(
-						'updated' => true,
-						'action'  => 'followed',
-					);
-				}
-
-				\wp_safe_redirect( \add_query_arg( $query ) );
-				break;
-			default:
-				break;
-		}
 	}
 
 	/**
