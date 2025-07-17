@@ -46,6 +46,7 @@ class Following extends \WP_List_Table {
 		);
 
 		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
+		\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 	}
 
 	/**
@@ -112,6 +113,13 @@ class Following extends \WP_List_Table {
 
 		\wp_safe_redirect( $redirect_to );
 		exit;
+	}
+
+	/**
+	 * Process admin notices based on query parameters.
+	 */
+	public function process_admin_notices() {
+		\settings_errors( 'activitypub' );
 	}
 
 	/**
