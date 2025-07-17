@@ -118,30 +118,36 @@ class Following extends \WP_List_Table {
 	 * Process admin notices based on query parameters.
 	 */
 	public function process_admin_notices() {
-		if ( isset( $_REQUEST['updated'] ) && 'true' === $_REQUEST['updated'] && ! empty( $_REQUEST['action'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$message = '';
-			switch ( $_REQUEST['action'] ) { // phpcs:ignore WordPress.Security.NonceVerification
-				case 'deleted':
-					$message = \__( 'Account unfollowed.', 'activitypub' );
-					break;
-				case 'all_deleted':
-					$count = \absint( $_REQUEST['count'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
-					/* translators: %d: Number of accounts unfollowed. */
-					$message = \_n( '%d account unfollowed.', '%d accounts unfollowed.', $count, 'activitypub' );
-					$message = \sprintf( $message, \number_format_i18n( $count ) );
-					break;
-			}
+		if (
+			! isset( $_REQUEST['updated'] ) || // phpcs:ignore WordPress.Security.NonceVerification
+			! in_array( $_REQUEST['updated'], array( 'true', 'false' ), true ) || // phpcs:ignore WordPress.Security.NonceVerification
+			! empty( $_REQUEST['action'] ) // phpcs:ignore WordPress.Security.NonceVerification
+		) {
+			return;
+		}
 
-			if ( ! empty( $message ) ) {
-				\wp_admin_notice(
-					$message,
-					array(
-						'type'        => 'success',
-						'dismissible' => true,
-						'id'          => 'message',
-					)
-				);
-			}
+		$message = '';
+		switch ( $_REQUEST['action'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+			case 'deleted':
+				$message = \__( 'Account unfollowed.', 'activitypub' );
+				break;
+			case 'all_deleted':
+				$count = \absint( $_REQUEST['count'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
+				/* translators: %d: Number of accounts unfollowed. */
+				$message = \_n( '%d account unfollowed.', '%d accounts unfollowed.', $count, 'activitypub' );
+				$message = \sprintf( $message, \number_format_i18n( $count ) );
+				break;
+		}
+
+		if ( ! empty( $message ) ) {
+			\wp_admin_notice(
+				$message,
+				array(
+					'type'        => 'true' === $_REQUEST['updated'] ? 'success' : 'error', // phpcs:ignore WordPress.Security.NonceVerification
+					'dismissible' => true,
+					'id'          => 'message',
+				)
+			);
 		}
 	}
 
