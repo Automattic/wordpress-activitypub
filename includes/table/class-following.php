@@ -114,16 +114,16 @@ class Following extends \WP_List_Table {
 				}
 				break;
 			case 'follow':
-				if ( ! isset( $_POST['activitypub-profile'], $_POST['_wpnonce'] ) ) {
+				if ( ! isset( $_REQUEST['activitypub-profile'], $_REQUEST['_wpnonce'] ) ) {
 					return;
 				}
 
-				$nonce = \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) );
+				$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
 				if ( ! \wp_verify_nonce( $nonce, 'activitypub-follow-nonce' ) ) {
 					return;
 				}
 
-				$profile = \sanitize_text_field( \wp_unslash( $_POST['activitypub-profile'] ) );
+				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
 
 				$post = Actors::fetch_remote_by_uri( $profile );
 
