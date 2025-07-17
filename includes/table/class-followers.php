@@ -57,8 +57,21 @@ class Followers extends \WP_List_Table {
 			return;
 		}
 
+		if ( ! $this->current_action() ) {
+			return;
+		}
+
+		$redirect_to = \add_query_arg(
+			array(
+				'settings-updated' => true,  // Tell WordPress to load settings errors transient.
+				'action'           => false, // Remove action parameter to prevent redirect loop.
+			)
+		);
+
 		switch ( $this->current_action() ) {
 			case 'delete':
+				$redirect_to = \remove_query_arg( array( 'follower', 'followers' ), $redirect_to );
+
 				// Handle single follower deletion.
 				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
 					$follower = \absint( $_GET['follower'] );
@@ -67,13 +80,7 @@ class Followers extends \WP_List_Table {
 					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
 						Follower_Collection::remove( $follower, $this->user_id );
 
-						$redirect_args = array(
-							'updated' => 'true',
-							'action'  => 'deleted',
-						);
-
-						\wp_safe_redirect( \add_query_arg( $redirect_args, \remove_query_arg( array( 'follower' ) ) ) );
-						exit;
+						\add_settings_error( 'activitypub', 'follower_deleted', \__( 'Follower deleted.', 'activitypub' ), 'success' );
 					}
 				}
 
@@ -87,14 +94,12 @@ class Followers extends \WP_List_Table {
 							Follower_Collection::remove( $follower, $this->user_id );
 						}
 
-						$redirect_args = array(
-							'updated' => 'true',
-							'action'  => 'all_deleted',
-							'count'   => \count( $followers ),
-						);
+						$count = \count( $followers );
+						/* translators: %d: Number of followers deleted. */
+						$message = \_n( '%d follower deleted.', '%d followers deleted.', $count, 'activitypub' );
+						$message = \sprintf( $message, \number_format_i18n( $count ) );
 
-						\wp_safe_redirect( \add_query_arg( $redirect_args, \remove_query_arg( array( 'followers' ) ) ) );
-						exit;
+						\add_settings_error( 'activitypub', 'followers_deleted', $message, 'success' );
 					}
 				}
 				break;
@@ -102,37 +107,18 @@ class Followers extends \WP_List_Table {
 			default:
 				break;
 		}
+
+		\set_transient( 'settings_errors', get_settings_errors(), 30 ); // 30 seconds.
+
+		\wp_safe_redirect( $redirect_to );
+		exit;
 	}
 
 	/**
 	 * Process admin notices based on query parameters.
 	 */
 	public function process_admin_notices() {
-		if ( isset( $_REQUEST['updated'] ) && 'true' === $_REQUEST['updated'] && ! empty( $_REQUEST['action'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$message = '';
-			switch ( $_REQUEST['action'] ) { // phpcs:ignore WordPress.Security.NonceVerification
-				case 'deleted':
-					$message = \__( 'Follower deleted.', 'activitypub' );
-					break;
-				case 'all_deleted':
-					$count = \absint( $_REQUEST['count'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
-					/* translators: %d: Number of followers deleted. */
-					$message = \_n( '%d follower deleted.', '%d followers deleted.', $count, 'activitypub' );
-					$message = \sprintf( $message, \number_format_i18n( $count ) );
-					break;
-			}
-
-			if ( ! empty( $message ) ) {
-				\wp_admin_notice(
-					$message,
-					array(
-						'type'        => 'success',
-						'dismissible' => true,
-						'id'          => 'message',
-					)
-				);
-			}
-		}
+		\settings_errors( 'activitypub' );
 	}
 
 	/**
