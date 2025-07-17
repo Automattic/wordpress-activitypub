@@ -61,7 +61,7 @@ class Following extends \WP_List_Table {
 			case 'delete':
 				// Handle single follower deletion.
 				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
-					$follower = \esc_url_raw( \wp_unslash( $_GET['follower'] ) );
+					$follower = \absint( $_GET['follower'] );
 					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
@@ -82,7 +82,7 @@ class Following extends \WP_List_Table {
 					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-						$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
+						$following = array_map( 'absint', $_REQUEST['following'] );
 
 						foreach ( $following as $post_id ) {
 							Following_Collection::unfollow( $post_id, $this->user_id );
@@ -419,10 +419,10 @@ class Following extends \WP_List_Table {
 					\add_query_arg(
 						array(
 							'action'   => 'delete',
-							'follower' => $item['identifier'],
+							'follower' => $item['id'],
 						)
 					),
-					'delete-follower_' . $item['identifier']
+					'delete-follower_' . $item['id']
 				),
 				/* translators: %s: username. */
 				\esc_attr( \sprintf( \__( 'Unfollow %s', 'activitypub' ), $item['username'] ) ),
