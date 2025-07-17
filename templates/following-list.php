@@ -17,7 +17,7 @@ global $following_list_table;
 $_search = \sanitize_text_field( \wp_unslash( $_REQUEST['s'] ?? '' ) );
 $_page   = \sanitize_text_field( \wp_unslash( $_REQUEST['page'] ?? '' ) );
 $_tab    = \sanitize_text_field( \wp_unslash( $_REQUEST['tab'] ?? '' ) );
-$_status = \sanitize_text_field( \wp_unslash( $_REQUEST['status'] ?? 'accepted' ) );
+$_status = \sanitize_text_field( \wp_unslash( $_REQUEST['status'] ?? '' ) );
 
 $following_list_table->prepare_items();
 ?>
@@ -39,7 +39,9 @@ $following_list_table->prepare_items();
 	<form method="get">
 		<input type="hidden" name="page" value="<?php echo esc_attr( $_page ); ?>" />
 		<input type="hidden" name="tab" value="<?php echo esc_attr( $_tab ); ?>" />
-		<input type="hidden" name="status" value="<?php echo esc_attr( $_status ); ?>" />
+		<?php if ( ! empty( $_status ) ) : ?>
+			<input type="hidden" name="status" value="<?php echo esc_attr( $_status ); ?>" />
+		<?php endif; ?>
 		<?php $following_list_table->search_box( esc_html__( 'Search Followings', 'activitypub' ), 'search' ); ?>
 	</form>
 
