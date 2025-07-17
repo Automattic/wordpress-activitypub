@@ -46,7 +46,6 @@ $following_list_table->prepare_items();
 	<form method="post">
 		<input type="hidden" name="page" value="<?php echo esc_attr( $_page ); ?>" />
 		<input type="hidden" name="tab" value="<?php echo esc_attr( $_tab ); ?>" />
-		<?php wp_nonce_field( 'bulk-' . $following_list_table->_args['plural'] ); ?>
 		<?php $following_list_table->display(); ?>
 	</form>
 	<div class="form-wrap edit-term-notes">
