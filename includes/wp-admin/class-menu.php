@@ -28,8 +28,7 @@ class Menu {
 
 		\add_action( 'load-' . $settings_page, array( Settings::class, 'add_settings_help_tab' ) );
 		\add_action( 'load-users.php', array( Settings::class, 'add_users_help_tab' ) );
-		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_followers_list_table' ) );
-		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_following_list_table' ) );
+		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_settings_list_tables' ) );
 		\add_action( 'load-' . $settings_page, array( Screen_Options::class, 'add_settings_list_options' ) );
 
 		// User has to be able to publish posts.

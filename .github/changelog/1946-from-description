@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Table actions are now faster by using the Custom Post Type ID instead of the remote user URI, thanks to the unified Actor Model.

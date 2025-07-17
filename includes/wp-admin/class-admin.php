@@ -88,22 +88,6 @@ class Admin {
 	}
 
 	/**
-	 * Display one admin menu notice about configuration problems or conflicts.
-	 *
-	 * @param string $admin_notice The notice to display.
-	 * @param string $level        The level of the notice (error, warning, success, info).
-	 */
-	private static function show_admin_notice( $admin_notice, $level ) {
-		?>
-
-		<div class="notice notice-<?php echo esc_attr( $level ); ?>">
-			<p><?php echo wp_kses( $admin_notice, 'data' ); ?></p>
-		</div>
-
-		<?php
-	}
-
-	/**
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
@@ -120,6 +104,22 @@ class Admin {
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php' );
+		}
+	}
+
+	/**
+	 * Creates the followers and following list tables in ActivityPub settings.
+	 */
+	public static function add_settings_list_tables() {
+		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		switch ( $tab ) {
+			case 'followers':
+				self::add_followers_list_table();
+				break;
+			case 'following':
+				self::add_following_list_table();
+				break;
 		}
 	}
 

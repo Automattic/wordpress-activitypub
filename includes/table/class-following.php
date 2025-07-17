@@ -63,23 +63,18 @@ class Following extends \WP_List_Table {
 			case 'delete':
 				// Handle single follower deletion.
 				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
-					$follower = \esc_url_raw( \wp_unslash( $_GET['follower'] ) );
+					$follower = \absint( $_GET['follower'] );
 					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
-						$actor = Actors::get_remote_by_uri( $follower );
-						if ( \is_wp_error( $actor ) ) {
-							break;
-						}
-
-						Following_Collection::unfollow( $actor, $this->user_id );
+						Following_Collection::unfollow( $follower, $this->user_id );
 
 						$redirect_args = array(
 							'updated' => 'true',
 							'action'  => 'deleted',
 						);
 
-						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
+						\wp_safe_redirect( \add_query_arg( $redirect_args, \remove_query_arg( array( 'follower' ) ) ) );
 						exit;
 					}
 				}
@@ -89,14 +84,10 @@ class Following extends \WP_List_Table {
 					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-						$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
+						$following = array_map( 'absint', \wp_unslash( $_REQUEST['following'] ) );
 
-						foreach ( $following as $actor_id ) {
-							$actor = Actors::get_remote_by_uri( $actor_id );
-							if ( \is_wp_error( $actor ) ) {
-								continue;
-							}
-							Following_Collection::unfollow( $actor, $this->user_id );
+						foreach ( $following as $post_id ) {
+							Following_Collection::unfollow( $post_id, $this->user_id );
 						}
 
 						$redirect_args = array(
@@ -105,7 +96,7 @@ class Following extends \WP_List_Table {
 							'count'   => \count( $following ),
 						);
 
-						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
+						\wp_safe_redirect( \add_query_arg( $redirect_args, \remove_query_arg( array( 'following' ) ) ) );
 						exit;
 					}
 				}
@@ -337,7 +328,7 @@ class Following extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', \esc_attr( $item['identifier'] ) );
+		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', \esc_attr( $item['id'] ) );
 	}
 
 	/**
@@ -422,10 +413,10 @@ class Following extends \WP_List_Table {
 					\add_query_arg(
 						array(
 							'action'   => 'delete',
-							'follower' => $item['identifier'],
+							'follower' => $item['id'],
 						)
 					),
-					'delete-follower_' . $item['identifier']
+					'delete-follower_' . $item['id']
 				),
 				/* translators: %s: username. */
 				\esc_attr( \sprintf( \__( 'Unfollow %s', 'activitypub' ), $item['username'] ) ),
