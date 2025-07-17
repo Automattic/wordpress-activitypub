@@ -54,7 +54,7 @@ class Accept {
 			return;
 		}
 
-		$actor_post = Actors::get_remote_by_uri( object_to_uri( $accept['object']['actor'] ) );
+		$actor_post = Actors::get_remote_by_uri( object_to_uri( $accept['object']['object'] ) );
 
 		if ( \is_wp_error( $actor_post ) ) {
 			return;

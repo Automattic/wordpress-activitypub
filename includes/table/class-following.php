@@ -35,6 +35,8 @@ class Following extends \WP_List_Table {
 			$this->user_id = Actors::BLOG_USER_ID;
 		} else {
 			$this->user_id = \get_current_user_id();
+
+			\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 		}
 
 		parent::__construct(
@@ -44,6 +46,81 @@ class Following extends \WP_List_Table {
 				'ajax'     => false,
 			)
 		);
+
+		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
+	}
+
+	/**
+	 * Process action.
+	 */
+	public function process_action() {
+		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
+			return;
+		}
+
+		if ( ! $this->current_action() ) {
+			return;
+		}
+
+		$redirect_to = \add_query_arg(
+			array(
+				'settings-updated' => true,  // Tell WordPress to load settings errors transient.
+				'action'           => false, // Remove action parameter to prevent redirect loop.
+			)
+		);
+
+		switch ( $this->current_action() ) {
+			case 'delete':
+				$redirect_to = \remove_query_arg( array( 'follower', 'following' ), $redirect_to );
+
+				// Handle single follower deletion.
+				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
+					$follower = \absint( $_GET['follower'] );
+					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
+						Following_Collection::unfollow( $follower, $this->user_id );
+
+						\add_settings_error( 'activitypub', 'follower_deleted', \__( 'Account unfollowed.', 'activitypub' ), 'success' );
+					}
+				}
+
+				// Handle bulk actions.
+				if ( isset( $_REQUEST['following'], $_REQUEST['_wpnonce'] ) ) {
+					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+						$following = array_map( 'absint', \wp_unslash( $_REQUEST['following'] ) );
+
+						foreach ( $following as $post_id ) {
+							Following_Collection::unfollow( $post_id, $this->user_id );
+						}
+
+						$count = \count( $following );
+						/* translators: %d: Number of accounts unfollowed. */
+						$message = \_n( '%d account unfollowed.', '%d accounts unfollowed.', $count, 'activitypub' );
+						$message = \sprintf( $message, \number_format_i18n( $count ) );
+
+						\add_settings_error( 'activitypub', 'followers_deleted', $message, 'success' );
+					}
+				}
+				break;
+
+			default:
+				break;
+		}
+
+		\set_transient( 'settings_errors', get_settings_errors(), 30 ); // 30 seconds.
+
+		\wp_safe_redirect( $redirect_to );
+		exit;
+	}
+
+	/**
+	 * Process admin notices based on query parameters.
+	 */
+	public function process_admin_notices() {
+		\settings_errors( 'activitypub' );
 	}
 
 	/**
@@ -77,17 +154,10 @@ class Following extends \WP_List_Table {
 	 * Prepare items.
 	 */
 	public function prepare_items() {
-		$columns = $this->get_columns();
-		$hidden  = array();
-		$status  = Following_Collection::ALL;
-
-		$this->process_action();
-		$this->_column_headers = array( $columns, $hidden, $this->get_sortable_columns() );
-
+		$status   = Following_Collection::ALL;
 		$page_num = $this->get_pagenum();
-		$per_page = 20;
-
-		$args = array();
+		$per_page = $this->get_items_per_page( 'activitypub_following_per_page' );
+		$args     = array();
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['orderby'] ) ) {
@@ -135,7 +205,7 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor = Actors::get_actor( $following->ID );
+			$actor = Actors::get_actor( $following );
 
 			$this->items[] = array(
 				'id'         => $following->ID,
@@ -251,7 +321,7 @@ class Following extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', \esc_attr( $item['identifier'] ) );
+		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', \esc_attr( $item['id'] ) );
 	}
 
 	/**
@@ -296,36 +366,6 @@ class Following extends \WP_List_Table {
 	}
 
 	/**
-	 * Process action.
-	 */
-	public function process_action() {
-		if ( ! isset( $_REQUEST['following'], $_REQUEST['_wpnonce'] ) ) {
-			return;
-		}
-
-		$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
-		if ( ! \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-			return;
-		}
-
-		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
-			return;
-		}
-
-		if ( $this->current_action() === 'delete' ) {
-			$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
-
-			foreach ( $following as $actor_id ) {
-				$actor = Actors::get_remote_by_uri( $actor_id );
-				if ( \is_wp_error( $actor ) ) {
-					continue;
-				}
-				Following_Collection::unfollow( $actor, $this->user_id );
-			}
-		}
-	}
-
-	/**
 	 * Message to be displayed when there are no followings.
 	 */
 	public function no_items() {
@@ -344,5 +384,39 @@ class Following extends \WP_List_Table {
 		);
 		$this->single_row_columns( $item );
 		\printf( "</tr>\n" );
+	}
+
+	/**
+	 * Handles the row actions for each following item.
+	 *
+	 * @param array  $item        The current following item.
+	 * @param string $column_name The current column name.
+	 * @param string $primary     The primary column name.
+	 * @return string HTML for the row actions.
+	 */
+	protected function handle_row_actions( $item, $column_name, $primary ) {
+		if ( $column_name !== $primary ) {
+			return '';
+		}
+
+		$actions = array(
+			'unfollow' => sprintf(
+				'<a href="%s" aria-label="%s">%s</a>',
+				\wp_nonce_url(
+					\add_query_arg(
+						array(
+							'action'   => 'delete',
+							'follower' => $item['id'],
+						)
+					),
+					'delete-follower_' . $item['id']
+				),
+				/* translators: %s: username. */
+				\esc_attr( \sprintf( \__( 'Unfollow %s', 'activitypub' ), $item['username'] ) ),
+				\esc_html__( 'Unfollow', 'activitypub' )
+			),
+		);
+
+		return $this->row_actions( $actions );
 	}
 }

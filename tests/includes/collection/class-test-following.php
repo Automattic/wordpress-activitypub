@@ -360,32 +360,32 @@ class Test_Following extends \WP_UnitTestCase {
 
 		$accept_1 = array(
 			'object' => array(
-				'id'    => $outbox_item_1->guid,
-				'actor' => 'https://example.com/actor/1',
+				'id'     => $outbox_item_1->guid,
+				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_2 = array(
 			'object' => array(
-				'id'    => $outbox_item_2->guid,
-				'actor' => 'https://example.com/actor/1',
+				'id'     => $outbox_item_2->guid,
+				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_3 = array(
 			'object' => array(
-				'id'    => $outbox_item_3->guid,
-				'actor' => 'https://example.com/actor/1',
+				'id'     => $outbox_item_3->guid,
+				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_4 = array(
 			'object' => array(
-				'id'    => $outbox_item_4->guid,
-				'actor' => 'https://example.com/actor/1',
+				'id'     => $outbox_item_4->guid,
+				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_5 = array(
 			'object' => array(
-				'id'    => $outbox_item_5->guid,
-				'actor' => 'https://example.com/actor/1',
+				'id'     => $outbox_item_5->guid,
+				'object' => 'https://example.com/actor/1',
 			),
 		);
 

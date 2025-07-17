@@ -85,8 +85,13 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'missing_signature', 'No Signature or Authorization header present.' );
 		}
 
-		$header     = $headers['signature'] ?? $headers['authorization'];
-		$parsed     = $this->parse_signature_header( $header[0] );
+		$header = $headers['signature'] ?? $headers['authorization'];
+		$parsed = $this->parse_signature_header( $header[0] );
+
+		if ( empty( $parsed['keyId'] ) ) {
+			return new \WP_Error( 'activitypub_signature', 'No Key ID present.' );
+		}
+
 		$public_key = Actors::get_remote_key( $parsed['keyId'] );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;

@@ -196,8 +196,8 @@ class Outbox {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				esc_sql( $guid ),
-				esc_sql( self::POST_TYPE )
+				\esc_url( $guid ),
+				self::POST_TYPE
 			)
 		);
 

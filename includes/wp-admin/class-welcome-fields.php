@@ -139,7 +139,11 @@ class Welcome_Fields {
 		$count = 0;
 
 		if ( isset( $wp_filter['activitypub_onboarding_steps'] ) ) {
-			$count = \count( $wp_filter['activitypub_onboarding_steps']->callbacks );
+			$pattern = '/^' . \preg_quote( self::class, '/' ) . '/';
+			foreach ( $wp_filter['activitypub_onboarding_steps']->callbacks as $callbacks ) {
+				$matching_keys = \preg_grep( $pattern, \array_keys( $callbacks ) );
+				$count        += \count( $matching_keys );
+			}
 		}
 
 		return $count;

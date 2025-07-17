@@ -35,6 +35,8 @@ class Followers extends \WP_List_Table {
 			$this->user_id = Actors::BLOG_USER_ID;
 		} else {
 			$this->user_id = \get_current_user_id();
+
+			\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 		}
 
 		parent::__construct(
@@ -44,6 +46,80 @@ class Followers extends \WP_List_Table {
 				'ajax'     => false,
 			)
 		);
+
+		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
+	}
+
+	/**
+	 * Process action.
+	 */
+	public function process_action() {
+		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
+			return;
+		}
+
+		if ( ! $this->current_action() ) {
+			return;
+		}
+
+		$redirect_to = \add_query_arg(
+			array(
+				'settings-updated' => true,  // Tell WordPress to load settings errors transient.
+				'action'           => false, // Remove action parameter to prevent redirect loop.
+			)
+		);
+
+		switch ( $this->current_action() ) {
+			case 'delete':
+				$redirect_to = \remove_query_arg( array( 'follower', 'followers' ), $redirect_to );
+
+				// Handle single follower deletion.
+				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
+					$follower = \absint( $_GET['follower'] );
+					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
+						Follower_Collection::remove( $follower, $this->user_id );
+
+						\add_settings_error( 'activitypub', 'follower_deleted', \__( 'Follower deleted.', 'activitypub' ), 'success' );
+					}
+				}
+
+				// Handle bulk actions.
+				if ( isset( $_REQUEST['followers'], $_REQUEST['_wpnonce'] ) ) {
+					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+						$followers = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ) );
+						foreach ( $followers as $follower ) {
+							Follower_Collection::remove( $follower, $this->user_id );
+						}
+
+						$count = \count( $followers );
+						/* translators: %d: Number of followers deleted. */
+						$message = \_n( '%d follower deleted.', '%d followers deleted.', $count, 'activitypub' );
+						$message = \sprintf( $message, \number_format_i18n( $count ) );
+
+						\add_settings_error( 'activitypub', 'followers_deleted', $message, 'success' );
+					}
+				}
+				break;
+
+			default:
+				break;
+		}
+
+		\set_transient( 'settings_errors', get_settings_errors(), 30 ); // 30 seconds.
+
+		\wp_safe_redirect( $redirect_to );
+		exit;
+	}
+
+	/**
+	 * Process admin notices based on query parameters.
+	 */
+	public function process_admin_notices() {
+		\settings_errors( 'activitypub' );
 	}
 
 	/**
@@ -77,16 +153,9 @@ class Followers extends \WP_List_Table {
 	 * Prepare items.
 	 */
 	public function prepare_items() {
-		$columns = $this->get_columns();
-		$hidden  = array();
-
-		$this->process_action();
-		$this->_column_headers = array( $columns, $hidden, $this->get_sortable_columns() );
-
 		$page_num = $this->get_pagenum();
-		$per_page = 20;
-
-		$args = array();
+		$per_page = $this->get_items_per_page( 'activitypub_followers_per_page' );
+		$args     = array();
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['orderby'] ) ) {
@@ -125,6 +194,7 @@ class Followers extends \WP_List_Table {
 		foreach ( $followers as $follower ) {
 			$actor         = Actors::get_actor( $follower );
 			$this->items[] = array(
+				'id'         => $follower->ID,
 				'icon'       => $actor->get_icon()['url'] ?? '',
 				'post_title' => $actor->get_name(),
 				'username'   => $actor->get_preferred_username(),
@@ -202,7 +272,7 @@ class Followers extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="followers[]" value="%s" />', \esc_attr( $item['identifier'] ) );
+		return \sprintf( '<input type="checkbox" name="followers[]" value="%s" />', \esc_attr( $item['id'] ) );
 	}
 
 	/**
@@ -237,35 +307,43 @@ class Followers extends \WP_List_Table {
 	}
 
 	/**
-	 * Process action.
-	 */
-	public function process_action() {
-		if ( ! isset( $_REQUEST['followers'], $_REQUEST['_wpnonce'] ) ) {
-			return;
-		}
-
-		$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
-		if ( ! \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-			return;
-		}
-
-		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
-			return;
-		}
-
-		if ( $this->current_action() === 'delete' ) {
-			$followers = \array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['followers'] ) );
-
-			foreach ( $followers as $follower ) {
-				Follower_Collection::remove_follower( $this->user_id, $follower );
-			}
-		}
-	}
-
-	/**
 	 * Message to be displayed when there are no followers.
 	 */
 	public function no_items() {
 		\esc_html_e( 'No followers found.', 'activitypub' );
+	}
+
+	/**
+	 * Handles the row actions for each follower item.
+	 *
+	 * @param array  $item        The current follower item.
+	 * @param string $column_name The current column name.
+	 * @param string $primary     The primary column name.
+	 * @return string HTML for the row actions.
+	 */
+	protected function handle_row_actions( $item, $column_name, $primary ) {
+		if ( $column_name !== $primary ) {
+			return '';
+		}
+
+		$actions = array(
+			'delete' => sprintf(
+				'<a href="%s" aria-label="%s">%s</a>',
+				\wp_nonce_url(
+					\add_query_arg(
+						array(
+							'action'   => 'delete',
+							'follower' => $item['id'],
+						)
+					),
+					'delete-follower_' . $item['id']
+				),
+				/* translators: %s: username. */
+				\esc_attr( \sprintf( \__( 'Delete %s', 'activitypub' ), $item['username'] ) ),
+				\esc_html__( 'Delete', 'activitypub' )
+			),
+		);
+
+		return $this->row_actions( $actions );
 	}
 }
