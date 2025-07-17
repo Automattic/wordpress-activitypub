@@ -33,4 +33,3 @@ $args = wp_parse_args( $args ?? array() );
 		</nav>
 	</div>
 </div>
-<hr class="wp-header-end">

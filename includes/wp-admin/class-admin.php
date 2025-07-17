@@ -88,22 +88,6 @@ class Admin {
 	}
 
 	/**
-	 * Display one admin menu notice about configuration problems or conflicts.
-	 *
-	 * @param string $admin_notice The notice to display.
-	 * @param string $level        The level of the notice (error, warning, success, info).
-	 */
-	private static function show_admin_notice( $admin_notice, $level ) {
-		?>
-
-		<div class="notice notice-<?php echo esc_attr( $level ); ?>">
-			<p><?php echo wp_kses( $admin_notice, 'data' ); ?></p>
-		</div>
-
-		<?php
-	}
-
-	/**
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {

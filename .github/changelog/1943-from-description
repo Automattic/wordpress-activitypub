@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Prevent WordPress from loading all admin notices twice on ActivityPub settings pages.
