@@ -33,7 +33,7 @@ $following_list_table->prepare_items();
 	endif;
 	?>
 
-	<hr class="wp-header-end">
+	<div class="clear"></div>
 
 	<?php $following_list_table->views(); ?>
 	<form method="get">

@@ -32,7 +32,7 @@ $followers_list_table->prepare_items();
 	endif;
 	?>
 
-	<hr class="wp-header-end">
+	<div class="clear"></div>
 
 	<?php $followers_list_table->views(); ?>
 
