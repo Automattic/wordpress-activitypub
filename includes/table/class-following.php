@@ -82,7 +82,7 @@ class Following extends \WP_List_Table {
 					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-						$following = array_map( 'absint', $_REQUEST['following'] );
+						$following = array_map( 'absint', \wp_unslash( $_REQUEST['following'] ) );
 
 						foreach ( $following as $post_id ) {
 							Following_Collection::unfollow( $post_id, $this->user_id );
