@@ -47,7 +47,8 @@ class Followers extends \WP_List_Table {
 
 		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
 
-		if ( ! isset( $_GET['tab'] ) || 'followers' === $_GET['tab'] ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		if ( ! isset( $_GET['tab'] ) || 'followers' === \wp_unslash( $_GET['tab'] ) ) {
 			\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 		}
 	}
