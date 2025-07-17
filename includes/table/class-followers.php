@@ -82,7 +82,7 @@ class Followers extends \WP_List_Table {
 					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-						$followers = \array_map( 'absint', $_REQUEST['followers'] );
+						$followers = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ) );
 						foreach ( $followers as $follower ) {
 							Follower_Collection::remove( $follower, $this->user_id );
 						}
