@@ -82,10 +82,12 @@ $following_list_table->prepare_items();
 				<form method="post">
 					<input type="hidden" name="page" value="<?php echo esc_attr( $_page ); ?>" />
 					<input type="hidden" name="tab" value="<?php echo esc_attr( $_tab ); ?>" />
-					<?php wp_nonce_field( 'bulk-' . $following_list_table->_args['plural'] ); ?>
 					<?php $following_list_table->display(); ?>
 				</form>
 			</div>
 		</div>
-	</div>
+    <div class="form-wrap edit-term-notes">
+      <strong><?php esc_html_e( 'About Followings', 'activitypub' ); ?></strong>
+      <p class="description"><?php esc_html_e( 'When you follow another author, a follow request is sent on your behalf. If you see &#8220;Pending,&#8221; it means your follow request hasn&#8217;t been accepted yet—so you aren&#8217;t following that author until they approve your request. This is a normal part of the ActivityPub protocol and helps ensure that authors have control over who follows them.', 'activitypub' ); ?></p>
+    </div>
 </div>

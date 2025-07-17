@@ -73,18 +73,18 @@ class Followers extends \WP_List_Table {
 			case 'delete':
 				// Handle single follower deletion.
 				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
-					$follower = \esc_url_raw( \wp_unslash( $_GET['follower'] ) );
+					$follower = \absint( $_GET['follower'] );
 					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
-						Follower_Collection::remove_follower( $this->user_id, $follower );
+						Follower_Collection::remove( $follower, $this->user_id );
 
 						$redirect_args = array(
 							'updated' => 'true',
 							'action'  => 'deleted',
 						);
 
-						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
+						\wp_safe_redirect( \add_query_arg( $redirect_args, \remove_query_arg( array( 'follower' ) ) ) );
 						exit;
 					}
 				}
@@ -94,9 +94,9 @@ class Followers extends \WP_List_Table {
 					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-						$followers = \array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['followers'] ) );
+						$followers = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ) );
 						foreach ( $followers as $follower ) {
-							Follower_Collection::remove_follower( $this->user_id, $follower );
+							Follower_Collection::remove( $follower, $this->user_id );
 						}
 
 						$redirect_args = array(
@@ -105,7 +105,7 @@ class Followers extends \WP_List_Table {
 							'count'   => \count( $followers ),
 						);
 
-						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
+						\wp_safe_redirect( \add_query_arg( $redirect_args, \remove_query_arg( array( 'followers' ) ) ) );
 						exit;
 					}
 				}
@@ -306,7 +306,7 @@ class Followers extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="followers[]" value="%s" />', \esc_attr( $item['identifier'] ) );
+		return \sprintf( '<input type="checkbox" name="followers[]" value="%s" />', \esc_attr( $item['id'] ) );
 	}
 
 	/**
@@ -398,10 +398,10 @@ class Followers extends \WP_List_Table {
 					\add_query_arg(
 						array(
 							'action'   => 'delete',
-							'follower' => $item['identifier'],
+							'follower' => $item['id'],
 						)
 					),
-					'delete-follower_' . $item['identifier']
+					'delete-follower_' . $item['id']
 				),
 				/* translators: %s: username. */
 				\esc_attr( \sprintf( \__( 'Delete %s', 'activitypub' ), $item['username'] ) ),

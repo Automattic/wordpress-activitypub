@@ -67,13 +67,43 @@ class Followers {
 	/**
 	 * Remove a Follower.
 	 *
+	 * @param int $post_id The ID of the remote Actor.
+	 * @param int $user_id The ID of the WordPress User.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function remove( $post_id, $user_id ) {
+		$remote_actor = \get_post( $post_id );
+
+		if ( ! $remote_actor ) {
+			return false;
+		}
+
+		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+
+		/**
+		 * Fires before a Follower is removed.
+		 *
+		 * @param \WP_Post $remote_actor The remote Actor object.
+		 * @param int      $user_id      The ID of the WordPress User.
+		 */
+		\do_action( 'activitypub_followers_pre_remove_follower', $remote_actor, $user_id );
+
+		return \delete_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
+	}
+
+	/**
+	 * Remove a Follower.
+	 *
+	 * @deprecated Use Activitypub\Collection\Followers::remove instead.
+	 *
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_follower( $user_id, $actor ) {
-		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::remove' );
 
 		$remote_actor = self::get_follower( $user_id, $actor );
 
@@ -81,16 +111,7 @@ class Followers {
 			return false;
 		}
 
-		/**
-		 * Fires before a Follower is removed.
-		 *
-		 * @param \WP_Post $remote_actor The remote Actor object.
-		 * @param int      $user_id      The ID of the WordPress User.
-		 * @param string   $actor        The Actor URL.
-		 */
-		\do_action( 'activitypub_followers_pre_remove_follower', $remote_actor, $user_id, $actor );
-
-		return \delete_post_meta( $remote_actor->ID, self::FOLLOWER_META_KEY, $user_id );
+		return self::remove( $remote_actor->ID, $user_id );
 	}
 
 	/**
