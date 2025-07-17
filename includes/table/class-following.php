@@ -9,7 +9,6 @@ namespace Activitypub\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
-use Activitypub\Sanitize;
 
 use function Activitypub\object_to_uri;
 
@@ -21,6 +20,8 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
  * Following Table-Class.
  */
 class Following extends \WP_List_Table {
+	use Actor_List_Table;
+
 	/**
 	 * User ID.
 	 *
@@ -192,7 +193,7 @@ class Following extends \WP_List_Table {
 		}
 
 		if ( isset( $_GET['s'] ) ) {
-			$args['s'] = Sanitize::actor_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$args['s'] = self::sanitize_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		}
 
 		if ( isset( $_GET['status'] ) ) {
