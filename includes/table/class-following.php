@@ -260,7 +260,7 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor     = Actors::get_actor( $following->ID );
+			$actor     = Actors::get_actor( $following );
 			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
 			$webfinger = Webfinger::uri_to_acct( $url );
 
