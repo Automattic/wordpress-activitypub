@@ -40,8 +40,6 @@ class Following extends \WP_List_Table {
 			$this->user_id = \get_current_user_id();
 		}
 
-		$this->process_action();
-
 		parent::__construct(
 			array(
 				'singular' => \__( 'Following', 'activitypub' ),
