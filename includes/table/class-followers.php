@@ -65,7 +65,7 @@ class Followers extends \WP_List_Table {
 					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
-						Follower_Collection::remove_follower( $this->user_id, $follower );
+						Follower_Collection::remove( $follower, $this->user_id );
 
 						$redirect_args = array(
 							'updated' => 'true',
@@ -84,7 +84,7 @@ class Followers extends \WP_List_Table {
 					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
 						$followers = \array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['followers'] ) );
 						foreach ( $followers as $follower ) {
-							Follower_Collection::remove_follower( $this->user_id, $follower );
+							Follower_Collection::remove( $follower, $this->user_id );
 						}
 
 						$redirect_args = array(
@@ -284,7 +284,7 @@ class Followers extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="followers[]" value="%s" />', \esc_attr( $item['identifier'] ) );
+		return \sprintf( '<input type="checkbox" name="followers[]" value="%s" />', \esc_attr( $item['id'] ) );
 	}
 
 	/**

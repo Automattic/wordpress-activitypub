@@ -65,12 +65,7 @@ class Following extends \WP_List_Table {
 					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
-						$actor = Actors::get_remote_by_uri( $follower );
-						if ( \is_wp_error( $actor ) ) {
-							break;
-						}
-
-						Following_Collection::unfollow( $actor, $this->user_id );
+						Following_Collection::unfollow( $follower, $this->user_id );
 
 						$redirect_args = array(
 							'updated' => 'true',
@@ -89,12 +84,8 @@ class Following extends \WP_List_Table {
 					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
 						$following = array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['following'] ) );
 
-						foreach ( $following as $actor_id ) {
-							$actor = Actors::get_remote_by_uri( $actor_id );
-							if ( \is_wp_error( $actor ) ) {
-								continue;
-							}
-							Following_Collection::unfollow( $actor, $this->user_id );
+						foreach ( $following as $post_id ) {
+							Following_Collection::unfollow( $post_id, $this->user_id );
 						}
 
 						$redirect_args = array(
@@ -343,7 +334,7 @@ class Following extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', \esc_attr( $item['identifier'] ) );
+		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', \esc_attr( $item['id'] ) );
 	}
 
 	/**
