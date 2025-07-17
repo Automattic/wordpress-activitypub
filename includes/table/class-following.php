@@ -31,13 +31,6 @@ class Following extends \WP_List_Table {
 	private $user_id;
 
 	/**
-	 * Follow URL.
-	 *
-	 * @var string
-	 */
-	public $follow_url = '';
-
-	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -421,10 +414,10 @@ class Following extends \WP_List_Table {
 		}
 
 		return sprintf(
-			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong>%5$s<br />',
+			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s" target="_blank">%4$s</a></strong>%5$s<br />',
 			\esc_url( $item['icon'] ),
 			\esc_attr( $item['post_title'] ),
-			\esc_url( \add_query_arg( 'id', $item['id'], $this->follow_url ) ),
+			\esc_url( $item['url'] ),
 			\esc_html( $item['username'] ),
 			$status
 		);
@@ -479,7 +472,7 @@ class Following extends \WP_List_Table {
 		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
 			$actor = Actors::fetch_remote_by_uri( $search );
 			if ( ! is_wp_error( $actor ) ) {
-				\printf( ' Do you maybe want to follow %s?', sprintf( '<a href="%s">%s</a>', \esc_url( \add_query_arg( 'id', $actor->ID, $this->follow_url ) ), \esc_html( $actor->post_title ) ) );
+				\printf( ' Do you maybe want to follow %s?', sprintf( '<a href="%s">%s</a>', \esc_url( \add_query_arg( array( 'resource' => $search ) ) ), \esc_html( $actor->post_title ) ) );
 			}
 		}
 	}

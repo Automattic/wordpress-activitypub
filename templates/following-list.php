@@ -51,7 +51,7 @@ $following_list_table->prepare_items();
 						<div class="form-field form-required">
 							<label for="activitypub-profile"><?php echo esc_html__( 'Profile', 'activitypub' ); ?></label>
 							<input type="hidden" name="action" value="follow" />
-							<input name="activitypub-profile" id="activitypub-profile" type="text" value="" size="40" aria-required="true" aria-describedby="activitypub-profile-description" placeholder="@username@domain.tld or https://domain.tld/@username">
+							<input name="activitypub-profile" id="activitypub-profile" type="text" value="<?php echo esc_attr( sanitize_text_field( wp_unslash( $_GET['resource'] ?? '' ) ) ); ?>" size="40" aria-required="true" aria-describedby="activitypub-profile-description" placeholder="@username@domain.tld or https://domain.tld/@username">
 							<p id="activitypub-profile-description">
 								<?php echo esc_html__( 'Paste the WebFinger address or profile URL into the field above and click "Follow".', 'activitypub' ); ?>
 							</p>

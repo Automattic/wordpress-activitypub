@@ -43,10 +43,10 @@ class Followers extends \WP_List_Table {
 	public function __construct() {
 		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
 			$this->user_id    = Actors::BLOG_USER_ID;
-			$this->follow_url = admin_url( 'options-general.php?page=activitypub&tab=follow' );
+			$this->follow_url = admin_url( 'options-general.php?page=activitypub&tab=following' );
 		} else {
 			$this->user_id    = \get_current_user_id();
-			$this->follow_url = admin_url( 'users.php?page=activitypub-follow' );
+			$this->follow_url = admin_url( 'users.php?page=activitypub-following' );
 		}
 
 		parent::__construct(
@@ -317,10 +317,10 @@ class Followers extends \WP_List_Table {
 	 */
 	public function column_username( $item ) {
 		return \sprintf(
-			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong><br />',
+			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s" target="_blank">%4$s</a></strong><br />',
 			\esc_url( $item['icon'] ),
 			\esc_attr( $item['username'] ),
-			\esc_url( \add_query_arg( 'id', $item['id'], $this->follow_url ) ),
+			\esc_url( $item['url'] ),
 			\esc_html( $item['username'] )
 		);
 	}
@@ -373,7 +373,7 @@ class Followers extends \WP_List_Table {
 		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
 			$actor = Actors::fetch_remote_by_uri( $search );
 			if ( ! is_wp_error( $actor ) ) {
-				\printf( ' Do you maybe want to follow %s?', sprintf( '<a href="%s">%s</a>', \esc_url( \add_query_arg( 'id', $actor->ID, $this->follow_url ) ), \esc_html( $actor->post_title ) ) );
+				\printf( ' Do you maybe want to follow %s?', sprintf( '<a href="%s">%s</a>', \esc_url( \add_query_arg( 'resource', $search, $this->follow_url ) ), \esc_html( $actor->post_title ) ) );
 			}
 		}
 	}
