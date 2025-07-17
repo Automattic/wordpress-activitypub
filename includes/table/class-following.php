@@ -108,6 +108,8 @@ class Following extends \WP_List_Table {
 				}
 				break;
 			case 'follow':
+				$redirect_to = \remove_query_arg( array( 's' ), $redirect_to );
+
 				if ( ! isset( $_REQUEST['activitypub-profile'], $_REQUEST['_wpnonce'] ) ) {
 					return;
 				}
@@ -124,24 +126,14 @@ class Following extends \WP_List_Table {
 				if ( ! \is_wp_error( $post ) ) {
 					$result = Following_Collection::follow( $post, $this->user_id );
 					if ( \is_wp_error( $result ) ) {
-						$query = array(
-							'updated' => 'false',
-							'action'  => 'followed',
-						);
+						\add_settings_error( 'activitypub', 'followed', $result->get_error_message(), 'error' );
 					} else {
-						$query = array(
-							'updated' => 'true',
-							'action'  => 'followed',
-						);
+						\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
 					}
 				} else {
-					$query = array(
-						'updated' => 'false',
-						'action'  => 'followed',
-					);
+					\add_settings_error( 'activitypub', 'followed', $post->get_error_message(), 'error' );
 				}
 
-				\wp_safe_redirect( \add_query_arg( $query ) );
 				break;
 			default:
 				break;
