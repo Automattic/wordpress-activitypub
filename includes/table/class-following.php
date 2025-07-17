@@ -240,7 +240,7 @@ class Following extends \WP_List_Table {
 			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
 			$webfinger = Webfinger::uri_to_acct( $url );
 
-			if ( is_wp_error( $webfinger ) ) {
+			if ( \is_wp_error( $webfinger ) ) {
 				$webfinger = guess_webfinger_by_uri( $url );
 			}
 
