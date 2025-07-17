@@ -70,7 +70,7 @@ class Following extends \WP_List_Table {
 
 		switch ( $this->current_action() ) {
 			case 'delete':
-				$redirect_to = \remove_query_arg( array( 'follower', 'followers' ), $redirect_to );
+				$redirect_to = \remove_query_arg( array( 'follower', 'following' ), $redirect_to );
 
 				// Handle single follower deletion.
 				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
