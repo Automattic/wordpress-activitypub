@@ -45,8 +45,7 @@
 	padding-top: 8px;
 }
 
-.settings_page_activitypub #wpcontent,
-.settings_page_activitypub_follow #wpcontent {
+.settings_page_activitypub #wpcontent {
 	padding-left: 0;
 }
 
@@ -359,7 +358,6 @@ input.blog-user-identifier {
 	border-right: 4px solid #3582c4;
 	padding: 16px 20px;
 }
-
 
 @media screen and (max-width: 782px) {
 	.activitypub-settings {
