@@ -72,7 +72,7 @@ class Followers extends \WP_List_Table {
 							'action'  => 'deleted',
 						);
 
-						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
+						\wp_safe_redirect( \add_query_arg( $redirect_args, \remove_query_arg( array( 'follower' ) ) ) );
 						exit;
 					}
 				}
@@ -93,7 +93,7 @@ class Followers extends \WP_List_Table {
 							'count'   => \count( $followers ),
 						);
 
-						\wp_safe_redirect( \add_query_arg( $redirect_args ) );
+						\wp_safe_redirect( \add_query_arg( $redirect_args, \remove_query_arg( array( 'followers' ) ) ) );
 						exit;
 					}
 				}
