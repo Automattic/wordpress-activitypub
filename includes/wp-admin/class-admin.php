@@ -108,6 +108,22 @@ class Admin {
 	}
 
 	/**
+	 * Creates the followers and following list tables in ActivityPub settings.
+	 */
+	public static function add_settings_list_tables() {
+		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		switch ( $tab ) {
+			case 'followers':
+				self::add_followers_list_table();
+				break;
+			case 'following':
+				self::add_following_list_table();
+				break;
+		}
+	}
+
+	/**
 	 * Creates the followers list table.
 	 */
 	public static function add_followers_list_table() {
