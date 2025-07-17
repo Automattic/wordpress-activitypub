@@ -131,22 +131,19 @@ class Following extends \WP_List_Table {
 					$result = Following_Collection::follow( $post, $this->user_id );
 					if ( \is_wp_error( $result ) ) {
 						$query = array(
-							'updated' => 'true',
+							'updated' => 'false',
 							'action'  => 'followed',
-							'error'   => $post->get_error_message(),
 						);
 					} else {
 						$query = array(
-							'updated'   => 'true',
-							'action'    => 'followed',
-							'success'   => __( 'Followed', 'activitypub' ),
+							'updated' => 'true',
+							'action'  => 'followed',
 						);
 					}
 				} else {
 					$query = array(
-						'updated' => 'true',
+						'updated' => 'false',
 						'action'  => 'followed',
-						'error'   => $post->get_error_message(),
 					);
 				}
 
@@ -172,6 +169,9 @@ class Following extends \WP_List_Table {
 					/* translators: %d: Number of accounts unfollowed. */
 					$message = \_n( '%d account unfollowed.', '%d accounts unfollowed.', $count, 'activitypub' );
 					$message = \sprintf( $message, \number_format_i18n( $count ) );
+					break;
+				case 'followed':
+					$message = \__( 'Account followed.', 'activitypub' );
 					break;
 			}
 
