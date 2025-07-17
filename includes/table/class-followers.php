@@ -47,6 +47,8 @@ class Followers extends \WP_List_Table {
 		} else {
 			$this->user_id    = \get_current_user_id();
 			$this->follow_url = \admin_url( 'users.php?page=activitypub-following' );
+
+			\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 		}
 
 		parent::__construct(
@@ -58,7 +60,6 @@ class Followers extends \WP_List_Table {
 		);
 
 		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
-		\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 	}
 
 	/**
