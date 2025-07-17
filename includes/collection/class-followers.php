@@ -73,9 +73,9 @@ class Followers {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove( $post_id, $user_id ) {
-		$remote_actor = \get_post( $post_id );
+		$post = \get_post( $post_id );
 
-		if ( ! $remote_actor ) {
+		if ( ! $post ) {
 			return false;
 		}
 
@@ -84,10 +84,11 @@ class Followers {
 		/**
 		 * Fires before a Follower is removed.
 		 *
-		 * @param \WP_Post $remote_actor The remote Actor object.
-		 * @param int      $user_id      The ID of the WordPress User.
+		 * @param \WP_Post                  $post    The remote Actor object.
+		 * @param int                       $user_id The ID of the WordPress User.
+		 * @param \Activitypub\Actors\Actor $actor   The Actor object.
 		 */
-		\do_action( 'activitypub_followers_pre_remove_follower', $remote_actor, $user_id );
+		\do_action( 'activitypub_followers_pre_remove_follower', $post, $user_id, Actors::get_actor( $post ) );
 
 		return \delete_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 	}
