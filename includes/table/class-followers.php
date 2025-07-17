@@ -43,10 +43,10 @@ class Followers extends \WP_List_Table {
 	public function __construct() {
 		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
 			$this->user_id    = Actors::BLOG_USER_ID;
-			$this->follow_url = admin_url( 'options-general.php?page=activitypub&tab=following' );
+			$this->follow_url = \admin_url( 'options-general.php?page=activitypub&tab=following' );
 		} else {
 			$this->user_id    = \get_current_user_id();
-			$this->follow_url = admin_url( 'users.php?page=activitypub-following' );
+			$this->follow_url = \admin_url( 'users.php?page=activitypub-following' );
 		}
 
 		parent::__construct(
