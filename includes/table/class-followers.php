@@ -350,7 +350,7 @@ class Followers extends \WP_List_Table {
 		\esc_html_e( 'No followers found.', 'activitypub' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$search = \sanitize_text_field( \wp_unslash( isset( $_GET['s'] ) ? $_GET['s'] : '' ) );
+		$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ?? '' ) );
 		$search = Sanitize::webfinger( $search );
 
 		if ( filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
