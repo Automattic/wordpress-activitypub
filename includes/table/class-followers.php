@@ -207,6 +207,7 @@ class Followers extends \WP_List_Table {
 		foreach ( $followers as $follower ) {
 			$actor         = Actors::get_actor( $follower );
 			$this->items[] = array(
+				'id'         => $follower->ID,
 				'icon'       => $actor->get_icon()['url'] ?? '',
 				'post_title' => $actor->get_name(),
 				'username'   => $actor->get_preferred_username(),

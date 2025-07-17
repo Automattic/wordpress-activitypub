@@ -218,7 +218,7 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor = Actors::get_actor( $following->ID );
+			$actor = Actors::get_actor( $following );
 
 			$this->items[] = array(
 				'id'         => $following->ID,
