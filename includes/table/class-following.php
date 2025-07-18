@@ -423,7 +423,7 @@ class Following extends \WP_List_Table {
 	 * Message to be displayed when there are no followings.
 	 */
 	public function no_items() {
-		\esc_html_e( 'No accounts found.', 'activitypub' );
+		\esc_html_e( 'No profiles found.', 'activitypub' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ?? '' ) );
@@ -451,6 +451,7 @@ class Following extends \WP_List_Table {
 				);
 			}
 		}
+	}
 
 	/**
 	 * Single row.
