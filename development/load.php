@@ -1,4 +1,3 @@
-
 <?php
 /**
  * Load the ActivityPub development tools.
