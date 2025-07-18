@@ -101,7 +101,7 @@ class Starter_Kit {
 
 		$file_info = \wp_check_filetype( \sanitize_file_name( $_FILES['import']['name'] ), array( 'json' => 'application/json' ) );
 		if ( 'application/json' !== $file_info['type'] ) {
-			printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'The uploaded file must be a JSON file. Please try again with the correct file format.', 'activitypub' ) );
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'The uploaded file must be a JSON file. Please try again with the correct file format.', 'activitypub' ) );
 			return false;
 		}
 
