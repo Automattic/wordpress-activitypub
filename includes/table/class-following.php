@@ -423,12 +423,15 @@ class Following extends \WP_List_Table {
 	 * Message to be displayed when there are no followings.
 	 */
 	public function no_items() {
-		\esc_html_e( 'No followings found.', 'activitypub' );
+		\esc_html_e( 'No accounts found.', 'activitypub' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$search = \sanitize_text_field( \wp_unslash( isset( $_GET['s'] ) ? $_GET['s'] : '' ) );
-		$search = Sanitize::webfinger( $search );
+		$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ?? '' ) );
+		if ( empty( $search ) ) {
+			return;
+		}
 
+		$search = Sanitize::webfinger( $search );
 		if ( filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
 			$search = Webfinger::resolve( $search );
 		}
@@ -436,10 +439,18 @@ class Following extends \WP_List_Table {
 		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
 			$actor = Actors::fetch_remote_by_uri( $search );
 			if ( ! is_wp_error( $actor ) ) {
-				\printf( ' Do you maybe want to follow %s?', sprintf( '<a href="%s">%s</a>', \esc_url( \add_query_arg( array( 'resource' => $search ) ) ), \esc_html( $actor->post_title ) ) );
+				echo ' ';
+				\printf(
+					/* translators: %s: Actor name. */
+					\esc_html__( 'Would you like to follow %s?', 'activitypub' ),
+					\sprintf(
+						'<a href="%s">%s</a>',
+						\esc_url( \add_query_arg( 'resource', $search ) ),
+						\esc_html( $actor->post_title )
+					)
+				);
 			}
 		}
-	}
 
 	/**
 	 * Single row.
