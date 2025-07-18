@@ -85,7 +85,7 @@ function plugin_init() {
 	}
 
 	// Load development tools.
-	if ( in_array( wp_get_environment_type(), array( 'development', 'local' ), true ) ) {
+	if ( 'local' === wp_get_environment_type() ) {
 		$dev_loader = __DIR__ . '/development/load.php';
 		if ( file_exists( $dev_loader ) && is_readable( $dev_loader ) ) {
 			require_once $dev_loader;

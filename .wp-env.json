@@ -2,11 +2,6 @@
 	"core": null,
 	"plugins": [ "." ],
 	"env": {
-		"development": {
-			"config": {
-				"WP_ENVIRONMENT_TYPE": "development"
-			}
-		},
 		"tests": {
 			"config": {
 				"WP_TESTS_DOMAIN": "example.org",

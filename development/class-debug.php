@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-namespace Activitypub;
+namespace Activitypub\Development;
 
 /**
  * ActivityPub Debug Class.
