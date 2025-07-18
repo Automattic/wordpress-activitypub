@@ -752,8 +752,6 @@ class Migration {
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
 		self::add_default_extra_field();
-
-		Scheduler::register_schedules();
 	}
 
 	/**
