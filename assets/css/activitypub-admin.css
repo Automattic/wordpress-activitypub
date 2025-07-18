@@ -359,7 +359,7 @@ input.blog-user-identifier {
 	padding: 16px 20px;
 }
 
-.highlight {
+#activitypub-follow-form .highlight {
 	animation: highlight-fade 3s ease-in-out;
 	border-color: #3582c4 !important;
 	box-shadow: 0 0 0 1px #3582c4;
