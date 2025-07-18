@@ -252,7 +252,7 @@ class Starter_Kit {
 				++$skipped;
 			} else {
 				/* translators: %s: Account ID */
-				printf( '<p>' . \esc_html__( 'Followed %s', 'activitypub' ) . '</p>', \esc_html( $item['id'] ) );
+				\printf( '<p>' . \esc_html__( 'Followed %s', 'activitypub' ) . '</p>', \esc_html( $item['id'] ) );
 				++$followed;
 			}
 		}
