@@ -192,13 +192,13 @@ class Starter_Kit {
 
 		$file_contents = $wp_filesystem->get_contents( $file );
 		if ( false === $file_contents ) {
-			printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Could not read the uploaded file.', 'activitypub' ) );
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Could not read the uploaded file.', 'activitypub' ) );
 			return;
 		}
 
 		self::$starter_kit = \json_decode( $file_contents, true );
 		if ( null === self::$starter_kit ) {
-			printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Invalid JSON format in the uploaded file.', 'activitypub' ) );
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Invalid JSON format in the uploaded file.', 'activitypub' ) );
 			return;
 		}
 
