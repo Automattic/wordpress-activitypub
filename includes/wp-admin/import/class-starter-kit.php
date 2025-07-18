@@ -113,7 +113,7 @@ class Starter_Kit {
 		$upload = \wp_handle_upload( $_FILES['import'], $overrides );
 
 		if ( isset( $upload['error'] ) ) {
-			printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( $upload['error'] ) );
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( $upload['error'] ) );
 			return false;
 		}
 
