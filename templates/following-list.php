@@ -14,10 +14,11 @@
  */
 global $following_list_table;
 
-$_search = \sanitize_text_field( \wp_unslash( $_REQUEST['s'] ?? '' ) );
-$_page   = \sanitize_text_field( \wp_unslash( $_REQUEST['page'] ?? '' ) );
-$_tab    = \sanitize_text_field( \wp_unslash( $_REQUEST['tab'] ?? '' ) );
-$_status = \sanitize_text_field( \wp_unslash( $_REQUEST['status'] ?? '' ) );
+$_search   = \sanitize_text_field( \wp_unslash( $_REQUEST['s'] ?? '' ) );
+$_page     = \sanitize_text_field( \wp_unslash( $_REQUEST['page'] ?? '' ) );
+$_tab      = \sanitize_text_field( \wp_unslash( $_REQUEST['tab'] ?? '' ) );
+$_status   = \sanitize_text_field( \wp_unslash( $_REQUEST['status'] ?? '' ) );
+$_resource = \sanitize_text_field( \wp_unslash( $_REQUEST['resource'] ?? '' ) );
 
 $following_list_table->prepare_items();
 ?>
@@ -46,28 +47,21 @@ $following_list_table->prepare_items();
 			<div class="col-wrap">
 				<h2><?php echo esc_html__( 'Follow', 'activitypub' ); ?></h2>
 				<div class="form-wrap">
-					<p><?php echo wp_kses_post( __( 'You can follow people from other federated platforms (like <strong>Mastodon</strong>, <strong>Friendica</strong>, or another <strong>WordPress</strong> blog) using their profile link or WebFinger address.', 'activitypub' ) ); ?></p>
-					<p><?php echo esc_html__( 'Just paste one of the following into the field below:', 'activitypub' ); ?></p>
-
-					<ul class="edit-term-notes">
-						<li><?php echo wp_kses_post( __( 'A WebFinger address — e.g. <code>@username@example.com</code>', 'activitypub' ) ); ?></li>
-						<li><?php echo wp_kses_post( __( 'A full profile URL — e.g. <code>https://example.com/@username</code>', 'activitypub' ) ); ?></li>
-					</ul>
-
-					<p><?php echo esc_html__( 'Click Follow, and if the user accepts (or their server allows automatic follows), their posts will start appearing in your followers list.', 'activitypub' ); ?></p>
-
-					<form method="post">
+					<form method="post" id="activitypub-follow-form">
 						<?php wp_nonce_field( 'activitypub-follow-nonce' ); ?>
 						<div class="form-field form-required">
-							<label for="activitypub-profile"><?php echo esc_html__( 'Profile', 'activitypub' ); ?></label>
+							<label for="activitypub-profile"><?php echo esc_html__( 'Username or profile link', 'activitypub' ); ?></label>
 							<input type="hidden" name="action" value="follow" />
-							<input name="activitypub-profile" id="activitypub-profile" type="text" value="<?php echo esc_attr( sanitize_text_field( wp_unslash( $_GET['resource'] ?? '' ) ) ); ?>" size="40" aria-required="true" aria-describedby="activitypub-profile-description" placeholder="@username@example.com or https://example.com/@username">
-							<p id="activitypub-profile-description">
-								<?php echo esc_html__( 'The profile of the user you want to follow.', 'activitypub' ); ?>
-							</p>
+							<input name="activitypub-profile" id="activitypub-profile" type="text" value="<?php echo esc_attr( $_resource ); ?>" size="40" aria-required="true" class="<?php echo $_resource ? 'highlight' : ''; ?>" />
 						</div>
 						<?php submit_button( esc_attr__( 'Follow', 'activitypub' ) ); ?>
 					</form>
+
+					<p><?php echo wp_kses_post( __( 'You can follow people from other Fediverse platforms like <strong>Mastodon</strong>, <strong>Friendica</strong>, or other <strong>WordPress</strong> sites. Try these formats:', 'activitypub' ) ); ?></p>
+					<ul>
+						<li><p><?php echo wp_kses_post( __( 'Username: <code>@username@example.com</code>', 'activitypub' ) ); ?></p></li>
+						<li><p><?php echo wp_kses_post( __( 'Profile link: <code>https://example.com/@username</code>', 'activitypub' ) ); ?></p></li>
+					</ul>
 
 					<p><?php echo esc_html__( '(Make sure the user you&rsquo;re following is part of the fediverse and supports ActivityPub.)', 'activitypub' ); ?></p>
 				</div>
