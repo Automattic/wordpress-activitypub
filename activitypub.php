@@ -85,11 +85,10 @@ function plugin_init() {
 	}
 
 	// Load development tools.
-	if ( 'development' === wp_get_environment_type() ) {
-		$debug_file = __DIR__ . '/development/debug.php';
-		if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
-			require_once $debug_file;
-			Debug::init();
+	if ( in_array( wp_get_environment_type(), array( 'development', 'local' ), true ) ) {
+		$dev_loader = __DIR__ . '/development/load.php';
+		if ( file_exists( $dev_loader ) && is_readable( $dev_loader ) ) {
+			require_once $dev_loader;
 		}
 	}
 }
