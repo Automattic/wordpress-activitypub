@@ -251,7 +251,8 @@ class Starter_Kit {
 			if ( \is_wp_error( $result ) ) {
 				++$skipped;
 			} else {
-				printf( '<p>%s%s</p>', \esc_html__( 'Followed ', 'activitypub' ), \esc_html( $item['id'] ) );
+				/* translators: %s: Account ID */
+				printf( '<p>' . \esc_html__( 'Followed %s', 'activitypub' ) . '</p>', \esc_html( $item['id'] ) );
 				++$followed;
 			}
 		}
