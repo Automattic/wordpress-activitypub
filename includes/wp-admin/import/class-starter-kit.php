@@ -220,9 +220,9 @@ class Starter_Kit {
 		\wp_import_cleanup( self::$import_id );
 
 		if ( \is_wp_error( $result ) ) {
-			printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( $result->get_error_message() ) );
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( $result->get_error_message() ) );
 		} else {
-			printf( '<p>%s</p>', \esc_html__( 'All done.', 'activitypub' ) );
+			\printf( '<p>%s</p>', \esc_html__( 'All done.', 'activitypub' ) );
 		}
 
 		/**
