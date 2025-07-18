@@ -122,17 +122,16 @@ class Following extends \WP_List_Table {
 
 				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
 
-				$post = Actors::fetch_remote_by_uri( $profile );
+				if ( \is_wp_error( $post ) ) {
+					\add_settings_error( 'activitypub', 'followed', $post->get_error_message() );
+					break;
+				}
 
-				if ( ! \is_wp_error( $post ) ) {
-					$result = Following_Collection::follow( $post, $this->user_id );
-					if ( \is_wp_error( $result ) ) {
-						\add_settings_error( 'activitypub', 'followed', $result->get_error_message(), 'error' );
-					} else {
-						\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
-					}
+				$result = Following_Collection::follow( $post, $this->user_id );
+				if ( \is_wp_error( $result ) ) {
+					\add_settings_error( 'activitypub', 'followed', $result->get_error_message() );
 				} else {
-					\add_settings_error( 'activitypub', 'followed', $post->get_error_message(), 'error' );
+					\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
 				}
 
 				break;
