@@ -142,7 +142,7 @@ class Starter_Kit {
 	public static function import_options() {
 		$activitypub_users = function ( $users ) {
 			// Add blog user to the html output if enabled.
-			$users = preg_replace( '/<\/select>/', '<option value="0">' . \__( 'Blog User', 'activitypub' ) . '</option></select>', $users );
+			$users = \preg_replace( '/<\/select>/', '<option value="0">' . \__( 'Blog User', 'activitypub' ) . '</option></select>', $users );
 			return $users;
 		};
 
@@ -240,7 +240,9 @@ class Starter_Kit {
 		$skipped  = 0;
 		$followed = 0;
 
-		foreach ( self::$starter_kit['items'] as $item ) {
+		$items = self::$starter_kit['items'] ?? array();
+
+		foreach ( $items as $item ) {
 			if ( ! is_actor( $item ) ) {
 				++$skipped;
 				continue;
