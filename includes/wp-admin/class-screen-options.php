@@ -139,11 +139,11 @@ class Screen_Options {
 			<legend class="screen-layout"><?php \esc_html_e( 'Settings Pages', 'activitypub' ); ?></legend>
 			<div class="metabox-prefs-container">
 				<?php foreach ( $screen_options as $option => $label ) : ?>
-					<label for="<?php echo \esc_attr( $option ); ?>">
-						<input name="<?php echo \esc_attr( $option ); ?>" type="hidden" value="0" />
-						<input name="<?php echo \esc_attr( $option ); ?>" type="checkbox" id="<?php echo \esc_attr( $option ); ?>" value="1" <?php \checked( 1, \get_user_meta( \get_current_user_id(), $option, true ) ); ?> />
-						<?php echo \esc_html( $label ); ?>
-					</label>
+				<label for="<?php echo \esc_attr( $option ); ?>">
+					<input name="<?php echo \esc_attr( $option ); ?>" type="hidden" value="0" />
+					<input name="<?php echo \esc_attr( $option ); ?>" type="checkbox" id="<?php echo \esc_attr( $option ); ?>" value="1" <?php \checked( 1, \get_user_meta( \get_current_user_id(), $option, true ) ); ?> />
+					<?php echo \esc_html( $label ); ?>
+				</label>
 				<?php endforeach; ?>
 			</div>
 		</fieldset>
