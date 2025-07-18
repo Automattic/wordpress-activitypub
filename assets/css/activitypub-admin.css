@@ -4,12 +4,12 @@
 	position: relative;
 }
 
-.settings_page_activitypub .notice {
+.settings_page_activitypub div:not(.wrap) > .notice {
 	max-width: 800px;
 	margin: 0 auto 30px;
 }
 
-.settings_page_activitypub .update-nag {
+.settings_page_activitypub div:not(.wrap) > .update-nag {
 	margin: 25px 20px 15px 22px;
 }
 
