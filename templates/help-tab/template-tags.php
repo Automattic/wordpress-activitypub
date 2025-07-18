@@ -41,8 +41,6 @@ $anchor_html = array(
 <dl>
 	<dt><code>[ap_hashtags]</code></dt>
 	<dd><?php esc_html_e( 'The post&#8217;s tags as hashtags.', 'activitypub' ); ?></dd>
-	<dt><code>[ap_hashcats]</code></dt>
-	<dd><?php esc_html_e( 'The post&#8217;s categories as hashtags.', 'activitypub' ); ?></dd>
 	<dt><code>[ap_author]</code></dt>
 	<dd><?php esc_html_e( 'The author&#8217;s name.', 'activitypub' ); ?></dd>
 	<dt><code>[ap_authorurl]</code></dt>

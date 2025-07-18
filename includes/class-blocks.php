@@ -8,7 +8,6 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Followers;
 
 /**
  * Block class.
@@ -92,7 +91,7 @@ class Blocks {
 			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
 			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
 			'enabled'          => array(
-				'site'  => ! is_user_type_disabled( 'blog' ),
+				'blog'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
 		);
@@ -173,7 +172,7 @@ class Blocks {
 	/**
 	 * Get the user ID from a user string.
 	 *
-	 * @param string $user_string The user string. Can be a user ID, 'site', or 'inherit'.
+	 * @param string $user_string The user string. Can be a user ID, 'blog', or 'inherit'.
 	 * @return int|null The user ID, or null if the 'inherit' string is not supported in this context.
 	 */
 	public static function get_user_id( $user_string ) {
@@ -181,8 +180,8 @@ class Blocks {
 			return absint( $user_string );
 		}
 
-		// If the user string is 'site', return the Blog User ID.
-		if ( 'site' === $user_string ) {
+		// If the user string is 'blog', return the Blog User ID.
+		if ( 'blog' === $user_string ) {
 			return Actors::BLOG_USER_ID;
 		}
 

@@ -312,32 +312,12 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_hashcats' Shortcode.
 	 *
+	 * @deprecated 7.0.0
+	 *
 	 * @return string The post categories as hashtags.
 	 */
 	public static function hashcats() {
-		$item = self::get_item();
-
-		if ( ! $item ) {
-			return '';
-		}
-
-		$categories = \get_the_category( $item->ID );
-
-		if ( ! $categories ) {
-			return '';
-		}
-
-		$hash_tags = array();
-
-		foreach ( $categories as $category ) {
-			$hash_tags[] = \sprintf(
-				'<a rel="tag" class="hashtag u-tag u-category" href="%s">%s</a>',
-				\esc_url( \get_category_link( $category ) ),
-				esc_hashtag( $category->name )
-			);
-		}
-
-		return \implode( ' ', $hash_tags );
+		return '';
 	}
 
 	/**

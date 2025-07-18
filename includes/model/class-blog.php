@@ -10,8 +10,6 @@ namespace Activitypub\Model;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
-use Activitypub\Signature;
-use WP_Query;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -26,29 +24,6 @@ use function Activitypub\get_attribution_domains;
  */
 class Blog extends Actor {
 	/**
-	 * The Featured-Posts.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
-	 *
-	 * @context {
-	 *   "@id": "http://joinmastodon.org/ns#featured",
-	 *   "@type": "@id"
-	 * }
-	 *
-	 * @var string
-	 */
-	protected $featured;
-
-	/**
-	 * Moderators endpoint.
-	 *
-	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
-	 *
-	 * @var string
-	 */
-	protected $moderators;
-
-	/**
 	 * The User-ID
 	 *
 	 * @var int
@@ -56,40 +31,20 @@ class Blog extends Actor {
 	protected $_id = Actors::BLOG_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
-	 * If the User is indexable.
+	 * The generator of the object.
 	 *
-	 * @context http://joinmastodon.org/ns#indexable
+	 * @see https://www.w3.org/TR/activitypub/#generator
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md#discovery-through-an-actor
 	 *
-	 * @var boolean
+	 * @var array
 	 */
-	protected $indexable;
-
-	/**
-	 * The WebFinger Resource.
-	 *
-	 * @var string
-	 */
-	protected $webfinger;
-
-	/**
-	 * Whether the User is discoverable.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
-	 *
-	 * @context http://joinmastodon.org/ns#discoverable
-	 *
-	 * @var boolean
-	 */
-	protected $discoverable;
-
-	/**
-	 * Restrict posting to mods.
-	 *
-	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
-	 *
-	 * @var boolean
-	 */
-	protected $posting_restricted_to_mods;
+	protected $generator = array(
+		'type'       => 'Application',
+		'implements' => array(
+			'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
+			'name' => 'RFC-9421: HTTP Message Signatures',
+		),
+	);
 
 	/**
 	 * Constructor.
@@ -314,7 +269,7 @@ class Blog extends Actor {
 	 * @return string The published date.
 	 */
 	public function get_published() {
-		$first_post = new WP_Query(
+		$first_post = new \WP_Query(
 			array(
 				'orderby' => 'date',
 				'order'   => 'ASC',
@@ -375,7 +330,7 @@ class Blog extends Actor {
 		return array(
 			'id'           => $this->get_id() . '#main-key',
 			'owner'        => $this->get_id(),
-			'publicKeyPem' => Signature::get_public_key_for( $this->get__id() ),
+			'publicKeyPem' => Actors::get_public_key( $this->get__id() ),
 		);
 	}
 
@@ -461,6 +416,15 @@ class Blog extends Actor {
 	 */
 	public function get_featured() {
 		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
+	}
+
+	/**
+	 * Returns the Featured-Tags-API-Endpoint.
+	 *
+	 * @return string The Featured-Tags-Endpoint.
+	 */
+	public function get_featured_tags() {
+		return get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
 	}
 
 	/**

@@ -51,25 +51,31 @@ class Follow {
 		$user_id = $user->get__id();
 
 		// Save follower.
-		$follower = Followers::add_follower(
+		$remote_actor = Followers::add_follower(
 			$user_id,
 			$activity['actor']
 		);
 
+		if ( \is_wp_error( $remote_actor ) ) {
+			return $remote_actor;
+		}
+
+		$remote_actor = \get_post( $remote_actor );
+
 		/**
 		 * Fires after a new follower has been added.
 		 *
-		 * @param string                                $actor    The URL of the actor (follower) who initiated the follow.
-		 * @param array                                 $activity The complete activity data of the follow request.
-		 * @param int                                   $user_id  The ID of the WordPress user being followed.
-		 * @param \Activitypub\Model\Follower|\WP_Error $follower The Follower object containing the new follower's data.
+		 * @param string             $actor        The URL of the actor (follower) who initiated the follow.
+		 * @param array              $activity     The complete activity data of the follow request.
+		 * @param int                $user_id      The ID of the WordPress user being followed.
+		 * @param \WP_Post|\WP_Error $remote_actor The Actor object containing the new follower's data.
 		 */
-		do_action( 'activitypub_followers_post_follow', $activity['actor'], $activity, $user_id, $follower );
+		do_action( 'activitypub_followers_post_follow', $activity['actor'], $activity, $user_id, $remote_actor );
 
 		// Send notification.
 		$notification = new Notification(
 			'follow',
-			$activity['actor'],
+			$remote_actor->guid,
 			$activity,
 			$user_id
 		);
@@ -79,13 +85,13 @@ class Follow {
 	/**
 	 * Send Accept response.
 	 *
-	 * @param string                                $actor           The Actor URL.
-	 * @param array                                 $activity_object The Activity object.
-	 * @param int                                   $user_id         The ID of the WordPress User.
-	 * @param \Activitypub\Model\Follower|\WP_Error $follower        The Follower object.
+	 * @param string             $actor           The Actor URL.
+	 * @param array              $activity_object The Activity object.
+	 * @param int                $user_id         The ID of the WordPress User.
+	 * @param \WP_Post|\WP_Error $remote_actor    The Actor object.
 	 */
-	public static function queue_accept( $actor, $activity_object, $user_id, $follower ) {
-		if ( \is_wp_error( $follower ) ) {
+	public static function queue_accept( $actor, $activity_object, $user_id, $remote_actor ) {
+		if ( \is_wp_error( $remote_actor ) ) {
 			// Impossible to send a "Reject" because we can not get the Remote-Inbox.
 			return;
 		}

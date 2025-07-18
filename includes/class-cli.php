@@ -227,4 +227,32 @@ class Cli extends \WP_CLI_Command {
 			\WP_CLI::success( 'Move Scheduled.' );
 		}
 	}
+
+	/**
+	 * Follow a user.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <remote-user>
+	 *     The remote user to follow.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *    $ wp activitypub follow https://example.com/@user
+	 *    $ wp --user=pfefferle activitypub follow https://example.com/@user
+	 *
+	 * @synopsis <remote_user>
+	 *
+	 * @param array $args The arguments.
+	 */
+	public function follow( $args ) {
+		$user_id   = \get_current_user_id();
+		$follow_id = follow( $args[0], $user_id );
+
+		if ( is_wp_error( $follow_id ) ) {
+			\WP_CLI::error( $follow_id->get_error_message() );
+		} else {
+			\WP_CLI::success( 'Follow Scheduled.' );
+		}
+	}
 }

@@ -88,36 +88,53 @@ class Admin {
 	}
 
 	/**
-	 * Display one admin menu notice about configuration problems or conflicts.
-	 *
-	 * @param string $admin_notice The notice to display.
-	 * @param string $level        The level of the notice (error, warning, success, info).
-	 */
-	private static function show_admin_notice( $admin_notice, $level ) {
-		?>
-
-		<div class="notice notice-<?php echo esc_attr( $level ); ?>">
-			<p><?php echo wp_kses( $admin_notice, 'data' ); ?></p>
-		</div>
-
-		<?php
-	}
-
-	/**
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
-			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
 		}
 	}
 
 	/**
-	 * Adds the follower list to the Help tab.
+	 * Load user following list page
 	 */
-	public static function add_followers_list_help_tab() {
-		// todo.
+	public static function following_list_page() {
+		// User has to be able to publish posts.
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php' );
+		}
+	}
+
+	/**
+	 * Creates the followers and following list tables in ActivityPub settings.
+	 */
+	public static function add_settings_list_tables() {
+		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		switch ( $tab ) {
+			case 'followers':
+				self::add_followers_list_table();
+				break;
+			case 'following':
+				self::add_following_list_table();
+				break;
+		}
+	}
+
+	/**
+	 * Creates the followers list table.
+	 */
+	public static function add_followers_list_table() {
+		$GLOBALS['followers_list_table'] = new \Activitypub\Table\Followers();
+	}
+
+	/**
+	 * Creates the following list table.
+	 */
+	public static function add_following_list_table() {
+		$GLOBALS['following_list_table'] = new \Activitypub\Table\Following();
 	}
 
 	/**
@@ -253,23 +270,29 @@ class Admin {
 	 * Disables the edit_comment capability for federated comments.
 	 */
 	public static function edit_comment() {
-		// Disable the edit_comment capability for federated comments.
-		\add_filter(
-			'user_has_cap',
-			function ( $all_caps, $caps, $arg ) {
-				if ( 'edit_comment' !== $arg[0] ) {
-					return $all_caps;
-				}
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$comment_id = \absint( $_GET['c'] ?? 0 );
+		if ( Comment::was_received( $comment_id ) ) {
+			$path = 'edit-comments.php';
 
-				if ( was_comment_received( $arg[2] ) ) {
-					return false;
-				}
+			switch ( \wp_get_comment_status( $comment_id ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+				case 'spam':
+					$path = 'edit-comments.php?comment_status=spam';
+					break;
 
-				return $all_caps;
-			},
-			1,
-			3
-		);
+				case 'trash':
+					$path = 'edit-comments.php?comment_status=trash';
+					break;
+
+				case 'unapproved':
+					$path = 'edit-comments.php?comment_status=moderated';
+					break;
+			}
+
+			// Redirect to the appropriate comments page.
+			\wp_safe_redirect( \admin_url( $path ) );
+			exit;
+		}
 	}
 
 	/**

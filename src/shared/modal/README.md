@@ -35,7 +35,7 @@ The modal is built from three main parts:
 In your block’s JS file (e.g., `view.js`):
 
 ```js
-import { createModalController } from '../shared/modal';
+import { createModalStore } from '../shared/modal';
 ```
 
 ### 2. Initialize the Controller
@@ -43,14 +43,14 @@ import { createModalController } from '../shared/modal';
 Pass your block's namespace to set up modal state handling:
 
 ```js
-createModalController('activitypub/your-block-name');
+createModalStore('activitypub/your-block-name');
 ```
 
 #### Why Namespace Matters
 
 #### Why the Namespace Matters
 
-The namespace you pass to `createModalController()` should match your block’s namespace because the WordPress Interactivity API merges all stores that share the same namespace.
+The namespace you pass to `createModalStore()` should match your block’s namespace because the WordPress Interactivity API merges all stores that share the same namespace.
 
 This means:
 

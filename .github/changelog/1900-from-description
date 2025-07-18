@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Set older unfederated posts to local visibility by default.

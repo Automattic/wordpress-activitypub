@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 6.0.2
+ * Version: 7.0.1
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -19,7 +19,7 @@ namespace Activitypub;
 
 use WP_CLI;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '6.0.2' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '7.0.1' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -96,8 +96,10 @@ function plugin_init() {
  * Initialize plugin admin.
  */
 function plugin_admin_init() {
-	// Menus are registered before `admin_init`, because of course they are.
+	// Screen Options and Menus are set before `admin_init`.
+	\add_filter( 'init', array( __NAMESPACE__ . '\WP_Admin\Screen_Options', 'init' ) );
 	\add_action( 'admin_menu', array( __NAMESPACE__ . '\WP_Admin\Menu', 'admin_menu' ) );
+
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Admin', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Health_Check', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
@@ -150,3 +152,14 @@ function activation_redirect( $plugin ) {
 		'uninstall',
 	)
 );
+
+// Check for CLI env, to add the CLI commands.Add commentMore actions.
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	WP_CLI::add_command(
+		'activitypub',
+		'\Activitypub\Cli',
+		array(
+			'shortdesc' => 'ActivityPub related commands to manage plugin functionality and the federation of posts and comments.',
+		)
+	);
+}

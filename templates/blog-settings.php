@@ -7,6 +7,8 @@
 
 ?>
 
+<hr class="wp-header-end">
+
 <div class="activitypub-settings activitypub-settings-page hide-if-no-js">
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub_blog' ); ?>

@@ -8,6 +8,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Http;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 use function Activitypub\object_to_uri;
@@ -34,30 +35,30 @@ class Move {
 	 * @param array $activity The JSON "Move" Activity.
 	 */
 	public static function handle_move( $activity ) {
-		$target = self::extract_target( $activity );
-		$origin = self::extract_origin( $activity );
+		$target_uri = self::extract_target( $activity );
+		$origin_uri = self::extract_origin( $activity );
 
-		if ( ! $target || ! $origin ) {
+		if ( ! $target_uri || ! $origin_uri ) {
 			return;
 		}
 
-		$target_object = Http::get_remote_object( $target );
-		$origin_object = Http::get_remote_object( $origin );
+		$target_json = Http::get_remote_object( $target_uri );
+		$origin_json = Http::get_remote_object( $origin_uri );
 
-		$verified = self::verify_move( $target_object, $origin_object );
+		$verified = self::verify_move( $target_json, $origin_json );
 
 		if ( ! $verified ) {
 			return;
 		}
 
-		$target_follower = Followers::get_follower_by_actor( $target );
-		$origin_follower = Followers::get_follower_by_actor( $origin );
+		$target_object = Actors::get_remote_by_uri( $target_uri );
+		$origin_object = Actors::get_remote_by_uri( $origin_uri );
 
 		/*
 		 * If the new target is followed, but the origin is not,
 		 * everything is fine, so we can return.
 		 */
-		if ( $target_follower && ! $origin_follower ) {
+		if ( ! \is_wp_error( $target_object ) && \is_wp_error( $origin_object ) ) {
 			return;
 		}
 
@@ -65,21 +66,20 @@ class Move {
 		 * If the new target is not followed, but the origin is,
 		 * update the origin follower to the new target.
 		 */
-		if ( ! $target_follower && $origin_follower ) {
-			$origin_follower->from_array( $target_object );
-			$origin_follower->set_id( $target );
-			$origin_id = $origin_follower->upsert();
-
+		if ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
 				$wpdb->posts,
-				array( 'guid' => sanitize_url( $target ) ),
-				array( 'ID' => sanitize_key( $origin_id ) )
+				array( 'guid' => sanitize_url( $target_uri ) ),
+				array( 'ID' => sanitize_key( $origin_object->ID ) )
 			);
 
 			// Clear the cache.
-			wp_cache_delete( $origin_id, 'posts' );
+			\wp_cache_delete( $origin_object->ID, 'posts' );
+
+			Actors::upsert( $target_json );
+
 			return;
 		}
 
@@ -87,18 +87,18 @@ class Move {
 		 * If the new target is followed, and the origin is followed,
 		 * move users and delete the origin follower.
 		 */
-		if ( $target_follower && $origin_follower ) {
-			$origin_users = \get_post_meta( $origin_follower->get__id(), Followers::FOLLOWER_META_KEY, false );
-			$target_users = \get_post_meta( $target_follower->get__id(), Followers::FOLLOWER_META_KEY, false );
+		if ( ! \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
+			$origin_users = \get_post_meta( $origin_object->ID, Followers::FOLLOWER_META_KEY, false );
+			$target_users = \get_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, false );
 
 			// Get all user ids from $origin_users that are not in $target_users.
 			$users = \array_diff( $origin_users, $target_users );
 
 			foreach ( $users as $user_id ) {
-				\add_post_meta( $target_follower->get__id(), Followers::FOLLOWER_META_KEY, $user_id );
+				\add_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, $user_id );
 			}
 
-			$origin_follower->delete();
+			\wp_delete_post( $origin_object->ID );
 		}
 	}
 

@@ -190,6 +190,19 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
 
+		if ( \version_compare( $version_from_db, '7.0.0', '<' ) ) {
+			wp_unschedule_hook( 'activitypub_update_followers' );
+			wp_unschedule_hook( 'activitypub_cleanup_followers' );
+
+			if ( ! \wp_next_scheduled( 'activitypub_update_remote_actors' ) ) {
+				\wp_schedule_event( time(), 'hourly', 'activitypub_update_remote_actors' );
+			}
+
+			if ( ! \wp_next_scheduled( 'activitypub_cleanup_remote_actors' ) ) {
+				\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
+			}
+		}
+
 		/*
 		 * Add new update routines above this comment. ^
 		 *
@@ -977,7 +990,7 @@ class Migration {
 	 *
 	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 100.
 	 *
-	 * @return array|null Array with batch size and offset if there are more meta values to process, null otherwise.
+	 * @return array|void Array with batch size and offset if there are more meta values to process, void otherwise.
 	 */
 	public static function update_actor_json_storage( $batch_size = 100 ) {
 		global $wpdb;
@@ -1035,7 +1048,5 @@ class Migration {
 				'batch_size' => $batch_size,
 			);
 		}
-
-		return null;
 	}
 }

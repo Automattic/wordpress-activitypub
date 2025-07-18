@@ -7,11 +7,9 @@
 
 namespace Activitypub;
 
-use WP_Error;
-use DateTime;
-use DateTimeZone;
-use WP_REST_Request;
 use Activitypub\Collection\Actors;
+use Activitypub\Signature\Http_Signature_Draft;
+use Activitypub\Signature\Http_Message_Signature;
 
 /**
  * ActivityPub Signature Class.
@@ -22,167 +20,239 @@ use Activitypub\Collection\Actors;
 class Signature {
 
 	/**
+	 * Sign an HTTP Request.
+	 *
+	 * @param array  $args An array of HTTP request arguments.
+	 * @param string $url  The request URL.
+	 *
+	 * @return array Request arguments with signature headers.
+	 */
+	public static function sign_request( $args, $url ) {
+		// Bail if there's nothing to sign with.
+		if ( ! isset( $args['key_id'], $args['private_key'] ) ) {
+			return $args;
+		}
+
+		$args = \wp_parse_args(
+			$args,
+			array(
+				'method'  => 'GET',
+				'headers' => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+				),
+			)
+		);
+
+		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && self::could_support_rfc9421( $url ) ) {
+			$signature = new Http_Message_Signature();
+			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
+		} else {
+			$signature = new Http_Signature_Draft();
+		}
+
+		return $signature->sign( $args, $url );
+	}
+
+	/**
+	 * Verifies the http signatures
+	 *
+	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
+	 *
+	 * @return bool|\WP_Error A boolean or WP_Error.
+	 */
+	public static function verify_http_signature( $request ) {
+		if ( is_object( $request ) ) { // REST Request object.
+			$body                           = $request->get_body();
+			$headers                        = $request->get_headers();
+			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
+		} else {
+			$headers                        = self::format_server_request( $request );
+			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
+		}
+
+		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Http_Signature_Draft();
+
+		return $signature->verify( $headers, $body ?? null );
+	}
+
+	/**
+	 * If a request with RFC-9421 signature fails, we try again with the Draft Cavage signature.
+	 *
+	 * @param array  $response    HTTP response.
+	 * @param array  $parsed_args HTTP request arguments.
+	 * @param string $url         The request URL.
+	 *
+	 * @return array The HTTP response.
+	 */
+	public static function maybe_double_knock( $response, $parsed_args, $url ) {
+		// Remove this filter to prevent infinite recursion.
+		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
+
+		$response_code = \wp_remote_retrieve_response_code( $response );
+
+		// Fall back to Draft Cavage signature for any 4xx responses.
+		if ( $response_code >= 400 && $response_code < 500 ) {
+			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
+			self::rfc9421_add_unsupported_host( $url );
+
+			$parsed_args = ( new Http_Signature_Draft() )->sign( $parsed_args, $url );
+			$response    = \wp_remote_request( $url, $parsed_args );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Formats the $_SERVER to resemble the WP_REST_REQUEST array,
+	 * for use with verify_http_signature().
+	 *
+	 * @param array $server The $_SERVER array.
+	 *
+	 * @return array $request The formatted request array.
+	 */
+	public static function format_server_request( $server ) {
+		$headers = array();
+
+		foreach ( $server as $key => $value ) {
+			$key               = \str_replace( 'http_', '', \strtolower( $key ) );
+			$headers[ $key ][] = \wp_unslash( $value );
+
+		}
+
+		return $headers;
+	}
+
+	/**
+	 * Returns route.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return string
+	 */
+	private static function get_route( $request ) {
+		// Check if the route starts with "index.php".
+		if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
+			$route = $request->get_route();
+		} else {
+			$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
+		}
+
+		// Fix route for subdirectory installations.
+		$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
+
+		if ( \is_string( $path ) ) {
+			$path = trim( $path, '/' );
+		}
+
+		if ( $path ) {
+			$route = '/' . $path . $route;
+		}
+
+		return $route;
+	}
+
+	/**
+	 * Check if RFC-9421 signature could be supported.
+	 *
+	 * @param string $url The URL to check.
+	 *
+	 * @return bool True, if RFC-9421 signature could be supported, false otherwise.
+	 */
+	private static function could_support_rfc9421( $url ) {
+		$host = \wp_parse_url( $url, \PHP_URL_HOST );
+		$list = \get_option( 'activitypub_rfc9421_unsupported', array() );
+
+		if ( isset( $list[ $host ] ) ) {
+			if ( $list[ $host ] > \time() ) {
+				return false;
+			}
+
+			unset( $list[ $host ] );
+			\update_option( 'activitypub_rfc9421_unsupported', $list );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Set RFC-9421 signature unsupported for a given host.
+	 *
+	 * @param string $url The URL to set.
+	 */
+	private static function rfc9421_add_unsupported_host( $url ) {
+		$list = \get_option( 'activitypub_rfc9421_unsupported', array() );
+		$host = \wp_parse_url( $url, \PHP_URL_HOST );
+
+		$list[ $host ] = \time() + MONTH_IN_SECONDS;
+		\update_option( 'activitypub_rfc9421_unsupported', $list, false );
+	}
+
+	/**
 	 * Return the public key for a given user.
+	 *
+	 * @deprecated 7.0.0 Use {@see Actors::get_public_key()}.
 	 *
 	 * @param int  $user_id The WordPress User ID.
 	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
 	 *
-	 * @return mixed The public key.
+	 * @return string The public key.
 	 */
 	public static function get_public_key_for( $user_id, $force = false ) {
-		if ( $force ) {
-			self::generate_key_pair_for( $user_id );
-		}
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_public_key' );
 
-		$key_pair = self::get_keypair_for( $user_id );
-
-		return $key_pair['public_key'];
+		return Actors::get_public_key( $user_id, $force );
 	}
 
 	/**
 	 * Return the private key for a given user.
 	 *
+	 * @deprecated 7.0.0 Use {@see Actors::get_private_key()}.
+	 *
 	 * @param int  $user_id The WordPress User ID.
 	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
 	 *
-	 * @return mixed The private key.
+	 * @return string The private key.
 	 */
 	public static function get_private_key_for( $user_id, $force = false ) {
-		if ( $force ) {
-			self::generate_key_pair_for( $user_id );
-		}
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_private_key' );
 
-		$key_pair = self::get_keypair_for( $user_id );
-
-		return $key_pair['private_key'];
+		return Actors::get_private_key( $user_id, $force );
 	}
 
 	/**
 	 * Return the key pair for a given user.
+	 *
+	 * @deprecated 7.0.0 Use {@see Actors::get_keypair()}.
 	 *
 	 * @param int $user_id The WordPress User ID.
 	 *
 	 * @return array The key pair.
 	 */
 	public static function get_keypair_for( $user_id ) {
-		$option_key = self::get_signature_options_key_for( $user_id );
-		$key_pair   = \get_option( $option_key );
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_keypair' );
 
-		if ( ! $key_pair ) {
-			$key_pair = self::generate_key_pair_for( $user_id );
-		}
-
-		return $key_pair;
+		return Actors::get_keypair( $user_id );
 	}
 
 	/**
-	 * Generates the pair keys
+	 * Get public key from key_id.
 	 *
-	 * @param int $user_id The WordPress User ID.
+	 * @deprecated 7.0.0 Use {@see Actors::get_remote_key()}.
 	 *
-	 * @return array The key pair.
+	 * @param string $key_id The URL to the public key.
+	 *
+	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
-	protected static function generate_key_pair_for( $user_id ) {
-		$option_key = self::get_signature_options_key_for( $user_id );
-		$key_pair   = self::check_legacy_key_pair_for( $user_id );
+	public static function get_remote_key( $key_id ) {
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_remote_key()' );
 
-		if ( $key_pair ) {
-			\add_option( $option_key, $key_pair );
-
-			return $key_pair;
-		}
-
-		$config = array(
-			'digest_alg'       => 'sha512',
-			'private_key_bits' => 2048,
-			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
-		);
-
-		$key         = \openssl_pkey_new( $config );
-		$private_key = null;
-		$detail      = array();
-		if ( $key ) {
-			\openssl_pkey_export( $key, $private_key );
-
-			$detail = \openssl_pkey_get_details( $key );
-		}
-
-		// Check if keys are valid.
-		if (
-			empty( $private_key ) || ! is_string( $private_key ) ||
-			! isset( $detail['key'] ) || ! is_string( $detail['key'] )
-		) {
-			return array(
-				'private_key' => null,
-				'public_key'  => null,
-			);
-		}
-
-		$key_pair = array(
-			'private_key' => $private_key,
-			'public_key'  => $detail['key'],
-		);
-
-		// Persist keys.
-		\add_option( $option_key, $key_pair );
-
-		return $key_pair;
-	}
-
-	/**
-	 * Return the option key for a given user.
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return string The option key.
-	 */
-	protected static function get_signature_options_key_for( $user_id ) {
-		$id = $user_id;
-
-		if ( $user_id > 0 ) {
-			$user = \get_userdata( $user_id );
-			// Sanitize username because it could include spaces and special chars.
-			$id = sanitize_title( $user->user_login );
-		}
-
-		return 'activitypub_keypair_for_' . $id;
-	}
-
-	/**
-	 * Check if there is a legacy key pair
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return array|bool The key pair or false.
-	 */
-	protected static function check_legacy_key_pair_for( $user_id ) {
-		switch ( $user_id ) {
-			case 0:
-				$public_key  = \get_option( 'activitypub_blog_user_public_key' );
-				$private_key = \get_option( 'activitypub_blog_user_private_key' );
-				break;
-			case -1:
-				$public_key  = \get_option( 'activitypub_application_user_public_key' );
-				$private_key = \get_option( 'activitypub_application_user_private_key' );
-				break;
-			default:
-				$public_key  = \get_user_meta( $user_id, 'magic_sig_public_key', true );
-				$private_key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
-				break;
-		}
-
-		if ( ! empty( $public_key ) && is_string( $public_key ) && ! empty( $private_key ) && is_string( $private_key ) ) {
-			return array(
-				'private_key' => $private_key,
-				'public_key'  => $public_key,
-			);
-		}
-
-		return false;
+		return Actors::get_remote_key( $key_id );
 	}
 
 	/**
 	 * Generates the Signature for an HTTP Request.
+	 *
+	 * @deprecated 7.0.0 Use {@see Signature::sign_request()}.
 	 *
 	 * @param int    $user_id     The WordPress User ID.
 	 * @param string $http_method The HTTP method.
@@ -193,8 +263,10 @@ class Signature {
 	 * @return string The signature.
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request()' );
+
 		$user = Actors::get_by_id( $user_id );
-		$key  = self::get_private_key_for( $user->get__id() );
+		$key  = Actors::get_private_key( $user_id );
 
 		$url_parts = \wp_parse_url( $url );
 
@@ -233,128 +305,18 @@ class Signature {
 	}
 
 	/**
-	 * Verifies the http signatures
-	 *
-	 * @param WP_REST_Request|array $request The request object or $_SERVER array.
-	 *
-	 * @return bool|WP_Error A boolean or WP_Error.
-	 */
-	public static function verify_http_signature( $request ) {
-		if ( is_object( $request ) ) { // REST Request object.
-			// Check if route starts with "index.php".
-			if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
-				$route = $request->get_route();
-			} else {
-				$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
-			}
-
-			// Fix route for subdirectory installs.
-			$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
-
-			if ( \is_string( $path ) ) {
-				$path = trim( $path, '/' );
-			}
-
-			if ( $path ) {
-				$route = '/' . $path . $route;
-			}
-
-			$headers                        = $request->get_headers();
-			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $route;
-		} else {
-			$request                        = self::format_server_request( $request );
-			$headers                        = $request['headers']; // $_SERVER array
-			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
-		}
-
-		if ( array_key_exists( 'signature', $headers ) ) {
-			$signature_block = self::parse_signature_header( $headers['signature'][0] );
-		} elseif ( array_key_exists( 'authorization', $headers ) ) {
-			$signature_block = self::parse_signature_header( $headers['authorization'][0] );
-		} else {
-			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 401 ) );
-		}
-
-		$signed_headers = $signature_block['headers'];
-
-		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
-		if ( ! $signed_data ) {
-			return new WP_Error( 'activitypub_signature', __( 'Signed request date outside acceptable time window', 'activitypub' ), array( 'status' => 401 ) );
-		}
-
-		$algorithm = self::get_signature_algorithm( $signature_block );
-		if ( ! $algorithm ) {
-			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 401 ) );
-		}
-
-		if ( \in_array( 'digest', $signed_headers, true ) && isset( $body ) ) {
-			if ( is_array( $headers['digest'] ) ) {
-				$headers['digest'] = $headers['digest'][0];
-			}
-			$algorithm = 'sha256';
-			$digest    = explode( '=', $headers['digest'], 2 );
-			if ( 'SHA-512' === $digest[0] ) {
-				$algorithm = 'sha512';
-			}
-
-			if ( \base64_encode( \hash( $algorithm, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
-				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
-			}
-		}
-
-		$public_key = self::get_remote_key( $signature_block['keyId'] );
-
-		if ( \is_wp_error( $public_key ) ) {
-			return $public_key;
-		}
-
-		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
-		if ( ! $verified ) {
-			return new WP_Error( 'activitypub_signature', __( 'Invalid signature', 'activitypub' ), array( 'status' => 401 ) );
-		}
-		return $verified;
-	}
-
-	/**
-	 * Get public key from key_id.
-	 *
-	 * @param string $key_id The URL to the public key.
-	 *
-	 * @return resource|WP_Error The public key resource or WP_Error.
-	 */
-	public static function get_remote_key( $key_id ) {
-		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) );
-		if ( \is_wp_error( $actor ) ) {
-			return new WP_Error(
-				'activitypub_no_remote_profile_found',
-				__( 'No Profile found or Profile not accessible', 'activitypub' ),
-				array( 'status' => 401 )
-			);
-		}
-
-		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
-			$key_resource = \openssl_pkey_get_public( \rtrim( $actor['publicKey']['publicKeyPem'] ) );
-			if ( $key_resource ) {
-				return $key_resource;
-			}
-		}
-
-		return new WP_Error(
-			'activitypub_no_remote_key_found',
-			__( 'No Public-Key found', 'activitypub' ),
-			array( 'status' => 401 )
-		);
-	}
-
-	/**
 	 * Gets the signature algorithm from the signature header.
+	 *
+	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
 	 *
 	 * @param array $signature_block The signature block.
 	 *
-	 * @return string The signature algorithm.
+	 * @return string|bool The signature algorithm or false if not found.
 	 */
-	public static function get_signature_algorithm( $signature_block ) {
-		if ( $signature_block['algorithm'] ) {
+	public static function get_signature_algorithm( $signature_block ) { // phpcs:ignore
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+
+		if ( ! empty( $signature_block['algorithm'] ) ) {
 			switch ( $signature_block['algorithm'] ) {
 				case 'rsa-sha-512':
 					return 'sha512'; // hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12.
@@ -362,17 +324,22 @@ class Signature {
 					return 'sha256';
 			}
 		}
+
 		return false;
 	}
 
 	/**
 	 * Parses the Signature header.
 	 *
+	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
+	 *
 	 * @param string $signature The signature header.
 	 *
 	 * @return array Signature parts.
 	 */
-	public static function parse_signature_header( $signature ) {
+	public static function parse_signature_header( $signature ) { // phpcs:ignore
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+
 		$parsed_header = array();
 		$matches       = array();
 
@@ -405,13 +372,17 @@ class Signature {
 	/**
 	 * Gets the header data from the included pseudo headers.
 	 *
+	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
+	 *
 	 * @param array $signed_headers  The signed headers.
 	 * @param array $signature_block The signature block.
 	 * @param array $headers         The HTTP headers.
 	 *
 	 * @return string signed headers for comparison
 	 */
-	public static function get_signed_data( $signed_headers, $signature_block, $headers ) {
+	public static function get_signed_data( $signed_headers, $signature_block, $headers ) { // phpcs:ignore
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+
 		$signed_data = '';
 
 		// This also verifies time-based values by returning false if any of these are out of range.
@@ -458,8 +429,8 @@ class Signature {
 				}
 
 				// Allow a bit of leeway for misconfigured clocks.
-				$d = new DateTime( $headers[ $header ][0] );
-				$d->setTimeZone( new DateTimeZone( 'UTC' ) );
+				$d = new \DateTime( $headers[ $header ][0] );
+				$d->setTimeZone( new \DateTimeZone( 'UTC' ) );
 				$c = $d->format( 'U' );
 
 				$d_plus  = time() + ( 3 * HOUR_IN_SECONDS );
@@ -475,44 +446,23 @@ class Signature {
 				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
 			}
 		}
+
 		return \rtrim( $signed_data, "\n" );
 	}
 
 	/**
 	 * Generates the digest for an HTTP Request.
 	 *
+	 * @deprecated 7.0.0 Use {@see Signature::sign_request()}.
+	 *
 	 * @param string $body The body of the request.
 	 *
 	 * @return string The digest.
 	 */
 	public static function generate_digest( $body ) {
+		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request' );
+
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return "SHA-256=$digest";
-	}
-
-	/**
-	 * Formats the $_SERVER to resemble the WP_REST_REQUEST array,
-	 * for use with verify_http_signature().
-	 *
-	 * @param array $server The $_SERVER array.
-	 *
-	 * @return array $request The formatted request array.
-	 */
-	public static function format_server_request( $server ) {
-		$request = array();
-		foreach ( $server as $param_key => $param_val ) {
-			$req_param = strtolower( $param_key );
-			if ( 'REQUEST_URI' === $req_param ) {
-				$request['headers']['route'][] = $param_val;
-			} else {
-				$header_key                          = str_replace(
-					'http_',
-					'',
-					$req_param
-				);
-				$request['headers'][ $header_key ][] = \wp_unslash( $param_val );
-			}
-		}
-		return $request;
 	}
 }

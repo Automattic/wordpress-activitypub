@@ -13,7 +13,7 @@ use Activitypub\Move;
 /**
  * Test class for Activitypub User.
  *
- * @coversDefaultClass User
+ * @coversDefaultClass \Activitypub\Model\User
  */
 class Test_User extends \WP_UnitTestCase {
 
