@@ -199,8 +199,7 @@ class Migration {
 			}
 		}
 
-		// Always register schedules, to ensure they are registered even
-		// if the plugin is activated after the first activation.
+		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
 
 		/*
