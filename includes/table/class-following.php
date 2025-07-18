@@ -121,6 +121,7 @@ class Following extends \WP_List_Table {
 				}
 
 				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
+				$post    = Actors::fetch_remote_by_uri( $profile );
 
 				if ( \is_wp_error( $post ) ) {
 					\add_settings_error( 'activitypub', 'followed', $post->get_error_message() );
