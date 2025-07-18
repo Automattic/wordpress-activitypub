@@ -9,6 +9,8 @@ namespace Activitypub\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
+use Activitypub\Sanitize;
+use Activitypub\Webfinger;
 
 use function Activitypub\object_to_uri;
 
@@ -20,6 +22,8 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
  * Following Table-Class.
  */
 class Following extends \WP_List_Table {
+	use Actor_List_Table;
+
 	/**
 	 * User ID.
 	 *
@@ -105,7 +109,34 @@ class Following extends \WP_List_Table {
 					}
 				}
 				break;
+			case 'follow':
+				$redirect_to = \remove_query_arg( array( 's' ), $redirect_to );
 
+				if ( ! isset( $_REQUEST['activitypub-profile'], $_REQUEST['_wpnonce'] ) ) {
+					return;
+				}
+
+				$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+				if ( ! \wp_verify_nonce( $nonce, 'activitypub-follow-nonce' ) ) {
+					return;
+				}
+
+				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
+				$post    = Actors::fetch_remote_by_uri( $profile );
+
+				if ( \is_wp_error( $post ) ) {
+					\add_settings_error( 'activitypub', 'followed', $post->get_error_message() );
+					break;
+				}
+
+				$result = Following_Collection::follow( $post, $this->user_id );
+				if ( \is_wp_error( $result ) ) {
+					\add_settings_error( 'activitypub', 'followed', $result->get_error_message() );
+				} else {
+					\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
+				}
+
+				break;
 			default:
 				break;
 		}
@@ -133,6 +164,7 @@ class Following extends \WP_List_Table {
 			'cb'         => '<input type="checkbox" />',
 			'username'   => \__( 'Username', 'activitypub' ),
 			'post_title' => \__( 'Name', 'activitypub' ),
+			'webfinger'  => \__( 'Profile', 'activitypub' ),
 			'modified'   => \__( 'Last updated', 'activitypub' ),
 		);
 	}
@@ -169,15 +201,7 @@ class Following extends \WP_List_Table {
 		}
 
 		if ( isset( $_GET['s'] ) ) {
-			$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ) );
-			$search = \str_replace( 'acct:', '', $search );
-			$search = \str_replace( '@', ' ', $search );
-			$search = \str_replace( 'http://', '', $search );
-			$search = \str_replace( 'https://', '', $search );
-			$search = \str_replace( 'www.', '', $search );
-			$search = \trim( $search );
-
-			$args['s'] = $search;
+			$args['s'] = self::normalize_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		}
 
 		if ( isset( $_GET['status'] ) ) {
@@ -205,15 +229,22 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor = Actors::get_actor( $following );
+			$actor     = Actors::get_actor( $following );
+			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
+			$webfinger = Webfinger::uri_to_acct( $url );
+
+			if ( \is_wp_error( $webfinger ) ) {
+				$webfinger = Webfinger::guess( $url );
+			}
 
 			$this->items[] = array(
 				'id'         => $following->ID,
 				'icon'       => $actor->get_icon()['url'] ?? '',
-				'post_title' => $actor->get_name(),
+				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
-				'name'       => $actor->get_name(),
-				'url'        => object_to_uri( $actor->get_url() ),
+				'url'        => $url,
+				'webfinger'  => $webfinger,
+				'status'     => Following_Collection::check_status( $this->user_id, $following->ID ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $following->post_modified_gmt,
 			);
@@ -234,7 +265,7 @@ class Following extends \WP_List_Table {
 			$path = 'options-general.php?page=activitypub&tab=following';
 		}
 
-		if ( isset( $_GET['status'] ) ) {
+		if ( ! empty( $_GET['status'] ) ) {
 			$status = \sanitize_text_field( \wp_unslash( $_GET['status'] ) );
 		}
 
@@ -335,18 +366,35 @@ class Following extends \WP_List_Table {
 
 		if (
 			( ! isset( $_GET['status'] ) || Following_Collection::ALL === $_GET['status'] ) &&
-			( Following_Collection::PENDING === Following_Collection::check_status( $this->user_id, $item['id'] ) )
+			( Following_Collection::PENDING === $item['status'] )
 		) {
 			$status = \sprintf( '<strong> — %s</strong>', \esc_html__( 'Pending', 'activitypub' ) );
 		}
 
 		return sprintf(
-			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong>%5$s<br />',
+			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s" target="_blank">%4$s</a></strong>%5$s<br />',
 			\esc_url( $item['icon'] ),
 			\esc_attr( $item['post_title'] ),
 			\esc_url( $item['url'] ),
 			\esc_html( $item['username'] ),
 			$status
+		);
+	}
+
+	/**
+	 * Column WebFinger.
+	 *
+	 * @param array $item Item.
+	 *
+	 * @return string The WebFinger link.
+	 */
+	public function column_webfinger( $item ) {
+		$webfinger = Sanitize::webfinger( $item['webfinger'] );
+
+		return \sprintf(
+			'<a href="%1$s" target="_blank" title="%1$s">@%2$s</a>',
+			\esc_url( $item['url'] ),
+			\esc_html( $webfinger )
 		);
 	}
 
@@ -369,7 +417,36 @@ class Following extends \WP_List_Table {
 	 * Message to be displayed when there are no followings.
 	 */
 	public function no_items() {
-		\esc_html_e( 'No followings found.', 'activitypub' );
+		\esc_html_e( 'No profiles found.', 'activitypub' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ?? '' ) );
+		if ( empty( $search ) ) {
+			return;
+		}
+
+		$search = Sanitize::webfinger( $search );
+		if ( filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
+			return;
+		}
+
+		$search = Webfinger::resolve( $search );
+
+		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
+			$actor = Actors::fetch_remote_by_uri( $search );
+			if ( ! is_wp_error( $actor ) ) {
+				echo ' ';
+				\printf(
+					/* translators: %s: Actor name. */
+					\esc_html__( 'Would you like to follow %s?', 'activitypub' ),
+					\sprintf(
+						'<a href="%s">%s</a>',
+						\esc_url( \add_query_arg( 'resource', $search ) ),
+						\esc_html( $actor->post_title )
+					)
+				);
+			}
+		}
 	}
 
 	/**
