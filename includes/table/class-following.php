@@ -13,7 +13,6 @@ use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\object_to_uri;
-use function Activitypub\guess_webfinger_by_uri;
 
 if ( ! \class_exists( '\WP_List_Table' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
@@ -241,7 +240,7 @@ class Following extends \WP_List_Table {
 			$webfinger = Webfinger::uri_to_acct( $url );
 
 			if ( \is_wp_error( $webfinger ) ) {
-				$webfinger = guess_webfinger_by_uri( $url );
+				$webfinger = Webfinger::guess( $url );
 			}
 
 			$this->items[] = array(
