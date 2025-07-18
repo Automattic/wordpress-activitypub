@@ -9,6 +9,9 @@ namespace Activitypub\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
+use Activitypub\Collection\Following;
+use Activitypub\Sanitize;
+use Activitypub\Webfinger;
 
 use function Activitypub\object_to_uri;
 
@@ -30,13 +33,24 @@ class Followers extends \WP_List_Table {
 	private $user_id;
 
 	/**
+	 * Follow URL.
+	 *
+	 * @var string
+	 */
+	public $follow_url;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
-			$this->user_id = Actors::BLOG_USER_ID;
+			$this->user_id    = Actors::BLOG_USER_ID;
+			$this->follow_url = \admin_url( 'options-general.php?page=activitypub&tab=following' );
 		} else {
-			$this->user_id = \get_current_user_id();
+			$this->user_id    = \get_current_user_id();
+			$this->follow_url = \admin_url( 'users.php?page=activitypub-following' );
+
+			\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 		}
 
 		parent::__construct(
@@ -48,7 +62,6 @@ class Followers extends \WP_List_Table {
 		);
 
 		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
-		\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 	}
 
 	/**
@@ -59,8 +72,21 @@ class Followers extends \WP_List_Table {
 			return;
 		}
 
+		if ( ! $this->current_action() ) {
+			return;
+		}
+
+		$redirect_to = \add_query_arg(
+			array(
+				'settings-updated' => true,  // Tell WordPress to load settings errors transient.
+				'action'           => false, // Remove action parameter to prevent redirect loop.
+			)
+		);
+
 		switch ( $this->current_action() ) {
 			case 'delete':
+				$redirect_to = \remove_query_arg( array( 'follower', 'followers' ), $redirect_to );
+
 				// Handle single follower deletion.
 				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
 					$follower = \absint( $_GET['follower'] );
@@ -69,13 +95,7 @@ class Followers extends \WP_List_Table {
 					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $follower ) ) {
 						Follower_Collection::remove( $follower, $this->user_id );
 
-						$redirect_args = array(
-							'updated' => 'true',
-							'action'  => 'deleted',
-						);
-
-						\wp_safe_redirect( \add_query_arg( $redirect_args, \remove_query_arg( array( 'follower' ) ) ) );
-						exit;
+						\add_settings_error( 'activitypub', 'follower_deleted', \__( 'Follower deleted.', 'activitypub' ), 'success' );
 					}
 				}
 
@@ -89,14 +109,12 @@ class Followers extends \WP_List_Table {
 							Follower_Collection::remove( $follower, $this->user_id );
 						}
 
-						$redirect_args = array(
-							'updated' => 'true',
-							'action'  => 'all_deleted',
-							'count'   => \count( $followers ),
-						);
+						$count = \count( $followers );
+						/* translators: %d: Number of followers deleted. */
+						$message = \_n( '%d follower deleted.', '%d followers deleted.', $count, 'activitypub' );
+						$message = \sprintf( $message, \number_format_i18n( $count ) );
 
-						\wp_safe_redirect( \add_query_arg( $redirect_args, \remove_query_arg( array( 'followers' ) ) ) );
-						exit;
+						\add_settings_error( 'activitypub', 'followers_deleted', $message, 'success' );
 					}
 				}
 				break;
@@ -104,37 +122,18 @@ class Followers extends \WP_List_Table {
 			default:
 				break;
 		}
+
+		\set_transient( 'settings_errors', get_settings_errors(), 30 ); // 30 seconds.
+
+		\wp_safe_redirect( $redirect_to );
+		exit;
 	}
 
 	/**
 	 * Process admin notices based on query parameters.
 	 */
 	public function process_admin_notices() {
-		if ( isset( $_REQUEST['updated'] ) && 'true' === $_REQUEST['updated'] && ! empty( $_REQUEST['action'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$message = '';
-			switch ( $_REQUEST['action'] ) { // phpcs:ignore WordPress.Security.NonceVerification
-				case 'deleted':
-					$message = \__( 'Follower deleted.', 'activitypub' );
-					break;
-				case 'all_deleted':
-					$count = \absint( $_REQUEST['count'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
-					/* translators: %d: Number of followers deleted. */
-					$message = \_n( '%d follower deleted.', '%d followers deleted.', $count, 'activitypub' );
-					$message = \sprintf( $message, \number_format_i18n( $count ) );
-					break;
-			}
-
-			if ( ! empty( $message ) ) {
-				\wp_admin_notice(
-					$message,
-					array(
-						'type'        => 'success',
-						'dismissible' => true,
-						'id'          => 'message',
-					)
-				);
-			}
-		}
+		\settings_errors( 'activitypub' );
 	}
 
 	/**
@@ -147,6 +146,7 @@ class Followers extends \WP_List_Table {
 			'cb'         => '<input type="checkbox" />',
 			'username'   => \esc_html__( 'Username', 'activitypub' ),
 			'post_title' => \esc_html__( 'Name', 'activitypub' ),
+			'webfinger'  => \esc_html__( 'Profile', 'activitypub' ),
 			'modified'   => \esc_html__( 'Last updated', 'activitypub' ),
 		);
 	}
@@ -199,12 +199,21 @@ class Followers extends \WP_List_Table {
 		);
 
 		foreach ( $followers as $follower ) {
-			$actor         = Actors::get_actor( $follower );
+			$actor     = Actors::get_actor( $follower );
+			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
+			$webfinger = Webfinger::uri_to_acct( $url );
+
+			if ( is_wp_error( $webfinger ) ) {
+				$webfinger = Webfinger::guess( $url );
+			}
+
 			$this->items[] = array(
+				'id'         => $follower->ID,
 				'icon'       => $actor->get_icon()['url'] ?? '',
-				'post_title' => $actor->get_name(),
+				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
-				'url'        => object_to_uri( $actor->get_url() ),
+				'url'        => $url,
+				'webfinger'  => $webfinger,
 				'identifier' => $actor->get_id(),
 				'modified'   => $follower->post_modified_gmt,
 			);
@@ -289,11 +298,27 @@ class Followers extends \WP_List_Table {
 	 */
 	public function column_username( $item ) {
 		return \sprintf(
-			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s">%4$s</a></strong><br />',
+			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s" target="_blank">%4$s</a></strong><br />',
 			\esc_url( $item['icon'] ),
 			\esc_attr( $item['username'] ),
 			\esc_url( $item['url'] ),
 			\esc_html( $item['username'] )
+		);
+	}
+
+	/**
+	 * Column webfinger.
+	 *
+	 * @param array $item Item.
+	 * @return string
+	 */
+	public function column_webfinger( $item ) {
+		$webfinger = Sanitize::webfinger( $item['webfinger'] );
+
+		return \sprintf(
+			'<a href="%1$s" target="_blank" title="%1$s">@%2$s</a>',
+			\esc_url( $item['url'] ),
+			\esc_html( $webfinger )
 		);
 	}
 
@@ -316,7 +341,24 @@ class Followers extends \WP_List_Table {
 	 * Message to be displayed when there are no followers.
 	 */
 	public function no_items() {
-		\esc_html_e( 'No followers found.', 'activitypub' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$search         = \sanitize_text_field( \wp_unslash( $_GET['s'] ?? '' ) );
+		$actor_or_false = $this->_is_followable( $search );
+
+		if ( $actor_or_false ) {
+			\printf(
+				/* translators: %s: Actor name. */
+				\esc_html__( '%1$s is not following you, would you like to %2$s instead?', 'activitypub' ),
+				\esc_html( $actor_or_false->post_title ),
+				\sprintf(
+					'<a href="%s">%s</a>',
+					\esc_url( \add_query_arg( 'resource', $search, $this->follow_url ) ),
+					\esc_html__( 'follow them', 'activitypub' )
+				)
+			);
+		} else {
+			\esc_html_e( 'No followers found.', 'activitypub' );
+		}
 	}
 
 	/**
@@ -351,5 +393,40 @@ class Followers extends \WP_List_Table {
 		);
 
 		return $this->row_actions( $actions );
+	}
+
+	/**
+	 * Checks if the searched actor can be followed.
+	 *
+	 * @param string $search The search string.
+	 *
+	 * @return \WP_Post|false The actor post or false.
+	 */
+	private function _is_followable( $search ) { // phpcs:ignore
+		if ( empty( $search ) ) {
+			return false;
+		}
+
+		$search = Sanitize::webfinger( $search );
+		if ( ! \filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
+			return false;
+		}
+
+		$search = Webfinger::resolve( $search );
+		if ( \is_wp_error( $search ) || ! \filter_var( $search, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		$actor = Actors::fetch_remote_by_uri( $search );
+		if ( \is_wp_error( $actor ) ) {
+			return false;
+		}
+
+		$does_follow = Following::check_status( $this->user_id, $actor->ID );
+		if ( $does_follow ) {
+			return false;
+		}
+
+		return $actor;
 	}
 }
