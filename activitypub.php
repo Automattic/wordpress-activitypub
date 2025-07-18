@@ -84,10 +84,13 @@ function plugin_init() {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
 	}
 
-	$debug_file = __DIR__ . '/includes/debug.php';
-	if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
-		require_once $debug_file;
-		Debug::init();
+	// Load development tools.
+	if ( 'development' === wp_get_environment_type() ) {
+		$debug_file = __DIR__ . '/development/debug.php';
+		if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
+			require_once $debug_file;
+			Debug::init();
+		}
 	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
