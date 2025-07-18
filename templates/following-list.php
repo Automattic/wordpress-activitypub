@@ -63,7 +63,7 @@ $following_list_table->prepare_items();
 						<li><p><?php echo wp_kses_post( __( 'Profile link: <code>https://example.com/@username</code>', 'activitypub' ) ); ?></p></li>
 					</ul>
 
-					<p><?php echo esc_html__( '(Make sure the user you&rsquo;re following is part of the fediverse and supports ActivityPub.)', 'activitypub' ); ?></p>
+					<p><?php echo esc_html__( '(Make sure the user you&rsquo;re following is part of the fediverse and supports ActivityPub)', 'activitypub' ); ?></p>
 				</div>
 			</div>
 		</div>
