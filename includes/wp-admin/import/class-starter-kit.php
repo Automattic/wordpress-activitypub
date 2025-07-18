@@ -284,7 +284,7 @@ class Starter_Kit {
 	 */
 	public static function header() {
 		echo '<div class="wrap">';
-		echo '<h2>' . \esc_html__( 'Import Starter Kit (Beta)', 'activitypub' ) . '</h2>';
+		echo '<h2>' . \esc_html__( 'Import a Fediverse Starter Kit (Beta)', 'activitypub' ) . '</h2>';
 	}
 
 	/**

@@ -30,8 +30,8 @@ function load() {
 	if ( \apply_filters( 'activitypub_show_following_ui', false ) ) {
 		\register_importer(
 			'starter-kit',
-			\__( 'Starter Kits (Beta)', 'activitypub' ),
-			\__( 'Automatically follow a collection of users.', 'activitypub' ),
+			\__( 'Fediverse Starter Kits (Beta)', 'activitypub' ),
+			\__( 'Automatically follow a collection of Fediverse users.', 'activitypub' ),
 			array( __NAMESPACE__ . '\Starter_Kit', 'dispatch' )
 		);
 	}
