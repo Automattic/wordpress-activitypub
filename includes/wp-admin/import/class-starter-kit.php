@@ -260,9 +260,9 @@ class Starter_Kit {
 		echo '<hr />';
 
 		/* translators: %d: Number of followed actors */
-		printf( '<p>%s</p>', \esc_html( \sprintf( \_n( 'Followed %s Actor.', 'Followed %s Actors.', $followed, 'activitypub' ), \number_format_i18n( $followed ) ) ) );
+		\printf( '<p>%s</p>', \esc_html( \sprintf( \_n( 'Followed %s Actor.', 'Followed %s Actors.', $followed, 'activitypub' ), \number_format_i18n( $followed ) ) ) );
 		/* translators: %d: Number of skipped items */
-		printf( '<p>%s</p>', \esc_html( \sprintf( \_n( 'Skipped %s Item.', 'Skipped %s Items.', $skipped, 'activitypub' ), \number_format_i18n( $skipped ) ) ) );
+		\printf( '<p>%s</p>', \esc_html( \sprintf( \_n( 'Skipped %s Item.', 'Skipped %s Items.', $skipped, 'activitypub' ), \number_format_i18n( $skipped ) ) ) );
 
 		return true;
 	}
