@@ -9,6 +9,7 @@ namespace Activitypub\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
+use Activitypub\Collection\Following;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
@@ -346,21 +347,23 @@ class Followers extends \WP_List_Table {
 	 * Message to be displayed when there are no followers.
 	 */
 	public function no_items() {
-		\esc_html_e( 'No followers found.', 'activitypub' );
-
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$search = \sanitize_text_field( \wp_unslash( $_GET['s'] ?? '' ) );
-		$search = Sanitize::webfinger( $search );
+		$search         = \sanitize_text_field( \wp_unslash( $_GET['s'] ?? '' ) );
+		$actor_or_false = $this->_is_followable( $search );
 
-		if ( filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
-			$search = Webfinger::resolve( $search );
-		}
-
-		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
-			$actor = Actors::fetch_remote_by_uri( $search );
-			if ( ! is_wp_error( $actor ) ) {
-				\printf( ' Do you maybe want to follow %s?', sprintf( '<a href="%s">%s</a>', \esc_url( \add_query_arg( 'resource', $search, $this->follow_url ) ), \esc_html( $actor->post_title ) ) );
-			}
+		if ( $actor_or_false ) {
+			\printf(
+				/* translators: %s: Actor name. */
+				\esc_html__( '%1$s is not following you, would you like to %2$s instead?', 'activitypub' ),
+				\esc_html( $actor_or_false->post_title ),
+				\sprintf(
+					'<a href="%s">%s</a>',
+					\esc_url( \add_query_arg( 'resource', $search, $this->follow_url ) ),
+					\esc_html__( 'follow them', 'activitypub' )
+				)
+			);
+		} else {
+			\esc_html_e( 'No followers found.', 'activitypub' );
 		}
 	}
 
@@ -396,5 +399,40 @@ class Followers extends \WP_List_Table {
 		);
 
 		return $this->row_actions( $actions );
+	}
+
+	/**
+	 * Checks if the searched actor can be followed.
+	 *
+	 * @param string $search The search string.
+	 *
+	 * @return \WP_Post|false The actor post or false.
+	 */
+	private function _is_followable( $search ) { // phpcs:ignore
+		if ( empty( $search ) ) {
+			return false;
+		}
+
+		$search = Sanitize::webfinger( $search );
+		if ( ! \filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
+			return false;
+		}
+
+		$search = Webfinger::resolve( $search );
+		if ( \is_wp_error( $search ) || ! \filter_var( $search, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		$actor = Actors::fetch_remote_by_uri( $search );
+		if ( \is_wp_error( $actor ) ) {
+			return false;
+		}
+
+		$does_follow = Following::check_status( $this->user_id, $actor->ID );
+		if ( $does_follow ) {
+			return false;
+		}
+
+		return $actor;
 	}
 }

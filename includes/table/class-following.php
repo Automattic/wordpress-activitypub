@@ -433,8 +433,10 @@ class Following extends \WP_List_Table {
 
 		$search = Sanitize::webfinger( $search );
 		if ( filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
-			$search = Webfinger::resolve( $search );
+			return;
 		}
+
+		$search = Webfinger::resolve( $search );
 
 		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
 			$actor = Actors::fetch_remote_by_uri( $search );
