@@ -12,6 +12,7 @@ use Activitypub\Collection\Following as Following_Collection;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
+use function Activitypub\follow;
 use function Activitypub\object_to_uri;
 
 if ( ! \class_exists( '\WP_List_Table' ) ) {
@@ -122,14 +123,7 @@ class Following extends \WP_List_Table {
 				}
 
 				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$post    = Actors::fetch_remote_by_uri( $profile );
-
-				if ( \is_wp_error( $post ) ) {
-					\add_settings_error( 'activitypub', 'followed', $post->get_error_message() );
-					break;
-				}
-
-				$result = Following_Collection::follow( $post, $this->user_id );
+				$result  = follow( $profile, $this->user_id );
 				if ( \is_wp_error( $result ) ) {
 					\add_settings_error( 'activitypub', 'followed', $result->get_error_message() );
 				} else {
