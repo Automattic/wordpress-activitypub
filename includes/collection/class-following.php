@@ -51,6 +51,8 @@ class Following {
 	/**
 	 * Follow a user.
 	 *
+	 * This function will not look up an Actor by URI or create an outbox entry.
+	 *
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
 	 *
