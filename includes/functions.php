@@ -174,7 +174,7 @@ function url_to_authorid( $url ) {
 /**
  * Verify that url is a wp_ap_comment or a previously received remote comment.
  *
- * @deprecated since unreleased.
+ * @deprecated unreleased
  *
  * @return int|bool Comment ID or false if not found.
  */
