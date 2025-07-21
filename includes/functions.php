@@ -1529,12 +1529,16 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 /**
  * Follow a user.
  *
- * @param string $remote_actor The Actor URL or WebFinger Resource.
- * @param int    $user_id      The ID of the WordPress User.
+ * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
+ * @param int        $user_id      The ID of the WordPress User.
  *
  * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
  */
 function follow( $remote_actor, $user_id ) {
+	if ( \is_numeric( $remote_actor ) ) {
+		return Following::follow( $remote_actor, $user_id );
+	}
+
 	if ( ! \filter_var( $remote_actor, FILTER_VALIDATE_URL ) ) {
 		$remote_actor = Webfinger::resolve( $remote_actor );
 	}
@@ -1555,12 +1559,16 @@ function follow( $remote_actor, $user_id ) {
 /**
  * Unfollow a user.
  *
- * @param string $remote_actor The Actor URL or WebFinger Resource.
- * @param int    $user_id      The ID of the WordPress User.
+ * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
+ * @param int        $user_id      The ID of the WordPress User.
  *
  * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
  */
 function unfollow( $remote_actor, $user_id ) {
+	if ( \is_numeric( $remote_actor ) ) {
+		return Following::unfollow( $remote_actor, $user_id );
+	}
+
 	if ( ! \filter_var( $remote_actor, FILTER_VALIDATE_URL ) ) {
 		$remote_actor = Webfinger::resolve( $remote_actor );
 	}
