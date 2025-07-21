@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 
 /**
@@ -50,10 +51,22 @@ class Sanitize {
 			$uri = \trim( $uri );
 			$uri = \ltrim( $uri, '@' );
 
-			if ( \is_email( $uri ) ) {
-				$uris[] = \sanitize_email( $uri );
+			if ( \is_email( \ltrim( $uri, '@' ) ) ) {
+				$_uri = Webfinger::resolve( $uri );
+				if ( \is_wp_error( $_uri ) ) {
+					$uris[] = $uri;
+					continue;
+				}
+
+				$uri = $_uri;
+			}
+
+			$uri   = \sanitize_url( $uri );
+			$actor = Actors::fetch_remote_by_uri( $uri );
+			if ( \is_wp_error( $actor ) ) {
+				$uris[] = $uri;
 			} else {
-				$uris[] = \sanitize_url( $uri );
+				$uris[] = \sanitize_url( $actor->guid );
 			}
 		}
 
