@@ -263,11 +263,6 @@ class Http {
 			return $url;
 		}
 
-		// Add scheme if missing.
-		if ( empty( \wp_parse_url( $url, PHP_URL_SCHEME ) ) ) {
-			$url = \esc_url_raw( 'https://' . \ltrim( $url, '/' ) );
-		}
-
 		$transient_key = self::generate_cache_key( $url );
 
 		// Only check the cache if needed.

@@ -123,7 +123,12 @@ class Following extends \WP_List_Table {
 				}
 
 				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$result  = follow( $profile, $this->user_id );
+				if ( false === \strpos( $profile, '@' ) && empty( \wp_parse_url( $profile, PHP_URL_SCHEME ) ) ) {
+					// Add scheme if missing.
+					$profile = \esc_url_raw( 'https://' . \ltrim( $profile, '/' ) );
+				}
+
+				$result = follow( $profile, $this->user_id );
 				if ( \is_wp_error( $result ) ) {
 					\add_settings_error( 'activitypub', 'followed', $result->get_error_message() );
 				} else {
