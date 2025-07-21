@@ -199,7 +199,12 @@ class Followers extends \WP_List_Table {
 		);
 
 		foreach ( $followers as $follower ) {
-			$actor     = Actors::get_actor( $follower );
+			$actor = Actors::get_actor( $follower );
+
+			if ( \is_wp_error( $actor ) ) {
+				continue;
+			}
+
 			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
 			$webfinger = Webfinger::uri_to_acct( $url );
 
