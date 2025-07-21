@@ -176,6 +176,7 @@ class Move {
 		$also_known_as   = \get_user_option( 'activitypub_also_known_as', $user_id ) ?: array();
 		$also_known_as[] = $from;
 
+		\delete_transient( 'activitypub_also_known_as_' . $user_id );
 		\update_user_option( $user_id, 'activitypub_also_known_as', $also_known_as );
 	}
 
@@ -188,6 +189,7 @@ class Move {
 		$also_known_as   = \get_option( 'activitypub_blog_user_also_known_as', array() );
 		$also_known_as[] = $from;
 
+		\delete_transient( 'activitypub_blog_user_also_known_as' );
 		\update_option( 'activitypub_blog_user_also_known_as', $also_known_as );
 	}
 
