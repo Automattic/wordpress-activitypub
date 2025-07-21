@@ -40,6 +40,7 @@ class Sanitize {
 	 * webfinger identifiers, and normalizes them into a consistent format.
 	 *
 	 * @param string|array $value The value to sanitize.
+	 *
 	 * @return array The sanitized and normalized list of account identifiers.
 	 */
 	public static function identifier_list( $value ) {
