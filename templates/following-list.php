@@ -63,7 +63,7 @@ $following_list_table->prepare_items();
 						<li><p><?php echo wp_kses_post( __( 'Profile link: <code>https://example.com/@username</code>', 'activitypub' ) ); ?></p></li>
 					</ul>
 
-					<p><?php echo esc_html__( '(Make sure the user you&rsquo;re following is part of the fediverse and supports ActivityPub)', 'activitypub' ); ?></p>
+					<p><?php echo esc_html__( '(Make sure the user you&#8217;re following is part of the fediverse and supports ActivityPub)', 'activitypub' ); ?></p>
 				</div>
 			</div>
 		</div>
@@ -78,11 +78,10 @@ $following_list_table->prepare_items();
 					</form>
 					<div class="edit-term-notes">
 						<strong><?php esc_html_e( 'About Followings', 'activitypub' ); ?></strong>
-						<p class="description"><?php esc_html_e( 'When you follow another author, a follow request is sent on your behalf. If you see &#8220;Pending,&#8221; it means your follow request hasn&#8217;t been accepted yet—so you aren&#8217;t following that author until they approve your request. This is a normal part of the ActivityPub protocol and helps ensure that authors have control over who follows them.', 'activitypub' ); ?></p>
+						<p class="description"><?php esc_html_e( 'When you follow another author, a follow request is sent on your behalf. If you see &#8220;Pending&#8221;, it means your follow request hasn&#8217;t been accepted yet&#8212;so you aren&#8217;t following that author until they approve your request. This is a normal part of the ActivityPub protocol and helps ensure that authors have control over who follows them.', 'activitypub' ); ?></p>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
 </div>
-

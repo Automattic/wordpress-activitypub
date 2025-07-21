@@ -7,7 +7,10 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Http;
+
+use function Activitypub\add_to_outbox;
 
 /**
  * ActivityPub Following Collection.
@@ -51,6 +54,10 @@ class Following {
 	/**
 	 * Follow a user.
 	 *
+	 * Please do not use this method directly, use `Activitypub\follow` instead.
+	 *
+	 * @see Activitypub\follow
+	 *
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
 	 *
@@ -68,7 +75,21 @@ class Following {
 		$pending   = $all_meta[ self::PENDING_META_KEY ] ?? array();
 
 		if ( ! \in_array( (string) $user_id, $following, true ) && ! \in_array( (string) $user_id, $pending, true ) ) {
+			$actor = Actors::get_by_id( $user_id );
+
+			if ( \is_wp_error( $actor ) ) {
+				return $actor;
+			}
+
 			\add_post_meta( $post->ID, self::PENDING_META_KEY, (string) $user_id );
+
+			$follow = new Activity();
+			$follow->set_type( 'Follow' );
+			$follow->set_actor( $actor->get_id() );
+			$follow->set_object( $post->guid );
+			$follow->set_to( array( $post->guid ) );
+
+			return add_to_outbox( $follow, null, $user_id );
 		}
 
 		return $post;
@@ -124,6 +145,10 @@ class Following {
 
 	/**
 	 * Remove a follow request.
+	 *
+	 * Please do not use this method directly, use `Activitypub\unfollow` instead.
+	 *
+	 * @see Activitypub\unfollow
 	 *
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
