@@ -111,7 +111,7 @@ class Following extends \WP_List_Table {
 				}
 				break;
 			case 'follow':
-				$redirect_to = \remove_query_arg( array( 's' ), $redirect_to );
+				$redirect_to = \remove_query_arg( array( 'resource', 's' ), $redirect_to );
 
 				if ( ! isset( $_REQUEST['activitypub-profile'], $_REQUEST['_wpnonce'] ) ) {
 					return;
@@ -125,7 +125,9 @@ class Following extends \WP_List_Table {
 				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
 				$result  = follow( $profile, $this->user_id );
 				if ( \is_wp_error( $result ) ) {
-					\add_settings_error( 'activitypub', 'followed', $result->get_error_message() );
+					/* translators: %s: Account profile that could not be followed */
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
+					$redirect_to = \add_query_arg( 'resource', $profile, $redirect_to );
 				} else {
 					\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
 				}
