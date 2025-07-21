@@ -565,7 +565,7 @@ class Blog extends Actor {
 
 		$also_known_as = array_unique( $also_known_as );
 
-		\set_transient( $transient_key, $also_known_as );
+		\set_transient( $transient_key, $also_known_as, WEEK_IN_SECONDS );
 
 		return $also_known_as;
 	}
