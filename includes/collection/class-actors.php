@@ -702,10 +702,9 @@ class Actors {
 		$post = \get_post( $post );
 
 		if ( ! $post ) {
-			$text = \__( 'Actor not found', 'activitypub' );
 			return new \WP_Error(
 				'activitypub_actor_not_found',
-				$text,
+				\__( 'Actor not found', 'activitypub' ),
 				array( 'status' => 404 )
 			);
 		}
