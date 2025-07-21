@@ -196,7 +196,7 @@ class Scheduler {
 
 			if ( is_tombstone( $meta ) ) {
 				\wp_delete_post( $actor->ID );
-			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+			} elseif ( empty( $meta ) || ! is_array( $meta ) || \is_wp_error( $meta ) ) {
 				if ( Actors::count_errors( $actor->ID ) >= 5 ) {
 					\wp_schedule_single_event( \time(), 'activitypub_delete_actor_interactions', array( $actor->guid ) );
 					\wp_delete_post( $actor->ID );
@@ -204,7 +204,12 @@ class Scheduler {
 					Actors::add_error( $actor->ID, $meta );
 				}
 			} else {
-				Actors::clear_errors( $actor->ID );
+				$id = Actors::upsert( $meta );
+				if ( \is_wp_error( $id ) ) {
+					Actors::add_error( $actor->ID, $id );
+				} else {
+					Actors::clear_errors( $actor->ID );
+				}
 			}
 		}
 	}

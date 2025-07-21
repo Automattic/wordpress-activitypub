@@ -229,7 +229,13 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor     = Actors::get_actor( $following );
+			$actor = Actors::get_actor( $following );
+
+			if ( \is_wp_error( $actor ) ) {
+				Actors::add_error( $following->ID, $actor );
+				continue;
+			}
+
 			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
 			$webfinger = Webfinger::uri_to_acct( $url );
 
