@@ -703,7 +703,6 @@ class Actors {
 
 		if ( ! $post ) {
 			$text = \__( 'Actor not found', 'activitypub' );
-			self::add_error( $post->ID, $text );
 			return new \WP_Error(
 				'activitypub_actor_not_found',
 				$text,
