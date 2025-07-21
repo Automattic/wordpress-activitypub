@@ -297,4 +297,16 @@ class Webfinger {
 
 		return 'webfinger_' . md5( $uri );
 	}
+
+	/**
+	 * Infer a shortname from the Actor ID or URL. Used only for fallbacks,
+	 * we will try to use what's supplied.
+	 *
+	 * @param string $uri The URI.
+	 *
+	 * @return string Hopefully the name of the Follower.
+	 */
+	public static function guess( $uri ) {
+		return extract_name_from_uri( $uri ) . '@' . \wp_parse_url( $uri, PHP_URL_HOST );
+	}
 }
