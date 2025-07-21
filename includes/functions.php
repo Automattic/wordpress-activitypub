@@ -491,7 +491,7 @@ function site_supports_blocks() {
 /**
  * Check if data is valid JSON.
  *
- * @deprecated since unreleased, use json_decode instead.
+ * @deprecated unreleased Use {@see \json_decode} instead.
  *
  * @param string $data The data to check.
  *
