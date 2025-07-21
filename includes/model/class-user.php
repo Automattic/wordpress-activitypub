@@ -443,12 +443,6 @@ class User extends Actor {
 	 * @return string[] The alsoKnownAs.
 	 */
 	public function get_also_known_as() {
-		$transient_key = 'activitypub_also_known_as_' . $this->_id;
-		$transient     = \get_transient( $transient_key );
-		if ( false !== $transient ) {
-			return $transient;
-		}
-
 		$also_known_as = array(
 			\add_query_arg( 'author', $this->_id, \home_url( '/' ) ),
 			$this->get_url(),
@@ -456,22 +450,9 @@ class User extends Actor {
 		);
 
 		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-		$_also_known_as = \get_user_option( 'activitypub_also_known_as', $this->_id ) ?: array();
+		$also_known_as = array_merge( $also_known_as, \get_user_option( 'activitypub_also_known_as', $this->_id ) ?: array() );
 
-		foreach ( $_also_known_as as $_also_known_as_url ) {
-			$actor = Actors::fetch_remote_by_uri( $_also_known_as_url );
-			if ( \is_wp_error( $actor ) ) {
-				continue;
-			}
-
-			$also_known_as[] = $actor->guid;
-		}
-
-		$also_known_as = array_unique( $also_known_as );
-
-		\set_transient( $transient_key, $also_known_as, WEEK_IN_SECONDS );
-
-		return $also_known_as;
+		return array_unique( $also_known_as );
 	}
 
 	/**
