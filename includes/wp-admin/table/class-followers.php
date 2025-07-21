@@ -150,29 +150,12 @@ class Followers extends \WP_List_Table {
 							exit;
 						}
 
-						$actor = Actors::get_actor( $follower );
-						if ( \is_wp_error( $actor ) ) {
+						$blocked = $this->block_followers( array( $follower ) );
+						if ( $blocked['success'] > 0 ) {
+							\add_settings_error( 'activitypub', 'account_blocked', \__( 'Account blocked.', 'activitypub' ), 'success' );
+						} else {
 							\add_settings_error( 'activitypub', 'block_error', \__( 'Invalid account.', 'activitypub' ) );
-							break;
 						}
-
-						// Add actor ID to disallowed keys.
-						$disallowed_keys = \trim( \get_option( 'disallowed_keys' ) );
-						if ( ! empty( $disallowed_keys ) ) {
-							$disallowed_keys .= "\n";
-						}
-						$disallowed_keys .= $actor->get_id();
-						\update_option( 'disallowed_keys', $disallowed_keys );
-
-						// Remove follower relationship.
-						Follower_Collection::remove( $follower, $this->user_id );
-
-						// If user is admin for blog actor, also remove relationships for blog actor.
-						if ( \user_can( $this->user_id, 'manage_options' ) ) {
-							Follower_Collection::remove( $follower, Actors::BLOG_USER_ID );
-						}
-
-						\add_settings_error( 'activitypub', 'account_blocked', \__( 'Account blocked.', 'activitypub' ), 'success' );
 					}
 				}
 
@@ -187,35 +170,15 @@ class Followers extends \WP_List_Table {
 							exit;
 						}
 
-						$followers       = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ) );
-						$disallowed_keys = \trim( \get_option( 'disallowed_keys' ) );
+						$followers = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ) );
+						$blocked   = $this->block_followers( $followers );
 
-						foreach ( $followers as $follower ) {
-							$actor = Actors::get_actor( $follower );
-							if ( \is_wp_error( $actor ) ) {
-								continue;
-							}
-
-							// Add actor ID to disallowed keys.
-							$disallowed_keys .= "\n" . $actor->get_id();
-
-							// Remove follower relationship.
-							Follower_Collection::remove( $follower, $this->user_id );
-
-							// If user is admin for blog actor, also remove relationships for blog actor.
-							if ( \user_can( $this->user_id, 'manage_options' ) ) {
-								Follower_Collection::remove( $follower, Actors::BLOG_USER_ID );
-							}
+						if ( $blocked['success'] > 0 ) {
+							/* translators: %d: Number of followers blocked. */
+							$message = \_n( '%d account blocked.', '%d accounts blocked.', $blocked['success'], 'activitypub' );
+							$message = \sprintf( $message, \number_format_i18n( $blocked['success'] ) );
+							\add_settings_error( 'activitypub', 'accounts_blocked', $message, 'success' );
 						}
-
-						\update_option( 'disallowed_keys', \trim( $disallowed_keys ) );
-
-						$count = \count( $followers );
-						/* translators: %d: Number of followers blocked. */
-						$message = \_n( '%d account blocked.', '%d accounts blocked.', $count, 'activitypub' );
-						$message = \sprintf( $message, \number_format_i18n( $count ) );
-
-						\add_settings_error( 'activitypub', 'accounts_blocked', $message, 'success' );
 					}
 				}
 				break;
@@ -442,24 +405,23 @@ class Followers extends \WP_List_Table {
 	/**
 	 * Shows the block confirmation screen.
 	 *
-	 * @param string $follower The follower identifier to block.
+	 * @param int $actor_id Actor id.
 	 */
-	private function show_block_confirmation( $follower ) {
-		$follower_data = Follower_Collection::get_follower( $this->user_id, $follower );
-		if ( \is_wp_error( $follower_data ) ) {
-			\wp_die( \esc_html__( 'Invalid account.', 'activitypub' ) );
+	private function show_block_confirmation( $actor_id ) {
+		$actor = Actors::get_actor( $actor_id );
+		if ( \is_wp_error( $actor ) ) {
+			\wp_die( \esc_html__( 'Invalid account.', 'activitypub' ), '', array( 'back_link' => true ) );
 		}
-		$actor = Actors::get_actor( $follower_data );
 
 		$confirm_url = \wp_nonce_url(
 			\add_query_arg(
 				array(
 					'action'   => 'block',
-					'follower' => $follower,
+					'follower' => $actor_id,
 					'confirm'  => 'true',
 				)
 			),
-			'block-follower_' . $follower
+			'block-follower_' . $actor_id
 		);
 
 		require_once ABSPATH . 'wp-admin/admin-header.php';
@@ -498,9 +460,9 @@ class Followers extends \WP_List_Table {
 	 * Shows the bulk block confirmation screen.
 	 */
 	private function show_bulk_block_confirmation() {
-		$followers = \array_map( 'esc_url_raw', \wp_unslash( $_REQUEST['followers'] ?? array() ) );
+		$followers = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ?? array() ) );
 		if ( empty( $followers ) ) {
-			\wp_die( \esc_html__( 'No accounts selected.', 'activitypub' ) );
+			\wp_die( \esc_html__( 'No accounts selected.', 'activitypub' ), '', array( 'back_link' => true ) );
 		}
 
 		$follower_count = count( $followers );
@@ -529,6 +491,18 @@ class Followers extends \WP_List_Table {
 			);
 			?>
 			</p>
+			<ul>
+				<?php
+				foreach ( $followers as $follower ) :
+					$actor = Actors::get_actor( $follower );
+					if ( \is_wp_error( $actor ) ) {
+						continue;
+					}
+
+					\printf( '<li><strong>%s</strong></li>', \esc_html( $actor->get_preferred_username() ) );
+				endforeach;
+				?>
+			</ul>
 			<p><?php \esc_html_e( 'This will:', 'activitypub' ); ?></p>
 			<ul class="ul-disc">
 				<li><?php \esc_html_e( 'Add their IDs to the comment disallowed list to block incoming requests.', 'activitypub' ); ?></li>
@@ -614,6 +588,55 @@ class Followers extends \WP_List_Table {
 		}
 
 		return $this->row_actions( $actions );
+	}
+
+	/**
+	 * Block one or more followers.
+	 *
+	 * @param array $follower_ids Array of follower IDs to block.
+	 * @return array Array with counts of success and failure.
+	 */
+	private function block_followers( $follower_ids ) {
+		$success_count   = 0;
+		$fail_count      = 0;
+		$disallowed_keys = \trim( \get_option( 'disallowed_keys' ) );
+		$actor_ids       = array();
+
+		foreach ( $follower_ids as $follower ) {
+			$actor = Actors::get_actor( $follower );
+			if ( \is_wp_error( $actor ) ) {
+				++$fail_count;
+				continue;
+			}
+
+			// Store actor ID for disallowed keys.
+			$actor_ids[] = $actor->get_id();
+
+			// Remove follower relationship.
+			Follower_Collection::remove( $follower, $this->user_id );
+
+			// If user is admin for blog actor, also remove relationships for blog actor.
+			if ( \user_can( $this->user_id, 'manage_options' ) ) {
+				Follower_Collection::remove( $follower, Actors::BLOG_USER_ID );
+			}
+
+			++$success_count;
+		}
+
+		// Add actor IDs to disallowed keys if we have any successful blocks.
+		if ( $success_count > 0 ) {
+			// Add actor IDs to disallowed keys.
+			if ( ! empty( $disallowed_keys ) ) {
+				$disallowed_keys .= "\n";
+			}
+			$disallowed_keys .= implode( "\n", $actor_ids );
+			\update_option( 'disallowed_keys', \trim( $disallowed_keys ) );
+		}
+
+		return array(
+			'success' => $success_count,
+			'failure' => $fail_count,
+		);
 	}
 
 	/**
