@@ -33,6 +33,34 @@ class Sanitize {
 	}
 
 	/**
+	 * Sanitize a list of profile URLs.
+	 *
+	 * @param string|array $value The value to sanitize.
+	 * @return array The sanitized list of profile URLs.
+	 */
+	public static function identifier_list( $value ) {
+		if ( ! \is_array( $value ) ) {
+			$value = \explode( PHP_EOL, $value );
+		}
+
+		$value = \array_filter( $value );
+		$uris  = array();
+
+		foreach ( $value as $uri ) {
+			$uri = \trim( $uri );
+			$uri = \ltrim( $uri, '@' );
+
+			if ( \is_email( $uri ) ) {
+				$uris[] = \sanitize_email( $uri );
+			} else {
+				$uris[] = \sanitize_url( $uri );
+			}
+		}
+
+		return \array_values( \array_unique( $uris ) );
+	}
+
+	/**
 	 * Sanitize a list of hosts.
 	 *
 	 * @param string $value The value to sanitize.

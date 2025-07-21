@@ -311,7 +311,7 @@ class Settings {
 				'type'              => 'array',
 				'description'       => 'An array of URLs that the blog user is known by.',
 				'default'           => array(),
-				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
 			)
 		);
 	}
