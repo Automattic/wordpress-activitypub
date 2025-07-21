@@ -55,7 +55,7 @@ class Sanitize {
 			$uri = \trim( $uri );
 			$uri = \ltrim( $uri, '@' );
 
-			if ( \is_email( \ltrim( $uri, '@' ) ) ) {
+			if ( \is_email( $uri ) ) {
 				$_uri = Webfinger::resolve( $uri );
 				if ( \is_wp_error( $_uri ) ) {
 					$uris[] = $uri;
