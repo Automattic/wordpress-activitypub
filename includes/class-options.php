@@ -7,8 +7,6 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Actors;
-
 /**
  * Options class.
  */
