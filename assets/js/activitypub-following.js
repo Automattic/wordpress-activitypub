@@ -126,7 +126,7 @@
 			var $notice = $( '<div class="notice notice-success is-dismissible"><p>' + message + '</p></div>' );
 
 			// Remove any existing notices
-			$( '.activitypub-following-notice' ).remove();
+			$( 'div.notice' ).remove();
 
 			// Add the new notice
 			$notice.addClass( 'activitypub-following-notice' ).insertAfter( '.wp-header-end' );
