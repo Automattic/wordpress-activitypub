@@ -140,7 +140,7 @@ class Followers extends \WP_List_Table {
 
 				// Handle single follower block.
 				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
-					$follower = \esc_url_raw( \wp_unslash( $_GET['follower'] ) );
+					$follower = \absint( $_GET['follower'] );
 					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'block-follower_' . $follower ) ) {
@@ -152,6 +152,7 @@ class Followers extends \WP_List_Table {
 
 						$actor = Actors::get_actor( $follower );
 						if ( \is_wp_error( $actor ) ) {
+							\add_settings_error( 'activitypub', 'block_error', \__( 'Invalid account.', 'activitypub' ) );
 							break;
 						}
 
