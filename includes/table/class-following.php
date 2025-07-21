@@ -123,7 +123,12 @@ class Following extends \WP_List_Table {
 				}
 
 				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$result  = follow( $profile, $this->user_id );
+				if ( ! \is_email( \ltrim( $profile, '@' ) ) && empty( \wp_parse_url( $profile, PHP_URL_SCHEME ) ) ) {
+					// Add scheme if missing.
+					$profile = \esc_url_raw( 'https://' . \ltrim( $profile, '/' ) );
+				}
+
+				$result = follow( $profile, $this->user_id );
 				if ( \is_wp_error( $result ) ) {
 					/* translators: %s: Account profile that could not be followed */
 					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
