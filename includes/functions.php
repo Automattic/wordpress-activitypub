@@ -64,11 +64,15 @@ function safe_remote_get( $url ) {
 /**
  * Returns a users WebFinger "resource".
  *
+ * @deprecated since unreleased, use Activitypub\Webfinger::get_user_resource instead.
+ *
  * @param int $user_id The user ID.
  *
  * @return string The User resource.
  */
 function get_webfinger_resource( $user_id ) {
+	\_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Webfinger::get_user_resource' );
+
 	return Webfinger::get_user_resource( $user_id );
 }
 
@@ -170,9 +174,13 @@ function url_to_authorid( $url ) {
 /**
  * Verify that url is a wp_ap_comment or a previously received remote comment.
  *
+ * @deprecated since unreleased.
+ *
  * @return int|bool Comment ID or false if not found.
  */
 function is_comment() {
+	\_deprecated_function( __FUNCTION__, 'unreleased' );
+
 	$comment_id = get_query_var( 'c', null );
 
 	if ( ! is_null( $comment_id ) ) {
@@ -483,11 +491,15 @@ function site_supports_blocks() {
 /**
  * Check if data is valid JSON.
  *
+ * @deprecated since unreleased, use json_decode instead.
+ *
  * @param string $data The data to check.
  *
  * @return boolean True if the data is JSON, false otherwise.
  */
 function is_json( $data ) {
+	\_deprecated_function( __FUNCTION__, 'unreleased', 'json_decode' );
+
 	return \is_array( \json_decode( $data, true ) );
 }
 
