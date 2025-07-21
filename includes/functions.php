@@ -64,7 +64,7 @@ function safe_remote_get( $url ) {
 /**
  * Returns a users WebFinger "resource".
  *
- * @deprecated since unreleased, use Activitypub\Webfinger::get_user_resource instead.
+ * @deprecated unreleased Use {@see \Activitypub\Webfinger::get_user_resource} instead.
  *
  * @param int $user_id The user ID.
  *
