@@ -202,7 +202,6 @@ class Followers extends \WP_List_Table {
 			$actor = Actors::get_actor( $follower );
 
 			if ( \is_wp_error( $actor ) ) {
-				Actors::add_error( $follower->ID, $actor );
 				continue;
 			}
 

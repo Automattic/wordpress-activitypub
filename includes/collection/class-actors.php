@@ -702,9 +702,11 @@ class Actors {
 		$post = \get_post( $post );
 
 		if ( ! $post ) {
+			$text = \__( 'Actor not found', 'activitypub' );
+			self::add_error( $post->ID, $text );
 			return new \WP_Error(
 				'activitypub_actor_not_found',
-				\__( 'Actor not found', 'activitypub' ),
+				$text,
 				array( 'status' => 404 )
 			);
 		}
@@ -715,7 +717,13 @@ class Actors {
 			$json = \get_post_meta( $post->ID, '_activitypub_actor_json', true );
 		}
 
-		return Actor::init_from_json( $json );
+		$actor = Actor::init_from_json( $json );
+
+		if ( \is_wp_error( $actor ) ) {
+			self::add_error( $post->ID, $actor );
+		}
+
+		return $actor;
 	}
 
 	/**
