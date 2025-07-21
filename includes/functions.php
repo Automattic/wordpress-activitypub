@@ -1541,12 +1541,16 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 /**
  * Follow a user.
  *
- * @param string $remote_actor The Actor URL or WebFinger Resource.
- * @param int    $user_id      The ID of the WordPress User.
+ * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
+ * @param int        $user_id      The ID of the WordPress User.
  *
- * @return int|\WP_Error The ID of the Outbox item or a WP_Error.
+ * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
  */
 function follow( $remote_actor, $user_id ) {
+	if ( \is_numeric( $remote_actor ) ) {
+		return Following::follow( $remote_actor, $user_id );
+	}
+
 	if ( ! \filter_var( $remote_actor, FILTER_VALIDATE_URL ) ) {
 		$remote_actor = Webfinger::resolve( $remote_actor );
 	}
@@ -1561,24 +1565,37 @@ function follow( $remote_actor, $user_id ) {
 		return $remote_actor_post;
 	}
 
-	$actor = Actors::get_by_id( $user_id );
+	return Following::follow( $remote_actor_post, $user_id );
+}
 
-	if ( \is_wp_error( $actor ) ) {
-		return $actor;
+/**
+ * Unfollow a user.
+ *
+ * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
+ * @param int        $user_id      The ID of the WordPress User.
+ *
+ * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ */
+function unfollow( $remote_actor, $user_id ) {
+	if ( \is_numeric( $remote_actor ) ) {
+		return Following::unfollow( $remote_actor, $user_id );
 	}
 
-	$result = Following::follow( $remote_actor_post, $user_id );
-	if ( \is_wp_error( $result ) ) {
-		return $result;
+	if ( ! \filter_var( $remote_actor, FILTER_VALIDATE_URL ) ) {
+		$remote_actor = Webfinger::resolve( $remote_actor );
 	}
 
-	$follow = new Activity();
-	$follow->set_type( 'Follow' );
-	$follow->set_actor( $actor->get_id() );
-	$follow->set_object( $remote_actor );
-	$follow->set_to( array( $remote_actor ) );
+	if ( \is_wp_error( $remote_actor ) ) {
+		return $remote_actor;
+	}
 
-	return add_to_outbox( $follow, null, $user_id );
+	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+
+	if ( \is_wp_error( $remote_actor_post ) ) {
+		return $remote_actor_post;
+	}
+
+	return Following::unfollow( $remote_actor_post, $user_id );
 }
 
 /**
