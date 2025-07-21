@@ -34,10 +34,13 @@ class Sanitize {
 	}
 
 	/**
-	 * Sanitize a list of profile URLs.
+	 * Sanitize and normalize a list of account identifiers to ActivityPub IDs.
+	 *
+	 * This function processes various identifier formats, such as URLs and
+	 * webfinger identifiers, and normalizes them into a consistent format.
 	 *
 	 * @param string|array $value The value to sanitize.
-	 * @return array The sanitized list of profile URLs.
+	 * @return array The sanitized and normalized list of account identifiers.
 	 */
 	public static function identifier_list( $value ) {
 		if ( ! \is_array( $value ) ) {
