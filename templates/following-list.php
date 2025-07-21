@@ -52,7 +52,7 @@ $following_list_table->prepare_items();
 						<div class="form-field form-required">
 							<label for="activitypub-profile"><?php echo esc_html__( 'Username or profile link', 'activitypub' ); ?></label>
 							<input type="hidden" name="action" value="follow" />
-							<input name="activitypub-profile" id="activitypub-profile" type="text" value="<?php echo esc_attr( $_resource ); ?>" size="40" aria-required="true" class="<?php echo $_resource ? 'highlight' : ''; ?>" />
+							<input name="activitypub-profile" id="activitypub-profile" type="text" value="<?php echo esc_attr( $_resource ); ?>" size="40" class="<?php echo $_resource ? 'highlight' : ''; ?>" autocomplete="off" data-1p-ignore="true"  />
 						</div>
 						<?php submit_button( esc_attr__( 'Follow', 'activitypub' ) ); ?>
 					</form>
