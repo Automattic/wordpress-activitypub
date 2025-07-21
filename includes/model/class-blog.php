@@ -540,7 +540,7 @@ class Blog extends Actor {
 	 * @return string[] The alsoKnownAs.
 	 */
 	public function get_also_known_as() {
-		$transient_key = 'activitypub_also_known_as';
+		$transient_key = 'activitypub_blog_user_also_known_as';
 		$transient     = \get_transient( $transient_key );
 		if ( false !== $transient ) {
 			return $transient;
