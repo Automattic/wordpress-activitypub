@@ -7,6 +7,8 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Actors;
+
 /**
  * Options class.
  */
@@ -23,6 +25,8 @@ class Options {
 
 		\add_filter( 'pre_option_activitypub_allow_likes', array( self::class, 'maybe_disable_interactions' ) );
 		\add_filter( 'pre_option_activitypub_allow_replies', array( self::class, 'maybe_disable_interactions' ) );
+
+		\add_filter( 'pre_update_option_activitypub_blog_user_also_known_as', array( self::class, 'pre_option_activitypub_blog_user_also_known_as' ) );
 
 		\add_filter( 'default_option_activitypub_negotiate_content', array( self::class, 'default_option_activitypub_negotiate_content' ) );
 		\add_filter( 'option_activitypub_max_image_attachments', array( self::class, 'default_max_image_attachments' ) );
@@ -131,6 +135,41 @@ class Options {
 		}
 
 		return $pre;
+	}
+
+	/**
+	 * Pre-get option filter for the Blog User Also Known As.
+	 *
+	 * @param string $value The value of the option.
+	 *
+	 * @return string If the constant is defined, return the value, otherwise return the pre-get option value.
+	 */
+	public static function pre_option_activitypub_blog_user_also_known_as( $value ) {
+		if ( ! \is_array( $value ) ) {
+			return $value;
+		}
+
+		$also_known_as = array();
+		foreach ( $value as $uri ) {
+			if ( \is_email( \ltrim( $uri, '@' ) ) ) {
+				$_uri = Webfinger::resolve( $uri );
+				if ( \is_wp_error( $_uri ) ) {
+					$also_known_as[] = $uri;
+					continue;
+				}
+
+				$uri = $_uri;
+			}
+
+			$actor = Actors::fetch_remote_by_uri( $uri );
+			if ( \is_wp_error( $actor ) ) {
+				$also_known_as[] = $uri;
+			} else {
+				$also_known_as[] = $actor->guid;
+			}
+		}
+
+		return array_unique( $also_known_as );
 	}
 
 	/**
