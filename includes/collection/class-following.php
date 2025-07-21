@@ -54,6 +54,10 @@ class Following {
 	/**
 	 * Follow a user.
 	 *
+	 * Please do not use this method directly, use `Activitypub\follow` instead.
+	 *
+	 * @see Activitypub\follow
+	 *
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
 	 *
@@ -141,6 +145,10 @@ class Following {
 
 	/**
 	 * Remove a follow request.
+	 *
+	 * Please do not use this method directly, use `Activitypub\unfollow` instead.
+	 *
+	 * @see Activitypub\unfollow
 	 *
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
