@@ -237,11 +237,7 @@ class Following extends \WP_List_Table {
 			}
 
 			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
-			$webfinger = Webfinger::uri_to_acct( $url );
-
-			if ( \is_wp_error( $webfinger ) ) {
-				$webfinger = Webfinger::guess( $url );
-			}
+			$webfinger = self::get_webfinger( $actor );
 
 			$this->items[] = array(
 				'id'         => $following->ID,
