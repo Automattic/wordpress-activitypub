@@ -278,7 +278,7 @@ class Scheduler {
 
 		$date->sub( \DateInterval::createFromDateString( "$days days" ) );
 
-		$post_ids = get_posts(
+		$post_ids = \get_posts(
 			array(
 				'post_type'   => Outbox::POST_TYPE,
 				'post_status' => 'any',
@@ -287,6 +287,14 @@ class Scheduler {
 				'date_query'  => array(
 					array(
 						'before' => $date->format( 'Y-m-d' ),
+					),
+				),
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => 'Follow',
+						'compare' => '!=',
 					),
 				),
 			)
