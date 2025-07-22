@@ -445,6 +445,43 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test double knock with unrelated requests.
+	 *
+	 * @covers ::maybe_double_knock
+	 */
+	public function test_double_knock_with_unrelated_requests() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+
+		add_filter(
+			'pre_http_request',
+			function ( $response, $parsed_args, $url ) {
+				if ( 'https://example.org/wp-json/activitypub/1.0/inbox' === $url ) {
+					\wp_safe_remote_get( 'https://example.org/wp-json/activitypub/1.0/actors/0/inbox' );
+				}
+
+				$response = array(
+					'headers'  => array(),
+					'body'     => '',
+					'response' => array(
+						'code'    => 401,
+						'message' => 'Unauthorized',
+					),
+				);
+
+				return apply_filters( 'http_response', $response, $parsed_args, $url );
+			},
+			10,
+			3
+		);
+
+		// This should not throw an error.
+		$this->expectNotToPerformAssertions();
+		Http::get( 'https://example.org/wp-json/activitypub/1.0/inbox' );
+
+		\delete_option( 'activitypub_rfc9421_signature' );
+	}
+
+	/**
 	 * Test HTTP signature verification with RFC-9421 compliant signatures using GET requests.
 	 *
 	 * @covers ::verify_http_signature
