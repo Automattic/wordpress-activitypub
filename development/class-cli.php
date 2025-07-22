@@ -10,7 +10,9 @@ namespace Activitypub\Development;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Comment;
-use WP_CLI\Utils;
+
+use function WP_CLI\Utils\make_progress_bar;
+use function WP_CLI\Utils\get_flag_value;
 
 /**
  * WP-CLI commands.
@@ -18,7 +20,6 @@ use WP_CLI\Utils;
  * @package Activitypub
  */
 class Cli extends \WP_CLI_Command {
-
 
 	/**
 	 * Add a follower to a user's followers list for testing purposes.
@@ -97,7 +98,7 @@ class Cli extends \WP_CLI_Command {
 	 *     $ wp activitypub generate comments --format=ids --count=3 --post_id=123
 	 *     138 139 140
 	 *
-	 * @param array $args     The arguments.
+	 * @param array $args       The arguments.
 	 * @param array $assoc_args The associative arguments.
 	 */
 	public function generate( $args, $assoc_args ) {
@@ -124,11 +125,11 @@ class Cli extends \WP_CLI_Command {
 
 		$assoc_args = array_merge( $defaults, $assoc_args );
 
-		$format = Utils\get_flag_value( $assoc_args, 'format', 'progress' );
+		$format = get_flag_value( $assoc_args, 'format', 'progress' );
 
 		$notify = false;
 		if ( 'progress' === $format ) {
-			$notify = Utils\make_progress_bar( 'Generating comments', $assoc_args['count'] );
+			$notify = make_progress_bar( 'Generating comments', $assoc_args['count'] );
 		}
 
 		$comment_count = wp_count_comments();
