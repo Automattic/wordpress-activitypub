@@ -19,27 +19,17 @@ class Heartbeat {
 	 * Initialize the Heartbeat API integration.
 	 */
 	public static function init() {
-		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
+		\add_action( 'admin_print_scripts-settings_page_activitypub', array( self::class, 'enqueue_scripts' ) );
+		\add_action( 'admin_print_scripts-users_page_activitypub-following-list', array( self::class, 'enqueue_scripts' ) );
+
 		\add_filter( 'heartbeat_received', array( self::class, 'heartbeat_received' ), 10, 2 );
 		\add_filter( 'heartbeat_settings', array( self::class, 'heartbeat_settings' ) );
 	}
 
 	/**
 	 * Enqueue scripts and localize data for the Following list table.
-	 *
-	 * @param string $hook The current admin page.
 	 */
-	public static function enqueue_scripts( $hook ) {
-		$following_pages = array(
-			'settings_page_activitypub',
-			'users_page_activitypub-following-list',
-		);
-
-		// Only enqueue on the following list pages.
-		if ( ! \in_array( $hook, $following_pages, true ) ) {
-			return;
-		}
-
+	public static function enqueue_scripts() {
 		// Get the current user ID.
 		$user_id = \get_current_screen()->id === 'settings_page_activitypub'
 			? Actors::BLOG_USER_ID
