@@ -91,6 +91,14 @@ function plugin_init() {
 			require_once $dev_loader;
 		}
 	}
+
+	if ( \defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		$debug_file = __DIR__ . '/includes/debug.php';
+		if ( file_exists( $debug_file ) && is_readable( $debug_file ) ) {
+			require_once $debug_file;
+			Debug::init();
+		}
+	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
