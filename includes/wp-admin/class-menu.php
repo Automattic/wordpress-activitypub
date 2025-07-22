@@ -44,7 +44,7 @@ class Menu {
 			\add_action( 'load-' . $followers_list_page, array( Admin::class, 'add_followers_list_table' ) );
 			\add_action( 'load-' . $followers_list_page, array( Screen_Options::class, 'add_followers_list_options' ) );
 
-			if ( '1' === \get_option( 'activitypub_following_ui', '0' )) {
+			if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
 				$following_list_page = \add_users_page(
 					\__( 'Following ⁂', 'activitypub' ),
 					\__( 'Following ⁂', 'activitypub' ),
