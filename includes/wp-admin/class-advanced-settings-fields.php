@@ -79,6 +79,15 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_rfc9421_signature' )
 		);
 
+		\add_settings_field(
+			'activitypub_following_ui',
+			\__( 'Following User Interface', 'activitypub' ),
+			array( self::class, 'render_following_ui_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_following_ui' )
+		);
+
 		if ( ! defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) ) {
 			\add_settings_field(
 				'activitypub_shared_inbox',
@@ -201,6 +210,27 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( 'Enables a newer standard (RFC-9421) for verifying your site&#8217;s identity when communicating with other Fediverse platforms. This alternative signature format may cause compatibility issues with platforms that do not support it. Keep disabled if you experience connection problems with certain Fediverse servers.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render show following UI field.
+	 */
+	public static function render_following_ui_field() {
+		$value = \get_option( 'activitypub_following_ui', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_following_ui" name="activitypub_following_ui" value="1" <?php checked( '1', $value ); ?> />
+				Display the "Following" interface in the admin menus and settings.
+			</label>
+		</p>
+		<p class="description">
+			Activates the Following feature, letting you follow other ActivityPub accounts directly from your WordPress site. Adds a "Following" menu and tab to manage followed accounts.
+		</p>
+		<p class="description">
+			⚠ A reader interface is not available yet. Please follow accounts sparingly—you won't be able to see their posts or shares. This feature is intended for testing the follow functionality. Once fully implemented, it will be enabled by default.
 		</p>
 		<?php
 	}

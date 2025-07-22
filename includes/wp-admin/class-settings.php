@@ -232,6 +232,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_following_ui',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Show Following UI in admin menus and settings.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_shared_inbox',
 			array(
 				'type'        => 'boolean',
@@ -355,7 +365,7 @@ class Settings {
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php',
 			);
 
-			if ( \apply_filters( 'activitypub_show_following_ui', false ) ) {
+			if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
 				$settings_tabs['following'] = array(
 					'label'    => __( 'Following', 'activitypub' ),
 					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php',
