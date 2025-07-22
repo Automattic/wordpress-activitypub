@@ -1,5 +1,5 @@
 /**
- * ActivityPub Following List Table Polling
+ * ActivityPub Following List Table Polling.
  *
  * Adds polling functionality to the Following list table to check for status updates
  * of pending follow requests without requiring manual page refresh.
@@ -15,7 +15,7 @@
 	 */
 	var ActivityPubFollowing = {
 		/**
-		 * Initialize the polling functionality
+		 * Initialize the polling functionality.
 		 */
 		init: function () {
 			this.setupHeartbeatListeners();

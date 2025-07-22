@@ -1,14 +1,14 @@
 <?php
 /**
- * ActivityPub Heartbeat API Integration
+ * ActivityPub Heartbeat API Integration.
  *
  * @package Activitypub
  */
 
 namespace Activitypub\WP_Admin;
 
-use Activitypub\Collection\Following;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Following;
 
 /**
  * Heartbeat API integration for ActivityPub.
