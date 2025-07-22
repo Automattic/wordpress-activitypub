@@ -715,7 +715,13 @@ class Actors {
 			$json = \get_post_meta( $post->ID, '_activitypub_actor_json', true );
 		}
 
-		return Actor::init_from_json( $json );
+		$actor = Actor::init_from_json( $json );
+
+		if ( \is_wp_error( $actor ) ) {
+			self::add_error( $post->ID, $actor );
+		}
+
+		return $actor;
 	}
 
 	/**

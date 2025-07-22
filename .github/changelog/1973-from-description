@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed a PHP error that prevented the Follower overview from loading.

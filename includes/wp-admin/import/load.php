@@ -26,4 +26,13 @@ function load() {
 		\__( 'Import content from Mastodon.', 'activitypub' ),
 		array( __NAMESPACE__ . '\Mastodon', 'dispatch' )
 	);
+
+	if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
+		\register_importer(
+			'starter-kit',
+			\__( 'Fediverse Starter Kits (Beta)', 'activitypub' ),
+			\__( 'Automatically follow a collection of Fediverse users.', 'activitypub' ),
+			array( __NAMESPACE__ . '\Starter_Kit', 'dispatch' )
+		);
+	}
 }

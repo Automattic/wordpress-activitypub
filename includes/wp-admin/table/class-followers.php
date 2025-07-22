@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-namespace Activitypub\Table;
+namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
@@ -199,13 +199,13 @@ class Followers extends \WP_List_Table {
 		);
 
 		foreach ( $followers as $follower ) {
-			$actor     = Actors::get_actor( $follower );
-			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
-			$webfinger = Webfinger::uri_to_acct( $url );
+			$actor = Actors::get_actor( $follower );
 
-			if ( is_wp_error( $webfinger ) ) {
-				$webfinger = Webfinger::guess( $url );
+			if ( \is_wp_error( $actor ) ) {
+				continue;
 			}
+
+			$url = object_to_uri( $actor->get_url() ?? $actor->get_id() );
 
 			$this->items[] = array(
 				'id'         => $follower->ID,
@@ -213,7 +213,7 @@ class Followers extends \WP_List_Table {
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => $url,
-				'webfinger'  => $webfinger,
+				'webfinger'  => self::get_webfinger( $actor ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $follower->post_modified_gmt,
 			);

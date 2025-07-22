@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Improved WebFinger fallback to better guess usernames from profile links.

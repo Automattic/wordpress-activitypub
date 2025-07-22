@@ -77,10 +77,3 @@ function manage_posts_custom_column( $column_name, $post_id ) {
 	}
 }
 \add_action( 'manage_posts_custom_column', '\Activitypub\manage_posts_custom_column', 10, 2 );
-
-/**
- * Debug the following UI.
- *
- * @return bool
- */
-\add_filter( 'activitypub_show_following_ui', '__return_true' );

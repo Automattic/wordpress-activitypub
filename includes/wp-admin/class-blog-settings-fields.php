@@ -298,7 +298,7 @@ class Blog_Settings_Fields {
 			<?php esc_html_e( 'If you’re moving from another account to this one, you’ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn’t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
 		</p>
 		<p class="description">
-			<?php esc_html_e( 'Enter one URL per line.', 'activitypub' ); ?>
+		<?php echo \wp_kses_post( \__( 'Enter one account per line. Profile links or usernames like <code>@username@example.com</code> are accepted and will be automatically normalized to the correct format.', 'activitypub' ) ); ?>
 		</p>
 		<?php
 	}

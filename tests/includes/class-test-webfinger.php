@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Webfinger;
 
 /**
@@ -263,6 +264,59 @@ class Test_Webfinger extends \WP_UnitTestCase {
 					'body'     => '{ "subject": "acct:test@example.org", "aliases": [ "https://example.org/?author=1" ], "links": [ { "rel": "self", "type": "application/activity+json", "href": "https://example.org/?author=1" } ] }',
 				),
 				'https://example.org/?author=1',
+			),
+		);
+	}
+
+	/**
+	 * Test the guess method.
+	 *
+	 * @dataProvider the_guess_provider
+	 * @covers ::guess
+	 *
+	 * @param string $actor_or_uri The Actor or URI.
+	 * @param string $expected     The expected result.
+	 */
+	public function test_guess( $actor_or_uri, $expected ) {
+		$this->assertEquals( $expected, Webfinger::guess( $actor_or_uri ) );
+	}
+
+	/**
+	 * Guess provider.
+	 *
+	 * @return array[]
+	 */
+	public function the_guess_provider() {
+		return array(
+			array(
+				'http://example.org/?author=1',
+				'example.org@example.org',
+			),
+			array(
+				'https://example.org/@author',
+				'author@example.org',
+			),
+			array(
+				'https://example.org/users/author',
+				'author@example.org',
+			),
+			array(
+				Actor::init_from_array(
+					array(
+						'id'                => 'https://example.org/users/author',
+						'preferredUsername' => 'author',
+					)
+				),
+				'author@example.org',
+			),
+			array(
+				Actor::init_from_array(
+					array(
+						'id'   => 'https://example.org/users/author',
+						'name' => 'john',
+					)
+				),
+				'author@example.org',
 			),
 		);
 	}

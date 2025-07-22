@@ -5,13 +5,14 @@
  * @package Activitypub
  */
 
-namespace Activitypub\Table;
+namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
+use function Activitypub\follow;
 use function Activitypub\object_to_uri;
 
 if ( ! \class_exists( '\WP_List_Table' ) ) {
@@ -110,7 +111,7 @@ class Following extends \WP_List_Table {
 				}
 				break;
 			case 'follow':
-				$redirect_to = \remove_query_arg( array( 's' ), $redirect_to );
+				$redirect_to = \remove_query_arg( array( 'resource', 's' ), $redirect_to );
 
 				if ( ! isset( $_REQUEST['activitypub-profile'], $_REQUEST['_wpnonce'] ) ) {
 					return;
@@ -122,16 +123,16 @@ class Following extends \WP_List_Table {
 				}
 
 				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$post    = Actors::fetch_remote_by_uri( $profile );
-
-				if ( \is_wp_error( $post ) ) {
-					\add_settings_error( 'activitypub', 'followed', $post->get_error_message() );
-					break;
+				if ( ! \is_email( \ltrim( $profile, '@' ) ) && empty( \wp_parse_url( $profile, PHP_URL_SCHEME ) ) ) {
+					// Add scheme if missing.
+					$profile = \esc_url_raw( 'https://' . \ltrim( $profile, '/' ) );
 				}
 
-				$result = Following_Collection::follow( $post, $this->user_id );
+				$result = follow( $profile, $this->user_id );
 				if ( \is_wp_error( $result ) ) {
-					\add_settings_error( 'activitypub', 'followed', $result->get_error_message() );
+					/* translators: %s: Account profile that could not be followed */
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
+					$redirect_to = \add_query_arg( 'resource', $profile, $redirect_to );
 				} else {
 					\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
 				}
@@ -229,13 +230,13 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor     = Actors::get_actor( $following );
-			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
-			$webfinger = Webfinger::uri_to_acct( $url );
+			$actor = Actors::get_actor( $following );
 
-			if ( \is_wp_error( $webfinger ) ) {
-				$webfinger = Webfinger::guess( $url );
+			if ( \is_wp_error( $actor ) ) {
+				continue;
 			}
+
+			$url = object_to_uri( $actor->get_url() ?? $actor->get_id() );
 
 			$this->items[] = array(
 				'id'         => $following->ID,
@@ -243,7 +244,7 @@ class Following extends \WP_List_Table {
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => $url,
-				'webfinger'  => $webfinger,
+				'webfinger'  => self::get_webfinger( $actor ),
 				'status'     => Following_Collection::check_status( $this->user_id, $following->ID ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $following->post_modified_gmt,

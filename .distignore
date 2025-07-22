@@ -21,6 +21,7 @@ CODE_OF_CONDUCT.md
 CONTRIBUTING.md
 composer.json
 composer.lock
+development
 Dockerfile
 docs
 docker-compose-test.yml
