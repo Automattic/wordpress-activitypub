@@ -11,7 +11,7 @@
 	'use strict';
 
 	/**
-	 * Following List Table Polling
+	 * Following List Table Polling.
 	 */
 	var ActivityPubFollowing = {
 		/**
@@ -19,23 +19,14 @@
 		 */
 		init: function () {
 			this.setupHeartbeatListeners();
-
-			// Log that polling is active (for debugging)
-			if ( window.console && window.console.log ) {
-				console.log(
-					'ActivityPub Following polling initialized with ' +
-						( wp.heartbeat ? wp.heartbeat.interval() : 'default' ) +
-						' second interval'
-				);
-			}
 		},
 
 		/**
-		 * Set up WordPress Heartbeat API listeners
+		 * Set up WordPress Heartbeat API listeners.
 		 */
 		setupHeartbeatListeners: function () {
-			// Add our data to the Heartbeat API request
-			$( document ).on( 'heartbeat-send', function ( e, data ) {
+			// Add our data to the Heartbeat API request.
+			$( document ).on( 'heartbeat-send.activitypub_following', function ( e, data ) {
 				data.activitypub_following_check = {
 					screen_id: ActivityPubFollowingSettings.screen_id,
 					user_id: ActivityPubFollowingSettings.user_id,
@@ -43,18 +34,18 @@
 				};
 			} );
 
-			// Process the Heartbeat API response
-			$( document ).on( 'heartbeat-tick', function ( e, data ) {
-				if ( data.activitypub_following_response ) {
-					ActivityPubFollowing.processUpdates( data.activitypub_following_response );
+			// Process the Heartbeat API response.
+			$( document ).on( 'heartbeat-tick.activitypub_following', function ( e, data ) {
+				if ( data.activitypub_following ) {
+					ActivityPubFollowing.processUpdates( data.activitypub_following );
 				}
 			} );
 		},
 
 		/**
-		 * Get IDs of all pending follow requests currently displayed in the table
+		 * Get IDs of all pending follow requests currently displayed in the table.
 		 *
-		 * @return {Array} Array of pending follow request IDs
+		 * @return {Array} Array of pending follow request IDs.
 		 */
 		getPendingIds: function () {
 			var pendingIds = [];
@@ -63,7 +54,7 @@
 			$( '.wp-list-table tr.status-pending' ).each( function () {
 				var id = $( this ).attr( 'id' );
 				if ( id ) {
-					// Extract the numeric ID from the row ID (e.g., "following-123" -> "123")
+					// Extract the numeric ID from the row ID (e.g., "following-123" -> "123").
 					var numericId = id.replace( /^following-(\d+)$/, '$1' );
 					pendingIds.push( numericId );
 				}
@@ -73,44 +64,60 @@
 		},
 
 		/**
-		 * Process updates received from the server
+		 * Process updates received from the server.
 		 *
-		 * @param {Object} response Response data from the server
+		 * @param {Object} response Response data from the server.
 		 */
 		processUpdates: function ( response ) {
+			if ( response.counts ) {
+				// Update the counts in the views navigation.
+				if ( response.counts.hasOwnProperty( 'all' ) ) {
+					$( '.subsubsub .all .count' ).text( '(' + response.counts.all + ')' );
+				}
+				if ( response.counts.hasOwnProperty( 'accepted' ) ) {
+					$( '.subsubsub .accepted .count' ).text( '(' + response.counts.accepted + ')' );
+				}
+				if ( response.counts.hasOwnProperty( 'pending' ) ) {
+					$( '.subsubsub .pending .count' ).text( '(' + response.counts.pending + ')' );
+
+					// Remove heartbeat listeners when there are no more pending follows.
+					if ( 0 === response.counts.pending ) {
+						$( document ).off( 'heartbeat-send.activitypub_following' );
+						$( document ).off( 'heartbeat-tick.activitypub_following' );
+					}
+				}
+			}
+
 			if ( ! response.updated_items || ! response.updated_items.length ) {
 				return;
 			}
 
 			var hasUpdates = false;
+			var $listTable = $( '#the-list' );
 
-			// Process each updated item
+			// Process each updated item.
 			$.each( response.updated_items, function ( index, item ) {
 				var $row = $( '#following-' + item.id );
 
-				if ( $row.length ) {
-					// Update the row status
-					if ( item.status === 'accepted' ) {
+				if ( $row.length && item.status === 'accepted' ) {
+					// Remove the row when we're in the "Pending" view.
+					if ( 'pending' === new URLSearchParams( window.location.search ).get( 'status' ) ) {
+						$row.remove();
+					} else {
 						$row.find( 'strong.pending' ).remove();
-						hasUpdates = true;
+					}
+					hasUpdates = true;
+
+					if ( 0 === $listTable.children().length ) {
+						$listTable.append(
+							'<tr class="no-items"><td class="colspanchange" colspan="5">' + response.no_items + '</td></tr>'
+						);
 					}
 				}
 			} );
 
-			// If we have updates, update the counts
-			if ( hasUpdates && response.counts ) {
-				// Update the counts in the views navigation
-				if ( response.counts.all ) {
-					$( '.subsubsub .all .count' ).text( '(' + response.counts.all + ')' );
-				}
-				if ( response.counts.accepted ) {
-					$( '.subsubsub .accepted .count' ).text( '(' + response.counts.accepted + ')' );
-				}
-				if ( response.counts.pending ) {
-					$( '.subsubsub .pending .count' ).text( '(' + response.counts.pending + ')' );
-				}
-
-				// Show a notification
+			// Show a notification.
+			if ( hasUpdates ) {
 				ActivityPubFollowing.showNotification(
 					response.message || wp.i18n.__( 'Follow requests updated.', 'activitypub' )
 				);
@@ -118,27 +125,25 @@
 		},
 
 		/**
-		 * Show a notification message
+		 * Show a notification message.
 		 *
-		 * @param {string} message The message to display
+		 * @param {string} message The message to display.
 		 */
 		showNotification: function ( message ) {
 			var $notice = $( '<div class="notice notice-success is-dismissible"><p>' + message + '</p></div>' );
 
-			// Remove any existing notices
+			// Remove any existing notices.
 			$( 'div.notice' ).remove();
 
-			// Add the new notice
+			// Add the new notice.
 			$notice.addClass( 'activitypub-following-notice' ).insertAfter( '.wp-header-end' );
 
-			// Make it dismissible
-			if ( wp.notices && wp.notices.removeDismissNotice ) {
-				wp.notices.removeDismissNotice( $notice );
-			}
+			// Trigger WordPress notice event to make it dismissible.
+			$( document ).trigger( 'wp-notice-added', [ $notice ] );
 		},
 	};
 
-	// Initialize on document ready
+	// Initialize on document ready.
 	$( document ).ready( function () {
 		ActivityPubFollowing.init();
 	} );

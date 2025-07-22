@@ -35,6 +35,11 @@ class Heartbeat {
 			? Actors::BLOG_USER_ID
 			: \get_current_user_id();
 
+		// Bail if there are no pending follows.
+		if ( 0 === Following::count_pending( $user_id ) ) {
+			return;
+		}
+
 		// Enqueue the script.
 		\wp_enqueue_script(
 			'activitypub-following',
@@ -68,9 +73,8 @@ class Heartbeat {
 			return $response;
 		}
 
-		$following_data = $data['activitypub_following_check'];
-		$user_id        = \absint( $following_data['user_id'] ?? 0 );
-		$pending_ids    = \array_map( 'absint', $following_data['pending_ids'] ?? array() );
+		$user_id     = \absint( $data['activitypub_following_check']['user_id'] ?? 0 );
+		$pending_ids = \array_map( 'absint', $data['activitypub_following_check']['pending_ids'] ?? array() );
 
 		// Verify user can view this data.
 		if ( ! \current_user_can( 'edit_user', $user_id ) ) {
@@ -78,9 +82,11 @@ class Heartbeat {
 		}
 
 		// Initialize the response.
-		$following_response = array(
-			'updated_items' => array(),
+		$response['activitypub_following'] = array(
+			'counts'        => Following::count( $user_id ),
 			'message'       => __( 'Follow requests updated.', 'activitypub' ),
+			'no_items'      => __( 'No profiles found.', 'activitypub' ),
+			'updated_items' => array(),
 		);
 
 		// Check for status changes in the pending follow requests.
@@ -89,20 +95,12 @@ class Heartbeat {
 
 			// If the status has changed from pending to accepted.
 			if ( Following::ACCEPTED === $status ) {
-				$following_response['updated_items'][] = array(
+				$response['activitypub_following']['updated_items'][] = array(
 					'id'     => $post_id,
 					'status' => $status,
 				);
 			}
 		}
-
-		// If we have updates, include the updated counts.
-		if ( ! empty( $following_response['updated_items'] ) ) {
-			$following_response['counts'] = Following::count( $user_id );
-		}
-
-		// Add our data to the response.
-		$response['activitypub_following_response'] = $following_response;
 
 		return $response;
 	}
@@ -118,10 +116,12 @@ class Heartbeat {
 
 		// Check if we're on a Following list page.
 		$is_following_page = false;
+		$user_id           = Actors::BLOG_USER_ID;
 
 		// phpcs:ignore WordPress.Security.NonceVerification
 		if ( 'users.php' === $pagenow && isset( $_GET['page'] ) && 'activitypub-following-list' === $_GET['page'] ) {
 			$is_following_page = true;
+			$user_id           = \get_current_user_id();
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification
@@ -130,7 +130,7 @@ class Heartbeat {
 		}
 
 		// Increase heartbeat frequency on Following list pages.
-		if ( $is_following_page ) {
+		if ( $is_following_page && 0 < Following::count_pending( $user_id ) ) {
 			$settings['interval'] = 10;
 		}
 
