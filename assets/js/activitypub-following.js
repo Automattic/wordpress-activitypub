@@ -73,13 +73,13 @@
 		processUpdates: function ( response ) {
 			if ( response.counts ) {
 				// Update the counts in the views navigation.
-				if ( response.counts.hasOwnProperty( 'all' ) ) {
+				if ( Object.hasOwn( response.counts, 'all' ) ) {
 					$( '.subsubsub .all .count' ).text( '(' + response.counts.all + ')' );
 				}
-				if ( response.counts.hasOwnProperty( 'accepted' ) ) {
+				if ( Object.hasOwn( response.counts, 'accepted' ) ) {
 					$( '.subsubsub .accepted .count' ).text( '(' + response.counts.accepted + ')' );
 				}
-				if ( response.counts.hasOwnProperty( 'pending' ) ) {
+				if ( Object.hasOwn( response.counts, 'pending' ) ) {
 					$( '.subsubsub .pending .count' ).text( '(' + response.counts.pending + ')' );
 
 					// Remove heartbeat listeners when there are no more pending follows.
