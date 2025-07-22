@@ -48,6 +48,8 @@ class Actor {
 		\add_action( 'update_option_activitypub_actor_mode', array( self::class, 'blog_user_update' ) );
 
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
+
+		\add_action( 'update_option_sticky_posts', array( self::class, 'detect_sticky_posts_change' ), 10, 2 );
 	}
 
 	/**
@@ -142,5 +144,24 @@ class Actor {
 		$actor->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, time() ) );
 
 		add_to_outbox( $actor, 'Update', $user_id );
+	}
+
+	/**
+	 * Detect sticky posts change.
+	 *
+	 * @param array $new_value New sticky posts.
+	 * @param array $old_value Old sticky posts.
+	 */
+	public static function detect_sticky_posts_change( $new_value, $old_value ) {
+		$removed = array_diff( $old_value, $new_value );
+		$added   = array_diff( $new_value, $old_value );
+
+		$changed = array_merge( $removed, $added );
+
+		foreach ( $changed as $post_id ) {
+			$post = \get_post( $post_id );
+
+			self::schedule_profile_update( $post->post_author );
+		}
 	}
 }
