@@ -153,10 +153,10 @@ class Actor {
 	 * @param array $old_value Old sticky posts.
 	 */
 	public static function detect_sticky_posts_change( $new_value, $old_value ) {
-		$removed = array_diff( $old_value, $new_value );
-		$added   = array_diff( $new_value, $old_value );
+		$removed = \array_diff( $old_value, $new_value );
+		$added   = \array_diff( $new_value, $old_value );
 
-		$changed = array_merge( $removed, $added );
+		$changed = \array_unique( \array_merge( $removed, $added ) );
 
 		foreach ( $changed as $post_id ) {
 			$post = \get_post( $post_id );
