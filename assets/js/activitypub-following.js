@@ -55,10 +55,10 @@
 			// Find all rows with pending status.
 			$( '.wp-list-table tr.status-pending' ).each( function () {
 				var id = $( this ).attr( 'id' );
+
 				if ( id ) {
 					// Extract the numeric ID from the row ID (e.g., "following-123" -> "123").
-					var numericId = id.replace( /^following-(\d+)$/, '$1' );
-					pendingIds.push( numericId );
+					pendingIds.push( id.replace( /^following-(\d+)$/, '$1' ) );
 				}
 			} );
 
@@ -86,6 +86,7 @@
 					if ( 0 === response.counts.pending ) {
 						$( document ).off( 'heartbeat-send.activitypub_following' );
 						$( document ).off( 'heartbeat-tick.activitypub_following' );
+						window.wp.heartbeat.interval( 60 );
 					}
 				}
 			}
