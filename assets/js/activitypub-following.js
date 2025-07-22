@@ -95,7 +95,9 @@
 				return;
 			}
 
-			var hasUpdates = false;
+			// Remove any existing notices.
+			$( 'div.notice' ).remove();
+
 			var $listTable = $( '#the-list' );
 
 			// Process each updated item.
@@ -109,7 +111,6 @@
 					} else {
 						$row.find( 'strong.pending' ).remove();
 					}
-					hasUpdates = true;
 
 					if ( 0 === $listTable.children().length ) {
 						$listTable.append(
@@ -118,31 +119,6 @@
 					}
 				}
 			} );
-
-			// Show a notification.
-			if ( hasUpdates ) {
-				ActivityPubFollowing.showNotification(
-					response.message || wp.i18n.__( 'Follow requests updated.', 'activitypub' )
-				);
-			}
-		},
-
-		/**
-		 * Show a notification message.
-		 *
-		 * @param {string} message The message to display.
-		 */
-		showNotification: function ( message ) {
-			var $notice = $( '<div class="notice notice-success is-dismissible"><p>' + message + '</p></div>' );
-
-			// Remove any existing notices.
-			$( 'div.notice' ).remove();
-
-			// Add the new notice.
-			$notice.addClass( 'activitypub-following-notice' ).insertAfter( '.wp-header-end' );
-
-			// Trigger WordPress notice event to make it dismissible.
-			$( document ).trigger( 'wp-notice-added', [ $notice ] );
 		},
 	};
 
