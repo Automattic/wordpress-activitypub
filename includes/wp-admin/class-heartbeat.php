@@ -23,7 +23,6 @@ class Heartbeat {
 		\add_action( 'admin_print_scripts-users_page_activitypub-following-list', array( self::class, 'enqueue_scripts' ) );
 
 		\add_filter( 'heartbeat_received', array( self::class, 'heartbeat_received' ), 10, 2 );
-		\add_filter( 'heartbeat_settings', array( self::class, 'heartbeat_settings' ) );
 	}
 
 	/**
@@ -53,10 +52,7 @@ class Heartbeat {
 		\wp_localize_script(
 			'activitypub-following',
 			'ActivityPubFollowingSettings',
-			array(
-				'screen_id' => \get_current_screen()->id,
-				'user_id'   => $user_id,
-			)
+			array( 'user_id' => $user_id )
 		);
 	}
 
@@ -103,37 +99,5 @@ class Heartbeat {
 		}
 
 		return $response;
-	}
-
-	/**
-	 * Adjust Heartbeat API settings for ActivityPub screens.
-	 *
-	 * @param array $settings Heartbeat settings.
-	 * @return array Modified heartbeat settings.
-	 */
-	public static function heartbeat_settings( $settings ) {
-		global $pagenow;
-
-		// Check if we're on a Following list page.
-		$is_following_page = false;
-		$user_id           = Actors::BLOG_USER_ID;
-
-		// phpcs:ignore WordPress.Security.NonceVerification
-		if ( 'users.php' === $pagenow && isset( $_GET['page'] ) && 'activitypub-following-list' === $_GET['page'] ) {
-			$is_following_page = true;
-			$user_id           = \get_current_user_id();
-		}
-
-		// phpcs:ignore WordPress.Security.NonceVerification
-		if ( 'options-general.php' === $pagenow && isset( $_GET['page'], $_GET['tab'] ) && 'activitypub' === $_GET['page'] && 'following' === $_GET['tab'] ) {
-			$is_following_page = true;
-		}
-
-		// Increase heartbeat frequency on Following list pages.
-		if ( $is_following_page && 0 < Following::count_pending( $user_id ) ) {
-			$settings['interval'] = 10;
-		}
-
-		return $settings;
 	}
 }

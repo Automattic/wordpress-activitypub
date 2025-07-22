@@ -19,6 +19,9 @@
 		 */
 		init: function () {
 			this.setupHeartbeatListeners();
+
+			// Check every 5 seconds. It'll automatically slow down after 2 mins 30 secs.
+			window.wp.heartbeat.interval( 'fast' );
 		},
 
 		/**
@@ -28,7 +31,6 @@
 			// Add our data to the Heartbeat API request.
 			$( document ).on( 'heartbeat-send.activitypub_following', function ( e, data ) {
 				data.activitypub_following_check = {
-					screen_id: ActivityPubFollowingSettings.screen_id,
 					user_id: ActivityPubFollowingSettings.user_id,
 					pending_ids: ActivityPubFollowing.getPendingIds(),
 				};
