@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed potential errors when unrelated requests get caught in double-knocking callback.
