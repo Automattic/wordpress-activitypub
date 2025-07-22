@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 
 /**
@@ -30,6 +31,50 @@ class Sanitize {
 		$value = \array_unique( $value );
 
 		return \array_values( $value );
+	}
+
+	/**
+	 * Sanitize and normalize a list of account identifiers to ActivityPub IDs.
+	 *
+	 * This function processes various identifier formats, such as URLs and
+	 * webfinger identifiers, and normalizes them into a consistent format.
+	 *
+	 * @param string|array $value The value to sanitize.
+	 *
+	 * @return array The sanitized and normalized list of account identifiers.
+	 */
+	public static function identifier_list( $value ) {
+		if ( ! \is_array( $value ) ) {
+			$value = \explode( PHP_EOL, $value );
+		}
+
+		$value = \array_filter( $value );
+		$uris  = array();
+
+		foreach ( $value as $uri ) {
+			$uri = \trim( $uri );
+			$uri = \ltrim( $uri, '@' );
+
+			if ( \is_email( $uri ) ) {
+				$_uri = Webfinger::resolve( $uri );
+				if ( \is_wp_error( $_uri ) ) {
+					$uris[] = $uri;
+					continue;
+				}
+
+				$uri = $_uri;
+			}
+
+			$uri   = \sanitize_url( $uri );
+			$actor = Actors::fetch_remote_by_uri( $uri );
+			if ( \is_wp_error( $actor ) ) {
+				$uris[] = $uri;
+			} else {
+				$uris[] = \sanitize_url( $actor->guid );
+			}
+		}
+
+		return \array_values( \array_unique( $uris ) );
 	}
 
 	/**

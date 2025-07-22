@@ -64,11 +64,15 @@ function safe_remote_get( $url ) {
 /**
  * Returns a users WebFinger "resource".
  *
+ * @deprecated unreleased Use {@see \Activitypub\Webfinger::get_user_resource} instead.
+ *
  * @param int $user_id The user ID.
  *
  * @return string The User resource.
  */
 function get_webfinger_resource( $user_id ) {
+	\_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Webfinger::get_user_resource' );
+
 	return Webfinger::get_user_resource( $user_id );
 }
 
@@ -170,9 +174,13 @@ function url_to_authorid( $url ) {
 /**
  * Verify that url is a wp_ap_comment or a previously received remote comment.
  *
+ * @deprecated unreleased
+ *
  * @return int|bool Comment ID or false if not found.
  */
 function is_comment() {
+	\_deprecated_function( __FUNCTION__, 'unreleased' );
+
 	$comment_id = get_query_var( 'c', null );
 
 	if ( ! is_null( $comment_id ) ) {
@@ -483,11 +491,15 @@ function site_supports_blocks() {
 /**
  * Check if data is valid JSON.
  *
+ * @deprecated unreleased Use {@see \json_decode} instead.
+ *
  * @param string $data The data to check.
  *
  * @return boolean True if the data is JSON, false otherwise.
  */
 function is_json( $data ) {
+	\_deprecated_function( __FUNCTION__, 'unreleased', 'json_decode' );
+
 	return \is_array( \json_decode( $data, true ) );
 }
 
@@ -1696,7 +1708,7 @@ function extract_name_from_uri( $uri ) {
 	if ( \filter_var( $name, FILTER_VALIDATE_URL ) ) {
 		$name = \rtrim( $name, '/' );
 		$path = \wp_parse_url( $name, PHP_URL_PATH );
-		if ( $path ) {
+		if ( $path && '/' !== $path ) {
 			if ( \strpos( $name, '@' ) !== false ) {
 				// Expected: https://example.com/@user (default URL pattern).
 				$name = \preg_replace( '|^/@?|', '', $path );
@@ -1705,6 +1717,9 @@ function extract_name_from_uri( $uri ) {
 				$parts = \explode( '/', $path );
 				$name  = \array_pop( $parts );
 			}
+		} else {
+			$name = \wp_parse_url( $name, PHP_URL_HOST );
+			$name = \str_replace( 'www.', '', $name );
 		}
 	} elseif (
 		\is_email( $name ) ||

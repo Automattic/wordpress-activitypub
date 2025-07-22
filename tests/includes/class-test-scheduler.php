@@ -268,6 +268,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 				'post_type'   => Outbox::POST_TYPE,
 				'post_status' => 'publish',
 				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 month' ) ),
+				'meta_input'  => array(
+					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Update',
+				),
 			)
 		);
 		self::factory()->post->create_many(
@@ -276,6 +279,20 @@ class Test_Scheduler extends \WP_UnitTestCase {
 				'post_type'   => Outbox::POST_TYPE,
 				'post_status' => 'publish',
 				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+				'meta_input'  => array(
+					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Update',
+				),
+			)
+		);
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+				'post_status' => 'publish',
+				'meta_input'  => array(
+					'_activitypub_activity_type' => 'Follow',
+				),
 			)
 		);
 
@@ -283,7 +300,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
 
 		// Assert that 5 posts were deleted, leaving 25.
-		$this->assertEquals( 25, wp_count_posts( Outbox::POST_TYPE )->publish );
+		$this->assertEquals( 30, wp_count_posts( Outbox::POST_TYPE )->publish );
 	}
 
 	/**
@@ -322,6 +339,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 				'post_type'   => Outbox::POST_TYPE,
 				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-4 months' ) ),
 				'post_status' => 'publish',
+				'meta_input'  => array(
+					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Update',
+				),
 			)
 		);
 

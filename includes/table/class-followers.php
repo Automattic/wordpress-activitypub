@@ -205,12 +205,7 @@ class Followers extends \WP_List_Table {
 				continue;
 			}
 
-			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
-			$webfinger = Webfinger::uri_to_acct( $url );
-
-			if ( is_wp_error( $webfinger ) ) {
-				$webfinger = Webfinger::guess( $url );
-			}
+			$url = object_to_uri( $actor->get_url() ?? $actor->get_id() );
 
 			$this->items[] = array(
 				'id'         => $follower->ID,
@@ -218,7 +213,7 @@ class Followers extends \WP_List_Table {
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => $url,
-				'webfinger'  => $webfinger,
+				'webfinger'  => self::get_webfinger( $actor ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $follower->post_modified_gmt,
 			);

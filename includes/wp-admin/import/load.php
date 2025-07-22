@@ -27,7 +27,7 @@ function load() {
 		array( __NAMESPACE__ . '\Mastodon', 'dispatch' )
 	);
 
-	if ( \apply_filters( 'activitypub_show_following_ui', false ) ) {
+	if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
 		\register_importer(
 			'starter-kit',
 			\__( 'Fediverse Starter Kits (Beta)', 'activitypub' ),

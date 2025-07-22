@@ -762,7 +762,7 @@ class Activitypub {
 				'description'       => 'An array of URLs that the user is known by.',
 				'single'            => true,
 				'default'           => array(),
-				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
 			)
 		);
 
