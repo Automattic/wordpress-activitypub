@@ -1717,6 +1717,9 @@ function extract_name_from_uri( $uri ) {
 				$parts = \explode( '/', $path );
 				$name  = \array_pop( $parts );
 			}
+		} else {
+			$name = \wp_parse_url( $name, PHP_URL_HOST );
+			$name = \str_replace( 'www.', '', $name );
 		}
 	} elseif (
 		\is_email( $name ) ||
