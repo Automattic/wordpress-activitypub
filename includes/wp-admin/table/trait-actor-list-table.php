@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-namespace Activitypub\Table;
+namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Webfinger;

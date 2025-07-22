@@ -10,7 +10,7 @@
 /**
  * Following list table.
  *
- * @global Activitypub\Table\Following $following_list_table
+ * @global \Activitypub\WP_Admin\Table\Following $following_list_table
  */
 global $following_list_table;
 
