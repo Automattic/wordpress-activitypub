@@ -103,6 +103,11 @@ class Screen_Options {
 			return $screen_settings;
 		}
 
+		// No screen options on followers and following tabs. The per_page screen options interfere with them.
+		if ( \in_array( \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ), array( 'followers', 'following' ), true ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			return $screen_settings;
+		}
+
 		// Verify screen options nonce.
 		if ( isset( $_POST['screenoptionnonce'] ) ) {
 			$nonce = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );

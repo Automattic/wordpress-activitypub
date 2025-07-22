@@ -236,12 +236,7 @@ class Following extends \WP_List_Table {
 				continue;
 			}
 
-			$url       = object_to_uri( $actor->get_url() ?? $actor->get_id() );
-			$webfinger = Webfinger::uri_to_acct( $url );
-
-			if ( \is_wp_error( $webfinger ) ) {
-				$webfinger = Webfinger::guess( $url );
-			}
+			$url = object_to_uri( $actor->get_url() ?? $actor->get_id() );
 
 			$this->items[] = array(
 				'id'         => $following->ID,
@@ -249,7 +244,7 @@ class Following extends \WP_List_Table {
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => $url,
-				'webfinger'  => $webfinger,
+				'webfinger'  => self::get_webfinger( $actor ),
 				'status'     => Following_Collection::check_status( $this->user_id, $following->ID ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $following->post_modified_gmt,

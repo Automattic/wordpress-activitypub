@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use WP_Error;
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 
 /**
@@ -302,11 +303,24 @@ class Webfinger {
 	 * Infer a shortname from the Actor ID or URL. Used only for fallbacks,
 	 * we will try to use what's supplied.
 	 *
-	 * @param string $uri The URI.
+	 * @param Actor|string $actor_or_uri The Actor or URI.
 	 *
 	 * @return string Hopefully the name of the Follower.
 	 */
-	public static function guess( $uri ) {
-		return extract_name_from_uri( $uri ) . '@' . \wp_parse_url( $uri, PHP_URL_HOST );
+	public static function guess( $actor_or_uri ) {
+		if ( ! $actor_or_uri instanceof Actor ) {
+			$actor = Actors::fetch_remote_by_uri( $actor_or_uri );
+			if ( \is_wp_error( $actor ) ) {
+				return extract_name_from_uri( $actor_or_uri ) . '@' . \wp_parse_url( $actor_or_uri, PHP_URL_HOST );
+			}
+
+			$actor_or_uri = $actor;
+		}
+
+		if ( $actor_or_uri->get_preferred_username() ) {
+			return $actor_or_uri->get_preferred_username() . '@' . \wp_parse_url( $actor_or_uri->get_id(), PHP_URL_HOST );
+		}
+
+		return extract_name_from_uri( $actor_or_uri->get_id() ) . '@' . \wp_parse_url( $actor_or_uri->get_id(), PHP_URL_HOST );
 	}
 }
