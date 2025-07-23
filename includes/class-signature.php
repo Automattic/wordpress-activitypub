@@ -85,13 +85,13 @@ class Signature {
 	 * @return array The HTTP response.
 	 */
 	public static function maybe_double_knock( $response, $args, $url ) {
-		// Remove this filter to prevent infinite recursion.
-		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
-
 		// Bail if there's nothing to sign with. It's likely an unrelated request getting processed first.
 		if ( ! isset( $args['key_id'], $args['private_key'], $args['headers']['Date'] ) ) {
 			return $response;
 		}
+
+		// Remove this filter to prevent infinite recursion.
+		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
 
 		$response_code = \wp_remote_retrieve_response_code( $response );
 
