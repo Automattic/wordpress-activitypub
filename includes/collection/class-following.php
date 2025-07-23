@@ -89,7 +89,7 @@ class Following {
 			$follow->set_object( $post->guid );
 			$follow->set_to( array( $post->guid ) );
 
-			return add_to_outbox( $follow, null, $user_id );
+			return add_to_outbox( $follow, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 		}
 
 		return $post;

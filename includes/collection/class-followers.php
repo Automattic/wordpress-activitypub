@@ -104,7 +104,7 @@ class Followers {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_follower( $user_id, $actor ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::remove' );
+		_deprecated_function( __METHOD__, '7.1.0', 'Activitypub\Collection\Followers::remove' );
 
 		$remote_actor = self::get_follower( $user_id, $actor );
 
@@ -351,12 +351,12 @@ class Followers {
 	/**
 	 * Get all Followers.
 	 *
-	 * @deprecated unreleased Use Activitypub\Collection\Actors::get_all() instead.
+	 * @deprecated 7.1.0 Use Activitypub\Collection\Actors::get_all() instead.
 	 *
 	 * @return \WP_Post[] The list of Followers.
 	 */
 	public static function get_all_followers() {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_all' );
+		_deprecated_function( __METHOD__, '7.1.0', 'Activitypub\Collection\Actors::get_all' );
 
 		$args = array(
 			'nopaging'   => true,

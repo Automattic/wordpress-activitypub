@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 7.0.1
+Stable tag: 7.1.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -110,6 +110,37 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+### 7.1.0 - 2025-07-23
+#### Added
+- Added a first version of the Follow form, allowing users to follow other Actors by username or profile link.
+- Added initial support for Fediverse Starter Kits, allowing users to follow recommended accounts from a predefined list.
+- Ensure that all schedulers are registered during every plugin update.
+- Followers and Following list tables now support Columns and Pagination screen options.
+- The featured tags endpoint is now available again for all profiles, showing the most frequently used tags by each user.
+- The `following` endpoint now returns the actual list of users being followed.
+
+#### Changed
+- Follower tables now look closer to what other tables in WordPress look like.
+- Improved Account-Aliases handling by internally normalizing input formats.
+- Minor performance improvement when querying posts of various types, by avoiding double queries.
+- Set older unfederated posts to local visibility by default.
+- Step counts for the Welcome checklist now only take into account steps that are added in the Welcome class.
+- Table actions are now faster by using the Custom Post Type ID instead of the remote user URI, thanks to the unified Actor Model.
+- The following tables now more closely match the appearance of other WordPress tables and can be filtered by status.
+
+#### Fixed
+- Ensure correct visibility handling for `Undo` and `Follow` requests
+- Ensure that the Actor-ID is always a URL.
+- Fixed a bug in how follow requests were accepted to ensure they work correctly.
+- Fixed an issue where the number of followers shown didn’t always match the actual follower list.
+- Fixed a PHP error that prevented the Follower overview from loading.
+- Fixed missing avatar class so that CSS styles are correctly applied to ActivityPub avatars on the Dashboard.
+- Fixed potential errors when unrelated requests get caught in double-knocking callback.
+- Improved WebFinger fallback to better guess usernames from profile links.
+- Prevent WordPress from loading all admin notices twice on ActivityPub settings pages.
+- Removed follower dates to avoid confusion, as they may not have accurately reflected the actual follow time.
+- Stop purging Follow activities from the Outbox to allow proper Unfollow (Undo) handling.
+
 ### 7.0.1 - 2025-07-10
 #### Fixed
 - When deleting interactions for cleaned up actors, we use the actor's URL again to retrieve their information instead of our internal ID.
@@ -166,9 +197,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.0.0 =
+= 7.1.0 =
 
-HTTP signatures now accept modern RFC 9421 standard with fallback and verification.
+Improved Followers table, smarter migrations, and no more accidental re-federation of old posts.
 
 == Installation ==
 

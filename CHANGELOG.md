@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.1.0] - 2025-07-23
+### Added
+- Added a first version of the Follow form, allowing users to follow other Actors by username or profile link. [#1930]
+- Added initial support for Fediverse Starter Kits, allowing users to follow recommended accounts from a predefined list. [#1919]
+- Ensure that all schedulers are registered during every plugin update. [#1959]
+- Followers and Following list tables now support Columns and Pagination screen options. [#1925]
+- The featured tags endpoint is now available again for all profiles, showing the most frequently used tags by each user. [#1922]
+- The `following` endpoint now returns the actual list of users being followed. [#1916]
+
+### Changed
+- Follower tables now look closer to what other tables in WordPress look like. [#1913]
+- Improved Account-Aliases handling by internally normalizing input formats. [#1974]
+- Minor performance improvement when querying posts of various types, by avoiding double queries. [#1907]
+- Set older unfederated posts to local visibility by default. [#1900]
+- Step counts for the Welcome checklist now only take into account steps that are added in the Welcome class. [#1942]
+- Table actions are now faster by using the Custom Post Type ID instead of the remote user URI, thanks to the unified Actor Model. [#1946]
+- The following tables now more closely match the appearance of other WordPress tables and can be filtered by status. [#1909]
+
+### Fixed
+- Ensure correct visibility handling for `Undo` and `Follow` requests [#1988]
+- Ensure that the Actor-ID is always a URL. [#1920]
+- Fixed a bug in how follow requests were accepted to ensure they work correctly. [#1931]
+- Fixed an issue where the number of followers shown didn’t always match the actual follower list. [#1918]
+- Fixed a PHP error that prevented the Follower overview from loading. [#1973]
+- Fixed missing avatar class so that CSS styles are correctly applied to ActivityPub avatars on the Dashboard. [#1932]
+- Fixed potential errors when unrelated requests get caught in double-knocking callback. [#1985]
+- Improved WebFinger fallback to better guess usernames from profile links. [#1979]
+- Prevent WordPress from loading all admin notices twice on ActivityPub settings pages. [#1943]
+- Removed follower dates to avoid confusion, as they may not have accurately reflected the actual follow time. [#1928]
+- Stop purging Follow activities from the Outbox to allow proper Unfollow (Undo) handling. [#1980]
+
 ## [7.0.1] - 2025-07-10
 ### Fixed
 - When deleting interactions for cleaned up actors, we use the actor's URL again to retrieve their information instead of our internal ID. [#1915]
@@ -1321,6 +1352,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.0.1...7.1.0
 [7.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.0.0...7.0.1
 [7.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.2...7.0.0
 [6.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.1...6.0.2

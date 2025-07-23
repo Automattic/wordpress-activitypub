@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Removed follower dates to avoid confusion, as they may not have accurately reflected the actual follow time.
