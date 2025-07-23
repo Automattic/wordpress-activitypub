@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Scheduler;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Outbox;
 use Activitypub\Scheduler\Actor;
 
 /**
@@ -319,5 +320,41 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Verify the updated attribute is set and matches the post's modified date.
 		$this->assertEqualsWithDelta( strtotime( $post->post_modified ), strtotime( $activity['updated'] ), 2, 'Updated attribute does not match post modified date.' );
+	}
+
+	/**
+	 * Test that sticky posts are detected.
+	 *
+	 * @covers ::schedule_profile_update
+	 */
+	public function test_detect_sticky_posts_change() {
+		Actor::init();
+
+		$items_before = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+			)
+		);
+
+		$before = \count( $items_before );
+
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		\stick_post( $post_id );
+
+		$items_after = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+			)
+		);
+
+		$after = \count( $items_after );
+
+		$this->assertEquals( $before + 1, $after );
 	}
 }
