@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Moved HTTP request signing to a filter instead of calling it directly.
