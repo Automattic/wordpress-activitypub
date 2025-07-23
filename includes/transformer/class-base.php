@@ -533,7 +533,7 @@ abstract class Base {
 				);
 
 				// Height and width for videos.
-				if ( isset( $meta['width'] ) && isset( $meta['height'] ) ) {
+				if ( isset( $meta['width'], $meta['height'] ) ) {
 					$attachment['width']  = \esc_attr( $meta['width'] );
 					$attachment['height'] = \esc_attr( $meta['height'] );
 				}
@@ -541,7 +541,6 @@ abstract class Base {
 				if ( \method_exists( $this, 'get_icon' ) && $this->get_icon() ) {
 					$attachment['icon'] = object_to_uri( $this->get_icon() );
 				}
-
 				break;
 		}
 
@@ -595,12 +594,16 @@ abstract class Base {
 	 */
 	protected function filter_unique_attachments( $attachments ) {
 		$seen_ids = array();
-		return \array_filter( $attachments, function( $attachment ) use ( &$seen_ids ) {
-			if ( isset( $attachment['id'] ) && ! in_array( $attachment['id'], $seen_ids, true ) ) {
-				$seen_ids[] = $attachment['id'];
-				return true;
+
+		return \array_filter(
+			$attachments,
+			function ( $attachment ) use ( &$seen_ids ) {
+				if ( isset( $attachment['id'] ) && ! in_array( $attachment['id'], $seen_ids, true ) ) {
+					$seen_ids[] = $attachment['id'];
+					return true;
+				}
+				return false;
 			}
-			return false;
-		} );
+		);
 	}
 }

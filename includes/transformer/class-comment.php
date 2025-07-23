@@ -387,7 +387,7 @@ class Comment extends Base {
 			'video' => array(),
 		);
 
-		// Get comment content and parse for image embeds
+		// Get comment content and parse for image embeds.
 		$content = $this->item->comment_content;
 		$media   = $this->get_classic_editor_image_embeds( $media, $max_media, $content );
 
@@ -404,7 +404,7 @@ class Comment extends Base {
 		 */
 		$media = \apply_filters( 'activitypub_comment_attachment_ids', $media, $this->item );
 
-		// Transform to ActivityStreams format using Base class method
+		// Transform to ActivityStreams format using Base class method.
 		$attachments = \array_filter( \array_map( array( $this, 'transform_attachment' ), $media ) );
 
 		/**
