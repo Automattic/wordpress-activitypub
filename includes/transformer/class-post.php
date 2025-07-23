@@ -245,7 +245,7 @@ class Post extends Base {
 		 */
 		$thumbnail = apply_filters(
 			'activitypub_get_image',
-			$this->get_wordpress_attachment( $id, $image_size ),
+			$this->get_attachment_image_src( $id, $image_size ),
 			$id,
 			$image_size
 		);
