@@ -78,13 +78,18 @@ class Signature {
 	/**
 	 * If a request with RFC-9421 signature fails, we try again with the Draft Cavage signature.
 	 *
-	 * @param array  $response    HTTP response.
-	 * @param array  $parsed_args HTTP request arguments.
-	 * @param string $url         The request URL.
+	 * @param array  $response HTTP response.
+	 * @param array  $args     HTTP request arguments.
+	 * @param string $url      The request URL.
 	 *
 	 * @return array The HTTP response.
 	 */
-	public static function maybe_double_knock( $response, $parsed_args, $url ) {
+	public static function maybe_double_knock( $response, $args, $url ) {
+		// Bail if there's nothing to sign with. It's likely an unrelated request getting processed first.
+		if ( ! isset( $args['key_id'], $args['private_key'], $args['headers']['Date'] ) ) {
+			return $response;
+		}
+
 		// Remove this filter to prevent infinite recursion.
 		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
 
@@ -92,11 +97,11 @@ class Signature {
 
 		// Fall back to Draft Cavage signature for any 4xx responses.
 		if ( $response_code >= 400 && $response_code < 500 ) {
-			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
+			unset( $args['headers']['Signature'], $args['headers']['Signature-Input'], $args['headers']['Content-Digest'] );
 			self::rfc9421_add_unsupported_host( $url );
 
-			$parsed_args = ( new Http_Signature_Draft() )->sign( $parsed_args, $url );
-			$response    = \wp_remote_request( $url, $parsed_args );
+			$args     = ( new Http_Signature_Draft() )->sign( $args, $url );
+			$response = \wp_remote_request( $url, $args );
 		}
 
 		return $response;

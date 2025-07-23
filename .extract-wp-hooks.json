@@ -1,0 +1,25 @@
+{
+    "namespace": "Activitypub",
+    "wiki_directory": "../activitypub.wiki",
+    "github_blob_url": "https://github.com/Automattic/wordpress-activitypub/blob/trunk/",
+    "ignore_filter": [
+        "comment_text",
+        "get_avatar_comment_types",
+        "get_avatar_url",
+        "http_headers_useragent",
+        "import_start",
+        "import_end",
+        "oembed_result",
+        "opengraph_metadata",
+        "rest_oembed_ttl",
+        "the_content",
+        "the_excerpt",
+        "webfinger_data",
+        "wp_import_existing_post",
+        "wpml_post_language_details"
+    ],
+    "exclude_dirs": [
+        "build",
+        "tests"
+    ]
+}

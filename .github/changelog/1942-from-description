@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Step counts for the Welcome checklist now only take into account steps that are added in the Welcome class.
