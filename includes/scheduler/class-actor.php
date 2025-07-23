@@ -161,6 +161,10 @@ class Actor {
 		foreach ( $changed as $post_id ) {
 			$post = \get_post( $post_id );
 
+			if ( ! $post ) {
+				continue;
+			}
+
 			self::schedule_profile_update( $post->post_author );
 		}
 	}
