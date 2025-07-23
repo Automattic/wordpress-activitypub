@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Ensure correct visibility handling for `Undo` and `Follow` requests

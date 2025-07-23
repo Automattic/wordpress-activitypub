@@ -128,9 +128,9 @@ class Following_Controller extends Actors_Controller {
 		 * @param array                   $items The array of following urls.
 		 * @param \Activitypub\Model\User $user  The user object.
 		 *
-		 * @deprecated unreleased Please migrate your Followings to the new internal Following structure.
+		 * @deprecated 7.1.0 Please migrate your Followings to the new internal Following structure.
 		 */
-		$items = \apply_filters_deprecated( 'activitypub_rest_following', array( array(), $user ), 'unreleased', 'Please migrate your Followings to the new internal Following structure.' );
+		$items = \apply_filters_deprecated( 'activitypub_rest_following', array( array(), $user ), '7.1.0', 'Please migrate your Followings to the new internal Following structure.' );
 
 		if ( ! empty( $items ) ) {
 			$response['totalItems']   = count( $items );

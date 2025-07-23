@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Ensure that all schedulers are registered during every plugin update.
