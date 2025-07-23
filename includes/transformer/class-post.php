@@ -326,10 +326,9 @@ class Post extends Base {
 			$media   = $this->get_classic_editor_image_embeds( $media, $max_media, $content );
 		}
 
-		$media      = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
-		$unique_ids = \array_unique( \array_column( $media, 'id' ) );
-		$media      = \array_intersect_key( $media, $unique_ids );
-		$media      = \array_slice( $media, 0, $max_media );
+		$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
+		$media = $this->filter_unique_attachments( $media );
+		$media = \array_slice( $media, 0, $max_media );
 
 		/**
 		 * Filter the attachment IDs for a post.

@@ -585,4 +585,22 @@ abstract class Base {
 
 		return $image;
 	}
+
+	/**
+	 * Filter attachments to ensure uniqueness based on their ID.
+	 *
+	 * @param array $attachments Array of attachments with 'id' field.
+	 *
+	 * @return array Array with duplicate attachments removed.
+	 */
+	protected function filter_unique_attachments( $attachments ) {
+		$seen_ids = array();
+		return \array_filter( $attachments, function( $attachment ) use ( &$seen_ids ) {
+			if ( isset( $attachment['id'] ) && ! in_array( $attachment['id'], $seen_ids, true ) ) {
+				$seen_ids[] = $attachment['id'];
+				return true;
+			}
+			return false;
+		} );
+	}
 }

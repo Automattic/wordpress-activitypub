@@ -391,10 +391,8 @@ class Comment extends Base {
 		$content = $this->item->comment_content;
 		$media   = $this->get_classic_editor_image_embeds( $media, $max_media, $content );
 
-		// Filter and process attachments
-		$unique_ids = \array_unique( \array_column( $media['image'], 'id' ) );
-		$media      = \array_intersect_key( $media['image'], $unique_ids );
-		$media      = \array_slice( $media, 0, $max_media );
+		$media = $this->filter_unique_attachments( $media['image'] );
+		$media = \array_slice( $media, 0, $max_media );
 
 		/**
 		 * Filter the attachment IDs for a comment.
