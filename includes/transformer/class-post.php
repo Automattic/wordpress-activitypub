@@ -322,7 +322,8 @@ class Post extends Base {
 		if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
 			$media = $this->get_block_attachments( $media, $max_media );
 		} else {
-			$media = $this->get_classic_editor_image_embeds( $media, $max_media );
+			$content = \get_post_field( 'post_content', $this->item );
+			$media   = $this->get_classic_editor_image_embeds( $media, $max_media, $content );
 		}
 
 		$media      = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
@@ -865,82 +866,6 @@ class Post extends Base {
 	 *
 	 * @return array The attachments.
 	 */
-	protected function get_classic_editor_image_embeds( $media, $max_images ) {
-		// If someone calls that function directly, bail.
-		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-			return $media;
-		}
-
-		// Max images can't be negative or zero.
-		if ( $max_images <= 0 ) {
-			return $media;
-		}
-
-		$images  = array();
-		$base    = get_upload_baseurl();
-		$content = \get_post_field( 'post_content', $this->item );
-		$tags    = new \WP_HTML_Tag_Processor( $content );
-
-		// This linter warning is a false positive - we have to re-count each time here as we modify $images.
-		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
-		while ( $tags->next_tag( 'img' ) && ( \count( $images ) <= $max_images ) ) {
-			/**
-			 * Filter the image source URL.
-			 *
-			 * This can be used to modify the image source URL before it is used to
-			 * determine the attachment ID.
-			 *
-			 * @param string $src The image source URL.
-			 */
-			$src = \apply_filters( 'activitypub_image_src', $tags->get_attribute( 'src' ) );
-
-			/*
-			 * If the img source is in our uploads dir, get the
-			 * associated ID. Note: if there's a -500x500
-			 * type suffix, we remove it, but we try the original
-			 * first in case the original image is actually called
-			 * that. Likewise, we try adding the -scaled suffix for
-			 * the case that this is a small version of an image
-			 * that was big enough to get scaled down on upload:
-			 * https://make.wordpress.org/core/2019/10/09/introducing-handling-of-big-images-in-wordpress-5-3/
-			 */
-			if ( null !== $src && \str_starts_with( $src, $base ) ) {
-				$img_id = \attachment_url_to_postid( $src );
-
-				if ( 0 === $img_id ) {
-					$count  = 0;
-					$src    = \strtok( $src, '?' );
-					$img_id = \attachment_url_to_postid( $src );
-				}
-
-				if ( 0 === $img_id ) {
-					$count = 0;
-					$src   = \preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
-					if ( $count > 0 ) {
-						$img_id = \attachment_url_to_postid( $src );
-					}
-				}
-
-				if ( 0 === $img_id ) {
-					$src    = \preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
-					$img_id = \attachment_url_to_postid( $src );
-				}
-
-				if ( 0 !== $img_id ) {
-					$images[] = array(
-						'id'  => $img_id,
-						'alt' => $tags->get_attribute( 'alt' ),
-					);
-				}
-			}
-		}
-
-		if ( \count( $media['image'] ) <= $max_images ) {
-			$media['image'] = \array_merge( $media['image'], $images );
-		}
-
-		return $media;
-	}
 
 	/**
 	 * Filter media IDs by object type.
@@ -972,94 +897,22 @@ class Post extends Base {
 	/**
 	 * Converts a WordPress Attachment to an ActivityPub Attachment.
 	 *
+	 * @deprecated unreleased Use {@see \Activitypub\Transformer\Base::transform_attachment()} instead.
+	 *
 	 * @param array $media The Attachment array.
 	 *
 	 * @return array The ActivityPub Attachment.
 	 */
 	public function wp_attachment_to_activity_attachment( $media ) {
-		if ( ! isset( $media['id'] ) ) {
-			return $media;
-		}
+		_deprecated_function( __METHOD__, 'unreleased', '\Activitypub\Transformer\Base::transform_attachment()' );
 
-		$id         = $media['id'];
-		$attachment = array();
-		$mime_type  = \get_post_mime_type( $id );
-		$media_type = \strtok( $mime_type, '/' );
-
-		// Switching on image/audio/video.
-		switch ( $media_type ) {
-			case 'image':
-				$image_size = 'large';
-
-				/**
-				 * Filter the image URL returned for each post.
-				 *
-				 * @param array|false $thumbnail  The image URL, or false if no image is available.
-				 * @param int         $id         The attachment ID.
-				 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
-				 */
-				$thumbnail = apply_filters(
-					'activitypub_get_image',
-					$this->get_wordpress_attachment( $id, $image_size ),
-					$id,
-					$image_size
-				);
-
-				if ( $thumbnail ) {
-					$image = array(
-						'type'      => 'Image',
-						'url'       => \esc_url( $thumbnail[0] ),
-						'mediaType' => \esc_attr( $mime_type ),
-					);
-
-					if ( ! empty( $media['alt'] ) ) {
-						$image['name'] = \wp_strip_all_tags( \html_entity_decode( $media['alt'] ) );
-					} else {
-						$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
-						if ( $alt ) {
-							$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt ) );
-						}
-					}
-
-					$attachment = $image;
-				}
-				break;
-
-			case 'audio':
-			case 'video':
-				$attachment = array(
-					'type'      => \ucfirst( $media_type ),
-					'mediaType' => \esc_attr( $mime_type ),
-					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
-					'name'      => \esc_attr( \get_the_title( $id ) ),
-				);
-				$meta       = wp_get_attachment_metadata( $id );
-				// Height and width for videos.
-				if ( isset( $meta['width'] ) && isset( $meta['height'] ) ) {
-					$attachment['width']  = \esc_attr( $meta['width'] );
-					$attachment['height'] = \esc_attr( $meta['height'] );
-				}
-
-				if ( $this->get_icon() ) {
-					$attachment['icon'] = object_to_uri( $this->get_icon() );
-				}
-
-				break;
-		}
-
-		/**
-		 * Filter the attachment for a post.
-		 *
-		 * @param array $attachment The attachment.
-		 * @param int   $id         The attachment ID.
-		 *
-		 * @return array The filtered attachment.
-		 */
-		return \apply_filters( 'activitypub_attachment', $attachment, $id );
+		return parent::transform_attachment( $media );
 	}
 
 	/**
 	 * Return details about an image attachment.
+	 *
+	 * @deprecated unreleased Use {@see \Activitypub\Transformer\Base::get_wordpress_attachment()} instead.
 	 *
 	 * @param int    $id         The attachment ID.
 	 * @param string $image_size The image size to retrieve. Set to 'large' by default.
@@ -1067,25 +920,9 @@ class Post extends Base {
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
 	protected function get_wordpress_attachment( $id, $image_size = 'large' ) {
-		/**
-		 * Hook into the image retrieval process. Before image retrieval.
-		 *
-		 * @param int    $id         The attachment ID.
-		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
-		 */
-		do_action( 'activitypub_get_image_pre', $id, $image_size );
+		_deprecated_function( __METHOD__, 'unreleased', '\Activitypub\Transformer\Base::get_wordpress_attachment()' );
 
-		$image = \wp_get_attachment_image_src( $id, $image_size );
-
-		/**
-		 * Hook into the image retrieval process. After image retrieval.
-		 *
-		 * @param int    $id         The attachment ID.
-		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
-		 */
-		do_action( 'activitypub_get_image_post', $id, $image_size );
-
-		return $image;
+		return parent::get_wordpress_attachment( $id, $image_size );
 	}
 
 	/**
