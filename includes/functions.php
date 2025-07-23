@@ -1232,30 +1232,9 @@ function generate_post_summary( $post, $length = 500 ) {
 	$content = \preg_replace( '/[\r\t]/u', '', $content );
 
 	if ( $length && mb_strlen( $content, 'UTF-8' ) > $length ) {
-		// Find a good break point (space, punctuation) near the length limit.
-		$truncated = mb_substr( $content, 0, $length, 'UTF-8' );
-		// Look slightly beyond the limit for good break points (periods, etc.).
-		$search_window = mb_substr( $content, 0, min( mb_strlen( $content, 'UTF-8' ), $length + 10 ), 'UTF-8' );
-
-		$last_space = mb_strrpos( $truncated, ' ', 0, 'UTF-8' );
-		$last_punct = max(
-			mb_strrpos( $search_window, '.', 0, 'UTF-8' ),
-			mb_strrpos( $search_window, '!', 0, 'UTF-8' ),
-			mb_strrpos( $search_window, '?', 0, 'UTF-8' )
-		);
-
-		// Use the best break point found, or fall back to character limit.
-		$break_point = max( $last_space, $last_punct );
-
-		// For very short lengths (like 10 chars), prefer word boundaries.
-		if ( $length <= 12 && $break_point > 0 && $break_point >= $length * 0.4 ) {
-			$content = mb_substr( $content, 0, $break_point, 'UTF-8' );
-		} elseif ( $break_point > 0 && $break_point > $length * 0.8 ) {
-			$content = mb_substr( $content, 0, $break_point, 'UTF-8' );
-		} else {
-			$content = $truncated;
-		}
-		$content = trim( $content ) . ' ' . $excerpt_more;
+		$content = \wordwrap( $content, $length, '</activitypub-summary>' );
+		$content = \explode( '</activitypub-summary>', $content, 2 );
+		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
 	// This filter is documented in wp-includes/post-template.php.
