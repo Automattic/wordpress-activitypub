@@ -189,7 +189,7 @@ class Post extends Base {
 		 */
 		$thumbnail = apply_filters(
 			'activitypub_get_image',
-			$this->get_wordpress_attachment( $id, $image_size ),
+			$this->get_attachment_image_src( $id, $image_size ),
 			$id,
 			$image_size
 		);
@@ -322,8 +322,7 @@ class Post extends Base {
 		if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
 			$media = $this->get_block_attachments( $media, $max_media );
 		} else {
-			$content = \get_post_field( 'post_content', $this->item );
-			$media   = $this->get_classic_editor_image_embeds( $media, $max_media, $content );
+			$media = $this->get_classic_editor_image_embeds( $media, $max_media, $this->item->post_content );
 		}
 
 		$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
@@ -858,15 +857,6 @@ class Post extends Base {
 	}
 
 	/**
-	 * Get image embeds from the classic editor by parsing HTML.
-	 *
-	 * @param array $media      The media array grouped by type.
-	 * @param int   $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachments.
-	 */
-
-	/**
 	 * Filter media IDs by object type.
 	 *
 	 * @param array    $media The media array grouped by type.
@@ -896,7 +886,7 @@ class Post extends Base {
 	/**
 	 * Converts a WordPress Attachment to an ActivityPub Attachment.
 	 *
-	 * @deprecated unreleased Use {@see \Activitypub\Transformer\Base::transform_attachment()} instead.
+	 * @deprecated unreleased Use {@see Base::transform_attachment()} instead.
 	 *
 	 * @param array $media The Attachment array.
 	 *
@@ -906,22 +896,6 @@ class Post extends Base {
 		_deprecated_function( __METHOD__, 'unreleased', '\Activitypub\Transformer\Base::transform_attachment()' );
 
 		return parent::transform_attachment( $media );
-	}
-
-	/**
-	 * Return details about an image attachment.
-	 *
-	 * @deprecated unreleased Use {@see \Activitypub\Transformer\Base::get_attachment_image_src()} instead.
-	 *
-	 * @param int    $id         The attachment ID.
-	 * @param string $image_size The image size to retrieve. Set to 'large' by default.
-	 *
-	 * @return array|false Array of image data, or boolean false if no image is available.
-	 */
-	protected function get_wordpress_attachment( $id, $image_size = 'large' ) {
-		_deprecated_function( __METHOD__, 'unreleased', '\Activitypub\Transformer\Base::get_attachment_image_src()' );
-
-		return $this->get_attachment_image_src( $id, $image_size );
 	}
 
 	/**

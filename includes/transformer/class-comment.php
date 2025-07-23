@@ -372,7 +372,7 @@ class Comment extends Base {
 		/**
 		 * Filters the maximum number of media attachments allowed in a comment.
 		 *
-		 * @param int        $max_media Maximum number of media attachments.
+		 * @param int         $max_media Maximum number of media attachments.
 		 * @param \WP_Comment $item      The comment object.
 		 */
 		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media, $this->item );
@@ -388,9 +388,7 @@ class Comment extends Base {
 		);
 
 		// Get comment content and parse for image embeds.
-		$content = $this->item->comment_content;
-		$media   = $this->get_classic_editor_image_embeds( $media, $max_media, $content );
-
+		$media = $this->get_classic_editor_image_embeds( $media, $max_media, $this->item->comment_content );
 		$media = $this->filter_unique_attachments( $media['image'] );
 		$media = \array_slice( $media, 0, $max_media );
 
