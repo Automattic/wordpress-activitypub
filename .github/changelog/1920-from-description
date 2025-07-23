@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Ensure that the Actor-ID is always a URL.

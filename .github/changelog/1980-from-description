@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Stop purging Follow activities from the Outbox to allow proper Unfollow (Undo) handling.
