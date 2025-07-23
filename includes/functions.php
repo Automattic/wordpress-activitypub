@@ -1226,8 +1226,6 @@ function generate_post_summary( $post, $length = 500 ) {
 	$content = \wp_strip_all_tags( $content );
 	$content = \html_entity_decode( $content, ENT_QUOTES, 'UTF-8' );
 	$content = \trim( $content );
-
-	// Use multibyte-safe regex handling.
 	$content = \preg_replace( '/\R+/mu', "\n\n", $content );
 	$content = \preg_replace( '/[\r\t]/u', '', $content );
 
