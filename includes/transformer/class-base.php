@@ -500,7 +500,7 @@ abstract class Base {
 				 * @param int         $id         The attachment ID.
 				 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
 				 */
-				$thumbnail = apply_filters( 'activitypub_get_image', $this->get_attachment_image_src( $id, $image_size ), $id, $image_size );
+				$thumbnail = \apply_filters( 'activitypub_get_image', $this->get_attachment_image_src( $id, $image_size ), $id, $image_size );
 
 				if ( $thumbnail ) {
 					$image = array(
@@ -571,7 +571,7 @@ abstract class Base {
 		 * @param int    $id         The attachment ID.
 		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 		 */
-		do_action( 'activitypub_get_image_pre', $id, $image_size );
+		\do_action( 'activitypub_get_image_pre', $id, $image_size );
 
 		$image = \wp_get_attachment_image_src( $id, $image_size );
 
@@ -581,7 +581,7 @@ abstract class Base {
 		 * @param int    $id         The attachment ID.
 		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 		 */
-		do_action( 'activitypub_get_image_post', $id, $image_size );
+		\do_action( 'activitypub_get_image_post', $id, $image_size );
 
 		return $image;
 	}
