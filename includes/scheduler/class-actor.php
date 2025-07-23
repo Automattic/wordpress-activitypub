@@ -49,7 +49,8 @@ class Actor {
 
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
 
-		\add_action( 'update_option_sticky_posts', array( self::class, 'detect_sticky_posts_change' ), 10, 2 );
+		\add_action( 'post_stuck', array( self::class, 'sticky_post_update' ) );
+		\add_action( 'post_unstuck', array( self::class, 'sticky_post_update' ) );
 	}
 
 	/**
@@ -147,25 +148,17 @@ class Actor {
 	}
 
 	/**
-	 * Detect sticky posts change.
+	 * Detect sticky posts update.
 	 *
-	 * @param array $new_value New sticky posts.
-	 * @param array $old_value Old sticky posts.
+	 * @param int $post_id The post ID.
 	 */
-	public static function detect_sticky_posts_change( $new_value, $old_value ) {
-		$removed = \array_diff( $old_value, $new_value );
-		$added   = \array_diff( $new_value, $old_value );
+	public static function sticky_post_update( $post_id ) {
+		$post = \get_post( $post_id );
 
-		$changed = \array_unique( \array_merge( $removed, $added ) );
-
-		foreach ( $changed as $post_id ) {
-			$post = \get_post( $post_id );
-
-			if ( ! $post ) {
-				continue;
-			}
-
-			self::schedule_profile_update( $post->post_author );
+		if ( ! $post ) {
+			return;
 		}
+
+		self::schedule_profile_update( $post->post_author );
 	}
 }

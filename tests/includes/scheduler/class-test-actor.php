@@ -325,9 +325,9 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test that sticky posts are detected.
 	 *
-	 * @covers ::schedule_profile_update
+	 * @covers ::sticky_post_update
 	 */
-	public function test_detect_sticky_posts_change() {
+	public function test_sticky_post_update() {
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 
 		$last_item = $this->get_latest_outbox_item();
