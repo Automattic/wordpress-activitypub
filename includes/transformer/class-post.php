@@ -341,7 +341,7 @@ class Post extends Base {
 		 */
 		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->item );
 
-		$attachments = \array_filter( \array_map( array( $this, 'wp_attachment_to_activity_attachment' ), $media ) );
+		$attachments = \array_filter( \array_map( array( $this, 'transform_attachment' ), $media ) );
 
 		/**
 		 * Filter the attachments for a post.
@@ -912,7 +912,7 @@ class Post extends Base {
 	/**
 	 * Return details about an image attachment.
 	 *
-	 * @deprecated unreleased Use {@see \Activitypub\Transformer\Base::get_wordpress_attachment()} instead.
+	 * @deprecated unreleased Use {@see \Activitypub\Transformer\Base::get_attachment_image_src()} instead.
 	 *
 	 * @param int    $id         The attachment ID.
 	 * @param string $image_size The image size to retrieve. Set to 'large' by default.
@@ -920,9 +920,9 @@ class Post extends Base {
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
 	protected function get_wordpress_attachment( $id, $image_size = 'large' ) {
-		_deprecated_function( __METHOD__, 'unreleased', '\Activitypub\Transformer\Base::get_wordpress_attachment()' );
+		_deprecated_function( __METHOD__, 'unreleased', '\Activitypub\Transformer\Base::get_attachment_image_src()' );
 
-		return parent::get_wordpress_attachment( $id, $image_size );
+		return $this->get_attachment_image_src( $id, $image_size );
 	}
 
 	/**

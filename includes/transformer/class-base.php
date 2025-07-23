@@ -500,7 +500,7 @@ abstract class Base {
 				 * @param int         $id         The attachment ID.
 				 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
 				 */
-				$thumbnail = apply_filters( 'activitypub_get_image', $this->get_wordpress_attachment( $id, $image_size ), $id, $image_size );
+				$thumbnail = apply_filters( 'activitypub_get_image', $this->get_attachment_image_src( $id, $image_size ), $id, $image_size );
 
 				if ( $thumbnail ) {
 					$image = array(
@@ -564,7 +564,7 @@ abstract class Base {
 	 *
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
-	protected function get_wordpress_attachment( $id, $image_size = 'large' ) {
+	protected function get_attachment_image_src( $id, $image_size = 'large' ) {
 		/**
 		 * Hook into the image retrieval process. Before image retrieval.
 		 *
