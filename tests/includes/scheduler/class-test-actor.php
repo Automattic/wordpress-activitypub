@@ -328,33 +328,27 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::schedule_profile_update
 	 */
 	public function test_detect_sticky_posts_change() {
-		Actor::init();
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 
-		$items_before = \get_posts(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'post_status' => 'pending',
-				'orderby'     => 'date',
-				'order'       => 'DESC',
-			)
-		);
+		$last_item = $this->get_latest_outbox_item();
 
-		$before = \count( $items_before );
+		$this->assertNull( $last_item );
 
-		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
 		\stick_post( $post_id );
 
-		$items_after = \get_posts(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'post_status' => 'pending',
-				'orderby'     => 'date',
-				'order'       => 'DESC',
-			)
-		);
+		$last_item_stick = $this->get_latest_outbox_item();
 
-		$after = \count( $items_after );
+		$this->assertNotNull( $last_item_stick );
 
-		$this->assertEquals( $before + 1, $after );
+		\unstick_post( $post_id );
+
+		$last_item_unstick = $this->get_latest_outbox_item();
+
+		$this->assertNotEquals( $last_item_stick->ID, $last_item_unstick->ID );
+		$this->assertEquals( $last_item_stick->post_author, $last_item_unstick->post_author );
+
+		\wp_delete_post( $post_id );
+		\wp_delete_user( $user_id );
 	}
 }
