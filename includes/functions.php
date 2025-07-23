@@ -64,7 +64,7 @@ function safe_remote_get( $url ) {
 /**
  * Returns a users WebFinger "resource".
  *
- * @deprecated unreleased Use {@see \Activitypub\Webfinger::get_user_resource} instead.
+ * @deprecated 7.1.0 Use {@see \Activitypub\Webfinger::get_user_resource} instead.
  *
  * @param int $user_id The user ID.
  *
@@ -174,7 +174,7 @@ function url_to_authorid( $url ) {
 /**
  * Verify that url is a wp_ap_comment or a previously received remote comment.
  *
- * @deprecated unreleased
+ * @deprecated 7.1.0
  *
  * @return int|bool Comment ID or false if not found.
  */
@@ -491,7 +491,7 @@ function site_supports_blocks() {
 /**
  * Check if data is valid JSON.
  *
- * @deprecated unreleased Use {@see \json_decode} instead.
+ * @deprecated 7.1.0 Use {@see \json_decode} instead.
  *
  * @param string $data The data to check.
  *
