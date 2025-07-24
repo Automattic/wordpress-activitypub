@@ -112,7 +112,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 			case 'Service':
 			case 'Application':
 			case 'Organization':
-				if ( '1' === get_option( 'activitypub_following_ui', '0' ) ) {
+				if ( boolval( get_option( 'activitypub_following_ui', '0' ) ) ) {
 					if ( user_can_activitypub( \get_current_user_id() ) ) {
 						$redirect_url = \admin_url( 'users.php?page=activitypub-following-list&resource=' . $uri );
 					} elseif ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
