@@ -405,11 +405,11 @@ class Followers extends \WP_List_Table {
 			),
 		);
 
-		if ( boolval( get_option( 'activitypub_following_ui', '0' ) ) ) {
+		if ( \boolval( \get_option( 'activitypub_following_ui', '0' ) ) ) {
 			if ( Following::check_status( $this->user_id, $item['id'] ) ) {
-				$actions['follow'] = __( 'You follow each other', 'activitypub' );
+				$actions['follow'] = \__( 'You follow each other', 'activitypub' );
 			} else {
-				$actions['follow'] = sprintf(
+				$actions['follow'] = \sprintf(
 					'<a href="%s" aria-label="%s">%s</a>',
 					\wp_nonce_url(
 						\add_query_arg(
