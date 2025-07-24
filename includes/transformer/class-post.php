@@ -322,7 +322,7 @@ class Post extends Base {
 		if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
 			$media = $this->get_block_attachments( $media, $max_media );
 		} else {
-			$media = $this->get_classic_editor_image_embeds( $media, $max_media, $this->item->post_content );
+			$media = $this->parse_html_images( $media, $max_media, $this->item->post_content );
 		}
 
 		$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );

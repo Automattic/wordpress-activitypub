@@ -384,7 +384,7 @@ abstract class Base {
 	}
 
 	/**
-	 * Extract image attachments from HTML content by parsing for img tags.
+	 * Parse HTML content for image tags and extract attachment information.
 	 *
 	 * This method is used by both Post and Comment transformers to find images
 	 * embedded in HTML content and extract their attachment IDs and alt text.
@@ -395,7 +395,7 @@ abstract class Base {
 	 *
 	 * @return array The updated media array with found images.
 	 */
-	protected function get_classic_editor_image_embeds( $media, $max_images, $content ) {
+	protected function parse_html_images( $media, $max_images, $content ) {
 		// If someone calls that function directly, bail.
 		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
 			return $media;

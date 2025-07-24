@@ -388,7 +388,7 @@ class Comment extends Base {
 		);
 
 		// Get comment content and parse for image embeds.
-		$media = $this->get_classic_editor_image_embeds( $media, $max_media, $this->item->comment_content );
+		$media = $this->parse_html_images( $media, $max_media, $this->item->comment_content );
 		$media = $this->filter_unique_attachments( $media['image'] );
 		$media = \array_slice( $media, 0, $max_media );
 
