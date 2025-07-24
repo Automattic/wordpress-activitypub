@@ -7,7 +7,10 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Http;
+
+use function Activitypub\user_can_activitypub;
 
 /**
  * Interaction Controller.
@@ -99,9 +102,12 @@ class Interaction_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		if ( ! empty( $object['url'] ) ) {
-			$uri = \esc_url( $object['url'] );
+		if ( ! empty( $object['id'] ) ) {
+			$uri = \esc_url( $object['id'] );
 		}
+
+		// Prepare URL parameter.
+		$url_param = \rawurlencode( $uri );
 
 		switch ( $object['type'] ) {
 			case 'Group':
@@ -109,6 +115,14 @@ class Interaction_Controller extends \WP_REST_Controller {
 			case 'Service':
 			case 'Application':
 			case 'Organization':
+				if ( boolval( get_option( 'activitypub_following_ui', '0' ) ) ) {
+					if ( user_can_activitypub( \get_current_user_id() ) ) {
+						$redirect_url = \admin_url( 'users.php?page=activitypub-following-list&resource=' . $url_param );
+					} elseif ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
+						$redirect_url = \admin_url( 'options-general.php?page=activitypub&tab=following&resource=' . $url_param );
+					}
+				}
+
 				/**
 				 * Filters the URL used for following an ActivityPub actor.
 				 *
@@ -119,7 +133,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 				$redirect_url = \apply_filters( 'activitypub_interactions_follow_url', $redirect_url, $uri, $object );
 				break;
 			default:
-				$redirect_url = \admin_url( 'post-new.php?in_reply_to=' . $uri );
+				$redirect_url = \admin_url( 'post-new.php?in_reply_to=' . $url_param );
 				/**
 				 * Filters the URL used for replying to an ActivityPub object.
 				 *
