@@ -8,6 +8,7 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Following;
 
 use function Activitypub\get_context;
 use function Activitypub\is_single_user;
@@ -23,13 +24,6 @@ use function Activitypub\get_masked_wp_version;
  */
 class Following_Controller extends Actors_Controller {
 	use Collection;
-
-	/**
-	 * Initialize the class, registering WordPress hooks.
-	 */
-	public function __construct() {
-		\add_filter( 'activitypub_rest_following', array( self::class, 'default_following' ), 10, 2 );
-	}
 
 	/**
 	 * Register routes.
@@ -65,6 +59,18 @@ class Following_Controller extends Actors_Controller {
 							'minimum'     => 1,
 							'maximum'     => 100,
 						),
+						'order'    => array(
+							'description' => 'Order sort attribute ascending or descending.',
+							'type'        => 'string',
+							'default'     => 'desc',
+							'enum'        => array( 'asc', 'desc' ),
+						),
+						'context'  => array(
+							'description' => 'The context in which the request is made.',
+							'type'        => 'string',
+							'default'     => 'simple',
+							'enum'        => array( 'simple', 'full' ),
+						),
 					),
 				),
 				'schema' => array( $this, 'get_public_item_schema' ),
@@ -91,24 +97,45 @@ class Following_Controller extends Actors_Controller {
 		 */
 		\do_action( 'activitypub_rest_following_pre' );
 
+		$order    = $request->get_param( 'order' );
+		$per_page = $request->get_param( 'per_page' );
+		$page     = $request->get_param( 'page' ) ?? 1;
+		$context  = $request->get_param( 'context' );
+
+		$data = Following::get_following_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
+
 		$response = array(
-			'@context'  => get_context(),
-			'id'        => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user->get__id() ) ),
-			'generator' => 'https://wordpress.org/?v=' . get_masked_wp_version(),
-			'actor'     => $user->get_id(),
-			'type'      => 'OrderedCollection',
+			'@context'     => get_context(),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user->get__id() ) ),
+			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
+			'actor'        => $user->get_id(),
+			'type'         => 'OrderedCollection',
+			'totalItems'   => $data['total'],
+			'orderedItems' => array_map(
+				function ( $item ) use ( $context ) {
+					if ( 'full' === $context ) {
+						return Actors::get_actor( $item )->to_array( false );
+					}
+					return $item->guid;
+				},
+				$data['following']
+			),
 		);
 
 		/**
-		 * Filter the list of following urls.
+		 * Filter the list of following urls
 		 *
 		 * @param array                   $items The array of following urls.
 		 * @param \Activitypub\Model\User $user  The user object.
+		 *
+		 * @deprecated 7.1.0 Please migrate your Followings to the new internal Following structure.
 		 */
-		$items = \apply_filters( 'activitypub_rest_following', array(), $user );
+		$items = \apply_filters_deprecated( 'activitypub_rest_following', array( array(), $user ), '7.1.0', 'Please migrate your Followings to the new internal Following structure.' );
 
-		$response['totalItems']   = \is_countable( $items ) ? \count( $items ) : 0;
-		$response['orderedItems'] = $items;
+		if ( ! empty( $items ) ) {
+			$response['totalItems']   = count( $items );
+			$response['orderedItems'] = $items;
+		}
 
 		$response = $this->prepare_collection_response( $response, $request );
 		if ( is_wp_error( $response ) ) {
@@ -122,29 +149,6 @@ class Following_Controller extends Actors_Controller {
 	}
 
 	/**
-	 * Add the Blog Authors to the following list of the Blog Actor
-	 * if Blog not in single mode.
-	 *
-	 * @param array                   $follow_list The array of following urls.
-	 * @param \Activitypub\Model\User $user        The user object.
-	 *
-	 * @return array The array of following urls.
-	 */
-	public static function default_following( $follow_list, $user ) {
-		if ( 0 !== $user->get__id() || is_single_user() ) {
-			return $follow_list;
-		}
-
-		$users = Actors::get_collection();
-
-		foreach ( $users as $user ) {
-			$follow_list[] = $user->get_id();
-		}
-
-		return $follow_list;
-	}
-
-	/**
 	 * Retrieves the following schema, conforming to JSON Schema.
 	 *
 	 * @return array Item schema data.
@@ -154,9 +158,65 @@ class Following_Controller extends Actors_Controller {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
+		// Define the schema for items in the following collection.
 		$item_schema = array(
-			'type'   => 'string',
-			'format' => 'uri',
+			'oneOf' => array(
+				array(
+					'type'   => 'string',
+					'format' => 'uri',
+				),
+				array(
+					'type'       => 'object',
+					'properties' => array(
+						'id'                => array(
+							'type'   => 'string',
+							'format' => 'uri',
+						),
+						'type'              => array(
+							'type' => 'string',
+						),
+						'name'              => array(
+							'type' => 'string',
+						),
+						'icon'              => array(
+							'type'       => 'object',
+							'properties' => array(
+								'type'      => array(
+									'type' => 'string',
+								),
+								'mediaType' => array(
+									'type' => 'string',
+								),
+								'url'       => array(
+									'type'   => 'string',
+									'format' => 'uri',
+								),
+							),
+						),
+						'published'         => array(
+							'type'   => 'string',
+							'format' => 'date-time',
+						),
+						'summary'           => array(
+							'type' => 'string',
+						),
+						'updated'           => array(
+							'type'   => 'string',
+							'format' => 'date-time',
+						),
+						'url'               => array(
+							'type'   => 'string',
+							'format' => 'uri',
+						),
+						'streams'           => array(
+							'type' => 'array',
+						),
+						'preferredUsername' => array(
+							'type' => 'string',
+						),
+					),
+				),
+			),
 		);
 
 		$schema = $this->get_collection_schema( $item_schema );

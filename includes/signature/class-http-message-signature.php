@@ -11,7 +11,7 @@
 
 namespace Activitypub\Signature;
 
-use Activitypub\Signature;
+use Activitypub\Collection\Actors;
 
 /**
  * Class Http_Message_Signature.
@@ -20,7 +20,66 @@ use Activitypub\Signature;
  *
  * @see https://www.rfc-editor.org/rfc/rfc9421.html
  */
-class Http_Message_Signature implements Signature_Standard {
+class Http_Message_Signature implements Http_Signature {
+
+	/**
+	 * Signature algorithms.
+	 *
+	 * @var int[][]
+	 */
+	private $algorithms = array(
+		// RSA PKCS#1 v1.5.
+		'rsa-v1_5-sha256'   => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA256,
+		),
+		'rsa-v1_5-sha384'   => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA384,
+		),
+		'rsa-v1_5-sha512'   => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA512,
+		),
+
+		// RSA PSS (note: not supported in openssl_verify() until PHP 8.1).
+		'rsa-pss-sha256'    => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA256,
+		),
+		'rsa-pss-sha384'    => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA384,
+		),
+		'rsa-pss-sha512'    => array(
+			'type' => OPENSSL_KEYTYPE_RSA,
+			'algo' => OPENSSL_ALGO_SHA512,
+		),
+
+		// ECDSA.
+		'ecdsa-p256-sha256' => array(
+			'type' => OPENSSL_KEYTYPE_EC,
+			'algo' => OPENSSL_ALGO_SHA256,
+		),
+		'ecdsa-p384-sha384' => array(
+			'type' => OPENSSL_KEYTYPE_EC,
+			'algo' => OPENSSL_ALGO_SHA384,
+		),
+		'ecdsa-p521-sha512' => array(
+			'type' => OPENSSL_KEYTYPE_EC,
+			'algo' => OPENSSL_ALGO_SHA512,
+		),
+	);
+
+	/**
+	 * Digest algorithms.
+	 *
+	 * @var string[]
+	 */
+	private $digest_algorithms = array(
+		'sha-256' => 'sha256',
+		'sha-512' => 'sha512',
+	);
 
 	/**
 	 * Generate RFC-9421 compliant Signature-Input and Signature headers for an outgoing HTTP request.
@@ -36,7 +95,6 @@ class Http_Message_Signature implements Signature_Standard {
 			'"@method"'     => \strtoupper( $args['method'] ),
 			'"@target-uri"' => $url,
 			'"@authority"'  => \wp_parse_url( $url, PHP_URL_HOST ),
-			'"created"'     => \strtotime( $args['headers']['Date'] ), // Required by Mastodon. See https://github.com/mastodon/mastodon/pull/34814.
 		);
 		$identifiers = \array_keys( $components );
 
@@ -49,7 +107,7 @@ class Http_Message_Signature implements Signature_Standard {
 		}
 
 		$params = array(
-			'created' => $components['"created"'],
+			'created' => \strtotime( $args['headers']['Date'] ),
 			'keyid'   => $args['key_id'],
 			'alg'     => 'rsa-v1_5-sha256',
 		);
@@ -61,7 +119,7 @@ class Http_Message_Signature implements Signature_Standard {
 		\openssl_sign( $signature_base, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature );
 
-		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ');created=' . $components['"created"'] . ';keyid="' . $args['key_id'] . '";alg="rsa-v1_5-sha256"';
+		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ')' . $this->get_params_string( $params );
 		$args['headers']['Signature']       = 'wp=:' . $signature . ':';
 
 		return $args;
@@ -106,7 +164,7 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return string The digest.
 	 */
 	public function generate_digest( $body ) {
-		return 'SHA-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
+		return 'sha-256=:' . \base64_encode( \hash( 'sha256', $body, true ) ) . ':';
 	}
 
 	/**
@@ -171,7 +229,7 @@ class Http_Message_Signature implements Signature_Standard {
 			return new \WP_Error( 'missing_keyid', 'Missing keyId in signature parameters.' );
 		}
 
-		$public_key = Signature::get_remote_key( $params['keyid'] );
+		$public_key = Actors::get_remote_key( $params['keyid'] );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}
@@ -188,7 +246,8 @@ class Http_Message_Signature implements Signature_Standard {
 			return $result;
 		}
 
-		$signature_base = $this->get_signature_base_string( $data['components'], $params, $headers );
+		$components     = $this->get_component_values( $data['components'], $headers );
+		$signature_base = $this->get_signature_base_string( $components, $params );
 
 		$verified = \openssl_verify( $signature_base, $data['signature'], $public_key, $algorithm ) > 0;
 		if ( ! $verified ) {
@@ -216,16 +275,11 @@ class Http_Message_Signature implements Signature_Standard {
 			if ( \preg_match( '/^([a-z0-9-]+)=:(.+):$/i', $digest, $matches ) ) {
 				list( , $alg, $encoded ) = $matches;
 
-				$map = array(
-					'SHA-256' => 'sha256',
-					'SHA-512' => 'sha512',
-				);
-
-				if ( ! isset( $map[ $alg ] ) ) {
-					return new \WP_Error( 'unsupported_digest', 'Unsupported digest algorithm.' );
+				if ( ! isset( $this->digest_algorithms[ $alg ] ) ) {
+					return new \WP_Error( 'unsupported_digest', 'WordPress supports sha-256 and sha-512 in Digest header. Offered algorithm: ' . $alg );
 				}
 
-				if ( \hash_equals( $encoded, \base64_encode( \hash( $map[ $alg ], $body, true ) ) ) ) {
+				if ( \hash_equals( $encoded, \base64_encode( \hash( $this->digest_algorithms[ $alg ], $body, true ) ) ) ) {
 					return true;
 				}
 			}
@@ -243,69 +297,52 @@ class Http_Message_Signature implements Signature_Standard {
 	 * @return int|\WP_Error OpenSSL algorithm constant or WP_Error.
 	 */
 	private function verify_algorithm( $alg_string, $public_key ) {
-		$alg_string = \strtolower( $alg_string );
-		if ( \strpos( $alg_string, 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
-			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
-		}
-
 		$details = \openssl_pkey_get_details( $public_key );
 		if ( ! isset( $details['type'] ) ) {
 			return new \WP_Error( 'invalid_key_details', 'Unable to read public key details.' );
 		}
 
-		$map = array(
-			// RSA PKCS#1 v1.5.
-			'rsa-v1_5-sha256'   => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA256,
-			),
-			'rsa-v1_5-sha384'   => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA384,
-			),
-			'rsa-v1_5-sha512'   => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA512,
-			),
+		// If alg_string is empty, determine algorithm based on public key.
+		if ( empty( $alg_string ) ) {
+			switch ( $details['type'] ) {
+				case \OPENSSL_KEYTYPE_RSA:
+					$bits = $details['bits'] ?? 2048;
 
-			// RSA PSS (note: not supported in openssl_verify() until PHP 8.1).
-			'rsa-pss-sha256'    => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA256,
-			),
-			'rsa-pss-sha384'    => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA384,
-			),
-			'rsa-pss-sha512'    => array(
-				'type' => OPENSSL_KEYTYPE_RSA,
-				'algo' => OPENSSL_ALGO_SHA512,
-			),
+					if ( $bits >= 4 * KB_IN_BYTES ) {
+						return \OPENSSL_ALGO_SHA512;
+					} elseif ( $bits >= 3 * KB_IN_BYTES ) {
+						return \OPENSSL_ALGO_SHA384;
+					} else {
+						return \OPENSSL_ALGO_SHA256;
+					}
 
-			// ECDSA.
-			'ecdsa-p256-sha256' => array(
-				'type' => OPENSSL_KEYTYPE_EC,
-				'algo' => OPENSSL_ALGO_SHA256,
-			),
-			'ecdsa-p384-sha384' => array(
-				'type' => OPENSSL_KEYTYPE_EC,
-				'algo' => OPENSSL_ALGO_SHA384,
-			),
-			'ecdsa-p521-sha512' => array(
-				'type' => OPENSSL_KEYTYPE_EC,
-				'algo' => OPENSSL_ALGO_SHA512,
-			),
-		);
+				case \OPENSSL_KEYTYPE_EC:
+					switch ( $details['ec']['curve_name'] ?? '' ) {
+						case 'prime256v1':
+						case 'secp256r1':
+							return \OPENSSL_ALGO_SHA256;
+						case 'secp384r1':
+							return \OPENSSL_ALGO_SHA384;
+						case 'secp521r1':
+							return \OPENSSL_ALGO_SHA512;
+					}
+			}
+		}
 
-		if ( ! isset( $map[ $alg_string ] ) ) {
+		$alg_string = \strtolower( $alg_string );
+		if ( \strpos( $alg_string, 'rsa-pss-' ) === 0 && \version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
+			return new \WP_Error( 'unsupported_pss', 'RSA-PSS algorithms are not supported.' );
+		}
+
+		if ( ! isset( $this->algorithms[ $alg_string ] ) ) {
 			return new \WP_Error( 'unsupported_alg', 'Unsupported or unknown alg parameter: ' . $alg_string );
 		}
 
-		if ( $map[ $alg_string ]['type'] !== $details['type'] ) {
+		if ( $this->algorithms[ $alg_string ]['type'] !== $details['type'] ) {
 			return new \WP_Error( 'alg_key_mismatch', 'Algorithm does not match public key type.' );
 		}
 
-		return $map[ $alg_string ]['algo'];
+		return $this->algorithms[ $alg_string ]['algo'];
 	}
 
 	/**
@@ -313,34 +350,43 @@ class Http_Message_Signature implements Signature_Standard {
 	 *
 	 * @param array $components Signature components.
 	 * @param array $params     Signature params.
-	 * @param array $headers    Optional. The HTTP headers. Default: empty array.
 	 *
 	 * @return string Base string to compare signature with.
 	 */
-	private function get_signature_base_string( $components, $params, $headers = array() ) {
+	private function get_signature_base_string( $components, $params ) {
 		$signature_base = '';
-
-		// We only get component names when we verify a signature and have to get their values.
-		if ( \array_is_list( $components ) ) {
-			$components = $this->get_component_values( $components, \array_merge( $params, $headers ) );
-		}
 
 		foreach ( $components as $component => $value ) {
 			$signature_base .= $component . ': ' . $value . "\n";
 		}
 
 		$signature_base .= '"@signature-params": (' . \implode( ' ', \array_keys( $components ) ) . ')';
+		$signature_base .= $this->get_params_string( $params );
+
+		return $signature_base;
+	}
+
+	/**
+	 * Returns the signature params in a string format.
+	 *
+	 * @param array $params Signature params.
+	 *
+	 * @return string Signature params.
+	 */
+	private function get_params_string( $params ) {
+		$signature_params = '';
+
 		foreach ( $params as $key => $value ) {
 			if ( \is_numeric( $value ) ) {
-				$signature_base .= ';' . $key . '=' . $value; // No quotes.
+				$signature_params .= ';' . $key . '=' . $value; // No quotes.
 			} else {
 				// Escape backslashes and double quotes per RFC-9421.
-				$value           = \str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
-				$signature_base .= ';' . $key . '="' . $value . '"'; // Double quotes.
+				$value             = \str_replace( array( '\\', '"' ), array( '\\\\', '\\"' ), $value );
+				$signature_params .= ';' . $key . '="' . $value . '"'; // Double quotes.
 			}
 		}
 
-		return $signature_base;
+		return $signature_params;
 	}
 
 	/**
@@ -359,11 +405,6 @@ class Http_Message_Signature implements Signature_Standard {
 			$key = \strtolower( \trim( $key, '"' ) );
 
 			switch ( $key ) {
-				case 'created':
-				case 'expires':
-					$value = (int) $headers[ $key ] ?? 0;
-					break;
-
 				case '@method':
 					$value = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 					break;

@@ -63,7 +63,7 @@ const v1 = {
 		},
 		selectedUser: {
 			type: 'string',
-			default: 'site',
+			default: 'blog',
 		},
 	},
 
@@ -105,7 +105,7 @@ const v2 = {
 	attributes: {
 		selectedUser: {
 			type: 'string',
-			default: 'site',
+			default: 'blog',
 		},
 		buttonOnly: {
 			type: 'boolean',
@@ -156,7 +156,7 @@ const v3 = {
 	attributes: {
 		selectedUser: {
 			type: 'string',
-			default: 'site',
+			default: 'blog',
 		},
 	},
 

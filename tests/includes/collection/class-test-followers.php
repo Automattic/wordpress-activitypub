@@ -227,6 +227,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$follower2 = Followers::get_follower( 2, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower2->guid );
 
+		$this->setExpectedDeprecated( 'Activitypub\Collection\Followers::remove_follower' );
 		Followers::remove_follower( 1, 'https://example.com/author/jon' );
 
 		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
@@ -234,6 +235,36 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$follower2 = Followers::get_follower( 2, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower2->guid );
+
+		$followers = Followers::get_followers( 1 );
+		$this->assertEquals( 1, count( $followers ) );
+	}
+
+	/**
+	 * Tests remove_follower.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove() {
+		$followers = array(
+			'https://example.com/author/jon',
+			'https://example.org/author/doe',
+		);
+
+		foreach ( $followers as $follower ) {
+			Followers::add_follower( 1, $follower );
+		}
+
+		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
+
+		$followers = Followers::get_followers( 1 );
+		$this->assertEquals( 2, count( $followers ) );
+
+		Followers::remove( $followers[0]->ID, 1 );
+
+		$follower = Followers::get_follower( 1, $followers[0]->guid );
+		$this->assertWPError( $follower );
 
 		$followers = Followers::get_followers( 1 );
 		$this->assertEquals( 1, count( $followers ) );
@@ -299,8 +330,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-
-		$actors = Actors::get_faulty();
+		$actors   = Actors::get_faulty();
 
 		$this->assertEquals( 1, \count( $actors ) );
 		$this->assertEquals( 'http://sally.example.org', $actors[0]->guid );
@@ -476,6 +506,8 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * Tests get_all_followers.
 	 *
 	 * @covers ::get_all_followers
+	 *
+	 * @expectedDeprecated Activitypub\Collection\Followers::get_all_followers
 	 */
 	public function test_get_all_followers() {
 		for ( $i = 0; $i < 30; $i++ ) {

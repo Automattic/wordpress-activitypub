@@ -7,13 +7,13 @@
 
 namespace Activitypub;
 
-use WP_Error;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Transformer\Post;
 use Activitypub\Transformer\Factory as Transformer_Factory;
 
@@ -44,7 +44,7 @@ function get_context() {
  * @param string $body    The Post Body.
  * @param int    $user_id The WordPress user ID.
  *
- * @return array|WP_Error The POST Response or an WP_Error.
+ * @return array|\WP_Error The POST Response or an WP_Error.
  */
 function safe_remote_post( $url, $body, $user_id ) {
 	return Http::post( $url, $body, $user_id );
@@ -55,7 +55,7 @@ function safe_remote_post( $url, $body, $user_id ) {
  *
  * @param string $url The URL endpoint.
  *
- * @return array|WP_Error The GET Response or an WP_Error.
+ * @return array|\WP_Error The GET Response or an WP_Error.
  */
 function safe_remote_get( $url ) {
 	return Http::get( $url );
@@ -64,11 +64,15 @@ function safe_remote_get( $url ) {
 /**
  * Returns a users WebFinger "resource".
  *
+ * @deprecated 7.1.0 Use {@see \Activitypub\Webfinger::get_user_resource} instead.
+ *
  * @param int $user_id The user ID.
  *
  * @return string The User resource.
  */
 function get_webfinger_resource( $user_id ) {
+	\_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Webfinger::get_user_resource' );
+
 	return Webfinger::get_user_resource( $user_id );
 }
 
@@ -78,7 +82,7 @@ function get_webfinger_resource( $user_id ) {
  * @param array|string $actor  The Actor array or URL.
  * @param bool         $cached Optional. Whether the result should be cached. Default true.
  *
- * @return array|WP_Error The Actor profile as array or WP_Error on failure.
+ * @return array|\WP_Error The Actor profile as array or WP_Error on failure.
  */
 function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	/**
@@ -170,9 +174,13 @@ function url_to_authorid( $url ) {
 /**
  * Verify that url is a wp_ap_comment or a previously received remote comment.
  *
+ * @deprecated 7.1.0
+ *
  * @return int|bool Comment ID or false if not found.
  */
 function is_comment() {
+	\_deprecated_function( __FUNCTION__, 'unreleased' );
+
 	$comment_id = get_query_var( 'c', null );
 
 	if ( ! is_null( $comment_id ) ) {
@@ -191,7 +199,7 @@ function is_comment() {
  *
  * @see https://www.w3.org/TR/activitypub/#delete-activity-outbox
  *
- * @param WP_Error $wp_error A WP_Error-Response of an HTTP-Request.
+ * @param \WP_Error $wp_error A WP_Error-Response of an HTTP-Request.
  *
  * @return boolean True if HTTP-Code is 410 or 404.
  */
@@ -432,7 +440,7 @@ function is_user_type_disabled( $type ) {
 			$disabled = false;
 			break;
 		default:
-			$disabled = new WP_Error(
+			$disabled = new \WP_Error(
 				'activitypub_wrong_user_type',
 				__( 'Wrong user type', 'activitypub' ),
 				array( 'status' => 400 )
@@ -483,11 +491,15 @@ function site_supports_blocks() {
 /**
  * Check if data is valid JSON.
  *
+ * @deprecated 7.1.0 Use {@see \json_decode} instead.
+ *
  * @param string $data The data to check.
  *
  * @return boolean True if the data is JSON, false otherwise.
  */
 function is_json( $data ) {
+	\_deprecated_function( __FUNCTION__, 'unreleased', 'json_decode' );
+
 	return \is_array( \json_decode( $data, true ) );
 }
 
@@ -1258,7 +1270,7 @@ function get_content_warning( $post_id ) {
 function get_user_id( $id ) {
 	$user = Actors::get_by_id( $id );
 
-	if ( ! $user ) {
+	if ( \is_wp_error( $user ) ) {
 		return false;
 	}
 
@@ -1527,6 +1539,66 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 }
 
 /**
+ * Follow a user.
+ *
+ * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
+ * @param int        $user_id      The ID of the WordPress User.
+ *
+ * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ */
+function follow( $remote_actor, $user_id ) {
+	if ( \is_numeric( $remote_actor ) ) {
+		return Following::follow( $remote_actor, $user_id );
+	}
+
+	if ( ! \filter_var( $remote_actor, FILTER_VALIDATE_URL ) ) {
+		$remote_actor = Webfinger::resolve( $remote_actor );
+	}
+
+	if ( \is_wp_error( $remote_actor ) ) {
+		return $remote_actor;
+	}
+
+	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+
+	if ( \is_wp_error( $remote_actor_post ) ) {
+		return $remote_actor_post;
+	}
+
+	return Following::follow( $remote_actor_post, $user_id );
+}
+
+/**
+ * Unfollow a user.
+ *
+ * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
+ * @param int        $user_id      The ID of the WordPress User.
+ *
+ * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ */
+function unfollow( $remote_actor, $user_id ) {
+	if ( \is_numeric( $remote_actor ) ) {
+		return Following::unfollow( $remote_actor, $user_id );
+	}
+
+	if ( ! \filter_var( $remote_actor, FILTER_VALIDATE_URL ) ) {
+		$remote_actor = Webfinger::resolve( $remote_actor );
+	}
+
+	if ( \is_wp_error( $remote_actor ) ) {
+		return $remote_actor;
+	}
+
+	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+
+	if ( \is_wp_error( $remote_actor_post ) ) {
+		return $remote_actor_post;
+	}
+
+	return Following::unfollow( $remote_actor_post, $user_id );
+}
+
+/**
  * Check if an `$data` is an Activity.
  *
  * @see https://www.w3.org/ns/activitystreams#activities
@@ -1636,7 +1708,7 @@ function extract_name_from_uri( $uri ) {
 	if ( \filter_var( $name, FILTER_VALIDATE_URL ) ) {
 		$name = \rtrim( $name, '/' );
 		$path = \wp_parse_url( $name, PHP_URL_PATH );
-		if ( $path ) {
+		if ( $path && '/' !== $path ) {
 			if ( \strpos( $name, '@' ) !== false ) {
 				// Expected: https://example.com/@user (default URL pattern).
 				$name = \preg_replace( '|^/@?|', '', $path );
@@ -1645,6 +1717,9 @@ function extract_name_from_uri( $uri ) {
 				$parts = \explode( '/', $path );
 				$name  = \array_pop( $parts );
 			}
+		} else {
+			$name = \wp_parse_url( $name, PHP_URL_HOST );
+			$name = \str_replace( 'www.', '', $name );
 		}
 	} elseif (
 		\is_email( $name ) ||

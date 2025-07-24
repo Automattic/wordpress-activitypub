@@ -79,6 +79,7 @@ class Move {
 			\wp_cache_delete( $origin_object->ID, 'posts' );
 
 			Actors::upsert( $target_json );
+
 			return;
 		}
 

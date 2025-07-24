@@ -44,20 +44,6 @@ To stop the environment, run:
 npm run env-stop
 ```
 
-### Docker
-
-If you prefer to use Docker, you can use the `docker-compose.yml` file in the root of the ActivityPub plugin directory.
-
-To start the environment, run:
-
-```bash
-docker-compose up -d
-```
-
-This will start a local WordPress environment with the ActivityPub plugin installed and activated.
-
-You can open the WordPress site in your browser by visiting `http://localhost:8076`.
-
 ### Composer
 
 Composer is used to install development dependencies for the ActivityPub plugin, to run unit tests, and to manage changelog entries.
