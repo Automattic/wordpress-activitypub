@@ -8,6 +8,9 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Http;
+use Activitypub\Collection\Actors;
+
+use function Activitypub\user_can_activitypub;
 
 /**
  * Interaction Controller.
@@ -99,8 +102,8 @@ class Interaction_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		if ( ! empty( $object['url'] ) ) {
-			$uri = \esc_url( $object['url'] );
+		if ( ! empty( $object['id'] ) ) {
+			$uri = \esc_url( $object['id'] );
 		}
 
 		switch ( $object['type'] ) {
@@ -109,6 +112,14 @@ class Interaction_Controller extends \WP_REST_Controller {
 			case 'Service':
 			case 'Application':
 			case 'Organization':
+				if ( '1' === get_option( 'activitypub_following_ui', '0' ) ) {
+					if ( user_can_activitypub( \get_current_user_id() ) ) {
+						$redirect_url = \admin_url( 'users.php?page=activitypub-following-list&resource=' . $uri );
+					} elseif ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
+						$redirect_url = \admin_url( 'options-general.php?page=activitypub&tab=following&resource=' . $uri );
+					}
+				}
+
 				/**
 				 * Filters the URL used for following an ActivityPub actor.
 				 *
