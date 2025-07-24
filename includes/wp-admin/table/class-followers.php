@@ -406,9 +406,7 @@ class Followers extends \WP_List_Table {
 		);
 
 		if ( \boolval( \get_option( 'activitypub_following_ui', '0' ) ) ) {
-			if ( Following::check_status( $this->user_id, $item['id'] ) ) {
-				$actions['follow'] = \__( 'You follow each other', 'activitypub' );
-			} else {
+			if ( ! Following::check_status( $this->user_id, $item['id'] ) ) {
 				$actions['follow'] = \sprintf(
 					'<a href="%s" aria-label="%s">%s</a>',
 					\wp_nonce_url(
