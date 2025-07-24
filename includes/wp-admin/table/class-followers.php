@@ -128,7 +128,8 @@ class Followers extends \WP_List_Table {
 					if ( \wp_verify_nonce( $nonce, 'follow-follower_' . $follower ) ) {
 						Following::follow( $follower, $this->user_id );
 
-						\add_settings_error( 'activitypub', 'follower_followed', \__( 'User followed successfully.', 'activitypub' ), 'success' );
+						\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
+
 					}
 				}
 				break;
