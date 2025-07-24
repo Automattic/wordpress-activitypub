@@ -48,7 +48,7 @@ class Followers extends \WP_List_Table {
 			$this->follow_url = \admin_url( 'options-general.php?page=activitypub&tab=following' );
 		} else {
 			$this->user_id    = \get_current_user_id();
-			$this->follow_url = \admin_url( 'users.php?page=activitypub-following' );
+			$this->follow_url = \admin_url( 'users.php?page=activitypub-following-list' );
 
 			\add_action( 'admin_notices', array( $this, 'process_admin_notices' ) );
 		}
@@ -403,6 +403,10 @@ class Followers extends \WP_List_Table {
 	 * @return \WP_Post|false The actor post or false.
 	 */
 	private function _is_followable( $search ) { // phpcs:ignore
+		if ( '1' !== get_option( 'activitypub_following_ui', '0' ) ) {
+			return false;
+		}
+
 		if ( empty( $search ) ) {
 			return false;
 		}
