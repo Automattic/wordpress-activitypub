@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix multibyte character corruption in post summaries, preventing Greek and other non-ASCII text from being garbled during text processing.

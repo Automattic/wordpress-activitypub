@@ -106,7 +106,7 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 		$content = do_shortcode( '[ap_excerpt length="25"]' );
 		wp_reset_postdata();
 
-		$this->assertEquals( "<p>Lorem ipsum dolor […]</p>\n", $content );
+		$this->assertEquals( "<p>Lorem ipsum dolor sit […]</p>\n", $content );
 	}
 
 	/**
