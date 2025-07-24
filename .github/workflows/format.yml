@@ -1,4 +1,4 @@
-name: Auto Format PR
+name: Prettify
 
 on:
   pull_request:
