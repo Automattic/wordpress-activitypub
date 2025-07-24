@@ -1201,7 +1201,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	 * @param string $excerpt_more The excerpt more.
 	 */
 	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[…]' );
-	$length       = $length - mb_strlen( $excerpt_more, 'UTF-8' );
+	$length       = $length - \mb_strlen( $excerpt_more, 'UTF-8' );
 
 	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
 
