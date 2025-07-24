@@ -608,6 +608,13 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				'<p>Hello World</p>' . PHP_EOL,
 			),
 			array(
+				'Greek Excerpt',
+				array(
+					'post_excerpt' => 'Τι μπορεί να σου συμβεί σε μια βόλτα για να αγοράσεις μια βαλίτσα για τα ταξίδια σου; Όλα είναι πιθανά αν έχεις ανοιχτές τις "κεραίες" σου!',
+				),
+				'<p>Τι μπορεί να σου συμβεί σε μια βόλτα για να αγοράσεις μια βαλίτσα για τα ταξίδια σου; Όλα είναι πιθανά αν έχεις ανοιχτές τις &#8220;κεραίες&#8221; σου!</p>' . PHP_EOL,
+			),
+			array(
 				'Content',
 				array(
 					'post_content' => 'Hello World',

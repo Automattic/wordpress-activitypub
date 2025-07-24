@@ -369,7 +369,7 @@ class Following extends \WP_List_Table {
 			( ! isset( $_GET['status'] ) || Following_Collection::ALL === $_GET['status'] ) &&
 			( Following_Collection::PENDING === $item['status'] )
 		) {
-			$status = \sprintf( '<strong> — %s</strong>', \esc_html__( 'Pending', 'activitypub' ) );
+			$status = \sprintf( '<strong class="pending"> — %s</strong>', \esc_html__( 'Pending', 'activitypub' ) );
 		}
 
 		return sprintf(
@@ -457,8 +457,9 @@ class Following extends \WP_List_Table {
 	 */
 	public function single_row( $item ) {
 		\printf(
-			"<tr id='following-%s'>",
-			\esc_attr( $item['id'] )
+			'<tr id="following-%1$s" class="status-%2$s">',
+			\esc_attr( $item['id'] ),
+			\esc_attr( $item['status'] )
 		);
 		$this->single_row_columns( $item );
 		\printf( "</tr>\n" );
