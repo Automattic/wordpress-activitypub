@@ -180,7 +180,9 @@ class Outbox {
 			$type = 'Remove';
 		}
 
-		return add_to_outbox( $activity, $type, $outbox_item->post_author );
+		$visibility = \get_post_meta( $outbox_item->ID, 'activitypub_content_visibility', true );
+
+		return add_to_outbox( $activity, $type, $outbox_item->post_author, $visibility );
 	}
 
 	/**

@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed an issue where the number of followers shown didn’t always match the actual follower list.
