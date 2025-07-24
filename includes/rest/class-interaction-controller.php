@@ -7,8 +7,8 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Http;
 use Activitypub\Collection\Actors;
+use Activitypub\Http;
 
 use function Activitypub\user_can_activitypub;
 
