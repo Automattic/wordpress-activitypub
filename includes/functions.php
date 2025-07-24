@@ -1229,7 +1229,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	$content = \preg_replace( '/\R+/mu', "\n\n", $content );
 	$content = \preg_replace( '/[\r\t]/u', '', $content );
 
-	if ( $length && mb_strlen( $content, 'UTF-8' ) > $length ) {
+	if ( $length && \mb_strlen( $content, 'UTF-8' ) > $length ) {
 		$content = \wordwrap( $content, $length, '</activitypub-summary>' );
 		$content = \explode( '</activitypub-summary>', $content, 2 );
 		$content = $content[0] . ' ' . $excerpt_more;
