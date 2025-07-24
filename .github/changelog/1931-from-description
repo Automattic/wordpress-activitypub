@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed a bug in how follow requests were accepted to ensure they work correctly.

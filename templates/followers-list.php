@@ -10,7 +10,7 @@
 /**
  * Followers list table.
  *
- * @global Activitypub\Table\Followers $followers_list_table
+ * @global \Activitypub\WP_Admin\Table\Followers $followers_list_table
  */
 global $followers_list_table;
 

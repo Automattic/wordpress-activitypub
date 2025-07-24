@@ -7,9 +7,9 @@
 
 namespace Activitypub\WP_Admin;
 
-use Activitypub\Comment;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Comment;
 use Activitypub\Model\Blog;
 
 use function Activitypub\count_followers;
@@ -127,14 +127,14 @@ class Admin {
 	 * Creates the followers list table.
 	 */
 	public static function add_followers_list_table() {
-		$GLOBALS['followers_list_table'] = new \Activitypub\Table\Followers();
+		$GLOBALS['followers_list_table'] = new Table\Followers();
 	}
 
 	/**
 	 * Creates the following list table.
 	 */
 	public static function add_following_list_table() {
-		$GLOBALS['following_list_table'] = new \Activitypub\Table\Following();
+		$GLOBALS['following_list_table'] = new Table\Following();
 	}
 
 	/**

@@ -84,9 +84,9 @@ class Followers {
 		/**
 		 * Fires before a Follower is removed.
 		 *
-		 * @param \WP_Post                  $post    The remote Actor object.
-		 * @param int                       $user_id The ID of the WordPress User.
-		 * @param \Activitypub\Actors\Actor $actor   The Actor object.
+		 * @param \WP_Post                    $post    The remote Actor object.
+		 * @param int                         $user_id The ID of the WordPress User.
+		 * @param \Activitypub\Activity\Actor $actor   The remote Actor object.
 		 */
 		\do_action( 'activitypub_followers_pre_remove_follower', $post, $user_id, Actors::get_actor( $post ) );
 
@@ -104,7 +104,7 @@ class Followers {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_follower( $user_id, $actor ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::remove' );
+		_deprecated_function( __METHOD__, '7.1.0', 'Activitypub\Collection\Followers::remove' );
 
 		$remote_actor = self::get_follower( $user_id, $actor );
 
@@ -351,12 +351,12 @@ class Followers {
 	/**
 	 * Get all Followers.
 	 *
-	 * @deprecated unreleased Use Activitypub\Collection\Actors::get_all() instead.
+	 * @deprecated 7.1.0 Use Activitypub\Collection\Actors::get_all() instead.
 	 *
 	 * @return \WP_Post[] The list of Followers.
 	 */
 	public static function get_all_followers() {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_all' );
+		_deprecated_function( __METHOD__, '7.1.0', 'Activitypub\Collection\Actors::get_all' );
 
 		$args = array(
 			'nopaging'   => true,
@@ -435,5 +435,20 @@ class Followers {
 		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::clear_errors' );
 
 		return Actors::clear_errors( $post_id );
+	}
+
+	/**
+	 * Check the status of a given following.
+	 *
+	 * @param int $post_id The ID of the Post.
+	 * @param int $user_id The ID of the WordPress User.
+	 *
+	 * @return bool The status of the following.
+	 */
+	public static function follows( $post_id, $user_id ) {
+		$all_meta  = \get_post_meta( $post_id );
+		$following = $all_meta[ self::FOLLOWER_META_KEY ] ?? array();
+
+		return \in_array( (string) $user_id, $following, true );
 	}
 }

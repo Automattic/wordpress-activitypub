@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Scheduler;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Outbox;
 use Activitypub\Scheduler\Actor;
 
 /**
@@ -319,5 +320,35 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Verify the updated attribute is set and matches the post's modified date.
 		$this->assertEqualsWithDelta( strtotime( $post->post_modified ), strtotime( $activity['updated'] ), 2, 'Updated attribute does not match post modified date.' );
+	}
+
+	/**
+	 * Test that sticky posts are detected.
+	 *
+	 * @covers ::sticky_post_update
+	 */
+	public function test_sticky_post_update() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$last_item = $this->get_latest_outbox_item();
+
+		$this->assertNull( $last_item );
+
+		$post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		\stick_post( $post_id );
+
+		$last_item_stick = $this->get_latest_outbox_item();
+
+		$this->assertNotNull( $last_item_stick );
+
+		\unstick_post( $post_id );
+
+		$last_item_unstick = $this->get_latest_outbox_item();
+
+		$this->assertNotEquals( $last_item_stick->ID, $last_item_unstick->ID );
+		$this->assertEquals( $last_item_stick->post_author, $last_item_unstick->post_author );
+
+		\wp_delete_post( $post_id );
+		\wp_delete_user( $user_id );
 	}
 }
