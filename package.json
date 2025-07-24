@@ -39,7 +39,7 @@
 		"@wordpress/editor": "^14.22.0",
 		"@wordpress/element": "^6.0.0",
 		"@wordpress/env": "^10.10.0",
-		"@wordpress/i18n": "^5.22.0",
+		"@wordpress/i18n": "^6.0.0",
 		"@wordpress/icons": "^10.10.0",
 		"@wordpress/interactivity": "^6.23.0",
 		"@wordpress/plugins": "^7.22.0",
