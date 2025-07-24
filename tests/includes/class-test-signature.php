@@ -317,8 +317,8 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 
-		$signature = new Signature\Http_Signature_Draft();
-		$args      = $signature->sign(
+		$args = \apply_filters(
+			'http_request_args',
 			array(
 				'method'      => 'POST',
 				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
@@ -374,6 +374,7 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
 		$keys = self::$test_keys['rsa']['4096'];
 
 		\add_filter(
@@ -391,8 +392,8 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 
-		$signature = new Signature\Http_Message_Signature();
-		$args      = $signature->sign(
+		$args = \apply_filters(
+			'http_request_args',
 			array(
 				'method'      => 'POST',
 				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
@@ -442,6 +443,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
 		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\delete_option( 'activitypub_rfc9421_signature' );
 	}
 
 	/**
