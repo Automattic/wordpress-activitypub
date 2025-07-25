@@ -4,6 +4,7 @@
 /vendor/
 _site
 .idea/
+.claude
 .cursor
 .DS_Store
 .php_cs.cache
