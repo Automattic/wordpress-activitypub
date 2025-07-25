@@ -560,7 +560,11 @@ class Post extends Base {
 	public function generate_reply_link( $block_content, $block ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Blocks::render_reply_block()' );
 
-		return Blocks::render_reply_block( $block['attrs'] );
+		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
+		$content = Blocks::render_reply_block( $block['attrs'] );
+		\remove_filter( 'activitypub_is_activitypub_request', '__return_true' );
+
+		return $content;
 	}
 
 	/**
