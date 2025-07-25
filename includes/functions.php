@@ -1048,8 +1048,7 @@ function register_comment_type( $comment_type, $args = array() ) {
  */
 function normalize_url( $url ) {
 	$url = \untrailingslashit( $url );
-	$url = \preg_replace( '/^https?:\/\//', '', $url );
-	$url = \preg_replace( '/^www\./', '', $url );
+	$url = \preg_replace( '/^https?:\/\/(www\.)?/', '', $url );
 
 	return $url;
 }
