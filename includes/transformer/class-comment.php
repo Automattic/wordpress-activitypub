@@ -358,4 +358,61 @@ class Comment extends Base {
 	public function get_replies() {
 		return Replies::get_collection( $this->item );
 	}
+
+	/**
+	 * Get the attachment for the comment.
+	 *
+	 * Extracts images from comment content and returns them as ActivityPub attachments.
+	 *
+	 * @return array The attachments array for ActivityPub.
+	 */
+	protected function get_attachment() {
+		$max_media = \get_option( 'activitypub_max_image_attachments', \ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
+
+		/**
+		 * Filters the maximum number of media attachments allowed in a comment.
+		 *
+		 * @param int         $max_media Maximum number of media attachments.
+		 * @param \WP_Comment $item      The comment object.
+		 */
+		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media, $this->item );
+
+		if ( 0 === $max_media ) {
+			return array();
+		}
+
+		$media = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		// Get comment content and parse for image embeds.
+		$media = $this->parse_html_images( $media, $max_media, $this->item->comment_content );
+		$media = $this->filter_unique_attachments( $media['image'] );
+		$media = \array_slice( $media, 0, $max_media );
+
+		/**
+		 * Filter the attachment IDs for a comment.
+		 *
+		 * @param array       $media The media array.
+		 * @param \WP_Comment $item  The comment object.
+		 *
+		 * @return array The filtered attachment IDs.
+		 */
+		$media = \apply_filters( 'activitypub_comment_attachment_ids', $media, $this->item );
+
+		// Transform to ActivityStreams format using Base class method.
+		$attachments = \array_filter( \array_map( array( $this, 'transform_attachment' ), $media ) );
+
+		/**
+		 * Filter the attachments for a comment.
+		 *
+		 * @param array       $attachments The attachments.
+		 * @param \WP_Comment $item        The comment object.
+		 *
+		 * @return array The filtered attachments.
+		 */
+		return \apply_filters( 'activitypub_comment_attachments', $attachments, $this->item );
+	}
 }

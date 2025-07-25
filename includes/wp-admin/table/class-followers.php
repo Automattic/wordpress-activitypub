@@ -118,7 +118,21 @@ class Followers extends \WP_List_Table {
 					}
 				}
 				break;
+			case 'follow':
+				$redirect_to = \remove_query_arg( array( 'follower', 'followers' ), $redirect_to );
 
+				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
+					$follower = \absint( $_GET['follower'] );
+					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'follow-follower_' . $follower ) ) {
+						Following::follow( $follower, $this->user_id );
+
+						\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
+
+					}
+				}
+				break;
 			default:
 				break;
 		}
@@ -391,6 +405,26 @@ class Followers extends \WP_List_Table {
 				\esc_html__( 'Delete', 'activitypub' )
 			),
 		);
+
+		if ( \boolval( \get_option( 'activitypub_following_ui', '0' ) ) ) {
+			if ( ! Following::check_status( $this->user_id, $item['id'] ) ) {
+				$actions['follow'] = \sprintf(
+					'<a href="%s" aria-label="%s">%s</a>',
+					\wp_nonce_url(
+						\add_query_arg(
+							array(
+								'action'   => 'follow',
+								'follower' => $item['id'],
+							)
+						),
+						'follow-follower_' . $item['id']
+					),
+					/* translators: %s: username. */
+					\esc_attr( \sprintf( \__( 'Follow %s', 'activitypub' ), $item['username'] ) ),
+					\esc_html__( 'Follow back', 'activitypub' )
+				);
+			}
+		}
 
 		return $this->row_actions( $actions );
 	}
