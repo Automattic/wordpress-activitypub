@@ -120,5 +120,4 @@ class Inbox {
 
 		return $title;
 	}
-
 }
