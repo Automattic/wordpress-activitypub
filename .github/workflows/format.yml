@@ -1,0 +1,41 @@
+name: Prettify
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.base.ref == 'trunk'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.API_TOKEN_GITHUB }}
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run formatter
+        run: npm run format
+
+      - name: Check for changes and commit
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Formatting changes detected, committing files..."
+            git config user.name "Automattic Bot"
+            git config user.email "sysops+ghmatticbot@automattic.com"
+            git add .
+            git commit -m "Prettify"
+            git push
+          else
+            echo "No formatting changes needed"
+          fi

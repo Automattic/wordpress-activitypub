@@ -8,7 +8,6 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use WP_Comment_Query;
 
 /**
  * ActivityPub Comment Class.
@@ -273,7 +272,7 @@ class Comment {
 	 * @return \WP_Comment|false Comment object, or false on failure.
 	 */
 	public static function object_id_to_comment( $id ) {
-		$comment_query = new WP_Comment_Query(
+		$comment_query = new \WP_Comment_Query(
 			array(
 				'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
@@ -298,16 +297,16 @@ class Comment {
 	 * @return string|null Comment ID or null if not found.
 	 */
 	public static function url_to_commentid( $url ) {
-		if ( ! $url || ! filter_var( $url, \FILTER_VALIDATE_URL ) ) {
+		if ( ! $url || ! \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
 			return null;
 		}
 
 		// Check for local comment.
-		if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+		if ( is_same_domain( $url ) ) {
 			$query = \wp_parse_url( $url, \PHP_URL_QUERY );
 
 			if ( $query ) {
-				parse_str( $query, $params );
+				\parse_str( $query, $params );
 
 				if ( ! empty( $params['c'] ) ) {
 					$comment = \get_comment( $params['c'] );
@@ -334,7 +333,7 @@ class Comment {
 			),
 		);
 
-		$query    = new WP_Comment_Query();
+		$query    = new \WP_Comment_Query();
 		$comments = $query->query( $args );
 
 		if ( $comments && is_array( $comments ) ) {
@@ -686,10 +685,10 @@ class Comment {
 	 *
 	 * @see https://github.com/janboddez/indieblocks/blob/a2d59de358031056a649ee47a1332ce9e39d4ce2/includes/functions.php#L423-L432
 	 *
-	 * @param WP_Comment_Query $query Comment count.
+	 * @param \WP_Comment_Query $query Comment count.
 	 */
 	public static function comment_query( $query ) {
-		if ( ! $query instanceof WP_Comment_Query ) {
+		if ( ! $query instanceof \WP_Comment_Query ) {
 			return;
 		}
 

@@ -42,7 +42,6 @@ class Http {
 		 */
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
 		$args       = array(
-			'method'              => 'POST',
 			'timeout'             => 100,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
@@ -56,8 +55,6 @@ class Http {
 			'key_id'              => Actors::get_by_id( $user_id )->get_id() . '#main-key',
 			'private_key'         => Actors::get_private_key( $user_id ),
 		);
-
-		$args = Signature::sign_request( $args, $url );
 
 		$response = \wp_safe_remote_post( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
@@ -138,7 +135,6 @@ class Http {
 		$timeout = \apply_filters( 'activitypub_remote_get_timeout', 100 );
 
 		$args = array(
-			'method'              => 'GET',
 			'timeout'             => $timeout,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
@@ -151,8 +147,6 @@ class Http {
 			'key_id'              => Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key',
 			'private_key'         => Actors::get_private_key( Actors::APPLICATION_USER_ID ),
 		);
-
-		$args = Signature::sign_request( $args, $url );
 
 		$response = \wp_safe_remote_get( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
