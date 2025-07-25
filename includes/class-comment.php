@@ -302,8 +302,11 @@ class Comment {
 			return null;
 		}
 
+		$blog_host = str_replace( 'www.', '', \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
+		$url_host  = str_replace( 'www.', '', \wp_parse_url( $url, \PHP_URL_HOST ) );
+
 		// Check for local comment.
-		if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+		if ( $blog_host === $url_host ) {
 			$query = \wp_parse_url( $url, \PHP_URL_QUERY );
 
 			if ( $query ) {
