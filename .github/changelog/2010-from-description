@@ -2,5 +2,3 @@ Significance: patch
 Type: fixed
 
 Fix avatar rendering for followers with missing icon property
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
