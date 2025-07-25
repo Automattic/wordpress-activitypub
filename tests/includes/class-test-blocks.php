@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use Activitypub\Blocks;
 use Activitypub\Collection\Interactions;
+use Activitypub\Transformer\Post;
 
 /**
  * Test class for Blocks.
@@ -159,6 +160,34 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test reply link generation.
+	 *
+	 * Pleroma prepends `acct:` to the webfinger identifier, which we'd want to normalize.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_render_reply_block_with_pleroma_url() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ), 10, 2 );
+
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:activitypub/reply {"url":"https://devs.live/notice/AQ8N0Xl57y8bUQAb6e"} /-->',
+				'post_title'   => '',
+			)
+		);
+
+		$get_content = new \ReflectionMethod( Post::class, 'get_content' );
+		$get_content->setAccessible( true );
+
+		// Invoke the method.
+		$reply_link = $get_content->invoke( new Post( $post ) );
+
+		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ) );
+	}
+
+	/**
 	 * Test filter_import_mastodon_post_data with regular paragraphs.
 	 *
 	 * @covers ::filter_import_mastodon_post_data
@@ -219,6 +248,34 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$expected     = '<h6 class="wp-block-heading">Fediverse Reactions</h6>';
 
 		$this->assertStringContainsString( $expected, $output );
+	}
+
+	/**
+	 * Filter pleroma object.
+	 *
+	 * @param array|string|null $response The response.
+	 * @param array|string|null $url      The Object URL.
+	 * @return string[]
+	 */
+	public function filter_pleroma_object( $response, $url ) {
+		if ( 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' === $url ) {
+			$response = array(
+				'type'         => 'Note',
+				'attributedTo' => 'https://devs.live/users/tester',
+				'content'      => 'Cake day it is',
+			);
+		}
+		if ( 'https://devs.live/users/tester' === $url ) {
+			$response = array(
+				'id'                => 'https://devs.live/users/tester',
+				'type'              => 'Person',
+				'preferredUsername' => 'tester',
+				'url'               => 'https://devs.live/users/tester',
+				'webfinger'         => 'acct:tester@devs.live',
+			);
+		}
+
+		return $response;
 	}
 
 	/**

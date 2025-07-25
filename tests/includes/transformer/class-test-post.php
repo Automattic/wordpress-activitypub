@@ -689,48 +689,39 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test reply link generation.
+	 * Test get_content method.
 	 *
-	 * Pleroma prepends `acct:` to the webfinger identifier, which we'd want to normalize.
-	 *
-	 * @covers ::generate_reply_link
+	 * @covers ::get_content
 	 */
-	public function test_generate_reply_link() {
-		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ), 10, 2 );
+	public function test_get_content() {
+		$follow_me = '<!-- wp:activitypub/follow-me -->
+<div class="wp-block-activitypub-follow-me"><!-- wp:button -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">Follow</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:activitypub/follow-me -->';
 
-		$transformer = new Post( self::factory()->post->create_and_get() );
-		$reply_link  = $transformer->generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
+		$followers = '<!-- wp:activitypub/followers -->
+<div class="wp-block-activitypub-followers"><!-- wp:heading {"level":3,"placeholder":"Fediverse Followers"} -->
+<h3 class="wp-block-heading">Fediverse Followers</h3>
+<!-- /wp:heading --></div>
+<!-- /wp:activitypub/followers -->';
 
-		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
+		$reactions = '<!-- wp:activitypub/reactions -->
+<div class="wp-block-activitypub-reactions"><!-- wp:heading {"level":3,"placeholder":"Fediverse Reactions"} -->
+<h3 class="wp-block-heading">Fediverse Reactions</h3>
+<!-- /wp:heading --></div>
+<!-- /wp:activitypub/reactions -->';
 
-		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ) );
-	}
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => implode( PHP_EOL, array( $follow_me, $followers, $reactions ) ),
+				'post_title'   => '',
+			)
+		);
 
-	/**
-	 * Filter pleroma object.
-	 *
-	 * @param array|string|null $response The response.
-	 * @param array|string|null $url      The Object URL.
-	 * @return string[]
-	 */
-	public function filter_pleroma_object( $response, $url ) {
-		if ( 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' === $url ) {
-			$response = array(
-				'type'         => 'Note',
-				'attributedTo' => 'https://devs.live/users/tester',
-				'content'      => 'Cake day it is',
-			);
-		}
-		if ( 'https://devs.live/users/tester' === $url ) {
-			$response = array(
-				'id'                => 'https://devs.live/users/tester',
-				'type'              => 'Person',
-				'preferredUsername' => 'tester',
-				'url'               => 'https://devs.live/users/tester',
-				'webfinger'         => 'acct:tester@devs.live',
-			);
-		}
+		$get_content = new \ReflectionMethod( Post::class, 'get_content' );
+		$get_content->setAccessible( true );
 
-		return $response;
+		$this->assertEmpty( $get_content->invoke( new Post( $post ) ) );
 	}
 }
