@@ -14,5 +14,6 @@ _site
 .windsurf
 .windsurfrules
 .wp-env.override.json
+CLAUDE*
 composer.lock
 package-lock.json
