@@ -302,6 +302,9 @@ class Interactions {
 				return 'inactive';
 			}
 		);
+		// Disable Antispam Bee comment processing.
+		$antispam_bee_removed = \remove_filter( 'preprocess_comment', array( 'Antispam_Bee', 'handle_incoming_request' ), 1 );
+
 		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
 		if ( self::INSERT === $action ) {
@@ -311,6 +314,12 @@ class Interactions {
 		}
 
 		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
+
+		// Restore Antispam Bee comment processing.
+		if ( $antispam_bee_removed ) {
+			\add_filter( 'preprocess_comment', array( 'Antispam_Bee', 'handle_incoming_request' ), 1 );
+		}
+		// Restore require email check.
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 		// Restore flood control.
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
