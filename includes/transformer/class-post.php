@@ -7,18 +7,16 @@
 
 namespace Activitypub\Transformer;
 
+use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
 use Activitypub\Collection\Interactions;
-use Activitypub\Http;
 use Activitypub\Model\Blog;
 use Activitypub\Shortcodes;
 
 use function Activitypub\esc_hashtag;
-use function Activitypub\object_to_uri;
 use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
-use function Activitypub\get_upload_baseurl;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\site_supports_blocks;
@@ -492,8 +490,6 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		\add_filter( 'activitypub_reply_block', '__return_empty_string' );
-
 		// Remove Content from drafts.
 		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
@@ -510,8 +506,8 @@ class Post extends Base {
 		 */
 		\do_action( 'activitypub_before_get_content', $post );
 
+		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
 		\add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
-		\add_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ), 10, 2 );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post    = $this->item;
@@ -534,9 +530,9 @@ class Post extends Base {
 		$content = \trim( $content );
 
 		/**
-		 * Filters the post content before it is transformed for ActivityPub.
+		 * Filters the post content after it was transformed for ActivityPub.
 		 *
-		 * @param string   $content The post content to be transformed.
+		 * @param string   $content The transformed post content.
 		 * @param \WP_Post $post    The post object being transformed.
 		 */
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
@@ -544,10 +540,9 @@ class Post extends Base {
 		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
 
-		// Get rid of the reply block filter.
-		\remove_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ) );
+		// Remove filters.
 		\remove_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ) );
-		\remove_filter( 'activitypub_reply_block', '__return_empty_string' );
+		\remove_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
 		return $content;
 	}
@@ -555,57 +550,17 @@ class Post extends Base {
 	/**
 	 * Generate HTML @ link for reply block.
 	 *
+	 * @deprecated unreleased Use {@see Blocks::render_reply_block()} instead.
+	 *
 	 * @param string $block_content The block content.
 	 * @param array  $block         The block data.
 	 *
 	 * @return string The HTML @ link.
 	 */
 	public function generate_reply_link( $block_content, $block ) {
-		// Return empty string if no URL is provided.
-		if ( empty( $block['attrs']['url'] ) ) {
-			return '';
-		}
+		_deprecated_function( __METHOD__, 'unreleased', 'Blocks::render_reply_block()' );
 
-		$url = $block['attrs']['url'];
-
-		// Try to get ActivityPub representation. Is likely already cached.
-		$object = Http::get_remote_object( $url );
-		if ( \is_wp_error( $object ) ) {
-			return '';
-		}
-
-		$author_url = $object['attributedTo'] ?? '';
-		if ( ! $author_url ) {
-			return '';
-		}
-
-		// Fetch author information.
-		$author = Http::get_remote_object( $author_url );
-		if ( \is_wp_error( $author ) ) {
-			return '';
-		}
-
-		// Get webfinger identifier.
-		$webfinger = '';
-		if ( ! empty( $author['webfinger'] ) ) {
-			$webfinger = \str_replace( 'acct:', '', $author['webfinger'] );
-		} elseif ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
-			// Construct webfinger-style identifier from username and domain.
-			$domain    = \wp_parse_url( $author['url'], PHP_URL_HOST );
-			$webfinger = '@' . $author['preferredUsername'] . '@' . $domain;
-		}
-
-		if ( ! $webfinger ) {
-			return '';
-		}
-
-		// Generate HTML @ link.
-		return \sprintf(
-			'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
-			\esc_url( $url ),
-			\esc_attr( $webfinger ),
-			\esc_html( '@' . strtok( $webfinger, '@' ) )
-		);
+		return Blocks::render_reply_block( $block['attrs'] );
 	}
 
 	/**

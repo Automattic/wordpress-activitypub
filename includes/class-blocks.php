@@ -234,6 +234,47 @@ class Blocks {
 			return null;
 		}
 
+		if ( is_activitypub_request() ) {
+			// Try to get ActivityPub representation. Is likely already cached.
+			$object = Http::get_remote_object( $attrs['url'] );
+			if ( \is_wp_error( $object ) ) {
+				return '';
+			}
+
+			$author_url = $object['attributedTo'] ?? '';
+			if ( ! $author_url ) {
+				return '';
+			}
+
+			// Fetch author information.
+			$author = Http::get_remote_object( $author_url );
+			if ( \is_wp_error( $author ) ) {
+				return '';
+			}
+
+			// Get webfinger identifier.
+			$webfinger = '';
+			if ( ! empty( $author['webfinger'] ) ) {
+				$webfinger = Sanitize::webfinger( $author['webfinger'] );
+			} elseif ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
+				// Construct webfinger-style identifier from username and domain.
+				$domain    = \wp_parse_url( $author['url'], PHP_URL_HOST );
+				$webfinger = '@' . $author['preferredUsername'] . '@' . $domain;
+			}
+
+			if ( ! $webfinger ) {
+				return '';
+			}
+
+			// Generate HTML @ link.
+			return \sprintf(
+				'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
+				\esc_url( $attrs['url'] ),
+				\esc_attr( $webfinger ),
+				\esc_html( '@' . strtok( $webfinger, '@' ) )
+			);
+		}
+
 		$show_embed = isset( $attrs['embedPost'] ) && $attrs['embedPost'];
 
 		$wrapper_attrs = get_block_wrapper_attributes(
