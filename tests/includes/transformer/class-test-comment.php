@@ -139,6 +139,115 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test Comment image attachment extraction.
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_comment_image_attachments() {
+		// Create a test image attachment.
+		$attachment_id = self::factory()->attachment->create_upload_object(
+			ACTIVITYPUB_PLUGIN_DIR . '/tests/assets/test.jpg',
+			self::$post_id
+		);
+
+		$attachment_url = \wp_get_attachment_url( $attachment_id );
+
+		// Create a comment with HTML image tag.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_content' => sprintf(
+					'This is a test comment with an image: <img src="%s" alt="Test image" />',
+					$attachment_url
+				),
+			)
+		);
+
+		$comment = \get_comment( $comment_id );
+
+		// Test the transformer.
+		$transformer        = new Comment( $comment );
+		$activitypub_object = $transformer->to_object();
+
+		// Check if attachments are present.
+		$attachments = $activitypub_object->get_attachment();
+
+		$this->assertIsArray( $attachments, 'Attachments should be an array' );
+		$this->assertNotEmpty( $attachments, 'Comment should have attachments when HTML images are present' );
+		$this->assertCount( 1, $attachments, 'Comment should have exactly one attachment' );
+
+		// Verify the attachment structure.
+		$attachment = $attachments[0];
+		$this->assertEquals( 'Image', $attachment['type'] );
+		$this->assertNotEmpty( $attachment['url'] );
+		$this->assertEquals( 'Test image', $attachment['name'] );
+
+		// Clean up.
+		\wp_delete_comment( $comment_id );
+		\wp_delete_attachment( $attachment_id );
+	}
+
+	/**
+	 * Test Comment without images.
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_comment_without_images() {
+		// Create a comment without images.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_content' => 'This is a test comment without any images.',
+			)
+		);
+
+		$comment = \get_comment( $comment_id );
+
+		// Test the transformer.
+		$transformer        = new Comment( $comment );
+		$activitypub_object = $transformer->to_object();
+
+		// Check if attachments are empty.
+		$attachments = $activitypub_object->get_attachment();
+
+		$this->assertIsArray( $attachments, 'Attachments should be an array' );
+		$this->assertEmpty( $attachments, 'Comment should have no attachments when no images are present' );
+
+		// Clean up.
+		\wp_delete_comment( $comment_id );
+	}
+
+	/**
+	 * Test Comment with external images (should be ignored).
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_comment_external_images() {
+		// Create a comment with external image (should be ignored).
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_content' => 'This has an external image: <img src="https://external-site.com/image.jpg" alt="External image" />',
+			)
+		);
+
+		$comment = \get_comment( $comment_id );
+
+		// Test the transformer.
+		$transformer        = new Comment( $comment );
+		$activitypub_object = $transformer->to_object();
+
+		// Check if attachments are empty (external images should be ignored).
+		$attachments = $activitypub_object->get_attachment();
+
+		$this->assertIsArray( $attachments, 'Attachments should be an array' );
+		$this->assertEmpty( $attachments, 'Comment should ignore external images' );
+
+		// Clean up.
+		\wp_delete_comment( $comment_id );
+	}
+
+	/**
 	 * Create a dummy response.
 	 *
 	 * @param string $body The body of the response.
