@@ -229,6 +229,10 @@ class Blocks {
 	 * @return string The HTML to render.
 	 */
 	public static function render_reply_block( $attrs ) {
+		if ( is_activitypub_request() ) {
+			return null;
+		}
+
 		// Return early if no URL is provided.
 		if ( empty( $attrs['url'] ) ) {
 			return null;

@@ -492,8 +492,6 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		\add_filter( 'activitypub_reply_block', '__return_empty_string' );
-
 		// Remove Content from drafts.
 		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
@@ -547,7 +545,6 @@ class Post extends Base {
 		// Get rid of the reply block filter.
 		\remove_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ) );
 		\remove_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ) );
-		\remove_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		return $content;
 	}
