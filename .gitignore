@@ -4,6 +4,7 @@
 /vendor/
 _site
 .idea/
+.claude
 .cursor
 .DS_Store
 .php_cs.cache
@@ -13,5 +14,6 @@ _site
 .windsurf
 .windsurfrules
 .wp-env.override.json
+CLAUDE*
 composer.lock
 package-lock.json
