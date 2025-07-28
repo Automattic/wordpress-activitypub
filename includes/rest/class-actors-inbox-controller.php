@@ -10,6 +10,7 @@ namespace Activitypub\Rest;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Debug;
+use Activitypub\Moderation;
 
 use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
@@ -177,7 +178,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		$type     = \strtolower( $type );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		if ( \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
+		if ( Moderation::is_activity_blocked( $data, $user->get__id() ) ) {
 			/**
 			 * ActivityPub inbox disallowed activity.
 			 *

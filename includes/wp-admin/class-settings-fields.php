@@ -7,6 +7,8 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Moderation;
+
 use function Activitypub\home_host;
 use function Activitypub\site_supports_blocks;
 
@@ -51,6 +53,13 @@ class Settings_Fields {
 			'activitypub_server',
 			__( 'Server', 'activitypub' ),
 			'__return_empty_string',
+			'activitypub_settings'
+		);
+
+		add_settings_section(
+			'activitypub_moderation',
+			__( 'Moderation', 'activitypub' ),
+			array( self::class, 'render_moderation_section_description' ),
 			'activitypub_settings'
 		);
 
@@ -151,6 +160,33 @@ class Settings_Fields {
 			'activitypub_server',
 			array( 'label_for' => 'activitypub_relays' )
 		);
+
+		// Only show moderation fields to users with manage_options capability
+		if ( \current_user_can( 'manage_options' ) ) {
+			add_settings_field(
+				'activitypub_site_blocked_actors',
+				__( 'Blocked Actors', 'activitypub' ),
+				array( self::class, 'render_site_blocked_actors_field' ),
+				'activitypub_settings',
+				'activitypub_moderation'
+			);
+
+			add_settings_field(
+				'activitypub_site_blocked_domains',
+				__( 'Blocked Domains', 'activitypub' ),
+				array( self::class, 'render_site_blocked_domains_field' ),
+				'activitypub_settings',
+				'activitypub_moderation'
+			);
+
+			add_settings_field(
+				'activitypub_site_blocked_keywords',
+				__( 'Blocked Keywords', 'activitypub' ),
+				array( self::class, 'render_site_blocked_keywords_field' ),
+				'activitypub_settings',
+				'activitypub_moderation'
+			);
+		}
 	}
 
 	/**
@@ -456,6 +492,112 @@ class Settings_Fields {
 			);
 			?>
 		</p>
+		<?php
+	}
+
+	/**
+	 * Render moderation section description.
+	 */
+	public static function render_moderation_section_description() {
+		echo '<p>' . \esc_html__( 'Configure site-wide moderation settings. These blocks will affect all users and ActivityPub content on your site.', 'activitypub' ) . '</p>';
+	}
+
+	/**
+	 * Render site blocked actors field.
+	 */
+	public static function render_site_blocked_actors_field() {
+		$blocked_actors = Moderation::get_site_blocks()['actors'];
+		
+		echo '<div class="activitypub-site-block-list">';
+		echo '<p class="description">' . \esc_html__( 'Block specific ActivityPub actors (users) by their full actor URL.', 'activitypub' ) . '</p>';
+		
+		if ( ! empty( $blocked_actors ) ) {
+			echo '<ul class="blocked-items-list">';
+			foreach ( $blocked_actors as $actor ) {
+				echo '<li>';
+				echo \esc_html( $actor );
+				echo ' <button type="button" class="button button-small remove-site-block-btn" data-type="actors" data-value="' . \esc_attr( $actor ) . '">' . \esc_html__( 'Remove', 'activitypub' ) . '</button>';
+				echo '</li>';
+			}
+			echo '</ul>';
+		}
+		
+		?>
+		<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
+			<input type="text" class="regular-text" id="new_site_actors" placeholder="<?php \esc_attr_e( 'https://example.com/@username', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
+			<button type="button" class="button add-site-block-btn" data-type="actors" style="flex-shrink: 0; white-space: nowrap;">
+				<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
+			</button>
+		</div>
+		<?php
+		echo '</div>';
+	}
+
+	/**
+	 * Render site blocked domains field.
+	 */
+	public static function render_site_blocked_domains_field() {
+		$blocked_domains = Moderation::get_site_blocks()['domains'];
+		?>
+		<p class="description"><?php \esc_html_e( 'Block entire ActivityPub instances by domain name.', 'activitypub' ); ?></p>
+		
+		<div class="activitypub-site-block-list">
+			<?php if ( ! empty( $blocked_domains ) ) : ?>
+			<table class="widefat striped activitypub-site-blocked-domains" role="presentation" style="max-width: 500px; margin: 15px 0;">
+				<?php foreach ( $blocked_domains as $domain ) : ?>
+					<tr>
+						<td><?php echo \esc_html( $domain ); ?></td>
+						<td style="width: 80px;">
+							<button type="button" class="button button-small remove-site-block-btn" data-type="domains" data-value="<?php echo \esc_attr( $domain ); ?>">
+								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+							</button>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</table>
+			<?php endif; ?>
+			
+			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
+				<input type="text" class="regular-text" id="new_site_domains" placeholder="<?php \esc_attr_e( 'example.com', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
+				<button type="button" class="button add-site-block-btn" data-type="domains" style="flex-shrink: 0; white-space: nowrap;">
+					<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
+				</button>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render site blocked keywords field.
+	 */
+	public static function render_site_blocked_keywords_field() {
+		$blocked_keywords = Moderation::get_site_blocks()['keywords'];
+		?>
+		<p class="description"><?php \esc_html_e( 'Block ActivityPub content containing specific keywords.', 'activitypub' ); ?></p>
+		
+		<div class="activitypub-site-block-list">
+			<?php if ( ! empty( $blocked_keywords ) ) : ?>
+			<table class="widefat striped activitypub-site-blocked-keywords" role="presentation" style="max-width: 500px; margin: 15px 0;">
+				<?php foreach ( $blocked_keywords as $keyword ) : ?>
+					<tr>
+						<td><?php echo \esc_html( $keyword ); ?></td>
+						<td style="width: 80px;">
+							<button type="button" class="button button-small remove-site-block-btn" data-type="keywords" data-value="<?php echo \esc_attr( $keyword ); ?>">
+								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+							</button>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</table>
+			<?php endif; ?>
+			
+			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
+				<input type="text" class="regular-text" id="new_site_keywords" placeholder="<?php \esc_attr_e( 'spam keyword', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
+				<button type="button" class="button add-site-block-btn" data-type="keywords" style="flex-shrink: 0; white-space: nowrap;">
+					<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
+				</button>
+			</div>
+		</div>
 		<?php
 	}
 }

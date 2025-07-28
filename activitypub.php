@@ -74,6 +74,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Mailer', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ), 1 );
+	\add_action( 'init', array( __NAMESPACE__ . '\Moderation', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Move', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Options', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
@@ -114,6 +115,7 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Advanced_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Blog_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Health_Check', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Moderation', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\User_Settings_Fields', 'init' ) );
