@@ -317,8 +317,8 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 
-		$signature = new Signature\Http_Signature_Draft();
-		$args      = $signature->sign(
+		$args = \apply_filters(
+			'http_request_args',
 			array(
 				'method'      => 'POST',
 				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
@@ -374,6 +374,7 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
 		$keys = self::$test_keys['rsa']['4096'];
 
 		\add_filter(
@@ -391,8 +392,8 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 
-		$signature = new Signature\Http_Message_Signature();
-		$args      = $signature->sign(
+		$args = \apply_filters(
+			'http_request_args',
 			array(
 				'method'      => 'POST',
 				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
@@ -442,6 +443,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
 		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\delete_option( 'activitypub_rfc9421_signature' );
 	}
 
 	/**
@@ -678,32 +680,29 @@ class Test_Signature extends \WP_UnitTestCase {
 		\add_option( 'activitypub_rfc9421_unsupported', array( 'sub.www.example.org' => \time() + MINUTE_IN_SECONDS ), '', false );
 		\update_option( 'activitypub_rfc9421_signature', '1' );
 
-		\add_filter( 'pre_http_request', '__return_null' );
-		\add_filter(
-			'http_request_args',
-			function ( $args ) {
-				$this->assertFalse( isset( $args['headers']['Signature-Input'] ) );
-				$this->assertStringContainsString( 'headers="(request-target) host date digest"', $args['headers']['Signature'] );
+		$test = function ( $args ) {
+			$this->assertFalse( isset( $args['headers']['Signature-Input'] ) );
+			$this->assertStringContainsString( 'headers="(request-target) host date digest"', $args['headers']['Signature'] );
 
-				return $args;
-			}
-		);
+			return $args;
+		};
+
+		\add_filter( 'pre_http_request', '__return_null' );
+		\add_filter( 'http_request_args', $test );
 
 		Http::post( 'https://sub.www.example.org/wp-json/activitypub/1.0/inbox', '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}', 1 );
 
 		// Expired timestamp results in another try.
 		\update_option( 'activitypub_rfc9421_unsupported', array( 'sub.www.example.org' => \time() - MINUTE_IN_SECONDS ), '', false );
-		\remove_all_filters( 'http_request_args' );
+		\remove_filter( 'http_request_args', $test );
 
-		\add_filter(
-			'http_request_args',
-			function ( $args ) {
-				$this->assertTrue( isset( $args['headers']['Signature-Input'] ) );
-				$this->assertStringStartsWith( 'wp=:', $args['headers']['Signature'] );
+		$test = function ( $args ) {
+			$this->assertTrue( isset( $args['headers']['Signature-Input'] ) );
+			$this->assertStringStartsWith( 'wp=:', $args['headers']['Signature'] );
 
-				return $args;
-			}
-		);
+			return $args;
+		};
+		\add_filter( 'http_request_args', $test );
 
 		Http::post( 'https://sub.www.example.org/wp-json/activitypub/1.0/inbox', '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}', 1 );
 
@@ -712,8 +711,8 @@ class Test_Signature extends \WP_UnitTestCase {
 		// Cleanup.
 		\delete_option( 'activitypub_rfc9421_unsupported' );
 		\delete_option( 'activitypub_rfc9421_signature' );
-		\remove_all_filters( 'pre_http_request' );
-		\remove_all_filters( 'http_request_args' );
+		\remove_filter( 'pre_http_request', '__return_null' );
+		\remove_filter( 'http_request_args', $test );
 	}
 
 	/**

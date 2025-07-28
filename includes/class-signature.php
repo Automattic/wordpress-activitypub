@@ -20,6 +20,14 @@ use Activitypub\Signature\Http_Message_Signature;
 class Signature {
 
 	/**
+	 * Initialize the class.
+	 */
+	public static function init() {
+		\add_filter( 'http_request_args', array( self::class, 'sign_request' ), 0, 2 ); // Ahead of all other filters, so signature is set.
+		\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
+	}
+
+	/**
 	 * Sign an HTTP Request.
 	 *
 	 * @param array  $args An array of HTTP request arguments.
@@ -33,19 +41,8 @@ class Signature {
 			return $args;
 		}
 
-		$args = \wp_parse_args(
-			$args,
-			array(
-				'method'  => 'GET',
-				'headers' => array(
-					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
-				),
-			)
-		);
-
 		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && self::could_support_rfc9421( $url ) ) {
 			$signature = new Http_Message_Signature();
-			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 		} else {
 			$signature = new Http_Signature_Draft();
 		}
@@ -85,13 +82,10 @@ class Signature {
 	 * @return array The HTTP response.
 	 */
 	public static function maybe_double_knock( $response, $args, $url ) {
-		// Bail if there's nothing to sign with. It's likely an unrelated request getting processed first.
-		if ( ! isset( $args['key_id'], $args['private_key'], $args['headers']['Date'] ) ) {
+		// Bail if it didn't use an RFC-9421 signature or there's nothing to sign with.
+		if ( ! isset( $args['key_id'], $args['private_key'], $args['headers']['Signature-Input'] ) ) {
 			return $response;
 		}
-
-		// Remove this filter to prevent infinite recursion.
-		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
 
 		$response_code = \wp_remote_retrieve_response_code( $response );
 

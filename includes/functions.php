@@ -1048,9 +1048,7 @@ function register_comment_type( $comment_type, $args = array() ) {
  */
 function normalize_url( $url ) {
 	$url = \untrailingslashit( $url );
-	$url = \str_replace( 'https://', '', $url );
-	$url = \str_replace( 'http://', '', $url );
-	$url = \str_replace( 'www.', '', $url );
+	$url = \preg_replace( '/^https?:\/\/(www\.)?/', '', $url );
 
 	return $url;
 }
@@ -1063,7 +1061,7 @@ function normalize_url( $url ) {
  * @return string The normalized host.
  */
 function normalize_host( $host ) {
-	return \str_replace( 'www.', '', $host );
+	return \preg_replace( '/^www\./', '', $host );
 }
 
 /**
