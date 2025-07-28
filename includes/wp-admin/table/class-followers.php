@@ -391,15 +391,7 @@ class Followers extends \WP_List_Table {
 		$actions = array(
 			'delete' => sprintf(
 				'<a href="%s" aria-label="%s">%s</a>',
-				\wp_nonce_url(
-					\add_query_arg(
-						array(
-							'action'   => 'delete',
-							'follower' => $item['id'],
-						)
-					),
-					'delete-follower_' . $item['id']
-				),
+				$this->get_action_url( 'delete', $item['id'] ),
 				/* translators: %s: username. */
 				\esc_attr( \sprintf( \__( 'Delete %s', 'activitypub' ), $item['username'] ) ),
 				\esc_html__( 'Delete', 'activitypub' )
@@ -410,15 +402,7 @@ class Followers extends \WP_List_Table {
 			if ( ! Following::check_status( $this->user_id, $item['id'] ) ) {
 				$actions['follow'] = \sprintf(
 					'<a href="%s" aria-label="%s">%s</a>',
-					\wp_nonce_url(
-						\add_query_arg(
-							array(
-								'action'   => 'follow',
-								'follower' => $item['id'],
-							)
-						),
-						'follow-follower_' . $item['id']
-					),
+					$this->get_action_url( 'follow', $item['id'] ),
 					/* translators: %s: username. */
 					\esc_attr( \sprintf( \__( 'Follow %s', 'activitypub' ), $item['username'] ) ),
 					\esc_html__( 'Follow back', 'activitypub' )

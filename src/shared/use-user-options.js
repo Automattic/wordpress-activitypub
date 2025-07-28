@@ -1,6 +1,7 @@
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
-import { useMemo } from '@wordpress/element';
+import { useMemo, useState, useEffect } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
 import { useOptions } from './use-options';
 
 /**
@@ -18,10 +19,34 @@ export function useUserOptions( { withInherit = false } ) {
 	 * @property {boolean} enabled.users - Whether users are enabled.
 	 * @property {boolean} enabled.blog - Whether the blog user is enabled.
 	 */
-	const { enabled } = useOptions();
-	const users = enabled?.users
+	const { enabled, namespace } = useOptions();
+	const fetchedUsers = enabled?.users
 		? useSelect( ( select ) => select( 'core' ).getUsers( { capabilities: 'activitypub' } ), [] )
 		: [];
+	const [ currentUserCanActivityPub, setCurrentUserCanActivityPub ] = useState( false );
+
+	// Only fetch current user and test capability if fetchedUsers failed
+	const currentUser = fetchedUsers === null ? useSelect( ( select ) => select( 'core' ).getCurrentUser(), [] ) : null;
+
+	// Test if current user has activitypub capability by trying to access their actor endpoint.
+	useEffect( () => {
+		if ( fetchedUsers !== null || ! currentUser || ! namespace ) {
+			return;
+		}
+
+		apiFetch( {
+			path: `/${ namespace }/actors/${ currentUser.id }`,
+			method: 'HEAD',
+			headers: { Accept: 'application/activity+json' },
+			parse: false,
+		} )
+			.then( () => setCurrentUserCanActivityPub( true ) )
+			.catch( () => setCurrentUserCanActivityPub( false ) );
+	}, [ fetchedUsers, currentUser?.id, namespace ] );
+
+	const users =
+		fetchedUsers ||
+		( currentUser && currentUserCanActivityPub ? [ { id: currentUser.id, name: currentUser.name } ] : [] );
 
 	/**
 	 * Memoized computation of user options for block settings.
@@ -32,7 +57,7 @@ export function useUserOptions( { withInherit = false } ) {
 		}
 		const userKeywords = [];
 
-		if ( enabled?.blog ) {
+		if ( enabled?.blog && fetchedUsers ) {
 			userKeywords.push( {
 				label: __( 'Blog', 'activitypub' ),
 				value: 'blog',
@@ -40,7 +65,7 @@ export function useUserOptions( { withInherit = false } ) {
 		}
 
 		// Only show the inherit option when explicitly asked for and users are enabled.
-		if ( withInherit && enabled?.users ) {
+		if ( withInherit && enabled?.users && fetchedUsers ) {
 			userKeywords.push( {
 				label: __( 'Dynamic User', 'activitypub' ),
 				value: 'inherit',
