@@ -48,4 +48,23 @@ trait Actor_List_Table {
 
 		return Webfinger::guess( $actor );
 	}
+
+	/**
+	 * Get the action URL for a follower.
+	 *
+	 * @param string $action   The action.
+	 * @param string $follower The follower ID.
+	 * @return string The action URL.
+	 */
+	private function get_action_url( $action, $follower ) {
+		return \wp_nonce_url(
+			\add_query_arg(
+				array(
+					'action'   => $action,
+					'follower' => $follower,
+				)
+			),
+			$action . '-follower_' . $follower
+		);
+	}
 }
