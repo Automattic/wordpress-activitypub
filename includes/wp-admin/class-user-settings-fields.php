@@ -323,12 +323,12 @@ class User_Settings_Fields {
 	 * Blocked actors field callback.
 	 */
 	public static function blocked_actors_callback() {
-		$user_id = \get_current_user_id();
+		$user_id        = \get_current_user_id();
 		$blocked_actors = Moderation::get_user_blocks( $user_id )['actors'];
-		
+
 		echo '<div class="activitypub-user-block-list" data-user-id="' . \esc_attr( $user_id ) . '">';
 		echo '<p class="description">' . \esc_html__( 'Block specific ActivityPub actors (users) by their full actor URL.', 'activitypub' ) . '</p>';
-		
+
 		if ( ! empty( $blocked_actors ) ) {
 			echo '<ul class="blocked-items-list">';
 			foreach ( $blocked_actors as $actor ) {
@@ -339,7 +339,7 @@ class User_Settings_Fields {
 			}
 			echo '</ul>';
 		}
-		
+
 		?>
 		<div class="add-user-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 			<input type="text" class="regular-text" id="new_user_actor" placeholder="<?php \esc_attr_e( 'https://example.com/@username', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
@@ -355,7 +355,7 @@ class User_Settings_Fields {
 	 * Blocked domains field callback.
 	 */
 	public static function blocked_domains_callback() {
-		$user_id = \get_current_user_id();
+		$user_id         = \get_current_user_id();
 		$blocked_domains = Moderation::get_user_blocks( $user_id )['domains'];
 		?>
 		<p class="description"><?php \esc_html_e( 'Block entire ActivityPub instances by domain name.', 'activitypub' ); ?></p>
@@ -390,7 +390,7 @@ class User_Settings_Fields {
 	 * Blocked keywords field callback.
 	 */
 	public static function blocked_keywords_callback() {
-		$user_id = \get_current_user_id();
+		$user_id          = \get_current_user_id();
 		$blocked_keywords = Moderation::get_user_blocks( $user_id )['keywords'];
 		?>
 		<p class="description"><?php \esc_html_e( 'Block ActivityPub content containing specific keywords.', 'activitypub' ); ?></p>

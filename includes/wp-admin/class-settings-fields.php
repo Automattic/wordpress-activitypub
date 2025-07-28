@@ -507,10 +507,10 @@ class Settings_Fields {
 	 */
 	public static function render_site_blocked_actors_field() {
 		$blocked_actors = Moderation::get_site_blocks()['actors'];
-		
+
 		echo '<div class="activitypub-site-block-list">';
 		echo '<p class="description">' . \esc_html__( 'Block specific ActivityPub actors (users) by their full actor URL.', 'activitypub' ) . '</p>';
-		
+
 		if ( ! empty( $blocked_actors ) ) {
 			echo '<ul class="blocked-items-list">';
 			foreach ( $blocked_actors as $actor ) {
@@ -521,7 +521,7 @@ class Settings_Fields {
 			}
 			echo '</ul>';
 		}
-		
+
 		?>
 		<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 			<input type="text" class="regular-text" id="new_site_actors" placeholder="<?php \esc_attr_e( 'https://example.com/@username', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />

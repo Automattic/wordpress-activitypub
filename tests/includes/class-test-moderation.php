@@ -377,7 +377,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 			'type'   => 'Create',
 			'actor'  => array(
 				'type' => 'Person',
-				// Missing 'id' field
+				// Missing 'id' field.
 			),
 			'object' => array(
 				'type'    => 'Note',
@@ -412,7 +412,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 			);
 
 			// Only exact domain matches should be blocked.
-			if ( $url === 'https://example.com/@user' || $url === 'http://example.com/@user' ) {
+			if ( 'https://example.com/@user' === $url || 'http://example.com/@user' === $url ) {
 				$this->assertTrue( Moderation::is_activity_blocked( $activity ), "URL $url should be blocked" );
 			} else {
 				$this->assertFalse( Moderation::is_activity_blocked( $activity ), "URL $url should not be blocked" );
@@ -458,7 +458,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 		// Test with zero user ID - WordPress treats user ID 0 specially, may return false.
 		$result = Moderation::add_user_block( 0, 'actor', 'https://example.com/@user' );
 		// User ID 0 might be handled differently by WordPress, so we allow both true/false.
-		$this->assertTrue( $result === false || $result !== false );
+		$this->assertFalse( $result );
 
 		// Test with negative user ID.
 		$this->assertNotFalse( Moderation::add_user_block( -1, 'actor', 'https://example.com/@user' ) );
