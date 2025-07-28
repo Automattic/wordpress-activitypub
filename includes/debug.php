@@ -7,6 +7,9 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Outbox;
+
 /**
  * Allow localhost URLs if WP_DEBUG is true.
  *
@@ -30,12 +33,17 @@ function allow_localhost( $parsed_args ) {
  * @return array The arguments for the post type.
  */
 function debug_outbox_post_type( $args, $post_type ) {
-	if ( 'ap_outbox' !== $post_type ) {
+	if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE ), true ) ) {
 		return $args;
 	}
 
-	$args['show_ui']   = true;
-	$args['menu_icon'] = 'dashicons-upload';
+	$args['show_ui'] = true;
+
+	if ( Outbox::POST_TYPE === $post_type ) {
+		$args['menu_icon'] = 'dashicons-upload';
+	} elseif ( Inbox::POST_TYPE === $post_type ) {
+		$args['menu_icon'] = 'dashicons-download';
+	}
 
 	return $args;
 }
@@ -77,3 +85,5 @@ function manage_posts_custom_column( $column_name, $post_id ) {
 	}
 }
 \add_action( 'manage_posts_custom_column', '\Activitypub\manage_posts_custom_column', 10, 2 );
+
+\add_filter( 'activitypub_defer_signature_verification', '__return_true', 99 );

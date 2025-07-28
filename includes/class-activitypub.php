@@ -10,6 +10,7 @@ namespace Activitypub;
 use Exception;
 use Activitypub\Options;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
@@ -633,8 +634,31 @@ class Activitypub {
 			)
 		);
 
+		// Register Outbox Post-Type.
+		register_post_type(
+			Inbox::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => _x( 'Inbox', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Inbox Item', 'post_type single name', 'activitypub' ),
+				),
+				'capabilities'        => array(
+					'create_posts' => false,
+				),
+				'map_meta_cap'        => true,
+				'public'              => false,
+				'show_in_rest'        => true,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'supports'            => array( 'title', 'editor', 'author', 'custom-fields' ),
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+			)
+		);
+
 		// Both User and Blog Extra Fields types have the same args.
-		$args = array(
+		$extra_field_args = array(
 			'labels'              => array(
 				'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
 				'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
@@ -660,8 +684,8 @@ class Activitypub {
 			'supports'            => array( 'title', 'editor', 'page-attributes' ),
 		);
 
-		\register_post_type( Extra_Fields::USER_POST_TYPE, $args );
-		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $args );
+		\register_post_type( Extra_Fields::USER_POST_TYPE, $extra_field_args );
+		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $extra_field_args );
 
 		/**
 		 * Fires after ActivityPub custom post types have been registered.

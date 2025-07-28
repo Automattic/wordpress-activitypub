@@ -19,7 +19,7 @@ class Inbox {
 	 */
 	public static function init() {
 		// Check if inbox collection persistence is enabled.
-		if ( boolval( \get_option( 'activitypub_persist_inbox', '0' ) ) ) {
+		if ( \get_option( 'activitypub_persist_inbox', '0' ) ) {
 			\add_action(
 				'activitypub_inbox',
 				array( self::class, 'handle_inbox_requests' ),
