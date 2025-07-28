@@ -35,6 +35,11 @@ class Inbox {
 			return $activity;
 		}
 
+		// Check for duplicate activity.
+		if ( self::get_by_id( $activity->get_id() ) ) {
+			return false;
+		}
+
 		$title      = self::get_object_title( $activity->get_object() );
 		$visibility = is_activity_public( $activity ) ? ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC : ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 
@@ -50,6 +55,7 @@ class Inbox {
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
+			'guid'         => $activity->get_id(),
 			'meta_input'   => array(
 				'_activitypub_object_id'             => object_to_uri( $activity->get_object() ),
 				'_activitypub_activity_type'         => $activity->get_type(),
@@ -107,5 +113,26 @@ class Inbox {
 		}
 
 		return $title;
+	}
+
+	/**
+	 * Get the inbox item by activity id.
+	 *
+	 * @param string $guid The activity id.
+	 *
+	 * @return int|null The inbox item id or null if not found.
+	 */
+	public static function get_by_id( $guid ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				\esc_url( $guid ),
+				self::POST_TYPE
+			)
+		);
+
+		return $post_id ? true : false;
 	}
 }
