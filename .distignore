@@ -32,6 +32,7 @@ Gruntfile.js
 gulpfile.js
 LICENSE.md
 LINGUAS
+local
 Makefile
 node_modules
 npm-debug.log
