@@ -6,7 +6,7 @@
  */
 
 \define( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS', false );
-\define( 'WP_ENVIRONMENT_TYPE', 'development' );
+\define( 'WP_ENVIRONMENT_TYPE', 'staging' );
 
 \define( 'AP_TESTS_DIR', __DIR__ );
 $_tests_dir = \getenv( 'WP_TESTS_DIR' );
