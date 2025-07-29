@@ -85,5 +85,3 @@ function manage_posts_custom_column( $column_name, $post_id ) {
 	}
 }
 \add_action( 'manage_posts_custom_column', '\Activitypub\manage_posts_custom_column', 10, 2 );
-
-\add_filter( 'activitypub_defer_signature_verification', '__return_true', 99 );
