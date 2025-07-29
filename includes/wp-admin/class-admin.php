@@ -802,10 +802,10 @@ class Admin {
 	 * AJAX handler for moderation settings (add/remove blocks).
 	 */
 	public static function ajax_moderation_settings() {
-		$context = \sanitize_text_field( \wp_unslash( $_POST['context'] ?? '' ) );
+		$context   = \sanitize_text_field( \wp_unslash( $_POST['context'] ?? '' ) );
 		$operation = \sanitize_text_field( \wp_unslash( $_POST['operation'] ?? '' ) );
-		$type    = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
-		$value   = \sanitize_text_field( \wp_unslash( $_POST['value'] ?? '' ) );
+		$type      = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
+		$value     = \sanitize_text_field( \wp_unslash( $_POST['value'] ?? '' ) );
 
 		// Validate required parameters.
 		if ( ! in_array( $context, array( 'user', 'site' ), true ) || ! in_array( $operation, array( 'add', 'remove' ), true ) ) {
