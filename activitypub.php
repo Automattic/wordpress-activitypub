@@ -85,15 +85,15 @@ function plugin_init() {
 
 	// Load development tools.
 	if ( 'local' === wp_get_environment_type() ) {
-		$dev_loader = __DIR__ . '/development/load.php';
-		if ( file_exists( $dev_loader ) && is_readable( $dev_loader ) ) {
-			require_once $dev_loader;
+		$loader_file = __DIR__ . '/local/load.php';
+		if ( \file_exists( $loader_file ) && \is_readable( $loader_file ) ) {
+			require_once $loader_file;
 		}
 	}
 
 	if ( \defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 		$debug_file = __DIR__ . '/includes/debug.php';
-		if ( file_exists( $debug_file ) && is_readable( $debug_file ) ) {
+		if ( \file_exists( $debug_file ) && \is_readable( $debug_file ) ) {
 			require_once $debug_file;
 			Debug::init();
 		}

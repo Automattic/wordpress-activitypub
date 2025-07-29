@@ -6,7 +6,8 @@
 			"config": {
 				"WP_TESTS_DOMAIN": "example.org",
 				"WP_SITEURL": "http://example.org",
-				"WP_HOME": "http://example.org"
+				"WP_HOME": "http://example.org",
+				"WP_ENVIRONMENT_TYPE": "production"
 			},
 			"port": 80,
 			"mappings": {

@@ -7,6 +7,10 @@
 
 use Activitypub\Blocks;
 
+if ( is_activitypub_request() || is_feed() ) {
+	return;
+}
+
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
 
