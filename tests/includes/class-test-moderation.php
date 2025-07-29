@@ -39,6 +39,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 		// Clear all existing blocks to ensure clean state.
 		$this->clean_moderation_data();
+
+		add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_actor' ), 10, 2 );
 	}
 
 	/**
@@ -46,7 +48,29 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 */
 	public function tear_down(): void {
 		$this->clean_moderation_data();
+		remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_actor' ) );
+
 		parent::tear_down();
+	}
+
+	/**
+	 * Mock remote actor response for testing.
+	 *
+	 * @param mixed  $response      The pre-filtered response.
+	 * @param string $url_or_object The URL or object being requested.
+	 *
+	 * @return mixed The mocked response or the original response.
+	 */
+	public function mock_remote_actor( $response, $url_or_object ) {
+		if ( 'https://example.com/@user' === $url_or_object ) {
+			$response = array(
+				'id'   => 'https://example.com/@user',
+				'type' => 'Person',
+				'guid' => 'https://example.com/@user',
+			);
+		}
+
+		return $response;
 	}
 
 	/**
