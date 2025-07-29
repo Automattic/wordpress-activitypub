@@ -107,11 +107,13 @@
 				return;
 			}
 
-			wp.ajax.post( 'activitypub_add_user_block', {
+			wp.ajax.post( 'activitypub_moderation_settings', {
+				context: 'user',
+				operation: 'add',
 				user_id: userId,
 				type: type,
 				value: value,
-				_wpnonce: activitypubModerationL10n.userNonce
+				_wpnonce: activitypubModerationL10n.nonce
 			}).done( function() {
 				// Clear input and add item to the UI.
 				input.val( '' );
@@ -128,11 +130,13 @@
 
 		// Function to remove user blocked term.
 		function removeUserBlockedTerm( type, value, userId ) {
-			wp.ajax.post( 'activitypub_remove_user_block', {
+			wp.ajax.post( 'activitypub_moderation_settings', {
+				context: 'user',
+				operation: 'remove',
 				user_id: userId,
 				type: type,
 				value: value,
-				_wpnonce: activitypubModerationL10n.userNonce
+				_wpnonce: activitypubModerationL10n.nonce
 			}).done( function() {
 				removeBlockedTermFromUI( type, value, 'user' );
 			}).fail( function( response ) {
@@ -192,10 +196,12 @@
 				return;
 			}
 
-			wp.ajax.post( 'activitypub_add_site_block', {
+			wp.ajax.post( 'activitypub_moderation_settings', {
+				context: 'site',
+				operation: 'add',
 				type: type,
 				value: value,
-				_wpnonce: activitypubModerationL10n.siteNonce
+				_wpnonce: activitypubModerationL10n.nonce
 			}).done( function() {
 				// Clear input and add item to the UI.
 				input.val( '' );
@@ -212,10 +218,12 @@
 
 		// Function to remove site blocked term.
 		function removeSiteBlockedTerm( type, value ) {
-			wp.ajax.post( 'activitypub_remove_site_block', {
+			wp.ajax.post( 'activitypub_moderation_settings', {
+				context: 'site',
+				operation: 'remove',
 				type: type,
 				value: value,
-				_wpnonce: activitypubModerationL10n.siteNonce
+				_wpnonce: activitypubModerationL10n.nonce
 			}).done( function() {
 				removeBlockedTermFromUI( type, value, 'site' );
 			}).fail( function( response ) {
