@@ -57,7 +57,7 @@ class Settings_Fields {
 
 		add_settings_section(
 			'activitypub_moderation',
-			__( 'Moderation', 'activitypub' ),
+			\esc_html__( 'Moderation', 'activitypub' ),
 			array( self::class, 'render_moderation_section_description' ),
 			'activitypub_settings'
 		);
@@ -154,7 +154,7 @@ class Settings_Fields {
 
 		add_settings_field(
 			'activitypub_site_blocked_domains',
-			\__( 'Blocked Domains', 'activitypub' ),
+			\esc_html__( 'Blocked Domains', 'activitypub' ),
 			array( self::class, 'render_site_blocked_domains_field' ),
 			'activitypub_settings',
 			'activitypub_moderation'
@@ -162,7 +162,7 @@ class Settings_Fields {
 
 		add_settings_field(
 			'activitypub_site_blocked_keywords',
-			\__( 'Blocked Keywords', 'activitypub' ),
+			\esc_html__( 'Blocked Keywords', 'activitypub' ),
 			array( self::class, 'render_site_blocked_keywords_field' ),
 			'activitypub_settings',
 			'activitypub_moderation'

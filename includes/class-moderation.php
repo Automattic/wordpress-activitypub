@@ -106,7 +106,7 @@ class Moderation {
 	}
 
 	/**
-	 * Check activity against block lists.
+	 * Check activity against blocklists.
 	 *
 	 * @param array $activity_data    The activity data.
 	 * @param array $blocked_actors   List of blocked actors.

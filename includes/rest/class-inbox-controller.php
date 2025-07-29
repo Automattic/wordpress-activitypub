@@ -161,7 +161,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				}
 
 				// Check user-specific blocks for this recipient.
-				if ( Moderation::activity_is_blocked( $data, $actor->get__id() ) ) {
+				if ( Moderation::activity_is_blocked_for_user( $data, $actor->get__id() ) ) {
 					/**
 					 * ActivityPub inbox disallowed activity for specific user.
 					 *
@@ -170,7 +170,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 					 * @param string             $type     The type of the activity.
 					 * @param Activity|\WP_Error $activity The Activity object.
 					 */
-					do_action( 'activitypub_rest_inbox_disallowed', $data, $actor->get__id(), $type, $activity );
+					\do_action( 'activitypub_rest_inbox_disallowed', $data, $actor->get__id(), $type, $activity );
 					continue;
 				}
 
