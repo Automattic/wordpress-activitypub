@@ -472,7 +472,7 @@ class Settings_Fields {
 
 		<div class="activitypub-site-block-list">
 			<?php if ( ! empty( $blocked_domains ) ) : ?>
-			<table class="widefat striped activitypub-site-blocked-domains" role="presentation" style="max-width: 500px; margin: 15px 0;">
+			<table class="widefat striped activitypub-site-blocked-domain" role="presentation" style="max-width: 500px; margin: 15px 0;">
 				<?php foreach ( $blocked_domains as $domain ) : ?>
 					<tr>
 						<td><?php echo \esc_html( $domain ); ?></td>
@@ -506,7 +506,7 @@ class Settings_Fields {
 
 		<div class="activitypub-site-block-list">
 			<?php if ( ! empty( $blocked_keywords ) ) : ?>
-			<table class="widefat striped activitypub-site-blocked-keywords" role="presentation" style="max-width: 500px; margin: 15px 0;">
+			<table class="widefat striped activitypub-site-blocked-keyword" role="presentation" style="max-width: 500px; margin: 15px 0;">
 				<?php foreach ( $blocked_keywords as $keyword ) : ?>
 					<tr>
 						<td><?php echo \esc_html( $keyword ); ?></td>

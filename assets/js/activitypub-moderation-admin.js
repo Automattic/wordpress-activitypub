@@ -10,21 +10,21 @@
 	 */
 	function addBlockedTermToUI( type, value, context, userId ) {
 		if ( context === 'user' ) {
-			// For user moderation, add to the appropriate list
+			// For user moderation, add to the appropriate table
 			var container = $( '.activitypub-user-block-list[data-user-id="' + userId + '"]' );
 			
-			var table = container.find( '.activitypub-blocked-' + type + 's' );
+			var table = container.find( '.activitypub-blocked-' + type );
 			if ( table.length === 0 ) {
-				table = $( '<table class="widefat striped activitypub-blocked-' + type + 's" role="presentation" style="max-width: 500px; margin: 15px 0;"></table>' );
+				table = $( '<table class="widefat striped activitypub-blocked-' + type + '" role="presentation" style="max-width: 500px; margin: 15px 0;"></table>' );
 				container.find( '#new_user_' + type ).closest( '.add-user-block-form' ).before( table );
 			}
 			table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-user-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
 		} else if ( context === 'site' ) {
-			// For site moderation, add to the appropriate section
+			// For site moderation, add to the appropriate table
 			var container = $( '#new_site_' + type ).closest( '.activitypub-site-block-list' );
-			var table = container.find( '.activitypub-site-blocked-' + type + 's' );
+			var table = container.find( '.activitypub-site-blocked-' + type );
 			if ( table.length === 0 ) {
-				table = $( '<table class="widefat striped activitypub-site-blocked-' + type + 's" role="presentation" style="max-width: 500px; margin: 15px 0;"></table>' );
+				table = $( '<table class="widefat striped activitypub-site-blocked-' + type + '" role="presentation" style="max-width: 500px; margin: 15px 0;"></table>' );
 				container.find( '.add-site-block-form' ).before( table );
 			}
 			table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-site-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
@@ -40,19 +40,13 @@
 		var button = $( selector );
 		
 		if ( button.length > 0 ) {
-			// Remove the parent list item or table row
-			var parent = button.closest( 'li, tr' );
-			var container = parent.closest( 'ul, table' );
+			// Remove the parent table row
+			var parent = button.closest( 'tr' );
+			var container = parent.closest( 'table' );
 			parent.remove();
 			
 			// If the container is now empty, remove it
-			// For tables, check if there are any rows left in tbody
-			if ( container.is( 'table' ) ) {
-				if ( container.find( 'tr' ).length === 0 ) {
-					container.remove();
-				}
-			} else if ( container.children().length === 0 ) {
-				// For lists, check if there are any children left
+			if ( container.find( 'tr' ).length === 0 ) {
 				container.remove();
 			}
 		}

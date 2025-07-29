@@ -319,10 +319,10 @@ class User_Settings_Fields {
 		$blocked_domains = Moderation::get_user_blocks( $user_id )['domains'];
 		?>
 		<p class="description"><?php \esc_html_e( 'Block entire ActivityPub instances by domain name.', 'activitypub' ); ?></p>
-		
+
 		<div class="activitypub-user-block-list" data-user-id="<?php echo \esc_attr( $user_id ); ?>">
 			<?php if ( ! empty( $blocked_domains ) ) : ?>
-			<table class="widefat striped activitypub-blocked-domains" role="presentation" style="max-width: 500px; margin: 15px 0;">
+			<table class="widefat striped activitypub-blocked-domain" role="presentation" style="max-width: 500px; margin: 15px 0;">
 				<?php foreach ( $blocked_domains as $domain ) : ?>
 					<tr>
 						<td><?php echo \esc_html( $domain ); ?></td>
@@ -335,7 +335,7 @@ class User_Settings_Fields {
 				<?php endforeach; ?>
 			</table>
 			<?php endif; ?>
-			
+
 			<div class="add-user-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 				<input type="text" class="regular-text" id="new_user_domain" placeholder="<?php \esc_attr_e( 'example.com', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
 				<button type="button" class="button add-user-block-btn" data-type="domain" style="flex-shrink: 0; white-space: nowrap;">
@@ -354,10 +354,10 @@ class User_Settings_Fields {
 		$blocked_keywords = Moderation::get_user_blocks( $user_id )['keywords'];
 		?>
 		<p class="description"><?php \esc_html_e( 'Block ActivityPub content containing specific keywords.', 'activitypub' ); ?></p>
-		
+
 		<div class="activitypub-user-block-list" data-user-id="<?php echo \esc_attr( $user_id ); ?>">
 			<?php if ( ! empty( $blocked_keywords ) ) : ?>
-			<table class="widefat striped activitypub-blocked-keywords" role="presentation" style="max-width: 500px; margin: 15px 0;">
+			<table class="widefat striped activitypub-blocked-keyword" role="presentation" style="max-width: 500px; margin: 15px 0;">
 				<?php foreach ( $blocked_keywords as $keyword ) : ?>
 					<tr>
 						<td><?php echo \esc_html( $keyword ); ?></td>
@@ -370,7 +370,7 @@ class User_Settings_Fields {
 				<?php endforeach; ?>
 			</table>
 			<?php endif; ?>
-			
+
 			<div class="add-user-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 				<input type="text" class="regular-text" id="new_user_keyword" placeholder="<?php \esc_attr_e( 'spam keyword', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
 				<button type="button" class="button add-user-block-btn" data-type="keyword" style="flex-shrink: 0; white-space: nowrap;">
