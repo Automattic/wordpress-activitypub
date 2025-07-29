@@ -10,6 +10,8 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 
+use function Activitypub\user_can_activitypub;
+
 /**
  * Heartbeat API integration for ActivityPub.
  */
@@ -33,6 +35,10 @@ class Heartbeat {
 		$user_id = \get_current_screen()->id === 'settings_page_activitypub'
 			? Actors::BLOG_USER_ID
 			: \get_current_user_id();
+
+		if ( ! user_can_activitypub( $user_id ) ) {
+			return;
+		}
 
 		// Bail if there are no pending follows.
 		if ( 0 === Following::count_pending( $user_id ) ) {
