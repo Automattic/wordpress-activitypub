@@ -161,32 +161,29 @@ class Settings_Fields {
 			array( 'label_for' => 'activitypub_relays' )
 		);
 
-		// Only show moderation fields to users with manage_options capability.
-		if ( \current_user_can( 'manage_options' ) ) {
-			add_settings_field(
-				'activitypub_site_blocked_actors',
-				__( 'Blocked Actors', 'activitypub' ),
-				array( self::class, 'render_site_blocked_actors_field' ),
-				'activitypub_settings',
-				'activitypub_moderation'
-			);
+		add_settings_field(
+			'activitypub_site_blocked_actors',
+			__( 'Blocked Actors', 'activitypub' ),
+			array( self::class, 'render_site_blocked_actors_field' ),
+			'activitypub_settings',
+			'activitypub_moderation'
+		);
 
-			add_settings_field(
-				'activitypub_site_blocked_domains',
-				__( 'Blocked Domains', 'activitypub' ),
-				array( self::class, 'render_site_blocked_domains_field' ),
-				'activitypub_settings',
-				'activitypub_moderation'
-			);
+		add_settings_field(
+			'activitypub_site_blocked_domains',
+			__( 'Blocked Domains', 'activitypub' ),
+			array( self::class, 'render_site_blocked_domains_field' ),
+			'activitypub_settings',
+			'activitypub_moderation'
+		);
 
-			add_settings_field(
-				'activitypub_site_blocked_keywords',
-				__( 'Blocked Keywords', 'activitypub' ),
-				array( self::class, 'render_site_blocked_keywords_field' ),
-				'activitypub_settings',
-				'activitypub_moderation'
-			);
-		}
+		add_settings_field(
+			'activitypub_site_blocked_keywords',
+			__( 'Blocked Keywords', 'activitypub' ),
+			array( self::class, 'render_site_blocked_keywords_field' ),
+			'activitypub_settings',
+			'activitypub_moderation'
+		);
 	}
 
 	/**
@@ -540,7 +537,7 @@ class Settings_Fields {
 		$blocked_domains = Moderation::get_site_blocks()['domains'];
 		?>
 		<p class="description"><?php \esc_html_e( 'Block entire ActivityPub instances by domain name.', 'activitypub' ); ?></p>
-		
+
 		<div class="activitypub-site-block-list">
 			<?php if ( ! empty( $blocked_domains ) ) : ?>
 			<table class="widefat striped activitypub-site-blocked-domains" role="presentation" style="max-width: 500px; margin: 15px 0;">
@@ -556,7 +553,7 @@ class Settings_Fields {
 				<?php endforeach; ?>
 			</table>
 			<?php endif; ?>
-			
+
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 				<input type="text" class="regular-text" id="new_site_domain" placeholder="<?php \esc_attr_e( 'example.com', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
 				<button type="button" class="button add-site-block-btn" data-type="domain" style="flex-shrink: 0; white-space: nowrap;">
@@ -574,7 +571,7 @@ class Settings_Fields {
 		$blocked_keywords = Moderation::get_site_blocks()['keywords'];
 		?>
 		<p class="description"><?php \esc_html_e( 'Block ActivityPub content containing specific keywords.', 'activitypub' ); ?></p>
-		
+
 		<div class="activitypub-site-block-list">
 			<?php if ( ! empty( $blocked_keywords ) ) : ?>
 			<table class="widefat striped activitypub-site-blocked-keywords" role="presentation" style="max-width: 500px; margin: 15px 0;">
@@ -590,7 +587,7 @@ class Settings_Fields {
 				<?php endforeach; ?>
 			</table>
 			<?php endif; ?>
-			
+
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 				<input type="text" class="regular-text" id="new_site_keyword" placeholder="<?php \esc_attr_e( 'spam keyword', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
 				<button type="button" class="button add-site-block-btn" data-type="keyword" style="flex-shrink: 0; white-space: nowrap;">
