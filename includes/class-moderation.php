@@ -15,36 +15,21 @@ use Activitypub\Activity\Activity;
  * Handles user-specific blocking and site-wide moderation.
  */
 class Moderation {
-
-	/**
-	 * User meta key for blocked actors.
-	 */
-	const USER_BLOCKED_ACTORS_META = 'activitypub_blocked_actors';
-
-	/**
-	 * User meta key for blocked domains.
-	 */
-	const USER_BLOCKED_DOMAINS_META = 'activitypub_blocked_domains';
-
 	/**
 	 * User meta key for blocked keywords.
 	 */
-	const USER_BLOCKED_KEYWORDS_META = 'activitypub_blocked_keywords';
-
-	/**
-	 * Option key for site-wide blocked actors.
-	 */
-	const SITE_BLOCKED_ACTORS_OPTION = 'activitypub_site_blocked_actors';
-
-	/**
-	 * Option key for site-wide blocked domains.
-	 */
-	const SITE_BLOCKED_DOMAINS_OPTION = 'activitypub_site_blocked_domains';
+	const USER_META_KEYS = array(
+		'domain'  => 'activitypub_blocked_domains',
+		'keyword' => 'activitypub_blocked_keywords',
+	);
 
 	/**
 	 * Option key for site-wide blocked keywords.
 	 */
-	const SITE_BLOCKED_KEYWORDS_OPTION = 'activitypub_site_blocked_keywords';
+	const OPTION_KEYS = array(
+		'domain'  => 'activitypub_site_blocked_domains',
+		'keyword' => 'activitypub_site_blocked_keywords',
+	);
 
 	/**
 	 * Check if an activity should be blocked for a specific user.
@@ -83,11 +68,9 @@ class Moderation {
 	 * @return bool True if blocked, false otherwise.
 	 */
 	public static function activity_is_blocked_site_wide( $activity_data ) {
-		$blocked_actors   = \get_option( self::SITE_BLOCKED_ACTORS_OPTION, array() );
-		$blocked_domains  = \get_option( self::SITE_BLOCKED_DOMAINS_OPTION, array() );
-		$blocked_keywords = \get_option( self::SITE_BLOCKED_KEYWORDS_OPTION, array() );
+		$blocks = self::get_site_blocks();
 
-		return self::check_activity_against_blocks( $activity_data, $blocked_actors, $blocked_domains, $blocked_keywords );
+		return self::check_activity_against_blocks( $activity_data, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
 	}
 
 	/**
@@ -98,11 +81,132 @@ class Moderation {
 	 * @return bool True if blocked, false otherwise.
 	 */
 	public static function activity_is_blocked_for_user( $activity_data, $user_id ) {
-		$blocked_actors   = \get_user_meta( $user_id, self::USER_BLOCKED_ACTORS_META, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-		$blocked_domains  = \get_user_meta( $user_id, self::USER_BLOCKED_DOMAINS_META, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-		$blocked_keywords = \get_user_meta( $user_id, self::USER_BLOCKED_KEYWORDS_META, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+		$blocks = self::get_user_blocks( $user_id );
 
-		return self::check_activity_against_blocks( $activity_data, $blocked_actors, $blocked_domains, $blocked_keywords );
+		return self::check_activity_against_blocks( $activity_data, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
+	}
+
+	/**
+	 * Add a block for a user.
+	 *
+	 * @param int    $user_id The user ID.
+	 * @param string $type    The block type (actor, domain, keyword).
+	 * @param string $value   The value to block.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function add_user_block( $user_id, $type, $value ) {
+		switch ( $type ) {
+			case 'domain':
+			case 'keyword':
+				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+
+				if ( ! in_array( $value, $blocks, true ) ) {
+					$blocks[] = $value;
+					return (bool) \update_user_meta( $user_id, self::USER_META_KEYS[ $type ], $blocks );
+				}
+				break;
+		}
+
+		return true; // Already blocked.
+	}
+
+	/**
+	 * Remove a block for a user.
+	 *
+	 * @param int    $user_id The user ID.
+	 * @param string $type    The block type (actor, domain, keyword).
+	 * @param string $value   The value to unblock.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function remove_user_block( $user_id, $type, $value ) {
+		switch ( $type ) {
+			case 'domain':
+			case 'keyword':
+				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+				$key    = array_search( $value, $blocks, true );
+
+				if ( false !== $key ) {
+					unset( $blocks[ $key ] );
+					return \update_user_meta( $user_id, self::USER_META_KEYS[ $type ], array_values( $blocks ) );
+				}
+				break;
+		}
+
+		return true; // Not blocked anyway.
+	}
+
+	/**
+	 * Get all blocks for a user.
+	 *
+	 * @param int $user_id The user ID.
+	 * @return array Array of blocks organized by type.
+	 */
+	public static function get_user_blocks( $user_id ) {
+		return array(
+			'actors'   => array(),
+			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS['domain'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS['keyword'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+		);
+	}
+
+	/**
+	 * Add a site-wide block.
+	 *
+	 * @param string $type  The block type (actor, domain, keyword).
+	 * @param string $value The value to block.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function add_site_block( $type, $value ) {
+		switch ( $type ) {
+			case 'domain':
+			case 'keyword':
+				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
+
+				if ( ! in_array( $value, $blocks, true ) ) {
+					$blocks[] = $value;
+					return \update_option( self::OPTION_KEYS[ $type ], $blocks );
+				}
+				break;
+		}
+
+		return true; // Already blocked.
+	}
+
+	/**
+	 * Remove a site-wide block.
+	 *
+	 * @param string $type  The block type (actor, domain, keyword).
+	 * @param string $value The value to unblock.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function remove_site_block( $type, $value ) {
+		switch ( $type ) {
+			case 'domain':
+			case 'keyword':
+				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
+				$key    = array_search( $value, $blocks, true );
+
+				if ( false !== $key ) {
+					unset( $blocks[ $key ] );
+					return \update_option( self::OPTION_KEYS[ $type ], array_values( $blocks ) );
+				}
+				break;
+		}
+
+		return true; // Not blocked anyway.
+	}
+
+	/**
+	 * Get all site-wide blocks.
+	 *
+	 * @return array Array of blocks organized by type.
+	 */
+	public static function get_site_blocks() {
+		return array(
+			'actors'   => array(),
+			'domains'  => \get_option( self::OPTION_KEYS['domain'], array() ),
+			'keywords' => \get_option( self::OPTION_KEYS['keyword'], array() ),
+		);
 	}
 
 	/**
@@ -143,168 +247,5 @@ class Moderation {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Add a block for a user.
-	 *
-	 * @param int    $user_id The user ID.
-	 * @param string $type    The block type (actor, domain, keyword).
-	 * @param string $value   The value to block.
-	 * @return bool True on success, false on failure.
-	 */
-	public static function add_user_block( $user_id, $type, $value ) {
-		$meta_key = self::get_user_meta_key_for_type( $type );
-		if ( ! $meta_key ) {
-			return false;
-		}
-
-		$blocks = \get_user_meta( $user_id, $meta_key, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-
-		if ( ! in_array( $value, $blocks, true ) ) {
-			$blocks[] = $value;
-			return \update_user_meta( $user_id, $meta_key, $blocks );
-		}
-
-		return true; // Already blocked.
-	}
-
-	/**
-	 * Remove a block for a user.
-	 *
-	 * @param int    $user_id The user ID.
-	 * @param string $type    The block type (actor, domain, keyword).
-	 * @param string $value   The value to unblock.
-	 * @return bool True on success, false on failure.
-	 */
-	public static function remove_user_block( $user_id, $type, $value ) {
-		$meta_key = self::get_user_meta_key_for_type( $type );
-		if ( ! $meta_key ) {
-			return false;
-		}
-
-		$blocks = \get_user_meta( $user_id, $meta_key, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-		$key    = array_search( $value, $blocks, true );
-
-		if ( false !== $key ) {
-			unset( $blocks[ $key ] );
-			$blocks = array_values( $blocks ); // Re-index array.
-			return \update_user_meta( $user_id, $meta_key, $blocks );
-		}
-
-		return true; // Not blocked anyway.
-	}
-
-	/**
-	 * Get all blocks for a user.
-	 *
-	 * @param int $user_id The user ID.
-	 * @return array Array of blocks organized by type.
-	 */
-	public static function get_user_blocks( $user_id ) {
-		return array(
-			'actors'   => \get_user_meta( $user_id, self::USER_BLOCKED_ACTORS_META, true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-			'domains'  => \get_user_meta( $user_id, self::USER_BLOCKED_DOMAINS_META, true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-			'keywords' => \get_user_meta( $user_id, self::USER_BLOCKED_KEYWORDS_META, true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-		);
-	}
-
-	/**
-	 * Add a site-wide block.
-	 *
-	 * @param string $type  The block type (actor, domain, keyword).
-	 * @param string $value The value to block.
-	 * @return bool True on success, false on failure.
-	 */
-	public static function add_site_block( $type, $value ) {
-		$option_key = self::get_site_option_key_for_type( $type );
-		if ( ! $option_key ) {
-			return false;
-		}
-
-		$blocks = \get_option( $option_key, array() );
-
-		if ( ! in_array( $value, $blocks, true ) ) {
-			$blocks[] = $value;
-			return \update_option( $option_key, $blocks );
-		}
-
-		return true; // Already blocked.
-	}
-
-	/**
-	 * Remove a site-wide block.
-	 *
-	 * @param string $type  The block type (actor, domain, keyword).
-	 * @param string $value The value to unblock.
-	 * @return bool True on success, false on failure.
-	 */
-	public static function remove_site_block( $type, $value ) {
-		$option_key = self::get_site_option_key_for_type( $type );
-		if ( ! $option_key ) {
-			return false;
-		}
-
-		$blocks = \get_option( $option_key, array() );
-		$key    = array_search( $value, $blocks, true );
-
-		if ( false !== $key ) {
-			unset( $blocks[ $key ] );
-			$blocks = array_values( $blocks ); // Re-index array.
-			return \update_option( $option_key, $blocks );
-		}
-
-		return true; // Not blocked anyway.
-	}
-
-	/**
-	 * Get all site-wide blocks.
-	 *
-	 * @return array Array of blocks organized by type.
-	 */
-	public static function get_site_blocks() {
-		return array(
-			'actors'   => \get_option( self::SITE_BLOCKED_ACTORS_OPTION, array() ),
-			'domains'  => \get_option( self::SITE_BLOCKED_DOMAINS_OPTION, array() ),
-			'keywords' => \get_option( self::SITE_BLOCKED_KEYWORDS_OPTION, array() ),
-		);
-	}
-
-	/**
-	 * Get user meta key for block type.
-	 *
-	 * @param string $type The block type.
-	 * @return string|false The meta key or false if invalid type.
-	 */
-	private static function get_user_meta_key_for_type( $type ) {
-		switch ( $type ) {
-			case 'actor':
-				return self::USER_BLOCKED_ACTORS_META;
-			case 'domain':
-				return self::USER_BLOCKED_DOMAINS_META;
-			case 'keyword':
-				return self::USER_BLOCKED_KEYWORDS_META;
-			default:
-				return false;
-		}
-	}
-
-	/**
-	 * Get site option key for block type.
-	 *
-	 * @param string $type The block type.
-	 * @return string|false The option key or false if invalid type.
-	 */
-	private static function get_site_option_key_for_type( $type ) {
-		switch ( $type ) {
-			case 'actor':
-				return self::SITE_BLOCKED_ACTORS_OPTION;
-			case 'domain':
-				return self::SITE_BLOCKED_DOMAINS_OPTION;
-			case 'keyword':
-				return self::SITE_BLOCKED_KEYWORDS_OPTION;
-			default:
-				return false;
-		}
 	}
 }

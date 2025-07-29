@@ -345,7 +345,7 @@ class Settings {
 				'description'       => 'Site-wide blocked ActivityPub domains.',
 				'default'           => array(),
 				'sanitize_callback' => function ( $value ) {
-					return \array_map( array( Sanitize::class, 'host_list' ), $value );
+					return \array_unique( \array_map( array( Sanitize::class, 'host_list' ), $value ) );
 				},
 			)
 		);

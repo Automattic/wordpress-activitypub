@@ -79,15 +79,13 @@ class Test_Moderation extends \WP_UnitTestCase {
 	private function clean_moderation_data() {
 		// Clean user meta.
 		if ( $this->test_user_id ) {
-			\delete_user_meta( $this->test_user_id, Moderation::USER_BLOCKED_ACTORS_META );
-			\delete_user_meta( $this->test_user_id, Moderation::USER_BLOCKED_DOMAINS_META );
-			\delete_user_meta( $this->test_user_id, Moderation::USER_BLOCKED_KEYWORDS_META );
+			\delete_user_meta( $this->test_user_id, Moderation::USER_META_KEYS['domain'] );
+			\delete_user_meta( $this->test_user_id, Moderation::USER_META_KEYS['keyword'] );
 		}
 
 		// Clean site options.
-		\delete_option( Moderation::SITE_BLOCKED_ACTORS_OPTION );
-		\delete_option( Moderation::SITE_BLOCKED_DOMAINS_OPTION );
-		\delete_option( Moderation::SITE_BLOCKED_KEYWORDS_OPTION );
+		\delete_option( Moderation::OPTION_KEYS['domain'] );
+		\delete_option( Moderation::OPTION_KEYS['keyword'] );
 
 		\wp_cache_flush();
 	}
@@ -97,12 +95,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 *
 	 * @covers ::add_user_block
 	 * @covers ::get_user_blocks
-	 * @covers ::get_user_meta_key_for_type
 	 */
 	public function test_add_user_block_valid_types() {
-		// Test actor block.
-		$this->assertNotFalse( Moderation::add_user_block( $this->test_user_id, 'actor', 'https://example.com/@user' ) );
-
 		// Test domain block.
 		$this->assertNotFalse( Moderation::add_user_block( $this->test_user_id, 'domain', 'spam.example.com' ) );
 
@@ -111,7 +105,6 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 		// Verify blocks were saved.
 		$blocks = Moderation::get_user_blocks( $this->test_user_id );
-		$this->assertContains( 'https://example.com/@user', $blocks['actors'] );
 		$this->assertContains( 'spam.example.com', $blocks['domains'] );
 		$this->assertContains( 'spam', $blocks['keywords'] );
 	}
@@ -120,12 +113,11 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * Test adding user blocks with invalid types.
 	 *
 	 * @covers ::add_user_block
-	 * @covers ::get_user_meta_key_for_type
 	 */
 	public function test_add_user_block_invalid_type() {
-		$this->assertFalse( Moderation::add_user_block( $this->test_user_id, 'invalid_type', 'value' ) );
-		$this->assertFalse( Moderation::add_user_block( $this->test_user_id, '', 'value' ) );
-		$this->assertFalse( Moderation::add_user_block( $this->test_user_id, null, 'value' ) );
+		$this->assertTrue( Moderation::add_user_block( $this->test_user_id, 'invalid_type', 'value' ) );
+		$this->assertTrue( Moderation::add_user_block( $this->test_user_id, '', 'value' ) );
+		$this->assertTrue( Moderation::add_user_block( $this->test_user_id, null, 'value' ) );
 	}
 
 	/**
@@ -135,17 +127,17 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * @covers ::get_user_blocks
 	 */
 	public function test_add_user_block_duplicate() {
-		$actor = 'https://example.com/@user';
+		$domain = 'spam.example.com';
 
 		// Add block first time.
-		$this->assertNotFalse( Moderation::add_user_block( $this->test_user_id, 'actor', $actor ) );
+		$this->assertTrue( Moderation::add_user_block( $this->test_user_id, 'domain', $domain ) );
 
 		// Add same block again - should return true but not duplicate.
-		$this->assertTrue( Moderation::add_user_block( $this->test_user_id, 'actor', $actor ) );
+		$this->assertTrue( Moderation::add_user_block( $this->test_user_id, 'domain', $domain ) );
 
 		$blocks = Moderation::get_user_blocks( $this->test_user_id );
-		$this->assertCount( 1, $blocks['actors'] );
-		$this->assertContains( $actor, $blocks['actors'] );
+		$this->assertCount( 1, $blocks['domains'] );
+		$this->assertContains( $domain, $blocks['domains'] );
 	}
 
 	/**
@@ -156,19 +148,16 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * @covers ::get_user_blocks
 	 */
 	public function test_remove_user_block() {
-		$actor  = 'https://example.com/@user';
 		$domain = 'spam.example.com';
 
 		// Add blocks first.
-		Moderation::add_user_block( $this->test_user_id, 'actor', $actor );
 		Moderation::add_user_block( $this->test_user_id, 'domain', $domain );
 
-		// Remove actor block.
-		$this->assertTrue( Moderation::remove_user_block( $this->test_user_id, 'actor', $actor ) );
+		// Remove domain block.
+		$this->assertTrue( Moderation::remove_user_block( $this->test_user_id, 'domain', $domain ) );
 
 		$blocks = Moderation::get_user_blocks( $this->test_user_id );
-		$this->assertNotContains( $actor, $blocks['actors'] );
-		$this->assertContains( $domain, $blocks['domains'] );
+		$this->assertNotContains( $domain, $blocks['domains'] );
 	}
 
 	/**
@@ -178,19 +167,18 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 */
 	public function test_remove_user_block_nonexistent() {
 		// Try to remove block that doesn't exist - should return true.
-		$this->assertTrue( Moderation::remove_user_block( $this->test_user_id, 'actor', 'https://nonexistent.com/@user' ) );
+		$this->assertTrue( Moderation::remove_user_block( $this->test_user_id, 'domain', 'https://nonexistent.com/@user' ) );
 	}
 
 	/**
 	 * Test removing user blocks with invalid types.
 	 *
 	 * @covers ::remove_user_block
-	 * @covers ::get_user_meta_key_for_type
 	 */
 	public function test_remove_user_block_invalid_type() {
-		$this->assertFalse( Moderation::remove_user_block( $this->test_user_id, 'invalid_type', 'value' ) );
-		$this->assertFalse( Moderation::remove_user_block( $this->test_user_id, '', 'value' ) );
-		$this->assertFalse( Moderation::remove_user_block( $this->test_user_id, null, 'value' ) );
+		$this->assertTrue( Moderation::remove_user_block( $this->test_user_id, 'invalid_type', 'value' ) );
+		$this->assertTrue( Moderation::remove_user_block( $this->test_user_id, '', 'value' ) );
+		$this->assertTrue( Moderation::remove_user_block( $this->test_user_id, null, 'value' ) );
 	}
 
 	/**
@@ -202,10 +190,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 		$blocks = Moderation::get_user_blocks( $this->test_user_id );
 
 		$this->assertIsArray( $blocks );
-		$this->assertArrayHasKey( 'actors', $blocks );
 		$this->assertArrayHasKey( 'domains', $blocks );
 		$this->assertArrayHasKey( 'keywords', $blocks );
-		$this->assertEmpty( $blocks['actors'] );
 		$this->assertEmpty( $blocks['domains'] );
 		$this->assertEmpty( $blocks['keywords'] );
 	}
@@ -218,12 +204,10 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * @covers ::get_site_option_key_for_type
 	 */
 	public function test_add_site_block() {
-		$this->assertTrue( Moderation::add_site_block( 'actor', 'https://bad.example.com/@spammer' ) );
 		$this->assertTrue( Moderation::add_site_block( 'domain', 'spam-instance.com' ) );
 		$this->assertTrue( Moderation::add_site_block( 'keyword', 'advertisement' ) );
 
 		$blocks = Moderation::get_site_blocks();
-		$this->assertContains( 'https://bad.example.com/@spammer', $blocks['actors'] );
 		$this->assertContains( 'spam-instance.com', $blocks['domains'] );
 		$this->assertContains( 'advertisement', $blocks['keywords'] );
 	}
@@ -235,13 +219,13 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * @covers ::get_site_blocks
 	 */
 	public function test_add_site_block_duplicate() {
-		$actor = 'https://bad.example.com/@spammer';
+		$domain = 'spam-instance.com';
 
-		$this->assertNotFalse( Moderation::add_site_block( 'actor', $actor ) );
-		$this->assertTrue( Moderation::add_site_block( 'actor', $actor ) );
+		$this->assertNotFalse( Moderation::add_site_block( 'domain', $domain ) );
+		$this->assertTrue( Moderation::add_site_block( 'domain', $domain ) );
 
 		$blocks = Moderation::get_site_blocks();
-		$this->assertCount( 1, $blocks['actors'] );
+		$this->assertCount( 1, $blocks['domains'] );
 	}
 
 	/**
@@ -252,13 +236,13 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * @covers ::get_site_blocks
 	 */
 	public function test_remove_site_block() {
-		$actor = 'https://bad.example.com/@spammer';
+		$domain = 'spam-instance.com';
 
-		Moderation::add_site_block( 'actor', $actor );
-		$this->assertTrue( Moderation::remove_site_block( 'actor', $actor ) );
+		Moderation::add_site_block( 'domain', $domain );
+		$this->assertTrue( Moderation::remove_site_block( 'domain', $domain ) );
 
 		$blocks = Moderation::get_site_blocks();
-		$this->assertNotContains( $actor, $blocks['actors'] );
+		$this->assertNotContains( $domain, $blocks['domains'] );
 	}
 
 	/**
@@ -271,20 +255,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 */
 	public function test_activity_is_blocked_site_wide() {
 		// Add site-wide blocks.
-		Moderation::add_site_block( 'actor', 'https://spam.example.com/@baduser' );
 		Moderation::add_site_block( 'domain', 'spam-instance.com' );
 		Moderation::add_site_block( 'keyword', 'buy now' );
-
-		// Test actor blocking.
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => 'https://spam.example.com/@baduser',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Hello world',
-			),
-		);
-		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 
 		// Test domain blocking.
 		$activity = array(
@@ -330,14 +302,13 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 */
 	public function test_activity_is_blocked_user_specific() {
 		// Add user-specific blocks.
-		Moderation::add_user_block( $this->test_user_id, 'actor', 'https://annoying.example.com/@user' );
 		Moderation::add_user_block( $this->test_user_id, 'domain', 'noise-instance.com' );
 		Moderation::add_user_block( $this->test_user_id, 'keyword', 'politics' );
 
 		// Test activity blocked for specific user but not site-wide.
 		$activity = array(
 			'type'   => 'Create',
-			'actor'  => 'https://annoying.example.com/@user',
+			'actor'  => 'https://noise-instance.com/@user',
 			'object' => array(
 				'type'    => 'Note',
 				'content' => 'Hello world',
@@ -360,14 +331,14 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * @covers ::add_site_block
 	 */
 	public function test_hierarchical_blocking() {
-		$actor = 'https://test.example.com/@user';
+		$domain = 'test.example.com';
 
 		// Add site-wide block.
-		Moderation::add_site_block( 'actor', $actor );
+		Moderation::add_site_block( 'domain', $domain );
 
 		$activity = array(
 			'type'   => 'Create',
-			'actor'  => $actor,
+			'actor'  => 'https://test.example.com/@user',
 			'object' => array(
 				'type'    => 'Note',
 				'content' => 'Hello world',
@@ -377,42 +348,6 @@ class Test_Moderation extends \WP_UnitTestCase {
 		// Should be blocked site-wide (takes precedence).
 		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 		$this->assertTrue( Moderation::activity_is_blocked( $activity, $this->test_user_id ) );
-	}
-
-	/**
-	 * Test activity blocking with complex actor formats.
-	 *
-	 * @covers ::activity_is_blocked
-	 * @covers ::activity_is_blocked_site_wide
-	 * @covers ::add_site_block
-	 */
-	public function test_activity_blocking_actor_formats() {
-		// Test with actor as string.
-		Moderation::add_site_block( 'actor', 'https://example.com/@user' );
-
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => 'https://example.com/@user',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Test',
-			),
-		);
-		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
-
-		// Test with actor as object.
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => array(
-				'id'   => 'https://example.com/@user',
-				'type' => 'Person',
-			),
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Test',
-			),
-		);
-		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 	}
 
 	/**
@@ -542,16 +477,16 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 */
 	public function test_invalid_user_ids() {
 		// Test with non-existent user ID.
-		$this->assertNotFalse( Moderation::add_user_block( 99999, 'actor', 'https://example.com/@user' ) );
-		$this->assertTrue( Moderation::remove_user_block( 99999, 'actor', 'https://example.com/@user' ) );
+		$this->assertNotFalse( Moderation::add_user_block( 99999, 'domain', 'example.com' ) );
+		$this->assertTrue( Moderation::remove_user_block( 99999, 'domain', 'example.com' ) );
 
 		// Test with zero user ID - WordPress treats user ID 0 specially, may return false.
-		$result = Moderation::add_user_block( 0, 'actor', 'https://example.com/@user' );
+		$result = Moderation::add_user_block( 0, 'domain', 'example.com' );
 		// User ID 0 might be handled differently by WordPress, so we allow both true/false.
 		$this->assertFalse( $result );
 
 		// Test with negative user ID.
-		$this->assertNotFalse( Moderation::add_user_block( -1, 'actor', 'https://example.com/@user' ) );
+		$this->assertNotFalse( Moderation::add_user_block( -1, 'domain', 'example.com' ) );
 	}
 
 	/**
@@ -607,30 +542,30 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * @covers ::get_user_blocks
 	 */
 	public function test_array_reindexing() {
-		$actors = array(
-			'https://example.com/@user1',
-			'https://example.com/@user2',
-			'https://example.com/@user3',
+		$domains = array(
+			'example.com',
+			'activitypub.blog',
+			'example.org',
 		);
 
-		// Add all actors.
-		foreach ( $actors as $actor ) {
-			Moderation::add_user_block( $this->test_user_id, 'actor', $actor );
+		// Add all domains.
+		foreach ( $domains as $domain ) {
+			Moderation::add_user_block( $this->test_user_id, 'domain', $domain );
 		}
 
-		// Remove middle actor.
-		Moderation::remove_user_block( $this->test_user_id, 'actor', $actors[1] );
+		// Remove middle domain.
+		Moderation::remove_user_block( $this->test_user_id, 'domain', $domains[1] );
 
 		$blocks = Moderation::get_user_blocks( $this->test_user_id );
 
 		// Array should be properly re-indexed.
-		$this->assertCount( 2, $blocks['actors'] );
-		$this->assertContains( $actors[0], $blocks['actors'] );
-		$this->assertContains( $actors[2], $blocks['actors'] );
-		$this->assertNotContains( $actors[1], $blocks['actors'] );
+		$this->assertCount( 2, $blocks['domains'] );
+		$this->assertContains( $domains[0], $blocks['domains'] );
+		$this->assertContains( $domains[2], $blocks['domains'] );
+		$this->assertNotContains( $domains[1], $blocks['domains'] );
 
 		// Keys should be sequential.
-		$this->assertEquals( array_values( $blocks['actors'] ), $blocks['actors'] );
+		$this->assertEquals( array_values( $blocks['domains'] ), $blocks['domains'] );
 	}
 
 	/**
