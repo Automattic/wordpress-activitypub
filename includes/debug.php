@@ -58,11 +58,11 @@ function debug_outbox_post_type( $args, $post_type ) {
  * @return array The updated columns.
  */
 function debug_outbox_post_type_column( $columns, $post_type ) {
-	if ( 'ap_outbox' !== $post_type ) {
+	if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE ), true ) ) {
 		return $columns;
 	}
 
-	$columns['ap_outbox_meta'] = 'Meta';
+	$columns['ap_meta'] = 'Meta';
 
 	return $columns;
 }
@@ -77,7 +77,7 @@ function debug_outbox_post_type_column( $columns, $post_type ) {
  * @return void
  */
 function manage_posts_custom_column( $column_name, $post_id ) {
-	if ( 'ap_outbox_meta' === $column_name ) {
+	if ( 'ap_meta' === $column_name ) {
 		$meta = \get_post_meta( $post_id );
 		foreach ( $meta as $key => $value ) {
 			echo \esc_attr( $key ) . ': ' . \esc_html( $value[0] ) . '<br>';
