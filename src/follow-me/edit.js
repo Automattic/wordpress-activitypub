@@ -137,7 +137,6 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
 	const usersOptions = useUserOptions( { withInherit: true } );
-	const { namespace } = useOptions();
 	const { selectedUser, className = 'is-style-default' } = attributes;
 	const isInheritMode = selectedUser === 'inherit';
 	const [ profile, setProfile ] = useState( getNormalizedProfile( DEFAULT_PROFILE_DATA ) );

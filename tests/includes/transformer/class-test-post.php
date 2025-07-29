@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Transformer;
 
+use Activitypub\Activity\Base_Object;
 use Activitypub\Transformer\Post;
 
 /**
@@ -732,5 +733,46 @@ class Test_Post extends \WP_UnitTestCase {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Test get_content method.
+	 *
+	 * @covers ::get_content
+	 */
+	public function test_get_content() {
+		$follow_me = '<!-- wp:activitypub/follow-me -->
+<div class="wp-block-activitypub-follow-me"><!-- wp:button -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">Follow</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:activitypub/follow-me -->';
+
+		$followers = '<!-- wp:activitypub/followers -->
+<div class="wp-block-activitypub-followers"><!-- wp:heading {"level":3,"placeholder":"Fediverse Followers"} -->
+<h3 class="wp-block-heading">Fediverse Followers</h3>
+<!-- /wp:heading --></div>
+<!-- /wp:activitypub/followers -->';
+
+		$reactions = '<!-- wp:activitypub/reactions -->
+<div class="wp-block-activitypub-reactions"><!-- wp:heading {"level":3,"placeholder":"Fediverse Reactions"} -->
+<h3 class="wp-block-heading">Fediverse Reactions</h3>
+<!-- /wp:heading --></div>
+<!-- /wp:activitypub/reactions -->';
+
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => implode( PHP_EOL, array( $follow_me, $followers, $reactions ) ),
+				'post_title'   => '',
+			)
+		);
+
+		$object      = new Base_Object();
+		$get_content = new \ReflectionMethod( Post::class, 'transform_object_properties' );
+
+		$get_content->setAccessible( true );
+
+		$object = $get_content->invoke( new Post( $post ), $object );
+
+		$this->assertEmpty( $object->get_content() );
 	}
 }

@@ -46,6 +46,13 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test environment.
+	 */
+	public function test_test_env() {
+		$this->assertEquals( 'production', \wp_get_environment_type() );
+	}
+
+	/**
 	 * Test post type support.
 	 *
 	 * @covers ::init

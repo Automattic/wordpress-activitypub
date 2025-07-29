@@ -9,7 +9,7 @@ namespace Activitypub\Development;
 
 \Activitypub\Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
-// Add development tools below.
+// Initialize local development tools below.
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	\WP_CLI::add_command(
