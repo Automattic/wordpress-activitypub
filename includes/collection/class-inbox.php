@@ -36,7 +36,7 @@ class Inbox {
 		}
 
 		// Check for duplicate activity.
-		if ( self::get_by_id( $activity->get_id() ) ) {
+		if ( ! \is_wp_error( self::get_by_guid( $activity->get_id() ) ) ) {
 			return false;
 		}
 
@@ -122,7 +122,7 @@ class Inbox {
 	 *
 	 * @return int|null The inbox item id or null if not found.
 	 */
-	public static function get_by_id( $guid ) {
+	public static function get_by_guid( $guid ) {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
@@ -133,6 +133,14 @@ class Inbox {
 			)
 		);
 
-		return $post_id ? true : false;
+		if ( ! $post_id ) {
+			return new \WP_Error(
+				'activitypub_inbox_item_not_found',
+				\__( 'Inbox item not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return \get_post( $post_id );
 	}
 }
