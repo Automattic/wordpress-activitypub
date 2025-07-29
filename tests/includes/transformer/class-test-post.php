@@ -736,7 +736,7 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_content.
+	 * Test get_content method.
 	 *
 	 * @covers ::get_content
 	 */
