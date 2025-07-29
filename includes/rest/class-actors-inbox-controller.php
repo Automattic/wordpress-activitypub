@@ -178,7 +178,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		$type     = \strtolower( $type );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		if ( Moderation::is_activity_blocked( $data, $user->get__id() ) ) {
+		if ( Moderation::activity_is_blocked( $data, $user->get__id() ) ) {
 			/**
 			 * ActivityPub inbox disallowed activity.
 			 *

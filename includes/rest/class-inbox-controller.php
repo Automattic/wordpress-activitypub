@@ -136,7 +136,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 		$type     = \strtolower( $request->get_param( 'type' ) );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		if ( Moderation::is_activity_blocked( $data ) ) {
+		if ( Moderation::activity_is_blocked( $data ) ) {
 			/**
 			 * ActivityPub inbox disallowed activity.
 			 *
@@ -161,7 +161,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				}
 
 				// Check user-specific blocks for this recipient.
-				if ( Moderation::is_activity_blocked( $data, $actor->get__id() ) ) {
+				if ( Moderation::activity_is_blocked( $data, $actor->get__id() ) ) {
 					/**
 					 * ActivityPub inbox disallowed activity for specific user.
 					 *

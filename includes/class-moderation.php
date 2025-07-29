@@ -7,6 +7,8 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Activity;
+
 /**
  * ActivityPub Moderation class.
  *
@@ -45,51 +47,32 @@ class Moderation {
 	const SITE_BLOCKED_KEYWORDS_OPTION = 'activitypub_site_blocked_keywords';
 
 	/**
-	 * Option key for site-wide moderation settings.
-	 */
-	const SITE_MODERATION_SETTINGS_OPTION = 'activitypub_moderation_settings';
-
-	/**
-	 * Initialize the moderation system.
-	 */
-	public static function init() {
-		\add_action( 'init', array( __CLASS__, 'register_hooks' ) );
-	}
-
-	/**
-	 * Register hooks.
-	 */
-	public static function register_hooks() {
-		// Hook can be added here for future extensions.
-	}
-
-	/**
 	 * Check if an activity should be blocked for a specific user.
 	 *
 	 * @param array    $activity_data The activity data.
 	 * @param int|null $user_id       The user ID to check blocks for.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function is_activity_blocked( $activity_data, $user_id = null ) {
+	public static function activity_is_blocked( $activity_data, $user_id = null ) {
 		// First check site-wide blocks (admin moderation).
-		if ( self::is_activity_blocked_site_wide( $activity_data ) ) {
+		if ( self::activity_is_blocked_site_wide( $activity_data ) ) {
 			return true;
 		}
 
 		// Then check user-specific blocks.
-		if ( $user_id && self::is_activity_blocked_for_user( $activity_data, $user_id ) ) {
+		if ( $user_id && self::activity_is_blocked_for_user( $activity_data, $user_id ) ) {
 			return true;
 		}
 
-		// Fall back to WordPress comment disallowed list.
+		// Convert to Activity object and get JSON like the original implementation.
 		if ( is_array( $activity_data ) ) {
-			// Convert to Activity object and get JSON like the original implementation.
-			$activity      = \Activitypub\Activity\Activity::init_from_array( $activity_data );
-			$activity_data = $activity->to_json( false );
+			$activity_data = Activity::init_from_array( $activity_data )->to_json( false );
 		}
 
-		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-		$user_agent  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+		$remote_addr = \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) );
+		$user_agent  = \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) );
+
+		// Fall back to WordPress comment disallowed list.
 		return \wp_check_comment_disallowed_list( $activity_data, '', '', '', $remote_addr, $user_agent );
 	}
 
@@ -99,39 +82,12 @@ class Moderation {
 	 * @param array $activity_data The activity data.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function is_activity_blocked_site_wide( $activity_data ) {
+	public static function activity_is_blocked_site_wide( $activity_data ) {
 		$blocked_actors   = \get_option( self::SITE_BLOCKED_ACTORS_OPTION, array() );
 		$blocked_domains  = \get_option( self::SITE_BLOCKED_DOMAINS_OPTION, array() );
 		$blocked_keywords = \get_option( self::SITE_BLOCKED_KEYWORDS_OPTION, array() );
 
-		// Extract actor information.
-		$actor_id = '';
-		if ( isset( $activity_data['actor'] ) ) {
-			$actor_id = is_string( $activity_data['actor'] ) ? $activity_data['actor'] : ( $activity_data['actor']['id'] ?? '' );
-		}
-
-		// Check blocked actors.
-		if ( $actor_id && in_array( $actor_id, $blocked_actors, true ) ) {
-			return true;
-		}
-
-		// Check blocked domains.
-		if ( $actor_id ) {
-			$domain = \wp_parse_url( $actor_id, PHP_URL_HOST );
-			if ( $domain && in_array( $domain, $blocked_domains, true ) ) {
-				return true;
-			}
-		}
-
-		// Check blocked keywords in activity content.
-		$activity_json = \wp_json_encode( $activity_data );
-		foreach ( $blocked_keywords as $keyword ) {
-			if ( stripos( $activity_json, $keyword ) !== false ) {
-				return true;
-			}
-		}
-
-		return false;
+		return self::check_activity_against_blocks( $activity_data, $blocked_actors, $blocked_domains, $blocked_keywords );
 	}
 
 	/**
@@ -141,11 +97,24 @@ class Moderation {
 	 * @param int   $user_id       The user ID.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function is_activity_blocked_for_user( $activity_data, $user_id ) {
+	public static function activity_is_blocked_for_user( $activity_data, $user_id ) {
 		$blocked_actors   = \get_user_meta( $user_id, self::USER_BLOCKED_ACTORS_META, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		$blocked_domains  = \get_user_meta( $user_id, self::USER_BLOCKED_DOMAINS_META, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		$blocked_keywords = \get_user_meta( $user_id, self::USER_BLOCKED_KEYWORDS_META, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 
+		return self::check_activity_against_blocks( $activity_data, $blocked_actors, $blocked_domains, $blocked_keywords );
+	}
+
+	/**
+	 * Check activity against block lists.
+	 *
+	 * @param array $activity_data    The activity data.
+	 * @param array $blocked_actors   List of blocked actors.
+	 * @param array $blocked_domains  List of blocked domains.
+	 * @param array $blocked_keywords List of blocked keywords.
+	 * @return bool True if blocked, false otherwise.
+	 */
+	private static function check_activity_against_blocks( $activity_data, $blocked_actors, $blocked_domains, $blocked_keywords ) {
 		// Extract actor information.
 		$actor_id = '';
 		if ( isset( $activity_data['actor'] ) ) {

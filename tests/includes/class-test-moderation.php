@@ -11,6 +11,8 @@ use Activitypub\Moderation;
 
 /**
  * Test class for ActivityPub Moderation.
+ *
+ * @coversDefaultClass \Activitypub\Moderation
  */
 class Test_Moderation extends \WP_UnitTestCase {
 
@@ -68,6 +70,10 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test adding user blocks for valid types.
+	 *
+	 * @covers ::add_user_block
+	 * @covers ::get_user_blocks
+	 * @covers ::get_user_meta_key_for_type
 	 */
 	public function test_add_user_block_valid_types() {
 		// Test actor block.
@@ -88,6 +94,9 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test adding user blocks with invalid types.
+	 *
+	 * @covers ::add_user_block
+	 * @covers ::get_user_meta_key_for_type
 	 */
 	public function test_add_user_block_invalid_type() {
 		$this->assertFalse( Moderation::add_user_block( $this->test_user_id, 'invalid_type', 'value' ) );
@@ -97,6 +106,9 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test adding duplicate user blocks.
+	 *
+	 * @covers ::add_user_block
+	 * @covers ::get_user_blocks
 	 */
 	public function test_add_user_block_duplicate() {
 		$actor = 'https://example.com/@user';
@@ -114,6 +126,10 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test removing user blocks.
+	 *
+	 * @covers ::remove_user_block
+	 * @covers ::add_user_block
+	 * @covers ::get_user_blocks
 	 */
 	public function test_remove_user_block() {
 		$actor  = 'https://example.com/@user';
@@ -133,6 +149,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test removing non-existent user blocks.
+	 *
+	 * @covers ::remove_user_block
 	 */
 	public function test_remove_user_block_nonexistent() {
 		// Try to remove block that doesn't exist - should return true.
@@ -141,6 +159,9 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test removing user blocks with invalid types.
+	 *
+	 * @covers ::remove_user_block
+	 * @covers ::get_user_meta_key_for_type
 	 */
 	public function test_remove_user_block_invalid_type() {
 		$this->assertFalse( Moderation::remove_user_block( $this->test_user_id, 'invalid_type', 'value' ) );
@@ -150,6 +171,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test getting user blocks for empty user.
+	 *
+	 * @covers ::get_user_blocks
 	 */
 	public function test_get_user_blocks_empty() {
 		$blocks = Moderation::get_user_blocks( $this->test_user_id );
@@ -165,6 +188,10 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test adding site blocks.
+	 *
+	 * @covers ::add_site_block
+	 * @covers ::get_site_blocks
+	 * @covers ::get_site_option_key_for_type
 	 */
 	public function test_add_site_block() {
 		$this->assertTrue( Moderation::add_site_block( 'actor', 'https://bad.example.com/@spammer' ) );
@@ -179,6 +206,9 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test adding duplicate site blocks.
+	 *
+	 * @covers ::add_site_block
+	 * @covers ::get_site_blocks
 	 */
 	public function test_add_site_block_duplicate() {
 		$actor = 'https://bad.example.com/@spammer';
@@ -192,6 +222,10 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test removing site blocks.
+	 *
+	 * @covers ::remove_site_block
+	 * @covers ::add_site_block
+	 * @covers ::get_site_blocks
 	 */
 	public function test_remove_site_block() {
 		$actor = 'https://bad.example.com/@spammer';
@@ -205,8 +239,13 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test activity blocking with site-wide blocks.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::activity_is_blocked_site_wide
+	 * @covers ::check_activity_against_blocks
+	 * @covers ::add_site_block
 	 */
-	public function test_is_activity_blocked_site_wide() {
+	public function test_activity_is_blocked_site_wide() {
 		// Add site-wide blocks.
 		Moderation::add_site_block( 'actor', 'https://spam.example.com/@baduser' );
 		Moderation::add_site_block( 'domain', 'spam-instance.com' );
@@ -221,7 +260,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'content' => 'Hello world',
 			),
 		);
-		$this->assertTrue( Moderation::is_activity_blocked( $activity ) );
+		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 
 		// Test domain blocking.
 		$activity = array(
@@ -232,7 +271,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'content' => 'Hello world',
 			),
 		);
-		$this->assertTrue( Moderation::is_activity_blocked( $activity ) );
+		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 
 		// Test keyword blocking.
 		$activity = array(
@@ -243,7 +282,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'content' => 'Check out this product, buy now!',
 			),
 		);
-		$this->assertTrue( Moderation::is_activity_blocked( $activity ) );
+		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 
 		// Test non-blocked activity.
 		$activity = array(
@@ -254,13 +293,18 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'content' => 'Hello everyone!',
 			),
 		);
-		$this->assertFalse( Moderation::is_activity_blocked( $activity ) );
+		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
 	}
 
 	/**
 	 * Test activity blocking with user-specific blocks.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::activity_is_blocked_for_user
+	 * @covers ::check_activity_against_blocks
+	 * @covers ::add_user_block
 	 */
-	public function test_is_activity_blocked_user_specific() {
+	public function test_activity_is_blocked_user_specific() {
 		// Add user-specific blocks.
 		Moderation::add_user_block( $this->test_user_id, 'actor', 'https://annoying.example.com/@user' );
 		Moderation::add_user_block( $this->test_user_id, 'domain', 'noise-instance.com' );
@@ -277,14 +321,19 @@ class Test_Moderation extends \WP_UnitTestCase {
 		);
 
 		// Should be blocked for the specific user.
-		$this->assertTrue( Moderation::is_activity_blocked( $activity, $this->test_user_id ) );
+		$this->assertTrue( Moderation::activity_is_blocked( $activity, $this->test_user_id ) );
 
 		// Should not be blocked site-wide.
-		$this->assertFalse( Moderation::is_activity_blocked( $activity ) );
+		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
 	}
 
 	/**
 	 * Test hierarchical blocking priority.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::activity_is_blocked_site_wide
+	 * @covers ::check_activity_against_blocks
+	 * @covers ::add_site_block
 	 */
 	public function test_hierarchical_blocking() {
 		$actor = 'https://test.example.com/@user';
@@ -302,12 +351,16 @@ class Test_Moderation extends \WP_UnitTestCase {
 		);
 
 		// Should be blocked site-wide (takes precedence).
-		$this->assertTrue( Moderation::is_activity_blocked( $activity ) );
-		$this->assertTrue( Moderation::is_activity_blocked( $activity, $this->test_user_id ) );
+		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
+		$this->assertTrue( Moderation::activity_is_blocked( $activity, $this->test_user_id ) );
 	}
 
 	/**
 	 * Test activity blocking with complex actor formats.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::activity_is_blocked_site_wide
+	 * @covers ::add_site_block
 	 */
 	public function test_activity_blocking_actor_formats() {
 		// Test with actor as string.
@@ -321,7 +374,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'content' => 'Test',
 			),
 		);
-		$this->assertTrue( Moderation::is_activity_blocked( $activity ) );
+		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 
 		// Test with actor as object.
 		$activity = array(
@@ -335,21 +388,23 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'content' => 'Test',
 			),
 		);
-		$this->assertTrue( Moderation::is_activity_blocked( $activity ) );
+		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 	}
 
 	/**
 	 * Test edge cases with malformed activity data.
+	 *
+	 * @covers ::activity_is_blocked
 	 */
 	public function test_activity_blocking_edge_cases() {
 		// Test with empty activity.
-		$this->assertFalse( Moderation::is_activity_blocked( array() ) );
+		$this->assertFalse( Moderation::activity_is_blocked( array() ) );
 
 		// Test with null activity.
-		$this->assertFalse( Moderation::is_activity_blocked( null ) );
+		$this->assertFalse( Moderation::activity_is_blocked( null ) );
 
 		// Test with non-array activity.
-		$this->assertFalse( Moderation::is_activity_blocked( 'invalid' ) );
+		$this->assertFalse( Moderation::activity_is_blocked( 'invalid' ) );
 
 		// Test with missing actor.
 		$activity = array(
@@ -359,7 +414,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'content' => 'Test',
 			),
 		);
-		$this->assertFalse( Moderation::is_activity_blocked( $activity ) );
+		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
 
 		// Test with empty actor.
 		$activity = array(
@@ -370,7 +425,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'content' => 'Test',
 			),
 		);
-		$this->assertFalse( Moderation::is_activity_blocked( $activity ) );
+		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
 
 		// Test with malformed actor object.
 		$activity = array(
@@ -384,11 +439,15 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'content' => 'Test',
 			),
 		);
-		$this->assertFalse( Moderation::is_activity_blocked( $activity ) );
+		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
 	}
 
 	/**
 	 * Test domain extraction from various URL formats.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::activity_is_blocked_site_wide
+	 * @covers ::add_site_block
 	 */
 	public function test_domain_blocking_url_formats() {
 		Moderation::add_site_block( 'domain', 'example.com' );
@@ -413,15 +472,19 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 			// Only exact domain matches should be blocked.
 			if ( 'https://example.com/@user' === $url || 'http://example.com/@user' === $url ) {
-				$this->assertTrue( Moderation::is_activity_blocked( $activity ), "URL $url should be blocked" );
+				$this->assertTrue( Moderation::activity_is_blocked( $activity ), "URL $url should be blocked" );
 			} else {
-				$this->assertFalse( Moderation::is_activity_blocked( $activity ), "URL $url should not be blocked" );
+				$this->assertFalse( Moderation::activity_is_blocked( $activity ), "URL $url should not be blocked" );
 			}
 		}
 	}
 
 	/**
 	 * Test keyword blocking case insensitivity.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::activity_is_blocked_site_wide
+	 * @covers ::add_site_block
 	 */
 	public function test_keyword_blocking_case_insensitive() {
 		Moderation::add_site_block( 'keyword', 'SPAM' );
@@ -443,12 +506,15 @@ class Test_Moderation extends \WP_UnitTestCase {
 				),
 			);
 
-			$this->assertTrue( Moderation::is_activity_blocked( $activity ), "Content '$content' should be blocked" );
+			$this->assertTrue( Moderation::activity_is_blocked( $activity ), "Content '$content' should be blocked" );
 		}
 	}
 
 	/**
 	 * Test with invalid user IDs.
+	 *
+	 * @covers ::add_user_block
+	 * @covers ::remove_user_block
 	 */
 	public function test_invalid_user_ids() {
 		// Test with non-existent user ID.
@@ -466,6 +532,10 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test with extremely long values.
+	 *
+	 * @covers ::add_user_block
+	 * @covers ::add_site_block
+	 * @covers ::get_user_blocks
 	 */
 	public function test_long_values() {
 		$long_value = str_repeat( 'a', 10000 );
@@ -479,6 +549,9 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test with special characters and Unicode.
+	 *
+	 * @covers ::add_user_block
+	 * @covers ::get_user_blocks
 	 */
 	public function test_special_characters() {
 		$special_values = array(
@@ -504,6 +577,10 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test array re-indexing after removal.
+	 *
+	 * @covers ::add_user_block
+	 * @covers ::remove_user_block
+	 * @covers ::get_user_blocks
 	 */
 	public function test_array_reindexing() {
 		$actors = array(
@@ -534,6 +611,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 	/**
 	 * Test WordPress comment disallowed list fallback.
+	 *
+	 * @covers ::activity_is_blocked
 	 */
 	public function test_wordpress_disallowed_list_fallback() {
 		\update_option( 'disallowed_keys', "badword\nspam.example.com" );
@@ -548,7 +627,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 		);
 
 		// Should be blocked by WordPress disallowed list.
-		$this->assertTrue( Moderation::is_activity_blocked( $activity ) );
+		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 
 		// Clean up.
 		\delete_option( 'disallowed_keys' );

@@ -74,7 +74,6 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Mailer', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ), 1 );
-	\add_action( 'init', array( __NAMESPACE__ . '\Moderation', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Move', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Options', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
