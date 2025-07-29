@@ -20,7 +20,8 @@ class Moderation {
 	 * Initialize the moderation admin functionality.
 	 */
 	public static function init() {
-		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
+		\add_action( 'admin_print_scripts-profile.php', array( self::class, 'enqueue_scripts' ) );
+		\add_action( 'admin_print_scripts-settings_page_activitypub', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'wp_ajax_activitypub_add_user_block', array( self::class, 'ajax_add_user_block' ) );
 		\add_action( 'wp_ajax_activitypub_remove_user_block', array( self::class, 'ajax_remove_user_block' ) );
 		\add_action( 'wp_ajax_activitypub_add_site_block', array( self::class, 'ajax_add_site_block' ) );
@@ -29,15 +30,8 @@ class Moderation {
 
 	/**
 	 * Enqueue admin scripts and styles.
-	 *
-	 * @param string $hook_suffix The current admin page.
 	 */
-	public static function enqueue_scripts( $hook_suffix ) {
-		// Only load on relevant admin pages.
-		if ( ! in_array( $hook_suffix, array( 'profile.php', 'user-edit.php', 'settings_page_activitypub' ), true ) ) {
-			return;
-		}
-
+	public static function enqueue_scripts() {
 		\wp_enqueue_script(
 			'activitypub-moderation-admin',
 			ACTIVITYPUB_PLUGIN_URL . 'assets/js/activitypub-moderation-admin.js',
@@ -64,7 +58,7 @@ class Moderation {
 	 * AJAX handler to add user block.
 	 */
 	public static function ajax_add_user_block() {
-		$user_id         = (int) ( $_POST['user_id'] ?? 0 );
+		$user_id         = (int) ( \sanitize_text_field( \wp_unslash( $_POST['user_id'] ?? 0 ) ) );
 		$current_user_id = \get_current_user_id();
 
 		// Check permissions.
@@ -72,12 +66,12 @@ class Moderation {
 			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
 		}
 
-		if ( ! \wp_verify_nonce( $_POST['_wpnonce'] ?? '', 'activitypub_user_moderation' ) ) {
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_user_moderation' ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
 		}
 
-		$type  = \sanitize_text_field( $_POST['type'] ?? '' );
-		$value = \sanitize_text_field( $_POST['value'] ?? '' );
+		$type  = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
+		$value = \sanitize_text_field( \wp_unslash( $_POST['value'] ?? '' ) );
 
 		if ( empty( $type ) || empty( $value ) || ! $user_id ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid parameters.', 'activitypub' ) ) );
@@ -96,7 +90,7 @@ class Moderation {
 	 * AJAX handler to remove user block.
 	 */
 	public static function ajax_remove_user_block() {
-		$user_id         = (int) ( $_POST['user_id'] ?? 0 );
+		$user_id         = (int) ( \sanitize_text_field( \wp_unslash( $_POST['user_id'] ?? 0 ) ) );
 		$current_user_id = \get_current_user_id();
 
 		// Check permissions.
@@ -104,12 +98,12 @@ class Moderation {
 			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
 		}
 
-		if ( ! \wp_verify_nonce( $_POST['_wpnonce'] ?? '', 'activitypub_user_moderation' ) ) {
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_user_moderation' ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
 		}
 
-		$type  = \sanitize_text_field( $_POST['type'] ?? '' );
-		$value = \sanitize_text_field( $_POST['value'] ?? '' );
+		$type  = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
+		$value = \sanitize_text_field( \wp_unslash( $_POST['value'] ?? '' ) );
 
 		if ( empty( $type ) || empty( $value ) || ! $user_id ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid parameters.', 'activitypub' ) ) );
@@ -132,12 +126,12 @@ class Moderation {
 			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
 		}
 
-		if ( ! \wp_verify_nonce( $_POST['_wpnonce'] ?? '', 'activitypub_site_moderation' ) ) {
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_site_moderation' ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
 		}
 
-		$type  = \sanitize_text_field( $_POST['type'] ?? '' );
-		$value = \sanitize_text_field( $_POST['value'] ?? '' );
+		$type  = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
+		$value = \sanitize_text_field( \wp_unslash( $_POST['value'] ?? '' ) );
 
 		if ( empty( $type ) || empty( $value ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid parameters.', 'activitypub' ) ) );
@@ -160,12 +154,12 @@ class Moderation {
 			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
 		}
 
-		if ( ! \wp_verify_nonce( $_POST['_wpnonce'] ?? '', 'activitypub_site_moderation' ) ) {
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_site_moderation' ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
 		}
 
-		$type  = \sanitize_text_field( $_POST['type'] ?? '' );
-		$value = \sanitize_text_field( $_POST['value'] ?? '' );
+		$type  = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
+		$value = \sanitize_text_field( \wp_unslash( $_POST['value'] ?? '' ) );
 
 		if ( empty( $type ) || empty( $value ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid parameters.', 'activitypub' ) ) );

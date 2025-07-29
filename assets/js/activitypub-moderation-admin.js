@@ -6,22 +6,94 @@
 	'use strict';
 
 	/**
-	 * Initialize moderation functionality
+	 * Helper function to add a blocked term to the UI
 	 */
-	function init() {
-		// User block management.
-		initUserBlocks();
-
-		// Site block management.
-		initSiteBlocks();
+	function addBlockedTermToUI( type, value, context, userId ) {
+		if ( context === 'user' ) {
+			// For user moderation, add to the appropriate list
+			var container = $( '.activitypub-user-block-list[data-user-id="' + userId + '"]' );
+			
+			if ( type === 'actor' ) {
+				var list = container.find( '.blocked-items-list' );
+				if ( list.length === 0 ) {
+					list = $( '<ul class="blocked-items-list"></ul>' );
+					container.find( '#new_user_' + type ).closest( '.add-user-block-form' ).before( list );
+				}
+				list.append( '<li>' + value + ' <button type="button" class="button button-small remove-user-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></li>' );
+			} else {
+				var table = container.find( '.activitypub-blocked-' + type + 's' );
+				if ( table.length === 0 ) {
+					table = $( '<table class="widefat striped activitypub-blocked-' + type + 's" role="presentation" style="max-width: 500px; margin: 15px 0;"></table>' );
+					container.find( '#new_user_' + type ).closest( '.add-user-block-form' ).before( table );
+				}
+				table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-user-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
+			}
+		} else if ( context === 'site' ) {
+			// For site moderation, add to the appropriate section
+			if ( type === 'actor' ) {
+				var container = $( '#new_site_' + type ).closest( '.activitypub-site-block-list' );
+				var list = container.find( '.blocked-items-list' );
+				if ( list.length === 0 ) {
+					list = $( '<ul class="blocked-items-list"></ul>' );
+					container.find( '.add-site-block-form' ).before( list );
+				}
+				list.append( '<li>' + value + ' <button type="button" class="button button-small remove-site-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></li>' );
+			} else {
+				var container = $( '#new_site_' + type ).closest( '.activitypub-site-block-list' );
+				var table = container.find( '.activitypub-site-blocked-' + type + 's' );
+				if ( table.length === 0 ) {
+					table = $( '<table class="widefat striped activitypub-site-blocked-' + type + 's" role="presentation" style="max-width: 500px; margin: 15px 0;"></table>' );
+					container.find( '.add-site-block-form' ).before( table );
+				}
+				table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-site-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
+			}
+		}
 	}
 
 	/**
-	 * Initialize user block management
+	 * Helper function to remove a blocked term from the UI
 	 */
-	function initUserBlocks() {
-		// Function to add user block.
-		function addUserBlock( type, userId ) {
+	function removeBlockedTermFromUI( type, value, context ) {
+		// Find and remove the specific blocked term element
+		var selector = '.remove-' + context + '-block-btn[data-type="' + type + '"][data-value="' + value + '"]';
+		var button = $( selector );
+		
+		if ( button.length > 0 ) {
+			// Remove the parent list item or table row
+			var parent = button.closest( 'li, tr' );
+			var container = parent.closest( 'ul, table' );
+			parent.remove();
+			
+			// If the container is now empty, remove it
+			// For tables, check if there are any rows left in tbody
+			if ( container.is( 'table' ) ) {
+				if ( container.find( 'tr' ).length === 0 ) {
+					container.remove();
+				}
+			} else if ( container.children().length === 0 ) {
+				// For lists, check if there are any children left
+				container.remove();
+			}
+		}
+	}
+
+	/**
+	 * Initialize moderation functionality
+	 */
+	function init() {
+		// User moderation management.
+		initUserModeration();
+
+		// Site moderation management.
+		initSiteModeration();
+	}
+
+	/**
+	 * Initialize user moderation management
+	 */
+	function initUserModeration() {
+		// Function to add user blocked term.
+		function addUserBlockedTerm( type, userId ) {
 			var input = $( '#new_user_' + type );
 			var value = input.val().trim();
 
@@ -41,9 +113,9 @@
 				value: value,
 				_wpnonce: activitypubModerationL10n.userNonce
 			}).done( function() {
-				// Clear input and reload page.
+				// Clear input and add item to the UI.
 				input.val( '' );
-				location.reload();
+				addBlockedTermToUI( type, value, 'user', userId );
 			}).fail( function( response ) {
 				var message = response && response.message ? response.message : activitypubModerationL10n.addBlockFailed;
 				if ( wp.a11y && wp.a11y.speak ) {
@@ -54,15 +126,15 @@
 			});
 		}
 
-		// Function to remove user block.
-		function removeUserBlock( type, value, userId ) {
+		// Function to remove user blocked term.
+		function removeUserBlockedTerm( type, value, userId ) {
 			wp.ajax.post( 'activitypub_remove_user_block', {
 				user_id: userId,
 				type: type,
 				value: value,
 				_wpnonce: activitypubModerationL10n.userNonce
 			}).done( function() {
-				location.reload();
+				removeBlockedTermFromUI( type, value, 'user' );
 			}).fail( function( response ) {
 				var message = response && response.message ? response.message : activitypubModerationL10n.removeBlockFailed;
 				if ( wp.a11y && wp.a11y.speak ) {
@@ -78,7 +150,7 @@
 			e.preventDefault();
 			var type = $( this ).data( 'type' );
 			var userId = $( this ).closest( '.activitypub-user-block-list' ).data( 'user-id' );
-			addUserBlock( type, userId );
+			addUserBlockedTerm( type, userId );
 		});
 
 		// Add user block functionality (Enter key).
@@ -88,7 +160,7 @@
 				var inputId = $( this ).attr( 'id' );
 				var type = inputId.replace( 'new_user_', '' );
 				var userId = $( this ).closest( '.activitypub-user-block-list' ).data( 'user-id' );
-				addUserBlock( type, userId );
+				addUserBlockedTerm( type, userId );
 			}
 		});
 
@@ -98,16 +170,16 @@
 			var type = $( this ).data( 'type' );
 			var value = $( this ).data( 'value' );
 			var userId = $( this ).closest( '.activitypub-user-block-list' ).data( 'user-id' );
-			removeUserBlock( type, value, userId );
+			removeUserBlockedTerm( type, value, userId );
 		});
 	}
 
 	/**
-	 * Initialize site block management
+	 * Initialize site moderation management
 	 */
-	function initSiteBlocks() {
-		// Function to add site block.
-		function addSiteBlock( type ) {
+	function initSiteModeration() {
+		// Function to add site blocked term.
+		function addSiteBlockedTerm( type ) {
 			var input = $( '#new_site_' + type );
 			var value = input.val().trim();
 
@@ -125,9 +197,9 @@
 				value: value,
 				_wpnonce: activitypubModerationL10n.siteNonce
 			}).done( function() {
-				// Clear input and reload page.
+				// Clear input and add item to the UI.
 				input.val( '' );
-				location.reload();
+				addBlockedTermToUI( type, value, 'site' );
 			}).fail( function( response ) {
 				var message = response && response.message ? response.message : activitypubModerationL10n.addBlockFailed;
 				if ( wp.a11y && wp.a11y.speak ) {
@@ -138,14 +210,14 @@
 			});
 		}
 
-		// Function to remove site block.
-		function removeSiteBlock( type, value ) {
+		// Function to remove site blocked term.
+		function removeSiteBlockedTerm( type, value ) {
 			wp.ajax.post( 'activitypub_remove_site_block', {
 				type: type,
 				value: value,
 				_wpnonce: activitypubModerationL10n.siteNonce
 			}).done( function() {
-				location.reload();
+				removeBlockedTermFromUI( type, value, 'site' );
 			}).fail( function( response ) {
 				var message = response && response.message ? response.message : activitypubModerationL10n.removeBlockFailed;
 				if ( wp.a11y && wp.a11y.speak ) {
@@ -160,16 +232,16 @@
 		$( document ).on( 'click', '.add-site-block-btn', function( e ) {
 			e.preventDefault();
 			var type = $( this ).data( 'type' );
-			addSiteBlock( type );
+			addSiteBlockedTerm( type );
 		});
 
 		// Add site block functionality (Enter key).
-		$( document ).on( 'keypress', '#new_site_actors, #new_site_domains, #new_site_keywords', function( e ) {
+		$( document ).on( 'keypress', '#new_site_actor, #new_site_domain, #new_site_keyword', function( e ) {
 			if ( e.which === 13 ) { // Enter key.
 				e.preventDefault();
 				var inputId = $( this ).attr( 'id' );
 				var type = inputId.replace( 'new_site_', '' );
-				addSiteBlock( type );
+				addSiteBlockedTerm( type );
 			}
 		});
 
@@ -178,7 +250,7 @@
 			e.preventDefault();
 			var type = $( this ).data( 'type' );
 			var value = $( this ).data( 'value' );
-			removeSiteBlock( type, value );
+			removeSiteBlockedTerm( type, value );
 		});
 	}
 

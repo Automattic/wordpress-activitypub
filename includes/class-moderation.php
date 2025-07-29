@@ -60,7 +60,7 @@ class Moderation {
 	 * Register hooks.
 	 */
 	public static function register_hooks() {
-		// Hook can be added here for future extensions
+		// Hook can be added here for future extensions.
 	}
 
 	/**
@@ -71,19 +71,26 @@ class Moderation {
 	 * @return bool True if blocked, false otherwise.
 	 */
 	public static function is_activity_blocked( $activity_data, $user_id = null ) {
-		// First check site-wide blocks (admin moderation)
+		// First check site-wide blocks (admin moderation).
 		if ( self::is_activity_blocked_site_wide( $activity_data ) ) {
 			return true;
 		}
 
-		// Then check user-specific blocks
+		// Then check user-specific blocks.
 		if ( $user_id && self::is_activity_blocked_for_user( $activity_data, $user_id ) ) {
 			return true;
 		}
 
-		// Fall back to WordPress comment disallowed list
-		$activity_json = is_array( $activity_data ) ? \wp_json_encode( $activity_data ) : $activity_data;
-		return \wp_check_comment_disallowed_list( $activity_json, '', '', '', $_SERVER['REMOTE_ADDR'] ?? '', $_SERVER['HTTP_USER_AGENT'] ?? '' );
+		// Fall back to WordPress comment disallowed list.
+		if ( is_array( $activity_data ) ) {
+			// Convert to Activity object and get JSON like the original implementation.
+			$activity      = \Activitypub\Activity\Activity::init_from_array( $activity_data );
+			$activity_data = $activity->to_json( false );
+		}
+
+		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		$user_agent  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+		return \wp_check_comment_disallowed_list( $activity_data, '', '', '', $remote_addr, $user_agent );
 	}
 
 	/**
@@ -135,9 +142,9 @@ class Moderation {
 	 * @return bool True if blocked, false otherwise.
 	 */
 	public static function is_activity_blocked_for_user( $activity_data, $user_id ) {
-		$blocked_actors   = \get_user_meta( $user_id, self::USER_BLOCKED_ACTORS_META, true ) ?: array();
-		$blocked_domains  = \get_user_meta( $user_id, self::USER_BLOCKED_DOMAINS_META, true ) ?: array();
-		$blocked_keywords = \get_user_meta( $user_id, self::USER_BLOCKED_KEYWORDS_META, true ) ?: array();
+		$blocked_actors   = \get_user_meta( $user_id, self::USER_BLOCKED_ACTORS_META, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+		$blocked_domains  = \get_user_meta( $user_id, self::USER_BLOCKED_DOMAINS_META, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+		$blocked_keywords = \get_user_meta( $user_id, self::USER_BLOCKED_KEYWORDS_META, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 
 		// Extract actor information.
 		$actor_id = '';
@@ -183,7 +190,7 @@ class Moderation {
 			return false;
 		}
 
-		$blocks = \get_user_meta( $user_id, $meta_key, true ) ?: array();
+		$blocks = \get_user_meta( $user_id, $meta_key, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 
 		if ( ! in_array( $value, $blocks, true ) ) {
 			$blocks[] = $value;
@@ -207,10 +214,10 @@ class Moderation {
 			return false;
 		}
 
-		$blocks = \get_user_meta( $user_id, $meta_key, true ) ?: array();
+		$blocks = \get_user_meta( $user_id, $meta_key, true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		$key    = array_search( $value, $blocks, true );
 
-		if ( $key !== false ) {
+		if ( false !== $key ) {
 			unset( $blocks[ $key ] );
 			$blocks = array_values( $blocks ); // Re-index array.
 			return \update_user_meta( $user_id, $meta_key, $blocks );
@@ -227,9 +234,9 @@ class Moderation {
 	 */
 	public static function get_user_blocks( $user_id ) {
 		return array(
-			'actors'   => \get_user_meta( $user_id, self::USER_BLOCKED_ACTORS_META, true ) ?: array(),
-			'domains'  => \get_user_meta( $user_id, self::USER_BLOCKED_DOMAINS_META, true ) ?: array(),
-			'keywords' => \get_user_meta( $user_id, self::USER_BLOCKED_KEYWORDS_META, true ) ?: array(),
+			'actors'   => \get_user_meta( $user_id, self::USER_BLOCKED_ACTORS_META, true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'domains'  => \get_user_meta( $user_id, self::USER_BLOCKED_DOMAINS_META, true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'keywords' => \get_user_meta( $user_id, self::USER_BLOCKED_KEYWORDS_META, true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		);
 	}
 
@@ -272,7 +279,7 @@ class Moderation {
 		$blocks = \get_option( $option_key, array() );
 		$key    = array_search( $value, $blocks, true );
 
-		if ( $key !== false ) {
+		if ( false !== $key ) {
 			unset( $blocks[ $key ] );
 			$blocks = array_values( $blocks ); // Re-index array.
 			return \update_option( $option_key, $blocks );

@@ -161,7 +161,7 @@ class Settings_Fields {
 			array( 'label_for' => 'activitypub_relays' )
 		);
 
-		// Only show moderation fields to users with manage_options capability
+		// Only show moderation fields to users with manage_options capability.
 		if ( \current_user_can( 'manage_options' ) ) {
 			add_settings_field(
 				'activitypub_site_blocked_actors',
@@ -516,7 +516,7 @@ class Settings_Fields {
 			foreach ( $blocked_actors as $actor ) {
 				echo '<li>';
 				echo \esc_html( $actor );
-				echo ' <button type="button" class="button button-small remove-site-block-btn" data-type="actors" data-value="' . \esc_attr( $actor ) . '">' . \esc_html__( 'Remove', 'activitypub' ) . '</button>';
+				echo ' <button type="button" class="button button-small remove-site-block-btn" data-type="actor" data-value="' . \esc_attr( $actor ) . '">' . \esc_html__( 'Remove', 'activitypub' ) . '</button>';
 				echo '</li>';
 			}
 			echo '</ul>';
@@ -524,8 +524,8 @@ class Settings_Fields {
 
 		?>
 		<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
-			<input type="text" class="regular-text" id="new_site_actors" placeholder="<?php \esc_attr_e( 'https://example.com/@username', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
-			<button type="button" class="button add-site-block-btn" data-type="actors" style="flex-shrink: 0; white-space: nowrap;">
+			<input type="text" class="regular-text" id="new_site_actor" placeholder="<?php \esc_attr_e( 'https://example.com/@username', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
+			<button type="button" class="button add-site-block-btn" data-type="actor" style="flex-shrink: 0; white-space: nowrap;">
 				<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
 			</button>
 		</div>
@@ -548,7 +548,7 @@ class Settings_Fields {
 					<tr>
 						<td><?php echo \esc_html( $domain ); ?></td>
 						<td style="width: 80px;">
-							<button type="button" class="button button-small remove-site-block-btn" data-type="domains" data-value="<?php echo \esc_attr( $domain ); ?>">
+							<button type="button" class="button button-small remove-site-block-btn" data-type="domain" data-value="<?php echo \esc_attr( $domain ); ?>">
 								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
 							</button>
 						</td>
@@ -558,8 +558,8 @@ class Settings_Fields {
 			<?php endif; ?>
 			
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
-				<input type="text" class="regular-text" id="new_site_domains" placeholder="<?php \esc_attr_e( 'example.com', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
-				<button type="button" class="button add-site-block-btn" data-type="domains" style="flex-shrink: 0; white-space: nowrap;">
+				<input type="text" class="regular-text" id="new_site_domain" placeholder="<?php \esc_attr_e( 'example.com', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
+				<button type="button" class="button add-site-block-btn" data-type="domain" style="flex-shrink: 0; white-space: nowrap;">
 					<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
 				</button>
 			</div>
@@ -582,7 +582,7 @@ class Settings_Fields {
 					<tr>
 						<td><?php echo \esc_html( $keyword ); ?></td>
 						<td style="width: 80px;">
-							<button type="button" class="button button-small remove-site-block-btn" data-type="keywords" data-value="<?php echo \esc_attr( $keyword ); ?>">
+							<button type="button" class="button button-small remove-site-block-btn" data-type="keyword" data-value="<?php echo \esc_attr( $keyword ); ?>">
 								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
 							</button>
 						</td>
@@ -592,8 +592,8 @@ class Settings_Fields {
 			<?php endif; ?>
 			
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
-				<input type="text" class="regular-text" id="new_site_keywords" placeholder="<?php \esc_attr_e( 'spam keyword', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
-				<button type="button" class="button add-site-block-btn" data-type="keywords" style="flex-shrink: 0; white-space: nowrap;">
+				<input type="text" class="regular-text" id="new_site_keyword" placeholder="<?php \esc_attr_e( 'spam keyword', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
+				<button type="button" class="button add-site-block-btn" data-type="keyword" style="flex-shrink: 0; white-space: nowrap;">
 					<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
 				</button>
 			</div>

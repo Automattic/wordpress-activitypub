@@ -536,8 +536,6 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * Test WordPress comment disallowed list fallback.
 	 */
 	public function test_wordpress_disallowed_list_fallback() {
-		// Mock wp_check_comment_disallowed_list to return true.
-		$this->expectFilterToBeCalled( 'option_disallowed_keys' );
 		\update_option( 'disallowed_keys', "badword\nspam.example.com" );
 
 		$activity = array(
@@ -554,15 +552,5 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_option( 'disallowed_keys' );
-	}
-
-	/**
-	 * Helper to expect a filter to be called.
-	 *
-	 * @param string $filter The filter name.
-	 */
-	private function expectFilterToBeCalled( $filter ) {
-		// This is a simple way to ensure the filter is used.
-		// In a real test, you might want to use more sophisticated mocking.
 	}
 }

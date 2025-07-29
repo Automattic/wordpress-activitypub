@@ -91,7 +91,7 @@ class User_Settings_Fields {
 			array( 'label_for' => 'activitypub_also_known_as' )
 		);
 
-		// Add moderation section
+		// Add moderation section.
 		\add_settings_section(
 			'activitypub_user_moderation',
 			\esc_html__( 'Moderation', 'activitypub' ),
