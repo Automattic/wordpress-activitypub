@@ -196,7 +196,7 @@ class Followers extends \WP_List_Table {
 		}
 
 		if ( ! empty( $_GET['s'] ) ) {
-			$args['s'] = self::normalize_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$args['s'] = $this->normalize_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		}
 
 		$followers_with_count = Follower_Collection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );
@@ -227,7 +227,7 @@ class Followers extends \WP_List_Table {
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => $url,
-				'webfinger'  => self::get_webfinger( $actor ),
+				'webfinger'  => $this->get_webfinger( $actor ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $follower->post_modified_gmt,
 			);
@@ -357,11 +357,11 @@ class Followers extends \WP_List_Table {
 	public function no_items() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$search         = \sanitize_text_field( \wp_unslash( $_GET['s'] ?? '' ) );
-		$actor_or_false = $this->_is_followable( $search );
+		$actor_or_false = $this->is_followable( $search );
 
 		if ( $actor_or_false ) {
 			\printf(
-				/* translators: %s: Actor name. */
+				/* translators: 1: Actor name, 2: Follow link */
 				\esc_html__( '%1$s is not following you, would you like to %2$s instead?', 'activitypub' ),
 				\esc_html( $actor_or_false->post_title ),
 				\sprintf(
@@ -420,7 +420,7 @@ class Followers extends \WP_List_Table {
 	 *
 	 * @return \WP_Post|false The actor post or false.
 	 */
-	private function _is_followable( $search ) { // phpcs:ignore
+	private function is_followable( $search ) {
 		if ( '1' !== get_option( 'activitypub_following_ui', '0' ) ) {
 			return false;
 		}
