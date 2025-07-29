@@ -163,7 +163,7 @@ class Settings_Fields {
 
 		add_settings_field(
 			'activitypub_site_blocked_actors',
-			__( 'Blocked Actors', 'activitypub' ),
+			\__( 'Blocked Actors', 'activitypub' ),
 			array( self::class, 'render_site_blocked_actors_field' ),
 			'activitypub_settings',
 			'activitypub_moderation'
@@ -171,7 +171,7 @@ class Settings_Fields {
 
 		add_settings_field(
 			'activitypub_site_blocked_domains',
-			__( 'Blocked Domains', 'activitypub' ),
+			\__( 'Blocked Domains', 'activitypub' ),
 			array( self::class, 'render_site_blocked_domains_field' ),
 			'activitypub_settings',
 			'activitypub_moderation'
@@ -179,7 +179,7 @@ class Settings_Fields {
 
 		add_settings_field(
 			'activitypub_site_blocked_keywords',
-			__( 'Blocked Keywords', 'activitypub' ),
+			\__( 'Blocked Keywords', 'activitypub' ),
 			array( self::class, 'render_site_blocked_keywords_field' ),
 			'activitypub_settings',
 			'activitypub_moderation'
