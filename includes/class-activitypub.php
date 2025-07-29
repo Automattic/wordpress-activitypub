@@ -7,13 +7,13 @@
 
 namespace Activitypub;
 
-use Exception;
-use Activitypub\Options;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Options;
 
 /**
  * ActivityPub Class.
@@ -492,7 +492,7 @@ class Activitypub {
 				'single'            => false,
 				'sanitize_callback' => function ( $value ) {
 					if ( ! is_string( $value ) ) {
-						throw new Exception( 'Error message is no valid string' );
+						throw new \Exception( 'Error message is no valid string' );
 					}
 
 					return esc_sql( $value );
