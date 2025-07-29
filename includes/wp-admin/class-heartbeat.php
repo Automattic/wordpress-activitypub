@@ -10,8 +10,6 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 
-use function Activitypub\user_can_activitypub;
-
 /**
  * Heartbeat API integration for ActivityPub.
  */
