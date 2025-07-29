@@ -552,7 +552,7 @@ class Activitypub {
 					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
 						'type'    => 'string',
-						'enum'    => array( 'Accept', 'Add', 'Announce', 'Arrive', 'Block', 'Create', 'Delete', 'Dislike', 'Flag', 'Follow', 'Ignore', 'Invite', 'Join', 'Leave', 'Like', 'Listen', 'Move', 'Offer', 'Question', 'Reject', 'Read', 'Remove', 'TentativeReject', 'TentativeAccept', 'Travel', 'Undo', 'Update', 'View' ),
+						'enum'    => Activity::TYPES,
 						'default' => 'Announce',
 					);
 
@@ -634,7 +634,7 @@ class Activitypub {
 			)
 		);
 
-		// Register Outbox Post-Type.
+		// Register Inbox Post-Type.
 		register_post_type(
 			Inbox::POST_TYPE,
 			array(
@@ -654,6 +654,102 @@ class Activitypub {
 				'delete_with_user'    => true,
 				'can_export'          => true,
 				'exclude_from_search' => true,
+			)
+		);
+
+		// Register Inbox Post-Meta.
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_object_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the object that the inbox item is about.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_type',
+			array(
+				'type'              => 'string',
+				'description'       => 'The type of the activity',
+				'single'            => true,
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$value  = ucfirst( strtolower( $value ) );
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => Activity::TYPES,
+						'default' => 'Create',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The type of the local actor that received the activity.',
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'application', 'blog', 'user' ),
+						'default' => 'user',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_remote_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the remote actor that sent the activity.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'activitypub_content_visibility',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The visibility of the content.',
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'public', 'unlisted', 'private', 'direct' ),
+						'default' => 'public',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
 			)
 		);
 
