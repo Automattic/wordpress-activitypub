@@ -113,6 +113,16 @@ class Admin {
 	}
 
 	/**
+	 * Load blocked actors page
+	 */
+	public static function blocked_actors_list_page() {
+		// User has to be able to publish posts.
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php' );
+		}
+	}
+
+	/**
 	 * Creates the followers and following list tables in ActivityPub settings.
 	 */
 	public static function add_settings_list_tables() {
@@ -124,6 +134,9 @@ class Admin {
 				break;
 			case 'following':
 				self::add_following_list_table();
+				break;
+			case 'blocked-actors':
+				self::add_blocked_actors_list_table();
 				break;
 		}
 	}
@@ -140,6 +153,13 @@ class Admin {
 	 */
 	public static function add_following_list_table() {
 		$GLOBALS['following_list_table'] = new Table\Following();
+	}
+
+	/**
+	 * Creates the blocked actors list table.
+	 */
+	public static function add_blocked_actors_list_table() {
+		$GLOBALS['blocked_actors_list_table'] = new Table\Blocked_Actors();
 	}
 
 	/**

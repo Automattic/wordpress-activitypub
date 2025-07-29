@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 
 /**
  * ActivityPub Moderation class.
@@ -15,6 +16,11 @@ use Activitypub\Activity\Activity;
  * Handles user-specific blocking and site-wide moderation.
  */
 class Moderation {
+	/**
+	 * Post meta key for blocked actors.
+	 */
+	const BLOCKED_ACTORS_META_KEY = '_activitypub_blocked_by';
+
 	/**
 	 * User meta key for blocked keywords.
 	 */
@@ -91,11 +97,24 @@ class Moderation {
 	 *
 	 * @param int    $user_id The user ID.
 	 * @param string $type    The block type (actor, domain, keyword).
-	 * @param string $value   The value to block.
+	 * @param string $value   The value to block (actor ID for actors, domain for domains, keyword for keywords).
 	 * @return bool True on success, false on failure.
 	 */
 	public static function add_user_block( $user_id, $type, $value ) {
 		switch ( $type ) {
+			case 'actor':
+				// Find or create actor post.
+				$actor_post = Actors::fetch_remote_by_uri( $value );
+				if ( \is_wp_error( $actor_post ) ) {
+					return false;
+				}
+
+				$blocked = \get_post_meta( $actor_post->ID, self::BLOCKED_ACTORS_META_KEY, false );
+				if ( ! \in_array( (string) $user_id, $blocked, true ) ) {
+					return (bool) \add_post_meta( $actor_post->ID, self::BLOCKED_ACTORS_META_KEY, (string) $user_id );
+				}
+				break;
+
 			case 'domain':
 			case 'keyword':
 				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
@@ -115,11 +134,26 @@ class Moderation {
 	 *
 	 * @param int    $user_id The user ID.
 	 * @param string $type    The block type (actor, domain, keyword).
-	 * @param string $value   The value to unblock.
+	 * @param string $value   The value to unblock (actor ID for actors, post ID for removing specific actor posts).
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_user_block( $user_id, $type, $value ) {
 		switch ( $type ) {
+			case 'actor':
+				// If value is numeric, treat it as a post ID for direct removal.
+				if ( is_numeric( $value ) ) {
+					$post_id = (int) $value;
+				} else {
+					// Otherwise, find the actor post by actor ID.
+					$actor_post = Actors::fetch_remote_by_uri( $value );
+					if ( \is_wp_error( $actor_post ) ) {
+						return false;
+					}
+					$post_id = $actor_post->ID;
+				}
+
+				return \delete_post_meta( $post_id, self::BLOCKED_ACTORS_META_KEY, $user_id );
+
 			case 'domain':
 			case 'keyword':
 				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
@@ -143,7 +177,7 @@ class Moderation {
 	 */
 	public static function get_user_blocks( $user_id ) {
 		return array(
-			'actors'   => array(),
+			'actors'   => self::get_blocked_actors( $user_id ),
 			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS['domain'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS['keyword'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		);
@@ -153,11 +187,15 @@ class Moderation {
 	 * Add a site-wide block.
 	 *
 	 * @param string $type  The block type (actor, domain, keyword).
-	 * @param string $value The value to block.
+	 * @param string $value The value to block (actor ID for actors, domain for domains, keyword for keywords).
 	 * @return bool True on success, false on failure.
 	 */
 	public static function add_site_block( $type, $value ) {
 		switch ( $type ) {
+			case 'actor':
+				// Site-wide actor blocking uses the BLOG_USER_ID.
+				return self::add_user_block( Actors::BLOG_USER_ID, 'actor', $value );
+
 			case 'domain':
 			case 'keyword':
 				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
@@ -176,11 +214,15 @@ class Moderation {
 	 * Remove a site-wide block.
 	 *
 	 * @param string $type  The block type (actor, domain, keyword).
-	 * @param string $value The value to unblock.
+	 * @param string $value The value to unblock (actor ID for actors, post ID for removing specific actor posts).
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_site_block( $type, $value ) {
 		switch ( $type ) {
+			case 'actor':
+				// Site-wide actor unblocking uses the BLOG_USER_ID.
+				return self::remove_user_block( Actors::BLOG_USER_ID, 'actor', $value );
+
 			case 'domain':
 			case 'keyword':
 				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
@@ -203,7 +245,7 @@ class Moderation {
 	 */
 	public static function get_site_blocks() {
 		return array(
-			'actors'   => array(),
+			'actors'   => self::get_blocked_actors( Actors::BLOG_USER_ID ),
 			'domains'  => \get_option( self::OPTION_KEYS['domain'], array() ),
 			'keywords' => \get_option( self::OPTION_KEYS['keyword'], array() ),
 		);
@@ -247,5 +289,83 @@ class Moderation {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Get the blocked actors of a given user, along with a total count for pagination purposes.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 * @param int      $number  Maximum number of results to return.
+	 * @param int      $page    Page number.
+	 * @param array    $args    The WP_Query arguments.
+	 *
+	 * @return array {
+	 *      Data about the blocked actors.
+	 *
+	 *      @type \WP_Post[] $blocked_actors List of blocked Actor WP_Post objects.
+	 *      @type int        $total         Total number of blocked actors.
+	 *  }
+	 */
+	public static function get_blocked_actors_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
+		$defaults = array(
+			'post_type'      => Actors::POST_TYPE,
+			'posts_per_page' => $number,
+			'paged'          => $page,
+			'orderby'        => 'ID',
+			'order'          => 'DESC',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				array(
+					'key'   => self::BLOCKED_ACTORS_META_KEY,
+					'value' => $user_id,
+				),
+			),
+		);
+
+		$args           = \wp_parse_args( $args, $defaults );
+		$query          = new \WP_Query( $args );
+		$total          = $query->found_posts;
+		$blocked_actors = \array_filter( $query->posts );
+
+		return \compact( 'blocked_actors', 'total' );
+	}
+
+	/**
+	 * Get the blocked actors of a given user.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 * @param int      $number  Maximum number of results to return.
+	 * @param int      $page    Page number.
+	 * @param array    $args    The WP_Query arguments.
+	 *
+	 * @return \WP_Post[] List of blocked Actors.
+	 */
+	public static function get_blocked_actors( $user_id, $number = -1, $page = null, $args = array() ) {
+		return self::get_blocked_actors_with_count( $user_id, $number, $page, $args )['blocked_actors'];
+	}
+
+	/**
+	 * Get the total number of blocked actors for a given user.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 *
+	 * @return int The total number of blocked actors.
+	 */
+	public static function count_blocked_actors( $user_id ) {
+		return self::get_blocked_actors_with_count( $user_id, -1 )['total'];
+	}
+
+	/**
+	 * Check if an actor is blocked by a given user.
+	 *
+	 * @param int $user_id The ID of the WordPress User.
+	 * @param int $post_id The ID of the Actor Post.
+	 *
+	 * @return bool True if blocked, false otherwise.
+	 */
+	public static function is_actor_blocked( $user_id, $post_id ) {
+		$blocked = \get_post_meta( $post_id, self::BLOCKED_ACTORS_META_KEY, false );
+
+		return \in_array( (string) $user_id, $blocked, true );
 	}
 }
