@@ -58,16 +58,16 @@ class Moderation {
 	 * AJAX handler to add user block.
 	 */
 	public static function ajax_add_user_block() {
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_user_moderation' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
 		$user_id         = (int) ( \sanitize_text_field( \wp_unslash( $_POST['user_id'] ?? 0 ) ) );
 		$current_user_id = \get_current_user_id();
 
 		// Check permissions.
 		if ( $current_user_id !== $user_id && ! \current_user_can( 'manage_options' ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
-		}
-
-		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_user_moderation' ) ) {
-			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
 		}
 
 		$type  = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
@@ -90,16 +90,16 @@ class Moderation {
 	 * AJAX handler to remove user block.
 	 */
 	public static function ajax_remove_user_block() {
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_user_moderation' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
 		$user_id         = (int) ( \sanitize_text_field( \wp_unslash( $_POST['user_id'] ?? 0 ) ) );
 		$current_user_id = \get_current_user_id();
 
 		// Check permissions.
 		if ( $current_user_id !== $user_id && ! \current_user_can( 'manage_options' ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
-		}
-
-		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_user_moderation' ) ) {
-			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
 		}
 
 		$type  = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
@@ -122,12 +122,12 @@ class Moderation {
 	 * AJAX handler to add site block.
 	 */
 	public static function ajax_add_site_block() {
-		if ( ! \current_user_can( 'manage_options' ) ) {
-			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
-		}
-
 		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_site_moderation' ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
 		}
 
 		$type  = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
@@ -150,12 +150,12 @@ class Moderation {
 	 * AJAX handler to remove site block.
 	 */
 	public static function ajax_remove_site_block() {
-		if ( ! \current_user_can( 'manage_options' ) ) {
-			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
-		}
-
 		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_site_moderation' ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
 		}
 
 		$type  = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
