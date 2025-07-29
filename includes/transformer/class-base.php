@@ -82,6 +82,9 @@ abstract class Base {
 			return $activity_object;
 		}
 
+		// Save activity in the context of an activitypub request.
+		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
+
 		$vars = $activity_object->get_object_var_keys();
 
 		foreach ( $vars as $var ) {
@@ -114,6 +117,9 @@ abstract class Base {
 				}
 			}
 		}
+
+		// Remove activity in the context of an activitypub request.
+		\remove_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
 		return $activity_object;
 	}

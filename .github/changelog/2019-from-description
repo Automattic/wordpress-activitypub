@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Informational Fediverse blocks are no longer rendered when posts get added to the Outbox.
