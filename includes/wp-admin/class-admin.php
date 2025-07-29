@@ -812,7 +812,7 @@ class Admin {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid context or action.', 'activitypub' ) ) );
 		}
 
-		if ( empty( $type ) || empty( $value ) ) {
+		if ( empty( $type ) || empty( $value ) || ! in_array( $type, array( 'domain', 'keyword' ), true ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid parameters.', 'activitypub' ) ) );
 		}
 

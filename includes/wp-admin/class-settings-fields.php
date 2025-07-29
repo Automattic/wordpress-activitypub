@@ -10,7 +10,6 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Moderation;
 
 use function Activitypub\home_host;
-use function Activitypub\site_supports_blocks;
 
 /**
  * Class Settings_Fields.
@@ -145,28 +144,12 @@ class Settings_Fields {
 		);
 
 		add_settings_field(
-			'activitypub_blocklist',
-			__( 'Blocklist', 'activitypub' ),
-			array( self::class, 'render_blocklist_field' ),
-			'activitypub_settings',
-			'activitypub_server'
-		);
-
-		add_settings_field(
 			'activitypub_relays',
 			__( 'Relays', 'activitypub' ),
 			array( self::class, 'render_relays_field' ),
 			'activitypub_settings',
 			'activitypub_server',
 			array( 'label_for' => 'activitypub_relays' )
-		);
-
-		add_settings_field(
-			'activitypub_site_blocked_actors',
-			\__( 'Blocked Actors', 'activitypub' ),
-			array( self::class, 'render_site_blocked_actors_field' ),
-			'activitypub_settings',
-			'activitypub_moderation'
 		);
 
 		add_settings_field(
@@ -473,61 +456,10 @@ class Settings_Fields {
 	}
 
 	/**
-	 * Render blocklist field.
-	 */
-	public static function render_blocklist_field() {
-		?>
-		<p>
-			<?php
-			echo \wp_kses(
-				\sprintf(
-					// translators: %s is a URL.
-					\__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
-					\esc_url( \admin_url( 'options-discussion.php#disallowed_keys' ) )
-				),
-				'default'
-			);
-			?>
-		</p>
-		<?php
-	}
-
-	/**
 	 * Render moderation section description.
 	 */
 	public static function render_moderation_section_description() {
 		echo '<p>' . \esc_html__( 'Configure site-wide moderation settings. These blocks will affect all users and ActivityPub content on your site.', 'activitypub' ) . '</p>';
-	}
-
-	/**
-	 * Render site blocked actors field.
-	 */
-	public static function render_site_blocked_actors_field() {
-		$blocked_actors = Moderation::get_site_blocks()['actors'];
-
-		echo '<div class="activitypub-site-block-list">';
-		echo '<p class="description">' . \esc_html__( 'Block specific ActivityPub actors (users) by their full actor URL.', 'activitypub' ) . '</p>';
-
-		if ( ! empty( $blocked_actors ) ) {
-			echo '<ul class="blocked-items-list">';
-			foreach ( $blocked_actors as $actor ) {
-				echo '<li>';
-				echo \esc_html( $actor );
-				echo ' <button type="button" class="button button-small remove-site-block-btn" data-type="actor" data-value="' . \esc_attr( $actor ) . '">' . \esc_html__( 'Remove', 'activitypub' ) . '</button>';
-				echo '</li>';
-			}
-			echo '</ul>';
-		}
-
-		?>
-		<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
-			<input type="text" class="regular-text" id="new_site_actor" placeholder="<?php \esc_attr_e( 'https://example.com/@username', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
-			<button type="button" class="button add-site-block-btn" data-type="actor" style="flex-shrink: 0; white-space: nowrap;">
-				<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
-			</button>
-		</div>
-		<?php
-		echo '</div>';
 	}
 
 	/**

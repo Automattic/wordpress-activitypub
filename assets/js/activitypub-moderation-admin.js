@@ -13,40 +13,21 @@
 			// For user moderation, add to the appropriate list
 			var container = $( '.activitypub-user-block-list[data-user-id="' + userId + '"]' );
 			
-			if ( type === 'actor' ) {
-				var list = container.find( '.blocked-items-list' );
-				if ( list.length === 0 ) {
-					list = $( '<ul class="blocked-items-list"></ul>' );
-					container.find( '#new_user_' + type ).closest( '.add-user-block-form' ).before( list );
-				}
-				list.append( '<li>' + value + ' <button type="button" class="button button-small remove-user-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></li>' );
-			} else {
-				var table = container.find( '.activitypub-blocked-' + type + 's' );
-				if ( table.length === 0 ) {
-					table = $( '<table class="widefat striped activitypub-blocked-' + type + 's" role="presentation" style="max-width: 500px; margin: 15px 0;"></table>' );
-					container.find( '#new_user_' + type ).closest( '.add-user-block-form' ).before( table );
-				}
-				table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-user-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
+			var table = container.find( '.activitypub-blocked-' + type + 's' );
+			if ( table.length === 0 ) {
+				table = $( '<table class="widefat striped activitypub-blocked-' + type + 's" role="presentation" style="max-width: 500px; margin: 15px 0;"></table>' );
+				container.find( '#new_user_' + type ).closest( '.add-user-block-form' ).before( table );
 			}
+			table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-user-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
 		} else if ( context === 'site' ) {
 			// For site moderation, add to the appropriate section
-			if ( type === 'actor' ) {
-				var container = $( '#new_site_' + type ).closest( '.activitypub-site-block-list' );
-				var list = container.find( '.blocked-items-list' );
-				if ( list.length === 0 ) {
-					list = $( '<ul class="blocked-items-list"></ul>' );
-					container.find( '.add-site-block-form' ).before( list );
-				}
-				list.append( '<li>' + value + ' <button type="button" class="button button-small remove-site-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></li>' );
-			} else {
-				var container = $( '#new_site_' + type ).closest( '.activitypub-site-block-list' );
-				var table = container.find( '.activitypub-site-blocked-' + type + 's' );
-				if ( table.length === 0 ) {
-					table = $( '<table class="widefat striped activitypub-site-blocked-' + type + 's" role="presentation" style="max-width: 500px; margin: 15px 0;"></table>' );
-					container.find( '.add-site-block-form' ).before( table );
-				}
-				table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-site-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
+			var container = $( '#new_site_' + type ).closest( '.activitypub-site-block-list' );
+			var table = container.find( '.activitypub-site-blocked-' + type + 's' );
+			if ( table.length === 0 ) {
+				table = $( '<table class="widefat striped activitypub-site-blocked-' + type + 's" role="presentation" style="max-width: 500px; margin: 15px 0;"></table>' );
+				container.find( '.add-site-block-form' ).before( table );
 			}
+			table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-site-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
 		}
 	}
 
@@ -158,7 +139,7 @@
 		});
 
 		// Add user block functionality (Enter key).
-		$( document ).on( 'keypress', '#new_user_actor, #new_user_domain, #new_user_keyword', function( e ) {
+		$( document ).on( 'keypress', '#new_user_domain, #new_user_keyword', function( e ) {
 			if ( e.which === 13 ) { // Enter key.
 				e.preventDefault();
 				var inputId = $( this ).attr( 'id' );
@@ -244,7 +225,7 @@
 		});
 
 		// Add site block functionality (Enter key).
-		$( document ).on( 'keypress', '#new_site_actor, #new_site_domain, #new_site_keyword', function( e ) {
+		$( document ).on( 'keypress', '#new_site_domain, #new_site_keyword', function( e ) {
 			if ( e.which === 13 ) { // Enter key.
 				e.preventDefault();
 				var inputId = $( this ).attr( 'id' );

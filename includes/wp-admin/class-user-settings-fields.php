@@ -104,14 +104,6 @@ class User_Settings_Fields {
 		);
 
 		\add_settings_field(
-			'activitypub_user_blocked_actors',
-			\esc_html__( 'Blocked Actors', 'activitypub' ),
-			array( self::class, 'blocked_actors_callback' ),
-			'activitypub_user_settings',
-			'activitypub_user_moderation'
-		);
-
-		\add_settings_field(
 			'activitypub_user_blocked_domains',
 			\esc_html__( 'Blocked Domains', 'activitypub' ),
 			array( self::class, 'blocked_domains_callback' ),
@@ -317,38 +309,6 @@ class User_Settings_Fields {
 	 */
 	public static function moderation_section_description() {
 		echo '<p>' . \esc_html__( 'Configure personal blocks to filter ActivityPub content you don\'t want to see.', 'activitypub' ) . '</p>';
-	}
-
-	/**
-	 * Blocked actors field callback.
-	 */
-	public static function blocked_actors_callback() {
-		$user_id        = \get_current_user_id();
-		$blocked_actors = Moderation::get_user_blocks( $user_id )['actors'];
-
-		echo '<div class="activitypub-user-block-list" data-user-id="' . \esc_attr( $user_id ) . '">';
-		echo '<p class="description">' . \esc_html__( 'Block specific ActivityPub actors (users) by their full actor URL.', 'activitypub' ) . '</p>';
-
-		if ( ! empty( $blocked_actors ) ) {
-			echo '<ul class="blocked-items-list">';
-			foreach ( $blocked_actors as $actor ) {
-				echo '<li>';
-				echo \esc_html( $actor );
-				echo ' <button type="button" class="button button-small remove-user-block-btn" data-type="actor" data-value="' . \esc_attr( $actor ) . '">' . \esc_html__( 'Remove', 'activitypub' ) . '</button>';
-				echo '</li>';
-			}
-			echo '</ul>';
-		}
-
-		?>
-		<div class="add-user-block-form" style="display: flex; max-width: 500px; gap: 8px;">
-			<input type="text" class="regular-text" id="new_user_actor" placeholder="<?php \esc_attr_e( 'https://example.com/@username', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
-			<button type="button" class="button add-user-block-btn" data-type="actor" style="flex-shrink: 0; white-space: nowrap;">
-				<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
-			</button>
-		</div>
-		<?php
-		echo '</div>';
 	}
 
 	/**
