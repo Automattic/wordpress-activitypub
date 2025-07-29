@@ -50,5 +50,4 @@ jobs:
         run: ./vendor/bin/phpunit
         env:
           PHP_VERSION: ${{ matrix.php-versions }}
-          WP_ENVIRONMENT_TYPE: staging
           LOCAL_WP_ENVIRONMENT_TYPE: staging
