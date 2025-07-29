@@ -46,6 +46,8 @@ class Test_Surge extends \WP_UnitTestCase {
 		// phpcs:ignore
 		\file_put_contents( $this->test_file, $this->config_contents );
 
+		require_once $this->test_file;
+
 		// Patch Surge::get_config_file() to return our test file.
 		\add_filter( 'activitypub_surge_cache_config_file', array( $this, 'get_test_file' ) );
 	}
@@ -80,6 +82,8 @@ class Test_Surge extends \WP_UnitTestCase {
 	 * @access public
 	 */
 	public function test_add_cache_config() {
+		\add_filter( 'pre_option_active_plugins', array( $this, 'get_active_plugins' ) );
+
 		Surge::add_cache_config();
 		// phpcs:ignore
 		$file = \file_get_contents( Surge::get_config_file_path() );
@@ -87,6 +91,8 @@ class Test_Surge extends \WP_UnitTestCase {
 		$this->assertStringContainsString( '<?php', $file, 'File should start with PHP opening tag' );
 		$this->assertStringContainsString( "/* That's all, stop editing! */", $file, 'Comment should be present' );
 		$this->assertStringContainsString( Surge::get_cache_config(), $file, 'Config line should be present' );
+
+		\remove_all_filters( 'pre_option_active_plugins' );
 	}
 
 	/**

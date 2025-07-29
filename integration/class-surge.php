@@ -37,6 +37,12 @@ class Surge {
 	 * Add the Surge cache config.
 	 */
 	public static function add_cache_config() {
+		// Check if surge is installed and active.
+		if ( ! \is_plugin_active( 'surge/surge.php' ) ) {
+			return;
+		}
+
+		// Check if the constant already exists.
 		if ( \defined( 'WP_CACHE_CONFIG' ) ) {
 			return;
 		}
