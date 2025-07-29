@@ -49,7 +49,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	 * Test environment.
 	 */
 	public function test_test_env() {
-		$this->assertEquals( 'staging', \wp_get_environment_type() );
+		$this->assertEquals( 'production', \wp_get_environment_type() );
 	}
 
 	/**
