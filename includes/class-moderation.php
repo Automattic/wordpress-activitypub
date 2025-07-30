@@ -222,7 +222,7 @@ class Moderation {
 		// Extract actor information.
 		$actor_id = '';
 		if ( isset( $activity_data['actor'] ) ) {
-			$actor_id = is_string( $activity_data['actor'] ) ? $activity_data['actor'] : ( $activity_data['actor']['id'] ?? '' );
+			$actor_id = object_to_uri( $activity_data['actor'] );
 		}
 
 		// Check blocked actors.
