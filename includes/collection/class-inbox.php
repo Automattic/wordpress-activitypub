@@ -77,14 +77,6 @@ class Inbox {
 			\kses_init_filters();
 		}
 
-		if ( \is_wp_error( $id ) ) {
-			return $id;
-		}
-
-		if ( ! $id ) {
-			return false;
-		}
-
 		return $id;
 	}
 
