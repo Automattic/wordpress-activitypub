@@ -1,6 +1,6 @@
 <?php
 /**
- * Test file for Follow handler.
+ * Test file for Inbox handler.
  *
  * @package Activitypub
  */
