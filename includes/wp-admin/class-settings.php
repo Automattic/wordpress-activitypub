@@ -538,14 +538,14 @@ class Settings {
 			array(
 				'id'      => 'starter-kit',
 				'title'   => \__( 'Starter Kits', 'activitypub' ),
-				'content' => sprintf(
+				'content' => \sprintf(
 					'<h2>%s</h2>' .
 					'<p>%s</p>' .
 					'<p>%s</p>',
 					\__( 'Starter Kits', 'activitypub' ),
 					\__( 'Starter kits are curated lists of accounts that help you quickly build your fediverse network. Import a starter kit to automatically follow a collection of interesting accounts in specific topics or communities.', 'activitypub' ),
 					// translators: %s: Importer URL.
-					\wp_kses_post( sprintf( __( 'To import a starter kit, go to <strong>Tools &#8594; Import</strong> and look for the "Starter Kit" option. You can also <a href="%s">click here to access the importer directly</a>.', 'activitypub' ), admin_url( 'admin.php?import=starter-kit' ) ) )
+					\wp_kses_post( \sprintf( \__( 'To import a starter kit, go to <strong>Tools &#8594; Import</strong> and look for <a href="%s">the &#8220;Starter Kit&#8221; option</a>.', 'activitypub' ), \admin_url( 'admin.php?import=starter-kit' ) ) )
 				),
 			)
 		);
