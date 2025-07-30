@@ -64,7 +64,7 @@ $following_list_table->prepare_items();
 					</ul>
 
 					<p><?php echo esc_html__( '(Make sure the user you&#8217;re following is part of the fediverse and supports ActivityPub)', 'activitypub' ); ?></p>
-					<?php \do_action( 'activitypub_post_follow_form' ); ?>
+					<?php do_action( 'activitypub_post_follow_form' ); ?>
 				</div>
 
 				<h2><?php echo esc_html__( 'Starter Packs', 'activitypub' ); ?></h2>
