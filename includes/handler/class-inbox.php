@@ -64,7 +64,7 @@ class Inbox {
 		$id = Inbox_Collection::add( $activity, $user_id );
 
 		/**
-		 * Fires after a new follower has been added.
+		 * Fires after an inbox item has been handled.
 		 *
 		 * @param array              $data     The data array.
 		 * @param int                $user_id  The ID of the local blog user.
