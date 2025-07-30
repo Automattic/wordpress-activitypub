@@ -11,6 +11,7 @@ namespace Activitypub\Development;
 
 // Initialize local development tools below.
 
+// Load development WP-CLI commands.
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	\WP_CLI::add_command(
 		'activitypub',
@@ -20,3 +21,6 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		)
 	);
 }
+
+// Defer signature verification on local development to better test API requests.
+\add_filter( 'activitypub_defer_signature_verification', '__return_true', 20 );
