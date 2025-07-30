@@ -438,6 +438,11 @@ class Settings {
 			)
 		);
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( 'following' === \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? '' ) ) ) {
+			self::add_following_help_tab();
+		}
+
 		// Core Features.
 		\get_current_screen()->add_help_tab(
 			array(
@@ -522,6 +527,27 @@ class Settings {
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/issues">' . \esc_html__( 'Report an issue', 'activitypub' ) . '</a></p>' . "\n" .
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs">' . \esc_html__( 'Documentation', 'activitypub' ) . '</a></p>' . "\n" .
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/releases">' . \esc_html__( 'View latest changes', 'activitypub' ) . '</a></p>'
+		);
+	}
+
+	/**
+	 * Adds the ActivityPub help tab to the users page.
+	 */
+	public static function add_following_help_tab() {
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'starter-kit',
+				'title'   => \__( 'Starter Kits', 'activitypub' ),
+				'content' => \sprintf(
+					'<h2>%s</h2>' .
+					'<p>%s</p>' .
+					'<p>%s</p>',
+					\__( 'Starter Kits', 'activitypub' ),
+					\__( 'Starter kits are curated lists of accounts that help you quickly build your fediverse network. Import a starter kit to automatically follow a collection of interesting accounts in specific topics or communities.', 'activitypub' ),
+					// translators: %s: Importer URL.
+					\wp_kses_post( \sprintf( \__( 'To import a starter kit, go to <strong>Tools &#8594; Import</strong> and look for <a href="%s">the &#8220;Starter Kit&#8221; option</a>.', 'activitypub' ), \admin_url( 'admin.php?import=starter-kit' ) ) )
+				),
+			)
 		);
 	}
 
