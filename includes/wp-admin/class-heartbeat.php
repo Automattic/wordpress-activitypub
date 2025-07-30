@@ -29,6 +29,11 @@ class Heartbeat {
 	 * Enqueue scripts and localize data for the Following list table.
 	 */
 	public static function enqueue_scripts() {
+		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( \get_current_screen()->id === 'settings_page_activitypub' && 'following' !== $tab ) {
+			return;
+		}
+
 		// Get the current user ID.
 		$user_id = \get_current_screen()->id === 'settings_page_activitypub'
 			? Actors::BLOG_USER_ID
