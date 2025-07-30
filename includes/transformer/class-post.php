@@ -881,14 +881,14 @@ class Post extends Base {
 	/**
 	 * Converts a WordPress Attachment to an ActivityPub Attachment.
 	 *
-	 * @deprecated unreleased Use {@see Base::transform_attachment()} instead.
+	 * @deprecated 7.2.0 Use {@see Base::transform_attachment()} instead.
 	 *
 	 * @param array $media The Attachment array.
 	 *
 	 * @return array The ActivityPub Attachment.
 	 */
 	public function wp_attachment_to_activity_attachment( $media ) {
-		_deprecated_function( __METHOD__, 'unreleased', '\Activitypub\Transformer\Base::transform_attachment()' );
+		_deprecated_function( __METHOD__, '7.2.0', '\Activitypub\Transformer\Base::transform_attachment()' );
 
 		return parent::transform_attachment( $media );
 	}

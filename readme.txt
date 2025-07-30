@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 7.1.0
+Stable tag: 7.2.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,25 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.2.0 - 2025-07-30
+#### Added
+- Add image attachment support to federated comments - HTML images in comment content now include proper ActivityStreams attachment fields.
+- Link to the following internal dialog for remote interactions, if the feature is enabled.
+- The followers list now shows follow status and allows quick follow-back actions.
+- Trigger Actor updates on (un)setting a post as sticky.
+- You can now use `OrderedCollection`s as starter packs — just drop in the output from a Follower or Following endpoint.
+
+#### Changed
+- Ensure that tests run in production-like conditions, avoiding interference from local development tools.
+- Moved HTTP request signing to a filter instead of calling it directly.
+
+#### Fixed
+- Allow non-administrator users to use Follow Me and Followers blocks
+- Correct linking from followers to the following list
+- Fix avatar rendering for followers with missing icon property
+- Fix multibyte character corruption in post summaries, preventing Greek and other non-ASCII text from being garbled during text processing.
+- Informational Fediverse blocks are no longer rendered when posts get added to the Outbox.
 
 ### 7.1.0 - 2025-07-23
 #### Added

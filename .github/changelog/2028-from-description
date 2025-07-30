@@ -1,4 +1,0 @@
-Significance: patch
-Type: added
-
-You can now use `OrderedCollection`s as starter packs — just drop in the output from a Follower or Following endpoint.
