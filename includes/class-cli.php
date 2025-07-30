@@ -23,15 +23,19 @@ class Cli extends \WP_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     $ wp activitypub self-destruct
+	 *     $ wp activitypub self_destruct
 	 *
 	 * @param array|null $args       The arguments.
 	 * @param array|null $assoc_args The associative arguments.
 	 *
 	 * @return void
 	 */
-	public function self_destruct( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		\WP_CLI::warning( 'Self-Destructing is not implemented yet.' );
+	public function self_destruct( $args, $assoc_args = array() ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$question = 'We are in the process of deleting your blog from the Fediverse. This action could be irreversible, so are you sure you want to continue?';
+
+		\WP_CLI::confirm( \WP_CLI::colorize( "%r{$question}%n" ), $assoc_args );
+
+		\WP_CLI::success( 'Deleting your Blog from the Fediverse...' );
 	}
 
 	/**
