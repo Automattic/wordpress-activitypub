@@ -66,11 +66,6 @@ $following_list_table->prepare_items();
 					<p><?php echo esc_html__( '(Make sure the user you&#8217;re following is part of the fediverse and supports ActivityPub)', 'activitypub' ); ?></p>
 					<?php do_action( 'activitypub_post_follow_form' ); ?>
 				</div>
-
-				<h2><?php echo esc_html__( 'Starter Kit', 'activitypub' ); ?></h2>
-				<p><?php echo wp_kses_post( __( 'Starter kits are curated lists of accounts that help you quickly build your fediverse network. Import a starter kit to automatically follow a collection of interesting accounts in specific topics or communities.', 'activitypub' ) ); ?></p>
-				<?php // translators: %s: Importer URL. ?>
-				<p><?php echo wp_kses_post( sprintf( __( 'To import a starter kit, go to <strong>Tools &#8594; Import</strong> and look for the "Starter Kit" option. You can also <a href="%s">click here to access the importer directly</a>.', 'activitypub' ), admin_url( 'admin.php?import=starter-kit' ) ) ); ?></p>
 			</div>
 		</div>
 		<div id="col-right">
