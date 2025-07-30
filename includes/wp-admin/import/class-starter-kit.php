@@ -240,7 +240,7 @@ class Starter_Kit {
 		$skipped  = 0;
 		$followed = 0;
 
-		$items = self::$starter_kit['items'] ?? array();
+		$items = self::$starter_kit['items'] ?? self::$starter_kit['orderedItems'] ?? array();
 
 		foreach ( $items as $item ) {
 			if ( ! is_actor( $item ) ) {
