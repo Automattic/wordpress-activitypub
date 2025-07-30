@@ -289,6 +289,8 @@ class Admin {
 				'enterValue'        => \__( 'Please enter a value to block.', 'activitypub' ),
 				'addBlockFailed'    => \__( 'Failed to add block.', 'activitypub' ),
 				'removeBlockFailed' => \__( 'Failed to remove block.', 'activitypub' ),
+				'alreadyBlocked'    => \__( 'This term is already blocked.', 'activitypub' ),
+				'invalidDomain'     => \__( 'Please enter a valid domain (e.g., example.com).', 'activitypub' ),
 				'nonce'             => \wp_create_nonce( 'activitypub_moderation_settings' ),
 			)
 		);

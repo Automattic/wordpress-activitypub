@@ -6,6 +6,28 @@
 	'use strict';
 
 	/**
+	 * Helper function to validate domain format
+	 */
+	function isValidDomain( domain ) {
+		// Basic domain validation - must contain at least one dot and valid characters
+		var domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+		return domainRegex.test( domain ) && domain.includes( '.' ) && domain.length > 3;
+	}
+
+	/**
+	 * Helper function to check if a term already exists in the UI
+	 */
+	function isTermAlreadyBlocked( type, value, context, userId ) {
+		var selector;
+		if ( context === 'user' ) {
+			selector = '.activitypub-user-block-list[data-user-id="' + userId + '"] .remove-user-block-btn[data-type="' + type + '"][data-value="' + value + '"]';
+		} else if ( context === 'site' ) {
+			selector = '.remove-site-block-btn[data-type="' + type + '"][data-value="' + value + '"]';
+		}
+		return $( selector ).length > 0;
+	}
+
+	/**
 	 * Helper function to add a blocked term to the UI
 	 */
 	function addBlockedTermToUI( type, value, context, userId ) {
@@ -79,6 +101,26 @@
 				} else {
 					alert( activitypubModerationL10n.enterValue );
 				}
+				return;
+			}
+
+			// Validate domain format if this is a domain block
+			if ( type === 'domain' && ! isValidDomain( value ) ) {
+				var message = activitypubModerationL10n.invalidDomain || 'Please enter a valid domain (e.g., example.com).';
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( message, 'assertive' );
+				}
+				alert( message );
+				return;
+			}
+
+			// Check if the term is already blocked
+			if ( isTermAlreadyBlocked( type, value, 'user', userId ) ) {
+				var message = activitypubModerationL10n.alreadyBlocked || 'This term is already blocked.';
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( message, 'assertive' );
+				}
+				alert( message );
 				return;
 			}
 
@@ -168,6 +210,26 @@
 				} else {
 					alert( activitypubModerationL10n.enterValue );
 				}
+				return;
+			}
+
+			// Validate domain format if this is a domain block
+			if ( type === 'domain' && ! isValidDomain( value ) ) {
+				var message = activitypubModerationL10n.invalidDomain || 'Please enter a valid domain (e.g., example.com).';
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( message, 'assertive' );
+				}
+				alert( message );
+				return;
+			}
+
+			// Check if the term is already blocked
+			if ( isTermAlreadyBlocked( type, value, 'site' ) ) {
+				var message = activitypubModerationL10n.alreadyBlocked || 'This term is already blocked.';
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( message, 'assertive' );
+				}
+				alert( message );
 				return;
 			}
 
