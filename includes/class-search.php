@@ -21,16 +21,17 @@ class Search {
 	 * Initialize the search enhancement.
 	 */
 	public static function init() {
-		\add_filter( 'pre_get_posts', array( self::class, 'enhance_search' ) );
+		\add_filter( 'pre_get_posts', array( self::class, 'enhance_public_search' ) );
+		\add_action( 'admin_init', array( self::class, 'enhance_admin_comment_search' ) );
 	}
 
 	/**
-	 * Enhance search functionality to check for URLs and ActivityPub objects.
+	 * Enhance public search functionality to check for URLs and ActivityPub objects.
 	 *
 	 * @param \WP_Query $query The WP_Query instance.
 	 * @return \WP_Query The modified query.
 	 */
-	public static function enhance_search( $query ) {
+	public static function enhance_public_search( $query ) {
 		// Check for a valid user session.
 		if ( ! is_user_logged_in() ) {
 			return $query;
@@ -65,6 +66,51 @@ class Search {
 
 		// Fall back to classic search if import failed or no redirect.
 		return $query;
+	}
+
+	/**
+	 * Handle admin comment search to check for URLs and ActivityPub objects.
+	 * Runs on admin_init to avoid infinite loops.
+	 */
+	public static function enhance_admin_comment_search() {
+		// Check for a valid user session.
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+
+		// Only enhance admin comment searches.
+		if ( ! \is_admin() ) {
+			return;
+		}
+
+		// Check if we're on the edit-comments.php page with a search.
+		global $pagenow;
+		if ( 'edit-comments.php' !== $pagenow ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$search_term = isset( $_GET['s'] ) ? \sanitize_text_field( \wp_unslash( $_GET['s'] ) ) : '';
+		if ( empty( $search_term ) ) {
+			return;
+		}
+
+		// Check if search term is a URL.
+		if ( ! \wp_http_validate_url( $search_term ) ) {
+			return;
+		}
+
+		// Try to import ActivityPub object.
+		$imported = self::try_import_activitypub_object( $search_term );
+
+		if ( $imported ) {
+			$comment_link   = \get_comment_link( $imported );
+			$validated_link = \wp_validate_redirect( $comment_link, \home_url() );
+			if ( $validated_link ) {
+				\wp_safe_redirect( $validated_link );
+				exit;
+			}
+		}
 	}
 
 	/**
