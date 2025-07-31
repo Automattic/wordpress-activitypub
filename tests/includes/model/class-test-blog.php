@@ -63,7 +63,7 @@ class Test_Blog extends \WP_UnitTestCase {
 
 		// The port might be lost due to HTTP_HOST manipulation, so check base URL structure.
 		$this->assertStringContainsString( '/?author=0', $blog['id'] );
-		$this->assertStringStartsWith( 'http://localhost', $blog['id'] );
+		$this->assertStringStartsWith( 'http://' . \wp_parse_url( $old_domain, PHP_URL_HOST ), $blog['id'] );
 
 		\remove_action( 'activitypub_construct_model_actor', array( Move::class, 'maybe_initiate_old_user' ) );
 
