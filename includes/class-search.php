@@ -37,7 +37,7 @@ class Search {
 		}
 
 		// Only enhance main search queries on frontend.
-		if ( ! $query->is_main_query() || ! $query->is_search() || is_admin() ) {
+		if ( ! $query->is_main_query() || ! $query->is_search() || \is_admin() ) {
 			return $query;
 		}
 
