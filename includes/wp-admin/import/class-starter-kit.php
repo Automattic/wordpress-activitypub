@@ -243,10 +243,7 @@ class Starter_Kit {
 		$items = self::$starter_kit['items'] ?? self::$starter_kit['orderedItems'] ?? array();
 
 		foreach ( $items as $actor_id ) {
-			if ( ! \is_string( $actor_id ) ) {
-				$actor_id = object_to_uri( $actor_id );
-			}
-
+			$actor_id = object_to_uri( $actor_id );
 			$actor_id = \ltrim( $actor_id, '@' );
 
 			if ( ! filter_var( $actor_id, FILTER_VALIDATE_URL ) && ! filter_var( $actor_id, FILTER_VALIDATE_EMAIL ) ) {
