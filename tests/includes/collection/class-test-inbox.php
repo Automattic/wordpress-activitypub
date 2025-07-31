@@ -208,7 +208,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		// Try to add the same activity again.
 		$inbox_id2 = Inbox::add( $activity, 1 );
-		$this->assertFalse( $inbox_id2 );
+		$this->assertEquals( $inbox_id1, $inbox_id2 );
 	}
 
 	/**
