@@ -91,7 +91,7 @@ class Search {
 
 		$activity = array(
 			'type'   => 'Create',
-			'actor'  => $object['actor'],
+			'actor'  => $object['attributedTo'],
 			'object' => $object,
 		);
 
