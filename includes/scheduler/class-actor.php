@@ -51,6 +51,9 @@ class Actor {
 
 		\add_action( 'post_stuck', array( self::class, 'sticky_post_update' ) );
 		\add_action( 'post_unstuck', array( self::class, 'sticky_post_update' ) );
+
+		// User deletion handling.
+		\add_action( 'delete_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
 	}
 
 	/**
@@ -160,5 +163,28 @@ class Actor {
 		}
 
 		self::schedule_profile_update( $post->post_author );
+	}
+
+	/**
+	 * Schedule a Delete activity when a user is deleted.
+	 *
+	 * @param int $user_id The user ID being deleted.
+	 */
+	public static function schedule_user_delete( $user_id ) {
+		// Don't bother if the user can't publish ActivityPub content.
+		if ( ! \user_can( $user_id, 'activitypub' ) ) {
+			return;
+		}
+
+		// Get the actor before deletion to ensure we have the data.
+		$actor = Actors::get_by_id( $user_id );
+
+		if ( \is_wp_error( $actor ) ) {
+			return;
+		}
+
+		\set_transient( 'activitypub_deleted_actor_' . $user_id, $actor->to_json(), 60 * 60 );
+
+		add_to_outbox( $actor, 'Delete', $user_id );
 	}
 }

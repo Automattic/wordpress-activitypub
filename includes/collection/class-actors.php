@@ -60,6 +60,15 @@ class Actors {
 			$user_id = (int) $user_id;
 		}
 
+		$actor = \get_transient( 'activitypub_deleted_actor_' . $user_id );
+
+		if ( $actor ) {
+			$actor = User::init_from_json( $actor );
+			$actor->set__id( $user_id );
+
+			return $actor;
+		}
+
 		if ( ! user_can_activitypub( $user_id ) ) {
 			return new \WP_Error(
 				'activitypub_user_not_found',
