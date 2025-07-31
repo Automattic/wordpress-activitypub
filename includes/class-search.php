@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Interactions;
 
 /**
