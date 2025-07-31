@@ -61,7 +61,7 @@ class Inbox {
 			'post_content' => wp_slash( $activity->to_json() ),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
-			'post_status'  => 'pending',
+			'post_status'  => 'publish',
 			'guid'         => $activity->get_id(),
 			'meta_input'   => array(
 				'_activitypub_object_id'             => object_to_uri( $activity->get_object() ),
