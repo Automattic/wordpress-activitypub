@@ -22,7 +22,7 @@ class Search {
 	 */
 	public static function init() {
 		\add_filter( 'pre_get_posts', array( self::class, 'enhance_public_search' ) );
-		\add_action( 'admin_init', array( self::class, 'enhance_admin_comment_search' ) );
+		\add_action( 'load-edit-comments.php', array( self::class, 'enhance_admin_comment_search' ) );
 	}
 
 	/**
