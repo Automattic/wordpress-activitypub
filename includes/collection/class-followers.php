@@ -309,14 +309,12 @@ class Followers {
 	 * @return array The list of Inboxes.
 	 */
 	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
-		$inboxes = self::get_inboxes( $actor_id );
-
-		if ( self::maybe_add_inboxes_of_blog_user( $json, $actor_id ) ) {
-			$inboxes = \array_fill_keys( $inboxes, 1 );
-			foreach ( self::get_inboxes( Actors::BLOG_USER_ID ) as $inbox ) {
-				$inboxes[ $inbox ] = 1;
-			}
-			$inboxes = \array_keys( $inboxes );
+		$activity = \json_decode( $json, true );
+		// Only if this is an Update or Delete. Create handles its own "Announce" in dual user mode.
+		if ( \in_array( $activity['type'] ?? null, array( 'Update', 'Delete' ), true ) ) {
+			$inboxes = Actors::get_inboxes();
+		} else {
+			$inboxes = self::get_inboxes( $actor_id );
 		}
 
 		return \array_slice( $inboxes, $offset, $batch_size );
@@ -330,6 +328,8 @@ class Followers {
 	 * @return bool True if the Inboxes of the Blog User should be added, false otherwise.
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $json, $actor_id ) {
+		\_deprecated_function( __METHOD__, 'unreleased' );
+
 		// Only if we're in both Blog and User modes.
 		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 			return false;

@@ -99,7 +99,6 @@ class Dispatcher {
 		$json    = Outbox::get_activity( $outbox_item_id )->to_json();
 		$actor   = Outbox::get_actor( \get_post( $outbox_item_id ) );
 		$inboxes = Followers::get_inboxes_for_activity( $json, $actor->get__id(), $batch_size, $offset );
-
 		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
 		// Retry failed inboxes.
