@@ -32,8 +32,8 @@ class Search {
 	 * @return \WP_Query The modified query.
 	 */
 	public static function enhance_public_search( $query ) {
-		// Check for a valid user session.
-		if ( ! is_user_logged_in() ) {
+		// Check user capabilities.
+		if ( ! current_user_can( 'activitypub' ) ) {
 			return $query;
 		}
 
@@ -75,19 +75,8 @@ class Search {
 	 * Runs on admin_init to avoid infinite loops.
 	 */
 	public static function enhance_admin_comment_search() {
-		// Check for a valid user session.
-		if ( ! is_user_logged_in() ) {
-			return;
-		}
-
-		// Only enhance admin comment searches.
-		if ( ! \is_admin() ) {
-			return;
-		}
-
-		// Check if we're on the edit-comments.php page with a search.
-		global $pagenow;
-		if ( 'edit-comments.php' !== $pagenow ) {
+		// Check user capabilities.
+		if ( ! current_user_can( 'activitypub' ) ) {
 			return;
 		}
 
