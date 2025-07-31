@@ -56,8 +56,11 @@ class Search {
 
 		if ( $imported ) {
 			$comment_link = \get_comment_link( $imported );
-			\wp_safe_redirect( $comment_link );
-			exit;
+			$validated_link = \wp_validate_redirect( $comment_link, home_url() );
+			if ( $validated_link ) {
+				\wp_safe_redirect( $validated_link );
+				exit;
+			}
 		}
 
 		// Fall back to classic search if import failed or no redirect.
