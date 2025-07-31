@@ -183,7 +183,7 @@ class Actor {
 			return;
 		}
 
-		\set_transient( 'activitypub_deleted_actor_' . $user_id, $actor->to_json(), 60 * 60 );
+		\set_transient( 'activitypub_deleted_actor_' . $user_id, $actor->to_json(), DAY_IN_SECONDS );
 
 		add_to_outbox( $actor, 'Delete', $user_id );
 	}
