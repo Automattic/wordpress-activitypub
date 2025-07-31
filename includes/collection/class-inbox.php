@@ -7,7 +7,6 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 
@@ -35,9 +34,17 @@ class Inbox {
 			return $activity;
 		}
 
+		$item = self::get_by_guid( $activity->get_id() );
+
 		// Check for duplicate activity.
-		if ( ! \is_wp_error( self::get_by_guid( $activity->get_id() ) ) ) {
-			return false;
+		if ( ! \is_wp_error( $item ) ) {
+			if ( \is_array( $item ) ) {
+				$item = \current( $item );
+			}
+
+			if ( $item instanceof \WP_Post ) {
+				return $item->ID;
+			}
 		}
 
 		$title      = self::get_object_title( $activity->get_object() );
@@ -47,7 +54,7 @@ class Inbox {
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
-				__( '[%1$s] %2$s', 'activitypub' ),
+				\__( '[%1$s] %2$s', 'activitypub' ),
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
@@ -92,10 +99,10 @@ class Inbox {
 			return '';
 		}
 
-		if ( is_string( $activity_object ) ) {
-			$post_id = url_to_postid( $activity_object );
+		if ( \is_string( $activity_object ) ) {
+			$post_id = \url_to_postid( $activity_object );
 
-			return $post_id ? get_the_title( $post_id ) : '';
+			return $post_id ? \get_the_title( $post_id ) : '';
 		}
 
 		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
@@ -114,7 +121,7 @@ class Inbox {
 	 *
 	 * @param string $guid The activity id.
 	 *
-	 * @return int|null The inbox item id or null if not found.
+	 * @return array|\WP_Error|\WP_Post The inbox item or an error.
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
@@ -122,7 +129,7 @@ class Inbox {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				\esc_url( $guid ),
+				\esc_url_raw( $guid ),
 				self::POST_TYPE
 			)
 		);
