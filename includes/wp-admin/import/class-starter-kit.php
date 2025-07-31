@@ -247,7 +247,9 @@ class Starter_Kit {
 				$actor_id = object_to_uri( $actor_id );
 			}
 
-			if ( ! filter_var( $actor_id, FILTER_VALIDATE_URL ) ) {
+			$actor_id = \ltrim( $actor_id, '@' );
+
+			if ( ! filter_var( $actor_id, FILTER_VALIDATE_URL ) && ! filter_var( $actor_id, FILTER_VALIDATE_EMAIL ) ) {
 				++$skipped;
 				continue;
 			}
