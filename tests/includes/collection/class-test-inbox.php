@@ -58,7 +58,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$post = \get_post( $inbox_id );
 		$this->assertInstanceOf( 'WP_Post', $post );
 		$this->assertEquals( Inbox::POST_TYPE, $post->post_type );
-		$this->assertEquals( 'pending', $post->post_status );
+		$this->assertEquals( 'publish', $post->post_status );
 
 		// Test _activitypub_object_id meta.
 		$object_id_meta = \get_post_meta( $inbox_id, '_activitypub_object_id', true );
