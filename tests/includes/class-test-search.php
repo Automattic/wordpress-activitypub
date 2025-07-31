@@ -48,7 +48,7 @@ class Test_Search extends \WP_UnitTestCase {
 	 * Test search enhancement initialization.
 	 */
 	public function test_search_init() {
-		$this->assertEquals( 10, has_filter( 'pre_get_posts', array( Search::class, 'enhance_search' ) ) );
+		$this->assertEquals( 10, has_filter( 'pre_get_posts', array( Search::class, 'enhance_public_search' ) ) );
 	}
 
 	/**
@@ -63,7 +63,7 @@ class Test_Search extends \WP_UnitTestCase {
 		// Simulate admin context.
 		\set_current_screen( 'edit-post' );
 
-		$result = Search::enhance_search( $admin_query );
+		$result = Search::enhance_public_search( $admin_query );
 		$this->assertEquals( $admin_query, $result );
 
 		// Reset screen.
@@ -74,7 +74,7 @@ class Test_Search extends \WP_UnitTestCase {
 		$non_search_query->is_search     = false;
 		$non_search_query->is_main_query = true;
 
-		$result = Search::enhance_search( $non_search_query );
+		$result = Search::enhance_public_search( $non_search_query );
 		$this->assertEquals( $non_search_query, $result );
 
 		// Test non-main query (should not be enhanced).
@@ -82,7 +82,7 @@ class Test_Search extends \WP_UnitTestCase {
 		$non_main_query->is_search     = true;
 		$non_main_query->is_main_query = false;
 
-		$result = Search::enhance_search( $non_main_query );
+		$result = Search::enhance_public_search( $non_main_query );
 		$this->assertEquals( $non_main_query, $result );
 	}
 
