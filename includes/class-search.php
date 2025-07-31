@@ -7,7 +7,6 @@
 
 namespace Activitypub;
 
-use Activitypub\Activity\Activity;
 use Activitypub\Collection\Interactions;
 
 /**
@@ -48,7 +47,7 @@ class Search {
 		}
 
 		// Check if search term is a URL.
-		if ( ! wp_http_validate_url( $search_term ) ) {
+		if ( ! \wp_http_validate_url( $search_term ) ) {
 			return $query;
 		}
 
