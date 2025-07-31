@@ -56,6 +56,8 @@ class Search {
 		$imported = self::try_import_activitypub_object( $search_term );
 
 		if ( $imported ) {
+			// Ensure the imported comment is approved/published.
+			\wp_set_comment_status( $imported, 'approve' );
 			$comment_link   = \get_comment_link( $imported );
 			$validated_link = \wp_validate_redirect( $comment_link, \home_url() );
 			if ( $validated_link ) {
@@ -104,6 +106,8 @@ class Search {
 		$imported = self::try_import_activitypub_object( $search_term );
 
 		if ( $imported ) {
+			// Ensure the imported comment is approved/published.
+			\wp_set_comment_status( $imported, 'approve' );
 			$comment_link   = \get_comment_link( $imported );
 			$validated_link = \wp_validate_redirect( $comment_link, \home_url() );
 			if ( $validated_link ) {
