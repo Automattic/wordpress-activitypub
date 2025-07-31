@@ -45,8 +45,9 @@ class Inbox {
 		 * @param array $activity_types The activity types to persist in the inbox.
 		 */
 		$activity_types = \apply_filters( 'activitypub_persist_inbox_activity_types', array( 'Create', 'Update' ) );
+		$activity_types = \array_map( 'strtolower', $activity_types );
 
-		if ( ! in_array( $type, $activity_types, true ) ) {
+		if ( ! \in_array( \strtolower( $type ), $activity_types, true ) ) {
 			return;
 		}
 
@@ -56,8 +57,9 @@ class Inbox {
 		 * @param array $object_types The object types to persist in the inbox.
 		 */
 		$object_types = \apply_filters( 'activitypub_persist_inbox_object_types', Base_Object::TYPES );
+		$object_types = \array_map( 'strtolower', $object_types );
 
-		if ( isset( $data['object']['type'] ) && ! in_array( $data['object']['type'], $object_types, true ) ) {
+		if ( isset( $data['object']['type'] ) && ! \in_array( \strtolower( $data['object']['type'] ), $object_types, true ) ) {
 			return;
 		}
 
