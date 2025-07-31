@@ -862,4 +862,150 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			array( 'www.example.com', 'example.com' ),
 		);
 	}
+
+	/**
+	 * Test whether an activity is public.
+	 *
+	 * @dataProvider public_activity_provider
+	 *
+	 * @param array $data  The data.
+	 * @param bool  $check The check.
+	 */
+	public function test_is_activity_public( $data, $check ) {
+		$this->assertEquals( $check, \Activitypub\is_activity_public( $data ) );
+	}
+
+	/**
+	 * Data provider.
+	 *
+	 * @return array[]
+	 */
+	public function public_activity_provider() {
+		return array(
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'to'     => 'https://www.w3.org/ns/activitystreams#Public',
+					'object' => array(),
+				),
+				true,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'to'     => array(
+						'https://www.w3.org/ns/activitystreams#Public',
+					),
+					'object' => array(),
+				),
+				true,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'object' => array(),
+				),
+				false,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'object' => array(
+						'to' => 'https://www.w3.org/ns/activitystreams#Public',
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'object' => array(
+						'to' => array(
+							'https://www.w3.org/ns/activitystreams#Public',
+						),
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'object' => array(
+						'cc' => array(
+							'https://www.w3.org/ns/activitystreams#Public',
+						),
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://www.w3.org/ns/activitystreams#Public',
+					),
+					'object' => 'https://example.com',
+				),
+				true,
+			),
+			array(
+				array(
+					'object' => array(
+						'to' => 'https://www.w3.org/ns/activitystreams#Public',
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'object' => array(
+						'cc' => 'https://www.w3.org/ns/activitystreams#Public',
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'object' => array(
+						'monkey' => 'https://www.w3.org/ns/activitystreams#Public',
+					),
+				),
+				false,
+			),
+			array(
+				array(
+					'to'     => 'http://www.w3.org/ns/activitystreams#Public',
+					'cc'     => 'http://www.w3.org/ns/activitystreams#Public',
+					'object' => '',
+				),
+				false,
+			),
+			array(
+				array(
+					'to'     => array( 'http://www.w3.org/ns/activitystreams#Public' ),
+					'cc'     => array( 'http://www.w3.org/ns/activitystreams#Public' ),
+					'object' => '',
+				),
+				false,
+			),
+		);
+	}
 }
