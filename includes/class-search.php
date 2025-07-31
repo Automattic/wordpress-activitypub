@@ -56,7 +56,7 @@ class Search {
 
 		if ( $imported ) {
 			$comment_link   = \get_comment_link( $imported );
-			$validated_link = \wp_validate_redirect( $comment_link, home_url() );
+			$validated_link = \wp_validate_redirect( $comment_link, \home_url() );
 			if ( $validated_link ) {
 				\wp_safe_redirect( $validated_link );
 				exit;
