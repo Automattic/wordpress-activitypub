@@ -13,7 +13,6 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
-use Activitypub\Options;
 
 /**
  * ActivityPub Class.
