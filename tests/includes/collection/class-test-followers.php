@@ -589,6 +589,8 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * @covers ::maybe_add_inboxes_of_blog_user
 	 * @dataProvider data_maybe_add_inboxes_of_blog_user
 	 *
+	 * @expectedDeprecated Activitypub\Collection\Followers::maybe_add_inboxes_of_blog_user
+	 *
 	 * @param string  $actor_mode The actor mode to test with.
 	 * @param string  $json       The JSON to test with.
 	 * @param int     $actor_id   The actor ID to test with.
