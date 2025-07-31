@@ -37,14 +37,8 @@ class Inbox {
 		$item = self::get_by_guid( $activity->get_id() );
 
 		// Check for duplicate activity.
-		if ( ! \is_wp_error( $item ) ) {
-			if ( \is_array( $item ) ) {
-				$item = \current( $item );
-			}
-
-			if ( $item instanceof \WP_Post ) {
-				return $item->ID;
-			}
+		if ( $item instanceof \WP_Post ) {
+			return $item->ID;
 		}
 
 		$title      = self::get_object_title( $activity->get_object() );
