@@ -79,17 +79,22 @@ class Search {
 		}
 
 		// Try to fetch as ActivityPub object.
-		$activitypub = Http::get_remote_object( $url );
-		if ( \is_wp_error( $activitypub ) ) {
+		$object = Http::get_remote_object( $url );
+		if ( \is_wp_error( $object ) ) {
 			return false;
 		}
 
 		// Check if it's a reply (has inReplyTo).
-		if ( ! is_activity_reply( $activitypub ) ) {
+		if ( empty( $object['inReplyTo'] ) ) {
 			return false;
 		}
 
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_actor( $object['actor'] );
+		$activity->set_object( $object );
+
 		// Import the reply as a comment.
-		return Interactions::add_comment( $activitypub );
+		return Interactions::add_comment( $activity );
 	}
 }
