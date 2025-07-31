@@ -73,7 +73,7 @@ class Search {
 	 */
 	private static function try_import_activitypub_object( $url ) {
 		// Check if it's already imported.
-		$existing = Comment::object_id_to_comment( $url );
+		$existing = Comment::url_to_commentid( $url );
 		if ( $existing ) {
 			return $existing;
 		}
