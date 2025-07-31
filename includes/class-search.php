@@ -90,10 +90,11 @@ class Search {
 			return false;
 		}
 
-		$activity = new Activity();
-		$activity->set_type( 'Create' );
-		$activity->set_actor( $object['actor'] );
-		$activity->set_object( $object );
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => $object['actor'],
+			'object' => $object,
+		);
 
 		// Import the reply as a comment.
 		return Interactions::add_comment( $activity );
