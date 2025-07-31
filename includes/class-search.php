@@ -31,13 +31,13 @@ class Search {
 	 * @return \WP_Query The modified query.
 	 */
 	public static function enhance_search( $query ) {
-		// Only enhance main search queries on frontend.
-		if ( ! $query->is_main_query() || ! $query->is_search() || is_admin() ) {
+		// Check for a valid user session.
+		if ( ! is_user_logged_in() ) {
 			return $query;
 		}
 
-		// Check for a valid user session.
-		if ( ! is_user_logged_in() ) {
+		// Only enhance main search queries on frontend.
+		if ( ! $query->is_main_query() || ! $query->is_search() || is_admin() ) {
 			return $query;
 		}
 
