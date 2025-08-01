@@ -406,42 +406,12 @@ class Actors {
 			return $inboxes;
 		}
 
-		// Get all Followers of an ID of the WordPress User.
-		$posts = new \WP_Query(
-			array(
-				'nopaging'   => true,
-				'post_type'  => self::POST_TYPE,
-				'fields'     => 'ids',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
-					'relation' => 'AND',
-					array(
-						'key'     => '_activitypub_inbox',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'     => '_activitypub_inbox',
-						'value'   => '',
-						'compare' => '!=',
-					),
-				),
-			)
-		);
-
-		if ( ! $posts->posts ) {
-			return array();
-		}
-
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$results = $wpdb->get_col(
-			$wpdb->prepare(
-				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
-				WHERE post_id IN (" . \implode( ', ', \array_fill( 0, \absint( $posts->post_count ), '%d' ) ) . ")
-				AND meta_key = '_activitypub_inbox'
-				AND meta_value IS NOT NULL",
-				$posts->posts
-			)
+			"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
+			WHERE meta_key = '_activitypub_inbox'
+			AND meta_value IS NOT NULL"
 		);
 
 		$inboxes = \array_filter( $results );
