@@ -21,12 +21,7 @@ class Inbox {
 	public static function init() {
 		// Check if inbox collection persistence is enabled.
 		if ( \get_option( 'activitypub_persist_inbox', '0' ) ) {
-			\add_action(
-				'activitypub_inbox',
-				array( self::class, 'handle_inbox_requests' ),
-				10,
-				4
-			);
+			\add_action( 'activitypub_inbox', array( self::class, 'handle_inbox_requests' ), 10, 4 );
 		}
 	}
 
