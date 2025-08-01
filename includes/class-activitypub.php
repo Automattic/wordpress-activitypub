@@ -1002,6 +1002,47 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
+
+		// Moderation user meta.
+		\register_meta(
+			'user',
+			'activitypub_blocked_actors',
+			array(
+				'type'              => 'array',
+				'description'       => 'User-specific blocked ActivityPub actors.',
+				'single'            => true,
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
+			)
+		);
+
+		\register_meta(
+			'user',
+			'activitypub_blocked_domains',
+			array(
+				'type'              => 'array',
+				'description'       => 'User-specific blocked ActivityPub domains.',
+				'single'            => true,
+				'default'           => array(),
+				'sanitize_callback' => function ( $value ) {
+					return \array_unique( \array_map( array( Sanitize::class, 'host_list' ), $value ) );
+				},
+			)
+		);
+
+		\register_meta(
+			'user',
+			'activitypub_blocked_keywords',
+			array(
+				'type'              => 'array',
+				'description'       => 'User-specific blocked ActivityPub keywords.',
+				'single'            => true,
+				'default'           => array(),
+				'sanitize_callback' => function ( $value ) {
+					return \array_map( 'sanitize_text_field', $value );
+				},
+			)
+		);
 	}
 
 	/**

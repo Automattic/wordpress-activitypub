@@ -11,6 +11,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Comment;
 use Activitypub\Model\Blog;
+use Activitypub\Moderation;
 
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
@@ -63,9 +64,13 @@ class Admin {
 			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
 		}
 
+		\add_action( 'admin_print_scripts-profile.php', array( self::class, 'enqueue_moderation_scripts' ) );
+		\add_action( 'admin_print_scripts-settings_page_activitypub', array( self::class, 'enqueue_moderation_scripts' ) );
 		\add_action( 'admin_print_footer_scripts-settings_page_activitypub', array( self::class, 'open_help_tab' ) );
 
 		\add_action( 'wp_dashboard_setup', array( self::class, 'add_dashboard_widgets' ) );
+
+		\add_action( 'wp_ajax_activitypub_moderation_settings', array( self::class, 'ajax_moderation_settings' ) );
 	}
 
 	/**
@@ -262,6 +267,33 @@ class Admin {
 				ACTIVITYPUB_PLUGIN_VERSION
 			);
 		}
+	}
+
+	/**
+	 * Enqueue moderation admin scripts.
+	 */
+	public static function enqueue_moderation_scripts() {
+		\wp_enqueue_script(
+			'activitypub-moderation-admin',
+			ACTIVITYPUB_PLUGIN_URL . 'assets/js/activitypub-moderation-admin.js',
+			array( 'jquery', 'wp-util', 'wp-a11y' ),
+			ACTIVITYPUB_PLUGIN_VERSION,
+			true
+		);
+
+		// Localize script with translations and nonces.
+		\wp_localize_script(
+			'activitypub-moderation-admin',
+			'activitypubModerationL10n',
+			array(
+				'enterValue'        => \__( 'Please enter a value to block.', 'activitypub' ),
+				'addBlockFailed'    => \__( 'Failed to add block.', 'activitypub' ),
+				'removeBlockFailed' => \__( 'Failed to remove block.', 'activitypub' ),
+				'alreadyBlocked'    => \__( 'This term is already blocked.', 'activitypub' ),
+				'invalidDomain'     => \__( 'Please enter a valid domain (e.g., example.com).', 'activitypub' ),
+				'nonce'             => \wp_create_nonce( 'activitypub_moderation_settings' ),
+			)
+		);
 	}
 
 	/**
@@ -766,5 +798,66 @@ class Admin {
 			<?php endif; ?>
 		</p>
 		<?php
+	}
+
+	/**
+	 * AJAX handler for moderation settings (add/remove blocks).
+	 */
+	public static function ajax_moderation_settings() {
+		$context   = \sanitize_text_field( \wp_unslash( $_POST['context'] ?? '' ) );
+		$operation = \sanitize_text_field( \wp_unslash( $_POST['operation'] ?? '' ) );
+		$type      = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
+		$value     = \sanitize_text_field( \wp_unslash( $_POST['value'] ?? '' ) );
+
+		// Validate required parameters.
+		if ( ! in_array( $context, array( 'user', 'site' ), true ) || ! in_array( $operation, array( 'add', 'remove' ), true ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid context or action.', 'activitypub' ) ) );
+		}
+
+		if ( empty( $type ) || empty( $value ) || ! in_array( $type, array( 'domain', 'keyword' ), true ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid parameters.', 'activitypub' ) ) );
+		}
+
+		// Verify nonce for all operations.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_moderation_settings' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
+		if ( 'user' === $context ) {
+			$user_id = (int) ( \sanitize_text_field( \wp_unslash( $_POST['user_id'] ?? 0 ) ) );
+
+			// Check permissions.
+			if ( \get_current_user_id() !== $user_id ) {
+				\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+			}
+
+			if ( ! $user_id ) {
+				\wp_send_json_error( array( 'message' => \__( 'Invalid user ID.', 'activitypub' ) ) );
+			}
+
+			if ( 'add' === $operation ) {
+				$success       = Moderation::add_user_block( $user_id, $type, $value );
+				$error_message = \__( 'Failed to add block.', 'activitypub' );
+			} else {
+				$success       = Moderation::remove_user_block( $user_id, $type, $value );
+				$error_message = \__( 'Failed to remove block.', 'activitypub' );
+			}
+		} elseif ( 'add' === $operation ) {
+				$success       = Moderation::add_site_block( $type, $value );
+				$error_message = \__( 'Failed to add block.', 'activitypub' );
+		} else {
+			$success       = Moderation::remove_site_block( $type, $value );
+			$error_message = \__( 'Failed to remove block.', 'activitypub' );
+		}
+
+		if ( $success ) {
+			\wp_send_json_success();
+		} else {
+			\wp_send_json_error( array( 'message' => $error_message ) );
+		}
 	}
 }
