@@ -442,7 +442,7 @@ class Comment {
 	 * @return string $url
 	 */
 	public static function remote_comment_link( $comment_link, $comment ) {
-		if ( ! $comment || is_admin() ) {
+		if ( ! $comment || \is_admin() || \is_search() ) {
 			return $comment_link;
 		}
 

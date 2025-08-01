@@ -216,7 +216,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertStringStartsWith( $new_domain, $outbox_item->target );
 
 		// Verify the old host was stored.
-		$this->assertEquals( 'example.org', \get_option( 'activitypub_old_host' ) );
+		$this->assertEquals( \wp_parse_url( $old_domain, PHP_URL_HOST ), \get_option( 'activitypub_old_host' ) );
 
 		// Clean up.
 		\delete_option( 'activitypub_old_host' );

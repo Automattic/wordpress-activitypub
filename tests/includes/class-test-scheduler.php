@@ -459,6 +459,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			'activitypub_pre_http_get_remote_object',
 			function () {
 				return array(
+					'type'              => 'Person',
 					'name'              => 'Test User',
 					'preferredUsername' => 'test',
 					'id'                => 'https://example.com/users/test',

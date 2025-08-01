@@ -1,15 +1,12 @@
 {
 	"core": null,
 	"plugins": [ "." ],
+	"port": 80,
 	"env": {
 		"tests": {
 			"config": {
-				"WP_TESTS_DOMAIN": "example.org",
-				"WP_SITEURL": "http://example.org",
-				"WP_HOME": "http://example.org",
 				"WP_ENVIRONMENT_TYPE": "production"
 			},
-			"port": 80,
 			"mappings": {
 				"wp-content/plugins/activitypub": ".",
 				"wp-content/plugins/activitypub/tests": "./tests",

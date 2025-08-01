@@ -14,11 +14,12 @@ use Activitypub\Model\Application;
 use Activitypub\Activity\Actor;
 
 use function Activitypub\get_remote_metadata_by_actor;
-use function Activitypub\object_to_uri;
-use function Activitypub\normalize_url;
-use function Activitypub\normalize_host;
-use function Activitypub\url_to_authorid;
+use function Activitypub\is_actor;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\normalize_host;
+use function Activitypub\normalize_url;
+use function Activitypub\object_to_uri;
+use function Activitypub\url_to_authorid;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -559,6 +560,14 @@ class Actors {
 
 		if ( \is_wp_error( $object ) ) {
 			return $object;
+		}
+
+		if ( ! is_actor( $object ) ) {
+			return new \WP_Error(
+				'activitypub_no_actor',
+				\__( 'Object is not an Actor', 'activitypub' ),
+				array( 'status' => 400 )
+			);
 		}
 
 		$post_id = self::upsert( $object );
