@@ -187,7 +187,7 @@ class Enable_Mastodon_Apps {
 		$user_id               = self::maybe_map_user_to_blog( $user_id );
 		$activitypub_followers = Followers::get_followers( $user_id, 40 );
 		$mastodon_followers    = array_map(
-			function ( $item ) {
+			function ( $item ) use ( $user_id ) {
 				$acct = Webfinger_Util::uri_to_acct( $item->get_id() );
 
 				if ( $acct && ! is_wp_error( $acct ) ) {
@@ -197,7 +197,7 @@ class Enable_Mastodon_Apps {
 				}
 
 				$account                  = new Account();
-				$account->id              = \strval( $item->get__id() );
+				$account->id              = \strval( $user_id );
 				$account->username        = $item->get_preferred_username();
 				$account->acct            = $acct;
 				$account->display_name    = $item->get_name();
@@ -322,7 +322,7 @@ class Enable_Mastodon_Apps {
 			$account->fields
 		);
 
-		$account->followers_count = Followers::count_followers( $user->get__id() );
+		$account->followers_count = Followers::count_followers( $user_id );
 
 		return $account;
 	}
@@ -481,28 +481,29 @@ class Enable_Mastodon_Apps {
 		}
 
 		foreach ( $followers as $follower ) {
-			$acct = Webfinger_Util::uri_to_acct( $follower->get_id() );
+			$actor = Actors::get_actor( $follower );
+			$acct  = Webfinger_Util::uri_to_acct( $actor->get_id() );
 
 			if ( $acct && ! is_wp_error( $acct ) ) {
 				$acct = \str_replace( 'acct:', '', $acct );
 			} else {
-				$acct = $follower->get_url();
+				$acct = $actor->get_url();
 			}
 
 			$account                 = new Account();
-			$account->id             = \strval( $follower->get__id() );
-			$account->username       = $follower->get_preferred_username();
+			$account->id             = \strval( $follower->guid );
+			$account->username       = $actor->get_preferred_username();
 			$account->acct           = $acct;
-			$account->display_name   = $follower->get_name();
-			$account->url            = $follower->get_url();
-			$account->uri            = $follower->get_id();
-			$account->avatar         = $follower->get_icon_url();
-			$account->avatar_static  = $follower->get_icon_url();
-			$account->created_at     = new DateTime( $follower->get_published() );
-			$account->last_status_at = new DateTime( $follower->get_published() );
-			$account->note           = $follower->get_summary();
-			$account->header         = $follower->get_image_url();
-			$account->header_static  = $follower->get_image_url();
+			$account->display_name   = $actor->get_name();
+			$account->url            = $actor->get_url();
+			$account->uri            = $actor->get_id();
+			$account->avatar         = $actor->get_icon_url();
+			$account->avatar_static  = $actor->get_icon_url();
+			$account->created_at     = new DateTime( $actor->get_published() );
+			$account->last_status_at = new DateTime( $actor->get_published() );
+			$account->note           = $actor->get_summary();
+			$account->header         = $actor->get_image_url();
+			$account->header_static  = $actor->get_image_url();
 
 			$search_data['accounts'][] = $account;
 		}

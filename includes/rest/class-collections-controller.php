@@ -92,11 +92,11 @@ class Collections_Controller extends Actors_Controller {
 
 		switch ( $request->get_param( 'type' ) ) {
 			case 'tags':
-				$response = $this->get_tags( $request, $user );
+				$response = $this->get_tags( $request, $user_id );
 				break;
 
 			case 'featured':
-				$response = $this->get_featured( $request, $user );
+				$response = $this->get_featured( $request, $user_id );
 				break;
 
 			default:
@@ -116,12 +116,12 @@ class Collections_Controller extends Actors_Controller {
 	/**
 	 * Retrieves a collection of featured tags.
 	 *
-	 * @param \WP_REST_Request      $request The request object.
-	 * @param User|Blog|Application $user    Actor.
+	 * @param \WP_REST_Request $request The request object.
+	 * @param int              $user_id Actor ID.
 	 *
 	 * @return array Collection of featured tags.
 	 */
-	public function get_tags( $request, $user ) {
+	public function get_tags( $request, $user_id ) {
 		$tags = \get_terms(
 			array(
 				'taxonomy' => 'post_tag',
@@ -137,7 +137,7 @@ class Collections_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'   => Base_Object::JSON_LD_CONTEXT,
-			'id'         => get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $user->get__id() ) ),
+			'id'         => get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $user_id ) ),
 			'type'       => 'Collection',
 			'totalItems' => \is_countable( $tags ) ? \count( $tags ) : 0,
 			'items'      => array(),
@@ -157,15 +157,15 @@ class Collections_Controller extends Actors_Controller {
 	/**
 	 * Retrieves a collection of featured posts.
 	 *
-	 * @param \WP_REST_Request      $request The request object.
-	 * @param User|Blog|Application $user    Actor.
+	 * @param \WP_REST_Request $request The request object.
+	 * @param int              $user_id Actor ID.
 	 *
 	 * @return array Collection of featured posts.
 	 */
-	public function get_featured( $request, $user ) {
+	public function get_featured( $request, $user_id ) {
 		$posts = array();
 
-		if ( is_single_user() || Actors::BLOG_USER_ID !== $user->get__id() ) {
+		if ( is_single_user() || Actors::BLOG_USER_ID !== $user_id ) {
 			$sticky_posts = \get_option( 'sticky_posts' );
 
 			if ( $sticky_posts && is_array( $sticky_posts ) ) {
@@ -184,8 +184,8 @@ class Collections_Controller extends Actors_Controller {
 					),
 				);
 
-				if ( $user->get__id() > 0 ) {
-					$args['author'] = $user->get__id();
+				if ( $user_id > 0 ) {
+					$args['author'] = $user_id;
 				}
 
 				$posts = \get_posts( $args );
@@ -194,7 +194,7 @@ class Collections_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $request->get_param( 'user_id' ) ) ),
+			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => \is_countable( $posts ) ? \count( $posts ) : 0,
 			'orderedItems' => array(),

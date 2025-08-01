@@ -24,7 +24,9 @@ class Follow {
 	public static function init() {
 		\add_action(
 			'activitypub_inbox_follow',
-			array( self::class, 'handle_follow' )
+			array( self::class, 'handle_follow' ),
+			10,
+			2
 		);
 
 		\add_action(
@@ -39,17 +41,9 @@ class Follow {
 	 * Handle "Follow" requests.
 	 *
 	 * @param array $activity The activity object.
+	 * @param int   $user_id  The user ID.
 	 */
-	public static function handle_follow( $activity ) {
-		$user = Actors::get_by_resource( $activity['object'] );
-
-		if ( ! $user || is_wp_error( $user ) ) {
-			// If we can not find a user, we can not initiate a follow process.
-			return;
-		}
-
-		$user_id = $user->get__id();
-
+	public static function handle_follow( $activity, $user_id ) {
 		// Save follower.
 		$remote_actor = Followers::add_follower(
 			$user_id,

@@ -100,8 +100,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 */
 	public function get_items( $request ) {
 		$page    = $request->get_param( 'page' ) ?? 1;
-		$user    = Actors::get_by_various( $request->get_param( 'user_id' ) );
-		$user_id = $user->get__id();
+		$user_id = $request->get_param( 'user_id' );
+		$user    = Actors::get_by_various( $user_id );
 
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.

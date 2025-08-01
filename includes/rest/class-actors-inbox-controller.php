@@ -126,7 +126,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'     => get_context(),
-			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user->get__id() ) ),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => 0,
@@ -186,7 +186,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			do_action( 'activitypub_rest_inbox_disallowed', $data, $user->get__id(), $type, $activity );
+			do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 		} else {
 			/**
 			 * ActivityPub inbox action.
@@ -196,7 +196,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			\do_action( 'activitypub_inbox', $data, $user->get__id(), $type, $activity );
+			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
 
 			/**
 			 * ActivityPub inbox action for specific activity types.
@@ -205,7 +205,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param int|null           $user_id  The user ID.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			\do_action( 'activitypub_inbox_' . $type, $data, $user->get__id(), $activity );
+			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
 		}
 
 		$response = \rest_ensure_response(
