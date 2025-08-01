@@ -161,15 +161,15 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object or WP_Error.
 	 */
 	public function create_item( $request ) {
-		$user_id  = $request->get_param( 'user_id' );
-		$data     = $request->get_json_params();
-		$type     = \strtolower( $request->get_param( 'type' ) );
+		$user_id = $request->get_param( 'user_id' );
+		$data    = $request->get_json_params();
+		$type    = \strtolower( $request->get_param( 'type' ) );
 
 		/* @var Activity $activity Activity object.*/
 		$activity = Activity::init_from_array( $data );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		if ( Moderation::activity_is_blocked( $activity, $user->get__id() ) ) {
+		if ( Moderation::activity_is_blocked( $activity, $user_id ) ) {
 			/**
 			 * ActivityPub inbox disallowed activity.
 			 *
