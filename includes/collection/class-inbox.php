@@ -34,7 +34,7 @@ class Inbox {
 			return $activity;
 		}
 
-		$item = self::get_by_guid( $activity->get_id() );
+		$item = self::get( $activity->get_id(), $user_id );
 
 		// Check for duplicate activity.
 		if ( $item instanceof \WP_Post ) {
@@ -113,17 +113,19 @@ class Inbox {
 	/**
 	 * Get the inbox item by activity id.
 	 *
-	 * @param string $guid The activity id.
+	 * @param string $guid    The activity id.
+	 * @param int    $user_id The id of the local blog-user.
 	 *
 	 * @return array|\WP_Error|\WP_Post The inbox item or an error.
 	 */
-	public static function get_by_guid( $guid ) {
+	public static function get( $guid, $user_id ) {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_author=%d AND post_type=%s",
 				\esc_url_raw( $guid ),
+				\absint( $user_id ),
 				self::POST_TYPE
 			)
 		);
