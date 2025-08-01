@@ -35,10 +35,10 @@ class Following_Controller extends Actors_Controller {
 			array(
 				'args'   => array(
 					'user_id' => array(
-						'description' => 'The ID or username of the actor.',
+						'description' => 'The ID of the actor.',
 						'type'        => 'string',
 						'required'    => true,
-						'pattern'     => '[\w\-\.]+',
+						'pattern'     => '-?\d+',
 					),
 				),
 				array(

@@ -35,7 +35,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = '(?:users|actors)/(?P<user_id>[\w\-\.]+)/outbox';
+	protected $rest_base = '(?:users|actors)/(?P<user_id>-?\d+)/outbox';
 
 	/**
 	 * Register routes.
