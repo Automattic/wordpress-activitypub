@@ -324,6 +324,44 @@ class Settings {
 				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
 			)
 		);
+
+		// Moderation settings.
+		\register_setting(
+			'activitypub',
+			'activitypub_site_blocked_actors',
+			array(
+				'type'              => 'array',
+				'description'       => 'Site-wide blocked ActivityPub actors.',
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_site_blocked_domains',
+			array(
+				'type'              => 'array',
+				'description'       => 'Site-wide blocked ActivityPub domains.',
+				'default'           => array(),
+				'sanitize_callback' => function ( $value ) {
+					return \array_unique( \array_map( array( Sanitize::class, 'host_list' ), $value ) );
+				},
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_site_blocked_keywords',
+			array(
+				'type'              => 'array',
+				'description'       => 'Site-wide blocked ActivityPub keywords.',
+				'default'           => array(),
+				'sanitize_callback' => function ( $value ) {
+					return \array_map( 'sanitize_text_field', $value );
+				},
+			)
+		);
 	}
 
 	/**
