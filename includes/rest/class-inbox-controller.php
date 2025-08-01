@@ -153,9 +153,9 @@ class Inbox_Controller extends \WP_REST_Controller {
 					continue;
 				}
 
-				$actor = Actors::get_by_various( $recipient );
+				$user_id = Actors::get_by_various( $recipient, 'id' );
 
-				if ( ! $actor || \is_wp_error( $actor ) ) {
+				if ( \is_wp_error( $user_id ) ) {
 					continue;
 				}
 
@@ -167,7 +167,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param string             $type     The type of the activity.
 				 * @param Activity|\WP_Error $activity The Activity object.
 				 */
-				\do_action( 'activitypub_inbox', $data, $actor->get__id(), $type, $activity );
+				\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
 
 				/**
 				 * ActivityPub inbox action for specific activity types.
@@ -176,7 +176,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param int                $user_id  The user ID.
 				 * @param Activity|\WP_Error $activity The Activity object.
 				 */
-				\do_action( 'activitypub_inbox_' . $type, $data, $actor->get__id(), $activity );
+				\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
 			}
 		}
 
