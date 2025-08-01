@@ -14,6 +14,7 @@ use Activitypub\Moderation;
 
 use function Activitypub\is_same_domain;
 use function Activitypub\extract_recipients_from_activity;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Inbox_Controller class.
@@ -159,6 +160,10 @@ class Inbox_Controller extends \WP_REST_Controller {
 				$user_id = Actors::get_id_by_various( $recipient );
 
 				if ( \is_wp_error( $user_id ) ) {
+					continue;
+				}
+
+				if ( ! user_can_activitypub( $user_id ) ) {
 					continue;
 				}
 
