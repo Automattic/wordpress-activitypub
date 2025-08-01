@@ -118,7 +118,7 @@ class Moderation {
 			case 'keyword':
 				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 
-				if ( ! in_array( $value, $blocks, true ) ) {
+				if ( ! \in_array( $value, $blocks, true ) ) {
 					$blocks[] = $value;
 					return (bool) \update_user_meta( $user_id, self::USER_META_KEYS[ $type ], $blocks );
 				}
@@ -140,7 +140,7 @@ class Moderation {
 		switch ( $type ) {
 			case 'actor':
 				// If value is numeric, treat it as a post ID for direct removal.
-				if ( is_numeric( $value ) ) {
+				if ( \is_numeric( $value ) ) {
 					$post_id = (int) $value;
 				} else {
 					// Otherwise, find the actor post by actor ID.
@@ -156,11 +156,11 @@ class Moderation {
 			case 'domain':
 			case 'keyword':
 				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-				$key    = array_search( $value, $blocks, true );
+				$key    = \array_search( $value, $blocks, true );
 
 				if ( false !== $key ) {
 					unset( $blocks[ $key ] );
-					return \update_user_meta( $user_id, self::USER_META_KEYS[ $type ], array_values( $blocks ) );
+					return \update_user_meta( $user_id, self::USER_META_KEYS[ $type ], \array_values( $blocks ) );
 				}
 				break;
 		}
@@ -199,7 +199,7 @@ class Moderation {
 			case 'keyword':
 				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
 
-				if ( ! in_array( $value, $blocks, true ) ) {
+				if ( ! \in_array( $value, $blocks, true ) ) {
 					$blocks[] = $value;
 					return \update_option( self::OPTION_KEYS[ $type ], $blocks );
 				}
@@ -225,11 +225,11 @@ class Moderation {
 			case 'domain':
 			case 'keyword':
 				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
-				$key    = array_search( $value, $blocks, true );
+				$key    = \array_search( $value, $blocks, true );
 
 				if ( false !== $key ) {
 					unset( $blocks[ $key ] );
-					return \update_option( self::OPTION_KEYS[ $type ], array_values( $blocks ) );
+					return \update_option( self::OPTION_KEYS[ $type ], \array_values( $blocks ) );
 				}
 				break;
 		}
@@ -350,30 +350,5 @@ class Moderation {
 	 */
 	public static function get_blocked_actors( $user_id, $number = -1, $page = null, $args = array() ) {
 		return self::get_blocked_actors_with_count( $user_id, $number, $page, $args )['blocked_actors'];
-	}
-
-	/**
-	 * Get the total number of blocked actors for a given user.
-	 *
-	 * @param int|null $user_id The ID of the WordPress User.
-	 *
-	 * @return int The total number of blocked actors.
-	 */
-	public static function count_blocked_actors( $user_id ) {
-		return self::get_blocked_actors_with_count( $user_id, -1 )['total'];
-	}
-
-	/**
-	 * Check if an actor is blocked by a given user.
-	 *
-	 * @param int $user_id The ID of the WordPress User.
-	 * @param int $post_id The ID of the Actor Post.
-	 *
-	 * @return bool True if blocked, false otherwise.
-	 */
-	public static function is_actor_blocked( $user_id, $post_id ) {
-		$blocked = \get_post_meta( $post_id, self::BLOCKED_ACTORS_META_KEY, false );
-
-		return \in_array( (string) $user_id, $blocked, true );
 	}
 }

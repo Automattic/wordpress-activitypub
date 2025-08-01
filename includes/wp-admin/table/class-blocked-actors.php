@@ -35,7 +35,7 @@ class Blocked_Actors extends \WP_List_Table {
 	 * Constructor.
 	 */
 	public function __construct() {
-		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
+		if ( \get_current_screen()->id === 'settings_page_activitypub' ) {
 			$this->user_id = Actors::BLOG_USER_ID;
 		} else {
 			$this->user_id = \get_current_user_id();
@@ -51,7 +51,7 @@ class Blocked_Actors extends \WP_List_Table {
 			)
 		);
 
-		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
+		\add_action( 'load-' . \get_current_screen()->id, array( $this, 'process_action' ), 20 );
 	}
 
 	/**
@@ -94,7 +94,7 @@ class Blocked_Actors extends \WP_List_Table {
 					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-						$blocked = array_map( 'absint', \wp_unslash( $_REQUEST['blocked'] ) );
+						$blocked = \array_map( 'absint', \wp_unslash( $_REQUEST['blocked'] ) );
 
 						foreach ( $blocked as $post_id ) {
 							Moderation::remove_user_block( $this->user_id, 'actor', $post_id );
@@ -141,7 +141,7 @@ class Blocked_Actors extends \WP_List_Table {
 				break;
 		}
 
-		\set_transient( 'settings_errors', get_settings_errors(), 30 ); // 30 seconds.
+		\set_transient( 'settings_errors', \get_settings_errors(), 30 ); // 30 seconds.
 
 		\wp_safe_redirect( $redirect_to );
 		exit;
@@ -237,7 +237,7 @@ class Blocked_Actors extends \WP_List_Table {
 		$this->set_pagination_args(
 			array(
 				'total_items' => $counter,
-				'total_pages' => ceil( $counter / $per_page ),
+				'total_pages' => \ceil( $counter / $per_page ),
 				'per_page'    => $per_page,
 			)
 		);
@@ -283,7 +283,7 @@ class Blocked_Actors extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_default( $item, $column_name ) {
-		if ( ! array_key_exists( $column_name, $item ) ) {
+		if ( ! \array_key_exists( $column_name, $item ) ) {
 			return \esc_html__( 'None', 'activitypub' );
 		}
 		return \esc_html( $item[ $column_name ] );
@@ -306,7 +306,7 @@ class Blocked_Actors extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_username( $item ) {
-		return sprintf(
+		return \sprintf(
 			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s" target="_blank">%4$s</a></strong><br />',
 			\esc_url( $item['icon'] ),
 			\esc_attr( $item['post_title'] ),
@@ -360,15 +360,15 @@ class Blocked_Actors extends \WP_List_Table {
 		}
 
 		$search = Sanitize::webfinger( $search );
-		if ( filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
+		if ( \filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
 			return;
 		}
 
 		$search = Webfinger::resolve( $search );
 
-		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
+		if ( ! \is_wp_error( $search ) && \filter_var( $search, FILTER_VALIDATE_URL ) ) {
 			$actor = Actors::fetch_remote_by_uri( $search );
-			if ( ! is_wp_error( $actor ) ) {
+			if ( ! \is_wp_error( $actor ) ) {
 				echo ' ';
 				\printf(
 					/* translators: %s: Actor name. */
