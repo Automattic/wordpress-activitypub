@@ -180,7 +180,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/999999/followers' );
 		$response = rest_get_server()->dispatch( $request );
 
-		$this->assertErrorResponse( 'activitypub_user_not_found', $response, 404 );
+		$this->assertErrorResponse( 'rest_invalid_param', $response, 400 );
 	}
 
 	/**

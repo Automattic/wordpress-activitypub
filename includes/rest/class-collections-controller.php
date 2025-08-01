@@ -40,9 +40,10 @@ class Collections_Controller extends Actors_Controller {
 			array(
 				'args'   => array(
 					'user_id' => array(
-						'description' => 'The user ID or username.',
-						'type'        => 'string',
-						'required'    => true,
+						'description'       => 'The user ID or username.',
+						'type'              => 'string',
+						'required'          => true,
+						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 					'type'    => array(
 						'description' => 'The type of collection to query.',
@@ -84,11 +85,6 @@ class Collections_Controller extends Actors_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = Actors::get_by_various( $user_id );
-
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
 
 		switch ( $request->get_param( 'type' ) ) {
 			case 'tags':

@@ -42,10 +42,11 @@ class Actors_Controller extends \WP_REST_Controller {
 			array(
 				'args'   => array(
 					'user_id' => array(
-						'description' => 'The ID of the actor.',
-						'type'        => 'string',
-						'required'    => true,
-						'pattern'     => '-?\d+',
+						'description'       => 'The ID of the actor.',
+						'type'              => 'string',
+						'required'          => true,
+						'pattern'           => '-?\d+',
+						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),
 				array(
@@ -93,11 +94,7 @@ class Actors_Controller extends \WP_REST_Controller {
 	 */
 	public function get_item( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = Actor_Collection::get_by_various( $user_id );
-
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
+		$user    = Actor_Collection::get_by_id( $user_id );
 
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
@@ -122,11 +119,7 @@ class Actors_Controller extends \WP_REST_Controller {
 	public function get_remote_follow_item( $request ) {
 		$resource = $request->get_param( 'resource' );
 		$user_id  = $request->get_param( 'user_id' );
-		$user     = Actor_Collection::get_by_various( $user_id );
-
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
+		$user     = Actor_Collection::get_by_id( $user_id );
 
 		$template = Webfinger::get_remote_follow_endpoint( $resource );
 
@@ -375,5 +368,20 @@ class Actors_Controller extends \WP_REST_Controller {
 		);
 
 		return $this->add_additional_fields_schema( $this->schema );
+	}
+
+	/**
+	 * Validates the user_id parameter.
+	 *
+	 * @param mixed $user_id The user_id parameter.
+	 * @return bool|\WP_Error True if the user_id is valid, WP_Error otherwise.
+	 */
+	public function validate_user_id( $user_id ) {
+		$user = Actor_Collection::get_by_id( $user_id );
+		if ( \is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		return true;
 	}
 }

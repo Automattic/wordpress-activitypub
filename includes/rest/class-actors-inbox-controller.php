@@ -35,10 +35,11 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			array(
 				'args'   => array(
 					'user_id' => array(
-						'description' => 'The ID of the actor.',
-						'type'        => 'string',
-						'required'    => true,
-						'pattern'     => '-?\d+',
+						'description'       => 'The ID of the actor.',
+						'type'              => 'string',
+						'required'          => true,
+						'pattern'           => '-?\d+',
+						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),
 				array(
@@ -113,11 +114,6 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = Actors::get_by_various( $user_id );
-
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
 
 		/**
 		 * Fires before the ActivityPub inbox is created and sent to the client.
@@ -164,13 +160,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object or WP_Error.
 	 */
 	public function create_item( $request ) {
-		$user_id = $request->get_param( 'user_id' );
-		$user    = Actors::get_by_various( $user_id );
-
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
-
+		$user_id  = $request->get_param( 'user_id' );
 		$data     = $request->get_json_params();
 		$activity = Activity::init_from_array( $data );
 		$type     = $request->get_param( 'type' );

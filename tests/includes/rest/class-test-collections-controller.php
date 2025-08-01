@@ -71,7 +71,7 @@ class Test_Collections_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/9999999/collections/tags' );
 		$response = rest_get_server()->dispatch( $request );
 
-		$this->assertErrorResponse( 'activitypub_user_not_found', $response, 404 );
+		$this->assertErrorResponse( 'rest_invalid_param', $response, 400 );
 	}
 
 	/**

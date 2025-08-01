@@ -35,10 +35,11 @@ class Following_Controller extends Actors_Controller {
 			array(
 				'args'   => array(
 					'user_id' => array(
-						'description' => 'The ID of the actor.',
-						'type'        => 'string',
-						'required'    => true,
-						'pattern'     => '-?\d+',
+						'description'       => 'The ID of the actor.',
+						'type'              => 'string',
+						'required'          => true,
+						'pattern'           => '-?\d+',
+						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),
 				array(
@@ -86,11 +87,7 @@ class Following_Controller extends Actors_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = Actors::get_by_various( $user_id );
-
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
+		$user    = Actors::get_by_id( $user_id );
 
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
