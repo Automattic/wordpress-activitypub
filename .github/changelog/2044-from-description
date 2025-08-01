@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add code coverage reporting to GitHub Actions PHPUnit workflow with dedicated coverage job using Xdebug
