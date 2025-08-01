@@ -64,10 +64,11 @@ class Actors_Controller extends \WP_REST_Controller {
 			array(
 				'args' => array(
 					'user_id' => array(
-						'description' => 'The ID of the actor.',
-						'type'        => 'string',
-						'required'    => true,
-						'pattern'     => '-?\d+',
+						'description'       => 'The ID of the actor.',
+						'type'              => 'string',
+						'required'          => true,
+						'pattern'           => '-?\d+',
+						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),
 				array(
