@@ -242,7 +242,7 @@ class Moderation {
 
 		// Check blocked keywords in activity content.
 		if ( $has_object ) {
-			$content = $activity->get_object()->get_content();
+			$content = $activity->get_object()->get_content() . ' ' . $activity->get_object()->get_summary() . ' ' . $activity->get_object()->get_name();
 			foreach ( $blocked_keywords as $keyword ) {
 				if ( \stripos( $content, $keyword ) !== false ) {
 					return true;
