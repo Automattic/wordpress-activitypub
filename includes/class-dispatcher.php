@@ -98,7 +98,6 @@ class Dispatcher {
 	public static function send_to_followers( $outbox_item_id, $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset = 0 ) {
 		$item    = \get_post( $outbox_item_id );
 		$json    = Outbox::get_activity( $outbox_item_id )->to_json();
-		$actor   = Outbox::get_actor( $item );
 		$inboxes = Followers::get_inboxes_for_activity( $json, $item->post_author, $batch_size, $offset );
 		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
@@ -177,7 +176,6 @@ class Dispatcher {
 	private static function send_to_inboxes( $inboxes, $outbox_item_id ) {
 		$item    = \get_post( $outbox_item_id );
 		$json    = Outbox::get_activity( $outbox_item_id )->to_json();
-		$actor   = Outbox::get_actor( $item );
 		$retries = array();
 
 		/**
