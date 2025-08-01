@@ -640,4 +640,89 @@ class Test_Moderation extends \WP_UnitTestCase {
 		// Clean up.
 		\delete_option( 'disallowed_keys' );
 	}
+
+	/**
+	 * Test blocked attributes.
+	 *
+	 * @covers ::activity_is_blocked
+	 *
+	 * @dataProvider blocked_attributes_provider
+	 *
+	 * @param array $data     The data.
+	 * @param bool  $expected The expected result.
+	 */
+	public function test_blocked_attributes( $data, $expected ) {
+		Moderation::add_site_block( 'keyword', 'spam' );
+
+		$data = Activity::init_from_array( $data );
+
+		$this->assertEquals( $expected, Moderation::activity_is_blocked( $data ) );
+
+		Moderation::remove_site_block( 'keyword', 'spam' );
+	}
+
+	/**
+	 * Data provider.
+	 *
+	 * @return array[]
+	 */
+	public function blocked_attributes_provider() {
+		return array(
+			array(
+				array(
+					'actor'  => 'https://example.com/@user',
+					'object' => array(
+						'id'      => 'https://example.com/note/1',
+						'type'    => 'Note',
+						'content' => 'spam',
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'actor'  => 'https://example.com/@user',
+					'object' => array(
+						'id'                => 'https://example.com/note/1',
+						'type'              => 'Person',
+						'preferredUsername' => 'spam',
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'actor'  => 'https://example.com/@user',
+					'object' => array(
+						'id'      => 'https://example.com/note/1',
+						'type'    => 'Note',
+						'summary' => 'spam',
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'actor'  => 'https://example.com/@user',
+					'object' => array(
+						'id'   => 'https://example.com/note/1',
+						'type' => 'Note',
+						'name' => 'spam',
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'actor'  => 'https://example.com/@user',
+					'object' => array(
+						'id'      => 'https://example.com/note/1',
+						'type'    => 'Note',
+						'content' => 'Test',
+					),
+				),
+				false,
+			),
+		);
+	}
 }
