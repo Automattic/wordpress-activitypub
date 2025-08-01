@@ -105,7 +105,6 @@ class Following_Controller extends Actors_Controller {
 			'@context'     => get_context(),
 			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
-			'actor'        => $user_id,
 			'type'         => 'OrderedCollection',
 			'totalItems'   => $data['total'],
 			'orderedItems' => array_map(
