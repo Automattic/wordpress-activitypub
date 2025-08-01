@@ -156,7 +156,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 					continue;
 				}
 
-				$user_id = Actors::get_by_various( $recipient, 'id' );
+				$user_id = Actors::get_id_by_various( $recipient );
 
 				if ( \is_wp_error( $user_id ) ) {
 					continue;
