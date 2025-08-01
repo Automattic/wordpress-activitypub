@@ -71,6 +71,8 @@ class Actors {
 		}
 
 		switch ( $output ) {
+			case 'id':
+				return $user_id;
 			case 'actor':
 				switch ( $user_id ) {
 					case self::BLOG_USER_ID:
@@ -80,9 +82,6 @@ class Actors {
 					default:
 						return User::from_wp_user( $user_id );
 				}
-				break;
-			case 'id':
-				return $user_id;
 			default:
 				return new \WP_Error(
 					'activitypub_user_not_found',
