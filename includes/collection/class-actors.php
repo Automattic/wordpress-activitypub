@@ -82,13 +82,13 @@ class Actors {
 					default:
 						return User::from_wp_user( $user_id );
 				}
-			default:
-				return new \WP_Error(
-					'activitypub_user_not_found',
-					\__( 'Actor not found', 'activitypub' ),
-					array( 'status' => 404 )
-				);
 		}
+
+		return new \WP_Error(
+			'activitypub_user_not_found',
+			\__( 'Actor not found', 'activitypub' ),
+			array( 'status' => 404 )
+		);
 	}
 
 	/**
