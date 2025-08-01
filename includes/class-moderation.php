@@ -40,13 +40,17 @@ class Moderation {
 	/**
 	 * Check if an activity should be blocked for a specific user.
 	 *
-	 * @param array    $activity_data The activity data.
-	 * @param int|null $user_id       The user ID to check blocks for.
+	 * @param Activity $activity The activity.
+	 * @param int|null $user_id  The user ID to check blocks for.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function activity_is_blocked( $activity_data, $user_id = null ) {
+	public static function activity_is_blocked( $activity, $user_id = null ) {
+		if ( ! $activity instanceof Activity ) {
+			return false;
+		}
+
 		// First check site-wide blocks (admin moderation).
-		if ( self::activity_is_blocked_site_wide( $activity_data ) ) {
+		if ( self::activity_is_blocked_site_wide( $activity ) ) {
 			return true;
 		}
 
@@ -92,7 +96,7 @@ class Moderation {
 	 *
 	 * @param int    $user_id The user ID.
 	 * @param string $type    The block type (actor, domain, keyword).
-	 * @param string $value   The value to block (actor ID for actors, domain for domains, keyword for keywords).
+	 * @param string $value   The value to block.
 	 * @return bool True on success, false on failure.
 	 */
 	public static function add_user_block( $user_id, $type, $value ) {
@@ -129,7 +133,7 @@ class Moderation {
 	 *
 	 * @param int    $user_id The user ID.
 	 * @param string $type    The block type (actor, domain, keyword).
-	 * @param string $value   The value to unblock (actor ID for actors, post ID for removing specific actor posts).
+	 * @param string $value   The value to unblock.
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_user_block( $user_id, $type, $value ) {
@@ -182,7 +186,7 @@ class Moderation {
 	 * Add a site-wide block.
 	 *
 	 * @param string $type  The block type (actor, domain, keyword).
-	 * @param string $value The value to block (actor ID for actors, domain for domains, keyword for keywords).
+	 * @param string $value The value to block.
 	 * @return bool True on success, false on failure.
 	 */
 	public static function add_site_block( $type, $value ) {
@@ -209,7 +213,7 @@ class Moderation {
 	 * Remove a site-wide block.
 	 *
 	 * @param string $type  The block type (actor, domain, keyword).
-	 * @param string $value The value to unblock (actor ID for actors, post ID for removing specific actor posts).
+	 * @param string $value The value to unblock.
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_site_block( $type, $value ) {
