@@ -187,28 +187,29 @@ class Enable_Mastodon_Apps {
 		$user_id               = self::maybe_map_user_to_blog( $user_id );
 		$activitypub_followers = Followers::get_followers( $user_id, 40 );
 		$mastodon_followers    = array_map(
-			function ( $item ) use ( $user_id ) {
-				$acct = Webfinger_Util::uri_to_acct( $item->get_id() );
+			function ( $item ) {
+				$actor = Actors::get_actor( $item );
+				$acct  = Webfinger_Util::uri_to_acct( $actor->get_id() );
 
 				if ( $acct && ! is_wp_error( $acct ) ) {
 					$acct = \str_replace( 'acct:', '', $acct );
 				} else {
-					$acct = $item->get_id();
+					$acct = $actor->get_id();
 				}
 
 				$account                  = new Account();
-				$account->id              = \strval( $user_id );
-				$account->username        = $item->get_preferred_username();
+				$account->id              = \strval( $item->ID );
+				$account->username        = $actor->get_preferred_username();
 				$account->acct            = $acct;
-				$account->display_name    = $item->get_name();
-				$account->url             = $item->get_url();
-				$account->avatar          = $item->get_icon_url();
-				$account->avatar_static   = $item->get_icon_url();
-				$account->created_at      = new DateTime( $item->get_published() );
-				$account->last_status_at  = new DateTime( $item->get_published() );
-				$account->note            = $item->get_summary();
-				$account->header          = $item->get_image_url();
-				$account->header_static   = $item->get_image_url();
+				$account->display_name    = $actor->get_name();
+				$account->url             = $actor->get_url();
+				$account->avatar          = $actor->get_icon_url();
+				$account->avatar_static   = $actor->get_icon_url();
+				$account->created_at      = new DateTime( $actor->get_published() );
+				$account->last_status_at  = new DateTime( $actor->get_published() );
+				$account->note            = $actor->get_summary();
+				$account->header          = $actor->get_image_url();
+				$account->header_static   = $actor->get_image_url();
 				$account->followers_count = 0;
 				$account->following_count = 0;
 				$account->statuses_count  = 0;
