@@ -111,7 +111,7 @@ class Actors {
 	 *
 	 * @param string $username Name of the actor.
 	 *
-	 * @return int|WP_Error Actor id or WP_Error if not found.
+	 * @return int|\WP_Error Actor id or WP_Error if not found.
 	 */
 	public static function get_id_by_username( $username ) {
 		// Check for blog user.
@@ -204,7 +204,7 @@ class Actors {
 	 *
 	 * @param string $uri The actor resource URI.
 	 *
-	 * @return int|WP_Error Actor id or WP_Error if not found.
+	 * @return int|\WP_Error Actor id or WP_Error if not found.
 	 */
 	public static function get_id_by_resource( $uri ) {
 		$uri = object_to_uri( $uri );
@@ -332,7 +332,7 @@ class Actors {
 	 *
 	 * @param string|int $id Actor identifier (user ID, URI, username, or email).
 	 *
-	 * @return int|WP_Error Actor id or WP_Error if not found.
+	 * @return int|\WP_Error Actor id or WP_Error if not found.
 	 */
 	public static function get_id_by_various( $id ) {
 		if ( is_numeric( $id ) ) {
