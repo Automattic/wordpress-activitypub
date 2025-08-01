@@ -22,19 +22,8 @@ class Follow {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action(
-			'activitypub_inbox_follow',
-			array( self::class, 'handle_follow' ),
-			10,
-			2
-		);
-
-		\add_action(
-			'activitypub_followers_post_follow',
-			array( self::class, 'queue_accept' ),
-			10,
-			4
-		);
+		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow' ), 10, 2 );
+		\add_action( 'activitypub_followers_post_follow', array( self::class, 'queue_accept' ), 10, 4 );
 	}
 
 	/**

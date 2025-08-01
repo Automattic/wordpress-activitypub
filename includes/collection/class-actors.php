@@ -188,7 +188,7 @@ class Actors {
 	 *
 	 * @param string $uri The actor resource URI.
 	 *
-	 * @return Actor|User|Blog|Application|WP_Error Actor object or WP_Error if not found.
+	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
 	public static function get_by_resource( $uri ) {
 		$id = self::get_id_by_resource( $uri );
@@ -316,7 +316,7 @@ class Actors {
 	 *
 	 * @param string|int $id Actor identifier (user ID, URI, username, or email).
 	 *
-	 * @return Actor|User|Blog|Application|WP_Error Actor object or WP_Error if not found.
+	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
 	public static function get_by_various( $id ) {
 		$id = self::get_id_by_various( $id );
