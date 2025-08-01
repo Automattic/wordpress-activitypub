@@ -93,7 +93,28 @@ jobs:
         run: |
           if grep -q "Warning\|Error" coverage-output.log; then
             echo "Coverage warnings/errors found:"
-            grep -n "Warning\|Error" coverage-output.log
+            
+            # Parse warnings and create GitHub annotations
+            grep "Warning\|Error" coverage-output.log | while IFS= read -r line; do
+              echo "$line"
+              
+              # Extract file path and line number from xdebug warnings
+              if [[ "$line" =~ in\ ([^\ ]+)\ on\ line\ ([0-9]+) ]]; then
+                file="${BASH_REMATCH[1]}"
+                line_num="${BASH_REMATCH[2]}"
+                # Remove leading ./ if present
+                file="${file#./}"
+                echo "::warning file=${file},line=${line_num}::${line}"
+              elif [[ "$line" =~ ([^:]+):([0-9]+) ]]; then
+                file="${BASH_REMATCH[1]}"
+                line_num="${BASH_REMATCH[2]}"
+                file="${file#./}"
+                echo "::warning file=${file},line=${line_num}::${line}"
+              else
+                echo "::warning::${line}"
+              fi
+            done
+            
             echo "::error::Coverage analysis produced warnings or errors"
             exit 1
           fi
