@@ -266,6 +266,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'type'   => 'Create',
 				'actor'  => 'https://spam-instance.com/@anyuser',
 				'object' => array(
+					'id'      => 'https://example.com/note/1',
 					'type'    => 'Note',
 					'content' => 'Hello world',
 				),
@@ -280,6 +281,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'type'   => 'Create',
 				'actor'  => 'https://good.example.com/@user',
 				'object' => array(
+					'id'      => 'https://example.com/note/1',
 					'type'    => 'Note',
 					'content' => 'Check out this product, buy now!',
 				),
@@ -294,6 +296,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'type'   => 'Create',
 				'actor'  => 'https://good.example.com/@user',
 				'object' => array(
+					'id'      => 'https://example.com/note/1',
 					'type'    => 'Note',
 					'content' => 'Hello everyone!',
 				),
@@ -322,6 +325,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'type'   => 'Create',
 				'actor'  => 'https://noise-instance.com/@user',
 				'object' => array(
+					'id'      => 'https://example.com/note/1',
 					'type'    => 'Note',
 					'content' => 'Hello world',
 				),
@@ -355,6 +359,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'type'   => 'Create',
 				'actor'  => 'https://test.example.com/@user',
 				'object' => array(
+					'id'      => 'https://example.com/note/1',
 					'type'    => 'Note',
 					'content' => 'Hello world',
 				),
@@ -388,6 +393,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'id'     => 'https://example.com/activities/1',
 				'type'   => 'Create',
 				'object' => array(
+					'id'      => 'https://example.com/note/1',
 					'type'    => 'Note',
 					'content' => 'Test',
 				),
@@ -403,6 +409,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'type'   => 'Create',
 				'actor'  => '',
 				'object' => array(
+					'id'      => 'https://example.com/note/1',
 					'type'    => 'Note',
 					'content' => 'Test',
 				),
@@ -421,6 +428,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 					// Missing 'id' field.
 				),
 				'object' => array(
+					'id'      => 'https://example.com/note/1',
 					'type'    => 'Note',
 					'content' => 'Test',
 				),
@@ -455,6 +463,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 					'type'   => 'Create',
 					'actor'  => $url,
 					'object' => array(
+						'id'      => 'https://example.org/note/1',
 						'type'    => 'Note',
 						'content' => 'Test',
 					),
@@ -494,6 +503,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 					'type'   => 'Create',
 					'actor'  => 'https://example.com/@user',
 					'object' => array(
+						'id'      => 'https://example.com/note/1',
 						'type'    => 'Note',
 						'content' => $content,
 					),
@@ -617,6 +627,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'type'   => 'Create',
 				'actor'  => 'https://good.example.com/@user',
 				'object' => array(
+					'id'      => 'https://example.com/note/1',
 					'type'    => 'Note',
 					'content' => 'This contains badword in it',
 				),
