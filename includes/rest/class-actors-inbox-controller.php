@@ -172,13 +172,14 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			return $user;
 		}
 
-		$data     = $request->get_json_params();
+		$data = $request->get_json_params();
+		$type = \strtolower( $request->get_param( 'type' ) );
+
+		/* @var Activity $activity Activity object.*/
 		$activity = Activity::init_from_array( $data );
-		$type     = $request->get_param( 'type' );
-		$type     = \strtolower( $type );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		if ( Moderation::activity_is_blocked( $data, $user->get__id() ) ) {
+		if ( Moderation::activity_is_blocked( $activity, $user->get__id() ) ) {
 			/**
 			 * ActivityPub inbox disallowed activity.
 			 *

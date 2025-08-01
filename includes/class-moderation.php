@@ -51,45 +51,40 @@ class Moderation {
 		}
 
 		// Then check user-specific blocks.
-		if ( $user_id && self::activity_is_blocked_for_user( $activity_data, $user_id ) ) {
+		if ( $user_id && self::activity_is_blocked_for_user( $activity, $user_id ) ) {
 			return true;
-		}
-
-		// Convert to Activity object and get JSON like the original implementation.
-		if ( is_array( $activity_data ) ) {
-			$activity_data = Activity::init_from_array( $activity_data )->to_json( false );
 		}
 
 		$remote_addr = \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) );
 		$user_agent  = \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) );
 
 		// Fall back to WordPress comment disallowed list.
-		return \wp_check_comment_disallowed_list( $activity_data, '', '', '', $remote_addr, $user_agent );
+		return \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', $activity->get_content(), $remote_addr, $user_agent );
 	}
 
 	/**
 	 * Check if an activity is blocked site-wide.
 	 *
-	 * @param array $activity_data The activity data.
+	 * @param Activity $activity The activity.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function activity_is_blocked_site_wide( $activity_data ) {
+	public static function activity_is_blocked_site_wide( $activity ) {
 		$blocks = self::get_site_blocks();
 
-		return self::check_activity_against_blocks( $activity_data, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
+		return self::check_activity_against_blocks( $activity, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
 	}
 
 	/**
 	 * Check if an activity is blocked for a specific user.
 	 *
-	 * @param array $activity_data The activity data.
-	 * @param int   $user_id       The user ID.
+	 * @param Activity $activity The activity.
+	 * @param int      $user_id  The user ID.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function activity_is_blocked_for_user( $activity_data, $user_id ) {
+	public static function activity_is_blocked_for_user( $activity, $user_id ) {
 		$blocks = self::get_user_blocks( $user_id );
 
-		return self::check_activity_against_blocks( $activity_data, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
+		return self::check_activity_against_blocks( $activity, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
 	}
 
 	/**
@@ -254,37 +249,46 @@ class Moderation {
 	/**
 	 * Check activity against blocklists.
 	 *
-	 * @param array $activity_data    The activity data.
-	 * @param array $blocked_actors   List of blocked actors.
-	 * @param array $blocked_domains  List of blocked domains.
-	 * @param array $blocked_keywords List of blocked keywords.
+	 * @param Activity $activity         The activity.
+	 * @param array    $blocked_actors   List of blocked actors.
+	 * @param array    $blocked_domains  List of blocked domains.
+	 * @param array    $blocked_keywords List of blocked keywords.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	private static function check_activity_against_blocks( $activity_data, $blocked_actors, $blocked_domains, $blocked_keywords ) {
+	private static function check_activity_against_blocks( $activity, $blocked_actors, $blocked_domains, $blocked_keywords ) {
+		$has_object = \is_object( $activity->get_object() );
+
 		// Extract actor information.
-		$actor_id = '';
-		if ( isset( $activity_data['actor'] ) ) {
-			$actor_id = is_string( $activity_data['actor'] ) ? $activity_data['actor'] : ( $activity_data['actor']['id'] ?? '' );
-		}
+		$actor_id = object_to_uri( $activity->get_actor() );
 
 		// Check blocked actors.
-		if ( $actor_id && in_array( $actor_id, $blocked_actors, true ) ) {
+		if ( $actor_id && \in_array( $actor_id, $blocked_actors, true ) ) {
 			return true;
 		}
 
 		// Check blocked domains.
-		if ( $actor_id ) {
-			$domain = \wp_parse_url( $actor_id, PHP_URL_HOST );
-			if ( $domain && in_array( $domain, $blocked_domains, true ) ) {
+		$urls = array(
+			\wp_parse_url( $actor_id, PHP_URL_HOST ),
+			\wp_parse_url( $activity->get_id(), PHP_URL_HOST ),
+			\wp_parse_url( object_to_uri( $activity->get_object() ) ?? '', PHP_URL_HOST ),
+		);
+		foreach ( $blocked_domains as $domain ) {
+			if ( \in_array( $domain, $urls, true ) ) {
 				return true;
 			}
 		}
 
 		// Check blocked keywords in activity content.
-		$activity_json = \wp_json_encode( $activity_data );
-		foreach ( $blocked_keywords as $keyword ) {
-			if ( stripos( $activity_json, $keyword ) !== false ) {
-				return true;
+		if ( $has_object ) {
+			$content = $activity->get_object()->get_content() . ' ' . $activity->get_object()->get_summary() . ' ' . $activity->get_object()->get_name();
+			if ( is_actor( $activity->get_object() ) ) {
+				$content .= ' ' . $activity->get_object()->get_preferred_username();
+			}
+
+			foreach ( $blocked_keywords as $keyword ) {
+				if ( \stripos( $content, $keyword ) !== false ) {
+					return true;
+				}
 			}
 		}
 

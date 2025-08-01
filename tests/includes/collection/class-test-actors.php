@@ -327,32 +327,36 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 * @return array[]
 	 */
 	public function the_resource_provider() {
+		$home_url       = \home_url();
+		$home_host      = \wp_parse_url( $home_url, PHP_URL_HOST );
+		$https_home_url = \str_replace( 'http://', 'https://', $home_url );
+
 		return array(
-			array( 'http://example.org/?author=1', 'Activitypub\Model\User' ),
-			array( 'https://example.org/?author=1', 'Activitypub\Model\User' ),
-			array( 'https://example.org?author=1', 'Activitypub\Model\User' ),
-			array( 'http://example.org/?author=7', 'WP_Error' ),
-			array( 'acct:admin@example.org', 'Activitypub\Model\User' ),
-			array( 'acct:blog@example.org', 'Activitypub\Model\Blog' ),
-			array( 'acct:*@example.org', 'Activitypub\Model\Blog' ),
-			array( 'acct:_@example.org', 'Activitypub\Model\Blog' ),
-			array( 'acct:aksd@example.org', 'WP_Error' ),
-			array( 'admin@example.org', 'Activitypub\Model\User' ),
-			array( 'acct:application@example.org', 'Activitypub\Model\Application' ),
-			array( 'http://example.org/@admin', 'Activitypub\Model\User' ),
-			array( 'http://example.org/@blog', 'Activitypub\Model\Blog' ),
-			array( 'https://example.org/@blog', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org/@blog/', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org/blog/@blog', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org/blog/@blog/', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org/error/@blog', 'WP_Error' ),
-			array( 'http://example.org/error/@blog/', 'WP_Error' ),
-			array( 'http://example.org/', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org', 'Activitypub\Model\Blog' ),
-			array( 'https://example.org/', 'Activitypub\Model\Blog' ),
-			array( 'https://example.org', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org/@blog/s', 'WP_Error' ),
-			array( 'http://example.org/@blogs/', 'WP_Error' ),
+			array( $home_url . '/?author=1', 'Activitypub\Model\User' ),
+			array( $https_home_url . '/?author=1', 'Activitypub\Model\User' ),
+			array( \rtrim( $https_home_url, '/' ) . '?author=1', 'Activitypub\Model\User' ),
+			array( $home_url . '/?author=7', 'WP_Error' ),
+			array( 'acct:admin@' . $home_host, 'Activitypub\Model\User' ),
+			array( 'acct:blog@' . $home_host, 'Activitypub\Model\Blog' ),
+			array( 'acct:*@' . $home_host, 'Activitypub\Model\Blog' ),
+			array( 'acct:_@' . $home_host, 'Activitypub\Model\Blog' ),
+			array( 'acct:aksd@' . $home_host, 'WP_Error' ),
+			array( 'admin@' . $home_host, 'Activitypub\Model\User' ),
+			array( 'acct:application@' . $home_host, 'Activitypub\Model\Application' ),
+			array( $home_url . '/@admin', 'Activitypub\Model\User' ),
+			array( $home_url . '/@blog', 'Activitypub\Model\Blog' ),
+			array( $https_home_url . '/@blog', 'Activitypub\Model\Blog' ),
+			array( $home_url . '/@blog/', 'Activitypub\Model\Blog' ),
+			array( $home_url . '/blog/@blog', 'Activitypub\Model\Blog' ),
+			array( $home_url . '/blog/@blog/', 'Activitypub\Model\Blog' ),
+			array( $home_url . '/error/@blog', 'WP_Error' ),
+			array( $home_url . '/error/@blog/', 'WP_Error' ),
+			array( $home_url . '/', 'Activitypub\Model\Blog' ),
+			array( \rtrim( $home_url, '/' ), 'Activitypub\Model\Blog' ),
+			array( $https_home_url . '/', 'Activitypub\Model\Blog' ),
+			array( \rtrim( $https_home_url, '/' ), 'Activitypub\Model\Blog' ),
+			array( $home_url . '/@blog/s', 'WP_Error' ),
+			array( $home_url . '/@blogs/', 'WP_Error' ),
 		);
 	}
 

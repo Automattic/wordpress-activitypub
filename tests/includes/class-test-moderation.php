@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Moderation;
 
 /**
@@ -259,35 +260,47 @@ class Test_Moderation extends \WP_UnitTestCase {
 		Moderation::add_site_block( 'keyword', 'buy now' );
 
 		// Test domain blocking.
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => 'https://spam-instance.com/@anyuser',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Hello world',
-			),
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'actor'  => 'https://spam-instance.com/@anyuser',
+				'object' => array(
+					'id'      => 'https://example.com/note/1',
+					'type'    => 'Note',
+					'content' => 'Hello world',
+				),
+			)
 		);
 		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 
 		// Test keyword blocking.
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => 'https://good.example.com/@user',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Check out this product, buy now!',
-			),
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'actor'  => 'https://good.example.com/@user',
+				'object' => array(
+					'id'      => 'https://example.com/note/1',
+					'type'    => 'Note',
+					'content' => 'Check out this product, buy now!',
+				),
+			)
 		);
 		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 
 		// Test non-blocked activity.
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => 'https://good.example.com/@user',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Hello everyone!',
-			),
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'actor'  => 'https://good.example.com/@user',
+				'object' => array(
+					'id'      => 'https://example.com/note/1',
+					'type'    => 'Note',
+					'content' => 'Hello everyone!',
+				),
+			)
 		);
 		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
 	}
@@ -306,13 +319,17 @@ class Test_Moderation extends \WP_UnitTestCase {
 		Moderation::add_user_block( $this->test_user_id, 'keyword', 'politics' );
 
 		// Test activity blocked for specific user but not site-wide.
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => 'https://noise-instance.com/@user',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Hello world',
-			),
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'actor'  => 'https://noise-instance.com/@user',
+				'object' => array(
+					'id'      => 'https://example.com/note/1',
+					'type'    => 'Note',
+					'content' => 'Hello world',
+				),
+			)
 		);
 
 		// Should be blocked for the specific user.
@@ -336,13 +353,17 @@ class Test_Moderation extends \WP_UnitTestCase {
 		// Add site-wide block.
 		Moderation::add_site_block( 'domain', $domain );
 
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => 'https://test.example.com/@user',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Hello world',
-			),
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'actor'  => 'https://test.example.com/@user',
+				'object' => array(
+					'id'      => 'https://example.com/note/1',
+					'type'    => 'Note',
+					'content' => 'Hello world',
+				),
+			)
 		);
 
 		// Should be blocked site-wide (takes precedence).
@@ -366,38 +387,54 @@ class Test_Moderation extends \WP_UnitTestCase {
 		$this->assertFalse( Moderation::activity_is_blocked( 'invalid' ) );
 
 		// Test with missing actor.
-		$activity = array(
-			'type'   => 'Create',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Test',
-			),
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'id'     => 'https://example.com/activities/1',
+				'type'   => 'Create',
+				'object' => array(
+					'id'      => 'https://example.com/note/1',
+					'type'    => 'Note',
+					'content' => 'Test',
+				),
+			)
 		);
 		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
 
 		// Test with empty actor.
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => '',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Test',
-			),
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'id'     => 'https://example.com/activities/1',
+				'type'   => 'Create',
+				'actor'  => '',
+				'object' => array(
+					'id'      => 'https://example.com/note/1',
+					'type'    => 'Note',
+					'content' => 'Test',
+				),
+			)
 		);
 		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
 
 		// Test with malformed actor object.
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => array(
-				'type' => 'Person',
-				// Missing 'id' field.
-			),
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Test',
-			),
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'id'     => 'https://example.com/activities/1',
+				'type'   => 'Create',
+				'actor'  => array(
+					'type' => 'Person',
+					// Missing 'id' field.
+				),
+				'object' => array(
+					'id'      => 'https://example.com/note/1',
+					'type'    => 'Note',
+					'content' => 'Test',
+				),
+			)
 		);
+		$this->expectError();
 		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
 	}
 
@@ -420,13 +457,17 @@ class Test_Moderation extends \WP_UnitTestCase {
 		);
 
 		foreach ( $test_urls as $url ) {
-			$activity = array(
-				'type'   => 'Create',
-				'actor'  => $url,
-				'object' => array(
-					'type'    => 'Note',
-					'content' => 'Test',
-				),
+			/* @var Activity $activity Activity. */
+			$activity = Activity::init_from_array(
+				array(
+					'type'   => 'Create',
+					'actor'  => $url,
+					'object' => array(
+						'id'      => 'https://example.org/note/1',
+						'type'    => 'Note',
+						'content' => 'Test',
+					),
+				)
 			);
 
 			// Only exact domain matches should be blocked.
@@ -456,13 +497,17 @@ class Test_Moderation extends \WP_UnitTestCase {
 		);
 
 		foreach ( $test_contents as $content ) {
-			$activity = array(
-				'type'   => 'Create',
-				'actor'  => 'https://example.com/@user',
-				'object' => array(
-					'type'    => 'Note',
-					'content' => $content,
-				),
+			/* @var Activity $activity Activity. */
+			$activity = Activity::init_from_array(
+				array(
+					'type'   => 'Create',
+					'actor'  => 'https://example.com/@user',
+					'object' => array(
+						'id'      => 'https://example.com/note/1',
+						'type'    => 'Note',
+						'content' => $content,
+					),
+				)
 			);
 
 			$this->assertTrue( Moderation::activity_is_blocked( $activity ), "Content '$content' should be blocked" );
@@ -576,13 +621,17 @@ class Test_Moderation extends \WP_UnitTestCase {
 	public function test_wordpress_disallowed_list_fallback() {
 		\update_option( 'disallowed_keys', "badword\nspam.example.com" );
 
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => 'https://good.example.com/@user',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'This contains badword in it',
-			),
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'actor'  => 'https://good.example.com/@user',
+				'object' => array(
+					'id'      => 'https://example.com/note/1',
+					'type'    => 'Note',
+					'content' => 'This contains badword in it',
+				),
+			)
 		);
 
 		// Should be blocked by WordPress disallowed list.
