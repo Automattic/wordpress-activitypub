@@ -12,6 +12,7 @@ use Activitypub\Handler\Announce;
 use Activitypub\Handler\Create;
 use Activitypub\Handler\Delete;
 use Activitypub\Handler\Follow;
+use Activitypub\Handler\Inbox;
 use Activitypub\Handler\Like;
 use Activitypub\Handler\Move;
 use Activitypub\Handler\Reject;
@@ -38,6 +39,7 @@ class Handler {
 		Create::init();
 		Delete::init();
 		Follow::init();
+		Inbox::init();
 		Like::init();
 		Move::init();
 		Reject::init();

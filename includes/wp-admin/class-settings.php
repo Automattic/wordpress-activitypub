@@ -250,6 +250,16 @@ class Settings {
 			)
 		);
 
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_persist_inbox',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable inbox collection persistence.',
+				'default'     => false,
+			)
+		);
+
 		// Blog-User Settings.
 		\register_setting(
 			'activitypub_blog',
