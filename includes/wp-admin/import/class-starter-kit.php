@@ -242,19 +242,22 @@ class Starter_Kit {
 
 		$items = self::$starter_kit['items'] ?? self::$starter_kit['orderedItems'] ?? array();
 
-		foreach ( $items as $item ) {
-			if ( ! is_actor( $item ) ) {
+		foreach ( $items as $actor_id ) {
+			$actor_id = object_to_uri( $actor_id );
+			$actor_id = \ltrim( $actor_id, '@' );
+
+			if ( ! filter_var( $actor_id, FILTER_VALIDATE_URL ) && ! filter_var( $actor_id, FILTER_VALIDATE_EMAIL ) ) {
 				++$skipped;
 				continue;
 			}
 
-			$result = follow( object_to_uri( $item ), self::$author );
+			$result = follow( $actor_id, self::$author );
 
 			if ( \is_wp_error( $result ) ) {
 				++$skipped;
 			} else {
 				/* translators: %s: Account ID */
-				\printf( '<p>' . \esc_html__( 'Followed %s', 'activitypub' ) . '</p>', \esc_html( $item['id'] ) );
+				\printf( '<p>' . \esc_html__( 'Followed %s', 'activitypub' ) . '</p>', \esc_html( $actor_id ) );
 				++$followed;
 			}
 		}
