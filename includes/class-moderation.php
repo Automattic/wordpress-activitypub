@@ -232,7 +232,7 @@ class Moderation {
 		$urls = array(
 			\wp_parse_url( $actor_id, PHP_URL_HOST ),
 			\wp_parse_url( $activity->get_id(), PHP_URL_HOST ),
-			\wp_parse_url( $has_object ? $activity->get_object()->get_id() : '', PHP_URL_HOST ),
+			\wp_parse_url( object_to_uri( $activity->get_object() ) ?? '', PHP_URL_HOST ),
 		);
 		foreach ( $blocked_domains as $domain ) {
 			if ( \in_array( $domain, $urls, true ) ) {
@@ -243,6 +243,10 @@ class Moderation {
 		// Check blocked keywords in activity content.
 		if ( $has_object ) {
 			$content = $activity->get_object()->get_content() . ' ' . $activity->get_object()->get_summary() . ' ' . $activity->get_object()->get_name();
+			if ( is_actor( $activity->get_object() ) ) {
+				$content .= ' ' . $activity->get_object()->get_preferred_username();
+			}
+
 			foreach ( $blocked_keywords as $keyword ) {
 				if ( \stripos( $content, $keyword ) !== false ) {
 					return true;
