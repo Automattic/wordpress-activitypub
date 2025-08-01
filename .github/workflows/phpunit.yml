@@ -85,6 +85,23 @@ jobs:
         run: bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 latest
 
       - name: Unit Testing with Coverage
-        run: ./vendor/bin/phpunit --coverage-text --coverage-clover coverage.xml
+        run: ./vendor/bin/phpunit --coverage-text --coverage-clover coverage.xml --log-junit junit.xml 2>&1 | tee coverage-output.log
         env:
           WP_ENVIRONMENT_TYPE: production
+          
+      - name: Check for Coverage Warnings
+        run: |
+          if grep -q "Warning\|Error" coverage-output.log; then
+            echo "Coverage warnings/errors found:"
+            grep -n "Warning\|Error" coverage-output.log
+            echo "::error::Coverage analysis produced warnings or errors"
+            exit 1
+          fi
+          
+      - name: Annotate Test Results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: PHPUnit Coverage Results
+          path: junit.xml
+          reporter: java-junit
