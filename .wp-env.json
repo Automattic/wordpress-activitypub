@@ -1,17 +1,17 @@
 {
 	"core": null,
 	"plugins": [ "." ],
-	"port": 80,
 	"env": {
 		"tests": {
 			"config": {
 				"WP_ENVIRONMENT_TYPE": "production"
 			},
 			"mappings": {
-				"wp-content/plugins/activitypub": ".",
-				"wp-content/plugins/activitypub/tests": "./tests",
-				"wp-content/plugins/activitypub/coverage": "./coverage"
+				"wp-content/plugins/activitypub": "."
 			}
 		}
+	},
+	"lifecycleScripts": {
+		"afterStart": "npx wp-env run cli wp rewrite structure /%year%/%monthnum%/%postname%/"
 	}
 }
