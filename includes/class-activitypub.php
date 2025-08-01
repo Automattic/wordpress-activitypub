@@ -287,13 +287,7 @@ class Activitypub {
 				return;
 			}
 
-			if ( $actor->get__id() > 0 ) {
-				$redirect_url = $actor->get_url();
-			} else {
-				$redirect_url = get_bloginfo( 'url' );
-			}
-
-			wp_safe_redirect( $redirect_url, 301 );
+			\wp_safe_redirect( $actor->get_url(), 301 );
 			exit;
 		}
 	}
