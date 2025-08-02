@@ -958,6 +958,7 @@ class Migration {
 		$users = \get_users(
 			array(
 				'capability__in' => array( 'activitypub' ),
+				'fields'         => 'id',
 			)
 		);
 
