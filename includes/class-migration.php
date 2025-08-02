@@ -955,7 +955,7 @@ class Migration {
 		\add_option( 'activitypub_blog_user_mailer_new_follower', $new_follower );
 		\add_option( 'activitypub_blog_user_mailer_new_mention', '1' );
 
-		$users = \get_users(
+		$user_ids = \get_users(
 			array(
 				'capability__in' => array( 'activitypub' ),
 				'fields'         => 'id',
@@ -963,10 +963,10 @@ class Migration {
 		);
 
 		// Add the actor notification options.
-		foreach ( $users as $user ) {
-			\update_user_option( $user->ID, 'activitypub_mailer_new_dm', $new_dm );
-			\update_user_option( $user->ID, 'activitypub_mailer_new_follower', $new_follower );
-			\update_user_option( $user->ID, 'activitypub_mailer_new_mention', '1' );
+		foreach ( $user_ids as $user_id ) {
+			\update_user_option( $user_id, 'activitypub_mailer_new_dm', $new_dm );
+			\update_user_option( $user_id, 'activitypub_mailer_new_follower', $new_follower );
+			\update_user_option( $user_id, 'activitypub_mailer_new_mention', '1' );
 		}
 
 		// Delete the old notification options.
