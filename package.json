@@ -16,7 +16,7 @@
 		"lint:css": "wp-scripts lint-style",
 		"lint:js": "wp-scripts lint-js",
 		"env": "wp-env",
-		"env-start": "wp-env start && wp-env run cli wp rewrite structure '/%year%/%monthnum%/%postname%/'",
+		"env-start": "wp-env start",
 		"env-stop": "wp-env stop",
 		"env-test": "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit",
 		"release": "node bin/release.js"
