@@ -253,7 +253,7 @@ class Starter_Kit {
 		self::$import_id = \wp_insert_attachment( $attachment, $temp_file );
 
 		// Check if the attachment was inserted successfully.
-		if ( is_wp_error( self::$import_id ) || ! self::$import_id ) {
+		if ( \is_wp_error( self::$import_id ) || ! self::$import_id ) {
 			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to insert attachment.', 'activitypub' ) );
 			return false;
 		}
