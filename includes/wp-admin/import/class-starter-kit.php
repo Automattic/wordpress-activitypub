@@ -171,7 +171,7 @@ class Starter_Kit {
 	public static function handle_url_import() {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
 
-
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$url = \sanitize_url( \wp_unslash( $_POST['import_url'] ?? '' ) );
 		if ( empty( $url ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
