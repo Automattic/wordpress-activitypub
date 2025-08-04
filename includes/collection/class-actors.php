@@ -155,7 +155,7 @@ class Actors {
 		);
 
 		if ( $user->get_results() ) {
-			return $user->get_results()[0];
+			return \current( $user->get_results() );
 		}
 
 		$username = str_replace( array( '*', '%' ), '', $username );
@@ -173,7 +173,7 @@ class Actors {
 		);
 
 		if ( $user->get_results() ) {
-			return $user->get_results()[0];
+			return \current( $user->get_results() );
 		}
 
 		return new \WP_Error(
