@@ -195,6 +195,8 @@ class Starter_Kit {
 
 	/**
 	 * Render error message.
+	 *
+	 * @param \WP_Error $error The error to render.
 	 */
 	private static function render_error( $error ) {
 		\printf(
@@ -206,6 +208,8 @@ class Starter_Kit {
 
 	/**
 	 * Render the import form.
+	 *
+	 * @param array $actors The actors to render.
 	 */
 	private static function render_import_form( $actors ) {
 		?>
