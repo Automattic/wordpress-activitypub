@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.2.0] - 2025-07-30
+### Added
+- Add image attachment support to federated comments - HTML images in comment content now include proper ActivityStreams attachment fields. [#1996]
+- Link to the following internal dialog for remote interactions, if the feature is enabled. [#2001]
+- The followers list now shows follow status and allows quick follow-back actions. [#2003]
+- Trigger Actor updates on (un)setting a post as sticky. [#1982]
+- You can now use `OrderedCollection`s as starter packs — just drop in the output from a Follower or Following endpoint. [#2028]
+
+### Changed
+- Ensure that tests run in production-like conditions, avoiding interference from local development tools. [#2026]
+- Moved HTTP request signing to a filter instead of calling it directly. [#1994]
+
+### Fixed
+- Allow non-administrator users to use Follow Me and Followers blocks [#2015]
+- Correct linking from followers to the following list [#2002]
+- Fix avatar rendering for followers with missing icon property [#2010]
+- Fix multibyte character corruption in post summaries, preventing Greek and other non-ASCII text from being garbled during text processing. [#1995]
+- Informational Fediverse blocks are no longer rendered when posts get added to the Outbox. [#2019]
+
 ## [7.1.0] - 2025-07-23
 ### Added
 - Added a first version of the Follow form, allowing users to follow other Actors by username or profile link. [#1930]
@@ -1352,6 +1371,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.1.0...7.2.0
 [7.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.0.1...7.1.0
 [7.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.0.0...7.0.1
 [7.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.2...7.0.0
