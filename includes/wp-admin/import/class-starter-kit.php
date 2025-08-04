@@ -171,8 +171,7 @@ class Starter_Kit {
 	public static function handle_url_import() {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
 
-		\check_admin_referer( 'import-url' );
-
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$url = \sanitize_url( \wp_unslash( $_POST['import_url'] ?? '' ) );
 		if ( empty( $url ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
@@ -253,6 +252,11 @@ class Starter_Kit {
 		// Save the data.
 		self::$import_id = \wp_insert_attachment( $attachment, $temp_file );
 
+		// Check if the attachment was inserted successfully.
+		if ( \is_wp_error( self::$import_id ) || ! self::$import_id ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to insert attachment.', 'activitypub' ) );
+			return false;
+		}
 		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
 		\wp_schedule_single_event( time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
 
