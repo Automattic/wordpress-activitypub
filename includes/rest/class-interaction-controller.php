@@ -141,7 +141,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 				}
 
 				/**
-				 * Filters the URL used for importing an Starter Kit collection.
+				 * Filters the URL used for importing a Starter Kit collection.
 				 *
 				 * @param string $redirect_url The URL to redirect to.
 				 * @param string $uri          The URI of the collection to import.
