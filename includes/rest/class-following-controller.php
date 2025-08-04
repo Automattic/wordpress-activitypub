@@ -136,7 +136,7 @@ class Following_Controller extends Actors_Controller {
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );
-		if ( is_wp_error( $response ) ) {
+		if ( \is_wp_error( $response ) ) {
 			return $response;
 		}
 
