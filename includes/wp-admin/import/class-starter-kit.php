@@ -194,7 +194,7 @@ class Starter_Kit {
 					\printf( \wp_kses_post( 'Created by <a href="%1$s" target="_blank">%1$s</a>', 'activitypub' ), \esc_url( self::$starter_kit['attributedTo'] ) );
 				}
 				?>
-				<p><h4><?php \esc_html_e( 'Select the author for the imported posts', 'activitypub' ); ?></h4></p>
+				<p><h4><?php \esc_html_e( 'Select the author for the imported Starter Kit', 'activitypub' ); ?></h4></p>
 				<p>
 					<label for="author"><?php \esc_html_e( 'Author:', 'activitypub' ); ?></label>
 					<?php
