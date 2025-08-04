@@ -86,7 +86,10 @@ class Following_Controller extends Actors_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = Actors::get_by_id( $user_id );
+		$user    = null;
+		if ( \has_filter( 'activitypub_rest_following' ) ) {
+			$user = Actors::get_by_id( $user_id );
+		}
 
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
