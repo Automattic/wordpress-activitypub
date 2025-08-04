@@ -35,7 +35,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = '(?:users|actors)/(?P<user_id>-?\d+)/outbox';
+	protected $rest_base = '(?:users|actors)/(?P<user_id>[-]?\d+)/outbox';
 
 	/**
 	 * Register routes.
@@ -48,7 +48,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 				'args'   => array(
 					'user_id' => array(
 						'description'       => 'The ID of the user or actor.',
-						'type'              => 'string',
+						'type'              => 'integer',
 						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),

@@ -37,9 +37,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				'args'   => array(
 					'user_id' => array(
 						'description'       => 'The ID of the actor.',
-						'type'              => 'string',
+						'type'              => 'integer',
 						'required'          => true,
-						'pattern'           => '-?\d+',
 						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),

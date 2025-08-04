@@ -50,7 +50,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>-?\d+)/followers', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>[-]?\d+)/followers', $routes );
 	}
 
 	/**

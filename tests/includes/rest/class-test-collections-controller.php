@@ -59,7 +59,7 @@ class Test_Collections_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>-?\d+)/collections/(?P<type>[\w\-\.]+)', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>[-]?\d+)/collections/(?P<type>[\w\-\.]+)', $routes );
 	}
 
 	/**

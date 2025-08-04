@@ -30,7 +30,7 @@ class Actors_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = '(?:users|actors)\/(?P<user_id>-?\d+)';
+	protected $rest_base = '(?:users|actors)\/(?P<user_id>[-]?\d+)';
 
 	/**
 	 * Register routes.
@@ -43,9 +43,8 @@ class Actors_Controller extends \WP_REST_Controller {
 				'args'   => array(
 					'user_id' => array(
 						'description'       => 'The ID of the actor.',
-						'type'              => 'string',
+						'type'              => 'integer',
 						'required'          => true,
-						'pattern'           => '-?\d+',
 						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),
@@ -65,9 +64,8 @@ class Actors_Controller extends \WP_REST_Controller {
 				'args' => array(
 					'user_id' => array(
 						'description'       => 'The ID of the actor.',
-						'type'              => 'string',
+						'type'              => 'integer',
 						'required'          => true,
-						'pattern'           => '-?\d+',
 						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),

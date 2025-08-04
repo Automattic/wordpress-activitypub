@@ -41,7 +41,7 @@ class Collections_Controller extends Actors_Controller {
 				'args'   => array(
 					'user_id' => array(
 						'description'       => 'The user ID or username.',
-						'type'              => 'string',
+						'type'              => 'integer',
 						'required'          => true,
 						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
