@@ -171,7 +171,6 @@ class Starter_Kit {
 	public static function handle_url_import() {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
 
-		\check_admin_referer( 'import-url' );
 
 		$url = \sanitize_url( \wp_unslash( $_POST['import_url'] ?? '' ) );
 		if ( empty( $url ) ) {
