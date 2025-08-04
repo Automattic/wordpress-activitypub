@@ -258,7 +258,7 @@ class Starter_Kit {
 			\printf(
 				'<img src="%s" style="max-width: 500px;" alt="%s" />',
 				\esc_url( self::$starter_kit['image']['url'] ),
-				\esc_attr( \__( 'The logo of the Starter Kit', 'activitypub' ) )
+				\esc_attr( self::$starter_kit['image']['summary'] ?? '' )
 			);
 		}
 
