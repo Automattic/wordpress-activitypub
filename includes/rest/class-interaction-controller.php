@@ -137,7 +137,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 			case 'OrderedCollection':
 			case 'OrderedCollectionPage':
 				if ( \get_option( 'activitypub_following_ui', '0' ) ) {
-					$redirect_url = \admin_url( '/admin.php?import=starter-kit&url=' . $url_param );
+					$redirect_url = \admin_url( 'admin.php?import=starter-kit&url=' . $url_param );
 				}
 
 				/**
