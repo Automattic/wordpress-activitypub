@@ -320,7 +320,7 @@ class Starter_Kit {
 	 * @return bool True if the actor URI is valid, false otherwise.
 	 */
 	private static function is_valid_actor( $actor_uri ) {
-		return filter_var( $actor_uri, FILTER_VALIDATE_URL ) || filter_var( $actor_uri, FILTER_VALIDATE_EMAIL );
+		return filter_var( $actor_uri, FILTER_VALIDATE_URL ) !== false || filter_var( $actor_uri, FILTER_VALIDATE_EMAIL ) !== false;
 	}
 
 	/**
