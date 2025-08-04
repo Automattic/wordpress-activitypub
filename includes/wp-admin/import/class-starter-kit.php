@@ -72,6 +72,13 @@ class Starter_Kit {
 				break;
 
 			case 2:
+				\check_admin_referer( 'import-url' );
+				if ( self::handle_url_import() ) {
+					self::import_options();
+				}
+				break;
+
+			case 3:
 				\check_admin_referer( 'import-starter-kit' );
 				self::$import_id  = \absint( $_POST['import_id'] ?? 0 );
 				self::$author     = \absint( $_POST['author'] ?? \get_current_user_id() );
@@ -152,6 +159,100 @@ class Starter_Kit {
 	}
 
 	/**
+	 * Handle URL import.
+	 */
+	public static function handle_url_import() {
+		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
+
+		\check_admin_referer( 'import-url' );
+
+		$url = \sanitize_url( \wp_unslash( $_POST['import_url'] ?? '' ) );
+		if ( empty( $url ) ) {
+			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+			echo \esc_html__( 'Please provide a valid URL.', 'activitypub' ) . '</p>';
+			return false;
+		}
+
+		// Validate URL format.
+		if ( ! \filter_var( $url, FILTER_VALIDATE_URL ) ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'The provided URL is not valid.', 'activitypub' ) );
+			return false;
+		}
+
+		// Fetch the URL content.
+		$response = \wp_remote_get(
+			$url,
+			array(
+				'timeout'     => 30,
+				'redirection' => 5,
+				'headers'     => array(
+					'Accept' => 'application/activity+json',
+				),
+			)
+		);
+
+		if ( \is_wp_error( $response ) ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( $response->get_error_message() ) );
+			return false;
+		}
+
+		$response_code = \wp_remote_retrieve_response_code( $response );
+		if ( 200 !== $response_code ) {
+			\printf(
+				'<p><strong>%s</strong><br />%s</p>',
+				\esc_html( $error_message ),
+				/* translators: %d: HTTP response code */
+				\esc_html( \sprintf( \__( 'Failed to fetch URL. HTTP response code: %d', 'activitypub' ), $response_code ) )
+			);
+			return false;
+		}
+
+		$body = \wp_remote_retrieve_body( $response );
+		if ( empty( $body ) ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'The URL returned empty content.', 'activitypub' ) );
+			return false;
+		}
+
+		// Validate JSON format.
+		$json_data = \json_decode( $body, true );
+		if ( null === $json_data ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'The URL does not contain valid JSON data.', 'activitypub' ) );
+			return false;
+		}
+
+		// Create a temporary file to store the JSON content.
+		$upload_dir = \wp_upload_dir();
+		$temp_file  = \trailingslashit( $upload_dir['path'] ) . 'starter-kit-' . \time() . '.json';
+
+		\WP_Filesystem();
+		global $wp_filesystem;
+
+		if ( ! $wp_filesystem->put_contents( $temp_file, $body, FS_CHMOD_FILE ) ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to save the downloaded content.', 'activitypub' ) );
+			return false;
+		}
+
+		// Construct the attachment array.
+		$attachment = array(
+			// phpcs:ignore
+			'post_title'     => \basename( \wp_parse_url( $url, PHP_URL_PATH ) ) ?: 'starter-kit.json',
+			'post_content'   => $url,
+			'post_mime_type' => 'application/json',
+			'guid'           => $url,
+			'context'        => 'import',
+			'post_status'    => 'private',
+		);
+
+		// Save the data.
+		self::$import_id = \wp_insert_attachment( $attachment, $temp_file );
+
+		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
+		\wp_schedule_single_event( time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
+
+		return true;
+	}
+
+	/**
 	 * Import options.
 	 */
 	public static function import_options() {
@@ -213,7 +314,7 @@ class Starter_Kit {
 	 */
 	private static function render_import_form( $actors ) {
 		?>
-		<form action="<?php echo \esc_url( \admin_url( 'admin.php?import=starter-kit&amp;step=2' ) ); ?>" method="post">
+		<form action="<?php echo \esc_url( \admin_url( 'admin.php?import=starter-kit&amp;step=3' ) ); ?>" method="post">
 			<?php \wp_nonce_field( 'import-starter-kit' ); ?>
 			<input type="hidden" name="import_id" value="<?php echo esc_attr( self::$import_id ); ?>" />
 
@@ -402,9 +503,37 @@ class Starter_Kit {
 		echo '<div class="narrow">';
 		echo '<p>' . \esc_html__( 'Starter Kits use the ActivityPub protocol with custom extensions to automate tasks such as following accounts, blocking unwanted content, and applying default configurations. The importer will automatically follow every user listed in the kit, helping users connect right away. Support for additional actions and features will be added over time.', 'activitypub' ) . '</p>';
 
-		\wp_import_upload_form( 'admin.php?import=starter-kit&amp;step=1' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$url = \sanitize_text_field( \wp_unslash( $_GET['url'] ) ) ?? '';
 
-		echo '</div>';
+		if ( empty( $url ) ) {
+			// File upload option.
+			printf( '<h3>%s</h3>', \esc_html__( 'Option 1: Upload a File', 'activitypub' ) );
+			\wp_import_upload_form( 'admin.php?import=starter-kit&amp;step=1' );
+
+			// URL import option.
+			printf( '<h3>%s</h3>', \esc_html__( 'Option 2: Import from URL', 'activitypub' ) );
+		} else {
+			// URL import option.
+			printf( '<h3>%s</h3>', \esc_html__( 'Import from URL', 'activitypub' ) );
+		}
+		?>
+		<form id="import-url-form" method="post" action="<?php echo \esc_url( \admin_url( 'admin.php?import=starter-kit&amp;step=2' ) ); ?>">
+			<?php
+			\wp_nonce_field( 'import-url' );
+			?>
+			<p>
+				<label for="import_url"><?php \esc_html_e( 'Starter Kit URL:', 'activitypub' ); ?><br />
+					<input type="url" id="import_url" name="import_url" size="50" class="code" placeholder="https://example.com/starter-kit.json" value="<?php echo \esc_attr( $url ); ?>" required />
+				</label>
+			</p>
+			<p class="submit">
+				<input type="submit" name="submit" id="submit" class="button" value="<?php \esc_attr_e( 'Import from URL', 'activitypub' ); ?>" />
+			</p>
+		</form>
+
+		</div>
+		<?php
 	}
 
 	/**
