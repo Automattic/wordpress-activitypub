@@ -183,14 +183,17 @@ class Starter_Kit {
 			);
 		};
 
-		\add_filter( 'wp_dropdown_users', $add_blog_user );
+		\add_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
 	}
 
 	/**
 	 * Cleanup blog user filter.
 	 */
 	private static function cleanup_blog_user_filter() {
-		\remove_all_filters( 'wp_dropdown_users' );
+		if ( self::$blog_user_filter_callback ) {
+			\remove_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
+			self::$blog_user_filter_callback = null;
+		}
 	}
 
 	/**
