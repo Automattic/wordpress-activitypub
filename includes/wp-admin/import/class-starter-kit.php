@@ -155,90 +155,166 @@ class Starter_Kit {
 	 * Import options.
 	 */
 	public static function import_options() {
-		$activitypub_users = function ( $users ) {
-			// Add blog user to the html output if enabled.
-			$users = \preg_replace( '/<\/select>/', '<option value="0">' . \__( 'Blog User', 'activitypub' ) . '</option></select>', $users );
-			return $users;
+		self::setup_blog_user_filter();
+
+		$actors = self::get_actor_list();
+		if ( \is_wp_error( $actors ) ) {
+			self::render_error( $actors );
+			return;
+		}
+
+		self::render_import_form( $actors );
+		self::cleanup_blog_user_filter();
+	}
+
+	/**
+	 * Setup blog user filter for dropdown.
+	 */
+	private static function setup_blog_user_filter() {
+		if ( is_user_type_disabled( 'blog' ) ) {
+			return;
+		}
+
+		$add_blog_user = function ( $users ) {
+			return \preg_replace(
+				'/<\/select>/',
+				'<option value="0">' . \__( 'Blog User', 'activitypub' ) . '</option></select>',
+				$users
+			);
 		};
 
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			\add_filter(
-				'wp_dropdown_users',
-				$activitypub_users
-			);
-		}
+		\add_filter( 'wp_dropdown_users', $add_blog_user );
+	}
+
+	/**
+	 * Cleanup blog user filter.
+	 */
+	private static function cleanup_blog_user_filter() {
+		\remove_all_filters( 'wp_dropdown_users' );
+	}
+
+	/**
+	 * Render error message.
+	 */
+	private static function render_error( $error ) {
+		\printf(
+			'<p><strong>%s</strong><br />%s</p>',
+			\esc_html__( 'Sorry, there has been an error.', 'activitypub' ),
+			\esc_html( $error->get_error_message() )
+		);
+	}
+
+	/**
+	 * Render the import form.
+	 */
+	private static function render_import_form( $actors ) {
 		?>
 		<form action="<?php echo \esc_url( \admin_url( 'admin.php?import=starter-kit&amp;step=2' ) ); ?>" method="post">
-			<?php
-			$actors = self::get_actor_list();
-			if ( \is_wp_error( $actors ) ) {
-				\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html__( 'Sorry, there has been an error.', 'activitypub' ), \esc_html( $actors->get_error_message() ) );
-			} else {
-				\wp_nonce_field( 'import-starter-kit' );
-				?>
-				<input type="hidden" name="import_id" value="<?php echo esc_attr( self::$import_id ); ?>" />
-				<h3><?php echo empty( self::$starter_kit['name'] ) ? \esc_html__( 'Starter Kit', 'activitypub' ) : \esc_html( self::$starter_kit['name'] ); ?></h3>
-				<?php
-				if ( ! empty( self::$starter_kit['image']['url'] ) ) {
-					?>
-					<img src="<?php echo \esc_url( self::$starter_kit['image']['url'] ); ?>" style="max-width: 500px;" alt="<?php echo \esc_attr( \__( 'The logo of the Starter Kit', 'activitypub' ) ); ?>" />
-					<?php
-				}
-				if ( ! empty( self::$starter_kit['summary'] ) ) {
-					?>
-					<p><?php echo \esc_html( self::$starter_kit['summary'] ); ?></p>
-					<?php
-				}
-				if ( ! empty( self::$starter_kit['attributedTo'] ) ) {
-					// translators: %s: Starter Kit author.
-					\printf( \wp_kses_post( 'Created by <a href="%1$s" target="_blank">%1$s</a>', 'activitypub' ), \esc_url( self::$starter_kit['attributedTo'] ) );
-				}
-				?>
-				<p><h4><?php \esc_html_e( 'Select the author for the imported Starter Kit', 'activitypub' ); ?></h4></p>
-				<p>
-					<label for="author"><?php \esc_html_e( 'Author:', 'activitypub' ); ?></label>
-					<?php
-					\wp_dropdown_users(
-						array(
-							'name'       => 'author',
-							'id'         => 'author',
-							'show'       => 'display_name_with_login',
-							'selected'   => \get_current_user_id(),
-							'capability' => 'activitypub',
-						)
-					);
-					?>
-				</p>
-				<p><h4><?php \esc_html_e( 'Select the accounts you want to follow', 'activitypub' ); ?></h4></p>
-				<ul>
-				<?php
-				foreach ( $actors as $actor ) {
-					$actor = object_to_uri( $actor );
-					$actor = \ltrim( $actor, '@' );
+			<?php \wp_nonce_field( 'import-starter-kit' ); ?>
+			<input type="hidden" name="import_id" value="<?php echo esc_attr( self::$import_id ); ?>" />
 
-					if ( ! filter_var( $actor, FILTER_VALIDATE_URL ) && ! filter_var( $actor, FILTER_VALIDATE_EMAIL ) ) {
-						continue;
-					}
-					?>
-					<li>
-						<label>
-							<input type="checkbox" name="actors[]" value="<?php echo \esc_attr( $actor ); ?>" checked />
-							<?php echo \esc_url( $actor ); ?>
-						</label>
-					</li>
-					<?php
-				}
-				?>
-				</ul>
-				<p class="submit">
-					<input type="submit" class="button button-primary" value="<?php \esc_attr_e( 'Import', 'activitypub' ); ?>" />
-				</p>
-				<?php
-			}
-			?>
+			<?php self::render_starter_kit_info(); ?>
+			<?php self::render_author_selection(); ?>
+			<?php self::render_actor_selection( $actors ); ?>
+
+			<p class="submit">
+				<input type="submit" class="button button-primary" value="<?php \esc_attr_e( 'Import', 'activitypub' ); ?>" />
+			</p>
 		</form>
 		<?php
-		\remove_filter( 'wp_dropdown_users', $activitypub_users );
+	}
+
+	/**
+	 * Render starter kit information.
+	 */
+	private static function render_starter_kit_info() {
+		$name = empty( self::$starter_kit['name'] )
+			? \__( 'Starter Kit', 'activitypub' )
+			: self::$starter_kit['name'];
+
+		echo '<h3>' . \esc_html( $name ) . '</h3>';
+
+		if ( ! empty( self::$starter_kit['image']['url'] ) ) {
+			\printf(
+				'<img src="%s" style="max-width: 500px;" alt="%s" />',
+				\esc_url( self::$starter_kit['image']['url'] ),
+				\esc_attr( \__( 'The logo of the Starter Kit', 'activitypub' ) )
+			);
+		}
+
+		if ( ! empty( self::$starter_kit['summary'] ) ) {
+			echo '<p>' . \esc_html( self::$starter_kit['summary'] ) . '</p>';
+		}
+
+		if ( ! empty( self::$starter_kit['attributedTo'] ) ) {
+			\printf(
+				\wp_kses_post( 'Created by <a href="%1$s" target="_blank">%1$s</a>' ),
+				\esc_url( self::$starter_kit['attributedTo'] )
+			);
+		}
+	}
+
+	/**
+	 * Render author selection.
+	 */
+	private static function render_author_selection() {
+		?>
+		<h4><?php \esc_html_e( 'Select the author for the imported Starter Kit', 'activitypub' ); ?></h4>
+		<p>
+			<label for="author"><?php \esc_html_e( 'Author:', 'activitypub' ); ?></label>
+			<?php
+			\wp_dropdown_users(
+				array(
+					'name'       => 'author',
+					'id'         => 'author',
+					'show'       => 'display_name_with_login',
+					'selected'   => \get_current_user_id(),
+					'capability' => 'activitypub',
+				)
+			);
+			?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render actor selection.
+	 *
+	 * @param array $actors The actors to render.
+	 */
+	private static function render_actor_selection( $actors ) {
+		?>
+		<h4><?php \esc_html_e( 'Select the accounts you want to follow', 'activitypub' ); ?></h4>
+		<ul>
+			<?php foreach ( $actors as $actor ) : ?>
+				<?php
+				$actor_uri = object_to_uri( $actor );
+				$actor_uri = \ltrim( $actor_uri, '@' );
+
+				if ( ! self::is_valid_actor( $actor_uri ) ) {
+					continue;
+				}
+				?>
+				<li>
+					<label>
+						<input type="checkbox" name="actors[]" value="<?php echo \esc_attr( $actor_uri ); ?>" checked />
+						<?php echo \esc_url( $actor_uri ); ?>
+					</label>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+		<?php
+	}
+
+	/**
+	 * Check if actor URI is valid.
+	 *
+	 * @param string $actor_uri The actor URI to validate.
+	 *
+	 * @return bool True if the actor URI is valid, false otherwise.
+	 */
+	private static function is_valid_actor( $actor_uri ) {
+		return filter_var( $actor_uri, FILTER_VALIDATE_URL ) || filter_var( $actor_uri, FILTER_VALIDATE_EMAIL );
 	}
 
 	/**
