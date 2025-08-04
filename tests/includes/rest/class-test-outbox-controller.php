@@ -67,7 +67,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)/(?P<user_id>[\w\-\.]+)/outbox', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)/(?P<user_id>[-]?\d+)/outbox', $routes );
 	}
 
 	/**
@@ -105,19 +105,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$response = \rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
-	}
-
-	/**
-	 * Test getting items by passing the username instead of the user ID.
-	 *
-	 * @covers ::get_items
-	 */
-	public function test_get_items_with_username() {
-		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/%s/outbox', ACTIVITYPUB_REST_NAMESPACE, get_userdata( self::$user_id )->user_nicename ) );
-		$response = \rest_get_server()->dispatch( $request );
-		$data     = $response->get_data();
-
-		$this->assertEquals( 10, $data['totalItems'] );
 	}
 
 	/**
