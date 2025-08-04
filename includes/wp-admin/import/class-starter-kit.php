@@ -51,6 +51,13 @@ class Starter_Kit {
 	private static $actor_list;
 
 	/**
+	 * Blog user filter callback.
+	 *
+	 * @var callable
+	 */
+	private static $blog_user_filter_callback;
+
+	/**
 	 * Dispatch
 	 */
 	public static function dispatch() {
@@ -175,7 +182,7 @@ class Starter_Kit {
 			return;
 		}
 
-		$add_blog_user = function ( $users ) {
+		self::$blog_user_filter_callback = function ( $users ) {
 			return \preg_replace(
 				'/<\/select>/',
 				'<option value="0">' . \__( 'Blog User', 'activitypub' ) . '</option></select>',
@@ -254,10 +261,10 @@ class Starter_Kit {
 		}
 
 		if ( ! empty( self::$starter_kit['attributedTo'] ) ) {
-			echo wp_kses_post(
-				sprintf(
+			echo \wp_kses_post(
+				\sprintf(
 					'Created by <a href="%1$s" target="_blank">%1$s</a>',
-					esc_url( self::$starter_kit['attributedTo'] )
+					\esc_url( self::$starter_kit['attributedTo'] )
 				)
 			);
 		}
@@ -323,7 +330,7 @@ class Starter_Kit {
 	 * @return bool True if the actor URI is valid, false otherwise.
 	 */
 	private static function is_valid_actor( $actor_uri ) {
-		return filter_var( $actor_uri, FILTER_VALIDATE_URL ) !== false || filter_var( $actor_uri, FILTER_VALIDATE_EMAIL ) !== false;
+		return false !== \filter_var( $actor_uri, FILTER_VALIDATE_URL ) || false !== \filter_var( $actor_uri, FILTER_VALIDATE_EMAIL );
 	}
 
 	/**
