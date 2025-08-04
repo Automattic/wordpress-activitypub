@@ -82,14 +82,18 @@ class Starter_Kit {
 				\check_admin_referer( 'import-starter-kit' );
 				self::$import_id  = \absint( $_POST['import_id'] ?? 0 );
 				self::$author     = \absint( $_POST['author'] ?? \get_current_user_id() );
-				self::$actor_list = \array_map(
-					function ( $actor ) {
-						$actor = \sanitize_text_field( $actor );
-						$actor = \wp_unslash( $actor );
-						return $actor;
-					},
-					// phpcs:ignore
-					$_POST['actors'] ?? array()
+				self::$actor_list = \array_values(
+					array_filter(
+						array_map(
+							function ( $actor ) {
+								$actor = \sanitize_text_field( $actor );
+								$actor = \wp_unslash( $actor );
+								return self::is_valid_actor( $actor ) ? $actor : null;
+							},
+							// phpcs:ignore
+							$_POST['actors'] ?? array()
+						)
+					)
 				);
 
 				\set_time_limit( 0 );
