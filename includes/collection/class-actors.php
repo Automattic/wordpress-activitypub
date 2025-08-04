@@ -98,6 +98,22 @@ class Actors {
 			return $pre;
 		}
 
+		$id = self::get_id_by_username( $username );
+		if ( \is_wp_error( $id ) ) {
+			return $id;
+		}
+
+		return self::get_by_id( $id );
+	}
+
+	/**
+	 * Get the Actor by username.
+	 *
+	 * @param string $username Name of the actor.
+	 *
+	 * @return int|\WP_Error Actor id or WP_Error if not found.
+	 */
+	public static function get_id_by_username( $username ) {
 		// Check for blog user.
 		if (
 			Blog::get_default_username() === $username ||
@@ -111,12 +127,12 @@ class Actors {
 				);
 			}
 
-			return new Blog();
+			return self::BLOG_USER_ID;
 		}
 
 		// Check for application user.
 		if ( 'application' === $username ) {
-			return new Application();
+			return self::APPLICATION_USER_ID;
 		}
 
 		// Check for 'activitypub_username' meta.
@@ -139,10 +155,7 @@ class Actors {
 		);
 
 		if ( $user->get_results() ) {
-			$actor = self::get_by_id( $user->get_results()[0] );
-			if ( ! \is_wp_error( $actor ) ) {
-				return $actor;
-			}
+			return \current( $user->get_results() );
 		}
 
 		$username = str_replace( array( '*', '%' ), '', $username );
@@ -160,10 +173,7 @@ class Actors {
 		);
 
 		if ( $user->get_results() ) {
-			$actor = self::get_by_id( $user->get_results()[0] );
-			if ( ! \is_wp_error( $actor ) ) {
-				return $actor;
-			}
+			return \current( $user->get_results() );
 		}
 
 		return new \WP_Error(
@@ -181,6 +191,22 @@ class Actors {
 	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
 	public static function get_by_resource( $uri ) {
+		$id = self::get_id_by_resource( $uri );
+		if ( \is_wp_error( $id ) ) {
+			return $id;
+		}
+
+		return self::get_by_id( $id );
+	}
+
+	/**
+	 * Get the Actor by resource URI (acct, http(s), etc).
+	 *
+	 * @param string $uri The actor resource URI.
+	 *
+	 * @return int|\WP_Error Actor id or WP_Error if not found.
+	 */
+	public static function get_id_by_resource( $uri ) {
 		$uri = object_to_uri( $uri );
 
 		if ( ! $uri ) {
@@ -210,7 +236,7 @@ class Actors {
 				$post = self::get_remote_by_uri( $uri );
 
 				if ( ! \is_wp_error( $post ) ) {
-					return self::get_actor( $post );
+					return $post->ID;
 				}
 
 				// Check for http(s)://blog.example.com/@username.
@@ -229,7 +255,7 @@ class Actors {
 						$identifier = \str_replace( '@', '', $resource_path );
 						$identifier = \trim( $identifier, '/' );
 
-						return self::get_by_username( $identifier );
+						return self::get_id_by_username( $identifier );
 					}
 				}
 
@@ -237,7 +263,7 @@ class Actors {
 				$user_id = url_to_authorid( $uri );
 
 				if ( \is_int( $user_id ) ) {
-					return self::get_by_id( $user_id );
+					return $user_id;
 				}
 
 				// Check for http(s)://blog.example.com/.
@@ -247,7 +273,7 @@ class Actors {
 					normalize_url( site_url() ) === $normalized_uri ||
 					normalize_url( home_url() ) === $normalized_uri
 				) {
-					return self::get_by_id( self::BLOG_USER_ID );
+					return self::BLOG_USER_ID;
 				}
 
 				return new \WP_Error(
@@ -272,10 +298,10 @@ class Actors {
 
 				// Prepare wildcards https://github.com/mastodon/mastodon/issues/22213.
 				if ( in_array( $identifier, array( '_', '*', '' ), true ) ) {
-					return self::get_by_id( self::BLOG_USER_ID );
+					return self::BLOG_USER_ID;
 				}
 
-				return self::get_by_username( $identifier );
+				return self::get_id_by_username( $identifier );
 			default:
 				return new \WP_Error(
 					'activitypub_wrong_scheme',
@@ -293,8 +319,24 @@ class Actors {
 	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
 	public static function get_by_various( $id ) {
+		$id = self::get_id_by_various( $id );
+		if ( \is_wp_error( $id ) ) {
+			return $id;
+		}
+
+		return self::get_by_id( $id );
+	}
+
+	/**
+	 * Get the Actor by various identifier types (ID, URI, username, or email).
+	 *
+	 * @param string|int $id Actor identifier (user ID, URI, username, or email).
+	 *
+	 * @return int|\WP_Error Actor id or WP_Error if not found.
+	 */
+	public static function get_id_by_various( $id ) {
 		if ( is_numeric( $id ) ) {
-			$user = self::get_by_id( $id );
+			$id = (int) $id;
 		} elseif (
 			// Is URL.
 			filter_var( $id, FILTER_VALIDATE_URL ) ||
@@ -303,12 +345,12 @@ class Actors {
 			// Is email.
 			filter_var( $id, FILTER_VALIDATE_EMAIL )
 		) {
-			$user = self::get_by_resource( $id );
+			$id = self::get_id_by_resource( $id );
 		} else {
-			$user = self::get_by_username( $id );
+			$id = self::get_id_by_username( $id );
 		}
 
-		return $user;
+		return $id;
 	}
 
 	/**

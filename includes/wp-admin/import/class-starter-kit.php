@@ -51,6 +51,13 @@ class Starter_Kit {
 	private static $actor_list;
 
 	/**
+	 * Blog user filter callback.
+	 *
+	 * @var callable
+	 */
+	private static $blog_user_filter_callback;
+
+	/**
 	 * Dispatch
 	 */
 	public static function dispatch() {
@@ -276,7 +283,7 @@ class Starter_Kit {
 			return;
 		}
 
-		$add_blog_user = function ( $users ) {
+		self::$blog_user_filter_callback = function ( $users ) {
 			return \preg_replace(
 				'/<\/select>/',
 				'<option value="0">' . \__( 'Blog User', 'activitypub' ) . '</option></select>',
@@ -284,14 +291,17 @@ class Starter_Kit {
 			);
 		};
 
-		\add_filter( 'wp_dropdown_users', $add_blog_user );
+		\add_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
 	}
 
 	/**
 	 * Cleanup blog user filter.
 	 */
 	private static function cleanup_blog_user_filter() {
-		\remove_all_filters( 'wp_dropdown_users' );
+		if ( self::$blog_user_filter_callback ) {
+			\remove_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
+			self::$blog_user_filter_callback = null;
+		}
 	}
 
 	/**
@@ -352,9 +362,11 @@ class Starter_Kit {
 		}
 
 		if ( ! empty( self::$starter_kit['attributedTo'] ) ) {
-			\printf(
-				\wp_kses_post( 'Created by <a href="%1$s" target="_blank">%1$s</a>' ),
-				\esc_url( self::$starter_kit['attributedTo'] )
+			echo \wp_kses_post(
+				\sprintf(
+					'Created by <a href="%1$s" target="_blank">%1$s</a>',
+					\esc_url( self::$starter_kit['attributedTo'] )
+				)
 			);
 		}
 	}
@@ -403,7 +415,7 @@ class Starter_Kit {
 				<li>
 					<label>
 						<input type="checkbox" name="actors[]" value="<?php echo \esc_attr( $actor_uri ); ?>" checked />
-						<?php echo \esc_url( $actor_uri ); ?>
+						<?php echo \esc_html( $actor_uri ); ?>
 					</label>
 				</li>
 			<?php endforeach; ?>
@@ -419,7 +431,7 @@ class Starter_Kit {
 	 * @return bool True if the actor URI is valid, false otherwise.
 	 */
 	private static function is_valid_actor( $actor_uri ) {
-		return filter_var( $actor_uri, FILTER_VALIDATE_URL ) || filter_var( $actor_uri, FILTER_VALIDATE_EMAIL );
+		return false !== \filter_var( $actor_uri, FILTER_VALIDATE_URL ) || false !== \filter_var( $actor_uri, FILTER_VALIDATE_EMAIL );
 	}
 
 	/**

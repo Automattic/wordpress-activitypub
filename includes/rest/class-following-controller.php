@@ -35,10 +35,10 @@ class Following_Controller extends Actors_Controller {
 			array(
 				'args'   => array(
 					'user_id' => array(
-						'description' => 'The ID or username of the actor.',
-						'type'        => 'string',
-						'required'    => true,
-						'pattern'     => '[\w\-\.]+',
+						'description'       => 'The ID of the actor.',
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),
 				array(
@@ -86,10 +86,9 @@ class Following_Controller extends Actors_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = Actors::get_by_various( $user_id );
-
-		if ( \is_wp_error( $user ) ) {
-			return $user;
+		$user    = null;
+		if ( \has_filter( 'activitypub_rest_following' ) ) {
+			$user = Actors::get_by_id( $user_id );
 		}
 
 		/**
@@ -106,9 +105,8 @@ class Following_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'     => get_context(),
-			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user->get__id() ) ),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
-			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => $data['total'],
 			'orderedItems' => array_map(
@@ -138,7 +136,7 @@ class Following_Controller extends Actors_Controller {
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );
-		if ( is_wp_error( $response ) ) {
+		if ( \is_wp_error( $response ) ) {
 			return $response;
 		}
 
