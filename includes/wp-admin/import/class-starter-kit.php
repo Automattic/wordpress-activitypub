@@ -304,7 +304,7 @@ class Starter_Kit {
 				<li>
 					<label>
 						<input type="checkbox" name="actors[]" value="<?php echo \esc_attr( $actor_uri ); ?>" checked />
-						<?php echo \esc_url( $actor_uri ); ?>
+						<?php echo \esc_html( $actor_uri ); ?>
 					</label>
 				</li>
 			<?php endforeach; ?>
