@@ -504,18 +504,18 @@ class Starter_Kit {
 		echo '<p>' . \esc_html__( 'Starter Kits use the ActivityPub protocol with custom extensions to automate tasks such as following accounts, blocking unwanted content, and applying default configurations. The importer will automatically follow every user listed in the kit, helping users connect right away. Support for additional actions and features will be added over time.', 'activitypub' ) . '</p>';
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$url = \sanitize_text_field( \wp_unslash( $_GET['url'] ) ) ?? '';
+		$url = isset( $_GET['url'] ) ? \sanitize_text_field( \wp_unslash( $_GET['url'] ) ) : '';
 
 		if ( empty( $url ) ) {
 			// File upload option.
-			printf( '<h3>%s</h3>', \esc_html__( 'Option 1: Upload a File', 'activitypub' ) );
+			\printf( '<h3>%s</h3>', \esc_html__( 'Option 1: Upload a File', 'activitypub' ) );
 			\wp_import_upload_form( 'admin.php?import=starter-kit&amp;step=1' );
 
 			// URL import option.
-			printf( '<h3>%s</h3>', \esc_html__( 'Option 2: Import from URL', 'activitypub' ) );
+			\printf( '<h3>%s</h3>', \esc_html__( 'Option 2: Import from URL', 'activitypub' ) );
 		} else {
 			// URL import option.
-			printf( '<h3>%s</h3>', \esc_html__( 'Import from URL', 'activitypub' ) );
+			\printf( '<h3>%s</h3>', \esc_html__( 'Import from URL', 'activitypub' ) );
 		}
 		?>
 		<form id="import-url-form" method="post" action="<?php echo \esc_url( \admin_url( 'admin.php?import=starter-kit&amp;step=2' ) ); ?>">
