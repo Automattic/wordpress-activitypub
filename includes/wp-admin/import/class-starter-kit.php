@@ -232,8 +232,9 @@ class Starter_Kit {
 
 		// Create a temporary file to store the JSON content.
 		$upload_dir = \wp_upload_dir();
-		$temp_file  = \trailingslashit( $upload_dir['path'] ) . 'starter-kit-' . \time() . '.json';
-
+		$base_filename = 'starter-kit.json';
+		$unique_filename = \wp_unique_filename( $upload_dir['path'], $base_filename );
+		$temp_file  = \trailingslashit( $upload_dir['path'] ) . $unique_filename;
 		\WP_Filesystem();
 		global $wp_filesystem;
 
