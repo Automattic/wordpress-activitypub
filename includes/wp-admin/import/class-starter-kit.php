@@ -89,14 +89,18 @@ class Starter_Kit {
 				\check_admin_referer( 'import-starter-kit' );
 				self::$import_id  = \absint( $_POST['import_id'] ?? 0 );
 				self::$author     = \absint( $_POST['author'] ?? \get_current_user_id() );
-				self::$actor_list = \array_map(
-					function ( $actor ) {
-						$actor = \sanitize_text_field( $actor );
-						$actor = \wp_unslash( $actor );
-						return $actor;
-					},
-					// phpcs:ignore
-					$_POST['actors'] ?? array()
+				self::$actor_list = \array_values(
+					array_filter(
+						array_map(
+							function ( $actor ) {
+								$actor = \sanitize_text_field( $actor );
+								$actor = \wp_unslash( $actor );
+								return self::is_valid_actor( $actor ) ? $actor : null;
+							},
+							// phpcs:ignore
+							$_POST['actors'] ?? array()
+						)
+					)
 				);
 
 				\set_time_limit( 0 );
@@ -227,12 +231,17 @@ class Starter_Kit {
 		}
 
 		// Create a temporary file to store the JSON content.
-		$upload_dir = \wp_upload_dir();
-		$temp_file  = \trailingslashit( $upload_dir['path'] ) . 'starter-kit-' . \time() . '.json';
-
+		$upload_dir      = \wp_upload_dir();
+		$base_filename   = 'starter-kit.json';
+		$unique_filename = \wp_unique_filename( $upload_dir['path'], $base_filename );
+		$temp_file       = \trailingslashit( $upload_dir['path'] ) . $unique_filename;
 		\WP_Filesystem();
 		global $wp_filesystem;
 
+		if ( ! $wp_filesystem || ! is_a( $wp_filesystem, 'WP_Filesystem_Base' ) ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to initialize the WordPress filesystem.', 'activitypub' ) );
+			return false;
+		}
 		if ( ! $wp_filesystem->put_contents( $temp_file, $body, FS_CHMOD_FILE ) ) {
 			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to save the downloaded content.', 'activitypub' ) );
 			return false;
@@ -241,7 +250,7 @@ class Starter_Kit {
 		// Construct the attachment array.
 		$attachment = array(
 			// phpcs:ignore
-			'post_title'     => \basename( \wp_parse_url( $url, PHP_URL_PATH ) ) ?: 'starter-kit.json',
+			'post_title'     => \sanitize_file_name( \basename( \wp_parse_url( $url, PHP_URL_PATH ) ) ) ?: 'starter-kit.json',
 			'post_content'   => $url,
 			'post_mime_type' => 'application/json',
 			'guid'           => $url,
@@ -258,7 +267,7 @@ class Starter_Kit {
 			return false;
 		}
 		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
-		\wp_schedule_single_event( time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
+		\wp_schedule_single_event( \wp_get_current_timestamp() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
 
 		return true;
 	}
@@ -296,16 +305,21 @@ class Starter_Kit {
 		};
 
 		\add_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
+
+		self::$blog_user_filter_added = true;
 	}
 
 	/**
 	 * Cleanup blog user filter.
 	 */
 	private static function cleanup_blog_user_filter() {
+
 		if ( self::$blog_user_filter_callback ) {
 			\remove_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
 			self::$blog_user_filter_callback = null;
 		}
+
+		self::$blog_user_filter_added = false;
 	}
 
 	/**
@@ -357,7 +371,7 @@ class Starter_Kit {
 			\printf(
 				'<img src="%s" style="max-width: 500px;" alt="%s" />',
 				\esc_url( self::$starter_kit['image']['url'] ),
-				\esc_attr( \__( 'The logo of the Starter Kit', 'activitypub' ) )
+				\esc_attr( self::$starter_kit['image']['summary'] ?? '' )
 			);
 		}
 
@@ -588,6 +602,10 @@ class Starter_Kit {
 		}
 
 		$actors = self::$starter_kit['items'] ?? self::$starter_kit['orderedItems'] ?? array();
+
+		// Limit list to 150 actors.
+		// TODO: Make this configurable.
+		$actors = \array_slice( $actors, 0, 150 );
 
 		if ( ! $actors ) {
 			return new \WP_Error( 'empty_actor_list', \esc_html__( 'The uploaded file does not contain any actors.', 'activitypub' ) );
