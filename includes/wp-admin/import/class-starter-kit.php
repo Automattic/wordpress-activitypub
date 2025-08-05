@@ -314,8 +314,8 @@ class Starter_Kit {
 	private static function cleanup_blog_user_filter() {
 
 		if ( self::$blog_user_filter_callback ) {
-			self::$blog_user_filter_callback = null;
 			\remove_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
+			self::$blog_user_filter_callback = null;
 		}
 
 		self::$blog_user_filter_added = false;
