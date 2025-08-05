@@ -237,6 +237,10 @@ class Starter_Kit {
 		\WP_Filesystem();
 		global $wp_filesystem;
 
+		if ( ! $wp_filesystem || ! is_a( $wp_filesystem, 'WP_Filesystem_Base' ) ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to initialize the WordPress filesystem.', 'activitypub' ) );
+			return false;
+		}
 		if ( ! $wp_filesystem->put_contents( $temp_file, $body, FS_CHMOD_FILE ) ) {
 			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to save the downloaded content.', 'activitypub' ) );
 			return false;
