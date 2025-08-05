@@ -58,6 +58,13 @@ class Starter_Kit {
 	private static $blog_user_filter_callback;
 
 	/**
+	 * Blog user filter added.
+	 *
+	 * @var bool
+	 */
+	private static $blog_user_filter_added = false;
+
+	/**
 	 * Dispatch
 	 */
 	public static function dispatch() {
@@ -235,7 +242,13 @@ class Starter_Kit {
 		$base_filename   = 'starter-kit.json';
 		$unique_filename = \wp_unique_filename( $upload_dir['path'], $base_filename );
 		$temp_file       = \trailingslashit( $upload_dir['path'] ) . $unique_filename;
-		\WP_Filesystem();
+
+    
+		if ( ! \WP_Filesystem() ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to initialize the WordPress filesystem.', 'activitypub' ) );
+			return false;
+		}
+
 		global $wp_filesystem;
 
 		if ( ! $wp_filesystem || ! is_a( $wp_filesystem, 'WP_Filesystem_Base' ) ) {
@@ -267,7 +280,7 @@ class Starter_Kit {
 			return false;
 		}
 		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
-		\wp_schedule_single_event( \wp_get_current_timestamp() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
+		\wp_schedule_single_event( \time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
 
 		return true;
 	}
@@ -313,8 +326,7 @@ class Starter_Kit {
 	 * Cleanup blog user filter.
 	 */
 	private static function cleanup_blog_user_filter() {
-
-		if ( self::$blog_user_filter_callback ) {
+		if ( self::$blog_user_filter_callback && self::$blog_user_filter_added ) {
 			\remove_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
 			self::$blog_user_filter_callback = null;
 		}
