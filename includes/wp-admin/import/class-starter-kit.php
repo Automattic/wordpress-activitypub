@@ -266,7 +266,7 @@ class Starter_Kit {
 			return false;
 		}
 		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
-		\wp_schedule_single_event( time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
+		\wp_schedule_single_event( \wp_get_current_timestamp() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
 
 		return true;
 	}
