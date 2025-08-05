@@ -304,7 +304,7 @@ class Starter_Kit {
 		};
 
 		\add_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
-    
+
 		self::$blog_user_filter_added = true;
 	}
 
@@ -317,8 +317,8 @@ class Starter_Kit {
 			self::$blog_user_filter_callback = null;
 			\remove_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
 		}
-    
-		self::$blog_user_filter_added    = false;
+
+		self::$blog_user_filter_added = false;
 	}
 
 	/**
