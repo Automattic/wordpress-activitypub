@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Adds support for importing Starter Kits from a link (URL).
