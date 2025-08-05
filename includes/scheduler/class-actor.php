@@ -54,6 +54,7 @@ class Actor {
 
 		// User deletion handling.
 		\add_action( 'delete_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
+		\add_action( 'post_types_to_delete_with_user', array( self::class, 'post_types_to_delete_with_user' ) );
 	}
 
 	/**
@@ -183,8 +184,17 @@ class Actor {
 			return;
 		}
 
-		\set_transient( 'activitypub_deleted_actor_' . $user_id, $actor->to_json(), DAY_IN_SECONDS );
-
 		add_to_outbox( $actor, 'Delete', $user_id );
+	}
+
+	/**
+	 * Remove outbox from post types to delete with user.
+	 *
+	 * @param array $post_types The post types to delete with user.
+	 *
+	 * @return array The post types to delete with user without outbox.
+	 */
+	public static function post_types_to_delete_with_user( $post_types ) {
+		return \array_diff( $post_types, array( 'ap_outbox' ) );
 	}
 }
