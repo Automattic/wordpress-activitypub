@@ -462,8 +462,9 @@ class Starter_Kit {
 
 		$actors = self::$starter_kit['items'] ?? self::$starter_kit['orderedItems'] ?? array();
 
-		// Limit list to 100 actors.
-		$actors = \array_slice( $actors, 0, 100 );
+		// Limit list to 150 actors.
+		// TODO: Make this configurable.
+		$actors = \array_slice( $actors, 0, 150 );
 
 		if ( ! $actors ) {
 			return new \WP_Error( 'empty_actor_list', \esc_html__( 'The uploaded file does not contain any actors.', 'activitypub' ) );
