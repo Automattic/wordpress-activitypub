@@ -109,7 +109,7 @@ class Following_Controller extends Actors_Controller {
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => $data['total'],
-			'orderedItems' => \array_filter(
+			'orderedItems' => array_filter(
 				array_map(
 					function ( $item ) use ( $context ) {
 						if ( 'full' === $context ) {
