@@ -89,14 +89,18 @@ class Starter_Kit {
 				\check_admin_referer( 'import-starter-kit' );
 				self::$import_id  = \absint( $_POST['import_id'] ?? 0 );
 				self::$author     = \absint( $_POST['author'] ?? \get_current_user_id() );
-				self::$actor_list = \array_map(
-					function ( $actor ) {
-						$actor = \sanitize_text_field( $actor );
-						$actor = \wp_unslash( $actor );
-						return $actor;
-					},
-					// phpcs:ignore
-					$_POST['actors'] ?? array()
+				self::$actor_list = \array_values(
+					array_filter(
+						array_map(
+							function ( $actor ) {
+								$actor = \sanitize_text_field( $actor );
+								$actor = \wp_unslash( $actor );
+								return self::is_valid_actor( $actor ) ? $actor : null;
+							},
+							// phpcs:ignore
+							$_POST['actors'] ?? array()
+						)
+					)
 				);
 
 				\set_time_limit( 0 );
@@ -296,16 +300,21 @@ class Starter_Kit {
 		};
 
 		\add_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
+    
+		self::$blog_user_filter_added = true;
 	}
 
 	/**
 	 * Cleanup blog user filter.
 	 */
 	private static function cleanup_blog_user_filter() {
+
 		if ( self::$blog_user_filter_callback ) {
-			\remove_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
 			self::$blog_user_filter_callback = null;
+			\remove_filter( 'wp_dropdown_users', self::$blog_user_filter_callback );
 		}
+    
+		self::$blog_user_filter_added    = false;
 	}
 
 	/**
@@ -357,7 +366,7 @@ class Starter_Kit {
 			\printf(
 				'<img src="%s" style="max-width: 500px;" alt="%s" />',
 				\esc_url( self::$starter_kit['image']['url'] ),
-				\esc_attr( \__( 'The logo of the Starter Kit', 'activitypub' ) )
+				\esc_attr( self::$starter_kit['image']['summary'] ?? '' )
 			);
 		}
 
@@ -588,6 +597,10 @@ class Starter_Kit {
 		}
 
 		$actors = self::$starter_kit['items'] ?? self::$starter_kit['orderedItems'] ?? array();
+
+		// Limit list to 150 actors.
+		// TODO: Make this configurable.
+		$actors = \array_slice( $actors, 0, 150 );
 
 		if ( ! $actors ) {
 			return new \WP_Error( 'empty_actor_list', \esc_html__( 'The uploaded file does not contain any actors.', 'activitypub' ) );
