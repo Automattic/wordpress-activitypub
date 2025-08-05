@@ -235,7 +235,10 @@ class Starter_Kit {
 		$base_filename   = 'starter-kit.json';
 		$unique_filename = \wp_unique_filename( $upload_dir['path'], $base_filename );
 		$temp_file       = \trailingslashit( $upload_dir['path'] ) . $unique_filename;
-		\WP_Filesystem();
+		if ( ! \WP_Filesystem() ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to initialize the WordPress filesystem.', 'activitypub' ) );
+			return false;
+		}
 		global $wp_filesystem;
 
 		if ( ! $wp_filesystem || ! is_a( $wp_filesystem, 'WP_Filesystem_Base' ) ) {
