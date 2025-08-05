@@ -250,7 +250,7 @@ class Starter_Kit {
 		// Construct the attachment array.
 		$attachment = array(
 			// phpcs:ignore
-			'post_title'     => \basename( \wp_parse_url( $url, PHP_URL_PATH ) ) ?: 'starter-kit.json',
+			'post_title'     => \sanitize_file_name( \basename( \wp_parse_url( $url, PHP_URL_PATH ) ) ) ?: 'starter-kit.json',
 			'post_content'   => $url,
 			'post_mime_type' => 'application/json',
 			'guid'           => $url,
