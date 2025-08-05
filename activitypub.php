@@ -77,6 +77,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Move', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Options', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
 
 	if ( site_supports_blocks() ) {

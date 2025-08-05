@@ -78,7 +78,7 @@ class Test_Comments_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/(?P<comment_id>\d+)/remote-reply', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/(?P<comment_id>[-]?\d+)/remote-reply', $routes );
 	}
 
 	/**

@@ -31,7 +31,7 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		self::$user = $factory->user->create_and_get(
 			array(
 				'user_login' => 'test_user',
-				'user_email' => 'user@example.org',
+				'user_email' => 'user@' . WP_TESTS_DOMAIN,
 			)
 		);
 		self::$user->add_cap( 'activitypub' );
@@ -89,7 +89,7 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function test_get_item() {
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger' );
-		$request->set_param( 'resource', 'acct:test_user@example.org' );
+		$request->set_param( 'resource', 'acct:test_user@' . \wp_parse_url( \home_url(), PHP_URL_HOST ) );
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
@@ -129,13 +129,13 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function test_webfinger_data_filter() {
 		$test_data = array(
-			'subject' => 'acct:test_user@example.org',
-			'aliases' => array( 'https://example.org/@test_user' ),
+			'subject' => 'acct:test_user@' . WP_TESTS_DOMAIN,
+			'aliases' => array( 'https://' . WP_TESTS_DOMAIN . '/@test_user' ),
 			'links'   => array(
 				array(
 					'rel'  => 'self',
 					'type' => 'application/activity+json',
-					'href' => 'https://example.org/author/test_user',
+					'href' => 'https://' . WP_TESTS_DOMAIN . '/author/test_user',
 				),
 			),
 		);
@@ -143,7 +143,7 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		\add_filter(
 			'webfinger_data',
 			function ( $data, $webfinger ) use ( $test_data ) {
-				$this->assertEquals( 'acct:test_user@example.org', $webfinger );
+				$this->assertEquals( 'acct:test_user@' . WP_TESTS_DOMAIN, $webfinger );
 				return $test_data;
 			},
 			10,
@@ -151,7 +151,7 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		);
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger' );
-		$request->set_param( 'resource', 'acct:test_user@example.org' );
+		$request->set_param( 'resource', 'acct:test_user@' . WP_TESTS_DOMAIN );
 
 		$response = rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
@@ -186,7 +186,7 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function test_response_matches_schema() {
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger' );
-		$request->set_param( 'resource', 'acct:test_user@example.org' );
+		$request->set_param( 'resource', 'acct:test_user@' . \wp_parse_url( \home_url(), PHP_URL_HOST ) );
 
 		$response = rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
