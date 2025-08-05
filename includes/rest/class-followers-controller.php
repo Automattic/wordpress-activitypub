@@ -104,7 +104,7 @@ class Followers_Controller extends Actors_Controller {
 			'type'         => 'OrderedCollection',
 			'totalItems'   => $data['total'],
 			'orderedItems' => \array_filter(
-				array_map(
+				\array_map(
 					function ( $item ) use ( $context ) {
 						if ( 'full' === $context ) {
 							$actor = Actors::get_actor( $item );
@@ -121,7 +121,7 @@ class Followers_Controller extends Actors_Controller {
 		);
 
 		$response = $this->prepare_collection_response( $response, $request );
-		if ( is_wp_error( $response ) ) {
+		if ( \is_wp_error( $response ) ) {
 			return $response;
 		}
 
