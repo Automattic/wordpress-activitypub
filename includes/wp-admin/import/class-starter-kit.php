@@ -243,7 +243,6 @@ class Starter_Kit {
 		$unique_filename = \wp_unique_filename( $upload_dir['path'], $base_filename );
 		$temp_file       = \trailingslashit( $upload_dir['path'] ) . $unique_filename;
 
-    
 		if ( ! \WP_Filesystem() ) {
 			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to initialize the WordPress filesystem.', 'activitypub' ) );
 			return false;
