@@ -479,6 +479,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertCount( 30, $inboxes );
 
 		wp_cache_delete( sprintf( Followers::CACHE_KEY_INBOXES, 1 ), 'activitypub' );
+		wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
 
 		for ( $j = 0; $j < 5; $j++ ) {
 			$k    = $j + 100;
