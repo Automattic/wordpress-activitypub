@@ -67,7 +67,7 @@ class Cli extends \WP_CLI_Command {
 		\add_option( 'activitypub_self_destruct', true );
 
 		// Hook into outbox processing completion to notify when self-destruct is done.
-		\add_action( 'activitypub_self_destruct_processing_complete', array( Scheduler::class, 'check_self_destruct_completion' ), 10, 4 );
+		\add_action( 'activitypub_outbox_processing_complete', array( Scheduler::class, 'check_self_destruct_completion' ), 10, 2 );
 
 		// Process each user with progress indication.
 		$processed = 0;
