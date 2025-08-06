@@ -7,10 +7,11 @@
 
 namespace Activitypub;
 
-use Activitypub\Scheduler;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
+use Activitypub\Scheduler;
 
 /**
  * WP-CLI commands.
@@ -79,7 +80,12 @@ class Cli extends \WP_CLI_Command {
 				continue;
 			}
 
-			add_to_outbox( $actor, 'Delete', $user_id );
+			$activity = new Activity();
+			$activity->set_actor( $actor->get_id() );
+			$activity->set_object( $actor->get_id() );
+			$activity->set_type( 'Delete' );
+
+			add_to_outbox( $activity, null, $user_id );
 			++$processed;
 
 			\WP_CLI::line( \WP_CLI::colorize( "%G✓%n [{$processed}/{$user_count}] Scheduled deletion for: %B{$actor->get_name()}%n" ) );
