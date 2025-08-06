@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Adds a self-destruct feature to remove a blog from the Fediverse by sending Delete activities to followers.
