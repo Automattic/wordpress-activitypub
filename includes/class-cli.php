@@ -75,7 +75,7 @@ class Cli extends \WP_CLI_Command {
 			$actor = Actors::get_by_id( $user_id );
 
 			if ( ! $actor ) {
-				\WP_CLI::line( \WP_CLI::colorize( '%R✗ Failed to load user ID: {$user_id}%n' ) );
+				\WP_CLI::line( \WP_CLI::colorize( "%R✗ Failed to load user ID: {$user_id}%n" ) );
 				continue;
 			}
 
