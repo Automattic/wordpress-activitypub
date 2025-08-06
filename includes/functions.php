@@ -1237,8 +1237,12 @@ function generate_post_summary( $post, $length = 500 ) {
 		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
+	/*
+	There is no proper support for HTML in ActivityPub summaries yet.
 	// This filter is documented in wp-includes/post-template.php.
 	return \apply_filters( 'the_excerpt', $content );
+	*/
+	return $content;
 }
 
 /**
