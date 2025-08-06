@@ -55,7 +55,7 @@ class Actor {
 
 		// User deletion handling.
 		\add_action( 'delete_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
-		\add_action( 'post_types_to_delete_with_user', array( self::class, 'post_types_to_delete_with_user' ) );
+		\add_filter( 'post_types_to_delete_with_user', array( self::class, 'post_types_to_delete_with_user' ) );
 	}
 
 	/**
