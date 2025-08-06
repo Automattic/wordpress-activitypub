@@ -31,14 +31,19 @@ class Cli extends \WP_CLI_Command {
 	 * @return void
 	 */
 	public function self_destruct( $args, $assoc_args = array() ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$question = 'You are in the process of deleting your blog from the Fediverse. This action could be irreversible, so are you sure you want to continue?';
+		// Display warning header.
+		\WP_CLI::line( \WP_CLI::colorize( '%R⚠️  DESTRUCTIVE OPERATION ⚠️%n' ) );
+		\WP_CLI::line( '' );
 
-		\WP_CLI::confirm( \WP_CLI::colorize( "%y{$question}%n" ), $assoc_args );
+		$question = 'You are about to delete your blog from the Fediverse. This action is IRREVERSIBLE and will:';
+		\WP_CLI::line( \WP_CLI::colorize( "%y{$question}%n" ) );
+		\WP_CLI::line( \WP_CLI::colorize( '%y• Send Delete activities to all followers%n' ) );
+		\WP_CLI::line( \WP_CLI::colorize( '%y• Remove your blog from ActivityPub networks%n' ) );
+		\WP_CLI::line( '' );
 
-		\WP_CLI::log( 'Deleting your Blog from the Fediverse. Scheduled delete for:' );
+		\WP_CLI::confirm( 'Are you absolutely sure you want to continue?', $assoc_args );
 
-		\add_option( 'activitypub_self_destruct', true );
-
+		// Get users before starting.
 		$user_ids = \get_users(
 			array(
 				'fields'         => 'ids',
@@ -46,14 +51,52 @@ class Cli extends \WP_CLI_Command {
 			)
 		);
 
-		foreach ( $user_ids as $user_id ) {
-			$actor = Actors::get_by_id( $user_id );
-			add_to_outbox( $actor, 'Delete', $user_id );
-
-			\WP_CLI::line( ' - ' . $actor->get_name() );
+		if ( empty( $user_ids ) ) {
+			\WP_CLI::warning( 'No ActivityPub users found. Nothing to delete.' );
+			return;
 		}
 
-		\WP_CLI::success( 'All users scheduled for deletion. This process can take a while. Please keep the plugin active, we will notify you when it is done.' );
+		// Show what will be processed.
+		$user_count = \count( $user_ids );
+		\WP_CLI::line( \WP_CLI::colorize( '%GStarting Fediverse deletion process...%n' ) );
+		\WP_CLI::line( \WP_CLI::colorize( "%BFound {$user_count} ActivityPub user(s) to process:%n" ) );
+		\WP_CLI::line( '' );
+
+		// Set the self-destruct flag.
+		\add_option( 'activitypub_self_destruct', true );
+
+		// Process each user with progress indication.
+		$processed = 0;
+		foreach ( $user_ids as $user_id ) {
+			$actor = Actors::get_by_id( $user_id );
+
+			if ( ! $actor ) {
+				\WP_CLI::line( \WP_CLI::colorize( '%R✗ Failed to load user ID: {$user_id}%n' ) );
+				continue;
+			}
+
+			add_to_outbox( $actor, 'Delete', $user_id );
+			++$processed;
+
+			\WP_CLI::line( \WP_CLI::colorize( "%G✓%n [{$processed}/{$user_count}] Scheduled deletion for: %B{$actor->get_name()}%n" ) );
+		}
+
+		\WP_CLI::line( '' );
+
+		if ( 0 === $processed ) {
+			\WP_CLI::error( 'Failed to schedule any deletions. Please check your configuration.' );
+			return;
+		}
+
+		// Final success message with clear next steps.
+		\WP_CLI::success( "Successfully scheduled {$processed} user(s) for Fediverse deletion." );
+		\WP_CLI::line( '' );
+		\WP_CLI::line( \WP_CLI::colorize( '%Y📋 Next Steps:%n' ) );
+		\WP_CLI::line( \WP_CLI::colorize( '%Y• Keep the ActivityPub plugin active%n' ) );
+		\WP_CLI::line( \WP_CLI::colorize( '%Y• Delete activities will be sent automatically%n' ) );
+		\WP_CLI::line( \WP_CLI::colorize( '%Y• Process may take several minutes to complete%n' ) );
+		\WP_CLI::line( \WP_CLI::colorize( '%Y• The plugin will notify you when the process is done.%n' ) );
+		\WP_CLI::line( '' );
 	}
 
 	/**
