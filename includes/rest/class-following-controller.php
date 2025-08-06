@@ -109,14 +109,20 @@ class Following_Controller extends Actors_Controller {
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => $data['total'],
-			'orderedItems' => array_map(
-				function ( $item ) use ( $context ) {
-					if ( 'full' === $context ) {
-						return Actors::get_actor( $item )->to_array( false );
-					}
-					return $item->guid;
-				},
-				$data['following']
+			'orderedItems' => \array_filter(
+				\array_map(
+					function ( $item ) use ( $context ) {
+						if ( 'full' === $context ) {
+							$actor = Actors::get_actor( $item );
+							if ( \is_wp_error( $actor ) ) {
+								return false;
+							}
+							return $actor->to_array( false );
+						}
+						return $item->guid;
+					},
+					$data['following']
+				)
 			),
 		);
 

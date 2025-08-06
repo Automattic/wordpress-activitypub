@@ -66,7 +66,7 @@ class Embed {
 		if ( empty( $author['webfinger'] ) ) {
 			if ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
 				// Construct webfinger-style identifier from username and domain.
-				$domain              = wp_parse_url( $author['url'], PHP_URL_HOST );
+				$domain              = \wp_parse_url( object_to_uri( $author['url'] ), PHP_URL_HOST );
 				$author['webfinger'] = '@' . $author['preferredUsername'] . '@' . $domain;
 			} else {
 				// Fallback to URL.
