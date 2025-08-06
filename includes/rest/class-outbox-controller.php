@@ -35,7 +35,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = '(?:users|actors)/(?P<user_id>[\w\-\.]+)/outbox';
+	protected $rest_base = '(?:users|actors)/(?P<user_id>[-]?\d+)/outbox';
 
 	/**
 	 * Register routes.
@@ -48,7 +48,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 				'args'   => array(
 					'user_id' => array(
 						'description'       => 'The ID of the user or actor.',
-						'type'              => 'string',
+						'type'              => 'integer',
 						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),
@@ -84,7 +84,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return bool|\WP_Error True if the user_id is valid, WP_Error otherwise.
 	 */
 	public function validate_user_id( $user_id ) {
-		$user = Actors::get_by_various( $user_id );
+		$user = Actors::get_by_id( $user_id );
 		if ( \is_wp_error( $user ) ) {
 			return $user;
 		}
@@ -100,8 +100,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 */
 	public function get_items( $request ) {
 		$page    = $request->get_param( 'page' ) ?? 1;
-		$user    = Actors::get_by_various( $request->get_param( 'user_id' ) );
-		$user_id = $user->get__id();
+		$user_id = $request->get_param( 'user_id' );
+		$user    = Actors::get_by_id( $user_id );
 
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.

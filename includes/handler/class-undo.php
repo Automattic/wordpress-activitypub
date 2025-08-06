@@ -48,17 +48,14 @@ class Undo {
 
 		// Handle "Unfollow" requests.
 		if ( 'Follow' === $type ) {
-			$id   = object_to_uri( $activity['object']['object'] );
-			$user = Actors::get_by_resource( $id );
+			$user_id = Actors::get_id_by_resource( object_to_uri( $activity['object']['object'] ) );
 
-			if ( ! $user || is_wp_error( $user ) ) {
+			if ( \is_wp_error( $user_id ) ) {
 				// If we can not find a user, we can not initiate a follow process.
 				return;
 			}
 
-			$user_id = $user->get__id();
-			$actor   = object_to_uri( $activity['actor'] );
-
+			$actor = object_to_uri( $activity['actor'] );
 			$state = Followers::remove_follower( $user_id, $actor );
 		}
 
