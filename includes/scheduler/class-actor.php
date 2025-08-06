@@ -7,6 +7,7 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
@@ -184,7 +185,12 @@ class Actor {
 			return;
 		}
 
-		add_to_outbox( $actor, 'Delete', $user_id );
+		$activity = new Activity();
+		$activity->set_actor( $actor->get_id() );
+		$activity->set_object( $actor->get_id() );
+		$activity->set_type( 'Delete' );
+
+		add_to_outbox( $activity, null, $user_id );
 	}
 
 	/**
