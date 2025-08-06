@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Scheduler;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
@@ -43,10 +44,10 @@ class Cli extends \WP_CLI_Command {
 
 		\WP_CLI::confirm( 'Are you absolutely sure you want to continue?', $assoc_args );
 
-		// Get users before starting.
+		// Get all users with ActivityPub capabilities.
 		$user_ids = \get_users(
 			array(
-				'fields'         => 'ids',
+				'fields'         => 'ID',
 				'capability__in' => array( 'activitypub' ),
 			)
 		);
@@ -64,6 +65,9 @@ class Cli extends \WP_CLI_Command {
 
 		// Set the self-destruct flag.
 		\add_option( 'activitypub_self_destruct', true );
+
+		// Hook into outbox processing completion to notify when self-destruct is done.
+		\add_action( 'activitypub_self_destruct_processing_complete', array( Scheduler::class, 'check_self_destruct_completion' ), 10, 4 );
 
 		// Process each user with progress indication.
 		$processed = 0;
