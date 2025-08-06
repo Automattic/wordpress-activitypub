@@ -31,11 +31,29 @@ class Cli extends \WP_CLI_Command {
 	 * @return void
 	 */
 	public function self_destruct( $args, $assoc_args = array() ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$question = 'We are in the process of deleting your blog from the Fediverse. This action could be irreversible, so are you sure you want to continue?';
+		$question = 'You are in the process of deleting your blog from the Fediverse. This action could be irreversible, so are you sure you want to continue?';
 
-		\WP_CLI::confirm( \WP_CLI::colorize( "%r{$question}%n" ), $assoc_args );
+		\WP_CLI::confirm( \WP_CLI::colorize( "%y{$question}%n" ), $assoc_args );
 
-		\WP_CLI::success( 'Deleting your Blog from the Fediverse...' );
+		\WP_CLI::log( 'Deleting your Blog from the Fediverse. Scheduled delete for:' );
+
+		\add_option( 'activitypub_self_destruct', true );
+
+		$user_ids = \get_users(
+			array(
+				'fields'         => 'ids',
+				'capability__in' => array( 'activitypub' ),
+			)
+		);
+
+		foreach ( $user_ids as $user_id ) {
+			$actor = Actors::get_by_id( $user_id );
+			add_to_outbox( $actor, 'Delete', $user_id );
+
+			\WP_CLI::line( ' - ' . $actor->get_name() );
+		}
+
+		\WP_CLI::success( 'All users scheduled for deletion. This process can take a while. Please keep the plugin active, we will notify you when it is done.' );
 	}
 
 	/**
