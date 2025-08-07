@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Switches ActivityPub summaries to plain text for better compatibility.
