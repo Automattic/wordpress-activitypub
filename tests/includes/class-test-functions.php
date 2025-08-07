@@ -605,49 +605,49 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_excerpt' => 'Hello World',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Greek Excerpt',
 				array(
 					'post_excerpt' => 'Τι μπορεί να σου συμβεί σε μια βόλτα για να αγοράσεις μια βαλίτσα για τα ταξίδια σου; Όλα είναι πιθανά αν έχεις ανοιχτές τις "κεραίες" σου!',
 				),
-				'<p>Τι μπορεί να σου συμβεί σε μια βόλτα για να αγοράσεις μια βαλίτσα για τα ταξίδια σου; Όλα είναι πιθανά αν έχεις ανοιχτές τις &#8220;κεραίες&#8221; σου!</p>' . PHP_EOL,
+				'Τι μπορεί να σου συμβεί σε μια βόλτα για να αγοράσεις μια βαλίτσα για τα ταξίδια σου; Όλα είναι πιθανά αν έχεις ανοιχτές τις "κεραίες" σου!',
 			),
 			array(
 				'Content',
 				array(
 					'post_content' => 'Hello World',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Content with more tag',
 				array(
 					'post_content' => 'Hello World <!--more--> More',
 				),
-				'<p>Hello World […]</p>' . PHP_EOL,
+				'Hello World […]',
 			),
 			array(
 				'Excerpt with shortcode',
 				array(
 					'post_excerpt' => 'Hello World [activitypub_test_shortcode]',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Content with shortcode',
 				array(
 					'post_content' => 'Hello World [activitypub_test_shortcode]',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Excerpt more than limit',
 				array(
 					'post_excerpt' => 'Hello World Hello World Hello World Hello World Hello World',
 				),
-				'<p>Hello World Hello World Hello World Hello World Hello World</p>' . PHP_EOL,
+				'Hello World Hello World Hello World Hello World Hello World',
 				10,
 			),
 			array(
@@ -655,7 +655,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_content' => 'Hello World Hello World Hello World Hello World Hello World',
 				),
-				'<p>Hello […]</p>' . PHP_EOL,
+				'Hello […]',
 				10,
 			),
 			array(
@@ -663,7 +663,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_content' => 'Hello World Hello <!--more--> World Hello World Hello World Hello World',
 				),
-				'<p>Hello World Hello […]</p>' . PHP_EOL,
+				'Hello World Hello […]',
 				1,
 			),
 			array(
@@ -671,28 +671,28 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_content' => '<p>Hello World</p>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Test HTML content with anchor',
 				array(
 					'post_content' => 'Hello <a href="https://example.com">World</a>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Test HTML excerpt',
 				array(
 					'post_excerpt' => '<p>Hello World</p>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Test HTML excerpt with anchor',
 				array(
 					'post_excerpt' => 'Hello <a href="https://example.com">World</a>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 		);
 	}
