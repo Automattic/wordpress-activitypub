@@ -60,8 +60,9 @@ class Dispatcher {
 			return;
 		}
 
+		$type  = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 		$actor = Outbox::get_actor( $outbox_item );
-		if ( \is_wp_error( $actor ) ) {
+		if ( \is_wp_error( $actor ) || 'Delete' !== $type ) {
 			// If the actor is not found, publish the post and don't try again.
 			\wp_publish_post( $outbox_item );
 			return;
