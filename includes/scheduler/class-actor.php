@@ -181,6 +181,9 @@ class Actor {
 		// Get the actor before deletion to ensure we have the data.
 		$actor = Actors::get_by_id( $user_id );
 
+		Tombstone::bury( $actor->get_id() );
+		Tombstone::bury( $actor->get_url() );
+
 		if ( \is_wp_error( $actor ) ) {
 			return;
 		}
