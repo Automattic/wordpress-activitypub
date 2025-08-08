@@ -7,7 +7,8 @@
 
 namespace Activitypub\Collection;
 
-use function Activitypub\is_tombstone;
+use Activitypub\Tombstone;
+
 use function Activitypub\get_remote_metadata_by_actor;
 
 /**
@@ -42,7 +43,7 @@ class Followers {
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
-		if ( is_tombstone( $meta ) ) {
+		if ( Tombstone::check( $meta ) ) {
 			return $meta;
 		}
 

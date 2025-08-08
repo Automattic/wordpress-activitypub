@@ -7,14 +7,14 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Http;
+use Activitypub\Tombstone;
 
 /**
  * Test class for ActivityPub HTTP Class
  *
  * @coversDefaultClass \Activitypub\Http
  */
-class Test_Http extends \WP_UnitTestCase {
+class Test_Tombstone extends \WP_UnitTestCase {
 
 	/**
 	 * Response code is 404 -> is_tombstone returns true
@@ -31,7 +31,7 @@ class Test_Http extends \WP_UnitTestCase {
 			return $request;
 		};
 		add_filter( 'pre_http_request', $fake_request, 10, 3 );
-		$response = Http::is_tombstone( 'https://fake.test/object/123' );
+		$response = Tombstone::is_tombstone( 'https://fake.test/object/123' );
 		$this->assertEquals( $result, $response );
 		remove_filter( 'pre_http_request', $fake_request, 10 );
 	}

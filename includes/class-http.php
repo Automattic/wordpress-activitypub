@@ -182,27 +182,9 @@ class Http {
 	 * @return bool True if the URL is a tombstone.
 	 */
 	public static function is_tombstone( $url ) {
-		/**
-		 * Fires before checking if the URL is a tombstone.
-		 *
-		 * @param string $url The URL to check.
-		 */
-		\do_action( 'activitypub_pre_http_is_tombstone', $url );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Tombstone::check_remote_url' );
 
-		$response = \wp_safe_remote_get( $url, array( 'headers' => array( 'Accept' => 'application/activity+json' ) ) );
-		$code     = \wp_remote_retrieve_response_code( $response );
-
-		if ( in_array( (int) $code, array( 404, 410 ), true ) ) {
-			return true;
-		}
-
-		$data = \wp_remote_retrieve_body( $response );
-		$data = \json_decode( $data, true );
-		if ( $data && isset( $data['type'] ) && 'Tombstone' === $data['type'] ) {
-			return true;
-		}
-
-		return false;
+		return Tombstone::check_remote_url( $url );
 	}
 
 	/**
