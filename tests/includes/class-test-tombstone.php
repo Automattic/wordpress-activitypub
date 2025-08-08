@@ -10,9 +10,9 @@ namespace Activitypub\Tests;
 use Activitypub\Tombstone;
 
 /**
- * Test class for ActivityPub HTTP Class
+ * Test class for ActivityPub Tombstone Class
  *
- * @coversDefaultClass \Activitypub\Http
+ * @coversDefaultClass \Activitypub\Tombstone
  */
 class Test_Tombstone extends \WP_UnitTestCase {
 
