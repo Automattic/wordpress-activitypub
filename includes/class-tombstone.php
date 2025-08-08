@@ -111,11 +111,11 @@ class Tombstone {
 	}
 
 	/**
-	 * Check if the response is a WP_Error.
+	 * Check if the given array represents a tombstone.
 	 *
-	 * @param array $data The response to check.
+	 * @param array $data The array to check.
 	 *
-	 * @return bool True if the response is a WP_Error, false otherwise.
+	 * @return bool True if the array represents a tombstone, false otherwise.
 	 */
 	public static function check_array( $data ) {
 		if ( ! \is_array( $data ) ) {
@@ -130,11 +130,11 @@ class Tombstone {
 	}
 
 	/**
-	 * Check if the response is a WP_Error.
+	 * Check if the given object represents a tombstone.
 	 *
-	 * @param object $data The response to check.
+	 * @param object $data The object to check.
 	 *
-	 * @return bool True if the response is a WP_Error, false otherwise.
+	 * @return bool True if the object represents a tombstone, false otherwise.
 	 */
 	public static function check_object( $data ) {
 		if ( ! \is_object( $data ) ) {
