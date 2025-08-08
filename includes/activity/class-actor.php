@@ -23,7 +23,6 @@ class Actor extends Base_Object {
 		'https://www.w3.org/ns/activitystreams',
 		'https://w3id.org/security/v1',
 		'https://purl.archive.org/socialweb/webfinger',
-		'https://w3id.org/fep/844e',
 		array(
 			'schema'                    => 'http://schema.org#',
 			'toot'                      => 'http://joinmastodon.org/ns#',
@@ -55,6 +54,11 @@ class Actor extends Base_Object {
 			'attributionDomains'        => array(
 				'@id'   => 'toot:attributionDomains',
 				'@type' => '@id',
+			),
+			'implements'                => array(
+				'@id'        => 'https://w3id.org/fep/844e/implements',
+				'@type'      => '@id',
+				'@container' => '@list',
 			),
 			'postingRestrictedToMods'   => 'lemmy:postingRestrictedToMods',
 			'discoverable'              => 'toot:discoverable',
@@ -303,9 +307,9 @@ class Actor extends Base_Object {
 	/**
 	 * Listing Implemented Specifications on the Application Actor
 	 *
-	 * @see https://codeberg.org/helge/fep/src/commit/e1b2a16707b542ea5ea0cfb390ac1abce89f05bb/fep/aaa3/fep-aaa3.md
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md
 	 *
 	 * @var array
 	 */
-	protected $implemented;
+	protected $implements;
 }
