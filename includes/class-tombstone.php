@@ -74,11 +74,8 @@ class Tombstone {
 
 		$data = \wp_remote_retrieve_body( $response );
 		$data = \json_decode( $data, true );
-		if ( $data && isset( $data['type'] ) && 'Tombstone' === $data['type'] ) {
-			return true;
-		}
 
-		return false;
+		return self::check_array( $data );
 	}
 
 	/**
