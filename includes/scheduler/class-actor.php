@@ -10,6 +10,7 @@ namespace Activitypub\Scheduler;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Tombstone;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_user_type_disabled;
