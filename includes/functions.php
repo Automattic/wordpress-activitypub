@@ -204,15 +204,9 @@ function is_comment() {
  * @return boolean True if HTTP-Code is 410 or 404.
  */
 function is_tombstone( $wp_error ) {
-	if ( ! is_wp_error( $wp_error ) ) {
-		return false;
-	}
+	_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Tombstone::check_wp_error' );
 
-	if ( in_array( (int) $wp_error->get_error_code(), array( 404, 410 ), true ) ) {
-		return true;
-	}
-
-	return false;
+	return Tombstone::check_wp_error( $wp_error );
 }
 
 /**
