@@ -1,6 +1,6 @@
 <?php
 /**
- * Test file for Activitypub HTTP Class
+ * Test file for Activitypub Tombstone Class
  *
  * @package Activitypub
  */
