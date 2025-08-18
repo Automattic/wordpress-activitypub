@@ -4,6 +4,8 @@ on:
   push:
     branches: [trunk]
     paths: ['**.php']
+  pull_request:
+    paths: ['**.php']
   workflow_dispatch:
 
 jobs:
@@ -13,7 +15,7 @@ jobs:
       contents: write # Required to push to wiki repository
     steps:
       - uses: actions/checkout@v4
-      - uses: akirk/extract-wp-hooks@main
+      - uses: obenland/extract-wp-hooks@fix/top-headline
         with:
           namespace: 'Activitypub'
           wiki-directory: '../activitypub.wiki'
