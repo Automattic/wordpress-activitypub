@@ -143,7 +143,7 @@ class Test_User extends \WP_UnitTestCase {
 				'user_login' => 'testuser123@gmail.com',
 			)
 		);
-		$user = User::from_wp_user( $user_id );
+		$user    = User::from_wp_user( $user_id );
 
 		// Preferred username should be sanitized.
 		$this->assertSame( 'testuser123-gmail-com', $user->get_preferred_username() );
@@ -159,7 +159,7 @@ class Test_User extends \WP_UnitTestCase {
 				'user_login' => 'admin@googlemail.com',
 			)
 		);
-		$user2 = User::from_wp_user( $user_id2 );
+		$user2    = User::from_wp_user( $user_id2 );
 
 		$this->assertSame( 'admin-googlemail-com', $user2->get_preferred_username() );
 
@@ -170,7 +170,7 @@ class Test_User extends \WP_UnitTestCase {
 				'user_login' => 'normaluser',
 			)
 		);
-		$user3 = User::from_wp_user( $user_id3 );
+		$user3    = User::from_wp_user( $user_id3 );
 
 		$this->assertSame( 'normaluser', $user3->get_preferred_username() );
 	}
