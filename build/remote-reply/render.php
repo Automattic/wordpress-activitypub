@@ -7,6 +7,10 @@
 
 use Activitypub\Blocks;
 
+if ( is_activitypub_request() || is_feed() ) {
+	return;
+}
+
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
 
@@ -68,9 +72,12 @@ ob_start();
 		<?php esc_html_e( 'Copy and paste the Comment URL into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
+		<label for="<?php echo esc_attr( $block_id . '-profile-handle' ); ?>" class="screen-reader-text">
+			<?php esc_html_e( 'Comment URL', 'activitypub' ); ?>
+		</label>
 		<input
 			aria-readonly="true"
-			id="profile-handle"
+			id="<?php echo esc_attr( $block_id . '-profile-handle' ); ?>"
 			readonly
 			tabindex="-1"
 			type="text"
@@ -92,12 +99,15 @@ ob_start();
 		<?php esc_html_e( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
+		<label for="<?php echo esc_attr( $block_id . '-remote-profile' ); ?>" class="screen-reader-text">
+			<?php esc_html_e( 'Your Fediverse profile', 'activitypub' ); ?>
+		</label>
 		<input
 			data-wp-bind--aria-invalid="context.isError"
 			data-wp-bind--value="context.remoteProfile"
 			data-wp-on--input="actions.updateRemoteProfile"
 			data-wp-on--keydown="actions.onInputKeydown"
-			id="remote-profile"
+			id="<?php echo esc_attr( $block_id . '-remote-profile' ); ?>"
 			placeholder="<?php esc_attr_e( '@username@example.com', 'activitypub' ); ?>"
 			type="text"
 		/>
@@ -172,7 +182,7 @@ $modal_content = ob_get_clean();
 		data-wp-bind--aria-expanded="context.modal.isOpen"
 		aria-label="<?php esc_attr_e( 'Reply on the Fediverse', 'activitypub' ); ?>"
 		aria-haspopup="dialog"
-		aria-controls="modal-heading"
+		aria-controls="<?php echo esc_attr( $block_id . '-modal-title' ); ?>"
 		role="button"
 		tabindex="0"
 		hidden
@@ -183,6 +193,7 @@ $modal_content = ob_get_clean();
 	<?php
 	Blocks::render_modal(
 		array(
+			'id'      => $block_id . '-modal',
 			'title'   => __( 'Remote Reply', 'activitypub' ),
 			'content' => $modal_content,
 		)
