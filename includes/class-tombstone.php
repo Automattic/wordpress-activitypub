@@ -94,7 +94,7 @@ class Tombstone {
 	/**
 	 * Check if the response is a WP_Error.
 	 *
-	 * @param WP_Error $wp_error The response to check.
+	 * @param \WP_Error $wp_error The response to check.
 	 *
 	 * @return bool True if the response is a WP_Error, false otherwise.
 	 */
