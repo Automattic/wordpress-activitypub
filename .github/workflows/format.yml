@@ -13,7 +13,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          token: ${{ secrets.API_TOKEN_GITHUB }}
           ref: ${{ github.head_ref }}
 
       - name: Setup Node.js
