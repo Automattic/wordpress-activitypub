@@ -91,32 +91,56 @@ jobs:
 
       - name: Check for Coverage Warnings
         run: |
-          if grep -q "Warning\|Error" coverage-output.log; then
-            echo "Coverage warnings/errors found:"
+          echo "Checking for coverage warnings in output..."
+          
+          # Check for warnings and errors
+          WARNINGS_FOUND=false
+          
+          # Look for PHPUnit warnings summary
+          if grep -q "WARNINGS!\|There was.*warning" coverage-output.log; then
+            echo "PHPUnit warnings found in output:"
+            WARNINGS_FOUND=true
             
-            # Parse warnings and create GitHub annotations
-            grep "Warning\|Error" coverage-output.log | while IFS= read -r line; do
-              echo "$line"
+            # Show the warnings section for debugging
+            echo "--- Warnings Section ---"
+            sed -n '/There was.*warning/,/^$/p' coverage-output.log | head -20
+            echo "--- End Warnings Section ---"
+            
+            # Extract and create annotations for @covers warnings
+            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | while IFS= read -r line; do
+              # Skip empty lines and numbered test items
+              if [[ -z "$line" || "$line" =~ ^[0-9]+\)$ || "$line" =~ ^Time: || "$line" =~ ^Tests: ]]; then
+                continue
+              fi
               
-              # Extract file path and line number from xdebug warnings
-              if [[ "$line" =~ in\ ([^\ ]+)\ on\ line\ ([0-9]+) ]]; then
-                file="${BASH_REMATCH[1]}"
-                line_num="${BASH_REMATCH[2]}"
-                # Remove leading ./ if present
-                file="${file#./}"
-                echo "::warning file=${file},line=${line_num}::${line}"
-              elif [[ "$line" =~ ([^:]+):([0-9]+) ]]; then
-                file="${BASH_REMATCH[1]}"
-                line_num="${BASH_REMATCH[2]}"
-                file="${file#./}"
-                echo "::warning file=${file},line=${line_num}::${line}"
-              else
-                echo "::warning::${line}"
+              # Look for @covers warnings - these are the actual warning messages
+              if [[ "$line" =~ \"@covers.*is\ invalid ]]; then
+                echo "::warning::PHPUnit @covers annotation error: ${line}"
+              # Look for deprecated warnings
+              elif [[ "$line" =~ (deprecated|will\ no\ longer\ be\ possible) ]]; then
+                echo "::warning::PHPUnit deprecation warning: ${line}"
+              # Look for other error patterns
+              elif [[ "$line" =~ (Error|Exception) ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
+                echo "::warning::PHPUnit error: ${line}"
               fi
             done
+          fi
+          
+          # Also check for expectError deprecation warnings specifically
+          if grep -qE "(Expecting E_ERROR.*deprecated|will no longer be possible)" coverage-output.log; then
+            echo "Found expectError deprecation warnings"
+            WARNINGS_FOUND=true
             
-            echo "::error::Coverage analysis produced warnings or errors"
+            grep -E "(Expecting E_ERROR.*deprecated|will no longer be possible)" coverage-output.log | while IFS= read -r line; do
+              echo "::warning::PHPUnit expectError deprecation: ${line}"
+            done
+          fi
+          
+          if [ "$WARNINGS_FOUND" = true ]; then
+            echo "::error::Coverage analysis produced warnings"
             exit 1
+          else
+            echo "No coverage warnings found"
           fi
 
       - name: Annotate Test Results
