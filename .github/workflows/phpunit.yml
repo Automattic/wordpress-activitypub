@@ -125,12 +125,12 @@ jobs:
                   
                   # Find test file and line number
                   echo "Searching for @covers annotation with target: $COVERS_TARGET"
-                  # Escape backslashes for grep pattern
-                  ESCAPED_TARGET=$(echo "$COVERS_TARGET" | sed 's/\\/\\\\/g')
-                  echo "Escaped target for grep: $ESCAPED_TARGET"
-                  if TEST_FILE=$(find tests/ -name "*.php" -type f -exec grep -l "@covers.*$ESCAPED_TARGET" {} \; | head -1); then
+                  # Extract just the method name from the full class::method
+                  METHOD_NAME=$(echo "$COVERS_TARGET" | sed 's/.*:://')
+                  echo "Extracted method name: $METHOD_NAME"
+                  if TEST_FILE=$(find tests/ -name "*.php" -type f -exec grep -l "@covers.*$METHOD_NAME" {} \; | head -1); then
                     echo "Found test file: $TEST_FILE"
-                    if LINE_NUM=$(grep -n "@covers.*$ESCAPED_TARGET" "$TEST_FILE" | head -1 | cut -d: -f1); then
+                    if LINE_NUM=$(grep -n "@covers.*$METHOD_NAME" "$TEST_FILE" | head -1 | cut -d: -f1); then
                       echo "Found line number: $LINE_NUM"
                       # Escape XML characters and add checkstyle entry
                       MESSAGE=$(echo "Invalid @covers annotation: $COVERS_TARGET" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
@@ -176,7 +176,7 @@ jobs:
           if grep -q '<error' coverage-warnings.xml; then
             echo "Found coverage warnings to annotate"
             echo "Converting checkstyle report to PR annotations..."
-            cs2pr coverage-warnings.xml
+            cs2pr --graceful-warnings coverage-warnings.xml
           else
             echo "No coverage warnings found in checkstyle report"
           fi
