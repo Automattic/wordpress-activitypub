@@ -142,11 +142,10 @@ jobs:
             done < temp-warnings.txt
             
             rm -f temp-warnings.txt
-            
-            echo "::error::Coverage analysis produced warnings"
-            exit 1
+            WARNINGS_FOUND=true
           else
             echo "No coverage warnings found"
+            WARNINGS_FOUND=false
           fi
           
           # Close the checkstyle XML
@@ -155,6 +154,12 @@ jobs:
           # Debug: show the generated checkstyle content
           echo "Generated checkstyle report:"
           cat coverage-warnings.xml
+          
+          # Exit with error if warnings were found
+          if [ "$WARNINGS_FOUND" = true ]; then
+            echo "::error::Coverage analysis produced warnings"
+            exit 1
+          fi
 
       - name: Annotate Coverage Warnings in PR
         if: always() && github.event_name == 'pull_request'
