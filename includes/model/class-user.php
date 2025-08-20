@@ -172,8 +172,8 @@ class User extends Actor {
 		$login = \get_the_author_meta( 'login', $this->_id );
 
 		// Handle cases where login is an email address (e.g., from Site Kit Google login).
-		if ( \str_contains( $login, '@' ) ) {
-			$login = \sanitize_title( $login );
+		if ( \filter_var( $login, FILTER_VALIDATE_EMAIL ) ) {
+			$login = \str_replace( array( '@', '.' ), '-', $login );
 		}
 
 		return $login;
