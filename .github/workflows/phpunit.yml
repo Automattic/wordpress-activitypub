@@ -93,13 +93,13 @@ jobs:
         if: always()
         run: |
           echo "Generating checkstyle report for coverage warnings..."
-          
+
           # Create checkstyle XML header
           cat > coverage-warnings.xml << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <checkstyle version="4.3">
           EOF
-          
+
           # Check for PHPUnit warnings and process them
           if grep -q "WARNINGS!\|There was.*warning" coverage-output.log; then
             echo "Processing coverage warnings for checkstyle report..."
@@ -155,14 +155,14 @@ jobs:
             echo "No coverage warnings found"
             WARNINGS_FOUND=false
           fi
-          
+
           # Close the checkstyle XML
           echo '</checkstyle>' >> coverage-warnings.xml
-          
+
           # Debug: show the generated checkstyle content
           echo "Generated checkstyle report:"
           cat coverage-warnings.xml
-          
+
           # Exit with error if warnings were found
           if [ "$WARNINGS_FOUND" = true ]; then
             echo "::error::Coverage analysis produced warnings"
