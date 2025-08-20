@@ -150,6 +150,7 @@ $modal_content = ob_get_clean();
 >
 	<div class="activitypub-remote-profile" hidden data-wp-bind--hidden="!context.hasRemoteUser">
 		<a
+			href=""
 			class="comment-reply-link activitypub-remote-profile__link"
 			data-wp-bind--href="state.remoteProfileUrl"
 			target="_blank"
