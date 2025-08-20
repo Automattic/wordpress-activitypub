@@ -139,7 +139,6 @@ jobs:
             <error line="$LINE_NUM" column="1" severity="warning" message="$MESSAGE" source="phpunit.coverage"/>
           </file>
           EOF
-                      echo "::warning file=$TEST_FILE,line=$LINE_NUM::Invalid @covers annotation: $COVERS_TARGET"
                     fi
                   fi
                 fi
