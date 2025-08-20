@@ -143,10 +143,127 @@ jobs:
             echo "No coverage warnings found"
           fi
 
-      - name: Annotate Test Results
+      - name: Parse Coverage Warnings for File Annotations
         if: always()
-        uses: dorny/test-reporter@v1
-        with:
-          name: PHPUnit Coverage Results
-          path: junit.xml
-          reporter: java-junit
+        run: |
+          echo "Parsing coverage warnings for file-level annotations..."
+          
+          # Create annotations file
+          cat > coverage-annotations.json << 'EOF'
+          []
+          EOF
+          
+          # Extract coverage warnings and map them to files
+          if grep -q "WARNINGS!\|There was.*warning" coverage-output.log; then
+            echo "Parsing warnings to create file annotations..."
+            
+            # Use a temporary file to collect annotations
+            echo '[]' > temp-annotations.json
+            
+            # Parse the warnings section
+            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | while IFS= read -r line; do
+              # Look for @covers warnings that mention class/method names
+              if [[ "$line" =~ \"@covers.*is\ invalid ]]; then
+                # Extract the @covers target (class or method name)
+                if [[ "$line" =~ @covers\ \\\\([^\"]+) ]]; then
+                  COVERS_TARGET="${BASH_REMATCH[1]}"
+                  echo "Found invalid @covers for: $COVERS_TARGET"
+                  
+                  # Try to find the test file that contains this @covers annotation
+                  # Search through test files for this specific @covers annotation
+                  if find tests/ -name "*.php" -type f -exec grep -l "@covers.*$COVERS_TARGET" {} \; | head -1 | read TEST_FILE; then
+                    echo "Found test file: $TEST_FILE"
+                    
+                    # Find the line number of the @covers annotation
+                    LINE_NUM=$(grep -n "@covers.*$COVERS_TARGET" "$TEST_FILE" | head -1 | cut -d: -f1)
+                    
+                    if [ ! -z "$LINE_NUM" ]; then
+                      echo "Found @covers annotation at line $LINE_NUM in $TEST_FILE"
+                      
+                      # Create file annotation in a format that can be used by reviewdog or similar tools
+                      echo "::warning file=$TEST_FILE,line=$LINE_NUM::Invalid @covers annotation: $line"
+                      
+                      # Also save to a structured format for potential use by other tools
+                      ANNOTATION="{\"file\":\"$TEST_FILE\",\"line\":$LINE_NUM,\"level\":\"warning\",\"message\":\"Invalid @covers annotation: $COVERS_TARGET\"}"
+                      echo "Annotation: $ANNOTATION"
+                    fi
+                  fi
+                fi
+              fi
+            done
+          fi
+
+      - name: Generate Checkstyle Report for Coverage Warnings
+        if: always()
+        run: |
+          echo "Generating checkstyle report for coverage warnings..."
+          
+          # Create checkstyle XML header
+          cat > coverage-warnings.xml << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <checkstyle version="4.3">
+          EOF
+          
+          # Extract coverage warnings and format them for checkstyle
+          if grep -q "WARNINGS!\|There was.*warning" coverage-output.log; then
+            echo "Processing coverage warnings for checkstyle report..."
+            
+            # Parse the warnings section
+            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | while IFS= read -r line; do
+              # Look for @covers warnings that mention class/method names
+              if [[ "$line" =~ \"@covers.*is\ invalid ]]; then
+                # Extract the @covers target (class or method name)
+                if [[ "$line" =~ @covers\ \\\\([^\"]+) ]]; then
+                  COVERS_TARGET="${BASH_REMATCH[1]}"
+                  echo "Processing @covers warning for: $COVERS_TARGET"
+                  
+                  # Try to find the test file that contains this @covers annotation
+                  if TEST_FILE=$(find tests/ -name "*.php" -type f -exec grep -l "@covers.*$COVERS_TARGET" {} \; | head -1); then
+                    echo "Found test file: $TEST_FILE"
+                    
+                    # Find the line number of the @covers annotation
+                    if LINE_NUM=$(grep -n "@covers.*$COVERS_TARGET" "$TEST_FILE" | head -1 | cut -d: -f1); then
+                      echo "Adding checkstyle error for $TEST_FILE:$LINE_NUM"
+                      
+                      # Escape XML special characters in the message
+                      MESSAGE=$(echo "Invalid @covers annotation: $COVERS_TARGET" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
+                      
+                      # Add to checkstyle XML
+                      cat >> coverage-warnings.xml << EOF
+          <file name="$TEST_FILE">
+            <error line="$LINE_NUM" column="1" severity="warning" message="$MESSAGE" source="phpunit.coverage"/>
+          </file>
+          EOF
+                    fi
+                  fi
+                fi
+              fi
+            done
+          fi
+          
+          # Close the checkstyle XML
+          echo '</checkstyle>' >> coverage-warnings.xml
+          
+          # Show the generated XML for debugging
+          echo "Generated checkstyle report:"
+          cat coverage-warnings.xml
+
+      - name: Annotate Coverage Warnings in PR
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          # Check if we have any errors in the checkstyle report
+          if grep -q '<error' coverage-warnings.xml; then
+            echo "Found coverage warnings to annotate, installing cs2pr..."
+            
+            # Install cs2pr
+            curl -s https://raw.githubusercontent.com/staabm/cs2pr/master/cs2pr -o cs2pr
+            chmod +x cs2pr
+            
+            # Convert checkstyle report to PR annotations
+            echo "Converting checkstyle report to PR annotations..."
+            ./cs2pr coverage-warnings.xml
+          else
+            echo "No coverage warnings found in checkstyle report"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
