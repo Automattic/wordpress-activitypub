@@ -440,10 +440,15 @@ class Test_Moderation extends \WP_UnitTestCase {
 			static function ( $errno, $errstr ) {
 				throw new \Exception( \esc_html( $errstr ), \esc_html( $errno ) );
 			},
-			E_WARNING
+			E_NOTICE | E_WARNING
 		);
 
-		$this->expectExceptionMessage( 'Undefined array key &quot;id&quot;' );
+		// PHP 7.2 uses "Undefined index", PHP 8+ uses "Undefined array key".
+		if ( version_compare( PHP_VERSION, '8.0.0', '>=' ) ) {
+			$this->expectExceptionMessage( 'Undefined array key &quot;id&quot;' );
+		} else {
+			$this->expectExceptionMessage( 'Undefined index: id' );
+		}
 		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
 
 		\restore_error_handler();
