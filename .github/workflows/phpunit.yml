@@ -109,8 +109,11 @@ jobs:
             sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | head -10
             echo "--- End Warnings ---"
             
-            # Parse warnings and create checkstyle entries
-            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | while IFS= read -r line; do
+            # Extract warnings to temporary file to avoid subshell issues
+            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log > temp-warnings.txt
+            
+            # Process each line
+            while IFS= read -r line; do
               # Look for @covers warnings
               if [[ "$line" =~ \"@covers.*is\ invalid ]]; then
                 # Extract the @covers target
@@ -136,7 +139,9 @@ jobs:
               elif [[ "$line" =~ (deprecated|will\ no\ longer\ be\ possible) ]]; then
                 echo "::warning::PHPUnit deprecation warning: ${line}"
               fi
-            done
+            done < temp-warnings.txt
+            
+            rm -f temp-warnings.txt
             
             echo "::error::Coverage analysis produced warnings"
             exit 1
@@ -146,6 +151,10 @@ jobs:
           
           # Close the checkstyle XML
           echo '</checkstyle>' >> coverage-warnings.xml
+          
+          # Debug: show the generated checkstyle content
+          echo "Generated checkstyle report:"
+          cat coverage-warnings.xml
 
       - name: Annotate Coverage Warnings in PR
         if: always() && github.event_name == 'pull_request'
