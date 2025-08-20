@@ -114,16 +114,20 @@ jobs:
             
             # Process each line
             while IFS= read -r line; do
+              echo "Processing line: $line"
               # Look for @covers warnings
-              if [[ "$line" =~ \"@covers.*is\ invalid ]]; then
-                # Extract the @covers target
-                if [[ "$line" =~ @covers\ \\\\([^\"]+) ]]; then
+              if [[ "$line" =~ \"@covers.*\"\ is\ invalid ]]; then
+                echo "Found @covers warning line: $line"
+                # Extract the @covers target - everything between quotes
+                if [[ "$line" =~ \"@covers\ ([^\"]+)\" ]]; then
                   COVERS_TARGET="${BASH_REMATCH[1]}"
                   echo "Processing @covers warning for: $COVERS_TARGET"
                   
                   # Find test file and line number
                   if TEST_FILE=$(find tests/ -name "*.php" -type f -exec grep -l "@covers.*$COVERS_TARGET" {} \; | head -1); then
+                    echo "Found test file: $TEST_FILE"
                     if LINE_NUM=$(grep -n "@covers.*$COVERS_TARGET" "$TEST_FILE" | head -1 | cut -d: -f1); then
+                      echo "Found line number: $LINE_NUM"
                       # Escape XML characters and add checkstyle entry
                       MESSAGE=$(echo "Invalid @covers annotation: $COVERS_TARGET" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
                       cat >> coverage-warnings.xml << EOF
