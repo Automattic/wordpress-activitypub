@@ -142,7 +142,7 @@ class User extends Actor {
 		if ( empty( $description ) ) {
 			$description = get_user_meta( $this->_id, 'description', true );
 		}
-		return \wpautop( \wp_kses( $description, 'default' ) );
+		return \wpautop( \wp_kses( (string) $description, 'default' ) );
 	}
 
 	/**

@@ -241,12 +241,7 @@ class Application extends Actor {
 	 * @return string The User description.
 	 */
 	public function get_summary() {
-		return \wpautop(
-			\wp_kses(
-				\get_bloginfo( 'description' ),
-				'default'
-			)
-		);
+		return \wpautop( \wp_kses( (string) \get_bloginfo( 'description' ), 'default' ) );
 	}
 
 	/**
