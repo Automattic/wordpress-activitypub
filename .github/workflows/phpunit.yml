@@ -68,7 +68,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install subversion
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup PHP with Xdebug
         uses: shivammathur/setup-php@v2
@@ -89,110 +89,6 @@ jobs:
         env:
           WP_ENVIRONMENT_TYPE: production
 
-      - name: Check for Coverage Warnings
-        run: |
-          echo "Checking for coverage warnings in output..."
-          
-          # Check for warnings and errors
-          WARNINGS_FOUND=false
-          
-          # Look for PHPUnit warnings summary
-          if grep -q "WARNINGS!\|There was.*warning" coverage-output.log; then
-            echo "PHPUnit warnings found in output:"
-            WARNINGS_FOUND=true
-            
-            # Show the warnings section for debugging
-            echo "--- Warnings Section ---"
-            sed -n '/There was.*warning/,/^$/p' coverage-output.log | head -20
-            echo "--- End Warnings Section ---"
-            
-            # Extract and create annotations for @covers warnings
-            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | while IFS= read -r line; do
-              # Skip empty lines and numbered test items
-              if [[ -z "$line" || "$line" =~ ^[0-9]+\)$ || "$line" =~ ^Time: || "$line" =~ ^Tests: ]]; then
-                continue
-              fi
-              
-              # Look for @covers warnings - these are the actual warning messages
-              if [[ "$line" =~ \"@covers.*is\ invalid ]]; then
-                echo "::warning::PHPUnit @covers annotation error: ${line}"
-              # Look for deprecated warnings
-              elif [[ "$line" =~ (deprecated|will\ no\ longer\ be\ possible) ]]; then
-                echo "::warning::PHPUnit deprecation warning: ${line}"
-              # Look for other error patterns
-              elif [[ "$line" =~ (Error|Exception) ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
-                echo "::warning::PHPUnit error: ${line}"
-              fi
-            done
-          fi
-          
-          # Also check for expectError deprecation warnings specifically
-          if grep -qE "(Expecting E_ERROR.*deprecated|will no longer be possible)" coverage-output.log; then
-            echo "Found expectError deprecation warnings"
-            WARNINGS_FOUND=true
-            
-            grep -E "(Expecting E_ERROR.*deprecated|will no longer be possible)" coverage-output.log | while IFS= read -r line; do
-              echo "::warning::PHPUnit expectError deprecation: ${line}"
-            done
-          fi
-          
-          if [ "$WARNINGS_FOUND" = true ]; then
-            echo "::error::Coverage analysis produced warnings"
-            exit 1
-          else
-            echo "No coverage warnings found"
-          fi
-
-      - name: Parse Coverage Warnings for File Annotations
-        if: always()
-        run: |
-          echo "Parsing coverage warnings for file-level annotations..."
-          
-          # Create annotations file
-          cat > coverage-annotations.json << 'EOF'
-          []
-          EOF
-          
-          # Extract coverage warnings and map them to files
-          if grep -q "WARNINGS!\|There was.*warning" coverage-output.log; then
-            echo "Parsing warnings to create file annotations..."
-            
-            # Use a temporary file to collect annotations
-            echo '[]' > temp-annotations.json
-            
-            # Parse the warnings section
-            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | while IFS= read -r line; do
-              # Look for @covers warnings that mention class/method names
-              if [[ "$line" =~ \"@covers.*is\ invalid ]]; then
-                # Extract the @covers target (class or method name)
-                if [[ "$line" =~ @covers\ \\\\([^\"]+) ]]; then
-                  COVERS_TARGET="${BASH_REMATCH[1]}"
-                  echo "Found invalid @covers for: $COVERS_TARGET"
-                  
-                  # Try to find the test file that contains this @covers annotation
-                  # Search through test files for this specific @covers annotation
-                  if find tests/ -name "*.php" -type f -exec grep -l "@covers.*$COVERS_TARGET" {} \; | head -1 | read TEST_FILE; then
-                    echo "Found test file: $TEST_FILE"
-                    
-                    # Find the line number of the @covers annotation
-                    LINE_NUM=$(grep -n "@covers.*$COVERS_TARGET" "$TEST_FILE" | head -1 | cut -d: -f1)
-                    
-                    if [ ! -z "$LINE_NUM" ]; then
-                      echo "Found @covers annotation at line $LINE_NUM in $TEST_FILE"
-                      
-                      # Create file annotation in a format that can be used by reviewdog or similar tools
-                      echo "::warning file=$TEST_FILE,line=$LINE_NUM::Invalid @covers annotation: $line"
-                      
-                      # Also save to a structured format for potential use by other tools
-                      ANNOTATION="{\"file\":\"$TEST_FILE\",\"line\":$LINE_NUM,\"level\":\"warning\",\"message\":\"Invalid @covers annotation: $COVERS_TARGET\"}"
-                      echo "Annotation: $ANNOTATION"
-                    fi
-                  fi
-                fi
-              fi
-            done
-          fi
-
       - name: Generate Checkstyle Report for Coverage Warnings
         if: always()
         run: |
@@ -204,49 +100,52 @@ jobs:
           <checkstyle version="4.3">
           EOF
           
-          # Extract coverage warnings and format them for checkstyle
+          # Check for PHPUnit warnings and process them
           if grep -q "WARNINGS!\|There was.*warning" coverage-output.log; then
             echo "Processing coverage warnings for checkstyle report..."
             
-            # Parse the warnings section
+            # Show warnings section for debugging
+            echo "--- Warnings Found ---"
+            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | head -10
+            echo "--- End Warnings ---"
+            
+            # Parse warnings and create checkstyle entries
             sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | while IFS= read -r line; do
-              # Look for @covers warnings that mention class/method names
+              # Look for @covers warnings
               if [[ "$line" =~ \"@covers.*is\ invalid ]]; then
-                # Extract the @covers target (class or method name)
+                # Extract the @covers target
                 if [[ "$line" =~ @covers\ \\\\([^\"]+) ]]; then
                   COVERS_TARGET="${BASH_REMATCH[1]}"
                   echo "Processing @covers warning for: $COVERS_TARGET"
                   
-                  # Try to find the test file that contains this @covers annotation
+                  # Find test file and line number
                   if TEST_FILE=$(find tests/ -name "*.php" -type f -exec grep -l "@covers.*$COVERS_TARGET" {} \; | head -1); then
-                    echo "Found test file: $TEST_FILE"
-                    
-                    # Find the line number of the @covers annotation
                     if LINE_NUM=$(grep -n "@covers.*$COVERS_TARGET" "$TEST_FILE" | head -1 | cut -d: -f1); then
-                      echo "Adding checkstyle error for $TEST_FILE:$LINE_NUM"
-                      
-                      # Escape XML special characters in the message
+                      # Escape XML characters and add checkstyle entry
                       MESSAGE=$(echo "Invalid @covers annotation: $COVERS_TARGET" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
-                      
-                      # Add to checkstyle XML
                       cat >> coverage-warnings.xml << EOF
           <file name="$TEST_FILE">
             <error line="$LINE_NUM" column="1" severity="warning" message="$MESSAGE" source="phpunit.coverage"/>
           </file>
           EOF
+                      echo "::warning file=$TEST_FILE,line=$LINE_NUM::Invalid @covers annotation: $COVERS_TARGET"
                     fi
                   fi
                 fi
+              # Look for deprecation warnings
+              elif [[ "$line" =~ (deprecated|will\ no\ longer\ be\ possible) ]]; then
+                echo "::warning::PHPUnit deprecation warning: ${line}"
               fi
             done
+            
+            echo "::error::Coverage analysis produced warnings"
+            exit 1
+          else
+            echo "No coverage warnings found"
           fi
           
           # Close the checkstyle XML
           echo '</checkstyle>' >> coverage-warnings.xml
-          
-          # Show the generated XML for debugging
-          echo "Generated checkstyle report:"
-          cat coverage-warnings.xml
 
       - name: Annotate Coverage Warnings in PR
         if: always() && github.event_name == 'pull_request'
