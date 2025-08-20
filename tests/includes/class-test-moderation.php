@@ -373,7 +373,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 	/**
 	 * Test edge cases with malformed activity data.
 	 *
-	 * @covers ::activity_is_blocked
+	 * @covers ::activity_is_blockeded
 	 * @throws \Exception Thrown when an error occurs.
 	 */
 	public function test_activity_blocking_edge_cases() {
