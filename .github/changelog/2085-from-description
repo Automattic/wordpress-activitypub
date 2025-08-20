@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix PHP 8.4 deprecation warnings by preventing null values from being passed to WordPress core functions
