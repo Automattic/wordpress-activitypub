@@ -75,7 +75,7 @@ jobs:
         with:
           php-version: '8.3'
           coverage: xdebug
-          tools: composer, phpunit-polyfills
+          tools: composer, phpunit-polyfills, cs2pr
           extensions: mysql
 
       - name: Install Composer dependencies for PHP
@@ -124,9 +124,13 @@ jobs:
                   echo "Processing @covers warning for: $COVERS_TARGET"
                   
                   # Find test file and line number
-                  if TEST_FILE=$(find tests/ -name "*.php" -type f -exec grep -l "@covers.*$COVERS_TARGET" {} \; | head -1); then
+                  echo "Searching for @covers annotation with target: $COVERS_TARGET"
+                  # Escape backslashes for grep pattern
+                  ESCAPED_TARGET=$(echo "$COVERS_TARGET" | sed 's/\\/\\\\/g')
+                  echo "Escaped target for grep: $ESCAPED_TARGET"
+                  if TEST_FILE=$(find tests/ -name "*.php" -type f -exec grep -l "@covers.*$ESCAPED_TARGET" {} \; | head -1); then
                     echo "Found test file: $TEST_FILE"
-                    if LINE_NUM=$(grep -n "@covers.*$COVERS_TARGET" "$TEST_FILE" | head -1 | cut -d: -f1); then
+                    if LINE_NUM=$(grep -n "@covers.*$ESCAPED_TARGET" "$TEST_FILE" | head -1 | cut -d: -f1); then
                       echo "Found line number: $LINE_NUM"
                       # Escape XML characters and add checkstyle entry
                       MESSAGE=$(echo "Invalid @covers annotation: $COVERS_TARGET" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
@@ -170,15 +174,9 @@ jobs:
         run: |
           # Check if we have any errors in the checkstyle report
           if grep -q '<error' coverage-warnings.xml; then
-            echo "Found coverage warnings to annotate, installing cs2pr..."
-            
-            # Install cs2pr
-            curl -s https://raw.githubusercontent.com/staabm/cs2pr/master/cs2pr -o cs2pr
-            chmod +x cs2pr
-            
-            # Convert checkstyle report to PR annotations
+            echo "Found coverage warnings to annotate"
             echo "Converting checkstyle report to PR annotations..."
-            ./cs2pr coverage-warnings.xml
+            cs2pr coverage-warnings.xml
           else
             echo "No coverage warnings found in checkstyle report"
           fi
