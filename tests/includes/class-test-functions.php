@@ -60,25 +60,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Test method to generate coverage warnings for testing annotation system.
-	 * TODO: Remove this test method after verifying coverage annotations work.
-	 */
-	public function test_coverage_warning_generator() {
-		// This will generate a coverage warning - accessing undefined variable
-		$undefined_variable = $non_existent_var ?? null;
-		
-		// This will generate an error that should be caught by coverage
-		@include '/non/existent/file.php';
-		
-		// Force a deprecated function call that might generate warnings
-		if ( function_exists( 'create_function' ) ) {
-			@create_function( '', 'return true;' );
-		}
-		
-		$this->assertTrue( true );
-	}
-
-	/**
 	 * Test object_id_to_comment.
 	 *
 	 * @covers \Activitypub\object_id_to_comment
