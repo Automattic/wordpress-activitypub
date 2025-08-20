@@ -200,7 +200,7 @@ $modal_content = ob_get_clean();
 
 				<?php if ( $actor->get_summary() ) : ?>
 					<div class="activitypub-profile__bio p-note">
-						<?php echo wp_kses_post( $actor->get_summary() ?? '' ); ?>
+						<?php echo wp_kses_post( $actor->get_summary() ); ?>
 					</div>
 				<?php endif; ?>
 
