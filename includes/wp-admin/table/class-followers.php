@@ -10,6 +10,7 @@ namespace Activitypub\WP_Admin\Table;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
 use Activitypub\Collection\Following;
+use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
@@ -440,13 +441,13 @@ class Followers extends \WP_List_Table {
 			</p>
 			<p><?php \esc_html_e( 'This will:', 'activitypub' ); ?></p>
 			<ul class="ul-disc">
-				<li><?php \esc_html_e( 'Add their ID to the comment disallowed list to block incoming requests.', 'activitypub' ); ?></li>
+				<li><?php \esc_html_e( 'Block incoming requests from this account.', 'activitypub' ); ?></li>
 				<li><?php \esc_html_e( 'Remove them from your followers and following lists.', 'activitypub' ); ?></li>
 				<?php if ( \user_can( $this->user_id, 'manage_options' ) ) : ?>
 					<li><?php \esc_html_e( 'Remove them from the blog actor followers and following lists.', 'activitypub' ); ?></li>
 				<?php endif; ?>
 			</ul>
-			<p><?php \esc_html_e( 'You can unblock this account later by removing their ID from the disallowed comment keys in Settings > Discussion.', 'activitypub' ); ?></p>
+			<p><?php \esc_html_e( 'You can unblock this account later in the ActivityPub moderation settings.', 'activitypub' ); ?></p>
 
 			<p class="submit">
 				<a href="<?php echo \esc_url( $confirm_url ); ?>" class="button button-primary"><?php \esc_html_e( 'Confirm Block', 'activitypub' ); ?></a>
@@ -505,13 +506,13 @@ class Followers extends \WP_List_Table {
 			</ul>
 			<p><?php \esc_html_e( 'This will:', 'activitypub' ); ?></p>
 			<ul class="ul-disc">
-				<li><?php \esc_html_e( 'Add their IDs to the comment disallowed list to block incoming requests.', 'activitypub' ); ?></li>
+				<li><?php \esc_html_e( 'Block incoming requests from these accounts.', 'activitypub' ); ?></li>
 				<li><?php \esc_html_e( 'Remove them from your followers and following lists.', 'activitypub' ); ?></li>
 				<?php if ( \user_can( $this->user_id, 'manage_options' ) ) : ?>
 					<li><?php \esc_html_e( 'Remove them from the blog actor followers and following lists.', 'activitypub' ); ?></li>
 				<?php endif; ?>
 			</ul>
-			<p><?php \esc_html_e( 'You can unblock these accounts later by removing their IDs from the disallowed comment keys in Settings > Discussion.', 'activitypub' ); ?></p>
+			<p><?php \esc_html_e( 'You can unblock these accounts later in the ActivityPub moderation settings.', 'activitypub' ); ?></p>
 
 			<p class="submit">
 				<a href="<?php echo \esc_url( $confirm_url ); ?>" class="button button-primary"><?php \esc_html_e( 'Confirm Block', 'activitypub' ); ?></a>
@@ -597,10 +598,8 @@ class Followers extends \WP_List_Table {
 	 * @return array Array with counts of success and failure.
 	 */
 	private function block_followers( $follower_ids ) {
-		$success_count   = 0;
-		$fail_count      = 0;
-		$disallowed_keys = \trim( \get_option( 'disallowed_keys' ) );
-		$actor_ids       = array();
+		$success_count = 0;
+		$fail_count    = 0;
 
 		foreach ( $follower_ids as $follower ) {
 			$actor = Actors::get_actor( $follower );
@@ -609,28 +608,31 @@ class Followers extends \WP_List_Table {
 				continue;
 			}
 
-			// Store actor ID for disallowed keys.
-			$actor_ids[] = $actor->get_id();
+			$actor_id = $actor->get_id();
 
-			// Remove follower relationship.
-			Follower_Collection::remove( $follower, $this->user_id );
+			// Add user-specific block.
+			$user_block_success = Moderation::add_user_block( $this->user_id, 'actor', $actor_id );
 
-			// If user is admin for blog actor, also remove relationships for blog actor.
+			// If user is admin for blog actor, also add site-wide block.
+			$site_block_success = true;
 			if ( \user_can( $this->user_id, 'manage_options' ) ) {
-				Follower_Collection::remove( $follower, Actors::BLOG_USER_ID );
+				$site_block_success = Moderation::add_site_block( 'actor', $actor_id );
 			}
 
-			++$success_count;
-		}
+			// Only proceed with removal if blocking was successful.
+			if ( $user_block_success && $site_block_success ) {
+				// Remove follower relationship.
+				Follower_Collection::remove( $follower, $this->user_id );
 
-		// Add actor IDs to disallowed keys if we have any successful blocks.
-		if ( $success_count > 0 ) {
-			// Add actor IDs to disallowed keys.
-			if ( ! empty( $disallowed_keys ) ) {
-				$disallowed_keys .= "\n";
+				// If user is admin for blog actor, also remove relationships for blog actor.
+				if ( \user_can( $this->user_id, 'manage_options' ) ) {
+					Follower_Collection::remove( $follower, Actors::BLOG_USER_ID );
+				}
+
+				++$success_count;
+			} else {
+				++$fail_count;
 			}
-			$disallowed_keys .= implode( "\n", $actor_ids );
-			\update_option( 'disallowed_keys', \trim( $disallowed_keys ) );
 		}
 
 		return array(
