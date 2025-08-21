@@ -442,7 +442,7 @@ class Activitypub {
 	/**
 	 * Register Custom Post Types.
 	 */
-	private static function register_post_types() {
+	public static function register_post_types() {
 		\register_post_type(
 			Actors::POST_TYPE,
 			array(
