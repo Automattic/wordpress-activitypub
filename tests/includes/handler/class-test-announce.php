@@ -24,13 +24,6 @@ class Test_Announce extends \WP_UnitTestCase {
 	public $user_id;
 
 	/**
-	 * User URL.
-	 *
-	 * @var string
-	 */
-	public $user_url;
-
-	/**
 	 * Post ID.
 	 *
 	 * @var int
@@ -49,9 +42,7 @@ class Test_Announce extends \WP_UnitTestCase {
 	 */
 	public function set_up() {
 		parent::set_up();
-		$this->user_id  = 1;
-		$authordata     = \get_userdata( $this->user_id );
-		$this->user_url = $authordata->user_url;
+		$this->user_id = 1;
 
 		$this->post_id        = \wp_insert_post(
 			array(
@@ -61,14 +52,14 @@ class Test_Announce extends \WP_UnitTestCase {
 		);
 		$this->post_permalink = \get_permalink( $this->post_id );
 
-		\add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'get_remote_metadata_by_actor' ), 0, 2 );
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'get_remote_metadata_by_actor' ), 0, 2 );
 	}
 
 	/**
 	 * Tear down the test.
 	 */
 	public function tear_down() {
-		\remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'get_remote_metadata_by_actor' ) );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'get_remote_metadata_by_actor' ) );
 		parent::tear_down();
 	}
 
@@ -79,7 +70,7 @@ class Test_Announce extends \WP_UnitTestCase {
 	 * @param string $actor The actor.
 	 * @return array The metadata.
 	 */
-	public static function get_remote_metadata_by_actor( $value, $actor ) {
+	public function get_remote_metadata_by_actor( $value, $actor ) {
 		return array(
 			'name' => 'Example User',
 			'icon' => array(
@@ -95,14 +86,14 @@ class Test_Announce extends \WP_UnitTestCase {
 	 *
 	 * @return array The test object.
 	 */
-	public function create_test_object() {
+	public static function create_test_object() {
 		return array(
-			'actor'  => $this->user_url,
+			'actor'  => 'https://example.com/user',
 			'type'   => 'Announce',
 			'id'     => 'https://example.com/id/' . microtime( true ),
-			'to'     => array( $this->user_url ),
+			'to'     => array( 'https://example.com/user' ),
 			'cc'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'object' => $this->post_permalink,
+			'object' => 'https://example.com/post/123',
 		);
 	}
 
@@ -112,7 +103,16 @@ class Test_Announce extends \WP_UnitTestCase {
 	 * @covers ::handle_announce
 	 */
 	public function test_handle_announce() {
-		$object = $this->create_test_object();
+		$user_url = \get_userdata( $this->user_id )->user_url;
+
+		$object = array(
+			'actor'  => $user_url,
+			'type'   => 'Announce',
+			'id'     => 'https://example.com/id/' . microtime( true ),
+			'to'     => array( $user_url ),
+			'cc'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => $this->post_permalink,
+		);
 
 		Announce::handle_announce( $object, $this->user_id );
 
@@ -149,16 +149,18 @@ class Test_Announce extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test handle announce with invalid object.
+	 * Test maybe save announce.
 	 *
-	 * @covers ::handle_announce
+	 * @covers ::maybe_save_announce
 	 */
 	public function test_maybe_save_announce() {
+		$user_url = \get_userdata( $this->user_id )->user_url;
+
 		$activity = array(
-			'actor'  => $this->user_url,
+			'actor'  => $user_url,
 			'type'   => 'Announce',
 			'id'     => 'https://example.com/id/' . microtime( true ),
-			'to'     => array( $this->user_url ),
+			'to'     => array( $user_url ),
 			'object' => $this->post_permalink,
 		);
 
@@ -180,24 +182,24 @@ class Test_Announce extends \WP_UnitTestCase {
 	 *
 	 * @return array The data provider.
 	 */
-	public function data_handle_announces() {
+	public static function data_handle_announces() {
 		return array(
 			array(
-				'announce'  => $this->create_test_object(),
+				'announce'  => self::create_test_object(),
 				'recursion' => 0,
 				'message'   => 'Simple Announce of an URL.',
 			),
 			array(
 				'announce'  => array(
-					'actor'  => $this->user_url,
+					'actor'  => 'https://example.com/user',
 					'type'   => 'Announce',
 					'id'     => 'https://example.com/id/' . microtime( true ),
-					'to'     => array( $this->user_url ),
+					'to'     => array( 'https://example.com/user' ),
 					'object' => array(
-						'actor'   => $this->user_url,
+						'actor'   => 'https://example.com/user',
 						'type'    => 'Note',
-						'id'      => $this->post_permalink,
-						'to'      => array( $this->user_url ),
+						'id'      => 'https://example.com/post/123',
+						'to'      => array( 'https://example.com/user' ),
 						'content' => 'text',
 					),
 				),
@@ -206,11 +208,11 @@ class Test_Announce extends \WP_UnitTestCase {
 			),
 			array(
 				'announce'  => array(
-					'actor'  => $this->user_url,
+					'actor'  => 'https://example.com/user',
 					'type'   => 'Announce',
 					'id'     => 'https://example.com/id/' . microtime( true ),
-					'to'     => array( $this->user_url ),
-					'object' => $this->create_test_object(),
+					'to'     => array( 'https://example.com/user' ),
+					'object' => self::create_test_object(),
 				),
 				'recursion' => 1,
 				'message'   => 'Announce of an Announce-Object.',
