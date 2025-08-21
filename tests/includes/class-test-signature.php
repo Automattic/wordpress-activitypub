@@ -370,7 +370,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
-	 * @covers \Activitypub\Signature\Http_Message_Signature::resolve_algorithm
 	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421() {
@@ -491,7 +490,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
-	 * @covers \Activitypub\Signature\Http_Message_Signature::resolve_algorithm
 	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421_get_request() {
@@ -571,7 +569,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
-	 * @covers \Activitypub\Signature\Http_Message_Signature::resolve_algorithm
 	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
 	 */
 	public function test_verify_http_signature_rfc9421_algorithms() {

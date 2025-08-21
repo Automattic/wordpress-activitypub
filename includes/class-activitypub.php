@@ -7,9 +7,9 @@
 
 namespace Activitypub;
 
-use Exception;
-use Activitypub\Options;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
@@ -287,13 +287,7 @@ class Activitypub {
 				return;
 			}
 
-			if ( $actor->get__id() > 0 ) {
-				$redirect_url = $actor->get_url();
-			} else {
-				$redirect_url = get_bloginfo( 'url' );
-			}
-
-			wp_safe_redirect( $redirect_url, 301 );
+			\wp_safe_redirect( $actor->get_url(), 301 );
 			exit;
 		}
 	}
@@ -491,7 +485,7 @@ class Activitypub {
 				'single'            => false,
 				'sanitize_callback' => function ( $value ) {
 					if ( ! is_string( $value ) ) {
-						throw new Exception( 'Error message is no valid string' );
+						throw new \Exception( 'Error message is no valid string' );
 					}
 
 					return esc_sql( $value );
@@ -507,6 +501,125 @@ class Activitypub {
 				'single'            => false,
 				'sanitize_callback' => function ( $value ) {
 					return esc_sql( $value );
+				},
+			)
+		);
+
+		// Register Inbox Post-Type.
+		register_post_type(
+			Inbox::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => _x( 'Inbox', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Inbox Item', 'post_type single name', 'activitypub' ),
+				),
+				'capabilities'        => array(
+					'create_posts' => false,
+				),
+				'map_meta_cap'        => true,
+				'public'              => false,
+				'show_in_rest'        => true,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'supports'            => array( 'title', 'editor', 'author', 'custom-fields' ),
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+			)
+		);
+
+		// Register Inbox Post-Meta.
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_object_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the object that the inbox item is about.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_type',
+			array(
+				'type'              => 'string',
+				'description'       => 'The type of the activity',
+				'single'            => true,
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$value  = ucfirst( strtolower( $value ) );
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => Activity::TYPES,
+						'default' => 'Create',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The type of the local actor that received the activity.',
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'application', 'blog', 'user' ),
+						'default' => 'user',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_remote_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the remote actor that sent the activity.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'activitypub_content_visibility',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The visibility of the content.',
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'public', 'unlisted', 'private', 'direct' ),
+						'default' => 'public',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
 				},
 			)
 		);
@@ -551,7 +664,7 @@ class Activitypub {
 					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
 						'type'    => 'string',
-						'enum'    => array( 'Accept', 'Add', 'Announce', 'Arrive', 'Block', 'Create', 'Delete', 'Dislike', 'Flag', 'Follow', 'Ignore', 'Invite', 'Join', 'Leave', 'Like', 'Listen', 'Move', 'Offer', 'Question', 'Reject', 'Read', 'Remove', 'TentativeReject', 'TentativeAccept', 'Travel', 'Undo', 'Update', 'View' ),
+						'enum'    => Activity::TYPES,
 						'default' => 'Announce',
 					);
 
@@ -634,7 +747,7 @@ class Activitypub {
 		);
 
 		// Both User and Blog Extra Fields types have the same args.
-		$args = array(
+		$extra_field_args = array(
 			'labels'              => array(
 				'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
 				'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
@@ -660,8 +773,8 @@ class Activitypub {
 			'supports'            => array( 'title', 'editor', 'page-attributes' ),
 		);
 
-		\register_post_type( Extra_Fields::USER_POST_TYPE, $args );
-		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $args );
+		\register_post_type( Extra_Fields::USER_POST_TYPE, $extra_field_args );
+		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $extra_field_args );
 
 		/**
 		 * Fires after ActivityPub custom post types have been registered.

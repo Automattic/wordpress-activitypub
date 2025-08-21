@@ -30,7 +30,7 @@ class Comments_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = 'comments/(?P<comment_id>\d+)';
+	protected $rest_base = 'comments/(?P<comment_id>[-]?\d+)';
 
 	/**
 	 * Register routes.

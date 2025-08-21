@@ -14,6 +14,7 @@ use Activitypub\Moderation;
 
 use function Activitypub\is_same_domain;
 use function Activitypub\extract_recipients_from_activity;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Inbox_Controller class.
@@ -156,14 +157,18 @@ class Inbox_Controller extends \WP_REST_Controller {
 					continue;
 				}
 
-				$actor = Actors::get_by_various( $recipient );
+				$user_id = Actors::get_id_by_various( $recipient );
 
-				if ( ! $actor || \is_wp_error( $actor ) ) {
+				if ( \is_wp_error( $user_id ) ) {
+					continue;
+				}
+
+				if ( ! user_can_activitypub( $user_id ) ) {
 					continue;
 				}
 
 				// Check user-specific blocks for this recipient.
-				if ( Moderation::activity_is_blocked_for_user( $activity, $actor->get__id() ) ) {
+				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
 					/**
 					 * ActivityPub inbox disallowed activity for specific user.
 					 *
@@ -172,7 +177,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 					 * @param string             $type     The type of the activity.
 					 * @param Activity|\WP_Error $activity The Activity object.
 					 */
-					\do_action( 'activitypub_rest_inbox_disallowed', $data, $actor->get__id(), $type, $activity );
+					\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 					continue;
 				}
 
@@ -184,7 +189,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param string             $type     The type of the activity.
 				 * @param Activity|\WP_Error $activity The Activity object.
 				 */
-				\do_action( 'activitypub_inbox', $data, $actor->get__id(), $type, $activity );
+				\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
 
 				/**
 				 * ActivityPub inbox action for specific activity types.
@@ -193,7 +198,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param int                $user_id  The user ID.
 				 * @param Activity|\WP_Error $activity The Activity object.
 				 */
-				\do_action( 'activitypub_inbox_' . $type, $data, $actor->get__id(), $activity );
+				\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
 			}
 		}
 

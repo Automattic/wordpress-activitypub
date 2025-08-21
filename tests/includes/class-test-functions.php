@@ -569,7 +569,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * @dataProvider get_post_summary_data
 	 *
 	 * @param string $desc     The description of the test.
-	 * @param object $post     The post object.
+	 * @param array  $post     The post object.
 	 * @param string $expected The expected summary.
 	 * @param int    $length   The length of the summary.
 	 */
@@ -605,49 +605,49 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_excerpt' => 'Hello World',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Greek Excerpt',
 				array(
 					'post_excerpt' => 'Τι μπορεί να σου συμβεί σε μια βόλτα για να αγοράσεις μια βαλίτσα για τα ταξίδια σου; Όλα είναι πιθανά αν έχεις ανοιχτές τις "κεραίες" σου!',
 				),
-				'<p>Τι μπορεί να σου συμβεί σε μια βόλτα για να αγοράσεις μια βαλίτσα για τα ταξίδια σου; Όλα είναι πιθανά αν έχεις ανοιχτές τις &#8220;κεραίες&#8221; σου!</p>' . PHP_EOL,
+				'Τι μπορεί να σου συμβεί σε μια βόλτα για να αγοράσεις μια βαλίτσα για τα ταξίδια σου; Όλα είναι πιθανά αν έχεις ανοιχτές τις "κεραίες" σου!',
 			),
 			array(
 				'Content',
 				array(
 					'post_content' => 'Hello World',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Content with more tag',
 				array(
 					'post_content' => 'Hello World <!--more--> More',
 				),
-				'<p>Hello World […]</p>' . PHP_EOL,
+				'Hello World […]',
 			),
 			array(
 				'Excerpt with shortcode',
 				array(
 					'post_excerpt' => 'Hello World [activitypub_test_shortcode]',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Content with shortcode',
 				array(
 					'post_content' => 'Hello World [activitypub_test_shortcode]',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Excerpt more than limit',
 				array(
 					'post_excerpt' => 'Hello World Hello World Hello World Hello World Hello World',
 				),
-				'<p>Hello World Hello World Hello World Hello World Hello World</p>' . PHP_EOL,
+				'Hello World Hello World Hello World Hello World Hello World',
 				10,
 			),
 			array(
@@ -655,7 +655,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_content' => 'Hello World Hello World Hello World Hello World Hello World',
 				),
-				'<p>Hello […]</p>' . PHP_EOL,
+				'Hello […]',
 				10,
 			),
 			array(
@@ -663,7 +663,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_content' => 'Hello World Hello <!--more--> World Hello World Hello World Hello World',
 				),
-				'<p>Hello World Hello […]</p>' . PHP_EOL,
+				'Hello World Hello […]',
 				1,
 			),
 			array(
@@ -671,28 +671,28 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_content' => '<p>Hello World</p>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Test HTML content with anchor',
 				array(
 					'post_content' => 'Hello <a href="https://example.com">World</a>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Test HTML excerpt',
 				array(
 					'post_excerpt' => '<p>Hello World</p>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Test HTML excerpt with anchor',
 				array(
 					'post_excerpt' => 'Hello <a href="https://example.com">World</a>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 		);
 	}
@@ -714,7 +714,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Tests follow method.
 	 *
-	 * @covers ::follow
+	 * @covers \Activitypub\follow
 	 */
 	public function test_follow() {
 		$user_id = self::factory()->user->create(
@@ -758,7 +758,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test that Update activities have the updated attribute set.
 	 *
-	 * @covers ::add_to_outbox
+	 * @covers \Activitypub\add_to_outbox
 	 */
 	public function test_webfinger_support() {
 		$follow = new Activity();
@@ -811,7 +811,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 *
 	 * @dataProvider data_normalize_url
 	 *
-	 * @covers ::normalize_url
+	 * @covers \Activitypub\normalize_url
 	 *
 	 * @param string $url     The URL.
 	 * @param string $expected The expected result.
@@ -842,7 +842,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 *
 	 * @dataProvider data_normalize_host
 	 *
-	 * @covers ::normalize_host
+	 * @covers \Activitypub\normalize_host
 	 *
 	 * @param string $host     The host.
 	 * @param string $expected The expected result.

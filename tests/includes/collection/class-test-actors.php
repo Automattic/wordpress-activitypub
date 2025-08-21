@@ -397,11 +397,9 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 * @covers ::get_private_key
 	 */
 	public function test_signature_creation() {
-		$user = Actors::get_by_id( 1 );
-
-		$key_pair    = Actors::get_keypair( $user->get__id() );
-		$public_key  = Actors::get_public_key( $user->get__id() );
-		$private_key = Actors::get_private_key( $user->get__id() );
+		$key_pair    = Actors::get_keypair( 1 );
+		$public_key  = Actors::get_public_key( 1 );
+		$private_key = Actors::get_private_key( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
@@ -414,33 +412,28 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 * @covers ::get_keypair
 	 */
 	public function test_signature_legacy() {
-		// Check user.
-		$user = Actors::get_by_id( 1 );
+		$public_key  = 'public key 1';
+		$private_key = 'private key 1';
 
-		$public_key  = 'public key ' . $user->get__id();
-		$private_key = 'private key ' . $user->get__id();
+		\update_user_meta( 1, 'magic_sig_public_key', $public_key );
+		\update_user_meta( 1, 'magic_sig_private_key', $private_key );
 
-		\update_user_meta( $user->get__id(), 'magic_sig_public_key', $public_key );
-		\update_user_meta( $user->get__id(), 'magic_sig_private_key', $private_key );
-
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 
 		// Check application user.
-		$user = Actors::get_by_id( Actors::APPLICATION_USER_ID );
-
 		\delete_option( 'activitypub_keypair_for_-1' );
 
-		$public_key  = 'public key ' . $user->get__id();
-		$private_key = 'private key ' . $user->get__id();
+		$public_key  = 'public key ' . Actors::APPLICATION_USER_ID;
+		$private_key = 'private key ' . Actors::APPLICATION_USER_ID;
 
 		\add_option( 'activitypub_application_user_public_key', $public_key );
 		\add_option( 'activitypub_application_user_private_key', $private_key );
 
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( Actors::APPLICATION_USER_ID );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
@@ -448,18 +441,17 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 
 		// Check blog user.
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-		$user = Actors::get_by_id( Actors::BLOG_USER_ID );
 		\delete_option( 'activitypub_actor_mode' );
 
-		$public_key  = 'public key ' . $user->get__id();
-		$private_key = 'private key ' . $user->get__id();
+		$public_key  = 'public key ' . Actors::BLOG_USER_ID;
+		$private_key = 'private key ' . Actors::BLOG_USER_ID;
 
 		\delete_option( 'activitypub_keypair_for_0' );
 
 		\add_option( 'activitypub_blog_user_public_key', $public_key );
 		\add_option( 'activitypub_blog_user_private_key', $private_key );
 
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( Actors::BLOG_USER_ID );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
@@ -472,25 +464,22 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 * @covers ::get_keypair
 	 */
 	public function test_signature_consistency() {
-		// Check user.
-		$user = Actors::get_by_id( 1 );
+		$public_key  = 'public key 1';
+		$private_key = 'private key 1';
 
-		$public_key  = 'public key ' . $user->get__id();
-		$private_key = 'private key ' . $user->get__id();
+		\update_user_meta( 1, 'magic_sig_public_key', $public_key );
+		\update_user_meta( 1, 'magic_sig_private_key', $private_key );
 
-		\update_user_meta( $user->get__id(), 'magic_sig_public_key', $public_key );
-		\update_user_meta( $user->get__id(), 'magic_sig_private_key', $private_key );
-
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 
-		\update_user_meta( $user->get__id(), 'magic_sig_public_key', $public_key . '-update' );
-		\update_user_meta( $user->get__id(), 'magic_sig_private_key', $private_key . '-update' );
+		\update_user_meta( 1, 'magic_sig_public_key', $public_key . '-update' );
+		\update_user_meta( 1, 'magic_sig_private_key', $private_key . '-update' );
 
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
@@ -503,20 +492,18 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 * @covers ::get_keypair
 	 */
 	public function test_signature_consistency2() {
-		$user = Actors::get_by_id( 1 );
-
-		$key_pair    = Actors::get_keypair( $user->get__id() );
-		$public_key  = Actors::get_public_key( $user->get__id() );
-		$private_key = Actors::get_private_key( $user->get__id() );
+		$key_pair    = Actors::get_keypair( 1 );
+		$public_key  = Actors::get_public_key( 1 );
+		$private_key = Actors::get_private_key( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 
-		\update_user_meta( $user->get__id(), 'magic_sig_public_key', 'test' );
-		\update_user_meta( $user->get__id(), 'magic_sig_private_key', 'test' );
+		\update_user_meta( 1, 'magic_sig_public_key', 'test' );
+		\update_user_meta( 1, 'magic_sig_private_key', 'test' );
 
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
