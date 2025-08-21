@@ -414,47 +414,22 @@ class Followers extends \WP_List_Table {
 			\wp_die( \esc_html__( 'Invalid account.', 'activitypub' ), '', array( 'back_link' => true ) );
 		}
 
-		$confirm_url = \wp_nonce_url(
-			\add_query_arg(
-				array(
-					'action'   => 'block',
-					'follower' => $actor_id,
-					'confirm'  => 'true',
-				)
-			),
-			'block-follower_' . $actor_id
+		$base_url = \add_query_arg(
+			array(
+				'action'   => 'block',
+				'follower' => $actor_id,
+				'confirm'  => 'true',
+			)
 		);
 
-		require_once ABSPATH . 'wp-admin/admin-header.php';
-		?>
-		<div class="wrap">
-			<h1><?php \esc_html_e( 'Block Account', 'activitypub' ); ?></h1>
+		$args = array(
+			'actor'          => $actor,
+			'base_url'       => $base_url,
+			'nonce_action'   => 'block-follower_' . $actor_id,
+			'can_block_site' => \user_can( $this->user_id, 'manage_options' ),
+		);
 
-			<p>
-			<?php
-			\printf(
-				/* translators: %s: username */
-				\esc_html__( 'You are about to block &#8220;%s&#8221;.', 'activitypub' ),
-				'<strong>' . \esc_html( $actor->get_preferred_username() ) . '</strong>'
-			);
-			?>
-			</p>
-			<p><?php \esc_html_e( 'This will:', 'activitypub' ); ?></p>
-			<ul class="ul-disc">
-				<li><?php \esc_html_e( 'Block incoming requests from this account.', 'activitypub' ); ?></li>
-				<li><?php \esc_html_e( 'Remove them from your followers and following lists.', 'activitypub' ); ?></li>
-				<?php if ( \user_can( $this->user_id, 'manage_options' ) ) : ?>
-					<li><?php \esc_html_e( 'Remove them from the blog actor followers and following lists.', 'activitypub' ); ?></li>
-				<?php endif; ?>
-			</ul>
-			<p><?php \esc_html_e( 'You can unblock this account later in the ActivityPub moderation settings.', 'activitypub' ); ?></p>
-
-			<p class="submit">
-				<a href="<?php echo \esc_url( $confirm_url ); ?>" class="button button-primary"><?php \esc_html_e( 'Confirm Block', 'activitypub' ); ?></a>
-			</p>
-		</div>
-		<?php
-		require_once ABSPATH . 'wp-admin/admin-footer.php';
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/block-confirmation.php', false, $args );
 	}
 
 	/**
@@ -468,58 +443,35 @@ class Followers extends \WP_List_Table {
 
 		$follower_count = count( $followers );
 
-		$confirm_url = \wp_nonce_url(
-			\add_query_arg(
-				array(
-					'action'    => 'block',
-					'followers' => $followers,
-					'confirm'   => 'true',
-				)
-			),
-			'bulk-' . $this->_args['plural']
+		$base_url = \add_query_arg(
+			array(
+				'action'    => 'block',
+				'followers' => $followers,
+				'confirm'   => 'true',
+			)
 		);
 
-		require_once ABSPATH . 'wp-admin/admin-header.php';
-		?>
-		<div class="wrap">
-			<h1><?php \esc_html_e( 'Block Accounts', 'activitypub' ); ?></h1>
-			<p>
-			<?php
-			\printf(
-				/* translators: %d: number of followers */
-				\esc_html( _n( 'You are about to block %d accounts.', 'You are about to block %d accounts.', $follower_count, 'activitypub' ) ),
-				\esc_html( \number_format_i18n( $follower_count ) )
+		// Prepare follower data for template.
+		$follower_data = array();
+		foreach ( $followers as $follower ) {
+			$actor = Actors::get_actor( $follower );
+			if ( \is_wp_error( $actor ) ) {
+				continue;
+			}
+			$follower_data[] = array(
+				'username' => $actor->get_preferred_username(),
 			);
-			?>
-			</p>
-			<ul>
-				<?php
-				foreach ( $followers as $follower ) :
-					$actor = Actors::get_actor( $follower );
-					if ( \is_wp_error( $actor ) ) {
-						continue;
-					}
+		}
 
-					\printf( '<li><strong>%s</strong></li>', \esc_html( $actor->get_preferred_username() ) );
-				endforeach;
-				?>
-			</ul>
-			<p><?php \esc_html_e( 'This will:', 'activitypub' ); ?></p>
-			<ul class="ul-disc">
-				<li><?php \esc_html_e( 'Block incoming requests from these accounts.', 'activitypub' ); ?></li>
-				<li><?php \esc_html_e( 'Remove them from your followers and following lists.', 'activitypub' ); ?></li>
-				<?php if ( \user_can( $this->user_id, 'manage_options' ) ) : ?>
-					<li><?php \esc_html_e( 'Remove them from the blog actor followers and following lists.', 'activitypub' ); ?></li>
-				<?php endif; ?>
-			</ul>
-			<p><?php \esc_html_e( 'You can unblock these accounts later in the ActivityPub moderation settings.', 'activitypub' ); ?></p>
+		$args = array(
+			'followers'      => $follower_data,
+			'follower_count' => $follower_count,
+			'base_url'       => $base_url,
+			'nonce_action'   => 'bulk-' . $this->_args['plural'],
+			'can_block_site' => \user_can( $this->user_id, 'manage_options' ),
+		);
 
-			<p class="submit">
-				<a href="<?php echo \esc_url( $confirm_url ); ?>" class="button button-primary"><?php \esc_html_e( 'Confirm Block', 'activitypub' ); ?></a>
-			</p>
-		</div>
-		<?php
-		require_once ABSPATH . 'wp-admin/admin-footer.php';
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-block-confirmation.php', false, $args );
 	}
 
 	/**
@@ -613,9 +565,9 @@ class Followers extends \WP_List_Table {
 			// Add user-specific block.
 			$user_block_success = Moderation::add_user_block( $this->user_id, 'actor', $actor_id );
 
-			// If user is admin for blog actor, also add site-wide block.
+			// Add site-wide block only if user is admin and explicitly requested.
 			$site_block_success = true;
-			if ( \user_can( $this->user_id, 'manage_options' ) ) {
+			if ( \user_can( $this->user_id, 'manage_options' ) && isset( $_REQUEST['site_wide'] ) && '1' === $_REQUEST['site_wide'] ) {
 				$site_block_success = Moderation::add_site_block( 'actor', $actor_id );
 			}
 
