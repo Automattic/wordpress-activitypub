@@ -138,13 +138,13 @@ function url_to_authorid( $url ) {
 	global $wp_rewrite;
 
 	// Check if url hase the same host.
-	$request_host = \wp_parse_url( (string) $url, \PHP_URL_HOST );
+	$request_host = \wp_parse_url( $url, \PHP_URL_HOST );
 	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== $request_host && get_option( 'activitypub_old_host' ) !== $request_host ) {
 		return null;
 	}
 
 	// First, check to see if there is an 'author=N' to match against.
-	if ( \preg_match( '/[?&]author=(\d+)/i', (string) $url, $values ) ) {
+	if ( \preg_match( '/[?&]author=(\d+)/i', $url, $values ) ) {
 		return \absint( $values[1] );
 	}
 
@@ -224,7 +224,7 @@ function is_tombstone( $wp_error ) {
  */
 function get_rest_url_by_path( $path = '' ) {
 	// We'll handle the leading slash.
-	$path            = ltrim( (string) $path, '/' );
+	$path            = ltrim( $path, '/' );
 	$namespaced_path = sprintf( '/%s/%s', ACTIVITYPUB_REST_NAMESPACE, $path );
 	return \get_rest_url( null, $namespaced_path );
 }
@@ -1720,7 +1720,7 @@ function extract_name_from_uri( $uri ) {
 				$name = \preg_replace( '|^/@?|', '', $path );
 			} else {
 				// Expected: https://example.com/users/user (default ID pattern).
-				$parts = \explode( '/', (string) $path );
+				$parts = \explode( '/', $path );
 				$name  = \array_pop( $parts );
 			}
 		} else {
@@ -1733,11 +1733,11 @@ function extract_name_from_uri( $uri ) {
 		\strpos( $name, '@' ) === 0
 	) {
 		// Expected: user@example.com or acct:user@example (WebFinger).
-		$name = \ltrim( (string) $name, '@' );
+		$name = \ltrim( $name, '@' );
 		if ( str_starts_with( $name, 'acct:' ) ) {
 			$name = \substr( $name, 5 );
 		}
-		$parts = \explode( '@', (string) $name );
+		$parts = \explode( '@', $name );
 		$name  = $parts[0];
 	}
 
