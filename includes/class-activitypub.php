@@ -9,6 +9,7 @@ namespace Activitypub;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
@@ -47,6 +48,7 @@ class Activitypub {
 		\add_action( 'user_register', array( self::class, 'user_register' ) );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
+		\add_action( 'activitypub_add_user_block', array( Following::class, 'remove_blocked_actors' ), 10, 3 );
 
 		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
