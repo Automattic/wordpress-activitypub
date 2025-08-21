@@ -10,9 +10,9 @@ use Activitypub\Collection\Actors;
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
 
-$followers     = $args['followers'];
-$user_id       = $args['user_id'];
-$plural_args   = $args['plural_args'];
+$followers   = $args['followers'];
+$user_id     = $args['user_id'];
+$plural_args = $args['plural_args'];
 
 // Validate followers.
 if ( empty( $followers ) ) {

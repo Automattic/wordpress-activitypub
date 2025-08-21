@@ -10,8 +10,8 @@ use Activitypub\Collection\Actors;
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
 
-$actor_id       = $args['actor_id'];
-$user_id        = $args['user_id'];
+$actor_id = $args['actor_id'];
+$user_id  = $args['user_id'];
 
 // Get actor and validate.
 $actor = Actors::get_actor( $actor_id );

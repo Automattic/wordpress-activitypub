@@ -172,7 +172,7 @@ class Followers extends \WP_List_Table {
 						// If confirm is not set, show confirmation screen.
 						if ( ! isset( $_GET['confirm'] ) || 'true' !== $_GET['confirm'] ) {
 							$followers = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ) );
-							$args = array(
+							$args      = array(
 								'followers'   => $followers,
 								'user_id'     => $this->user_id,
 								'plural_args' => $this->_args['plural'],
