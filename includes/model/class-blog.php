@@ -139,7 +139,12 @@ class Blog extends Actor {
 			$summary = \get_bloginfo( 'description' );
 		}
 
-		return \wpautop( \wp_kses( (string) $summary, 'default' ) );
+		return \wpautop(
+			\wp_kses(
+				$summary,
+				'default'
+			)
+		);
 	}
 
 	/**
