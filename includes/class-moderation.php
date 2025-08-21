@@ -110,6 +110,15 @@ class Moderation {
 
 				$blocked = \get_post_meta( $actor_post->ID, self::BLOCKED_ACTORS_META_KEY, false );
 				if ( ! \in_array( (string) $user_id, $blocked, true ) ) {
+					/**
+					 * Fired when an actor is blocked.
+					 *
+					 * @param string $value   The blocked actor URI.
+					 * @param string $type    The block type (actor, domain, keyword).
+					 * @param int    $user_id The user ID.
+					 */
+					\do_action( 'activitypub_add_user_block', $value, $type, $user_id );
+
 					return (bool) \add_post_meta( $actor_post->ID, self::BLOCKED_ACTORS_META_KEY, (string) $user_id );
 				}
 				break;
@@ -119,6 +128,15 @@ class Moderation {
 				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 
 				if ( ! \in_array( $value, $blocks, true ) ) {
+					/**
+					 * Fired when a domain or keyword is blocked.
+					 *
+					 * @param string $value   The blocked domain or keyword.
+					 * @param string $type    The block type (actor, domain, keyword).
+					 * @param int    $user_id The user ID.
+					 */
+					\do_action( 'activitypub_add_user_block', $value, $type, $user_id );
+
 					$blocks[] = $value;
 					return (bool) \update_user_meta( $user_id, self::USER_META_KEYS[ $type ], $blocks );
 				}
@@ -151,6 +169,15 @@ class Moderation {
 					$post_id = $actor_post->ID;
 				}
 
+				/**
+				 * Fired when an actor is unblocked.
+				 *
+				 * @param string $value   The unblocked actor URI.
+				 * @param string $type    The block type (actor, domain, keyword).
+				 * @param int    $user_id The user ID.
+				 */
+				\do_action( 'activitypub_remove_user_block', $value, $type, $user_id );
+
 				return \delete_post_meta( $post_id, self::BLOCKED_ACTORS_META_KEY, $user_id );
 
 			case 'domain':
@@ -159,6 +186,15 @@ class Moderation {
 				$key    = \array_search( $value, $blocks, true );
 
 				if ( false !== $key ) {
+					/**
+					 * Fired when a domain or keyword is unblocked.
+					 *
+					 * @param string $value   The unblocked domain or keyword.
+					 * @param string $type    The block type (actor, domain, keyword).
+					 * @param int    $user_id The user ID.
+					 */
+					\do_action( 'activitypub_remove_user_block', $value, $type, $user_id );
+
 					unset( $blocks[ $key ] );
 					return \update_user_meta( $user_id, self::USER_META_KEYS[ $type ], \array_values( $blocks ) );
 				}
@@ -200,6 +236,14 @@ class Moderation {
 				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
 
 				if ( ! \in_array( $value, $blocks, true ) ) {
+					/**
+					 * Fired when a domain or keyword is blocked site-wide.
+					 *
+					 * @param string $value The blocked domain or keyword.
+					 * @param string $type  The block type (actor, domain, keyword).
+					 */
+					\do_action( 'activitypub_add_site_block', $value, $type );
+
 					$blocks[] = $value;
 					return \update_option( self::OPTION_KEYS[ $type ], $blocks );
 				}
@@ -228,6 +272,14 @@ class Moderation {
 				$key    = \array_search( $value, $blocks, true );
 
 				if ( false !== $key ) {
+					/**
+					 * Fired when a domain or keyword is unblocked site-wide.
+					 *
+					 * @param string $value The unblocked domain or keyword.
+					 * @param string $type  The block type (actor, domain, keyword).
+					 */
+					\do_action( 'activitypub_remove_site_block', $value, $type );
+
 					unset( $blocks[ $key ] );
 					return \update_option( self::OPTION_KEYS[ $type ], \array_values( $blocks ) );
 				}
