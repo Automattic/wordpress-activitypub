@@ -5,11 +5,45 @@
  * @package Activitypub
  */
 
+use Activitypub\Collection\Actors;
+
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
 
-$follower_count = $args['follower_count'];
-$can_block_site = $args['can_block_site'] ?? false;
+$followers     = $args['followers'];
+$user_id       = $args['user_id'];
+$plural_args   = $args['plural_args'];
+
+// Validate followers.
+if ( empty( $followers ) ) {
+	\wp_die( \esc_html__( 'No accounts selected.', 'activitypub' ), '', array( 'back_link' => true ) );
+}
+
+$follower_count = count( $followers );
+
+// Prepare form URL.
+$base_url = \add_query_arg(
+	array(
+		'action'    => 'block',
+		'followers' => $followers,
+		'confirm'   => 'true',
+	)
+);
+
+// Prepare follower data for display.
+$follower_data = array();
+foreach ( $followers as $follower ) {
+	$actor = Actors::get_actor( $follower );
+	if ( \is_wp_error( $actor ) ) {
+		continue;
+	}
+	$follower_data[] = array(
+		'username' => $actor->get_preferred_username(),
+	);
+}
+
+$can_block_site = \user_can( $user_id, 'manage_options' );
+$nonce_action   = 'bulk-' . $plural_args;
 
 require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
@@ -25,8 +59,8 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 	?>
 	</p>
 	<ul>
-		<?php foreach ( $args['followers'] as $follower_data ) : ?>
-			<li><strong><?php echo esc_html( $follower_data['username'] ); ?></strong></li>
+		<?php foreach ( $follower_data as $follower ) : ?>
+			<li><strong><?php echo esc_html( $follower['username'] ); ?></strong></li>
 		<?php endforeach; ?>
 	</ul>
 	<p><?php esc_html_e( 'This will:', 'activitypub' ); ?></p>
@@ -35,8 +69,8 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 		<li><?php esc_html_e( 'Remove them from your followers and following lists.', 'activitypub' ); ?></li>
 	</ul>
 
-	<form method="post" action="<?php echo esc_url( $args['base_url'] ); ?>">
-		<?php wp_nonce_field( $args['nonce_action'] ); ?>
+	<form method="post" action="<?php echo esc_url( $base_url ); ?>">
+		<?php wp_nonce_field( $nonce_action ); ?>
 
 		<?php if ( $can_block_site ) : ?>
 			<p>

@@ -5,11 +5,31 @@
  * @package Activitypub
  */
 
+use Activitypub\Collection\Actors;
+
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
 
-$actor          = $args['actor'];
-$can_block_site = $args['can_block_site'] ?? false;
+$actor_id       = $args['actor_id'];
+$user_id        = $args['user_id'];
+
+// Get actor and validate.
+$actor = Actors::get_actor( $actor_id );
+if ( \is_wp_error( $actor ) ) {
+	\wp_die( \esc_html__( 'Invalid account.', 'activitypub' ), '', array( 'back_link' => true ) );
+}
+
+// Prepare form URL.
+$base_url = \add_query_arg(
+	array(
+		'action'   => 'block',
+		'follower' => $actor_id,
+		'confirm'  => 'true',
+	)
+);
+
+$can_block_site = \user_can( $user_id, 'manage_options' );
+$nonce_action   = 'block-follower_' . $actor_id;
 
 require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
@@ -31,8 +51,8 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 		<li><?php esc_html_e( 'Remove them from your followers and following lists.', 'activitypub' ); ?></li>
 	</ul>
 
-	<form method="post" action="<?php echo esc_url( $args['base_url'] ); ?>">
-		<?php wp_nonce_field( $args['nonce_action'] ); ?>
+	<form method="post" action="<?php echo esc_url( $base_url ); ?>">
+		<?php wp_nonce_field( $nonce_action ); ?>
 
 		<?php if ( $can_block_site ) : ?>
 			<p>

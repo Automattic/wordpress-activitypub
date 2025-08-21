@@ -147,7 +147,11 @@ class Followers extends \WP_List_Table {
 					if ( \wp_verify_nonce( $nonce, 'block-follower_' . $follower ) ) {
 						// If confirm is not set, show confirmation screen.
 						if ( ! isset( $_GET['confirm'] ) || 'true' !== $_GET['confirm'] ) {
-							$this->show_block_confirmation( $follower );
+							$args = array(
+								'actor_id' => $follower,
+								'user_id'  => $this->user_id,
+							);
+							\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/block-confirmation.php', false, $args );
 							exit;
 						}
 
@@ -167,7 +171,13 @@ class Followers extends \WP_List_Table {
 					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
 						// If confirm is not set, show confirmation screen.
 						if ( ! isset( $_GET['confirm'] ) || 'true' !== $_GET['confirm'] ) {
-							$this->show_bulk_block_confirmation();
+							$followers = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ) );
+							$args = array(
+								'followers'   => $followers,
+								'user_id'     => $this->user_id,
+								'plural_args' => $this->_args['plural'],
+							);
+							\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-block-confirmation.php', false, $args );
 							exit;
 						}
 
@@ -401,77 +411,6 @@ class Followers extends \WP_List_Table {
 			\esc_attr( \gmdate( 'c', $modified ) ),
 			\esc_html( \gmdate( \get_option( 'date_format' ), $modified ) )
 		);
-	}
-
-	/**
-	 * Shows the block confirmation screen.
-	 *
-	 * @param int $actor_id Actor id.
-	 */
-	private function show_block_confirmation( $actor_id ) {
-		$actor = Actors::get_actor( $actor_id );
-		if ( \is_wp_error( $actor ) ) {
-			\wp_die( \esc_html__( 'Invalid account.', 'activitypub' ), '', array( 'back_link' => true ) );
-		}
-
-		$base_url = \add_query_arg(
-			array(
-				'action'   => 'block',
-				'follower' => $actor_id,
-				'confirm'  => 'true',
-			)
-		);
-
-		$args = array(
-			'actor'          => $actor,
-			'base_url'       => $base_url,
-			'nonce_action'   => 'block-follower_' . $actor_id,
-			'can_block_site' => \user_can( $this->user_id, 'manage_options' ),
-		);
-
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/block-confirmation.php', false, $args );
-	}
-
-	/**
-	 * Shows the bulk block confirmation screen.
-	 */
-	private function show_bulk_block_confirmation() {
-		$followers = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ?? array() ) );
-		if ( empty( $followers ) ) {
-			\wp_die( \esc_html__( 'No accounts selected.', 'activitypub' ), '', array( 'back_link' => true ) );
-		}
-
-		$follower_count = count( $followers );
-
-		$base_url = \add_query_arg(
-			array(
-				'action'    => 'block',
-				'followers' => $followers,
-				'confirm'   => 'true',
-			)
-		);
-
-		// Prepare follower data for template.
-		$follower_data = array();
-		foreach ( $followers as $follower ) {
-			$actor = Actors::get_actor( $follower );
-			if ( \is_wp_error( $actor ) ) {
-				continue;
-			}
-			$follower_data[] = array(
-				'username' => $actor->get_preferred_username(),
-			);
-		}
-
-		$args = array(
-			'followers'      => $follower_data,
-			'follower_count' => $follower_count,
-			'base_url'       => $base_url,
-			'nonce_action'   => 'bulk-' . $this->_args['plural'],
-			'can_block_site' => \user_can( $this->user_id, 'manage_options' ),
-		);
-
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-block-confirmation.php', false, $args );
 	}
 
 	/**
