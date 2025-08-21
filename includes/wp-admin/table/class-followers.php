@@ -619,16 +619,8 @@ class Followers extends \WP_List_Table {
 				$site_block_success = Moderation::add_site_block( 'actor', $actor_id );
 			}
 
-			// Only proceed with removal if blocking was successful.
+			// Check if blocking was successful.
 			if ( $user_block_success && $site_block_success ) {
-				// Remove follower relationship.
-				Follower_Collection::remove( $follower, $this->user_id );
-
-				// If user is admin for blog actor, also remove relationships for blog actor.
-				if ( \user_can( $this->user_id, 'manage_options' ) ) {
-					Follower_Collection::remove( $follower, Actors::BLOG_USER_ID );
-				}
-
 				++$success_count;
 			} else {
 				++$fail_count;
