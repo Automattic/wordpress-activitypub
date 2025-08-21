@@ -8,7 +8,7 @@
 namespace Activitypub\Tests\WP_Admin\Table;
 
 use Activitypub\WP_Admin\Table\Followers;
-use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers as Follower_Collection;
 
 /**
  * Test class for Followers Table.
@@ -32,7 +32,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		// Set up global screen mock.
 		set_current_screen( 'users_page_activitypub-followers-list' );
-		
+
 		// Set current user.
 		wp_set_current_user( 1 );
 
@@ -43,43 +43,57 @@ class Test_Followers extends \WP_UnitTestCase {
 	/**
 	 * Test column_username with actor having icon object.
 	 *
-	 * This test simulates the prepare_items() data processing by creating
-	 * a realistic item array that includes an icon URL extracted from
-	 * an ActivityPub actor's icon object.
-	 *
 	 * @covers ::column_username
+	 * @covers ::prepare_items
 	 */
 	public function test_column_username_with_icon_object() {
-		// Simulate how prepare_items() processes an ActivityPub actor with icon object.
-		// Real ActivityPub actor icon: {"type": "Image", "url": "..."}
-		$activitypub_actor_icon = array(
-			'type' => 'Image',
-			'url'  => 'https://secure.gravatar.com/avatar/example?s=120&d=mm&r=g',
+		// Mock remote metadata for the actor with icon object.
+		$actor_url  = 'https://example.com/users/testuser';
+		$actor_data = array(
+			'name'              => 'Test User',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => 'https://secure.gravatar.com/avatar/example?s=120&d=mm&r=g',
+			),
+			'url'               => $actor_url,
+			'id'                => 'https://example.com/users/testuser',
+			'preferredUsername' => 'testuser',
+			'inbox'             => 'https://example.com/users/testuser/inbox',
 		);
 
-		// Simulate the icon URL extraction from prepare_items(): object_to_uri( $actor->get_icon() )
-		$extracted_icon_url = $activitypub_actor_icon['url'] ?? '';
-
-		// Create item array as prepare_items() would.
-		$item = array(
-			'id'         => 123,
-			'icon'       => $extracted_icon_url,
-			'post_title' => 'Test User',
-			'username'   => 'testuser',
-			'url'        => 'https://example.com/@testuser',
-			'webfinger'  => '@testuser@example.com',
-			'identifier' => 'https://example.com/users/testuser',
-			'modified'   => '2023-01-01 12:00:00',
+		// Mock the remote metadata call using the correct filter.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function ( $value, $actor ) use ( $actor_url, $actor_data ) {
+				if ( $actor === $actor_url ) {
+					return $actor_data;
+				}
+				return $value;
+			},
+			10,
+			2
 		);
 
-		// Test the column_username output.
+		// Add the follower.
+		Follower_Collection::add_follower( get_current_user_id(), $actor_url );
+
+		// Use the real prepare_items() method.
+		$this->followers_table->prepare_items();
+
+		// Verify we have items.
+		$this->assertNotEmpty( $this->followers_table->items );
+
+		// Get the first item and test column_username.
+		$item   = $this->followers_table->items[0];
 		$result = $this->followers_table->column_username( $item );
 
-		// Verify the icon URL was properly rendered (WordPress escapes & as &#038;).
-		$this->assertStringContainsString( 'https://secure.gravatar.com/avatar/example?s=120&#038;d=mm&#038;r=g', $result );
-		$this->assertStringContainsString( 'width="32" height="32"', $result );
-		$this->assertStringContainsString( 'alt="testuser"', $result );
-		$this->assertStringContainsString( 'loading="lazy"', $result );
-		$this->assertStringContainsString( '<strong><a href="https://example.com/@testuser" target="_blank">testuser</a></strong>', $result );
+		// Verify the icon URL was extracted from the object by object_to_uri() and properly rendered.
+		$this->assertStringContainsString( 'src="https://secure.gravatar.com/avatar/example?s=120&#038;d=mm&#038;r=g"', $result );
+
+		// Verify that the icon was processed correctly: from object to URL.
+		$this->assertEquals( 'https://secure.gravatar.com/avatar/example?s=120&d=mm&r=g', $item['icon'] );
+
+		// Clean up.
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
 }
