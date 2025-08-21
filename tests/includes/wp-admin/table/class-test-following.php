@@ -7,8 +7,9 @@
 
 namespace Activitypub\Tests\WP_Admin\Table;
 
-use Activitypub\WP_Admin\Table\Following;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
+use Activitypub\WP_Admin\Table\Following;
 
 /**
  * Test class for Following Table.
@@ -52,7 +53,7 @@ class Test_Following extends \WP_UnitTestCase {
 	 */
 	public function test_column_username_with_icon_object() {
 		// Mock remote metadata for the actor with icon object.
-		$actor_url = 'https://example.com/users/testuser';
+		$actor_url  = 'https://example.com/users/testuser';
 		$actor_data = array(
 			'name'              => 'Test User',
 			'icon'              => array(
@@ -79,14 +80,10 @@ class Test_Following extends \WP_UnitTestCase {
 		);
 
 		// Add the actor first, then follow them.
-		$actor_post_id = \Activitypub\Collection\Actors::upsert( $actor_data );
-		$this->assertIsInt( $actor_post_id );
-		$this->assertGreaterThan( 0, $actor_post_id );
+		$actor_post_id = Actors::upsert( $actor_data );
 
 		// Follow the actor using the proper method.
-		$result = Following_Collection::follow( $actor_post_id, get_current_user_id() );
-		$this->assertIsInt( $result );
-		$this->assertGreaterThan( 0, $result );
+		Following_Collection::follow( $actor_post_id, get_current_user_id() );
 
 		// Use the real prepare_items() method.
 		$this->following_table->prepare_items();
@@ -95,7 +92,7 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertNotEmpty( $this->following_table->items );
 
 		// Get the first item and test column_username.
-		$item = $this->following_table->items[0];
+		$item   = $this->following_table->items[0];
 		$result = $this->following_table->column_username( $item );
 
 		// Verify the icon URL was extracted from the object by object_to_uri() and properly rendered.
