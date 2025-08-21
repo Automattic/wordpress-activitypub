@@ -93,7 +93,7 @@ class Admin {
 	}
 
 	/**
-	 * Load user settings page
+	 * Load user settings page.
 	 */
 	public static function followers_list_page() {
 		// User has to be able to publish posts.
@@ -103,7 +103,7 @@ class Admin {
 	}
 
 	/**
-	 * Load user following list page
+	 * Load user following list page.
 	 */
 	public static function following_list_page() {
 		// User has to be able to publish posts.
@@ -113,7 +113,7 @@ class Admin {
 	}
 
 	/**
-	 * Load blocked actors page
+	 * Load blocked actors page.
 	 */
 	public static function blocked_actors_list_page() {
 		// User has to be able to publish posts.

@@ -379,7 +379,7 @@ class Settings {
 
 		// Add blocked actors tab for site-wide blocking.
 		$settings_tabs['blocked-actors'] = array(
-			'label'    => __( 'Blocked Actors', 'activitypub' ),
+			'label'    => \__( 'Blocked Actors', 'activitypub' ),
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php',
 		);
 
