@@ -139,7 +139,15 @@ class Following extends \WP_List_Table {
 				// Check if user has blocked the account.
 				if ( \in_array( $profile, Moderation::get_user_blocks( $this->user_id )['actors'], true ) ) {
 					/* translators: %s: Account profile that could not be followed */
-					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. The account has been blocked.', 'activitypub' ), \esc_html( $profile ) ) );
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. The account is blocked.', 'activitypub' ), \esc_html( $profile ) ) );
+					$redirect_to = \add_query_arg( 'resource', $profile, $redirect_to );
+					break;
+				}
+
+				// Check if site has blocked the account.
+				if ( \in_array( $profile, Moderation::get_site_blocks()['actors'], true ) ) {
+					/* translators: %s: Account profile that could not be followed */
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. The account is blocked site-wide.', 'activitypub' ), \esc_html( $profile ) ) );
 					$redirect_to = \add_query_arg( 'resource', $profile, $redirect_to );
 					break;
 				}
