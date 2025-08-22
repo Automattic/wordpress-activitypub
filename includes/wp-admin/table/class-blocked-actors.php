@@ -122,12 +122,19 @@ class Blocked_Actors extends \WP_List_Table {
 				}
 
 				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				if ( ! \is_email( \ltrim( $profile, '@' ) ) && empty( \wp_parse_url( $profile, PHP_URL_SCHEME ) ) ) {
+				$profile = \trim( $profile, '@' );
+
+				if ( \filter_var( $profile, FILTER_VALIDATE_EMAIL ) ) {
+					$remote_actor = Webfinger::resolve( $profile );
+					if ( ! \is_wp_error( $remote_actor ) ) {
+						$profile = object_to_uri( $remote_actor );
+					}
+				} elseif ( empty( \wp_parse_url( $profile, PHP_URL_SCHEME ) ) ) {
 					// Add scheme if missing.
 					$profile = \esc_url_raw( 'https://' . \ltrim( $profile, '/' ) );
 				}
 
-				$result = $this->block_actor( $profile, $this->user_id );
+				$result = Moderation::add_user_block( $this->user_id, 'actor', $profile );
 				if ( \is_wp_error( $result ) ) {
 					/* translators: %s: Account profile that could not be blocked */
 					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
@@ -145,28 +152,6 @@ class Blocked_Actors extends \WP_List_Table {
 
 		\wp_safe_redirect( $redirect_to );
 		exit;
-	}
-
-	/**
-	 * Block an actor by profile.
-	 *
-	 * @param string $profile The profile URL or webfinger address.
-	 * @param int    $user_id The user ID.
-	 * @return bool|\WP_Error True on success or a WP_Error.
-	 */
-	private function block_actor( $profile, $user_id ) {
-		// Try to resolve the profile to an actor URL.
-		$actor_url = Webfinger::resolve( $profile );
-		if ( \is_wp_error( $actor_url ) ) {
-			$actor_url = $profile;
-		}
-
-		$result = Moderation::add_user_block( $user_id, 'actor', $actor_url );
-		if ( ! $result ) {
-			return new \WP_Error( 'activitypub_block_failed', 'Failed to block actor' );
-		}
-
-		return $result;
 	}
 
 	/**
