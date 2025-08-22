@@ -447,12 +447,11 @@ class Following {
 			return;
 		}
 
-		$actor_post = Actors::get_by_various( $value );
-
-		if ( \is_wp_error( $actor_post ) ) {
+		$actor_id = Actors::get_id_by_various( $value );
+		if ( \is_wp_error( $actor_id ) ) {
 			return;
 		}
 
-		self::unfollow( $actor_post, $user_id );
+		self::unfollow( $actor_id, $user_id );
 	}
 }
