@@ -156,14 +156,11 @@ class Blocked_Actors extends \WP_List_Table {
 	 */
 	private function block_actor( $profile, $user_id ) {
 		// Try to resolve the profile to an actor URL.
-		$webfinger_result = Webfinger::resolve( $profile );
-		if ( \is_wp_error( $webfinger_result ) ) {
+		$actor_url = Webfinger::resolve( $profile );
+		if ( \is_wp_error( $actor_url ) ) {
 			$actor_url = $profile;
-		} else {
-			$actor_url = $webfinger_result;
 		}
 
-		// Block the actor using the unified method.
 		$result = Moderation::add_user_block( $user_id, 'actor', $actor_url );
 		if ( ! $result ) {
 			return new \WP_Error( 'activitypub_block_failed', 'Failed to block actor' );
@@ -244,7 +241,6 @@ class Blocked_Actors extends \WP_List_Table {
 
 		foreach ( $blocked_actor_posts as $blocked_actor_post ) {
 			$actor = Actors::get_actor( $blocked_actor_post );
-
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
@@ -253,7 +249,7 @@ class Blocked_Actors extends \WP_List_Table {
 
 			$this->items[] = array(
 				'id'         => $blocked_actor_post->ID,
-				'icon'       => $actor->get_icon()['url'] ?? '',
+				'icon'       => object_to_uri( $actor->get_icon() ?? '' ),
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => $url,
