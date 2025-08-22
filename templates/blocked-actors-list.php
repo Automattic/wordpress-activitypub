@@ -48,7 +48,7 @@ $blocked_actors_list_table->prepare_items();
 					<form method="post" id="activitypub-block-form">
 						<?php wp_nonce_field( 'activitypub-block-nonce' ); ?>
 						<div class="form-field form-required">
-							<label for="activitypub-profile"><?php echo esc_html__( 'Username or profile link', 'activitypub' ); ?></label>
+							<label for="activitypub-profile" class="screen-reader-text"><?php echo esc_html__( 'Profile link', 'activitypub' ); ?></label>
 							<input type="hidden" name="action" value="block" />
 							<input name="activitypub-profile" id="activitypub-profile" type="text" value="<?php echo esc_attr( $_resource ); ?>" size="40" aria-required="true" class="<?php echo $_resource ? 'highlight' : ''; ?>" />
 						</div>
