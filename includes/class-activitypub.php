@@ -458,6 +458,7 @@ class Activitypub {
 					'singular_name' => _x( 'Follower', 'post_type single name', 'activitypub' ),
 				),
 				'public'           => false,
+				'show_in_rest'     => true,
 				'hierarchical'     => false,
 				'rewrite'          => false,
 				'query_var'        => false,
@@ -506,7 +507,7 @@ class Activitypub {
 		);
 
 		// Register Inbox Post-Type.
-		register_post_type(
+		\register_post_type(
 			Inbox::POST_TYPE,
 			array(
 				'labels'              => array(
@@ -625,7 +626,7 @@ class Activitypub {
 		);
 
 		// Register Outbox Post-Type.
-		register_post_type(
+		\register_post_type(
 			Outbox::POST_TYPE,
 			array(
 				'labels'              => array(
