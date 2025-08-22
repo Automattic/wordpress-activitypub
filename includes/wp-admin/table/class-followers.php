@@ -137,7 +137,7 @@ class Followers extends \WP_List_Table {
 				break;
 
 			case 'block':
-				$redirect_to = \remove_query_arg( array( 'follower', 'followers' ), $redirect_to );
+				$redirect_to = \remove_query_arg( array( 'follower', 'followers', 'confirm' ), $redirect_to );
 
 				// Handle single follower block.
 				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {

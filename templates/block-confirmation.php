@@ -58,7 +58,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 			<p>
 				<label>
 					<input type="checkbox" name="site_wide" value="1" />
-					<?php esc_html_e( 'Also block this account site-wide (affects all users and the blog actor)', 'activitypub' ); ?>
+					<?php esc_html_e( 'Also block this account site-wide (affects all users and the blog actor).', 'activitypub' ); ?>
 				</label>
 			</p>
 		<?php endif; ?>
