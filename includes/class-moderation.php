@@ -119,7 +119,10 @@ class Moderation {
 					 */
 					\do_action( 'activitypub_add_user_block', $value, $type, $user_id );
 
-					return (bool) \add_post_meta( $actor_post->ID, self::BLOCKED_ACTORS_META_KEY, (string) $user_id );
+					$result = (bool) \add_post_meta( $actor_post->ID, self::BLOCKED_ACTORS_META_KEY, (string) $user_id );
+					\clean_post_cache( $actor_post->ID );
+
+					return $result;
 				}
 				break;
 
@@ -178,7 +181,10 @@ class Moderation {
 				 */
 				\do_action( 'activitypub_remove_user_block', $value, $type, $user_id );
 
-				return \delete_post_meta( $post_id, self::BLOCKED_ACTORS_META_KEY, $user_id );
+				$result = \delete_post_meta( $post_id, self::BLOCKED_ACTORS_META_KEY, $user_id );
+				\clean_post_cache( $post_id );
+
+				return $result;
 
 			case 'domain':
 			case 'keyword':
@@ -212,7 +218,7 @@ class Moderation {
 	 */
 	public static function get_user_blocks( $user_id ) {
 		return array(
-			'actors'   => self::get_blocked_actors( $user_id ),
+			'actors'   => \wp_list_pluck( self::get_blocked_actors( $user_id ), 'guid' ),
 			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS['domain'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS['keyword'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		);
@@ -296,7 +302,7 @@ class Moderation {
 	 */
 	public static function get_site_blocks() {
 		return array(
-			'actors'   => self::get_blocked_actors( Actors::BLOG_USER_ID ),
+			'actors'   => \wp_list_pluck( self::get_blocked_actors( Actors::BLOG_USER_ID ), 'guid' ),
 			'domains'  => \get_option( self::OPTION_KEYS['domain'], array() ),
 			'keywords' => \get_option( self::OPTION_KEYS['keyword'], array() ),
 		);
