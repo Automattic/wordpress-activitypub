@@ -104,7 +104,7 @@ The coverage configuration is already set up in `phpunit.xml.dist` to analyze th
 
 ```bash
 # Start the environment with Xdebug enabled.
-npm run env -- start --xdebug=coverage
+npm run env-start -- --xdebug=coverage
 ```
 ```bash
 # Run tests with code coverage.
