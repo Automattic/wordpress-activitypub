@@ -10,6 +10,7 @@ namespace Activitypub\Scheduler;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Outbox;
 use Activitypub\Tombstone;
 
 use function Activitypub\add_to_outbox;
@@ -184,7 +185,7 @@ class Actor {
 		if ( \is_wp_error( $actor ) ) {
 			return;
 		}
-		
+
 		Tombstone::bury( $actor->get_id() );
 		Tombstone::bury( $actor->get_url() );
 
@@ -199,11 +200,13 @@ class Actor {
 	/**
 	 * Remove outbox from post types to delete with user.
 	 *
+	 * @deprecated unreleased
+	 *
 	 * @param array $post_types The post types to delete with user.
 	 *
 	 * @return array The post types to delete with user without outbox.
 	 */
 	public static function post_types_to_delete_with_user( $post_types ) {
-		return \array_diff( $post_types, array( 'ap_outbox' ) );
+		return \array_diff( $post_types, array( Outbox::POST_TYPE ) );
 	}
 }
