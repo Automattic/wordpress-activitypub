@@ -27,24 +27,24 @@ class Tombstone {
 	 *
 	 * @return bool True if the various data is a tombstone.
 	 */
-	public static function check( $various ) {
+	public static function is_gone( $various ) {
 		if ( \is_wp_error( $various ) ) {
-			return self::check_wp_error( $various );
+			return self::is_wp_error( $various );
 		}
 
 		if ( \is_string( $various ) ) {
 			if ( is_same_domain( $various ) ) {
-				return self::check_local_url( $various );
+				return self::is_local_url_gone( $various );
 			}
-			return self::check_remote_url( $various );
+			return self::is_remote_url_gone( $various );
 		}
 
 		if ( \is_array( $various ) ) {
-			return self::check_array( $various );
+			return self::is_array_gone( $various );
 		}
 
 		if ( \is_object( $various ) ) {
-			return self::check_object( $various );
+			return self::is_object_gone( $various );
 		}
 
 		return false;
@@ -57,7 +57,7 @@ class Tombstone {
 	 *
 	 * @return bool True if the URL is a tombstone.
 	 */
-	public static function check_remote_url( $url ) {
+	public static function is_remote_url_gone( $url ) {
 		/**
 		 * Fires before checking if the URL is a tombstone.
 		 *
@@ -75,7 +75,7 @@ class Tombstone {
 		$data = \wp_remote_retrieve_body( $response );
 		$data = \json_decode( $data, true );
 
-		return self::check_array( $data );
+		return self::is_array_gone( $data );
 	}
 
 	/**
@@ -85,7 +85,7 @@ class Tombstone {
 	 *
 	 * @return bool True if the URL is a tombstone.
 	 */
-	public static function check_local_url( $url ) {
+	public static function is_local_url_gone( $url ) {
 		$urls = get_option( 'activitypub_tombstone_urls', array() );
 
 		return in_array( normalize_url( $url ), $urls, true );
@@ -94,16 +94,21 @@ class Tombstone {
 	/**
 	 * Check if the response is a WP_Error.
 	 *
-	 * @param WP_Error $wp_error The response to check.
+	 * @param \WP_Error $wp_error The response to check.
 	 *
 	 * @return bool True if the response is a WP_Error, false otherwise.
 	 */
-	public static function check_wp_error( $wp_error ) {
+	public static function is_wp_error( $wp_error ) {
 		if ( ! \is_wp_error( $wp_error ) ) {
 			return false;
 		}
 
 		if ( in_array( (int) $wp_error->get_error_code(), self::$codes, true ) ) {
+			return true;
+		}
+
+		$data = $wp_error->get_error_data();
+		if ( isset( $data['status'] ) && in_array( (int) $data['status'], self::$codes, true ) ) {
 			return true;
 		}
 
@@ -117,7 +122,7 @@ class Tombstone {
 	 *
 	 * @return bool True if the array represents a tombstone, false otherwise.
 	 */
-	public static function check_array( $data ) {
+	public static function is_array_gone( $data ) {
 		if ( ! \is_array( $data ) ) {
 			return false;
 		}
@@ -136,7 +141,7 @@ class Tombstone {
 	 *
 	 * @return bool True if the object represents a tombstone, false otherwise.
 	 */
-	public static function check_object( $data ) {
+	public static function is_object_gone( $data ) {
 		if ( ! \is_object( $data ) ) {
 			return false;
 		}

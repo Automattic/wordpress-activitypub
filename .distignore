@@ -3,7 +3,6 @@
 .distignore
 .DS_Store
 .editorconfig
-.extract-wp-hooks.json
 .git
 .github
 .gitignore

@@ -12,7 +12,7 @@ $object->set_type( 'Tombstone' );
 /**
  * Fires before an ActivityPub object is generated and sent to the client.
  *
- * @param object $object The ActivityPub object.
+ * @param Activitypub\Activity\Base_Object $object The ActivityPub object.
  */
 \do_action( 'activitypub_json_pre', $object );
 
@@ -22,6 +22,6 @@ echo $object->to_json(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputN
 /**
  * Fires after an ActivityPub object is generated and sent to the client.
  *
- * @param object $object The ActivityPub object.
+ * @param Activitypub\Activity\Base_Object $object The ActivityPub object.
  */
 \do_action( 'activitypub_json_post', $object );

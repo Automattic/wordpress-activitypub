@@ -19,19 +19,19 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
-	 * @covers ::check_remote_url
+	 * @covers ::is_remote_url_gone
 	 *
-	 * @dataProvider data_check_remote_url
+	 * @dataProvider data_is_remote_url_gone
 	 *
 	 * @param array $request The request array.
 	 * @param bool  $result  The expected result.
 	 */
-	public function test_check_remote_url( $request, $result ) {
+	public function test_is_remote_url_gone( $request, $result ) {
 		$fake_request = function () use ( $request ) {
 			return $request;
 		};
 		add_filter( 'pre_http_request', $fake_request, 10, 3 );
-		$response = Tombstone::check_remote_url( 'https://fake.test/object/123' );
+		$response = Tombstone::is_remote_url_gone( 'https://fake.test/object/123' );
 		$this->assertEquals( $result, $response );
 		remove_filter( 'pre_http_request', $fake_request, 10 );
 	}
@@ -41,7 +41,7 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	 *
 	 * @return array
 	 */
-	public function data_check_remote_url() {
+	public function data_is_remote_url_gone() {
 		return array(
 			array( array( 'response' => array( 'code' => 404 ) ), true ),
 			array( array( 'response' => array( 'code' => 410 ) ), true ),
@@ -86,59 +86,68 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
-	 * @covers ::check_wp_error
+	 * @covers ::is_wp_error
 	 */
-	public function test_check_wp_error() {
-		$response = Tombstone::check_wp_error( new \WP_Error( 404 ) );
+	public function test_is_wp_error() {
+		$response = Tombstone::is_wp_error( new \WP_Error( 404 ) );
 		$this->assertTrue( $response );
 
-		$response = Tombstone::check_wp_error( new \WP_Error( 410 ) );
+		$response = Tombstone::is_wp_error( new \WP_Error( 410 ) );
 		$this->assertTrue( $response );
 
-		$response = Tombstone::check_wp_error( new \WP_Error( 200 ) );
+		$response = Tombstone::is_wp_error( new \WP_Error( 200 ) );
+		$this->assertFalse( $response );
+
+		$response = Tombstone::is_wp_error( new \WP_Error( 'foo', '', array( 'status' => 404 ) ) );
+		$this->assertTrue( $response );
+
+		$response = Tombstone::is_wp_error( new \WP_Error( 'bar', '', array( 'status' => 410 ) ) );
+		$this->assertTrue( $response );
+
+		$response = Tombstone::is_wp_error( new \WP_Error( 'baz', '', array( 'status' => 200 ) ) );
 		$this->assertFalse( $response );
 	}
 
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
-	 * @covers ::check_array
+	 * @covers ::is_array_gone
 	 */
-	public function test_check_array() {
-		$response = Tombstone::check_array( array( 'type' => 'Tombstone' ) );
+	public function test_is_array_gone() {
+		$response = Tombstone::is_array_gone( array( 'type' => 'Tombstone' ) );
 		$this->assertTrue( $response );
 
-		$response = Tombstone::check_array( array( 'type' => 'Note' ) );
+		$response = Tombstone::is_array_gone( array( 'type' => 'Note' ) );
 		$this->assertFalse( $response );
 	}
 
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
-	 * @covers ::check_object
+	 * @covers ::is_object_gone
 	 */
-	public function test_check_object() {
-		$response = Tombstone::check_object( (object) array( 'type' => 'Tombstone' ) );
+	public function test_is_object_gone() {
+		$response = Tombstone::is_object_gone( (object) array( 'type' => 'Tombstone' ) );
 		$this->assertTrue( $response );
 
-		$response = Tombstone::check_object( (object) array( 'type' => 'Note' ) );
+		$response = Tombstone::is_object_gone( (object) array( 'type' => 'Note' ) );
 		$this->assertFalse( $response );
 	}
 
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
-	 * @covers ::check_local_url
+	 * @covers ::is_local_url_gone
 	 */
-	public function test_check_local_url() {
+	public function test_is_local_url_gone() {
 		$url = 'https://fake.test/object/123';
 
-		$response = Tombstone::check_local_url( $url );
+		$response = Tombstone::is_local_url_gone( $url );
 		$this->assertFalse( $response );
 
 		Tombstone::bury( $url );
 
-		$response = Tombstone::check_local_url( $url );
+		$response = Tombstone::is_local_url_gone( $url );
 		$this->assertTrue( $response );
 
 		\delete_option( 'activitypub_tombstone_urls' );

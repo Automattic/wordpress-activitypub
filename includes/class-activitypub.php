@@ -117,7 +117,7 @@ class Activitypub {
 			return $template;
 		}
 
-		if ( Tombstone::check_local_url( Query::get_instance()->get_request_url() ) ) {
+		if ( Tombstone::is_local_url_gone( Query::get_instance()->get_request_url() ) ) {
 			\status_header( 410 );
 			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
 		}
@@ -463,6 +463,7 @@ class Activitypub {
 					'singular_name' => _x( 'Follower', 'post_type single name', 'activitypub' ),
 				),
 				'public'           => false,
+				'show_in_rest'     => true,
 				'hierarchical'     => false,
 				'rewrite'          => false,
 				'query_var'        => false,
@@ -511,7 +512,7 @@ class Activitypub {
 		);
 
 		// Register Inbox Post-Type.
-		register_post_type(
+		\register_post_type(
 			Inbox::POST_TYPE,
 			array(
 				'labels'              => array(
@@ -630,7 +631,7 @@ class Activitypub {
 		);
 
 		// Register Outbox Post-Type.
-		register_post_type(
+		\register_post_type(
 			Outbox::POST_TYPE,
 			array(
 				'labels'              => array(
