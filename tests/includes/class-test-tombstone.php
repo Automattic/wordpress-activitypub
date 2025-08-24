@@ -97,6 +97,15 @@ class Test_Tombstone extends \WP_UnitTestCase {
 
 		$response = Tombstone::is_wp_error( new \WP_Error( 200 ) );
 		$this->assertFalse( $response );
+
+		$response = Tombstone::is_wp_error( new \WP_Error( 'foo', '', array( 'status' => 404 ) ) );
+		$this->assertTrue( $response );
+
+		$response = Tombstone::is_wp_error( new \WP_Error( 'bar', '', array( 'status' => 410 ) ) );
+		$this->assertTrue( $response );
+
+		$response = Tombstone::is_wp_error( new \WP_Error( 'baz', '', array( 'status' => 200 ) ) );
+		$this->assertFalse( $response );
 	}
 
 	/**

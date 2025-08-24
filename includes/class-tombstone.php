@@ -107,6 +107,11 @@ class Tombstone {
 			return true;
 		}
 
+		$data = $wp_error->get_error_data();
+		if ( isset( $data['status'] ) && in_array( (int) $data['status'], self::$codes, true ) ) {
+			return true;
+		}
+
 		return false;
 	}
 
