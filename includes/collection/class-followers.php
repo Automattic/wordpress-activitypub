@@ -43,7 +43,7 @@ class Followers {
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
-		if ( Tombstone::check( $meta ) ) {
+		if ( Tombstone::is_gone( $meta ) ) {
 			return $meta;
 		}
 
