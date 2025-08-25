@@ -200,7 +200,8 @@ class Actor {
 	/**
 	 * Remove outbox from post types to delete with user.
 	 *
-	 * @deprecated unreleased
+	 * Outbox items should not be deleted with the user, because we
+	 * need to federate the `Delete` Activities.
 	 *
 	 * @param array $post_types The post types to delete with user.
 	 *
