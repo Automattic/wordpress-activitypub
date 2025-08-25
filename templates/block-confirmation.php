@@ -50,7 +50,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 	<form method="post" action="<?php echo esc_url( $base_url ); ?>">
 		<?php wp_nonce_field( 'block-follower_' . $actor_id ); ?>
 
-		<p><?php esc_html_e( 'You can unblock this account later in the ActivityPub moderation settings.', 'activitypub' ); ?></p>
+		<p><?php esc_html_e( 'You can unblock this account later from your Blocked Actors list.', 'activitypub' ); ?></p>
 
 		<?php if ( current_user_can( 'manage_options' ) ) : ?>
 			<p>

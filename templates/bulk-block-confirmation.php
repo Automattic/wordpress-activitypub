@@ -67,7 +67,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 	<form method="post" action="<?php echo esc_url( $base_url ); ?>">
 		<?php wp_nonce_field( 'bulk-' . $args['plural_args'] ); ?>
 
-		<p><?php esc_html_e( 'You can unblock these accounts later in the ActivityPub moderation settings.', 'activitypub' ); ?></p>
+		<p><?php esc_html_e( 'You can unblock these accounts later from your Blocked Actors list.', 'activitypub' ); ?></p>
 
 		<?php if ( current_user_can( 'manage_options' ) ) : ?>
 			<p>
