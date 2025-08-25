@@ -52,7 +52,7 @@ class Http {
 				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
 			'body'                => $body,
-			'key_id'              => Actors::get_by_id( $user_id )->get_id() . '#main-key',
+			'key_id'              => \json_decode( $body )->actor . '#main-key',
 			'private_key'         => Actors::get_private_key( $user_id ),
 		);
 
