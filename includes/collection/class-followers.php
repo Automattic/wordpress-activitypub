@@ -314,7 +314,7 @@ class Followers {
 	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
 		$activity = \json_decode( $json, true );
 		// Only if this is an Update or Delete. Create handles its own "Announce" in dual user mode.
-		if ( \in_array( $activity['type'] ?? null, array( 'Update', 'Delete' ), true ) ) {
+		if ( 'Delete' === ( $activity['type'] ?? null ) ) {
 			$inboxes = Actors::get_inboxes();
 		} else {
 			$inboxes = self::get_inboxes( $actor_id );
