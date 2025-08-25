@@ -223,7 +223,7 @@ class Followers extends \WP_List_Table {
 
 			$this->items[] = array(
 				'id'         => $follower->ID,
-				'icon'       => $actor->get_icon()['url'] ?? '',
+				'icon'       => object_to_uri( $actor->get_icon() ?? '' ),
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => $url,
