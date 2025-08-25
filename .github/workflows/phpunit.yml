@@ -51,3 +51,133 @@ jobs:
         env:
           PHP_VERSION: ${{ matrix.php-versions }}
           WP_ENVIRONMENT_TYPE: production
+
+  coverage:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mariadb:10.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=10s --health-retries=10
+    steps:
+      - name: Install svn
+        run: |
+          sudo apt-get update
+          sudo apt-get install subversion
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup PHP with Xdebug
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: xdebug
+          tools: composer, phpunit-polyfills, cs2pr
+          extensions: mysql
+
+      - name: Install Composer dependencies for PHP
+        uses: ramsey/composer-install@v3
+
+      - name: Setup Test Environment
+        run: bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 latest
+
+      - name: Unit Testing with Coverage
+        run: ./vendor/bin/phpunit --coverage-text --coverage-clover coverage.xml --log-junit junit.xml 2>&1 | tee coverage-output.log
+        env:
+          WP_ENVIRONMENT_TYPE: production
+
+      - name: Generate Checkstyle Report for Coverage Warnings
+        if: always()
+        run: |
+          echo "Generating checkstyle report for coverage warnings..."
+
+          # Create checkstyle XML header
+          cat > coverage-warnings.xml << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <checkstyle version="4.3">
+          EOF
+
+          # Check for PHPUnit warnings and process them
+          if grep -q "WARNINGS!\|There was.*warning" coverage-output.log; then
+            echo "Processing coverage warnings for checkstyle report..."
+            
+            # Show warnings section for debugging
+            echo "--- Warnings Found ---"
+            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | head -10
+            echo "--- End Warnings ---"
+            
+            # Extract warnings to temporary file to avoid subshell issues
+            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log > temp-warnings.txt
+            
+            # Process each line
+            while IFS= read -r line; do
+              echo "Processing line: $line"
+              # Look for @covers warnings
+              if [[ "$line" =~ \"@covers.*\"\ is\ invalid ]]; then
+                echo "Found @covers warning line: $line"
+                # Extract the @covers target - everything between quotes
+                if [[ "$line" =~ \"@covers\ ([^\"]+)\" ]]; then
+                  COVERS_TARGET="${BASH_REMATCH[1]}"
+                  echo "Processing @covers warning for: $COVERS_TARGET"
+                  
+                  # Find test file and line number
+                  echo "Searching for @covers annotation with target: $COVERS_TARGET"
+                  # Extract just the method name from the full class::method
+                  METHOD_NAME=$(echo "$COVERS_TARGET" | sed 's/.*:://')
+                  echo "Extracted method name: $METHOD_NAME"
+                  if TEST_FILE=$(find tests/ -name "*.php" -type f -exec grep -l "@covers.*$METHOD_NAME" {} \; | head -1); then
+                    echo "Found test file: $TEST_FILE"
+                    if LINE_NUM=$(grep -n "@covers.*$METHOD_NAME" "$TEST_FILE" | head -1 | cut -d: -f1); then
+                      echo "Found line number: $LINE_NUM"
+                      # Escape XML characters and add checkstyle entry
+                      MESSAGE=$(echo "Invalid @covers annotation: $COVERS_TARGET" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
+                      cat >> coverage-warnings.xml << EOF
+          <file name="$TEST_FILE">
+            <error line="$LINE_NUM" column="1" severity="warning" message="$MESSAGE" source="phpunit.coverage"/>
+          </file>
+          EOF
+                    fi
+                  fi
+                fi
+              # Look for deprecation warnings
+              elif [[ "$line" =~ (deprecated|will\ no\ longer\ be\ possible) ]]; then
+                echo "::warning::PHPUnit deprecation warning: ${line}"
+              fi
+            done < temp-warnings.txt
+            
+            rm -f temp-warnings.txt
+            WARNINGS_FOUND=true
+          else
+            echo "No coverage warnings found"
+            WARNINGS_FOUND=false
+          fi
+
+          # Close the checkstyle XML
+          echo '</checkstyle>' >> coverage-warnings.xml
+
+          # Debug: show the generated checkstyle content
+          echo "Generated checkstyle report:"
+          cat coverage-warnings.xml
+
+          # Exit with error if warnings were found
+          if [ "$WARNINGS_FOUND" = true ]; then
+            echo "::error::Coverage analysis produced warnings"
+            exit 1
+          fi
+
+      - name: Annotate Coverage Warnings in PR
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          # Check if we have any errors in the checkstyle report
+          if grep -q '<error' coverage-warnings.xml; then
+            echo "Found coverage warnings to annotate"
+            echo "Converting checkstyle report to PR annotations..."
+            cs2pr --graceful-warnings coverage-warnings.xml
+          else
+            echo "No coverage warnings found in checkstyle report"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
