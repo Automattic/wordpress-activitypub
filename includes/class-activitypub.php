@@ -9,10 +9,10 @@ namespace Activitypub;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Followers;
-use Activitypub\Collection\Extra_Fields;
 
 /**
  * ActivityPub Class.
@@ -24,6 +24,12 @@ class Activitypub {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
+		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
+		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
+		\add_action( 'init', array( self::class, 'register_post_types' ), 11 );
+		\add_action( 'init', array( self::class, 'register_oembed_providers' ), 11 );
+
 		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
@@ -31,34 +37,21 @@ class Activitypub {
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
-		// Add support for ActivityPub to custom post types.
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
-
-		foreach ( $post_types as $post_type ) {
-			\add_post_type_support( $post_type, 'activitypub' );
-		}
-
 		\add_action( 'wp_trash_post', array( self::class, 'trash_post' ), 1 );
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
-		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
-		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
-
 		\add_action( 'user_register', array( self::class, 'user_register' ) );
-
-		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
 		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'default_post_metadata', array( self::class, 'default_post_metadata' ), 10, 3 );
 
-		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
+		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
-		// Register several post_types.
-		self::register_post_types();
-
-		self::register_oembed_providers();
-		Embed::init();
+		// Add support for ActivityPub to custom post types.
+		foreach ( \get_option( 'activitypub_support_post_types', array( 'post' ) ) as $post_type ) {
+			\add_post_type_support( $post_type, 'activitypub' );
+		}
 	}
 
 	/**
@@ -449,7 +442,7 @@ class Activitypub {
 	/**
 	 * Register Custom Post Types.
 	 */
-	private static function register_post_types() {
+	public static function register_post_types() {
 		\register_post_type(
 			Actors::POST_TYPE,
 			array(
