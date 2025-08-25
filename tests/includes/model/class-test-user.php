@@ -146,10 +146,10 @@ class Test_User extends \WP_UnitTestCase {
 		$user    = User::from_wp_user( $user_id );
 
 		// Preferred username should be sanitized.
-		$this->assertSame( 'testuser123-gmail-com', $user->get_preferred_username() );
+		$this->assertSame( 'testuser123gmail-com', $user->get_preferred_username() );
 
 		// Webfinger should not have double @.
-		$expected_webfinger = 'testuser123-gmail-com@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+		$expected_webfinger = 'testuser123gmail-com@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
 		$this->assertSame( $expected_webfinger, $user->get_webfinger() );
 
 		// Test another email format.
@@ -161,7 +161,7 @@ class Test_User extends \WP_UnitTestCase {
 		);
 		$user2    = User::from_wp_user( $user_id2 );
 
-		$this->assertSame( 'admin-googlemail-com', $user2->get_preferred_username() );
+		$this->assertSame( 'admingooglemail-com', $user2->get_preferred_username() );
 
 		// Test normal username (no email) remains unchanged.
 		$user_id3 = self::factory()->user->create(

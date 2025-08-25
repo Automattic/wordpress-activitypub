@@ -173,7 +173,7 @@ class User extends Actor {
 
 		// Handle cases where login is an email address (e.g., from Site Kit Google login).
 		if ( \filter_var( $login, FILTER_VALIDATE_EMAIL ) ) {
-			$login = \str_replace( array( '@', '.' ), '-', $login );
+			$login = \get_the_author_meta( 'user_nicename', $this->_id );
 		}
 
 		return $login;
