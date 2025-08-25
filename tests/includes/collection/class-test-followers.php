@@ -635,7 +635,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 
 		// username and jon have sharedInbox endpoints.
-		$this->assertCount( 2, $inboxes, 'Should retrieve exactly 3 inboxes.' );
+		$this->assertCount( 2, $inboxes, 'Should retrieve exactly 2 inboxes.' );
 		$this->assertContains( self::$actors['username@example.org']['endpoints']['sharedInbox'], $inboxes, 'Should contain first inbox.' );
 		$this->assertContains( self::$actors['doe@example.org']['inbox'], $inboxes, 'Should contain second inbox.' );
 
@@ -653,7 +653,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		Followers::add_follower( Actors::BLOG_USER_ID, self::$actors['sally@example.org']['id'] );
 
 		$inboxes = Followers::get_inboxes_for_activity(
-			'{"type":"Update"}',
+			'{"type":"Delete"}',
 			$actor_id,
 			50,
 			0
