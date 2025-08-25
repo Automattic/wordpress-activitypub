@@ -215,7 +215,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test post meta registration exists.
 	 */
 	public function test_post_meta_registration() {
-		Activitypub::init();
+		Activitypub::register_post_types();
 
 		// Verify that post meta is registered for inbox post type.
 		$registered_meta = \get_registered_meta_keys( 'post', Inbox::POST_TYPE );

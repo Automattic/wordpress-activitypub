@@ -33,6 +33,10 @@ require_once __DIR__ . '/integration/load.php';
 
 Autoloader::register_path( __NAMESPACE__, __DIR__ . '/includes' );
 
+\register_activation_hook( __FILE__, array( Activitypub::class, 'activate' ) );
+\register_deactivation_hook( __FILE__, array( Activitypub::class, 'deactivate' ) );
+\register_uninstall_hook( __FILE__, array( Activitypub::class, 'uninstall' ) );
+
 /**
  * Initialize REST routes.
  */
@@ -68,6 +72,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
@@ -127,14 +132,6 @@ function plugin_admin_init() {
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_admin_init' );
 
-\register_activation_hook(
-	__FILE__,
-	array(
-		__NAMESPACE__ . '\Activitypub',
-		'activate',
-	)
-);
-
 /**
  * Redirect to the welcome page after plugin activation.
  *
@@ -147,22 +144,6 @@ function activation_redirect( $plugin ) {
 	}
 }
 \add_action( 'activated_plugin', __NAMESPACE__ . '\activation_redirect' );
-
-\register_deactivation_hook(
-	__FILE__,
-	array(
-		__NAMESPACE__ . '\Activitypub',
-		'deactivate',
-	)
-);
-
-\register_uninstall_hook(
-	__FILE__,
-	array(
-		__NAMESPACE__ . '\Activitypub',
-		'uninstall',
-	)
-);
 
 // Check for CLI env, to add the CLI commands.Add commentMore actions.
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
