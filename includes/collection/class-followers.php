@@ -326,8 +326,11 @@ class Followers {
 	/**
 	 * Maybe add Inboxes of the Blog User.
 	 *
+	 * @deprecated unreleased
+	 *
 	 * @param string $json     The ActivityPub Activity JSON.
 	 * @param int    $actor_id The WordPress Actor ID.
+	 *
 	 * @return bool True if the Inboxes of the Blog User should be added, false otherwise.
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $json, $actor_id ) {
