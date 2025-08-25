@@ -105,4 +105,60 @@ class Test_Following extends \WP_UnitTestCase {
 		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		wp_delete_post( $actor_post_id, true );
 	}
+
+	/**
+	 * Test prepare_items with actor having icon array of URLs.
+	 *
+	 * This test verifies that when an icon field contains an array of URLs,
+	 * the object_to_uri() function correctly extracts the first URL from the array.
+	 *
+	 * @covers ::prepare_items
+	 */
+	public function test_prepare_items_with_icon_array_of_urls() {
+		// Mock remote metadata for the actor with icon as direct array of URLs.
+		$actor_url  = 'https://example.com/users/arrayuser';
+		$actor_data = array(
+			'name'              => 'Array User',
+			'icon'              => array(
+				'url'       => array(
+					'https://example.com/storage/profile.webp',
+				),
+				'type'      => 'Image',
+				'mediaType' => 'image/webp',
+			),
+			'url'               => $actor_url,
+			'id'                => 'https://example.com/users/arrayuser',
+			'preferredUsername' => 'arrayuser',
+			'inbox'             => 'https://example.com/users/arrayuser/inbox',
+		);
+
+		// Mock the remote metadata call using the correct filter.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function ( $value, $actor ) use ( $actor_url, $actor_data ) {
+				if ( $actor === $actor_url ) {
+					return $actor_data;
+				}
+				return $value;
+			},
+			10,
+			2
+		);
+
+		// Add the actor first, then follow them.
+		$actor_post_id = Actors::upsert( $actor_data );
+
+		// Follow the actor using the proper method.
+		Following_Collection::follow( $actor_post_id, get_current_user_id() );
+
+		// Use the real prepare_items() method.
+		$this->following_table->prepare_items();
+
+		// Verify that the icon array was processed correctly: from array to first URL.
+		$this->assertEquals( 'https://example.com/storage/profile.webp', $this->following_table->items[0]['icon'] );
+
+		// Clean up.
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		wp_delete_post( $actor_post_id, true );
+	}
 }
