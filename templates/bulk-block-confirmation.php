@@ -10,19 +10,17 @@ use Activitypub\Collection\Actors;
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
 
-$followers   = $args['followers'];
-$user_id     = $args['user_id'];
-$plural_args = $args['plural_args'];
+$followers = $args['followers'];
 
 // Validate followers.
 if ( empty( $followers ) ) {
-	\wp_die( \esc_html__( 'No accounts selected.', 'activitypub' ), '', array( 'back_link' => true ) );
+	wp_die( esc_html__( 'No accounts selected.', 'activitypub' ), '', array( 'back_link' => true ) );
 }
 
 $follower_count = count( $followers );
 
 // Prepare form URL.
-$base_url = \add_query_arg(
+$base_url = add_query_arg(
 	array(
 		'action'    => 'block',
 		'followers' => $followers,
@@ -34,16 +32,13 @@ $base_url = \add_query_arg(
 $follower_data = array();
 foreach ( $followers as $follower ) {
 	$actor = Actors::get_actor( $follower );
-	if ( \is_wp_error( $actor ) ) {
+	if ( is_wp_error( $actor ) ) {
 		continue;
 	}
 	$follower_data[] = array(
 		'username' => $actor->get_preferred_username(),
 	);
 }
-
-$can_block_site = \user_can( $user_id, 'manage_options' );
-$nonce_action   = 'bulk-' . $plural_args;
 
 require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
@@ -70,9 +65,11 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 	</ul>
 
 	<form method="post" action="<?php echo esc_url( $base_url ); ?>">
-		<?php wp_nonce_field( $nonce_action ); ?>
+		<?php wp_nonce_field( 'bulk-' . $args['plural_args'] ); ?>
 
-		<?php if ( $can_block_site ) : ?>
+		<p><?php esc_html_e( 'You can unblock these accounts later in the ActivityPub moderation settings.', 'activitypub' ); ?></p>
+
+		<?php if ( current_user_can( 'manage_options' ) ) : ?>
 			<p>
 				<label>
 					<input type="checkbox" name="site_wide" value="1" />
@@ -80,8 +77,6 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 				</label>
 			</p>
 		<?php endif; ?>
-
-		<p><?php esc_html_e( 'You can unblock these accounts later in the ActivityPub moderation settings.', 'activitypub' ); ?></p>
 
 		<p class="submit">
 			<?php submit_button( __( 'Confirm Block', 'activitypub' ), 'primary', 'submit', false ); ?>

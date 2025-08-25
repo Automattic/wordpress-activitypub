@@ -11,25 +11,21 @@ use Activitypub\Collection\Actors;
 $args = wp_parse_args( $args ?? array() );
 
 $actor_id = $args['actor_id'];
-$user_id  = $args['user_id'];
 
 // Get actor and validate.
 $actor = Actors::get_actor( $actor_id );
-if ( \is_wp_error( $actor ) ) {
-	\wp_die( \esc_html__( 'Invalid account.', 'activitypub' ), '', array( 'back_link' => true ) );
+if ( is_wp_error( $actor ) ) {
+	wp_die( \esc_html__( 'Invalid account.', 'activitypub' ), '', array( 'back_link' => true ) );
 }
 
 // Prepare form URL.
-$base_url = \add_query_arg(
+$base_url = add_query_arg(
 	array(
 		'action'   => 'block',
 		'follower' => $actor_id,
 		'confirm'  => 'true',
 	)
 );
-
-$can_block_site = \user_can( $user_id, 'manage_options' );
-$nonce_action   = 'block-follower_' . $actor_id;
 
 require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
@@ -52,9 +48,11 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 	</ul>
 
 	<form method="post" action="<?php echo esc_url( $base_url ); ?>">
-		<?php wp_nonce_field( $nonce_action ); ?>
+		<?php wp_nonce_field( 'block-follower_' . $actor_id ); ?>
 
-		<?php if ( $can_block_site ) : ?>
+		<p><?php esc_html_e( 'You can unblock this account later in the ActivityPub moderation settings.', 'activitypub' ); ?></p>
+
+		<?php if ( current_user_can( 'manage_options' ) ) : ?>
 			<p>
 				<label>
 					<input type="checkbox" name="site_wide" value="1" />
@@ -62,8 +60,6 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 				</label>
 			</p>
 		<?php endif; ?>
-
-		<p><?php esc_html_e( 'You can unblock this account later in the ActivityPub moderation settings.', 'activitypub' ); ?></p>
 
 		<p class="submit">
 			<?php submit_button( __( 'Confirm Block', 'activitypub' ), 'primary', 'submit', false ); ?>
