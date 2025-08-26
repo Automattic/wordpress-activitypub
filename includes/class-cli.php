@@ -215,7 +215,7 @@ class Cli extends \WP_CLI_Command {
 	 */
 	private function display_completion_message( $processed ) {
 		if ( 0 === $processed ) {
-			return; // Error already displayed in process_user_deletions
+			return; // Error already displayed in process_user_deletions.
 		}
 
 		\WP_CLI::success( "Successfully scheduled {$processed} user(s) for Fediverse deletion." );
@@ -277,7 +277,7 @@ class Cli extends \WP_CLI_Command {
 			)
 		);
 
-		// Get count of pending Delete activities
+		// Get count of pending Delete activities.
 		$pending_count = count( $pending_deletes );
 
 		// If no more pending Delete activities, self-destruct is complete.
