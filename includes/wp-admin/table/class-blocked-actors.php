@@ -126,7 +126,7 @@ class Blocked_Actors extends \WP_List_Table {
 				$profile  = Actors::normalize_identifier( $original );
 				if ( ! $profile ) {
 					/* translators: %s: Account profile that could not be blocked */
-					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
+					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $original ) ) );
 					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
 					break;
 				}
