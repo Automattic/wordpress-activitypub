@@ -52,7 +52,7 @@ $blocked_actors_list_table->prepare_items();
 							<input type="hidden" name="action" value="block" />
 							<input name="activitypub-profile" id="activitypub-profile" type="text" value="<?php echo esc_attr( $_resource ); ?>" size="40" aria-required="true" class="<?php echo $_resource ? 'highlight' : ''; ?>" />
 						</div>
-						<?php submit_button( esc_attr__( 'Block Actor', 'activitypub' ) ); ?>
+						<?php submit_button( esc_attr__( 'Block', 'activitypub' ) ); ?>
 					</form>
 
 					<p><?php esc_html_e( 'Try these formats:', 'activitypub' ); ?></p>
