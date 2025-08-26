@@ -50,6 +50,13 @@ class Actors {
 	const POST_TYPE = 'ap_actor';
 
 	/**
+	 * Cache key for the followers inbox.
+	 *
+	 * @var string
+	 */
+	const CACHE_KEY_INBOXES = 'actor_inboxes';
+
+	/**
 	 * Get the Actor by ID.
 	 *
 	 * @param int $user_id The user ID.
@@ -419,6 +426,32 @@ class Actors {
 		}
 
 		return $return;
+	}
+
+	/**
+	 * Returns all Inboxes for all known remote Actors.
+	 *
+	 * @return array The list of Inboxes.
+	 */
+	public static function get_inboxes() {
+		$inboxes = \wp_cache_get( self::CACHE_KEY_INBOXES, 'activitypub' );
+
+		if ( $inboxes ) {
+			return $inboxes;
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$results = $wpdb->get_col(
+			"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
+			WHERE meta_key = '_activitypub_inbox'
+			AND meta_value IS NOT NULL"
+		);
+
+		$inboxes = \array_filter( $results );
+		\wp_cache_set( self::CACHE_KEY_INBOXES, $inboxes, 'activitypub' );
+
+		return $inboxes;
 	}
 
 	/**

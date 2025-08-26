@@ -110,6 +110,11 @@ class Activitypub {
 			return $template;
 		}
 
+		if ( Tombstone::exists_local( Query::get_instance()->get_request_url() ) ) {
+			\status_header( 410 );
+			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
+		}
+
 		$activitypub_template = false;
 		$activitypub_object   = Query::get_instance()->get_activitypub_object();
 

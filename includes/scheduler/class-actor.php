@@ -7,8 +7,11 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Outbox;
+use Activitypub\Tombstone;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_user_type_disabled;
@@ -51,6 +54,10 @@ class Actor {
 
 		\add_action( 'post_stuck', array( self::class, 'sticky_post_update' ) );
 		\add_action( 'post_unstuck', array( self::class, 'sticky_post_update' ) );
+
+		// User deletion handling.
+		\add_action( 'delete_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
+		\add_filter( 'post_types_to_delete_with_user', array( self::class, 'post_types_to_delete_with_user' ) );
 	}
 
 	/**
@@ -160,5 +167,47 @@ class Actor {
 		}
 
 		self::schedule_profile_update( $post->post_author );
+	}
+
+	/**
+	 * Schedule a Delete activity when a user is deleted.
+	 *
+	 * @param int $user_id The user ID being deleted.
+	 */
+	public static function schedule_user_delete( $user_id ) {
+		// Don't bother if the user can't publish ActivityPub content.
+		if ( ! \user_can( $user_id, 'activitypub' ) ) {
+			return;
+		}
+
+		// Get the actor before deletion to ensure we have the data.
+		$actor = Actors::get_by_id( $user_id );
+		if ( \is_wp_error( $actor ) ) {
+			return;
+		}
+
+		Tombstone::bury( $actor->get_id() );
+		Tombstone::bury( $actor->get_url() );
+
+		$activity = new Activity();
+		$activity->set_actor( $actor->get_id() );
+		$activity->set_object( $actor->get_id() );
+		$activity->set_type( 'Delete' );
+
+		add_to_outbox( $activity, null, $user_id );
+	}
+
+	/**
+	 * Remove outbox from post types to delete with user.
+	 *
+	 * Outbox items should not be deleted with the user, because we
+	 * need to federate the `Delete` Activities.
+	 *
+	 * @param array $post_types The post types to delete with user.
+	 *
+	 * @return array The post types to delete with user without outbox.
+	 */
+	public static function post_types_to_delete_with_user( $post_types ) {
+		return \array_diff( $post_types, array( Outbox::POST_TYPE ) );
 	}
 }
