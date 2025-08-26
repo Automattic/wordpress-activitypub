@@ -248,7 +248,7 @@ class Query {
 	 *
 	 * @return string|null The request URL.
 	 */
-	protected function get_request_url() {
+	public function get_request_url() {
 		if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
 			return null;
 		}

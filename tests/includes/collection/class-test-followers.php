@@ -479,6 +479,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertCount( 30, $inboxes );
 
 		wp_cache_delete( sprintf( Followers::CACHE_KEY_INBOXES, 1 ), 'activitypub' );
+		wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
 
 		for ( $j = 0; $j < 5; $j++ ) {
 			$k    = $j + 100;
@@ -589,6 +590,8 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * @covers ::maybe_add_inboxes_of_blog_user
 	 * @dataProvider data_maybe_add_inboxes_of_blog_user
 	 *
+	 * @expectedDeprecated Activitypub\Collection\Followers::maybe_add_inboxes_of_blog_user
+	 *
 	 * @param string  $actor_mode The actor mode to test with.
 	 * @param string  $json       The JSON to test with.
 	 * @param int     $actor_id   The actor ID to test with.
@@ -632,7 +635,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 
 		// username and jon have sharedInbox endpoints.
-		$this->assertCount( 2, $inboxes, 'Should retrieve exactly 3 inboxes.' );
+		$this->assertCount( 2, $inboxes, 'Should retrieve exactly 2 inboxes.' );
 		$this->assertContains( self::$actors['username@example.org']['endpoints']['sharedInbox'], $inboxes, 'Should contain first inbox.' );
 		$this->assertContains( self::$actors['doe@example.org']['inbox'], $inboxes, 'Should contain second inbox.' );
 
@@ -650,7 +653,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		Followers::add_follower( Actors::BLOG_USER_ID, self::$actors['sally@example.org']['id'] );
 
 		$inboxes = Followers::get_inboxes_for_activity(
-			'{"type":"Update"}',
+			'{"type":"Delete"}',
 			$actor_id,
 			50,
 			0

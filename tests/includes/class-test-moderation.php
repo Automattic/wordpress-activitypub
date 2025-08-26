@@ -306,6 +306,24 @@ class Test_Moderation extends \WP_UnitTestCase {
 		);
 		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
 
+		// Test keyword blocking.
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'actor'  => 'https://good.example.com/@user',
+				'object' => array(
+					'id'          => 'https://example.com/note/1',
+					'type'        => 'Note',
+					'content_map' => array(
+						'en' => 'Check out this product, buy now!',
+						'de' => 'Überprüfe dieses Produkt, kaufe jetzt!',
+					),
+				),
+			)
+		);
+		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
+
 		// Test non-blocked activity.
 		/* @var Activity $activity Activity. */
 		$activity = Activity::init_from_array(
