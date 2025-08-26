@@ -265,7 +265,6 @@ class Moderation {
 			}
 
 			$content_map = \array_filter( $content_map );
-			$content_map = \array_unique( $content_map );
 			$content     = \implode( ' ', $content_map );
 
 			foreach ( $blocked_keywords as $keyword ) {
