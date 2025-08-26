@@ -324,8 +324,18 @@ class Moderation {
 		$actor_id = object_to_uri( $activity->get_actor() );
 
 		// Check blocked actors.
-		if ( $actor_id && \in_array( $actor_id, $blocked_actors, true ) ) {
-			return true;
+		if ( $actor_id ) {
+			// If actor_id is not a URL, resolve it via webfinger.
+			if ( ! \str_starts_with( $actor_id, 'http' ) ) {
+				$resolved_url = Webfinger::resolve( $actor_id );
+				if ( ! \is_wp_error( $resolved_url ) ) {
+					$actor_id = $resolved_url;
+				}
+			}
+
+			if ( \in_array( $actor_id, $blocked_actors, true ) ) {
+				return true;
+			}
 		}
 
 		// Check blocked domains.
