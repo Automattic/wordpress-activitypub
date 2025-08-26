@@ -271,7 +271,6 @@ class Cli extends \WP_CLI_Command {
 					array(
 						'key'     => '_activitypub_activity_type',
 						'value'   => 'Delete',
-						'compare' => '=',
 					),
 				),
 			)
