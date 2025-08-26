@@ -1,4 +1,4 @@
-import { store, getContext } from '@wordpress/interactivity';
+import { store, getContext, getConfig } from '@wordpress/interactivity';
 import { createModalStore } from '../shared/modal';
 import './style.scss';
 
@@ -8,7 +8,7 @@ const { apiFetch } = window.wp;
 createModalStore( 'activitypub/remote-reply' );
 
 /**
- * @typedef {Object} state
+ * @typedef {Object} config
  * @property {String} namespace ActivityPub REST Namespace.
  * @property {Object} i18n Internationalization strings.
  * @property {String} i18n.copy "Copy" button text.
@@ -36,7 +36,7 @@ createModalStore( 'activitypub/remote-reply' );
  * @property {String} template The template for the remote reply URL.
  */
 
-const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
+const { actions, callbacks } = store( 'activitypub/remote-reply', {
 	state: {
 		/**
 		 * Get the remote profile URL.
@@ -69,16 +69,17 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 */
 		copyToClipboard() {
 			const context = getContext();
+			const { i18n } = getConfig();
 
 			// Use the Clipboard API to copy text.
 			navigator.clipboard.writeText( context.commentURL ).then(
 				() => {
 					// Update button text to show success.
-					context.copyButtonText = state.i18n.copied;
+					context.copyButtonText = i18n.copied;
 
 					// Reset button text after 1 second.
 					setTimeout( () => {
-						context.copyButtonText = state.i18n.copy;
+						context.copyButtonText = i18n.copy;
 					}, 1000 );
 				},
 				( error ) => {
@@ -122,7 +123,7 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 */
 		*submitRemoteProfile() {
 			const context = getContext();
-			const { namespace, i18n } = state;
+			const { namespace, i18n } = getConfig();
 			const profileURL = context.remoteProfile.trim();
 
 			// Validate input.

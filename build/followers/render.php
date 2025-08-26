@@ -69,8 +69,8 @@ $followers = array_map(
 	$follower_data['followers']
 );
 
-// Set up the Interactivity API state.
-wp_interactivity_state(
+// Set up the Interactivity API config.
+wp_interactivity_config(
 	'activitypub/followers',
 	array(
 		'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',

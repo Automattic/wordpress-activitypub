@@ -22,8 +22,8 @@ $selected_comment = $attributes['selectedComment'] ?? '';
 // Generate a unique ID for the block.
 $block_id = 'activitypub-remote-reply-block-' . wp_unique_id();
 
-// Set up the Interactivity API state.
-$state = wp_interactivity_state(
+// Set up the Interactivity API config.
+wp_interactivity_config(
 	'activitypub/remote-reply',
 	array(
 		'namespace' => ACTIVITYPUB_REST_NAMESPACE,
@@ -52,7 +52,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'blockId'           => $block_id,
 		'commentId'         => $comment_id,
 		'commentURL'        => $selected_comment,
-		'copyButtonText'    => $state['i18n']['copy'],
+		'copyButtonText'    => __( 'Copy', 'activitypub' ),
 		'errorMessage'      => '',
 		'hasRemoteUser'     => false,
 		'isError'           => false,
