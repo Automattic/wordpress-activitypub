@@ -250,8 +250,7 @@ class Cli extends \WP_CLI_Command {
 			\WP_CLI::line( \WP_CLI::colorize( '%C❌ Status: NOT STARTED%n' ) );
 			\WP_CLI::line( \WP_CLI::colorize( '%CThe self-destruct process has not been initiated.%n' ) );
 			\WP_CLI::line( '' );
-			\WP_CLI::line( \WP_CLI::colorize( '%C💡 To start the process, run:%n' ) );
-			\WP_CLI::line( \WP_CLI::colorize( '%C   wp activitypub self_destruct%n' ) );
+			\WP_CLI::line( \WP_CLI::colorize( '%CTo start the process, run:%n %Bwp activitypub self_destruct%n' ) );
 			\WP_CLI::line( '' );
 			return;
 		}
