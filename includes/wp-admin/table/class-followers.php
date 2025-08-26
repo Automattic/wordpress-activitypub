@@ -10,6 +10,7 @@ namespace Activitypub\WP_Admin\Table;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
 use Activitypub\Collection\Following;
+use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
@@ -118,6 +119,7 @@ class Followers extends \WP_List_Table {
 					}
 				}
 				break;
+
 			case 'follow':
 				$redirect_to = \remove_query_arg( array( 'follower', 'followers' ), $redirect_to );
 
@@ -133,6 +135,65 @@ class Followers extends \WP_List_Table {
 					}
 				}
 				break;
+
+			case 'block':
+				$redirect_to = \remove_query_arg( array( 'follower', 'followers', 'confirm' ), $redirect_to );
+
+				// Handle single follower block.
+				if ( isset( $_GET['follower'], $_GET['_wpnonce'] ) ) {
+					$follower = \absint( $_GET['follower'] );
+					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'block-follower_' . $follower ) ) {
+						// If confirm is not set, show confirmation screen.
+						if ( ! isset( $_GET['confirm'] ) || 'true' !== $_GET['confirm'] ) {
+							$args = array(
+								'actor_id' => $follower,
+								'user_id'  => $this->user_id,
+							);
+							\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/block-confirmation.php', false, $args );
+							exit;
+						}
+
+						$blocked = $this->block_followers( array( $follower ) );
+						if ( $blocked['success'] > 0 ) {
+							\add_settings_error( 'activitypub', 'account_blocked', \__( 'Account blocked.', 'activitypub' ), 'success' );
+						} else {
+							\add_settings_error( 'activitypub', 'block_error', \__( 'Invalid account.', 'activitypub' ) );
+						}
+					}
+				}
+
+				// Handle bulk block actions.
+				if ( isset( $_REQUEST['followers'], $_REQUEST['_wpnonce'] ) ) {
+					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
+
+					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+						// If confirm is not set, show confirmation screen.
+						if ( ! isset( $_GET['confirm'] ) || 'true' !== $_GET['confirm'] ) {
+							$followers = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ) );
+							$args      = array(
+								'followers'   => $followers,
+								'user_id'     => $this->user_id,
+								'plural_args' => $this->_args['plural'],
+							);
+							\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-block-confirmation.php', false, $args );
+							exit;
+						}
+
+						$followers = \array_map( 'absint', \wp_unslash( $_REQUEST['followers'] ) );
+						$blocked   = $this->block_followers( $followers );
+
+						if ( $blocked['success'] > 0 ) {
+							/* translators: %d: Number of followers blocked. */
+							$message = \_n( '%d account blocked.', '%d accounts blocked.', $blocked['success'], 'activitypub' );
+							$message = \sprintf( $message, \number_format_i18n( $blocked['success'] ) );
+							\add_settings_error( 'activitypub', 'accounts_blocked', $message, 'success' );
+						}
+					}
+				}
+				break;
+
 			default:
 				break;
 		}
@@ -276,6 +337,7 @@ class Followers extends \WP_List_Table {
 	public function get_bulk_actions() {
 		return array(
 			'delete' => \__( 'Delete', 'activitypub' ),
+			'block'  => \__( 'Block', 'activitypub' ),
 		);
 	}
 
@@ -396,6 +458,13 @@ class Followers extends \WP_List_Table {
 				\esc_attr( \sprintf( \__( 'Delete %s', 'activitypub' ), $item['username'] ) ),
 				\esc_html__( 'Delete', 'activitypub' )
 			),
+			'block'  => sprintf(
+				'<a href="%s" aria-label="%s" class="activitypub-block-follower">%s</a>',
+				$this->get_action_url( 'block', $item['id'] ),
+				/* translators: %s: username. */
+				\esc_attr( \sprintf( \__( 'Block %s', 'activitypub' ), $item['username'] ) ),
+				\esc_html__( 'Block', 'activitypub' )
+			),
 		);
 
 		if ( \boolval( \get_option( 'activitypub_following_ui', '0' ) ) ) {
@@ -411,6 +480,48 @@ class Followers extends \WP_List_Table {
 		}
 
 		return $this->row_actions( $actions );
+	}
+
+	/**
+	 * Block one or more followers.
+	 *
+	 * @param array $follower_ids Array of follower IDs to block.
+	 * @return array Array with counts of success and failure.
+	 */
+	private function block_followers( $follower_ids ) {
+		$success_count = 0;
+		$fail_count    = 0;
+
+		foreach ( $follower_ids as $follower ) {
+			$actor = Actors::get_actor( $follower );
+			if ( \is_wp_error( $actor ) ) {
+				++$fail_count;
+				continue;
+			}
+
+			$actor_id = $actor->get_id();
+
+			// Add user-specific block.
+			$user_block_success = Moderation::add_user_block( $this->user_id, 'actor', $actor_id );
+
+			// Add site-wide block only if user is admin and explicitly requested.
+			$site_block_success = true;
+			if ( \user_can( $this->user_id, 'manage_options' ) && isset( $_REQUEST['site_wide'] ) && '1' === $_REQUEST['site_wide'] ) {
+				$site_block_success = Moderation::add_site_block( 'actor', $actor_id );
+			}
+
+			// Check if blocking was successful.
+			if ( $user_block_success && $site_block_success ) {
+				++$success_count;
+			} else {
+				++$fail_count;
+			}
+		}
+
+		return array(
+			'success' => $success_count,
+			'failure' => $fail_count,
+		);
 	}
 
 	/**

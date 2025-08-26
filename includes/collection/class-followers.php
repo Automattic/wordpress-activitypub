@@ -457,4 +457,26 @@ class Followers {
 
 		return \in_array( (string) $user_id, $following, true );
 	}
+
+	/**
+	 * Remove blocked actors from follower lists.
+	 *
+	 * Called via activitypub_add_user_block hook.
+	 *
+	 * @param string $value   The blocked actor URI.
+	 * @param string $type    The block type (actor, domain, keyword).
+	 * @param int    $user_id The user ID.
+	 */
+	public static function remove_blocked_actors( $value, $type, $user_id ) {
+		if ( 'actor' !== $type ) {
+			return;
+		}
+
+		$actor_id = Actors::get_id_by_various( $value );
+		if ( \is_wp_error( $actor_id ) ) {
+			return;
+		}
+
+		self::remove( $actor_id, $user_id );
+	}
 }

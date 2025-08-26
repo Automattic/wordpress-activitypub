@@ -7,8 +7,6 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 
 /**
