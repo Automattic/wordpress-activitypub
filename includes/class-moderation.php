@@ -252,16 +252,16 @@ class Moderation {
 				$content_map[] = $object->get_preferred_username();
 			}
 
-			if ( is_array( $object->get_content_map() ) ) {
-				$content_map = array_merge( $content_map, array_values( $object->get_content_map() ) );
+			if ( \is_array( $object->get_content_map() ) ) {
+				$content_map = \array_merge( $content_map, \array_values( $object->get_content_map() ) );
 			}
 
-			if ( is_array( $object->get_summary_map() ) ) {
-				$content_map = array_merge( $content_map, array_values( $object->get_summary_map() ) );
+			if ( \is_array( $object->get_summary_map() ) ) {
+				$content_map = \array_merge( $content_map, \array_values( $object->get_summary_map() ) );
 			}
 
-			if ( is_array( $object->get_name_map() ) ) {
-				$content_map = array_merge( $content_map, array_values( $object->get_name_map() ) );
+			if ( \is_array( $object->get_name_map() ) ) {
+				$content_map = \array_merge( $content_map, \array_values( $object->get_name_map() ) );
 			}
 
 			$content_map = \array_filter( $content_map );
