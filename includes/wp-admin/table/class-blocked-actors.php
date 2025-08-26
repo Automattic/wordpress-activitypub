@@ -84,7 +84,7 @@ class Blocked_Actors extends \WP_List_Table {
 					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $actor_id ) ) {
-						Moderation::remove_user_block( $this->user_id, 'actor', $actor_id );
+						Moderation::remove_user_block( $this->user_id, Moderation::TYPE_ACTOR, $actor_id );
 
 						\add_settings_error( 'activitypub', 'actor_unblocked', \__( 'Actor unblocked.', 'activitypub' ), 'success' );
 					}
@@ -98,7 +98,7 @@ class Blocked_Actors extends \WP_List_Table {
 						$blocked = \array_map( 'absint', \wp_unslash( $_REQUEST['blocked'] ) );
 
 						foreach ( $blocked as $post_id ) {
-							Moderation::remove_user_block( $this->user_id, 'actor', $post_id );
+							Moderation::remove_user_block( $this->user_id, Moderation::TYPE_ACTOR, $post_id );
 						}
 
 						$count = \count( $blocked );
@@ -135,7 +135,7 @@ class Blocked_Actors extends \WP_List_Table {
 					$profile = \esc_url_raw( 'https://' . \ltrim( $profile, '/' ) );
 				}
 
-				$result = Moderation::add_user_block( $this->user_id, 'actor', $profile );
+				$result = Moderation::add_user_block( $this->user_id, Moderation::TYPE_ACTOR, $profile );
 				if ( \is_wp_error( $result ) ) {
 					/* translators: %s: Account profile that could not be blocked */
 					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );

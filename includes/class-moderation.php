@@ -17,6 +17,14 @@ use Activitypub\Collection\Blocked_Actors;
  * Handles user-specific blocking and site-wide moderation.
  */
 class Moderation {
+
+	/**
+	 * Block type constants.
+	 */
+	const TYPE_ACTOR   = 'actor';
+	const TYPE_DOMAIN  = 'domain';
+	const TYPE_KEYWORD = 'keyword';
+
 	/**
 	 * Post meta key for blocked actors.
 	 */
@@ -26,16 +34,16 @@ class Moderation {
 	 * User meta key for blocked keywords.
 	 */
 	const USER_META_KEYS = array(
-		'domain'  => 'activitypub_blocked_domains',
-		'keyword' => 'activitypub_blocked_keywords',
+		self::TYPE_DOMAIN  => 'activitypub_blocked_domains',
+		self::TYPE_KEYWORD => 'activitypub_blocked_keywords',
 	);
 
 	/**
 	 * Option key for site-wide blocked keywords.
 	 */
 	const OPTION_KEYS = array(
-		'domain'  => 'activitypub_site_blocked_domains',
-		'keyword' => 'activitypub_site_blocked_keywords',
+		self::TYPE_DOMAIN  => 'activitypub_site_blocked_domains',
+		self::TYPE_KEYWORD => 'activitypub_site_blocked_keywords',
 	);
 
 	/**
@@ -102,11 +110,11 @@ class Moderation {
 	 */
 	public static function add_user_block( $user_id, $type, $value ) {
 		switch ( $type ) {
-			case 'actor':
+			case self::TYPE_ACTOR:
 				return Blocked_Actors::add_block( $user_id, $value );
 
-			case 'domain':
-			case 'keyword':
+			case self::TYPE_DOMAIN:
+			case self::TYPE_KEYWORD:
 				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 
 				if ( ! \in_array( $value, $blocks, true ) ) {
@@ -138,11 +146,11 @@ class Moderation {
 	 */
 	public static function remove_user_block( $user_id, $type, $value ) {
 		switch ( $type ) {
-			case 'actor':
+			case self::TYPE_ACTOR:
 				return Blocked_Actors::remove_block( $user_id, $value );
 
-			case 'domain':
-			case 'keyword':
+			case self::TYPE_DOMAIN:
+			case self::TYPE_KEYWORD:
 				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 				$key    = \array_search( $value, $blocks, true );
 
@@ -174,8 +182,8 @@ class Moderation {
 	public static function get_user_blocks( $user_id ) {
 		return array(
 			'actors'   => \wp_list_pluck( Blocked_Actors::get_blocked_actors( $user_id ), 'guid' ),
-			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS['domain'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS['keyword'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_DOMAIN ], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_KEYWORD ], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		);
 	}
 
@@ -188,12 +196,12 @@ class Moderation {
 	 */
 	public static function add_site_block( $type, $value ) {
 		switch ( $type ) {
-			case 'actor':
+			case self::TYPE_ACTOR:
 				// Site-wide actor blocking uses the BLOG_USER_ID.
-				return self::add_user_block( Actors::BLOG_USER_ID, 'actor', $value );
+				return self::add_user_block( Actors::BLOG_USER_ID, self::TYPE_ACTOR, $value );
 
-			case 'domain':
-			case 'keyword':
+			case self::TYPE_DOMAIN:
+			case self::TYPE_KEYWORD:
 				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
 
 				if ( ! \in_array( $value, $blocks, true ) ) {
@@ -223,12 +231,12 @@ class Moderation {
 	 */
 	public static function remove_site_block( $type, $value ) {
 		switch ( $type ) {
-			case 'actor':
+			case self::TYPE_ACTOR:
 				// Site-wide actor unblocking uses the BLOG_USER_ID.
-				return self::remove_user_block( Actors::BLOG_USER_ID, 'actor', $value );
+				return self::remove_user_block( Actors::BLOG_USER_ID, self::TYPE_ACTOR, $value );
 
-			case 'domain':
-			case 'keyword':
+			case self::TYPE_DOMAIN:
+			case self::TYPE_KEYWORD:
 				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
 				$key    = \array_search( $value, $blocks, true );
 
@@ -258,8 +266,8 @@ class Moderation {
 	public static function get_site_blocks() {
 		return array(
 			'actors'   => \wp_list_pluck( Blocked_Actors::get_blocked_actors( Actors::BLOG_USER_ID ), 'guid' ),
-			'domains'  => \get_option( self::OPTION_KEYS['domain'], array() ),
-			'keywords' => \get_option( self::OPTION_KEYS['keyword'], array() ),
+			'domains'  => \get_option( self::OPTION_KEYS[ self::TYPE_DOMAIN ], array() ),
+			'keywords' => \get_option( self::OPTION_KEYS[ self::TYPE_KEYWORD ], array() ),
 		);
 	}
 
