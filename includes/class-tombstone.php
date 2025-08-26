@@ -11,6 +11,9 @@ use Activitypub\Activity\Base_Object;
 
 /**
  * ActivityPub Tombstone Class.
+ *
+ * Provides methods to detect deleted/tombstoned ActivityPub resources
+ * across various data formats (URLs, objects, arrays, WP_Error responses).
  */
 class Tombstone {
 	/**
@@ -21,43 +24,47 @@ class Tombstone {
 	private static $codes = array( 404, 410 );
 
 	/**
-	 * Check for Tombstone.
+	 * Check if a tombstone exists for the given resource.
+	 *
+	 * Accepts URLs, WP_Error objects, ActivityPub arrays, or objects and
+	 * determines if they indicate a deleted resource (HTTP 404/410 or
+	 * ActivityPub Tombstone type).
 	 *
 	 * @param string|\WP_Error|array|object $various The various data to check.
 	 *
-	 * @return bool True if the various data is a tombstone.
+	 * @return bool True if a tombstone exists for the resource.
 	 */
-	public static function is_gone( $various ) {
+	public static function exists( $various ) {
 		if ( \is_wp_error( $various ) ) {
-			return self::is_wp_error( $various );
+			return self::exists_in_error( $various );
 		}
 
 		if ( \is_string( $various ) ) {
 			if ( is_same_domain( $various ) ) {
-				return self::is_local_url_gone( $various );
+				return self::exists_local( $various );
 			}
-			return self::is_remote_url_gone( $various );
+			return self::exists_remote( $various );
 		}
 
 		if ( \is_array( $various ) ) {
-			return self::is_array_gone( $various );
+			return self::check_array( $various );
 		}
 
 		if ( \is_object( $various ) ) {
-			return self::is_object_gone( $various );
+			return self::check_object( $various );
 		}
 
 		return false;
 	}
 
 	/**
-	 * Check for remote URL for Tombstone.
+	 * Check if remote URL is tombstoned.
 	 *
 	 * @param string $url The URL to check.
 	 *
 	 * @return bool True if the URL is a tombstone.
 	 */
-	public static function is_remote_url_gone( $url ) {
+	public static function exists_remote( $url ) {
 		/**
 		 * Fires before checking if the URL is a tombstone.
 		 *
@@ -75,17 +82,17 @@ class Tombstone {
 		$data = \wp_remote_retrieve_body( $response );
 		$data = \json_decode( $data, true );
 
-		return self::is_array_gone( $data );
+		return self::check_array( $data );
 	}
 
 	/**
-	 * Check for local URL for Tombstone.
+	 * Check if local URL is tombstoned.
 	 *
 	 * @param string $url The URL to check.
 	 *
 	 * @return bool True if the URL is a tombstone.
 	 */
-	public static function is_local_url_gone( $url ) {
+	public static function exists_local( $url ) {
 		$urls = get_option( 'activitypub_tombstone_urls', array() );
 
 		return in_array( normalize_url( $url ), $urls, true );
@@ -98,7 +105,7 @@ class Tombstone {
 	 *
 	 * @return bool True if the response is a WP_Error, false otherwise.
 	 */
-	public static function is_wp_error( $wp_error ) {
+	public static function exists_in_error( $wp_error ) {
 		if ( ! \is_wp_error( $wp_error ) ) {
 			return false;
 		}
@@ -118,7 +125,7 @@ class Tombstone {
 	 *
 	 * @return bool True if the array represents a tombstone, false otherwise.
 	 */
-	public static function is_array_gone( $data ) {
+	private static function check_array( $data ) {
 		if ( ! \is_array( $data ) ) {
 			return false;
 		}
@@ -137,7 +144,7 @@ class Tombstone {
 	 *
 	 * @return bool True if the object represents a tombstone, false otherwise.
 	 */
-	public static function is_object_gone( $data ) {
+	private static function check_object( $data ) {
 		if ( ! \is_object( $data ) ) {
 			return false;
 		}

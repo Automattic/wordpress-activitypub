@@ -19,29 +19,29 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
-	 * @covers ::is_remote_url_gone
+	 * @covers ::exists_remote
 	 *
-	 * @dataProvider data_is_remote_url_gone
+	 * @dataProvider data_exists_remote
 	 *
 	 * @param array $request The request array.
 	 * @param bool  $result  The expected result.
 	 */
-	public function test_is_remote_url_gone( $request, $result ) {
+	public function test_exists_remote( $request, $result ) {
 		$fake_request = function () use ( $request ) {
 			return $request;
 		};
 		add_filter( 'pre_http_request', $fake_request, 10, 3 );
-		$response = Tombstone::is_remote_url_gone( 'https://fake.test/object/123' );
+		$response = Tombstone::exists_remote( 'https://fake.test/object/123' );
 		$this->assertEquals( $result, $response );
 		remove_filter( 'pre_http_request', $fake_request, 10 );
 	}
 
 	/**
-	 * Data provider for test_is_tombstone.
+	 * Data provider for test_exists_remote.
 	 *
 	 * @return array
 	 */
-	public function data_is_remote_url_gone() {
+	public function data_exists_remote() {
 		return array(
 			array( array( 'response' => array( 'code' => 404 ) ), true ),
 			array( array( 'response' => array( 'code' => 410 ) ), true ),
@@ -86,68 +86,78 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
-	 * @covers ::is_wp_error
+	 * @covers ::exists_in_error
 	 */
-	public function test_is_wp_error() {
-		$response = Tombstone::is_wp_error( new \WP_Error( 404 ) );
-		$this->assertTrue( $response );
-
-		$response = Tombstone::is_wp_error( new \WP_Error( 410 ) );
-		$this->assertTrue( $response );
-
-		$response = Tombstone::is_wp_error( new \WP_Error( 200 ) );
+	public function test_exists_in_error() {
+		$response = Tombstone::exists_in_error( new \WP_Error( 404 ) );
 		$this->assertFalse( $response );
 
-		$response = Tombstone::is_wp_error( new \WP_Error( 'foo', '', array( 'status' => 404 ) ) );
-		$this->assertTrue( $response );
-
-		$response = Tombstone::is_wp_error( new \WP_Error( 'bar', '', array( 'status' => 410 ) ) );
-		$this->assertTrue( $response );
-
-		$response = Tombstone::is_wp_error( new \WP_Error( 'baz', '', array( 'status' => 200 ) ) );
+		$response = Tombstone::exists_in_error( new \WP_Error( 410 ) );
 		$this->assertFalse( $response );
-	}
 
-	/**
-	 * Response code is 404 -> is_tombstone returns true
-	 *
-	 * @covers ::is_array_gone
-	 */
-	public function test_is_array_gone() {
-		$response = Tombstone::is_array_gone( array( 'type' => 'Tombstone' ) );
+		$response = Tombstone::exists_in_error( new \WP_Error( 200 ) );
+		$this->assertFalse( $response );
+
+		$response = Tombstone::exists_in_error( new \WP_Error( 'foo', '', array( 'status' => 404 ) ) );
 		$this->assertTrue( $response );
 
-		$response = Tombstone::is_array_gone( array( 'type' => 'Note' ) );
+		$response = Tombstone::exists_in_error( new \WP_Error( 'bar', '', array( 'status' => 410 ) ) );
+		$this->assertTrue( $response );
+
+		$response = Tombstone::exists_in_error( new \WP_Error( 'baz', '', array( 'status' => 200 ) ) );
 		$this->assertFalse( $response );
 	}
 
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
-	 * @covers ::is_object_gone
+	 * @covers ::check_array
 	 */
-	public function test_is_object_gone() {
-		$response = Tombstone::is_object_gone( (object) array( 'type' => 'Tombstone' ) );
+	public function test_check_array() {
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Tombstone::class );
+		$method     = $reflection->getMethod( 'check_array' );
+		$method->setAccessible( true );
+
+		$response = $method->invokeArgs( null, array( array( 'type' => 'Tombstone' ) ) );
 		$this->assertTrue( $response );
 
-		$response = Tombstone::is_object_gone( (object) array( 'type' => 'Note' ) );
+		$response = $method->invokeArgs( null, array( array( 'type' => 'Note' ) ) );
 		$this->assertFalse( $response );
 	}
 
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
-	 * @covers ::is_local_url_gone
+	 * @covers ::check_object
 	 */
-	public function test_is_local_url_gone() {
+	public function test_check_object() {
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Tombstone::class );
+		$method     = $reflection->getMethod( 'check_object' );
+		$method->setAccessible( true );
+
+		$response = $method->invokeArgs( null, array( (object) array( 'type' => 'Tombstone' ) ) );
+		$this->assertTrue( $response );
+
+		$response = $method->invokeArgs( null, array( (object) array( 'type' => 'Note' ) ) );
+		$this->assertFalse( $response );
+	}
+
+	/**
+	 * Response code is 404 -> is_tombstone returns true
+	 *
+	 * @covers ::exists_local
+	 */
+	public function test_exists_local() {
 		$url = 'https://fake.test/object/123';
 
-		$response = Tombstone::is_local_url_gone( $url );
+		$response = Tombstone::exists_local( $url );
 		$this->assertFalse( $response );
 
 		Tombstone::bury( $url );
 
-		$response = Tombstone::is_local_url_gone( $url );
+		$response = Tombstone::exists_local( $url );
 		$this->assertTrue( $response );
 
 		\delete_option( 'activitypub_tombstone_urls' );
