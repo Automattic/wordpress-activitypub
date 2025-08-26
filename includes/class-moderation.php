@@ -321,5 +321,4 @@ class Moderation {
 
 		return false;
 	}
-
 }
