@@ -60,7 +60,7 @@ class Following {
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
 	 *
-	 * @return int|false|\WP_Post|\WP_Error The Outbox ID or false on failure, the Actor post or a WP_Error.
+	 * @return \WP_Post|\WP_Error The Actor post or a WP_Error.
 	 */
 	public static function follow( $post, $user_id ) {
 		$post = \get_post( $post );
@@ -88,7 +88,11 @@ class Following {
 			$follow->set_object( $post->guid );
 			$follow->set_to( array( $post->guid ) );
 
-			return add_to_outbox( $follow, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+			$id = add_to_outbox( $follow, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+
+			if ( ! $id ) {
+				return new \WP_Error( 'activitypub_follow_failed', 'Failed to add follow to outbox' );
+			}
 		}
 
 		return $post;
