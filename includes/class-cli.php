@@ -155,7 +155,7 @@ class Cli extends \WP_CLI_Command {
 		\WP_CLI::line( '' );
 
 		// Set the self-destruct flag.
-		\add_option( 'activitypub_self_destruct', true );
+		\update_option( 'activitypub_self_destruct', true );
 
 		$processed = 0;
 		foreach ( $user_ids as $user_id ) {
