@@ -7,6 +7,12 @@ import { store, getContext, getConfig } from '@wordpress/interactivity';
 const { apiFetch, url } = window.wp;
 
 /**
+ * @typedef {Object} config
+ * @property {String} defaultAvatarUrl Default avatar URL.
+ * @property {String} namespace ActivityPub REST Namespace.
+ */
+
+/**
  * @typedef {Object} context
  * @property {Array} followers The list of followers.
  * @property {boolean} isLoading Whether the followers are currently being fetched.
