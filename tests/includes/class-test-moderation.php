@@ -295,8 +295,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'type'   => 'Create',
 				'actor'  => 'https://good.example.com/@user',
 				'object' => array(
-					'id'      => 'https://example.com/note/1',
-					'type'    => 'Note',
+					'id'          => 'https://example.com/note/1',
+					'type'        => 'Note',
 					'content_map' => array(
 						'en' => 'Check out this product, buy now!',
 						'de' => 'Überprüfe dieses Produkt, kaufe jetzt!',

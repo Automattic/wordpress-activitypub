@@ -242,7 +242,7 @@ class Moderation {
 
 		// Check blocked keywords in activity content.
 		if ( $has_object ) {
-			$object    = $activity->get_object();
+			$object        = $activity->get_object();
 			$content_map   = array();
 			$content_map[] = $object->get_content();
 			$content_map[] = $object->get_summary();
