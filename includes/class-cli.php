@@ -23,7 +23,7 @@ class Cli extends \WP_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     $ wp activitypub self_destruct
+	 *     $ wp activitypub self-destruct
 	 *
 	 * @param array|null $args       The arguments.
 	 * @param array|null $assoc_args The associative arguments.
