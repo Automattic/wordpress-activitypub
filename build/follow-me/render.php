@@ -8,6 +8,7 @@
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+
 use function Activitypub\is_activitypub_request;
 
 if ( is_activitypub_request() || is_feed() ) {
@@ -96,7 +97,7 @@ $content = Blocks::add_directions(
 		'data-wp-bind--aria-expanded' => 'context.modal.isOpen',
 		'aria-label'                  => __( 'Follow me on the Fediverse', 'activitypub' ),
 		'aria-haspopup'               => 'dialog',
-		'aria-controls'               => 'modal-heading',
+		'aria-controls'               => $block_id . '-modal-title',
 		'role'                        => 'button',
 		'tabindex'                    => '0',
 	)
@@ -118,9 +119,12 @@ ob_start();
 		<?php esc_html_e( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
+		<label for="<?php echo esc_attr( $block_id . '-profile-handle' ); ?>" class="screen-reader-text">
+			<?php esc_html_e( 'My Fediverse handle', 'activitypub' ); ?>
+		</label>
 		<input
 			aria-readonly="true"
-			id="profile-handle"
+			id="<?php echo esc_attr( $block_id . '-profile-handle' ); ?>"
 			readonly
 			tabindex="-1"
 			type="text"
@@ -142,12 +146,15 @@ ob_start();
 		<?php esc_html_e( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
+		<label for="<?php echo esc_attr( $block_id . '-remote-profile' ); ?>" class="screen-reader-text">
+			<?php esc_html_e( 'Your Fediverse profile', 'activitypub' ); ?>
+		</label>
 		<input
 			data-wp-bind--aria-invalid="context.isError"
 			data-wp-bind--value="context.remoteProfile"
 			data-wp-on--input="actions.updateRemoteProfile"
 			data-wp-on--keydown="actions.handleKeyDown"
-			id="remote-profile"
+			id="<?php echo esc_attr( $block_id . '-remote-profile' ); ?>"
 			placeholder="<?php esc_attr_e( '@username@example.com', 'activitypub' ); ?>"
 			type="text"
 		/>
@@ -235,6 +242,7 @@ $modal_content = ob_get_clean();
 	// Render the modal using the Blocks class.
 	Blocks::render_modal(
 		array(
+			'id'      => $block_id . '-modal',
 			'content' => $modal_content,
 			/* translators: %s: Profile name. */
 			'title'   => sprintf( esc_html__( 'Follow %s', 'activitypub' ), esc_html( $actor->get_name() ) ),
