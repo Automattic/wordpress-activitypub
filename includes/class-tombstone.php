@@ -12,27 +12,38 @@ use Activitypub\Activity\Base_Object;
 /**
  * ActivityPub Tombstone Class.
  *
- * Provides methods to detect deleted/tombstoned ActivityPub resources
- * across various data formats (URLs, objects, arrays, WP_Error responses).
+ * Handles detection and management of tombstoned (deleted) ActivityPub resources.
+ * A tombstone in ActivityPub represents a deleted object that was previously available.
+ * This class provides methods to detect tombstones across various data formats including
+ * URLs, ActivityPub objects, arrays, and WordPress error responses.
+ *
+ * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone
  */
 class Tombstone {
 	/**
-	 * HTTP codes that indicate a tombstone.
+	 * HTTP status codes that indicate a tombstoned resource.
 	 *
-	 * @var array
+	 * - 404: Not Found - Resource no longer exists
+	 * - 410: Gone - Resource was intentionally removed
+	 *
+	 * @var int[] Array of HTTP status codes indicating tombstones.
 	 */
 	private static $codes = array( 404, 410 );
 
 	/**
 	 * Check if a tombstone exists for the given resource.
 	 *
-	 * Accepts URLs, WP_Error objects, ActivityPub arrays, or objects and
-	 * determines if they indicate a deleted resource (HTTP 404/410 or
-	 * ActivityPub Tombstone type).
+	 * This is the main entry point for tombstone detection. It accepts various
+	 * data types and routes them to the appropriate checking method:
+	 * - URLs (string): Checks remote or local tombstone status
+	 * - WP_Error objects: Checks for tombstone-indicating HTTP status codes
+	 * - Arrays: Checks for ActivityPub Tombstone type
+	 * - Objects: Checks for ActivityPub Tombstone type or Base_Object instances
 	 *
-	 * @param string|\WP_Error|array|object $various The various data to check.
+	 * @param string|\WP_Error|array|object $various The resource data to check for tombstone status.
+	 *                                               Can be a URL, error object, ActivityPub array, or object.
 	 *
-	 * @return bool True if a tombstone exists for the resource.
+	 * @return bool True if the resource is tombstoned, false otherwise.
 	 */
 	public static function exists( $various ) {
 		if ( \is_wp_error( $various ) ) {
@@ -58,11 +69,16 @@ class Tombstone {
 	}
 
 	/**
-	 * Check if remote URL is tombstoned.
+	 * Check if a remote URL is tombstoned.
 	 *
-	 * @param string $url The URL to check.
+	 * Makes an HTTP request to the remote URL with ActivityPub headers
+	 * and checks for tombstone indicators:
+	 * - HTTP 404/410 status codes
+	 * - ActivityPub Tombstone object type in response body
 	 *
-	 * @return bool True if the URL is a tombstone.
+	 * @param string $url The remote URL to check for tombstone status.
+	 *
+	 * @return bool True if the remote URL is tombstoned, false otherwise.
 	 */
 	public static function exists_remote( $url ) {
 		/**
@@ -86,11 +102,14 @@ class Tombstone {
 	}
 
 	/**
-	 * Check if local URL is tombstoned.
+	 * Check if a local URL is tombstoned.
 	 *
-	 * @param string $url The URL to check.
+	 * Checks against the local tombstone URL registry stored in WordPress options.
+	 * Local URLs are normalized before comparison to ensure consistent matching.
 	 *
-	 * @return bool True if the URL is a tombstone.
+	 * @param string $url The local URL to check for tombstone status.
+	 *
+	 * @return bool True if the local URL is in the tombstone registry, false otherwise.
 	 */
 	public static function exists_local( $url ) {
 		$urls = get_option( 'activitypub_tombstone_urls', array() );
@@ -99,11 +118,14 @@ class Tombstone {
 	}
 
 	/**
-	 * Check if the response is a WP_Error.
+	 * Check if a WP_Error object indicates a tombstoned resource.
 	 *
-	 * @param \WP_Error $wp_error The response to check.
+	 * Examines the error data for HTTP status codes that indicate tombstones.
+	 * This is typically used when HTTP requests return error responses.
 	 *
-	 * @return bool True if the response is a WP_Error, false otherwise.
+	 * @param \WP_Error $wp_error The WordPress error object to examine.
+	 *
+	 * @return bool True if the error indicates a tombstoned resource, false otherwise.
 	 */
 	public static function exists_in_error( $wp_error ) {
 		if ( ! \is_wp_error( $wp_error ) ) {
@@ -119,11 +141,14 @@ class Tombstone {
 	}
 
 	/**
-	 * Check if the given array represents a tombstone.
+	 * Check if an array represents an ActivityPub Tombstone object.
 	 *
-	 * @param array $data The array to check.
+	 * Examines the array for the ActivityPub 'type' property set to 'Tombstone'.
+	 * This follows the ActivityStreams specification for tombstone objects.
 	 *
-	 * @return bool True if the array represents a tombstone, false otherwise.
+	 * @param array|mixed $data The array data to check. Non-arrays return false.
+	 *
+	 * @return bool True if the array represents a Tombstone object, false otherwise.
 	 */
 	private static function check_array( $data ) {
 		if ( ! \is_array( $data ) ) {
@@ -138,11 +163,15 @@ class Tombstone {
 	}
 
 	/**
-	 * Check if the given object represents a tombstone.
+	 * Check if an object represents an ActivityPub Tombstone.
 	 *
-	 * @param object $data The object to check.
+	 * Checks for tombstone indicators in objects:
+	 * - Standard objects: 'type' property set to 'Tombstone'
+	 * - Base_Object instances: Uses get_type() method to check for 'Tombstone'
 	 *
-	 * @return bool True if the object represents a tombstone, false otherwise.
+	 * @param object|mixed $data The object data to check. Non-objects return false.
+	 *
+	 * @return bool True if the object represents a Tombstone, false otherwise.
 	 */
 	private static function check_object( $data ) {
 		if ( ! \is_object( $data ) ) {
@@ -161,9 +190,15 @@ class Tombstone {
 	}
 
 	/**
-	 * Bury a URL.
+	 * Add a URL to the local tombstone registry.
 	 *
-	 * @param string $url The URL to bury.
+	 * "Buries" a URL by adding it to the local tombstone URL registry.
+	 * The URL is normalized before storage and duplicates are automatically removed.
+	 * This marks the URL as tombstoned for future local checks.
+	 *
+	 * @param string $url The URL to add to the tombstone registry.
+	 *
+	 * @return void
 	 */
 	public static function bury( $url ) {
 		$urls   = \get_option( 'activitypub_tombstone_urls', array() );
