@@ -730,7 +730,8 @@ function object_to_uri( $data ) {
 	// Return part of Object that makes most sense.
 	switch ( $type ) {
 		case 'Image':
-			$data = $data['url'];
+			// See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
+			$data = object_to_uri( $data['url'] );
 			break;
 		case 'Link':
 			$data = $data['href'];
