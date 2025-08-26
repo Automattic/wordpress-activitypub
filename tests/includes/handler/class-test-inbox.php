@@ -34,6 +34,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 				'id'   => 'https://example.com/object/1',
 				'type' => 'Note',
 			),
+			'actor'  => 'https://example.com/actor/1',
 		);
 		$user_id  = 1;
 		$type     = 'Create';

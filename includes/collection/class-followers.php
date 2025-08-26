@@ -232,7 +232,7 @@ class Followers {
 	 * @return int The number of Followers
 	 */
 	public static function count_followers( $user_id ) {
-		return self::get_followers_with_count( $user_id )['total'];
+		return self::get_followers_with_count( $user_id, 1 )['total'];
 	}
 
 	/**

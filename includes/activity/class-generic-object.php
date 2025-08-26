@@ -61,7 +61,7 @@ use function Activitypub\snake_to_camel_case;
  * @method Base_Object set_summary( string $summary )             Sets the natural language summary of the object.
  * @method Base_Object set_summary_map( array|null $summary_map ) Sets the summary property of the object.
  * @method Base_Object set_target( string $target )               Sets the target property of the object.
- * @method Base_Object set_to( array|string $to )                 Sets the primary recipients of the object.
+ * @method Base_Object set_to( string|string[] $to )              Sets the primary recipients of the object.
  * @method Base_Object set_type( string $type )                   Sets the type of the object.
  * @method Base_Object set_updated( string $updated )             Sets the date and time the object was updated in ISO 8601 format.
  * @method Base_Object set_url( string $url )                     Sets the URL of the object.

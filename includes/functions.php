@@ -730,7 +730,8 @@ function object_to_uri( $data ) {
 	// Return part of Object that makes most sense.
 	switch ( $type ) {
 		case 'Image':
-			$data = $data['url'];
+			// See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
+			$data = object_to_uri( $data['url'] );
 			break;
 		case 'Link':
 			$data = $data['href'];
@@ -1550,7 +1551,7 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
  * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
  * @param int        $user_id      The ID of the WordPress User.
  *
- * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ * @return int|false|\WP_Post|\WP_Error The Outbox ID or false on failure, the Actor post or a WP_Error.
  */
 function follow( $remote_actor, $user_id ) {
 	if ( \is_numeric( $remote_actor ) ) {
@@ -1580,7 +1581,7 @@ function follow( $remote_actor, $user_id ) {
  * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
  * @param int        $user_id      The ID of the WordPress User.
  *
- * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ * @return \WP_Post|\WP_Error The Actor post or a WP_Error.
  */
 function unfollow( $remote_actor, $user_id ) {
 	if ( \is_numeric( $remote_actor ) ) {

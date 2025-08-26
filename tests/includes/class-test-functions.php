@@ -569,7 +569,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * @dataProvider get_post_summary_data
 	 *
 	 * @param string $desc     The description of the test.
-	 * @param object $post     The post object.
+	 * @param array  $post     The post object.
 	 * @param string $expected The expected summary.
 	 * @param int    $length   The length of the summary.
 	 */
@@ -714,7 +714,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Tests follow method.
 	 *
-	 * @covers ::follow
+	 * @covers \Activitypub\follow
 	 */
 	public function test_follow() {
 		$user_id = self::factory()->user->create(
@@ -758,7 +758,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	/**
 	 * Test that Update activities have the updated attribute set.
 	 *
-	 * @covers ::add_to_outbox
+	 * @covers \Activitypub\add_to_outbox
 	 */
 	public function test_webfinger_support() {
 		$follow = new Activity();
@@ -811,7 +811,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 *
 	 * @dataProvider data_normalize_url
 	 *
-	 * @covers ::normalize_url
+	 * @covers \Activitypub\normalize_url
 	 *
 	 * @param string $url     The URL.
 	 * @param string $expected The expected result.
@@ -842,7 +842,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 *
 	 * @dataProvider data_normalize_host
 	 *
-	 * @covers ::normalize_host
+	 * @covers \Activitypub\normalize_host
 	 *
 	 * @param string $host     The host.
 	 * @param string $expected The expected result.
