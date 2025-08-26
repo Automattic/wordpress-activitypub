@@ -123,33 +123,20 @@ class Following extends \WP_List_Table {
 					return;
 				}
 
-				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$profile = \trim( $profile, '@' );
-
-				if ( \filter_var( $profile, FILTER_VALIDATE_EMAIL ) ) {
-					$remote_actor = Webfinger::resolve( $profile );
-					if ( ! \is_wp_error( $remote_actor ) ) {
-						$original = $profile;
-						$profile  = object_to_uri( $remote_actor );
-					}
-				} elseif ( empty( \wp_parse_url( $profile, PHP_URL_SCHEME ) ) ) {
-					// Add scheme if missing.
-					$profile = \esc_url_raw( 'https://' . \ltrim( $profile, '/' ) );
-				}
-
-				// Check if user has blocked the account.
-				if ( \in_array( $profile, Moderation::get_user_blocks( $this->user_id )['actors'], true ) ) {
+				$original = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
+				$profile  = Actors::normalize_identifier( $original );
+				if ( ! $profile ) {
 					/* translators: %s: Account profile that could not be followed */
-					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. The account is blocked.', 'activitypub' ), \esc_html( $profile ) ) );
-					$redirect_to = \add_query_arg( 'resource', $original ?? $profile, $redirect_to );
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
+					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
 					break;
 				}
 
-				// Check if site has blocked the account.
-				if ( \in_array( $profile, Moderation::get_site_blocks()['actors'], true ) ) {
+				// Check if actor is blocked.
+				if ( Moderation::is_actor_blocked( $profile, $this->user_id ) ) {
 					/* translators: %s: Account profile that could not be followed */
-					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. The account is blocked site-wide.', 'activitypub' ), \esc_html( $profile ) ) );
-					$redirect_to = \add_query_arg( 'resource', $original ?? $profile, $redirect_to );
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. The account is blocked.', 'activitypub' ), \esc_html( $profile ) ) );
+					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
 					break;
 				}
 
@@ -157,7 +144,7 @@ class Following extends \WP_List_Table {
 				if ( \is_wp_error( $result ) ) {
 					/* translators: %s: Account profile that could not be followed */
 					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
-					$redirect_to = \add_query_arg( 'resource', $original ?? $profile, $redirect_to );
+					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
 				} else {
 					\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
 				}

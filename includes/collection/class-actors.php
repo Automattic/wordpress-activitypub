@@ -1030,4 +1030,35 @@ class Actors {
 
 		return false;
 	}
+
+	/**
+	 * Normalize actor identifier to a URI.
+	 *
+	 * Handles webfinger addresses, URLs without schemes, objects, and arrays.
+	 *
+	 * @param string|object|array $actor Actor URI, webfinger address, actor object, or array.
+	 * @return string|null Normalized actor URI or null if unable to resolve.
+	 */
+	public static function normalize_identifier( $actor ) {
+		// If it's already a string URI, check if it needs webfinger resolution.
+		if ( \is_string( $actor ) ) {
+			$actor = \trim( $actor, '@' );
+
+			// If it's an email-like webfinger address, resolve it.
+			if ( \filter_var( $actor, FILTER_VALIDATE_EMAIL ) ) {
+				$resolved = \Activitypub\Webfinger::resolve( $actor );
+				return \is_wp_error( $resolved ) ? null : object_to_uri( $resolved );
+			}
+
+			// If it's a URL without scheme, add https://.
+			if ( empty( \wp_parse_url( $actor, PHP_URL_SCHEME ) ) ) {
+				$actor = \esc_url_raw( 'https://' . \ltrim( $actor, '/' ) );
+			}
+
+			return $actor;
+		}
+
+		// If it's an object or array, extract the URI.
+		return object_to_uri( $actor );
+	}
 }

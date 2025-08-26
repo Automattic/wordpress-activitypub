@@ -272,6 +272,35 @@ class Moderation {
 	}
 
 	/**
+	 * Check if an actor is blocked by user or site-wide.
+	 *
+	 * @param string $actor_uri Actor URI to check.
+	 * @param int    $user_id   Optional. User ID to check user blocks for. Defaults to 0 (site-wide only).
+	 * @return bool True if blocked, false otherwise.
+	 */
+	public static function is_actor_blocked( $actor_uri, $user_id = 0 ) {
+		if ( ! $actor_uri ) {
+			return false;
+		}
+
+		// Check site-wide blocks.
+		$site_blocks = self::get_site_blocks();
+		if ( \in_array( $actor_uri, $site_blocks['actors'], true ) ) {
+			return true;
+		}
+
+		// Check user-specific blocks if user_id is provided.
+		if ( $user_id > 0 ) {
+			$user_blocks = self::get_user_blocks( $user_id );
+			if ( \in_array( $actor_uri, $user_blocks['actors'], true ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Check activity against blocklists.
 	 *
 	 * @param Activity $activity         The activity.
