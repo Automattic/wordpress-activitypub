@@ -103,29 +103,7 @@ class Moderation {
 	public static function add_user_block( $user_id, $type, $value ) {
 		switch ( $type ) {
 			case 'actor':
-				// Find or create actor post.
-				$actor_post = Actors::fetch_remote_by_uri( $value );
-				if ( \is_wp_error( $actor_post ) ) {
-					return false;
-				}
-
-				$blocked = \get_post_meta( $actor_post->ID, self::BLOCKED_ACTORS_META_KEY, false );
-				if ( ! \in_array( (string) $user_id, $blocked, true ) ) {
-					/**
-					 * Fired when an actor is blocked.
-					 *
-					 * @param string $value   The blocked actor URI.
-					 * @param string $type    The block type (actor, domain, keyword).
-					 * @param int    $user_id The user ID.
-					 */
-					\do_action( 'activitypub_add_user_block', $value, $type, $user_id );
-
-					$result = (bool) \add_post_meta( $actor_post->ID, self::BLOCKED_ACTORS_META_KEY, (string) $user_id );
-					\clean_post_cache( $actor_post->ID );
-
-					return $result;
-				}
-				break;
+				return Blocked_Actors::add_block( $user_id, $value );
 
 			case 'domain':
 			case 'keyword':
@@ -161,31 +139,7 @@ class Moderation {
 	public static function remove_user_block( $user_id, $type, $value ) {
 		switch ( $type ) {
 			case 'actor':
-				// If value is numeric, treat it as a post ID for direct removal.
-				if ( \is_numeric( $value ) ) {
-					$post_id = (int) $value;
-				} else {
-					// Otherwise, find the actor post by actor ID.
-					$actor_post = Actors::fetch_remote_by_uri( $value );
-					if ( \is_wp_error( $actor_post ) ) {
-						return false;
-					}
-					$post_id = $actor_post->ID;
-				}
-
-				/**
-				 * Fired when an actor is unblocked.
-				 *
-				 * @param string $value   The unblocked actor URI.
-				 * @param string $type    The block type (actor, domain, keyword).
-				 * @param int    $user_id The user ID.
-				 */
-				\do_action( 'activitypub_remove_user_block', $value, $type, $user_id );
-
-				$result = \delete_post_meta( $post_id, self::BLOCKED_ACTORS_META_KEY, $user_id );
-				\clean_post_cache( $post_id );
-
-				return $result;
+				return Blocked_Actors::remove_block( $user_id, $value );
 
 			case 'domain':
 			case 'keyword':
