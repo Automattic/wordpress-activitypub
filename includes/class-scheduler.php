@@ -74,54 +74,6 @@ class Scheduler {
 	}
 
 	/**
-	 * Check if self-destruct process is complete and notify.
-	 *
-	 * @param array  $inboxes        The inboxes.
-	 * @param string $json           The ActivityPub Activity JSON.
-	 */
-	public static function check_self_destruct_completion( $inboxes, $json ) {
-		// Only proceed if self-destruct is active.
-		if ( ! \get_option( 'activitypub_self_destruct', false ) ) {
-			return;
-		}
-
-		// Check if this is a Delete activity (part of self-destruct).
-		$activity_data = \json_decode( $json, true );
-		if ( ! isset( $activity_data['type'] ) || 'Delete' !== $activity_data['type'] ) {
-			return;
-		}
-
-		// Check if there are any more pending Delete activities for self-destruct.
-		$pending_deletes = \get_posts(
-			array(
-				'post_type'      => Outbox::POST_TYPE,
-				'post_status'    => 'pending',
-				'posts_per_page' => 1,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'     => array(
-					array(
-						'key'     => '_activitypub_activity_type',
-						'value'   => 'Delete',
-						'compare' => '=',
-					),
-				),
-			)
-		);
-
-		// If no more pending Delete activities, self-destruct is complete.
-		if ( empty( $pending_deletes ) ) {
-			// Remove the self-destruct flag.
-			\delete_option( 'activitypub_self_destruct' );
-
-			// Remove the completion hook to avoid future notifications.
-			\remove_action( 'activitypub_outbox_processing_complete', array( self::class, 'check_self_destruct_completion' ), 10 );
-
-			// Add an admin notice for completion.
-			\add_option( 'activitypub_self_destruct_complete', \time() );
-		}
-	}
-
-	/**
 	 * Schedule all ActivityPub schedules.
 	 */
 	public static function register_schedules() {
