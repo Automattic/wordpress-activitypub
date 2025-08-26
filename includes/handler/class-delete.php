@@ -7,7 +7,7 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Http;
+use Activitypub\Tombstone;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 
@@ -104,7 +104,7 @@ class Delete {
 		$follower = Actors::get_remote_by_uri( $activity['actor'] );
 
 		// Verify that Actor is deleted.
-		if ( ! is_wp_error( $follower ) && Http::is_tombstone( $activity['actor'] ) ) {
+		if ( ! is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
 			Actors::delete( $follower->ID );
 			self::maybe_delete_interactions( $activity );
 		}
@@ -117,7 +117,7 @@ class Delete {
 	 */
 	public static function maybe_delete_interactions( $activity ) {
 		// Verify that Actor is deleted.
-		if ( Http::is_tombstone( $activity['actor'] ) ) {
+		if ( Tombstone::exists( $activity['actor'] ) ) {
 			\wp_schedule_single_event(
 				\time(),
 				'activitypub_delete_actor_interactions',
@@ -153,7 +153,7 @@ class Delete {
 
 		$comments = Interactions::get_interaction_by_id( $id );
 
-		if ( $comments && Http::is_tombstone( $id ) ) {
+		if ( $comments && Tombstone::exists( $id ) ) {
 			foreach ( $comments as $comment ) {
 				wp_delete_comment( $comment->comment_ID, true );
 			}

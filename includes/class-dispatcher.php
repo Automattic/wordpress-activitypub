@@ -60,8 +60,9 @@ class Dispatcher {
 			return;
 		}
 
+		$type  = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 		$actor = Outbox::get_actor( $outbox_item );
-		if ( \is_wp_error( $actor ) ) {
+		if ( \is_wp_error( $actor ) && 'Delete' !== $type ) {
 			// If the actor is not found, publish the post and don't try again.
 			\wp_publish_post( $outbox_item );
 			return;
@@ -99,8 +100,7 @@ class Dispatcher {
 		$outbox_item = \get_post( $outbox_item_id );
 		$json        = Outbox::get_activity( $outbox_item_id )->to_json();
 		$inboxes     = Followers::get_inboxes_for_activity( $json, $outbox_item->post_author, $batch_size, $offset );
-
-		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
+		$retries     = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
 		// Retry failed inboxes.
 		if ( ! empty( $retries ) ) {

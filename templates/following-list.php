@@ -50,7 +50,7 @@ $following_list_table->prepare_items();
 					<form method="post" id="activitypub-follow-form">
 						<?php wp_nonce_field( 'activitypub-follow-nonce' ); ?>
 						<div class="form-field form-required">
-							<label for="activitypub-profile"><?php echo esc_html__( 'Username or profile link', 'activitypub' ); ?></label>
+							<label for="activitypub-profile" class="screen-reader-text"><?php echo esc_html__( 'Profile link', 'activitypub' ); ?></label>
 							<input type="hidden" name="action" value="follow" />
 							<input name="activitypub-profile" id="activitypub-profile" type="text" value="<?php echo esc_attr( $_resource ); ?>" size="40" aria-required="true" class="<?php echo $_resource ? 'highlight' : ''; ?>" />
 						</div>

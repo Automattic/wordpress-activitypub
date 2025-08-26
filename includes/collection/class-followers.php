@@ -7,7 +7,8 @@
 
 namespace Activitypub\Collection;
 
-use function Activitypub\is_tombstone;
+use Activitypub\Tombstone;
+
 use function Activitypub\get_remote_metadata_by_actor;
 
 /**
@@ -42,7 +43,7 @@ class Followers {
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
-		if ( is_tombstone( $meta ) ) {
+		if ( Tombstone::exists( $meta ) ) {
 			return $meta;
 		}
 
@@ -59,6 +60,7 @@ class Followers {
 		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
 			\add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+			\wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
 		}
 
 		return $post_id;
@@ -80,6 +82,7 @@ class Followers {
 		}
 
 		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		\wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
 
 		/**
 		 * Fires before a Follower is removed.
@@ -232,7 +235,7 @@ class Followers {
 	 * @return int The number of Followers
 	 */
 	public static function count_followers( $user_id ) {
-		return self::get_followers_with_count( $user_id )['total'];
+		return self::get_followers_with_count( $user_id, 1 )['total'];
 	}
 
 	/**
@@ -309,14 +312,12 @@ class Followers {
 	 * @return array The list of Inboxes.
 	 */
 	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
-		$inboxes = self::get_inboxes( $actor_id );
-
-		if ( self::maybe_add_inboxes_of_blog_user( $json, $actor_id ) ) {
-			$inboxes = \array_fill_keys( $inboxes, 1 );
-			foreach ( self::get_inboxes( Actors::BLOG_USER_ID ) as $inbox ) {
-				$inboxes[ $inbox ] = 1;
-			}
-			$inboxes = \array_keys( $inboxes );
+		$activity = \json_decode( $json, true );
+		// Only if this is a Delete. Create handles its own "Announce" in dual user mode.
+		if ( 'Delete' === ( $activity['type'] ?? null ) ) {
+			$inboxes = Actors::get_inboxes();
+		} else {
+			$inboxes = self::get_inboxes( $actor_id );
 		}
 
 		return \array_slice( $inboxes, $offset, $batch_size );
@@ -325,11 +326,16 @@ class Followers {
 	/**
 	 * Maybe add Inboxes of the Blog User.
 	 *
+	 * @deprecated unreleased
+	 *
 	 * @param string $json     The ActivityPub Activity JSON.
 	 * @param int    $actor_id The WordPress Actor ID.
+	 *
 	 * @return bool True if the Inboxes of the Blog User should be added, false otherwise.
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $json, $actor_id ) {
+		\_deprecated_function( __METHOD__, 'unreleased' );
+
 		// Only if we're in both Blog and User modes.
 		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 			return false;

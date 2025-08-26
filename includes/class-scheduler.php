@@ -194,7 +194,7 @@ class Scheduler {
 		foreach ( $actors as $actor ) {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
-			if ( is_tombstone( $meta ) ) {
+			if ( Tombstone::exists( $meta ) ) {
 				\wp_delete_post( $actor->ID );
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || \is_wp_error( $meta ) ) {
 				if ( Actors::count_errors( $actor->ID ) >= 5 ) {

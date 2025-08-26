@@ -8,6 +8,7 @@
 namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Blocked_Actors as Blocked_Actors_Collection;
 use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -83,7 +84,7 @@ class Blocked_Actors extends \WP_List_Table {
 					$nonce    = \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'delete-follower_' . $actor_id ) ) {
-						Moderation::remove_user_block( $this->user_id, 'actor', $actor_id );
+						Moderation::remove_user_block( $this->user_id, Moderation::TYPE_ACTOR, $actor_id );
 
 						\add_settings_error( 'activitypub', 'actor_unblocked', \__( 'Actor unblocked.', 'activitypub' ), 'success' );
 					}
@@ -97,7 +98,7 @@ class Blocked_Actors extends \WP_List_Table {
 						$blocked = \array_map( 'absint', \wp_unslash( $_REQUEST['blocked'] ) );
 
 						foreach ( $blocked as $post_id ) {
-							Moderation::remove_user_block( $this->user_id, 'actor', $post_id );
+							Moderation::remove_user_block( $this->user_id, Moderation::TYPE_ACTOR, $post_id );
 						}
 
 						$count = \count( $blocked );
@@ -134,7 +135,7 @@ class Blocked_Actors extends \WP_List_Table {
 					$profile = \esc_url_raw( 'https://' . \ltrim( $profile, '/' ) );
 				}
 
-				$result = Moderation::add_user_block( $this->user_id, 'actor', $profile );
+				$result = Moderation::add_user_block( $this->user_id, Moderation::TYPE_ACTOR, $profile );
 				if ( \is_wp_error( $result ) ) {
 					/* translators: %s: Account profile that could not be blocked */
 					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
@@ -210,7 +211,7 @@ class Blocked_Actors extends \WP_List_Table {
 			$args['s'] = $this->normalize_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		}
 
-		$blocked_with_count = Moderation::get_blocked_actors_with_count( $this->user_id, $per_page, $page_num, $args );
+		$blocked_with_count = Blocked_Actors_Collection::get_blocked_actors_with_count( $this->user_id, $per_page, $page_num, $args );
 
 		$blocked_actor_posts = $blocked_with_count['blocked_actors'];
 		$counter             = $blocked_with_count['total'];
