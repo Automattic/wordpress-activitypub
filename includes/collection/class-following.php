@@ -88,9 +88,7 @@ class Following {
 			$follow->set_object( $post->guid );
 			$follow->set_to( array( $post->guid ) );
 
-			$id = add_to_outbox( $follow, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
-
-			if ( ! $id ) {
+			if ( ! $id || \is_wp_error( $id ) ) {
 				return new \WP_Error( 'activitypub_follow_failed', 'Failed to add follow to outbox' );
 			}
 		}
