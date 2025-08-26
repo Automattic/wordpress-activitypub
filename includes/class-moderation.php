@@ -9,6 +9,7 @@ namespace Activitypub;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Blocked_Actors;
 
 /**
  * ActivityPub Moderation class.
@@ -218,7 +219,7 @@ class Moderation {
 	 */
 	public static function get_user_blocks( $user_id ) {
 		return array(
-			'actors'   => \wp_list_pluck( self::get_blocked_actors( $user_id ), 'guid' ),
+			'actors'   => \wp_list_pluck( Blocked_Actors::get_blocked_actors( $user_id ), 'guid' ),
 			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS['domain'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS['keyword'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		);
@@ -302,7 +303,7 @@ class Moderation {
 	 */
 	public static function get_site_blocks() {
 		return array(
-			'actors'   => \wp_list_pluck( self::get_blocked_actors( Actors::BLOG_USER_ID ), 'guid' ),
+			'actors'   => \wp_list_pluck( Blocked_Actors::get_blocked_actors( Actors::BLOG_USER_ID ), 'guid' ),
 			'domains'  => \get_option( self::OPTION_KEYS['domain'], array() ),
 			'keywords' => \get_option( self::OPTION_KEYS['keyword'], array() ),
 		);
@@ -367,56 +368,4 @@ class Moderation {
 		return false;
 	}
 
-	/**
-	 * Get the blocked actors of a given user, along with a total count for pagination purposes.
-	 *
-	 * @param int|null $user_id The ID of the WordPress User.
-	 * @param int      $number  Maximum number of results to return.
-	 * @param int      $page    Page number.
-	 * @param array    $args    The WP_Query arguments.
-	 *
-	 * @return array {
-	 *      Data about the blocked actors.
-	 *
-	 *      @type \WP_Post[] $blocked_actors List of blocked Actor WP_Post objects.
-	 *      @type int        $total         Total number of blocked actors.
-	 *  }
-	 */
-	public static function get_blocked_actors_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
-		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
-			'posts_per_page' => $number,
-			'paged'          => $page,
-			'orderby'        => 'ID',
-			'order'          => 'DESC',
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
-				array(
-					'key'   => self::BLOCKED_ACTORS_META_KEY,
-					'value' => $user_id,
-				),
-			),
-		);
-
-		$args           = \wp_parse_args( $args, $defaults );
-		$query          = new \WP_Query( $args );
-		$total          = $query->found_posts;
-		$blocked_actors = \array_filter( $query->posts );
-
-		return \compact( 'blocked_actors', 'total' );
-	}
-
-	/**
-	 * Get the blocked actors of a given user.
-	 *
-	 * @param int|null $user_id The ID of the WordPress User.
-	 * @param int      $number  Maximum number of results to return.
-	 * @param int      $page    Page number.
-	 * @param array    $args    The WP_Query arguments.
-	 *
-	 * @return \WP_Post[] List of blocked Actors.
-	 */
-	public static function get_blocked_actors( $user_id, $number = -1, $page = null, $args = array() ) {
-		return self::get_blocked_actors_with_count( $user_id, $number, $page, $args )['blocked_actors'];
-	}
 }
