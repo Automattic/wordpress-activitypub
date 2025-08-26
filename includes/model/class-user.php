@@ -169,7 +169,14 @@ class User extends Actor {
 	 * @return string The preferred username.
 	 */
 	public function get_preferred_username() {
-		return \get_the_author_meta( 'login', $this->_id );
+		$login = \get_the_author_meta( 'login', $this->_id );
+
+		// Handle cases where login is an email address (e.g., from Site Kit Google login).
+		if ( \filter_var( $login, FILTER_VALIDATE_EMAIL ) ) {
+			$login = \get_the_author_meta( 'user_nicename', $this->_id );
+		}
+
+		return $login;
 	}
 
 	/**

@@ -321,7 +321,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	/**
 	 * Test get_post_metadata method.
 	 *
-	 * @covers ::get_post_metadata
+	 * @covers ::default_post_metadata
 	 */
 	public function test_get_post_metadata() {
 		// Create a test post.

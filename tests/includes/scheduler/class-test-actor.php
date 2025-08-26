@@ -351,4 +351,100 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		\wp_delete_post( $post_id );
 		\wp_delete_user( $user_id );
 	}
+
+	/**
+	 * Test that user deletion creates a Delete activity.
+	 *
+	 * @covers ::schedule_user_delete
+	 */
+	public function test_schedule_user_delete() {
+		// Create a user with ActivityPub capability.
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		// Verify the user has ActivityPub capability.
+		$this->assertTrue( \user_can( $user_id, 'activitypub' ) );
+
+		// Get the actor before deletion.
+		$actor = Actors::get_by_id( $user_id );
+		$this->assertNotNull( $actor );
+		$this->assertFalse( \is_wp_error( $actor ) );
+
+		// Get the current outbox count.
+		$outbox_before = $this->get_latest_outbox_item();
+		$this->assertNull( $outbox_before );
+
+		// Call the method directly to test it.
+		Actor::schedule_user_delete( $user_id );
+
+		// Check that a Delete activity was added to the outbox.
+		$outbox_after = $this->get_latest_outbox_item();
+		$this->assertNotNull( $outbox_after );
+
+		// Verify it's a Delete activity.
+		$activity_type = \get_post_meta( $outbox_after->ID, '_activitypub_activity_type', true );
+		$this->assertEquals( 'Delete', $activity_type, 'Activity type should be Delete' );
+
+		// Verify the activity content.
+		$activity = \json_decode( $outbox_after->post_content, true );
+		$this->assertIsArray( $activity, 'Activity content should be valid JSON' );
+		$this->assertEquals( 'Delete', $activity['type'], 'Activity type in content should be Delete' );
+		$this->assertEquals( $actor->get_id(), $activity['actor'], 'Actor should match' );
+		$this->assertEquals( $actor->get_id(), $activity['object'], 'Object should be the actor being deleted' );
+
+		// Clean up.
+		\wp_delete_user( $user_id );
+	}
+
+	/**
+	 * Test that user deletion is skipped for users without ActivityPub capability.
+	 *
+	 * @covers ::schedule_user_delete
+	 */
+	public function test_schedule_user_delete_skips_non_activitypub_users() {
+		// Create a user without ActivityPub capability (subscriber role).
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		// Verify the user doesn't have ActivityPub capability.
+		$this->assertFalse( \user_can( $user_id, 'activitypub' ) );
+
+		// Get the current total outbox items across all users.
+		$total_before = \wp_count_posts( 'ap_outbox' )->publish;
+
+		// Call the method directly to test it.
+		Actor::schedule_user_delete( $user_id );
+
+		// Check that no Delete activity was added.
+		$total_after = \wp_count_posts( 'ap_outbox' )->publish;
+		$this->assertEquals( $total_before, $total_after, 'No Delete activity should be added for non-ActivityPub users' );
+
+		// Clean up.
+		\wp_delete_user( $user_id );
+	}
+
+	/**
+	 * Test that user deletion handles invalid actor gracefully.
+	 *
+	 * @covers ::schedule_user_delete
+	 */
+	public function test_schedule_user_delete_handles_invalid_actor() {
+		// Create a user with ActivityPub capability.
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		// Verify the user has ActivityPub capability.
+		$this->assertTrue( \user_can( $user_id, 'activitypub' ) );
+
+		// We'll use a filter to mock the response instead since we can't easily mock static methods.
+		// For this test, we'll delete the user first to make the actor invalid.
+		\wp_delete_user( $user_id );
+
+		// Get the current total outbox items.
+		$total_before = \wp_count_posts( 'ap_outbox' )->publish;
+
+		// Call the method with the deleted user ID.
+		Actor::schedule_user_delete( $user_id );
+
+		// Check that no Delete activity was added since the actor is invalid.
+		$total_after = \wp_count_posts( 'ap_outbox' )->publish;
+		$this->assertEquals( $total_before, $total_after, 'No Delete activity should be added for invalid actors' );
+	}
 }

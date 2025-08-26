@@ -202,7 +202,6 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 *
 	 * @covers ::add_site_block
 	 * @covers ::get_site_blocks
-	 * @covers ::get_site_option_key_for_type
 	 */
 	public function test_add_site_block() {
 		$this->assertTrue( Moderation::add_site_block( 'domain', 'spam-instance.com' ) );
@@ -284,6 +283,24 @@ class Test_Moderation extends \WP_UnitTestCase {
 					'id'      => 'https://example.com/note/1',
 					'type'    => 'Note',
 					'content' => 'Check out this product, buy now!',
+				),
+			)
+		);
+		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
+
+		// Test keyword blocking.
+		/* @var Activity $activity Activity. */
+		$activity = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'actor'  => 'https://good.example.com/@user',
+				'object' => array(
+					'id'          => 'https://example.com/note/1',
+					'type'        => 'Note',
+					'content_map' => array(
+						'en' => 'Check out this product, buy now!',
+						'de' => 'Überprüfe dieses Produkt, kaufe jetzt!',
+					),
 				),
 			)
 		);
@@ -375,6 +392,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * Test edge cases with malformed activity data.
 	 *
 	 * @covers ::activity_is_blocked
+	 * @throws \Exception Thrown when an error occurs.
 	 */
 	public function test_activity_blocking_edge_cases() {
 		// Test with empty activity.
@@ -434,8 +452,24 @@ class Test_Moderation extends \WP_UnitTestCase {
 				),
 			)
 		);
-		$this->expectError();
+
+		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
+		\set_error_handler(
+			static function ( $errno, $errstr ) {
+				throw new \Exception( \esc_html( $errstr ), \esc_html( $errno ) );
+			},
+			E_NOTICE | E_WARNING
+		);
+
+		// PHP 7.2 uses "Undefined index", PHP 8+ uses "Undefined array key".
+		if ( version_compare( PHP_VERSION, '8.0.0', '>=' ) ) {
+			$this->expectExceptionMessage( 'Undefined array key &quot;id&quot;' );
+		} else {
+			$this->expectExceptionMessage( 'Undefined index: id' );
+		}
 		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
+
+		\restore_error_handler();
 	}
 
 	/**

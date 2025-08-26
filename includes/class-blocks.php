@@ -282,6 +282,7 @@ class Blocks {
 	public static function render_modal( $args = array() ) {
 		$defaults = array(
 			'content'    => '',
+			'id'         => '',
 			'is_compact' => false,
 			'title'      => '',
 		);
@@ -300,7 +301,12 @@ class Blocks {
 			<div class="activitypub-modal__frame">
 				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
 					<div class="activitypub-modal__header">
-						<h2 class="activitypub-modal__title"><?php echo \esc_html( $args['title'] ); ?></h2>
+						<h2 
+							class="activitypub-modal__title"
+							<?php if ( ! empty( $args['id'] ) ) : ?>
+								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
+							<?php endif; ?>
+						><?php echo \esc_html( $args['title'] ); ?></h2>
 						<button
 							type="button"
 							class="activitypub-modal__close wp-element-button wp-block-button__link"
