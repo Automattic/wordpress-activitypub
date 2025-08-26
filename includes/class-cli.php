@@ -294,12 +294,7 @@ class Cli extends \WP_CLI_Command {
 			\WP_CLI::line( \WP_CLI::colorize( '%YThe self-destruct process is currently running.%n' ) );
 			\WP_CLI::line( '' );
 
-			if ( $pending_count > 0 ) {
-				\WP_CLI::line( \WP_CLI::colorize( "%Y📊 Progress: {$pending_count} Delete Activities still pending%n" ) );
-			} else {
-				\WP_CLI::line( \WP_CLI::colorize( '%Y📊 Progress: All Delete Activities have been processed%n' ) );
-				\WP_CLI::line( \WP_CLI::colorize( '%Y⚠️  Completion notification may be pending%n' ) );
-			}
+			\WP_CLI::line( \WP_CLI::colorize( "%Y📊 Progress: {$pending_count} Delete Activities still pending%n" ) );
 
 			\WP_CLI::line( '' );
 			\WP_CLI::line( \WP_CLI::colorize( '%Y💡 Note: The process may take several minutes to complete.%n' ) );
