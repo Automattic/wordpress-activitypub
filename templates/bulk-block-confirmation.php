@@ -79,7 +79,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 		<?php endif; ?>
 
 		<p class="submit">
-			<?php submit_button( __( 'Confirm Block', 'activitypub' ), 'primary', 'submit', false ); ?>
+			<?php submit_button( __( 'Confirm', 'activitypub' ), 'primary', 'submit', false ); ?>
 			<a href="<?php echo esc_url( wp_get_referer() ); ?>" class="button"><?php esc_html_e( 'Cancel', 'activitypub' ); ?></a>
 		</p>
 	</form>
