@@ -10,6 +10,7 @@ namespace Activitypub\Model;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 
+use function Activitypub\home_host;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -244,7 +245,7 @@ class Application extends Actor {
 		return sprintf(
 			/* translators: %s: Domain of the site */
 			__( 'This is the Application Actor for %s.', 'activitypub' ),
-			\wp_parse_url( \home_url(), \PHP_URL_HOST )
+			home_host()
 		);
 	}
 
