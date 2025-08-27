@@ -8,6 +8,8 @@
 namespace Activitypub;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Blocked_Actors;
 
 /**
  * ActivityPub Moderation class.
@@ -15,20 +17,33 @@ use Activitypub\Activity\Activity;
  * Handles user-specific blocking and site-wide moderation.
  */
 class Moderation {
+
+	/**
+	 * Block type constants.
+	 */
+	const TYPE_ACTOR   = 'actor';
+	const TYPE_DOMAIN  = 'domain';
+	const TYPE_KEYWORD = 'keyword';
+
+	/**
+	 * Post meta key for blocked actors.
+	 */
+	const BLOCKED_ACTORS_META_KEY = '_activitypub_blocked_by';
+
 	/**
 	 * User meta key for blocked keywords.
 	 */
 	const USER_META_KEYS = array(
-		'domain'  => 'activitypub_blocked_domains',
-		'keyword' => 'activitypub_blocked_keywords',
+		self::TYPE_DOMAIN  => 'activitypub_blocked_domains',
+		self::TYPE_KEYWORD => 'activitypub_blocked_keywords',
 	);
 
 	/**
 	 * Option key for site-wide blocked keywords.
 	 */
 	const OPTION_KEYS = array(
-		'domain'  => 'activitypub_site_blocked_domains',
-		'keyword' => 'activitypub_site_blocked_keywords',
+		self::TYPE_DOMAIN  => 'activitypub_site_blocked_domains',
+		self::TYPE_KEYWORD => 'activitypub_site_blocked_keywords',
 	);
 
 	/**
@@ -95,11 +110,23 @@ class Moderation {
 	 */
 	public static function add_user_block( $user_id, $type, $value ) {
 		switch ( $type ) {
-			case 'domain':
-			case 'keyword':
+			case self::TYPE_ACTOR:
+				return Blocked_Actors::add_block( $user_id, $value );
+
+			case self::TYPE_DOMAIN:
+			case self::TYPE_KEYWORD:
 				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 
-				if ( ! in_array( $value, $blocks, true ) ) {
+				if ( ! \in_array( $value, $blocks, true ) ) {
+					/**
+					 * Fired when a domain or keyword is blocked.
+					 *
+					 * @param string $value   The blocked domain or keyword.
+					 * @param string $type    The block type (actor, domain, keyword).
+					 * @param int    $user_id The user ID.
+					 */
+					\do_action( 'activitypub_add_user_block', $value, $type, $user_id );
+
 					$blocks[] = $value;
 					return (bool) \update_user_meta( $user_id, self::USER_META_KEYS[ $type ], $blocks );
 				}
@@ -119,14 +146,26 @@ class Moderation {
 	 */
 	public static function remove_user_block( $user_id, $type, $value ) {
 		switch ( $type ) {
-			case 'domain':
-			case 'keyword':
+			case self::TYPE_ACTOR:
+				return Blocked_Actors::remove_block( $user_id, $value );
+
+			case self::TYPE_DOMAIN:
+			case self::TYPE_KEYWORD:
 				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-				$key    = array_search( $value, $blocks, true );
+				$key    = \array_search( $value, $blocks, true );
 
 				if ( false !== $key ) {
+					/**
+					 * Fired when a domain or keyword is unblocked.
+					 *
+					 * @param string $value   The unblocked domain or keyword.
+					 * @param string $type    The block type (actor, domain, keyword).
+					 * @param int    $user_id The user ID.
+					 */
+					\do_action( 'activitypub_remove_user_block', $value, $type, $user_id );
+
 					unset( $blocks[ $key ] );
-					return \update_user_meta( $user_id, self::USER_META_KEYS[ $type ], array_values( $blocks ) );
+					return \update_user_meta( $user_id, self::USER_META_KEYS[ $type ], \array_values( $blocks ) );
 				}
 				break;
 		}
@@ -142,9 +181,9 @@ class Moderation {
 	 */
 	public static function get_user_blocks( $user_id ) {
 		return array(
-			'actors'   => array(),
-			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS['domain'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS['keyword'], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'actors'   => \wp_list_pluck( Blocked_Actors::get_blocked_actors( $user_id ), 'guid' ),
+			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_DOMAIN ], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_KEYWORD ], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		);
 	}
 
@@ -157,11 +196,23 @@ class Moderation {
 	 */
 	public static function add_site_block( $type, $value ) {
 		switch ( $type ) {
-			case 'domain':
-			case 'keyword':
+			case self::TYPE_ACTOR:
+				// Site-wide actor blocking uses the BLOG_USER_ID.
+				return self::add_user_block( Actors::BLOG_USER_ID, self::TYPE_ACTOR, $value );
+
+			case self::TYPE_DOMAIN:
+			case self::TYPE_KEYWORD:
 				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
 
-				if ( ! in_array( $value, $blocks, true ) ) {
+				if ( ! \in_array( $value, $blocks, true ) ) {
+					/**
+					 * Fired when a domain or keyword is blocked site-wide.
+					 *
+					 * @param string $value The blocked domain or keyword.
+					 * @param string $type  The block type (actor, domain, keyword).
+					 */
+					\do_action( 'activitypub_add_site_block', $value, $type );
+
 					$blocks[] = $value;
 					return \update_option( self::OPTION_KEYS[ $type ], $blocks );
 				}
@@ -180,14 +231,26 @@ class Moderation {
 	 */
 	public static function remove_site_block( $type, $value ) {
 		switch ( $type ) {
-			case 'domain':
-			case 'keyword':
+			case self::TYPE_ACTOR:
+				// Site-wide actor unblocking uses the BLOG_USER_ID.
+				return self::remove_user_block( Actors::BLOG_USER_ID, self::TYPE_ACTOR, $value );
+
+			case self::TYPE_DOMAIN:
+			case self::TYPE_KEYWORD:
 				$blocks = \get_option( self::OPTION_KEYS[ $type ], array() );
-				$key    = array_search( $value, $blocks, true );
+				$key    = \array_search( $value, $blocks, true );
 
 				if ( false !== $key ) {
+					/**
+					 * Fired when a domain or keyword is unblocked site-wide.
+					 *
+					 * @param string $value The unblocked domain or keyword.
+					 * @param string $type  The block type (actor, domain, keyword).
+					 */
+					\do_action( 'activitypub_remove_site_block', $value, $type );
+
 					unset( $blocks[ $key ] );
-					return \update_option( self::OPTION_KEYS[ $type ], array_values( $blocks ) );
+					return \update_option( self::OPTION_KEYS[ $type ], \array_values( $blocks ) );
 				}
 				break;
 		}
@@ -202,9 +265,9 @@ class Moderation {
 	 */
 	public static function get_site_blocks() {
 		return array(
-			'actors'   => array(),
-			'domains'  => \get_option( self::OPTION_KEYS['domain'], array() ),
-			'keywords' => \get_option( self::OPTION_KEYS['keyword'], array() ),
+			'actors'   => \wp_list_pluck( Blocked_Actors::get_blocked_actors( Actors::BLOG_USER_ID ), 'guid' ),
+			'domains'  => \get_option( self::OPTION_KEYS[ self::TYPE_DOMAIN ], array() ),
+			'keywords' => \get_option( self::OPTION_KEYS[ self::TYPE_KEYWORD ], array() ),
 		);
 	}
 
@@ -224,8 +287,18 @@ class Moderation {
 		$actor_id = object_to_uri( $activity->get_actor() );
 
 		// Check blocked actors.
-		if ( $actor_id && \in_array( $actor_id, $blocked_actors, true ) ) {
-			return true;
+		if ( $actor_id ) {
+			// If actor_id is not a URL, resolve it via webfinger.
+			if ( ! \str_starts_with( $actor_id, 'http' ) ) {
+				$resolved_url = Webfinger::resolve( $actor_id );
+				if ( ! \is_wp_error( $resolved_url ) ) {
+					$actor_id = $resolved_url;
+				}
+			}
+
+			if ( \in_array( $actor_id, $blocked_actors, true ) ) {
+				return true;
+			}
 		}
 
 		// Check blocked domains.

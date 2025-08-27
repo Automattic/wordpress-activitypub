@@ -377,6 +377,12 @@ class Settings {
 			);
 		}
 
+		// Add blocked actors tab for site-wide blocking.
+		$settings_tabs['blocked-actors'] = array(
+			'label'    => \__( 'Blocked Actors', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php',
+		);
+
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
 				'label'    => __( 'Blog Profile', 'activitypub' ),

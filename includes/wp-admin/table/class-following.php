@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
+use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
@@ -123,16 +124,40 @@ class Following extends \WP_List_Table {
 				}
 
 				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				if ( ! \is_email( \ltrim( $profile, '@' ) ) && empty( \wp_parse_url( $profile, PHP_URL_SCHEME ) ) ) {
+				$profile = \trim( $profile, '@' );
+
+				if ( \filter_var( $profile, FILTER_VALIDATE_EMAIL ) ) {
+					$remote_actor = Webfinger::resolve( $profile );
+					if ( ! \is_wp_error( $remote_actor ) ) {
+						$original = $profile;
+						$profile  = object_to_uri( $remote_actor );
+					}
+				} elseif ( empty( \wp_parse_url( $profile, PHP_URL_SCHEME ) ) ) {
 					// Add scheme if missing.
 					$profile = \esc_url_raw( 'https://' . \ltrim( $profile, '/' ) );
+				}
+
+				// Check if user has blocked the account.
+				if ( \in_array( $profile, Moderation::get_user_blocks( $this->user_id )['actors'], true ) ) {
+					/* translators: %s: Account profile that could not be followed */
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. The account is blocked.', 'activitypub' ), \esc_html( $profile ) ) );
+					$redirect_to = \add_query_arg( 'resource', $original ?? $profile, $redirect_to );
+					break;
+				}
+
+				// Check if site has blocked the account.
+				if ( \in_array( $profile, Moderation::get_site_blocks()['actors'], true ) ) {
+					/* translators: %s: Account profile that could not be followed */
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. The account is blocked site-wide.', 'activitypub' ), \esc_html( $profile ) ) );
+					$redirect_to = \add_query_arg( 'resource', $original ?? $profile, $redirect_to );
+					break;
 				}
 
 				$result = follow( $profile, $this->user_id );
 				if ( \is_wp_error( $result ) ) {
 					/* translators: %s: Account profile that could not be followed */
 					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
-					$redirect_to = \add_query_arg( 'resource', $profile, $redirect_to );
+					$redirect_to = \add_query_arg( 'resource', $original ?? $profile, $redirect_to );
 				} else {
 					\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
 				}

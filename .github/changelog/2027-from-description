@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add actor blocking functionality with list table interface for managing blocked users and site-wide blocks
