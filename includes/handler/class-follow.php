@@ -87,13 +87,11 @@ class Follow {
 		// Only send minimal data.
 		$activity_object = array_intersect_key(
 			$activity_object,
-			array_flip(
-				array(
-					'id',
-					'type',
-					'actor',
-					'object',
-				)
+			array(
+				'id'     => 1,
+				'type'   => 1,
+				'actor'  => 1,
+				'object' => 1,
 			)
 		);
 
@@ -116,13 +114,11 @@ class Follow {
 		// Only send minimal data.
 		$origin_activity = array_intersect_key(
 			$activity,
-			array_flip(
-				array(
-					'id',
-					'type',
-					'actor',
-					'object',
-				)
+			array(
+				'id'     => 1,
+				'type'   => 1,
+				'actor'  => 1,
+				'object' => 1,
 			)
 		);
 
