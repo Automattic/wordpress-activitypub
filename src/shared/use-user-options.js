@@ -20,17 +20,24 @@ export function useUserOptions( { withInherit = false } ) {
 	 * @property {boolean} enabled.blog - Whether the blog user is enabled.
 	 */
 	const { enabled, namespace } = useOptions();
-	const fetchedUsers = enabled?.users
-		? useSelect( ( select ) => select( 'core' ).getUsers( { capabilities: 'activitypub' } ), [] )
-		: [];
 	const [ currentUserCanActivityPub, setCurrentUserCanActivityPub ] = useState( false );
+	const { fetchedUsers, isLoadingUsers } = useSelect( ( select ) => {
+		const { getUsers, getIsResolving } = select( 'core' );
+		return {
+			fetchedUsers: enabled?.users ? getUsers( { capabilities: 'activitypub' } ) : null,
+			isLoadingUsers: enabled?.users ? getIsResolving( 'getUsers', [ { capabilities: 'activitypub' } ] ) : false,
+		};
+	}, [] );
 
-	// Only fetch current user and test capability if fetchedUsers failed
-	const currentUser = fetchedUsers === null ? useSelect( ( select ) => select( 'core' ).getCurrentUser(), [] ) : null;
+	// Only fetch current user if fetchedUsers is empty and we're not still loading.
+	const currentUser = useSelect(
+		( select ) => ( fetchedUsers || isLoadingUsers ? null : select( 'core' ).getCurrentUser() ),
+		[ fetchedUsers, isLoadingUsers ]
+	);
 
 	// Test if current user has activitypub capability by trying to access their actor endpoint.
 	useEffect( () => {
-		if ( fetchedUsers !== null || ! currentUser || ! namespace ) {
+		if ( fetchedUsers || isLoadingUsers || ! currentUser ) {
 			return;
 		}
 
@@ -42,7 +49,7 @@ export function useUserOptions( { withInherit = false } ) {
 		} )
 			.then( () => setCurrentUserCanActivityPub( true ) )
 			.catch( () => setCurrentUserCanActivityPub( false ) );
-	}, [ fetchedUsers, currentUser?.id, namespace ] );
+	}, [ fetchedUsers, isLoadingUsers, currentUser ] );
 
 	const users =
 		fetchedUsers ||
@@ -52,7 +59,7 @@ export function useUserOptions( { withInherit = false } ) {
 	 * Memoized computation of user options for block settings.
 	 */
 	return useMemo( () => {
-		if ( ! users ) {
+		if ( ! users.length ) {
 			return [];
 		}
 		const userKeywords = [];
