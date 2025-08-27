@@ -199,6 +199,10 @@ class Migration {
 			}
 		}
 
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::remove_pending_application_user_follow_requests();
+		}
+
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
 
@@ -1054,5 +1058,20 @@ class Migration {
 				'batch_size' => $batch_size,
 			);
 		}
+	}
+
+	/**
+	 * Removes pending follow requests for the application user.
+	 */
+	public static function remove_pending_application_user_follow_requests() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
+				Actors::APPLICATION_USER_ID
+			)
+		);
 	}
 }
