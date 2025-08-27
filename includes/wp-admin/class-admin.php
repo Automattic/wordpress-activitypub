@@ -81,6 +81,24 @@ class Admin {
 		if ( ! $current_screen ) {
 			return;
 		}
+
+		// Check for self-destruct completion notice.
+		$self_destruct_complete = \get_option( 'activitypub_self_destruct_complete' );
+		if ( $self_destruct_complete ) {
+			// Show the notice only once, then remove it.
+			\delete_option( 'activitypub_self_destruct_complete' );
+			?>
+			<div class="notice notice-success is-dismissible">
+				<p>
+					<strong><?php esc_html_e( 'ActivityPub Self-Destruct Complete!', 'activitypub' ); ?></strong>
+				</p>
+				<p>
+					<?php esc_html_e( 'All Delete activities have been successfully sent to the Fediverse. Your blog is no longer discoverable via ActivityPub and all followers have been notified of the deletion.', 'activitypub' ); ?>
+				</p>
+			</div>
+			<?php
+		}
+
 		if ( 'edit' === $current_screen->base && Extra_Fields::is_extra_fields_post_type( $current_screen->post_type ) ) {
 			?>
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
@@ -93,7 +111,7 @@ class Admin {
 	}
 
 	/**
-	 * Load user settings page
+	 * Load user settings page.
 	 */
 	public static function followers_list_page() {
 		// User has to be able to publish posts.
@@ -103,12 +121,22 @@ class Admin {
 	}
 
 	/**
-	 * Load user following list page
+	 * Load user following list page.
 	 */
 	public static function following_list_page() {
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php' );
+		}
+	}
+
+	/**
+	 * Load blocked actors page.
+	 */
+	public static function blocked_actors_list_page() {
+		// User has to be able to publish posts.
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php' );
 		}
 	}
 
@@ -125,6 +153,9 @@ class Admin {
 			case 'following':
 				self::add_following_list_table();
 				break;
+			case 'blocked-actors':
+				self::add_blocked_actors_list_table();
+				break;
 		}
 	}
 
@@ -140,6 +171,13 @@ class Admin {
 	 */
 	public static function add_following_list_table() {
 		$GLOBALS['following_list_table'] = new Table\Following();
+	}
+
+	/**
+	 * Creates the blocked actors list table.
+	 */
+	public static function add_blocked_actors_list_table() {
+		$GLOBALS['blocked_actors_list_table'] = new Table\Blocked_Actors();
 	}
 
 	/**

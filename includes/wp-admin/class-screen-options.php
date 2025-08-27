@@ -35,6 +35,9 @@ class Screen_Options {
 			case 'following':
 				self::add_following_list_options();
 				break;
+			case 'blocked-actors':
+				self::add_blocked_actors_list_options();
+				break;
 		}
 	}
 
@@ -71,6 +74,22 @@ class Screen_Options {
 	}
 
 	/**
+	 * Add screen options for blocked actors list.
+	 *
+	 * @see Menu::admin_menu()
+	 */
+	public static function add_blocked_actors_list_options() {
+		\add_screen_option(
+			'per_page',
+			array(
+				'label'   => \__( 'Blocked Actors per page', 'activitypub' ),
+				'default' => 20,
+				'option'  => 'activitypub_blocked_actors_per_page',
+			)
+		);
+	}
+
+	/**
 	 * Set per_page screen options.
 	 *
 	 * @param mixed  $status Screen option value. Default false to skip.
@@ -79,7 +98,7 @@ class Screen_Options {
 	 * @return int
 	 */
 	public static function set_per_page_option( $status, $option, $value ) {
-		if ( 'activitypub_followers_per_page' === $option || 'activitypub_following_per_page' === $option ) {
+		if ( 'activitypub_followers_per_page' === $option || 'activitypub_following_per_page' === $option || 'activitypub_blocked_actors_per_page' === $option ) {
 			$value = (int) $value;
 
 			if ( $value > 0 && $value <= 100 ) {
@@ -103,8 +122,8 @@ class Screen_Options {
 			return $screen_settings;
 		}
 
-		// No screen options on followers and following tabs. The per_page screen options interfere with them.
-		if ( \in_array( \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ), array( 'followers', 'following' ), true ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+		// No screen options on followers, following, and blocked-actors tabs. The per_page screen options interfere with them.
+		if ( \in_array( \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ), array( 'followers', 'following', 'blocked-actors' ), true ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			return $screen_settings;
 		}
 

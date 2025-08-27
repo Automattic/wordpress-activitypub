@@ -31,7 +31,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 		parent::set_up();
 
 		// Create a test user.
-		$this->test_user_id = $this->factory->user->create(
+		$this->test_user_id = self::factory()->user->create(
 			array(
 				'user_login' => 'testuser',
 				'user_email' => 'test@example.com',
@@ -68,6 +68,24 @@ class Test_Moderation extends \WP_UnitTestCase {
 				'id'   => 'https://example.com/@user',
 				'type' => 'Person',
 				'guid' => 'https://example.com/@user',
+			);
+		}
+
+		// Mock for webfinger testing.
+		$webfinger_test_actors = array(
+			'acct:spammer@bad.example.com',
+			'https://bad.example.com/@spammer',
+			'https://bad.example.com/user/spammer',
+			'https://bad.example.com/users/spammer',
+		);
+
+		if ( \in_array( $url_or_object, $webfinger_test_actors, true ) ) {
+			$response = array(
+				'id'                => $url_or_object,
+				'type'              => 'Person',
+				'guid'              => $url_or_object,
+				'preferredUsername' => 'spammer',
+				'name'              => 'Test Spammer',
 			);
 		}
 
@@ -688,9 +706,10 @@ class Test_Moderation extends \WP_UnitTestCase {
 	public function test_blocked_attributes( $data, $expected ) {
 		Moderation::add_site_block( 'keyword', 'spam' );
 
-		$data = Activity::init_from_array( $data );
+		/* @type Activity $activity Activity object */
+		$activity = Activity::init_from_array( $data );
 
-		$this->assertEquals( $expected, Moderation::activity_is_blocked( $data ) );
+		$this->assertEquals( $expected, Moderation::activity_is_blocked( $activity ) );
 
 		Moderation::remove_site_block( 'keyword', 'spam' );
 	}
@@ -758,5 +777,62 @@ class Test_Moderation extends \WP_UnitTestCase {
 				false,
 			),
 		);
+	}
+
+	/**
+	 * Test that webfinger actors are resolved to URLs for blocking.
+	 *
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_webfinger_actor_resolution() {
+		// Mock webfinger resolution to return a URL.
+		add_filter(
+			'pre_http_request',
+			function ( $response, $args, $url ) {
+				if ( strpos( $url, '/.well-known/webfinger' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:spammer@bad.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://bad.example.com/@spammer',
+									),
+								),
+							)
+						),
+					);
+				}
+				return $response;
+			},
+			10,
+			3
+		);
+
+		// Block the resolved URL.
+		Moderation::add_site_block( 'domain', 'bad.example.com' );
+
+		/* @type Activity $activity Activity object */
+		$activity = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'actor'  => 'spammer@bad.example.com',
+				'object' => array(
+					'id'      => 'https://example.com/note/1',
+					'type'    => 'Note',
+					'content' => 'Test content',
+				),
+			)
+		);
+
+		// Should be blocked because webfinger resolves to blocked domain.
+		$this->assertTrue( Moderation::activity_is_blocked( $activity ) );
+
+		// Clean up.
+		Moderation::remove_site_block( 'domain', 'bad.example.com' );
+		remove_all_filters( 'pre_http_request' );
 	}
 }
