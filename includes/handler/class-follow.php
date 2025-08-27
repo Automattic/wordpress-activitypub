@@ -33,6 +33,11 @@ class Follow {
 	 * @param int   $user_id  The user ID.
 	 */
 	public static function handle_follow( $activity, $user_id ) {
+		if ( Actors::APPLICATION_USER_ID === $user_id ) {
+			self::queue_reject( $activity, $user_id );
+			return;
+		}
+
 		// Save follower.
 		$remote_actor = Followers::add_follower(
 			$user_id,
@@ -82,13 +87,11 @@ class Follow {
 		// Only send minimal data.
 		$activity_object = array_intersect_key(
 			$activity_object,
-			array_flip(
-				array(
-					'id',
-					'type',
-					'actor',
-					'object',
-				)
+			array(
+				'id'     => 1,
+				'type'   => 1,
+				'actor'  => 1,
+				'object' => 1,
 			)
 		);
 
@@ -97,6 +100,33 @@ class Follow {
 		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 		$activity->set_object( $activity_object );
 		$activity->set_to( array( $actor ) );
+
+		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+	}
+
+	/**
+	 * Send Reject response.
+	 *
+	 * @param array $activity The Activity array.
+	 * @param int   $user_id  The ID of the WordPress User.
+	 */
+	public static function queue_reject( $activity, $user_id ) {
+		// Only send minimal data.
+		$origin_activity = array_intersect_key(
+			$activity,
+			array(
+				'id'     => 1,
+				'type'   => 1,
+				'actor'  => 1,
+				'object' => 1,
+			)
+		);
+
+		$activity = new Activity();
+		$activity->set_type( 'Reject' );
+		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+		$activity->set_object( $origin_activity );
+		$activity->set_to( array( $origin_activity['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}

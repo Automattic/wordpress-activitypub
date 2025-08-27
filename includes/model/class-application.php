@@ -10,6 +10,7 @@ namespace Activitypub\Model;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 
+use function Activitypub\home_host;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -241,11 +242,10 @@ class Application extends Actor {
 	 * @return string The User description.
 	 */
 	public function get_summary() {
-		return \wpautop(
-			\wp_kses(
-				\get_bloginfo( 'description' ),
-				'default'
-			)
+		return sprintf(
+			/* translators: %s: Domain of the site */
+			__( 'This is the Application Actor for %s.', 'activitypub' ),
+			home_host()
 		);
 	}
 
