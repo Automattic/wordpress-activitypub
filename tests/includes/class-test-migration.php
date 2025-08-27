@@ -1021,7 +1021,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		\add_post_meta( $post2, 'some_other_meta', Actors::APPLICATION_USER_ID );
 
 		// Verify initial state.
-		$initial_count = $wpdb->get_var(
+		$initial_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
 				Actors::APPLICATION_USER_ID
@@ -1029,8 +1029,11 @@ class Test_Migration extends \WP_UnitTestCase {
 		);
 		$this->assertEquals( 2, $initial_count, 'Should have 2 _activitypub_following entries with APPLICATION_USER_ID' );
 
-		$other_following_count = $wpdb->get_var(
-			"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value != '" . Actors::APPLICATION_USER_ID . "'"
+		$other_following_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value != %s",
+				Actors::APPLICATION_USER_ID
+			)
 		);
 		$this->assertEquals( 2, $other_following_count, 'Should have 2 _activitypub_following entries with other values' );
 
@@ -1038,7 +1041,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		Migration::remove_pending_application_user_follow_requests();
 
 		// Verify APPLICATION_USER_ID entries were removed.
-		$remaining_count = $wpdb->get_var(
+		$remaining_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
 				Actors::APPLICATION_USER_ID
@@ -1047,8 +1050,11 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( 0, $remaining_count, 'All _activitypub_following entries with APPLICATION_USER_ID should be removed' );
 
 		// Verify other _activitypub_following entries remain.
-		$remaining_other_count = $wpdb->get_var(
-			"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value != '" . Actors::APPLICATION_USER_ID . "'"
+		$remaining_other_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value != %s",
+				Actors::APPLICATION_USER_ID
+			)
 		);
 		$this->assertEquals( 2, $remaining_other_count, 'Other _activitypub_following entries should remain' );
 
@@ -1083,10 +1089,10 @@ class Test_Migration extends \WP_UnitTestCase {
 		\add_post_meta( $post2, 'different_meta', Actors::APPLICATION_USER_ID );
 
 		// Get initial counts.
-		$initial_following_count = $wpdb->get_var(
+		$initial_following_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following'"
 		);
-		$initial_total_count = $wpdb->get_var(
+		$initial_total_count     = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			"SELECT COUNT(*) FROM {$wpdb->postmeta}"
 		);
 
@@ -1094,10 +1100,10 @@ class Test_Migration extends \WP_UnitTestCase {
 		Migration::remove_pending_application_user_follow_requests();
 
 		// Verify no entries were removed.
-		$final_following_count = $wpdb->get_var(
+		$final_following_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following'"
 		);
-		$final_total_count = $wpdb->get_var(
+		$final_total_count     = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			"SELECT COUNT(*) FROM {$wpdb->postmeta}"
 		);
 
@@ -1135,7 +1141,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		\add_post_meta( $post_id, '_activitypub_following', '789' );
 
 		// Verify initial state.
-		$initial_app_count = $wpdb->get_var(
+		$initial_app_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
 				Actors::APPLICATION_USER_ID
@@ -1147,7 +1153,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		Migration::remove_pending_application_user_follow_requests();
 
 		// Verify all APPLICATION_USER_ID entries were removed.
-		$remaining_app_count = $wpdb->get_var(
+		$remaining_app_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
 				Actors::APPLICATION_USER_ID
@@ -1156,7 +1162,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( 0, $remaining_app_count, 'All APPLICATION_USER_ID entries should be removed' );
 
 		// Verify the other entry remains.
-		$remaining_other_count = $wpdb->get_var(
+		$remaining_other_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = '_activitypub_following'",
 				$post_id
