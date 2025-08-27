@@ -243,7 +243,7 @@ class Application extends Actor {
 	public function get_summary() {
 		return sprintf(
 			/* translators: %s: Domain of the site */
-			__( 'This is the Application Actor for %s. It&#8217;s a tool account only, please don&#8217;t follow or interact with it.', 'activitypub' ),
+			__( 'This is the Application Actor for %s.', 'activitypub' ),
 			\wp_parse_url( \home_url(), \PHP_URL_HOST )
 		);
 	}
