@@ -278,7 +278,7 @@ class Moderation {
 	 * @param int    $user_id   Optional. User ID to check user blocks for. Defaults to 0 (site-wide only).
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function actor_is_blocked( $actor_uri, $user_id = 0 ) {
+	public static function is_actor_blocked( $actor_uri, $user_id = 0 ) {
 		if ( ! $actor_uri ) {
 			return false;
 		}

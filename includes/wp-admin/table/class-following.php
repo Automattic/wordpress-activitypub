@@ -133,7 +133,7 @@ class Following extends \WP_List_Table {
 				}
 
 				// Check if actor is blocked.
-				if ( Moderation::actor_is_blocked( $profile, $this->user_id ) ) {
+				if ( Moderation::is_actor_blocked( $profile, $this->user_id ) ) {
 					/* translators: %s: Account profile that could not be followed */
 					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. The account is blocked.', 'activitypub' ), \esc_html( $profile ) ) );
 					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
