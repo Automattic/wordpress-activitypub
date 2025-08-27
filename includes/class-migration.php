@@ -1067,10 +1067,11 @@ class Migration {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->query(
-			$wpdb->prepare(
-				"DELETE FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
-				Actors::APPLICATION_USER_ID
+		$wpdb->delete(
+			$wpdb->postmeta,
+			array(
+				'meta_key'   => '_activitypub_following', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value' => Actors::APPLICATION_USER_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			)
 		);
 	}
