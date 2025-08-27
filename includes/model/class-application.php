@@ -241,11 +241,10 @@ class Application extends Actor {
 	 * @return string The User description.
 	 */
 	public function get_summary() {
-		return \wpautop(
-			\wp_kses(
-				\get_bloginfo( 'description' ),
-				'default'
-			)
+		return sprintf(
+			/* translators: %s: Domain of the site */
+			__( 'This is the Application Actor for %s. It&#8217;s a tool account only, please don&#8217;t follow or interact with it.', 'activitypub' ),
+			\wp_parse_url( \home_url(), \PHP_URL_HOST )
 		);
 	}
 
