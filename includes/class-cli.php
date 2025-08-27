@@ -9,7 +9,7 @@ namespace Activitypub;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Followers;
+use Activitypub\Collection\Outbox;
 
 /**
  * WP-CLI commands.
