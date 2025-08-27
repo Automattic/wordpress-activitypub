@@ -7,9 +7,9 @@
 
 namespace Activitypub\Tests\WP_Admin\Table;
 
-use Activitypub\WP_Admin\Table\Followers;
-use Activitypub\Collection\Followers as Follower_Collection;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers as Follower_Collection;
+use Activitypub\WP_Admin\Table\Followers;
 
 /**
  * Test class for Followers Table.
