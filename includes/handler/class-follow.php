@@ -101,7 +101,7 @@ class Follow {
 		$activity->set_type( 'Accept' );
 		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 		$activity->set_object( $activity_object );
-		$activity->set_to( array( $activity_object['actor'] ) );
+		$activity->set_to( array( $actor ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}
