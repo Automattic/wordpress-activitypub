@@ -256,19 +256,16 @@ class Following extends \WP_List_Table {
 
 		foreach ( $followings as $following ) {
 			$actor = Actors::get_actor( $following );
-
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
 
-			$url = object_to_uri( $actor->get_url() ?? $actor->get_id() );
-
 			$this->items[] = array(
 				'id'         => $following->ID,
-				'icon'       => object_to_uri( $actor->get_icon() ?? '' ),
+				'icon'       => object_to_uri( $actor->get_icon() ?? ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg' ),
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
-				'url'        => $url,
+				'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
 				'webfinger'  => $this->get_webfinger( $actor ),
 				'status'     => Following_Collection::check_status( $this->user_id, $following->ID ),
 				'identifier' => $actor->get_id(),
