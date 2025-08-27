@@ -114,7 +114,7 @@ class Follow {
 	 */
 	public static function queue_reject( $activity, $user_id ) {
 		// Only send minimal data.
-		$activity = array_intersect_key(
+		$origin_activity = array_intersect_key(
 			$activity,
 			array_flip(
 				array(
@@ -129,8 +129,8 @@ class Follow {
 		$activity = new Activity();
 		$activity->set_type( 'Reject' );
 		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
-		$activity->set_object( $activity );
-		$activity->set_to( array( $activity['actor'] ) );
+		$activity->set_object( $origin_activity );
+		$activity->set_to( array( $origin_activity['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}
