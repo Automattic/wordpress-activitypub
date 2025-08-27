@@ -860,6 +860,10 @@ class Actors {
 	 */
 	public static function normalize_identifier( $actor ) {
 		$actor = object_to_uri( $actor );
+		if ( ! is_string( $actor ) ) {
+			return null;
+		}
+
 		$actor = \trim( $actor, '@' );
 
 		// If it's an email-like webfinger address, resolve it.
