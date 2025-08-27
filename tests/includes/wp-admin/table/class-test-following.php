@@ -76,6 +76,18 @@ class Test_Following extends \WP_UnitTestCase {
 			'inbox'             => 'https://example.com/users/testuser/inbox',
 		);
 
+		// Mock HTTP request to fetch actor data.
+		add_filter(
+			'pre_http_request',
+			function () use ( $actor_data ) {
+				return array(
+					'headers'  => array( 'content-type' => 'application/activity+json' ),
+					'body'     => wp_json_encode( $actor_data ),
+					'response' => array( 'code' => 200 ),
+				);
+			}
+		);
+
 		// Mock the remote metadata call using the correct filter.
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
@@ -139,6 +151,18 @@ class Test_Following extends \WP_UnitTestCase {
 			'id'                => 'https://example.com/users/arrayuser',
 			'preferredUsername' => 'arrayuser',
 			'inbox'             => 'https://example.com/users/arrayuser/inbox',
+		);
+
+		// Mock HTTP request to fetch actor data.
+		add_filter(
+			'pre_http_request',
+			function () use ( $actor_data ) {
+				return array(
+					'headers'  => array( 'content-type' => 'application/activity+json' ),
+					'body'     => wp_json_encode( $actor_data ),
+					'response' => array( 'code' => 200 ),
+				);
+			}
 		);
 
 		// Mock the remote metadata call using the correct filter.

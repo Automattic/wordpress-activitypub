@@ -196,6 +196,18 @@ class Test_Followers extends \WP_UnitTestCase {
 			),
 		);
 
+		// Mock HTTP request to fetch actor data.
+		add_filter(
+			'pre_http_request',
+			function () use ( $actor_data ) {
+				return array(
+					'headers'  => array( 'content-type' => 'application/activity+json' ),
+					'body'     => wp_json_encode( $actor_data ),
+					'response' => array( 'code' => 200 ),
+				);
+			}
+		);
+
 		// Mock remote metadata for the actor.
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
