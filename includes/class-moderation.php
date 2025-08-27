@@ -289,10 +289,21 @@ class Moderation {
 			return true;
 		}
 
+		// Check site-wide domain blocks.
+		$actor_domain = \wp_parse_url( $actor_uri, PHP_URL_HOST );
+		if ( $actor_domain && \in_array( $actor_domain, $site_blocks['domains'], true ) ) {
+			return true;
+		}
+
 		// Check user-specific blocks if user_id is provided.
 		if ( $user_id > 0 ) {
 			$user_blocks = self::get_user_blocks( $user_id );
 			if ( \in_array( $actor_uri, $user_blocks['actors'], true ) ) {
+				return true;
+			}
+
+			// Check user-specific domain blocks.
+			if ( $actor_domain && \in_array( $actor_domain, $user_blocks['domains'], true ) ) {
 				return true;
 			}
 		}

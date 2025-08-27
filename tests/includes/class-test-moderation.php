@@ -89,6 +89,24 @@ class Test_Moderation extends \WP_UnitTestCase {
 			);
 		}
 
+		// Mock for is_actor_blocked testing.
+		$actor_test_urls = array(
+			'https://example.com/@baduser',
+			'https://annoying.example.com/@spammer',
+			'https://other.example.com/@user3',
+		);
+
+		if ( \in_array( $url_or_object, $actor_test_urls, true ) ) {
+			$response = array(
+				'id'                => $url_or_object,
+				'type'              => 'Person',
+				'guid'              => $url_or_object,
+				'preferredUsername' => 'testactor',
+				'name'              => 'Test Actor',
+				'inbox'             => 'https://example.com/inbox',
+			);
+		}
+
 		return $response;
 	}
 
@@ -105,6 +123,24 @@ class Test_Moderation extends \WP_UnitTestCase {
 		// Clean site options.
 		\delete_option( Moderation::OPTION_KEYS['domain'] );
 		\delete_option( Moderation::OPTION_KEYS['keyword'] );
+
+		// Clean up actor posts with blocking metadata.
+		$actor_posts = \get_posts(
+			array(
+				'post_type'   => 'ap_actor',
+				'numberposts' => -1,
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'     => Moderation::BLOCKED_ACTORS_META_KEY,
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
+
+		foreach ( $actor_posts as $post ) {
+			\delete_post_meta( $post->ID, Moderation::BLOCKED_ACTORS_META_KEY );
+		}
 
 		\wp_cache_flush();
 	}
@@ -834,5 +870,228 @@ class Test_Moderation extends \WP_UnitTestCase {
 		// Clean up.
 		Moderation::remove_site_block( 'domain', 'bad.example.com' );
 		remove_all_filters( 'pre_http_request' );
+	}
+
+	/**
+	 * Test is_actor_blocked with site-wide actor blocks.
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_site_wide_actor() {
+		$actor_uri = 'https://example.com/@baduser';
+
+		// Add site-wide actor block.
+		$result = Moderation::add_site_block( 'actor', $actor_uri );
+		$this->assertTrue( $result, 'Failed to add site-wide actor block' );
+
+		// Debug: check if the block was actually added.
+		$site_blocks = Moderation::get_site_blocks();
+		$this->assertNotEmpty( $site_blocks['actors'], 'Site blocks actors should not be empty' );
+		$this->assertContains( $actor_uri, $site_blocks['actors'], 'Actor URI should be in site blocks' );
+
+		// Should be blocked site-wide.
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri ) );
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri, $this->test_user_id ) );
+
+		// Clean up.
+		Moderation::remove_site_block( 'actor', $actor_uri );
+	}
+
+	/**
+	 * Test is_actor_blocked with site-wide domain blocks.
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_site_wide_domain() {
+		$actor_uri      = 'https://spam.example.com/@anyuser';
+		$blocked_domain = 'spam.example.com';
+
+		// Add site-wide domain block.
+		Moderation::add_site_block( 'domain', $blocked_domain );
+
+		// Should be blocked site-wide.
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri ) );
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri, $this->test_user_id ) );
+
+		// Different actor on same domain should also be blocked.
+		$this->assertTrue( Moderation::is_actor_blocked( 'https://spam.example.com/@anotheruser' ) );
+
+		// Actor on different domain should not be blocked.
+		$this->assertFalse( Moderation::is_actor_blocked( 'https://good.example.com/@user' ) );
+
+		// Clean up.
+		Moderation::remove_site_block( 'domain', $blocked_domain );
+	}
+
+	/**
+	 * Test is_actor_blocked with user-specific actor blocks.
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_user_specific_actor() {
+		$actor_uri = 'https://annoying.example.com/@spammer';
+
+		// Add user-specific actor block.
+		Moderation::add_user_block( $this->test_user_id, 'actor', $actor_uri );
+
+		// Should be blocked for the specific user.
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri, $this->test_user_id ) );
+
+		// Should not be blocked site-wide.
+		$this->assertFalse( Moderation::is_actor_blocked( $actor_uri ) );
+
+		// Should not be blocked for a different user.
+		$other_user_id = self::factory()->user->create();
+		$this->assertFalse( Moderation::is_actor_blocked( $actor_uri, $other_user_id ) );
+
+		// Clean up.
+		Moderation::remove_user_block( $this->test_user_id, 'actor', $actor_uri );
+	}
+
+	/**
+	 * Test is_actor_blocked with user-specific domain blocks.
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_user_specific_domain() {
+		$actor_uri      = 'https://personal-block.example.com/@user';
+		$blocked_domain = 'personal-block.example.com';
+
+		// Add user-specific domain block.
+		Moderation::add_user_block( $this->test_user_id, 'domain', $blocked_domain );
+
+		// Should be blocked for the specific user.
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri, $this->test_user_id ) );
+
+		// Should not be blocked site-wide.
+		$this->assertFalse( Moderation::is_actor_blocked( $actor_uri ) );
+
+		// Different actor on same domain should also be blocked for the user.
+		$this->assertTrue( Moderation::is_actor_blocked( 'https://personal-block.example.com/@another', $this->test_user_id ) );
+
+		// Clean up.
+		Moderation::remove_user_block( $this->test_user_id, 'domain', $blocked_domain );
+	}
+
+	/**
+	 * Test is_actor_blocked with hierarchical priority (site-wide takes precedence).
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_hierarchical_priority() {
+		$actor_uri = 'https://priority-test.example.com/@user';
+		$domain    = 'priority-test.example.com';
+
+		// Add site-wide domain block.
+		Moderation::add_site_block( 'domain', $domain );
+
+		// Should be blocked site-wide regardless of user-specific settings.
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri ) );
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri, $this->test_user_id ) );
+
+		// Even with no user blocks, site-wide should take effect.
+		$other_user_id = self::factory()->user->create();
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri, $other_user_id ) );
+
+		// Clean up.
+		Moderation::remove_site_block( 'domain', $domain );
+	}
+
+	/**
+	 * Test is_actor_blocked with edge cases.
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_edge_cases() {
+		// Empty actor URI.
+		$this->assertFalse( Moderation::is_actor_blocked( '' ) );
+		$this->assertFalse( Moderation::is_actor_blocked( '', $this->test_user_id ) );
+
+		// Null actor URI.
+		$this->assertFalse( Moderation::is_actor_blocked( null ) );
+		$this->assertFalse( Moderation::is_actor_blocked( null, $this->test_user_id ) );
+
+		// Invalid user ID.
+		$this->assertFalse( Moderation::is_actor_blocked( 'https://example.com/@user', 0 ) );
+		$this->assertFalse( Moderation::is_actor_blocked( 'https://example.com/@user', -1 ) );
+		$this->assertFalse( Moderation::is_actor_blocked( 'https://example.com/@user', 99999 ) );
+
+		// Malformed URIs.
+		$this->assertFalse( Moderation::is_actor_blocked( 'not-a-url' ) );
+		$this->assertFalse( Moderation::is_actor_blocked( 'https://' ) );
+		$this->assertFalse( Moderation::is_actor_blocked( 'ftp://example.com/@user' ) );
+	}
+
+	/**
+	 * Test is_actor_blocked with various URL formats.
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_url_formats() {
+		$blocked_domain = 'blocked.example.com';
+		Moderation::add_site_block( 'domain', $blocked_domain );
+
+		// Test various URL formats.
+		$test_cases = array(
+			// Should be blocked.
+			'https://blocked.example.com/@user'      => true,
+			'http://blocked.example.com/@user'       => true,
+			'https://blocked.example.com/users/test' => true,
+			'https://blocked.example.com/'           => true,
+
+			// Should not be blocked (different domains).
+			'https://www.blocked.example.com/@user'  => false,
+			'https://sub.blocked.example.com/@user'  => false,
+			'https://blocked-example.com/@user'      => false,
+			'https://notblocked.example.com/@user'   => false,
+		);
+
+		foreach ( $test_cases as $actor_uri => $expected ) {
+			$result = Moderation::is_actor_blocked( $actor_uri );
+			$this->assertEquals( $expected, $result, "Failed for URI: $actor_uri" );
+		}
+
+		// Clean up.
+		Moderation::remove_site_block( 'domain', $blocked_domain );
+	}
+
+	/**
+	 * Test is_actor_blocked with mixed blocking scenarios.
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_mixed_scenarios() {
+		$actor_uri1 = 'https://mixed.example.com/@user1';
+		$actor_uri2 = 'https://mixed.example.com/@user2';
+		$actor_uri3 = 'https://other.example.com/@user3';
+		$domain     = 'mixed.example.com';
+
+		// Add site-wide domain block.
+		Moderation::add_site_block( 'domain', $domain );
+
+		// Add user-specific actor block for different domain.
+		Moderation::add_user_block( $this->test_user_id, 'actor', $actor_uri3 );
+
+		// Test site-wide domain block.
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri1 ) );
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri2 ) );
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri1, $this->test_user_id ) );
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri2, $this->test_user_id ) );
+
+		// Test user-specific actor block.
+		$this->assertFalse( Moderation::is_actor_blocked( $actor_uri3 ) );
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri3, $this->test_user_id ) );
+
+		// Create another user.
+		$other_user_id = self::factory()->user->create();
+
+		// Other user should only be affected by site-wide blocks.
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri1, $other_user_id ) );
+		$this->assertTrue( Moderation::is_actor_blocked( $actor_uri2, $other_user_id ) );
+		$this->assertFalse( Moderation::is_actor_blocked( $actor_uri3, $other_user_id ) );
+
+		// Clean up.
+		Moderation::remove_site_block( 'domain', $domain );
+		Moderation::remove_user_block( $this->test_user_id, 'actor', $actor_uri3 );
 	}
 }
