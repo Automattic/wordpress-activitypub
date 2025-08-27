@@ -81,6 +81,24 @@ class Admin {
 		if ( ! $current_screen ) {
 			return;
 		}
+
+		// Check for self-destruct completion notice.
+		$self_destruct_complete = \get_option( 'activitypub_self_destruct_complete' );
+		if ( $self_destruct_complete ) {
+			// Show the notice only once, then remove it.
+			\delete_option( 'activitypub_self_destruct_complete' );
+			?>
+			<div class="notice notice-success is-dismissible">
+				<p>
+					<strong><?php esc_html_e( 'ActivityPub Self-Destruct Complete!', 'activitypub' ); ?></strong>
+				</p>
+				<p>
+					<?php esc_html_e( 'All Delete activities have been successfully sent to the Fediverse. Your blog is no longer discoverable via ActivityPub and all followers have been notified of the deletion.', 'activitypub' ); ?>
+				</p>
+			</div>
+			<?php
+		}
+
 		if ( 'edit' === $current_screen->base && Extra_Fields::is_extra_fields_post_type( $current_screen->post_type ) ) {
 			?>
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
