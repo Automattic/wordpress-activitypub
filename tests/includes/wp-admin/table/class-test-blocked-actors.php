@@ -37,6 +37,7 @@ class Test_Blocked_Actors extends \WP_UnitTestCase {
 		parent::tear_down();
 
 		remove_all_filters( 'pre_http_request' );
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
 
 	/**
@@ -165,8 +166,6 @@ class Test_Blocked_Actors extends \WP_UnitTestCase {
 		$this->assertContains( $actor_data['id'], $blocked_actors['actors'], 'Actor object was not properly converted to URI when blocking' );
 
 		// Clean up.
-		remove_all_filters( 'pre_http_request' );
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		Moderation::remove_user_block( get_current_user_id(), Moderation::TYPE_ACTOR, $actor_data['id'] );
 	}
 
