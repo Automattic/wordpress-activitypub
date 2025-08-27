@@ -59,24 +59,46 @@ class Activitypub {
 
 	/**
 	 * Activation Hook.
+	 *
+	 * @param bool $network_wide Whether to activate the plugin for all sites in the network or just the current site.
 	 */
-	public static function activate() {
+	public static function activate( $network_wide ) {
 		self::flush_rewrite_rules();
 		Scheduler::register_schedules();
 
 		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
 		Migration::update_comment_counts();
+
+		if ( \is_multisite() && $network_wide ) {
+			$sites = \get_sites( array( 'fields' => 'ids' ) );
+			foreach ( $sites as $site ) {
+				\switch_to_blog( $site );
+				self::flush_rewrite_rules();
+				\restore_current_blog();
+			}
+		}
 	}
 
 	/**
 	 * Deactivation Hook.
+	 *
+	 * @param bool $network_wide Whether to deactivate the plugin for all sites in the network or just the current site.
 	 */
-	public static function deactivate() {
+	public static function deactivate( $network_wide ) {
 		self::flush_rewrite_rules();
 		Scheduler::deregister_schedules();
 
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
+
+		if ( \is_multisite() && $network_wide ) {
+			$sites = \get_sites( array( 'fields' => 'ids' ) );
+			foreach ( $sites as $site ) {
+				\switch_to_blog( $site );
+				self::flush_rewrite_rules();
+				\restore_current_blog();
+			}
+		}
 	}
 
 	/**
