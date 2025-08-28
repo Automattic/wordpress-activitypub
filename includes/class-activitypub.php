@@ -69,7 +69,7 @@ class Activitypub {
 		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
 		Migration::update_comment_counts();
 
-		if ( \is_multisite() && $network_wide ) {
+		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
 			$sites = \get_sites( array( 'fields' => 'ids' ) );
 			foreach ( $sites as $site ) {
 				\switch_to_blog( $site );
@@ -91,7 +91,7 @@ class Activitypub {
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
 
-		if ( \is_multisite() && $network_wide ) {
+		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
 			$sites = \get_sites( array( 'fields' => 'ids' ) );
 			foreach ( $sites as $site ) {
 				\switch_to_blog( $site );
