@@ -122,24 +122,20 @@ class Blocked_Actors extends \WP_List_Table {
 					return;
 				}
 
-				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$profile = \trim( $profile, '@' );
-
-				if ( \filter_var( $profile, FILTER_VALIDATE_EMAIL ) ) {
-					$remote_actor = Webfinger::resolve( $profile );
-					if ( ! \is_wp_error( $remote_actor ) ) {
-						$profile = object_to_uri( $remote_actor );
-					}
-				} elseif ( empty( \wp_parse_url( $profile, PHP_URL_SCHEME ) ) ) {
-					// Add scheme if missing.
-					$profile = \esc_url_raw( 'https://' . \ltrim( $profile, '/' ) );
+				$original = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
+				$profile  = Actors::normalize_identifier( $original );
+				if ( ! $profile ) {
+					/* translators: %s: Account profile that could not be blocked */
+					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $original ) ) );
+					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
+					break;
 				}
 
 				$result = Moderation::add_user_block( $this->user_id, Moderation::TYPE_ACTOR, $profile );
 				if ( \is_wp_error( $result ) ) {
 					/* translators: %s: Account profile that could not be blocked */
-					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
-					$redirect_to = \add_query_arg( 'resource', $profile, $redirect_to );
+					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $original ) ) );
+					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
 				} else {
 					\add_settings_error( 'activitypub', 'blocked', \__( 'Actor blocked.', 'activitypub' ), 'success' );
 				}

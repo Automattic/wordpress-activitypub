@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Refactor actor blocking with unified API for better maintainability
