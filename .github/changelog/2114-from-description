@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Hide site-wide checkbox in block confirmations when accessed from ActivityPub settings page
