@@ -47,6 +47,17 @@ class Application extends Actor {
 	protected $indexable = false;
 
 	/**
+	 * Whether the Application manually approves followers.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#as
+	 *
+	 * @context as:manuallyApprovesFollowers
+	 *
+	 * @var boolean
+	 */
+	protected $manually_approves_followers = true;
+
+	/**
 	 * List of software capabilities implemented by the Application.
 	 *
 	 * @see https://codeberg.org/silverpill/feps/src/branch/main/844e/fep-844e.md
