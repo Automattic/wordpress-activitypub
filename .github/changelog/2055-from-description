@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Improves REST responses by skipping invalid actors in Followers and Following controllers.

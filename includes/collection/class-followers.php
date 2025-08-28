@@ -326,7 +326,7 @@ class Followers {
 	/**
 	 * Maybe add Inboxes of the Blog User.
 	 *
-	 * @deprecated unreleased
+	 * @deprecated 7.3.0
 	 *
 	 * @param string $json     The ActivityPub Activity JSON.
 	 * @param int    $actor_id The WordPress Actor ID.

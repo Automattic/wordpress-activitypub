@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Blocks relying on user selectors no longer error due to a race condition when fetching users.

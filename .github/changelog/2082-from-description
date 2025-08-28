@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix malformed ActivityPub handles for users with email-based logins (e.g., from Site Kit Google authentication)

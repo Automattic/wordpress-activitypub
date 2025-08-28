@@ -68,7 +68,7 @@ $following_list_table->prepare_items();
 					/**
 					 * Action to add custom content after the follow form.
 					 *
-					 * @since unreleased
+					 * @since 7.3.0
 					 */
 					do_action( 'activitypub_post_follow_form' );
 					?>

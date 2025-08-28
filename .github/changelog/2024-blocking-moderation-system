@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Add comprehensive blocking and moderation system for ActivityPub with user-specific and site-wide controls for actors, domains, and keywords.

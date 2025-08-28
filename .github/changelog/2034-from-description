@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Adds support for searching (remote) URLs similar to Mastodon, redirecting to existing replies or importing them if missing.
