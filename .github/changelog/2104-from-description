@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+When activated or deactivated network-wide, the plugin now refreshes rewrite rules across all sites.
