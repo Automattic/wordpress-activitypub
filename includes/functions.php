@@ -1536,6 +1536,11 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 
 	set_wp_object_state( $data, 'federated' );
 
+	// Set Tombstones for deleted objects.
+	if ( 'Delete' === $activity->get_type() ) {
+		Tombstone::bury( object_to_uri( $activity->get_object() ) );
+	}
+
 	return $outbox_activity_id;
 }
 

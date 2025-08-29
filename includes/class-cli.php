@@ -396,6 +396,68 @@ class Cli extends \WP_CLI_Command {
 	}
 
 	/**
+	 * Delete or Update an Actor.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <action>
+	 * : The action to perform. Either `delete` or `update`.
+	 * ---
+	 * options:
+	 *   - delete
+	 *   - update
+	 * ---
+	 *
+	 * <id>
+	 * : The id of the Actor.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp activitypub actor delete 1
+	 *
+	 * @synopsis <action> <id>
+	 *
+	 * @param array $args The arguments.
+	 */
+	public function actor( $args ) {
+		if ( Actors::APPLICATION_USER_ID === (int) $args[1] ) {
+			\WP_CLI::error( 'You cannot delete the application actor.' );
+		}
+
+		switch ( $args[0] ) {
+			case 'delete':
+				$actor = Actors::get_by_id( $args[1], true );
+
+				if ( \is_wp_error( $actor ) ) {
+					\WP_CLI::error( 'Actor not found.' );
+				}
+
+				\WP_CLI::confirm( 'Do you really want to delete the Actor with the ID: ' . $args[1] );
+
+				$activity = new Activity();
+				$activity->set_actor( $actor->get_id() );
+				$activity->set_object( $actor->get_id() );
+				$activity->set_type( 'Delete' );
+
+				add_to_outbox( $activity, null, $args[1] );
+				\WP_CLI::success( '"Delete" activity is queued.' );
+				break;
+			case 'update':
+				$actor = Actors::get_by_id( $args[1] );
+
+				if ( \is_wp_error( $actor ) ) {
+					\WP_CLI::error( 'Actor not found.' );
+				}
+
+				add_to_outbox( $actor, 'Update', $args[1] );
+				\WP_CLI::success( '"Update" activity is queued.' );
+				break;
+			default:
+				\WP_CLI::error( 'Unknown action.' );
+		}
+	}
+
+	/**
 	 * Undo an activity that was sent to the Fediverse.
 	 *
 	 * ## OPTIONS

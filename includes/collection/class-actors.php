@@ -59,16 +59,17 @@ class Actors {
 	/**
 	 * Get the Actor by ID.
 	 *
-	 * @param int $user_id The user ID.
+	 * @param int  $user_id         The user ID.
+	 * @param bool $bypass_user_can Whether to bypass the `user_can_activitypub` check.
 	 *
 	 * @return Actor|User|Blog|Application|\WP_Error Actor object or WP_Error if not found or not permitted.
 	 */
-	public static function get_by_id( $user_id ) {
+	public static function get_by_id( $user_id, $bypass_user_can = false ) {
 		if ( is_numeric( $user_id ) ) {
 			$user_id = (int) $user_id;
 		}
 
-		if ( ! user_can_activitypub( $user_id ) ) {
+		if ( ! $bypass_user_can && ! user_can_activitypub( $user_id ) ) {
 			return new \WP_Error(
 				'activitypub_user_not_found',
 				\__( 'Actor not found', 'activitypub' ),
@@ -89,11 +90,12 @@ class Actors {
 	/**
 	 * Get the Actor by username.
 	 *
-	 * @param string $username Name of the actor.
+	 * @param string $username      Name of the actor.
+	 * @param bool   $bypass_user_can Whether to bypass the `user_can_activitypub` check.
 	 *
 	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
-	public static function get_by_username( $username ) {
+	public static function get_by_username( $username, $bypass_user_can = false ) {
 		/**
 		 * Filter the username before we do anything else.
 		 *
@@ -110,7 +112,7 @@ class Actors {
 			return $id;
 		}
 
-		return self::get_by_id( $id );
+		return self::get_by_id( $id, $bypass_user_can );
 	}
 
 	/**
@@ -193,17 +195,18 @@ class Actors {
 	/**
 	 * Get the Actor by resource URI (acct, http(s), etc).
 	 *
-	 * @param string $uri The actor resource URI.
+	 * @param string $uri             The actor resource URI.
+	 * @param bool   $bypass_user_can Whether to bypass the `user_can_activitypub` check.
 	 *
 	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
-	public static function get_by_resource( $uri ) {
+	public static function get_by_resource( $uri, $bypass_user_can = false ) {
 		$id = self::get_id_by_resource( $uri );
 		if ( \is_wp_error( $id ) ) {
 			return $id;
 		}
 
-		return self::get_by_id( $id );
+		return self::get_by_id( $id, $bypass_user_can );
 	}
 
 	/**
@@ -321,17 +324,18 @@ class Actors {
 	/**
 	 * Get the Actor by various identifier types (ID, URI, username, or email).
 	 *
-	 * @param string|int $id Actor identifier (user ID, URI, username, or email).
+	 * @param string|int $id              Actor identifier (user ID, URI, username, or email).
+	 * @param bool       $bypass_user_can Whether to bypass the `user_can_activitypub` check.
 	 *
 	 * @return User|Blog|Application|\WP_Error Actor object or WP_Error if not found.
 	 */
-	public static function get_by_various( $id ) {
+	public static function get_by_various( $id, $bypass_user_can = false ) {
 		$id = self::get_id_by_various( $id );
 		if ( \is_wp_error( $id ) ) {
 			return $id;
 		}
 
-		return self::get_by_id( $id );
+		return self::get_by_id( $id, $bypass_user_can );
 	}
 
 	/**
