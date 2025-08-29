@@ -8,8 +8,8 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Activitypub;
-use Activitypub\Query;
 use Activitypub\Collection\Outbox;
+use Activitypub\Query;
 
 /**
  * Test class for Activitypub.
@@ -301,11 +301,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	 * @covers ::prevent_empty_post_meta
 	 */
 	public function test_prevent_empty_post_meta() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_author' => 1,
-			)
-		);
+		$post_id = self::factory()->post->create( array( 'post_author' => 1 ) );
 
 		\update_post_meta( $post_id, 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
 		$this->assertEmpty( \get_post_meta( $post_id, 'activitypub_max_image_attachments', true ) );

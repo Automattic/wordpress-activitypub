@@ -1,8 +1,13 @@
 #!/usr/bin/env sh
 
-# Run the WordPress formatter with our custom plugin
+# Sort PHP imports first
+echo "Sorting PHP imports..."
+git diff --cached --name-only --diff-filter=ACMR | grep "\.php$" | xargs -I{} node bin/prettier/sort-php-imports.js {}
+
+# Run the WordPress formatter without showing all file output
 echo "Running wp-scripts format..."
-npm run format
+npm run format > /dev/null 2>&1 || { echo "Formatting failed"; exit 1; }
+echo "Formatting complete"
 
 # If the script made changes, add those changes to the commit
 if [ $? -eq 0 ]; then
