@@ -800,10 +800,39 @@ class Activitypub {
 		\register_post_type( Extra_Fields::USER_POST_TYPE, $extra_field_args );
 		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $extra_field_args );
 
+		// Register REST field for ap_actor posts.
+		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
+
 		/**
 		 * Fires after ActivityPub custom post types have been registered.
 		 */
 		\do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Register REST field for ap_actor posts.
+	 */
+	public static function register_ap_actor_rest_field() {
+		\register_rest_field(
+			Actors::POST_TYPE,
+			'activitypub_json',
+			array(
+				/**
+				 * Get the raw post content without WordPress content filtering.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return string The raw post content.
+				 */
+				'get_callback' => function ( $response ) {
+					return \get_post_field( 'post_content', $response['id'] );
+				},
+				'schema'       => array(
+					'description' => 'Raw ActivityPub JSON data without WordPress content filtering',
+					'type'        => 'string',
+					'context'     => array( 'view', 'edit' ),
+				),
+			)
+		);
 	}
 
 	/**
