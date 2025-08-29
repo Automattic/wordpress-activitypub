@@ -57,7 +57,6 @@ trait Collection {
 		// Still here, so this is a Page request. Append the type.
 		$response['type']  .= 'Page';
 		$response['partOf'] = \remove_query_arg( 'page', $response['id'] );
-		$response['id']     = \add_query_arg( 'page', $page, $response['id'] );
 
 		if ( $max_pages > $page ) {
 			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
