@@ -164,7 +164,8 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Response code is 404 -> is_tombstone returns true
+	 * Tests that the exhume method removes a URL from the tombstone list,
+	 * so that was_buried returns false after exhuming.
 	 *
 	 * @covers ::exhume
 	 */
