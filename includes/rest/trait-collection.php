@@ -57,14 +57,14 @@ trait Collection {
 		// Still here, so this is a Page request. Append the type.
 		$response['type']  .= 'Page';
 		$response['partOf'] = $response['id'];
-		$response['id']    .= '?page=' . $page;
+		$response['id']     = \add_query_arg( 'page', $page, $response['id'] );
 
 		if ( $max_pages > $page ) {
-			$response['next'] = \add_query_arg( 'page', $page + 1, $response['id'] );
+			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
 		}
 
 		if ( $page > 1 ) {
-			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['id'] );
+			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
 		}
 
 		return $response;

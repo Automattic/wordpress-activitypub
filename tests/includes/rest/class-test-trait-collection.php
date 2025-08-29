@@ -196,4 +196,47 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 		$this->assertEquals( 'rest_post_invalid_page_number', $result->get_error_code() );
 		$this->assertEquals( 400, $result->get_error_data()['status'] );
 	}
+
+	/**
+	 * Test that pagination links preserve query parameters from original request.
+	 *
+	 * @covers ::prepare_collection_response
+	 */
+	public function test_prepare_collection_response_preserves_query_args() {
+		$request = new \WP_REST_Request();
+		$request->set_param( 'page', 2 );
+		$request->set_param( 'per_page', 10 );
+		$request->set_param( 'context', 'full' );
+		$request->set_param( 'order', 'asc' );
+
+		$response = array(
+			'type'       => 'OrderedCollection',
+			'id'         => 'https://example.org/collection?context=full&order=asc',
+			'totalItems' => 35,
+			'orderedItems' => array( 'item11', 'item12', 'item13' ),
+		);
+
+		$result = $this->instance->prepare_collection_response( $response, $request );
+
+		$this->assertEquals( 'OrderedCollectionPage', $result['type'] );
+		$this->assertEquals( 'https://example.org/collection?context=full&order=asc', $result['partOf'] );
+		$this->assertEquals( 'https://example.org/collection?context=full&order=asc&page=2', $result['id'] );
+
+		// Check that query parameters are preserved in pagination links.
+		$this->assertStringContainsString( 'context=full', $result['first'] );
+		$this->assertStringContainsString( 'order=asc', $result['first'] );
+		$this->assertStringContainsString( 'page=1', $result['first'] );
+
+		$this->assertStringContainsString( 'context=full', $result['last'] );
+		$this->assertStringContainsString( 'order=asc', $result['last'] );
+		$this->assertStringContainsString( 'page=4', $result['last'] );
+
+		$this->assertStringContainsString( 'context=full', $result['next'] );
+		$this->assertStringContainsString( 'order=asc', $result['next'] );
+		$this->assertStringContainsString( 'page=3', $result['next'] );
+
+		$this->assertStringContainsString( 'context=full', $result['prev'] );
+		$this->assertStringContainsString( 'order=asc', $result['prev'] );
+		$this->assertStringContainsString( 'page=1', $result['prev'] );
+	}
 }
