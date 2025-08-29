@@ -210,9 +210,9 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 		$request->set_param( 'order', 'asc' );
 
 		$response = array(
-			'type'       => 'OrderedCollection',
-			'id'         => 'https://example.org/collection?context=full&order=asc',
-			'totalItems' => 35,
+			'type'         => 'OrderedCollection',
+			'id'           => 'https://example.org/collection?context=full&order=asc',
+			'totalItems'   => 35,
 			'orderedItems' => array( 'item11', 'item12', 'item13' ),
 		);
 
