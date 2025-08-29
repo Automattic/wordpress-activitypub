@@ -147,19 +147,38 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
-	 * @covers ::exists_local
+	 * @covers ::was_buried
 	 */
-	public function test_exists_local() {
+	public function test_was_buried() {
 		$url = 'https://fake.test/object/123';
 
-		$response = Tombstone::exists_local( $url );
+		$response = Tombstone::was_buried( $url );
 		$this->assertFalse( $response );
 
 		Tombstone::bury( $url );
 
-		$response = Tombstone::exists_local( $url );
+		$response = Tombstone::was_buried( $url );
 		$this->assertTrue( $response );
 
 		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Response code is 404 -> is_tombstone returns true
+	 *
+	 * @covers ::exhume
+	 */
+	public function test_exhume() {
+		$url = 'https://fake.test/object/123';
+
+		Tombstone::bury( $url );
+
+		$response = Tombstone::was_buried( $url );
+		$this->assertTrue( $response );
+
+		Tombstone::exhume( $url );
+
+		$response = Tombstone::was_buried( $url );
+		$this->assertFalse( $response );
 	}
 }

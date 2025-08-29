@@ -52,7 +52,7 @@ class Tombstone {
 
 		if ( \is_string( $various ) ) {
 			if ( is_same_domain( $various ) ) {
-				return self::exists_local( $various );
+				return self::was_buried( $various );
 			}
 			return self::exists_remote( $various );
 		}
@@ -111,7 +111,7 @@ class Tombstone {
 	 *
 	 * @return bool True if the local URL is in the tombstone registry, false otherwise.
 	 */
-	public static function exists_local( $url ) {
+	public static function was_buried( $url ) {
 		$urls = get_option( 'activitypub_tombstone_urls', array() );
 
 		return in_array( normalize_url( $url ), $urls, true );
@@ -205,6 +205,26 @@ class Tombstone {
 		$urls[] = normalize_url( $url );
 		$urls   = \array_unique( $urls );
 
+		\update_option( 'activitypub_tombstone_urls', $urls );
+	}
+
+	/**
+	 * Remove a URL from the local tombstone registry.
+	 *
+	 * "Exhumes" a URL by removing it from the local tombstone URL registry.
+	 * The URL is normalized before comparison to ensure consistent matching.
+	 * This marks the URL as no longer tombstoned for future local checks.
+	 *
+	 * @param string $url The URL to remove from the tombstone registry.
+	 */
+	public static function exhume( $url ) {
+		$urls = \get_option( 'activitypub_tombstone_urls', array() );
+		$urls = \array_filter(
+			$urls,
+			function ( $_url ) use ( $url ) {
+				return normalize_url( $_url ) !== normalize_url( $url );
+			}
+		);
 		\update_option( 'activitypub_tombstone_urls', $urls );
 	}
 }
