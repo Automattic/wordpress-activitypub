@@ -198,10 +198,10 @@ class Delete {
 	/**
 	 * Add the activity to the outbox.
 	 *
-	 * @param int                            $outbox_activity_id The ID of the outbox activity.
-	 * @param \Activitypub\Activity\Activity $activity           The Activity object.
+	 * @param int                            $outbox_id The ID of the outbox activity.
+	 * @param \Activitypub\Activity\Activity $activity  The Activity object.
 	 */
-	public static function post_add_to_outbox( $outbox_activity_id, $activity ) {
+	public static function post_add_to_outbox( $outbox_id, $activity ) {
 		// Set Tombstones for deleted objects.
 		if ( 'Delete' === $activity->get_type() ) {
 			Tombstone::bury( object_to_uri( $activity->get_object() ) );
