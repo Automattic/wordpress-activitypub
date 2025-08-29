@@ -72,7 +72,7 @@ class Application extends Actor {
 	);
 
 	/**
-	 * Whether the Application is invisible.
+	 * Set Application as invisible.
 	 *
 	 * @see https://litepub.social/
 	 *
@@ -81,18 +81,25 @@ class Application extends Actor {
 	protected $invisible = true;
 
 	/**
-	 * Returns the type of the object.
+	 * The type of the Actor.
 	 *
-	 * @var string The type of the object.
+	 * @var string
 	 */
 	protected $type = 'Application';
 
 	/**
-	 * Get the Username.
+	 * The Username.
 	 *
-	 * @var string The Username.
+	 * @var string
 	 */
 	protected $name = 'application';
+
+	/**
+	 * The preferred username.
+	 *
+	 * @var string
+	 */
+	protected $preferred_username = 'application';
 
 	/**
 	 * Returns the ID of the Application.
@@ -119,15 +126,6 @@ class Application extends Actor {
 	 */
 	public function get_alternate_url() {
 		return $this->get_id();
-	}
-
-	/**
-	 * Get the preferred username.
-	 *
-	 * @return string The preferred username.
-	 */
-	public function get_preferred_username() {
-		return $this->get_name();
 	}
 
 	/**
