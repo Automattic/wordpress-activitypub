@@ -219,12 +219,7 @@ class Tombstone {
 	 */
 	public static function exhume( $url ) {
 		$urls = \get_option( 'activitypub_tombstone_urls', array() );
-		$urls = \array_filter(
-			$urls,
-			function ( $_url ) use ( $url ) {
-				return normalize_url( $_url ) !== normalize_url( $url );
-			}
-		);
+		$urls = \array_diff( $urls, array( normalize_url( $url ) ) );
 		\update_option( 'activitypub_tombstone_urls', $urls );
 	}
 }
