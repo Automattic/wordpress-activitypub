@@ -164,12 +164,12 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests that the exhume method removes a URL from the tombstone list,
-	 * so that was_buried returns false after exhuming.
+	 * Tests that the remove method removes a URL from the tombstone list,
+	 * so that was_buried returns false after removing.
 	 *
-	 * @covers ::exhume
+	 * @covers ::remove
 	 */
-	public function test_exhume() {
+	public function test_remove() {
 		$url = 'https://fake.test/object/123';
 
 		Tombstone::bury( $url );
@@ -177,7 +177,7 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$response = Tombstone::was_buried( $url );
 		$this->assertTrue( $response );
 
-		Tombstone::exhume( $url );
+		Tombstone::remove( $url );
 
 		$response = Tombstone::was_buried( $url );
 		$this->assertFalse( $response );
