@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add activitypub_json REST field for ap_actor posts to access raw JSON data
