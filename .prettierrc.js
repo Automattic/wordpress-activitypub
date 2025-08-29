@@ -4,6 +4,7 @@ module.exports = {
 	...wpPrettierConfig,
 
 	printWidth: 120,
+	plugins: [require.resolve('./bin/prettier/sort-php-imports.js')],
 	overrides: [
 		{
 			files: '*.yml',

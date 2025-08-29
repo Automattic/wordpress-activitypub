@@ -1,4 +1,6 @@
+.claude
 build
+coverage
 node_modules
 tests
 vendor
