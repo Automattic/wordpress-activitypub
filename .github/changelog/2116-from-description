@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Adds support for virtual deletes and restores, allowing objects to be removed from the fediverse without being deleted locally.
