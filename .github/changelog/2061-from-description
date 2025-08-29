@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Improves handling of author URLs by converting them to a proper format.

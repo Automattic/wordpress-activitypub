@@ -52,7 +52,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 
 		<p><?php esc_html_e( 'You can unblock this account later from your Blocked Actors list.', 'activitypub' ); ?></p>
 
-		<?php if ( current_user_can( 'manage_options' ) ) : ?>
+		<?php if ( current_user_can( 'manage_options' ) && get_current_screen()->id !== 'settings_page_activitypub' ) : ?>
 			<p>
 				<label>
 					<input type="checkbox" name="site_wide" value="1" />

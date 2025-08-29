@@ -186,9 +186,6 @@ class Actor {
 			return;
 		}
 
-		Tombstone::bury( $actor->get_id() );
-		Tombstone::bury( $actor->get_url() );
-
 		$activity = new Activity();
 		$activity->set_actor( $actor->get_id() );
 		$activity->set_object( $actor->get_id() );

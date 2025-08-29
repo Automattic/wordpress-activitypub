@@ -275,19 +275,16 @@ class Followers extends \WP_List_Table {
 
 		foreach ( $followers as $follower ) {
 			$actor = Actors::get_actor( $follower );
-
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
 
-			$url = object_to_uri( $actor->get_url() ?? $actor->get_id() );
-
 			$this->items[] = array(
 				'id'         => $follower->ID,
-				'icon'       => object_to_uri( $actor->get_icon() ?? '' ),
+				'icon'       => object_to_uri( $actor->get_icon() ?? ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg' ),
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
-				'url'        => $url,
+				'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
 				'webfinger'  => $this->get_webfinger( $actor ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $follower->post_modified_gmt,

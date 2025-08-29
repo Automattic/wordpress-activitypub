@@ -27,6 +27,7 @@ class Actor extends Base_Object {
 			'schema'                    => 'http://schema.org#',
 			'toot'                      => 'http://joinmastodon.org/ns#',
 			'lemmy'                     => 'https://join-lemmy.org/ns#',
+			'litepub'                   => 'http://litepub.social/ns#',
 			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
 			'PropertyValue'             => 'schema:PropertyValue',
 			'value'                     => 'schema:value',
@@ -63,6 +64,7 @@ class Actor extends Base_Object {
 			'postingRestrictedToMods'   => 'lemmy:postingRestrictedToMods',
 			'discoverable'              => 'toot:discoverable',
 			'indexable'                 => 'toot:indexable',
+			'invisible'                 => 'litepub:invisible',
 		),
 	);
 
@@ -312,4 +314,13 @@ class Actor extends Base_Object {
 	 * @var array
 	 */
 	protected $implements;
+
+	/**
+	 * Whether the User is invisible.
+	 *
+	 * @see https://litepub.social/
+	 *
+	 * @var boolean
+	 */
+	protected $invisible = null;
 }

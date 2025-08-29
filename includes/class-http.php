@@ -182,7 +182,7 @@ class Http {
 	 * @return bool True if the URL is a tombstone.
 	 */
 	public static function is_tombstone( $url ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Tombstone::exists_remote' );
+		_deprecated_function( __METHOD__, '7.3.0', 'Activitypub\Tombstone::exists_remote' );
 
 		return Tombstone::exists_remote( $url );
 	}

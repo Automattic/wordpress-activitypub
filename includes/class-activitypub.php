@@ -31,6 +31,8 @@ class Activitypub {
 		\add_action( 'init', array( self::class, 'register_post_types' ), 11 );
 		\add_action( 'init', array( self::class, 'register_oembed_providers' ), 11 );
 
+		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
+
 		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
@@ -59,24 +61,46 @@ class Activitypub {
 
 	/**
 	 * Activation Hook.
+	 *
+	 * @param bool $network_wide Whether to activate the plugin for all sites in the network or just the current site.
 	 */
-	public static function activate() {
+	public static function activate( $network_wide ) {
 		self::flush_rewrite_rules();
 		Scheduler::register_schedules();
 
 		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
 		Migration::update_comment_counts();
+
+		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
+			$sites = \get_sites( array( 'fields' => 'ids' ) );
+			foreach ( $sites as $site ) {
+				\switch_to_blog( $site );
+				self::flush_rewrite_rules();
+				\restore_current_blog();
+			}
+		}
 	}
 
 	/**
 	 * Deactivation Hook.
+	 *
+	 * @param bool $network_wide Whether to deactivate the plugin for all sites in the network or just the current site.
 	 */
-	public static function deactivate() {
+	public static function deactivate( $network_wide ) {
 		self::flush_rewrite_rules();
 		Scheduler::deregister_schedules();
 
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
+
+		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
+			$sites = \get_sites( array( 'fields' => 'ids' ) );
+			foreach ( $sites as $site ) {
+				\switch_to_blog( $site );
+				self::flush_rewrite_rules();
+				\restore_current_blog();
+			}
+		}
 	}
 
 	/**
@@ -782,6 +806,32 @@ class Activitypub {
 		 * Fires after ActivityPub custom post types have been registered.
 		 */
 		\do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Register REST field for ap_actor posts.
+	 */
+	public static function register_ap_actor_rest_field() {
+		\register_rest_field(
+			Actors::POST_TYPE,
+			'activitypub_json',
+			array(
+				/**
+				 * Get the raw post content without WordPress content filtering.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return string The raw post content.
+				 */
+				'get_callback' => function ( $response ) {
+					return \get_post_field( 'post_content', $response['id'] );
+				},
+				'schema'       => array(
+					'description' => 'Raw ActivityPub JSON data without WordPress content filtering',
+					'type'        => 'string',
+					'context'     => array( 'view', 'edit' ),
+				),
+			)
+		);
 	}
 
 	/**

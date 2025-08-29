@@ -199,7 +199,7 @@ class Migration {
 			}
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '7.3.0', '<' ) ) {
 			self::remove_pending_application_user_follow_requests();
 		}
 

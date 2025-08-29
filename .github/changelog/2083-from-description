@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix duplicate HTML IDs and missing form labels in modal blocks
