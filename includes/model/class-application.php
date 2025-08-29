@@ -72,6 +72,15 @@ class Application extends Actor {
 	);
 
 	/**
+	 * Whether the Application is invisible.
+	 *
+	 * @see https://litepub.social/
+	 *
+	 * @var boolean
+	 */
+	protected $invisible = true;
+
+	/**
 	 * Returns the type of the object.
 	 *
 	 * @return string The type of the object.
