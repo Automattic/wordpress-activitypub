@@ -427,7 +427,9 @@ class Cli extends \WP_CLI_Command {
 
 		switch ( $args[0] ) {
 			case 'delete':
+				\add_filter( 'activitypub_user_can_activitypub', '__return_true' );
 				Actor::schedule_user_delete( $args[1] );
+				\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );
 				\WP_CLI::success( '"Delete" activity is queued.' );
 				break;
 			case 'update':

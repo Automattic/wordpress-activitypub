@@ -342,6 +342,7 @@ function is_post_disabled( $post ) {
  * This function checks if a user is enabled for ActivityPub.
  *
  * @param int|string $user_id The user ID.
+ *
  * @return boolean True if the user is enabled, false otherwise.
  */
 function user_can_activitypub( $user_id ) {
