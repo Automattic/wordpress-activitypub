@@ -10,6 +10,7 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Scheduler\Actor;
 
 /**
  * WP-CLI commands.
@@ -388,6 +389,51 @@ class Cli extends \WP_CLI_Command {
 				break;
 			case 'update':
 				add_to_outbox( $comment, 'Update', $comment->user_id );
+				\WP_CLI::success( '"Update" activity is queued.' );
+				break;
+			default:
+				\WP_CLI::error( 'Unknown action.' );
+		}
+	}
+
+	/**
+	 * Delete or Update an Actor.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <action>
+	 * : The action to perform. Either `delete` or `update`.
+	 * ---
+	 * options:
+	 *   - delete
+	 *   - update
+	 * ---
+	 *
+	 * <id>
+	 * : The id of the Actor.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp activitypub actor delete 1
+	 *
+	 * @synopsis <action> <id>
+	 *
+	 * @param array $args The arguments.
+	 */
+	public function actor( $args ) {
+		if ( Actors::APPLICATION_USER_ID === (int) $args[1] ) {
+			\WP_CLI::error( 'You cannot delete the application actor.' );
+		}
+
+		switch ( $args[0] ) {
+			case 'delete':
+				\add_filter( 'activitypub_user_can_activitypub', '__return_true' );
+				Actor::schedule_user_delete( $args[1] );
+				\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );
+				\WP_CLI::success( '"Delete" activity is queued.' );
+				break;
+			case 'update':
+				Actor::schedule_profile_update( $args[1] );
 				\WP_CLI::success( '"Update" activity is queued.' );
 				break;
 			default:

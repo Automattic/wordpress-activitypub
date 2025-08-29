@@ -27,8 +27,7 @@ trait Collection {
 	 */
 	public function prepare_collection_response( $response, $request ) {
 		$page      = $request->get_param( 'page' );
-		$per_page  = $request->get_param( 'per_page' );
-		$max_pages = \ceil( $response['totalItems'] / $per_page );
+		$max_pages = \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) );
 
 		if ( $page > $max_pages ) {
 			return new \WP_Error(
@@ -43,6 +42,7 @@ trait Collection {
 			return $response;
 		}
 
+		$response['id']    = \add_query_arg( $request->get_query_params(), $response['id'] );
 		$response['first'] = \add_query_arg( 'page', 1, $response['id'] );
 		$response['last']  = \add_query_arg( 'page', $max_pages, $response['id'] );
 
@@ -56,15 +56,14 @@ trait Collection {
 
 		// Still here, so this is a Page request. Append the type.
 		$response['type']  .= 'Page';
-		$response['partOf'] = $response['id'];
-		$response['id']    .= '?page=' . $page;
+		$response['partOf'] = \remove_query_arg( 'page', $response['id'] );
 
 		if ( $max_pages > $page ) {
-			$response['next'] = \add_query_arg( 'page', $page + 1, $response['id'] );
+			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
 		}
 
 		if ( $page > 1 ) {
-			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['id'] );
+			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
 		}
 
 		return $response;
