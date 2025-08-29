@@ -432,6 +432,7 @@ class Cli extends \WP_CLI_Command {
 					\WP_CLI::error( 'Actor not found.' );
 				}
 
+				\WP_CLI::line( \WP_CLI::colorize( '%YThe Actor will not deleted from the database, but only from the Fediverse. Be aware that this action might be irreversible.%n' ) );
 				\WP_CLI::confirm( 'Do you really want to delete the Actor with the ID: ' . $args[1] );
 
 				$activity = new Activity();
