@@ -52,7 +52,7 @@ class Tombstone {
 
 		if ( \is_string( $various ) ) {
 			if ( is_same_domain( $various ) ) {
-				return self::was_buried( $various );
+				return self::exists_local( $various );
 			}
 			return self::exists_remote( $various );
 		}
@@ -111,7 +111,7 @@ class Tombstone {
 	 *
 	 * @return bool True if the local URL is in the tombstone registry, false otherwise.
 	 */
-	public static function was_buried( $url ) {
+	public static function exists_local( $url ) {
 		$urls = get_option( 'activitypub_tombstone_urls', array() );
 
 		return in_array( normalize_url( $url ), $urls, true );

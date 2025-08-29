@@ -135,7 +135,7 @@ class Activitypub {
 			return $template;
 		}
 
-		if ( Tombstone::was_buried( Query::get_instance()->get_request_url() ) ) {
+		if ( Tombstone::exists_local( Query::get_instance()->get_request_url() ) ) {
 			\status_header( 410 );
 			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
 		}
