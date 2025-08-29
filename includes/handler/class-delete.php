@@ -26,7 +26,7 @@ class Delete {
 		\add_action( 'activitypub_delete_actor_interactions', array( self::class, 'delete_interactions' ) );
 
 		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
-		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'post_add_to_outbox' ) );
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'post_add_to_outbox' ), 10, 2 );
 	}
 
 	/**
