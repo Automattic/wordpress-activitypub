@@ -10,6 +10,7 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Scheduler\Actor;
 
 /**
  * WP-CLI commands.
@@ -426,31 +427,11 @@ class Cli extends \WP_CLI_Command {
 
 		switch ( $args[0] ) {
 			case 'delete':
-				$actor = Actors::get_by_id( $args[1], true );
-
-				if ( \is_wp_error( $actor ) ) {
-					\WP_CLI::error( 'Actor not found.' );
-				}
-
-				\WP_CLI::line( \WP_CLI::colorize( '%YThe Actor will not deleted from the database, but only from the Fediverse. Be aware that this action might be irreversible.%n' ) );
-				\WP_CLI::confirm( 'Do you really want to delete the Actor with the ID: ' . $args[1] );
-
-				$activity = new Activity();
-				$activity->set_actor( $actor->get_id() );
-				$activity->set_object( $actor->get_id() );
-				$activity->set_type( 'Delete' );
-
-				add_to_outbox( $activity, null, $args[1] );
+				Actor::schedule_user_delete( $args[1] );
 				\WP_CLI::success( '"Delete" activity is queued.' );
 				break;
 			case 'update':
-				$actor = Actors::get_by_id( $args[1] );
-
-				if ( \is_wp_error( $actor ) ) {
-					\WP_CLI::error( 'Actor not found.' );
-				}
-
-				add_to_outbox( $actor, 'Update', $args[1] );
+				Actor::schedule_profile_update( $args[1] );
 				\WP_CLI::success( '"Update" activity is queued.' );
 				break;
 			default:
