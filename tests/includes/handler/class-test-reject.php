@@ -7,10 +7,10 @@
 
 namespace Activitypub\Tests\Handler;
 
-use Activitypub\Handler\Reject;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Handler\Reject;
 
 /**
  * Class Test_Reject

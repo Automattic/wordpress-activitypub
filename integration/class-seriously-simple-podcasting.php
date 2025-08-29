@@ -9,8 +9,8 @@ namespace Activitypub\Integration;
 
 use Activitypub\Transformer\Post;
 
-use function Activitypub\object_to_uri;
 use function Activitypub\generate_post_summary;
+use function Activitypub\object_to_uri;
 
 /**
  * Compatibility with the Seriously Simple Podcasting plugin.

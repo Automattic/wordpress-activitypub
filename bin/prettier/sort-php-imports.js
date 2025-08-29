@@ -2,6 +2,7 @@
  * Script to sort PHP namespace imports
  *
  * This script is meant to be run before Prettier to sort PHP imports
+ * It preserves blank lines between different types of imports (class vs function)
  */
 
 const fs = require( 'fs' );
@@ -46,18 +47,30 @@ const sortImports = ( filePath ) => {
 			} );
 		}
 
-		// Sort each block of use statements
+		// Sort each block of use statements, preserving separation between class and function imports
 		let result = content;
 		let offset = 0;
 		let changed = false;
 
 		blocks.forEach( ( block ) => {
-			// Sort the statements alphabetically
-			const sortedStatements = [ ...block.statements ].sort();
+			// Separate class and function imports
+			const classImports = block.statements.filter( ( stmt ) => ! stmt.includes( 'use function' ) );
+			const functionImports = block.statements.filter( ( stmt ) => stmt.includes( 'use function' ) );
+
+			// Sort each group separately
+			const sortedClassImports = [ ...classImports ].sort();
+			const sortedFunctionImports = [ ...functionImports ].sort();
+
+			// Combine with a blank line between if both types exist
+			let sortedBlock;
+			if ( sortedClassImports.length > 0 && sortedFunctionImports.length > 0 ) {
+				sortedBlock = sortedClassImports.join( '\n' ) + '\n\n' + sortedFunctionImports.join( '\n' );
+			} else {
+				sortedBlock = [ ...sortedClassImports, ...sortedFunctionImports ].join( '\n' );
+			}
 
 			// Replace the original block with sorted statements
 			const originalBlock = result.substring( block.start + offset, block.end + offset );
-			const sortedBlock = sortedStatements.join( '\n' );
 
 			if ( originalBlock !== sortedBlock ) {
 				changed = true;
@@ -72,13 +85,13 @@ const sortImports = ( filePath ) => {
 		// Only write the file if changes were made
 		if ( changed ) {
 			fs.writeFileSync( filePath, result, 'utf8' );
-			return true;
+			return { changed: true };
 		}
 
-		return false;
+		return { changed: false };
 	} catch ( error ) {
 		console.error( `Error processing ${ filePath }:`, error );
-		return false;
+		return { changed: false };
 	}
 };
 
@@ -91,11 +104,7 @@ if ( require.main === module ) {
 	}
 
 	const filePath = args[ 0 ];
-	if ( sortImports( filePath ) ) {
-		console.log( `Sorted imports in ${ filePath }` );
-	} else {
-		console.log( `No changes made to ${ filePath }` );
-	}
+	sortImports( filePath );
 }
 
 // Export for use in other scripts

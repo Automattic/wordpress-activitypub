@@ -8,8 +8,8 @@
 namespace Activitypub\WP_Admin\Import;
 
 use function Activitypub\follow;
-use function Activitypub\object_to_uri;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\object_to_uri;
 
 /**
  * Starter Kit importer class.

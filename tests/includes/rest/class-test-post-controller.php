@@ -9,9 +9,7 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\Rest\Post;
 use WP_REST_Request;
-use WP_REST_Server;
 use WP_UnitTestCase;
-use WP_REST_Response;
 
 /**
  * Test Post REST Endpoints.
@@ -23,7 +21,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	/**
 	 * REST Server.
 	 *
-	 * @var WP_REST_Server
+	 * @var \WP_REST_Server
 	 */
 	protected $server;
 
@@ -34,7 +32,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 		parent::set_up();
 
 		global $wp_rest_server;
-		$wp_rest_server = new WP_REST_Server();
+		$wp_rest_server = new \WP_REST_Server();
 		$this->server   = $wp_rest_server;
 
 		do_action( 'rest_api_init' );

@@ -8,9 +8,9 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Handler\Update;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Handler\Update;
 
 /**
  * Update Handler Test Class.

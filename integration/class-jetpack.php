@@ -7,8 +7,8 @@
 
 namespace Activitypub\Integration;
 
-use Activitypub\Comment;
 use Activitypub\Collection\Followers;
+use Activitypub\Comment;
 
 /**
  * Jetpack integration class.

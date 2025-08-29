@@ -7,8 +7,8 @@
 
 namespace Activitypub;
 
-use WP_Error;
 use Activitypub\Collection\Actors;
+use WP_Error;
 
 /**
  * ActivityPub HTTP Class

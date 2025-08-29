@@ -7,9 +7,9 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Tombstone;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
+use Activitypub\Tombstone;
 
 use function Activitypub\object_to_uri;
 
