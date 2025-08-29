@@ -33,7 +33,7 @@ class Application extends Actor {
 	 *
 	 * @context http://joinmastodon.org/ns#discoverable
 	 *
-	 * @var boolean
+	 * @var bool
 	 */
 	protected $discoverable = false;
 
@@ -42,7 +42,7 @@ class Application extends Actor {
 	 *
 	 * @context http://joinmastodon.org/ns#indexable
 	 *
-	 * @var boolean
+	 * @var bool
 	 */
 	protected $indexable = false;
 
@@ -53,7 +53,7 @@ class Application extends Actor {
 	 *
 	 * @context as:manuallyApprovesFollowers
 	 *
-	 * @var boolean
+	 * @var bool
 	 */
 	protected $manually_approves_followers = true;
 
@@ -76,27 +76,23 @@ class Application extends Actor {
 	 *
 	 * @see https://litepub.social/
 	 *
-	 * @var boolean
+	 * @var bool
 	 */
 	protected $invisible = true;
 
 	/**
 	 * Returns the type of the object.
 	 *
-	 * @return string The type of the object.
+	 * @var string The type of the object.
 	 */
-	public function get_type() {
-		return 'Application';
-	}
+	protected $type = 'Application';
 
 	/**
-	 * Returns whether the Application manually approves followers.
+	 * Get the Username.
 	 *
-	 * @return true Whether the Application manually approves followers.
+	 * @var string The Username.
 	 */
-	public function get_manually_approves_followers() {
-		return true;
-	}
+	protected $name = 'application';
 
 	/**
 	 * Returns the ID of the Application.
@@ -123,15 +119,6 @@ class Application extends Actor {
 	 */
 	public function get_alternate_url() {
 		return $this->get_id();
-	}
-
-	/**
-	 * Get the Username.
-	 *
-	 * @return string The Username.
-	 */
-	public function get_name() {
-		return 'application';
 	}
 
 	/**
