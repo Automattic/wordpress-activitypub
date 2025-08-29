@@ -7,16 +7,28 @@
 
 use Activitypub\Comment;
 use Activitypub\Blocks;
+use function Activitypub\is_activitypub_request;
+
+if ( is_activitypub_request() || is_feed() ) {
+	return;
+}
 
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes, array( 'align' => null ) );
 
-/* @var string $content Inner blocks content. */
+/* @var \WP_Block $block Current block. */
+$block = $block ?? '';
+
+/* @var string $content Block content. */
+$content = $content ?? '';
+
 if ( empty( $content ) ) {
 	// Fallback for v1.0.0 blocks.
 	$_title  = $attributes['title'] ?? __( 'Fediverse Reactions', 'activitypub' );
 	$content = '<h6 class="wp-block-heading">' . esc_html( $_title ) . '</h6>';
 	unset( $attributes['title'], $attributes['className'] );
+} else {
+	$content = implode( PHP_EOL, wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
 }
 
 // Get the Post ID from attributes or use the current post.
@@ -33,6 +45,7 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 			'post_id' => $_post_id,
 			'type'    => $_type,
 			'status'  => 'approve',
+			'parent'  => 0,
 		)
 	);
 
@@ -59,10 +72,9 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 		'items' => array_map(
 			function ( $comment ) {
 				return array(
-					'id'     => $comment->comment_ID,
-					'name'   => $comment->comment_author,
+					'name'   => html_entity_decode( $comment->comment_author ),
 					'url'    => $comment->comment_author_url,
-					'avatar' => get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
+					'avatar' => get_avatar_url( $comment ),
 				);
 			},
 			$_comments
@@ -70,17 +82,22 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 	);
 }
 
-// Set up the Interactivity API state.
-wp_interactivity_state(
+if ( empty( $reactions ) ) {
+	echo '<!-- Reactions block: No reactions found. -->';
+	return;
+}
+
+// Set up the Interactivity API config.
+wp_interactivity_config(
 	'activitypub/reactions',
 	array(
 		'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
 		'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
-		'reactions'        => array(
-			$_post_id => $reactions,
-		),
 	)
 );
+
+// Set up the Interactivity API state.
+wp_interactivity_state( 'activitypub/reactions', array( 'reactions' => array( $_post_id => $reactions ) ) );
 
 // Render a subset of the most recent reactions.
 $reactions = array_map(
@@ -101,27 +118,47 @@ $reactions = array_map(
 
 // Initialize the context for the block.
 $context = array(
-	'blockId'      => $block_id,
-	'hasReactions' => ! empty( $reactions ),
-	'reactions'    => $reactions,
-	'postId'       => $_post_id,
-	'modal'        => array(
+	'blockId'   => $block_id,
+	'modal'     => array(
 		'isCompact' => true,
 		'isOpen'    => false,
 		'items'     => array(),
 	),
+	'postId'    => $_post_id,
+	'reactions' => $reactions,
 );
 
 // Add the block wrapper attributes.
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
-		'id'                   => $block_id,
-		'data-wp-interactive'  => 'activitypub/reactions',
-		'data-wp-context'      => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
-		'data-wp-init'         => 'callbacks.initReactions',
-		'data-wp-bind--hidden' => '!context.hasReactions',
+		'id'                  => $block_id,
+		'data-wp-interactive' => 'activitypub/reactions',
+		'data-wp-context'     => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
+		'data-wp-init'        => 'callbacks.initReactions',
 	)
 );
+
+ob_start();
+?>
+<ul class="reactions-list">
+	<template data-wp-each="context.modal.items">
+		<li class="reaction-item">
+			<a data-wp-bind--href="context.item.url" target="_blank" rel="noopener noreferrer">
+				<img
+					alt=""
+					data-wp-bind--alt="context.item.name"
+					data-wp-bind--src="context.item.avatar"
+					data-wp-on--error="callbacks.setDefaultAvatar"
+					src=""
+				/>
+				<span class="reaction-name" data-wp-text="context.item.name"></span>
+			</a>
+		</li>
+	</template>
+</ul>
+<?php
+$modal_content = ob_get_clean();
+
 ?>
 
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
@@ -133,7 +170,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			/* translators: %s: reaction type. */
 			$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
 			?>
-		<div class="reaction-group">
+		<div class="reaction-group" data-reaction-type="<?php echo esc_attr( $_type ); ?>">
 			<ul class="reaction-avatars">
 				<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
 					<li>
@@ -170,25 +207,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	</div>
 
 	<?php
-	$modal_content = '
-		<ul class="reactions-list">
-			<template data-wp-each="context.modal.items">
-				<li class="reaction-item">
-					<a data-wp-bind--href="context.item.url" target="_blank" rel="noopener noreferrer">
-						<img
-							data-wp-bind--src="context.item.avatar"
-							data-wp-bind--alt="context.item.name"
-							data-wp-on--error="callbacks.setDefaultAvatar"
-							src=""
-							alt=""
-						/>
-						<span class="reaction-name" data-wp-text="context.item.name"></span>
-					</a>
-				</li>
-			</template>
-		</ul>
-	';
-
 	// Render the modal using the Blocks class.
 	Blocks::render_modal(
 		array(

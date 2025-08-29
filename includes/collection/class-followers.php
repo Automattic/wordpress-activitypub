@@ -7,11 +7,8 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Model\Follower;
-use WP_Error;
-use WP_Query;
+use Activitypub\Tombstone;
 
-use function Activitypub\is_tombstone;
 use function Activitypub\get_remote_metadata_by_actor;
 
 /**
@@ -21,8 +18,19 @@ use function Activitypub\get_remote_metadata_by_actor;
  * @author Matthias Pfefferle
  */
 class Followers {
-	const POST_TYPE         = 'ap_follower';
+	/**
+	 * Cache key for the followers inbox.
+	 *
+	 * @var string
+	 */
 	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
+
+	/**
+	 * Meta key for the followers user ID.
+	 *
+	 * @var string
+	 */
+	const FOLLOWER_META_KEY = '_activitypub_following';
 
 	/**
 	 * Add new Follower.
@@ -30,41 +38,68 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
-	 * @return Follower|WP_Error The Follower (WP_Post array) or an WP_Error.
+	 * @return int|\WP_Error The Follower ID or an WP_Error.
 	 */
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
-		if ( is_tombstone( $meta ) ) {
+		if ( Tombstone::exists( $meta ) ) {
 			return $meta;
 		}
 
-		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
+		if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
+			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		$follower = new Follower();
-		$follower->from_array( $meta );
-
-		$id = $follower->upsert();
-
-		if ( is_wp_error( $id ) ) {
-			return $id;
+		$post_id = Actors::upsert( $meta );
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
 		}
 
-		$post_meta = get_post_meta( $id, '_activitypub_user_id', false );
-
-		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
-		if ( is_array( $post_meta ) && ! in_array( $user_id, $post_meta ) ) {
-			add_post_meta( $id, '_activitypub_user_id', $user_id );
-			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		$post_meta = \get_post_meta( $post_id, self::FOLLOWER_META_KEY, false );
+		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
+			\add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
+			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+			\wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
 		}
 
-		return $follower;
+		return $post_id;
 	}
 
 	/**
 	 * Remove a Follower.
+	 *
+	 * @param int $post_id The ID of the remote Actor.
+	 * @param int $user_id The ID of the WordPress User.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function remove( $post_id, $user_id ) {
+		$post = \get_post( $post_id );
+
+		if ( ! $post ) {
+			return false;
+		}
+
+		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		\wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
+
+		/**
+		 * Fires before a Follower is removed.
+		 *
+		 * @param \WP_Post                    $post    The remote Actor object.
+		 * @param int                         $user_id The ID of the WordPress User.
+		 * @param \Activitypub\Activity\Actor $actor   The remote Actor object.
+		 */
+		\do_action( 'activitypub_followers_pre_remove_follower', $post, $user_id, Actors::get_actor( $post ) );
+
+		return \delete_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
+	}
+
+	/**
+	 * Remove a Follower.
+	 *
+	 * @deprecated Use Activitypub\Collection\Followers::remove instead.
 	 *
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
@@ -72,24 +107,15 @@ class Followers {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_follower( $user_id, $actor ) {
-		wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		_deprecated_function( __METHOD__, '7.1.0', 'Activitypub\Collection\Followers::remove' );
 
-		$follower = self::get_follower( $user_id, $actor );
+		$remote_actor = self::get_follower( $user_id, $actor );
 
-		if ( ! $follower ) {
+		if ( \is_wp_error( $remote_actor ) ) {
 			return false;
 		}
 
-		/**
-		 * Fires before a Follower is removed.
-		 *
-		 * @param Follower $follower The Follower object.
-		 * @param int      $user_id  The ID of the WordPress User.
-		 * @param string   $actor    The Actor URL.
-		 */
-		do_action( 'activitypub_followers_pre_remove_follower', $follower, $user_id, $actor );
-
-		return delete_post_meta( $follower->get__id(), '_activitypub_user_id', $user_id );
+		return self::remove( $remote_actor->ID, $user_id );
 	}
 
 	/**
@@ -98,29 +124,33 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
-	 * @return Follower|false|null The Follower object or null
+	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower( $user_id, $actor ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$post_id = $wpdb->get_var(
+		$id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = '_activitypub_user_id' AND pm.meta_value = %d AND p.guid = %s",
+				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid = %s",
 				array(
-					esc_sql( self::POST_TYPE ),
-					esc_sql( $user_id ),
-					esc_sql( $actor ),
+					\esc_sql( Actors::POST_TYPE ),
+					\esc_sql( self::FOLLOWER_META_KEY ),
+					\esc_sql( $user_id ),
+					\esc_sql( $actor ),
 				)
 			)
 		);
 
-		if ( $post_id ) {
-			$post = get_post( $post_id );
-			return Follower::init_from_cpt( $post );
+		if ( ! $id ) {
+			return new \WP_Error(
+				'activitypub_follower_not_found',
+				\__( 'Follower not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
-		return null;
+		return \get_post( $id );
 	}
 
 	/**
@@ -128,25 +158,12 @@ class Followers {
 	 *
 	 * @param string $actor The Actor URL.
 	 *
-	 * @return Follower|false|null The Follower object or false on failure.
+	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
-		global $wpdb;
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_remote_by_uri' );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s",
-				esc_sql( $actor )
-			)
-		);
-
-		if ( $post_id ) {
-			$post = get_post( $post_id );
-			return Follower::init_from_cpt( $post );
-		}
-
-		return null;
+		return Actors::get_remote_by_uri( $actor );
 	}
 
 	/**
@@ -157,10 +174,11 @@ class Followers {
 	 * @param int      $page    Page number.
 	 * @param array    $args    The WP_Query arguments.
 	 *
-	 * @return Follower[] List of `Follower` objects.
+	 * @return \WP_Post[] List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
 		$data = self::get_followers_with_count( $user_id, $number, $page, $args );
+
 		return $data['followers'];
 	}
 
@@ -175,19 +193,25 @@ class Followers {
 	 * @return array {
 	 *      Data about the followers.
 	 *
-	 *      @type Follower[] $followers List of `Follower` objects.
+	 *      @type \WP_Post[] $followers List of `Follower` objects.
 	 *      @type int        $total     Total number of followers.
 	 *  }
 	 */
 	public static function get_followers_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => self::POST_TYPE,
+			'post_type'      => Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',
 			'order'          => 'DESC',
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
+				'relation' => 'OR',
+				array(
+					'key'   => self::FOLLOWER_META_KEY,
+					'value' => $user_id,
+				),
+				// for backwards compatibility.
 				array(
 					'key'   => '_activitypub_user_id',
 					'value' => $user_id,
@@ -195,37 +219,12 @@ class Followers {
 			),
 		);
 
-		$args      = wp_parse_args( $args, $defaults );
-		$query     = new WP_Query( $args );
+		$args      = \wp_parse_args( $args, $defaults );
+		$query     = new \WP_Query( $args );
 		$total     = $query->found_posts;
-		$followers = array_map( array( Follower::class, 'init_from_cpt' ), $query->get_posts() );
-		$followers = array_filter( $followers );
+		$followers = \array_filter( $query->posts );
 
-		return compact( 'followers', 'total' );
-	}
-
-	/**
-	 * Get all Followers.
-	 *
-	 * @return Follower[] The Term list of Followers.
-	 */
-	public static function get_all_followers() {
-		$args = array(
-			'nopaging'   => true,
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query' => array(
-				'relation' => 'AND',
-				array(
-					'key'     => '_activitypub_inbox',
-					'compare' => 'EXISTS',
-				),
-				array(
-					'key'     => '_activitypub_actor_json',
-					'compare' => 'EXISTS',
-				),
-			),
-		);
-		return self::get_followers( null, null, null, $args );
+		return \compact( 'followers', 'total' );
 	}
 
 	/**
@@ -236,30 +235,7 @@ class Followers {
 	 * @return int The number of Followers
 	 */
 	public static function count_followers( $user_id ) {
-		$query = new WP_Query(
-			array(
-				'post_type'  => self::POST_TYPE,
-				'fields'     => 'ids',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
-					'relation' => 'AND',
-					array(
-						'key'   => '_activitypub_user_id',
-						'value' => $user_id,
-					),
-					array(
-						'key'     => '_activitypub_inbox',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'     => '_activitypub_actor_json',
-						'compare' => 'EXISTS',
-					),
-				),
-			)
-		);
-
-		return $query->found_posts;
+		return self::get_followers_with_count( $user_id, 1 )['total'];
 	}
 
 	/**
@@ -270,18 +246,18 @@ class Followers {
 	 * @return array The list of Inboxes.
 	 */
 	public static function get_inboxes( $user_id ) {
-		$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
-		$inboxes   = wp_cache_get( $cache_key, 'activitypub' );
+		$cache_key = \sprintf( self::CACHE_KEY_INBOXES, $user_id );
+		$inboxes   = \wp_cache_get( $cache_key, 'activitypub' );
 
 		if ( $inboxes ) {
 			return $inboxes;
 		}
 
 		// Get all Followers of an ID of the WordPress User.
-		$posts = new WP_Query(
+		$posts = new \WP_Query(
 			array(
 				'nopaging'   => true,
-				'post_type'  => self::POST_TYPE,
+				'post_type'  => Actors::POST_TYPE,
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
@@ -291,7 +267,7 @@ class Followers {
 						'compare' => 'EXISTS',
 					),
 					array(
-						'key'   => '_activitypub_user_id',
+						'key'   => self::FOLLOWER_META_KEY,
 						'value' => $user_id,
 					),
 					array(
@@ -303,9 +279,7 @@ class Followers {
 			)
 		);
 
-		$posts = $posts->get_posts();
-
-		if ( ! $posts ) {
+		if ( ! $posts->posts ) {
 			return array();
 		}
 
@@ -314,15 +288,15 @@ class Followers {
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
-				WHERE post_id IN (" . implode( ', ', array_fill( 0, count( $posts ), '%d' ) ) . ")
+				WHERE post_id IN (" . \implode( ', ', \array_fill( 0, \absint( $posts->post_count ), '%d' ) ) . ")
 				AND meta_key = '_activitypub_inbox'
 				AND meta_value IS NOT NULL",
-				$posts
+				$posts->posts
 			)
 		);
 
-		$inboxes = array_filter( $results );
-		wp_cache_set( $cache_key, $inboxes, 'activitypub' );
+		$inboxes = \array_filter( $results );
+		\wp_cache_set( $cache_key, $inboxes, 'activitypub' );
 
 		return $inboxes;
 	}
@@ -338,27 +312,30 @@ class Followers {
 	 * @return array The list of Inboxes.
 	 */
 	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
-		$inboxes = self::get_inboxes( $actor_id );
-
-		if ( self::maybe_add_inboxes_of_blog_user( $json, $actor_id ) ) {
-			$inboxes = array_fill_keys( $inboxes, 1 );
-			foreach ( self::get_inboxes( Actors::BLOG_USER_ID ) as $inbox ) {
-				$inboxes[ $inbox ] = 1;
-			}
-			$inboxes = array_keys( $inboxes );
+		$activity = \json_decode( $json, true );
+		// Only if this is a Delete. Create handles its own "Announce" in dual user mode.
+		if ( 'Delete' === ( $activity['type'] ?? null ) ) {
+			$inboxes = Actors::get_inboxes();
+		} else {
+			$inboxes = self::get_inboxes( $actor_id );
 		}
 
-		return array_slice( $inboxes, $offset, $batch_size );
+		return \array_slice( $inboxes, $offset, $batch_size );
 	}
 
 	/**
 	 * Maybe add Inboxes of the Blog User.
 	 *
+	 * @deprecated 7.3.0
+	 *
 	 * @param string $json     The ActivityPub Activity JSON.
 	 * @param int    $actor_id The WordPress Actor ID.
+	 *
 	 * @return bool True if the Inboxes of the Blog User should be added, false otherwise.
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $json, $actor_id ) {
+		\_deprecated_function( __METHOD__, 'unreleased' );
+
 		// Only if we're in both Blog and User modes.
 		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 			return false;
@@ -368,9 +345,9 @@ class Followers {
 			return false;
 		}
 
-		$activity = json_decode( $json, true );
+		$activity = \json_decode( $json, true );
 		// Only if this is an Update or Delete. Create handles its own "Announce" in dual user mode.
-		if ( ! in_array( $activity['type'] ?? null, array( 'Update', 'Delete' ), true ) ) {
+		if ( ! \in_array( $activity['type'] ?? null, array( 'Update', 'Delete' ), true ) ) {
 			return false;
 		}
 
@@ -378,77 +355,58 @@ class Followers {
 	}
 
 	/**
+	 * Get all Followers.
+	 *
+	 * @deprecated 7.1.0 Use Activitypub\Collection\Actors::get_all() instead.
+	 *
+	 * @return \WP_Post[] The list of Followers.
+	 */
+	public static function get_all_followers() {
+		_deprecated_function( __METHOD__, '7.1.0', 'Activitypub\Collection\Actors::get_all' );
+
+		$args = array(
+			'nopaging'   => true,
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key'     => '_activitypub_inbox',
+					'compare' => 'EXISTS',
+				),
+			),
+		);
+		return self::get_followers( null, null, null, $args );
+	}
+
+	/**
 	 * Get all Followers that have not been updated for a given time.
+	 *
+	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::get_outdated() instead.
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
 	 *
-	 * @return Follower[] The Term list of Followers.
+	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
-		$args = array(
-			'post_type'      => self::POST_TYPE,
-			'posts_per_page' => $number,
-			'orderby'        => 'modified',
-			'order'          => 'ASC',
-			'post_status'    => 'any', // 'any' includes 'trash'.
-			'date_query'     => array(
-				array(
-					'column' => 'post_modified_gmt',
-					'before' => gmdate( 'Y-m-d', \time() - $older_than ),
-				),
-			),
-		);
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_outdated' );
 
-		$posts = new WP_Query( $args );
-		$items = array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
-
-		return array_filter( $items );
+		return Actors::get_outdated( $number, $older_than );
 	}
 
 	/**
 	 * Get all Followers that had errors.
 	 *
+	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::get_faulty() instead.
+	 *
 	 * @param int $number Optional. The number of Followers to return. Default 20.
 	 *
-	 * @return Follower[] The Term list of Followers.
+	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
-		$args = array(
-			'post_type'      => self::POST_TYPE,
-			'posts_per_page' => $number,
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
-				'relation' => 'OR',
-				array(
-					'key'     => '_activitypub_errors',
-					'compare' => 'EXISTS',
-				),
-				array(
-					'key'     => '_activitypub_inbox',
-					'compare' => 'NOT EXISTS',
-				),
-				array(
-					'key'     => '_activitypub_actor_json',
-					'compare' => 'NOT EXISTS',
-				),
-				array(
-					'key'     => '_activitypub_inbox',
-					'value'   => '',
-					'compare' => '=',
-				),
-				array(
-					'key'     => '_activitypub_actor_json',
-					'value'   => '',
-					'compare' => '=',
-				),
-			),
-		);
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_faulty' );
 
-		$posts = new WP_Query( $args );
-		$items = array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
-
-		return array_filter( $items );
+		return Actors::get_faulty( $number );
 	}
 
 	/**
@@ -457,38 +415,68 @@ class Followers {
 	 *
 	 * The error will be stored in post meta.
 	 *
+	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::add_error() instead.
+	 *
 	 * @param int   $post_id The ID of the WordPress Custom-Post-Type.
 	 * @param mixed $error   The error message. Can be a string or a WP_Error.
 	 *
 	 * @return int|false The meta ID on success, false on failure.
 	 */
 	public static function add_error( $post_id, $error ) {
-		if ( is_string( $error ) ) {
-			$error_message = $error;
-		} elseif ( is_wp_error( $error ) ) {
-			$error_message = $error->get_error_message();
-		} else {
-			$error_message = __(
-				'Unknown Error or misconfigured Error-Message',
-				'activitypub'
-			);
-		}
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::add_error' );
 
-		return add_post_meta(
-			$post_id,
-			'_activitypub_errors',
-			$error_message
-		);
+		return Actors::add_error( $post_id, $error );
 	}
 
 	/**
 	 * Clear the errors for a Follower.
+	 *
+	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::clear_errors() instead.
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
 	 * @return bool True on success, false on failure.
 	 */
 	public static function clear_errors( $post_id ) {
-		return \delete_post_meta( $post_id, '_activitypub_errors' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::clear_errors' );
+
+		return Actors::clear_errors( $post_id );
+	}
+
+	/**
+	 * Check the status of a given following.
+	 *
+	 * @param int $post_id The ID of the Post.
+	 * @param int $user_id The ID of the WordPress User.
+	 *
+	 * @return bool The status of the following.
+	 */
+	public static function follows( $post_id, $user_id ) {
+		$all_meta  = \get_post_meta( $post_id );
+		$following = $all_meta[ self::FOLLOWER_META_KEY ] ?? array();
+
+		return \in_array( (string) $user_id, $following, true );
+	}
+
+	/**
+	 * Remove blocked actors from follower lists.
+	 *
+	 * Called via activitypub_add_user_block hook.
+	 *
+	 * @param string $value   The blocked actor URI.
+	 * @param string $type    The block type (actor, domain, keyword).
+	 * @param int    $user_id The user ID.
+	 */
+	public static function remove_blocked_actors( $value, $type, $user_id ) {
+		if ( 'actor' !== $type ) {
+			return;
+		}
+
+		$actor_id = Actors::get_id_by_various( $value );
+		if ( \is_wp_error( $actor_id ) ) {
+			return;
+		}
+
+		self::remove( $actor_id, $user_id );
 	}
 }

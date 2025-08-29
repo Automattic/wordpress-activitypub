@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Refactored to use CSS for effects instead of JavaScript, simplifying the code.

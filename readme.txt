@@ -1,9 +1,9 @@
 === ActivityPub ===
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
-Tags: OStatus, fediverse, activitypub, activitystream
+Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 5.9.2
+Stable tag: 7.3.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -16,7 +16,7 @@ Enter the fediverse with **ActivityPub**, broadcasting your blog to a wider audi
 
 https://www.youtube.com/watch?v=QzYozbNneVc
 
-With the ActivityPub plugin installed, your WordPress blog itself function as a federated profile, along with profiles for each author. For instance, if your website is `example.com`, then the blog-wide profile can be found at `@example.com@example.com`, and authors like Jane and Bob would have their individual profiles at `@jane@example.com` and `@bobz@example.com`, respectively.
+With the ActivityPub plugin installed, your WordPress blog itself functions as a federated profile, along with profiles for each author. For instance, if your website is `example.com`, then the blog-wide profile can be found at `@example.com@example.com`, and authors like Jane and Bob would have their individual profiles at `@jane@example.com` and `@bobz@example.com`, respectively.
 
 An example: I give you my Mastodon profile name: `@pfefferle@mastodon.social`. You search, see my profile, and hit follow. Now, any post I make appears in your Home feed. Similarly, with the ActivityPub plugin, you can find and follow Jane's profile at `@jane@example.com`.
 
@@ -59,38 +59,20 @@ This plugin connects your WordPress blog to popular social platforms like Mastod
 
 = What is "ActivityPub for WordPress" =
 
-*ActivityPub for WordPress* extends WordPress with some Fediverse features, but it does not compete with platforms like Friendica or Mastodon. If you want to run a **decentralized social network**, please use [Mastodon](https://joinmastodon.org/) or [GNU social](https://gnusocial.network/).
+*ActivityPub for WordPress* adds Fediverse features to WordPress, but it is not a replacement for platforms like Friendica or Mastodon. If you're looking to host a decentralized social network, consider using [Mastodon](https://joinmastodon.org/) or [Friendica](https://friendi.ca/).
 
-= What if you are running your blog in a subdirectory? =
+= Why "ActivityPub"? =
 
-In order for webfinger to work, it must be mapped to the root directory of the URL on which your blog resides.
+The name ActivityPub comes from the two core ideas behind the protocol:
 
-**Apache**
+* Activity: It is based on the concept of activities, like "Create", "Like", "Follow", "Announce", etc. These are structured messages (usually in [ActivityStreams](https://www.w3.org/TR/activitystreams-core/) format) that describe what users do on the network.
+* Pub: Short for publish or publication. It refers to the fact that this is a publish-subscribe (pub-sub) protocol — one user can "follow" another, and receive their published activities.
 
-Add the following to the .htaccess file in the root directory:
+Put together, ActivityPub is a protocol for publishing and subscribing to activities, which enables decentralized social networking — where different servers can interact and users can follow each other across the Fediverse.
 
-	RedirectMatch "^\/\.well-known/(webfinger|nodeinfo)(.*)$" /blog/.well-known/$1$2
+= How do I solve… =
 
-Where 'blog' is the path to the subdirectory at which your blog resides.
-
-**Nginx**
-
-Add the following to the site.conf in sites-available:
-
-	location ~* /.well-known {
-		allow all;
-		try_files $uri $uri/ /blog/?$args;
-	}
-
-Where 'blog' is the path to the subdirectory at which your blog resides.
-
-If you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/), you don't need the redirect, because the index.php will take care of that.
-
-= What if you are running your blog behind a reverse proxy with Apache? =
-
-If you are using a reverse proxy with Apache to run your host you may encounter that you are unable to have followers join the blog. This will occur because the proxy system rewrites the host headers to be the internal DNS name of your server, which the plugin then uses to attempt to sign the replies. The remote site attempting to follow your users is expecting the public DNS name on the replies. In these cases you will need to use the 'ProxyPreserveHost On' directive to ensure the external host name is passed to your internal host.
-
-If you are using SSL between the proxy and internal host you may also need to `SSLProxyCheckPeerName off` if your internal host can not answer with the correct SSL name. This may present a security issue in some environments.
+We have a **How-To** section in the [docs](https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs/how-to) directory that can help you troubleshoot common issues.
 
 = Constants =
 
@@ -128,304 +110,152 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-### 5.9.2 - 2025-05-16
-#### Fixed
-- Titles added through a Heading block in the Reactions block now stay properly hidden when there are no reactions.
-
-### 5.9.1 - 2025-05-15
-#### Fixed
-- Fixed a bug where Reaction blocks without modified titles did not get displayed correctly.
-
-### 5.9.0 - 2025-05-14
+### 7.3.0 - 2025-08-28
 #### Added
-- ActivityPub embeds now support audios, videos, and up to 4 images.
-- Added a check to make sure we only attempt to embed activity objects, when processing fallback embeds.
-- Add setting to enable or disable how content is tailored for browsers and Fediverse services.
-- Adjusted the plugin's default behavior based on the caching plugins installed.
-- A guided onboarding flow after plugin activation to help users make key setup decisions and understand Fediverse concepts.
-- Author profiles will cap the amount of extra fields they return to 20, to avoid response size errors in clients.
-- Fediverse Preview in the Editor now also supports video and audio attachments.
-- Guidance for configuring Surge to support ActivityPub caching.
-- Help tab section explaining ActivityPub capabilities on the users page.
-- Profile sections have been moved from the Welcome page to new Dashboard widgets for easier access.
-- The ActivityPub blog news feed to WordPress dashboard.
-- The Outbox now skips invalid items instead of trying to process them for output and encountering an error.
+- Add actor blocking functionality with list table interface for managing blocked users and site-wide blocks
+- Add code coverage reporting to GitHub Actions PHPUnit workflow with dedicated coverage job using Xdebug
+- Add comprehensive blocking and moderation system for ActivityPub with user-specific and site-wide controls for actors, domains, and keywords.
+- Add comprehensive unit tests for Followers and Following table classes with proper ActivityPub icon object handling.
+- Added link and explanation for the existing Starter Kit importer on the help tab of the Following pages.
+- Adds a self-destruct feature to remove a blog from the Fediverse by sending Delete activities to followers.
+- Adds a User Interface to select accounts during Starter Kit import
+- Adds support for importing Starter Kits from a link (URL).
+- Adds support for searching (remote) URLs similar to Mastodon, redirecting to existing replies or importing them if missing.
+- Adds support for sending Delete activities when a user is removed.
+- Adds support for Starter Kit collections in the ActivityPub API.
+- A global Inbox handler and persistence layer to log incoming Create and Update requests for debugging and verifying Activity handling.
+- Follower lists now include the option to block individual accounts.
+- Improved handling of deleted content with a new unified system for better tracking and compatibility.
+- Moderation now checks blocked keywords across all language variants of the content, summary and name fields.
+- When activated or deactivated network-wide, the plugin now refreshes rewrite rules across all sites.
 
 #### Changed
-- Batch processing jobs can now be scheduled with individual hooks.
-- Better error handling when other servers request Outbox items in the wrong format, and 404 pages now show correctly.
-- Fediverse Previews in the Block Editor now show media items, even if the post has not been published yet.
-- Hide interaction buttons in emails when the Classic Editor is used.
-- Improve compatibility with third-party caching plugins by sending a `Vary` header.
-- Much more comprehensive plugin documentation in the Help tab of ActivityPub Settings.
-- NodeInfo endpoint response now correctly formats `localPosts` values.
-- Reactions block heading now uses Core's heading block with all its customization options.
-- Settings pages are now more mobile-friendly with more space and easier scrolling.
-- The number of images shared to the Fediverse can now be chosen on a per-post basis.
-- Updated default max attachment count to four, creating better-looking gallery grids for posts with 4 or more images.
-- Use a dedicated hook for the "Dismiss Welcome Page Welcome" link.
-- Use FEP-c180 schema for error responses.
-- Use `Audio` and `Video` type for Attachments, instead of the very generic `Document` type.
-
-#### Deprecated
-- Deprecated `rest_activitypub_outbox_query` filter in favor of `activitypub_rest_outbox_query`.
-  Deprecated `activitypub_outbox_post` action in favor of `activitypub_rest_outbox_post`.
+- Add default avatars for actors without icons in admin tables
+- Added support for list of Actor IDs in Starter Kits.
+- Improve Following class documentation and optimize count methods for better performance
+- Refactor actor blocking with unified API for better maintainability
 
 #### Fixed
-- Broken avatars in the Reactions and Follower block are now replaced with the default avatar.
-- Email notifications for interactions with Brid.gy actors no longer trigger PHP Warnings.
-- Improved support for users from more Fediverse platforms in email notifications.
-- Improved the handling of Shares and Boosts.
-- Issue preventing "Receive reblogs (boosts)" setting from being properly saved.
-- Mention emails will no longer be sent for reply Activities.
-- Prevent accidental follower removal by resetting errors properly.
-- Properly remove retries schedules, with the invalidation of an Outbox-Item.
-- The blog profile can no longer be queried when the blog actor option is disabled.
+- Blocks relying on user selectors no longer error due to a race condition when fetching users.
+- Fix duplicate HTML IDs and missing form labels in modal blocks
+- Fix malformed ActivityPub handles for users with email-based logins (e.g., from Site Kit Google authentication)
+- Fix PHP 8.4 deprecation warnings by preventing null values from being passed to WordPress core functions
+- Improves handling of author URLs by converting them to a proper format.
+- Improves REST responses by skipping invalid actors in Followers and Following controllers.
+- More reliable Actor checks during the follow process.
+- Prevents Application users from being followed.
+- Proper implementation of FEP 844e.
+- Switches ActivityPub summaries to plain text for better compatibility.
 
-### 5.8.0 - 2025-04-24
+### 7.2.0 - 2025-07-30
 #### Added
-- An option to receive notification emails when an Actor was mentioned in the Fediverse.
-- Enable direct linking to Help Tabs.
-- Fallback embed support for Fediverse content that lacks native oEmbed responses.
-- Support for all media types in the Mastodon Importer.
+- Add image attachment support to federated comments - HTML images in comment content now include proper ActivityStreams attachment fields.
+- Link to the following internal dialog for remote interactions, if the feature is enabled.
+- The followers list now shows follow status and allows quick follow-back actions.
+- Trigger Actor updates on (un)setting a post as sticky.
+- You can now use `OrderedCollection`s as starter packs — just drop in the output from a Follower or Following endpoint.
 
 #### Changed
-- Added WordPress disallowed list filtering to block unwanted ActivityPub interactions.
-- Mastodon imports now support blocks, with automatic reply embedding for conversations.
-- Tested and compatible with the latest version of WordPress.
-- Updated design of new follower notification email and added meta information.
-- Update DM email notification to include an embed display of the DM.
-- Updated notification settings to be user-specific for more personalization.
+- Ensure that tests run in production-like conditions, avoiding interference from local development tools.
+- Moved HTTP request signing to a filter instead of calling it directly.
 
 #### Fixed
-- Add support for Multisite Language Switcher
-- Better check for an empty `headers` array key in the Signature class.
-- Include user context in Global-Inbox actions.
-- No more PHP warning when Mastodon Apps run out of posts to process.
-- Reply links and popup modals are now properly translated for logged-out visitors.
+- Allow non-administrator users to use Follow Me and Followers blocks
+- Correct linking from followers to the following list
+- Fix avatar rendering for followers with missing icon property
+- Fix multibyte character corruption in post summaries, preventing Greek and other non-ASCII text from being garbled during text processing.
+- Informational Fediverse blocks are no longer rendered when posts get added to the Outbox.
 
-### 5.7.0 - 2025-04-11
+### 7.1.0 - 2025-07-23
 #### Added
-- Advanced Settings tab, with special settings for advanced users.
-- Check if pretty permalinks are enabled and recommend to use threaded comments.
-- Reply block: show embeds where available.
-- Support same-server domain migrations.
-- Upgrade routine that removes any erroneously created extra field entries.
+- Added a first version of the Follow form, allowing users to follow other Actors by username or profile link.
+- Added initial support for Fediverse Starter Kits, allowing users to follow recommended accounts from a predefined list.
+- Ensure that all schedulers are registered during every plugin update.
+- Followers and Following list tables now support Columns and Pagination screen options.
+- The featured tags endpoint is now available again for all profiles, showing the most frequently used tags by each user.
+- The `following` endpoint now returns the actual list of users being followed.
 
 #### Changed
-- Add option to enable/disable the "shared inbox" to the "Advanced Settings".
-- Add option to enable/disable the `Vary` Header to the "Advanced Settings".
-- Configure the "Follow Me" button to have a button-only mode.
-- Importers are loaded on admin-specific hook.
-- Improve the troubleshooting UI and show Site-Health stats in ActivityPub settings.
-- Increased compatibility with Mobilizon and other platforms by improving signature verification for different key formats.
+- Follower tables now look closer to what other tables in WordPress look like.
+- Improved Account-Aliases handling by internally normalizing input formats.
+- Minor performance improvement when querying posts of various types, by avoiding double queries.
+- Set older unfederated posts to local visibility by default.
+- Step counts for the Welcome checklist now only take into account steps that are added in the Welcome class.
+- Table actions are now faster by using the Custom Post Type ID instead of the remote user URI, thanks to the unified Actor Model.
+- The following tables now more closely match the appearance of other WordPress tables and can be filtered by status.
 
 #### Fixed
-- Ensure that an `Activity` has an `Actor` before adding it to the Outbox.
-- Fixed some bugs and added additional information on the Debug tab of the Site-Health page.
-- Follow-up to the reply block changes that makes sure Mastodon embeds are displayed in the editor.
-- Outbox endpoint bug where non-numeric usernames caused errors when querying Outbox data.
-- Show Site Health error if site uses old "Almost Pretty Permalinks" structure.
-- Sites with comments from the Fediverse no longer create uncached extra fields posts that flood the Outbox.
-- Transformers allow settings values to false again, a regression from 5.5.0.
+- Ensure correct visibility handling for `Undo` and `Follow` requests
+- Ensure that the Actor-ID is always a URL.
+- Fixed a bug in how follow requests were accepted to ensure they work correctly.
+- Fixed an issue where the number of followers shown didn’t always match the actual follower list.
+- Fixed a PHP error that prevented the Follower overview from loading.
+- Fixed missing avatar class so that CSS styles are correctly applied to ActivityPub avatars on the Dashboard.
+- Fixed potential errors when unrelated requests get caught in double-knocking callback.
+- Improved WebFinger fallback to better guess usernames from profile links.
+- Prevent WordPress from loading all admin notices twice on ActivityPub settings pages.
+- Removed follower dates to avoid confusion, as they may not have accurately reflected the actual follow time.
+- Stop purging Follow activities from the Outbox to allow proper Unfollow (Undo) handling.
 
-### 5.6.1 - 2025-04-02
+### 7.0.1 - 2025-07-10
 #### Fixed
-- "Post Interactions" settings will now be saved to the options table.
-- So not show `movedTo` attribute instead of setting it to `false` if empty.
-- Use specified date format for `updated` field in Outbox-Activites.
+- When deleting interactions for cleaned up actors, we use the actor's URL again to retrieve their information instead of our internal ID.
 
-### 5.6.0 - 2025-04-01
+### 7.0.0 - 2025-07-09
 #### Added
-- Added a Mastodon importer to move your Mastodon posts to your WordPress site.
-- A default Extra-Field to do a little advertising for WordPress.
-- Move: Differentiate between `internal` and 'external' Move.
-- Redirect user to the welcome page after ActivityPub plugin is activated.
-- The option to show/hide the "Welcome Page".
-- User setting to enable/disable Likes and Reblogs
+- Added basic support for handling remote rejections of follow requests.
+- Added basic support for RFC-9421 style signatures for incoming activities.
+- Added initial Following support for Actors, hidden for now until plugins add support.
+- Added missing "Advanced Settings" details to Site Health debug information.
+- Added option to auto-approve reactions like likes and reposts.
+- Added support for namespaced attributes and the dcterms:subject field (FEP-b2b8), as a first step toward phasing out summary-based content warnings.
+- Added support for the WP Rest Cache plugin to help with caching REST API responses.
+- Documented support for FEP-844e.
+- Optional support for RFC-9421 style signatures for outgoing activities, including retry with Draft-Cavage-style signature.
+- Reactions block now supports customizing colors, borders, box-shadows, and typography.
+- Support for sending follow requests to remote actors is now in place, including outbox delivery and status updates—UI integration will follow later.
 
 #### Changed
-- Logged-out remote reply button markup to look closer to logged-in version.
-- No longer federates `Delete` activities for posts that were not federated.
-- OrderedCollection and OrderedCollectionPage behave closer to spec now.
-- Outbox items now contain the full activity, not just activity objects.
-- Standardized mentions to use usernames only in comments and posts.
+- Comment feeds now show only comments by default, with a new `type` filter (e.g., `like`, `all`) to customize which reactions appear.
+- Consistent naming of Blog user in Block settings.
+- hs2019 signatures for incoming REST API requests now have their algorithm determined based on their public key.
+- Likes, comments, and reposts from the Fediverse now require either a name or `preferredUsername` to be set when the Discussion option `require_name_email` is set to true. It falls back to "Anonymous", if not.
+- Management of public/private keys for Actors now lives in the Actors collection, in preparation for Signature improvements down the line.
+- Notification emails for new reactions received from the Fediverse now link to the moderation page instead of the edit page, preventing errors and making comment management smoother.
+- Plugins now have full control over which Settings tabs are shown in Settings > Activitypub.
+- Reworked follower structure to simplify handling and enable reuse for following mechanism.
+- Screen options in the Activitypub settings page are now filterable.
+- Setting the blog identifier to empty will no longer trigger an error message about it being the same as an existing user name.
+- Step completion tracking in the Welcome tab now even works when the number of steps gets reduced.
+- The image attachment setting is no longer saved to the database if it matches the default value.
+- The welcome page now links to the correct profile when Blog Only mode was selected in the profile mode step.
+- Unified retrieval of comment avatars and re-used core filters to give access to third-part plugins.
 
 #### Fixed
-- Changelog entries: allow automating changelog entry generation from forks as well.
-- Comments from Fediverse actors will now be purged as expected.
-- Importing attachments no longer creates Outbox items for them.
-- Improved readability in Mastodon Apps plugin string.
-- No more PHP warnings when previewing posts without attachments.
-- Outbox batch processing adheres to passed batch size.
-- Permanently delete reactions that were `Undo` instead of trashing them.
-- PHP warnings when scheduling post activities for an invalid post.
-- PHP Warning when there's no actor information in comment activities.
-- Prevent self-replies on local comments.
-- Properly set `to` audience of `Activity` instead of changing the `Follow` Object.
-- Run all Site-Health checks with the required headers and a valid signature.
-- Set `updated` field for profile updates, otherwise the `Update`-`Activity` wouldn't be handled by Mastodon.
-- Support multiple layers of nested Outbox activities when searching for the Object ID.
-- The Custom-Avatar getter on WP.com.
-- Use the $from account for the object in Move activity for external Moves
-- Use the `$from` account for the object in Move activity for internal Moves
-- Use `add_to_outbox` instead of the changed scheduler hooks.
-- Use `JSON_UNESCAPED_SLASHES` because Mastodon seems to have problems with encoded URLs.
-- `Scheduler::schedule_announce_activity` to handle Activities instead of Activity-Objects.
-
-### 5.5.0 - 2025-03-19
-#### Added
-- Added "Enable Mastodon Apps" and "Event Bridge for ActivityPub" to the recommended plugins section.
-- Added Constants to the Site-Health debug informations.
-- Development environment: add Changelogger tool to environment dependencies.
-- Development environment: allow contributors to specify a changelog entry directly from their Pull Request description.
-- Documentation for migrating from a Mastodon instance to WordPress.
-- Support for sending Activities to ActivityPub Relays, to improve discoverability of public content.
-
-#### Changed
-- Documentation: expand Pull Request process docs, and mention the new changelog process as well as the updated release process.
-- Don't redirect @-name URLs to trailing slashed versions
-- Improved and simplified Query code.
-- Improved readability for actor mode setting.
-- Improved title case for NodeInfo settings.
-- Introduced utility function to determine actor type based on user ID.
-- Outbox items only get sent to followers when there are any.
-- Restricted modifications to settings if they are predefined as constants.
-- The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin.
-- Uses two-digit version numbers in Outbox and NodeInfo responses.
-
-#### Removed
-- Our version of `sanitize_url()` was unused—use Core's `sanitize_url()` instead.
-
-#### Fixed
-- Ensured that Query::get_object_id() returns an ID instead of an Object.
-- Fix a fatal error in the Preview when a post contains no (hash)tags.
-- Fixed an issue with the Content Carousel and Blog Posts block: https://github.com/Automattic/wp-calypso/issues/101220
-- Fixed default value for `activitypub_authorized_fetch` option.
-- Follow-Me blocks now show the correct avatar on attachment pages.
-- Images with the correct aspect ratio no longer get sent through the crop step again.
-- No more PHP warnings when a header image gets cropped.
-- PHP warnings when trying to process empty tags or image blocks without ID attributes.
-- Properly re-added support for `Update` and `Delete` `Announce`ments.
-- Updates to certain user meta fields did not trigger an Update activity.
-- When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
-
-### 5.4.1 - 2025-03-04
-#### Fixed
-- Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
-- Show "full content" preview even if post is in still in draft mode.
-
-### 5.4.0 - 2025-03-03
-#### Added
-- Upgrade script to fix Follower json representations with unescaped backslashes.
-- Centralized place for sanitization functions.
-
-#### Changed
-- Bumped minimum required WordPress version to 6.4.
-- Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
-- Use webfinger as author email for comments from the Fediverse.
-- Remove the special handling of comments from Enable Mastodon Apps.
-
-#### Fixed
-- Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
-
-### 5.3.2 - 2025-02-27
-#### Fixed
-- Remove `activitypub_reply_block` filter after Activity-JSON is rendered, to not affect the HTML representation.
-- Remove `render_block_core/embed` filter after Activity-JSON is rendered, to not affect the HTML representation.
-
-### 5.3.1 - 2025-02-26
-#### Fixed
-- Blog profile settings can be saved again without errors.
-- Followers with backslashes in their descriptions no longer break their actor representation.
-
-### 5.3.0 - 2025-02-25
-#### Added
-- A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
-- A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
-- Setting to adjust the number of days Outbox items are kept before being purged.
-- Failed Follower notifications for Outbox items now get retried for two more times.
-- Undo API for Outbox items.
-- Metadata to New Follower E-Mail.
-- Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
-- Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
-- Support for incoming `Move` activities and ensure that followed persons are updated accordingly.
-- Labels to add context to visibility settings in the block editor.
-- WP CLI command to reschedule Outbox-Activities.
-
-#### Changed
-- Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
-- Post bulk edits no longer create Outbox items, unless author or post status change.
-- Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
-- Outbox processing accounts for shared inboxes again.
-- Improved check for `?activitypub` query-var.
-- Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
-- Deprecate the `activitypub_post_locale` filter in favor of the `activitypub_locale` filter.
-
-#### Fixed
-- The Outbox purging routine no longer is limited to deleting 5 items at a time.
-- Ellipses now display correctly in notification emails for Likes and Reposts.
-- Send Update-Activity when "Actor-Mode" is changed.
-- Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
-- `Actor` validation in several REST API endpoints.
-- Bring back the `activitypub_post_locale` filter to allow overriding the post's locale.
-
-### 5.2.0 - 2025-02-13
-#### Added
-- Batch Outbox-Processing.
-- Outbox processed events get logged in Stream and show any errors returned from inboxes.
-- Outbox items older than 6 months will be purged to avoid performance issues.
-- REST API endpoints for likes and shares.
-
-#### Changed
-- Increased probability of Outbox items being processed with the correct author.
-- Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
-- Updated terminology to be client-neutral in the Federated Reply block.
-
-#### Fixed
-- Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
-- Enforce 200 status header for valid ActivityPub requests.
-- `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
-- Integration of content-visibility setup in the block editor.
-- Update CLI commands to the new scheduler refactorings.
-- Do not add an audience to the Actor-Profiles.
-- `Activity::set_object` falsely overwrites the Activity-ID with a default.
-
-### 5.1.0 - 2025-02-06
-#### Added
-- Cleanup of option values when the plugin is uninstalled.
-- Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
-- Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
-
-#### Changed
-- Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
-- Allow omitting replies in ActivityPub representations instead of setting them as empty.
-- Allow Base Transformer to handle WP_Term objects for transformation.
-- Improved Query extensibility for third party plugins.
-
-#### Fixed
-- Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
-- Avoid PHP warnings when using Debug mode and when the `actor` is not set.
-- No longer creates Outbox items when importing content/users.
-- Fix NodeInfo 2.0 URL to be HTTP instead of HTTPS.
-
-### 5.0.0 - 2025-02-03
-#### Changed
-- Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
-- Moved password check to `is_post_disabled` function.
-
-#### Fixed
-- Handle deletes from remote servers that leave behind an accessible Tombstone object.
-- No longer parses tags for post types that don't support Activitypub.
-- rel attribute will now contain no more than one "me" value.
+- Allow interaction redirect URLs that contain an ampersand.
+- Comments received from the Fediverse no longer show an Edit link in the comment list, despite not being editable.
+- Fixed an issue where links to remote likes and boosts could open raw JSON instead of a proper page.
+- Fixed a potential error when getting an Activitypub ID based on a user ID.
+- HTTP signatures using the hs2019 algorithm now get accepted without error.
+- Improved compatibility with older follower data.
+- Inbox requests that are missing an `algorithm` parameter in their signature no longer create a PHP warning.
+- Interaction attempts that pass a webfinger ID instead of a URL will work again.
+- Names containing HTML entities now get displayed correctly in the Reactions block's list of users.
+- Prevent storage of empty or default post meta values.
+- The amount of avatars shown in the Reactions block no longer depends on the amount of likes, but is comment type agnostic.
+- The command-line interface extension, accidentally removed in a recent cleanup, has been restored.
+- The image attachment setting now correctly respects a value of 0, instead of falling back to the default.
+- The Welcome screen now loads with proper styling when shown as a fallback.
+- Using categories as hashtags has been removed to prevent conflicts with tags of the same name.
+- When verifying signatures on incoming requests, the digest header now gets checked as expected.
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
 == Upgrade Notice ==
 
-= 5.9.2 =
+= 7.3.0 =
 
-Titles added through a Heading block in the Reactions block now stay properly hidden when there are no reactions.
+Moderation has been improved with stronger tools, and user deletion now includes support for federated deletes across the network.
 
 == Installation ==
 

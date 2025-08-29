@@ -21,6 +21,7 @@ CODE_OF_CONDUCT.md
 CONTRIBUTING.md
 composer.json
 composer.lock
+development
 Dockerfile
 docs
 docker-compose-test.yml
@@ -30,6 +31,7 @@ Gruntfile.js
 gulpfile.js
 LICENSE.md
 LINGUAS
+local
 Makefile
 node_modules
 npm-debug.log

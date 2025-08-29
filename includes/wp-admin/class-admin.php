@@ -7,10 +7,11 @@
 
 namespace Activitypub\WP_Admin;
 
-use Activitypub\Comment;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Comment;
 use Activitypub\Model\Blog;
+use Activitypub\Moderation;
 
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
@@ -63,9 +64,13 @@ class Admin {
 			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
 		}
 
+		\add_action( 'admin_print_scripts-profile.php', array( self::class, 'enqueue_moderation_scripts' ) );
+		\add_action( 'admin_print_scripts-settings_page_activitypub', array( self::class, 'enqueue_moderation_scripts' ) );
 		\add_action( 'admin_print_footer_scripts-settings_page_activitypub', array( self::class, 'open_help_tab' ) );
 
 		\add_action( 'wp_dashboard_setup', array( self::class, 'add_dashboard_widgets' ) );
+
+		\add_action( 'wp_ajax_activitypub_moderation_settings', array( self::class, 'ajax_moderation_settings' ) );
 	}
 
 	/**
@@ -76,6 +81,24 @@ class Admin {
 		if ( ! $current_screen ) {
 			return;
 		}
+
+		// Check for self-destruct completion notice.
+		$self_destruct_complete = \get_option( 'activitypub_self_destruct_complete' );
+		if ( $self_destruct_complete ) {
+			// Show the notice only once, then remove it.
+			\delete_option( 'activitypub_self_destruct_complete' );
+			?>
+			<div class="notice notice-success is-dismissible">
+				<p>
+					<strong><?php esc_html_e( 'ActivityPub Self-Destruct Complete!', 'activitypub' ); ?></strong>
+				</p>
+				<p>
+					<?php esc_html_e( 'All Delete activities have been successfully sent to the Fediverse. Your blog is no longer discoverable via ActivityPub and all followers have been notified of the deletion.', 'activitypub' ); ?>
+				</p>
+			</div>
+			<?php
+		}
+
 		if ( 'edit' === $current_screen->base && Extra_Fields::is_extra_fields_post_type( $current_screen->post_type ) ) {
 			?>
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
@@ -88,36 +111,73 @@ class Admin {
 	}
 
 	/**
-	 * Display one admin menu notice about configuration problems or conflicts.
-	 *
-	 * @param string $admin_notice The notice to display.
-	 * @param string $level        The level of the notice (error, warning, success, info).
-	 */
-	private static function show_admin_notice( $admin_notice, $level ) {
-		?>
-
-		<div class="notice notice-<?php echo esc_attr( $level ); ?>">
-			<p><?php echo wp_kses( $admin_notice, 'data' ); ?></p>
-		</div>
-
-		<?php
-	}
-
-	/**
-	 * Load user settings page
+	 * Load user settings page.
 	 */
 	public static function followers_list_page() {
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
-			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
 		}
 	}
 
 	/**
-	 * Adds the follower list to the Help tab.
+	 * Load user following list page.
 	 */
-	public static function add_followers_list_help_tab() {
-		// todo.
+	public static function following_list_page() {
+		// User has to be able to publish posts.
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php' );
+		}
+	}
+
+	/**
+	 * Load blocked actors page.
+	 */
+	public static function blocked_actors_list_page() {
+		// User has to be able to publish posts.
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php' );
+		}
+	}
+
+	/**
+	 * Creates the followers and following list tables in ActivityPub settings.
+	 */
+	public static function add_settings_list_tables() {
+		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		switch ( $tab ) {
+			case 'followers':
+				self::add_followers_list_table();
+				break;
+			case 'following':
+				self::add_following_list_table();
+				break;
+			case 'blocked-actors':
+				self::add_blocked_actors_list_table();
+				break;
+		}
+	}
+
+	/**
+	 * Creates the followers list table.
+	 */
+	public static function add_followers_list_table() {
+		$GLOBALS['followers_list_table'] = new Table\Followers();
+	}
+
+	/**
+	 * Creates the following list table.
+	 */
+	public static function add_following_list_table() {
+		$GLOBALS['following_list_table'] = new Table\Following();
+	}
+
+	/**
+	 * Creates the blocked actors list table.
+	 */
+	public static function add_blocked_actors_list_table() {
+		$GLOBALS['blocked_actors_list_table'] = new Table\Blocked_Actors();
 	}
 
 	/**
@@ -153,7 +213,7 @@ class Admin {
 
 		// User options that should be processed with `sanitize_textarea_field()`.
 		$textarea_field_user_options = array(
-			'activitypub_blog_user_also_known_as',
+			'activitypub_also_known_as',
 			'activitypub_description',
 		);
 
@@ -248,28 +308,61 @@ class Admin {
 	}
 
 	/**
+	 * Enqueue moderation admin scripts.
+	 */
+	public static function enqueue_moderation_scripts() {
+		\wp_enqueue_script(
+			'activitypub-moderation-admin',
+			ACTIVITYPUB_PLUGIN_URL . 'assets/js/activitypub-moderation-admin.js',
+			array( 'jquery', 'wp-util', 'wp-a11y' ),
+			ACTIVITYPUB_PLUGIN_VERSION,
+			true
+		);
+
+		// Localize script with translations and nonces.
+		\wp_localize_script(
+			'activitypub-moderation-admin',
+			'activitypubModerationL10n',
+			array(
+				'enterValue'        => \__( 'Please enter a value to block.', 'activitypub' ),
+				'addBlockFailed'    => \__( 'Failed to add block.', 'activitypub' ),
+				'removeBlockFailed' => \__( 'Failed to remove block.', 'activitypub' ),
+				'alreadyBlocked'    => \__( 'This term is already blocked.', 'activitypub' ),
+				'invalidDomain'     => \__( 'Please enter a valid domain (e.g., example.com).', 'activitypub' ),
+				'nonce'             => \wp_create_nonce( 'activitypub_moderation_settings' ),
+			)
+		);
+	}
+
+	/**
 	 * Hook into the edit_comment functionality.
 	 *
 	 * Disables the edit_comment capability for federated comments.
 	 */
 	public static function edit_comment() {
-		// Disable the edit_comment capability for federated comments.
-		\add_filter(
-			'user_has_cap',
-			function ( $all_caps, $caps, $arg ) {
-				if ( 'edit_comment' !== $arg[0] ) {
-					return $all_caps;
-				}
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$comment_id = \absint( $_GET['c'] ?? 0 );
+		if ( Comment::was_received( $comment_id ) ) {
+			$path = 'edit-comments.php';
 
-				if ( was_comment_received( $arg[2] ) ) {
-					return false;
-				}
+			switch ( \wp_get_comment_status( $comment_id ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+				case 'spam':
+					$path = 'edit-comments.php?comment_status=spam';
+					break;
 
-				return $all_caps;
-			},
-			1,
-			3
-		);
+				case 'trash':
+					$path = 'edit-comments.php?comment_status=trash';
+					break;
+
+				case 'unapproved':
+					$path = 'edit-comments.php?comment_status=moderated';
+					break;
+			}
+
+			// Redirect to the appropriate comments page.
+			\wp_safe_redirect( \admin_url( $path ) );
+			exit;
+		}
 	}
 
 	/**
@@ -743,5 +836,66 @@ class Admin {
 			<?php endif; ?>
 		</p>
 		<?php
+	}
+
+	/**
+	 * AJAX handler for moderation settings (add/remove blocks).
+	 */
+	public static function ajax_moderation_settings() {
+		$context   = \sanitize_text_field( \wp_unslash( $_POST['context'] ?? '' ) );
+		$operation = \sanitize_text_field( \wp_unslash( $_POST['operation'] ?? '' ) );
+		$type      = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
+		$value     = \sanitize_text_field( \wp_unslash( $_POST['value'] ?? '' ) );
+
+		// Validate required parameters.
+		if ( ! in_array( $context, array( 'user', 'site' ), true ) || ! in_array( $operation, array( 'add', 'remove' ), true ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid context or action.', 'activitypub' ) ) );
+		}
+
+		if ( empty( $type ) || empty( $value ) || ! in_array( $type, array( 'domain', 'keyword' ), true ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid parameters.', 'activitypub' ) ) );
+		}
+
+		// Verify nonce for all operations.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_moderation_settings' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
+		if ( 'user' === $context ) {
+			$user_id = (int) ( \sanitize_text_field( \wp_unslash( $_POST['user_id'] ?? 0 ) ) );
+
+			// Check permissions.
+			if ( \get_current_user_id() !== $user_id ) {
+				\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+			}
+
+			if ( ! $user_id ) {
+				\wp_send_json_error( array( 'message' => \__( 'Invalid user ID.', 'activitypub' ) ) );
+			}
+
+			if ( 'add' === $operation ) {
+				$success       = Moderation::add_user_block( $user_id, $type, $value );
+				$error_message = \__( 'Failed to add block.', 'activitypub' );
+			} else {
+				$success       = Moderation::remove_user_block( $user_id, $type, $value );
+				$error_message = \__( 'Failed to remove block.', 'activitypub' );
+			}
+		} elseif ( 'add' === $operation ) {
+				$success       = Moderation::add_site_block( $type, $value );
+				$error_message = \__( 'Failed to add block.', 'activitypub' );
+		} else {
+			$success       = Moderation::remove_site_block( $type, $value );
+			$error_message = \__( 'Failed to remove block.', 'activitypub' );
+		}
+
+		if ( $success ) {
+			\wp_send_json_success();
+		} else {
+			\wp_send_json_error( array( 'message' => $error_message ) );
+		}
 	}
 }

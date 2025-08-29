@@ -1,4 +1,4 @@
-import { store, getContext } from '@wordpress/interactivity';
+import { store, getContext, getElement, getConfig } from '@wordpress/interactivity';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import { createModalStore } from '../shared/modal';
 
@@ -7,23 +7,52 @@ const { apiFetch } = window.wp;
 
 createModalStore( 'activitypub/follow-me' );
 
-const { actions, callbacks, state } = store( 'activitypub/follow-me', {
+/**
+ * @typedef {Object} config
+ * @property {String} namespace ActivityPub REST Namespace.
+ * @property {Object} i18n Internationalization strings.
+ * @property {String} i18n.copy "Copy" button text.
+ * @property {String} i18n.copied "Copied" button text.
+ * @property {String} i18n.emptyProfileError Error message for empty remote profile.
+ * @property {String} i18n.genericError Generic error message.
+ * @property {String} i18n.invalidProfileError Error message for invalid remote profile.
+ */
+
+/**
+ * @typedef {Object} context
+ * @property {String} backgroundColor The background color for the button.
+ * @property {String} blockId The block ID.
+ * @property {String} buttonStyle The button style.
+ * @property {String} copyButtonText The copy button text.
+ * @property {String} errorMessage The error message.
+ * @property {boolean} isError Whether the remote profile input has an error.
+ * @property {boolean} isLoading Whether the remote profile is being submitted.
+ * @property {Object} modal The modal state.
+ * @property {boolean} modal.isOpen Whether the modal is open.
+ * @property {String} remoteProfile The remote profile.
+ * @property {String} template The template for the remote reply URL.
+ * @property {String} userId The user ID.
+ * @property {String} webfinger The webfinger of the user.
+ */
+
+const { actions, callbacks } = store( 'activitypub/follow-me', {
 	actions: {
 		/**
 		 * Copy the webfinger to clipboard.
 		 */
 		copyToClipboard() {
 			const context = getContext();
+			const { i18n } = getConfig();
 
 			// Use the Clipboard API to copy text.
 			navigator.clipboard.writeText( context.webfinger ).then(
 				() => {
 					// Update button text to show success.
-					context.copyButtonText = state.i18n.copied;
+					context.copyButtonText = i18n.copied;
 
 					// Reset button text after 1 second.
 					setTimeout( () => {
-						context.copyButtonText = state.i18n.copy;
+						context.copyButtonText = i18n.copy;
 					}, 1000 );
 				},
 				( error ) => {
@@ -47,9 +76,23 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 		},
 
 		/**
+		 * Handle the opening of the modal.
+		 *
+		 * @param {Event} event The event that triggered the modal opening/closing.
+		 * @param {String} event.key The key pressed, if any.
+		 */
+		onKeydown( event ) {
+			if ( getElement().ref.tagName === 'A' && ( event.key === 'Enter' || event.key === ' ' ) ) {
+				event.preventDefault();
+				actions.toggleModal( event );
+			}
+		},
+
+		/**
 		 * Handle keydown event for remote profile input.
 		 *
 		 * @param {Event} event Keydown event.
+		 * @param {String} event.key The key pressed.
 		 */
 		handleKeyDown( event ) {
 			if ( event.key === 'Enter' ) {
@@ -63,19 +106,19 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 		 */
 		submitRemoteProfile: function* () {
 			const context = getContext();
-			const { namespace } = state;
+			const { namespace, i18n } = getConfig();
 			const input = context.remoteProfile.trim();
 
 			// Validate input.
 			if ( ! input ) {
 				context.isError = true;
-				context.errorMessage = state.i18n.emptyProfileError;
+				context.errorMessage = i18n.emptyProfileError;
 				return;
 			}
 
 			if ( ! callbacks.isHandle( input ) ) {
 				context.isError = true;
-				context.errorMessage = state.i18n.invalidProfileError;
+				context.errorMessage = i18n.invalidProfileError;
 				return;
 			}
 
@@ -99,13 +142,13 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 				window.open( response.url, '_blank' );
 
 				// Close the modal after opening the URL.
-				actions.closeModal();
+				actions.closeModal( new Event( 'click' ) );
 			} catch ( error ) {
 				// Handle error.
 				console.error( 'Error submitting profile:', error );
 				context.isLoading = false;
 				context.isError = true;
-				context.errorMessage = error.message || state.i18n.genericError;
+				context.errorMessage = error.message || i18n.genericError;
 			}
 		},
 	},
@@ -161,6 +204,9 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 			}
 		},
 
+		/**
+		 * Callback when modal is closed.
+		 */
 		onModalClose() {
 			const context = getContext();
 

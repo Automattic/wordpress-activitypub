@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
@@ -24,17 +25,19 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		self::factory()->post->create_many(
 			25,
 			array(
-				'post_type'  => Followers::POST_TYPE,
-				'meta_input' => array(
-					'_activitypub_user_id'    => '0',
-					'_activitypub_actor_json' => wp_json_encode(
+				'post_type'    => Actors::POST_TYPE,
+				'post_content' => \wp_slash(
+					\wp_json_encode(
 						array(
 							'id'                => 'https://example.org/actor/1',
 							'type'              => 'Person',
 							'preferredUsername' => 'user1',
 							'name'              => 'User 1',
 						)
-					),
+					)
+				),
+				'meta_input'   => array(
+					Followers::FOLLOWER_META_KEY => '0',
 				),
 			)
 		);
@@ -47,7 +50,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>[\w\-\.]+)/followers', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>[-]?\d+)/followers', $routes );
 	}
 
 	/**
@@ -103,7 +106,6 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertArrayHasKey( 'id', $data );
 		$this->assertArrayHasKey( 'type', $data );
 		$this->assertArrayHasKey( 'generator', $data );
-		$this->assertArrayHasKey( 'actor', $data );
 		$this->assertArrayHasKey( 'totalItems', $data );
 
 		// Test property values.
@@ -177,7 +179,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/999999/followers' );
 		$response = rest_get_server()->dispatch( $request );
 
-		$this->assertErrorResponse( 'activitypub_user_not_found', $response, 404 );
+		$this->assertErrorResponse( 'rest_invalid_param', $response, 400 );
 	}
 
 	/**

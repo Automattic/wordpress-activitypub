@@ -7,6 +7,11 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Outbox;
+
+use function Activitypub\add_to_outbox;
+
 /**
  * Test class for Functions.
  */
@@ -31,6 +36,15 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				'post_content' => 'test',
 			)
 		);
+	}
+
+	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
+		parent::tear_down();
+
+		_delete_all_posts();
 	}
 
 	/**
@@ -144,9 +158,9 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * @covers \Activitypub\is_self_ping
 	 */
 	public function test_is_self_ping() {
-		$this->assertFalse( \Activitypub\is_self_ping( 'https://example.org' ) );
+		$this->assertFalse( \Activitypub\is_self_ping( \home_url() ) );
 		$this->assertFalse( \Activitypub\is_self_ping( 'https://example.com' ) );
-		$this->assertTrue( \Activitypub\is_self_ping( 'https://example.org/?c=123' ) );
+		$this->assertTrue( \Activitypub\is_self_ping( \home_url( '?c=123' ) ) );
 		$this->assertFalse( \Activitypub\is_self_ping( 'https://example.com/?c=123' ) );
 	}
 
@@ -555,7 +569,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * @dataProvider get_post_summary_data
 	 *
 	 * @param string $desc     The description of the test.
-	 * @param object $post     The post object.
+	 * @param array  $post     The post object.
 	 * @param string $expected The expected summary.
 	 * @param int    $length   The length of the summary.
 	 */
@@ -591,42 +605,49 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_excerpt' => 'Hello World',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
+			),
+			array(
+				'Greek Excerpt',
+				array(
+					'post_excerpt' => 'Τι μπορεί να σου συμβεί σε μια βόλτα για να αγοράσεις μια βαλίτσα για τα ταξίδια σου; Όλα είναι πιθανά αν έχεις ανοιχτές τις "κεραίες" σου!',
+				),
+				'Τι μπορεί να σου συμβεί σε μια βόλτα για να αγοράσεις μια βαλίτσα για τα ταξίδια σου; Όλα είναι πιθανά αν έχεις ανοιχτές τις "κεραίες" σου!',
 			),
 			array(
 				'Content',
 				array(
 					'post_content' => 'Hello World',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Content with more tag',
 				array(
 					'post_content' => 'Hello World <!--more--> More',
 				),
-				'<p>Hello World […]</p>' . PHP_EOL,
+				'Hello World […]',
 			),
 			array(
 				'Excerpt with shortcode',
 				array(
 					'post_excerpt' => 'Hello World [activitypub_test_shortcode]',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Content with shortcode',
 				array(
 					'post_content' => 'Hello World [activitypub_test_shortcode]',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Excerpt more than limit',
 				array(
 					'post_excerpt' => 'Hello World Hello World Hello World Hello World Hello World',
 				),
-				'<p>Hello World Hello World Hello World Hello World Hello World</p>' . PHP_EOL,
+				'Hello World Hello World Hello World Hello World Hello World',
 				10,
 			),
 			array(
@@ -634,7 +655,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_content' => 'Hello World Hello World Hello World Hello World Hello World',
 				),
-				'<p>Hello […]</p>' . PHP_EOL,
+				'Hello […]',
 				10,
 			),
 			array(
@@ -642,7 +663,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_content' => 'Hello World Hello <!--more--> World Hello World Hello World Hello World',
 				),
-				'<p>Hello World Hello […]</p>' . PHP_EOL,
+				'Hello World Hello […]',
 				1,
 			),
 			array(
@@ -650,28 +671,340 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				array(
 					'post_content' => '<p>Hello World</p>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Test HTML content with anchor',
 				array(
 					'post_content' => 'Hello <a href="https://example.com">World</a>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Test HTML excerpt',
 				array(
 					'post_excerpt' => '<p>Hello World</p>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
 			),
 			array(
 				'Test HTML excerpt with anchor',
 				array(
 					'post_excerpt' => 'Hello <a href="https://example.com">World</a>',
 				),
-				'<p>Hello World</p>' . PHP_EOL,
+				'Hello World',
+			),
+		);
+	}
+
+	/**
+	 * Test get_user_id function.
+	 *
+	 * @covers \Activitypub\get_user_id
+	 */
+	public function test_get_user_id() {
+		$this->assertFalse( \Activitypub\get_user_id( 90210 ) );
+
+		$user = self::factory()->user->create_and_get();
+		$user->add_cap( 'activitypub' );
+
+		$this->assertIsString( \Activitypub\get_user_id( $user->ID ) );
+	}
+
+	/**
+	 * Tests follow method.
+	 *
+	 * @covers \Activitypub\follow
+	 */
+	public function test_follow() {
+		$user_id = self::factory()->user->create(
+			array(
+				'role' => 'administrator',
+			)
+		);
+
+		$actor_array = array(
+			'id'                 => 'https://example.com/users/test',
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>HTML content</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
+		);
+
+		$remote_actor = function () use ( $actor_array ) {
+			return $actor_array;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+
+		\Activitypub\follow( 'https://example.com/users/test', $user_id );
+
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
+				'post_status' => 'any',
+			)
+		);
+
+		$this->assertEquals( 1, count( $outbox_items ) );
+		$this->assertEquals( 'Follow', \get_post_meta( $outbox_items[0]->ID, '_activitypub_activity_type', true ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+	}
+
+	/**
+	 * Test that Update activities have the updated attribute set.
+	 *
+	 * @covers \Activitypub\add_to_outbox
+	 */
+	public function test_webfinger_support() {
+		$follow = new Activity();
+		$follow->set_type( 'Follow' );
+		$follow->set_actor( 'https://example.com/user/1' );
+		$follow->set_object( 'user1@example.com' );
+		$follow->set_to( array( 'https://example.com/user/2' ) );
+
+		$filter = function () {
+			return array(
+				'response' => array(
+					'code' => 200,
+				),
+				'body'     => wp_json_encode(
+					array(
+						'subject' => 'acct:pfefferle@example.org',
+						'aliases' => array( 'https://example.org/?author=1' ),
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'href' => 'https://example.org/?author=1',
+								'type' => 'application/activity+json',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$id = add_to_outbox( $follow, null, 1 );
+
+		$this->assertNotFalse( $id );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Get the activity from the outbox.
+		$activity = Outbox::get_activity( $id );
+		$this->assertNotInstanceOf( \WP_Error::class, $activity );
+
+		$this->assertEquals( 'Follow', $activity->get_type() );
+		$this->assertEquals( 'https://example.org/?author=1', get_post_meta( $id, '_activitypub_object_id', true ) );
+
+		// Delete the Outbox item.
+		wp_delete_post( $id );
+	}
+
+	/**
+	 * Test normalize_url.
+	 *
+	 * @dataProvider data_normalize_url
+	 *
+	 * @covers \Activitypub\normalize_url
+	 *
+	 * @param string $url     The URL.
+	 * @param string $expected The expected result.
+	 */
+	public function test_normalize_url( $url, $expected ) {
+		$this->assertEquals( $expected, \Activitypub\normalize_url( $url ) );
+	}
+
+	/**
+	 * Data provider for test_normalize_url.
+	 *
+	 * @return array[]
+	 */
+	public function data_normalize_url() {
+		return array(
+			array( 'https://example.com', 'example.com' ),
+			array( 'http://example.com', 'example.com' ),
+			array( 'https://example.com/path', 'example.com/path' ),
+			array( 'http://example.com/path', 'example.com/path' ),
+			array( 'http://example.com/path/', 'example.com/path' ),
+			array( 'https://www.example.com/path/to/nowhere', 'example.com/path/to/nowhere' ),
+			array( 'http://www.example.com/path/to/nowhere', 'example.com/path/to/nowhere' ),
+		);
+	}
+
+	/**
+	 * Test normalize_host.
+	 *
+	 * @dataProvider data_normalize_host
+	 *
+	 * @covers \Activitypub\normalize_host
+	 *
+	 * @param string $host     The host.
+	 * @param string $expected The expected result.
+	 */
+	public function test_normalize_host( $host, $expected ) {
+		$this->assertEquals( $expected, \Activitypub\normalize_host( $host ) );
+	}
+
+	/**
+	 * Data provider for test_normalize_host.
+	 *
+	 * @return array[]
+	 */
+	public function data_normalize_host() {
+		return array(
+			array( 'example.com', 'example.com' ),
+			array( 'www.example.com', 'example.com' ),
+		);
+	}
+
+	/**
+	 * Test whether an activity is public.
+	 *
+	 * @dataProvider public_activity_provider
+	 *
+	 * @param array $data  The data.
+	 * @param bool  $check The check.
+	 */
+	public function test_is_activity_public( $data, $check ) {
+		$this->assertEquals( $check, \Activitypub\is_activity_public( $data ) );
+	}
+
+	/**
+	 * Data provider.
+	 *
+	 * @return array[]
+	 */
+	public function public_activity_provider() {
+		return array(
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'to'     => 'https://www.w3.org/ns/activitystreams#Public',
+					'object' => array(),
+				),
+				true,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'to'     => array(
+						'https://www.w3.org/ns/activitystreams#Public',
+					),
+					'object' => array(),
+				),
+				true,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'object' => array(),
+				),
+				false,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'object' => array(
+						'to' => 'https://www.w3.org/ns/activitystreams#Public',
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'object' => array(
+						'to' => array(
+							'https://www.w3.org/ns/activitystreams#Public',
+						),
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://example.com/@test2',
+					),
+					'object' => array(
+						'cc' => array(
+							'https://www.w3.org/ns/activitystreams#Public',
+						),
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'cc'     => array(
+						'https://example.org/@test',
+						'https://www.w3.org/ns/activitystreams#Public',
+					),
+					'object' => 'https://example.com',
+				),
+				true,
+			),
+			array(
+				array(
+					'object' => array(
+						'to' => 'https://www.w3.org/ns/activitystreams#Public',
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'object' => array(
+						'cc' => 'https://www.w3.org/ns/activitystreams#Public',
+					),
+				),
+				true,
+			),
+			array(
+				array(
+					'object' => array(
+						'monkey' => 'https://www.w3.org/ns/activitystreams#Public',
+					),
+				),
+				false,
+			),
+			array(
+				array(
+					'to'     => 'http://www.w3.org/ns/activitystreams#Public',
+					'cc'     => 'http://www.w3.org/ns/activitystreams#Public',
+					'object' => '',
+				),
+				false,
+			),
+			array(
+				array(
+					'to'     => array( 'http://www.w3.org/ns/activitystreams#Public' ),
+					'cc'     => array( 'http://www.w3.org/ns/activitystreams#Public' ),
+					'object' => '',
+				),
+				false,
 			),
 		);
 	}

@@ -32,7 +32,7 @@ class Post_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = 'posts/(?P<id>\d+)';
+	protected $rest_base = 'posts/(?P<id>[-]?\d+)';
 
 	/**
 	 * Register routes.
@@ -98,6 +98,7 @@ class Post_Controller extends \WP_REST_Controller {
 					'post_id' => $post_id,
 					'type'    => $type_object['type'],
 					'status'  => 'approve',
+					'parent'  => 0,
 				)
 			);
 
@@ -123,9 +124,9 @@ class Post_Controller extends \WP_REST_Controller {
 				'items' => \array_map(
 					function ( $comment ) {
 						return array(
-							'name'   => $comment->comment_author,
+							'name'   => html_entity_decode( $comment->comment_author ),
 							'url'    => $comment->comment_author_url,
-							'avatar' => \get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
+							'avatar' => \get_avatar_url( $comment ),
 						);
 					},
 					$comments

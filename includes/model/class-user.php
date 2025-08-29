@@ -8,8 +8,8 @@
 namespace Activitypub\Model;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
-use Activitypub\Signature;
 
 use function Activitypub\is_blog_public;
 use function Activitypub\get_rest_url_by_path;
@@ -30,20 +30,6 @@ class User extends Actor {
 	protected $_id; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
-	 * The Featured-Posts.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
-	 *
-	 * @context {
-	 *   "@id": "http://joinmastodon.org/ns#featured",
-	 *   "@type": "@id"
-	 * }
-	 *
-	 * @var string
-	 */
-	protected $featured;
-
-	/**
 	 * Whether the User is discoverable.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
@@ -55,20 +41,20 @@ class User extends Actor {
 	protected $discoverable = true;
 
 	/**
-	 * Whether the User is indexable.
+	 * The generator of the object.
 	 *
-	 * @context http://joinmastodon.org/ns#indexable
+	 * @see https://www.w3.org/TR/activitypub/#generator
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md#discovery-through-an-actor
 	 *
-	 * @var boolean
+	 * @var array
 	 */
-	protected $indexable;
-
-	/**
-	 * The WebFinger Resource.
-	 *
-	 * @var string
-	 */
-	protected $webfinger;
+	protected $generator = array(
+		'type'       => 'Application',
+		'implements' => array(
+			'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
+			'name' => 'RFC-9421: HTTP Message Signatures',
+		),
+	);
 
 	/**
 	 * Constructor.
@@ -183,7 +169,14 @@ class User extends Actor {
 	 * @return string The preferred username.
 	 */
 	public function get_preferred_username() {
-		return \get_the_author_meta( 'login', $this->_id );
+		$login = \get_the_author_meta( 'login', $this->_id );
+
+		// Handle cases where login is an email address (e.g., from Site Kit Google login).
+		if ( \filter_var( $login, FILTER_VALIDATE_EMAIL ) ) {
+			$login = \get_the_author_meta( 'user_nicename', $this->_id );
+		}
+
+		return $login;
 	}
 
 	/**
@@ -258,7 +251,7 @@ class User extends Actor {
 		return array(
 			'id'           => $this->get_id() . '#main-key',
 			'owner'        => $this->get_id(),
-			'publicKeyPem' => Signature::get_public_key_for( $this->get__id() ),
+			'publicKeyPem' => Actors::get_public_key( $this->get__id() ),
 		);
 	}
 
@@ -305,6 +298,15 @@ class User extends Actor {
 	 */
 	public function get_featured() {
 		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
+	}
+
+	/**
+	 * Returns the Featured-Tags-API-Endpoint.
+	 *
+	 * @return string The Featured-Tags-Endpoint.
+	 */
+	public function get_featured_tags() {
+		return get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
 	}
 
 	/**

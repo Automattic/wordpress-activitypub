@@ -129,6 +129,14 @@ export function Reactions( { postId = null, reactions: providedReactions = null,
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
 
+	const onError = () => {
+		// On error, use fallback reactions if provided
+		if ( fallbackReactions ) {
+			setReactions( fallbackReactions );
+		}
+		setLoading( false );
+	};
+
 	useEffect( () => {
 		if ( providedReactions ) {
 			setReactions( providedReactions );
@@ -136,8 +144,9 @@ export function Reactions( { postId = null, reactions: providedReactions = null,
 			return;
 		}
 
-		if ( ! postId ) {
-			setLoading( false );
+		// if no postId is provided or it's not a number (Site Editor), return early.
+		if ( ! postId || typeof postId !== 'number' ) {
+			onError();
 			return;
 		}
 
@@ -149,7 +158,7 @@ export function Reactions( { postId = null, reactions: providedReactions = null,
 				// Check if the response has any actual reactions
 				const hasReactions = Object.values( response ).some( ( group ) => group.items?.length > 0 );
 
-				// If there are no real reactions and fallback is provided, use the fallback
+				// If there are no real reactions and fallback is provided, use the fallback.
 				if ( ! hasReactions && fallbackReactions ) {
 					setReactions( fallbackReactions );
 				} else {
@@ -157,13 +166,7 @@ export function Reactions( { postId = null, reactions: providedReactions = null,
 				}
 				setLoading( false );
 			} )
-			.catch( () => {
-				// On error, use fallback reactions if provided
-				if ( fallbackReactions ) {
-					setReactions( fallbackReactions );
-				}
-				setLoading( false );
-			} );
+			.catch( onError );
 	}, [ postId, providedReactions, fallbackReactions, namespace ] );
 
 	if ( loading ) {

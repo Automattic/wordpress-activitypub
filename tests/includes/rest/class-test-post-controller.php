@@ -17,7 +17,7 @@ use WP_REST_Response;
  * Test Post REST Endpoints.
  *
  * @group rest
- * @coversDefaultClass \Activitypub\Rest\Post
+ * @coversDefaultClass \Activitypub\Rest\Post_Controller
  */
 class Test_Post_Controller extends WP_UnitTestCase {
 	/**
@@ -43,11 +43,11 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	/**
 	 * Test initialization of hooks.
 	 *
-	 * @covers ::init
+	 * @covers ::register_routes
 	 */
 	public function test_init() {
 		$routes = $this->server->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>\d+)/reactions', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[-]?\d+)/reactions', $routes );
 	}
 
 	/**
@@ -184,6 +184,41 @@ class Test_Post_Controller extends WP_UnitTestCase {
 			'comment_approved'     => 0,
 		);
 		wp_insert_comment( $comment_data );
+
+		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
+		$response = $this->server->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertEmpty( $response->get_data() );
+	}
+
+	/**
+	 * Test getting reactions respects comment approval status.
+	 *
+	 * @covers ::get_reactions
+	 */
+	public function test_get_reactions_skips_comment_reactions() {
+		$post_id    = self::factory()->post->create();
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_type'    => 'comment',
+				'comment_content' => 'Test Comment',
+			)
+		);
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_author'       => 'Test User',
+				'comment_author_url'   => 'https://example.com/user',
+				'comment_author_email' => '',
+				'comment_content'      => '',
+				'comment_type'         => 'like',
+				'comment_parent'       => $comment_id,
+				'user_id'              => 0,
+				'comment_approved'     => 1,
+			)
+		);
 
 		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
 		$response = $this->server->dispatch( $request );

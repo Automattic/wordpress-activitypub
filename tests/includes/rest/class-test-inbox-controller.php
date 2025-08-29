@@ -153,88 +153,6 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
-	 * Test whether an activity is public.
-	 *
-	 * @dataProvider public_activity_provider
-	 *
-	 * @param array $data  The data.
-	 * @param bool  $check The check.
-	 */
-	public function test_is_activity_public( $data, $check ) {
-		$this->assertEquals( $check, \Activitypub\is_activity_public( $data ) );
-	}
-
-	/**
-	 * Data provider.
-	 *
-	 * @return array[]
-	 */
-	public function public_activity_provider() {
-		return array(
-			array(
-				array(
-					'cc'     => array(
-						'https://example.org/@test',
-						'https://example.com/@test2',
-					),
-					'to'     => 'https://www.w3.org/ns/activitystreams#Public',
-					'object' => array(),
-				),
-				true,
-			),
-			array(
-				array(
-					'cc'     => array(
-						'https://example.org/@test',
-						'https://example.com/@test2',
-					),
-					'to'     => array(
-						'https://www.w3.org/ns/activitystreams#Public',
-					),
-					'object' => array(),
-				),
-				true,
-			),
-			array(
-				array(
-					'cc'     => array(
-						'https://example.org/@test',
-						'https://example.com/@test2',
-					),
-					'object' => array(),
-				),
-				false,
-			),
-			array(
-				array(
-					'cc'     => array(
-						'https://example.org/@test',
-						'https://example.com/@test2',
-					),
-					'object' => array(
-						'to' => 'https://www.w3.org/ns/activitystreams#Public',
-					),
-				),
-				true,
-			),
-			array(
-				array(
-					'cc'     => array(
-						'https://example.org/@test',
-						'https://example.com/@test2',
-					),
-					'object' => array(
-						'to' => array(
-							'https://www.w3.org/ns/activitystreams#Public',
-						),
-					),
-				),
-				true,
-			),
-		);
-	}
-
-	/**
 	 * Test get_item method.
 	 *
 	 * @doesNotPerformAssertions
@@ -464,6 +382,12 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				),
 				'to'     => array( $user_actor->get_id() ),
 			);
+
+			// `Accept` needs an `object` with `actor` and `object`.
+			if ( 'Accept' === $type ) {
+				$json['object']['actor']  = 'https://remote.example/@test';
+				$json['object']['object'] = 'https://remote.example/post/test';
+			}
 
 			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 			$request->set_header( 'Content-Type', 'application/activity+json' );

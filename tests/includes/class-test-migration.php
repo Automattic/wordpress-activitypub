@@ -12,7 +12,6 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 use Activitypub\Comment;
 use Activitypub\Migration;
-use Activitypub\Model\Follower;
 use Activitypub\Scheduler;
 
 /**
@@ -259,7 +258,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]", $template );
 		$this->assertFalse( $content_type );
 
-		$custom = '[ap_title] [ap_content] [ap_hashcats] [ap_authorurl]';
+		$custom = '[ap_title] [ap_content] [ap_authorurl]';
 
 		\update_option( 'activitypub_post_content_type', 'custom' );
 		\update_option( 'activitypub_custom_post_content', $custom );
@@ -513,23 +512,20 @@ class Test_Migration extends \WP_UnitTestCase {
 	 * @covers ::update_actor_json_slashing
 	 */
 	public function test_update_actor_json_slashing() {
-		$follower = new Follower();
-		$follower->from_array(
-			array(
-				'type'               => 'Person',
-				'name'               => 'Test Follower',
-				'preferred_username' => 'Follower',
-				'summary'            => '<p>unescaped backslash 04\2024</p>',
-			)
+		$follower = array(
+			'id'                 => 'https://example.com/users/test',
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>unescaped backslash 04\2024</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
 		);
-		$unslashed_json = $follower->to_json();
 
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type'  => Followers::POST_TYPE,
-				'meta_input' => array( '_activitypub_actor_json' => $unslashed_json ),
-			)
-		);
+		$post_id = Actors::upsert( $follower );
+
+		\add_post_meta( $post_id, '_activitypub_actor_json', \wp_json_encode( $follower ) );
 
 		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
 		$this->assertNull( \json_decode( $original_meta, true ) );
@@ -762,5 +758,339 @@ class Test_Migration extends \WP_UnitTestCase {
 		\delete_user_option( $user_id1, 'activitypub_mailer_new_follower' );
 		\delete_user_option( $user_id1, 'activitypub_mailer_new_mention' );
 		\wp_delete_user( $user_id1 );
+	}
+
+	/**
+	 * Test migrate followers to AP Actor CPT.
+	 *
+	 * @covers ::migrate_followers_to_ap_actor_cpt
+	 */
+	public function test_migrate_followers_to_ap_actor_cpt() {
+		$follower = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_follower',
+			)
+		);
+
+		\add_post_meta( $follower, '_activitypub_user_id', '5' );
+
+		Migration::migrate_followers_to_ap_actor_cpt();
+
+		\clean_post_cache( $follower );
+
+		$this->assertEquals( Actors::POST_TYPE, \get_post_type( $follower ) );
+		$this->assertEquals( '5', \get_post_meta( $follower, Followers::FOLLOWER_META_KEY, true ) );
+
+		\wp_delete_post( $follower );
+	}
+
+	/**
+	 * Test update_actor_json_storage with valid JSON.
+	 *
+	 * @covers ::update_actor_json_storage
+	 */
+	public function test_update_actor_json_storage() {
+		$actor_array = array(
+			'id'                 => 'https://example.com/users/test',
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>HTML content</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
+		);
+
+		$remote_actor = function () use ( $actor_array ) {
+			return array(
+				'code' => 200,
+				'body' => $actor_array,
+			);
+		};
+
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			$remote_actor
+		);
+
+		$post_id = Actors::upsert( $actor_array );
+
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_type'    => Actors::POST_TYPE,
+				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
+			)
+		);
+
+		\add_post_meta( $post_id, '_activitypub_actor_json', \wp_slash( \wp_json_encode( $actor_array ) ) );
+
+		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertIsObject( \json_decode( $original_meta ) );
+
+		$result = Migration::update_actor_json_storage();
+
+		// No additional batch should be scheduled.
+		$this->assertNull( $result );
+
+		\clean_post_cache( $post_id );
+
+		$post    = \get_post( $post_id );
+		$content = \json_decode( $post->post_content, true );
+		$meta    = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertEmpty( $meta, 'Updated meta should be empty' );
+		$this->assertEquals( JSON_ERROR_NONE, \json_last_error() );
+		$this->assertIsObject( \json_decode( $original_meta ) );
+		$this->assertContains( 'Test Follower', $content );
+		$this->assertContains( '<p>HTML content</p>', $content );
+
+		$actor = Actor::init_from_json( $post->post_content );
+
+		$this->assertEquals( '<p>HTML content</p>', $actor->get_summary() );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+		\wp_delete_post( $post_id );
+	}
+
+	/**
+	 * Test update_actor_json_storage with broken JSON.
+	 *
+	 * @covers ::update_actor_json_storage
+	 */
+	public function test_update_actor_json_storage_broken_json() {
+		$actor_array = array(
+			'id'                 => 'https://example.com/users/test',
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>HTML content</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
+		);
+
+		$remote_actor = function () use ( $actor_array ) {
+			return $actor_array;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+
+		$post_id = Actors::upsert( $actor_array );
+
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_type'    => Actors::POST_TYPE,
+				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
+			)
+		);
+
+		\add_post_meta( $post_id, '_activitypub_actor_json', 'no json' );
+
+		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertEmpty( \json_decode( $original_meta ) );
+
+		$result = Migration::update_actor_json_storage();
+
+		// No additional batch should be scheduled.
+		$this->assertNull( $result );
+
+		\clean_post_cache( $post_id );
+
+		$post    = \get_post( $post_id );
+		$content = \json_decode( $post->post_content, true );
+		$meta    = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertEmpty( $meta, 'Updated meta should be empty' );
+		$this->assertContains( 'Test Follower', $content );
+		$this->assertContains( '<p>HTML content</p>', $content );
+
+		$actor = Actor::init_from_json( $post->post_content );
+
+		$this->assertEquals( '<p>HTML content</p>', $actor->get_summary() );
+
+		\wp_delete_post( $post_id );
+	}
+
+	/**
+	 * Test remove_pending_application_user_follow_requests removes correct meta entries.
+	 *
+	 * @covers ::remove_pending_application_user_follow_requests
+	 */
+	public function test_remove_pending_application_user_follow_requests() {
+		global $wpdb;
+
+		// Create test posts with various meta entries.
+		$post1 = self::factory()->post->create();
+		$post2 = self::factory()->post->create();
+		$post3 = self::factory()->post->create();
+
+		// Add _activitypub_following meta with APPLICATION_USER_ID value.
+		\add_post_meta( $post1, '_activitypub_following', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post2, '_activitypub_following', Actors::APPLICATION_USER_ID );
+
+		// Add _activitypub_following meta with different values (should not be removed).
+		\add_post_meta( $post3, '_activitypub_following', '123' );
+		\add_post_meta( $post1, '_activitypub_following', '456' );
+
+		// Add other meta keys (should not be affected).
+		\add_post_meta( $post1, '_activitypub_other_meta', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post2, 'some_other_meta', Actors::APPLICATION_USER_ID );
+
+		// Verify initial state.
+		$initial_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
+				Actors::APPLICATION_USER_ID
+			)
+		);
+		$this->assertEquals( 2, $initial_count, 'Should have 2 _activitypub_following entries with APPLICATION_USER_ID' );
+
+		$other_following_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value != %s",
+				Actors::APPLICATION_USER_ID
+			)
+		);
+		$this->assertEquals( 2, $other_following_count, 'Should have 2 _activitypub_following entries with other values' );
+
+		// Run the migration.
+		Migration::remove_pending_application_user_follow_requests();
+
+		// Verify APPLICATION_USER_ID entries were removed.
+		$remaining_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
+				Actors::APPLICATION_USER_ID
+			)
+		);
+		$this->assertEquals( 0, $remaining_count, 'All _activitypub_following entries with APPLICATION_USER_ID should be removed' );
+
+		// Verify other _activitypub_following entries remain.
+		$remaining_other_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value != %s",
+				Actors::APPLICATION_USER_ID
+			)
+		);
+		$this->assertEquals( 2, $remaining_other_count, 'Other _activitypub_following entries should remain' );
+
+		// Verify other meta keys are unaffected.
+		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
+		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post2, 'some_other_meta', true ), 'Other meta keys should not be affected' );
+
+		// Clean up.
+		\wp_delete_post( $post1, true );
+		\wp_delete_post( $post2, true );
+		\wp_delete_post( $post3, true );
+	}
+
+	/**
+	 * Test remove_pending_application_user_follow_requests with no matching entries.
+	 *
+	 * @covers ::remove_pending_application_user_follow_requests
+	 */
+	public function test_remove_pending_application_user_follow_requests_no_matches() {
+		global $wpdb;
+
+		// Create test posts with non-matching meta entries.
+		$post1 = self::factory()->post->create();
+		$post2 = self::factory()->post->create();
+
+		// Add _activitypub_following meta with different values.
+		\add_post_meta( $post1, '_activitypub_following', '123' );
+		\add_post_meta( $post2, '_activitypub_following', '456' );
+
+		// Add other meta keys with APPLICATION_USER_ID.
+		\add_post_meta( $post1, '_activitypub_other_meta', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post2, 'different_meta', Actors::APPLICATION_USER_ID );
+
+		// Get initial counts.
+		$initial_following_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following'"
+		);
+		$initial_total_count     = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"SELECT COUNT(*) FROM {$wpdb->postmeta}"
+		);
+
+		// Run the migration.
+		Migration::remove_pending_application_user_follow_requests();
+
+		// Verify no entries were removed.
+		$final_following_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following'"
+		);
+		$final_total_count     = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"SELECT COUNT(*) FROM {$wpdb->postmeta}"
+		);
+
+		$this->assertEquals( $initial_following_count, $final_following_count, 'No _activitypub_following entries should be removed' );
+		$this->assertEquals( $initial_total_count, $final_total_count, 'Total meta count should remain the same' );
+
+		// Verify specific entries remain.
+		$this->assertEquals( '123', \get_post_meta( $post1, '_activitypub_following', true ), '_activitypub_following with different value should remain' );
+		$this->assertEquals( '456', \get_post_meta( $post2, '_activitypub_following', true ), '_activitypub_following with different value should remain' );
+		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
+		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post2, 'different_meta', true ), 'Other meta keys should not be affected' );
+
+		// Clean up.
+		\wp_delete_post( $post1, true );
+		\wp_delete_post( $post2, true );
+	}
+
+	/**
+	 * Test remove_pending_application_user_follow_requests with multiple APPLICATION_USER_ID entries on same post.
+	 *
+	 * @covers ::remove_pending_application_user_follow_requests
+	 */
+	public function test_remove_pending_application_user_follow_requests_multiple_entries() {
+		global $wpdb;
+
+		// Create test post.
+		$post_id = self::factory()->post->create();
+
+		// Add multiple _activitypub_following meta entries with APPLICATION_USER_ID.
+		\add_post_meta( $post_id, '_activitypub_following', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post_id, '_activitypub_following', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post_id, '_activitypub_following', Actors::APPLICATION_USER_ID );
+
+		// Add one with different value.
+		\add_post_meta( $post_id, '_activitypub_following', '789' );
+
+		// Verify initial state.
+		$initial_app_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
+				Actors::APPLICATION_USER_ID
+			)
+		);
+		$this->assertEquals( 3, $initial_app_count, 'Should have 3 APPLICATION_USER_ID entries' );
+
+		// Run the migration.
+		Migration::remove_pending_application_user_follow_requests();
+
+		// Verify all APPLICATION_USER_ID entries were removed.
+		$remaining_app_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
+				Actors::APPLICATION_USER_ID
+			)
+		);
+		$this->assertEquals( 0, $remaining_app_count, 'All APPLICATION_USER_ID entries should be removed' );
+
+		// Verify the other entry remains.
+		$remaining_other_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = '_activitypub_following'",
+				$post_id
+			)
+		);
+		$this->assertEquals( 1, $remaining_other_count, 'One _activitypub_following entry should remain' );
+		$this->assertEquals( '789', \get_post_meta( $post_id, '_activitypub_following', true ), 'Non-APPLICATION_USER_ID entry should remain' );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
 	}
 }

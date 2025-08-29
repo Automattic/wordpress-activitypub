@@ -123,6 +123,10 @@ function plugin_init() {
 		WPML::init();
 	}
 
+	if ( \class_exists( 'WP_Rest_Cache_Plugin\Includes\Plugin' ) ) {
+		WP_Rest_Cache::init();
+	}
+
 	/**
 	 * Load the Surge integration.
 	 *
@@ -137,7 +141,6 @@ function plugin_init() {
 // Register activation and deactivation hooks for Surge integration.
 \register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'add_cache_config' ) );
 \register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'remove_cache_config' ) );
-
 
 /**
  * Register the Stream Connector for ActivityPub.
@@ -161,6 +164,8 @@ add_filter( 'wp_stream_connectors', __NAMESPACE__ . '\register_stream_connector'
 add_filter(
 	'wp_stream_posts_exclude_post_types',
 	function ( $post_types ) {
+		$post_types[] = 'ap_actor';
+		// @todo remove in one of the next versions
 		$post_types[] = 'ap_follower';
 		$post_types[] = 'ap_extrafield';
 		$post_types[] = 'ap_extrafield_blog';

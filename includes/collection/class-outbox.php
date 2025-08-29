@@ -7,8 +7,8 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Dispatcher;
 use Activitypub\Scheduler;
+use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 
@@ -40,6 +40,17 @@ class Outbox {
 			$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 		}
 
+		if ( ! \filter_var( $object_id, FILTER_VALIDATE_URL ) ) {
+			$object_id = Webfinger::resolve( $object_id );
+		}
+
+		if ( \is_wp_error( $object_id ) ) {
+			return $object_id;
+		}
+
+		// Save activity in the context of an activitypub request.
+		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
+
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
@@ -59,6 +70,8 @@ class Outbox {
 				'activitypub_content_visibility' => $visibility,
 			),
 		);
+
+		\remove_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 		if ( $has_kses ) {
@@ -150,11 +163,15 @@ class Outbox {
 	 *
 	 * @param int|\WP_Post $outbox_item The Outbox post or post ID.
 	 *
-	 * @return int|bool The ID of the outbox item or false on failure.
+	 * @return int|bool|\WP_Error The ID of the outbox item or false on failure.
 	 */
 	public static function undo( $outbox_item ) {
-		$outbox_item = get_post( $outbox_item );
+		$outbox_item = \get_post( $outbox_item );
 		$activity    = self::get_activity( $outbox_item );
+
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
 
 		$type = 'Undo';
 		if ( 'Create' === $activity->get_type() ) {
@@ -163,7 +180,38 @@ class Outbox {
 			$type = 'Remove';
 		}
 
-		return add_to_outbox( $activity, $type, $outbox_item->post_author );
+		$visibility = \get_post_meta( $outbox_item->ID, 'activitypub_content_visibility', true );
+
+		return add_to_outbox( $activity, $type, $outbox_item->post_author, $visibility );
+	}
+
+	/**
+	 * Get an outbox item by its GUID.
+	 *
+	 * @param string $guid The GUID of the outbox item.
+	 *
+	 * @return \WP_Post|\WP_Error The outbox item or WP_Error.
+	 */
+	public static function get_by_guid( $guid ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				\esc_url( $guid ),
+				self::POST_TYPE
+			)
+		);
+
+		if ( ! $post_id ) {
+			return new \WP_Error(
+				'activitypub_outbox_item_not_found',
+				\__( 'Outbox item not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return \get_post( $post_id );
 	}
 
 	/**
@@ -193,11 +241,7 @@ class Outbox {
 	 * @return Activity|\WP_Error The Activity object or WP_Error.
 	 */
 	public static function get_activity( $outbox_item ) {
-		$outbox_item = get_post( $outbox_item );
-		$actor       = self::get_actor( $outbox_item );
-		if ( is_wp_error( $actor ) ) {
-			return $actor;
-		}
+		$outbox_item = \get_post( $outbox_item );
 
 		$activity_object = \json_decode( $outbox_item->post_content, true );
 		$type            = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
@@ -205,9 +249,18 @@ class Outbox {
 		if ( $activity_object['type'] === $type ) {
 			$activity = Activity::init_from_array( $activity_object );
 			if ( ! $activity->get_actor() ) {
+				$actor = self::get_actor( $outbox_item );
+				if ( \is_wp_error( $actor ) ) {
+					return $actor;
+				}
 				$activity->set_actor( $actor->get_id() );
 			}
 		} else {
+			$actor = self::get_actor( $outbox_item );
+			if ( \is_wp_error( $actor ) ) {
+				return $actor;
+			}
+
 			$activity = new Activity();
 			$activity->set_type( $type );
 			$activity->set_id( $outbox_item->guid );

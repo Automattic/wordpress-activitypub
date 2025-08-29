@@ -7,8 +7,8 @@
 
 namespace Activitypub\Tests\Transformer;
 
+use Activitypub\Activity\Base_Object;
 use Activitypub\Transformer\Post;
-use ReflectionClass;
 
 /**
  * Test class for Post Transformer.
@@ -19,7 +19,7 @@ class Test_Post extends \WP_UnitTestCase {
 	/**
 	 * Reflection method for testing protected method.
 	 *
-	 * @var ReflectionMethod
+	 * @var \ReflectionMethod
 	 */
 	private $reflection_method;
 
@@ -32,7 +32,7 @@ class Test_Post extends \WP_UnitTestCase {
 		update_option( 'activitypub_object_type', 'wordpress-post-format' );
 
 		// Set up reflection method.
-		$reflection              = new ReflectionClass( Post::class );
+		$reflection              = new \ReflectionClass( Post::class );
 		$this->reflection_method = $reflection->getMethod( 'get_type' );
 		$this->reflection_method->setAccessible( true );
 	}
@@ -423,6 +423,40 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_attachments with zero max_media_attachments.
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_get_attachments_with_zero_max_media_attachments() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:image {"id":123} --><figure class="wp-block-image"><img src="test.jpg" alt="Test alt text" /></figure><!-- /wp:image -->',
+			)
+		);
+
+		\update_post_meta( $post_id, 'activitypub_max_image_attachments', 0 );
+		$post = get_post( $post_id );
+
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_attachment' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( $transformer );
+
+		$this->assertEmpty( $result );
+		$this->assertFalse( (bool) \did_filter( 'activitypub_attachment_ids' ) );
+
+		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
+
+		$result = $method->invoke( $transformer );
+		$this->assertTrue( (bool) \did_filter( 'activitypub_attachment_ids' ) );
+
+		\wp_delete_post( $post_id );
+	}
+
+	/**
 	 * Test get_media_from_blocks adds new image when none exist.
 	 *
 	 * @covers ::get_media_from_blocks
@@ -653,5 +687,92 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Check if the preview for a Note is null.
 		$this->assertNull( $note_preview );
+	}
+
+	/**
+	 * Test reply link generation.
+	 *
+	 * Pleroma prepends `acct:` to the webfinger identifier, which we'd want to normalize.
+	 *
+	 * @covers ::generate_reply_link
+	 */
+	public function test_generate_reply_link() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ), 10, 2 );
+
+		$transformer = new Post( self::factory()->post->create_and_get() );
+		$reply_link  = $transformer->generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
+
+		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ) );
+	}
+
+	/**
+	 * Filter pleroma object.
+	 *
+	 * @param array|string|null $response The response.
+	 * @param array|string|null $url      The Object URL.
+	 * @return string[]
+	 */
+	public function filter_pleroma_object( $response, $url ) {
+		if ( 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' === $url ) {
+			$response = array(
+				'type'         => 'Note',
+				'attributedTo' => 'https://devs.live/users/tester',
+				'content'      => 'Cake day it is',
+			);
+		}
+		if ( 'https://devs.live/users/tester' === $url ) {
+			$response = array(
+				'id'                => 'https://devs.live/users/tester',
+				'type'              => 'Person',
+				'preferredUsername' => 'tester',
+				'url'               => 'https://devs.live/users/tester',
+				'webfinger'         => 'acct:tester@devs.live',
+			);
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Test get_content method.
+	 *
+	 * @covers ::get_content
+	 */
+	public function test_get_content() {
+		$follow_me = '<!-- wp:activitypub/follow-me -->
+<div class="wp-block-activitypub-follow-me"><!-- wp:button -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">Follow</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:activitypub/follow-me -->';
+
+		$followers = '<!-- wp:activitypub/followers -->
+<div class="wp-block-activitypub-followers"><!-- wp:heading {"level":3,"placeholder":"Fediverse Followers"} -->
+<h3 class="wp-block-heading">Fediverse Followers</h3>
+<!-- /wp:heading --></div>
+<!-- /wp:activitypub/followers -->';
+
+		$reactions = '<!-- wp:activitypub/reactions -->
+<div class="wp-block-activitypub-reactions"><!-- wp:heading {"level":3,"placeholder":"Fediverse Reactions"} -->
+<h3 class="wp-block-heading">Fediverse Reactions</h3>
+<!-- /wp:heading --></div>
+<!-- /wp:activitypub/reactions -->';
+
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => implode( PHP_EOL, array( $follow_me, $followers, $reactions ) ),
+				'post_title'   => '',
+			)
+		);
+
+		$object      = new Base_Object();
+		$get_content = new \ReflectionMethod( Post::class, 'transform_object_properties' );
+
+		$get_content->setAccessible( true );
+
+		$object = $get_content->invoke( new Post( $post ), $object );
+
+		$this->assertEmpty( $object->get_content() );
 	}
 }

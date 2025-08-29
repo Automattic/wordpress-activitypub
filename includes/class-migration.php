@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -159,9 +160,6 @@ class Migration {
 			\wp_schedule_single_event( \time() + 15, 'activitypub_create_comment_outbox_items' );
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
-		if ( \version_compare( $version_from_db, '5.2.0', '<' ) ) {
-			Scheduler::register_schedules();
-		}
 		if ( \version_compare( $version_from_db, '5.4.0', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_slashing' ) );
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
@@ -173,6 +171,36 @@ class Migration {
 		if ( \version_compare( $version_from_db, '5.8.0', '<' ) ) {
 			self::update_notification_options();
 		}
+
+		if ( \version_compare( $version_from_db, '6.0.0', '<' ) ) {
+			self::migrate_followers_to_ap_actor_cpt();
+			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
+		}
+
+		if ( \version_compare( $version_from_db, '6.0.1', '<' ) ) {
+			self::migrate_followers_to_ap_actor_cpt();
+			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
+		}
+
+		if ( \version_compare( $version_from_db, '7.0.0', '<' ) ) {
+			wp_unschedule_hook( 'activitypub_update_followers' );
+			wp_unschedule_hook( 'activitypub_cleanup_followers' );
+
+			if ( ! \wp_next_scheduled( 'activitypub_update_remote_actors' ) ) {
+				\wp_schedule_event( time(), 'hourly', 'activitypub_update_remote_actors' );
+			}
+
+			if ( ! \wp_next_scheduled( 'activitypub_cleanup_remote_actors' ) ) {
+				\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
+			}
+		}
+
+		if ( \version_compare( $version_from_db, '7.3.0', '<' ) ) {
+			self::remove_pending_application_user_follow_requests();
+		}
+
+		// Ensure all required cron schedules are registered.
+		Scheduler::register_schedules();
 
 		/*
 		 * Add new update routines above this comment. ^
@@ -427,7 +455,7 @@ class Migration {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB
 		$followers = $wpdb->get_col(
-			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Followers::POST_TYPE )
+			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Actors::POST_TYPE )
 		);
 		foreach ( $followers as $id ) {
 			clean_post_cache( $id );
@@ -748,7 +776,7 @@ class Migration {
 	}
 
 	/**
-	 * Rename meta keys.
+	 * Rename user meta keys.
 	 *
 	 * @param string $old_key The old comment meta key.
 	 * @param string $new_key The new comment meta key.
@@ -758,6 +786,24 @@ class Migration {
 
 		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->usermeta,
+			array( 'meta_key' => $new_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			array( 'meta_key' => $old_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			array( '%s' ),
+			array( '%s' )
+		);
+	}
+
+	/**
+	 * Update post meta keys.
+	 *
+	 * @param string $old_key The old post meta key.
+	 * @param string $new_key The new post meta key.
+	 */
+	private static function update_postmeta_key( $old_key, $new_key ) {
+		global $wpdb;
+
+		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->postmeta,
 			array( 'meta_key' => $new_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			array( 'meta_key' => $old_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			array( '%s' ),
@@ -843,15 +889,120 @@ class Migration {
 		\add_option( 'activitypub_blog_user_mailer_new_follower', $new_follower );
 		\add_option( 'activitypub_blog_user_mailer_new_mention', '1' );
 
+		$user_ids = \get_users(
+			array(
+				'capability__in' => array( 'activitypub' ),
+				'fields'         => 'id',
+			)
+		);
+
 		// Add the actor notification options.
-		foreach ( Actors::get_collection() as $actor ) {
-			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_dm', $new_dm );
-			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_follower', $new_follower );
-			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_mention', '1' );
+		foreach ( $user_ids as $user_id ) {
+			\update_user_option( $user_id, 'activitypub_mailer_new_dm', $new_dm );
+			\update_user_option( $user_id, 'activitypub_mailer_new_follower', $new_follower );
+			\update_user_option( $user_id, 'activitypub_mailer_new_mention', '1' );
 		}
 
 		// Delete the old notification options.
 		\delete_option( 'activitypub_mailer_new_dm' );
 		\delete_option( 'activitypub_mailer_new_follower' );
+	}
+
+	/**
+	 * Migrate followers to the new CPT.
+	 */
+	public static function migrate_followers_to_ap_actor_cpt() {
+		global $wpdb;
+
+		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->posts,
+			array( 'post_type' => Actors::POST_TYPE ),
+			array( 'post_type' => 'ap_follower' ),
+			array( '%s' ),
+			array( '%s' )
+		);
+
+		self::update_postmeta_key( '_activitypub_user_id', Followers::FOLLOWER_META_KEY );
+	}
+
+	/**
+	 * Update _activitypub_actor_json meta values to ensure they are properly slashed.
+	 *
+	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 100.
+	 *
+	 * @return array|void Array with batch size and offset if there are more meta values to process, void otherwise.
+	 */
+	public static function update_actor_json_storage( $batch_size = 100 ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$meta_values = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' LIMIT %d",
+				$batch_size
+			)
+		);
+
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			// Prevent KSES from corrupting JSON in post_content.
+			\kses_remove_filters();
+		}
+
+		foreach ( $meta_values as $meta ) {
+			$post = \get_post( $meta->post_id );
+
+			if ( ! $post ) {
+				\delete_post_meta( $meta->post_id, '_activitypub_actor_json' );
+				continue;
+			}
+
+			$post_content = \json_decode( $meta->meta_value, true );
+
+			if ( \json_last_error() !== JSON_ERROR_NONE ) {
+				$post_content = Http::get_remote_object( $post->guid );
+
+				if ( \is_wp_error( $post_content ) ) {
+					\delete_post_meta( $post->ID, '_activitypub_actor_json' );
+					continue;
+				}
+			}
+
+			\wp_update_post(
+				array(
+					'ID'           => $post->ID,
+					'post_content' => \wp_slash( \wp_json_encode( $post_content ) ),
+				)
+			);
+
+			\delete_post_meta( $post->ID, '_activitypub_actor_json' );
+		}
+
+		if ( $has_kses ) {
+			// Restore KSES filters.
+			\kses_init_filters();
+		}
+
+		if ( \count( $meta_values ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+			);
+		}
+	}
+
+	/**
+	 * Removes pending follow requests for the application user.
+	 */
+	public static function remove_pending_application_user_follow_requests() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete(
+			$wpdb->postmeta,
+			array(
+				'meta_key'   => '_activitypub_following', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value' => Actors::APPLICATION_USER_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
 	}
 }

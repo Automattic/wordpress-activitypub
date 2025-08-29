@@ -7,7 +7,10 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Http;
+
+use function Activitypub\user_can_activitypub;
 
 /**
  * Interaction Controller.
@@ -41,15 +44,38 @@ class Interaction_Controller extends \WP_REST_Controller {
 					'permission_callback' => '__return_true',
 					'args'                => array(
 						'uri' => array(
-							'description' => 'The URI of the object to interact with.',
-							'type'        => 'string',
-							'format'      => 'uri',
-							'required'    => true,
+							'description'       => 'The URI or webfinger ID of the object to interact with.',
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => array( $this, 'sanitize_uri' ),
 						),
 					),
 				),
 			)
 		);
+	}
+
+	/**
+	 * Sanitize the URI parameter.
+	 *
+	 * @param string $uri The URI or webfinger ID of the object to interact with.
+	 *
+	 * @return string Sanitized URI.
+	 */
+	public function sanitize_uri( $uri ) {
+		// Remove "acct:" prefix if present.
+		if ( str_starts_with( $uri, 'acct:' ) ) {
+			$uri = \substr( $uri, 5 );
+		}
+
+		// Remove "@" prefix if present.
+		$uri = \ltrim( $uri, '@' );
+
+		if ( is_email( $uri ) ) {
+			return \sanitize_text_field( $uri );
+		}
+
+		return \sanitize_url( $uri );
 	}
 
 	/**
@@ -76,9 +102,12 @@ class Interaction_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		if ( ! empty( $object['url'] ) ) {
-			$uri = \esc_url( $object['url'] );
+		if ( ! empty( $object['id'] ) ) {
+			$uri = \esc_url( $object['id'] );
 		}
+
+		// Prepare URL parameter.
+		$url_param = \rawurlencode( $uri );
 
 		switch ( $object['type'] ) {
 			case 'Group':
@@ -86,6 +115,14 @@ class Interaction_Controller extends \WP_REST_Controller {
 			case 'Service':
 			case 'Application':
 			case 'Organization':
+				if ( \get_option( 'activitypub_following_ui', '0' ) ) {
+					if ( user_can_activitypub( \get_current_user_id() ) ) {
+						$redirect_url = \admin_url( 'users.php?page=activitypub-following-list&resource=' . $url_param );
+					} elseif ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
+						$redirect_url = \admin_url( 'options-general.php?page=activitypub&tab=following&resource=' . $url_param );
+					}
+				}
+
 				/**
 				 * Filters the URL used for following an ActivityPub actor.
 				 *
@@ -95,8 +132,26 @@ class Interaction_Controller extends \WP_REST_Controller {
 				 */
 				$redirect_url = \apply_filters( 'activitypub_interactions_follow_url', $redirect_url, $uri, $object );
 				break;
+			case 'Collection':
+			case 'CollectionPage':
+			case 'OrderedCollection':
+			case 'OrderedCollectionPage':
+				if ( \get_option( 'activitypub_following_ui', '0' ) ) {
+					$redirect_url = \admin_url( 'admin.php?import=starter-kit&url=' . $url_param );
+				}
+
+				/**
+				 * Filters the URL used for importing a Starter Kit collection.
+				 *
+				 * @param string $redirect_url The URL to redirect to.
+				 * @param string $uri          The URI of the collection to import.
+				 * @param array  $object       The full collection object data.
+				 */
+				$redirect_url = \apply_filters( 'activitypub_interactions_starter_kit_url', $redirect_url, $uri, $object );
+				break;
 			default:
-				$redirect_url = \admin_url( 'post-new.php?in_reply_to=' . $uri );
+				$redirect_url = \admin_url( 'post-new.php?in_reply_to=' . $url_param );
+
 				/**
 				 * Filters the URL used for replying to an ActivityPub object.
 				 *
@@ -134,6 +189,6 @@ class Interaction_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		return new \WP_REST_Response( null, 302, array( 'Location' => \esc_url( $redirect_url ) ) );
+		return new \WP_REST_Response( null, 302, array( 'Location' => $redirect_url ) );
 	}
 }

@@ -1,4 +1,4 @@
-import { getContext, getElement, store, withScope } from '@wordpress/interactivity';
+import { getContext, getElement, store, withScope, getConfig } from '@wordpress/interactivity';
 import { createModalStore } from '../shared/modal';
 
 /** @var {Object} window.wp WordPress global object */
@@ -7,10 +7,21 @@ const { apiFetch } = window.wp;
 createModalStore( 'activitypub/reactions' );
 
 /**
- * @var {Object} state
- * @var {Object} state.reactions Reactions data.
- * @var {String} state.defaultAvatarUrl Default avatar URL.
+ * @typedef {Object} state
+ * @property {Object} reactions Reactions data, keyed by post ID.
  */
+
+/**
+ * @typedef {Object} context
+ * @property {String} blockId The block ID.
+ * @property {Object} modal The modal state.
+ * @property {boolean} modal.isCompact Whether the modal is compact.
+ * @property {boolean} modal.isOpen Whether the modal is open.
+ * @property {Object} modal.items The items to display in the modal.
+ * @property {String} postId The post ID.
+ * @property {Object} reactions Reactions data, keyed by reaction type.
+ */
+
 const { callbacks, state } = store( 'activitypub/reactions', {
 	actions: {
 		/**
@@ -18,7 +29,7 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 		 */
 		async fetchReactions() {
 			const context = getContext();
-			const { namespace } = state;
+			const { namespace } = getConfig();
 
 			if ( ! context.postId ) return;
 
@@ -74,7 +85,7 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 				}
 
 				getElement()
-					.ref.querySelectorAll( '.reaction-group' )
+					.ref.querySelectorAll( `.reaction-group[data-reaction-type="${ reactionType }"]` )
 					.forEach( ( container ) => {
 						const label = container.querySelector( '.reaction-label' );
 						const labelWidth = label.offsetWidth || 0;
@@ -116,7 +127,7 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 		 * @param {Object} event The error event.
 		 */
 		setDefaultAvatar( event ) {
-			event.target.src = state.defaultAvatarUrl;
+			event.target.src = getConfig().defaultAvatarUrl;
 		},
 
 		/**

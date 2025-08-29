@@ -27,6 +27,7 @@ class Actor extends Base_Object {
 			'schema'                    => 'http://schema.org#',
 			'toot'                      => 'http://joinmastodon.org/ns#',
 			'lemmy'                     => 'https://join-lemmy.org/ns#',
+			'litepub'                   => 'http://litepub.social/ns#',
 			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
 			'PropertyValue'             => 'schema:PropertyValue',
 			'value'                     => 'schema:value',
@@ -55,9 +56,15 @@ class Actor extends Base_Object {
 				'@id'   => 'toot:attributionDomains',
 				'@type' => '@id',
 			),
+			'implements'                => array(
+				'@id'        => 'https://w3id.org/fep/844e/implements',
+				'@type'      => '@id',
+				'@container' => '@list',
+			),
 			'postingRestrictedToMods'   => 'lemmy:postingRestrictedToMods',
 			'discoverable'              => 'toot:discoverable',
 			'indexable'                 => 'toot:indexable',
+			'invisible'                 => 'litepub:invisible',
 		),
 	);
 
@@ -221,4 +228,99 @@ class Actor extends Base_Object {
 	 * @var array
 	 */
 	protected $also_known_as;
+
+	/**
+	 * The Featured-Posts.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
+	 *
+	 * @context {
+	 *   "@id": "http://joinmastodon.org/ns#featured",
+	 *   "@type": "@id"
+	 * }
+	 *
+	 * @var string
+	 */
+	protected $featured;
+
+	/**
+	 * The Featured-Tags.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#featuredTags
+	 *
+	 * @context {
+	 *   "@id": "http://joinmastodon.org/ns#featuredTags",
+	 *   "@type": "@id"
+	 * }
+	 *
+	 * @var string
+	 */
+	protected $featured_tags;
+
+	/**
+	 * Whether the User is discoverable.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
+	 *
+	 * @context http://joinmastodon.org/ns#discoverable
+	 *
+	 * @var boolean
+	 */
+	protected $discoverable;
+
+	/**
+	 * Whether the User is indexable.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#indexable
+	 *
+	 * @context http://joinmastodon.org/ns#indexable
+	 *
+	 * @var boolean
+	 */
+	protected $indexable;
+
+	/**
+	 * The WebFinger Resource.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/2c59/fep-2c59.md
+	 *
+	 * @var string
+	 */
+	protected $webfinger;
+
+	/**
+	 * URL to the Moderators endpoint.
+	 *
+	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
+	 *
+	 * @var string
+	 */
+	protected $moderators;
+
+	/**
+	 * Restrict posting to mods.
+	 *
+	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
+	 *
+	 * @var boolean
+	 */
+	protected $posting_restricted_to_mods;
+
+	/**
+	 * Listing Implemented Specifications on the Application Actor
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md
+	 *
+	 * @var array
+	 */
+	protected $implements;
+
+	/**
+	 * Whether the User is invisible.
+	 *
+	 * @see https://litepub.social/
+	 *
+	 * @var boolean
+	 */
+	protected $invisible = null;
 }

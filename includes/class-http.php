@@ -35,18 +35,12 @@ class Http {
 		 */
 		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
 
-		$date      = \gmdate( 'D, d M Y H:i:s T' );
-		$digest    = Signature::generate_digest( $body );
-		$signature = Signature::generate_signature( $user_id, 'post', $url, $date, $digest );
-
-		$wp_version = get_masked_wp_version();
-
 		/**
 		 * Filters the HTTP headers user agent string.
 		 *
 		 * @param string $user_agent The user agent string.
 		 */
-		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
+		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
 		$args       = array(
 			'timeout'             => 100,
 			'limit_response_size' => 1048576,
@@ -55,11 +49,11 @@ class Http {
 			'headers'             => array(
 				'Accept'       => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
-				'Digest'       => $digest,
-				'Signature'    => $signature,
-				'Date'         => $date,
+				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
 			'body'                => $body,
+			'key_id'              => \json_decode( $body )->actor . '#main-key',
+			'private_key'         => Actors::get_private_key( $user_id ),
 		);
 
 		$response = \wp_safe_remote_post( $url, $args );
@@ -123,11 +117,6 @@ class Http {
 			}
 		}
 
-		$date      = \gmdate( 'D, d M Y H:i:s T' );
-		$signature = Signature::generate_signature( Actors::APPLICATION_USER_ID, 'get', $url, $date );
-
-		$wp_version = get_masked_wp_version();
-
 		/**
 		 * Filters the HTTP headers user agent string.
 		 *
@@ -136,7 +125,7 @@ class Http {
 		 *
 		 * @param string $user_agent The user agent string.
 		 */
-		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
+		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
 
 		/**
 		 * Filters the timeout duration for remote GET requests in ActivityPub.
@@ -153,9 +142,10 @@ class Http {
 			'headers'             => array(
 				'Accept'       => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
-				'Signature'    => $signature,
-				'Date'         => $date,
+				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
+			'key_id'              => Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key',
+			'private_key'         => Actors::get_private_key( Actors::APPLICATION_USER_ID ),
 		);
 
 		$response = \wp_safe_remote_get( $url, $args );
@@ -192,27 +182,9 @@ class Http {
 	 * @return bool True if the URL is a tombstone.
 	 */
 	public static function is_tombstone( $url ) {
-		/**
-		 * Fires before checking if the URL is a tombstone.
-		 *
-		 * @param string $url The URL to check.
-		 */
-		\do_action( 'activitypub_pre_http_is_tombstone', $url );
+		_deprecated_function( __METHOD__, '7.3.0', 'Activitypub\Tombstone::exists_remote' );
 
-		$response = \wp_safe_remote_get( $url, array( 'headers' => array( 'Accept' => 'application/activity+json' ) ) );
-		$code     = \wp_remote_retrieve_response_code( $response );
-
-		if ( in_array( (int) $code, array( 404, 410 ), true ) ) {
-			return true;
-		}
-
-		$data = \wp_remote_retrieve_body( $response );
-		$data = \json_decode( $data, true );
-		if ( $data && isset( $data['type'] ) && 'Tombstone' === $data['type'] ) {
-			return true;
-		}
-
-		return false;
+		return Tombstone::exists_remote( $url );
 	}
 
 	/**
