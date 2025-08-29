@@ -24,7 +24,9 @@ class Delete {
 		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ) );
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
 		\add_action( 'activitypub_delete_actor_interactions', array( self::class, 'delete_interactions' ) );
+
 		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'post_add_to_outbox' ), 10, 2 );
 	}
 
 	/**
@@ -182,6 +184,7 @@ class Delete {
 	 * Set the object to the object ID.
 	 *
 	 * @param \Activitypub\Activity\Activity $activity The Activity object.
+	 *
 	 * @return \Activitypub\Activity\Activity The filtered Activity object.
 	 */
 	public static function outbox_activity( $activity ) {
@@ -190,5 +193,18 @@ class Delete {
 		}
 
 		return $activity;
+	}
+
+	/**
+	 * Add the activity to the outbox.
+	 *
+	 * @param int                            $outbox_id The ID of the outbox activity.
+	 * @param \Activitypub\Activity\Activity $activity  The Activity object.
+	 */
+	public static function post_add_to_outbox( $outbox_id, $activity ) {
+		// Set Tombstones for deleted objects.
+		if ( 'Delete' === $activity->get_type() ) {
+			Tombstone::bury( object_to_uri( $activity->get_object() ) );
+		}
 	}
 }
