@@ -126,6 +126,11 @@ class Mailer {
 	 * @param int   $user_id  The id of the local blog-user.
 	 */
 	public static function new_follower( $activity, $user_id ) {
+		// Do not send notifications to the Application user.
+		if ( Actors::APPLICATION_USER_ID === $user_id ) {
+			return;
+		}
+
 		if ( $user_id > Actors::BLOG_USER_ID ) {
 			if ( ! \get_user_option( 'activitypub_mailer_new_follower', $user_id ) ) {
 				return;
