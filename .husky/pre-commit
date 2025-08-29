@@ -7,13 +7,13 @@ PHP_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep "\.php$" || 
 if [ -n "$PHP_FILES" ]; then
   # First sort PHP imports
   for file in $PHP_FILES; do
-    node bin/prettier/sort-php-imports.js "$file"
+    node bin/precommit/sort-php-imports.js "$file"
   done
 
   # Then check for unused imports.
   UNUSED_IMPORTS=0
   for file in $PHP_FILES; do
-    if ! node bin/prettier/check-unused-imports.js "$file"; then
+    if ! node bin/precommit/check-unused-imports.js "$file"; then
       UNUSED_IMPORTS=1
     fi
   done
