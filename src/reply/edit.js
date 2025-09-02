@@ -58,13 +58,13 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 
 	// Update inner blocks when URL, embedPost, or isValidEmbed changes.
 	useEffect( () => {
-		if ( url && embedPost && isValidEmbed ) {
+		if ( url && showEmbed ) {
 			replaceInnerBlocks( clientId, [ createBlock( 'core/embed', { url } ) ] );
 		} else {
 			// Remove all inner blocks if embedding is disabled or URL is not embeddable.
 			replaceInnerBlocks( clientId, [] );
 		}
-	}, [ url, embedPost, isValidEmbed, clientId, replaceInnerBlocks ] );
+	}, [ url, showEmbed, clientId, replaceInnerBlocks ] );
 
 	// Update help text based on state changes.
 	useEffect( () => {
@@ -98,6 +98,19 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 				new URL( urlToCheck ); // Will throw if invalid.
 
 				try {
+					/**
+					 * Fetch the embed information using the WordPress oEmbed API.
+					 *
+					 * @typedef {Object} OEmbedResponse
+					 * @property {string} [provider_name] The name of the oEmbed provider.
+					 * @property {string} [html] The HTML content to embed.
+					 * @property {string} [title] The title of the embedded content.
+					 * @property {string} [author_name] The author of the embedded content.
+					 * @property {string} [author_url] The URL of the author.
+					 * @property {number} [width] The width of the embedded content.
+					 * @property {number} [height] The height of the embedded content.
+					 * @property {string} [type] The type of the embedded content (rich, video, photo).
+					 */
 					const response = await apiFetch( {
 						path: addQueryArgs( '/oembed/1.0/proxy', {
 							url: urlToCheck,
@@ -105,11 +118,11 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 						} ),
 					} );
 
-					setIsValidEmbed( !! response );
-
-					// Auto-enable embedding when we get valid embed info.
-					if ( response && response.provider_name && ! embedPost ) {
-						setAttributes( { embedPost: true } );
+					if ( response && response.provider_name ) {
+						setAttributes( { embedPost: true } ); // Auto-enable embedding when we get valid embed info.
+						setIsValidEmbed( true );
+					} else {
+						setIsValidEmbed( false );
 					}
 				} catch ( error ) {
 					console.log( 'Could not fetch embed:', error );
