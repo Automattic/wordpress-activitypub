@@ -122,15 +122,6 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 		}
 	}, [ url ] );
 
-	/**
-	 * Handle embed toggle changes.
-	 *
-	 * @param {boolean} value - New embed toggle value.
-	 */
-	const onEmbedPostChange = ( value ) => {
-		setAttributes( { embedPost: value } );
-	};
-
 	const onKeyDown = ( event ) => {
 		if ( event.key === 'Enter' ) {
 			insertAfterBlock( clientId );
@@ -151,7 +142,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 					<ToggleControl
 						label={ __( 'Embed Post', 'activitypub' ) }
 						checked={ !! embedPost }
-						onChange={ onEmbedPostChange }
+						onChange={ ( value ) => setAttributes( { embedPost: value } ) }
 						disabled={ ! isValidEmbed }
 						help={ __( 'Show embedded content from the URL.', 'activitypub' ) }
 						__nextHasNoMarginBottom
