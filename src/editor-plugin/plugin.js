@@ -1,13 +1,307 @@
 import { PluginDocumentSettingPanel, PluginPreviewMenuItem, store as editorStore } from '@wordpress/editor';
 import { PluginDocumentSettingPanel as DocumentSettingPanel } from '@wordpress/edit-post';
 import { registerPlugin } from '@wordpress/plugins';
-import { TextControl, RadioControl, RangeControl, __experimentalText as Text, Tooltip } from '@wordpress/components';
-import { Icon, globe, people, external } from '@wordpress/icons';
+import {
+	TextControl,
+	RadioControl,
+	RangeControl,
+	__experimentalText as Text,
+	Tooltip,
+	Panel,
+	PanelBody,
+	CheckboxControl,
+	Button,
+	Spinner,
+	__experimentalHStack as HStack,
+	__experimentalVStack as VStack,
+} from '@wordpress/components';
+import { Icon, globe, people, external, dragHandle, image as imageIcon, media as mediaIcon } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
-import { useEntityProp } from '@wordpress/core-data';
+import { useEntityProp, useEntityRecords } from '@wordpress/core-data';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 import { SVG, Path } from '@wordpress/primitives';
+import { useState, useCallback, useMemo } from '@wordpress/element';
+
+/**
+ * Attachment selection component for choosing which attachments to federate.
+ *
+ * @param {Object} props Component props.
+ * @param {number} props.postId The current post ID.
+ * @param {Array} props.selectedAttachments Array of selected attachment IDs.
+ * @param {Function} props.onSelectionChange Callback for selection changes.
+ * @param {number} props.maxAttachments Maximum number of attachments allowed.
+ * @returns {React.JSX.Element|null} The attachment selection component.
+ */
+const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, maxAttachments } ) => {
+	const [ draggedItem, setDraggedItem ] = useState( null );
+	const [ draggedOver, setDraggedOver ] = useState( null );
+
+	// Fetch all post attachments
+	const { records: attachments, isResolving: isLoadingAttachments } = useEntityRecords( 'root', 'media', {
+		post_parent: postId,
+		per_page: -1,
+		orderby: 'menu_order',
+		order: 'asc',
+	} );
+
+	// Get featured image
+	const featuredImageId = useSelect( ( select ) => {
+		return select( 'core/editor' ).getEditedPostAttribute( 'featured_media' );
+	}, [] );
+
+	// Get auto-selected attachments (mimicking the backend logic)
+	const autoSelectedAttachments = useMemo( () => {
+		if ( ! attachments || attachments.length === 0 ) {
+			return [];
+		}
+
+		const autoSelected = [];
+
+		// Add featured image first if it exists
+		if ( featuredImageId ) {
+			autoSelected.push( featuredImageId );
+		}
+
+		// Add other attachments up to the limit
+		attachments.forEach( ( attachment ) => {
+			if ( autoSelected.length >= maxAttachments ) {
+				return;
+			}
+			if ( ! autoSelected.includes( attachment.id ) ) {
+				autoSelected.push( attachment.id );
+			}
+		} );
+
+		return autoSelected.slice( 0, maxAttachments );
+	}, [ attachments, maxAttachments, featuredImageId ] );
+
+	// Use auto-selected if no manual selection has been made
+	const effectiveSelection = selectedAttachments.length > 0 ? selectedAttachments : autoSelectedAttachments;
+
+	/**
+	 * Gets the media type icon for an attachment.
+	 *
+	 * @param {string} mediaType The media type (image, video, audio).
+	 * @returns {React.JSX.Element} The appropriate icon.
+	 */
+	const getMediaTypeIcon = ( mediaType ) => {
+		switch ( mediaType ) {
+			case 'image':
+				return imageIcon;
+			case 'video':
+			case 'audio':
+				return mediaIcon;
+			default:
+				return mediaIcon;
+		}
+	};
+
+	/**
+	 * Handles attachment selection toggle.
+	 *
+	 * @param {number} attachmentId The attachment ID to toggle.
+	 */
+	const handleToggleAttachment = useCallback(
+		( attachmentId ) => {
+			const newSelection = effectiveSelection.includes( attachmentId )
+				? effectiveSelection.filter( ( id ) => id !== attachmentId )
+				: [ ...effectiveSelection, attachmentId ].slice( 0, maxAttachments );
+
+			onSelectionChange( newSelection );
+		},
+		[ effectiveSelection, onSelectionChange, maxAttachments ]
+	);
+
+	/**
+	 * Handles drag start.
+	 *
+	 * @param {Event} e The drag event.
+	 * @param {number} attachmentId The attachment being dragged.
+	 */
+	const handleDragStart = useCallback( ( e, attachmentId ) => {
+		setDraggedItem( attachmentId );
+		e.dataTransfer.effectAllowed = 'move';
+	}, [] );
+
+	/**
+	 * Handles drag over.
+	 *
+	 * @param {Event} e The drag event.
+	 * @param {number} attachmentId The attachment being dragged over.
+	 */
+	const handleDragOver = useCallback( ( e, attachmentId ) => {
+		e.preventDefault();
+		setDraggedOver( attachmentId );
+	}, [] );
+
+	/**
+	 * Handles drop.
+	 *
+	 * @param {Event} e The drop event.
+	 * @param {number} targetId The attachment being dropped on.
+	 */
+	const handleDrop = useCallback(
+		( e, targetId ) => {
+			e.preventDefault();
+
+			if ( ! draggedItem || draggedItem === targetId ) {
+				setDraggedItem( null );
+				setDraggedOver( null );
+				return;
+			}
+
+			const newSelection = [ ...effectiveSelection ];
+			const draggedIndex = newSelection.indexOf( draggedItem );
+			const targetIndex = newSelection.indexOf( targetId );
+
+			if ( draggedIndex !== -1 && targetIndex !== -1 ) {
+				newSelection.splice( draggedIndex, 1 );
+				newSelection.splice( targetIndex, 0, draggedItem );
+				onSelectionChange( newSelection );
+			}
+
+			setDraggedItem( null );
+			setDraggedOver( null );
+		},
+		[ draggedItem, effectiveSelection, onSelectionChange ]
+	);
+
+	/**
+	 * Resets selection to auto-selected attachments.
+	 */
+	const handleReset = useCallback( () => {
+		onSelectionChange( [] );
+	}, [ onSelectionChange ] );
+
+	if ( isLoadingAttachments ) {
+		return (
+			<div style={ { textAlign: 'center', padding: '20px' } }>
+				<Spinner />
+				<p>{ __( 'Loading attachments...', 'activitypub' ) }</p>
+			</div>
+		);
+	}
+
+	if ( ! attachments || attachments.length === 0 ) {
+		return (
+			<div style={ { textAlign: 'center', padding: '20px', color: '#8c8f94' } }>
+				<Icon icon={ mediaIcon } size={ 24 } />
+				<p>{ __( 'No attachments found for this post.', 'activitypub' ) }</p>
+			</div>
+		);
+	}
+
+	return (
+		<VStack spacing={ 4 }>
+			<HStack>
+				<Text>{ __( 'Select attachments to federate:', 'activitypub' ) }</Text>
+				{ selectedAttachments.length > 0 && (
+					<Button
+						variant="link"
+						onClick={ handleReset }
+						style={ { fontSize: '12px', textDecoration: 'underline' } }
+					>
+						{ __( 'Reset to default', 'activitypub' ) }
+					</Button>
+				) }
+			</HStack>
+
+			<div style={ { fontSize: '12px', color: '#8c8f94', marginBottom: '8px' } }>
+				{ __( 'Drag to reorder • Check to select • Maximum:', 'activitypub' ) } { maxAttachments }
+			</div>
+
+			<VStack spacing={ 2 }>
+				{ attachments.map( ( attachment ) => {
+					const isSelected = effectiveSelection.includes( attachment.id );
+					const isDragging = draggedItem === attachment.id;
+					const isDraggedOver = draggedOver === attachment.id;
+
+					return (
+						<div
+							key={ attachment.id }
+							draggable={ isSelected }
+							onDragStart={ ( e ) => handleDragStart( e, attachment.id ) }
+							onDragOver={ ( e ) => handleDragOver( e, attachment.id ) }
+							onDrop={ ( e ) => handleDrop( e, attachment.id ) }
+							style={ {
+								display: 'flex',
+								alignItems: 'center',
+								padding: '8px',
+								border: '1px solid #ddd',
+								borderRadius: '4px',
+								backgroundColor: isSelected ? '#f0f6fc' : '#fff',
+								opacity: isDragging ? 0.5 : 1,
+								borderColor: isDraggedOver ? '#0073aa' : '#ddd',
+								cursor: isSelected ? 'move' : 'default',
+								gap: '8px',
+							} }
+						>
+							<CheckboxControl
+								checked={ isSelected }
+								onChange={ () => handleToggleAttachment( attachment.id ) }
+								disabled={ ! isSelected && effectiveSelection.length >= maxAttachments }
+							/>
+
+							{ isSelected && <Icon icon={ dragHandle } size={ 16 } style={ { color: '#8c8f94' } } /> }
+
+							<Icon
+								icon={ getMediaTypeIcon( attachment.media_type ) }
+								size={ 20 }
+								style={ { color: '#8c8f94' } }
+							/>
+
+							{ attachment.media_details?.sizes?.thumbnail?.source_url ? (
+								<img
+									src={ attachment.media_details.sizes.thumbnail.source_url }
+									alt={ attachment.alt_text || attachment.title.rendered }
+									style={ {
+										width: '32px',
+										height: '32px',
+										objectFit: 'cover',
+										borderRadius: '2px',
+									} }
+								/>
+							) : null }
+
+							<VStack spacing={ 0 } style={ { flex: 1 } }>
+								<Text style={ { fontWeight: 500, fontSize: '14px' } }>
+									{ attachment.title.rendered || __( 'Untitled', 'activitypub' ) }
+								</Text>
+								<Text style={ { fontSize: '12px', color: '#8c8f94' } }>
+									{ attachment.media_type } •{ ' ' }
+									{ Math.round( attachment.media_details?.filesize / 1024 ) }KB
+								</Text>
+							</VStack>
+
+							{ isSelected && (
+								<Text style={ { fontSize: '12px', color: '#0073aa', fontWeight: 500 } }>
+									#{ effectiveSelection.indexOf( attachment.id ) + 1 }
+								</Text>
+							) }
+						</div>
+					);
+				} ) }
+			</VStack>
+
+			{ effectiveSelection.length > 0 && (
+				<div style={ { fontSize: '12px', color: '#8c8f94', textAlign: 'center' } }>
+					{ selectedAttachments.length > 0
+						? __( 'Custom selection:', 'activitypub' ) +
+						  ' ' +
+						  effectiveSelection.length +
+						  '/' +
+						  maxAttachments
+						: __( 'Auto-selected:', 'activitypub' ) +
+						  ' ' +
+						  effectiveSelection.length +
+						  '/' +
+						  maxAttachments }
+				</div>
+			) }
+		</VStack>
+	);
+};
 
 /**
  * Editor plugin for ActivityPub settings in the block editor.
@@ -16,6 +310,7 @@ import { SVG, Path } from '@wordpress/primitives';
  */
 const EditorPlugin = () => {
 	const postType = useSelect( ( select ) => select( editorStore ).getCurrentPostType(), [] );
+	const postId = useSelect( ( select ) => select( editorStore ).getCurrentPostId(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 
 	// Don't show when editing sync blocks.
@@ -108,6 +403,19 @@ const EditorPlugin = () => {
 				__next40pxDefaultSize
 				__nextHasNoMarginBottom
 			/>
+
+			{ meta?.activitypub_max_image_attachments > 0 && (
+				<div style={ { marginTop: '16px' } }>
+					<AttachmentSelector
+						postId={ postId }
+						selectedAttachments={ meta?.activitypub_selected_attachments || [] }
+						onSelectionChange={ ( selection ) => {
+							setMeta( { ...meta, activitypub_selected_attachments: selection } );
+						} }
+						maxAttachments={ meta?.activitypub_max_image_attachments || 4 }
+					/>
+				</div>
+			) }
 
 			<RadioControl
 				label={ __( 'Visibility', 'activitypub' ) }
