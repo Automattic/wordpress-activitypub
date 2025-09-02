@@ -2,20 +2,15 @@ import { PluginDocumentSettingPanel, PluginPreviewMenuItem, store as editorStore
 import { PluginDocumentSettingPanel as DocumentSettingPanel } from '@wordpress/edit-post';
 import { registerPlugin } from '@wordpress/plugins';
 import {
+	BaseControl,
 	TextControl,
 	RadioControl,
-	RangeControl,
 	__experimentalText as Text,
 	Tooltip,
-	Panel,
-	PanelBody,
-	CheckboxControl,
-	Button,
 	Spinner,
-	__experimentalHStack as HStack,
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
-import { Icon, globe, people, external, dragHandle, image as imageIcon, media as mediaIcon } from '@wordpress/icons';
+import { Icon, globe, people, external, dragHandle, image as imageIcon } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp, useEntityRecords } from '@wordpress/core-data';
 import { addQueryArgs } from '@wordpress/url';
@@ -37,65 +32,113 @@ const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, m
 	const [ draggedItem, setDraggedItem ] = useState( null );
 	const [ draggedOver, setDraggedOver ] = useState( null );
 
-	// Fetch all post attachments
-	const { records: attachments, isResolving: isLoadingAttachments } = useEntityRecords( 'root', 'media', {
+	// Get post content to extract attachment IDs
+	const postContent = useSelect( ( select ) => {
+		return select( 'core/editor' ).getEditedPostContent();
+	}, [] );
+
+	// Extract attachment IDs from post content
+	const contentAttachmentIds = useMemo( () => {
+		if ( ! postContent ) return [];
+
+		const ids = [];
+		// Match image blocks: {"id":1045}
+		const imageMatches = postContent.match( /"id":(\d+)/g );
+		if ( imageMatches ) {
+			imageMatches.forEach( ( match ) => {
+				const id = parseInt( match.replace( /"id":/, '' ), 10 );
+				if ( id && ! ids.includes( id ) ) {
+					ids.push( id );
+				}
+			} );
+		}
+
+		return ids;
+	}, [ postContent ] );
+
+	// Fetch attachments by post_parent (traditional attachments)
+	const { records: parentAttachments, isResolving: isLoadingParentAttachments } = useEntityRecords( 'root', 'media', {
 		post_parent: postId,
 		per_page: -1,
 		orderby: 'menu_order',
 		order: 'asc',
 	} );
 
-	// Get featured image
-	const featuredImageId = useSelect( ( select ) => {
-		return select( 'core/editor' ).getEditedPostAttribute( 'featured_media' );
-	}, [] );
-
-	// Get auto-selected attachments (mimicking the backend logic)
-	const autoSelectedAttachments = useMemo( () => {
-		if ( ! attachments || attachments.length === 0 ) {
-			return [];
-		}
-
-		const autoSelected = [];
-
-		// Add featured image first if it exists
-		if ( featuredImageId ) {
-			autoSelected.push( featuredImageId );
-		}
-
-		// Add other attachments up to the limit
-		attachments.forEach( ( attachment ) => {
-			if ( autoSelected.length >= maxAttachments ) {
-				return;
-			}
-			if ( ! autoSelected.includes( attachment.id ) ) {
-				autoSelected.push( attachment.id );
-			}
-		} );
-
-		return autoSelected.slice( 0, maxAttachments );
-	}, [ attachments, maxAttachments, featuredImageId ] );
-
-	// Use auto-selected if no manual selection has been made
-	const effectiveSelection = selectedAttachments.length > 0 ? selectedAttachments : autoSelectedAttachments;
+	// Fetch content-referenced attachments if we have IDs
+	const { records: contentAttachments, isResolving: isLoadingContentAttachments } = useEntityRecords(
+		'root',
+		'media',
+		contentAttachmentIds.length > 0
+			? {
+					include: contentAttachmentIds,
+					per_page: -1,
+			  }
+			: null
+	);
 
 	/**
-	 * Gets the media type icon for an attachment.
+	 * Determines the normalized media type from attachment.
 	 *
-	 * @param {string} mediaType The media type (image, video, audio).
-	 * @returns {React.JSX.Element} The appropriate icon.
+	 * @param {Object} attachment The attachment object.
+	 * @returns {string} The normalized media type (image, video, audio, or file).
 	 */
-	const getMediaTypeIcon = ( mediaType ) => {
-		switch ( mediaType ) {
-			case 'image':
-				return imageIcon;
-			case 'video':
-			case 'audio':
-				return mediaIcon;
-			default:
-				return mediaIcon;
+	const getMediaType = ( attachment ) => {
+		// First try the media_type field
+		let mediaType = attachment.media_type;
+
+		// Fallback to mime_type if media_type is not reliable
+		if ( ! mediaType || mediaType === 'file' ) {
+			const mimeType = attachment.mime_type || '';
+			if ( mimeType.startsWith( 'image/' ) ) {
+				mediaType = 'image';
+			} else if ( mimeType.startsWith( 'audio/' ) ) {
+				mediaType = 'audio';
+			} else if ( mimeType.startsWith( 'video/' ) ) {
+				mediaType = 'video';
+			}
 		}
+
+		return mediaType;
 	};
+
+	// Helper function to check if attachment is an image
+	const isImageAttachment = ( attachment ) => {
+		const mediaType = getMediaType( attachment );
+		return mediaType === 'image';
+	};
+
+	// Combine and deduplicate attachments, filter for images only
+	const attachments = useMemo( () => {
+		const combined = [];
+		const seenIds = new Set();
+
+		// Add parent attachments first
+		if ( parentAttachments ) {
+			parentAttachments.forEach( ( attachment ) => {
+				if ( ! seenIds.has( attachment.id ) && isImageAttachment( attachment ) ) {
+					combined.push( attachment );
+					seenIds.add( attachment.id );
+				}
+			} );
+		}
+
+		// Add content attachments
+		if ( contentAttachments ) {
+			contentAttachments.forEach( ( attachment ) => {
+				if ( ! seenIds.has( attachment.id ) && isImageAttachment( attachment ) ) {
+					combined.push( attachment );
+					seenIds.add( attachment.id );
+				}
+			} );
+		}
+
+		return combined;
+	}, [ parentAttachments, contentAttachments ] );
+
+	const isLoadingAttachments = isLoadingParentAttachments || isLoadingContentAttachments;
+
+	// Use selected attachments directly
+	const effectiveSelection = selectedAttachments;
 
 	/**
 	 * Handles attachment selection toggle.
@@ -106,11 +149,11 @@ const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, m
 		( attachmentId ) => {
 			const newSelection = effectiveSelection.includes( attachmentId )
 				? effectiveSelection.filter( ( id ) => id !== attachmentId )
-				: [ ...effectiveSelection, attachmentId ].slice( 0, maxAttachments );
+				: [ ...effectiveSelection, attachmentId ];
 
 			onSelectionChange( newSelection );
 		},
-		[ effectiveSelection, onSelectionChange, maxAttachments ]
+		[ effectiveSelection, onSelectionChange ]
 	);
 
 	/**
@@ -132,7 +175,26 @@ const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, m
 	 */
 	const handleDragOver = useCallback( ( e, attachmentId ) => {
 		e.preventDefault();
+		e.dataTransfer.dropEffect = 'move';
 		setDraggedOver( attachmentId );
+	}, [] );
+
+	/**
+	 * Handles drag enter.
+	 *
+	 * @param {Event} e The drag event.
+	 * @param {number} attachmentId The attachment being entered.
+	 */
+	const handleDragEnter = useCallback( ( e, attachmentId ) => {
+		e.preventDefault();
+		setDraggedOver( attachmentId );
+	}, [] );
+
+	/**
+	 * Handles drag leave.
+	 */
+	const handleDragLeave = useCallback( () => {
+		setDraggedOver( null );
 	}, [] );
 
 	/**
@@ -140,39 +202,56 @@ const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, m
 	 *
 	 * @param {Event} e The drop event.
 	 * @param {number} targetId The attachment being dropped on.
+	 * @param {number} dropPosition Position relative to target: -1 (before), 0 (on), 1 (after).
 	 */
 	const handleDrop = useCallback(
-		( e, targetId ) => {
+		( e, targetId, dropPosition = 0 ) => {
 			e.preventDefault();
 
-			if ( ! draggedItem || draggedItem === targetId ) {
+			if ( ! draggedItem ) {
 				setDraggedItem( null );
 				setDraggedOver( null );
 				return;
 			}
 
+			// Work with all attachments array to maintain correct order
+			const allAttachmentIds = attachments.map( ( a ) => a.id );
 			const newSelection = [ ...effectiveSelection ];
-			const draggedIndex = newSelection.indexOf( draggedItem );
-			const targetIndex = newSelection.indexOf( targetId );
 
-			if ( draggedIndex !== -1 && targetIndex !== -1 ) {
+			// Remove dragged item from selection
+			const draggedIndex = newSelection.indexOf( draggedItem );
+			if ( draggedIndex !== -1 ) {
 				newSelection.splice( draggedIndex, 1 );
-				newSelection.splice( targetIndex, 0, draggedItem );
-				onSelectionChange( newSelection );
 			}
 
+			if ( targetId === null ) {
+				// Dropped at the beginning or end
+				if ( dropPosition === -1 ) {
+					newSelection.unshift( draggedItem ); // Add to beginning
+				} else {
+					newSelection.push( draggedItem ); // Add to end
+				}
+			} else {
+				// Find target position in the selection array
+				let targetIndex = newSelection.indexOf( targetId );
+				if ( targetIndex === -1 ) {
+					// Target not in selection, add to end
+					newSelection.push( draggedItem );
+				} else {
+					// Insert relative to target
+					if ( dropPosition >= 0 ) {
+						targetIndex++; // Insert after target
+					}
+					newSelection.splice( targetIndex, 0, draggedItem );
+				}
+			}
+
+			onSelectionChange( newSelection );
 			setDraggedItem( null );
 			setDraggedOver( null );
 		},
-		[ draggedItem, effectiveSelection, onSelectionChange ]
+		[ draggedItem, effectiveSelection, onSelectionChange, attachments ]
 	);
-
-	/**
-	 * Resets selection to auto-selected attachments.
-	 */
-	const handleReset = useCallback( () => {
-		onSelectionChange( [] );
-	}, [ onSelectionChange ] );
 
 	if ( isLoadingAttachments ) {
 		return (
@@ -186,119 +265,367 @@ const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, m
 	if ( ! attachments || attachments.length === 0 ) {
 		return (
 			<div style={ { textAlign: 'center', padding: '20px', color: '#8c8f94' } }>
-				<Icon icon={ mediaIcon } size={ 24 } />
-				<p>{ __( 'No attachments found for this post.', 'activitypub' ) }</p>
+				<Icon icon={ imageIcon } size={ 24 } />
+				<p>{ __( 'No images found for this post.', 'activitypub' ) }</p>
 			</div>
 		);
 	}
 
 	return (
 		<VStack spacing={ 4 }>
-			<HStack>
-				<Text>{ __( 'Select attachments to federate:', 'activitypub' ) }</Text>
-				{ selectedAttachments.length > 0 && (
-					<Button
-						variant="link"
-						onClick={ handleReset }
-						style={ { fontSize: '12px', textDecoration: 'underline' } }
+			<Text>{ __( 'Select images to federate:', 'activitypub' ) }</Text>
+
+			<div>
+				{ draggedItem && draggedOver === 'drop-zone-start' && (
+					<div
+						onDragOver={ ( e ) => {
+							e.preventDefault();
+							setDraggedOver( 'drop-zone-start' );
+						} }
+						onDragEnter={ ( e ) => {
+							e.preventDefault();
+							setDraggedOver( 'drop-zone-start' );
+						} }
+						onDragLeave={ () => setDraggedOver( null ) }
+						onDrop={ ( e ) => handleDrop( e, null, -1 ) }
+						style={ {
+							height: '72px',
+							backgroundColor: '#0073aa20',
+							border: '2px dashed #0073aa',
+							borderRadius: '6px',
+							marginBottom: '4px',
+							transition: 'all 0.15s ease',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							fontSize: '12px',
+							color: '#0073aa',
+							fontWeight: 500,
+						} }
 					>
-						{ __( 'Reset to default', 'activitypub' ) }
-					</Button>
+						{ __( 'Drop here', 'activitypub' ) }
+					</div>
 				) }
-			</HStack>
 
-			<div style={ { fontSize: '12px', color: '#8c8f94', marginBottom: '8px' } }>
-				{ __( 'Drag to reorder • Check to select • Maximum:', 'activitypub' ) } { maxAttachments }
-			</div>
+				{ draggedItem && draggedOver !== 'drop-zone-start' && (
+					<div
+						onDragOver={ ( e ) => {
+							e.preventDefault();
+							setDraggedOver( 'drop-zone-start' );
+						} }
+						onDragEnter={ ( e ) => {
+							e.preventDefault();
+							setDraggedOver( 'drop-zone-start' );
+						} }
+						style={ {
+							height: '4px',
+							marginBottom: '4px',
+						} }
+					/>
+				) }
 
-			<VStack spacing={ 2 }>
-				{ attachments.map( ( attachment ) => {
-					const isSelected = effectiveSelection.includes( attachment.id );
+				{ effectiveSelection.map( ( attachmentId, index ) => {
+					const attachment = attachments.find( ( a ) => a.id === attachmentId );
+					if ( ! attachment ) return null;
+
+					const isSelected = true; // Always true since we're mapping over selection
 					const isDragging = draggedItem === attachment.id;
 					const isDraggedOver = draggedOver === attachment.id;
 
 					return (
-						<div
-							key={ attachment.id }
-							draggable={ isSelected }
-							onDragStart={ ( e ) => handleDragStart( e, attachment.id ) }
-							onDragOver={ ( e ) => handleDragOver( e, attachment.id ) }
-							onDrop={ ( e ) => handleDrop( e, attachment.id ) }
-							style={ {
-								display: 'flex',
-								alignItems: 'center',
-								padding: '8px',
-								border: '1px solid #ddd',
-								borderRadius: '4px',
-								backgroundColor: isSelected ? '#f0f6fc' : '#fff',
-								opacity: isDragging ? 0.5 : 1,
-								borderColor: isDraggedOver ? '#0073aa' : '#ddd',
-								cursor: isSelected ? 'move' : 'default',
-								gap: '8px',
-							} }
-						>
-							<CheckboxControl
-								checked={ isSelected }
-								onChange={ () => handleToggleAttachment( attachment.id ) }
-								disabled={ ! isSelected && effectiveSelection.length >= maxAttachments }
-							/>
+						<div key={ attachment.id }>
+							<div
+								draggable={ isSelected }
+								onClick={ () => {
+									if ( ! ( ! isSelected && effectiveSelection.length >= maxAttachments ) ) {
+										handleToggleAttachment( attachment.id );
+									}
+								} }
+								onDragStart={ ( e ) => handleDragStart( e, attachment.id ) }
+								onDragOver={ isSelected ? ( e ) => handleDragOver( e, attachment.id ) : undefined }
+								onDragEnter={ isSelected ? ( e ) => handleDragEnter( e, attachment.id ) : undefined }
+								onDragLeave={ isSelected ? handleDragLeave : undefined }
+								onDrop={ isSelected ? ( e ) => handleDrop( e, attachment.id ) : undefined }
+								style={ {
+									display: 'flex',
+									alignItems: 'center',
+									padding: '10px 12px',
+									border: `1px solid ${ isSelected ? '#0073aa' : '#ddd' }`,
+									borderRadius: '6px',
+									backgroundColor: isSelected ? '#f6f7f7' : '#fff',
+									opacity: isDragging ? 0.6 : 1,
+									borderColor:
+										isDraggedOver && isSelected ? '#005177' : isSelected ? '#0073aa' : '#ddd',
+									cursor: isSelected ? 'grab' : 'pointer',
+									gap: '10px',
+									transition: 'all 0.15s ease',
+									boxShadow: isSelected ? '0 0 0 1px rgba(0, 115, 170, 0.1)' : 'none',
+									marginBottom: '4px',
+								} }
+							>
+								{ isSelected && (
+									<Icon
+										icon={ dragHandle }
+										size={ 16 }
+										style={ {
+											color: '#666',
+											cursor: 'grab',
+											flexShrink: 0,
+										} }
+									/>
+								) }
 
-							{ isSelected && <Icon icon={ dragHandle } size={ 16 } style={ { color: '#8c8f94' } } /> }
+								{ attachment.media_details?.sizes?.thumbnail?.source_url ? (
+									<img
+										src={ attachment.media_details.sizes.thumbnail.source_url }
+										alt={ attachment.alt_text || attachment.title.rendered }
+										style={ {
+											width: '40px',
+											height: '40px',
+											objectFit: 'cover',
+											borderRadius: '4px',
+											flexShrink: 0,
+											border: '1px solid #e0e0e0',
+										} }
+									/>
+								) : (
+									<div
+										style={ {
+											width: '40px',
+											height: '40px',
+											backgroundColor: '#f0f0f0',
+											borderRadius: '4px',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											flexShrink: 0,
+											border: '1px solid #e0e0e0',
+										} }
+									>
+										<Icon icon={ imageIcon } size={ 20 } style={ { color: '#666' } } />
+									</div>
+								) }
 
-							<Icon
-								icon={ getMediaTypeIcon( attachment.media_type ) }
-								size={ 20 }
-								style={ { color: '#8c8f94' } }
-							/>
+								<div style={ { flex: 1, minWidth: 0 } }>
+									<div
+										style={ {
+											fontWeight: 500,
+											fontSize: '14px',
+											color: '#1e1e1e',
+											marginBottom: '4px',
+											overflow: 'hidden',
+											textOverflow: 'ellipsis',
+											whiteSpace: 'nowrap',
+										} }
+									>
+										{ attachment.title.rendered || __( 'Untitled', 'activitypub' ) }
+									</div>
+								</div>
 
-							{ attachment.media_details?.sizes?.thumbnail?.source_url ? (
-								<img
-									src={ attachment.media_details.sizes.thumbnail.source_url }
-									alt={ attachment.alt_text || attachment.title.rendered }
-									style={ {
-										width: '32px',
-										height: '32px',
-										objectFit: 'cover',
-										borderRadius: '2px',
-									} }
-								/>
-							) : null }
+								{ isSelected && (
+									<div
+										style={ {
+											fontSize: '12px',
+											color: '#0073aa',
+											fontWeight: 600,
+											backgroundColor: 'rgba(0, 115, 170, 0.1)',
+											padding: '4px 8px',
+											borderRadius: '12px',
+											minWidth: '24px',
+											textAlign: 'center',
+											flexShrink: 0,
+										} }
+									>
+										#{ index + 1 }
+									</div>
+								) }
+							</div>
 
-							<VStack spacing={ 0 } style={ { flex: 1 } }>
-								<Text style={ { fontWeight: 500, fontSize: '14px' } }>
-									{ attachment.title.rendered || __( 'Untitled', 'activitypub' ) }
-								</Text>
-								<Text style={ { fontSize: '12px', color: '#8c8f94' } }>
-									{ attachment.media_type } •{ ' ' }
-									{ Math.round( attachment.media_details?.filesize / 1024 ) }KB
-								</Text>
-							</VStack>
+							{ draggedItem &&
+								index < effectiveSelection.length - 1 &&
+								draggedOver === `drop-zone-after-${ attachment.id }` && (
+									<div
+										onDragOver={ ( e ) => {
+											e.preventDefault();
+											setDraggedOver( `drop-zone-after-${ attachment.id }` );
+										} }
+										onDragEnter={ ( e ) => {
+											e.preventDefault();
+											setDraggedOver( `drop-zone-after-${ attachment.id }` );
+										} }
+										onDragLeave={ () => setDraggedOver( null ) }
+										onDrop={ ( e ) => handleDrop( e, attachment.id, 1 ) }
+										style={ {
+											height: '72px',
+											backgroundColor: '#0073aa20',
+											border: '2px dashed #0073aa',
+											borderRadius: '6px',
+											marginBottom: '4px',
+											transition: 'all 0.15s ease',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											fontSize: '12px',
+											color: '#0073aa',
+											fontWeight: 500,
+										} }
+									>
+										{ __( 'Drop here', 'activitypub' ) }
+									</div>
+								) }
 
-							{ isSelected && (
-								<Text style={ { fontSize: '12px', color: '#0073aa', fontWeight: 500 } }>
-									#{ effectiveSelection.indexOf( attachment.id ) + 1 }
-								</Text>
-							) }
+							{ draggedItem &&
+								index < effectiveSelection.length - 1 &&
+								draggedOver !== `drop-zone-after-${ attachment.id }` && (
+									<div
+										onDragOver={ ( e ) => {
+											e.preventDefault();
+											setDraggedOver( `drop-zone-after-${ attachment.id }` );
+										} }
+										onDragEnter={ ( e ) => {
+											e.preventDefault();
+											setDraggedOver( `drop-zone-after-${ attachment.id }` );
+										} }
+										style={ {
+											height: '4px',
+											marginBottom: '4px',
+										} }
+									/>
+								) }
 						</div>
 					);
 				} ) }
-			</VStack>
 
-			{ effectiveSelection.length > 0 && (
-				<div style={ { fontSize: '12px', color: '#8c8f94', textAlign: 'center' } }>
-					{ selectedAttachments.length > 0
-						? __( 'Custom selection:', 'activitypub' ) +
-						  ' ' +
-						  effectiveSelection.length +
-						  '/' +
-						  maxAttachments
-						: __( 'Auto-selected:', 'activitypub' ) +
-						  ' ' +
-						  effectiveSelection.length +
-						  '/' +
-						  maxAttachments }
-				</div>
-			) }
+				{ draggedItem && draggedOver === 'drop-zone-end' && (
+					<div
+						onDragOver={ ( e ) => {
+							e.preventDefault();
+							setDraggedOver( 'drop-zone-end' );
+						} }
+						onDragEnter={ ( e ) => {
+							e.preventDefault();
+							setDraggedOver( 'drop-zone-end' );
+						} }
+						onDragLeave={ () => setDraggedOver( null ) }
+						onDrop={ ( e ) => handleDrop( e, null, 1 ) }
+						style={ {
+							height: '72px',
+							backgroundColor: '#0073aa20',
+							border: '2px dashed #0073aa',
+							borderRadius: '6px',
+							transition: 'all 0.15s ease',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							fontSize: '12px',
+							color: '#0073aa',
+							fontWeight: 500,
+						} }
+					>
+						{ __( 'Drop here', 'activitypub' ) }
+					</div>
+				) }
+
+				{ draggedItem && draggedOver !== 'drop-zone-end' && (
+					<div
+						onDragOver={ ( e ) => {
+							e.preventDefault();
+							setDraggedOver( 'drop-zone-end' );
+						} }
+						onDragEnter={ ( e ) => {
+							e.preventDefault();
+							setDraggedOver( 'drop-zone-end' );
+						} }
+						style={ {
+							height: '4px',
+						} }
+					/>
+				) }
+
+				{ /* Show unselected attachments for selection */ }
+				{ attachments
+					.filter( ( attachment ) => ! effectiveSelection.includes( attachment.id ) )
+					.map( ( attachment ) => {
+						return (
+							<div key={ attachment.id }>
+								<div
+									draggable={ false }
+									onClick={ () => {
+										handleToggleAttachment( attachment.id );
+									} }
+									style={ {
+										display: 'flex',
+										alignItems: 'center',
+										padding: '10px 12px',
+										border: '1px solid #ddd',
+										borderRadius: '6px',
+										backgroundColor: '#fff',
+										cursor: 'pointer',
+										gap: '10px',
+										transition: 'all 0.15s ease',
+										marginBottom: '4px',
+									} }
+								>
+									<Icon
+										icon={ dragHandle }
+										size={ 16 }
+										style={ {
+											color: '#ccc',
+											cursor: 'pointer',
+											flexShrink: 0,
+										} }
+									/>
+									{ attachment.media_details?.sizes?.thumbnail?.source_url ? (
+										<img
+											src={ attachment.media_details.sizes.thumbnail.source_url }
+											alt={ attachment.alt_text || attachment.title.rendered }
+											style={ {
+												width: '40px',
+												height: '40px',
+												objectFit: 'cover',
+												borderRadius: '4px',
+												flexShrink: 0,
+												border: '1px solid #e0e0e0',
+											} }
+										/>
+									) : (
+										<div
+											style={ {
+												width: '40px',
+												height: '40px',
+												backgroundColor: '#f0f0f0',
+												borderRadius: '4px',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												flexShrink: 0,
+												border: '1px solid #e0e0e0',
+											} }
+										>
+											<Icon icon={ imageIcon } size={ 20 } style={ { color: '#666' } } />
+										</div>
+									) }
+
+									<div style={ { flex: 1, minWidth: 0 } }>
+										<div
+											style={ {
+												fontWeight: 500,
+												fontSize: '14px',
+												color: '#1e1e1e',
+												marginBottom: '4px',
+												overflow: 'hidden',
+												textOverflow: 'ellipsis',
+												whiteSpace: 'nowrap',
+											} }
+										>
+											{ attachment.title.rendered || __( 'Untitled', 'activitypub' ) }
+										</div>
+									</div>
+								</div>
+							</div>
+						);
+					} ) }
+			</div>
 		</VStack>
 	);
 };
@@ -388,34 +715,16 @@ const EditorPlugin = () => {
 				__nextHasNoMarginBottom
 			/>
 
-			<RangeControl
-				label={ __( 'Maximum Image Attachments', 'activitypub' ) }
-				value={ meta?.activitypub_max_image_attachments }
-				onChange={ ( value ) => {
-					setMeta( { ...meta, activitypub_max_image_attachments: value } );
-				} }
-				min={ 0 }
-				max={ 10 }
-				help={ __(
-					'Maximum number of image attachments to include when sharing to the fediverse.',
-					'activitypub'
-				) }
-				__next40pxDefaultSize
-				__nextHasNoMarginBottom
-			/>
-
-			{ meta?.activitypub_max_image_attachments > 0 && (
-				<div style={ { marginTop: '16px' } }>
-					<AttachmentSelector
-						postId={ postId }
-						selectedAttachments={ meta?.activitypub_selected_attachments || [] }
-						onSelectionChange={ ( selection ) => {
-							setMeta( { ...meta, activitypub_selected_attachments: selection } );
-						} }
-						maxAttachments={ meta?.activitypub_max_image_attachments || 4 }
-					/>
-				</div>
-			) }
+			<BaseControl label={ __( 'Image Attachments', 'activitypub' ) } __next40pxDefaultSize>
+				<AttachmentSelector
+					postId={ postId }
+					selectedAttachments={ meta?.activitypub_selected_attachments || [] }
+					onSelectionChange={ ( selection ) => {
+						setMeta( { ...meta, activitypub_selected_attachments: selection } );
+					} }
+					maxAttachments={ 10 }
+				/>
+			</BaseControl>
 
 			<RadioControl
 				label={ __( 'Visibility', 'activitypub' ) }
