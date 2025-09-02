@@ -285,15 +285,18 @@ class Embed {
 			/*
 			 * If the 'activitypub' parameter is present, perform an additional validation step:
 			 * Ensure the provided URL resolves to a valid ActivityPub object.
+			 *
 			 * This differs from the standard oEmbed flow, which does not explicitly validate
 			 * the URL as an ActivityPub object unless the initial oEmbed lookup fails.
-			 * This block is triggered for requests that specifically ask for ActivityPub content.
+			 * This block is triggered for requests from the Federated Reply block, where we
+			 * want to inform users whether post authors will be notified of the reply.
 			 */
 			$object = Http::get_remote_object( $request->get_param( 'url' ) );
 
 			if ( \is_wp_error( $object ) || ! is_activity_object( $object ) ) {
 				$response = new \WP_Error( 'oembed_invalid_url', \get_status_header_desc( 404 ), array( 'status' => 404 ) );
 			}
+		}
 
 		return $response;
 	}
