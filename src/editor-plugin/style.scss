@@ -1,0 +1,161 @@
+// Attachment Selector Styles
+.activitypub-attachment-selector {
+	&__loading {
+		text-align: center;
+		padding: 20px;
+	}
+
+	&__help {
+		color: #757575;
+		font-size: 13px;
+		font-style: normal;
+		margin: 0;
+	}
+
+	&__separator {
+		height: 1px;
+		background-color: #e0e0e0;
+		margin: 12px auto;
+		border: none;
+		width: 25%;
+	}
+}
+
+// Drop Zone Styles
+.activitypub-attachment-dropzone {
+	margin-bottom: 4px;
+
+	&--active {
+		height: 72px;
+		background-color: rgba(0, 115, 170, 0.125);
+		border: 2px dashed #0073aa;
+		border-radius: 6px;
+		transition: all 0.15s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 12px;
+		color: #0073aa;
+		font-weight: 500;
+	}
+
+	&--inactive {
+		height: 4px;
+	}
+}
+
+// Attachment Item Styles
+.activitypub-attachment-item {
+	position: relative;
+	display: flex;
+	align-items: center;
+	padding: 10px 12px;
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	background-color: #fff;
+	cursor: pointer;
+	gap: 10px;
+	transition: all 0.15s ease;
+	margin-bottom: 4px;
+
+	&:hover {
+		border-color: #999;
+	}
+
+	&--selected {
+		border-color: #0073aa;
+		background-color: #fff;
+		box-shadow: 0 0 0 1px rgba(0, 115, 170, 0.1);
+		cursor: grab;
+
+		&:hover {
+			border-color: #005177;
+		}
+	}
+
+	// Unselected items have normal appearance
+	&:not(&--selected) {
+		background-color: #fff;
+		border-color: #ddd;
+
+		&:hover {
+			border-color: #999;
+		}
+	}
+
+	&--dragging {
+		opacity: 0.6;
+	}
+
+	&--drag-over {
+		border-color: #005177 !important;
+		box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
+	}
+
+	&__drag-handle {
+		position: absolute;
+		left: 8px;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #666;
+		cursor: grab;
+		flex-shrink: 0;
+		z-index: 1;
+
+		&--selected {
+			color: #666;
+			cursor: grab;
+		}
+	}
+
+	&__spacer {
+		margin-left: -10px; // Make up for gap: 10px;
+		flex-shrink: 0;
+	}
+
+	&__thumbnail {
+		width: 40px;
+		object-fit: cover;
+		border-radius: 4px;
+		flex-shrink: 0;
+		margin-left: 20px; // Space for drag handle + some breathing room
+
+		&--placeholder {
+			background-color: #f0f0f0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+
+			svg {
+				color: #666;
+			}
+		}
+	}
+
+	&__content {
+		flex: 1;
+		min-width: 0;
+	}
+
+	&__title {
+		font-weight: 500;
+		font-size: 14px;
+		color: #1e1e1e;
+		margin-bottom: 4px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	&__number {
+		font-size: 12px;
+		color: #0073aa;
+		font-weight: 600;
+		background-color: rgba(0, 115, 170, 0.1);
+		padding: 4px 8px;
+		border-radius: 12px;
+		min-width: 24px;
+		text-align: center;
+		flex-shrink: 0;
+	}
+}
