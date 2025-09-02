@@ -1,7 +1,7 @@
 import { useBlockProps, InspectorControls, useInnerBlocksProps } from '@wordpress/block-editor';
 import { TextControl, PanelBody, ToggleControl, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useEffect, useState, useRef } from '@wordpress/element';
+import { useCallback, useEffect, useState, useRef } from '@wordpress/element';
 import { useDebounce } from '@wordpress/compose';
 import { useDispatch } from '@wordpress/data';
 import apiFetch from '@wordpress/api-fetch';
@@ -83,44 +83,46 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 		setTimeout( () => urlInputRef.current?.focus(), 50 );
 	};
 
-	// Check URL when it changes
-	const checkUrl = async ( urlToCheck ) => {
-		if ( ! urlToCheck ) {
-			setIsValidEmbed( false );
-			return;
-		}
+	// Check URL when it changes.
+	const checkUrl = useCallback(
+		async ( urlToCheck ) => {
+			if ( ! urlToCheck ) {
+				setIsValidEmbed( false );
+				return;
+			}
 
-		try {
-			setIsCheckingEmbed( true );
-
-			// Simple URL validation.
-			new URL( urlToCheck ); // Will throw if invalid.
-
-			// Fetch the embed information using the WordPress oEmbed API.
 			try {
-				const response = await apiFetch( {
-					path: addQueryArgs( '/oembed/1.0/proxy', {
-						url: urlToCheck,
-						activitypub: true,
-					} ),
-				} );
+				setIsCheckingEmbed( true );
 
-				setIsValidEmbed( !! response );
+				// Simple URL validation.
+				new URL( urlToCheck ); // Will throw if invalid.
 
-				// Auto-enable embedding when we get valid embed info.
-				if ( response && response.provider_name && ! embedPost ) {
-					setAttributes( { embedPost: true } );
+				try {
+					const response = await apiFetch( {
+						path: addQueryArgs( '/oembed/1.0/proxy', {
+							url: urlToCheck,
+							activitypub: true,
+						} ),
+					} );
+
+					setIsValidEmbed( !! response );
+
+					// Auto-enable embedding when we get valid embed info.
+					if ( response && response.provider_name && ! embedPost ) {
+						setAttributes( { embedPost: true } );
+					}
+				} catch ( error ) {
+					console.log( 'Could not fetch embed:', error );
+					setIsValidEmbed( false );
 				}
 			} catch ( error ) {
-				console.log( 'Could not fetch embed:', error );
 				setIsValidEmbed( false );
+			} finally {
+				setIsCheckingEmbed( false );
 			}
-		} catch ( error ) {
-			setIsValidEmbed( false );
-		} finally {
-			setIsCheckingEmbed( false );
-		}
-	};
+		},
+		[ embedPost, setAttributes ]
+	);
 
 	// Debounce the URL check to avoid too many requests.
 	const debouncedCheckUrl = useDebounce( checkUrl, 250 );
