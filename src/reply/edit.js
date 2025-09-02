@@ -43,12 +43,15 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 	const urlInputRef = useRef();
 	const { insertAfterBlock, removeBlock, replaceInnerBlocks } = useDispatch( 'core/block-editor' );
 
+	// Show embed in both selected and non-selected states when embedPost is true.
+	const showEmbed = embedPost && ! isCheckingEmbed && isValidEmbed;
+
 	// Setup inner blocks.
 	const innerBlocksProps = useInnerBlocksProps(
 		{ className: 'activitypub-embed-container' },
 		{
 			allowedBlocks: [ 'core/embed' ],
-			template: url && embedPost ? [ [ 'core/embed', { url } ] ] : [],
+			template: url && showEmbed ? [ [ 'core/embed', { url } ] ] : [],
 			templateLock: 'all',
 		}
 	);
@@ -63,6 +66,19 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 		}
 	}, [ url, embedPost, isValidEmbed, clientId, replaceInnerBlocks ] );
 
+	// Update help text based on state changes.
+	useEffect( () => {
+		if ( ! url ) {
+			setHelpText( HELP_TEXT.default );
+		} else if ( isCheckingEmbed ) {
+			setHelpText( HELP_TEXT.checking() );
+		} else if ( isValidEmbed ) {
+			setHelpText( HELP_TEXT.valid );
+		} else {
+			setHelpText( HELP_TEXT.error );
+		}
+	}, [ url, isCheckingEmbed, isValidEmbed ] );
+
 	const focusInput = () => {
 		setTimeout( () => urlInputRef.current?.focus(), 50 );
 	};
@@ -70,14 +86,12 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 	// Check URL when it changes
 	const checkUrl = async ( urlToCheck ) => {
 		if ( ! urlToCheck ) {
-			setHelpText( HELP_TEXT.default );
 			setIsValidEmbed( false );
 			return;
 		}
 
 		try {
 			setIsCheckingEmbed( true );
-			setHelpText( HELP_TEXT.checking() );
 
 			// Simple URL validation.
 			new URL( urlToCheck ); // Will throw if invalid.
@@ -92,7 +106,6 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 				} );
 
 				setIsValidEmbed( !! response );
-				setHelpText( HELP_TEXT.valid );
 
 				// Auto-enable embedding when we get valid embed info.
 				if ( response && response.provider_name && ! embedPost ) {
@@ -101,12 +114,9 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 			} catch ( error ) {
 				console.log( 'Could not fetch embed:', error );
 				setIsValidEmbed( false );
-				setHelpText( HELP_TEXT.error );
-				// We'll still allow the reply even if embedding fails.
 			}
 		} catch ( error ) {
 			setIsValidEmbed( false );
-			setHelpText( HELP_TEXT.error );
 		} finally {
 			setIsCheckingEmbed( false );
 		}
@@ -130,10 +140,6 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 			removeBlock( clientId );
 		}
 	};
-
-	// Show embed in both selected and non-selected states when embedPost is true.
-	const showEmbed = embedPost && ! isCheckingEmbed && isValidEmbed;
-	const showLinkPreview = ! showEmbed || isSelected;
 
 	return (
 		<>
@@ -166,7 +172,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 
 				{ showEmbed && <div { ...innerBlocksProps } /> }
 
-				{ url && showLinkPreview && ! isSelected && (
+				{ url && ! showEmbed && ! isSelected && (
 					<div
 						className="activitypub-reply-block-editor__preview"
 						contentEditable={ false }
