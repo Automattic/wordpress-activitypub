@@ -80,6 +80,30 @@ class Blocks {
 					'sanitize_callback' => 'absint',
 				)
 			);
+
+			\register_post_meta(
+				$post_type,
+				'activitypub_selected_attachments',
+				array(
+					'type'              => 'array',
+					'single'            => true,
+					'show_in_rest'      => array(
+						'schema' => array(
+							'type'  => 'array',
+							'items' => array(
+								'type' => 'integer',
+							),
+						),
+					),
+					'default'           => array(),
+					'sanitize_callback' => function ( $value ) {
+						if ( ! is_array( $value ) ) {
+							return array();
+						}
+						return array_map( 'absint', array_filter( $value, 'is_numeric' ) );
+					},
+				)
+			);
 		}
 	}
 

@@ -303,6 +303,36 @@ class Post extends Base {
 			return array();
 		}
 
+		// Check for custom attachment selection.
+		$selected_attachments = \get_post_meta( $this->item->ID, 'activitypub_selected_attachments', true );
+		
+		if ( is_array( $selected_attachments ) && ! empty( $selected_attachments ) ) {
+			// Use custom selection.
+			$media = array();
+			foreach ( $selected_attachments as $attachment_id ) {
+				$attachment = \get_post( $attachment_id );
+				if ( $attachment && 'attachment' === $attachment->post_type ) {
+					$media[] = array( 'id' => $attachment_id );
+				}
+			}
+			
+			// Limit to max_media.
+			$media = \array_slice( $media, 0, $max_media );
+			
+			$attachments = \array_filter( \array_map( array( $this, 'transform_attachment' ), $media ) );
+			
+			/**
+			 * Filter the attachments for a post.
+			 *
+			 * @param array    $attachments The attachments.
+			 * @param \WP_Post $item        The post object.
+			 *
+			 * @return array The filtered attachments.
+			 */
+			return \apply_filters( 'activitypub_attachments', $attachments, $this->item );
+		}
+
+		// Fall back to automatic attachment detection.
 		$media = array(
 			'image' => array(),
 			'audio' => array(),
