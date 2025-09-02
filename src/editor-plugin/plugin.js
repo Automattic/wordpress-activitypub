@@ -19,7 +19,6 @@ import './style.scss';
  */
 const EditorPlugin = () => {
 	const postType = useSelect( ( select ) => select( editorStore ).getCurrentPostType(), [] );
-	const postId = useSelect( ( select ) => select( editorStore ).getCurrentPostId(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 
 	// Don't show when editing sync blocks.
@@ -99,7 +98,6 @@ const EditorPlugin = () => {
 
 			<BaseControl label={ __( 'Image Attachments', 'activitypub' ) } __next40pxDefaultSize>
 				<AttachmentSelector
-					postId={ postId }
 					selectedAttachments={ meta?.activitypub_selected_attachments || [] }
 					onSelectionChange={ ( selection ) => {
 						setMeta( { ...meta, activitypub_selected_attachments: selection } );

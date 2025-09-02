@@ -15,7 +15,7 @@
 	&__separator {
 		height: 1px;
 		background-color: #e0e0e0;
-		margin: 12px auto;
+		margin: 8px auto;
 		border: none;
 		width: 25%;
 	}
@@ -56,7 +56,6 @@
 	cursor: pointer;
 	gap: 10px;
 	transition: all 0.15s ease;
-	margin-bottom: 4px;
 
 	&:hover {
 		border-color: #999;

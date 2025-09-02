@@ -11,13 +11,12 @@ import AttachmentItem from './AttachmentItem';
  * Attachment selection component for choosing which attachments to federate.
  *
  * @param {Object} props Component props.
- * @param {number} props.postId The current post ID.
  * @param {Array} props.selectedAttachments Array of selected attachment IDs.
  * @param {Function} props.onSelectionChange Callback for selection changes.
  * @param {number} props.maxAttachments Maximum number of attachments allowed.
  * @returns {React.JSX.Element|null} The attachment selection component.
  */
-const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, maxAttachments } ) => {
+const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttachments } ) => {
 	const [ draggedItem, setDraggedItem ] = useState( null );
 	const [ draggedOver, setDraggedOver ] = useState( null );
 
@@ -224,7 +223,7 @@ const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, m
 	} );
 
 	return (
-		<VStack spacing={ 4 } className="activitypub-attachment-selector">
+		<VStack spacing={ 1 } className="activitypub-attachment-selector">
 			{ effectiveSelection.length > 0 && (
 				<>
 					{ /* Drop zone at start */ }
@@ -283,9 +282,7 @@ const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, m
 			{ /* Section separator and unselected attachments */ }
 			{ attachments.filter( ( attachment ) => ! effectiveSelection.includes( attachment.id ) ).length > 0 && (
 				<>
-					{ effectiveSelection.length > 0 && (
-						<div className="activitypub-attachment-selector__separator" />
-					) }
+					{ effectiveSelection.length > 0 && <div className="activitypub-attachment-selector__separator" /> }
 
 					{ /* Unselected attachments */ }
 					{ attachments
