@@ -21,9 +21,7 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 	const [ draggedOver, setDraggedOver ] = useState( null );
 
 	// Get post content to extract attachment IDs
-	const postContent = useSelect( ( select ) => {
-		return select( 'core/editor' ).getEditedPostContent();
-	}, [] );
+	const postContent = useSelect( ( select ) => select( 'core/editor' ).getEditedPostContent(), [] );
 
 	// Extract attachment IDs from post content
 	const contentAttachmentIds = useMemo( () => {
@@ -70,8 +68,7 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 		: [];
 
 	// Filter unselected attachments once to avoid redundant computation
-	const unselectedAttachments =
-		attachments?.filter( ( attachment ) => ! effectiveSelection.includes( attachment.id ) ) || [];
+	const unselectedAttachments = attachments?.filter( ( { id } ) => ! effectiveSelection.includes( id ) ) || [];
 
 	// Auto-select first X images when no selection has ever been set (undefined) and images are available
 	// Don't auto-select if user has intentionally set empty selection ([])
