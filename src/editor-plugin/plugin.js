@@ -81,12 +81,35 @@ const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, m
 			: null
 	);
 
+	// Fetch featured image if it exists and isn't already included
+	const { records: featuredAttachment, isResolving: isLoadingFeaturedAttachment } = useEntityRecords(
+		'root',
+		'media',
+		featuredImageId &&
+			! contentAttachmentIds.includes( featuredImageId ) &&
+			( ! parentAttachments || ! parentAttachments.some( ( a ) => a.id === featuredImageId ) )
+			? {
+					include: [ featuredImageId ],
+					per_page: 1,
+			  }
+			: null
+	);
+
 	// Combine and deduplicate attachments, filter for images only
 	const attachments = useMemo( () => {
 		const combined = [];
 		const seenIds = new Set();
 
-		// Add parent attachments first
+		// Add featured image first if it exists
+		if ( featuredAttachment && featuredAttachment.length > 0 ) {
+			const featured = featuredAttachment[ 0 ];
+			if ( ! seenIds.has( featured.id ) ) {
+				combined.push( featured );
+				seenIds.add( featured.id );
+			}
+		}
+
+		// Add parent attachments
 		if ( parentAttachments ) {
 			parentAttachments.forEach( ( attachment ) => {
 				if ( ! seenIds.has( attachment.id ) ) {
@@ -107,9 +130,10 @@ const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, m
 		}
 
 		return combined;
-	}, [ parentAttachments, contentAttachments ] );
+	}, [ featuredAttachment, parentAttachments, contentAttachments ] );
 
-	const isLoadingAttachments = isLoadingParentAttachments || isLoadingContentAttachments;
+	const isLoadingAttachments =
+		isLoadingParentAttachments || isLoadingContentAttachments || isLoadingFeaturedAttachment;
 
 	// Get auto-selected attachments (mimicking the backend logic)
 	const autoSelectedAttachments = useMemo( () => {
@@ -768,6 +792,7 @@ const EditorPlugin = () => {
 					onSelectionChange={ ( selection ) => {
 						setMeta( { ...meta, activitypub_selected_attachments: selection } );
 					} }
+					maxAttachments={ 4 }
 				/>
 			</BaseControl>
 
