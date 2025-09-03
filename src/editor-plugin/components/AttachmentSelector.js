@@ -157,8 +157,7 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 				return;
 			}
 
-			// Work with all attachments array to maintain correct order
-			const allAttachmentIds = attachments.map( ( a ) => a.id );
+			// Work with current selection to reorder
 			const newSelection = [ ...effectiveSelection ];
 
 			// Remove dragged item from selection

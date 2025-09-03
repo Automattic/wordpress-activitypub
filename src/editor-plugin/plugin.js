@@ -7,6 +7,7 @@ import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
+import { useCallback } from '@wordpress/element';
 import { SVG, Path } from '@wordpress/primitives';
 
 import AttachmentSelector from './components/AttachmentSelector';
@@ -69,6 +70,13 @@ const EditorPlugin = () => {
 		</Tooltip>
 	);
 
+	const handleAttachmentSelectionChange = useCallback(
+		( selection ) => {
+			setMeta( { ...meta, activitypub_selected_attachments: selection } );
+		},
+		[ meta, setMeta ]
+	);
+
 	/*
 	 * Backwards compatibility with WordPress 6.5.
 	 * @todo Remove when 6.5 is no longer supported.
@@ -103,9 +111,7 @@ const EditorPlugin = () => {
 			>
 				<AttachmentSelector
 					selectedAttachments={ meta?.activitypub_selected_attachments }
-					onSelectionChange={ ( selection ) => {
-						setMeta( { ...meta, activitypub_selected_attachments: selection } );
-					} }
+					onSelectionChange={ handleAttachmentSelectionChange }
 					maxAttachments={ 10 }
 				/>
 			</BaseControl>
