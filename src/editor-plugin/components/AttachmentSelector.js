@@ -12,15 +12,16 @@ import AttachmentItem from './AttachmentItem';
  * Attachment selection component for choosing which attachments to federate.
  *
  * @param {Object} props Component props.
- * @param {number} props.postId The current post ID.
  * @param {Array} props.selectedAttachments Array of selected attachment IDs.
  * @param {Function} props.onSelectionChange Callback for selection changes.
  * @param {number} props.maxAttachments Maximum number of attachments allowed.
  * @returns {React.JSX.Element|null} The attachment selection component.
  */
-const AttachmentSelector = ( { postId, selectedAttachments, onSelectionChange, maxAttachments } ) => {
+const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttachments } ) => {
 	const [ draggedItem, setDraggedItem ] = useState( null );
 	const [ draggedOver, setDraggedOver ] = useState( null );
+
+	const postId = useSelect( ( select ) => select( editorStore ).getCurrentPostId(), [] );
 
 	// Get post content to extract attachment IDs
 	const postContent = useSelect( ( select ) => {
