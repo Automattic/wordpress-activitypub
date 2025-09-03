@@ -285,7 +285,13 @@ class Post extends Base {
 		if ( \metadata_exists( 'post', $this->item->ID, 'activitypub_selected_attachments' ) ) {
 			$media = \get_post_meta( $this->item->ID, 'activitypub_selected_attachments', true );
 			$media = array_filter( $media, 'wp_attachment_is_image' );
-			$media = array( 'image' => $media );
+			$media = array_map(
+				function ( $id ) {
+					/** Make compatible with {@see transform_attachment()}. */
+					return array( 'id' => $id );
+				},
+				$media
+			);
 		} else {
 			$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true );
 
