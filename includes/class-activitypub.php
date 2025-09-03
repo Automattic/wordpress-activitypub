@@ -864,14 +864,14 @@ class Activitypub {
 
 		if ( isset( $post_metas[ $meta_key ] ) ) {
 			$default_value = $post_metas[ $meta_key ];
-			$matches = false;
-			
+			$matches       = false;
+
 			if ( is_array( $default_value ) && is_array( $meta_value ) ) {
 				$matches = empty( $meta_value ) && empty( $default_value );
 			} else {
 				$matches = $default_value === (string) $meta_value;
 			}
-			
+
 			if ( $matches ) {
 				if ( 'update_post_metadata' === current_action() ) {
 					\delete_post_meta( $object_id, $meta_key );
