@@ -64,13 +64,15 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 	}, [] );
 
 	// Filter selected attachments to only include attachments that exist in our fetched list
-	const effectiveSelection = selectedAttachments.filter( ( id ) =>
-		attachments?.some( ( attachment ) => attachment.id === id )
-	);
+	// Handle the case where selectedAttachments is undefined (never been set)
+	const effectiveSelection = selectedAttachments
+		? selectedAttachments.filter( ( id ) => attachments?.some( ( attachment ) => attachment.id === id ) )
+		: [];
 
-	// Auto-select first X images when no selection exists but images are available
+	// Auto-select first X images when no selection has ever been set (undefined) and images are available
+	// Don't auto-select if user has intentionally set empty selection ([])
 	const shouldAutoSelect =
-		effectiveSelection.length === 0 && attachments && attachments.length > 0 && globalMaxAttachments > 0;
+		selectedAttachments === undefined && attachments && attachments.length > 0 && globalMaxAttachments > 0;
 
 	if ( shouldAutoSelect ) {
 		// Auto-select up to globalMaxAttachments images

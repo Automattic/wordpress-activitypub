@@ -98,7 +98,7 @@ const EditorPlugin = () => {
 
 			<BaseControl label={ __( 'Image Attachments', 'activitypub' ) } __next40pxDefaultSize>
 				<AttachmentSelector
-					selectedAttachments={ meta?.activitypub_selected_attachments || [] }
+					selectedAttachments={ meta?.activitypub_selected_attachments }
 					onSelectionChange={ ( selection ) => {
 						setMeta( { ...meta, activitypub_selected_attachments: selection } );
 					} }

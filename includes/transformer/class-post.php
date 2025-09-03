@@ -282,80 +282,57 @@ class Post extends Base {
 			return array();
 		}
 
-		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true );
-
-		if ( ! is_numeric( $max_media ) ) {
-			$max_media = \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
-		}
-
-		/**
-		 * Filters the maximum number of media attachments allowed in a post.
-		 *
-		 * Despite the name suggesting only images, this filter controls the maximum number
-		 * of all media attachments (images, audio, and video) that can be included in an
-		 * ActivityPub post. The name is maintained for backwards compatibility.
-		 *
-		 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
-		 */
-		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
-
-		if ( 0 === $max_media ) {
-			return array();
-		}
-
-		// Check for custom attachment selection.
-		$selected_attachments = \get_post_meta( $this->item->ID, 'activitypub_selected_attachments', true );
-		
-		if ( is_array( $selected_attachments ) && ! empty( $selected_attachments ) ) {
-			// Use custom selection.
-			$media = array();
-			foreach ( $selected_attachments as $attachment_id ) {
-				$attachment = \get_post( $attachment_id );
-				if ( $attachment && 'attachment' === $attachment->post_type ) {
-					$media[] = array( 'id' => $attachment_id );
-				}
-			}
-			
-			// Limit to max_media.
-			$media = \array_slice( $media, 0, $max_media );
-			
-			$attachments = \array_filter( \array_map( array( $this, 'transform_attachment' ), $media ) );
-			
-			/**
-			 * Filter the attachments for a post.
-			 *
-			 * @param array    $attachments The attachments.
-			 * @param \WP_Post $item        The post object.
-			 *
-			 * @return array The filtered attachments.
-			 */
-			return \apply_filters( 'activitypub_attachments', $attachments, $this->item );
-		}
-
-		// Fall back to automatic attachment detection.
-		$media = array(
-			'image' => array(),
-			'audio' => array(),
-			'video' => array(),
-		);
-		$id    = $this->item->ID;
-
-		// List post thumbnail first if this post has one.
-		if ( \has_post_thumbnail( $id ) ) {
-			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
-		}
-
-		$media = $this->get_enclosures( $media );
-
-		if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
-			$media = $this->get_block_attachments( $media, $max_media );
+		if ( \metadata_exists( 'post', $this->item->ID, 'activitypub_selected_attachments' ) ) {
+			$media = \get_post_meta( $this->item->ID, 'activitypub_selected_attachments', true );
+			$media = array_filter( $media, 'wp_attachment_is_image' );
+			$media = array( 'image' => $media );
 		} else {
-			$media = $this->parse_html_images( $media, $max_media, $this->item->post_content );
-		}
+			$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true );
 
-		$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
-		$media = $this->filter_unique_attachments( $media );
-		$media = \array_slice( $media, 0, $max_media );
+			if ( ! is_numeric( $max_media ) ) {
+				$max_media = \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
+			}
+
+			/**
+			 * Filters the maximum number of media attachments allowed in a post.
+			 *
+			 * Despite the name suggesting only images, this filter controls the maximum number
+			 * of all media attachments (images, audio, and video) that can be included in an
+			 * ActivityPub post. The name is maintained for backwards compatibility.
+			 *
+			 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
+			 */
+			$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
+
+			if ( 0 === $max_media ) {
+				return array();
+			}
+
+			// Fall back to legacy max_image_attachments behavior for old posts.
+			$media = array(
+				'image' => array(),
+				'audio' => array(),
+				'video' => array(),
+			);
+			$id    = $this->item->ID;
+
+			// List post thumbnail first if this post has one.
+			if ( \has_post_thumbnail( $id ) ) {
+				$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
+			}
+
+			$media = $this->get_enclosures( $media );
+
+			if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
+				$media = $this->get_block_attachments( $media, $max_media );
+			} else {
+				$media = $this->parse_html_images( $media, $max_media, $this->item->post_content );
+			}
+
+			$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
+			$media = $this->filter_unique_attachments( $media );
+			$media = \array_slice( $media, 0, $max_media );
+		}
 
 		/**
 		 * Filter the attachment IDs for a post.
