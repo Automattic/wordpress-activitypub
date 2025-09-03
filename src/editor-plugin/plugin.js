@@ -96,7 +96,11 @@ const EditorPlugin = () => {
 				__nextHasNoMarginBottom
 			/>
 
-			<BaseControl label={ __( 'Image Attachments', 'activitypub' ) } __next40pxDefaultSize>
+			<BaseControl
+				label={ __( 'Image Attachments', 'activitypub' ) }
+				help={ __( 'Choose which images to share with the fediverse.', 'activitypub' ) }
+				__next40pxDefaultSize
+			>
 				<AttachmentSelector
 					selectedAttachments={ meta?.activitypub_selected_attachments }
 					onSelectionChange={ ( selection ) => {
