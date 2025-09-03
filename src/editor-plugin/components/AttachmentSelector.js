@@ -2,7 +2,7 @@ import { Spinner, __experimentalVStack as VStack } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { useEntityRecords } from '@wordpress/core-data';
 import { __ } from '@wordpress/i18n';
-import { useState, useCallback, useMemo } from '@wordpress/element';
+import { useState, useCallback, useMemo, useEffect } from '@wordpress/element';
 
 import DropZone from './DropZone';
 import AttachmentItem from './AttachmentItem';
@@ -69,19 +69,19 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 		? selectedAttachments.filter( ( id ) => attachments?.some( ( attachment ) => attachment.id === id ) )
 		: [];
 
+	// Filter unselected attachments once to avoid redundant computation
+	const unselectedAttachments =
+		attachments?.filter( ( attachment ) => ! effectiveSelection.includes( attachment.id ) ) || [];
+
 	// Auto-select first X images when no selection has ever been set (undefined) and images are available
 	// Don't auto-select if user has intentionally set empty selection ([])
-	const shouldAutoSelect =
-		selectedAttachments === undefined && attachments && attachments.length > 0 && globalMaxAttachments > 0;
-
-	if ( shouldAutoSelect ) {
-		// Auto-select up to globalMaxAttachments images
-		const autoSelectedIds = attachments.slice( 0, globalMaxAttachments ).map( ( attachment ) => attachment.id );
-		// Use setTimeout to avoid updating state during render
-		setTimeout( () => {
+	useEffect( () => {
+		if ( selectedAttachments === undefined && attachments && attachments.length > 0 && globalMaxAttachments > 0 ) {
+			// Auto-select up to globalMaxAttachments images
+			const autoSelectedIds = attachments.slice( 0, globalMaxAttachments ).map( ( attachment ) => attachment.id );
 			onSelectionChange( autoSelectedIds );
-		}, 0 );
-	}
+		}
+	}, [ selectedAttachments, attachments, globalMaxAttachments, onSelectionChange ] );
 
 	/**
 	 * Handles attachment selection toggle.
@@ -279,26 +279,24 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 			) }
 
 			{ /* Section separator and unselected attachments */ }
-			{ attachments.filter( ( attachment ) => ! effectiveSelection.includes( attachment.id ) ).length > 0 && (
+			{ unselectedAttachments.length > 0 && (
 				<>
 					{ effectiveSelection.length > 0 && <div className="activitypub-attachment-selector__separator" /> }
 
 					{ /* Unselected attachments */ }
-					{ attachments
-						.filter( ( attachment ) => ! effectiveSelection.includes( attachment.id ) )
-						.map( ( attachment ) => (
-							<AttachmentItem
-								key={ attachment.id }
-								attachment={ attachment }
-								isSelected={ false }
-								selectionIndex={ -1 }
-								isDragging={ false }
-								isDraggedOver={ false }
-								onToggle={ () => handleToggleAttachment( attachment.id ) }
-								onDragStart={ () => {} }
-								dragHandlers={ {} }
-							/>
-						) ) }
+					{ unselectedAttachments.map( ( attachment ) => (
+						<AttachmentItem
+							key={ attachment.id }
+							attachment={ attachment }
+							isSelected={ false }
+							selectionIndex={ -1 }
+							isDragging={ false }
+							isDraggedOver={ false }
+							onToggle={ () => handleToggleAttachment( attachment.id ) }
+							onDragStart={ () => {} }
+							dragHandlers={ {} }
+						/>
+					) ) }
 				</>
 			) }
 		</VStack>

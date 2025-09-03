@@ -867,7 +867,7 @@ class Activitypub {
 			$matches       = false;
 
 			if ( is_array( $default_value ) && is_array( $meta_value ) ) {
-				$matches = empty( $meta_value ) && empty( $default_value );
+				$matches = $default_value === $meta_value;
 			} else {
 				$matches = $default_value === (string) $meta_value;
 			}
