@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix reply block rendering inconsistency where blocks were always converted to @-mentions in ActivityPub content. Now only first reply blocks become @-mentions, others remain as regular links.
