@@ -131,6 +131,9 @@ class Blocks {
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/editor-plugin/plugin.asset.php';
 		$plugin_url = plugins_url( 'build/editor-plugin/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		wp_enqueue_script( 'activitypub-block-editor', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+
+		$style_url = plugins_url( 'build/editor-plugin/style-plugin.css', ACTIVITYPUB_PLUGIN_FILE );
+		wp_enqueue_style( 'activitypub-block-editor', $style_url, array(), $asset_data['version'] );
 	}
 
 	/**
@@ -325,7 +328,7 @@ class Blocks {
 			<div class="activitypub-modal__frame">
 				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
 					<div class="activitypub-modal__header">
-						<h2 
+						<h2
 							class="activitypub-modal__title"
 							<?php if ( ! empty( $args['id'] ) ) : ?>
 								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
