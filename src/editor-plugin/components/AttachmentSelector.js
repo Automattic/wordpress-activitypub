@@ -207,12 +207,9 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 
 	if ( contentAttachmentIds.length === 0 || ! attachments || attachments.length === 0 ) {
 		return (
-			<p className="activitypub-attachment-selector__help">
-				{ __(
-					'Add images to your post content to choose which ones to share with the fediverse.',
-					'activitypub'
-				) }
-			</p>
+			<div className="activitypub-attachment-selector__empty-state">
+				<p>{ __( 'Images from your post will appear here for selection.', 'activitypub' ) }</p>
+			</div>
 		);
 	}
 

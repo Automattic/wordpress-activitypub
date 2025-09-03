@@ -19,6 +19,21 @@
 		border: none;
 		width: 25%;
 	}
+
+	// Empty state styles
+	&__empty-state {
+		background-color: #f9f9f9;
+		border: 1px solid #e0e0e0;
+		border-radius: 6px;
+		padding: 16px;
+
+		p {
+			margin: 0;
+			color: #757575;
+			font-size: 13px;
+			line-height: 1.4;
+		}
+	}
 }
 
 // Drop Zone Styles
@@ -89,6 +104,24 @@
 	&--drag-over {
 		border-color: #005177 !important;
 		box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
+	}
+
+	&--placeholder {
+		opacity: 0.6;
+		cursor: default;
+		border-style: dashed;
+		border-color: #ccc;
+		background-color: #f9f9f9;
+
+		&:hover {
+			border-color: #ccc;
+			opacity: 0.6;
+		}
+
+		.activitypub-attachment-item__title {
+			color: #757575;
+			font-style: italic;
+		}
 	}
 
 	&__drag-handle {
