@@ -38,7 +38,7 @@ We encourage you to ask for help at any point. We want your first experience wit
 - Create issues only for specific bugs or concrete enhancement proposals.
 - Keep questions concise and directly related to the plugin.
 
-This helps us organize feedback effectively and ensures your questions get the right attention..
+This helps us organize feedback effectively and ensures your questions get the right attention.
 
 ## Translate the plugin
 
