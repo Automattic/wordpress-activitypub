@@ -9,7 +9,6 @@ namespace Activitypub\Tests;
 
 use Activitypub\Blocks;
 use Activitypub\Collection\Interactions;
-use Activitypub\Transformer\Post;
 
 /**
  * Test class for Blocks.
