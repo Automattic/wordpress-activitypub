@@ -25,6 +25,7 @@ class Comment {
 		// Comment transitions.
 		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
 		\add_action( 'wp_insert_comment', array( self::class, 'schedule_comment_activity_on_insert' ), 10, 2 );
+		\add_action( 'delete_comment', array( self::class, 'schedule_comment_delete_activity' ), 10, 2 );
 	}
 
 	/**
@@ -87,5 +88,29 @@ class Comment {
 		if ( 1 === (int) $comment->comment_approved ) {
 			self::schedule_comment_activity( 'approved', '', $comment );
 		}
+	}
+
+	/**
+	 * Schedule Delete activity when a comment is permanently deleted.
+	 *
+	 * @param int         $comment_id Comment ID.
+	 * @param \WP_Comment $comment    Comment object.
+	 */
+	public static function schedule_comment_delete_activity( $comment_id, $comment ) {
+		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			return;
+		}
+
+		// Only send Delete activities for comments that were previously federated.
+		if ( ! \Activitypub\Comment::was_sent( $comment ) ) {
+			return;
+		}
+
+		// Federate only comments that are written by a registered user.
+		if ( ! $comment || ! $comment->user_id ) {
+			return;
+		}
+
+		add_to_outbox( $comment, 'Delete', $comment->user_id );
 	}
 }

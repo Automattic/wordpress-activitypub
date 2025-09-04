@@ -126,4 +126,118 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		wp_delete_comment( $comment_id, true );
 	}
+
+	/**
+	 * Test scheduling Delete activity when comment is permanently deleted.
+	 *
+	 * @covers ::schedule_comment_delete_activity
+	 */
+	public function test_schedule_comment_delete_activity() {
+		// Create a comment that gets federated.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$comment_post_ID,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 1,
+			)
+		);
+
+		// Mark the comment as sent (federated).
+		\add_comment_meta( $comment_id, 'activitypub_status', 'federated' );
+
+		$comment        = \get_comment( $comment_id );
+		$activitypub_id = \Activitypub\Comment::generate_id( $comment );
+
+		// Permanently delete the comment - this should trigger a Delete activity.
+		\wp_delete_comment( $comment_id, true );
+
+		// Check if a Delete activity was created.
+		$outbox_posts = \get_posts(
+			array(
+				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
+				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
+				'numberposts' => -1,
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox_posts, 'Should create exactly one Delete activity for permanently deleted federated comment' );
+
+		// Verify the outbox post has correct metadata.
+		$outbox_post = $outbox_posts[0];
+		$this->assertEquals( 'Delete', \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true ) );
+		$this->assertEquals( $activitypub_id, \get_post_meta( $outbox_post->ID, '_activitypub_object_id', true ) );
+		$this->assertEquals( self::$user_id, $outbox_post->post_author );
+	}
+
+	/**
+	 * Test that non-federated comments don't create Delete activities.
+	 *
+	 * @covers ::schedule_comment_delete_activity
+	 */
+	public function test_no_delete_activity_for_non_federated_comment() {
+		// Create a comment that was NOT federated.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$comment_post_ID,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 1,
+			)
+		);
+
+		$comment        = \get_comment( $comment_id );
+		$activitypub_id = \Activitypub\Comment::generate_id( $comment );
+
+		// Ensure this comment is NOT marked as sent.
+		\delete_comment_meta( $comment_id, 'activitypub_status' );
+
+		// Count existing Delete activities before deletion.
+		$outbox_posts_before = \get_posts(
+			array(
+				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
+				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
+				'numberposts' => -1,
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		// Permanently delete the comment.
+		\wp_delete_comment( $comment_id, true );
+
+		// Check that no new Delete activity was created for this specific comment.
+		$outbox_posts_after = \get_posts(
+			array(
+				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
+				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
+				'numberposts' => -1,
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertEmpty( $outbox_posts_after, 'Should not create Delete activity for non-federated comment deletion' );
+		$this->assertCount( count( $outbox_posts_before ), $outbox_posts_after, 'Number of Delete activities should remain unchanged' );
+	}
 }
