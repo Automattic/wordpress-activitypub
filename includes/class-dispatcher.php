@@ -433,7 +433,7 @@ class Dispatcher {
 		}
 
 		// Get all federated comments for this post.
-		$comment_actors = $wpdb->get_col(
+		$comment_actors = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT DISTINCT cm.meta_value 
 				FROM {$wpdb->comments} c
