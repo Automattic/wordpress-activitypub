@@ -87,6 +87,14 @@ class Blocks {
 				array(
 					'type'              => 'array',
 					'single'            => true,
+					'show_in_rest'      => array(
+						'schema' => array(
+							'type'  => 'array',
+							'items' => array(
+								'type' => 'integer',
+							),
+						),
+					),
 					'sanitize_callback' => function ( $value ) {
 						if ( ! is_array( $value ) ) {
 							return null;
