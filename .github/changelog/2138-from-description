@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add interactive image attachment selection control for ActivityPub posts with drag-and-drop reordering.
