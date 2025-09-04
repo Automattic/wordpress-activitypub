@@ -106,12 +106,10 @@ const EditorPlugin = () => {
 						! meta?.activitypub_selected_attachments ||
 						meta?.activitypub_selected_attachments?.includes( -1 )
 							? null
-							: meta?.activitypub_selected_attachments?.includes( 0 )
-							? []
 							: meta?.activitypub_selected_attachments
 					}
 					onSelectionChange={ ( selection ) => {
-						const value = selection === null ? [ -1 ] : selection.length === 0 ? [ 0 ] : selection;
+						const value = selection === null ? [ -1 ] : selection;
 						setMeta( { ...meta, activitypub_selected_attachments: value } );
 					} }
 					maxAttachments={ meta?.activitypub_max_image_attachments || 4 }
