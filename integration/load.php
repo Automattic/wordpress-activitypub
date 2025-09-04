@@ -128,6 +128,17 @@ function plugin_init() {
 	}
 
 	/**
+	 * Adds Yoast SEO support.
+	 *
+	 * This class handles the compatibility with Yoast SEO.
+	 *
+	 * @see https://wordpress.org/plugins/wordpress-seo/
+	 */
+	if ( \defined( 'WPSEO_VERSION' ) ) {
+		Yoast_Seo::init();
+	}
+
+	/**
 	 * Load the Surge integration.
 	 *
 	 * Only load code that needs Surge to run once Surge is loaded and initialized.
