@@ -353,4 +353,101 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		// Clean up.
 		remove_filter( 'pre_http_request', $callback );
 	}
+
+	/**
+	 * Test that Delete activities are sent to comment actors.
+	 *
+	 * @covers ::add_inboxes_of_comment_actors
+	 */
+	public function test_send_delete_to_comment_actors() {
+		// Create a test post.
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+
+		// Create a federated comment on the post.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_author'  => 'Remote User',
+				'comment_content' => 'This is a federated comment',
+			)
+		);
+
+		// Add comment meta manually.
+		add_comment_meta( $comment_id, 'activitypub_actor_id', 'https://mastodon.social/users/testuser' );
+
+		// Create a Delete activity for the post.
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		$activity->set_id( 'https://example.com/delete-activity' );
+		$activity->set_object( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		// Mock HTTP responses for actor lookups.
+		$callback = function ( $pre, $parsed_args, $url ) {
+			if ( 'https://mastodon.social/users/testuser' === $url ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'type'  => 'Person',
+							'id'    => 'https://mastodon.social/users/testuser',
+							'inbox' => 'https://mastodon.social/users/testuser/inbox',
+						)
+					),
+				);
+			}
+
+			return $pre;
+		};
+
+		add_filter( 'pre_http_request', $callback, 10, 3 );
+
+		// Get inboxes for comment actors.
+		$inboxes = Dispatcher::add_inboxes_of_comment_actors( array(), self::$user_id, $activity );
+
+		// Verify that the comment actor's inbox was added.
+		$this->assertContains( 'https://mastodon.social/users/testuser/inbox', $inboxes, 'Should include comment actor inbox' );
+
+		// Clean up.
+		remove_filter( 'pre_http_request', $callback );
+		wp_delete_comment( $comment_id, true );
+		wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test that non-Delete activities don't add comment actor inboxes.
+	 *
+	 * @covers ::add_inboxes_of_comment_actors
+	 */
+	public function test_non_delete_activities_ignore_comment_actors() {
+		// Create a test post.
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+
+		// Create a federated comment on the post.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_author'  => 'Remote User',
+				'comment_content' => 'This is a federated comment',
+				'meta_input'      => array(
+					'activitypub_actor_id' => 'https://mastodon.social/@user',
+				),
+			)
+		);
+
+		// Create a Create activity (not Delete).
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/create-activity' );
+		$activity->set_object( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		// Get inboxes for comment actors.
+		$inboxes = Dispatcher::add_inboxes_of_comment_actors( array(), self::$user_id, $activity );
+
+		// Verify that no inboxes were added since it's not a Delete activity.
+		$this->assertEmpty( $inboxes, 'Should not add comment actor inboxes for non-Delete activities' );
+
+		// Clean up.
+		wp_delete_comment( $comment_id, true );
+		wp_delete_post( $post_id, true );
+	}
 }

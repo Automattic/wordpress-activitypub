@@ -10,6 +10,8 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
+use Activitypub\Http;
+use Activitypub\Mention;
 
 /**
  * ActivityPub Dispatcher Class.
@@ -44,6 +46,7 @@ class Dispatcher {
 		// Default filters to add Inboxes to sent to.
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
+		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_comment_actors' ), 10, 3 );
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_relays' ), 10, 3 );
 	}
 
@@ -380,6 +383,93 @@ class Dispatcher {
 		 * @param \WP_Post $outbox_item                The WordPress object.
 		 */
 		return apply_filters( 'activitypub_send_activity_to_followers', $send, $activity, $outbox_item->post_author, $outbox_item );
+	}
+
+	/**
+	 * Add inboxes of actors who have commented on the post being deleted.
+	 *
+	 * @param array    $inboxes  The list of Inboxes.
+	 * @param int      $actor_id The Actor-ID.
+	 * @param Activity $activity The ActivityPub Activity.
+	 *
+	 * @return array The filtered Inboxes.
+	 */
+	public static function add_inboxes_of_comment_actors( $inboxes, $actor_id, $activity ) {
+		// Only process Delete activities.
+		if ( 'Delete' !== $activity->get_type() ) {
+			return $inboxes;
+		}
+
+		global $wpdb;
+
+		// Get the original post ID from the activity object.
+		$object_id = $activity->get_object();
+		if ( ! is_string( $object_id ) ) {
+			return $inboxes;
+		}
+
+		// Extract post ID from the ActivityPub URL.
+		$post_id = url_to_postid( $object_id );
+		if ( ! $post_id ) {
+			// Try to get post ID from the URL pattern (e.g., ?p=123).
+			if ( preg_match( '/[?&]p=(\d+)/', $object_id, $matches ) ) {
+				$post_id = (int) $matches[1];
+			}
+		}
+
+		if ( ! $post_id ) {
+			// Try parsing the URL to get query parameters.
+			$parsed_url = wp_parse_url( $object_id );
+			if ( isset( $parsed_url['query'] ) ) {
+				parse_str( $parsed_url['query'], $query_vars );
+				if ( isset( $query_vars['p'] ) ) {
+					$post_id = (int) $query_vars['p'];
+				}
+			}
+		}
+
+		if ( ! $post_id ) {
+			return $inboxes;
+		}
+
+		// Get all federated comments for this post.
+		$comment_actors = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT cm.meta_value 
+				FROM {$wpdb->comments} c
+				INNER JOIN {$wpdb->commentmeta} cm ON c.comment_ID = cm.comment_id
+				WHERE c.comment_post_ID = %d 
+				AND cm.meta_key = 'activitypub_actor_id'
+				AND cm.meta_value != ''",
+				$post_id
+			)
+		);
+
+		if ( empty( $comment_actors ) ) {
+			return $inboxes;
+		}
+
+		// Get inboxes for these actors.
+		foreach ( $comment_actors as $actor_url ) {
+			// Skip same domain actors.
+			if ( is_same_domain( $actor_url ) ) {
+				continue;
+			}
+
+			$actor = Http::get_remote_object( $actor_url );
+
+			if ( ! $actor || \is_wp_error( $actor ) ) {
+				continue;
+			}
+
+			if ( ! empty( $actor['endpoints']['sharedInbox'] ) ) {
+				$inboxes[] = $actor['endpoints']['sharedInbox'];
+			} elseif ( ! empty( $actor['inbox'] ) ) {
+				$inboxes[] = $actor['inbox'];
+			}
+		}
+
+		return $inboxes;
 	}
 
 	/**
