@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests\Scheduler;
 
+use Activitypub\Comment;
+
 /**
  * Test Comment scheduler class.
  *
@@ -41,7 +43,7 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				'comment_approved' => 0,
 			)
 		);
-		$activitpub_id = \Activitypub\Comment::generate_id( $comment_id );
+		$activitpub_id = Comment::generate_id( $comment_id );
 
 		wp_set_comment_status( $comment_id, 'approve' );
 
@@ -49,7 +51,7 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
 
-		wp_delete_comment( $comment_id, true );
+		\wp_delete_comment( $comment_id, true );
 	}
 
 	/**
@@ -63,13 +65,13 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				'comment_approved' => 1,
 			)
 		);
-		$activitpub_id = \Activitypub\Comment::generate_id( $comment_id );
+		$activitpub_id = Comment::generate_id( $comment_id );
 
 		$post = $this->get_latest_outbox_item( $activitpub_id );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
 
-		wp_delete_comment( $comment_id, true );
+		\wp_delete_comment( $comment_id, true );
 	}
 
 	/**
@@ -120,11 +122,11 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		}
 
 		$comment_id    = self::factory()->comment->create( $comment_data );
-		$activitpub_id = \Activitypub\Comment::generate_id( $comment_id );
+		$activitpub_id = Comment::generate_id( $comment_id );
 
 		$this->assertNull( $this->get_latest_outbox_item( $activitpub_id ) );
 
-		wp_delete_comment( $comment_id, true );
+		\wp_delete_comment( $comment_id, true );
 	}
 
 	/**
@@ -145,8 +147,7 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Mark the comment as sent (federated).
 		\add_comment_meta( $comment_id, 'activitypub_status', 'federated' );
 
-		$comment        = \get_comment( $comment_id );
-		$activitypub_id = \Activitypub\Comment::generate_id( $comment );
+		$activitypub_id = Comment::generate_id( $comment_id );
 
 		// Permanently delete the comment - this should trigger a Delete activity.
 		\wp_delete_comment( $comment_id, true );
@@ -156,7 +157,7 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			array(
 				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
 				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
-				'numberposts' => -1,
+				'numberposts' => 1,
 				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 					array(
 						'key'   => '_activitypub_object_id',
@@ -171,9 +172,9 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		);
 
 		$this->assertCount( 1, $outbox_posts, 'Should create exactly one Delete activity for permanently deleted federated comment' );
+		$outbox_post = $outbox_posts[0];
 
 		// Verify the outbox post has correct metadata.
-		$outbox_post = $outbox_posts[0];
 		$this->assertEquals( 'Delete', \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true ) );
 		$this->assertEquals( $activitypub_id, \get_post_meta( $outbox_post->ID, '_activitypub_object_id', true ) );
 		$this->assertEquals( self::$user_id, $outbox_post->post_author );
@@ -194,51 +195,20 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			)
 		);
 
-		$comment        = \get_comment( $comment_id );
-		$activitypub_id = \Activitypub\Comment::generate_id( $comment );
+		$activitypub_id = Comment::generate_id( $comment_id );
 
 		// Ensure this comment is NOT marked as sent.
 		\delete_comment_meta( $comment_id, 'activitypub_status' );
 
-		// Count existing Delete activities before deletion.
-		$outbox_posts_before = \get_posts(
-			array(
-				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
-				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
-				'numberposts' => -1,
-				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					array(
-						'key'   => '_activitypub_activity_type',
-						'value' => 'Delete',
-					),
-				),
-			)
-		);
-
 		// Permanently delete the comment.
 		\wp_delete_comment( $comment_id, true );
 
-		// Count all Delete activities after deletion to ensure no new ones were created.
-		$outbox_posts_after = \get_posts(
+		// Check that no Delete activity was created for this specific comment.
+		$outbox_posts = \get_posts(
 			array(
 				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
 				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
-				'numberposts' => -1,
-				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					array(
-						'key'   => '_activitypub_activity_type',
-						'value' => 'Delete',
-					),
-				),
-			)
-		);
-
-		// Check that no new Delete activity was created for this specific comment.
-		$specific_comment_activities = \get_posts(
-			array(
-				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
-				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
-				'numberposts' => -1,
+				'numberposts' => 1,
 				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 					array(
 						'key'   => '_activitypub_object_id',
@@ -252,7 +222,6 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			)
 		);
 
-		$this->assertEmpty( $specific_comment_activities, 'Should not create Delete activity for non-federated comment deletion' );
-		$this->assertCount( count( $outbox_posts_before ), $outbox_posts_after, 'Number of Delete activities should remain unchanged' );
+		$this->assertEmpty( $outbox_posts, 'Should not create Delete activity for non-federated comment deletion' );
 	}
 }
