@@ -306,7 +306,13 @@ class Post extends Base {
 		// Check for custom attachment selection.
 		$selected_attachments = \get_post_meta( $this->item->ID, 'activitypub_selected_attachments', true );
 
-		if ( \is_array( $selected_attachments ) ) {
+		if ( \is_array( $selected_attachments ) && ! \in_array( -1, $selected_attachments, true ) ) {
+			// Handle explicit "no attachments" selection.
+			if ( array( 0 ) === $selected_attachments ) {
+				return array();
+			}
+
+			// Manual selection of specific attachments.
 			$media = array();
 			foreach ( $selected_attachments as $attachment_id ) {
 				$attachment = \get_post( $attachment_id );

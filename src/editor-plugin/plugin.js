@@ -102,9 +102,17 @@ const EditorPlugin = () => {
 				__next40pxDefaultSize
 			>
 				<AttachmentSelector
-					selectedAttachments={ meta?.activitypub_selected_attachments ?? null }
+					selectedAttachments={
+						! meta?.activitypub_selected_attachments ||
+						meta?.activitypub_selected_attachments?.includes( -1 )
+							? null
+							: meta?.activitypub_selected_attachments?.includes( 0 )
+							? []
+							: meta?.activitypub_selected_attachments
+					}
 					onSelectionChange={ ( selection ) => {
-						setMeta( { ...meta, activitypub_selected_attachments: selection } );
+						const value = selection === null ? [ -1 ] : selection.length === 0 ? [ 0 ] : selection;
+						setMeta( { ...meta, activitypub_selected_attachments: value } );
 					} }
 					maxAttachments={ meta?.activitypub_max_image_attachments || 4 }
 				/>

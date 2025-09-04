@@ -85,22 +85,18 @@ class Blocks {
 				$post_type,
 				'activitypub_selected_attachments',
 				array(
-					'type'              => 'array',
-					'single'            => true,
-					'show_in_rest'      => array(
+					'type'         => 'array',
+					'single'       => true,
+					'show_in_rest' => array(
 						'schema' => array(
 							'type'  => 'array',
 							'items' => array(
-								'type' => 'integer',
+								'type'    => 'integer',
+								'minimum' => -1,
 							),
 						),
 					),
-					'sanitize_callback' => function ( $value ) {
-						if ( ! is_array( $value ) ) {
-							return null;
-						}
-						return array_map( 'absint', array_filter( $value, 'is_numeric' ) );
-					},
+					'default'      => array( -1 ), // -1 = auto-selection
 				)
 			);
 		}
