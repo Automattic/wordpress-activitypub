@@ -1,13 +1,14 @@
 import { store as editorStore } from '@wordpress/editor';
 import { useSelect } from '@wordpress/data';
 import { useEntityRecords } from '@wordpress/core-data';
-import { Spinner, __experimentalVStack as VStack } from '@wordpress/components';
-import { Icon, media as mediaIcon } from '@wordpress/icons';
-import { useState, useCallback, useMemo } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __experimentalVStack as VStack } from '@wordpress/components';
+import { useCallback, useMemo } from '@wordpress/element';
 
 import DropZone from './DropZone';
 import AttachmentItem from './AttachmentItem';
+import LoadingState from './LoadingState';
+import EmptyState from './EmptyState';
+import useDragAndDrop from '../hooks/useDragAndDrop';
 
 /**
  * Attachment selection component for choosing which attachments to federate.
@@ -19,35 +20,43 @@ import AttachmentItem from './AttachmentItem';
  * @returns {React.JSX.Element|null} The attachment selection component.
  */
 const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttachments } ) => {
-	const [ draggedItem, setDraggedItem ] = useState( null );
-	const [ draggedOver, setDraggedOver ] = useState( null );
+	// Drag and drop functionality
+	const { draggedItem, draggedOver, handleDragStart, setDraggedOver, createDragHandlers, createDropHandler } =
+		useDragAndDrop( onSelectionChange );
 
 	const postId = useSelect( ( select ) => select( editorStore ).getCurrentPostId(), [] );
 	const postStatus = useSelect( ( select ) => select( editorStore ).getCurrentPost()?.status, [] );
+	const postContent = useSelect( ( select ) => select( 'core/editor' ).getEditedPostContent(), [] );
+	const featuredImageId = useSelect(
+		( select ) => select( 'core/editor' ).getEditedPostAttribute( 'featured_media' ),
+		[]
+	);
 
-	// Get post content to extract attachment IDs
-	const postContent = useSelect( ( select ) => {
-		return select( 'core/editor' ).getEditedPostContent();
-	}, [] );
-
-	// Extract attachment IDs from post content
+	// Extract attachment IDs from post content and featured image
 	const contentAttachmentIds = useMemo( () => {
-		if ( ! postContent ) return [];
-
 		const ids = [];
-		// Match image blocks: {"id":1045}
-		const imageMatches = postContent.match( /"id":(\d+)/g );
-		if ( imageMatches ) {
-			imageMatches.forEach( ( match ) => {
-				const id = parseInt( match.replace( /"id":/, '' ), 10 );
-				if ( id && ! ids.includes( id ) ) {
-					ids.push( id );
-				}
-			} );
+
+		// Add featured image first if it exists
+		if ( featuredImageId && featuredImageId > 0 ) {
+			ids.push( featuredImageId );
+		}
+
+		// Add content attachment IDs
+		if ( postContent ) {
+			// Match image blocks: {"id":1045}
+			const imageMatches = postContent.match( /"id":(\d+)/g );
+			if ( imageMatches ) {
+				imageMatches.forEach( ( match ) => {
+					const id = parseInt( match.replace( /"id":/, '' ), 10 );
+					if ( id && ! ids.includes( id ) ) {
+						ids.push( id );
+					}
+				} );
+			}
 		}
 
 		return ids;
-	}, [ postContent ] );
+	}, [ postContent, featuredImageId ] );
 
 	// Fetch attachments by post_parent (traditional attachments)
 	// Skip for new/auto-draft posts to avoid fetching unrelated attachments
@@ -65,13 +74,7 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 		{ enabled: shouldFetchParentAttachments }
 	);
 
-	// Get featured image
-	const featuredImageId = useSelect( ( select ) => {
-		return select( 'core/editor' ).getEditedPostAttribute( 'featured_media' );
-	}, [] );
-
-	// Fetch content-referenced attachments if we have IDs
-	const shouldFetchContentAttachments = contentAttachmentIds.length > 0;
+	// Fetch content-referenced attachments and featured image if we have IDs
 	const { records: contentAttachments, isResolving: isLoadingContentAttachments } = useEntityRecords(
 		'root',
 		'media',
@@ -79,36 +82,22 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 			include: contentAttachmentIds,
 			per_page: -1,
 		},
-		{ enabled: shouldFetchContentAttachments }
+		{ enabled: contentAttachmentIds.length > 0 }
 	);
 
-	// Fetch featured image if it exists and isn't already included
-	// Simplified condition - we'll deduplicate later in the useMemo
-	const shouldFetchFeaturedImage =
-		featuredImageId && featuredImageId > 0 && ! contentAttachmentIds.includes( featuredImageId );
-
-	const { records: featuredAttachment, isResolving: isLoadingFeaturedAttachment } = useEntityRecords(
-		'root',
-		'media',
-		{
-			include: [ featuredImageId ],
-			per_page: 1,
-		},
-		{ enabled: shouldFetchFeaturedImage }
-	);
-
-	// Combine and deduplicate attachments, filter for images only
+	// Combine and deduplicate attachments
 	const attachments = useMemo( () => {
 		const combined = [];
 		const seenIds = new Set();
 
-		// Add featured image first if it exists
-		if ( featuredAttachment && featuredAttachment.length > 0 ) {
-			const featured = featuredAttachment[ 0 ];
-			if ( ! seenIds.has( featured.id ) ) {
-				combined.push( featured );
-				seenIds.add( featured.id );
-			}
+		// Add content attachments (includes featured image)
+		if ( contentAttachments ) {
+			contentAttachments.forEach( ( attachment ) => {
+				if ( ! seenIds.has( attachment.id ) ) {
+					combined.push( attachment );
+					seenIds.add( attachment.id );
+				}
+			} );
 		}
 
 		// Add parent attachments
@@ -121,21 +110,8 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 			} );
 		}
 
-		// Add content attachments
-		if ( contentAttachments ) {
-			contentAttachments.forEach( ( attachment ) => {
-				if ( ! seenIds.has( attachment.id ) ) {
-					combined.push( attachment );
-					seenIds.add( attachment.id );
-				}
-			} );
-		}
-
 		return combined;
-	}, [ featuredAttachment, parentAttachments, contentAttachments ] );
-
-	const isLoadingAttachments =
-		isLoadingParentAttachments || isLoadingContentAttachments || isLoadingFeaturedAttachment;
+	}, [ contentAttachments, parentAttachments ] );
 
 	// Get auto-selected attachments (mimicking the backend logic)
 	const autoSelectedAttachments = useMemo( () => {
@@ -190,131 +166,24 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 		[ isAutoMode, autoSelectedAttachments, selectedAttachments, onSelectionChange ]
 	);
 
-	/**
-	 * Handles drag start.
-	 *
-	 * @param {Event} e The drag event.
-	 * @param {number} attachmentId The attachment being dragged.
-	 */
-	const handleDragStart = useCallback( ( e, attachmentId ) => {
-		setDraggedItem( attachmentId );
-		e.dataTransfer.effectAllowed = 'move';
-	}, [] );
-
-	/**
-	 * Handles drag over.
-	 *
-	 * @param {Event} e The drag event.
-	 * @param {number} attachmentId The attachment being dragged over.
-	 */
-	const handleDragOver = useCallback( ( e, attachmentId ) => {
-		e.preventDefault();
-		setDraggedOver( attachmentId );
-	}, [] );
-
-	/**
-	 * Handles drag enter.
-	 *
-	 * @param {Event} e The drag event.
-	 * @param {number} attachmentId The attachment being entered.
-	 */
-	const handleDragEnter = useCallback( ( e, attachmentId ) => {
-		e.preventDefault();
-		setDraggedOver( attachmentId );
-	}, [] );
-
-	/**
-	 * Handles drag leave.
-	 */
-	const handleDragLeave = useCallback( () => {
-		setDraggedOver( null );
-	}, [] );
-
-	/**
-	 * Handles drop.
-	 *
-	 * @param {Event} e The drop event.
-	 * @param {number} targetId The attachment being dropped on.
-	 * @param {number} dropPosition Position relative to target: -1 (before), 0 (on), 1 (after).
-	 */
-	const handleDrop = useCallback(
-		( e, targetId, dropPosition = 0 ) => {
-			e.preventDefault();
-
-			if ( ! draggedItem ) {
-				setDraggedItem( null );
-				setDraggedOver( null );
-				return;
-			}
-
-			// When user drags, switch from auto mode to manual mode if needed
-			// Start with current effective selection as the baseline
-			const currentSelection = isAutoMode ? [ ...autoSelectedAttachments ] : [ ...selectedAttachments ];
-			const newSelection = [ ...currentSelection ];
-
-			// Remove dragged item from selection
-			const draggedIndex = newSelection.indexOf( draggedItem );
-			if ( draggedIndex !== -1 ) {
-				newSelection.splice( draggedIndex, 1 );
-			}
-
-			if ( targetId === null ) {
-				// Dropped at the beginning or end
-				if ( dropPosition === -1 ) {
-					newSelection.unshift( draggedItem ); // Add to beginning
-				} else {
-					newSelection.push( draggedItem ); // Add to end
-				}
-			} else {
-				// Find target position in the selection array
-				let targetIndex = newSelection.indexOf( targetId );
-				if ( targetIndex === -1 ) {
-					// Target not in selection, add to end
-					newSelection.push( draggedItem );
-				} else {
-					// Insert relative to target
-					if ( dropPosition >= 0 ) {
-						targetIndex++; // Insert after target
-					}
-					newSelection.splice( targetIndex, 0, draggedItem );
-				}
-			}
-
-			onSelectionChange( newSelection );
-			setDraggedItem( null );
-			setDraggedOver( null );
-		},
-		[ draggedItem, isAutoMode, autoSelectedAttachments, selectedAttachments, onSelectionChange ]
-	);
-
-	if ( isLoadingAttachments ) {
-		return (
-			<div style={ { textAlign: 'center', padding: '20px' } }>
-				<Spinner />
-				<p>{ __( 'Loading attachments...', 'activitypub' ) }</p>
-			</div>
-		);
+	if ( isLoadingParentAttachments || isLoadingContentAttachments ) {
+		return <LoadingState />;
 	}
 
 	if ( ! attachments || attachments.length === 0 ) {
-		return (
-			<div style={ { textAlign: 'center', padding: '20px', color: '#8c8f94' } }>
-				<Icon icon={ mediaIcon } size={ 24 } />
-				<p>{ __( 'No attachments found for this post.', 'activitypub' ) }</p>
-			</div>
-		);
+		return <EmptyState />;
 	}
-
-	// Create drag handlers for attachment items
-	const createDragHandlers = ( attachmentId ) => ( {
-		onDragOver: ( e ) => handleDragOver( e, attachmentId ),
-		onDragEnter: ( e ) => handleDragEnter( e, attachmentId ),
-		onDragLeave: handleDragLeave,
-		onDrop: ( e ) => handleDrop( e, attachmentId ),
-	} );
 
 	// Filter unselected attachments once to avoid redundant computation
 	const unselectedAttachments = attachments?.filter( ( { id } ) => ! effectiveSelection.includes( id ) ) || [];
+
+	// Selection info for drag & drop handlers
+	const selectionInfo = {
+		currentSelection: effectiveSelection,
+		isAutoMode,
+		autoSelection: autoSelectedAttachments,
+		manualSelection: selectedAttachments,
+	};
 
 	return (
 		<VStack spacing={ 1 } className="activitypub-attachment-selector">
@@ -325,7 +194,7 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 						<DropZone
 							zoneId="drop-zone-start"
 							isActive={ draggedOver === 'drop-zone-start' }
-							onDrop={ ( e ) => handleDrop( e, null, -1 ) }
+							onDrop={ ( e ) => createDropHandler( null, -1 )( e, selectionInfo ) }
 							setDraggedOver={ setDraggedOver }
 						/>
 					) }
@@ -353,7 +222,7 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 									<DropZone
 										zoneId={ `drop-zone-after-${ attachment.id }` }
 										isActive={ draggedOver === `drop-zone-after-${ attachment.id }` }
-										onDrop={ ( e ) => handleDrop( e, attachment.id, 1 ) }
+										onDrop={ ( e ) => createDropHandler( attachment.id, 1 )( e, selectionInfo ) }
 										setDraggedOver={ setDraggedOver }
 									/>
 								) }
@@ -366,7 +235,7 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 						<DropZone
 							zoneId="drop-zone-end"
 							isActive={ draggedOver === 'drop-zone-end' }
-							onDrop={ ( e ) => handleDrop( e, null, 1 ) }
+							onDrop={ ( e ) => createDropHandler( null, 1 )( e, selectionInfo ) }
 							setDraggedOver={ setDraggedOver }
 						/>
 					) }
