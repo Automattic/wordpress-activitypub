@@ -97,8 +97,8 @@ const EditorPlugin = () => {
 			/>
 
 			<BaseControl
-				label={ __( 'Image Attachments', 'activitypub' ) }
-				help={ __( 'Choose which images to share with the fediverse.', 'activitypub' ) }
+				label={ __( 'Media Attachments', 'activitypub' ) }
+				help={ __( 'Choose which media files to share with the fediverse.', 'activitypub' ) }
 				__next40pxDefaultSize
 			>
 				<AttachmentSelector
