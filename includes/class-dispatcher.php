@@ -389,7 +389,7 @@ class Dispatcher {
 	 * Add inboxes of actors who have commented on the post being deleted.
 	 *
 	 * @param array    $inboxes  The list of Inboxes.
-	 * @param int      $actor_id The Actor-ID.
+	 * @param int      $actor_id The Actor ID.
 	 * @param Activity $activity The ActivityPub Activity.
 	 *
 	 * @return array The filtered Inboxes.
@@ -403,7 +403,7 @@ class Dispatcher {
 		global $wpdb;
 
 		// Get the original post ID from the activity object.
-		$object_id = $activity->get_object();
+		$object_id = object_to_uri( $activity->get_object() );
 		if ( ! is_string( $object_id ) ) {
 			return $inboxes;
 		}
@@ -457,7 +457,6 @@ class Dispatcher {
 			}
 
 			$actor = Http::get_remote_object( $actor_url );
-
 			if ( ! $actor || \is_wp_error( $actor ) ) {
 				continue;
 			}
