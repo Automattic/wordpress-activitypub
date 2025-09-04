@@ -29,7 +29,7 @@ class Yoast_Seo {
 	public static function add_site_health_tests( $tests ) {
 		// Only add the test if attachment post type is supported by ActivityPub.
 		if ( self::is_attachment_supported() ) {
-			$tests['direct']['activitypub_yoast_media_pages'] = array(
+			$tests['direct']['activitypub_yoast_seo_media_pages'] = array(
 				'label' => \__( 'Yoast SEO Media Pages Test', 'activitypub' ),
 				'test'  => array( self::class, 'test_yoast_seo_media_pages' ),
 			);

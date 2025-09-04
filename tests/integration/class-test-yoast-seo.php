@@ -37,8 +37,8 @@ class Test_Yoast_Seo extends \WP_UnitTestCase {
 
 		// Check if our test is registered.
 		$this->assertArrayHasKey( 'direct', $tests );
-		$this->assertArrayHasKey( 'activitypub_yoast_media_pages', $tests['direct'] );
-		$this->assertEquals( 'Yoast SEO Media Pages Test', $tests['direct']['activitypub_yoast_media_pages']['label'] );
+		$this->assertArrayHasKey( 'activitypub_yoast_seo_media_pages', $tests['direct'] );
+		$this->assertEquals( 'Yoast SEO Media Pages Test', $tests['direct']['activitypub_yoast_seo_media_pages']['label'] );
 	}
 
 	/**
@@ -60,7 +60,7 @@ class Test_Yoast_Seo extends \WP_UnitTestCase {
 		$tests = \apply_filters( 'site_status_tests', array( 'direct' => array() ) );
 
 		// Check if our test is NOT registered.
-		$this->assertArrayNotHasKey( 'activitypub_yoast_media_pages', $tests['direct'] );
+		$this->assertArrayNotHasKey( 'activitypub_yoast_seo_media_pages', $tests['direct'] );
 	}
 
 	/**
