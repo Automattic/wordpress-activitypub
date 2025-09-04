@@ -43,10 +43,10 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 
 		// Add content attachment IDs
 		if ( postContent ) {
-			// Match image blocks: {"id":1045}
-			const imageMatches = postContent.match( /"id":(\d+)/g );
-			if ( imageMatches ) {
-				imageMatches.forEach( ( match ) => {
+			// Match attachment IDs in blocks: {"id":1045}
+			const mediaMatches = postContent.match( /"id":(\d+)/g );
+			if ( mediaMatches ) {
+				mediaMatches.forEach( ( match ) => {
 					const id = parseInt( match.replace( /"id":/, '' ), 10 );
 					if ( id && ! ids.includes( id ) ) {
 						ids.push( id );
