@@ -218,8 +218,23 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Permanently delete the comment.
 		\wp_delete_comment( $comment_id, true );
 
-		// Check that no new Delete activity was created for this specific comment.
+		// Count all Delete activities after deletion to ensure no new ones were created.
 		$outbox_posts_after = \get_posts(
+			array(
+				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
+				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
+				'numberposts' => -1,
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		// Check that no new Delete activity was created for this specific comment.
+		$specific_comment_activities = \get_posts(
 			array(
 				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
 				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
@@ -237,7 +252,7 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			)
 		);
 
-		$this->assertEmpty( $outbox_posts_after, 'Should not create Delete activity for non-federated comment deletion' );
+		$this->assertEmpty( $specific_comment_activities, 'Should not create Delete activity for non-federated comment deletion' );
 		$this->assertCount( count( $outbox_posts_before ), $outbox_posts_after, 'Number of Delete activities should remain unchanged' );
 	}
 }
