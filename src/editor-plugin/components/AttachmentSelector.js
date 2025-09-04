@@ -1,3 +1,4 @@
+import { store as editorStore } from '@wordpress/editor';
 import { useSelect } from '@wordpress/data';
 import { useEntityRecords } from '@wordpress/core-data';
 import { Spinner, __experimentalVStack as VStack } from '@wordpress/components';
