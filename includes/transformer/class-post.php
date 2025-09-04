@@ -305,8 +305,8 @@ class Post extends Base {
 
 		// Check for custom attachment selection.
 		$selected_attachments = \get_post_meta( $this->item->ID, 'activitypub_selected_attachments', true );
-		
-		if ( is_array( $selected_attachments ) && ! empty( $selected_attachments ) ) {
+
+		if ( \is_array( $selected_attachments ) && ! empty( $selected_attachments ) ) {
 			// Use custom selection.
 			$media = array();
 			foreach ( $selected_attachments as $attachment_id ) {
@@ -315,52 +315,37 @@ class Post extends Base {
 					$media[] = array( 'id' => $attachment_id );
 				}
 			}
-			
-			// Limit to max_media.
-			$media = \array_slice( $media, 0, $max_media );
-			
-			$attachments = \array_filter( \array_map( array( $this, 'transform_attachment' ), $media ) );
-			
-			/**
-			 * Filter the attachments for a post.
-			 *
-			 * @param array    $attachments The attachments.
-			 * @param \WP_Post $item        The post object.
-			 *
-			 * @return array The filtered attachments.
-			 */
-			return \apply_filters( 'activitypub_attachments', $attachments, $this->item );
-		}
-
-		// Fall back to automatic attachment detection.
-		$media = array(
-			'image' => array(),
-			'audio' => array(),
-			'video' => array(),
-		);
-		$id    = $this->item->ID;
-
-		// List post thumbnail first if this post has one.
-		if ( \has_post_thumbnail( $id ) ) {
-			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
-		}
-
-		$media = $this->get_enclosures( $media );
-
-		if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
-			$media = $this->get_block_attachments( $media, $max_media );
 		} else {
-			$media = $this->parse_html_images( $media, $max_media, $this->item->post_content );
-		}
+			// Fall back to automatic attachment detection.
+			$media = array(
+				'image' => array(),
+				'audio' => array(),
+				'video' => array(),
+			);
+			$id    = $this->item->ID;
 
-		$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
-		$media = $this->filter_unique_attachments( $media );
-		$media = \array_slice( $media, 0, $max_media );
+			// List post thumbnail first if this post has one.
+			if ( \has_post_thumbnail( $id ) ) {
+				$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
+			}
+
+			$media = $this->get_enclosures( $media );
+
+			if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
+				$media = $this->get_block_attachments( $media, $max_media );
+			} else {
+				$media = $this->parse_html_images( $media, $max_media, $this->item->post_content );
+			}
+
+			$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
+			$media = $this->filter_unique_attachments( $media );
+			$media = \array_slice( $media, 0, $max_media );
+		}
 
 		/**
 		 * Filter the attachment IDs for a post.
 		 *
-		 * @param array    $media The media array grouped by type.
+		 * @param array    $media The media array.
 		 * @param \WP_Post $item  The post object.
 		 *
 		 * @return array The filtered attachment IDs.
