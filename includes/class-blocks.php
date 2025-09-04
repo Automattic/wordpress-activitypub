@@ -87,18 +87,9 @@ class Blocks {
 				array(
 					'type'              => 'array',
 					'single'            => true,
-					'show_in_rest'      => array(
-						'schema' => array(
-							'type'  => 'array',
-							'items' => array(
-								'type' => 'integer',
-							),
-						),
-					),
-					'default'           => array(),
 					'sanitize_callback' => function ( $value ) {
 						if ( ! is_array( $value ) ) {
-							return array();
+							return null;
 						}
 						return array_map( 'absint', array_filter( $value, 'is_numeric' ) );
 					},

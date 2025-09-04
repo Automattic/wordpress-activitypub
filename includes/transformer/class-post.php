@@ -306,8 +306,7 @@ class Post extends Base {
 		// Check for custom attachment selection.
 		$selected_attachments = \get_post_meta( $this->item->ID, 'activitypub_selected_attachments', true );
 
-		if ( \is_array( $selected_attachments ) && ! empty( $selected_attachments ) ) {
-			// Use custom selection.
+		if ( \is_array( $selected_attachments ) ) {
 			$media = array();
 			foreach ( $selected_attachments as $attachment_id ) {
 				$attachment = \get_post( $attachment_id );
@@ -316,7 +315,7 @@ class Post extends Base {
 				}
 			}
 		} else {
-			// Fall back to automatic attachment detection.
+			// Fall back to automatic attachment detection when null/undefined.
 			$media = array(
 				'image' => array(),
 				'audio' => array(),

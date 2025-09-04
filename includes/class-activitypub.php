@@ -859,7 +859,6 @@ class Activitypub {
 			'activitypub_content_visibility'    => '',
 			'activitypub_content_warning'       => '',
 			'activitypub_max_image_attachments' => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
-			'activitypub_selected_attachments'  => array(),
 		);
 
 		if ( isset( $post_metas[ $meta_key ] ) ) {

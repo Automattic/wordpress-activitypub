@@ -1,4 +1,11 @@
-import { Icon, dragHandle, image as imageIcon } from '@wordpress/icons';
+import {
+	Icon,
+	dragHandle,
+	image as imageIcon,
+	video as videoIcon,
+	audio as audioIcon,
+	media as mediaIcon,
+} from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -34,6 +41,56 @@ const AttachmentItem = ( {
 		.filter( Boolean )
 		.join( ' ' );
 
+	/**
+	 * Determines the normalized media type from attachment.
+	 *
+	 * @param {Object} attachment The attachment object.
+	 * @returns {string} The normalized media type (image, video, audio, or file).
+	 */
+	const getMediaType = ( attachment ) => {
+		// First try the media_type field
+		let mediaType = attachment.media_type;
+
+		// Fallback to mime_type if media_type is not reliable
+		if ( ! mediaType || mediaType === 'file' ) {
+			const mimeType = attachment.mime_type || '';
+			if ( mimeType.startsWith( 'image/' ) ) {
+				mediaType = 'image';
+			} else if ( mimeType.startsWith( 'audio/' ) ) {
+				mediaType = 'audio';
+			} else if ( mimeType.startsWith( 'video/' ) ) {
+				mediaType = 'video';
+			}
+		}
+
+		return mediaType;
+	};
+
+	/**
+	 * Returns the appropriate icon based on media type.
+	 *
+	 * @param {Object} attachment The attachment object.
+	 * @returns {Object} The icon object.
+	 */
+	const getIcon = ( attachment ) => {
+		const mediaType = getMediaType( attachment );
+		switch ( mediaType ) {
+			case 'image':
+				return imageIcon;
+			case 'video':
+				return videoIcon;
+			case 'audio':
+				return audioIcon;
+			default:
+				return mediaIcon;
+		}
+	};
+
+	let sourceUrl = attachment?.media_details?.sizes?.thumbnail?.source_url;
+	if ( ! sourceUrl && 'image' === getMediaType( attachment ) ) {
+		sourceUrl = attachment?.source_url;
+	}
+
 	return (
 		<div
 			draggable={ isSelected }
@@ -52,15 +109,15 @@ const AttachmentItem = ( {
 				<div className="activitypub-attachment-item__spacer" />
 			) }
 
-			{ attachment.media_details?.sizes?.thumbnail?.source_url ? (
+			{ sourceUrl ? (
 				<img
-					src={ attachment.media_details.sizes.thumbnail.source_url }
+					src={ sourceUrl }
 					alt={ attachment.alt_text || attachment.title.rendered }
 					className="activitypub-attachment-item__thumbnail"
 				/>
 			) : (
 				<div className="activitypub-attachment-item__thumbnail activitypub-attachment-item__thumbnail--placeholder">
-					<Icon icon={ imageIcon } size={ 20 } />
+					<Icon icon={ getIcon( attachment ) } size={ 20 } />
 				</div>
 			) }
 

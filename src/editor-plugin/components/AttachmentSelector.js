@@ -23,6 +23,7 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 	const [ draggedOver, setDraggedOver ] = useState( null );
 
 	const postId = useSelect( ( select ) => select( editorStore ).getCurrentPostId(), [] );
+	const postStatus = useSelect( ( select ) => select( editorStore ).getCurrentPost()?.status, [] );
 
 	// Get post content to extract attachment IDs
 	const postContent = useSelect( ( select ) => {
@@ -49,12 +50,20 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 	}, [ postContent ] );
 
 	// Fetch attachments by post_parent (traditional attachments)
-	const { records: parentAttachments, isResolving: isLoadingParentAttachments } = useEntityRecords( 'root', 'media', {
-		post_parent: postId,
-		per_page: -1,
-		orderby: 'menu_order',
-		order: 'asc',
-	} );
+	// Skip for new/auto-draft posts to avoid fetching unrelated attachments
+	const shouldFetchParentAttachments = postId && postId > 0 && postStatus !== 'auto-draft';
+
+	const { records: parentAttachments, isResolving: isLoadingParentAttachments } = useEntityRecords(
+		'root',
+		'media',
+		{
+			post_parent: postId,
+			per_page: -1,
+			orderby: 'menu_order',
+			order: 'asc',
+		},
+		{ enabled: shouldFetchParentAttachments }
+	);
 
 	// Get featured image
 	const featuredImageId = useSelect( ( select ) => {
@@ -62,29 +71,30 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 	}, [] );
 
 	// Fetch content-referenced attachments if we have IDs
+	const shouldFetchContentAttachments = contentAttachmentIds.length > 0;
 	const { records: contentAttachments, isResolving: isLoadingContentAttachments } = useEntityRecords(
 		'root',
 		'media',
-		contentAttachmentIds.length > 0
-			? {
-					include: contentAttachmentIds,
-					per_page: -1,
-			  }
-			: null
+		{
+			include: contentAttachmentIds,
+			per_page: -1,
+		},
+		{ enabled: shouldFetchContentAttachments }
 	);
 
 	// Fetch featured image if it exists and isn't already included
+	// Simplified condition - we'll deduplicate later in the useMemo
+	const shouldFetchFeaturedImage =
+		featuredImageId && featuredImageId > 0 && ! contentAttachmentIds.includes( featuredImageId );
+
 	const { records: featuredAttachment, isResolving: isLoadingFeaturedAttachment } = useEntityRecords(
 		'root',
 		'media',
-		featuredImageId &&
-			! contentAttachmentIds.includes( featuredImageId ) &&
-			( ! parentAttachments || ! parentAttachments.some( ( a ) => a.id === featuredImageId ) )
-			? {
-					include: [ featuredImageId ],
-					per_page: 1,
-			  }
-			: null
+		{
+			include: [ featuredImageId ],
+			per_page: 1,
+		},
+		{ enabled: shouldFetchFeaturedImage }
 	);
 
 	// Combine and deduplicate attachments, filter for images only
@@ -153,33 +163,12 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 		return autoSelected.slice( 0, maxAttachments );
 	}, [ attachments, maxAttachments, featuredImageId ] );
 
-	// Use auto-selected if no manual selection has been made
-	const effectiveSelection = selectedAttachments.length > 0 ? selectedAttachments : autoSelectedAttachments;
-
-	/**
-	 * Determines the normalized media type from attachment.
-	 *
-	 * @param {Object} attachment The attachment object.
-	 * @returns {string} The normalized media type (image, video, audio, or file).
-	 */
-	const getMediaType = ( attachment ) => {
-		// First try the media_type field
-		let mediaType = attachment.media_type;
-
-		// Fallback to mime_type if media_type is not reliable
-		if ( ! mediaType || mediaType === 'file' ) {
-			const mimeType = attachment.mime_type || '';
-			if ( mimeType.startsWith( 'image/' ) ) {
-				mediaType = 'image';
-			} else if ( mimeType.startsWith( 'audio/' ) ) {
-				mediaType = 'audio';
-			} else if ( mimeType.startsWith( 'video/' ) ) {
-				mediaType = 'video';
-			}
-		}
-
-		return mediaType;
-	};
+	// Three-state system:
+	// null/undefined = Auto-selection active
+	// [] = Manual selection of no attachments
+	// [id1, id2...] = Manual selection of specific attachments
+	const isAutoMode = selectedAttachments === null || selectedAttachments === undefined;
+	const effectiveSelection = isAutoMode ? autoSelectedAttachments : selectedAttachments;
 
 	/**
 	 * Handles attachment selection toggle.
@@ -188,13 +177,17 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 	 */
 	const handleToggleAttachment = useCallback(
 		( attachmentId ) => {
-			const newSelection = effectiveSelection.includes( attachmentId )
-				? effectiveSelection.filter( ( id ) => id !== attachmentId )
-				: [ ...effectiveSelection, attachmentId ];
+			// When user first interacts, switch from auto mode to manual mode
+			// Start with current effective selection as the baseline
+			const currentSelection = isAutoMode ? [ ...autoSelectedAttachments ] : [ ...selectedAttachments ];
+
+			const newSelection = currentSelection.includes( attachmentId )
+				? currentSelection.filter( ( id ) => id !== attachmentId )
+				: [ ...currentSelection, attachmentId ];
 
 			onSelectionChange( newSelection );
 		},
-		[ effectiveSelection, onSelectionChange ]
+		[ isAutoMode, autoSelectedAttachments, selectedAttachments, onSelectionChange ]
 	);
 
 	/**
@@ -254,8 +247,10 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 				return;
 			}
 
-			// Work with all attachments array to maintain correct order
-			const newSelection = [ ...effectiveSelection ];
+			// When user drags, switch from auto mode to manual mode if needed
+			// Start with current effective selection as the baseline
+			const currentSelection = isAutoMode ? [ ...autoSelectedAttachments ] : [ ...selectedAttachments ];
+			const newSelection = [ ...currentSelection ];
 
 			// Remove dragged item from selection
 			const draggedIndex = newSelection.indexOf( draggedItem );
@@ -289,7 +284,7 @@ const AttachmentSelector = ( { selectedAttachments, onSelectionChange, maxAttach
 			setDraggedItem( null );
 			setDraggedOver( null );
 		},
-		[ draggedItem, effectiveSelection, onSelectionChange, attachments ]
+		[ draggedItem, isAutoMode, autoSelectedAttachments, selectedAttachments, onSelectionChange ]
 	);
 
 	if ( isLoadingAttachments ) {

@@ -102,7 +102,7 @@ const EditorPlugin = () => {
 				__next40pxDefaultSize
 			>
 				<AttachmentSelector
-					selectedAttachments={ meta?.activitypub_selected_attachments || [] }
+					selectedAttachments={ meta?.activitypub_selected_attachments ?? null }
 					onSelectionChange={ ( selection ) => {
 						setMeta( { ...meta, activitypub_selected_attachments: selection } );
 					} }
