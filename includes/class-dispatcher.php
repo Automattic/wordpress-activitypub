@@ -10,8 +10,6 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
-use Activitypub\Http;
-use Activitypub\Mention;
 
 /**
  * ActivityPub Dispatcher Class.
@@ -400,8 +398,6 @@ class Dispatcher {
 			return $inboxes;
 		}
 
-		global $wpdb;
-
 		// Get the original post ID from the activity object.
 		$object_id = object_to_uri( $activity->get_object() );
 		if ( ! is_string( $object_id ) ) {
@@ -431,6 +427,8 @@ class Dispatcher {
 		if ( ! $post_id ) {
 			return $inboxes;
 		}
+
+		global $wpdb;
 
 		// Get all federated comments for this post.
 		$comment_actors = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
