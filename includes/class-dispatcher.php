@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 
@@ -400,30 +401,12 @@ class Dispatcher {
 
 		// Get the original post ID from the activity object.
 		$object_id = object_to_uri( $activity->get_object() );
-		if ( ! is_string( $object_id ) ) {
+		if ( ! \is_string( $object_id ) ) {
 			return $inboxes;
 		}
 
 		// Extract post ID from the ActivityPub URL.
-		$post_id = url_to_postid( $object_id );
-		if ( ! $post_id ) {
-			// Try to get post ID from the URL pattern (e.g., ?p=123).
-			if ( preg_match( '/[?&]p=(\d+)/', $object_id, $matches ) ) {
-				$post_id = (int) $matches[1];
-			}
-		}
-
-		if ( ! $post_id ) {
-			// Try parsing the URL to get query parameters.
-			$parsed_url = wp_parse_url( $object_id );
-			if ( isset( $parsed_url['query'] ) ) {
-				parse_str( $parsed_url['query'], $query_vars );
-				if ( isset( $query_vars['p'] ) ) {
-					$post_id = (int) $query_vars['p'];
-				}
-			}
-		}
-
+		$post_id = \url_to_postid( $object_id );
 		if ( ! $post_id ) {
 			return $inboxes;
 		}
@@ -454,15 +437,20 @@ class Dispatcher {
 				continue;
 			}
 
-			$actor = Http::get_remote_object( $actor_url );
-			if ( ! $actor || \is_wp_error( $actor ) ) {
+			$actor_post = Actors::fetch_remote_by_uri( $actor_url );
+			if ( \is_wp_error( $actor_post ) ) {
 				continue;
 			}
 
-			if ( ! empty( $actor['endpoints']['sharedInbox'] ) ) {
-				$inboxes[] = $actor['endpoints']['sharedInbox'];
-			} elseif ( ! empty( $actor['inbox'] ) ) {
-				$inboxes[] = $actor['inbox'];
+			$actor = Actors::get_actor( $actor_post );
+			if ( \is_wp_error( $actor ) ) {
+				continue;
+			}
+
+			if ( ! empty( $actor->get_endpoints()['sharedInbox'] ) ) {
+				$inboxes[] = $actor->get_endpoints()['sharedInbox'];
+			} elseif ( ! empty( $actor->get_inbox() ) ) {
+				$inboxes[] = $actor->get_inbox();
 			}
 		}
 
