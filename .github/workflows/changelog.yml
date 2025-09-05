@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: 'Check for Skip Changelog label, or if the PR is a draft'
         id: check-skip-label
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { payload : { pull_request : { number, labels, draft = false, base : { ref } } } } = context;
@@ -42,7 +42,7 @@ jobs:
       - name: 'Check for changelog file'
         if: steps.check-skip-label.outputs.skip-changelog != 'true'
         id: check-changelog-file
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { repo: { owner, repo }, payload : { pull_request : { number } } } = context;
@@ -85,7 +85,7 @@ jobs:
       - name: 'Check for changelog information in PR body'
         id: check-pr-body
         if: steps.check-skip-label.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { repo: { owner, repo }, payload : { pull_request : { number, body } } } = context;
@@ -165,7 +165,7 @@ jobs:
         if: steps.check-skip-label.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true' && steps.check-pr-body.outputs.has-changelog-info == 'true'
         env:
           PR_MESSAGE: '${{ steps.check-pr-body.outputs.message }}'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.API_TOKEN_GITHUB }}
           script: |
