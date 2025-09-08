@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Http;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
@@ -240,7 +241,7 @@ class Actors {
 			case 'http':
 			case 'https':
 				// Check locally stored remote Actor.
-				$post = self::get_remote_by_uri( $uri );
+				$post = Remote_Actors::get_by_uri( $uri );
 
 				if ( ! \is_wp_error( $post ) ) {
 					return $post->ID;

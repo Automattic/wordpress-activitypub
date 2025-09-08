@@ -66,7 +66,7 @@ class Remote_Actors {
 			$actor = Actor::init_from_array( $actor );
 		}
 
-		$post = self::get_remote_by_uri( $actor->get_id() );
+		$post = self::get_by_uri( $actor->get_id() );
 
 		if ( ! \is_wp_error( $post ) ) {
 			return self::update( $post, $actor );
