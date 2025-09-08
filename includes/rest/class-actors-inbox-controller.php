@@ -8,6 +8,8 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
+use Activitypub\Debug;
 use Activitypub\Moderation;
 
 use function Activitypub\get_context;

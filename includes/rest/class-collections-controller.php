@@ -9,6 +9,9 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
+use Activitypub\Model\Application;
+use Activitypub\Model\Blog;
+use Activitypub\Model\User;
 use Activitypub\Transformer\Factory;
 
 use function Activitypub\esc_hashtag;

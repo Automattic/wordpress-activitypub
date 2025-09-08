@@ -9,6 +9,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Debug;
 use Activitypub\Moderation;
 
 use function Activitypub\extract_recipients_from_activity;

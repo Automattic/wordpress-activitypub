@@ -9,9 +9,9 @@ namespace Activitypub\Tests\Transformer;
 
 use Activitypub\Activity\Base_Object;
 use Activitypub\Activity\Generic_Object;
+use Activitypub\Http;
 use Activitypub\Transformer\Base;
 use Activitypub\Transformer\Post;
-
 /**
  * Test class for Base Transformer.
  *
