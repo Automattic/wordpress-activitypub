@@ -28,10 +28,7 @@ foreach ( $users as $user_id ) {
 		continue;
 	}
 
-	// Check if user has ActivityPub capability.
-	if ( ! user_can( $user_id, 'activitypub' ) ) {
-		continue;
-	}
+	// Note: ActivityPub capability has already been removed, but we still show the user for fediverse deletion confirmation
 
 	$user_data[] = array(
 		'id'           => $user_id,
@@ -52,12 +49,12 @@ $user_count = count( $user_data );
 require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
 <div class="wrap">
-	<h1><?php esc_html_e( 'Remove ActivityPub Capability', 'activitypub' ); ?></h1>
+	<h1><?php esc_html_e( 'Delete Users from Fediverse', 'activitypub' ); ?></h1>
 	<p>
 	<?php
 	printf(
 		/* translators: %d: number of users */
-		esc_html( _n( 'You are about to remove ActivityPub capability from %d user.', 'You are about to remove ActivityPub capability from %d users.', $user_count, 'activitypub' ) ),
+		esc_html( _n( 'ActivityPub capability has been removed from %d user. Do you want to also remove them from the Fediverse?', 'ActivityPub capability has been removed from %d users. Do you want to also remove them from the Fediverse?', $user_count, 'activitypub' ) ),
 		esc_html( number_format_i18n( $user_count ) )
 	);
 	?>
@@ -74,8 +71,6 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 		<?php endforeach; ?>
 
 		<div class="activitypub-user-list">
-			<h3><?php esc_html_e( 'Users to Process:', 'activitypub' ); ?></h3>
-
 			<ul>
 				<?php foreach ( $user_data as $user ) : ?>
 					<li>
@@ -89,48 +84,13 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 			</ul>
 		</div>
 
-		<div class="notice notice-info">
-			<h3><?php esc_html_e( 'Fediverse Removal Options', 'activitypub' ); ?></h3>
-			<p><?php esc_html_e( 'For each user above, you can choose whether to also remove them from the Fediverse by checking the box next to their name. This will send Delete activities to notify their followers.', 'activitypub' ); ?></p>
-		</div>
-
-		<div class="activitypub-consequences">
-			<h4><?php esc_html_e( 'This action will:', 'activitypub' ); ?></h4>
-			<ul class="ul-disc">
-				<li><?php esc_html_e( 'Remove the ActivityPub capability from the selected users', 'activitypub' ); ?></li>
-				<li><?php esc_html_e( 'Prevent them from publishing new ActivityPub content', 'activitypub' ); ?></li>
-				<li><?php esc_html_e( 'Hide ActivityPub settings from their profile pages', 'activitypub' ); ?></li>
-				<li id="delete-consequences" style="display: none;"><?php esc_html_e( 'Send Delete activities to notify all followers', 'activitypub' ); ?></li>
-			</ul>
-		</div>
+		<p><?php esc_html_e( 'Fediverse deletion is optional but recommended to properly notify followers, but be aware that this action might be irreversible.', 'activitypub' ); ?></p>
 
 		<p class="submit">
-			<?php submit_button( __( 'Confirm Removal', 'activitypub' ), 'primary', 'submit', false ); ?>
-			<a href="<?php echo esc_url( $send_back ); ?>" class="button"><?php esc_html_e( 'Cancel', 'activitypub' ); ?></a>
+			<?php submit_button( __( 'Delete from Fediverse', 'activitypub' ), 'primary', 'submit', false ); ?>
+			<a href="<?php echo esc_url( $send_back ); ?>" class="button"><?php esc_html_e( 'Skip Fediverse Deletion', 'activitypub' ); ?></a>
 		</p>
 	</form>
 </div>
-
-<script type="text/javascript">
-document.addEventListener('DOMContentLoaded', function() {
-	const fediverseCheckboxes = document.querySelectorAll('.fediverse-removal-checkbox');
-	const deleteConsequences = document.getElementById('delete-consequences');
-
-	function updateDeleteConsequences() {
-		const hasDeleteAction = Array.from(fediverseCheckboxes).some(checkbox => checkbox.checked);
-		if (deleteConsequences) {
-			deleteConsequences.style.display = hasDeleteAction ? 'list-item' : 'none';
-		}
-	}
-
-	fediverseCheckboxes.forEach(function(checkbox) {
-		checkbox.addEventListener('change', updateDeleteConsequences);
-	});
-
-	// Initial check
-	updateDeleteConsequences();
-});
-</script>
-
 <?php
 require_once ABSPATH . 'wp-admin/admin-footer.php';
