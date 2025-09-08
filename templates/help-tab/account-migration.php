@@ -7,7 +7,6 @@
 
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
-
 use function Activitypub\user_can_activitypub;
 
 if ( user_can_activitypub( get_current_user_id() ) ) {

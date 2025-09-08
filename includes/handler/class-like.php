@@ -7,8 +7,8 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
+use Activitypub\Collection\Interactions;
 
 use function Activitypub\object_to_uri;
 

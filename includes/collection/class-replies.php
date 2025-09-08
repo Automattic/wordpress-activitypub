@@ -7,17 +7,18 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Comment;
-use Activitypub\Model\Blog;
-use Activitypub\Transformer\Comment as CommentTransformer;
-use Activitypub\Transformer\Post as PostTransformer;
+use WP_Post;
 use WP_Comment;
 use WP_Error;
-use WP_Post;
 
-use function Activitypub\get_rest_url_by_path;
-use function Activitypub\is_local_comment;
+use Activitypub\Comment;
+use Activitypub\Model\Blog;
+use Activitypub\Transformer\Post as PostTransformer;
+use Activitypub\Transformer\Comment as CommentTransformer;
+
 use function Activitypub\is_post_disabled;
+use function Activitypub\is_local_comment;
+use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_user_type_disabled;
 
 /**

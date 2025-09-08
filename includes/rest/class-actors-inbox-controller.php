@@ -13,8 +13,8 @@ use Activitypub\Debug;
 use Activitypub\Moderation;
 
 use function Activitypub\get_context;
-use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_masked_wp_version;
 
 /**
  * Actors_Inbox_Controller class.

@@ -7,8 +7,8 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Mailer;
+use Activitypub\Collection\Actors;
 use WP_UnitTestCase;
 
 /**

@@ -7,8 +7,8 @@
 
 namespace Activitypub\Transformer;
 
-use function Activitypub\is_activity;
 use function Activitypub\is_actor;
+use function Activitypub\is_activity;
 
 /**
  * String Transformer Class file.

@@ -7,10 +7,10 @@
 
 namespace Activitypub\WP_Admin;
 
-use Activitypub\Collection\Actors;
-use Activitypub\Http;
-use Activitypub\Sanitize;
 use Activitypub\Webfinger;
+use Activitypub\Http;
+use Activitypub\Collection\Actors;
+use Activitypub\Sanitize;
 
 use function Activitypub\user_can_activitypub;
 

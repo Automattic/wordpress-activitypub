@@ -8,8 +8,8 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Activitypub;
-use Activitypub\Collection\Outbox;
 use Activitypub\Query;
+use Activitypub\Collection\Outbox;
 
 /**
  * Test class for Activitypub.

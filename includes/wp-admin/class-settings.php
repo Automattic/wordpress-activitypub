@@ -10,7 +10,6 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Sanitize;
-
 use function Activitypub\user_can_activitypub;
 
 /**

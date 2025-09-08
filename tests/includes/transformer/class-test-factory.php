@@ -7,13 +7,13 @@
 
 namespace Activitypub\Tests\Transformer;
 
-use Activitypub\Transformer\Activity_Object;
-use Activitypub\Transformer\Attachment;
-use Activitypub\Transformer\Comment;
-use Activitypub\Transformer\Factory;
-use Activitypub\Transformer\Json;
-use Activitypub\Transformer\Post;
 use WP_UnitTestCase;
+use Activitypub\Transformer\Factory;
+use Activitypub\Transformer\Post;
+use Activitypub\Transformer\Comment;
+use Activitypub\Transformer\Attachment;
+use Activitypub\Transformer\Json;
+use Activitypub\Transformer\Activity_Object;
 
 /**
  * Test class for Transformer Factory.

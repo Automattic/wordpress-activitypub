@@ -7,8 +7,8 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Embed;
 use Activitypub\Http;
+use Activitypub\Embed;
 
 /**
  * URL Validator Controller Class.

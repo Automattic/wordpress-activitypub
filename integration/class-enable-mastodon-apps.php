@@ -7,17 +7,17 @@
 
 namespace Activitypub\Integration;
 
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Extra_Fields;
-use Activitypub\Collection\Followers;
+use DateTime;
+use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Http;
 use Activitypub\Mention;
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Transformer\Factory;
-use Activitypub\Webfinger as Webfinger_Util;
-use DateTime;
 use Enable_Mastodon_Apps\Entity\Account;
-use Enable_Mastodon_Apps\Entity\Media_Attachment;
 use Enable_Mastodon_Apps\Entity\Status;
+use Enable_Mastodon_Apps\Entity\Media_Attachment;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_user_type_disabled;

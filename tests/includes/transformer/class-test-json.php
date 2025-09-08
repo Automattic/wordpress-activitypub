@@ -7,8 +7,8 @@
 
 namespace Activitypub\Tests\Transformer;
 
-use Activitypub\Activity\Base_Object;
 use Activitypub\Transformer\Json;
+use Activitypub\Activity\Base_Object;
 use WP_UnitTestCase;
 
 /**

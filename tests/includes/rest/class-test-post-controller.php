@@ -9,9 +9,9 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\Rest\Post;
 use WP_REST_Request;
-use WP_REST_Response;
 use WP_REST_Server;
 use WP_UnitTestCase;
+use WP_REST_Response;
 
 /**
  * Test Post REST Endpoints.

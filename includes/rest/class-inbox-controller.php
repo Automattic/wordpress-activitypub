@@ -12,8 +12,8 @@ use Activitypub\Collection\Actors;
 use Activitypub\Debug;
 use Activitypub\Moderation;
 
-use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\is_same_domain;
+use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\user_can_activitypub;
 
 /**
