@@ -10,6 +10,7 @@ namespace Activitypub;
 use WP_Error;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * ActivityPub WebFinger Class.
@@ -309,7 +310,7 @@ class Webfinger {
 	 */
 	public static function guess( $actor_or_uri ) {
 		if ( ! $actor_or_uri instanceof Actor ) {
-			$actor = Actors::fetch_remote_by_uri( $actor_or_uri );
+			$actor = Remote_Actors::fetch_by_uri( $actor_or_uri );
 			if ( \is_wp_error( $actor ) ) {
 				return extract_name_from_uri( $actor_or_uri ) . '@' . \wp_parse_url( $actor_or_uri, PHP_URL_HOST );
 			}

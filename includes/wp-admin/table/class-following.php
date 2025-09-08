@@ -8,6 +8,7 @@
 namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Following as Following_Collection;
 use Activitypub\Moderation;
 use Activitypub\Sanitize;
@@ -242,7 +243,7 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor = Actors::get_actor( $following );
+			$actor = Remote_Actors::get_actor( $following );
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
@@ -443,7 +444,7 @@ class Following extends \WP_List_Table {
 		$search = Webfinger::resolve( $search );
 
 		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
-			$actor = Actors::fetch_remote_by_uri( $search );
+			$actor = Remote_Actors::fetch_by_uri( $search );
 			if ( ! is_wp_error( $actor ) ) {
 				echo ' ';
 				\printf(

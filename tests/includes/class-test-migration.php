@@ -11,6 +11,7 @@ use Activitypub\Migration;
 use Activitypub\Comment;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
@@ -604,7 +605,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			),
 		);
 
-		$post_id = Actors::upsert( $follower );
+		$post_id = Remote_Actors::upsert( $follower );
 
 		\add_post_meta( $post_id, '_activitypub_actor_json', \wp_json_encode( $follower ) );
 
@@ -894,7 +895,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			$remote_actor
 		);
 
-		$post_id = Actors::upsert( $actor_array );
+		$post_id = Remote_Actors::upsert( $actor_array );
 
 		\wp_update_post(
 			array(
@@ -957,7 +958,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
 
-		$post_id = Actors::upsert( $actor_array );
+		$post_id = Remote_Actors::upsert( $actor_array );
 
 		\wp_update_post(
 			array(

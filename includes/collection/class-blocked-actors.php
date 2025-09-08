@@ -7,6 +7,9 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
+
 use Activitypub\Moderation;
 
 /**
@@ -23,7 +26,7 @@ class Blocked_Actors {
 	 */
 	public static function add_block( $user_id, $value ) {
 		// Find or create actor post.
-		$actor_post = Actors::fetch_remote_by_uri( $value );
+		$actor_post = Remote_Actors::fetch_by_uri( $value );
 		if ( \is_wp_error( $actor_post ) ) {
 			return false;
 		}
@@ -61,7 +64,7 @@ class Blocked_Actors {
 			$post_id = (int) $value;
 		} else {
 			// Otherwise, find the actor post by actor ID.
-			$actor_post = Actors::fetch_remote_by_uri( $value );
+			$actor_post = Remote_Actors::fetch_by_uri( $value );
 			if ( \is_wp_error( $actor_post ) ) {
 				return false;
 			}

@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Following as Following_Collection;
 use Activitypub\WP_Admin\Table\Following;
 
@@ -102,7 +103,7 @@ class Test_Following extends \WP_UnitTestCase {
 		);
 
 		// Add the actor first, then follow them.
-		$actor_post_id = Actors::upsert( $actor_data );
+		$actor_post_id = Remote_Actors::upsert( $actor_data );
 
 		// Follow the actor using the proper method.
 		Following_Collection::follow( $actor_post_id, get_current_user_id() );
@@ -179,7 +180,7 @@ class Test_Following extends \WP_UnitTestCase {
 		);
 
 		// Add the actor first, then follow them.
-		$actor_post_id = Actors::upsert( $actor_data );
+		$actor_post_id = Remote_Actors::upsert( $actor_data );
 
 		// Follow the actor using the proper method.
 		Following_Collection::follow( $actor_post_id, get_current_user_id() );
@@ -304,7 +305,7 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertEquals( $actor_data['id'], $normalized_id, 'Actor object was not properly normalized to URI' );
 
 		// Add the actor and follow.
-		$actor_post_id = Actors::upsert( $actor_data );
+		$actor_post_id = Remote_Actors::upsert( $actor_data );
 		Following_Collection::follow( $actor_post_id, get_current_user_id() );
 
 		// Prepare items to test normalization.

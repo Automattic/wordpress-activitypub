@@ -8,6 +8,7 @@
 namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
 use Activitypub\Collection\Following;
 use Activitypub\Moderation;
@@ -274,7 +275,7 @@ class Followers extends \WP_List_Table {
 		);
 
 		foreach ( $followers as $follower ) {
-			$actor = Actors::get_actor( $follower );
+			$actor = Remote_Actors::get_actor( $follower );
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
@@ -547,7 +548,7 @@ class Followers extends \WP_List_Table {
 			return false;
 		}
 
-		$actor = Actors::fetch_remote_by_uri( $search );
+		$actor = Remote_Actors::fetch_by_uri( $search );
 		if ( \is_wp_error( $actor ) ) {
 			return false;
 		}

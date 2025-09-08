@@ -7,7 +7,7 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Followers;
 
 use function Activitypub\get_context;
@@ -107,7 +107,7 @@ class Followers_Controller extends Actors_Controller {
 				\array_map(
 					function ( $item ) use ( $context ) {
 						if ( 'full' === $context ) {
-							$actor = Actors::get_actor( $item );
+							$actor = Remote_Actors::get_actor( $item );
 							if ( \is_wp_error( $actor ) ) {
 								return false;
 							}

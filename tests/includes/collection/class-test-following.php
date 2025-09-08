@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Handler\Accept;
 
@@ -405,10 +406,10 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertSame( 1, $following['total'] );
 
 		// User 3 unfollows https://example.com/actor/1.
-		Following::unfollow( Actors::get_remote_by_uri( 'https://example.com/actor/1' ), $user_ids[2] );
+		Following::unfollow( Remote_Actors::get_by_uri( 'https://example.com/actor/1' ), $user_ids[2] );
 
 		// User 3 unfollows https://example.com/actor/1.
-		Following::unfollow( Actors::get_remote_by_uri( 'https://example.com/actor/1' ), 0 );
+		Following::unfollow( Remote_Actors::get_by_uri( 'https://example.com/actor/1' ), 0 );
 
 		$following = Following::get_following_with_count( 0 );
 		$this->assertCount( 0, $following['following'] );

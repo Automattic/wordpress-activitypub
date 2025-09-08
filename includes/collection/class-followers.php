@@ -8,6 +8,8 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Tombstone;
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_remote_metadata_by_actor;
 
@@ -51,7 +53,7 @@ class Followers {
 			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		$post_id = Actors::upsert( $meta );
+		$post_id = Remote_Actors::upsert( $meta );
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
@@ -60,7 +62,7 @@ class Followers {
 		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
 			\add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-			\wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
+			\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 		}
 
 		return $post_id;
@@ -82,7 +84,7 @@ class Followers {
 		}
 
 		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-		\wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
+		\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 
 		/**
 		 * Fires before a Follower is removed.
@@ -91,7 +93,7 @@ class Followers {
 		 * @param int                         $user_id The ID of the WordPress User.
 		 * @param \Activitypub\Activity\Actor $actor   The remote Actor object.
 		 */
-		\do_action( 'activitypub_followers_pre_remove_follower', $post, $user_id, Actors::get_actor( $post ) );
+		\do_action( 'activitypub_followers_pre_remove_follower', $post, $user_id, Remote_Actors::get_actor( $post ) );
 
 		return \delete_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 	}
@@ -134,7 +136,7 @@ class Followers {
 			$wpdb->prepare(
 				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid = %s",
 				array(
-					\esc_sql( Actors::POST_TYPE ),
+					\esc_sql( Remote_Actors::POST_TYPE ),
 					\esc_sql( self::FOLLOWER_META_KEY ),
 					\esc_sql( $user_id ),
 					\esc_sql( $actor ),
@@ -156,14 +158,16 @@ class Followers {
 	/**
 	 * Get a Follower by Actor independent of the User.
 	 *
+	 * @deprecated unreleased
+	 *
 	 * @param string $actor The Actor URL.
 	 *
 	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_remote_by_uri' );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_by_uri' );
 
-		return Actors::get_remote_by_uri( $actor );
+		return Remote_Actors::get_by_uri( $actor );
 	}
 
 	/**
@@ -199,7 +203,7 @@ class Followers {
 	 */
 	public static function get_followers_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
+			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',
@@ -257,7 +261,7 @@ class Followers {
 		$posts = new \WP_Query(
 			array(
 				'nopaging'   => true,
-				'post_type'  => Actors::POST_TYPE,
+				'post_type'  => Remote_Actors::POST_TYPE,
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
@@ -315,7 +319,7 @@ class Followers {
 		$activity = \json_decode( $json, true );
 		// Only if this is a Delete. Create handles its own "Announce" in dual user mode.
 		if ( 'Delete' === ( $activity['type'] ?? null ) ) {
-			$inboxes = Actors::get_inboxes();
+			$inboxes = Remote_Actors::get_inboxes();
 		} else {
 			$inboxes = self::get_inboxes( $actor_id );
 		}

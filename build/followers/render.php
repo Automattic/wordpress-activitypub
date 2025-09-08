@@ -7,6 +7,7 @@
 
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Followers;
 use function Activitypub\is_activitypub_request;
 use function Activitypub\object_to_uri;
@@ -56,7 +57,7 @@ $followers = array_map(
 	 * @return array
 	 */
 	function ( $follower ) {
-		$actor    = Actors::get_actor( $follower );
+		$actor    = Remote_Actors::get_actor( $follower );
 		$username = $actor->get_preferred_username();
 
 		return array(
