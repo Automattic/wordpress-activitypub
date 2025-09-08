@@ -71,14 +71,6 @@ class Settings_Fields {
 			'activitypub_profiles'
 		);
 
-		add_settings_field(
-			'activitypub_object_type',
-			__( 'Activity-Object-Type', 'activitypub' ),
-			array( self::class, 'render_object_type_field' ),
-			'activitypub_settings',
-			'activitypub_activities'
-		);
-
 		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 		if ( 'note' === $object_type ) {
 			add_settings_field(
@@ -230,35 +222,6 @@ class Settings_Fields {
 			</div>
 		</div>
 	</fieldset>
-		<?php
-	}
-
-	/**
-	 * Render object type field.
-	 */
-	public static function render_object_type_field() {
-		$value = get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
-		?>
-		<p>
-			<label>
-				<input type="radio" name="activitypub_object_type" value="wordpress-post-format" <?php checked( 'wordpress-post-format', $value ); ?> />
-				<?php esc_html_e( 'Automatic (default)', 'activitypub' ); ?>
-				-
-				<span class="description">
-					<?php esc_html_e( 'Let the plugin choose the best possible format for you.', 'activitypub' ); ?>
-				</span>
-			</label>
-		</p>
-		<p>
-			<label>
-				<input type="radio" name="activitypub_object_type" value="note" <?php checked( 'note', $value ); ?> />
-				<?php esc_html_e( 'Note', 'activitypub' ); ?>
-				-
-				<span class="description">
-					<?php esc_html_e( 'Should work with most platforms.', 'activitypub' ); ?>
-				</span>
-			</label>
-		</p>
 		<?php
 	}
 
