@@ -16,18 +16,7 @@ jobs:
           php-version: '7.4'
           coverage: none
           tools: composer, cs2pr
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "::set-output name=dir::$(composer config cache-files-dir)"
-      - name: Setup cache
-        uses: pat-s/always-upload-cache@v3.0.11
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          # Use the hash of composer.json as the key for your cache if you do not commit composer.lock.
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}
-          #key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
+      - name: Install Composer dependencies for PHP
+        uses: ramsey/composer-install@v3
       - name: Detect coding standard violations
         run: ./vendor/bin/phpcs

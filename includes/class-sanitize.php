@@ -22,7 +22,7 @@ class Sanitize {
 	 */
 	public static function url_list( $value ) {
 		if ( ! \is_array( $value ) ) {
-			$value = \explode( PHP_EOL, $value );
+			$value = \explode( PHP_EOL, (string) $value );
 		}
 
 		$value = \array_filter( $value );
@@ -45,7 +45,7 @@ class Sanitize {
 	 */
 	public static function identifier_list( $value ) {
 		if ( ! \is_array( $value ) ) {
-			$value = \explode( PHP_EOL, $value );
+			$value = \explode( PHP_EOL, (string) $value );
 		}
 
 		$value = \array_filter( $value );
@@ -84,7 +84,7 @@ class Sanitize {
 	 * @return string The sanitized list of hosts.
 	 */
 	public static function host_list( $value ) {
-		$value = \explode( PHP_EOL, $value );
+		$value = \explode( PHP_EOL, (string) $value );
 		$value = \array_map(
 			function ( $host ) {
 				$host = \trim( $host );
@@ -113,7 +113,7 @@ class Sanitize {
 	 */
 	public static function blog_identifier( $value ) {
 		// Hack to allow dots in the username.
-		$parts     = \explode( '.', $value );
+		$parts     = \explode( '.', (string) $value );
 		$sanitized = \array_map( 'sanitize_title', $parts );
 		$sanitized = \implode( '.', $sanitized );
 
