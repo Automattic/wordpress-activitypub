@@ -10,6 +10,10 @@ namespace Activitypub\Collection;
 use Activitypub\Activity\Actor;
 use Activitypub\Http;
 
+use function Activitypub\is_actor;
+use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\object_to_uri;
+
 /**
  * Remote Actors collection class.
  */

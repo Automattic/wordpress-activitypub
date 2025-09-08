@@ -14,8 +14,6 @@ use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
 use Activitypub\Activity\Actor;
 
-use function Activitypub\get_remote_metadata_by_actor;
-use function Activitypub\is_actor;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\normalize_host;
 use function Activitypub\normalize_url;
