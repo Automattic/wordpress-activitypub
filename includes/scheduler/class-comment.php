@@ -7,6 +7,8 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Comment as Comment_Utils;
+
 use function Activitypub\add_to_outbox;
 use function Activitypub\should_comment_be_federated;
 
@@ -99,7 +101,7 @@ class Comment {
 	 */
 	public static function schedule_comment_delete_activity( $comment_id, $comment ) {
 		// Only send Delete activities for comments that were previously federated.
-		if ( \Activitypub\Comment::was_sent( $comment ) ) {
+		if ( Comment_Utils::was_sent( $comment ) ) {
 			self::schedule_comment_activity( 'delete', '', $comment );
 		}
 	}
