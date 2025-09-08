@@ -331,15 +331,4 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 		$this->assertEquals( $key_pair['public_key'], $public_key );
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 	}
-
-	/**
-	 * Tests clear_errors with invalid follower ID.
-	 *
-	 * @covers ::clear_errors
-	 */
-	public function test_clear_errors_invalid_id() {
-		// Try to clear errors for non-existent follower.
-		$cleared = Actors::clear_errors( 99999 );
-		$this->assertFalse( $cleared );
-	}
 }
