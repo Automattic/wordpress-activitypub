@@ -328,7 +328,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_author' => 1,
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 months' ) ), // Post older than a year.
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 months' ) ), // Post older than a month.
 			)
 		);
 
@@ -341,12 +341,12 @@ class Test_Activitypub extends \WP_UnitTestCase {
 		$result = Activitypub::default_post_metadata( 'original_value', $post_id, 'activitypub_content_visibility' );
 		$this->assertEquals( 'original_value', $result, 'Should return original value for federated posts.' );
 
-		// Test 3: When post is not federated and older than a year, should return local visibility.
+		// Test 3: When post is not federated and older than a month, should return local visibility.
 		\update_post_meta( $post_id, 'activitypub_status', 'pending' );
-		$result = Activitypub::default_post_metadata( 'original_value', $post_id, 'activitypub_content_visibility' );
+		$result = Activitypub::default_post_metadata( null, $post_id, 'activitypub_content_visibility' );
 		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, $result, 'Should return local visibility for old non-federated posts.' );
 
-		// Test 4: When post is not federated but less than a year old, should return original value.
+		// Test 4: When post is not federated but less than a month old, should return original value.
 		$recent_post_id = self::factory()->post->create(
 			array(
 				'post_author' => 1,
@@ -354,8 +354,17 @@ class Test_Activitypub extends \WP_UnitTestCase {
 			)
 		);
 		\update_post_meta( $recent_post_id, 'activitypub_status', 'pending' );
-		$result = Activitypub::default_post_metadata( 'original_value', $recent_post_id, 'activitypub_content_visibility' );
-		$this->assertEquals( 'original_value', $result, 'Should return original value for recent non-federated posts.' );
+		$result = Activitypub::default_post_metadata( null, $recent_post_id, 'activitypub_content_visibility' );
+		$this->assertEquals( null, $result, 'Should return original value for recent non-federated posts.' );
+
+		// Test 5: When meta value is already set (not null), should respect author's explicit choice.
+		\update_post_meta( $post_id, 'activitypub_status', 'pending' ); // Ensure not federated.
+		$result = Activitypub::default_post_metadata( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $post_id, 'activitypub_content_visibility' );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $result, 'Should respect explicitly set public visibility even for old unfederated posts.' );
+
+		// Test 6: Only apply local visibility when meta value is null (no explicit setting).
+		$result = Activitypub::default_post_metadata( null, $post_id, 'activitypub_content_visibility' );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, $result, 'Should return local visibility when no explicit value is set for old unfederated posts.' );
 
 		// Clean up.
 		\wp_delete_post( $post_id, true );
