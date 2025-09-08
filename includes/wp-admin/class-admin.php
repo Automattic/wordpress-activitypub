@@ -86,41 +86,6 @@ class Admin {
 			return;
 		}
 
-		// Check for bulk capability removal success notices.
-		if ( isset( $_GET['activitypub_bulk_removed'] ) ) {
-			$removed_count = \absint( $_GET['activitypub_bulk_removed'] );
-			$deleted_count = \absint( $_GET['activitypub_bulk_deleted'] ?? 0 );
-
-			if ( $removed_count > 0 ) {
-				?>
-				<div class="notice notice-success is-dismissible">
-					<p>
-						<strong>
-						<?php
-						printf(
-							/* translators: %d: number of users */
-							esc_html( _n( 'ActivityPub capability removed from %d user.', 'ActivityPub capability removed from %d users.', $removed_count, 'activitypub' ) ),
-							esc_html( number_format_i18n( $removed_count ) )
-						);
-						?>
-						</strong>
-					</p>
-					<?php if ( $deleted_count > 0 ) : ?>
-						<p>
-						<?php
-						printf(
-							/* translators: %d: number of users */
-							esc_html( _n( 'Delete activities have been scheduled for %d user to notify followers in the Fediverse.', 'Delete activities have been scheduled for %d users to notify followers in the Fediverse.', $deleted_count, 'activitypub' ) ),
-							esc_html( number_format_i18n( $deleted_count ) )
-						);
-						?>
-						</p>
-					<?php endif; ?>
-				</div>
-				<?php
-			}
-		}
-
 		// Check for self-destruct completion notice.
 		$self_destruct_complete = \get_option( 'activitypub_self_destruct_complete' );
 		if ( $self_destruct_complete ) {
@@ -683,6 +648,7 @@ class Admin {
 	 */
 	public static function handle_bulk_capability_removal_page() {
 		// Check if this is our confirmation page request.
+		// phpcs:ignore WordPress.Security.NonceVerification
 		if ( ! isset( $_GET['activitypub_confirm_removal'] ) ) {
 			return;
 		}
@@ -698,7 +664,9 @@ class Admin {
 		}
 
 		// Get parameters.
-		$users     = \sanitize_text_field( \wp_unslash( $_GET['users'] ?? array() ) );
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$users = \sanitize_text_field( \wp_unslash( $_GET['users'] ?? array() ) );
+		// phpcs:ignore WordPress.Security.NonceVerification
 		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
 
 		// Sanitize user IDs.
