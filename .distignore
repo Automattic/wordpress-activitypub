@@ -6,7 +6,7 @@
 .git
 .github
 .gitignore
-.husky
+.githooks
 .php_cs
 .prettierignore
 .prettierrc.js

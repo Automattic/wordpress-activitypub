@@ -20,7 +20,7 @@
 		"env-stop": "wp-env stop",
 		"env-test": "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit",
 		"release": "node bin/release.js",
-		"prepare": "husky || true"
+		"prepare": "git config core.hooksPath .githooks"
 	},
 	"license": "MIT",
 	"bugs": {
@@ -49,7 +49,6 @@
 		"@wordpress/scripts": "^27.0.0",
 		"@wordpress/url": "^4.22.0",
 		"classnames": "^2.3.2",
-		"husky": "^9.0",
 		"prettier": "npm:wp-prettier@^3.0.3"
 	}
 }
