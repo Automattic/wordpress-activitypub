@@ -664,8 +664,8 @@ class Admin {
 		}
 
 		// Get parameters.
-		// phpcs:ignore WordPress.Security.NonceVerification
-		$users = \sanitize_text_field( \wp_unslash( $_GET['users'] ?? array() ) );
+		// phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+		$users = \wp_unslash( $_GET['users'] ?? array() );
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
 
@@ -706,8 +706,10 @@ class Admin {
 		}
 
 		// Get form data.
-		$selected_users        = \sanitize_text_field( \wp_unslash( $_POST['selected_users'] ?? array() ) );
-		$remove_from_fediverse = \sanitize_text_field( \wp_unslash( $_POST['remove_from_fediverse'] ?? array() ) );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$selected_users = \wp_unslash( $_POST['selected_users'] ?? array() );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$remove_from_fediverse = \wp_unslash( $_POST['remove_from_fediverse'] ?? array() );
 		$send_back             = \esc_url_raw( \wp_unslash( $_POST['send_back'] ?? '' ) );
 
 		// Sanitize user IDs.
