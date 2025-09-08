@@ -298,11 +298,11 @@ class Advanced_Settings_Fields {
 		<p>
 			<label>
 				<input type="checkbox" name="activitypub_object_type" value="note" <?php checked( 'note', $value ); ?> />
-				<?php esc_html_e( 'Use Template Tags (not recommended)', 'activitypub' ); ?>
+				<?php esc_html_e( 'Use Template Tags instead of letting the plugin choose the best possible format for you.', 'activitypub' ); ?>
 			</label>
 		</p>
 		<p class="description">
-			<?php esc_html_e( 'This is mainly for backward compatibility. It is not recommended to use this feature, because it might not be supported in future versions.', 'activitypub' ); ?>
+			<?php esc_html_e( 'This is mainly for backwards compatibility. It is not recommended to use the Template Tags, because it might not be supported in future versions.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}
