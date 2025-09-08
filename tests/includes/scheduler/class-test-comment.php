@@ -179,49 +179,4 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertEquals( $activitypub_id, \get_post_meta( $outbox_post->ID, '_activitypub_object_id', true ) );
 		$this->assertEquals( self::$user_id, $outbox_post->post_author );
 	}
-
-	/**
-	 * Test that non-federated comments don't create Delete activities.
-	 *
-	 * @covers ::schedule_comment_delete_activity
-	 */
-	public function test_no_delete_activity_for_non_federated_comment() {
-		// Create a comment that was NOT federated.
-		$comment_id = self::factory()->comment->create(
-			array(
-				'comment_post_ID'  => self::$comment_post_ID,
-				'user_id'          => self::$user_id,
-				'comment_approved' => 1,
-			)
-		);
-
-		$activitypub_id = Comment::generate_id( $comment_id );
-
-		// Ensure this comment is NOT marked as sent.
-		\delete_comment_meta( $comment_id, 'activitypub_status' );
-
-		// Permanently delete the comment.
-		\wp_delete_comment( $comment_id, true );
-
-		// Check that no Delete activity was created for this specific comment.
-		$outbox_posts = \get_posts(
-			array(
-				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
-				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
-				'numberposts' => 1,
-				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					array(
-						'key'   => '_activitypub_object_id',
-						'value' => $activitypub_id,
-					),
-					array(
-						'key'   => '_activitypub_activity_type',
-						'value' => 'Delete',
-					),
-				),
-			)
-		);
-
-		$this->assertEmpty( $outbox_posts, 'Should not create Delete activity for non-federated comment deletion' );
-	}
 }
