@@ -10,7 +10,7 @@ use Activitypub\Collection\Actors;
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
 
-$users = $args['users'] ?? array();
+$users     = $args['users'] ?? array();
 $send_back = $args['send_back'] ?? '';
 
 // Validate users.
@@ -27,17 +27,17 @@ foreach ( $users as $user_id ) {
 	if ( ! $user ) {
 		continue;
 	}
-	
+
 	// Check if user has ActivityPub capability
 	if ( ! user_can( $user_id, 'activitypub' ) ) {
 		continue;
 	}
-	
+
 	$user_data[] = array(
-		'id' => $user_id,
-		'login' => $user->user_login,
+		'id'           => $user_id,
+		'login'        => $user->user_login,
 		'display_name' => $user->display_name,
-		'email' => $user->user_email,
+		'email'        => $user->user_email,
 	);
 }
 

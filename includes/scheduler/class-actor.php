@@ -172,15 +172,9 @@ class Actor {
 	/**
 	 * Schedule a Delete activity when a user is deleted.
 	 *
-	 * @param int  $user_id          The user ID being deleted.
-	 * @param bool $bypass_cap_check Whether to bypass the capability check.
+	 * @param int $user_id The user ID being deleted.
 	 */
-	public static function schedule_user_delete( $user_id, $bypass_cap_check = false ) {
-		// Don't bother if the user can't publish ActivityPub content.
-		if ( ! \user_can( $user_id, 'activitypub' ) && ! $bypass_cap_check ) {
-			return;
-		}
-
+	public static function schedule_user_delete( $user_id ) {
 		// Get the actor before deletion to ensure we have the data.
 		$actor = Actors::get_by_id( $user_id );
 		if ( \is_wp_error( $actor ) ) {
