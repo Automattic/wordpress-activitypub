@@ -698,8 +698,8 @@ class Admin {
 		}
 
 		// Get parameters.
-		$users     = \wp_unslash( $_GET['users'] ?? array() );
-		$send_back = \urldecode( \wp_unslash( $_GET['send_back'] ?? '' ) );
+		$users     = \sanitize_text_field( \wp_unslash( $_GET['users'] ?? array() ) );
+		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
 
 		// Sanitize user IDs.
 		$users = \array_map( 'absint', (array) $users );
@@ -728,7 +728,7 @@ class Admin {
 	 */
 	public static function handle_bulk_capability_removal_confirmation() {
 		// Verify nonce.
-		if ( ! \wp_verify_nonce( \wp_unslash( $_POST['_wpnonce'] ?? '' ), 'bulk-users' ) ) {
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'bulk-users' ) ) {
 			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
 		}
 
@@ -738,8 +738,8 @@ class Admin {
 		}
 
 		// Get form data.
-		$selected_users        = \wp_unslash( $_POST['selected_users'] ?? array() );
-		$remove_from_fediverse = \wp_unslash( $_POST['remove_from_fediverse'] ?? array() );
+		$selected_users        = \sanitize_text_field( \wp_unslash( $_POST['selected_users'] ?? array() ) );
+		$remove_from_fediverse = \sanitize_text_field( \wp_unslash( $_POST['remove_from_fediverse'] ?? array() ) );
 		$send_back             = \esc_url_raw( \wp_unslash( $_POST['send_back'] ?? '' ) );
 
 		// Sanitize user IDs.
@@ -776,12 +776,12 @@ class Admin {
 		// Normalize fediverse removal parameter.
 		if ( is_string( $remove_from_fediverse ) ) {
 			// Legacy format: 'delete' or 'keep' for all users.
-			$delete_all = ( 'delete' === $remove_from_fediverse );
+			$delete_all      = ( 'delete' === $remove_from_fediverse );
 			$users_to_delete = $delete_all ? array_flip( $users ) : array();
 		} else {
 			// New format: array of specific user IDs to delete from fediverse.
 			$remove_from_fediverse = \array_map( 'absint', (array) $remove_from_fediverse );
-			$users_to_delete = \array_flip( \array_filter( $remove_from_fediverse ) );
+			$users_to_delete       = \array_flip( \array_filter( $remove_from_fediverse ) );
 		}
 
 		// First pass: Schedule delete activities while users still have capabilities.

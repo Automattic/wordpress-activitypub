@@ -28,7 +28,7 @@ foreach ( $users as $user_id ) {
 		continue;
 	}
 
-	// Check if user has ActivityPub capability
+	// Check if user has ActivityPub capability.
 	if ( ! user_can( $user_id, 'activitypub' ) ) {
 		continue;
 	}
@@ -41,7 +41,7 @@ foreach ( $users as $user_id ) {
 	);
 }
 
-// If no users with ActivityPub capability, redirect back
+// If no users with ActivityPub capability, redirect back.
 if ( empty( $user_data ) ) {
 	wp_safe_redirect( $send_back );
 	exit;
@@ -62,20 +62,20 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 	);
 	?>
 	</p>
-	
+
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<?php wp_nonce_field( 'bulk-users' ); ?>
-		
+
 		<input type="hidden" name="action" value="remove_activitypub_cap_confirmed" />
 		<input type="hidden" name="send_back" value="<?php echo esc_url( $send_back ); ?>" />
-		
+
 		<?php foreach ( $user_data as $user ) : ?>
 			<input type="hidden" name="selected_users[]" value="<?php echo esc_attr( $user['id'] ); ?>" />
 		<?php endforeach; ?>
 
 		<div class="activitypub-user-list">
 			<h3><?php esc_html_e( 'Users to Process:', 'activitypub' ); ?></h3>
-			
+
 			<ul>
 				<?php foreach ( $user_data as $user ) : ?>
 					<li>
@@ -115,18 +115,18 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 document.addEventListener('DOMContentLoaded', function() {
 	const fediverseCheckboxes = document.querySelectorAll('.fediverse-removal-checkbox');
 	const deleteConsequences = document.getElementById('delete-consequences');
-	
+
 	function updateDeleteConsequences() {
 		const hasDeleteAction = Array.from(fediverseCheckboxes).some(checkbox => checkbox.checked);
 		if (deleteConsequences) {
 			deleteConsequences.style.display = hasDeleteAction ? 'list-item' : 'none';
 		}
 	}
-	
+
 	fediverseCheckboxes.forEach(function(checkbox) {
 		checkbox.addEventListener('change', updateDeleteConsequences);
 	});
-	
+
 	// Initial check
 	updateDeleteConsequences();
 });
