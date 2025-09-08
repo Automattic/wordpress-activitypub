@@ -12,6 +12,7 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Comment;
 use Activitypub\Model\Blog;
 use Activitypub\Moderation;
+use Activitypub\Scheduler\Actor;
 
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
@@ -52,6 +53,9 @@ class Admin {
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
+		\add_action( 'admin_init', array( self::class, 'handle_bulk_capability_removal_confirmation' ) );
+		\add_action( 'current_screen', array( self::class, 'handle_bulk_capability_removal_page' ) );
+
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
 		}
@@ -80,6 +84,41 @@ class Admin {
 		$current_screen = get_current_screen();
 		if ( ! $current_screen ) {
 			return;
+		}
+
+		// Check for bulk capability removal success notices.
+		if ( isset( $_GET['activitypub_bulk_removed'] ) ) {
+			$removed_count = \absint( $_GET['activitypub_bulk_removed'] );
+			$deleted_count = \absint( $_GET['activitypub_bulk_deleted'] ?? 0 );
+			
+			if ( $removed_count > 0 ) {
+				?>
+				<div class="notice notice-success is-dismissible">
+					<p>
+						<strong>
+						<?php
+						printf(
+							/* translators: %d: number of users */
+							esc_html( _n( 'ActivityPub capability removed from %d user.', 'ActivityPub capability removed from %d users.', $removed_count, 'activitypub' ) ),
+							esc_html( number_format_i18n( $removed_count ) )
+						);
+						?>
+						</strong>
+					</p>
+					<?php if ( $deleted_count > 0 ) : ?>
+						<p>
+						<?php
+						printf(
+							/* translators: %d: number of users */
+							esc_html( _n( 'Delete activities have been scheduled for %d user to notify followers in the Fediverse.', 'Delete activities have been scheduled for %d users to notify followers in the Fediverse.', $deleted_count, 'activitypub' ) ),
+							esc_html( number_format_i18n( $deleted_count ) )
+						);
+						?>
+						</p>
+					<?php endif; ?>
+				</div>
+				<?php
+			}
 		}
 
 		// Check for self-destruct completion notice.
@@ -582,7 +621,8 @@ class Admin {
 	 * Handle bulk activitypub requests.
 	 *
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
-	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users.
+	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users (redirects to confirmation page).
+	 * * `remove_activitypub_cap_confirmed` - Actually remove the capability after confirmation.
 	 *
 	 * @param string $send_back The URL to send the user back to.
 	 * @param string $action    The requested action.
@@ -593,21 +633,178 @@ class Admin {
 	public static function handle_bulk_request( $send_back, $action, $users ) {
 		if (
 			'remove_activitypub_cap' !== $action &&
-			'add_activitypub_cap' !== $action
+			'add_activitypub_cap' !== $action &&
+			'remove_activitypub_cap_confirmed' !== $action
 		) {
 			return $send_back;
 		}
 
-		foreach ( $users as $user_id ) {
-			$user = new \WP_User( $user_id );
-			if ( 'add_activitypub_cap' === $action ) {
+		// Handle adding ActivityPub capability
+		if ( 'add_activitypub_cap' === $action ) {
+			foreach ( $users as $user_id ) {
+				$user = new \WP_User( $user_id );
 				$user->add_cap( 'activitypub' );
-			} elseif ( 'remove_activitypub_cap' === $action ) {
-				$user->remove_cap( 'activitypub' );
 			}
+			return $send_back;
+		}
+
+		// Handle removing ActivityPub capability - redirect to confirmation page
+		if ( 'remove_activitypub_cap' === $action ) {
+			// Build the query args with proper array handling
+			$query_args = array(
+				'activitypub_confirm_removal' => '1',
+				'send_back' => urlencode( $send_back ),
+			);
+			
+			// Add user IDs as separate parameters
+			foreach ( $users as $index => $user_id ) {
+				$query_args[ 'users[' . $index . ']' ] = absint( $user_id );
+			}
+			
+			$confirmation_url = \add_query_arg( $query_args, \admin_url( 'users.php' ) );
+			
+			// Force redirect instead of just returning URL
+			\wp_safe_redirect( $confirmation_url );
+			exit;
+		}
+
+		// This should be handled by handle_bulk_capability_removal_confirmation
+		// but we include it here as a fallback
+		if ( 'remove_activitypub_cap_confirmed' === $action ) {
+			return self::process_capability_removal( $users, $send_back );
 		}
 
 		return $send_back;
+	}
+
+	/**
+	 * Handle the bulk capability removal page request directly.
+	 */
+	public static function handle_bulk_capability_removal_page() {
+		// Check if this is our confirmation page request
+		if ( ! isset( $_GET['activitypub_confirm_removal'] ) ) {
+			return;
+		}
+
+		// Check if we're in admin area
+		if ( ! \is_admin() ) {
+			return;
+		}
+
+		// Check permissions
+		if ( ! \current_user_can( 'edit_users' ) ) {
+			\wp_die( \esc_html__( 'You do not have sufficient permissions to access this page.', 'activitypub' ) );
+		}
+
+		// Get parameters
+		$users = \wp_unslash( $_GET['users'] ?? array() );
+		$send_back = \urldecode( \wp_unslash( $_GET['send_back'] ?? '' ) );
+
+		// Sanitize user IDs
+		$users = \array_map( 'absint', (array) $users );
+		$users = \array_filter( $users );
+
+		// Validate send_back URL
+		if ( empty( $send_back ) ) {
+			$send_back = \admin_url( 'users.php' );
+		}
+
+		// Load template and exit to prevent WordPress from trying to load other admin pages
+		\load_template(
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-capability-removal-confirmation.php',
+			false,
+			array(
+				'users' => $users,
+				'send_back' => $send_back,
+			)
+		);
+		exit;
+	}
+
+
+	/**
+	 * Handle the bulk capability removal confirmation form submission.
+	 */
+	public static function handle_bulk_capability_removal_confirmation() {
+		// Check if this is our confirmation form submission
+		if ( ! isset( $_POST['action'] ) || 'remove_activitypub_cap_confirmed' !== $_POST['action'] ) {
+			return;
+		}
+
+		// Verify nonce
+		if ( ! \wp_verify_nonce( \wp_unslash( $_POST['_wpnonce'] ?? '' ), 'bulk-users' ) ) {
+			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
+		}
+
+		// Check permissions
+		if ( ! \current_user_can( 'edit_users' ) ) {
+			\wp_die( \esc_html__( 'You do not have sufficient permissions to perform this action.', 'activitypub' ) );
+		}
+
+		// Get form data
+		$users = \wp_unslash( $_POST['users'] ?? array() );
+		$fediverse_action = \sanitize_text_field( \wp_unslash( $_POST['fediverse_action'] ?? 'keep' ) );
+		$send_back = \esc_url_raw( \wp_unslash( $_POST['send_back'] ?? '' ) );
+
+		// Sanitize user IDs
+		$users = \array_map( 'absint', (array) $users );
+		$users = \array_filter( $users );
+
+		if ( empty( $users ) ) {
+			\wp_safe_redirect( $send_back );
+			exit;
+		}
+
+		// Process the capability removal
+		$result = self::process_capability_removal( $users, $send_back, $fediverse_action );
+
+		// Redirect back
+		\wp_safe_redirect( $result );
+		exit;
+	}
+
+	/**
+	 * Process the actual capability removal.
+	 *
+	 * @param array  $users           Array of user IDs.
+	 * @param string $send_back       URL to redirect back to.
+	 * @param string $fediverse_action Action to take in fediverse ('keep' or 'delete').
+	 *
+	 * @return string The URL to redirect to.
+	 */
+	public static function process_capability_removal( $users, $send_back, $fediverse_action = 'keep' ) {
+		$removed_count = 0;
+		$deleted_count = 0;
+
+		foreach ( $users as $user_id ) {
+			$user = new \WP_User( $user_id );
+			
+			// Check if user has ActivityPub capability
+			if ( ! $user->has_cap( 'activitypub' ) ) {
+				continue;
+			}
+
+			// If we're deleting from fediverse, schedule the delete activity first
+			if ( 'delete' === $fediverse_action ) {
+				Actor::schedule_user_delete( $user_id );
+				$deleted_count++;
+			}
+
+			// Remove the capability
+			$user->remove_cap( 'activitypub' );
+			$removed_count++;
+		}
+
+		// Add success message parameters to the redirect URL
+		$message_params = array(
+			'activitypub_bulk_removed' => $removed_count,
+		);
+
+		if ( $deleted_count > 0 ) {
+			$message_params['activitypub_bulk_deleted'] = $deleted_count;
+		}
+
+		return \add_query_arg( $message_params, $send_back );
 	}
 
 	/**
