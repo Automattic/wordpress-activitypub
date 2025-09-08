@@ -671,22 +671,8 @@ class Admin {
 		// This should be handled by handle_bulk_capability_removal_confirmation
 		// but we include it here as a fallback.
 		if ( 'remove_activitypub_cap_confirmed' === $action ) {
-			// Remove capability for all users first.
-			$removed_count = 0;
-			foreach ( $users as $user_id ) {
-				$user = new \WP_User( $user_id );
-				if ( $user->has_cap( 'activitypub' ) ) {
-					$user->remove_cap( 'activitypub' );
-					++$removed_count;
-				}
-			}
-
-			// Add success message parameters to the redirect URL.
-			$message_params = array(
-				'activitypub_bulk_removed' => $removed_count,
-			);
-
-			return \add_query_arg( $message_params, $send_back );
+			// Use unified method with no fediverse deletion (keep).
+			return self::process_capability_removal( $users, 'keep', $send_back );
 		}
 
 		return $send_back;
@@ -765,120 +751,52 @@ class Admin {
 			exit;
 		}
 
-		// Remove capability for all selected users first.
-		$removed_count = 0;
-		foreach ( $selected_users as $user_id ) {
-			$user = new \WP_User( $user_id );
-
-			if ( $user->has_cap( 'activitypub' ) ) {
-				$result = $user->remove_cap( 'activitypub' );
-
-				// Force save the user capabilities.
-				\wp_cache_delete( $user_id, 'users' );
-				\wp_cache_delete( $user_id, 'user_meta' );
-				++$removed_count;
-			}
-		}
-
-		// Handle fediverse removal for checked users.
-		$deleted_count         = 0;
-		$remove_from_fediverse = \array_map( 'absint', (array) $remove_from_fediverse );
-		$remove_from_fediverse = \array_flip( \array_filter( $remove_from_fediverse ) );
-
-		foreach ( $selected_users as $user_id ) {
-			if ( isset( $remove_from_fediverse[ $user_id ] ) ) {
-				Actor::schedule_user_delete( $user_id );
-				++$deleted_count;
-			}
-		}
-
-		// Add success message parameters to the redirect URL.
-		$message_params = array(
-			'activitypub_bulk_removed' => $removed_count,
-		);
-
-		if ( $deleted_count > 0 ) {
-			$message_params['activitypub_bulk_deleted'] = $deleted_count;
-		}
-
-		$result = \add_query_arg( $message_params, $send_back );
+		// Process capability removal using unified method.
+		$result = self::process_capability_removal( $selected_users, $remove_from_fediverse, $send_back );
 
 		// Redirect back.
 		\wp_safe_redirect( $result );
 		exit;
 	}
 
+
 	/**
-	 * Process the actual capability removal with simplified checkbox logic.
+	 * Process capability removal for users with optional fediverse deletion.
 	 *
-	 * @param array  $selected_users        Array of selected user IDs.
-	 * @param array  $remove_from_fediverse Array of user IDs to remove from fediverse.
-	 * @param string $send_back             URL to redirect back to.
+	 * @param array        $users                  Array of user IDs.
+	 * @param array|string $remove_from_fediverse  Array of user IDs to delete from fediverse, or 'delete'/'keep' for all users.
+	 * @param string       $send_back              URL to redirect back to.
 	 *
 	 * @return string The URL to redirect to.
 	 */
-	public static function process_capability_removal_simplified( $selected_users, $remove_from_fediverse, $send_back ) {
+	public static function process_capability_removal( $users, $remove_from_fediverse, $send_back ) {
 		$removed_count = 0;
 		$deleted_count = 0;
 
-		// Convert remove_from_fediverse array to user ID keys for easy lookup.
-		$remove_from_fediverse = \array_map( 'absint', (array) $remove_from_fediverse );
-		$remove_from_fediverse = \array_flip( \array_filter( $remove_from_fediverse ) );
-
-		foreach ( $selected_users as $user_id ) {
-			$user = new \WP_User( $user_id );
-
-			// Check if user has ActivityPub capability.
-			if ( ! $user->has_cap( 'activitypub' ) ) {
-				continue;
-			}
-
-			// Check if this user should be removed from fediverse.
-			if ( isset( $remove_from_fediverse[ $user_id ] ) ) {
-				Actor::schedule_user_delete( $user_id );
-				++$deleted_count;
-			}
-
-			// Remove the capability.
-			$user->remove_cap( 'activitypub' );
-			++$removed_count;
+		// Normalize fediverse removal parameter.
+		if ( is_string( $remove_from_fediverse ) ) {
+			// Legacy format: 'delete' or 'keep' for all users.
+			$delete_all = ( 'delete' === $remove_from_fediverse );
+			$users_to_delete = $delete_all ? array_flip( $users ) : array();
+		} else {
+			// New format: array of specific user IDs to delete from fediverse.
+			$remove_from_fediverse = \array_map( 'absint', (array) $remove_from_fediverse );
+			$users_to_delete = \array_flip( \array_filter( $remove_from_fediverse ) );
 		}
-
-		// Add success message parameters to the redirect URL.
-		$message_params = array(
-			'activitypub_bulk_removed' => $removed_count,
-		);
-
-		if ( $deleted_count > 0 ) {
-			$message_params['activitypub_bulk_deleted'] = $deleted_count;
-		}
-
-		return \add_query_arg( $message_params, $send_back );
-	}
-
-	/**
-	 * Process the actual capability removal.
-	 *
-	 * @param array  $users           Array of user IDs.
-	 * @param string $send_back       URL to redirect back to.
-	 * @param string $fediverse_action Action to take in fediverse ('keep' or 'delete').
-	 *
-	 * @return string The URL to redirect to.
-	 */
-	public static function process_capability_removal( $users, $send_back, $fediverse_action = 'keep' ) {
-		$removed_count = 0;
-		$deleted_count = 0;
 
 		// First pass: Schedule delete activities while users still have capabilities.
-		if ( 'delete' === $fediverse_action ) {
+		if ( ! empty( $users_to_delete ) ) {
+			// Temporarily bypass capability checks for delete activity scheduling.
+			\add_filter( 'activitypub_user_can_activitypub', '__return_true' );
+
 			foreach ( $users as $user_id ) {
-				// Schedule the delete activity while user still has the capability.
-				// Temporarily bypass the capability check in Actors::get_by_id().
-				\add_filter( 'activitypub_user_can_activitypub', '__return_true' );
-				Actor::schedule_user_delete( $user_id );
-				\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );
-				++$deleted_count;
+				if ( isset( $users_to_delete[ $user_id ] ) ) {
+					Actor::schedule_user_delete( $user_id );
+					++$deleted_count;
+				}
 			}
+
+			\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );
 		}
 
 		// Second pass: Remove capabilities after all delete activities are scheduled.
@@ -892,6 +810,11 @@ class Admin {
 
 			// Remove the capability.
 			$user->remove_cap( 'activitypub' );
+
+			// Force cache refresh for user capabilities.
+			\wp_cache_delete( $user_id, 'users' );
+			\wp_cache_delete( $user_id, 'user_meta' );
+
 			++$removed_count;
 		}
 
