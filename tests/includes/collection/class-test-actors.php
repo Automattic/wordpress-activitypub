@@ -8,7 +8,6 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Remote_Actors;
 
 /**
  * Class Test_Actors
@@ -16,65 +15,6 @@ use Activitypub\Collection\Remote_Actors;
  * @coversDefaultClass \Activitypub\Collection\Actors
  */
 class Test_Actors extends \WP_UnitTestCase {
-
-	/**
-	 * The public key in PKCS#1 format.
-	 *
-	 * @var string
-	 */
-	private $pkcs1_key = '-----BEGIN RSA PUBLIC KEY-----
-MIIBCgKCAQEAtAVnFFbWG+6NBFKhMZdt59Gx2/vKxWxbxOAYyi/ypZ/9aDY6C/UB
-Rei8SqnhKcKXQaiSwme/wpqgCdkrf53H85OioBitCEvKNA6uDxkCtcdgtQ3X55QD
-XmatWd32ln6elRmKG45U9R386j82OHzff8Ju65QxGL1LlyCKQ/XFx/pgvblF3cGj
-shk0dhNcyGAztODN5HFp9Qzf9d7+gi+xdKeGNhXBAulXoaDzx8FvLEXNfPJb3jUM
-1Ug0STFsiICcf7VxmQow6N6d0+HtWxrdtjUBdXrPxz998Ns/cu9jjg06d+XV3TcS
-U+AOldmGLJuB/AWV/+F9c9DlczqmnXqd1QIDAQAB
------END RSA PUBLIC KEY-----
-';
-
-	/**
-	 * The public key in X.509 format.
-	 *
-	 * @var string
-	 */
-	private $x509_key = '-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA19218d19uYisOYUZ3oqN
-wSRyixAX8V1JHJSngbjAjZr1vYcwMte8CPqqELbNwtQWAMy42UnQpyIqgvLpOaVr
-vQWjUuR+7i8wETrVNJq8JQNNCiQ+8+I4TPcGyZDBclHkLtKiCoBtjUH0itVh4Sg0
-KQLSb8ZHu9lGh8TJMcLXVUdVkvkUjqHl6I5BoftMVDSKQF+V4X8Qyk7qP7wU8mpE
-+O6RuhUpZ3QXM+dBIalyey8NKLf2yN6CmKyW1220wdNupOYHbc8DSYEq6NDQZfZb
-yP2KLHN3rdNwsnlAP02Ws1qroBivHSV71KLebQUDU2KpDLKQF2Ix6X47IBFOXnb9
-FwIDAQAB
------END PUBLIC KEY-----
-';
-
-	/**
-	 * The public key in EC format.
-	 *
-	 * @var string
-	 */
-	private $ec_key = '-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/jw3kftaHGIB2OTKTYFUTTqyzDs0
-eWKe+6k1Kh6HSrinXriBLbIhMPY9pQsvqkeT6wW975NDn7+8awb8kHRmIg==
------END PUBLIC KEY-----
-';
-
-	/**
-	 * The public key in PKCS#8 format.
-	 *
-	 * @var string
-	 */
-	private $pkcs8_key = '-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy8dfWmTltr09m49uyESj
-x6UnQ9G/iVq+3dJbUdCdVEPR256UD6DLHE8uM4DgXhtoLVrBcvTAl9h0nRGX4uVN
-5jE+pTh47B9IUim0bVw2sOBNwPCTUuKbMVx3Cso/6UxJsot41q7+FHIxcAurDxfR
-xfJkf+1ecYSb5czoeOG+NUcTEQv1LQntAOJ1ngrmjKyL4UlKZgcs2TfueqlK1v2t
-Gw4ylFOQYRx1Nj5YttQAuXc+VpGfztyRK90R74WkE/N6miOoDHcvc+7AeW4zyWsh
-ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
-4wIDAQAB
------END PUBLIC KEY-----
-';
-
 	/**
 	 * Set up the test.
 	 */
