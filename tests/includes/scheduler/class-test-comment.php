@@ -137,24 +137,11 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function test_schedule_comment_delete_activity() {
 		// Create a comment that gets federated.
-		$parent_comment_id = self::factory()->comment->create(
-			array(
-				'comment_post_ID'  => self::$comment_post_ID,
-				'user_id'          => 0,
-				'comment_approved' => 1,
-				'comment_meta'     => array(
-					'protocol' => 'activitypub',
-				),
-			)
-		);
-
-		// Create a comment that gets federated.
 		$comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => self::$comment_post_ID,
 				'user_id'          => self::$user_id,
 				'comment_approved' => 1,
-				'comment_parent'   => $parent_comment_id,
 				'comment_meta'     => array(
 					'activitypub_status' => 'federated',
 				),
