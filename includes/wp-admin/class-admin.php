@@ -53,7 +53,7 @@ class Admin {
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
-		\add_action( 'admin_init', array( self::class, 'handle_bulk_capability_removal_confirmation' ) );
+		\add_action( 'admin_post_remove_activitypub_cap_confirmed', array( self::class, 'handle_bulk_capability_removal_confirmation' ) );
 		\add_action( 'current_screen', array( self::class, 'handle_bulk_capability_removal_page' ) );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
@@ -90,7 +90,7 @@ class Admin {
 		if ( isset( $_GET['activitypub_bulk_removed'] ) ) {
 			$removed_count = \absint( $_GET['activitypub_bulk_removed'] );
 			$deleted_count = \absint( $_GET['activitypub_bulk_deleted'] ?? 0 );
-			
+
 			if ( $removed_count > 0 ) {
 				?>
 				<div class="notice notice-success is-dismissible">
@@ -655,14 +655,14 @@ class Admin {
 				'activitypub_confirm_removal' => '1',
 				'send_back' => urlencode( $send_back ),
 			);
-			
+
 			// Add user IDs as separate parameters
 			foreach ( $users as $index => $user_id ) {
 				$query_args[ 'users[' . $index . ']' ] = absint( $user_id );
 			}
-			
+
 			$confirmation_url = \add_query_arg( $query_args, \admin_url( 'users.php' ) );
-			
+
 			// Force redirect instead of just returning URL
 			\wp_safe_redirect( $confirmation_url );
 			exit;
@@ -671,7 +671,22 @@ class Admin {
 		// This should be handled by handle_bulk_capability_removal_confirmation
 		// but we include it here as a fallback
 		if ( 'remove_activitypub_cap_confirmed' === $action ) {
-			return self::process_capability_removal( $users, $send_back );
+			// Remove capability for all users first
+			$removed_count = 0;
+			foreach ( $users as $user_id ) {
+				$user = new \WP_User( $user_id );
+				if ( $user->has_cap( 'activitypub' ) ) {
+					$user->remove_cap( 'activitypub' );
+					$removed_count++;
+				}
+			}
+
+			// Add success message
+			$message_params = array(
+				'activitypub_bulk_removed' => $removed_count,
+			);
+
+			return \add_query_arg( $message_params, $send_back );
 		}
 
 		return $send_back;
@@ -726,10 +741,9 @@ class Admin {
 	 * Handle the bulk capability removal confirmation form submission.
 	 */
 	public static function handle_bulk_capability_removal_confirmation() {
-		// Check if this is our confirmation form submission
-		if ( ! isset( $_POST['action'] ) || 'remove_activitypub_cap_confirmed' !== $_POST['action'] ) {
-			return;
-		}
+		// Always log that we're being called
+		\file_put_contents( '/tmp/activitypub_debug.log', 'Handler called at ' . \date( 'Y-m-d H:i:s' ) . "\n", FILE_APPEND );
+		\file_put_contents( '/tmp/activitypub_debug.log', 'POST data: ' . \print_r( $_POST, true ) . "\n", FILE_APPEND );
 
 		// Verify nonce
 		if ( ! \wp_verify_nonce( \wp_unslash( $_POST['_wpnonce'] ?? '' ), 'bulk-users' ) ) {
@@ -742,25 +756,121 @@ class Admin {
 		}
 
 		// Get form data
-		$users = \wp_unslash( $_POST['users'] ?? array() );
-		$fediverse_action = \sanitize_text_field( \wp_unslash( $_POST['fediverse_action'] ?? 'keep' ) );
+		$selected_users = \wp_unslash( $_POST['selected_users'] ?? array() );
+		$remove_from_fediverse = \wp_unslash( $_POST['remove_from_fediverse'] ?? array() );
 		$send_back = \esc_url_raw( \wp_unslash( $_POST['send_back'] ?? '' ) );
 
-		// Sanitize user IDs
-		$users = \array_map( 'absint', (array) $users );
-		$users = \array_filter( $users );
+		\file_put_contents( '/tmp/activitypub_debug.log', 'Raw form data - selected_users: ' . \print_r( $_POST['selected_users'] ?? 'not set', true ) . "\n", FILE_APPEND );
+		\file_put_contents( '/tmp/activitypub_debug.log', 'Raw form data - remove_from_fediverse: ' . \print_r( $_POST['remove_from_fediverse'] ?? 'not set', true ) . "\n", FILE_APPEND );
 
-		if ( empty( $users ) ) {
+		// Sanitize user IDs
+		$selected_users = \array_map( 'absint', (array) $selected_users );
+		$selected_users = \array_filter( $selected_users );
+
+		if ( empty( $selected_users ) ) {
 			\wp_safe_redirect( $send_back );
 			exit;
 		}
 
-		// Process the capability removal
-		$result = self::process_capability_removal( $users, $send_back, $fediverse_action );
+		// Debug: Log what we're processing
+		\file_put_contents( '/tmp/activitypub_debug.log', 'Processing users: ' . \print_r( $selected_users, true ) . "\n", FILE_APPEND );
+
+		// Remove capability for all selected users first
+		$removed_count = 0;
+		foreach ( $selected_users as $user_id ) {
+			$user = new \WP_User( $user_id );
+			\file_put_contents( '/tmp/activitypub_debug.log', 'User ' . $user_id . ' has activitypub cap: ' . ( $user->has_cap( 'activitypub' ) ? 'yes' : 'no' ) . "\n", FILE_APPEND );
+
+			if ( $user->has_cap( 'activitypub' ) ) {
+				$result = $user->remove_cap( 'activitypub' );
+				\file_put_contents( '/tmp/activitypub_debug.log', 'Removed cap for user ' . $user_id . ', result: ' . \print_r( $result, true ) . "\n", FILE_APPEND );
+
+				// Force save the user capabilities
+				\wp_cache_delete( $user_id, 'users' );
+				\wp_cache_delete( $user_id, 'user_meta' );
+				$removed_count++;
+			}
+		}
+
+		// Handle fediverse removal for checked users
+		$deleted_count = 0;
+		$remove_from_fediverse = \array_map( 'absint', (array) $remove_from_fediverse );
+		$remove_from_fediverse = \array_flip( \array_filter( $remove_from_fediverse ) );
+
+		\file_put_contents( '/tmp/activitypub_debug.log', 'Fediverse removal array: ' . \print_r( $remove_from_fediverse, true ) . "\n", FILE_APPEND );
+
+		foreach ( $selected_users as $user_id ) {
+			if ( isset( $remove_from_fediverse[ $user_id ] ) ) {
+				\file_put_contents( '/tmp/activitypub_debug.log', 'Scheduling delete for user: ' . $user_id . "\n", FILE_APPEND );
+				Actor::schedule_user_delete( $user_id );
+				$deleted_count++;
+			}
+		}
+
+		\file_put_contents( '/tmp/activitypub_debug.log', 'Total deleted count: ' . $deleted_count . "\n", FILE_APPEND );
+
+		// Add success message parameters to the redirect URL
+		$message_params = array(
+			'activitypub_bulk_removed' => $removed_count,
+		);
+
+		if ( $deleted_count > 0 ) {
+			$message_params['activitypub_bulk_deleted'] = $deleted_count;
+		}
+
+		$result = \add_query_arg( $message_params, $send_back );
 
 		// Redirect back
 		\wp_safe_redirect( $result );
 		exit;
+	}
+
+	/**
+	 * Process the actual capability removal with simplified checkbox logic.
+	 *
+	 * @param array  $selected_users        Array of selected user IDs.
+	 * @param array  $remove_from_fediverse Array of user IDs to remove from fediverse.
+	 * @param string $send_back             URL to redirect back to.
+	 *
+	 * @return string The URL to redirect to.
+	 */
+	public static function process_capability_removal_simplified( $selected_users, $remove_from_fediverse, $send_back ) {
+		$removed_count = 0;
+		$deleted_count = 0;
+
+		// Convert remove_from_fediverse array to user ID keys for easy lookup
+		$remove_from_fediverse = \array_map( 'absint', (array) $remove_from_fediverse );
+		$remove_from_fediverse = \array_flip( \array_filter( $remove_from_fediverse ) );
+
+		foreach ( $selected_users as $user_id ) {
+			$user = new \WP_User( $user_id );
+
+			// Check if user has ActivityPub capability
+			if ( ! $user->has_cap( 'activitypub' ) ) {
+				continue;
+			}
+
+			// Check if this user should be removed from fediverse
+			if ( isset( $remove_from_fediverse[ $user_id ] ) ) {
+				Actor::schedule_user_delete( $user_id );
+				$deleted_count++;
+			}
+
+			// Remove the capability
+			$user->remove_cap( 'activitypub' );
+			$removed_count++;
+		}
+
+		// Add success message parameters to the redirect URL
+		$message_params = array(
+			'activitypub_bulk_removed' => $removed_count,
+		);
+
+		if ( $deleted_count > 0 ) {
+			$message_params['activitypub_bulk_deleted'] = $deleted_count;
+		}
+
+		return \add_query_arg( $message_params, $send_back );
 	}
 
 	/**
@@ -778,7 +888,7 @@ class Admin {
 
 		foreach ( $users as $user_id ) {
 			$user = new \WP_User( $user_id );
-			
+
 			// Check if user has ActivityPub capability
 			if ( ! $user->has_cap( 'activitypub' ) ) {
 				continue;
@@ -786,7 +896,7 @@ class Admin {
 
 			// If we're deleting from fediverse, schedule the delete activity first
 			if ( 'delete' === $fediverse_action ) {
-				Actor::schedule_user_delete( $user_id );
+				Actor::schedule_user_delete( $user_id, true );
 				$deleted_count++;
 			}
 

@@ -172,11 +172,12 @@ class Actor {
 	/**
 	 * Schedule a Delete activity when a user is deleted.
 	 *
-	 * @param int $user_id The user ID being deleted.
+	 * @param int  $user_id          The user ID being deleted.
+	 * @param bool $bypass_cap_check Whether to bypass the capability check.
 	 */
-	public static function schedule_user_delete( $user_id ) {
+	public static function schedule_user_delete( $user_id, $bypass_cap_check = false ) {
 		// Don't bother if the user can't publish ActivityPub content.
-		if ( ! \user_can( $user_id, 'activitypub' ) ) {
+		if ( ! \user_can( $user_id, 'activitypub' ) && ! $bypass_cap_check ) {
 			return;
 		}
 
