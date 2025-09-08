@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added confirmation step for bulk removal of ActivityPub capability, asking whether to also delete users from the Fediverse.
