@@ -28,8 +28,6 @@ foreach ( $users as $user_id ) {
 		continue;
 	}
 
-	// Note: ActivityPub capability has already been removed, but we still show the user for fediverse deletion confirmation
-
 	$user_data[] = array(
 		'id'           => $user_id,
 		'login'        => $user->user_login,

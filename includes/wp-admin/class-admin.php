@@ -616,7 +616,7 @@ class Admin {
 		// Handle removing ActivityPub capability - remove capabilities immediately, then redirect to fediverse deletion confirmation.
 		if ( 'remove_activitypub_cap' === $action ) {
 			$removed_count = 0;
-			
+
 			// Remove capabilities immediately.
 			foreach ( $users as $user_id ) {
 				$user = new \WP_User( $user_id );
