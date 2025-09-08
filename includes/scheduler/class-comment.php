@@ -58,7 +58,10 @@ class Comment {
 		} elseif ( 'approved' === $new_status ) {
 			$type = 'Update';
 			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', time(), true );
-		} elseif ( \in_array( $new_status, array( 'trash', 'delete', 'spam' ), true ) ) {
+		} elseif (
+			\in_array( $new_status, array( 'trash', 'delete', 'spam' ), true ) &&
+			\Activitypub\Comment::was_received( $comment->comment_parent )
+		) {
 			$type = 'Delete';
 		}
 
