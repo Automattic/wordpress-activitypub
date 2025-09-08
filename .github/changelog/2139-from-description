@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix content visibility override issue preventing authors from changing visibility on older posts.
