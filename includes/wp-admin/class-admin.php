@@ -746,8 +746,6 @@ class Admin {
 	 * @return string The URL to redirect to.
 	 */
 	public static function process_capability_removal( $users, $remove_from_fediverse, $send_back ) {
-		$deleted_count = 0;
-
 		// Normalize fediverse removal parameter.
 		if ( is_string( $remove_from_fediverse ) ) {
 			// Legacy format: 'delete' or 'keep' for all users.
