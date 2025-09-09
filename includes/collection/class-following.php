@@ -8,7 +8,6 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Activity;
-use Activitypub\Http;
 
 use function Activitypub\add_to_outbox;
 
@@ -54,14 +53,14 @@ class Following {
 	/**
 	 * Follow a user.
 	 *
-	 * Please do not use this method directly, use `Activitypub\follow` instead.
+	 * Please do not use this method directly, use `\Activitypub\follow` instead.
 	 *
-	 * @see Activitypub\follow
+	 * @see \Activitypub\follow
 	 *
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
 	 *
-	 * @return \WP_Post|\WP_Error The ID of the Actor or a WP_Error.
+	 * @return int|false|\WP_Post|\WP_Error The Outbox ID or false on failure, the Actor post or a WP_Error.
 	 */
 	public static function follow( $post, $user_id ) {
 		$post = \get_post( $post );
@@ -146,9 +145,9 @@ class Following {
 	/**
 	 * Remove a follow request.
 	 *
-	 * Please do not use this method directly, use `Activitypub\unfollow` instead.
+	 * Please do not use this method directly, use `\Activitypub\unfollow` instead.
 	 *
-	 * @see Activitypub\unfollow
+	 * @see \Activitypub\unfollow
 	 *
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
@@ -264,7 +263,7 @@ class Following {
 	 * @return int The total number of followings.
 	 */
 	public static function count_following( $user_id ) {
-		return self::get_following_with_count( $user_id, -1, null, array() )['total'];
+		return self::get_following_with_count( $user_id, 1 )['total'];
 	}
 
 	/**
@@ -330,7 +329,7 @@ class Following {
 	 * @return int The total number of pending followings.
 	 */
 	public static function count_pending( $user_id ) {
-		return self::get_pending_with_count( $user_id, -1, null, array() )['total'];
+		return self::get_pending_with_count( $user_id, 1 )['total'];
 	}
 
 	/**
@@ -341,7 +340,12 @@ class Following {
 	 * @param int      $page    Page number.
 	 * @param array    $args    The WP_Query arguments.
 	 *
-	 * @return \WP_Post[] List of `Following` objects.
+	 * @return array {
+	 *      Data about the followings.
+	 *
+	 *      @type \WP_Post[] $followers List of `Follower` objects.
+	 *      @type int $total Total number of followers.
+	 * }
 	 */
 	public static function get_all_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
@@ -380,7 +384,7 @@ class Following {
 	 * @return \WP_Post[] List of `Following` objects.
 	 */
 	public static function get_all( $user_id ) {
-		return self::get_all_with_count( $user_id, -1, null, array() )['following'];
+		return self::get_all_with_count( $user_id )['following'];
 	}
 
 	/**
@@ -391,7 +395,7 @@ class Following {
 	 * @return int The total number of all followings.
 	 */
 	public static function count_all( $user_id ) {
-		return self::get_all_with_count( $user_id, -1, null, array() )['total'];
+		return self::get_all_with_count( $user_id, 1 )['total'];
 	}
 
 	/**
@@ -403,9 +407,9 @@ class Following {
 	 */
 	public static function count( $user_id ) {
 		return array(
-			self::ALL      => self::get_all_with_count( $user_id, -1, null, array() )['total'],
-			self::ACCEPTED => self::get_following_with_count( $user_id, -1, null, array() )['total'],
-			self::PENDING  => self::get_pending_with_count( $user_id, -1, null, array() )['total'],
+			self::ALL      => self::get_all_with_count( $user_id, 1 )['total'],
+			self::ACCEPTED => self::get_following_with_count( $user_id, 1 )['total'],
+			self::PENDING  => self::get_pending_with_count( $user_id, 1 )['total'],
 		);
 	}
 
@@ -431,5 +435,27 @@ class Following {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Remove blocked actors from following list.
+	 *
+	 * @see \Activitypub\Activitypub::init()
+	 *
+	 * @param string $value   The blocked actor URI or domain/keyword.
+	 * @param string $type    The block type (actor, domain, keyword).
+	 * @param int    $user_id The user ID.
+	 */
+	public static function remove_blocked_actors( $value, $type, $user_id ) {
+		if ( 'actor' !== $type ) {
+			return;
+		}
+
+		$actor_id = Actors::get_id_by_various( $value );
+		if ( \is_wp_error( $actor_id ) ) {
+			return;
+		}
+
+		self::unfollow( $actor_id, $user_id );
 	}
 }

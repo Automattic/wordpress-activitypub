@@ -10,6 +10,7 @@ namespace Activitypub\Model;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 
+use function Activitypub\home_host;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -32,7 +33,7 @@ class Application extends Actor {
 	 *
 	 * @context http://joinmastodon.org/ns#discoverable
 	 *
-	 * @var boolean
+	 * @var bool
 	 */
 	protected $discoverable = false;
 
@@ -41,9 +42,20 @@ class Application extends Actor {
 	 *
 	 * @context http://joinmastodon.org/ns#indexable
 	 *
-	 * @var boolean
+	 * @var bool
 	 */
 	protected $indexable = false;
+
+	/**
+	 * Whether the Application manually approves followers.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#as
+	 *
+	 * @context as:manuallyApprovesFollowers
+	 *
+	 * @var bool
+	 */
+	protected $manually_approves_followers = true;
 
 	/**
 	 * List of software capabilities implemented by the Application.
@@ -60,22 +72,34 @@ class Application extends Actor {
 	);
 
 	/**
-	 * Returns the type of the object.
+	 * Set Application as invisible.
 	 *
-	 * @return string The type of the object.
+	 * @see https://litepub.social/
+	 *
+	 * @var bool
 	 */
-	public function get_type() {
-		return 'Application';
-	}
+	protected $invisible = true;
 
 	/**
-	 * Returns whether the Application manually approves followers.
+	 * The type of the Actor.
 	 *
-	 * @return true Whether the Application manually approves followers.
+	 * @var string
 	 */
-	public function get_manually_approves_followers() {
-		return true;
-	}
+	protected $type = 'Application';
+
+	/**
+	 * The Username.
+	 *
+	 * @var string
+	 */
+	protected $name = 'application';
+
+	/**
+	 * The preferred username.
+	 *
+	 * @var string
+	 */
+	protected $preferred_username = 'application';
 
 	/**
 	 * Returns the ID of the Application.
@@ -102,24 +126,6 @@ class Application extends Actor {
 	 */
 	public function get_alternate_url() {
 		return $this->get_id();
-	}
-
-	/**
-	 * Get the Username.
-	 *
-	 * @return string The Username.
-	 */
-	public function get_name() {
-		return 'application';
-	}
-
-	/**
-	 * Get the preferred username.
-	 *
-	 * @return string The preferred username.
-	 */
-	public function get_preferred_username() {
-		return $this->get_name();
 	}
 
 	/**
@@ -241,11 +247,10 @@ class Application extends Actor {
 	 * @return string The User description.
 	 */
 	public function get_summary() {
-		return \wpautop(
-			\wp_kses(
-				\get_bloginfo( 'description' ),
-				'default'
-			)
+		return sprintf(
+			/* translators: %s: Domain of the site */
+			__( 'This is the Application Actor for %s.', 'activitypub' ),
+			home_host()
 		);
 	}
 

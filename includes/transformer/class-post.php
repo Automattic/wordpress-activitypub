@@ -15,10 +15,8 @@ use Activitypub\Model\Blog;
 use Activitypub\Shortcodes;
 
 use function Activitypub\esc_hashtag;
-use function Activitypub\object_to_uri;
 use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
-use function Activitypub\get_upload_baseurl;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\site_supports_blocks;
@@ -189,7 +187,7 @@ class Post extends Base {
 		 */
 		$thumbnail = apply_filters(
 			'activitypub_get_image',
-			$this->get_wordpress_attachment( $id, $image_size ),
+			$this->get_attachment_image_src( $id, $image_size ),
 			$id,
 			$image_size
 		);
@@ -208,7 +206,7 @@ class Post extends Base {
 
 		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt ) );
+			$image['name'] = \html_entity_decode( \wp_strip_all_tags( $alt ), ENT_QUOTES, 'UTF-8' );
 		}
 
 		return $image;
@@ -245,7 +243,7 @@ class Post extends Base {
 		 */
 		$thumbnail = apply_filters(
 			'activitypub_get_image',
-			$this->get_wordpress_attachment( $id, $image_size ),
+			$this->get_attachment_image_src( $id, $image_size ),
 			$id,
 			$image_size
 		);
@@ -264,7 +262,7 @@ class Post extends Base {
 
 		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt ) );
+			$image['name'] = \html_entity_decode( \wp_strip_all_tags( $alt ), ENT_QUOTES, 'UTF-8' );
 		}
 
 		return $image;
@@ -322,13 +320,12 @@ class Post extends Base {
 		if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
 			$media = $this->get_block_attachments( $media, $max_media );
 		} else {
-			$media = $this->get_classic_editor_image_embeds( $media, $max_media );
+			$media = $this->parse_html_images( $media, $max_media, $this->item->post_content );
 		}
 
-		$media      = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
-		$unique_ids = \array_unique( \array_column( $media, 'id' ) );
-		$media      = \array_intersect_key( $media, $unique_ids );
-		$media      = \array_slice( $media, 0, $max_media );
+		$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
+		$media = $this->filter_unique_attachments( $media );
+		$media = \array_slice( $media, 0, $max_media );
 
 		/**
 		 * Filter the attachment IDs for a post.
@@ -340,7 +337,7 @@ class Post extends Base {
 		 */
 		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->item );
 
-		$attachments = \array_filter( \array_map( array( $this, 'wp_attachment_to_activity_attachment' ), $media ) );
+		$attachments = \array_filter( \array_map( array( $this, 'transform_attachment' ), $media ) );
 
 		/**
 		 * Filter the attachments for a post.
@@ -493,8 +490,6 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		\add_filter( 'activitypub_reply_block', '__return_empty_string' );
-
 		// Remove Content from drafts.
 		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
@@ -535,9 +530,9 @@ class Post extends Base {
 		$content = \trim( $content );
 
 		/**
-		 * Filters the post content before it is transformed for ActivityPub.
+		 * Filters the post content after it was transformed for ActivityPub.
 		 *
-		 * @param string   $content The post content to be transformed.
+		 * @param string   $content The transformed post content.
 		 * @param \WP_Post $post    The post object being transformed.
 		 */
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
@@ -545,10 +540,9 @@ class Post extends Base {
 		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
 
-		// Get rid of the reply block filter.
+		// Remove filters.
 		\remove_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ) );
 		\remove_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ) );
-		\remove_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		return $content;
 	}
@@ -858,91 +852,6 @@ class Post extends Base {
 	}
 
 	/**
-	 * Get image embeds from the classic editor by parsing HTML.
-	 *
-	 * @param array $media      The media array grouped by type.
-	 * @param int   $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachments.
-	 */
-	protected function get_classic_editor_image_embeds( $media, $max_images ) {
-		// If someone calls that function directly, bail.
-		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-			return $media;
-		}
-
-		// Max images can't be negative or zero.
-		if ( $max_images <= 0 ) {
-			return $media;
-		}
-
-		$images  = array();
-		$base    = get_upload_baseurl();
-		$content = \get_post_field( 'post_content', $this->item );
-		$tags    = new \WP_HTML_Tag_Processor( $content );
-
-		// This linter warning is a false positive - we have to re-count each time here as we modify $images.
-		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
-		while ( $tags->next_tag( 'img' ) && ( \count( $images ) <= $max_images ) ) {
-			/**
-			 * Filter the image source URL.
-			 *
-			 * This can be used to modify the image source URL before it is used to
-			 * determine the attachment ID.
-			 *
-			 * @param string $src The image source URL.
-			 */
-			$src = \apply_filters( 'activitypub_image_src', $tags->get_attribute( 'src' ) );
-
-			/*
-			 * If the img source is in our uploads dir, get the
-			 * associated ID. Note: if there's a -500x500
-			 * type suffix, we remove it, but we try the original
-			 * first in case the original image is actually called
-			 * that. Likewise, we try adding the -scaled suffix for
-			 * the case that this is a small version of an image
-			 * that was big enough to get scaled down on upload:
-			 * https://make.wordpress.org/core/2019/10/09/introducing-handling-of-big-images-in-wordpress-5-3/
-			 */
-			if ( null !== $src && \str_starts_with( $src, $base ) ) {
-				$img_id = \attachment_url_to_postid( $src );
-
-				if ( 0 === $img_id ) {
-					$count  = 0;
-					$src    = \strtok( $src, '?' );
-					$img_id = \attachment_url_to_postid( $src );
-				}
-
-				if ( 0 === $img_id ) {
-					$count = 0;
-					$src   = \preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
-					if ( $count > 0 ) {
-						$img_id = \attachment_url_to_postid( $src );
-					}
-				}
-
-				if ( 0 === $img_id ) {
-					$src    = \preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
-					$img_id = \attachment_url_to_postid( $src );
-				}
-
-				if ( 0 !== $img_id ) {
-					$images[] = array(
-						'id'  => $img_id,
-						'alt' => $tags->get_attribute( 'alt' ),
-					);
-				}
-			}
-		}
-
-		if ( \count( $media['image'] ) <= $max_images ) {
-			$media['image'] = \array_merge( $media['image'], $images );
-		}
-
-		return $media;
-	}
-
-	/**
 	 * Filter media IDs by object type.
 	 *
 	 * @param array    $media The media array grouped by type.
@@ -972,120 +881,16 @@ class Post extends Base {
 	/**
 	 * Converts a WordPress Attachment to an ActivityPub Attachment.
 	 *
+	 * @deprecated 7.2.0 Use {@see Base::transform_attachment()} instead.
+	 *
 	 * @param array $media The Attachment array.
 	 *
 	 * @return array The ActivityPub Attachment.
 	 */
 	public function wp_attachment_to_activity_attachment( $media ) {
-		if ( ! isset( $media['id'] ) ) {
-			return $media;
-		}
+		_deprecated_function( __METHOD__, '7.2.0', '\Activitypub\Transformer\Base::transform_attachment()' );
 
-		$id         = $media['id'];
-		$attachment = array();
-		$mime_type  = \get_post_mime_type( $id );
-		$media_type = \strtok( $mime_type, '/' );
-
-		// Switching on image/audio/video.
-		switch ( $media_type ) {
-			case 'image':
-				$image_size = 'large';
-
-				/**
-				 * Filter the image URL returned for each post.
-				 *
-				 * @param array|false $thumbnail  The image URL, or false if no image is available.
-				 * @param int         $id         The attachment ID.
-				 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
-				 */
-				$thumbnail = apply_filters(
-					'activitypub_get_image',
-					$this->get_wordpress_attachment( $id, $image_size ),
-					$id,
-					$image_size
-				);
-
-				if ( $thumbnail ) {
-					$image = array(
-						'type'      => 'Image',
-						'url'       => \esc_url( $thumbnail[0] ),
-						'mediaType' => \esc_attr( $mime_type ),
-					);
-
-					if ( ! empty( $media['alt'] ) ) {
-						$image['name'] = \wp_strip_all_tags( \html_entity_decode( $media['alt'] ) );
-					} else {
-						$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
-						if ( $alt ) {
-							$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt ) );
-						}
-					}
-
-					$attachment = $image;
-				}
-				break;
-
-			case 'audio':
-			case 'video':
-				$attachment = array(
-					'type'      => \ucfirst( $media_type ),
-					'mediaType' => \esc_attr( $mime_type ),
-					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
-					'name'      => \esc_attr( \get_the_title( $id ) ),
-				);
-				$meta       = wp_get_attachment_metadata( $id );
-				// Height and width for videos.
-				if ( isset( $meta['width'] ) && isset( $meta['height'] ) ) {
-					$attachment['width']  = \esc_attr( $meta['width'] );
-					$attachment['height'] = \esc_attr( $meta['height'] );
-				}
-
-				if ( $this->get_icon() ) {
-					$attachment['icon'] = object_to_uri( $this->get_icon() );
-				}
-
-				break;
-		}
-
-		/**
-		 * Filter the attachment for a post.
-		 *
-		 * @param array $attachment The attachment.
-		 * @param int   $id         The attachment ID.
-		 *
-		 * @return array The filtered attachment.
-		 */
-		return \apply_filters( 'activitypub_attachment', $attachment, $id );
-	}
-
-	/**
-	 * Return details about an image attachment.
-	 *
-	 * @param int    $id         The attachment ID.
-	 * @param string $image_size The image size to retrieve. Set to 'large' by default.
-	 *
-	 * @return array|false Array of image data, or boolean false if no image is available.
-	 */
-	protected function get_wordpress_attachment( $id, $image_size = 'large' ) {
-		/**
-		 * Hook into the image retrieval process. Before image retrieval.
-		 *
-		 * @param int    $id         The attachment ID.
-		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
-		 */
-		do_action( 'activitypub_get_image_pre', $id, $image_size );
-
-		$image = \wp_get_attachment_image_src( $id, $image_size );
-
-		/**
-		 * Hook into the image retrieval process. After image retrieval.
-		 *
-		 * @param int    $id         The attachment ID.
-		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
-		 */
-		do_action( 'activitypub_get_image_post', $id, $image_size );
-
-		return $image;
+		return parent::transform_attachment( $media );
 	}
 
 	/**

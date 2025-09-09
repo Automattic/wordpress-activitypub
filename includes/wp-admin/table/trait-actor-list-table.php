@@ -21,7 +21,7 @@ trait Actor_List_Table {
 	 * @param string $search The search term.
 	 * @return string The normalized search term.
 	 */
-	public static function normalize_search_term( $search ) {
+	public function normalize_search_term( $search ) {
 		$search = \sanitize_text_field( $search );
 		$search = \str_replace( array( 'acct:', 'http://', 'https://', 'www.' ), '', $search );
 		$search = \str_replace( '@', ' ', $search );
@@ -39,7 +39,7 @@ trait Actor_List_Table {
 	 *
 	 * @return string The WebFinger of the actor.
 	 */
-	public static function get_webfinger( $actor ) {
+	public function get_webfinger( $actor ) {
 		$webfinger = Webfinger::uri_to_acct( $actor->get_id() );
 
 		if ( ! \is_wp_error( $webfinger ) ) {
@@ -47,5 +47,24 @@ trait Actor_List_Table {
 		}
 
 		return Webfinger::guess( $actor );
+	}
+
+	/**
+	 * Get the action URL for a follower.
+	 *
+	 * @param string $action   The action.
+	 * @param string $follower The follower ID.
+	 * @return string The action URL.
+	 */
+	private function get_action_url( $action, $follower ) {
+		return \wp_nonce_url(
+			\add_query_arg(
+				array(
+					'action'   => $action,
+					'follower' => $follower,
+				)
+			),
+			$action . '-follower_' . $follower
+		);
 	}
 }

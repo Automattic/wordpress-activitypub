@@ -204,15 +204,9 @@ function is_comment() {
  * @return boolean True if HTTP-Code is 410 or 404.
  */
 function is_tombstone( $wp_error ) {
-	if ( ! is_wp_error( $wp_error ) ) {
-		return false;
-	}
+	_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Tombstone::exists_in_error' );
 
-	if ( in_array( (int) $wp_error->get_error_code(), array( 404, 410 ), true ) ) {
-		return true;
-	}
-
-	return false;
+	return Tombstone::exists_in_error( $wp_error );
 }
 
 /**
@@ -348,6 +342,7 @@ function is_post_disabled( $post ) {
  * This function checks if a user is enabled for ActivityPub.
  *
  * @param int|string $user_id The user ID.
+ *
  * @return boolean True if the user is enabled, false otherwise.
  */
 function user_can_activitypub( $user_id ) {
@@ -567,11 +562,15 @@ function extract_recipients_from_activity( $data ) {
 /**
  * Check if passed Activity is Public.
  *
- * @param array $data The Activity object as array.
+ * @param Base_Object|array $data The Activity object as Base_Object or array.
  *
  * @return boolean True if public, false if not.
  */
 function is_activity_public( $data ) {
+	if ( $data instanceof Base_Object ) {
+		$data = $data->to_array();
+	}
+
 	$recipients = extract_recipients_from_activity( $data );
 
 	return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
@@ -726,7 +725,8 @@ function object_to_uri( $data ) {
 	// Return part of Object that makes most sense.
 	switch ( $type ) {
 		case 'Image':
-			$data = $data['url'];
+			// See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
+			$data = object_to_uri( $data['url'] );
 			break;
 		case 'Link':
 			$data = $data['href'];
@@ -1048,9 +1048,7 @@ function register_comment_type( $comment_type, $args = array() ) {
  */
 function normalize_url( $url ) {
 	$url = \untrailingslashit( $url );
-	$url = \str_replace( 'https://', '', $url );
-	$url = \str_replace( 'http://', '', $url );
-	$url = \str_replace( 'www.', '', $url );
+	$url = \preg_replace( '/^https?:\/\/(www\.)?/', '', $url );
 
 	return $url;
 }
@@ -1063,7 +1061,7 @@ function normalize_url( $url ) {
  * @return string The normalized host.
  */
 function normalize_host( $host ) {
-	return \str_replace( 'www.', '', $host );
+	return \preg_replace( '/^www\./', '', $host );
 }
 
 /**
@@ -1201,7 +1199,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	 * @param string $excerpt_more The excerpt more.
 	 */
 	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[…]' );
-	$length       = $length - strlen( $excerpt_more );
+	$length       = $length - \mb_strlen( $excerpt_more, 'UTF-8' );
 
 	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
 
@@ -1223,20 +1221,24 @@ function generate_post_summary( $post, $length = 500 ) {
 	}
 
 	$content = \strip_shortcodes( $content );
-	$content = \html_entity_decode( $content );
 	$content = \wp_strip_all_tags( $content );
+	$content = \html_entity_decode( $content, ENT_QUOTES, 'UTF-8' );
 	$content = \trim( $content );
-	$content = \preg_replace( '/\R+/m', "\n\n", $content );
-	$content = \preg_replace( '/[\r\t]/', '', $content );
+	$content = \preg_replace( '/\R+/mu', "\n\n", $content );
+	$content = \preg_replace( '/[\r\t]/u', '', $content );
 
-	if ( $length && \strlen( $content ) > $length ) {
+	if ( $length && \mb_strlen( $content, 'UTF-8' ) > $length ) {
 		$content = \wordwrap( $content, $length, '</activitypub-summary>' );
 		$content = \explode( '</activitypub-summary>', $content, 2 );
 		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
+	/*
+	There is no proper support for HTML in ActivityPub summaries yet.
 	// This filter is documented in wp-includes/post-template.php.
 	return \apply_filters( 'the_excerpt', $content );
+	*/
+	return $content;
 }
 
 /**
@@ -1544,7 +1546,7 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
  * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
  * @param int        $user_id      The ID of the WordPress User.
  *
- * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ * @return int|false|\WP_Post|\WP_Error The Outbox ID or false on failure, the Actor post or a WP_Error.
  */
 function follow( $remote_actor, $user_id ) {
 	if ( \is_numeric( $remote_actor ) ) {
@@ -1574,7 +1576,7 @@ function follow( $remote_actor, $user_id ) {
  * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
  * @param int        $user_id      The ID of the WordPress User.
  *
- * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ * @return \WP_Post|\WP_Error The Actor post or a WP_Error.
  */
 function unfollow( $remote_actor, $user_id ) {
 	if ( \is_numeric( $remote_actor ) ) {

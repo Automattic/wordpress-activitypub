@@ -29,14 +29,17 @@ If you need help, [check out the support forums on WordPress.org](https://wordpr
 
 ## Contribute
 
-Thank you for thinking about contributing to the ActivityPub plugin! If you're unsure of anything, feel free to submit an issue or pull request on any topic. The worst that can happen is that you'll be politely directed to the best location to ask your question or to change something in your pull request. There are a variety of options for how you can help:
+Thank you for thinking about contributing to the ActivityPub plugin! We welcome contributions of all kinds, but to keep things productive for everyone, please follow these guidelines:
 
-* Write and submit patches.
-* [Discuss new features and enhancements](https://github.com/Automattic/wordpress-activitypub/discussions).
-* If you found a bug, [file a report here](https://github.com/Automattic/wordpress-activitypub/issues/new?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen&template=bug_report.yml).
-* [Translate the ActivityPub plugin in your language](https://translate.wordpress.org/projects/wp-plugins/activitypub/).
+* **Keep issues clear and focused.** If you're reporting a bug, please use the [bug report form](https://github.com/Automattic/wordpress-activitypub/issues/new?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen&template=bug_report.yml). For feature ideas, please share them in [Discussions](https://github.com/Automattic/wordpress-activitypub/discussions) so we can consider them together.
+* **Stay relevant to the plugin's scope.** Issues and comments should relate directly to improving this plugin. Tangential ideas or unrelated feature requests will be closed.
+* **Be concise.** Short, actionable descriptions are much easier for maintainers to respond to.
+* **Respectful collaboration.** We follow the [Contributor Covenant Code of Conduct](./CODE_OF_CONDUCT.md). Please keep your contributions constructive and professional.  
 
-To clarify these expectations, we have adopted the code of conduct defined by the Contributor Covenant. [It can be read in full here](./CODE_OF_CONDUCT.md).
+Other ways to help include:
+
+* Writing and submitting patches.
+* Translating the ActivityPub plugin into your language ([translate here](https://translate.wordpress.org/projects/wp-plugins/activitypub/)).
 
 ## Security
 

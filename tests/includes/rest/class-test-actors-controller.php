@@ -86,7 +86,7 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/999999' );
 		$response = rest_get_server()->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
+		$this->assertEquals( 400, $response->get_status() );
 	}
 
 	/**

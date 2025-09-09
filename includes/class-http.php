@@ -42,7 +42,6 @@ class Http {
 		 */
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
 		$args       = array(
-			'method'              => 'POST',
 			'timeout'             => 100,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
@@ -53,11 +52,9 @@ class Http {
 				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
 			'body'                => $body,
-			'key_id'              => Actors::get_by_id( $user_id )->get_id() . '#main-key',
+			'key_id'              => \json_decode( $body )->actor . '#main-key',
 			'private_key'         => Actors::get_private_key( $user_id ),
 		);
-
-		$args = Signature::sign_request( $args, $url );
 
 		$response = \wp_safe_remote_post( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
@@ -138,7 +135,6 @@ class Http {
 		$timeout = \apply_filters( 'activitypub_remote_get_timeout', 100 );
 
 		$args = array(
-			'method'              => 'GET',
 			'timeout'             => $timeout,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
@@ -151,8 +147,6 @@ class Http {
 			'key_id'              => Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key',
 			'private_key'         => Actors::get_private_key( Actors::APPLICATION_USER_ID ),
 		);
-
-		$args = Signature::sign_request( $args, $url );
 
 		$response = \wp_safe_remote_get( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
@@ -188,27 +182,9 @@ class Http {
 	 * @return bool True if the URL is a tombstone.
 	 */
 	public static function is_tombstone( $url ) {
-		/**
-		 * Fires before checking if the URL is a tombstone.
-		 *
-		 * @param string $url The URL to check.
-		 */
-		\do_action( 'activitypub_pre_http_is_tombstone', $url );
+		_deprecated_function( __METHOD__, '7.3.0', 'Activitypub\Tombstone::exists_remote' );
 
-		$response = \wp_safe_remote_get( $url, array( 'headers' => array( 'Accept' => 'application/activity+json' ) ) );
-		$code     = \wp_remote_retrieve_response_code( $response );
-
-		if ( in_array( (int) $code, array( 404, 410 ), true ) ) {
-			return true;
-		}
-
-		$data = \wp_remote_retrieve_body( $response );
-		$data = \json_decode( $data, true );
-		if ( $data && isset( $data['type'] ) && 'Tombstone' === $data['type'] ) {
-			return true;
-		}
-
-		return false;
+		return Tombstone::exists_remote( $url );
 	}
 
 	/**

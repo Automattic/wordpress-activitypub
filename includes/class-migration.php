@@ -199,6 +199,10 @@ class Migration {
 			}
 		}
 
+		if ( \version_compare( $version_from_db, '7.3.0', '<' ) ) {
+			self::remove_pending_application_user_follow_requests();
+		}
+
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
 
@@ -955,11 +959,18 @@ class Migration {
 		\add_option( 'activitypub_blog_user_mailer_new_follower', $new_follower );
 		\add_option( 'activitypub_blog_user_mailer_new_mention', '1' );
 
+		$user_ids = \get_users(
+			array(
+				'capability__in' => array( 'activitypub' ),
+				'fields'         => 'id',
+			)
+		);
+
 		// Add the actor notification options.
-		foreach ( Actors::get_collection() as $actor ) {
-			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_dm', $new_dm );
-			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_follower', $new_follower );
-			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_mention', '1' );
+		foreach ( $user_ids as $user_id ) {
+			\update_user_option( $user_id, 'activitypub_mailer_new_dm', $new_dm );
+			\update_user_option( $user_id, 'activitypub_mailer_new_follower', $new_follower );
+			\update_user_option( $user_id, 'activitypub_mailer_new_mention', '1' );
 		}
 
 		// Delete the old notification options.
@@ -1047,5 +1058,21 @@ class Migration {
 				'batch_size' => $batch_size,
 			);
 		}
+	}
+
+	/**
+	 * Removes pending follow requests for the application user.
+	 */
+	public static function remove_pending_application_user_follow_requests() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete(
+			$wpdb->postmeta,
+			array(
+				'meta_key'   => '_activitypub_following', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value' => Actors::APPLICATION_USER_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
 	}
 }

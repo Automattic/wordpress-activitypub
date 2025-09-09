@@ -327,32 +327,36 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 * @return array[]
 	 */
 	public function the_resource_provider() {
+		$home_url       = \home_url();
+		$home_host      = \wp_parse_url( $home_url, PHP_URL_HOST );
+		$https_home_url = \str_replace( 'http://', 'https://', $home_url );
+
 		return array(
-			array( 'http://example.org/?author=1', 'Activitypub\Model\User' ),
-			array( 'https://example.org/?author=1', 'Activitypub\Model\User' ),
-			array( 'https://example.org?author=1', 'Activitypub\Model\User' ),
-			array( 'http://example.org/?author=7', 'WP_Error' ),
-			array( 'acct:admin@example.org', 'Activitypub\Model\User' ),
-			array( 'acct:blog@example.org', 'Activitypub\Model\Blog' ),
-			array( 'acct:*@example.org', 'Activitypub\Model\Blog' ),
-			array( 'acct:_@example.org', 'Activitypub\Model\Blog' ),
-			array( 'acct:aksd@example.org', 'WP_Error' ),
-			array( 'admin@example.org', 'Activitypub\Model\User' ),
-			array( 'acct:application@example.org', 'Activitypub\Model\Application' ),
-			array( 'http://example.org/@admin', 'Activitypub\Model\User' ),
-			array( 'http://example.org/@blog', 'Activitypub\Model\Blog' ),
-			array( 'https://example.org/@blog', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org/@blog/', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org/blog/@blog', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org/blog/@blog/', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org/error/@blog', 'WP_Error' ),
-			array( 'http://example.org/error/@blog/', 'WP_Error' ),
-			array( 'http://example.org/', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org', 'Activitypub\Model\Blog' ),
-			array( 'https://example.org/', 'Activitypub\Model\Blog' ),
-			array( 'https://example.org', 'Activitypub\Model\Blog' ),
-			array( 'http://example.org/@blog/s', 'WP_Error' ),
-			array( 'http://example.org/@blogs/', 'WP_Error' ),
+			array( $home_url . '/?author=1', 'Activitypub\Model\User' ),
+			array( $https_home_url . '/?author=1', 'Activitypub\Model\User' ),
+			array( \rtrim( $https_home_url, '/' ) . '?author=1', 'Activitypub\Model\User' ),
+			array( $home_url . '/?author=7', 'WP_Error' ),
+			array( 'acct:admin@' . $home_host, 'Activitypub\Model\User' ),
+			array( 'acct:blog@' . $home_host, 'Activitypub\Model\Blog' ),
+			array( 'acct:*@' . $home_host, 'Activitypub\Model\Blog' ),
+			array( 'acct:_@' . $home_host, 'Activitypub\Model\Blog' ),
+			array( 'acct:aksd@' . $home_host, 'WP_Error' ),
+			array( 'admin@' . $home_host, 'Activitypub\Model\User' ),
+			array( 'acct:application@' . $home_host, 'Activitypub\Model\Application' ),
+			array( $home_url . '/@admin', 'Activitypub\Model\User' ),
+			array( $home_url . '/@blog', 'Activitypub\Model\Blog' ),
+			array( $https_home_url . '/@blog', 'Activitypub\Model\Blog' ),
+			array( $home_url . '/@blog/', 'Activitypub\Model\Blog' ),
+			array( $home_url . '/blog/@blog', 'Activitypub\Model\Blog' ),
+			array( $home_url . '/blog/@blog/', 'Activitypub\Model\Blog' ),
+			array( $home_url . '/error/@blog', 'WP_Error' ),
+			array( $home_url . '/error/@blog/', 'WP_Error' ),
+			array( $home_url . '/', 'Activitypub\Model\Blog' ),
+			array( \rtrim( $home_url, '/' ), 'Activitypub\Model\Blog' ),
+			array( $https_home_url . '/', 'Activitypub\Model\Blog' ),
+			array( \rtrim( $https_home_url, '/' ), 'Activitypub\Model\Blog' ),
+			array( $home_url . '/@blog/s', 'WP_Error' ),
+			array( $home_url . '/@blogs/', 'WP_Error' ),
 		);
 	}
 
@@ -393,11 +397,9 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 * @covers ::get_private_key
 	 */
 	public function test_signature_creation() {
-		$user = Actors::get_by_id( 1 );
-
-		$key_pair    = Actors::get_keypair( $user->get__id() );
-		$public_key  = Actors::get_public_key( $user->get__id() );
-		$private_key = Actors::get_private_key( $user->get__id() );
+		$key_pair    = Actors::get_keypair( 1 );
+		$public_key  = Actors::get_public_key( 1 );
+		$private_key = Actors::get_private_key( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
@@ -410,33 +412,28 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 * @covers ::get_keypair
 	 */
 	public function test_signature_legacy() {
-		// Check user.
-		$user = Actors::get_by_id( 1 );
+		$public_key  = 'public key 1';
+		$private_key = 'private key 1';
 
-		$public_key  = 'public key ' . $user->get__id();
-		$private_key = 'private key ' . $user->get__id();
+		\update_user_meta( 1, 'magic_sig_public_key', $public_key );
+		\update_user_meta( 1, 'magic_sig_private_key', $private_key );
 
-		\update_user_meta( $user->get__id(), 'magic_sig_public_key', $public_key );
-		\update_user_meta( $user->get__id(), 'magic_sig_private_key', $private_key );
-
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 
 		// Check application user.
-		$user = Actors::get_by_id( Actors::APPLICATION_USER_ID );
-
 		\delete_option( 'activitypub_keypair_for_-1' );
 
-		$public_key  = 'public key ' . $user->get__id();
-		$private_key = 'private key ' . $user->get__id();
+		$public_key  = 'public key ' . Actors::APPLICATION_USER_ID;
+		$private_key = 'private key ' . Actors::APPLICATION_USER_ID;
 
 		\add_option( 'activitypub_application_user_public_key', $public_key );
 		\add_option( 'activitypub_application_user_private_key', $private_key );
 
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( Actors::APPLICATION_USER_ID );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
@@ -444,18 +441,17 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 
 		// Check blog user.
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-		$user = Actors::get_by_id( Actors::BLOG_USER_ID );
 		\delete_option( 'activitypub_actor_mode' );
 
-		$public_key  = 'public key ' . $user->get__id();
-		$private_key = 'private key ' . $user->get__id();
+		$public_key  = 'public key ' . Actors::BLOG_USER_ID;
+		$private_key = 'private key ' . Actors::BLOG_USER_ID;
 
 		\delete_option( 'activitypub_keypair_for_0' );
 
 		\add_option( 'activitypub_blog_user_public_key', $public_key );
 		\add_option( 'activitypub_blog_user_private_key', $private_key );
 
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( Actors::BLOG_USER_ID );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
@@ -468,25 +464,22 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 * @covers ::get_keypair
 	 */
 	public function test_signature_consistency() {
-		// Check user.
-		$user = Actors::get_by_id( 1 );
+		$public_key  = 'public key 1';
+		$private_key = 'private key 1';
 
-		$public_key  = 'public key ' . $user->get__id();
-		$private_key = 'private key ' . $user->get__id();
+		\update_user_meta( 1, 'magic_sig_public_key', $public_key );
+		\update_user_meta( 1, 'magic_sig_private_key', $private_key );
 
-		\update_user_meta( $user->get__id(), 'magic_sig_public_key', $public_key );
-		\update_user_meta( $user->get__id(), 'magic_sig_private_key', $private_key );
-
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 
-		\update_user_meta( $user->get__id(), 'magic_sig_public_key', $public_key . '-update' );
-		\update_user_meta( $user->get__id(), 'magic_sig_private_key', $private_key . '-update' );
+		\update_user_meta( 1, 'magic_sig_public_key', $public_key . '-update' );
+		\update_user_meta( 1, 'magic_sig_private_key', $private_key . '-update' );
 
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
@@ -499,20 +492,18 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 * @covers ::get_keypair
 	 */
 	public function test_signature_consistency2() {
-		$user = Actors::get_by_id( 1 );
-
-		$key_pair    = Actors::get_keypair( $user->get__id() );
-		$public_key  = Actors::get_public_key( $user->get__id() );
-		$private_key = Actors::get_private_key( $user->get__id() );
+		$key_pair    = Actors::get_keypair( 1 );
+		$public_key  = Actors::get_public_key( 1 );
+		$private_key = Actors::get_private_key( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 
-		\update_user_meta( $user->get__id(), 'magic_sig_public_key', 'test' );
-		\update_user_meta( $user->get__id(), 'magic_sig_private_key', 'test' );
+		\update_user_meta( 1, 'magic_sig_public_key', 'test' );
+		\update_user_meta( 1, 'magic_sig_private_key', 'test' );
 
-		$key_pair = Actors::get_keypair( $user->get__id() );
+		$key_pair = Actors::get_keypair( 1 );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );

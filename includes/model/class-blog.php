@@ -91,7 +91,7 @@ class Blog extends Actor {
 		$permalink = \get_option( 'activitypub_use_permalink_as_id_for_blog', false );
 
 		if ( $permalink ) {
-			return $this->get_url();
+			return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
 		}
 
 		return \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) );
@@ -153,7 +153,7 @@ class Blog extends Actor {
 	 * @return string The User url.
 	 */
 	public function get_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
+		return \get_bloginfo( 'url' );
 	}
 
 	/**

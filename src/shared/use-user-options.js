@@ -1,6 +1,7 @@
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
-import { useMemo } from '@wordpress/element';
+import { useMemo, useState, useEffect } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
 import { useOptions } from './use-options';
 
 /**
@@ -18,21 +19,52 @@ export function useUserOptions( { withInherit = false } ) {
 	 * @property {boolean} enabled.users - Whether users are enabled.
 	 * @property {boolean} enabled.blog - Whether the blog user is enabled.
 	 */
-	const { enabled } = useOptions();
-	const users = enabled?.users
-		? useSelect( ( select ) => select( 'core' ).getUsers( { capabilities: 'activitypub' } ), [] )
-		: [];
+	const { enabled, namespace } = useOptions();
+	const [ currentUserCanActivityPub, setCurrentUserCanActivityPub ] = useState( false );
+	const { fetchedUsers, isLoadingUsers } = useSelect( ( select ) => {
+		const { getUsers, getIsResolving } = select( 'core' );
+		return {
+			fetchedUsers: enabled?.users ? getUsers( { capabilities: 'activitypub' } ) : null,
+			isLoadingUsers: enabled?.users ? getIsResolving( 'getUsers', [ { capabilities: 'activitypub' } ] ) : false,
+		};
+	}, [] );
+
+	// Only fetch current user if fetchedUsers is empty and we're not still loading.
+	const currentUser = useSelect(
+		( select ) => ( fetchedUsers || isLoadingUsers ? null : select( 'core' ).getCurrentUser() ),
+		[ fetchedUsers, isLoadingUsers ]
+	);
+
+	// Test if current user has activitypub capability by trying to access their actor endpoint.
+	useEffect( () => {
+		if ( fetchedUsers || isLoadingUsers || ! currentUser ) {
+			return;
+		}
+
+		apiFetch( {
+			path: `/${ namespace }/actors/${ currentUser.id }`,
+			method: 'HEAD',
+			headers: { Accept: 'application/activity+json' },
+			parse: false,
+		} )
+			.then( () => setCurrentUserCanActivityPub( true ) )
+			.catch( () => setCurrentUserCanActivityPub( false ) );
+	}, [ fetchedUsers, isLoadingUsers, currentUser ] );
+
+	const users =
+		fetchedUsers ||
+		( currentUser && currentUserCanActivityPub ? [ { id: currentUser.id, name: currentUser.name } ] : [] );
 
 	/**
 	 * Memoized computation of user options for block settings.
 	 */
 	return useMemo( () => {
-		if ( ! users ) {
+		if ( ! users.length ) {
 			return [];
 		}
 		const userKeywords = [];
 
-		if ( enabled?.blog ) {
+		if ( enabled?.blog && fetchedUsers ) {
 			userKeywords.push( {
 				label: __( 'Blog', 'activitypub' ),
 				value: 'blog',
@@ -40,7 +72,7 @@ export function useUserOptions( { withInherit = false } ) {
 		}
 
 		// Only show the inherit option when explicitly asked for and users are enabled.
-		if ( withInherit && enabled?.users ) {
+		if ( withInherit && enabled?.users && fetchedUsers ) {
 			userKeywords.push( {
 				label: __( 'Dynamic User', 'activitypub' ),
 				value: 'inherit',

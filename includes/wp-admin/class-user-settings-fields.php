@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Moderation;
 
 /**
  * Class to handle all user settings fields and callbacks.
@@ -88,6 +89,34 @@ class User_Settings_Fields {
 			'activitypub_user_settings',
 			'activitypub_user_profile',
 			array( 'label_for' => 'activitypub_also_known_as' )
+		);
+
+		// Add moderation section.
+		\add_settings_section(
+			'activitypub_user_moderation',
+			\esc_html__( 'Moderation', 'activitypub' ),
+			array( self::class, 'moderation_section_description' ),
+			'activitypub_user_settings',
+			array(
+				'before_section' => '<section id="activitypub-moderation">',
+				'after_section'  => '</section>',
+			)
+		);
+
+		\add_settings_field(
+			'activitypub_user_blocked_domains',
+			\esc_html__( 'Blocked Domains', 'activitypub' ),
+			array( self::class, 'blocked_domains_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_moderation'
+		);
+
+		\add_settings_field(
+			'activitypub_user_blocked_keywords',
+			\esc_html__( 'Blocked Keywords', 'activitypub' ),
+			array( self::class, 'blocked_keywords_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_moderation'
 		);
 	}
 
@@ -272,6 +301,83 @@ class User_Settings_Fields {
 		<p class="description">
 			<?php echo \wp_kses_post( \__( 'Enter one account per line. Profile links or usernames like <code>@username@example.com</code> are accepted and will be automatically normalized to the correct format.', 'activitypub' ) ); ?>
 		</p>
+		<?php
+	}
+
+	/**
+	 * Moderation section description callback.
+	 */
+	public static function moderation_section_description() {
+		echo '<p>' . \esc_html__( 'Configure personal blocks to filter ActivityPub content you don\'t want to see.', 'activitypub' ) . '</p>';
+	}
+
+	/**
+	 * Blocked domains field callback.
+	 */
+	public static function blocked_domains_callback() {
+		$user_id         = \get_current_user_id();
+		$blocked_domains = Moderation::get_user_blocks( $user_id )['domains'];
+		?>
+		<p class="description"><?php \esc_html_e( 'Block entire ActivityPub instances by domain name.', 'activitypub' ); ?></p>
+
+		<div class="activitypub-user-block-list" data-user-id="<?php echo \esc_attr( $user_id ); ?>">
+			<?php if ( ! empty( $blocked_domains ) ) : ?>
+			<table class="widefat striped activitypub-blocked-domain" role="presentation" style="max-width: 500px; margin: 15px 0;">
+				<?php foreach ( $blocked_domains as $domain ) : ?>
+					<tr>
+						<td><?php echo \esc_html( $domain ); ?></td>
+						<td style="width: 80px;">
+							<button type="button" class="button button-small remove-user-block-btn" data-type="domain" data-value="<?php echo \esc_attr( $domain ); ?>">
+								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+							</button>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</table>
+			<?php endif; ?>
+
+			<div class="add-user-block-form" style="display: flex; max-width: 500px; gap: 8px;">
+				<input type="text" class="regular-text" id="new_user_domain" placeholder="<?php \esc_attr_e( 'example.com', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
+				<button type="button" class="button add-user-block-btn" data-type="domain" style="flex-shrink: 0; white-space: nowrap;">
+					<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
+				</button>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Blocked keywords field callback.
+	 */
+	public static function blocked_keywords_callback() {
+		$user_id          = \get_current_user_id();
+		$blocked_keywords = Moderation::get_user_blocks( $user_id )['keywords'];
+		?>
+		<p class="description"><?php \esc_html_e( 'Block ActivityPub content containing specific keywords.', 'activitypub' ); ?></p>
+
+		<div class="activitypub-user-block-list" data-user-id="<?php echo \esc_attr( $user_id ); ?>">
+			<?php if ( ! empty( $blocked_keywords ) ) : ?>
+			<table class="widefat striped activitypub-blocked-keyword" role="presentation" style="max-width: 500px; margin: 15px 0;">
+				<?php foreach ( $blocked_keywords as $keyword ) : ?>
+					<tr>
+						<td><?php echo \esc_html( $keyword ); ?></td>
+						<td style="width: 80px;">
+							<button type="button" class="button button-small remove-user-block-btn" data-type="keyword" data-value="<?php echo \esc_attr( $keyword ); ?>">
+								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+							</button>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</table>
+			<?php endif; ?>
+
+			<div class="add-user-block-form" style="display: flex; max-width: 500px; gap: 8px;">
+				<input type="text" class="regular-text" id="new_user_keyword" placeholder="<?php \esc_attr_e( 'spam keyword', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
+				<button type="button" class="button add-user-block-btn" data-type="keyword" style="flex-shrink: 0; white-space: nowrap;">
+					<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
+				</button>
+			</div>
+		</div>
 		<?php
 	}
 }

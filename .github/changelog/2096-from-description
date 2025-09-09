@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Use wp_interactivity_config() for static values instead of wp_interactivity_state() to improve performance and code clarity

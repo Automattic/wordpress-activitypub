@@ -40,7 +40,11 @@ class Test_User extends \WP_UnitTestCase {
 		// User now returns old user actor.
 		\add_action( 'activitypub_construct_model_actor', array( Move::class, 'maybe_initiate_old_user' ) );
 		$user = ( new User( 1 ) )->to_array();
-		$this->assertSame( add_query_arg( 'author', 1, $old_domain ), $user['id'] );
+
+		// The port might be lost due to HTTP_HOST manipulation, so check base URL structure.
+		$this->assertStringContainsString( '/?author=1', $user['id'] );
+		$this->assertStringStartsWith( 'http://' . \wp_parse_url( $old_domain, PHP_URL_HOST ), $user['id'] );
+
 		\remove_action( 'activitypub_construct_model_actor', array( Move::class, 'maybe_initiate_old_user' ) );
 
 		// Clean up.
@@ -123,5 +127,51 @@ class Test_User extends \WP_UnitTestCase {
 		$user = User::from_wp_user( $user_id )->to_array( false );
 		$this->assertArrayHasKey( 'movedTo', $user );
 		$this->assertSame( 'https://example.com', $user['movedTo'] );
+	}
+
+	/**
+	 * Test that email-based usernames are properly sanitized for ActivityPub handles.
+	 *
+	 * @covers ::get_preferred_username
+	 * @covers ::get_webfinger
+	 */
+	public function test_email_username_sanitization() {
+		// Test with email-based login (e.g., from Site Kit Google login).
+		$user_id = self::factory()->user->create(
+			array(
+				'role'       => 'author',
+				'user_login' => 'testuser123@gmail.com',
+			)
+		);
+		$user    = User::from_wp_user( $user_id );
+
+		// Preferred username should be sanitized.
+		$this->assertSame( 'testuser123gmail-com', $user->get_preferred_username() );
+
+		// Webfinger should not have double @.
+		$expected_webfinger = 'testuser123gmail-com@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+		$this->assertSame( $expected_webfinger, $user->get_webfinger() );
+
+		// Test another email format.
+		$user_id2 = self::factory()->user->create(
+			array(
+				'role'       => 'author',
+				'user_login' => 'admin@googlemail.com',
+			)
+		);
+		$user2    = User::from_wp_user( $user_id2 );
+
+		$this->assertSame( 'admingooglemail-com', $user2->get_preferred_username() );
+
+		// Test normal username (no email) remains unchanged.
+		$user_id3 = self::factory()->user->create(
+			array(
+				'role'       => 'author',
+				'user_login' => 'normaluser',
+			)
+		);
+		$user3    = User::from_wp_user( $user_id3 );
+
+		$this->assertSame( 'normaluser', $user3->get_preferred_username() );
 	}
 }

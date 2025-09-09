@@ -6,9 +6,15 @@ Developers of all levels can help — whether you can barely recognize a filter 
 
 ## Create Bug Reports
 
-If you find a bug, please [file a GitHub issue](https://github.com/Automattic/wordpress-activitypub/issues/). If you have write access, add the appropriate labels.
+If you find a bug, please use our [bug report form](https://github.com/Automattic/wordpress-activitypub/issues/new?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen&template=bug_report.yml). This helps us gather the information we need efficiently.
 
-If you’re filing a bug, specific steps to reproduce are helpful. Please include the URL of the page that has the bug, along with what you expected to see and what happened instead.
+**Keep your bug reports focused and actionable:**
+- Include specific steps to reproduce the issue.
+- Provide the URL of the page that has the bug.
+- Describe what you expected to see and what happened instead.
+- Stay within the plugin's scope—issues unrelated to ActivityPub functionality may be closed.
+
+If you have write access, add the appropriate labels.
 
 ## Write and submit a patch
 
@@ -23,9 +29,16 @@ If you'd like to contribute but don't know where to get started, you can take a 
 - ["Good First Issues"](https://github.com/Automattic/wordpress-activitypub/labels/%5BType%5D%20Good%20First%20Issue) are a good entry point to get familiar with ActivityPub plugin's code base.
 - All issues labeled with [the "Good For Community" label](https://github.com/Automattic/wordpress-activitypub/issues?q=is%3Aopen+sort%3Aupdated-desc+label%3A%22Good+For+Community%22) are fair game. That's a great way to contribute new features and fix small issues within the ActivityPub plugin.
 
-### We’re Here To Help
+### We're Here To Help
 
-We encourage you to ask for help at any point. We want your first experience with the ActivityPub plugin to be a good one, so don’t be shy. If you’re wondering why something is the way it is, or how a decision was made, please create an issue and prefix it with “Question:”.
+We encourage you to ask for help at any point. We want your first experience with the ActivityPub plugin to be a good one, so don't be shy. 
+
+**For questions and discussions:**
+- Use [GitHub Discussions](https://github.com/Automattic/wordpress-activitypub/discussions) for feature ideas, general questions, and open-ended topics.
+- Create issues only for specific bugs or concrete enhancement proposals.
+- Keep questions concise and directly related to the plugin.
+
+This helps us organize feedback effectively and ensures your questions get the right attention.
 
 ## Translate the plugin
 

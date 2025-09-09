@@ -250,6 +250,16 @@ class Settings {
 			)
 		);
 
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_persist_inbox',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable inbox collection persistence.',
+				'default'     => false,
+			)
+		);
+
 		// Blog-User Settings.
 		\register_setting(
 			'activitypub_blog',
@@ -324,6 +334,18 @@ class Settings {
 				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
 			)
 		);
+
+		// Moderation settings.
+		\register_setting(
+			'activitypub',
+			'activitypub_site_blocked_actors',
+			array(
+				'type'              => 'array',
+				'description'       => 'Site-wide blocked ActivityPub actors.',
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
+			)
+		);
 	}
 
 	/**
@@ -354,6 +376,12 @@ class Settings {
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',
 			);
 		}
+
+		// Add blocked actors tab for site-wide blocking.
+		$settings_tabs['blocked-actors'] = array(
+			'label'    => \__( 'Blocked Actors', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php',
+		);
 
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
@@ -437,6 +465,11 @@ class Settings {
 				'content' => self::get_help_tab_template( 'getting-started' ),
 			)
 		);
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( 'following' === \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? '' ) ) ) {
+			self::add_following_help_tab();
+		}
 
 		// Core Features.
 		\get_current_screen()->add_help_tab(
@@ -522,6 +555,27 @@ class Settings {
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/issues">' . \esc_html__( 'Report an issue', 'activitypub' ) . '</a></p>' . "\n" .
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs">' . \esc_html__( 'Documentation', 'activitypub' ) . '</a></p>' . "\n" .
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/releases">' . \esc_html__( 'View latest changes', 'activitypub' ) . '</a></p>'
+		);
+	}
+
+	/**
+	 * Adds the ActivityPub help tab to the users page.
+	 */
+	public static function add_following_help_tab() {
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'starter-kit',
+				'title'   => \__( 'Starter Kits', 'activitypub' ),
+				'content' => \sprintf(
+					'<h2>%s</h2>' .
+					'<p>%s</p>' .
+					'<p>%s</p>',
+					\__( 'Starter Kits', 'activitypub' ),
+					\__( 'Starter kits are curated lists of accounts that help you quickly build your fediverse network. Import a starter kit to automatically follow a collection of interesting accounts in specific topics or communities.', 'activitypub' ),
+					// translators: %s: Importer URL.
+					\wp_kses_post( \sprintf( \__( 'To import a starter kit, go to <strong>Tools &#8594; Import</strong> and look for <a href="%s">the &#8220;Starter Kit&#8221; option</a>.', 'activitypub' ), \admin_url( 'admin.php?import=starter-kit' ) ) )
+				),
+			)
 		);
 	}
 

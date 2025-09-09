@@ -242,10 +242,6 @@ class Outbox {
 	 */
 	public static function get_activity( $outbox_item ) {
 		$outbox_item = \get_post( $outbox_item );
-		$actor       = self::get_actor( $outbox_item );
-		if ( is_wp_error( $actor ) ) {
-			return $actor;
-		}
 
 		$activity_object = \json_decode( $outbox_item->post_content, true );
 		$type            = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
@@ -253,9 +249,18 @@ class Outbox {
 		if ( $activity_object['type'] === $type ) {
 			$activity = Activity::init_from_array( $activity_object );
 			if ( ! $activity->get_actor() ) {
+				$actor = self::get_actor( $outbox_item );
+				if ( \is_wp_error( $actor ) ) {
+					return $actor;
+				}
 				$activity->set_actor( $actor->get_id() );
 			}
 		} else {
+			$actor = self::get_actor( $outbox_item );
+			if ( \is_wp_error( $actor ) ) {
+				return $actor;
+			}
+
 			$activity = new Activity();
 			$activity->set_type( $type );
 			$activity->set_id( $outbox_item->guid );

@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
+use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
@@ -122,17 +123,28 @@ class Following extends \WP_List_Table {
 					return;
 				}
 
-				$profile = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				if ( ! \is_email( \ltrim( $profile, '@' ) ) && empty( \wp_parse_url( $profile, PHP_URL_SCHEME ) ) ) {
-					// Add scheme if missing.
-					$profile = \esc_url_raw( 'https://' . \ltrim( $profile, '/' ) );
+				$original = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
+				$profile  = Actors::normalize_identifier( $original );
+				if ( ! $profile ) {
+					/* translators: %s: Account profile that could not be followed */
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
+					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
+					break;
+				}
+
+				// Check if actor is blocked.
+				if ( Moderation::is_actor_blocked( $profile, $this->user_id ) ) {
+					/* translators: %s: Account profile that could not be followed */
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. The account is blocked.', 'activitypub' ), \esc_html( $profile ) ) );
+					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
+					break;
 				}
 
 				$result = follow( $profile, $this->user_id );
 				if ( \is_wp_error( $result ) ) {
 					/* translators: %s: Account profile that could not be followed */
 					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
-					$redirect_to = \add_query_arg( 'resource', $profile, $redirect_to );
+					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
 				} else {
 					\add_settings_error( 'activitypub', 'followed', \__( 'Account followed.', 'activitypub' ), 'success' );
 				}
@@ -202,7 +214,7 @@ class Following extends \WP_List_Table {
 		}
 
 		if ( isset( $_GET['s'] ) ) {
-			$args['s'] = self::normalize_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$args['s'] = $this->normalize_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		}
 
 		if ( isset( $_GET['status'] ) ) {
@@ -231,20 +243,17 @@ class Following extends \WP_List_Table {
 
 		foreach ( $followings as $following ) {
 			$actor = Actors::get_actor( $following );
-
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
 
-			$url = object_to_uri( $actor->get_url() ?? $actor->get_id() );
-
 			$this->items[] = array(
 				'id'         => $following->ID,
-				'icon'       => $actor->get_icon()['url'] ?? '',
+				'icon'       => object_to_uri( $actor->get_icon() ?? ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg' ),
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
-				'url'        => $url,
-				'webfinger'  => self::get_webfinger( $actor ),
+				'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
+				'webfinger'  => $this->get_webfinger( $actor ),
 				'status'     => Following_Collection::check_status( $this->user_id, $following->ID ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $following->post_modified_gmt,
@@ -369,7 +378,7 @@ class Following extends \WP_List_Table {
 			( ! isset( $_GET['status'] ) || Following_Collection::ALL === $_GET['status'] ) &&
 			( Following_Collection::PENDING === $item['status'] )
 		) {
-			$status = \sprintf( '<strong> — %s</strong>', \esc_html__( 'Pending', 'activitypub' ) );
+			$status = \sprintf( '<strong class="pending"> — %s</strong>', \esc_html__( 'Pending', 'activitypub' ) );
 		}
 
 		return sprintf(
@@ -457,8 +466,9 @@ class Following extends \WP_List_Table {
 	 */
 	public function single_row( $item ) {
 		\printf(
-			"<tr id='following-%s'>",
-			\esc_attr( $item['id'] )
+			'<tr id="following-%1$s" class="status-%2$s">',
+			\esc_attr( $item['id'] ),
+			\esc_attr( $item['status'] )
 		);
 		$this->single_row_columns( $item );
 		\printf( "</tr>\n" );
@@ -480,15 +490,7 @@ class Following extends \WP_List_Table {
 		$actions = array(
 			'unfollow' => sprintf(
 				'<a href="%s" aria-label="%s">%s</a>',
-				\wp_nonce_url(
-					\add_query_arg(
-						array(
-							'action'   => 'delete',
-							'follower' => $item['id'],
-						)
-					),
-					'delete-follower_' . $item['id']
-				),
+				$this->get_action_url( 'delete', $item['id'] ),
 				/* translators: %s: username. */
 				\esc_attr( \sprintf( \__( 'Unfollow %s', 'activitypub' ), $item['username'] ) ),
 				\esc_html__( 'Unfollow', 'activitypub' )

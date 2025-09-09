@@ -47,7 +47,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 */
 	public function test_init() {
 		$routes = $this->server->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>\d+)/reactions', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[-]?\d+)/reactions', $routes );
 	}
 
 	/**

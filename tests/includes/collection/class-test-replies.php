@@ -49,7 +49,7 @@ class Test_Replies extends \WP_UnitTestCase {
 
 		wp_set_comment_status( $comment_id, 'hold' );
 		$replies = Replies::get_collection( get_post( $post_id ) );
-		$this->assertEquals( $replies['id'], sprintf( 'http://example.org/index.php?rest_route=/activitypub/1.0/posts/%d/replies', $post_id ) );
+		$this->assertEquals( $replies['id'], \rest_url( \sprintf( '/activitypub/1.0/posts/%d/replies', $post_id ) ) );
 		$this->assertCount( 0, $replies['first']['items'] );
 
 		wp_set_comment_status( $comment_id, 'approve' );

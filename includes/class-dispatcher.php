@@ -60,8 +60,9 @@ class Dispatcher {
 			return;
 		}
 
+		$type  = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 		$actor = Outbox::get_actor( $outbox_item );
-		if ( \is_wp_error( $actor ) ) {
+		if ( \is_wp_error( $actor ) && 'Delete' !== $type ) {
 			// If the actor is not found, publish the post and don't try again.
 			\wp_publish_post( $outbox_item );
 			return;
@@ -70,7 +71,7 @@ class Dispatcher {
 		$activity = Outbox::get_activity( $outbox_item );
 
 		// Send to mentioned and replied-to users. Everyone other than followers.
-		self::send_to_additional_inboxes( $activity, $actor->get__id(), $outbox_item );
+		self::send_to_additional_inboxes( $activity, $outbox_item->post_author, $outbox_item );
 
 		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
 			\do_action(
@@ -96,11 +97,10 @@ class Dispatcher {
 	 * @return array|void The next batch of followers to process, or void if done.
 	 */
 	public static function send_to_followers( $outbox_item_id, $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset = 0 ) {
-		$json    = Outbox::get_activity( $outbox_item_id )->to_json();
-		$actor   = Outbox::get_actor( \get_post( $outbox_item_id ) );
-		$inboxes = Followers::get_inboxes_for_activity( $json, $actor->get__id(), $batch_size, $offset );
-
-		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
+		$outbox_item = \get_post( $outbox_item_id );
+		$json        = Outbox::get_activity( $outbox_item_id )->to_json();
+		$inboxes     = Followers::get_inboxes_for_activity( $json, $outbox_item->post_author, $batch_size, $offset );
+		$retries     = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
 		// Retry failed inboxes.
 		if ( ! empty( $retries ) ) {
@@ -120,7 +120,7 @@ class Dispatcher {
 			 * @param int    $batch_size     The batch size.
 			 * @param int    $offset         The offset.
 			 */
-			\do_action( 'activitypub_outbox_processing_complete', $inboxes, $json, $actor->get__id(), $outbox_item_id, $batch_size, $offset );
+			\do_action( 'activitypub_outbox_processing_complete', $inboxes, $json, $outbox_item->post_author, $outbox_item_id, $batch_size, $offset );
 
 			// No more followers to process for this update.
 			\wp_publish_post( $outbox_item_id );
@@ -137,7 +137,7 @@ class Dispatcher {
 			 * @param int    $batch_size     The batch size.
 			 * @param int    $offset         The offset.
 			 */
-			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $json, $actor->get__id(), $outbox_item_id, $batch_size, $offset );
+			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $json, $outbox_item->post_author, $outbox_item_id, $batch_size, $offset );
 
 			return array( $outbox_item_id, $batch_size, $offset + $batch_size );
 		}
@@ -175,9 +175,9 @@ class Dispatcher {
 	 * @return array The failed inboxes.
 	 */
 	private static function send_to_inboxes( $inboxes, $outbox_item_id ) {
-		$json    = Outbox::get_activity( $outbox_item_id )->to_json();
-		$actor   = Outbox::get_actor( \get_post( $outbox_item_id ) );
-		$retries = array();
+		$outbox_item = \get_post( $outbox_item_id );
+		$json        = Outbox::get_activity( $outbox_item_id )->to_json();
+		$retries     = array();
 
 		/**
 		 * Fires before sending an Activity to inboxes.
@@ -189,7 +189,7 @@ class Dispatcher {
 		\do_action( 'activitypub_pre_send_to_inboxes', $json, $inboxes, $outbox_item_id );
 
 		foreach ( $inboxes as $inbox ) {
-			$result = safe_remote_post( $inbox, $json, $actor->get__id() );
+			$result = safe_remote_post( $inbox, $json, $outbox_item->post_author );
 
 			if ( is_wp_error( $result ) && in_array( $result->get_error_code(), self::$retry_error_codes, true ) ) {
 				$retries[] = $inbox;
@@ -204,7 +204,7 @@ class Dispatcher {
 			 * @param int    $actor_id       The actor ID.
 			 * @param int    $outbox_item_id The Outbox item ID.
 			 */
-			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $actor->get__id(), $outbox_item_id );
+			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $outbox_item->post_author, $outbox_item_id );
 		}
 
 		return $retries;
@@ -365,7 +365,7 @@ class Dispatcher {
 		);
 
 		if ( $send ) {
-			$followers = Followers::get_inboxes_for_activity( $activity->to_json(), $actor->get__id() );
+			$followers = Followers::get_inboxes_for_activity( $activity->to_json(), $outbox_item->post_author );
 
 			// Only send if there are followers to send to.
 			$send = ! is_countable( $followers ) || 0 < count( $followers );
@@ -379,7 +379,7 @@ class Dispatcher {
 		 * @param int      $actor_id                   The actor ID.
 		 * @param \WP_Post $outbox_item                The WordPress object.
 		 */
-		return apply_filters( 'activitypub_send_activity_to_followers', $send, $activity, $actor->get__id(), $outbox_item );
+		return apply_filters( 'activitypub_send_activity_to_followers', $send, $activity, $outbox_item->post_author, $outbox_item );
 	}
 
 	/**

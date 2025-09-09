@@ -7,12 +7,13 @@
 
 namespace Activitypub;
 
-use Exception;
-use Activitypub\Options;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
+use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Outbox;
 
 /**
  * ActivityPub Class.
@@ -24,6 +25,14 @@ class Activitypub {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
+		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
+		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
+		\add_action( 'init', array( self::class, 'register_post_types' ), 11 );
+		\add_action( 'init', array( self::class, 'register_oembed_providers' ), 11 );
+
+		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
+
 		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
@@ -31,56 +40,67 @@ class Activitypub {
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
-		// Add support for ActivityPub to custom post types.
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
-
-		foreach ( $post_types as $post_type ) {
-			\add_post_type_support( $post_type, 'activitypub' );
-		}
-
 		\add_action( 'wp_trash_post', array( self::class, 'trash_post' ), 1 );
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
-		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
-		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
-
 		\add_action( 'user_register', array( self::class, 'user_register' ) );
-
-		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
 		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'default_post_metadata', array( self::class, 'default_post_metadata' ), 10, 3 );
 
-		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
+		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
+		\add_action( 'activitypub_add_user_block', array( Followers::class, 'remove_blocked_actors' ), 10, 3 );
+		\add_action( 'activitypub_add_user_block', array( Following::class, 'remove_blocked_actors' ), 10, 3 );
 
-		// Register several post_types.
-		self::register_post_types();
-
-		self::register_oembed_providers();
-		Embed::init();
+		// Add support for ActivityPub to custom post types.
+		foreach ( \get_option( 'activitypub_support_post_types', array( 'post' ) ) as $post_type ) {
+			\add_post_type_support( $post_type, 'activitypub' );
+		}
 	}
 
 	/**
 	 * Activation Hook.
+	 *
+	 * @param bool $network_wide Whether to activate the plugin for all sites in the network or just the current site.
 	 */
-	public static function activate() {
+	public static function activate( $network_wide ) {
 		self::flush_rewrite_rules();
 		Scheduler::register_schedules();
 
 		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
 		Migration::update_comment_counts();
+
+		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
+			$sites = \get_sites( array( 'fields' => 'ids' ) );
+			foreach ( $sites as $site ) {
+				\switch_to_blog( $site );
+				self::flush_rewrite_rules();
+				\restore_current_blog();
+			}
+		}
 	}
 
 	/**
 	 * Deactivation Hook.
+	 *
+	 * @param bool $network_wide Whether to deactivate the plugin for all sites in the network or just the current site.
 	 */
-	public static function deactivate() {
+	public static function deactivate( $network_wide ) {
 		self::flush_rewrite_rules();
 		Scheduler::deregister_schedules();
 
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
+
+		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
+			$sites = \get_sites( array( 'fields' => 'ids' ) );
+			foreach ( $sites as $site ) {
+				\switch_to_blog( $site );
+				self::flush_rewrite_rules();
+				\restore_current_blog();
+			}
+		}
 	}
 
 	/**
@@ -115,6 +135,11 @@ class Activitypub {
 				\status_header( 406 );
 			}
 			return $template;
+		}
+
+		if ( Tombstone::exists_local( Query::get_instance()->get_request_url() ) ) {
+			\status_header( 410 );
+			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
 		}
 
 		$activitypub_template = false;
@@ -287,13 +312,7 @@ class Activitypub {
 				return;
 			}
 
-			if ( $actor->get__id() > 0 ) {
-				$redirect_url = $actor->get_url();
-			} else {
-				$redirect_url = get_bloginfo( 'url' );
-			}
-
-			wp_safe_redirect( $redirect_url, 301 );
+			\wp_safe_redirect( $actor->get_url(), 301 );
 			exit;
 		}
 	}
@@ -455,7 +474,7 @@ class Activitypub {
 	/**
 	 * Register Custom Post Types.
 	 */
-	private static function register_post_types() {
+	public static function register_post_types() {
 		\register_post_type(
 			Actors::POST_TYPE,
 			array(
@@ -464,6 +483,7 @@ class Activitypub {
 					'singular_name' => _x( 'Follower', 'post_type single name', 'activitypub' ),
 				),
 				'public'           => false,
+				'show_in_rest'     => true,
 				'hierarchical'     => false,
 				'rewrite'          => false,
 				'query_var'        => false,
@@ -491,7 +511,7 @@ class Activitypub {
 				'single'            => false,
 				'sanitize_callback' => function ( $value ) {
 					if ( ! is_string( $value ) ) {
-						throw new Exception( 'Error message is no valid string' );
+						throw new \Exception( 'Error message is no valid string' );
 					}
 
 					return esc_sql( $value );
@@ -511,8 +531,127 @@ class Activitypub {
 			)
 		);
 
+		// Register Inbox Post-Type.
+		\register_post_type(
+			Inbox::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => _x( 'Inbox', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Inbox Item', 'post_type single name', 'activitypub' ),
+				),
+				'capabilities'        => array(
+					'create_posts' => false,
+				),
+				'map_meta_cap'        => true,
+				'public'              => false,
+				'show_in_rest'        => true,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'supports'            => array( 'title', 'editor', 'author', 'custom-fields' ),
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+			)
+		);
+
+		// Register Inbox Post-Meta.
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_object_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the object that the inbox item is about.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_type',
+			array(
+				'type'              => 'string',
+				'description'       => 'The type of the activity',
+				'single'            => true,
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$value  = ucfirst( strtolower( $value ) );
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => Activity::TYPES,
+						'default' => 'Create',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The type of the local actor that received the activity.',
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'application', 'blog', 'user' ),
+						'default' => 'user',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_remote_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the remote actor that sent the activity.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'activitypub_content_visibility',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The visibility of the content.',
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'public', 'unlisted', 'private', 'direct' ),
+						'default' => 'public',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
 		// Register Outbox Post-Type.
-		register_post_type(
+		\register_post_type(
 			Outbox::POST_TYPE,
 			array(
 				'labels'              => array(
@@ -551,7 +690,7 @@ class Activitypub {
 					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
 						'type'    => 'string',
-						'enum'    => array( 'Accept', 'Add', 'Announce', 'Arrive', 'Block', 'Create', 'Delete', 'Dislike', 'Flag', 'Follow', 'Ignore', 'Invite', 'Join', 'Leave', 'Like', 'Listen', 'Move', 'Offer', 'Question', 'Reject', 'Read', 'Remove', 'TentativeReject', 'TentativeAccept', 'Travel', 'Undo', 'Update', 'View' ),
+						'enum'    => Activity::TYPES,
 						'default' => 'Announce',
 					);
 
@@ -634,7 +773,7 @@ class Activitypub {
 		);
 
 		// Both User and Blog Extra Fields types have the same args.
-		$args = array(
+		$extra_field_args = array(
 			'labels'              => array(
 				'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
 				'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
@@ -660,13 +799,39 @@ class Activitypub {
 			'supports'            => array( 'title', 'editor', 'page-attributes' ),
 		);
 
-		\register_post_type( Extra_Fields::USER_POST_TYPE, $args );
-		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $args );
+		\register_post_type( Extra_Fields::USER_POST_TYPE, $extra_field_args );
+		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $extra_field_args );
 
 		/**
 		 * Fires after ActivityPub custom post types have been registered.
 		 */
 		\do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Register REST field for ap_actor posts.
+	 */
+	public static function register_ap_actor_rest_field() {
+		\register_rest_field(
+			Actors::POST_TYPE,
+			'activitypub_json',
+			array(
+				/**
+				 * Get the raw post content without WordPress content filtering.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return string The raw post content.
+				 */
+				'get_callback' => function ( $response ) {
+					return \get_post_field( 'post_content', $response['id'] );
+				},
+				'schema'       => array(
+					'description' => 'Raw ActivityPub JSON data without WordPress content filtering',
+					'type'        => 'string',
+					'context'     => array( 'view', 'edit' ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -719,6 +884,11 @@ class Activitypub {
 	public static function default_post_metadata( $meta_value, $object_id, $meta_key ) {
 		// Check if the meta key is `activitypub_content_visibility`.
 		if ( 'activitypub_content_visibility' !== $meta_key ) {
+			return $meta_value;
+		}
+
+		// If meta value is already explicitly set, respect the author's choice.
+		if ( null !== $meta_value ) {
 			return $meta_value;
 		}
 
@@ -881,6 +1051,47 @@ class Activitypub {
 				'single'            => true,
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
+			)
+		);
+
+		// Moderation user meta.
+		\register_meta(
+			'user',
+			'activitypub_blocked_actors',
+			array(
+				'type'              => 'array',
+				'description'       => 'User-specific blocked ActivityPub actors.',
+				'single'            => true,
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
+			)
+		);
+
+		\register_meta(
+			'user',
+			'activitypub_blocked_domains',
+			array(
+				'type'              => 'array',
+				'description'       => 'User-specific blocked ActivityPub domains.',
+				'single'            => true,
+				'default'           => array(),
+				'sanitize_callback' => function ( $value ) {
+					return \array_unique( \array_map( array( Sanitize::class, 'host_list' ), $value ) );
+				},
+			)
+		);
+
+		\register_meta(
+			'user',
+			'activitypub_blocked_keywords',
+			array(
+				'type'              => 'array',
+				'description'       => 'User-specific blocked ActivityPub keywords.',
+				'single'            => true,
+				'default'           => array(),
+				'sanitize_callback' => function ( $value ) {
+					return \array_map( 'sanitize_text_field', $value );
+				},
 			)
 		);
 	}

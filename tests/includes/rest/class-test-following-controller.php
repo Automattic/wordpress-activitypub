@@ -69,7 +69,7 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>[\w\-\.]+)/following', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>[-]?\d+)/following', $routes );
 	}
 
 	/**
@@ -125,7 +125,6 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertArrayHasKey( 'id', $data );
 		$this->assertArrayHasKey( 'type', $data );
 		$this->assertArrayHasKey( 'generator', $data );
-		$this->assertArrayHasKey( 'actor', $data );
 		$this->assertArrayHasKey( 'totalItems', $data );
 
 		// Test property values.
@@ -200,7 +199,7 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/999999/following' );
 		$response = rest_get_server()->dispatch( $request );
 
-		$this->assertErrorResponse( 'activitypub_user_not_found', $response, 404 );
+		$this->assertErrorResponse( 'rest_invalid_param', $response, 400 );
 	}
 
 	/**

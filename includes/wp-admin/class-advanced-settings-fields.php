@@ -98,6 +98,15 @@ class Advanced_Settings_Fields {
 				array( 'label_for' => 'activitypub_shared_inbox' )
 			);
 		}
+
+		\add_settings_field(
+			'activitypub_persist_inbox',
+			\__( 'Inbox', 'activitypub' ),
+			array( self::class, 'render_persist_inbox_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_persist_inbox' )
+		);
 	}
 
 	/**
@@ -249,6 +258,24 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( 'Allows your site to handle incoming ActivityPub messages more efficiently, especially helpful for busy or multi-user sites. This feature is still in beta and may encounter issues.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render inbox collection persistence field.
+	 */
+	public static function render_persist_inbox_field() {
+		$value = \get_option( 'activitypub_persist_inbox', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_persist_inbox" name="activitypub_persist_inbox" value="1" <?php checked( '1', $value ); ?> />
+				Persist all incoming Activities.
+			</label>
+		</p>
+		<p class="description">
+			For now, this is only used for debugging purposes. If you have no actual need for this, please keep it disabled to avoid unnecessary database writes. Future versions may enable this feature by default.
 		</p>
 		<?php
 	}

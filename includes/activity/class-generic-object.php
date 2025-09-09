@@ -25,6 +25,7 @@ use function Activitypub\snake_to_camel_case;
  * @method array[]|null            get_attachment()         Gets the attachment property of the object.
  * @method string[]|null           get_cc()                 Gets the secondary recipients of the object.
  * @method string|null             get_content()            Gets the content property of the object.
+ * @method string[]|null           get_content_map()        Gets the content map property of the object.
  * @method string[]|null           get_endpoints()          Gets the endpoint property of the object.
  * @method string[]|null           get_icon()               Gets the icon property of the object.
  * @method string|null             get_id()                 Gets the object's unique global identifier.
@@ -32,10 +33,12 @@ use function Activitypub\snake_to_camel_case;
  * @method string[]|string|null    get_in_reply_to()        Gets the objects this object is in reply to.
  * @method string|null             get_inbox()              Gets the inbox property of the object.
  * @method string|null             get_name()               Gets the natural language name of the object.
+ * @method string[]|null           get_name_map()           Gets the name map property of the object.
  * @method Base_Object|string|null get_object()             Gets the direct object of the activity.
  * @method string|null             get_preferred_username() Gets the preferred username of the object.
  * @method string|null             get_published()          Gets the date and time the object was published in ISO 8601 format.
  * @method string|null             get_summary()            Gets the natural language summary of the object.
+ * @method string[]|null           get_summary_map()        Gets the summary map property of the object.
  * @method array[]|null            get_tag()                Gets the tag property of the object.
  * @method string[]|string|null    get_to()                 Gets the primary recipients of the object.
  * @method string                  get_type()               Gets the type of the object.
@@ -61,7 +64,7 @@ use function Activitypub\snake_to_camel_case;
  * @method Base_Object set_summary( string $summary )             Sets the natural language summary of the object.
  * @method Base_Object set_summary_map( array|null $summary_map ) Sets the summary property of the object.
  * @method Base_Object set_target( string $target )               Sets the target property of the object.
- * @method Base_Object set_to( array|string $to )                 Sets the primary recipients of the object.
+ * @method Base_Object set_to( string|string[] $to )              Sets the primary recipients of the object.
  * @method Base_Object set_type( string $type )                   Sets the type of the object.
  * @method Base_Object set_updated( string $updated )             Sets the date and time the object was updated in ISO 8601 format.
  * @method Base_Object set_url( string $url )                     Sets the URL of the object.
