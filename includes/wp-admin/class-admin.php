@@ -53,8 +53,8 @@ class Admin {
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
-		\add_action( 'admin_post_remove_activitypub_cap_confirmed', array( self::class, 'handle_bulk_capability_removal_confirmation' ) );
-		\add_action( 'current_screen', array( self::class, 'handle_bulk_capability_removal_page' ) );
+		\add_action( 'admin_post_remove_activitypub_cap_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
+		\add_action( 'current_screen', array( self::class, 'handle_bulk_actor_delete_page' ) );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -652,7 +652,7 @@ class Admin {
 	/**
 	 * Handle the bulk capability removal page request directly.
 	 */
-	public static function handle_bulk_capability_removal_page() {
+	public static function handle_bulk_actor_delete_page() {
 		// Check if this is our confirmation page request.
 		// phpcs:ignore WordPress.Security.NonceVerification
 		if ( ! isset( $_GET['action'] ) || 'activitypub_confirm_removal' !== $_GET['action'] ) {
@@ -686,7 +686,7 @@ class Admin {
 
 		// Load template and exit to prevent WordPress from trying to load other admin pages.
 		\load_template(
-			ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-capability-removal-confirmation.php',
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-actor-delete-confirmation.php',
 			false,
 			array(
 				'users'     => $users,
@@ -700,7 +700,7 @@ class Admin {
 	/**
 	 * Handle the bulk capability removal confirmation form submission.
 	 */
-	public static function handle_bulk_capability_removal_confirmation() {
+	public static function handle_bulk_actor_delete_confirmation() {
 		// Verify nonce.
 		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'bulk-users' ) ) {
 			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
