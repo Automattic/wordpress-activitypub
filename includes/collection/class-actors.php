@@ -434,36 +434,6 @@ class Actors {
 	}
 
 	/**
-	 * Normalize actor identifier to a URI.
-	 *
-	 * Handles webfinger addresses, URLs without schemes, objects, and arrays.
-	 *
-	 * @param string|object|array $actor Actor URI, webfinger address, actor object, or array.
-	 * @return string|null Normalized actor URI or null if unable to resolve.
-	 */
-	public static function normalize_identifier( $actor ) {
-		$actor = object_to_uri( $actor );
-		if ( ! is_string( $actor ) ) {
-			return null;
-		}
-
-		$actor = \trim( $actor, '@' );
-
-		// If it's an email-like webfinger address, resolve it.
-		if ( \filter_var( $actor, FILTER_VALIDATE_EMAIL ) ) {
-			$resolved = \Activitypub\Webfinger::resolve( $actor );
-			return \is_wp_error( $resolved ) ? null : object_to_uri( $resolved );
-		}
-
-		// If it's a URL without scheme, add https://.
-		if ( empty( \wp_parse_url( $actor, PHP_URL_SCHEME ) ) ) {
-			$actor = \esc_url_raw( 'https://' . \ltrim( $actor, '/' ) );
-		}
-
-		return $actor;
-	}
-
-	/**
 	 * Return the public key for a given actor.
 	 *
 	 * @param int  $user_id The WordPress User ID.
@@ -832,5 +802,20 @@ class Actors {
 	public static function get_remote_key( $key_id ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_public_key' );
 		return Remote_Actors::get_public_key( $key_id );
+	}
+
+	/**
+	 * Normalize actor identifier to a URI.
+	 *
+	 * Handles webfinger addresses, URLs without schemes, objects, and arrays.
+	 *
+	 * @deprecated unreleased Use {@see Remote_Actors::normalize_identifier()}
+	 *
+	 * @param string|object|array $actor Actor URI, webfinger address, actor object, or array.
+	 * @return string|null Normalized actor URI or null if unable to resolve.
+	 */
+	public static function normalize_identifier( $actor ) {
+		_deprecated_function( __METHOD__, 'unreleased', 'Remote_Actors::normalize_identifier' );
+		return Remote_Actors::normalize_identifier( $actor );
 	}
 }

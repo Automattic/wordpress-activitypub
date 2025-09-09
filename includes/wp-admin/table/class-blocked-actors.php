@@ -124,7 +124,7 @@ class Blocked_Actors extends \WP_List_Table {
 				}
 
 				$original = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$profile  = Actors::normalize_identifier( $original );
+				$profile  = Remote_Actors::normalize_identifier( $original );
 				if ( ! $profile ) {
 					/* translators: %s: Account profile that could not be blocked */
 					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $original ) ) );
