@@ -653,16 +653,6 @@ class Admin {
 	 * Handle the bulk capability removal page request directly.
 	 */
 	public static function handle_bulk_actor_delete_page() {
-		// Check if this is our confirmation page request.
-		// phpcs:ignore WordPress.Security.NonceVerification
-		if ( ! isset( $_GET['action'] ) || 'activitypub_confirm_removal' !== $_GET['action'] ) {
-			return;
-		}
-
-		// Check if we're in admin area.
-		if ( ! \is_admin() ) {
-			return;
-		}
 
 		// Check permissions.
 		if ( ! \current_user_can( 'edit_users' ) ) {
