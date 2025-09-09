@@ -13,7 +13,6 @@ use Activitypub\Http;
 use function Activitypub\is_actor;
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\object_to_uri;
-use function Activitypub\strip_fragment_from_url;
 
 /**
  * Remote Actors collection class.
@@ -472,7 +471,7 @@ class Remote_Actors {
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_public_key( $key_id ) {
-		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) );
+		$actor = get_remote_metadata_by_actor( \strip_fragment_from_url( $key_id ) );
 		if ( \is_wp_error( $actor ) ) {
 			return new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
 		}
