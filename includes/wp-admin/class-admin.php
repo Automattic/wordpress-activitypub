@@ -53,7 +53,7 @@ class Admin {
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
-		\add_action( 'admin_post_remove_activitypub_cap_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
+		\add_action( 'admin_post_delete_actor_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
 		\add_action( 'current_screen', array( self::class, 'handle_bulk_actor_delete_page' ) );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
@@ -587,7 +587,7 @@ class Admin {
 	 *
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
 	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users (redirects to confirmation page).
-	 * * `remove_activitypub_cap_confirmed` - Actually remove the capability after confirmation.
+	 * * `delete_actor_confirmed` - Actually remove the capability after confirmation.
 	 *
 	 * @param string $send_back The URL to send the user back to.
 	 * @param string $action    The requested action.
@@ -641,7 +641,7 @@ class Admin {
 				// Force redirect instead of just returning URL.
 				\wp_safe_redirect( $confirmation_url );
 				exit;
-			case 'remove_activitypub_cap_confirmed':
+			case 'delete_actor_confirmed':
 				// Use unified method with no fediverse deletion (keep).
 				return self::process_capability_removal( $users, 'keep', $send_back );
 			default:
