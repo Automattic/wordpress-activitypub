@@ -5,8 +5,9 @@
  * @package ActivityPub
  */
 
-use Activitypub\Comment;
 use Activitypub\Blocks;
+use Activitypub\Comment;
+
 use function Activitypub\is_activitypub_request;
 
 if ( is_activitypub_request() || is_feed() ) {

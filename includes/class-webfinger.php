@@ -7,9 +7,9 @@
 
 namespace Activitypub;
 
-use WP_Error;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
+use WP_Error;
 
 /**
  * ActivityPub WebFinger Class.

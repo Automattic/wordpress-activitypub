@@ -9,9 +9,9 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Http;
 use Activitypub\Signature;
-use Activitypub\Collection\Actors;
 
 /**
  * Test class for Signature.

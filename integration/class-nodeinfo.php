@@ -7,9 +7,9 @@
 
 namespace Activitypub\Integration;
 
-use function Activitypub\get_total_users;
 use function Activitypub\get_active_users;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_total_users;
 
 /**
  * Compatibility with the NodeInfo plugin.

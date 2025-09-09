@@ -7,11 +7,11 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Http;
-use Activitypub\Model\User;
-use Activitypub\Model\Blog;
-use Activitypub\Model\Application;
 use Activitypub\Activity\Actor;
+use Activitypub\Http;
+use Activitypub\Model\Application;
+use Activitypub\Model\Blog;
+use Activitypub\Model\User;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_actor;
