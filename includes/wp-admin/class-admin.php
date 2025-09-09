@@ -54,7 +54,7 @@ class Admin {
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
 		\add_action( 'admin_post_delete_actor_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
-		\add_action( 'current_screen', array( self::class, 'handle_bulk_actor_delete_page' ) );
+		\add_action( 'admin_action_activitypub_confirm_removal', array( self::class, 'handle_bulk_actor_delete_page' ) );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
