@@ -31,8 +31,8 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
 <div class="wrap">
 	<h1><?php esc_html_e( 'Delete Users from Fediverse', 'activitypub' ); ?></h1>
-	<p><?php echo wp_kses( __( 'Fediverse deletion is optional but recommended to properly notify followers, <strong>but be aware that this action might be irreversible.</strong>', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
-
+	<p><?php esc_html_e( 'You&#8217;ve just removed the capability to publish to the Fediverse for the selected users, do you want to also remove them from the Fediverse?', 'activitypub' ); ?></p>
+	<p><?php echo wp_kses( __( 'Fediverse deletion is optional but recommended to properly notify your followers, <strong>but be aware that this action might be irreversible.</strong>', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<?php wp_nonce_field( 'bulk-users' ); ?>
 
@@ -58,7 +58,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 			<a href="<?php echo esc_url( $send_back ); ?>" class="button"><?php esc_html_e( 'Skip', 'activitypub' ); ?></a>
 		</p>
 
-		<p><?php esc_html_e( 'The users will not be deleted from your WordPress installation.', 'activitypub' ); ?></p>
+		<p><?php esc_html_e( '(The users will not be deleted from your WordPress installation.)', 'activitypub' ); ?></p>
 	</form>
 </div>
 <?php
