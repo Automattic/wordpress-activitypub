@@ -655,7 +655,7 @@ class Admin {
 	public static function handle_bulk_capability_removal_page() {
 		// Check if this is our confirmation page request.
 		// phpcs:ignore WordPress.Security.NonceVerification
-		if ( ! isset( $_GET['activitypub_confirm_removal'] ) ) {
+		if ( ! isset( $_GET['action'] ) || 'activitypub_confirm_removal' !== $_GET['action'] ) {
 			return;
 		}
 
