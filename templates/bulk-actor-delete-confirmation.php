@@ -5,8 +5,6 @@
  * @package Activitypub
  */
 
-use Activitypub\Collection\Actors;
-
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
 
