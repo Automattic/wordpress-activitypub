@@ -6,6 +6,7 @@
  */
 
 use Activitypub\Blocks;
+
 use function Activitypub\is_activitypub_request;
 
 if ( is_activitypub_request() || is_feed() ) {

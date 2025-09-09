@@ -7,11 +7,11 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Http;
-use Activitypub\Model\User;
-use Activitypub\Model\Blog;
-use Activitypub\Model\Application;
 use Activitypub\Activity\Actor;
+use Activitypub\Http;
+use Activitypub\Model\Application;
+use Activitypub\Model\Blog;
+use Activitypub\Model\User;
 
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\normalize_host;

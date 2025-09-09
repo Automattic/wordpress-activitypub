@@ -7,18 +7,14 @@
 
 namespace Activitypub\Collection;
 
-use WP_Post;
-use WP_Comment;
-use WP_Error;
-
 use Activitypub\Comment;
 use Activitypub\Model\Blog;
-use Activitypub\Transformer\Post as PostTransformer;
-use Activitypub\Transformer\Comment as CommentTransformer;
+use Activitypub\Transformer\Comment as Comment_Transformer;
+use Activitypub\Transformer\Post as Post_Transformer;
 
-use function Activitypub\is_post_disabled;
-use function Activitypub\is_local_comment;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_local_comment;
+use function Activitypub\is_post_disabled;
 use function Activitypub\is_user_type_disabled;
 
 /**
@@ -28,7 +24,7 @@ class Replies {
 	/**
 	 * Build base arguments for fetching the comments of either a WordPress post or comment.
 	 *
-	 * @param WP_Post|WP_Comment|WP_Error $wp_object The post or comment to fetch replies for on success.
+	 * @param \WP_Post|\WP_Comment|\WP_Error $wp_object The post or comment to fetch replies for on success.
 	 */
 	private static function build_args( $wp_object ) {
 		$args = array(
@@ -38,13 +34,13 @@ class Replies {
 			'type'    => 'comment',
 		);
 
-		if ( $wp_object instanceof WP_Post ) {
+		if ( $wp_object instanceof \WP_Post ) {
 			$args['parent']  = 0; // TODO: maybe this is unnecessary.
 			$args['post_id'] = $wp_object->ID;
-		} elseif ( $wp_object instanceof WP_Comment ) {
+		} elseif ( $wp_object instanceof \WP_Comment ) {
 			$args['parent'] = $wp_object->comment_ID;
 		} else {
-			return new WP_Error();
+			return new \WP_Error();
 		}
 
 		return $args;
@@ -53,24 +49,24 @@ class Replies {
 	/**
 	 * Get the replies collections ID.
 	 *
-	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
+	 * @param \WP_Post|\WP_Comment $wp_object The post or comment to fetch replies for.
 	 *
-	 * @return string|WP_Error The rest URL of the replies collection or WP_Error if the object is not a post or comment.
+	 * @return string|\WP_Error The rest URL of the replies collection or WP_Error if the object is not a post or comment.
 	 */
 	private static function get_id( $wp_object ) {
-		if ( $wp_object instanceof WP_Post ) {
+		if ( $wp_object instanceof \WP_Post ) {
 			return get_rest_url_by_path( sprintf( 'posts/%d/replies', $wp_object->ID ) );
-		} elseif ( $wp_object instanceof WP_Comment ) {
+		} elseif ( $wp_object instanceof \WP_Comment ) {
 			return get_rest_url_by_path( sprintf( 'comments/%d/replies', $wp_object->comment_ID ) );
 		} else {
-			return new WP_Error( 'unsupported_object', 'The object is not a post or comment.' );
+			return new \WP_Error( 'unsupported_object', 'The object is not a post or comment.' );
 		}
 	}
 
 	/**
 	 * Get the Replies collection.
 	 *
-	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
+	 * @param \WP_Post|\WP_Comment $wp_object The post or comment to fetch replies for.
 	 *
 	 * @return array|\WP_Error|null An associative array containing the replies collection without JSON-LD context on success.
 	 */
@@ -96,11 +92,11 @@ class Replies {
 	 *
 	 * @link https://www.w3.org/TR/activitystreams-vocabulary/#dfn-collectionpage
 	 *
-	 * @param WP_Post|WP_Comment $wp_object The post of comment the replies are for.
-	 * @param int                $page      The current pagination page.
-	 * @param string             $part_of   Optional. The collection id/url the returned CollectionPage belongs to. Default null.
+	 * @param \WP_Post|\WP_Comment $wp_object The post of comment the replies are for.
+	 * @param int                  $page      The current pagination page.
+	 * @param string               $part_of   Optional. The collection id/url the returned CollectionPage belongs to. Default null.
 	 *
-	 * @return array|WP_Error|null A CollectionPage as an associative array on success, WP_Error or null on failure.
+	 * @return array|\WP_Error|null A CollectionPage as an associative array on success, WP_Error or null on failure.
 	 */
 	public static function get_collection_page( $wp_object, $page, $part_of = null ) {
 		// Build initial arguments for fetching approved comments.
@@ -170,7 +166,7 @@ class Replies {
 			)
 		);
 		$ids      = self::get_reply_ids( $comments, true );
-		$post_uri = ( new PostTransformer( $post ) )->to_id();
+		$post_uri = ( new Post_Transformer( $post ) )->to_id();
 		\array_unshift( $ids, $post_uri );
 
 		$author = Actors::get_by_id( $post->post_author );
@@ -197,8 +193,8 @@ class Replies {
 	 * It takes only federated/non-local comments into account, others also do not have an
 	 * ActivityPub ID available.
 	 *
-	 * @param WP_Comment[] $comments              The comments to retrieve the ActivityPub ids from.
-	 * @param boolean      $include_blog_comments Optional. Include blog comments in the returned array. Default false.
+	 * @param \WP_Comment[] $comments              The comments to retrieve the ActivityPub ids from.
+	 * @param boolean       $include_blog_comments Optional. Include blog comments in the returned array. Default false.
 	 *
 	 * @return string[] A list of the ActivityPub ID's.
 	 */
@@ -217,7 +213,7 @@ class Replies {
 			}
 
 			if ( $include_blog_comments ) {
-				$comment_ids[] = ( new CommentTransformer( $comment ) )->to_id();
+				$comment_ids[] = ( new Comment_Transformer( $comment ) )->to_id();
 			}
 		}
 

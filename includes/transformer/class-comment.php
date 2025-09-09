@@ -7,16 +7,16 @@
 
 namespace Activitypub\Transformer;
 
-use Activitypub\Webfinger;
-use Activitypub\Comment as Comment_Utils;
-use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
+use Activitypub\Comment as Comment_Utils;
+use Activitypub\Model\Blog;
+use Activitypub\Webfinger;
 
-use function Activitypub\is_single_user;
-use function Activitypub\get_rest_url_by_path;
-use function Activitypub\was_comment_received;
 use function Activitypub\get_comment_ancestors;
+use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_single_user;
+use function Activitypub\was_comment_received;
 
 /**
  * WordPress Comment Transformer.

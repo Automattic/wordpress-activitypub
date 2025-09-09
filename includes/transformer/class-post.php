@@ -8,20 +8,20 @@
 namespace Activitypub\Transformer;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Replies;
 use Activitypub\Collection\Interactions;
+use Activitypub\Collection\Replies;
 use Activitypub\Http;
 use Activitypub\Model\Blog;
 use Activitypub\Shortcodes;
 
 use function Activitypub\esc_hashtag;
-use function Activitypub\is_single_user;
-use function Activitypub\get_enclosures;
-use function Activitypub\get_content_warning;
-use function Activitypub\get_rest_url_by_path;
-use function Activitypub\site_supports_blocks;
 use function Activitypub\generate_post_summary;
 use function Activitypub\get_content_visibility;
+use function Activitypub\get_content_warning;
+use function Activitypub\get_enclosures;
+use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_single_user;
+use function Activitypub\site_supports_blocks;
 
 /**
  * WordPress Post Transformer.

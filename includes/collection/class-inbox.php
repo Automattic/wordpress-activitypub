@@ -10,8 +10,8 @@ namespace Activitypub\Collection;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 
-use function Activitypub\object_to_uri;
 use function Activitypub\is_activity_public;
+use function Activitypub\object_to_uri;
 
 /**
  * ActivityPub Inbox Collection

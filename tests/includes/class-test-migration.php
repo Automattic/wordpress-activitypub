@@ -7,14 +7,14 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Migration;
-use Activitypub\Comment;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
+use Activitypub\Comment;
+use Activitypub\Migration;
 
 /**
  * Test class for Activitypub Migrate.

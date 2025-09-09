@@ -7,13 +7,13 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Http;
-use Activitypub\Comment;
 use Activitypub\Collection\Interactions;
+use Activitypub\Comment;
+use Activitypub\Http;
 
 use function Activitypub\is_activity;
-use function Activitypub\object_to_uri;
 use function Activitypub\is_activity_public;
+use function Activitypub\object_to_uri;
 
 /**
  * Handle Create requests.

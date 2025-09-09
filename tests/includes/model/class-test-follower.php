@@ -7,9 +7,8 @@
 
 namespace Activitypub\Tests\Model;
 
-use Activitypub\Model\Follower;
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Model\Follower;
 
 /**
  * Tests the Follower class.

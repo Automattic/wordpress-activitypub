@@ -7,15 +7,15 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Comment;
 use Activitypub\Webfinger;
 use WP_Comment_Query;
-use Activitypub\Comment;
 
-use function Activitypub\object_to_uri;
-use function Activitypub\is_post_disabled;
-use function Activitypub\url_to_commentid;
-use function Activitypub\object_id_to_comment;
 use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\is_post_disabled;
+use function Activitypub\object_id_to_comment;
+use function Activitypub\object_to_uri;
+use function Activitypub\url_to_commentid;
 
 /**
  * ActivityPub Interactions Collection.

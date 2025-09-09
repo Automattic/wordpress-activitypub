@@ -9,12 +9,12 @@ namespace Activitypub;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Scheduler\Post;
-use Activitypub\Scheduler\Actor;
-use Activitypub\Scheduler\Comment;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Scheduler\Actor;
+use Activitypub\Scheduler\Comment;
+use Activitypub\Scheduler\Post;
 
 /**
  * Scheduler class.

@@ -7,8 +7,8 @@
 
 namespace Activitypub\Integration;
 
-use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
+use Activitypub\Model\Blog;
 
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_type_disabled;
