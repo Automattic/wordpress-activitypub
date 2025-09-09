@@ -53,10 +53,9 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 * @var string
 	 */
 	private $ec_key = '-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQVs8fkYt4qaCJzXfUpGWU3OF9Niu
-ZhQHJ1HiJ9x1pA5bFZzBWBgNrx9gqhHWmqIiuFq4fLvIWWWWWWWWWWWWWQ==
------END PUBLIC KEY-----
-';
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/jw3kftaHGIB2OTKTYFUTTqyzDs0
+eWKe+6k1Kh6HSrinXriBLbIhMPY9pQsvqkeT6wW975NDn7+8awb8kHRmIg==
+-----END PUBLIC KEY-----';
 
 	/**
 	 * The public key in PKCS#8 format.
