@@ -775,11 +775,6 @@ class Admin {
 			\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );
 		}
 
-		// Add success message parameters to the redirect URL.
-		if ( $deleted_count ) {
-			$send_back = \add_query_arg( 'activitypub_bulk_deleted', count( $users_to_delete ), $send_back );
-		}
-
 		return $send_back;
 	}
 

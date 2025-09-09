@@ -19,23 +19,10 @@ if ( empty( $users ) ) {
 }
 
 // Prepare user data for display.
-$user_data = array();
-foreach ( $users as $user_id ) {
-	$user = get_user_by( 'id', $user_id );
-	if ( ! $user ) {
-		continue;
-	}
-
-	$user_data[] = array(
-		'id'           => $user_id,
-		'login'        => $user->user_login,
-		'display_name' => $user->display_name,
-		'email'        => $user->user_email,
-	);
-}
+$users = \get_users( array( 'include' => $users ) );
 
 // If no users with ActivityPub capability, redirect back.
-if ( empty( $user_data ) ) {
+if ( ! $users ) {
 	wp_safe_redirect( $send_back );
 	exit;
 }
@@ -52,17 +39,14 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 		<input type="hidden" name="action" value="delete_actor_confirmed" />
 		<input type="hidden" name="send_back" value="<?php echo esc_url( $send_back ); ?>" />
 
-		<?php foreach ( $user_data as $user ) : ?>
-			<input type="hidden" name="selected_users[]" value="<?php echo esc_attr( $user['id'] ); ?>" />
-		<?php endforeach; ?>
-
 		<div class="activitypub-user-list">
 			<ul>
-				<?php foreach ( $user_data as $user ) : ?>
+				<?php foreach ( $users as $user ) : ?>
 					<li>
 						<label>
-							<input type="checkbox" name="remove_from_fediverse[]" value="<?php echo esc_attr( $user['id'] ); ?>" class="fediverse-removal-checkbox" />
-							<strong><?php echo esc_html( $user['display_name'] ); ?></strong>
+							<input type="checkbox" name="remove_from_fediverse[]" value="<?php echo esc_attr( $user->ID ); ?>" class="fediverse-removal-checkbox" />
+							<input type="hidden" name="selected_users[]" value="<?php echo esc_attr( $user->ID ); ?>" />
+							<strong><?php echo esc_html( $user->display_name ); ?></strong>
 						</label>
 					</li>
 				<?php endforeach; ?>
