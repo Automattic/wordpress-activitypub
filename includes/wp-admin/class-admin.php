@@ -638,7 +638,7 @@ class Admin {
 
 			// Build the query args with proper array handling for fediverse deletion confirmation.
 			$query_args = array(
-				'activitypub_confirm_removal' => '1',
+				'action' => 'activitypub_confirm_removal',
 				'send_back'                   => \rawurlencode( $send_back ),
 			);
 
