@@ -596,71 +596,57 @@ class Admin {
 	 * @return string The URL to send the user back to.
 	 */
 	public static function handle_bulk_request( $send_back, $action, $users ) {
-		if (
-			'remove_activitypub_cap' !== $action &&
-			'add_activitypub_cap' !== $action &&
-			'remove_activitypub_cap_confirmed' !== $action
-		) {
-			return $send_back;
-		}
+		switch ( $action ) {
+			case 'add_activitypub_cap':
+				foreach ( $users as $user_id ) {
+					$user = new \WP_User( $user_id );
+					$user->add_cap( 'activitypub' );
+				}
+				return $send_back;
+			case 'remove_activitypub_cap':
+				$removed_count = 0;
 
-		// Handle adding ActivityPub capability.
-		if ( 'add_activitypub_cap' === $action ) {
-			foreach ( $users as $user_id ) {
-				$user = new \WP_User( $user_id );
-				$user->add_cap( 'activitypub' );
-			}
-			return $send_back;
-		}
+				// Remove capabilities immediately.
+				foreach ( $users as $user_id ) {
+					$user = new \WP_User( $user_id );
 
-		// Handle removing ActivityPub capability - remove capabilities immediately, then redirect to fediverse deletion confirmation.
-		if ( 'remove_activitypub_cap' === $action ) {
-			$removed_count = 0;
+					// Check if user has ActivityPub capability.
+					if ( ! $user->has_cap( 'activitypub' ) ) {
+						continue;
+					}
 
-			// Remove capabilities immediately.
-			foreach ( $users as $user_id ) {
-				$user = new \WP_User( $user_id );
+					// Remove the capability.
+					$user->remove_cap( 'activitypub' );
 
-				// Check if user has ActivityPub capability.
-				if ( ! $user->has_cap( 'activitypub' ) ) {
-					continue;
+					// Force cache refresh for user capabilities.
+					\wp_cache_delete( $user_id, 'users' );
+					\wp_cache_delete( $user_id, 'user_meta' );
+
+					++$removed_count;
 				}
 
-				// Remove the capability.
-				$user->remove_cap( 'activitypub' );
+				// Build the query args with proper array handling for fediverse deletion confirmation.
+				$query_args = array(
+					'action'    => 'activitypub_confirm_removal',
+					'send_back' => \rawurlencode( $send_back ),
+				);
 
-				// Force cache refresh for user capabilities.
-				\wp_cache_delete( $user_id, 'users' );
-				\wp_cache_delete( $user_id, 'user_meta' );
+				// Add user IDs as separate parameters.
+				foreach ( $users as $index => $user_id ) {
+					$query_args[ sprintf( 'users[%d]', $index ) ] = absint( $user_id );
+				}
 
-				++$removed_count;
-			}
+				$confirmation_url = \add_query_arg( $query_args, \admin_url( 'users.php' ) );
 
-			// Build the query args with proper array handling for fediverse deletion confirmation.
-			$query_args = array(
-				'action' => 'activitypub_confirm_removal',
-				'send_back'                   => \rawurlencode( $send_back ),
-			);
-
-			// Add user IDs as separate parameters.
-			foreach ( $users as $index => $user_id ) {
-				$query_args[ 'users[' . $index . ']' ] = absint( $user_id );
-			}
-
-			$confirmation_url = \add_query_arg( $query_args, \admin_url( 'users.php' ) );
-
-			// Force redirect instead of just returning URL.
-			\wp_safe_redirect( $confirmation_url );
-			exit;
+				// Force redirect instead of just returning URL.
+				\wp_safe_redirect( $confirmation_url );
+				exit;
+			case 'remove_activitypub_cap_confirmed':
+				// Use unified method with no fediverse deletion (keep).
+				return self::process_capability_removal( $users, 'keep', $send_back );
+			default:
+				return $send_back;
 		}
-
-		// This should be handled by handle_bulk_capability_removal_confirmation but we include it here as a fallback.
-		if ( 'remove_activitypub_cap_confirmed' === $action ) {
-			// Use unified method with no fediverse deletion (keep).
-			return self::process_capability_removal( $users, 'keep', $send_back );
-		}
-
-		return $send_back;
 	}
 
 	/**
