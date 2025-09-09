@@ -25,6 +25,7 @@ if ( ! $users ) {
 	exit;
 }
 
+$GLOBALS['plugin_page'] = '';
 require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
 <div class="wrap">
