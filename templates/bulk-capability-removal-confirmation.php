@@ -86,7 +86,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 
 		<p class="submit">
 			<?php submit_button( __( 'Delete from Fediverse', 'activitypub' ), 'primary', 'submit', false ); ?>
-			<a href="<?php echo esc_url( $send_back ); ?>" class="button"><?php esc_html_e( 'Skip Fediverse Deletion', 'activitypub' ); ?></a>
+			<a href="<?php echo esc_url( $send_back ); ?>" class="button"><?php esc_html_e( 'Skip', 'activitypub' ); ?></a>
 		</p>
 	</form>
 </div>
