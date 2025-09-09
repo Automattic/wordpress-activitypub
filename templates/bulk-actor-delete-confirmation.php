@@ -18,8 +18,6 @@ if ( empty( $users ) ) {
 	wp_die( esc_html__( 'No users selected.', 'activitypub' ), '', array( 'back_link' => true ) );
 }
 
-$user_count = count( $users );
-
 // Prepare user data for display.
 $user_data = array();
 foreach ( $users as $user_id ) {
@@ -41,8 +39,6 @@ if ( empty( $user_data ) ) {
 	wp_safe_redirect( $send_back );
 	exit;
 }
-
-$user_count = count( $user_data );
 
 require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
