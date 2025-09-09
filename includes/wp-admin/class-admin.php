@@ -789,13 +789,11 @@ class Admin {
 		}
 
 		// Add success message parameters to the redirect URL.
-		$message_params = array();
-
-		if ( $deleted_count > 0 ) {
-			$message_params['activitypub_bulk_deleted'] = $deleted_count;
+		if ( $deleted_count ) {
+			$send_back = \add_query_arg( 'activitypub_bulk_deleted', $deleted_count, $send_back );
 		}
 
-		return \add_query_arg( $message_params, $send_back );
+		return $send_back;
 	}
 
 	/**
