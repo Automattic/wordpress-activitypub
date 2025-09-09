@@ -7,8 +7,8 @@
 
 namespace Activitypub\Tests\Rest;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Tests for Followers REST API endpoint.
@@ -25,7 +25,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		self::factory()->post->create_many(
 			25,
 			array(
-				'post_type'    => Actors::POST_TYPE,
+				'post_type'    => Remote_Actors::POST_TYPE,
 				'post_content' => \wp_slash(
 					\wp_json_encode(
 						array(

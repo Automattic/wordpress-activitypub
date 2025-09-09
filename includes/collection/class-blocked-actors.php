@@ -100,7 +100,7 @@ class Blocked_Actors {
 	 */
 	public static function get_blocked_actors_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
+			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',

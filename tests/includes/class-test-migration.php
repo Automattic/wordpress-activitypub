@@ -860,7 +860,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		\clean_post_cache( $follower );
 
-		$this->assertEquals( Actors::POST_TYPE, \get_post_type( $follower ) );
+		$this->assertEquals( Remote_Actors::POST_TYPE, \get_post_type( $follower ) );
 		$this->assertEquals( '5', \get_post_meta( $follower, Followers::FOLLOWER_META_KEY, true ) );
 
 		\wp_delete_post( $follower );
@@ -900,7 +900,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		\wp_update_post(
 			array(
 				'ID'           => $post_id,
-				'post_type'    => Actors::POST_TYPE,
+				'post_type'    => Remote_Actors::POST_TYPE,
 				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
 			)
 		);
@@ -963,7 +963,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		\wp_update_post(
 			array(
 				'ID'           => $post_id,
-				'post_type'    => Actors::POST_TYPE,
+				'post_type'    => Remote_Actors::POST_TYPE,
 				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
 			)
 		);

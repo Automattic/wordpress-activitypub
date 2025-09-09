@@ -8,8 +8,8 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Handler\Accept;
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Class Test_Accept
@@ -126,7 +126,7 @@ class Test_Accept extends \WP_UnitTestCase {
 		// Create remote actor post.
 		$post_id = $this->factory->post->create(
 			array(
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 				'post_status' => 'publish',
 				'guid'        => $object_guid,
 			)

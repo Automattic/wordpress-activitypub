@@ -40,7 +40,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -100,7 +100,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -127,7 +127,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -157,7 +157,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -192,7 +192,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -227,7 +227,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -269,7 +269,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -299,7 +299,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => \Activitypub\Collection\Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
