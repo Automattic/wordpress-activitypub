@@ -41,20 +41,6 @@ class Actors {
 	const APPLICATION_USER_ID = -1;
 
 	/**
-	 * Post type for storing remote actors.
-	 *
-	 * @var string
-	 */
-	const POST_TYPE = 'ap_actor';
-
-	/**
-	 * Cache key for the followers inbox.
-	 *
-	 * @var string
-	 */
-	const CACHE_KEY_INBOXES = 'actor_inboxes';
-
-	/**
 	 * Get the Actor by ID.
 	 *
 	 * @param int $user_id The user ID.
