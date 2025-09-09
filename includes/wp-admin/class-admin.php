@@ -752,11 +752,11 @@ class Admin {
 		if ( is_string( $remove_from_fediverse ) ) {
 			// Legacy format: 'delete' or 'keep' for all users.
 			$delete_all      = ( 'delete' === $remove_from_fediverse );
-			$users_to_delete = $delete_all ? array_flip( $users ) : array();
+			$users_to_delete = $delete_all ? $users : array();
 		} else {
 			// New format: array of specific user IDs to delete from fediverse.
 			$remove_from_fediverse = \array_map( 'absint', (array) $remove_from_fediverse );
-			$users_to_delete       = \array_flip( \array_filter( $remove_from_fediverse ) );
+			$users_to_delete       = \array_filter( $remove_from_fediverse );
 		}
 
 		// Schedule delete activities for users who should be removed from fediverse.
@@ -764,19 +764,20 @@ class Admin {
 			// Temporarily bypass capability checks for delete activity scheduling since capabilities were already removed.
 			\add_filter( 'activitypub_user_can_activitypub', '__return_true' );
 
-			foreach ( $users as $user_id ) {
-				if ( isset( $users_to_delete[ $user_id ] ) ) {
-					Actor::schedule_user_delete( $user_id );
-					++$deleted_count;
-				}
-			}
+			\array_map(
+				array(
+					Actor::class,
+					'schedule_user_delete',
+				),
+				$users_to_delete
+			);
 
 			\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );
 		}
 
 		// Add success message parameters to the redirect URL.
 		if ( $deleted_count ) {
-			$send_back = \add_query_arg( 'activitypub_bulk_deleted', $deleted_count, $send_back );
+			$send_back = \add_query_arg( 'activitypub_bulk_deleted', count( $users_to_delete ), $send_back );
 		}
 
 		return $send_back;
