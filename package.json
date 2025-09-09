@@ -19,7 +19,8 @@
 		"env-start": "wp-env start",
 		"env-stop": "wp-env stop",
 		"env-test": "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit",
-		"release": "node bin/release.js"
+		"release": "node bin/release.js",
+		"prepare": "git config core.hooksPath .githooks"
 	},
 	"license": "MIT",
 	"bugs": {

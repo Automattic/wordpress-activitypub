@@ -1,6 +1,8 @@
+.claude
 build
+coverage
 node_modules
-tests
+tests/fixtures
 vendor
 
 # Temporary ignores while breaking out each component.
