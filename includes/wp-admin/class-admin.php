@@ -654,8 +654,7 @@ class Admin {
 			exit;
 		}
 
-		// This should be handled by handle_bulk_capability_removal_confirmation
-		// but we include it here as a fallback.
+		// This should be handled by handle_bulk_capability_removal_confirmation but we include it here as a fallback.
 		if ( 'remove_activitypub_cap_confirmed' === $action ) {
 			// Use unified method with no fediverse deletion (keep).
 			return self::process_capability_removal( $users, 'keep', $send_back );
