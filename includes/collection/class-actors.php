@@ -624,7 +624,7 @@ class Actors {
 	/**
 	 * Returns all Inboxes for all known remote Actors.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::get_inboxes()}
+	 * @deprecated unreleased Use {@see Remote_Actors::get_inboxes()}
 	 *
 	 * @return array The list of Inboxes.
 	 */
