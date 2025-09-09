@@ -13,6 +13,7 @@ use Activitypub\Http;
 use function Activitypub\is_actor;
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\object_to_uri;
+use function Activitypub\strip_fragment_from_url;
 
 /**
  * Remote Actors collection class.
