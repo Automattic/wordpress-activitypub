@@ -71,21 +71,6 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
-			'activitypub_object_type',
-			array(
-				'type'         => 'string',
-				'description'  => \__( 'The Activity-Object-Type', 'activitypub' ),
-				'show_in_rest' => array(
-					'schema' => array(
-						'enum' => array( 'note', 'wordpress-post-format' ),
-					),
-				),
-				'default'      => ACTIVITYPUB_DEFAULT_OBJECT_TYPE,
-			)
-		);
-
-		\register_setting(
-			'activitypub',
 			'activitypub_use_hashtags',
 			array(
 				'type'        => 'boolean',
@@ -257,6 +242,21 @@ class Settings {
 				'type'        => 'boolean',
 				'description' => 'Enable inbox collection persistence.',
 				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_object_type',
+			array(
+				'type'         => 'string',
+				'description'  => \__( 'The Activity-Object-Type', 'activitypub' ),
+				'show_in_rest' => array(
+					'schema' => array(
+						'enum' => array( 'note', 'wordpress-post-format' ),
+					),
+				),
+				'default'      => ACTIVITYPUB_DEFAULT_OBJECT_TYPE,
 			)
 		);
 
@@ -498,14 +498,18 @@ class Settings {
 			)
 		);
 
-		// Template Tags.
-		\get_current_screen()->add_help_tab(
-			array(
-				'id'      => 'template-tags',
-				'title'   => \__( 'Template Tags', 'activitypub' ),
-				'content' => self::get_help_tab_template( 'template-tags' ),
-			)
-		);
+		// Show only if templating is enabled.
+		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+		if ( 'note' === $object_type ) {
+			// Template Tags.
+			\get_current_screen()->add_help_tab(
+				array(
+					'id'      => 'template-tags',
+					'title'   => \__( 'Template Tags', 'activitypub' ),
+					'content' => self::get_help_tab_template( 'template-tags' ),
+				)
+			);
+		}
 
 		// Recommended Plugins.
 		if ( ! empty( self::get_recommended_plugins() ) ) {
