@@ -8,8 +8,6 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Tombstone;
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_remote_metadata_by_actor;
 

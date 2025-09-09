@@ -8,7 +8,6 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Http;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog;
 use Activitypub\Model\Application;

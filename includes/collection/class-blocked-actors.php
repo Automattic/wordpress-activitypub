@@ -7,9 +7,6 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Remote_Actors;
-
 use Activitypub\Moderation;
 
 /**
