@@ -17,7 +17,7 @@ if ( empty( $users ) ) {
 }
 
 // Prepare user data for display.
-$users = \get_users( array( 'include' => $users ) );
+$users = get_users( array( 'include' => $users ) );
 
 // If no users with ActivityPub capability, redirect back.
 if ( ! $users ) {
