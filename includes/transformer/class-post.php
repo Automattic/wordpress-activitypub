@@ -615,16 +615,25 @@ class Post extends Base {
 			return null;
 		}
 
-		$blocks = \parse_blocks( $this->item->post_content );
+		$reply_links = array();
+		$blocks      = \parse_blocks( $this->item->post_content );
 
 		foreach ( $blocks as $block ) {
 			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) ) {
 				// We only support one reply block per post for now.
-				return $block['attrs']['url'];
+				$reply_links[] = $block['attrs']['url'];
 			}
 		}
 
-		return null;
+		if ( empty( $reply_links ) ) {
+			return null;
+		}
+
+		if ( 1 === count( $reply_links ) ) {
+			return \current( $reply_links );
+		}
+
+		return \array_values( \array_unique( $reply_links ) );
 	}
 
 	/**
