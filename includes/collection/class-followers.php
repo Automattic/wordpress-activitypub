@@ -359,7 +359,7 @@ class Followers {
 	/**
 	 * Get all Followers.
 	 *
-	 * @deprecated 7.1.0 Use Activitypub\Collection\Actors::get_all() instead.
+	 * @deprecated 7.1.0 Use {@see Actors::get_all()}.
 	 *
 	 * @return \WP_Post[] The list of Followers.
 	 */
@@ -383,7 +383,7 @@ class Followers {
 	/**
 	 * Get all Followers that have not been updated for a given time.
 	 *
-	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::get_outdated() instead.
+	 * @deprecated 7.0.0 Use {@see Remote_Actors::get_outdated()}.
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
@@ -391,24 +391,24 @@ class Followers {
 	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_outdated' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::get_outdated' );
 
-		return Actors::get_outdated( $number, $older_than );
+		return Remote_Actors::get_outdated( $number, $older_than );
 	}
 
 	/**
 	 * Get all Followers that had errors.
 	 *
-	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::get_faulty() instead.
+	 * @deprecated 7.0.0 Use {@see Remote_Actors::get_faulty()}.
 	 *
 	 * @param int $number Optional. The number of Followers to return. Default 20.
 	 *
 	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_faulty' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::get_faulty' );
 
-		return Actors::get_faulty( $number );
+		return Remote_Actors::get_faulty( $number );
 	}
 
 	/**
@@ -417,7 +417,7 @@ class Followers {
 	 *
 	 * The error will be stored in post meta.
 	 *
-	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::add_error() instead.
+	 * @deprecated 7.0.0 Use {@see Remote_Actors::add_error()}.
 	 *
 	 * @param int   $post_id The ID of the WordPress Custom-Post-Type.
 	 * @param mixed $error   The error message. Can be a string or a WP_Error.
@@ -425,24 +425,24 @@ class Followers {
 	 * @return int|false The meta ID on success, false on failure.
 	 */
 	public static function add_error( $post_id, $error ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::add_error' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::add_error' );
 
-		return Actors::add_error( $post_id, $error );
+		return Remote_Actors::add_error( $post_id, $error );
 	}
 
 	/**
 	 * Clear the errors for a Follower.
 	 *
-	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::clear_errors() instead.
+	 * @deprecated 7.0.0 Use {@see Remote_Actors::clear_errors()}.
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
 	 * @return bool True on success, false on failure.
 	 */
 	public static function clear_errors( $post_id ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::clear_errors' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::clear_errors' );
 
-		return Actors::clear_errors( $post_id );
+		return Remote_Actors::clear_errors( $post_id );
 	}
 
 	/**
