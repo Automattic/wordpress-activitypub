@@ -25,7 +25,7 @@ if ( ! $users ) {
 	exit;
 }
 
-$GLOBALS['plugin_page'] = '';
+$GLOBALS['plugin_page'] = ''; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
 <div class="wrap">
