@@ -8,6 +8,7 @@
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+
 use function Activitypub\is_activitypub_request;
 use function Activitypub\object_to_uri;
 

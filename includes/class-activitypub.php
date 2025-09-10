@@ -887,6 +887,11 @@ class Activitypub {
 			return $meta_value;
 		}
 
+		// If meta value is already explicitly set, respect the author's choice.
+		if ( null !== $meta_value ) {
+			return $meta_value;
+		}
+
 		// If the post is federated, return the default visibility.
 		if ( 'federated' === \get_post_meta( $object_id, 'activitypub_status', true ) ) {
 			return $meta_value;

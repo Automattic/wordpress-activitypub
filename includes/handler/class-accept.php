@@ -7,10 +7,10 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Notification;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Notification;
 
 use function Activitypub\object_to_uri;
 

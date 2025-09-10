@@ -7,9 +7,9 @@
 
 namespace Activitypub\Tests\Handler;
 
-use Activitypub\Handler\Accept;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Handler\Accept;
 
 /**
  * Class Test_Accept

@@ -7,10 +7,10 @@
 
 namespace Activitypub\Transformer;
 
-use Activitypub\Http;
 use Activitypub\Activity\Activity;
-use Activitypub\Collection\Actors;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Actors;
+use Activitypub\Http;
 
 use function Activitypub\get_upload_baseurl;
 use function Activitypub\object_to_uri;

@@ -9,9 +9,7 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Activity\Generic_Object;
 use Activitypub\Activity\Extended_Object\Event;
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 
 /**

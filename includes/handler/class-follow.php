@@ -7,10 +7,10 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Notification;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Notification;
 
 use function Activitypub\add_to_outbox;
 

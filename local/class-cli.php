@@ -11,8 +11,8 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Comment;
 
-use function WP_CLI\Utils\make_progress_bar;
 use function WP_CLI\Utils\get_flag_value;
+use function WP_CLI\Utils\make_progress_bar;
 
 /**
  * WP-CLI commands.

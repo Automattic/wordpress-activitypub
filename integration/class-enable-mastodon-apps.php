@@ -7,17 +7,16 @@
 
 namespace Activitypub\Integration;
 
-use DateTime;
-use Activitypub\Webfinger as Webfinger_Util;
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Followers;
 use Activitypub\Http;
 use Activitypub\Mention;
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Followers;
-use Activitypub\Collection\Extra_Fields;
 use Activitypub\Transformer\Factory;
+use Activitypub\Webfinger as Webfinger_Util;
 use Enable_Mastodon_Apps\Entity\Account;
-use Enable_Mastodon_Apps\Entity\Status;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
+use Enable_Mastodon_Apps\Entity\Status;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_user_type_disabled;
@@ -205,8 +204,8 @@ class Enable_Mastodon_Apps {
 				$account->url             = $actor->get_url();
 				$account->avatar          = $actor->get_icon_url();
 				$account->avatar_static   = $actor->get_icon_url();
-				$account->created_at      = new DateTime( $actor->get_published() );
-				$account->last_status_at  = new DateTime( $actor->get_published() );
+				$account->created_at      = new \DateTime( $actor->get_published() );
+				$account->last_status_at  = new \DateTime( $actor->get_published() );
 				$account->note            = $actor->get_summary();
 				$account->header          = $actor->get_image_url();
 				$account->header_static   = $actor->get_image_url();
@@ -300,7 +299,7 @@ class Enable_Mastodon_Apps {
 			$account->header_static = $account->header;
 		}
 
-		$account->created_at = new DateTime( $user->get_published() );
+		$account->created_at = new \DateTime( $user->get_published() );
 
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 		$query_args = array(
@@ -311,7 +310,7 @@ class Enable_Mastodon_Apps {
 			$query_args['author'] = $user_id;
 		}
 		$posts                   = \get_posts( $query_args );
-		$account->last_status_at = ! empty( $posts ) ? new DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
+		$account->last_status_at = ! empty( $posts ) ? new \DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
 
 		$account->fields = self::get_extra_fields( $user_id_to_use );
 		// Now do it in source['fields'] with stripped tags.
@@ -419,7 +418,7 @@ class Enable_Mastodon_Apps {
 		if ( ! isset( $data['published'] ) ) {
 			$data['published'] = 'now';
 		}
-		$account->created_at = new DateTime( $data['published'] );
+		$account->created_at = new \DateTime( $data['published'] );
 
 		return $account;
 	}
@@ -500,8 +499,8 @@ class Enable_Mastodon_Apps {
 			$account->uri            = $actor->get_id();
 			$account->avatar         = $actor->get_icon_url();
 			$account->avatar_static  = $actor->get_icon_url();
-			$account->created_at     = new DateTime( $actor->get_published() );
-			$account->last_status_at = new DateTime( $actor->get_published() );
+			$account->created_at     = new \DateTime( $actor->get_published() );
+			$account->last_status_at = new \DateTime( $actor->get_published() );
 			$account->note           = $actor->get_summary();
 			$account->header         = $actor->get_image_url();
 			$account->header_static  = $actor->get_image_url();
@@ -553,7 +552,7 @@ class Enable_Mastodon_Apps {
 
 		$status             = new Status();
 		$status->id         = $post_id ?? $object['id'];
-		$status->created_at = new DateTime( $object['published'] );
+		$status->created_at = new \DateTime( $object['published'] );
 		$status->content    = $object['content'];
 		$status->account    = $account;
 

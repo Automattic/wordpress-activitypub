@@ -11,11 +11,11 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
-use Activitypub\Transformer\Post;
+use Activitypub\Collection\Outbox;
 use Activitypub\Transformer\Factory as Transformer_Factory;
+use Activitypub\Transformer\Post;
 
 /**
  * Returns the ActivityPub default JSON-context.
@@ -859,7 +859,7 @@ function get_post_type_description( $post_type ) {
 			$description = '';
 			break;
 		case 'attachment':
-			$description = ' - ' . __( 'The attachments that you have uploaded to a post (images, videos, documents or other files).', 'activitypub' );
+			$description = ' - ' . __( 'Files uploaded to the media library (such as images, videos, documents, or other attachments). Note: This federates every file upload, not just published content.', 'activitypub' );
 			break;
 		default:
 			$description = '';
