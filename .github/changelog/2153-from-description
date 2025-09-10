@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Clarified the 'attachment' post type description to explain it refers to media library uploads and recommend disabling federation in most cases.

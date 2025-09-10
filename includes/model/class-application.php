@@ -10,8 +10,8 @@ namespace Activitypub\Model;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 
-use function Activitypub\home_host;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\home_host;
 
 /**
  * Application class.

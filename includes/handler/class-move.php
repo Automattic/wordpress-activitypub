@@ -7,9 +7,9 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Http;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Http;
 
 use function Activitypub\object_to_uri;
 

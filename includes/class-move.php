@@ -7,8 +7,8 @@
 
 namespace Activitypub;
 
-use Activitypub\Activity\Actor;
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;

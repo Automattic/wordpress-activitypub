@@ -8,8 +8,8 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Signature\Http_Signature_Draft;
 use Activitypub\Signature\Http_Message_Signature;
+use Activitypub\Signature\Http_Signature_Draft;
 
 /**
  * ActivityPub Signature Class.

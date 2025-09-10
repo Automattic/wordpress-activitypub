@@ -7,9 +7,9 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Comment;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Replies;
+use Activitypub\Comment;
 
 use function Activitypub\get_rest_url_by_path;
 

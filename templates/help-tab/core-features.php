@@ -6,6 +6,7 @@
  */
 
 use Activitypub\Collection\Actors;
+
 use function Activitypub\user_can_activitypub;
 
 $host   = wp_parse_url( home_url(), PHP_URL_HOST );

@@ -7,7 +7,6 @@
 
 namespace Activitypub;
 
-use WP_Error;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 
@@ -40,7 +39,7 @@ class Webfinger {
 	 *
 	 * @param string $uri The WebFinger Resource.
 	 *
-	 * @return string|WP_Error The URL or WP_Error.
+	 * @return string|\WP_Error The URL or WP_Error.
 	 */
 	public static function resolve( $uri ) {
 		$data = self::get_data( $uri );
@@ -50,7 +49,7 @@ class Webfinger {
 		}
 
 		if ( ! is_array( $data ) || empty( $data['links'] ) ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'webfinger_missing_links',
 				__( 'No valid Link elements found.', 'activitypub' ),
 				array(
@@ -73,7 +72,7 @@ class Webfinger {
 			}
 		}
 
-		return new WP_Error(
+		return new \WP_Error(
 			'webfinger_url_no_activitypub',
 			__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
 			array(
@@ -90,7 +89,7 @@ class Webfinger {
 	 *
 	 * @param string $uri The URI (acct:, mailto:, http:, https:).
 	 *
-	 * @return string|WP_Error Error or acct URI.
+	 * @return string|\WP_Error Error or acct URI.
 	 */
 	public static function uri_to_acct( $uri ) {
 		$data = self::get_data( $uri );
@@ -116,7 +115,7 @@ class Webfinger {
 			}
 		}
 
-		return new WP_Error(
+		return new \WP_Error(
 			'webfinger_url_no_acct',
 			__( 'No acct URI found.', 'activitypub' ),
 			array(
@@ -132,11 +131,11 @@ class Webfinger {
 	 *
 	 * @param string $url The URI (acct:, mailto:, http:, https:).
 	 *
-	 * @return WP_Error|array Error reaction or array with identifier and host as values.
+	 * @return \WP_Error|array Error reaction or array with identifier and host as values.
 	 */
 	public static function get_identifier_and_host( $url ) {
 		if ( ! $url ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'webfinger_invalid_identifier',
 				__( 'Invalid Identifier', 'activitypub' ),
 				array(
@@ -173,7 +172,7 @@ class Webfinger {
 		}
 
 		if ( empty( $host ) ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'webfinger_invalid_identifier',
 				__( 'Invalid Identifier', 'activitypub' ),
 				array(
@@ -191,7 +190,7 @@ class Webfinger {
 	 *
 	 * @param string $uri The Identifier: <identifier>@<host> or URI.
 	 *
-	 * @return WP_Error|array Error reaction or array with identifier and host as values.
+	 * @return \WP_Error|array Error reaction or array with identifier and host as values.
 	 */
 	public static function get_data( $uri ) {
 		$identifier_and_host = self::get_identifier_and_host( $uri );
@@ -223,7 +222,7 @@ class Webfinger {
 		);
 
 		if ( \is_wp_error( $response ) || \wp_remote_retrieve_response_code( $response ) >= 400 ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'webfinger_url_not_accessible',
 				__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
 				array(
@@ -246,7 +245,7 @@ class Webfinger {
 	 *
 	 * @param string $uri The WebFinger Resource URI.
 	 *
-	 * @return string|WP_Error Error or the Remote-Follow endpoint URI.
+	 * @return string|\WP_Error Error or the Remote-Follow endpoint URI.
 	 */
 	public static function get_remote_follow_endpoint( $uri ) {
 		$data = self::get_data( $uri );
@@ -256,7 +255,7 @@ class Webfinger {
 		}
 
 		if ( empty( $data['links'] ) ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'webfinger_missing_links',
 				__( 'No valid Link elements found.', 'activitypub' ),
 				array(
@@ -272,7 +271,7 @@ class Webfinger {
 			}
 		}
 
-		return new WP_Error(
+		return new \WP_Error(
 			'webfinger_missing_remote_follow_endpoint',
 			__( 'No valid Remote-Follow endpoint found.', 'activitypub' ),
 			array(
