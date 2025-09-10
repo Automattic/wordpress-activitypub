@@ -7,7 +7,6 @@
 
 namespace Activitypub;
 
-use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;

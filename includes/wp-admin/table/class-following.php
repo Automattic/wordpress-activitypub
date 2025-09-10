@@ -8,8 +8,8 @@
 namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Following as Following_Collection;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;

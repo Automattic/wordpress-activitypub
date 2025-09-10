@@ -8,8 +8,8 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_context;
 use function Activitypub\get_masked_wp_version;

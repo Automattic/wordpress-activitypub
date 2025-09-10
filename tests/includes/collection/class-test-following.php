@@ -7,9 +7,8 @@
 
 namespace Activitypub\Tests\Collection;
 
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Accept;
 
 use function Activitypub\follow;

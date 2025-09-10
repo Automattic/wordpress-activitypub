@@ -8,10 +8,9 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Move;
-use Activitypub\Http;
 
 /**
  * Test class for the Move handler.

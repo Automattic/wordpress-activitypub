@@ -8,8 +8,8 @@
 namespace Activitypub\Model;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\extract_name_from_uri;
 

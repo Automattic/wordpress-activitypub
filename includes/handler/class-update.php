@@ -7,8 +7,8 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Interactions;
+use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_remote_metadata_by_actor;
 

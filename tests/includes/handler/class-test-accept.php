@@ -7,7 +7,6 @@
 
 namespace Activitypub\Tests\Handler;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Accept;

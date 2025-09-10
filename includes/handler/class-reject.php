@@ -8,8 +8,8 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Following;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Notification;
 
 use function Activitypub\object_to_uri;

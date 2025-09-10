@@ -8,8 +8,8 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Test class for Activitypub Followers.

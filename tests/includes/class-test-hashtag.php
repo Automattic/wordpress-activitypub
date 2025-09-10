@@ -7,7 +7,6 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 
 /**
