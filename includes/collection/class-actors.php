@@ -8,7 +8,6 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Http;
 use Activitypub\Model\Application;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
@@ -606,7 +605,7 @@ class Actors {
 	/**
 	 * Upsert (insert or update) a remote actor as a custom post type.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::upsert()}
+	 * @deprecated unreleased Use {@see Remote_Actors::upsert()}
 	 *
 	 * @param array|Actor $actor ActivityPub actor object (array or actor, must include 'id').
 	 *
@@ -620,7 +619,7 @@ class Actors {
 	/**
 	 * Create a remote actor as a custom post type.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::create()}
+	 * @deprecated unreleased Use {@see Remote_Actors::create()}
 	 *
 	 * @param array|Actor $actor ActivityPub actor object (array or Actor, must include 'id').
 	 *
@@ -634,7 +633,7 @@ class Actors {
 	/**
 	 * Update a remote Actor object by actor URL (guid).
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::update()}
+	 * @deprecated unreleased Use {@see Remote_Actors::update()}
 	 *
 	 * @param int|\WP_Post $post  The post ID or object.
 	 * @param array|Actor  $actor The ActivityPub actor object as associative array (must include 'id').
@@ -649,7 +648,7 @@ class Actors {
 	/**
 	 * Delete a remote actor object by actor URL (guid).
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::delete()}
+	 * @deprecated unreleased Use {@see Remote_Actors::delete()}
 	 *
 	 * @param int $post_id The post ID.
 	 *
@@ -663,7 +662,7 @@ class Actors {
 	/**
 	 * Get a remote actor post by actor URI (guid).
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::get_by_uri()}
+	 * @deprecated unreleased Use {@see Remote_Actors::get_by_uri()}
 	 *
 	 * @param string $actor_uri The actor URI.
 	 *
@@ -677,7 +676,7 @@ class Actors {
 	/**
 	 * Lookup a remote actor post by actor URI (guid), fetching from remote if not found locally.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::fetch_by_uri()}
+	 * @deprecated unreleased Use {@see Remote_Actors::fetch_by_uri()}
 	 *
 	 * @param string $actor_uri The actor URI.
 	 *
@@ -693,7 +692,7 @@ class Actors {
 	 *
 	 * The error will be stored in post meta.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::add_error()}
+	 * @deprecated unreleased Use {@see Remote_Actors::add_error()}
 	 *
 	 * @param int              $post_id The ID of the WordPress Custom-Post-Type.
 	 * @param string|\WP_Error $error   The error message.
@@ -708,7 +707,7 @@ class Actors {
 	/**
 	 * Count the errors for an actor.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::count_errors()}
+	 * @deprecated unreleased Use {@see Remote_Actors::count_errors()}
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
@@ -722,7 +721,7 @@ class Actors {
 	/**
 	 * Get all error messages for an actor.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::get_errors()}
+	 * @deprecated unreleased Use {@see Remote_Actors::get_errors()}
 	 *
 	 * @param int $post_id The post ID.
 	 *
@@ -736,7 +735,7 @@ class Actors {
 	/**
 	 * Clear all errors for an actor.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::clear_errors()}
+	 * @deprecated unreleased Use {@see Remote_Actors::clear_errors()}
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
@@ -750,7 +749,7 @@ class Actors {
 	/**
 	 * Get all remote actors (Custom Post Type) that had errors.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::get_faulty()}
+	 * @deprecated unreleased Use {@see Remote_Actors::get_faulty()}
 	 *
 	 * @param int $number Optional. Number of actors to return. Default 20.
 	 *
@@ -764,7 +763,7 @@ class Actors {
 	/**
 	 * Get all remote actor posts not updated for a given time.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::get_outdated()}
+	 * @deprecated unreleased Use {@see Remote_Actors::get_outdated()}
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default DAY_IN_SECONDS.
@@ -779,7 +778,7 @@ class Actors {
 	/**
 	 * Convert a custom post type input to an Activitypub\Activity\Actor.
 	 *
-	 * @deprecated unreleased Use {@see Activitypub\Collection\Remote_Actors::get_actor()}
+	 * @deprecated unreleased Use {@see Remote_Actors::get_actor()}
 	 *
 	 * @param int|\WP_Post $post The post ID or object.
 	 *
@@ -793,7 +792,7 @@ class Actors {
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @deprecated unreleased
+	 * @deprecated unreleased Use {@see Remote_Actors::get_public_key()}
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
