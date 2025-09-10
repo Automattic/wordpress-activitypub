@@ -9,6 +9,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_context;
 use function Activitypub\get_masked_wp_version;
@@ -112,7 +113,7 @@ class Following_Controller extends Actors_Controller {
 				\array_map(
 					function ( $item ) use ( $context ) {
 						if ( 'full' === $context ) {
-							$actor = Actors::get_actor( $item );
+							$actor = Remote_Actors::get_actor( $item );
 							if ( \is_wp_error( $actor ) ) {
 								return false;
 							}

@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Scheduler\Post;
@@ -156,19 +157,19 @@ class Scheduler {
 		 * @param int $number The number of remote Actors to update.
 		 */
 		$number = apply_filters( 'activitypub_update_remote_actors_number', $number );
-		$actors = Actors::get_outdated( $number );
+		$actors = Remote_Actors::get_outdated( $number );
 
 		foreach ( $actors as $actor ) {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
+				Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
-				$id = Actors::upsert( $meta );
+				$id = Remote_Actors::upsert( $meta );
 				if ( \is_wp_error( $id ) ) {
 					continue;
 				}
-				Actors::clear_errors( $id );
+				Remote_Actors::clear_errors( $id );
 			}
 		}
 	}
@@ -189,7 +190,7 @@ class Scheduler {
 		 * @param int $number The number of remote Actors to clean up.
 		 */
 		$number = apply_filters( 'activitypub_cleanup_remote_actors_number', $number );
-		$actors = Actors::get_faulty( $number );
+		$actors = Remote_Actors::get_faulty( $number );
 
 		foreach ( $actors as $actor ) {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );
@@ -197,18 +198,18 @@ class Scheduler {
 			if ( Tombstone::exists( $meta ) ) {
 				\wp_delete_post( $actor->ID );
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || \is_wp_error( $meta ) ) {
-				if ( Actors::count_errors( $actor->ID ) >= 5 ) {
+				if ( Remote_Actors::count_errors( $actor->ID ) >= 5 ) {
 					\wp_schedule_single_event( \time(), 'activitypub_delete_actor_interactions', array( $actor->guid ) );
 					\wp_delete_post( $actor->ID );
 				} else {
-					Actors::add_error( $actor->ID, $meta );
+					Remote_Actors::add_error( $actor->ID, $meta );
 				}
 			} else {
-				$id = Actors::upsert( $meta );
+				$id = Remote_Actors::upsert( $meta );
 				if ( \is_wp_error( $id ) ) {
-					Actors::add_error( $actor->ID, $id );
+					Remote_Actors::add_error( $actor->ID, $id );
 				} else {
-					Actors::clear_errors( $actor->ID );
+					Remote_Actors::clear_errors( $actor->ID );
 				}
 			}
 		}

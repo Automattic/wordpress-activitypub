@@ -51,7 +51,7 @@ class Followers {
 			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		$post_id = Actors::upsert( $meta );
+		$post_id = Remote_Actors::upsert( $meta );
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
@@ -60,7 +60,7 @@ class Followers {
 		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
 			\add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-			\wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
+			\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 		}
 
 		return $post_id;
@@ -82,7 +82,7 @@ class Followers {
 		}
 
 		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-		\wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
+		\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 
 		/**
 		 * Fires before a Follower is removed.
@@ -91,7 +91,7 @@ class Followers {
 		 * @param int                         $user_id The ID of the WordPress User.
 		 * @param \Activitypub\Activity\Actor $actor   The remote Actor object.
 		 */
-		\do_action( 'activitypub_followers_pre_remove_follower', $post, $user_id, Actors::get_actor( $post ) );
+		\do_action( 'activitypub_followers_pre_remove_follower', $post, $user_id, Remote_Actors::get_actor( $post ) );
 
 		return \delete_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 	}
@@ -134,7 +134,7 @@ class Followers {
 			$wpdb->prepare(
 				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid = %s",
 				array(
-					\esc_sql( Actors::POST_TYPE ),
+					\esc_sql( Remote_Actors::POST_TYPE ),
 					\esc_sql( self::FOLLOWER_META_KEY ),
 					\esc_sql( $user_id ),
 					\esc_sql( $actor ),
@@ -156,14 +156,16 @@ class Followers {
 	/**
 	 * Get a Follower by Actor independent of the User.
 	 *
+	 * @deprecated unreleased
+	 *
 	 * @param string $actor The Actor URL.
 	 *
 	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_remote_by_uri' );
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_by_uri' );
 
-		return Actors::get_remote_by_uri( $actor );
+		return Remote_Actors::get_by_uri( $actor );
 	}
 
 	/**
@@ -199,7 +201,7 @@ class Followers {
 	 */
 	public static function get_followers_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
+			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',
@@ -257,7 +259,7 @@ class Followers {
 		$posts = new \WP_Query(
 			array(
 				'nopaging'   => true,
-				'post_type'  => Actors::POST_TYPE,
+				'post_type'  => Remote_Actors::POST_TYPE,
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
@@ -315,7 +317,7 @@ class Followers {
 		$activity = \json_decode( $json, true );
 		// Only if this is a Delete. Create handles its own "Announce" in dual user mode.
 		if ( 'Delete' === ( $activity['type'] ?? null ) ) {
-			$inboxes = Actors::get_inboxes();
+			$inboxes = Remote_Actors::get_inboxes();
 		} else {
 			$inboxes = self::get_inboxes( $actor_id );
 		}
@@ -357,7 +359,7 @@ class Followers {
 	/**
 	 * Get all Followers.
 	 *
-	 * @deprecated 7.1.0 Use Activitypub\Collection\Actors::get_all() instead.
+	 * @deprecated 7.1.0 Use {@see Actors::get_all()}.
 	 *
 	 * @return \WP_Post[] The list of Followers.
 	 */
@@ -381,7 +383,7 @@ class Followers {
 	/**
 	 * Get all Followers that have not been updated for a given time.
 	 *
-	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::get_outdated() instead.
+	 * @deprecated 7.0.0 Use {@see Remote_Actors::get_outdated()}.
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default 86400 (1 day).
@@ -389,24 +391,24 @@ class Followers {
 	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_outdated' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::get_outdated' );
 
-		return Actors::get_outdated( $number, $older_than );
+		return Remote_Actors::get_outdated( $number, $older_than );
 	}
 
 	/**
 	 * Get all Followers that had errors.
 	 *
-	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::get_faulty() instead.
+	 * @deprecated 7.0.0 Use {@see Remote_Actors::get_faulty()}.
 	 *
 	 * @param int $number Optional. The number of Followers to return. Default 20.
 	 *
 	 * @return \WP_Post[] The list of Actors.
 	 */
 	public static function get_faulty_followers( $number = 20 ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_faulty' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::get_faulty' );
 
-		return Actors::get_faulty( $number );
+		return Remote_Actors::get_faulty( $number );
 	}
 
 	/**
@@ -415,7 +417,7 @@ class Followers {
 	 *
 	 * The error will be stored in post meta.
 	 *
-	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::add_error() instead.
+	 * @deprecated 7.0.0 Use {@see Remote_Actors::add_error()}.
 	 *
 	 * @param int   $post_id The ID of the WordPress Custom-Post-Type.
 	 * @param mixed $error   The error message. Can be a string or a WP_Error.
@@ -423,24 +425,24 @@ class Followers {
 	 * @return int|false The meta ID on success, false on failure.
 	 */
 	public static function add_error( $post_id, $error ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::add_error' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::add_error' );
 
-		return Actors::add_error( $post_id, $error );
+		return Remote_Actors::add_error( $post_id, $error );
 	}
 
 	/**
 	 * Clear the errors for a Follower.
 	 *
-	 * @deprecated 7.0.0 Use Activitypub\Collection\Actors::clear_errors() instead.
+	 * @deprecated 7.0.0 Use {@see Remote_Actors::clear_errors()}.
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
 	 * @return bool True on success, false on failure.
 	 */
 	public static function clear_errors( $post_id ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::clear_errors' );
+		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::clear_errors' );
 
-		return Actors::clear_errors( $post_id );
+		return Remote_Actors::clear_errors( $post_id );
 	}
 
 	/**

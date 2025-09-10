@@ -6,6 +6,7 @@
  */
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
@@ -13,7 +14,7 @@ $args = wp_parse_args( $args ?? array() );
 $actor_id = $args['actor_id'];
 
 // Get actor and validate.
-$actor = Actors::get_actor( $actor_id );
+$actor = Remote_Actors::get_actor( $actor_id );
 if ( is_wp_error( $actor ) ) {
 	wp_die( \esc_html__( 'Invalid account.', 'activitypub' ), '', array( 'back_link' => true ) );
 }

@@ -11,7 +11,7 @@
 
 namespace Activitypub\Signature;
 
-use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Class Http_Signature_Draft.
@@ -92,7 +92,7 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'activitypub_signature', 'No Key ID present.' );
 		}
 
-		$public_key = Actors::get_remote_key( $parsed['keyId'] );
+		$public_key = Remote_Actors::get_public_key( $parsed['keyId'] );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}

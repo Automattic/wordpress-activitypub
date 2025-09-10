@@ -7,8 +7,8 @@
 
 namespace Activitypub\Tests\WP_Admin\Table;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\WP_Admin\Table\Followers;
 
 /**
@@ -171,7 +171,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		// Test the normalization directly.
-		$normalized = Actors::normalize_identifier( $input );
+		$normalized = Remote_Actors::normalize_identifier( $input );
 		$this->assertEquals( $expected, $normalized, "Failed to normalize: {$input} -> expected {$expected}, got " . wp_json_encode( $normalized ) );
 	}
 
@@ -301,7 +301,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 
 		// Test normalization.
-		$normalized = Actors::normalize_identifier( $input );
+		$normalized = Remote_Actors::normalize_identifier( $input );
 		$this->assertEquals( $actor_url, $normalized, "Failed to normalize complex webfinger: {$input}" );
 	}
 }

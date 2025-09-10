@@ -7,7 +7,7 @@
 
 namespace Activitypub\Tests\Model;
 
-use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Model\Follower;
 
 /**
@@ -32,22 +32,22 @@ class Test_Follower extends \WP_UnitTestCase {
 			'publicKeyPem'      => 'publicKeyPem',
 		);
 
-		$id = Actors::upsert( $actor );
+		$id = Remote_Actors::upsert( $actor );
 
 		// Add some errors.
-		Actors::add_error( $id, 'Test error 1' );
-		Actors::add_error( $id, 'Test error 2' );
+		Remote_Actors::add_error( $id, 'Test error 1' );
+		Remote_Actors::add_error( $id, 'Test error 2' );
 
 		// Verify errors were added.
-		$count = Actors::count_errors( $id );
+		$count = Remote_Actors::count_errors( $id );
 		$this->assertEquals( 2, $count );
 
 		// Clear errors.
-		$cleared = Actors::clear_errors( $id );
+		$cleared = Remote_Actors::clear_errors( $id );
 		$this->assertTrue( $cleared );
 
 		// Verify errors were cleared.
-		$count = Actors::count_errors( $id );
+		$count = Remote_Actors::count_errors( $id );
 		$this->assertEquals( 0, $count );
 	}
 
