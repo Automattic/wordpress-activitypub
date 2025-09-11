@@ -27,10 +27,7 @@ class Scheduler {
 	 *
 	 * @var array
 	 */
-	private static $batch_callbacks = array(
-		'activitypub_send_activity'  => array( Dispatcher::class, 'send_to_followers' ),
-		'activitypub_retry_activity' => array( Dispatcher::class, 'retry_send_to_followers' ),
-	);
+	private static $batch_callbacks = array();
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
@@ -44,8 +41,6 @@ class Scheduler {
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
-		\add_action( 'activitypub_send_activity', array( self::class, 'async_batch' ), 10, 3 );
-		\add_action( 'activitypub_retry_activity', array( self::class, 'async_batch' ), 10, 3 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 
@@ -79,7 +74,7 @@ class Scheduler {
 	 */
 	public static function register_async_batch_callback( $hook, $callback ) {
 		if ( \did_action( 'init' ) && ! \doing_action( 'init' ) ) {
-			\_doing_it_wrong( __METHOD__, 'Async batch callbacks should be registered before or during the init action.', '5.2.0' );
+			\_doing_it_wrong( __METHOD__, 'Async batch callbacks should be registered before or during the init action.', 'unreleased' );
 			return;
 		}
 
