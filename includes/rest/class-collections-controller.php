@@ -9,14 +9,11 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
-use Activitypub\Model\Application;
-use Activitypub\Model\Blog;
-use Activitypub\Model\User;
 use Activitypub\Transformer\Factory;
 
 use function Activitypub\esc_hashtag;
-use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_single_user;
 
 /**
  * Collections_Controller class.

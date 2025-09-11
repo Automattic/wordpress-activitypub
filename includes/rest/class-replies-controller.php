@@ -8,8 +8,8 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Replies;
 use Activitypub\Collection\Interactions;
+use Activitypub\Collection\Replies;
 
 use function Activitypub\get_rest_url_by_path;
 

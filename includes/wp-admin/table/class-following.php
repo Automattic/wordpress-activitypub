@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -124,7 +125,7 @@ class Following extends \WP_List_Table {
 				}
 
 				$original = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$profile  = Actors::normalize_identifier( $original );
+				$profile  = Remote_Actors::normalize_identifier( $original );
 				if ( ! $profile ) {
 					/* translators: %s: Account profile that could not be followed */
 					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
@@ -242,7 +243,7 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor = Actors::get_actor( $following );
+			$actor = Remote_Actors::get_actor( $following );
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
@@ -443,7 +444,7 @@ class Following extends \WP_List_Table {
 		$search = Webfinger::resolve( $search );
 
 		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
-			$actor = Actors::fetch_remote_by_uri( $search );
+			$actor = Remote_Actors::fetch_by_uri( $search );
 			if ( ! is_wp_error( $actor ) ) {
 				echo ' ';
 				\printf(

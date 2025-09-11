@@ -17,24 +17,28 @@ diverse, inclusive, and healthy community.
 Examples of behavior that contributes to a positive environment for our
 community include:
 
-* Demonstrating empathy and kindness toward other people
-* Being respectful of differing opinions, viewpoints, and experiences
-* Giving and gracefully accepting constructive feedback
+* Demonstrating empathy and kindness toward other people.
+* Being respectful of differing opinions, viewpoints, and experiences.
+* Giving and gracefully accepting constructive feedback.
 * Accepting responsibility and apologizing to those affected by our mistakes,
-  and learning from the experience
+  and learning from the experience.
 * Focusing on what is best not just for us as individuals, but for the
-  overall community
+  overall community.
+* Contributing constructive, concise, and actionable feedback that helps improve the project.
+* Keeping contributions relevant to the plugin's purpose and scope.
 
 Examples of unacceptable behavior include:
 
 * The use of sexualized language or imagery, and sexual attention or
-  advances of any kind
-* Trolling, insulting or derogatory comments, and personal or political attacks
-* Public or private harassment
+  advances of any kind.
+* Trolling, insulting or derogatory comments, and personal or political attacks.
+* Public or private harassment.
 * Publishing others' private information, such as a physical or email
-  address, without their explicit permission
+  address, without their explicit permission.
+* Submitting off-topic issues, excessive feature requests, or contributions
+  that don't align with the project's goals.
 * Other conduct which could reasonably be considered inappropriate in a
-  professional setting
+  professional setting.
 
 ## Enforcement Responsibilities
 

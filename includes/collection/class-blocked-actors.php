@@ -23,7 +23,7 @@ class Blocked_Actors {
 	 */
 	public static function add_block( $user_id, $value ) {
 		// Find or create actor post.
-		$actor_post = Actors::fetch_remote_by_uri( $value );
+		$actor_post = Remote_Actors::fetch_by_uri( $value );
 		if ( \is_wp_error( $actor_post ) ) {
 			return false;
 		}
@@ -61,7 +61,7 @@ class Blocked_Actors {
 			$post_id = (int) $value;
 		} else {
 			// Otherwise, find the actor post by actor ID.
-			$actor_post = Actors::fetch_remote_by_uri( $value );
+			$actor_post = Remote_Actors::fetch_by_uri( $value );
 			if ( \is_wp_error( $actor_post ) ) {
 				return false;
 			}
@@ -100,7 +100,7 @@ class Blocked_Actors {
 	 */
 	public static function get_blocked_actors_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
+			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',

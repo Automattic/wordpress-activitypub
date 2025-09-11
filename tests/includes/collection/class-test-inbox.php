@@ -9,9 +9,8 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Inbox;
 use Activitypub\Activitypub;
+use Activitypub\Collection\Inbox;
 
 /**
  * Test class for Inbox collection.

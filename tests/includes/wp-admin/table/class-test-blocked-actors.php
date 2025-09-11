@@ -7,7 +7,7 @@
 
 namespace Activitypub\Tests\WP_Admin\Table;
 
-use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
 
 /**
@@ -106,7 +106,7 @@ class Test_Blocked_Actors extends \WP_UnitTestCase {
 		}
 
 		// Test the normalization directly.
-		$normalized = Actors::normalize_identifier( $input );
+		$normalized = Remote_Actors::normalize_identifier( $input );
 		$this->assertEquals( $expected, $normalized, "Failed to normalize: {$input} -> expected {$expected}, got " . wp_json_encode( $normalized ) );
 	}
 
@@ -197,7 +197,7 @@ class Test_Blocked_Actors extends \WP_UnitTestCase {
 	 */
 	public function test_invalid_actor_identifier_handling( $invalid_input ) {
 		// These should not cause fatal errors.
-		$normalized = Actors::normalize_identifier( $invalid_input );
+		$normalized = Remote_Actors::normalize_identifier( $invalid_input );
 
 		// The result should be handled gracefully.
 		$this->assertTrue(

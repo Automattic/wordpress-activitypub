@@ -9,9 +9,9 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
 
-use function Activitypub\is_self_ping;
-use function Activitypub\is_activity_reply;
 use function Activitypub\is_activity_public;
+use function Activitypub\is_activity_reply;
+use function Activitypub\is_self_ping;
 use function Activitypub\object_id_to_comment;
 
 /**

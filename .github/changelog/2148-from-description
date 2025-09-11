@@ -1,0 +1,4 @@
+Significance: minor
+Type: deprecated
+
+ActivityPub now defaults to automated object type selection, with the old manual option moved to Advanced settings for compatibility.

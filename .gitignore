@@ -8,6 +8,7 @@ _site
 .cursor
 .DS_Store
 .php_cs.cache
+.phpunit.cache
 .phpunit.result.cache
 .sass-cache
 .vscode/settings.json

@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Blocked_Actors as Blocked_Actors_Collection;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -123,7 +124,7 @@ class Blocked_Actors extends \WP_List_Table {
 				}
 
 				$original = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$profile  = Actors::normalize_identifier( $original );
+				$profile  = Remote_Actors::normalize_identifier( $original );
 				if ( ! $profile ) {
 					/* translators: %s: Account profile that could not be blocked */
 					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $original ) ) );
@@ -222,7 +223,7 @@ class Blocked_Actors extends \WP_List_Table {
 		);
 
 		foreach ( $blocked_actor_posts as $blocked_actor_post ) {
-			$actor = Actors::get_actor( $blocked_actor_post );
+			$actor = Remote_Actors::get_actor( $blocked_actor_post );
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
@@ -343,7 +344,7 @@ class Blocked_Actors extends \WP_List_Table {
 		$search = Webfinger::resolve( $search );
 
 		if ( ! \is_wp_error( $search ) && \filter_var( $search, FILTER_VALIDATE_URL ) ) {
-			$actor = Actors::fetch_remote_by_uri( $search );
+			$actor = Remote_Actors::fetch_by_uri( $search );
 			if ( ! \is_wp_error( $actor ) ) {
 				echo ' ';
 				\printf(
