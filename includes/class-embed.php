@@ -19,6 +19,7 @@ class Embed {
 		\add_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ), 10, 3 );
 		\add_filter( 'oembed_dataparse', array( self::class, 'handle_filtered_oembed_result' ), 11, 3 );
 		\add_filter( 'oembed_request_post_id', array( self::class, 'register_fallback_hook' ) );
+		\add_action( 'init', array( self::class, 'register_oembed_providers' ), 11 );
 	}
 
 	/**
@@ -280,5 +281,17 @@ class Embed {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Register some Mastodon oEmbed providers.
+	 */
+	public static function register_oembed_providers() {
+		\wp_oembed_add_provider( '#https?://mastodon\.social/(@.+)/([0-9]+)#i', 'https://mastodon.social/api/oembed', true );
+		\wp_oembed_add_provider( '#https?://mastodon\.online/(@.+)/([0-9]+)#i', 'https://mastodon.online/api/oembed', true );
+		\wp_oembed_add_provider( '#https?://mastodon\.cloud/(@.+)/([0-9]+)#i', 'https://mastodon.cloud/api/oembed', true );
+		\wp_oembed_add_provider( '#https?://mstdn\.social/(@.+)/([0-9]+)#i', 'https://mstdn.social/api/oembed', true );
+		\wp_oembed_add_provider( '#https?://mastodon\.world/(@.+)/([0-9]+)#i', 'https://mastodon.world/api/oembed', true );
+		\wp_oembed_add_provider( '#https?://mas\.to/(@.+)/([0-9]+)#i', 'https://mas.to/api/oembed', true );
 	}
 }
