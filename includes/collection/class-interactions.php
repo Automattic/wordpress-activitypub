@@ -500,102 +500,127 @@ class Interactions {
 			return $text;
 		}
 
+		// Collect emoji data first.
+		$emoji_data = array();
+
 		foreach ( $activity['tag'] as $tag ) {
 			if ( isset( $tag['type'] ) && 'Emoji' === $tag['type'] && ! empty( $tag['name'] ) && ! empty( $tag['icon']['url'] ) ) {
-				$emoji_url  = $tag['icon']['url'];
-				$emoji_name = $tag['name'];
-
-				// Check for existing emoji by URL or placeholder.
-				$existing_attachments = \get_posts(
-					array(
-						'post_type'      => 'attachment',
-						'posts_per_page' => -1,
-						'fields'         => 'ids',
-
-						// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-						'meta_query'     => array(
-							'relation' => 'OR',
-							array(
-								'key'   => 'activitypub_emoji_source_url',
-								'value' => $emoji_url,
-							),
-							array(
-								'key'   => 'activitypub_emoji_placeholder',
-								'value' => $emoji_name,
-							),
-						),
-					)
+				$emoji_data[] = array(
+					'url'  => $tag['icon']['url'],
+					'name' => $tag['name'],
 				);
+			}
+		}
 
-				$attachment_id        = 0;
-				$existing_attachment  = 0;
-				$existing_placeholder = 0;
+		if ( empty( $emoji_data ) ) {
+			return $text;
+		}
 
-				// Sort through results to identify URL and placeholder matches.
-				foreach ( $existing_attachments as $post_id ) {
-					if ( \get_post_meta( $post_id, 'activitypub_emoji_source_url', true ) === $emoji_url ) {
-						$existing_attachment = $post_id;
-					} elseif ( \get_post_meta( $post_id, 'activitypub_emoji_placeholder', true ) === $emoji_name ) {
-						$existing_placeholder = $post_id;
-					}
+		// Single query for all emoji at once.
+		$meta_query = array( 'relation' => 'OR' );
+
+		foreach ( $emoji_data as $emoji ) {
+			$meta_query[] = array(
+				'key'   => 'activitypub_emoji_source_url',
+				'value' => $emoji['url'],
+			);
+			$meta_query[] = array(
+				'key'   => 'activitypub_emoji_placeholder',
+				'value' => $emoji['name'],
+			);
+		}
+
+		$existing_attachments = \get_posts(
+			array(
+				'post_type'      => 'attachment',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => $meta_query,
+			)
+		);
+
+		// Build lookup arrays for fast access.
+		$url_to_attachment  = array();
+		$name_to_attachment = array();
+
+		foreach ( $existing_attachments as $post_id ) {
+			$source_url  = \get_post_meta( $post_id, 'activitypub_emoji_source_url', true );
+			$placeholder = \get_post_meta( $post_id, 'activitypub_emoji_placeholder', true );
+
+			if ( $source_url ) {
+				$url_to_attachment[ $source_url ] = $post_id;
+			}
+			if ( $placeholder ) {
+				$name_to_attachment[ $placeholder ] = $post_id;
+			}
+		}
+
+		// Now process each emoji using the lookup arrays.
+		foreach ( $emoji_data as $emoji ) {
+			$emoji_url  = $emoji['url'];
+			$emoji_name = $emoji['name'];
+
+			$attachment_id        = 0;
+			$existing_attachment  = $url_to_attachment[ $emoji_url ] ?? 0;
+			$existing_placeholder = $name_to_attachment[ $emoji_name ] ?? 0;
+
+			// If we have a different image for this placeholder, or no existing image, download the new one.
+			if ( empty( $existing_attachment ) || ! empty( $existing_placeholder ) ) {
+				if ( ! function_exists( '\download_url' ) ) {
+					require_once \ABSPATH . 'wp-admin/includes/file.php';
 				}
 
-				// If we have a different image for this placeholder, or no existing image, download the new one.
-				if ( empty( $existing_attachment ) || ! empty( $existing_placeholder ) ) {
-					if ( ! function_exists( '\download_url' ) ) {
-						require_once \ABSPATH . 'wp-admin/includes/file.php';
-					}
-
-					$temp_file = \download_url( $emoji_url );
-					if ( ! \is_wp_error( $temp_file ) ) {
-						$file_array = array(
-							'name'     => \wp_basename( $emoji_url ),
-							'tmp_name' => $temp_file,
-						);
-
-						if ( ! function_exists( '\media_handle_sideload' ) ) {
-							require_once \ABSPATH . 'wp-admin/includes/media.php';
-							require_once \ABSPATH . 'wp-admin/includes/image.php';
-						}
-
-						$attachment_id = \media_handle_sideload( $file_array, 0, $emoji_name );
-
-						if ( ! \is_wp_error( $attachment_id ) ) {
-							\update_post_meta( $attachment_id, 'activitypub_emoji_source_url', $emoji_url );
-							\update_post_meta( $attachment_id, 'activitypub_emoji_placeholder', $emoji_name );
-						}
-					}
-
-					if ( \is_file( $temp_file ) ) {
-						\wp_delete_file( $temp_file );
-					}
-				} else {
-					$attachment_id = $existing_attachment;
-				}
-
-				if ( $attachment_id ) {
-					$image_url = \wp_get_attachment_url( $attachment_id );
-					$text      = str_replace(
-						$emoji_name,
-						sprintf(
-							'<img src="%s" alt="%s" class="emoji" />',
-							\esc_url( $image_url ),
-							\esc_attr( $emoji_name )
-						),
-						$text
+				$temp_file = \download_url( $emoji_url );
+				if ( ! \is_wp_error( $temp_file ) ) {
+					$file_array = array(
+						'name'     => \wp_basename( $emoji_url ),
+						'tmp_name' => $temp_file,
 					);
-				} else {
-					// Fallback to the original remote URL if something went wrong.
-					$text = str_replace(
-						$emoji_name,
-						sprintf(
-							'<img src="%s" alt="%s" class="emoji" />',
-							\esc_url( $emoji_url ),
-							\esc_attr( $emoji_name )
-						),
-						$text
-					);
+
+					if ( ! function_exists( '\media_handle_sideload' ) ) {
+						require_once \ABSPATH . 'wp-admin/includes/media.php';
+						require_once \ABSPATH . 'wp-admin/includes/image.php';
+					}
+
+					$attachment_id = \media_handle_sideload( $file_array, 0, $emoji_name );
+
+					if ( ! \is_wp_error( $attachment_id ) ) {
+						\update_post_meta( $attachment_id, 'activitypub_emoji_source_url', $emoji_url );
+						\update_post_meta( $attachment_id, 'activitypub_emoji_placeholder', $emoji_name );
+					}
 				}
+
+				if ( \is_file( $temp_file ) ) {
+					\wp_delete_file( $temp_file );
+				}
+			} else {
+				$attachment_id = $existing_attachment;
+			}
+
+			if ( $attachment_id ) {
+				$image_url = \wp_get_attachment_url( $attachment_id );
+				$text      = str_replace(
+					$emoji_name,
+					sprintf(
+						'<img src="%s" alt="%s" class="emoji" />',
+						\esc_url( $image_url ),
+						\esc_attr( $emoji_name )
+					),
+					$text
+				);
+			} else {
+				// Fallback to the original remote URL if something went wrong.
+				$text = str_replace(
+					$emoji_name,
+					sprintf(
+						'<img src="%s" alt="%s" class="emoji" />',
+						\esc_url( $emoji_url ),
+						\esc_attr( $emoji_name )
+					),
+					$text
+				);
 			}
 		}
 
