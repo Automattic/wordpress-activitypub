@@ -174,11 +174,6 @@ class Actor {
 	 * @param int $user_id The user ID being deleted.
 	 */
 	public static function schedule_user_delete( $user_id ) {
-		// Don't bother if the user can't publish ActivityPub content.
-		if ( ! \user_can( $user_id, 'activitypub' ) ) {
-			return;
-		}
-
 		// Get the actor before deletion to ensure we have the data.
 		$actor = Actors::get_by_id( $user_id );
 		if ( \is_wp_error( $actor ) ) {
