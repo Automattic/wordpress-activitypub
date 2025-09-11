@@ -424,6 +424,9 @@ class Blocks {
 	 * @return string The HTML @ link.
 	 */
 	public static function generate_reply_link( $block_content, $block ) {
+		// Unhook ourselves after first execution to ensure only the first reply block gets transformed.
+		\remove_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ) );
+
 		// Return empty string if no URL is provided.
 		if ( empty( $block['attrs']['url'] ) ) {
 			return '';
