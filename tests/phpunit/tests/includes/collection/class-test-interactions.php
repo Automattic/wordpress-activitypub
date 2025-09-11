@@ -711,6 +711,94 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test emoji replacement in activity_to_comment.
+	 *
+	 * @covers ::activity_to_comment
+	 */
+	public function test_activity_to_comment_with_emoji() {
+		// Mock actor with emoji in name.
+		$filter = function ( $value, $actor ) {
+			return array(
+				'name' => 'Test User :kappa:',
+				'icon' => array(
+					'url' => 'https://example.com/icon',
+				),
+				'url'  => $actor,
+				'id'   => 'http://example.org/users/example',
+				'tag'  => array(
+					array(
+						'type' => 'Emoji',
+						'name' => ':kappa:',
+						'icon' => array(
+							'type'      => 'Image',
+							'mediaType' => 'image/png',
+							'url'       => 'https://example.com/files/kappa.png',
+						),
+					),
+				),
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $filter, 10, 2 );
+
+		$activity = array(
+			'@context' => array(
+				'https://www.w3.org/ns/activitystreams',
+				array(
+					'Emoji' => 'http://joinmastodon.org/ns#Emoji',
+				),
+			),
+			'id'       => 'https://example.com/activities/1',
+			'type'     => 'Note',
+			'content'  => 'Hello world :kappa: and :smile:',
+			'actor'    => self::$user_url,
+			'object'   => array(
+				'id'        => 'https://example.com/objects/1',
+				'content'   => 'Hello world :kappa: and :smile:',
+				'inReplyTo' => self::$post_permalink,
+				'tag'       => array(
+					array(
+						'type' => 'Emoji',
+						'name' => ':kappa:',
+						'icon' => array(
+							'type'      => 'Image',
+							'mediaType' => 'image/png',
+							'url'       => 'https://example.com/files/kappa.png',
+						),
+					),
+					array(
+						'type' => 'Emoji',
+						'name' => ':smile:',
+						'icon' => array(
+							'type'      => 'Image',
+							'mediaType' => 'image/png',
+							'url'       => 'https://example.com/files/smile.png',
+						),
+					),
+				),
+			),
+		);
+
+		$comment_id = Interactions::add_comment( $activity );
+		$comment    = get_comment( $comment_id );
+
+		// Test emoji replacement in comment content.
+		$this->assertStringContainsString(
+			'<img src="https://example.com/files/kappa.png" alt=":kappa:" class="emoji" />',
+			$comment->comment_content
+		);
+		$this->assertStringContainsString(
+			'<img src="https://example.com/files/smile.png" alt=":smile:" class="emoji" />',
+			$comment->comment_content
+		);
+
+		// Test emoji replacement in author name.
+		$author_with_emoji = get_comment_author( $comment_id );
+		$this->assertSame( 'Test User <img src="https://example.com/files/kappa.png" alt=":kappa:" class="emoji" />', $author_with_emoji );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $filter, 10 );
+	}
+
+	/**
 	 * Test that incoming likes and reposts are not collected when disabled.
 	 *
 	 * @covers ::add_reaction
@@ -1142,60 +1230,5 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-	}
-
-	/**
-	 * Test emoji replacement in activity_to_comment.
-	 *
-	 * @covers ::activity_to_comment
-	 */
-	public function test_activity_to_comment_with_emoji() {
-		$activity = array(
-			'@context' => array(
-				'https://www.w3.org/ns/activitystreams',
-				array(
-					'Emoji' => 'http://joinmastodon.org/ns#Emoji',
-				),
-			),
-			'id'       => 'https://example.com/activities/1',
-			'type'     => 'Note',
-			'content'  => 'Hello world :kappa: and :smile:',
-			'actor'    => self::$user_url,
-			'object'   => array(
-				'id'      => 'https://example.com/objects/1',
-				'content' => 'Hello world :kappa: and :smile:',
-				'tag'     => array(
-					array(
-						'type' => 'Emoji',
-						'name' => ':kappa:',
-						'icon' => array(
-							'type'      => 'Image',
-							'mediaType' => 'image/png',
-							'url'       => 'https://example.com/files/kappa.png',
-						),
-					),
-					array(
-						'type' => 'Emoji',
-						'name' => ':smile:',
-						'icon' => array(
-							'type'      => 'Image',
-							'mediaType' => 'image/png',
-							'url'       => 'https://example.com/files/smile.png',
-						),
-					),
-				),
-			),
-		);
-
-		$comment_data = Interactions::activity_to_comment( $activity );
-
-		$this->assertStringContainsString(
-			'<img src="https://example.com/files/kappa.png" alt=":kappa:" class="emoji" />',
-			$comment_data['comment_content']
-		);
-		$this->assertStringContainsString(
-			'<img src="https://example.com/files/smile.png" alt=":smile:" class="emoji" />',
-			$comment_data['comment_content']
-		);
 	}
 }
