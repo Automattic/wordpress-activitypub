@@ -1,7 +1,6 @@
 .activitypub-embed-container {
 	position: relative;
 	min-height: 100px;
-	margin-top: 1em;
 	pointer-events: none;
 	user-select: none;
 }

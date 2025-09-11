@@ -7,8 +7,8 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Tombstone;
 
 use function Activitypub\object_to_uri;
@@ -103,11 +103,11 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function maybe_delete_follower( $activity ) {
-		$follower = Actors::get_remote_by_uri( $activity['actor'] );
+		$follower = Remote_Actors::get_by_uri( $activity['actor'] );
 
 		// Verify that Actor is deleted.
 		if ( ! is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
-			Actors::delete( $follower->ID );
+			Remote_Actors::delete( $follower->ID );
 			self::maybe_delete_interactions( $activity );
 		}
 	}

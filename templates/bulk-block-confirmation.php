@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
@@ -31,7 +31,7 @@ $base_url = add_query_arg(
 // Prepare follower data for display.
 $follower_data = array();
 foreach ( $followers as $follower ) {
-	$actor = Actors::get_actor( $follower );
+	$actor = Remote_Actors::get_actor( $follower );
 	if ( is_wp_error( $actor ) ) {
 		continue;
 	}

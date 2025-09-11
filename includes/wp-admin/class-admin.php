@@ -12,6 +12,7 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Comment;
 use Activitypub\Model\Blog;
 use Activitypub\Moderation;
+use Activitypub\Scheduler\Actor;
 
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
@@ -51,6 +52,9 @@ class Admin {
 		\add_filter( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
+
+		\add_action( 'admin_post_delete_actor_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
+		\add_action( 'admin_action_activitypub_confirm_removal', array( self::class, 'handle_bulk_actor_delete_page' ) );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -582,7 +586,8 @@ class Admin {
 	 * Handle bulk activitypub requests.
 	 *
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
-	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users.
+	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users (redirects to confirmation page).
+	 * * `delete_actor_confirmed` - Actually remove the capability after confirmation.
 	 *
 	 * @param string $send_back The URL to send the user back to.
 	 * @param string $action    The requested action.
@@ -591,20 +596,172 @@ class Admin {
 	 * @return string The URL to send the user back to.
 	 */
 	public static function handle_bulk_request( $send_back, $action, $users ) {
-		if (
-			'remove_activitypub_cap' !== $action &&
-			'add_activitypub_cap' !== $action
-		) {
-			return $send_back;
+		switch ( $action ) {
+			case 'add_activitypub_cap':
+				foreach ( $users as $user_id ) {
+					$user = new \WP_User( $user_id );
+					$user->add_cap( 'activitypub' );
+				}
+				return $send_back;
+			case 'remove_activitypub_cap':
+				$removed_count = 0;
+
+				// Remove capabilities immediately.
+				foreach ( $users as $key => $user_id ) {
+					$user = new \WP_User( $user_id );
+
+					// Check if user has ActivityPub capability.
+					if ( ! $user->has_cap( 'activitypub' ) ) {
+						unset( $users[ $key ] );
+						continue;
+					}
+
+					// Remove the capability.
+					$user->remove_cap( 'activitypub' );
+
+					// Force cache refresh for user capabilities.
+					\wp_cache_delete( $user_id, 'users' );
+					\wp_cache_delete( $user_id, 'user_meta' );
+
+					++$removed_count;
+				}
+
+				// Build the query args with proper array handling for fediverse deletion confirmation.
+				$query_args = array(
+					'action'    => 'activitypub_confirm_removal',
+					'send_back' => \rawurlencode( $send_back ),
+				);
+
+				// Add user IDs as separate parameters.
+				foreach ( $users as $index => $user_id ) {
+					$query_args[ sprintf( 'users[%d]', $index ) ] = absint( $user_id );
+				}
+
+				$confirmation_url = \add_query_arg( $query_args, \admin_url( 'users.php' ) );
+
+				// Force redirect instead of just returning URL.
+				\wp_safe_redirect( $confirmation_url );
+				exit;
+			case 'delete_actor_confirmed':
+				// Use unified method with no fediverse deletion (keep).
+				return self::process_capability_removal( $users, 'keep', $send_back );
+			default:
+				return $send_back;
+		}
+	}
+
+	/**
+	 * Handle the bulk capability removal page request directly.
+	 */
+	public static function handle_bulk_actor_delete_page() {
+
+		// Check permissions.
+		if ( ! \current_user_can( 'edit_users' ) ) {
+			\wp_die( \esc_html__( 'You do not have sufficient permissions to access this page.', 'activitypub' ) );
 		}
 
-		foreach ( $users as $user_id ) {
-			$user = new \WP_User( $user_id );
-			if ( 'add_activitypub_cap' === $action ) {
-				$user->add_cap( 'activitypub' );
-			} elseif ( 'remove_activitypub_cap' === $action ) {
-				$user->remove_cap( 'activitypub' );
-			}
+		// Get parameters.
+		// phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+		$users = \wp_unslash( $_GET['users'] ?? array() );
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
+
+		// Sanitize user IDs.
+		$users = \array_map( 'absint', (array) $users );
+		$users = \array_filter( $users );
+
+		// Validate send_back URL.
+		if ( empty( $send_back ) ) {
+			$send_back = \admin_url( 'users.php' );
+		}
+
+		// Load template and exit to prevent WordPress from trying to load other admin pages.
+		\load_template(
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-actor-delete-confirmation.php',
+			false,
+			array(
+				'users'     => $users,
+				'send_back' => $send_back,
+			)
+		);
+		exit;
+	}
+
+
+	/**
+	 * Handle the bulk capability removal confirmation form submission.
+	 */
+	public static function handle_bulk_actor_delete_confirmation() {
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'bulk-users' ) ) {
+			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
+		}
+
+		// Check permissions.
+		if ( ! \current_user_can( 'edit_users' ) ) {
+			\wp_die( \esc_html__( 'You do not have sufficient permissions to perform this action.', 'activitypub' ) );
+		}
+
+		// Get form data.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$selected_users = \wp_unslash( $_POST['selected_users'] ?? array() );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$remove_from_fediverse = \wp_unslash( $_POST['remove_from_fediverse'] ?? array() );
+		$send_back             = \esc_url_raw( \wp_unslash( $_POST['send_back'] ?? '' ) );
+
+		// Sanitize user IDs.
+		$selected_users = \array_map( 'absint', (array) $selected_users );
+		$selected_users = \array_filter( $selected_users );
+
+		if ( empty( $selected_users ) ) {
+			\wp_safe_redirect( $send_back );
+			exit;
+		}
+
+		// Process capability removal using unified method.
+		$result = self::process_capability_removal( $selected_users, $remove_from_fediverse, $send_back );
+
+		// Redirect back.
+		\wp_safe_redirect( $result );
+		exit;
+	}
+
+
+	/**
+	 * Process fediverse deletion for users (capabilities already removed).
+	 *
+	 * @param array        $users                  Array of user IDs.
+	 * @param array|string $remove_from_fediverse  Array of user IDs to delete from fediverse, or 'delete'/'keep' for all users.
+	 * @param string       $send_back              URL to redirect back to.
+	 *
+	 * @return string The URL to redirect to.
+	 */
+	public static function process_capability_removal( $users, $remove_from_fediverse, $send_back ) {
+		// Normalize fediverse removal parameter.
+		if ( is_string( $remove_from_fediverse ) ) {
+			// Legacy format: 'delete' or 'keep' for all users.
+			$delete_all      = ( 'delete' === $remove_from_fediverse );
+			$users_to_delete = $delete_all ? $users : array();
+		} else {
+			// New format: array of specific user IDs to delete from fediverse.
+			$remove_from_fediverse = \array_map( 'absint', (array) $remove_from_fediverse );
+			$users_to_delete       = \array_filter( $remove_from_fediverse );
+		}
+
+		// Schedule delete activities for users who should be removed from fediverse.
+		if ( ! empty( $users_to_delete ) ) {
+			// Temporarily bypass capability checks for delete activity scheduling since capabilities were already removed.
+			\add_filter( 'activitypub_user_can_activitypub', '__return_true' );
+
+			\array_map(
+				array(
+					Actor::class,
+					'schedule_user_delete',
+				),
+				$users_to_delete
+			);
+
+			\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );
 		}
 
 		return $send_back;

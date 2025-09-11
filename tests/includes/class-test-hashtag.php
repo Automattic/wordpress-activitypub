@@ -7,8 +7,7 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Test class for Activitypub Hashtag.
@@ -117,7 +116,7 @@ ENDPRE;
 		$post_id = self::factory()->post->create(
 			array(
 				'post_content' => 'Testing #php and #programming',
-				'post_type'    => Actors::POST_TYPE,
+				'post_type'    => Remote_Actors::POST_TYPE,
 			)
 		);
 

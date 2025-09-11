@@ -8,7 +8,6 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Model\Blog;
 use Activitypub\Move;
 
 /**

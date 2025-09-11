@@ -7,8 +7,8 @@
 
 namespace Activitypub\Tests\Rest;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Tests for Following REST API endpoint.
@@ -25,7 +25,7 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		self::factory()->post->create_many(
 			25,
 			array(
-				'post_type'    => Actors::POST_TYPE,
+				'post_type'    => Remote_Actors::POST_TYPE,
 				'post_content' => \wp_slash(
 					\wp_json_encode(
 						array(
@@ -44,7 +44,7 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		self::factory()->post->create_many(
 			3,
 			array(
-				'post_type'    => Actors::POST_TYPE,
+				'post_type'    => Remote_Actors::POST_TYPE,
 				'post_content' => \wp_slash(
 					\wp_json_encode(
 						array(

@@ -9,7 +9,6 @@ namespace Activitypub\Tests\Scheduler;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
-use Activitypub\Collection\Outbox;
 use Activitypub\Scheduler\Actor;
 
 /**
