@@ -217,7 +217,7 @@ class Following {
 	 */
 	public static function get_following_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
+			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',
@@ -283,7 +283,7 @@ class Following {
 	 */
 	public static function get_pending_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
+			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',
@@ -349,7 +349,7 @@ class Following {
 	 */
 	public static function get_all_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
+			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',

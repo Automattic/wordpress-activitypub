@@ -7,8 +7,8 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 
 use function Activitypub\object_to_uri;
@@ -51,8 +51,8 @@ class Move {
 			return;
 		}
 
-		$target_object = Actors::get_remote_by_uri( $target_uri );
-		$origin_object = Actors::get_remote_by_uri( $origin_uri );
+		$target_object = Remote_Actors::get_by_uri( $target_uri );
+		$origin_object = Remote_Actors::get_by_uri( $origin_uri );
 
 		/*
 		 * If the new target is followed, but the origin is not,
@@ -78,7 +78,7 @@ class Move {
 			// Clear the cache.
 			\wp_cache_delete( $origin_object->ID, 'posts' );
 
-			Actors::upsert( $target_json );
+			Remote_Actors::upsert( $target_json );
 
 			return;
 		}

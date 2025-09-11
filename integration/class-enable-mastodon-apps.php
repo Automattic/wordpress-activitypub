@@ -10,6 +10,7 @@ namespace Activitypub\Integration;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\Mention;
 use Activitypub\Transformer\Factory;
@@ -187,7 +188,7 @@ class Enable_Mastodon_Apps {
 		$activitypub_followers = Followers::get_followers( $user_id, 40 );
 		$mastodon_followers    = array_map(
 			function ( $item ) {
-				$actor = Actors::get_actor( $item );
+				$actor = Remote_Actors::get_actor( $item );
 				$acct  = Webfinger_Util::uri_to_acct( $actor->get_id() );
 
 				if ( $acct && ! is_wp_error( $acct ) ) {
@@ -481,7 +482,7 @@ class Enable_Mastodon_Apps {
 		}
 
 		foreach ( $followers as $follower ) {
-			$actor = Actors::get_actor( $follower );
+			$actor = Remote_Actors::get_actor( $follower );
 			$acct  = Webfinger_Util::uri_to_acct( $actor->get_id() );
 
 			if ( $acct && ! is_wp_error( $acct ) ) {

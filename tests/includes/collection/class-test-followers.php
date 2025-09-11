@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Test class for Activitypub Followers.
@@ -192,7 +193,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$follower2 = Followers::get_follower( 2, 'https://user2.example.com' );
 		$this->assertEquals( 'https://user2.example.com', $follower2->guid );
-		$this->assertEquals( 'úser2', Actors::get_actor( $follower2 )->get_name() );
+		$this->assertEquals( 'úser2', Remote_Actors::get_actor( $follower2 )->get_name() );
 	}
 
 	/**
@@ -306,7 +307,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		clean_post_cache( $follower->ID );
 
-		$actors = Actors::get_outdated();
+		$actors = Remote_Actors::get_outdated();
 		$this->assertEquals( 1, \count( $actors ) );
 		$this->assertEquals( 'https://example.com/author/jon', $actors[0]->guid );
 	}
@@ -330,15 +331,15 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		$actors   = Actors::get_faulty();
+		$actors   = Remote_Actors::get_faulty();
 
 		$this->assertEquals( 1, \count( $actors ) );
 		$this->assertEquals( 'http://sally.example.org', $actors[0]->guid );
 
-		Actors::clear_errors( $follower->ID );
+		Remote_Actors::clear_errors( $follower->ID );
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		$actors   = Actors::get_faulty();
+		$actors   = Remote_Actors::get_faulty();
 
 		$this->assertEquals( 0, \count( $actors ) );
 	}
@@ -469,7 +470,7 @@ class Test_Followers extends \WP_UnitTestCase {
 				'publicKeyPem'      => $i,
 			);
 
-			$id = Actors::upsert( $meta );
+			$id = Remote_Actors::upsert( $meta );
 
 			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
@@ -479,7 +480,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertCount( 30, $inboxes );
 
 		wp_cache_delete( sprintf( Followers::CACHE_KEY_INBOXES, 1 ), 'activitypub' );
-		wp_cache_delete( Actors::CACHE_KEY_INBOXES, 'activitypub' );
+		wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 
 		for ( $j = 0; $j < 5; $j++ ) {
 			$k    = $j + 100;
@@ -493,7 +494,7 @@ class Test_Followers extends \WP_UnitTestCase {
 				'publicKeyPem'      => $k,
 			);
 
-			$id = Actors::upsert( $meta );
+			$id = Remote_Actors::upsert( $meta );
 
 			add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
@@ -522,7 +523,7 @@ class Test_Followers extends \WP_UnitTestCase {
 				'publicKeyPem'      => $i,
 			);
 
-			$id = Actors::upsert( $meta );
+			$id = Remote_Actors::upsert( $meta );
 
 			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}

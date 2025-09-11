@@ -8,10 +8,9 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Move;
-use Activitypub\Http;
 
 /**
  * Test class for the Move handler.
@@ -80,7 +79,7 @@ class Test_Move extends \WP_UnitTestCase {
 			),
 		);
 
-		$id = Actors::upsert( $origin_object );
+		$id = Remote_Actors::upsert( $origin_object );
 
 		// Add the user ID meta value.
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
@@ -117,8 +116,8 @@ class Test_Move extends \WP_UnitTestCase {
 
 		Move::handle_move( $activity );
 
-		$old_follower     = Actors::get_remote_by_uri( $origin );
-		$updated_follower = Actors::get_remote_by_uri( $target );
+		$old_follower     = Remote_Actors::get_by_uri( $origin );
+		$updated_follower = Remote_Actors::get_by_uri( $target );
 
 		$this->assertWPError( $old_follower );
 		$this->assertNotNull( $updated_follower );
@@ -139,7 +138,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://example.com/old-profile';
 
 		// Create a follower for the origin.
-		$id = Actors::upsert(
+		$id = Remote_Actors::upsert(
 			array(
 				'inbox' => 'https://example.com/old-profile/inbox',
 				'name'  => 'Old Profile',
@@ -201,7 +200,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$test_follower->set_id( 'https://example.com/test-profile' );
 		$test_follower->set_url( 'https://example.com/test-profile' );
 
-		$id = Actors::upsert( $test_follower );
+		$id = Remote_Actors::upsert( $test_follower );
 
 		// Add the user ID meta value.
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
@@ -224,7 +223,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$existing_follower = Followers::get_follower( $this->user_id, 'https://example.com/test-profile' );
 		$this->assertNotNull( $existing_follower );
 
-		$actor = Actors::get_actor( $existing_follower );
+		$actor = Remote_Actors::get_actor( $existing_follower );
 
 		$this->assertEquals( 'https://example.com/test-profile', $actor->get_id() );
 		$this->assertEquals( 'https://example.com/test/inbox', $actor->get_inbox() );
@@ -246,14 +245,14 @@ class Test_Move extends \WP_UnitTestCase {
 		$target_follower->set_type( 'Person' );
 		$target_follower->set_id( $target );
 		$target_follower->set_url( $target );
-		$target_id = Actors::upsert( $target_follower );
+		$target_id = Remote_Actors::upsert( $target_follower );
 
 		$origin_follower = new Actor();
 		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
 		$origin_follower->set_type( 'Person' );
 		$origin_follower->set_id( $origin );
 		$origin_follower->set_url( $origin );
-		$origin_id = Actors::upsert( $origin_follower );
+		$origin_id = Remote_Actors::upsert( $origin_follower );
 
 		// Add user IDs.
 		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, $this->user_id );
@@ -323,7 +322,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertContains( (string) $this->user_id_2, $target_users );
 
 		// Check if the origin follower was deleted.
-		$this->assertWPError( Actors::get_remote_by_uri( $origin ) );
+		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
 
 		remove_filter( 'pre_http_request', $filter );
 	}

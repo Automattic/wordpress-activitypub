@@ -7,7 +7,7 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Model\Blog;
 
 /**
@@ -66,7 +66,7 @@ class Sanitize {
 			}
 
 			$uri   = \sanitize_url( $uri );
-			$actor = Actors::fetch_remote_by_uri( $uri );
+			$actor = Remote_Actors::fetch_by_uri( $uri );
 			if ( \is_wp_error( $actor ) ) {
 				$uris[] = $uri;
 			} else {
