@@ -590,10 +590,11 @@ class Interactions {
 						\update_post_meta( $attachment_id, 'activitypub_emoji_source_url', $emoji_url );
 						\update_post_meta( $attachment_id, 'activitypub_emoji_placeholder', $emoji_name );
 					}
-				}
 
-				if ( \is_file( $temp_file ) ) {
-					\wp_delete_file( $temp_file );
+					// Clean up temp file after processing.
+					if ( \is_file( $temp_file ) ) {
+						\wp_delete_file( $temp_file );
+					}
 				}
 			} else {
 				$attachment_id = $existing_attachment;
