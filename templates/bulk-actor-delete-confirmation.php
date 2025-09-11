@@ -56,8 +56,6 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 			<?php submit_button( __( 'Delete from Fediverse', 'activitypub' ), 'primary', 'submit', false ); ?>
 			<a href="<?php echo esc_url( $send_back ); ?>" class="button"><?php esc_html_e( 'Skip', 'activitypub' ); ?></a>
 		</p>
-
-		<p><?php esc_html_e( '(The users will not be deleted from your WordPress installation.)', 'activitypub' ); ?></p>
 	</form>
 </div>
 <?php
