@@ -27,22 +27,16 @@ class Scheduler {
 	 *
 	 * @var array
 	 */
-	private static $batch_callbacks = array();
+	private static $batch_callbacks = array(
+		'activitypub_send_activity'  => array( Dispatcher::class, 'send_to_followers' ),
+		'activitypub_retry_activity' => array( Dispatcher::class, 'retry_send_to_followers' ),
+	);
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_schedulers();
-
-		self::$batch_callbacks = array(
-			'activitypub_send_activity'               => array( Dispatcher::class, 'send_to_followers' ),
-			'activitypub_retry_activity'              => array( Dispatcher::class, 'retry_send_to_followers' ),
-			'activitypub_migrate_from_0_17'           => array( Migration::class, 'migrate_from_0_17' ),
-			'activitypub_update_comment_counts'       => array( Migration::class, 'update_comment_counts' ),
-			'activitypub_create_post_outbox_items'    => array( Migration::class, 'create_post_outbox_items' ),
-			'activitypub_create_comment_outbox_items' => array( Migration::class, 'create_comment_outbox_items' ),
-		);
 
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_remote_actors', array( self::class, 'update_remote_actors' ) );
@@ -52,10 +46,6 @@ class Scheduler {
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'async_batch' ), 10, 3 );
 		\add_action( 'activitypub_retry_activity', array( self::class, 'async_batch' ), 10, 3 );
-		\add_action( 'activitypub_migrate_from_0_17', array( self::class, 'async_batch' ) );
-		\add_action( 'activitypub_update_comment_counts', array( self::class, 'async_batch' ), 10, 2 );
-		\add_action( 'activitypub_create_post_outbox_items', array( self::class, 'async_batch' ), 10, 2 );
-		\add_action( 'activitypub_create_comment_outbox_items', array( self::class, 'async_batch' ), 10, 2 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 
@@ -79,6 +69,28 @@ class Scheduler {
 		 * @since 5.0.0
 		 */
 		do_action( 'activitypub_register_schedulers' );
+	}
+
+	/**
+	 * Register a batch callback for async processing.
+	 *
+	 * @param string   $hook     The cron event hook name.
+	 * @param callable $callback The callback to execute.
+	 */
+	public static function register_async_batch_callback( $hook, $callback ) {
+		if ( \did_action( 'init' ) && ! \doing_action( 'init' ) ) {
+			\_doing_it_wrong( __METHOD__, 'Async batch callbacks should be registered before or during the init action.', '5.2.0' );
+			return;
+		}
+
+		if ( ! \is_callable( $callback ) ) {
+			return;
+		}
+
+		self::$batch_callbacks[ $hook ] = $callback;
+
+		// Register the WordPress action hook to trigger async_batch.
+		\add_action( $hook, array( self::class, 'async_batch' ), 10, 99 );
 	}
 
 	/**

@@ -7,7 +7,6 @@
 
 namespace Activitypub;
 
-use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -25,6 +24,11 @@ class Migration {
 	 */
 	public static function init() {
 		self::maybe_migrate();
+
+		Scheduler::register_async_batch_callback( 'activitypub_migrate_from_0_17', array( self::class, 'migrate_from_0_17' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_create_post_outbox_items', array( self::class, 'create_post_outbox_items' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_create_comment_outbox_items', array( self::class, 'create_comment_outbox_items' ) );
 	}
 
 	/**

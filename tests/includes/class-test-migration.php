@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Activity\Actor;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
@@ -475,7 +477,8 @@ class Test_Migration extends \WP_UnitTestCase {
 	/**
 	 * Test async upgrade with multiple arguments.
 	 *
-	 * @covers ::async_upgrade
+	 * @covers ::update_comment_counts
+	 * @covers \Activitypub\Scheduler::async_batch
 	 */
 	public function test_async_upgrade_multiple_args() {
 		// Test that multiple arguments are passed correctly.
