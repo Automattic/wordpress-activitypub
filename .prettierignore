@@ -7,5 +7,4 @@ vendor
 
 # Temporary ignores while breaking out each component.
 assets
-src/reply
 src/reply-intent

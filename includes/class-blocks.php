@@ -255,6 +255,7 @@ class Blocks {
 			$embed = wp_oembed_get( $attrs['url'] );
 			if ( $embed ) {
 				$html .= $embed;
+				\wp_enqueue_script( 'wp-embed' );
 			}
 		}
 
@@ -301,7 +302,7 @@ class Blocks {
 			<div class="activitypub-modal__frame">
 				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
 					<div class="activitypub-modal__header">
-						<h2 
+						<h2
 							class="activitypub-modal__title"
 							<?php if ( ! empty( $args['id'] ) ) : ?>
 								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
