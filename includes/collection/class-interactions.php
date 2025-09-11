@@ -572,7 +572,7 @@ class Interactions {
 					require_once \ABSPATH . 'wp-admin/includes/file.php';
 				}
 
-				$temp_file = \download_url( $emoji_url );
+				$temp_file = \download_url( $emoji_url, 10 ); // 10 second timeout for emoji downloads.
 				if ( ! \is_wp_error( $temp_file ) ) {
 					$file_array = array(
 						'name'     => \wp_basename( $emoji_url ),
