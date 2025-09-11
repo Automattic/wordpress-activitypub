@@ -14,6 +14,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory as Transformer_Factory;
 use Activitypub\Transformer\Post;
 
@@ -1561,7 +1562,7 @@ function follow( $remote_actor, $user_id ) {
 		return $remote_actor;
 	}
 
-	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+	$remote_actor_post = Remote_Actors::fetch_by_uri( $remote_actor );
 
 	if ( \is_wp_error( $remote_actor_post ) ) {
 		return $remote_actor_post;
@@ -1591,7 +1592,7 @@ function unfollow( $remote_actor, $user_id ) {
 		return $remote_actor;
 	}
 
-	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+	$remote_actor_post = Remote_Actors::fetch_by_uri( $remote_actor );
 
 	if ( \is_wp_error( $remote_actor_post ) ) {
 		return $remote_actor_post;

@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Signature\Http_Message_Signature;
 use Activitypub\Signature\Http_Signature_Draft;
 
@@ -236,16 +237,16 @@ class Signature {
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @deprecated 7.0.0 Use {@see Actors::get_remote_key()}.
+	 * @deprecated unreleased Use {@see Remote_Actors::get_public_key()}.
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
-		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_remote_key()' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_public_key()' );
 
-		return Actors::get_remote_key( $key_id );
+		return Remote_Actors::get_public_key( $key_id );
 	}
 
 	/**

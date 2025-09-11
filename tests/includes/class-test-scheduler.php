@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Dispatcher;
 use Activitypub\Scheduler;
 
@@ -469,10 +470,10 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			}
 		);
 
-		$actor = Actors::fetch_remote_by_uri( 'https://example.com/users/test' );
+		$actor = Remote_Actors::fetch_by_uri( 'https://example.com/users/test' );
 
 		for ( $i = 0; $i < 6; $i++ ) {
-			Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata ' . $i );
+			Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata ' . $i );
 		}
 
 		// Track scheduled events.

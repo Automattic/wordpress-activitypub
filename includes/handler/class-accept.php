@@ -7,9 +7,9 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Notification;
 
 use function Activitypub\object_to_uri;
@@ -54,7 +54,7 @@ class Accept {
 			return;
 		}
 
-		$actor_post = Actors::get_remote_by_uri( object_to_uri( $accept['object']['object'] ) );
+		$actor_post = Remote_Actors::get_by_uri( object_to_uri( $accept['object']['object'] ) );
 
 		if ( \is_wp_error( $actor_post ) ) {
 			return;

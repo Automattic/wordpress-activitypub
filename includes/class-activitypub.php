@@ -14,6 +14,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * ActivityPub Class.
@@ -476,7 +477,7 @@ class Activitypub {
 	 */
 	public static function register_post_types() {
 		\register_post_type(
-			Actors::POST_TYPE,
+			Remote_Actors::POST_TYPE,
 			array(
 				'labels'           => array(
 					'name'          => _x( 'Followers', 'post_type plural name', 'activitypub' ),
@@ -494,7 +495,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Actors::POST_TYPE,
+			Remote_Actors::POST_TYPE,
 			'_activitypub_inbox',
 			array(
 				'type'              => 'string',
@@ -504,7 +505,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Actors::POST_TYPE,
+			Remote_Actors::POST_TYPE,
 			'_activitypub_errors',
 			array(
 				'type'              => 'string',
@@ -520,7 +521,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Actors::POST_TYPE,
+			Remote_Actors::POST_TYPE,
 			Followers::FOLLOWER_META_KEY,
 			array(
 				'type'              => 'string',
@@ -813,7 +814,7 @@ class Activitypub {
 	 */
 	public static function register_ap_actor_rest_field() {
 		\register_rest_field(
-			Actors::POST_TYPE,
+			Remote_Actors::POST_TYPE,
 			'activitypub_json',
 			array(
 				/**

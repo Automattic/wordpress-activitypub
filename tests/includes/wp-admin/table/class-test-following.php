@@ -7,8 +7,8 @@
 
 namespace Activitypub\Tests\WP_Admin\Table;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\WP_Admin\Table\Following;
 
 /**
@@ -102,7 +102,7 @@ class Test_Following extends \WP_UnitTestCase {
 		);
 
 		// Add the actor first, then follow them.
-		$actor_post_id = Actors::upsert( $actor_data );
+		$actor_post_id = Remote_Actors::upsert( $actor_data );
 
 		// Follow the actor using the proper method.
 		Following_Collection::follow( $actor_post_id, get_current_user_id() );
@@ -179,7 +179,7 @@ class Test_Following extends \WP_UnitTestCase {
 		);
 
 		// Add the actor first, then follow them.
-		$actor_post_id = Actors::upsert( $actor_data );
+		$actor_post_id = Remote_Actors::upsert( $actor_data );
 
 		// Follow the actor using the proper method.
 		Following_Collection::follow( $actor_post_id, get_current_user_id() );
@@ -260,7 +260,7 @@ class Test_Following extends \WP_UnitTestCase {
 		}
 
 		// Test the normalization directly.
-		$normalized = Actors::normalize_identifier( $input );
+		$normalized = Remote_Actors::normalize_identifier( $input );
 		$this->assertEquals( $expected, $normalized, "Failed to normalize: {$input} -> expected {$expected}, got " . wp_json_encode( $normalized ) );
 	}
 
@@ -300,11 +300,11 @@ class Test_Following extends \WP_UnitTestCase {
 		);
 
 		// Test normalization of actor object.
-		$normalized_id = Actors::normalize_identifier( $actor_data );
+		$normalized_id = Remote_Actors::normalize_identifier( $actor_data );
 		$this->assertEquals( $actor_data['id'], $normalized_id, 'Actor object was not properly normalized to URI' );
 
 		// Add the actor and follow.
-		$actor_post_id = Actors::upsert( $actor_data );
+		$actor_post_id = Remote_Actors::upsert( $actor_data );
 		Following_Collection::follow( $actor_post_id, get_current_user_id() );
 
 		// Prepare items to test normalization.
@@ -389,7 +389,7 @@ class Test_Following extends \WP_UnitTestCase {
 		);
 
 		// Test normalization.
-		$normalized = Actors::normalize_identifier( $input );
+		$normalized = Remote_Actors::normalize_identifier( $input );
 		$this->assertEquals( $actor_url, $normalized, "Failed to normalize complex webfinger: {$input}" );
 	}
 
@@ -425,7 +425,7 @@ class Test_Following extends \WP_UnitTestCase {
 	 */
 	public function test_actor_normalization_edge_cases( $edge_case ) {
 		// These should not cause fatal errors or exceptions.
-		$normalized = Actors::normalize_identifier( $edge_case );
+		$normalized = Remote_Actors::normalize_identifier( $edge_case );
 
 		// The result should be handled gracefully.
 		$this->assertTrue(

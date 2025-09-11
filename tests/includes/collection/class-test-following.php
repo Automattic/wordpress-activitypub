@@ -7,8 +7,8 @@
 
 namespace Activitypub\Tests\Collection;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Accept;
 
 use function Activitypub\follow;
@@ -39,7 +39,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -99,7 +99,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -126,7 +126,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -156,7 +156,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -191,7 +191,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -226,7 +226,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -268,7 +268,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -298,7 +298,7 @@ class Test_Following extends \WP_UnitTestCase {
 			array(
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
-				'post_type'   => \Activitypub\Collection\Actors::POST_TYPE,
+				'post_type'   => Remote_Actors::POST_TYPE,
 			)
 		);
 
@@ -405,10 +405,10 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertSame( 1, $following['total'] );
 
 		// User 3 unfollows https://example.com/actor/1.
-		Following::unfollow( Actors::get_remote_by_uri( 'https://example.com/actor/1' ), $user_ids[2] );
+		Following::unfollow( Remote_Actors::get_by_uri( 'https://example.com/actor/1' ), $user_ids[2] );
 
 		// User 3 unfollows https://example.com/actor/1.
-		Following::unfollow( Actors::get_remote_by_uri( 'https://example.com/actor/1' ), 0 );
+		Following::unfollow( Remote_Actors::get_by_uri( 'https://example.com/actor/1' ), 0 );
 
 		$following = Following::get_following_with_count( 0 );
 		$this->assertCount( 0, $following['following'] );
