@@ -607,11 +607,12 @@ class Admin {
 				$removed_count = 0;
 
 				// Remove capabilities immediately.
-				foreach ( $users as $user_id ) {
+				foreach ( $users as $key => $user_id ) {
 					$user = new \WP_User( $user_id );
 
 					// Check if user has ActivityPub capability.
 					if ( ! $user->has_cap( 'activitypub' ) ) {
+						unset( $users[ $key ] );
 						continue;
 					}
 
