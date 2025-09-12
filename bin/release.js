@@ -266,11 +266,19 @@ async function createRelease() {
 				replace: `@deprecated ${ version }`,
 			},
 			{
-				search: /(?<=_deprecated_function\s*\(\s*__METHOD__,\s*')unreleased(?=',\s*['<=>])/gi,
+				search: /(?<=_deprecated_function\s*\(\s*(?:__METHOD__|__FUNCTION__),\s*')unreleased(?=',\s*['<=>])/gi,
 				replace: ( match ) => match.replace( /unreleased/i, version ),
 			},
 			{
-				search: /(?<=\bapply_filters_deprecated\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=',\s*['<=>])/gi,
+				search: /(?<=_deprecated_class\s*\(\s*__CLASS__,\s*')unreleased(?=',\s*['<=>])/gi,
+				replace: ( match ) => match.replace( /unreleased/i, version ),
+			},
+			{
+				search: /(?<=_doing_it_wrong\s*\(\s*__FUNCTION__,\s*'.*?',\s*')unreleased(?=')/gi,
+				replace: ( match ) => match.replace( /unreleased/i, version ),
+			},
+			{
+				search: /(?<=\b(?:apply_filters_deprecated|do_action_deprecated)\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=',\s*['<=>])/gi,
 				replace: ( match ) => match.replace( /unreleased/i, version ),
 			},
 		] );
