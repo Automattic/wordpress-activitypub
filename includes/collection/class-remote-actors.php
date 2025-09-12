@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Http;
+use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -517,7 +518,7 @@ class Remote_Actors {
 			$acct  = Webfinger::guess( $actor );
 		}
 
-		$acct = \str_replace( 'acct:', '', $acct );
+		$acct = Sanitize::webfinger( $acct );
 
 		\update_post_meta( $id, '_activitypub_acct', $acct );
 
