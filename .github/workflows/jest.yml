@@ -5,14 +5,15 @@ on:
     branches:
       - trunk
   pull_request:
-  paths:
-    - '**/*.js'
-    - '**/*.jsx'
-    - '**/*.ts'
-    - '**/*.tsx'
-    - 'package.json'
-    - 'package-lock.json'
-    - '.github/workflows/jest.yml'
+
+paths:
+  - '**/*.js'
+  - '**/*.jsx'
+  - '**/*.ts'
+  - '**/*.tsx'
+  - 'package.json'
+  - 'package-lock.json'
+  - '.github/workflows/jest.yml'
 
 jobs:
   jest:
