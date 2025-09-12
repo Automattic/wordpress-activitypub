@@ -266,15 +266,11 @@ async function createRelease() {
 				replace: `@deprecated ${ version }`,
 			},
 			{
-				search: /(?<=_deprecated_function\s*\(\s*(?:__METHOD__|__FUNCTION__),\s*')unreleased(?=',\s*['<=>])/gi,
+				search: /(?<=_deprecated_(?:function|class|constructor|file|argument|hook)\s*\(\s*.*?,\s*')unreleased(?=')/gi,
 				replace: ( match ) => match.replace( /unreleased/i, version ),
 			},
 			{
-				search: /(?<=_deprecated_class\s*\(\s*__CLASS__,\s*')unreleased(?=',\s*['<=>])/gi,
-				replace: ( match ) => match.replace( /unreleased/i, version ),
-			},
-			{
-				search: /(?<=_doing_it_wrong\s*\(\s*(?:__FUNCTION__|__METHOD__),\s*'.*?',\s*')unreleased(?=')/gi,
+				search: /(?<=_doing_it_wrong\s*\(\s*.*?,\s*'.*?',\s*')unreleased(?=')/gi,
 				replace: ( match ) => match.replace( /unreleased/i, version ),
 			},
 			{
