@@ -180,7 +180,7 @@ function url_to_authorid( $url ) {
  * @return int|bool Comment ID or false if not found.
  */
 function is_comment() {
-	\_deprecated_function( __FUNCTION__, ' 7.1.0' );
+	\_deprecated_function( __FUNCTION__, '7.1.0' );
 
 	$comment_id = get_query_var( 'c', null );
 
