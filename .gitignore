@@ -17,4 +17,3 @@ _site
 .wp-env.override.json
 CLAUDE*
 composer.lock
-package-lock.json
