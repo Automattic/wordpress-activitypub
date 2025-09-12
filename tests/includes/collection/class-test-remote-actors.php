@@ -379,6 +379,169 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Test the get_acct method.
+	 *
+	 * @covers ::get_acct
+	 */
+	public function test_get_acct() {
+		// Test 1: Return cached acct from post meta.
+		$actor   = array(
+			'id'                => 'https://remote.example.com/actor/cached-user',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/cached-user',
+			'inbox'             => 'https://remote.example.com/actor/cached-user/inbox',
+			'name'              => 'Cached User',
+			'preferredUsername' => 'cached',
+		);
+		$post_id = Remote_Actors::create( $actor );
+		\update_post_meta( $post_id, '_activitypub_acct', 'cached@example.com' );
+
+		$result = Remote_Actors::get_acct( $post_id );
+		$this->assertEquals( 'cached@example.com', $result );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
+
+		// Test 2: Return empty string for non-existent post.
+		$result = Remote_Actors::get_acct( 99999 );
+		$this->assertEquals( '', $result );
+
+		// Test 3: Successful uri_to_acct conversion.
+		$actor2   = array(
+			'id'                => 'https://remote.example.com/actor/webfinger-user',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/webfinger-user',
+			'inbox'             => 'https://remote.example.com/actor/webfinger-user/inbox',
+			'name'              => 'Webfinger User',
+			'preferredUsername' => 'webfinger',
+		);
+		$post_id2 = Remote_Actors::create( $actor2 );
+
+		// Mock successful Webfinger::uri_to_acct.
+		\add_filter(
+			'pre_http_request',
+			function ( $preempt, $parsed_args, $url ) {
+				if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:webfinger@remote.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://remote.example.com/actor/webfinger-user',
+									),
+								),
+							)
+						),
+					);
+				}
+				return $preempt;
+			},
+			10,
+			3
+		);
+
+		$result = Remote_Actors::get_acct( $post_id2 );
+		$this->assertEquals( 'webfinger@remote.example.com', $result );
+
+		// Verify it was cached.
+		$cached_acct = \get_post_meta( $post_id2, '_activitypub_acct', true );
+		$this->assertEquals( 'webfinger@remote.example.com', $cached_acct );
+
+		\remove_all_filters( 'pre_http_request' );
+		\wp_delete_post( $post_id2, true );
+
+		// Test 4: Fallback to Webfinger::guess when uri_to_acct fails.
+		$actor3   = array(
+			'id'                => 'https://remote.example.com/actor/guess-user',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/guess-user',
+			'inbox'             => 'https://remote.example.com/actor/guess-user/inbox',
+			'name'              => 'Guess User',
+			'preferredUsername' => 'guess',
+		);
+		$post_id3 = Remote_Actors::create( $actor3 );
+
+		// Mock failed Webfinger::uri_to_acct (returns WP_Error).
+		\add_filter(
+			'pre_http_request',
+			function ( $preempt, $parsed_args, $url ) {
+				if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 404 ),
+						'body'     => 'Not Found',
+					);
+				}
+				return $preempt;
+			},
+			10,
+			3
+		);
+
+		$result = Remote_Actors::get_acct( $post_id3 );
+		$this->assertEquals( 'guess@remote.example.com', $result );
+
+		// Verify it was cached (without acct: prefix).
+		$cached_acct = \get_post_meta( $post_id3, '_activitypub_acct', true );
+		$this->assertEquals( 'guess@remote.example.com', $cached_acct );
+
+		\remove_all_filters( 'pre_http_request' );
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\wp_delete_post( $post_id3, true );
+
+		// Test 5: Handle acct: prefix removal.
+		$actor4   = array(
+			'id'                => 'https://remote.example.com/actor/acct-prefix-user',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/acct-prefix-user',
+			'inbox'             => 'https://remote.example.com/actor/acct-prefix-user/inbox',
+			'name'              => 'Acct Prefix User',
+			'preferredUsername' => 'acctprefix',
+		);
+		$post_id4 = Remote_Actors::create( $actor4 );
+
+		// Mock Webfinger::uri_to_acct returning acct: prefixed result.
+		\add_filter(
+			'pre_http_request',
+			function ( $preempt, $parsed_args, $url ) {
+				if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:acctprefix@remote.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://remote.example.com/actor/acct-prefix-user',
+									),
+								),
+							)
+						),
+					);
+				}
+				return $preempt;
+			},
+			10,
+			3
+		);
+
+		$result = Remote_Actors::get_acct( $post_id4 );
+		$this->assertEquals( 'acctprefix@remote.example.com', $result );
+
+		// Verify cached value has acct: prefix removed.
+		$cached_acct = \get_post_meta( $post_id4, '_activitypub_acct', true );
+		$this->assertEquals( 'acctprefix@remote.example.com', $cached_acct );
+
+		\remove_all_filters( 'pre_http_request' );
+		\wp_delete_post( $post_id4, true );
+	}
+
+	/**
 	 * Pre get remote metadata by actor.
 	 *
 	 * @param mixed  $value The value.
