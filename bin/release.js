@@ -274,7 +274,7 @@ async function createRelease() {
 				replace: ( match ) => match.replace( /unreleased/i, version ),
 			},
 			{
-				search: /(?<=_doing_it_wrong\s*\(\s*__FUNCTION__,\s*'.*?',\s*')unreleased(?=')/gi,
+				search: /(?<=_doing_it_wrong\s*\(\s*(?:__FUNCTION__|__METHOD__),\s*'.*?',\s*')unreleased(?=')/gi,
 				replace: ( match ) => match.replace( /unreleased/i, version ),
 			},
 			{
