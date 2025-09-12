@@ -263,7 +263,7 @@ class Signature {
 	 * @return string The signature.
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request()' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::sign_request()' );
 
 		$user = Actors::get_by_id( $user_id );
 		$key  = Actors::get_private_key( $user_id );
@@ -314,7 +314,7 @@ class Signature {
 	 * @return string|bool The signature algorithm or false if not found.
 	 */
 	public static function get_signature_algorithm( $signature_block ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
 
 		if ( ! empty( $signature_block['algorithm'] ) ) {
 			switch ( $signature_block['algorithm'] ) {
@@ -338,7 +338,7 @@ class Signature {
 	 * @return array Signature parts.
 	 */
 	public static function parse_signature_header( $signature ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
 
 		$parsed_header = array();
 		$matches       = array();
@@ -381,7 +381,7 @@ class Signature {
 	 * @return string signed headers for comparison
 	 */
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
 
 		$signed_data = '';
 
@@ -460,7 +460,7 @@ class Signature {
 	 * @return string The digest.
 	 */
 	public static function generate_digest( $body ) {
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::sign_request' );
 
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return "SHA-256=$digest";
