@@ -495,7 +495,7 @@ class Remote_Actors {
 	 *
 	 * @param int $id The ID of the remote actor.
 	 *
-	 * @return string|\WP_Error The acct of the remote actor or WP_Error on failure.
+	 * @return string The acct of the remote actor or empty string on failure.
 	 */
 	public static function get_acct( $id ) {
 		$acct = \get_post_meta( $id, '_activitypub_acct', true );
@@ -507,7 +507,7 @@ class Remote_Actors {
 		$post = \get_post( $id );
 
 		if ( ! $post ) {
-			return new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
+			return '';
 		}
 
 		$acct = Webfinger::uri_to_acct( $post->guid );
