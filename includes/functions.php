@@ -72,7 +72,7 @@ function safe_remote_get( $url ) {
  * @return string The User resource.
  */
 function get_webfinger_resource( $user_id ) {
-	\_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Webfinger::get_user_resource' );
+	\_deprecated_function( __FUNCTION__, '7.1.0', 'Activitypub\Webfinger::get_user_resource' );
 
 	return Webfinger::get_user_resource( $user_id );
 }
@@ -180,7 +180,7 @@ function url_to_authorid( $url ) {
  * @return int|bool Comment ID or false if not found.
  */
 function is_comment() {
-	\_deprecated_function( __FUNCTION__, 'unreleased' );
+	\_deprecated_function( __FUNCTION__, '7.1.0' );
 
 	$comment_id = get_query_var( 'c', null );
 
@@ -198,6 +198,7 @@ function is_comment() {
 /**
  * Check for Tombstone Objects.
  *
+ * @deprecated 7.3.0 Use {@see Tombstone::exists_in_error()}.
  * @see https://www.w3.org/TR/activitypub/#delete-activity-outbox
  *
  * @param \WP_Error $wp_error A WP_Error-Response of an HTTP-Request.
@@ -205,7 +206,7 @@ function is_comment() {
  * @return boolean True if HTTP-Code is 410 or 404.
  */
 function is_tombstone( $wp_error ) {
-	_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Tombstone::exists_in_error' );
+	\_deprecated_function( __FUNCTION__, '7.3.0', 'Activitypub\Tombstone::exists_in_error' );
 
 	return Tombstone::exists_in_error( $wp_error );
 }
@@ -487,14 +488,14 @@ function site_supports_blocks() {
 /**
  * Check if data is valid JSON.
  *
- * @deprecated 7.1.0 Use {@see \json_decode} instead.
+ * @deprecated 7.1.0 Use {@see \json_decode}.
  *
  * @param string $data The data to check.
  *
  * @return boolean True if the data is JSON, false otherwise.
  */
 function is_json( $data ) {
-	\_deprecated_function( __FUNCTION__, 'unreleased', 'json_decode' );
+	\_deprecated_function( __FUNCTION__, '7.1.0', 'json_decode' );
 
 	return \is_array( \json_decode( $data, true ) );
 }

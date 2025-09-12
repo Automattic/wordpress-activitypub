@@ -22,6 +22,7 @@ use function Activitypub\extract_name_from_uri;
  * @author Matt Wiebe
  * @author Matthias Pfefferle
  *
+ * @deprecated 7.0.0
  * @see https://www.w3.org/TR/activitypub/#follow-activity-inbox
  *
  * @method int           get__id()       Gets the post ID of the follower record.
@@ -50,7 +51,7 @@ class Follower extends Actor {
 	 * @deprecated Use Actor instead.
 	 */
 	public function __construct() {
-		\_deprecated_class( __CLASS__, 'unreleased', Actor::class );
+		\_deprecated_class( __CLASS__, '7.0.0', Actor::class );
 	}
 
 	/**
