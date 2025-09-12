@@ -3,7 +3,21 @@ on:
   push:
     branches:
       - trunk
+    paths:
+      - '**/*.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml.dist'
+      - 'bin/install-wp-tests.sh'
+      - '.github/workflows/phpunit.yml'
   pull_request:
+    paths:
+      - '**/*.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml.dist'
+      - 'bin/install-wp-tests.sh'
+      - '.github/workflows/phpunit.yml'
 jobs:
   phpunit:
     runs-on: ubuntu-latest
