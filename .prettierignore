@@ -4,6 +4,7 @@ coverage
 node_modules
 tests/fixtures
 vendor
+package-lock.json
 
 # Temporary ignores while breaking out each component.
 assets
