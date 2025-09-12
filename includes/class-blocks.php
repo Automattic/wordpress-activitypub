@@ -27,6 +27,9 @@ class Blocks {
 		\add_action( 'rest_api_init', array( self::class, 'register_rest_fields' ) );
 
 		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
+
+		\add_action( 'activitypub_before_get_content', array( self::class, 'add_post_transformation_callbacks' ) );
+		\add_filter( 'activitypub_the_content', array( self::class, 'remove_post_transformation_callbacks' ) );
 	}
 
 	/**
@@ -230,7 +233,7 @@ class Blocks {
 	 */
 	public static function render_reply_block( $attrs ) {
 		if ( is_activitypub_request() ) {
-			return null;
+			$attrs['embedPost'] = false;
 		}
 
 		// Return early if no URL is provided.
@@ -381,5 +384,113 @@ class Blocks {
 		}
 
 		return $tags->get_updated_html();
+	}
+
+	/**
+	 * Add post transformation callbacks.
+	 *
+	 * @param object $post The post object.
+	 */
+	public static function add_post_transformation_callbacks( $post ) {
+		\add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
+
+		// Only transform reply link if it's the first block in the post.
+		$blocks = \parse_blocks( $post->post_content );
+		if ( ! empty( $blocks ) && 'activitypub/reply' === $blocks[0]['blockName'] ) {
+			\add_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ), 10, 2 );
+		}
+	}
+
+	/**
+	 * Remove post transformation callbacks.
+	 *
+	 * @param string $content The post content.
+	 *
+	 * @return string The updated content.
+	 */
+	public static function remove_post_transformation_callbacks( $content ) {
+		\remove_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ) );
+		\remove_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ) );
+
+		return $content;
+	}
+
+	/**
+	 * Generate HTML @ link for reply block.
+	 *
+	 * @param string $block_content The block content.
+	 * @param array  $block         The block data.
+	 *
+	 * @return string The HTML @ link.
+	 */
+	public static function generate_reply_link( $block_content, $block ) {
+		// Unhook ourselves after first execution to ensure only the first reply block gets transformed.
+		\remove_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ) );
+
+		// Return empty string if no URL is provided.
+		if ( empty( $block['attrs']['url'] ) ) {
+			return '';
+		}
+
+		$url = $block['attrs']['url'];
+
+		// Try to get ActivityPub representation. Is likely already cached.
+		$object = Http::get_remote_object( $url );
+		if ( \is_wp_error( $object ) ) {
+			return '';
+		}
+
+		$author_url = $object['attributedTo'] ?? '';
+		if ( ! $author_url ) {
+			return '';
+		}
+
+		// Fetch author information.
+		$author = Http::get_remote_object( $author_url );
+		if ( \is_wp_error( $author ) ) {
+			return '';
+		}
+
+		// Get webfinger identifier.
+		$webfinger = '';
+		if ( ! empty( $author['webfinger'] ) ) {
+			$webfinger = \str_replace( 'acct:', '', $author['webfinger'] );
+		} elseif ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
+			// Construct webfinger-style identifier from username and domain.
+			$domain    = \wp_parse_url( $author['url'], PHP_URL_HOST );
+			$webfinger = '@' . $author['preferredUsername'] . '@' . $domain;
+		}
+
+		if ( ! $webfinger ) {
+			return '';
+		}
+
+		// Generate HTML @ link.
+		return \sprintf(
+			'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
+			\esc_url( $url ),
+			\esc_attr( $webfinger ),
+			\esc_html( '@' . strtok( $webfinger, '@' ) )
+		);
+	}
+
+	/**
+	 * Transform Embed blocks to block level link.
+	 *
+	 * Remote servers will simply drop iframe elements, rendering incomplete content.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
+	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
+	 *
+	 * @param string $block_content The block content (html).
+	 * @param object $block         The block object.
+	 *
+	 * @return string A block level link
+	 */
+	public static function revert_embed_links( $block_content, $block ) {
+		if ( ! isset( $block['attrs']['url'] ) ) {
+			return $block_content;
+		}
+		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
 	}
 }

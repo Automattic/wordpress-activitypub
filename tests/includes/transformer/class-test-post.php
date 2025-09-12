@@ -700,7 +700,8 @@ class Test_Post extends \WP_UnitTestCase {
 		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ), 10, 2 );
 
 		$transformer = new Post( self::factory()->post->create_and_get() );
-		$reply_link  = $transformer->generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
+		$this->setExpectedDeprecated( 'Activitypub\Transformer\Post::generate_reply_link' );
+		$reply_link = $transformer->generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
 
 		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
 
@@ -774,5 +775,139 @@ class Test_Post extends \WP_UnitTestCase {
 		$object = $get_content->invoke( new Post( $post ), $object );
 
 		$this->assertEmpty( $object->get_content() );
+	}
+
+	/**
+	 * Test that reply blocks get transformed into mention links when they are the first block in a post.
+	 *
+	 * @covers ::to_object
+	 * @covers ::get_content
+	 */
+	public function test_reply_block_transforms_to_mention_link_when_first_block() {
+		// Set up a filter to intercept HTTP requests for remote objects.
+		$filter_remote_object = function ( $pre, $url ) {
+			if ( 'https://example.com/posts/123' === $url ) {
+				return array(
+					'attributedTo' => 'https://example.com/users/author',
+				);
+			} elseif ( 'https://example.com/users/author' === $url ) {
+				return array(
+					'preferredUsername' => 'author',
+					'url'               => 'https://example.com/users/author',
+				);
+			}
+			return $pre;
+		};
+
+		add_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object, 10, 2 );
+
+		// Create a post with a reply block as the first block.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Reply Post',
+				'post_content' => '<!-- wp:activitypub/reply {"url":"https://example.com/posts/123"} /-->' . PHP_EOL .
+									'<!-- wp:paragraph --><p>This is a test post with a reply block first.</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Transform the post to an ActivityPub object.
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		// Assert that the reply block was transformed into a mention link.
+		$this->assertStringContainsString( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
+
+		// Clean up.
+		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
+	}
+
+	/**
+	 * Test that reply blocks do not get transformed into mention links when they are not the first block in a post.
+	 *
+	 * @covers ::to_object
+	 * @covers ::get_content
+	 */
+	public function test_reply_block_not_transformed_when_not_first_block() {
+		// Create a post with a reply block that is not the first block.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Reply Post',
+				'post_content' => '<!-- wp:paragraph --><p>This is a test post with a reply block that is not first.</p><!-- /wp:paragraph -->' . PHP_EOL .
+									'<!-- wp:activitypub/reply {"url":"https://example.com/posts/123"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Transform the post to an ActivityPub object.
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		// Get the content from the object.
+		$content = $object->get_content();
+
+		// Assert that the reply block was not transformed into a mention link.
+		$this->assertStringContainsString( '<div class="activitypub-reply-block wp-block-activitypub-reply" aria-label="Reply" data-in-reply-to="https://example.com/posts/123"><p><a title="This post is a response to the referenced content." aria-label="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to" target="_blank">&#8620;example.com/posts/123</a></p></div>', $content );
+	}
+
+	/**
+	 * Test that when multiple reply blocks exist, only the first one gets transformed to @-mention.
+	 *
+	 * @covers ::to_object
+	 * @covers ::get_content
+	 */
+	public function test_multiple_reply_blocks_only_first_becomes_mention() {
+		// Set up a filter to intercept HTTP requests for remote objects.
+		$filter_remote_object = function ( $pre, $url ) {
+			if ( 'https://example.com/posts/123' === $url ) {
+				return array(
+					'attributedTo' => 'https://example.com/users/author1',
+				);
+			} elseif ( 'https://example.com/users/author1' === $url ) {
+				return array(
+					'preferredUsername' => 'author1',
+					'url'               => 'https://example.com/users/author1',
+				);
+			} elseif ( 'https://other.site/posts/456' === $url ) {
+				return array(
+					'attributedTo' => 'https://other.site/users/author2',
+				);
+			} elseif ( 'https://other.site/users/author2' === $url ) {
+				return array(
+					'preferredUsername' => 'author2',
+					'url'               => 'https://other.site/users/author2',
+				);
+			}
+			return $pre;
+		};
+
+		add_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object, 10, 2 );
+
+		// Create a post with two reply blocks - first one should become @-mention, second should remain as link.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Multiple Reply Post',
+				'post_content' => '<!-- wp:activitypub/reply {"url":"https://example.com/posts/123"} /-->' . PHP_EOL .
+									'<!-- wp:paragraph --><p>This is a response to the first post, but also references another post.</p><!-- /wp:paragraph -->' . PHP_EOL .
+									'<!-- wp:activitypub/reply {"url":"https://other.site/posts/456"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Transform the post to an ActivityPub object.
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		// Get the content from the object.
+		$content = $object->get_content();
+
+		// Assert that the first reply block was transformed into a mention link.
+		$this->assertStringContainsString( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
+
+		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
+		$this->assertStringContainsString( '<div class="activitypub-reply-block wp-block-activitypub-reply" aria-label="Reply" data-in-reply-to="https://other.site/posts/456"><p><a title="This post is a response to the referenced content." aria-label="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to" target="_blank">&#8620;other.site/posts/456</a></p></div>', $content );
+
+		// Clean up.
+		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
 	}
 }
