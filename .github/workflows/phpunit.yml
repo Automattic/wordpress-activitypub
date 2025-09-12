@@ -11,6 +11,13 @@ on:
       - 'phpcs.xml'
       - '.github/workflows/phpunit.yml'
   pull_request:
+    paths:
+      - '**/*.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml.dist'
+      - 'phpcs.xml'
+      - '.github/workflows/phpunit.yml'
 jobs:
   phpunit:
     runs-on: ubuntu-latest
