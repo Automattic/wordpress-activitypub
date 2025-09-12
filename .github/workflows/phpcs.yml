@@ -3,6 +3,13 @@ on:
   push:
     branches:
       - trunk
+    paths:
+      - '**/*.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml.dist'
+      - 'phpcs.xml'
+      - '.github/workflows/phpcs.yml'
   pull_request:
 jobs:
   phpcs:
