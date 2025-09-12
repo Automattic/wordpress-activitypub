@@ -1,3 +1,6 @@
+import { useUserOptions } from '../../shared/use-user-options';
+import { useOptions } from '../../shared/use-options';
+
 // Test the utility functions we can extract and test from the edit component
 describe( 'FollowMe Edit utilities', () => {
 	beforeEach( () => {
@@ -29,12 +32,10 @@ describe( 'FollowMe Edit utilities', () => {
 	} );
 
 	test( 'can import useUserOptions hook', () => {
-		const { useUserOptions } = require( '../../shared/use-user-options' );
 		expect( typeof useUserOptions ).toBe( 'function' );
 	} );
 
 	test( 'can import useOptions hook', () => {
-		const { useOptions } = require( '../../shared/use-options' );
 		const options = useOptions();
 		expect( options.defaultAvatarUrl ).toBe( 'test.jpg' );
 	} );
