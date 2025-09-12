@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix release script to catch more 'unreleased' deprecation patterns that were previously missed during version updates.
