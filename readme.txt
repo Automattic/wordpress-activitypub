@@ -137,7 +137,7 @@ For reasons of data protection, it is not possible to see the followers of other
 - Fix query args preservation in collection pagination links
 - Fix release script to catch more 'unreleased' deprecation patterns that were previously missed during version updates.
 - Fix reply block rendering inconsistency where blocks were always converted to @-mentions in ActivityPub content. Now only first reply blocks become @-mentions, others remain as regular links.
-- Stopp sending follow notifications to the Application user, since system-level accounts cannot be followed.
+- Stop sending follow notifications to the Application user, since system-level accounts cannot be followed.
 
 ### 7.3.0 - 2025-08-28
 #### Added
