@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix query args preservation in collection pagination links

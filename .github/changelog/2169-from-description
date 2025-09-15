@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Optimized WebFinger lookups by centralizing and caching account resolution for faster, more consistent handling across lists.

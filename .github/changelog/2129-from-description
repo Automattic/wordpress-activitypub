@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Refactored Reply block to use WordPress core embed functionality for better compatibility and performance.
