@@ -593,47 +593,47 @@ class Actors {
 	/**
 	 * Returns all Inboxes for all known remote Actors.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::get_inboxes()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_inboxes()}
 	 *
 	 * @return array The list of Inboxes.
 	 */
 	public static function get_inboxes() {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_inboxes' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_inboxes' );
 		return Remote_Actors::get_inboxes();
 	}
 
 	/**
 	 * Upsert (insert or update) a remote actor as a custom post type.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::upsert()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::upsert()}
 	 *
 	 * @param array|Actor $actor ActivityPub actor object (array or actor, must include 'id').
 	 *
 	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
 	 */
 	public static function upsert( $actor ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::upsert' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::upsert' );
 		return Remote_Actors::upsert( $actor );
 	}
 
 	/**
 	 * Create a remote actor as a custom post type.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::create()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::create()}
 	 *
 	 * @param array|Actor $actor ActivityPub actor object (array or Actor, must include 'id').
 	 *
 	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
 	 */
 	public static function create( $actor ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::create' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::create' );
 		return Remote_Actors::create( $actor );
 	}
 
 	/**
 	 * Update a remote Actor object by actor URL (guid).
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::update()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::update()}
 	 *
 	 * @param int|\WP_Post $post  The post ID or object.
 	 * @param array|Actor  $actor The ActivityPub actor object as associative array (must include 'id').
@@ -641,49 +641,49 @@ class Actors {
 	 * @return int|\WP_Error The post ID or WP_Error.
 	 */
 	public static function update( $post, $actor ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::update' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::update' );
 		return Remote_Actors::update( $post, $actor );
 	}
 
 	/**
 	 * Delete a remote actor object by actor URL (guid).
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::delete()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::delete()}
 	 *
 	 * @param int $post_id The post ID.
 	 *
 	 * @return bool True on success, false on failure.
 	 */
 	public static function delete( $post_id ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::delete' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::delete' );
 		return Remote_Actors::delete( $post_id );
 	}
 
 	/**
 	 * Get a remote actor post by actor URI (guid).
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::get_by_uri()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_by_uri()}
 	 *
 	 * @param string $actor_uri The actor URI.
 	 *
 	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
 	 */
 	public static function get_remote_by_uri( $actor_uri ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_by_uri' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_by_uri' );
 		return Remote_Actors::get_by_uri( $actor_uri );
 	}
 
 	/**
 	 * Lookup a remote actor post by actor URI (guid), fetching from remote if not found locally.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::fetch_by_uri()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::fetch_by_uri()}
 	 *
 	 * @param string $actor_uri The actor URI.
 	 *
 	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
 	 */
 	public static function fetch_remote_by_uri( $actor_uri ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::fetch_by_uri' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::fetch_by_uri' );
 		return Remote_Actors::fetch_by_uri( $actor_uri );
 	}
 
@@ -692,7 +692,7 @@ class Actors {
 	 *
 	 * The error will be stored in post meta.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::add_error()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::add_error()}
 	 *
 	 * @param int              $post_id The ID of the WordPress Custom-Post-Type.
 	 * @param string|\WP_Error $error   The error message.
@@ -700,70 +700,70 @@ class Actors {
 	 * @return int|false The meta ID on success, false on failure.
 	 */
 	public static function add_error( $post_id, $error ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::add_error' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::add_error' );
 		return Remote_Actors::add_error( $post_id, $error );
 	}
 
 	/**
 	 * Count the errors for an actor.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::count_errors()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::count_errors()}
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
 	 * @return int The number of errors.
 	 */
 	public static function count_errors( $post_id ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::count_errors' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::count_errors' );
 		return Remote_Actors::count_errors( $post_id );
 	}
 
 	/**
 	 * Get all error messages for an actor.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::get_errors()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_errors()}
 	 *
 	 * @param int $post_id The post ID.
 	 *
 	 * @return string[] Array of error messages.
 	 */
 	public static function get_errors( $post_id ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_errors' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_errors' );
 		return Remote_Actors::get_errors( $post_id );
 	}
 
 	/**
 	 * Clear all errors for an actor.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::clear_errors()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::clear_errors()}
 	 *
 	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
 	 *
 	 * @return bool True on success, false on failure.
 	 */
 	public static function clear_errors( $post_id ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::clear_errors' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::clear_errors' );
 		return Remote_Actors::clear_errors( $post_id );
 	}
 
 	/**
 	 * Get all remote actors (Custom Post Type) that had errors.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::get_faulty()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_faulty()}
 	 *
 	 * @param int $number Optional. Number of actors to return. Default 20.
 	 *
 	 * @return \WP_Post[] Array of faulty actor posts.
 	 */
 	public static function get_faulty( $number = 20 ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_faulty' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_faulty' );
 		return Remote_Actors::get_faulty( $number );
 	}
 
 	/**
 	 * Get all remote actor posts not updated for a given time.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::get_outdated()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_outdated()}
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
 	 * @param int $older_than Optional. The time in seconds. Default DAY_IN_SECONDS.
@@ -771,35 +771,35 @@ class Actors {
 	 * @return \WP_Post[] The list of actors.
 	 */
 	public static function get_outdated( $number = 50, $older_than = DAY_IN_SECONDS ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_outdated' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_outdated' );
 		return Remote_Actors::get_outdated( $number, $older_than );
 	}
 
 	/**
 	 * Convert a custom post type input to an Activitypub\Activity\Actor.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::get_actor()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_actor()}
 	 *
 	 * @param int|\WP_Post $post The post ID or object.
 	 *
 	 * @return Actor|\WP_Error The actor object or WP_Error on failure.
 	 */
 	public static function get_actor( $post ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_actor' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_actor' );
 		return Remote_Actors::get_actor( $post );
 	}
 
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::get_public_key()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_public_key()}
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_public_key' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_public_key' );
 		return Remote_Actors::get_public_key( $key_id );
 	}
 
@@ -808,13 +808,13 @@ class Actors {
 	 *
 	 * Handles webfinger addresses, URLs without schemes, objects, and arrays.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::normalize_identifier()}
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::normalize_identifier()}
 	 *
 	 * @param string|object|array $actor Actor URI, webfinger address, actor object, or array.
 	 * @return string|null Normalized actor URI or null if unable to resolve.
 	 */
 	public static function normalize_identifier( $actor ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Remote_Actors::normalize_identifier' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Remote_Actors::normalize_identifier' );
 		return Remote_Actors::normalize_identifier( $actor );
 	}
 }

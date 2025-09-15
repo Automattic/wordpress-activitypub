@@ -156,14 +156,14 @@ class Followers {
 	/**
 	 * Get a Follower by Actor independent of the User.
 	 *
-	 * @deprecated unreleased
+	 * @deprecated 7.4.0
 	 *
 	 * @param string $actor The Actor URL.
 	 *
 	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_by_uri' );
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_by_uri' );
 
 		return Remote_Actors::get_by_uri( $actor );
 	}
