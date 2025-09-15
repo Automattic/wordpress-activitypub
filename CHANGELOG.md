@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix query args preservation in collection pagination links [#2120]
 - Fix release script to catch more 'unreleased' deprecation patterns that were previously missed during version updates. [#2171]
 - Fix reply block rendering inconsistency where blocks were always converted to @-mentions in ActivityPub content. Now only first reply blocks become @-mentions, others remain as regular links. [#2132]
-- Stopp sending follow notifications to the Application user, since system-level accounts cannot be followed. [#2117]
+- Stop sending follow notifications to the Application user, since system-level accounts cannot be followed. [#2117]
 
 ## [7.3.0] - 2025-08-28
 ### Added
