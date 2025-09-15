@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 7.3.0
+Stable tag: 7.4.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,35 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.4.0 - 2025-09-15
+#### Added
+- Add activitypub_json REST field for ap_actor posts to access raw JSON data
+- Add Delete activity support for permanently deleted federated comments.
+- Added a new WP-CLI command to manage Actors.
+- Added confirmation step for bulk removal of ActivityPub capability, asking whether to also delete users from the Fediverse.
+- Adds support for virtual deletes and restores, allowing objects to be removed from the fediverse without being deleted locally.
+- Add Yoast SEO integration for media pages site health check
+- Optimized WebFinger lookups by centralizing and caching account resolution for faster, more consistent handling across lists.
+
+#### Changed
+- Clarified the 'attachment' post type description to explain it refers to media library uploads and recommend disabling federation in most cases.
+- Hide site-wide checkbox in block confirmations when accessed from ActivityPub settings page
+- Improved ActivityPub compatibility by aligning with Mastodon’s Application Actor.
+- It’s now possible to reply to multiple posts using multiple reply blocks.
+- Refactored Reply block to use WordPress core embed functionality for better compatibility and performance.
+- Use wp_interactivity_config() for static values instead of wp_interactivity_state() to improve performance and code clarity
+
+#### Deprecated
+- ActivityPub now defaults to automated object type selection, with the old manual option moved to Advanced settings for compatibility.
+
+#### Fixed
+- Fix content visibility override issue preventing authors from changing visibility on older posts.
+- Fix PHP warning when saving ActivityPub settings.
+- Fix query args preservation in collection pagination links
+- Fix release script to catch more 'unreleased' deprecation patterns that were previously missed during version updates.
+- Fix reply block rendering inconsistency where blocks were always converted to @-mentions in ActivityPub content. Now only first reply blocks become @-mentions, others remain as regular links.
+- Stop sending follow notifications to the Application user, since system-level accounts cannot be followed.
 
 ### 7.3.0 - 2025-08-28
 #### Added
