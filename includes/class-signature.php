@@ -237,14 +237,14 @@ class Signature {
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @deprecated unreleased Use {@see Remote_Actors::get_public_key()}.
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_public_key()}.
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Remote_Actors::get_public_key()' );
+		\_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_public_key()' );
 
 		return Remote_Actors::get_public_key( $key_id );
 	}

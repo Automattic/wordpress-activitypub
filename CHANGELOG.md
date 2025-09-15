@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.4.0] - 2025-09-15
+### Added
+- Add activitypub_json REST field for ap_actor posts to access raw JSON data [#2121]
+- Add Delete activity support for permanently deleted federated comments. [#2141]
+- Added a new WP-CLI command to manage Actors. [#2118]
+- Added confirmation step for bulk removal of ActivityPub capability, asking whether to also delete users from the Fediverse. [#2150]
+- Adds support for virtual deletes and restores, allowing objects to be removed from the fediverse without being deleted locally. [#2116]
+- Add Yoast SEO integration for media pages site health check [#2136]
+- Optimized WebFinger lookups by centralizing and caching account resolution for faster, more consistent handling across lists. [#2169]
+
+### Changed
+- Clarified the 'attachment' post type description to explain it refers to media library uploads and recommend disabling federation in most cases. [#2153]
+- Hide site-wide checkbox in block confirmations when accessed from ActivityPub settings page [#2114]
+- Improved ActivityPub compatibility by aligning with Mastodon’s Application Actor. [#2113]
+- It’s now possible to reply to multiple posts using multiple reply blocks. [#2160]
+- Refactored Reply block to use WordPress core embed functionality for better compatibility and performance. [#2129]
+- Use wp_interactivity_config() for static values instead of wp_interactivity_state() to improve performance and code clarity [#2096]
+
+### Deprecated
+- ActivityPub now defaults to automated object type selection, with the old manual option moved to Advanced settings for compatibility. [#2148]
+
+### Fixed
+- Fix content visibility override issue preventing authors from changing visibility on older posts. [#2139]
+- Fix PHP warning when saving ActivityPub settings. [#2137]
+- Fix query args preservation in collection pagination links [#2120]
+- Fix release script to catch more 'unreleased' deprecation patterns that were previously missed during version updates. [#2171]
+- Fix reply block rendering inconsistency where blocks were always converted to @-mentions in ActivityPub content. Now only first reply blocks become @-mentions, others remain as regular links. [#2132]
+- Stop sending follow notifications to the Application user, since system-level accounts cannot be followed. [#2117]
+
 ## [7.3.0] - 2025-08-28
 ### Added
 - Add actor blocking functionality with list table interface for managing blocked users and site-wide blocks [#2027]
@@ -1408,6 +1437,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.3.0...7.4.0
 [7.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.2.0...7.3.0
 [7.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.1.0...7.2.0
 [7.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.0.1...7.1.0
