@@ -172,7 +172,7 @@ class Yoast_Seo {
 			return false;
 		}
 
-		// Check if disable-author is set to true (author archives disabled).
-		return isset( $yoast_options['disable-author'] ) && true === $yoast_options['disable-author'];
+		// Check if disable-author is set (author archives disabled).
+		return (bool) ( $yoast_options['disable-author'] ?? false );
 	}
 }
