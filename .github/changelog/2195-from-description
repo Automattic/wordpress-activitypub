@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Improved compatibility by making the 'implements' field always use multiple entries.
