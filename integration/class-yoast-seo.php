@@ -144,7 +144,7 @@ class Yoast_Seo {
 			$result['badge']['color'] = 'red';
 			$result['description']    = \sprintf(
 				'<p>%s</p>',
-				\__( 'Yoast SEO&#8217;s &#8220;Enable author archives&#8221; setting is currently disabled. Author archives are essential for ActivityPub because they serve as profile pages for users in the federation. Without author archives enabled, ActivityPub actors cannot be properly accessed by other federated platforms and clients.', 'activitypub' )
+				\__( 'The &#8220;Enable author archives&#8221; setting in Yoast SEO is currently disabled. Author archives are essential for ActivityPub, as they act as user profile pages. Without them, other platforms won’t be able to view those profiles.', 'activitypub' )
 			);
 			$result['actions']        = \sprintf(
 				'<p>%s</p>',
