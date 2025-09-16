@@ -16,7 +16,7 @@ class Yoast_Seo {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_filter( 'site_status_tests', array( self::class, 'add_site_health_tests' ), 11 );
+		\add_filter( 'site_status_tests', array( self::class, 'add_site_health_tests' ), 11 ); // After Health_Check::add_tests().
 	}
 
 	/**
