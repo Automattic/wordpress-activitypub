@@ -135,6 +135,30 @@ class Test_Activity extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test activity object list.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#Flag
+	 * @covers ::init_from_array
+	 */
+	public function test_activity_object_list() {
+		$object   = array(
+			'https://dummysite.example/?author=0',
+			'https://dummysite.example/?p=123',
+		);
+		$activity = Activity::init_from_array(
+			array(
+				'id'      => 'https://example.social/activities/123',
+				'type'    => 'Flag',
+				'actor'   => 'https://example.social/actor',
+				'content' => '',
+				'object'  => $object,
+			)
+		);
+
+		$this->assertSame( $object, $activity->get_object() );
+	}
+
+	/**
 	 * Test activity object.
 	 */
 	public function test_activity_object_in_reply_to() {
