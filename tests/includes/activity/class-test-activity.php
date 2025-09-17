@@ -159,6 +159,42 @@ class Test_Activity extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test activity object mixed array.
+	 *
+	 * @covers ::init_from_array
+	 */
+	public function test_activity_object_mixed_array() {
+		$activity = Activity::init_from_array(
+			array(
+				'@context' => 'https://www.w3.org/ns/activitystreams',
+				'summary'  => 'Sally liked a note',
+				'type'     => 'Like',
+				'actor'    => 'http://sally.example.org',
+				'object'   => array(
+					'http://example.org/posts/1',
+					array(
+						'type'    => 'Note',
+						'summary' => 'A simple note',
+						'content' => 'That is a tree.',
+					),
+				),
+			)
+		);
+
+		$object = $activity->get_object();
+
+		// Should be an array with 2 items.
+		$this->assertIsArray( $object );
+		$this->assertCount( 2, $object );
+
+		// First item should be the URL string (unchanged).
+		$this->assertSame( 'http://example.org/posts/1', $object[0] );
+
+		// Second item should be a Base_Object (converted from array).
+		$this->assertInstanceOf( 'Activitypub\Activity\Base_Object', $object[1] );
+	}
+
+	/**
 	 * Test activity object.
 	 */
 	public function test_activity_object_in_reply_to() {

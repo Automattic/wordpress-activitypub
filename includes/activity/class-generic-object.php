@@ -19,31 +19,31 @@ use function Activitypub\snake_to_camel_case;
  *
  * @since 5.3.0
  *
- * @method string|null             get_actor()              Gets one or more entities that performed or are expected to perform the activity.
- * @method string[]|null           get_also_known_as()      Gets the also known as property of the object.
- * @method string|null             get_attributed_to()      Gets the entity attributed as the original author.
- * @method array[]|null            get_attachment()         Gets the attachment property of the object.
- * @method string[]|null           get_cc()                 Gets the secondary recipients of the object.
- * @method string|null             get_content()            Gets the content property of the object.
- * @method string[]|null           get_content_map()        Gets the content map property of the object.
- * @method string[]|null           get_endpoints()          Gets the endpoint property of the object.
- * @method string[]|null           get_icon()               Gets the icon property of the object.
- * @method string|null             get_id()                 Gets the object's unique global identifier.
- * @method string[]|null           get_image()              Gets the image property of the object.
- * @method string[]|string|null    get_in_reply_to()        Gets the objects this object is in reply to.
- * @method string|null             get_inbox()              Gets the inbox property of the object.
- * @method string|null             get_name()               Gets the natural language name of the object.
- * @method string[]|null           get_name_map()           Gets the name map property of the object.
- * @method Base_Object|string|null get_object()             Gets the direct object of the activity.
- * @method string|null             get_preferred_username() Gets the preferred username of the object.
- * @method string|null             get_published()          Gets the date and time the object was published in ISO 8601 format.
- * @method string|null             get_summary()            Gets the natural language summary of the object.
- * @method string[]|null           get_summary_map()        Gets the summary map property of the object.
- * @method array[]|null            get_tag()                Gets the tag property of the object.
- * @method string[]|string|null    get_to()                 Gets the primary recipients of the object.
- * @method string                  get_type()               Gets the type of the object.
- * @method string|null             get_updated()            Gets the date and time the object was updated in ISO 8601 format.
- * @method string|null             get_url()                Gets the URL of the object.
+ * @method string|null                   get_actor()              Gets one or more entities that performed or are expected to perform the activity.
+ * @method string[]|null                 get_also_known_as()      Gets the also known as property of the object.
+ * @method string|null                   get_attributed_to()      Gets the entity attributed as the original author.
+ * @method array[]|null                  get_attachment()         Gets the attachment property of the object.
+ * @method string[]|null                 get_cc()                 Gets the secondary recipients of the object.
+ * @method string|null                   get_content()            Gets the content property of the object.
+ * @method string[]|null                 get_content_map()        Gets the content map property of the object.
+ * @method string[]|null                 get_endpoints()          Gets the endpoint property of the object.
+ * @method string[]|null                 get_icon()               Gets the icon property of the object.
+ * @method string|null                   get_id()                 Gets the object's unique global identifier.
+ * @method string[]|null                 get_image()              Gets the image property of the object.
+ * @method string[]|string|null          get_in_reply_to()        Gets the objects this object is in reply to.
+ * @method string|null                   get_inbox()              Gets the inbox property of the object.
+ * @method string|null                   get_name()               Gets the natural language name of the object.
+ * @method string[]|null                 get_name_map()           Gets the name map property of the object.
+ * @method Base_Object|string|array|null get_object()             Gets the direct object of the activity.
+ * @method string|null                   get_preferred_username() Gets the preferred username of the object.
+ * @method string|null                   get_published()          Gets the date and time the object was published in ISO 8601 format.
+ * @method string|null                   get_summary()            Gets the natural language summary of the object.
+ * @method string[]|null                 get_summary_map()        Gets the summary map property of the object.
+ * @method array[]|null                  get_tag()                Gets the tag property of the object.
+ * @method string[]|string|null          get_to()                 Gets the primary recipients of the object.
+ * @method string                        get_type()               Gets the type of the object.
+ * @method string|null                   get_updated()            Gets the date and time the object was updated in ISO 8601 format.
+ * @method string|null                   get_url()                Gets the URL of the object.
  *
  * @method string|string[] add_cc( string|array $cc ) Adds one or more entities to the secondary audience of the object.
  * @method string|string[] add_to( string|array $to ) Adds one or more entities to the primary audience of the object.
