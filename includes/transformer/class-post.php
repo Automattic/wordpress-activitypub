@@ -75,6 +75,67 @@ class Post extends Base {
 	}
 
 	/**
+	 * Get the Interaction Policy.
+	 *
+	 * @see https://docs.gotosocial.org/en/latest/federation/interaction_policy/
+	 *
+	 * @return array The interaction policy.
+	 */
+	public function get_interaction_policy() {
+		$policy    = array();
+		$anyone    = array(
+			'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
+			'always'            => 'https://www.w3.org/ns/activitystreams#Public',
+		);
+		$followers = array(
+			'automaticApproval' => get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->item->post_author ) ),
+		);
+
+		// Check Actor mode to set the correct Actor ID(s).
+		switch ( \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
+			case ACTIVITYPUB_BLOG_MODE:
+				$actor = new Blog();
+				$me    = array(
+					'automaticApproval' => $actor->get_id(),
+				);
+				break;
+			case ACTIVITYPUB_ACTOR_AND_BLOG_MODE:
+				$actor = new Blog();
+				$me    = array(
+					'automaticApproval' => array(
+						$this->get_actor_object()->get_id(),
+						$actor->get_id(),
+					),
+				);
+				break;
+			case ACTIVITYPUB_ACTOR_MODE:
+			default:
+				$me = array(
+					'automaticApproval' => $this->get_actor_object()->get_id(),
+				);
+				break;
+		}
+
+		// Build the `canQuote` part of the policy.
+		switch ( \get_post_meta( $this->item->ID, 'activitypub_interaction_policy_quote', true ) ) {
+			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
+				$policy['canQuote'] = $followers;
+				break;
+			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
+				$policy['canQuote'] = $anyone;
+				break;
+			case ACTIVITYPUB_INTERACTION_POLICY_ME:
+				$policy['canQuote'] = $me;
+				break;
+			default:
+				break;
+		}
+
+		// phpcs:ignore Universal.Operators.DisallowShortTernary
+		return $policy ?: null;
+	}
+
+	/**
 	 * Returns the User-Object of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the Blog-User is returned.
