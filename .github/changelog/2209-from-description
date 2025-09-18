@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Clarify error messages by specifying WebFinger handle format for better user guidance
