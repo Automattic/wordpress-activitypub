@@ -956,7 +956,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 						),
 					),
 				),
-				true,
+				false,
 			),
 			array(
 				array(
