@@ -55,7 +55,6 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'commentURL'        => $selected_comment,
 		'copyButtonText'    => __( 'Copy', 'activitypub' ),
 		'errorMessage'      => '',
-		'hasRemoteUser'     => false,
 		'isError'           => false,
 		'isLoading'         => false,
 		'modal'             => array( 'isOpen' => false ),
