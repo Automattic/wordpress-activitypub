@@ -121,11 +121,12 @@ class Post extends Base {
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
 				$policy['canQuote'] = $followers;
 				break;
-			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
-				$policy['canQuote'] = $anyone;
-				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
 				$policy['canQuote'] = $me;
+				break;
+			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
+			case '':
+				$policy['canQuote'] = $anyone;
 				break;
 			default:
 				break;

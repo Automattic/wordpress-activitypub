@@ -910,4 +910,156 @@ class Test_Post extends \WP_UnitTestCase {
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
 	}
+
+	/*
+	 * =========================
+	 * get_interaction_policy()
+	 * =========================
+	 */
+
+	/**
+	 * Helper to create a published post with a fresh author.
+	 *
+	 * @return \WP_Post
+	 */
+	private function create_test_post() {
+		$user_id = self::factory()->user->create();
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Interaction Policy Test',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+				'post_author'  => $user_id,
+			)
+		);
+		return get_post( $post_id );
+	}
+
+	/**
+	 * Test policy generation for the 'anyone' permission.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_anyone() {
+		$post = $this->create_test_post();
+		\update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$stored = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true );
+		$this->assertEmpty( $stored, 'Meta value not stored as expected.' );
+
+		$transformer = new Post( $post );
+		$policy      = $transformer->get_interaction_policy();
+
+		$this->assertIsArray( $policy, 'Policy should be array.' );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertSame(
+			array(
+				'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
+				'always'            => 'https://www.w3.org/ns/activitystreams#Public',
+			),
+			$policy['canQuote'],
+			"'anyone' permission should map to public policy."
+		);
+	}
+
+	/**
+	 * Test fallback to 'anyone' when no quote permission meta is set.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_no_meta_fallback() {
+		$post        = $this->create_test_post();
+		$transformer = new Post( $post );
+		$policy      = $transformer->get_interaction_policy();
+
+		$this->assertIsArray( $policy, 'Should fall back to anyone policy when no meta set.' );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertSame(
+			array(
+				'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
+				'always'            => 'https://www.w3.org/ns/activitystreams#Public',
+			),
+			$policy['canQuote'],
+			'No meta should fall back to anyone (public) policy.'
+		);
+	}
+
+	/**
+	 * Test policy generation for the 'followers' permission.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_followers() {
+		$post = $this->create_test_post();
+		update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS );
+
+		$transformer = new Post( $post );
+		$policy      = $transformer->get_interaction_policy();
+
+		$this->assertIsArray( $policy );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertArrayHasKey( 'automaticApproval', $policy['canQuote'] );
+		$this->assertStringContainsString( '/followers', $policy['canQuote']['automaticApproval'], 'Followers permission should point to followers collection.' );
+	}
+
+	/**
+	 * Test policy generation for the 'me' permission across actor modes.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_me_actor_modes() {
+		$post = $this->create_test_post();
+		update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_ME );
+
+		$actor_modes = array(
+			ACTIVITYPUB_ACTOR_MODE,
+			ACTIVITYPUB_BLOG_MODE,
+			ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+		);
+
+		foreach ( $actor_modes as $mode ) {
+			update_option( 'activitypub_actor_mode', $mode );
+			$transformer = new Post( get_post( $post->ID ) ); // fresh instance.
+			$policy      = $transformer->get_interaction_policy();
+
+			$this->assertIsArray( $policy, 'Policy should be array for mode ' . $mode );
+			$this->assertArrayHasKey( 'canQuote', $policy );
+			$this->assertArrayHasKey( 'automaticApproval', $policy['canQuote'] );
+
+			$auto = $policy['canQuote']['automaticApproval'];
+			if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE === $mode ) {
+				$this->assertIsArray( $auto, 'Actor+Blog mode should return an array of IDs.' );
+				$this->assertCount( 2, $auto, 'Actor+Blog mode should supply two IDs.' );
+			} else {
+				$this->assertIsString( $auto, 'Single mode should return a single ID string.' );
+			}
+		}
+
+		// Cleanup.
+		delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Ensure invalid permission values fall back to 'anyone' policy.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_invalid_value_returns_null() {
+		$post = $this->create_test_post();
+		\update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', 'not-a-valid-permission' );
+
+		$transformer = new Post( $post );
+		$policy      = $transformer->get_interaction_policy();
+
+		$this->assertIsArray( $policy, 'Invalid permission should fall back to anyone policy.' );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertSame(
+			array(
+				'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
+				'always'            => 'https://www.w3.org/ns/activitystreams#Public',
+			),
+			$policy['canQuote'],
+			'Invalid permission should fall back to anyone (public) policy.'
+		);
+	}
 }
