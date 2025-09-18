@@ -2,6 +2,7 @@ import { PluginDocumentSettingPanel, PluginPreviewMenuItem, store as editorStore
 import { PluginDocumentSettingPanel as DocumentSettingPanel } from '@wordpress/edit-post';
 import { registerPlugin } from '@wordpress/plugins';
 import {
+	BaseControl,
 	TextControl,
 	RadioControl,
 	RangeControl,
@@ -158,9 +159,14 @@ const EditorPlugin = () => {
 				className="activitypub-visibility"
 			/>
 
+			<BaseControl
+				label={ __( 'Interaction Policy', 'activitypub' ) }
+				help={ __( 'Control how others can interact with your post on the fediverse.', 'activitypub' ) }
+			></BaseControl>
+
 			<SelectControl
 				label={ __( 'Who can quote', 'activitypub' ) }
-				help={ __( 'Who is allowed to quote this post in the fediverse.', 'activitypub' ) }
+				help={ __( 'Who is allowed to quote this post.', 'activitypub' ) }
 				value={ meta?.activitypub_interaction_policy_quote }
 				options={ [
 					{ label: __( 'Anyone', 'activitypub' ), value: 'anyone' },
