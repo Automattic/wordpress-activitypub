@@ -1,4 +1,4 @@
 Significance: patch
 Type: changed
 
-Clarify error messages by specifying WebFinger handle format for better user guidance
+Clarify error messages in account modal to specify full profile URL format.
