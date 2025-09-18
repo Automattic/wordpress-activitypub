@@ -564,6 +564,8 @@ function extract_recipients_from_activity( $data ) {
 /**
  * Check if passed Activity is Public.
  *
+ * @see https://github.com/w3c/activitypub/issues/404#issuecomment-2926310561
+ *
  * @param Base_Object|array $data The Activity object as Base_Object or array.
  *
  * @return boolean True if public, false if not.
@@ -575,7 +577,7 @@ function is_activity_public( $data ) {
 
 	$recipients = extract_recipients_from_activity( $data );
 
-	return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
+	return ! empty( array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
 }
 
 /**
