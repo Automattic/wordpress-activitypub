@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix Flag activity object list processing to preserve URL arrays

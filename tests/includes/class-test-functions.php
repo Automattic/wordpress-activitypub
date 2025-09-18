@@ -1008,6 +1008,30 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				),
 				false,
 			),
+			array(
+				array(
+					'to'     => 'as:Public',
+					'cc'     => '',
+					'object' => '',
+				),
+				true,
+			),
+			array(
+				array(
+					'to'     => '',
+					'cc'     => 'as:Public',
+					'object' => '',
+				),
+				true,
+			),
+			array(
+				array(
+					'to'     => '',
+					'cc'     => 'Public',
+					'object' => '',
+				),
+				true,
+			),
 		);
 	}
 
