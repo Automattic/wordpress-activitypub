@@ -75,7 +75,7 @@ define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE', 'private' );
 define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );
 
 
-// URIs that mark an Activity as Public.
+// Identifiers that mark an Activity as Public.
 define(
 	'ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS',
 	array(
