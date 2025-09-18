@@ -540,30 +540,15 @@ function extract_recipients_from_activity( $data ) {
  * @return array The list of user URLs.
  */
 function extract_recipients_from_activity_property( $data, $property ) {
-	$recipient_items = array();
-
-	// Extract from main data and object data.
-	$sources = array( $data );
-	if ( is_array( $data['object'] ?? null ) ) {
-		$sources[] = $data['object'];
-	}
-
-	foreach ( $sources as $source ) {
-		if ( array_key_exists( $property, $source ) ) {
-			$recipients      = (array) $source[ $property ];
-			$recipient_items = array_merge( $recipient_items, $recipients );
-		}
-	}
-
-	// Flatten and extract IDs.
 	$recipients = array();
-	foreach ( $recipient_items as $recipient ) {
-		if ( is_array( $recipient ) && isset( $recipient['id'] ) ) {
-			$recipients[] = $recipient['id'];
-		} elseif ( ! is_array( $recipient ) ) {
-			$recipients[] = $recipient;
-		}
+
+	if ( ! empty( $data[ $property ] ) ) {
+		$recipients = $data[ $property ];
+	} elseif ( ! empty( $data['object'][ $property ] ) ) {
+		$recipients = $data['object'][ $property ];
 	}
+
+	$recipients = \array_map( '\Activitypub\object_to_uri', (array) $recipients );
 
 	return array_unique( $recipients );
 }
@@ -703,7 +688,7 @@ function url_to_commentid( $url ) {
  *
  * @param array|string $data The ActivityPub object.
  *
- * @return string The URI of the ActivityPub object
+ * @return string|false The URI of the ActivityPub object or false if not found.
  */
 function object_to_uri( $data ) {
 	// Check whether it is already simple.
@@ -740,10 +725,10 @@ function object_to_uri( $data ) {
 			$data = object_to_uri( $data['url'] );
 			break;
 		case 'Link':
-			$data = $data['href'];
+			$data = $data['href'] ?? false;
 			break;
 		default:
-			$data = $data['id'];
+			$data = $data['id'] ?? false;
 			break;
 	}
 
