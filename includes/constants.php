@@ -78,3 +78,13 @@ define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );
 define( 'ACTIVITYPUB_INTERACTION_POLICY_ANYONE', 'anyone' );
 define( 'ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS', 'followers' );
 define( 'ACTIVITYPUB_INTERACTION_POLICY_ME', 'me' );
+
+// Identifiers that mark an Activity as Public.
+define(
+	'ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS',
+	array(
+		'https://www.w3.org/ns/activitystreams#Public',
+		'as:Public',
+		'Public', // For backwards compatibility.
+	)
+);
