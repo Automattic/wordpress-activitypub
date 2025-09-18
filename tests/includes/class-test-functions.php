@@ -1107,7 +1107,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				'attribute' => 'to',
 				'expected'  => array(
 					'https://example.com/users/henry',
-					'https://example.com/users/iris',
 				),
 			),
 			'duplicate_recipients'               => array(

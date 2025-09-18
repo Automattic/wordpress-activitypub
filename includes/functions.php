@@ -550,7 +550,7 @@ function extract_recipients_from_activity_property( $data, $property ) {
 
 	$recipients = \array_map( '\Activitypub\object_to_uri', (array) $recipients );
 
-	return array_unique( $recipients );
+	return \array_unique( \array_filter( $recipients ) );
 }
 
 /**
