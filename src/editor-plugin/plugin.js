@@ -161,12 +161,11 @@ const EditorPlugin = () => {
 
 			<BaseControl
 				label={ __( 'Interaction Policy', 'activitypub' ) }
-				help={ __( 'Control how others can interact with your post on the fediverse.', 'activitypub' ) }
+				help={ __( 'Choose who can interact with this post.', 'activitypub' ) }
 			></BaseControl>
 
 			<SelectControl
 				label={ __( 'Who can quote', 'activitypub' ) }
-				help={ __( 'Who is allowed to quote this post.', 'activitypub' ) }
 				value={ meta?.activitypub_interaction_policy_quote }
 				options={ [
 					{ label: __( 'Anyone', 'activitypub' ), value: 'anyone' },
