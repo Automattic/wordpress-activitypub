@@ -30,9 +30,42 @@ class Base_Object extends Generic_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		array(
-			'Hashtag'   => 'as:Hashtag',
-			'sensitive' => 'as:sensitive',
-			'dcterms'   => 'http://purl.org/dc/terms/',
+			'Hashtag'           => 'as:Hashtag',
+			'sensitive'         => 'as:sensitive',
+			'dcterms'           => 'http://purl.org/dc/terms/',
+			'gts'               => 'https://gotosocial.org/ns#',
+			'interactionPolicy' => array(
+				'@id'   => 'gts:interactionPolicy',
+				'@type' => '@id',
+			),
+			'canQuote'          => array(
+				'@id'   => 'gts:canQuote',
+				'@type' => '@id',
+			),
+			'canReply'          => array(
+				'@id'   => 'gts:canReply',
+				'@type' => '@id',
+			),
+			'canLike'           => array(
+				'@id'   => 'gts:canLike',
+				'@type' => '@id',
+			),
+			'canAnnounce'       => array(
+				'@id'   => 'gts:canAnnounce',
+				'@type' => '@id',
+			),
+			'automaticApproval' => array(
+				'@id'   => 'gts:automaticApproval',
+				'@type' => '@id',
+			),
+			'manualApproval'    => array(
+				'@id'   => 'gts:manualApproval',
+				'@type' => '@id',
+			),
+			'always'            => array(
+				'@id'   => 'gts:always',
+				'@type' => '@id',
+			),
 		),
 	);
 
@@ -426,6 +459,19 @@ class Base_Object extends Generic_Object {
 	 * @var array
 	 */
 	protected $dcterms;
+
+	/**
+	 * Interaction policy is an attempt to limit the harmful effects of unwanted replies and
+	 * other interactions on a user's posts (eg., "reply guys").
+	 *
+	 * It is also used by Mastodon to limit the ability to quote posts.
+	 *
+	 * @see https://docs.gotosocial.org/en/latest/federation/interaction_policy/
+	 * @see https://blog.joinmastodon.org/2025/09/introducing-quote-posts/
+	 *
+	 * @var array
+	 */
+	protected $interaction_policy;
 
 	/**
 	 * Generic getter.

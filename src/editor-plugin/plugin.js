@@ -1,7 +1,14 @@
 import { PluginDocumentSettingPanel, PluginPreviewMenuItem, store as editorStore } from '@wordpress/editor';
 import { PluginDocumentSettingPanel as DocumentSettingPanel } from '@wordpress/edit-post';
 import { registerPlugin } from '@wordpress/plugins';
-import { TextControl, RadioControl, RangeControl, __experimentalText as Text, Tooltip } from '@wordpress/components';
+import {
+	TextControl,
+	RadioControl,
+	RangeControl,
+	__experimentalText as Text,
+	Tooltip,
+	SelectControl,
+} from '@wordpress/components';
 import { Icon, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
@@ -149,6 +156,19 @@ const EditorPlugin = () => {
 					setMeta( { ...meta, activitypub_content_visibility: value } );
 				} }
 				className="activitypub-visibility"
+			/>
+
+			<SelectControl
+				label={ __( 'Who can quote', 'activitypub' ) }
+				value="25%"
+				help={ __( 'Who is allowed to quote this post in the fediverse.', 'activitypub' ) }
+				options={ [
+					{ label: __( 'Anyone', 'activitypub' ), value: '100%' },
+					{ label: __( 'Followers only', 'activitypub' ), value: '50%' },
+					{ label: __( 'Just me', 'activitypub' ), value: '25%' },
+				] }
+				__next40pxDefaultSize
+				__nextHasNoMarginBottom
 			/>
 		</SettingsPanel>
 	);

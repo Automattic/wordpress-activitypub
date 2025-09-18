@@ -237,6 +237,10 @@ class Activity extends Base_Object {
 			$this->set( 'in_reply_to', $object->get_in_reply_to() );
 		}
 
+		if ( $object->get_interaction_policy() && ! $this->get_interaction_policy() ) {
+			$this->set( 'interaction_policy', $object->get_interaction_policy() );
+		}
+
 		if ( $object->get_id() && ! $this->get_id() ) {
 			$id = strtok( $object->get_id(), '#' );
 			if ( $object->get_updated() ) {
@@ -256,7 +260,7 @@ class Activity extends Base_Object {
 	 * @return array $context A compacted JSON-LD context.
 	 */
 	public function get_json_ld_context() {
-		if ( $this->object instanceof Base_Object ) {
+		if ( \is_object( $this->object ) ) {
 			$class = get_class( $this->object );
 			if ( $class && $class::JSON_LD_CONTEXT ) {
 				// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'.
