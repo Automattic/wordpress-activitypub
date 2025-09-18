@@ -11,6 +11,8 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Outbox;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\extract_recipients_from_activity;
+use function Activitypub\extract_recipients_from_activity_property;
 
 /**
  * Test class for Functions.
@@ -1007,5 +1009,212 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				false,
 			),
 		);
+	}
+
+	/**
+	 * Data provider for testing extract_recipients_from_activity_property.
+	 *
+	 * @return array Test data sets.
+	 */
+	public function data_provider_extract_recipients() {
+		return array(
+			'simple_string_recipient'            => array(
+				'data'      => array(
+					'to' => 'https://example.com/users/alice',
+				),
+				'attribute' => 'to',
+				'expected'  => array( 'https://example.com/users/alice' ),
+			),
+			'array_of_recipients'                => array(
+				'data'      => array(
+					'to' => array(
+						'https://example.com/users/alice',
+						'https://example.com/users/bob',
+					),
+				),
+				'attribute' => 'to',
+				'expected'  => array(
+					'https://example.com/users/alice',
+					'https://example.com/users/bob',
+				),
+			),
+			'object_recipients_with_id'          => array(
+				'data'      => array(
+					'cc' => array(
+						array( 'id' => 'https://example.com/users/charlie' ),
+						array( 'id' => 'https://example.com/users/diana' ),
+					),
+				),
+				'attribute' => 'cc',
+				'expected'  => array(
+					'https://example.com/users/charlie',
+					'https://example.com/users/diana',
+				),
+			),
+			'mixed_recipients'                   => array(
+				'data'      => array(
+					'bcc' => array(
+						'https://example.com/users/eve',
+						array( 'id' => 'https://example.com/users/frank' ),
+					),
+				),
+				'attribute' => 'bcc',
+				'expected'  => array(
+					'https://example.com/users/eve',
+					'https://example.com/users/frank',
+				),
+			),
+			'recipients_in_object'               => array(
+				'data'      => array(
+					'object' => array(
+						'to' => 'https://example.com/users/grace',
+					),
+				),
+				'attribute' => 'to',
+				'expected'  => array( 'https://example.com/users/grace' ),
+			),
+			'recipients_in_both_main_and_object' => array(
+				'data'      => array(
+					'to'     => 'https://example.com/users/henry',
+					'object' => array(
+						'to' => 'https://example.com/users/iris',
+					),
+				),
+				'attribute' => 'to',
+				'expected'  => array(
+					'https://example.com/users/henry',
+					'https://example.com/users/iris',
+				),
+			),
+			'duplicate_recipients'               => array(
+				'data'      => array(
+					'to' => array(
+						'https://example.com/users/jack',
+						'https://example.com/users/jack', // Duplicate.
+					),
+				),
+				'attribute' => 'to',
+				'expected'  => array( 'https://example.com/users/jack' ), // Should be unique.
+			),
+			'no_recipients'                      => array(
+				'data'      => array(
+					'cc' => array(),
+				),
+				'attribute' => 'to', // Different attribute.
+				'expected'  => array(),
+			),
+			'empty_data'                         => array(
+				'data'      => array(),
+				'attribute' => 'to',
+				'expected'  => array(),
+			),
+			'object_without_id'                  => array(
+				'data'      => array(
+					'to' => array(
+						array(
+							'type' => 'Person',
+							'name' => 'Kate',
+						), // No 'id' key.
+					),
+				),
+				'attribute' => 'to',
+				'expected'  => array(), // Should be ignored.
+			),
+			'public_recipients'                  => array(
+				'data'      => array(
+					'to' => array(
+						'https://www.w3.org/ns/activitystreams#Public',
+						'https://example.com/users/liam',
+					),
+				),
+				'attribute' => 'to',
+				'expected'  => array(
+					'https://www.w3.org/ns/activitystreams#Public',
+					'https://example.com/users/liam',
+				),
+			),
+			'audience_attribute'                 => array(
+				'data'      => array(
+					'audience' => 'https://example.com/groups/followers',
+				),
+				'attribute' => 'audience',
+				'expected'  => array( 'https://example.com/groups/followers' ),
+			),
+		);
+	}
+
+	/**
+	 * Test extract_recipients_from_activity_property function.
+	 *
+	 * @dataProvider data_provider_extract_recipients
+	 *
+	 * @param array  $data      The activity data.
+	 * @param string $attribute The attribute to extract.
+	 * @param array  $expected  The expected recipients.
+	 */
+	public function test_extract_recipients_from_activity_property( $data, $attribute, $expected ) {
+		$actual = extract_recipients_from_activity_property( $data, $attribute );
+
+		// Sort both arrays to ensure order doesn't matter in comparison.
+		sort( $expected );
+		sort( $actual );
+
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test extract_recipients_from_activity_attribute function.
+	 *
+	 * @dataProvider data_provider_extract_recipients
+	 *
+	 * @param array  $data      The activity data.
+	 * @param string $attribute The attribute to extract.
+	 * @param array  $expected  The expected recipients.
+	 */
+	public function test_extract_recipients_from_activity( $data, $attribute, $expected ) {
+		$actual = extract_recipients_from_activity( $data );
+
+		// Sort both arrays to ensure order doesn't matter in comparison.
+		sort( $expected );
+		sort( $actual );
+
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test that the function returns unique recipients.
+	 */
+	public function test_unique_recipients() {
+		$data   = array(
+			'to'     => array(
+				'https://example.com/users/alice',
+				'https://example.com/users/alice', // Duplicate.
+			),
+			'object' => array(
+				'to' => 'https://example.com/users/alice', // Another duplicate.
+			),
+		);
+		$actual = extract_recipients_from_activity_property( $data, 'to' );
+
+		$this->assertSame( array( 'https://example.com/users/alice' ), $actual );
+		$this->assertCount( 1, $actual, 'Should return unique recipients only.' );
+	}
+
+	/**
+	 * Test that the function returns unique recipients from extract_recipients_from_activity.
+	 */
+	public function test_unique_recipients_from_activity() {
+		$data   = array(
+			'to'     => array(
+				'https://example.com/users/alice',
+				'https://example.com/users/alice', // Duplicate.
+			),
+			'object' => array(
+				'to' => 'https://example.com/users/alice', // Another duplicate.
+			),
+		);
+		$actual = extract_recipients_from_activity( $data );
+		$this->assertSame( array( 'https://example.com/users/alice' ), $actual );
+		$this->assertCount( 1, $actual, 'Should return unique recipients only.' );
 	}
 }

@@ -525,35 +525,42 @@ function extract_recipients_from_activity( $data ) {
 	$recipient_items = array();
 
 	foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-		if ( array_key_exists( $i, $data ) ) {
-			if ( is_array( $data[ $i ] ) ) {
-				$recipient = $data[ $i ];
-			} else {
-				$recipient = array( $data[ $i ] );
-			}
-			$recipient_items = array_merge( $recipient_items, $recipient );
-		}
+		$recipient_items = array_merge( $recipient_items, extract_recipients_from_activity_property( $data, $i ) );
+	}
 
-		if ( is_array( $data['object'] ) && array_key_exists( $i, $data['object'] ) ) {
-			if ( is_array( $data['object'][ $i ] ) ) {
-				$recipient = $data['object'][ $i ];
-			} else {
-				$recipient = array( $data['object'][ $i ] );
-			}
-			$recipient_items = array_merge( $recipient_items, $recipient );
+	return array_unique( $recipient_items );
+}
+
+/**
+ * Extract recipient URLs from a specific attribute of an Activity object.
+ *
+ * @param array  $data      The Activity object as array.
+ * @param string $attribute The attribute to extract recipients from (e.g., 'to', 'cc').
+ *
+ * @return array The list of user URLs.
+ */
+function extract_recipients_from_activity_property( $data, $attribute ) {
+	$recipient_items = array();
+
+	// Extract from main data and object data.
+	$sources = array( $data );
+	if ( is_array( $data['object'] ?? null ) ) {
+		$sources[] = $data['object'];
+	}
+
+	foreach ( $sources as $source ) {
+		if ( array_key_exists( $attribute, $source ) ) {
+			$recipients      = (array) $source[ $attribute ];
+			$recipient_items = array_merge( $recipient_items, $recipients );
 		}
 	}
 
+	// Flatten and extract IDs.
 	$recipients = array();
-
-	// Flatten array.
 	foreach ( $recipient_items as $recipient ) {
-		if ( is_array( $recipient ) ) {
-			// Check if recipient is an object.
-			if ( array_key_exists( 'id', $recipient ) ) {
-				$recipients[] = $recipient['id'];
-			}
-		} else {
+		if ( is_array( $recipient ) && isset( $recipient['id'] ) ) {
+			$recipients[] = $recipient['id'];
+		} elseif ( ! is_array( $recipient ) ) {
 			$recipients[] = $recipient;
 		}
 	}
