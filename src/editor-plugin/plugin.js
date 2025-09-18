@@ -160,13 +160,16 @@ const EditorPlugin = () => {
 
 			<SelectControl
 				label={ __( 'Who can quote', 'activitypub' ) }
-				value="25%"
 				help={ __( 'Who is allowed to quote this post in the fediverse.', 'activitypub' ) }
+				value={ meta?.activitypub_interaction_policy_quote }
 				options={ [
-					{ label: __( 'Anyone', 'activitypub' ), value: '100%' },
-					{ label: __( 'Followers only', 'activitypub' ), value: '50%' },
-					{ label: __( 'Just me', 'activitypub' ), value: '25%' },
+					{ label: __( 'Anyone', 'activitypub' ), value: 'anyone' },
+					{ label: __( 'Followers only', 'activitypub' ), value: 'followers' },
+					{ label: __( 'Just me', 'activitypub' ), value: 'me' },
 				] }
+				onChange={ ( value ) => {
+					setMeta( { ...meta, activitypub_interaction_policy_quote: value } );
+				} }
 				__next40pxDefaultSize
 				__nextHasNoMarginBottom
 			/>

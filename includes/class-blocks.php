@@ -83,6 +83,29 @@ class Blocks {
 					'sanitize_callback' => 'absint',
 				)
 			);
+
+			\register_post_meta(
+				$post_type,
+				'activitypub_interaction_policy_quote',
+				array(
+					'type'              => 'string',
+					'single'            => true,
+					'show_in_rest'      => true,
+					'sanitize_callback' => function ( $value ) {
+						$schema = array(
+							'type'    => 'string',
+							'enum'    => array( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS, ACTIVITYPUB_INTERACTION_POLICY_ME ),
+							'default' => ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
+						);
+
+						if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+							return $schema['default'];
+						}
+
+						return $value;
+					},
+				)
+			);
 		}
 	}
 
