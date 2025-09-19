@@ -102,7 +102,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-target
 	 *
-	 * @var string|array
+	 * @var string|array|null
 	 */
 	protected $target;
 
@@ -114,7 +114,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-result
 	 *
-	 * @var string|Base_Object
+	 * @var string|Base_Object|null
 	 */
 	protected $result;
 
@@ -126,7 +126,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $replies;
 
@@ -140,7 +140,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-origin
 	 *
-	 * @var string|array
+	 * @var string|array|null
 	 */
 	protected $origin;
 
@@ -150,7 +150,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-instrument
 	 *
-	 * @var string|array
+	 * @var string|array|null
 	 */
 	protected $instrument;
 
@@ -221,6 +221,10 @@ class Activity extends Base_Object {
 			$this->set( 'in_reply_to', $object->get_in_reply_to() );
 		}
 
+		if ( $object->get_interaction_policy() && ! $this->get_interaction_policy() ) {
+			$this->set( 'interaction_policy', $object->get_interaction_policy() );
+		}
+
 		if ( $object->get_id() && ! $this->get_id() ) {
 			$id = strtok( $object->get_id(), '#' );
 			if ( $object->get_updated() ) {
@@ -240,7 +244,7 @@ class Activity extends Base_Object {
 	 * @return array $context A compacted JSON-LD context.
 	 */
 	public function get_json_ld_context() {
-		if ( $this->object instanceof Base_Object ) {
+		if ( \is_object( $this->object ) ) {
 			$class = get_class( $this->object );
 			if ( $class && $class::JSON_LD_CONTEXT ) {
 				// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'.

@@ -74,6 +74,10 @@ define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
 define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE', 'private' );
 define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );
 
+// Interaction policy constants.
+define( 'ACTIVITYPUB_INTERACTION_POLICY_ANYONE', 'anyone' );
+define( 'ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS', 'followers' );
+define( 'ACTIVITYPUB_INTERACTION_POLICY_ME', 'me' );
 
 // Identifiers that mark an Activity as Public.
 define(

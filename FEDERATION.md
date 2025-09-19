@@ -8,6 +8,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [WebFinger](https://www.w3.org/community/reports/socialcg/CG-FINAL-apwf-20240608/)
 - [HTTP Signatures](https://swicg.github.io/activitypub-http-signature/)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
+- [Interaction Policy](https://docs.gotosocial.org/en/latest/federation/interaction_policy/)
 
 ## Supported FEPs
 

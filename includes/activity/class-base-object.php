@@ -30,9 +30,42 @@ class Base_Object extends Generic_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		array(
-			'Hashtag'   => 'as:Hashtag',
-			'sensitive' => 'as:sensitive',
-			'dcterms'   => 'http://purl.org/dc/terms/',
+			'Hashtag'           => 'as:Hashtag',
+			'sensitive'         => 'as:sensitive',
+			'dcterms'           => 'http://purl.org/dc/terms/',
+			'gts'               => 'https://gotosocial.org/ns#',
+			'interactionPolicy' => array(
+				'@id'   => 'gts:interactionPolicy',
+				'@type' => '@id',
+			),
+			'canQuote'          => array(
+				'@id'   => 'gts:canQuote',
+				'@type' => '@id',
+			),
+			'canReply'          => array(
+				'@id'   => 'gts:canReply',
+				'@type' => '@id',
+			),
+			'canLike'           => array(
+				'@id'   => 'gts:canLike',
+				'@type' => '@id',
+			),
+			'canAnnounce'       => array(
+				'@id'   => 'gts:canAnnounce',
+				'@type' => '@id',
+			),
+			'automaticApproval' => array(
+				'@id'   => 'gts:automaticApproval',
+				'@type' => '@id',
+			),
+			'manualApproval'    => array(
+				'@id'   => 'gts:manualApproval',
+				'@type' => '@id',
+			),
+			'always'            => array(
+				'@id'   => 'gts:always',
+				'@type' => '@id',
+			),
 		),
 	);
 
@@ -372,7 +405,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#source-property
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $source;
 
@@ -392,7 +425,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#likes
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $likes;
 
@@ -402,7 +435,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#shares
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $shares;
 
@@ -413,7 +446,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#sensitive
 	 *
-	 * @var boolean
+	 * @var boolean|null
 	 */
 	protected $sensitive;
 
@@ -423,9 +456,22 @@ class Base_Object extends Generic_Object {
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md#sensitive
 	 * @see https://www.dublincore.org/specifications/dublin-core/dcmi-terms/
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $dcterms;
+
+	/**
+	 * Interaction policy is an attempt to limit the harmful effects of unwanted replies and
+	 * other interactions on a user's posts (e.g., "reply guys").
+	 *
+	 * It is also used by Mastodon to limit the ability to quote posts.
+	 *
+	 * @see https://docs.gotosocial.org/en/latest/federation/interaction_policy/
+	 * @see https://blog.joinmastodon.org/2025/09/introducing-quote-posts/
+	 *
+	 * @var array|null
+	 */
+	protected $interaction_policy;
 
 	/**
 	 * Generic getter.
