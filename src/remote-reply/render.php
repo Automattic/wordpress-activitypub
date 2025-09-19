@@ -33,7 +33,7 @@ wp_interactivity_config(
 			'copy'                => __( 'Copy', 'activitypub' ),
 			'emptyProfileError'   => __( 'Please enter a profile URL or handle.', 'activitypub' ),
 			'genericError'        => __( 'An error occurred. Please try again.', 'activitypub' ),
-			'invalidProfileError' => __( 'Please enter a valid URL or handle.', 'activitypub' ),
+			'invalidProfileError' => __( 'Please enter a valid profile URL or handle.', 'activitypub' ),
 		),
 	)
 );
