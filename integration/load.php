@@ -56,6 +56,15 @@ function plugin_init() {
 	}
 
 	/**
+	 * Adds Perfecty Push support.
+	 *
+	 * @see https://wordpress.org/plugins/perfecty-push-notifications/
+	 */
+	if ( \defined( 'PERFECTY_PUSH_VERSION' ) ) {
+		Perfecty_Push::init();
+	}
+
+	/**
 	 * Adds Jetpack support.
 	 *
 	 * This class handles the compatibility with Jetpack.
