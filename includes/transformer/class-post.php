@@ -82,58 +82,9 @@ class Post extends Base {
 	 * @return array The interaction policy.
 	 */
 	public function get_interaction_policy() {
-		$policy    = array();
-		$anyone    = array(
-			'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
-			'always'            => 'https://www.w3.org/ns/activitystreams#Public',
+		return array(
+			'canQuote' => $this->get_quote_policy(),
 		);
-		$followers = array(
-			'automaticApproval' => get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->item->post_author ) ),
-		);
-
-		// Check Actor mode to set the correct Actor ID(s).
-		switch ( \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
-			case ACTIVITYPUB_BLOG_MODE:
-				$actor = new Blog();
-				$me    = array(
-					'automaticApproval' => $actor->get_id(),
-				);
-				break;
-			case ACTIVITYPUB_ACTOR_AND_BLOG_MODE:
-				$actor = new Blog();
-				$me    = array(
-					'automaticApproval' => array(
-						$this->get_actor_object()->get_id(),
-						$actor->get_id(),
-					),
-				);
-				break;
-			case ACTIVITYPUB_ACTOR_MODE:
-			default:
-				$me = array(
-					'automaticApproval' => $this->get_actor_object()->get_id(),
-				);
-				break;
-		}
-
-		// Build the `canQuote` part of the policy.
-		switch ( \get_post_meta( $this->item->ID, 'activitypub_interaction_policy_quote', true ) ) {
-			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
-				$policy['canQuote'] = $followers;
-				break;
-			case ACTIVITYPUB_INTERACTION_POLICY_ME:
-				$policy['canQuote'] = $me;
-				break;
-			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
-			case '':
-				$policy['canQuote'] = $anyone;
-				break;
-			default:
-				break;
-		}
-
-		// phpcs:ignore Universal.Operators.DisallowShortTernary
-		return $policy ?: null;
 	}
 
 	/**
@@ -1011,5 +962,47 @@ class Post extends Base {
 			'type'    => 'Note',
 			'content' => $this->get_summary(),
 		);
+	}
+
+	/**
+	 * Get the quote policy.
+	 *
+	 * @return array The quote policy.
+	 */
+	private function get_quote_policy() {
+		switch ( \get_post_meta( $this->item->ID, 'activitypub_interaction_policy_quote', true ) ) {
+			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
+				return array( 'automaticApproval' => get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->item->post_author ) ) );
+
+			case ACTIVITYPUB_INTERACTION_POLICY_ME:
+				return array( 'automaticApproval' => $this->get_me_actors() );
+
+			default:
+				return array(
+					'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
+					'always'            => 'https://www.w3.org/ns/activitystreams#Public',
+				);
+		}
+	}
+
+	/**
+	 * Get the actor ID(s) for the `me` audience in the Quote interaction policy.
+	 *
+	 * @return string|array The actor ID(s).
+	 */
+	private function get_me_actors() {
+		switch ( \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
+			case ACTIVITYPUB_BLOG_MODE:
+				return ( new Blog() )->get_id();
+
+			case ACTIVITYPUB_ACTOR_AND_BLOG_MODE:
+				return array(
+					$this->get_actor_object()->get_id(),
+					( new Blog() )->get_id(),
+				);
+
+			default:
+				return $this->get_actor_object()->get_id();
+		}
 	}
 }
