@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add Perfecty Push integration for web push notifications on ActivityPub events
