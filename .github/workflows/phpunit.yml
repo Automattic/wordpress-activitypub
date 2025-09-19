@@ -130,7 +130,7 @@ jobs:
             while IFS= read -r line; do
               echo "Processing line: $line"
               # Look for @covers warnings
-              if [[ "$line" =~ \"@covers.*\"\ is\ invalid ]]; then
+              if [[ "$line" =~ \"@covers[^\"]*\"\ is\ invalid ]]; then
                 echo "Found @covers warning line: $line"
                 # Extract the @covers target - everything between quotes
                 if [[ "$line" =~ \"@covers\ ([^\"]+)\" ]]; then
