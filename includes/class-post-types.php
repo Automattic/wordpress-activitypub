@@ -1,0 +1,457 @@
+<?php
+/**
+ * Post Types class for consolidating all custom post type and related meta registrations.
+ *
+ * @package Activitypub
+ */
+
+namespace Activitypub;
+
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Followers;
+use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
+
+/**
+ * Post Types class.
+ */
+class Post_Types {
+	/**
+	 * Initialize the class, registering all custom post types and post meta.
+	 */
+	public static function init() {
+		self::register_remote_actors_post_type();
+		self::register_inbox_post_type();
+		self::register_outbox_post_type();
+		self::register_extra_fields_post_types();
+		self::register_activitypub_post_meta();
+	}
+
+	/**
+	 * Register the Remote Actors post type and its meta.
+	 */
+	public static function register_remote_actors_post_type() {
+		\register_post_type(
+			Remote_Actors::POST_TYPE,
+			array(
+				'labels'           => array(
+					'name'          => \_x( 'Followers', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'Follower', 'post_type single name', 'activitypub' ),
+				),
+				'public'           => false,
+				'show_in_rest'     => true,
+				'hierarchical'     => false,
+				'rewrite'          => false,
+				'query_var'        => false,
+				'delete_with_user' => false,
+				'can_export'       => true,
+				'supports'         => array(),
+			)
+		);
+
+		// Register meta for Remote Actors post type.
+		\register_post_meta(
+			Remote_Actors::POST_TYPE,
+			'_activitypub_inbox',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Remote_Actors::POST_TYPE,
+			'_activitypub_errors',
+			array(
+				'type'              => 'string',
+				'single'            => false,
+				'sanitize_callback' => function ( $value ) {
+					if ( ! is_string( $value ) ) {
+						throw new \Exception( 'Error message is no valid string' );
+					}
+
+					return \esc_sql( $value );
+				},
+			)
+		);
+
+		\register_post_meta(
+			Remote_Actors::POST_TYPE,
+			Followers::FOLLOWER_META_KEY,
+			array(
+				'type'              => 'string',
+				'single'            => false,
+				'sanitize_callback' => 'esc_sql',
+			)
+		);
+	}
+
+	/**
+	 * Register the Inbox post type and its meta.
+	 */
+	public static function register_inbox_post_type() {
+		\register_post_type(
+			Inbox::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'Inbox', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'Inbox Item', 'post_type single name', 'activitypub' ),
+				),
+				'capabilities'        => array(
+					'create_posts' => false,
+				),
+				'map_meta_cap'        => true,
+				'public'              => false,
+				'show_in_rest'        => true,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'supports'            => array( 'title', 'editor', 'author', 'custom-fields' ),
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+			)
+		);
+
+		// Register meta for Inbox post type.
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_object_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the object that the inbox item is about.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_type',
+			array(
+				'type'              => 'string',
+				'description'       => 'The type of the activity',
+				'single'            => true,
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$value  = ucfirst( strtolower( $value ) );
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => Activity::TYPES,
+						'default' => 'Create',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The type of the local actor that received the activity.',
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'application', 'blog', 'user' ),
+						'default' => 'user',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_activity_remote_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the remote actor that sent the activity.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'activitypub_content_visibility',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The visibility of the content.',
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'public', 'unlisted', 'private', 'direct' ),
+						'default' => 'public',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+	}
+
+	/**
+	 * Register the Outbox post type and its meta.
+	 */
+	public static function register_outbox_post_type() {
+		\register_post_type(
+			Outbox::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'Outbox', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'Outbox Item', 'post_type single name', 'activitypub' ),
+				),
+				'capabilities'        => array(
+					'create_posts' => false,
+				),
+				'map_meta_cap'        => true,
+				'public'              => false,
+				'show_in_rest'        => true,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'supports'            => array( 'title', 'editor', 'author', 'custom-fields' ),
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+			)
+		);
+
+		// Register meta for Outbox post type.
+		/**
+		 * Register Activity Type meta for Outbox items.
+		 *
+		 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
+		 */
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_activity_type',
+			array(
+				'type'              => 'string',
+				'description'       => 'The type of the activity',
+				'single'            => true,
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$value  = ucfirst( strtolower( $value ) );
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => Activity::TYPES,
+						'default' => 'Announce',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_activity_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'application', 'blog', 'user' ),
+						'default' => 'user',
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_outbox_offset',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'Keeps track of the followers offset when processing outbox items.',
+				'sanitize_callback' => 'absint',
+				'default'           => 0,
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_object_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the object that the outbox item is about.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'activitypub_content_visibility',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'show_in_rest'      => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+						'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+					);
+
+					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+	}
+
+	/**
+	 * Register the Extra Fields post types.
+	 */
+	public static function register_extra_fields_post_types() {
+		$extra_field_args = array(
+			'labels'              => array(
+				'name'          => \_x( 'Extra fields', 'post_type plural name', 'activitypub' ),
+				'singular_name' => \_x( 'Extra field', 'post_type single name', 'activitypub' ),
+				'add_new'       => \__( 'Add new', 'activitypub' ),
+				'add_new_item'  => \__( 'Add new extra field', 'activitypub' ),
+				'new_item'      => \__( 'New extra field', 'activitypub' ),
+				'edit_item'     => \__( 'Edit extra field', 'activitypub' ),
+				'view_item'     => \__( 'View extra field', 'activitypub' ),
+				'all_items'     => \__( 'All extra fields', 'activitypub' ),
+			),
+			'public'              => false,
+			'hierarchical'        => false,
+			'query_var'           => false,
+			'has_archive'         => false,
+			'publicly_queryable'  => false,
+			'show_in_menu'        => false,
+			'delete_with_user'    => true,
+			'can_export'          => true,
+			'exclude_from_search' => true,
+			'show_in_rest'        => true,
+			'map_meta_cap'        => true,
+			'show_ui'             => true,
+			'supports'            => array( 'title', 'editor', 'page-attributes' ),
+		);
+
+		\register_post_type( Extra_Fields::USER_POST_TYPE, $extra_field_args );
+		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $extra_field_args );
+
+		/**
+		 * Fires after ActivityPub custom post types have been registered.
+		 */
+		\do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Register post meta for ActivityPub supported post types.
+	 */
+	public static function register_activitypub_post_meta() {
+		$ap_post_types = \get_post_types_by_support( 'activitypub' );
+		foreach ( $ap_post_types as $post_type ) {
+			\register_post_meta(
+				$post_type,
+				'activitypub_content_warning',
+				array(
+					'show_in_rest'      => true,
+					'single'            => true,
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+				)
+			);
+
+			\register_post_meta(
+				$post_type,
+				'activitypub_content_visibility',
+				array(
+					'type'              => 'string',
+					'single'            => true,
+					'show_in_rest'      => true,
+					'sanitize_callback' => function ( $value ) {
+						$schema = array(
+							'type'    => 'string',
+							'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+							'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+						);
+
+						if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+							return $schema['default'];
+						}
+
+						return $value;
+					},
+				)
+			);
+
+			\register_post_meta(
+				$post_type,
+				'activitypub_max_image_attachments',
+				array(
+					'type'              => 'integer',
+					'single'            => true,
+					'show_in_rest'      => true,
+					'default'           => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+					'sanitize_callback' => 'absint',
+				)
+			);
+
+			\register_post_meta(
+				$post_type,
+				'activitypub_interaction_policy_quote',
+				array(
+					'type'              => 'string',
+					'single'            => true,
+					'show_in_rest'      => true,
+					'sanitize_callback' => function ( $value ) {
+						$schema = array(
+							'type'    => 'string',
+							'enum'    => array( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS, ACTIVITYPUB_INTERACTION_POLICY_ME ),
+							'default' => ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
+						);
+
+						if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+							return $schema['default'];
+						}
+
+						return $value;
+					},
+				)
+			);
+		}
+	}
+}
