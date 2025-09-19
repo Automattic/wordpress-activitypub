@@ -159,13 +159,9 @@ const EditorPlugin = () => {
 				className="activitypub-visibility"
 			/>
 
-			<BaseControl
-				label={ __( 'Interaction Policy', 'activitypub' ) }
-				help={ __( 'Choose who can interact with this post.', 'activitypub' ) }
-			></BaseControl>
-
 			<SelectControl
-				label={ __( 'Who can quote', 'activitypub' ) }
+				label={ __( 'Who can quote this post?', 'activitypub' ) }
+				help={ __( 'Quoting allows others to reshare your post while adding their own commentary.', 'activitypub' ) }
 				value={ meta?.activitypub_interaction_policy_quote }
 				options={ [
 					{ label: __( 'Anyone', 'activitypub' ), value: 'anyone' },
