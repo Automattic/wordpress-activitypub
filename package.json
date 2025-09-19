@@ -49,7 +49,7 @@
 		"@wordpress/icons": "^10.10.0",
 		"@wordpress/interactivity": "^6.30.0",
 		"@wordpress/plugins": "^7.22.0",
-		"@wordpress/prettier-config": "^4.23.0",
+		"@wordpress/prettier-config": "^4.31.0",
 		"@wordpress/primitives": "^4.31.0",
 		"@wordpress/scripts": "^30.23.0",
 		"@wordpress/url": "^4.22.0",
