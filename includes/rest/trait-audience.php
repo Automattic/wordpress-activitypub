@@ -62,7 +62,7 @@ trait Audience {
 	 */
 	public function determine_visibility( $activity ) {
 		// Set default visibility for specific activity types.
-		if ( in_array( $activity['type'], array( 'Follow', 'Accept', 'Reject', 'Undo', 'Delete' ), true ) ) {
+		if ( in_array( $activity['type'], array( 'Accept', 'Delete', 'Follow', 'Reject', 'Undo' ), true ) ) {
 			return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 		}
 
