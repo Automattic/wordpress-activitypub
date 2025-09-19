@@ -473,6 +473,7 @@ class Migration {
 	 * @see Comment::pre_wp_update_comment_count_now()
 	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
 	 * @param int $offset     Optional. Number of posts to skip. Default 0.
+	 *
 	 * @return int[]|void Array with batch size and offset if there are more posts to process.
 	 */
 	public static function update_comment_counts( $batch_size = 100, $offset = 0 ) {
