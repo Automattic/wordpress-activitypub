@@ -161,7 +161,10 @@ const EditorPlugin = () => {
 
 			<SelectControl
 				label={ __( 'Who can quote this post?', 'activitypub' ) }
-				help={ __( 'Quoting allows others to reshare your post while adding their own commentary.', 'activitypub' ) }
+				help={ __(
+					'Quoting allows others to reshare your post while adding their own commentary.',
+					'activitypub'
+				) }
 				value={ meta?.activitypub_interaction_policy_quote }
 				options={ [
 					{ label: __( 'Anyone', 'activitypub' ), value: 'anyone' },
