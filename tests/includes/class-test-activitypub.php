@@ -104,7 +104,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	 * Test activity type meta sanitization.
 	 *
 	 * @dataProvider activity_meta_sanitization_provider
-	 * @covers ::register_post_types
+	 * @covers \Activitypub\Post_Types::register_outbox_post_type
 	 *
 	 * @param string $meta_key   Meta key.
 	 * @param mixed  $meta_value Meta value.
