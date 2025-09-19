@@ -178,24 +178,28 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 */
 			do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 		} else {
+			$visibility = $this->determine_visibility( $data );
+
 			/**
 			 * ActivityPub inbox action.
 			 *
-			 * @param array              $data     The data array.
-			 * @param int|null           $user_id  The user ID.
-			 * @param string             $type     The type of the activity.
-			 * @param Activity|\WP_Error $activity The Activity object.
+			 * @param array              $data       The data array.
+			 * @param int|null           $user_id    The user ID.
+			 * @param string             $type       The type of the activity.
+			 * @param Activity|\WP_Error $activity   The Activity object.
+			 * @param string             $visibility The visibility of the activity.
 			 */
-			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
+			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity, $visibility );
 
 			/**
 			 * ActivityPub inbox action for specific activity types.
 			 *
-			 * @param array              $data     The data array.
-			 * @param int|null           $user_id  The user ID.
-			 * @param Activity|\WP_Error $activity The Activity object.
+			 * @param array              $data       The data array.
+			 * @param int|null           $user_id    The user ID.
+			 * @param Activity|\WP_Error $activity   The Activity object.
+			 * @param string             $visibility The visibility of the activity.
 			 */
-			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
+			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, $visibility );
 		}
 
 		$response = \rest_ensure_response(

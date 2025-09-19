@@ -27,7 +27,7 @@ trait Audience {
 	 *
 	 * @return array An array of user IDs who are the recipients of the activity.
 	 */
-	public function determine_recipients( $activity ) {
+	public function determine_local_recipients( $activity ) {
 		$recipients = extract_recipients_from_activity( $activity );
 		$user_ids   = array();
 
@@ -53,22 +53,26 @@ trait Audience {
 		return $user_ids;
 	}
 
+	/**
+	 * Determine the visibility of the activity based on its recipients.
+	 *
+	 * @param array $activity The activity data.
+	 *
+	 * @return string The visibility level: 'public', 'private', or 'direct'.
+	 */
 	public function determine_visibility( $activity ) {
-		$recipients = extract_recipients_from_activity_property( 'to', $activity );
-		$visibility = 'private';
-
-		foreach ( $recipients as $recipient ) {
-			if ( is_same_domain( $recipient ) ) {
-				$visibility = 'direct';
-				break;
-			}
-
-			if ( \in_array( $recipient, array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public' ), true ) ) {
-				$visibility = 'public';
-				break;
-			}
+		// Check 'to' field for public visibility.
+		$to = extract_recipients_from_activity_property( 'to', $activity );
+		if ( ! empty( array_intersect( $to, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 		}
 
-		return $visibility;
+		// Check 'cc' field for quiet public visibility.
+		$cc = extract_recipients_from_activity_property( 'cc', $activity );
+		if ( ! empty( array_intersect( $cc, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
+		}
+
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 	}
 }

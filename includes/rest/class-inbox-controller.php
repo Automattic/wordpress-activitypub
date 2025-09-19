@@ -146,7 +146,8 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 */
 			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
-			$recipients = $this->determine_recipients( $data );
+			$recipients = $this->determine_local_recipients( $data );
+			$visibility = $this->determine_visibility( $data );
 
 			foreach ( $recipients as $recipient ) {
 				// Check user-specific blocks for this recipient.
@@ -166,21 +167,23 @@ class Inbox_Controller extends \WP_REST_Controller {
 				/**
 				 * ActivityPub inbox action.
 				 *
-				 * @param array              $data     The data array.
-				 * @param int                $user_id  The user ID.
-				 * @param string             $type     The type of the activity.
-				 * @param Activity|\WP_Error $activity The Activity object.
+				 * @param array              $data       The data array.
+				 * @param int                $user_id    The user ID.
+				 * @param string             $type       The type of the activity.
+				 * @param Activity|\WP_Error $activity   The Activity object.
+				 * @param string             $visibility The visibility of the activity.
 				 */
-				\do_action( 'activitypub_inbox', $data, $recipient, $type, $activity );
+				\do_action( 'activitypub_inbox', $data, $recipient, $type, $activity, $visibility );
 
 				/**
 				 * ActivityPub inbox action for specific activity types.
 				 *
-				 * @param array              $data     The data array.
-				 * @param int                $user_id  The user ID.
-				 * @param Activity|\WP_Error $activity The Activity object.
+				 * @param array              $data       The data array.
+				 * @param int                $user_id    The user ID.
+				 * @param Activity|\WP_Error $activity   The Activity object.
+				 * @param string             $visibility The visibility of the activity.
 				 */
-				\do_action( 'activitypub_inbox_' . $type, $data, $recipient, $activity );
+				\do_action( 'activitypub_inbox_' . $type, $data, $recipient, $activity, $visibility );
 			}
 		}
 
