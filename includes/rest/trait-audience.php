@@ -61,6 +61,11 @@ trait Audience {
 	 * @return string The visibility level: 'public', 'private', or 'direct'.
 	 */
 	public function determine_visibility( $activity ) {
+		// Set default visibility for specific activity types.
+		if ( in_array( $activity['type'], array( 'Follow', 'Accept', 'Reject', 'Undo', 'Delete' ), true ) ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
+		}
+
 		// Check 'to' field for public visibility.
 		$to = extract_recipients_from_activity_property( 'to', $activity );
 		if ( ! empty( array_intersect( $to, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
