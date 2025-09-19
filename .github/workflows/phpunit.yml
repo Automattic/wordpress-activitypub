@@ -115,16 +115,16 @@ jobs:
           EOF
 
           # Check for PHPUnit warnings and process them
-          if grep -q "WARNINGS!\|There was.*warning" coverage-output.log; then
+          if grep -q "WARNINGS!" coverage-output.log; then
             echo "Processing coverage warnings for checkstyle report..."
 
             # Show warnings section for debugging
             echo "--- Warnings Found ---"
-            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | head -10
+            sed -n '/There w.*warning/,/WARNINGS!/p' coverage-output.log | head -10
             echo "--- End Warnings ---"
 
             # Extract warnings to temporary file to avoid subshell issues
-            sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log > temp-warnings.txt
+            sed -n '/There w.*warning/,/WARNINGS!/p' coverage-output.log > temp-warnings.txt
 
             # Process each line
             while IFS= read -r line; do
