@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Clarify error messages in account modal to specify full profile URL format.
