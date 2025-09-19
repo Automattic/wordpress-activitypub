@@ -118,19 +118,21 @@ class Perfecty_Push {
 			return;
 		}
 
-		$actor = Remote_Actors::get_actor( $activity['actor'] );
+		$actor = Remote_Actors::fetch_by_uri( $activity['actor'] );
 		if ( is_wp_error( $actor ) ) {
 			return;
 		}
+
+		$actor = Remote_Actors::get_actor( $actor );
 
 		$actor_name  = $actor->get_name() ?? $actor->get_preferred_username() ?? \__( 'Someone', 'activitypub' );
 		$actor_image = object_to_uri( $actor->get_icon() ?? ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg' );
 
 		/* translators: %s: Actor name */
 		$title   = sprintf( \__( '%s commented on your post', 'activitypub' ), $actor_name );
-		$message = get_comment_excerpt( $comment );
+		$message = \html_entity_decode( \get_comment_excerpt( $comment ), ENT_QUOTES, 'UTF-8' );
 
-		self::send_notification( $user_id, $message, $title, $actor_image );
+		self::send_notification( $user_id, $message, $title, $actor_image, get_comment_link( $comment ) );
 	}
 
 	/**
@@ -171,15 +173,14 @@ class Perfecty_Push {
 			// Check if Perfecty Push Integration class exists and is properly loaded.
 			if ( ! class_exists( 'Perfecty_Push_Integration' ) ) {
 				// Attempt to load the integration file manually.
-				$integration_file = WP_PLUGIN_DIR . '/perfecty-push-notifications/integration/class-perfecty-push-integration.php';
+				$integration_file = WP_PLUGIN_DIR . '/' . dirname( PERFECTY_PUSH_BASENAME ) . '/integration/class-perfecty-push-integration.php';
 				if ( file_exists( $integration_file ) ) {
 					include_once $integration_file;
 				}
 			}
 
 			if ( class_exists( 'Perfecty_Push_Integration' ) ) {
-				$integration = new \Perfecty_Push_Integration();
-				$integration->notify( $user_id, $message, $title, $image_url, $url_to_open );
+				( new \Perfecty_Push_Integration() )->notify( $user_id, $message, $title, $image_url, $url_to_open );
 			}
 		} catch ( \Exception $e ) {
 			error_log( 'ActivityPub Perfecty Push notification failed: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
@@ -210,93 +211,6 @@ class Perfecty_Push {
 
 		// Default to enabled for all types.
 		return in_array( $type, $default_enabled, true );
-	}
-
-	/**
-	 * Get actor display name from actor URL or object.
-	 *
-	 * @param string|array $actor The actor URL or object.
-	 * @return string The actor display name.
-	 */
-	private static function get_actor_name( $actor ) {
-		if ( is_string( $actor ) ) {
-			// Try to get actor info from cache or fetch it.
-			$actor_data = \Activitypub\get_remote_metadata_by_actor( $actor );
-			if ( $actor_data && isset( $actor_data['name'] ) ) {
-				return $actor_data['name'];
-			}
-			if ( $actor_data && isset( $actor_data['preferredUsername'] ) ) {
-				return $actor_data['preferredUsername'];
-			}
-			// Fallback to domain extraction.
-			$parsed_url = \wp_parse_url( $actor );
-			return $parsed_url['host'] ?? $actor;
-		}
-
-		if ( is_array( $actor ) ) {
-			if ( isset( $actor['name'] ) ) {
-				return $actor['name'];
-			}
-			if ( isset( $actor['preferredUsername'] ) ) {
-				return $actor['preferredUsername'];
-			}
-		}
-
-		return \__( 'Someone', 'activitypub' );
-	}
-
-	/**
-	 * Get actor image URL from actor URL or object.
-	 *
-	 * @param string|array $actor The actor URL or object.
-	 * @return string The actor image URL with mp.jpg fallback.
-	 */
-	private static function get_actor_image( $actor ) {
-		$image_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
-
-		if ( is_string( $actor ) ) {
-			// Try to get actor info from cache or fetch it.
-			$actor_data = \Activitypub\get_remote_metadata_by_actor( $actor );
-			if ( $actor_data ) {
-				// Check for icon (avatar) in actor data.
-				if ( isset( $actor_data['icon'] ) ) {
-					if ( is_array( $actor_data['icon'] ) && isset( $actor_data['icon']['url'] ) ) {
-						$image_url = $actor_data['icon']['url'];
-					} elseif ( is_string( $actor_data['icon'] ) ) {
-						$image_url = $actor_data['icon'];
-					}
-				}
-				// Check for image field as fallback.
-				if ( empty( $image_url ) && isset( $actor_data['image'] ) ) {
-					if ( is_array( $actor_data['image'] ) && isset( $actor_data['image']['url'] ) ) {
-						$image_url = $actor_data['image']['url'];
-					} elseif ( is_string( $actor_data['image'] ) ) {
-						$image_url = $actor_data['image'];
-					}
-				}
-			}
-		}
-
-		if ( is_array( $actor ) ) {
-			// Check for icon (avatar) in actor object.
-			if ( isset( $actor['icon'] ) ) {
-				if ( is_array( $actor['icon'] ) && isset( $actor['icon']['url'] ) ) {
-					$image_url = $actor['icon']['url'];
-				} elseif ( is_string( $actor['icon'] ) ) {
-					$image_url = $actor['icon'];
-				}
-			}
-			// Check for image field as fallback.
-			if ( empty( $image_url ) && isset( $actor['image'] ) ) {
-				if ( is_array( $actor['image'] ) && isset( $actor['image']['url'] ) ) {
-					$image_url = $actor['image']['url'];
-				} elseif ( is_string( $actor['image'] ) ) {
-					$image_url = $actor['image'];
-				}
-			}
-		}
-
-		return $image_url;
 	}
 
 	/**
