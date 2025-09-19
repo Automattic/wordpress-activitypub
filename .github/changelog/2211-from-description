@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Remote reply blocks now sync account info across all blocks on the same page
