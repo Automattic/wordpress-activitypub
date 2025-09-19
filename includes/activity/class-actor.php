@@ -201,7 +201,7 @@ class Actor extends Base_Object {
 	 *
 	 * @context as:manuallyApprovesFollowers
 	 *
-	 * @var boolean
+	 * @var boolean|null
 	 */
 	protected $manually_approves_followers = false;
 
@@ -211,7 +211,7 @@ class Actor extends Base_Object {
 	 *
 	 * @see https://blog.joinmastodon.org/2024/07/highlighting-journalism-on-mastodon/
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $attribution_domains = null;
 
@@ -225,7 +225,7 @@ class Actor extends Base_Object {
 	/**
 	 * The alsoKnownAs of the actor.
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $also_known_as;
 
@@ -239,7 +239,7 @@ class Actor extends Base_Object {
 	 *   "@type": "@id"
 	 * }
 	 *
-	 * @var string
+	 * @var string|null
 	 */
 	protected $featured;
 
@@ -253,7 +253,7 @@ class Actor extends Base_Object {
 	 *   "@type": "@id"
 	 * }
 	 *
-	 * @var string
+	 * @var string|null
 	 */
 	protected $featured_tags;
 
@@ -264,7 +264,7 @@ class Actor extends Base_Object {
 	 *
 	 * @context http://joinmastodon.org/ns#discoverable
 	 *
-	 * @var boolean
+	 * @var boolean|null
 	 */
 	protected $discoverable;
 
@@ -275,7 +275,7 @@ class Actor extends Base_Object {
 	 *
 	 * @context http://joinmastodon.org/ns#indexable
 	 *
-	 * @var boolean
+	 * @var boolean|null
 	 */
 	protected $indexable;
 
@@ -284,7 +284,7 @@ class Actor extends Base_Object {
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/2c59/fep-2c59.md
 	 *
-	 * @var string
+	 * @var string|null
 	 */
 	protected $webfinger;
 
@@ -293,7 +293,7 @@ class Actor extends Base_Object {
 	 *
 	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
 	 *
-	 * @var string
+	 * @var string|null
 	 */
 	protected $moderators;
 
@@ -302,7 +302,7 @@ class Actor extends Base_Object {
 	 *
 	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
 	 *
-	 * @var boolean
+	 * @var boolean|null
 	 */
 	protected $posting_restricted_to_mods;
 
@@ -311,7 +311,7 @@ class Actor extends Base_Object {
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $implements;
 
@@ -320,7 +320,7 @@ class Actor extends Base_Object {
 	 *
 	 * @see https://litepub.social/
 	 *
-	 * @var boolean
+	 * @var boolean|null
 	 */
 	protected $invisible = null;
 }

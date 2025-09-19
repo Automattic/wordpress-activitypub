@@ -405,7 +405,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#source-property
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $source;
 
@@ -425,7 +425,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#likes
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $likes;
 
@@ -435,7 +435,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#shares
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $shares;
 
@@ -446,7 +446,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#sensitive
 	 *
-	 * @var boolean
+	 * @var boolean|null
 	 */
 	protected $sensitive;
 
@@ -456,7 +456,7 @@ class Base_Object extends Generic_Object {
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md#sensitive
 	 * @see https://www.dublincore.org/specifications/dublin-core/dcmi-terms/
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $dcterms;
 
@@ -469,7 +469,7 @@ class Base_Object extends Generic_Object {
 	 * @see https://docs.gotosocial.org/en/latest/federation/interaction_policy/
 	 * @see https://blog.joinmastodon.org/2025/09/introducing-quote-posts/
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $interaction_policy;
 

@@ -102,7 +102,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-target
 	 *
-	 * @var string|array
+	 * @var string|array|null
 	 */
 	protected $target;
 
@@ -114,7 +114,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-result
 	 *
-	 * @var string|Base_Object
+	 * @var string|Base_Object|null
 	 */
 	protected $result;
 
@@ -126,7 +126,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $replies;
 
@@ -140,7 +140,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-origin
 	 *
-	 * @var string|array
+	 * @var string|array|null
 	 */
 	protected $origin;
 
@@ -150,7 +150,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-instrument
 	 *
-	 * @var string|array
+	 * @var string|array|null
 	 */
 	protected $instrument;
 
