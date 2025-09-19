@@ -8,12 +8,7 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
-use Activitypub\Collection\Actors;
 use Activitypub\Moderation;
-
-use function Activitypub\extract_recipients_from_activity;
-use function Activitypub\is_same_domain;
-use function Activitypub\user_can_activitypub;
 
 /**
  * Inbox_Controller class.
@@ -23,6 +18,8 @@ use function Activitypub\user_can_activitypub;
  * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox_Controller extends \WP_REST_Controller {
+	use Audience;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -149,25 +146,11 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 */
 			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
-			$recipients = extract_recipients_from_activity( $data );
+			$recipients = $this->determine_recipients( $data );
 
 			foreach ( $recipients as $recipient ) {
-				if ( ! is_same_domain( $recipient ) ) {
-					continue;
-				}
-
-				$user_id = Actors::get_id_by_various( $recipient );
-
-				if ( \is_wp_error( $user_id ) ) {
-					continue;
-				}
-
-				if ( ! user_can_activitypub( $user_id ) ) {
-					continue;
-				}
-
 				// Check user-specific blocks for this recipient.
-				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
+				if ( Moderation::activity_is_blocked_for_user( $activity, $recipient ) ) {
 					/**
 					 * ActivityPub inbox disallowed activity for specific user.
 					 *
@@ -176,7 +159,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 					 * @param string             $type     The type of the activity.
 					 * @param Activity|\WP_Error $activity The Activity object.
 					 */
-					\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
+					\do_action( 'activitypub_rest_inbox_disallowed', $data, $recipient, $type, $activity );
 					continue;
 				}
 
@@ -188,7 +171,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param string             $type     The type of the activity.
 				 * @param Activity|\WP_Error $activity The Activity object.
 				 */
-				\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
+				\do_action( 'activitypub_inbox', $data, $recipient, $type, $activity );
 
 				/**
 				 * ActivityPub inbox action for specific activity types.
@@ -197,7 +180,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param int                $user_id  The user ID.
 				 * @param Activity|\WP_Error $activity The Activity object.
 				 */
-				\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
+				\do_action( 'activitypub_inbox_' . $type, $data, $recipient, $activity );
 			}
 		}
 

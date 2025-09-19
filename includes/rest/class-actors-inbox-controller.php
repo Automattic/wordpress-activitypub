@@ -23,6 +23,7 @@ use function Activitypub\get_rest_url_by_path;
  */
 class Actors_Inbox_Controller extends Actors_Controller {
 	use Collection;
+	use Audience;
 
 	/**
 	 * Register routes.

@@ -1176,7 +1176,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * @param array  $expected  The expected recipients.
 	 */
 	public function test_extract_recipients_from_activity_property( $data, $attribute, $expected ) {
-		$actual = extract_recipients_from_activity_property( $data, $attribute );
+		$actual = extract_recipients_from_activity_property( $attribute, $data );
 
 		// Sort both arrays to ensure order doesn't matter in comparison.
 		sort( $expected );
@@ -1217,7 +1217,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				'to' => 'https://example.com/users/alice', // Another duplicate.
 			),
 		);
-		$actual = extract_recipients_from_activity_property( $data, 'to' );
+		$actual = extract_recipients_from_activity_property( 'to', $data );
 
 		$this->assertSame( array( 'https://example.com/users/alice' ), $actual );
 		$this->assertCount( 1, $actual, 'Should return unique recipients only.' );

@@ -525,7 +525,7 @@ function extract_recipients_from_activity( $data ) {
 	$recipient_items = array();
 
 	foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-		$recipient_items = array_merge( $recipient_items, extract_recipients_from_activity_property( $data, $i ) );
+		$recipient_items = array_merge( $recipient_items, extract_recipients_from_activity_property( $i, $data ) );
 	}
 
 	return array_unique( $recipient_items );
@@ -534,12 +534,12 @@ function extract_recipients_from_activity( $data ) {
 /**
  * Extract recipient URLs from a specific property of an Activity object.
  *
- * @param array  $data      The Activity object as array.
  * @param string $property The property to extract recipients from (e.g., 'to', 'cc').
+ * @param array  $data     The Activity object as array.
  *
  * @return array The list of user URLs.
  */
-function extract_recipients_from_activity_property( $data, $property ) {
+function extract_recipients_from_activity_property( $property, $data ) {
 	$recipients = array();
 
 	if ( ! empty( $data[ $property ] ) ) {
