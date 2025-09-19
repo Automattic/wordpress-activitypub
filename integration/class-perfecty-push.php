@@ -230,16 +230,13 @@ class Perfecty_Push {
 	 * Register blog settings.
 	 */
 	public static function register_blog_settings() {
-		// Check if we're on the blog profile tab.
-		if ( isset( $_GET['tab'] ) && 'blog-profile' === \sanitize_key( $_GET['tab'] ) ) {
-			\add_settings_field(
-				'activitypub_perfecty_push_notifications',
-				\esc_html__( 'Push Notifications', 'activitypub' ),
-				array( self::class, 'render_blog_notification_field' ),
-				'activitypub_blog_settings',
-				'activitypub_blog_profile'
-			);
-		}
+		\add_settings_field(
+			'activitypub_perfecty_push_notifications',
+			\esc_html__( 'Push Notifications', 'activitypub' ),
+			array( self::class, 'render_blog_notification_field' ),
+			'activitypub_blog_settings',
+			'activitypub_blog_profile'
+		);
 	}
 
 	/**
