@@ -32,8 +32,8 @@ class Perfecty_Push {
 		\add_action( 'activitypub_followers_post_follow', array( self::class, 'handle_follow' ), 10, 4 );
 
 		// Register settings.
-		\add_action( 'load-profile.php', array( self::class, 'register_user_settings' ) );
-		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_blog_settings' ) );
+		\add_action( 'load-profile.php', array( self::class, 'register_user_settings' ), 11 ); // After ActivityPub settings.
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_blog_settings' ), 11 ); // After ActivityPub settings.
 		\add_action( 'admin_init', array( self::class, 'register_setting_field' ) );
 	}
 
