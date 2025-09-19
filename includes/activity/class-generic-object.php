@@ -52,32 +52,33 @@ use function Activitypub\snake_to_camel_case;
  * @method string|string[] add_cc( string|array $cc ) Adds one or more entities to the secondary audience of the object.
  * @method string|string[] add_to( string|array $to ) Adds one or more entities to the primary audience of the object.
  *
- * @method Base_Object set_actor( string|array $actor )                    Sets one or more entities that performed the activity.
- * @method Base_Object set_attachment( array $attachment )                 Sets the attachment property of the object.
- * @method Base_Object set_attributed_to( string $attributed_to )          Sets the entity attributed as the original author.
- * @method Base_Object set_cc( array|string $cc )                          Sets the secondary recipients of the object.
- * @method Base_Object set_content( string $content )                      Sets the content property of the object.
- * @method Base_Object set_content_map( array $content_map )               Sets the content property of the object.
- * @method Base_Object set_icon( array $icon )                             Sets the icon property of the object.
- * @method Base_Object set_id( string $id )                                Sets the object's unique global identifier.
- * @method Base_Object set_image( array $image )                           Sets the image property of the object.
- * @method Base_Object set_in_reply_to( string|array $in_reply_to )        Sets the is in reply to property of the object.
- * @method Base_Object set_inbox( string $inbox )                          Sets the inbox property of the object.
- * @method Base_Object set_interaction_policy( array|null $policy )        Sets the interaction policy property of the object.
- * @method Base_Object set_name( string $name )                            Sets the natural language name of the object.
- * @method Base_Object set_name_map( array|null $name_map )                Sets the name map property of the object.
- * @method Base_Object set_object( string|array|Base_Object|null $object ) Sets the direct object of the activity.
- * @method Base_Object set_origin( string|array|null $origin )             Sets the origin property of the object.
- * @method Base_Object set_published( string|null $published )             Sets the date and time the object was published in ISO 8601 format.
- * @method Base_Object set_sensitive( bool|null $sensitive )               Sets the sensitive property of the object.
- * @method Base_Object set_summary( string $summary )                      Sets the natural language summary of the object.
- * @method Base_Object set_summary_map( array|null $summary_map )          Sets the summary property of the object.
- * @method Base_Object set_target( string|array|null $target )             Sets the target property of the object.
- * @method Base_Object set_tag( array|null $tag )                          Sets the tag property of the object.
- * @method Base_Object set_to( string|string[] $to )                       Sets the primary recipients of the object.
- * @method Base_Object set_type( string $type )                            Sets the type of the object.
- * @method Base_Object set_updated( string $updated )                      Sets the date and time the object was updated in ISO 8601 format.
- * @method Base_Object set_url( string $url )                              Sets the URL of the object.
+ * @method Base_Object set_actor( string|array $actor )                  Sets one or more entities that performed the activity.
+ * @method Base_Object set_attachment( array $attachment )               Sets the attachment property of the object.
+ * @method Base_Object set_attributed_to( string $attributed_to )        Sets the entity attributed as the original author.
+ * @method Base_Object set_cc( array|string $cc )                        Sets the secondary recipients of the object.
+ * @method Base_Object set_content( string $content )                    Sets the content property of the object.
+ * @method Base_Object set_content_map( array $content_map )             Sets the content property of the object.
+ * @method Base_Object set_dcterms( array $dcterms )                     Sets the Dublin Core terms property of the object.
+ * @method Base_Object set_icon( array $icon )                           Sets the icon property of the object.
+ * @method Base_Object set_id( string $id )                              Sets the object's unique global identifier.
+ * @method Base_Object set_image( array $image )                         Sets the image property of the object.
+ * @method Base_Object set_in_reply_to( string|string[] $in_reply_to )   Sets the is in reply to property of the object.
+ * @method Base_Object set_inbox( string $inbox )                        Sets the inbox property of the object.
+ * @method Base_Object set_interaction_policy( array|null $policy )      Sets the interaction policy property of the object.
+ * @method Base_Object set_name( string $name )                          Sets the natural language name of the object.
+ * @method Base_Object set_name_map( array|null $name_map )              Sets the name map property of the object.
+ * @method Base_Object set_object( string|array|Base_Object|null $data ) Sets the direct object of the activity.
+ * @method Base_Object set_origin( string|array|null $origin )           Sets the origin property of the object.
+ * @method Base_Object set_published( string|null $published )           Sets the date and time the object was published in ISO 8601 format.
+ * @method Base_Object set_sensitive( bool|null $sensitive )             Sets the sensitive property of the object.
+ * @method Base_Object set_summary( string $summary )                    Sets the natural language summary of the object.
+ * @method Base_Object set_summary_map( array|null $summary_map )        Sets the summary property of the object.
+ * @method Base_Object set_target( string|array|null $target )           Sets the target property of the object.
+ * @method Base_Object set_tag( array|null $tag )                        Sets the tag property of the object.
+ * @method Base_Object set_to( string|string[] $to )                     Sets the primary recipients of the object.
+ * @method Base_Object set_type( string $type )                          Sets the type of the object.
+ * @method Base_Object set_updated( string $updated )                    Sets the date and time the object was updated in ISO 8601 format.
+ * @method Base_Object set_url( string $url )                            Sets the URL of the object.
  */
 #[\AllowDynamicProperties]
 class Generic_Object {

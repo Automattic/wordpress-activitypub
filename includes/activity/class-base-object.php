@@ -462,7 +462,7 @@ class Base_Object extends Generic_Object {
 
 	/**
 	 * Interaction policy is an attempt to limit the harmful effects of unwanted replies and
-	 * other interactions on a user's posts (eg., "reply guys").
+	 * other interactions on a user's posts (e.g., "reply guys").
 	 *
 	 * It is also used by Mastodon to limit the ability to quote posts.
 	 *

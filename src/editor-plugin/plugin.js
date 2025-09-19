@@ -2,7 +2,6 @@ import { PluginDocumentSettingPanel, PluginPreviewMenuItem, store as editorStore
 import { PluginDocumentSettingPanel as DocumentSettingPanel } from '@wordpress/edit-post';
 import { registerPlugin } from '@wordpress/plugins';
 import {
-	BaseControl,
 	TextControl,
 	RadioControl,
 	RangeControl,
