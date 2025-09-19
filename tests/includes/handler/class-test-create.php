@@ -118,7 +118,7 @@ class Test_Create extends \WP_UnitTestCase {
 	public function test_handle_create_non_public_rejected() {
 		$object       = $this->create_test_object();
 		$object['cc'] = array();
-		$converted    = Create::handle_create( $object, $this->user_id );
+		$converted    = Create::handle_create( $object, $this->user_id, null, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 		$this->assertNull( $converted );
 	}
 
@@ -129,7 +129,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 */
 	public function test_handle_create_public_accepted() {
 		$object = $this->create_test_object();
-		Create::handle_create( $object, $this->user_id );
+		Create::handle_create( $object, $this->user_id, null, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 
 		$args = array(
 			'type'    => 'comment',
