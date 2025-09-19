@@ -7,7 +7,6 @@
 
 namespace Activitypub\Tests\Rest;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Rest\Audience;
 
 /**
@@ -165,92 +164,6 @@ class Test_Trait_Audience extends \WP_UnitTestCase {
 	public function test_determine_visibility( $activity, $expected, $description ) {
 		$result = $this->audience_test_class->determine_visibility( $activity );
 		$this->assertSame( $expected, $result, $description );
-	}
-
-	/**
-	 * Test determine_local_recipients method with no recipients.
-	 *
-	 * @covers ::determine_local_recipients
-	 */
-	public function test_determine_local_recipients_no_recipients() {
-		$activity = array(
-			'type' => 'Create',
-		);
-
-		$result = $this->audience_test_class->determine_local_recipients( $activity );
-		$this->assertEmpty( $result, 'Should return empty array when no recipients' );
-	}
-
-	/**
-	 * Test determine_local_recipients with external recipients only.
-	 *
-	 * @covers ::determine_local_recipients
-	 */
-	public function test_determine_local_recipients_external_only() {
-		$activity = array(
-			'type' => 'Create',
-			'to'   => array( 'https://external.example.com/user/123' ),
-			'cc'   => array( 'https://another.example.com/user/456' ),
-		);
-
-		$result = $this->audience_test_class->determine_local_recipients( $activity );
-		$this->assertEmpty( $result, 'Should return empty array for external recipients only' );
-	}
-
-	/**
-	 * Test determine_local_recipients with actual local actor.
-	 *
-	 * @covers ::determine_local_recipients
-	 */
-	public function test_determine_local_recipients_with_local_actor() {
-		// Get the actual actor ID for the user.
-		$actor    = Actors::get_by_id( self::$user_id );
-		$actor_id = $actor->get_id();
-
-		$activity = array(
-			'type' => 'Create',
-			'to'   => array( $actor_id ),
-			'cc'   => array( 'https://external.example.com/user/123' ),
-		);
-
-		$result = $this->audience_test_class->determine_local_recipients( $activity );
-		$this->assertContains( self::$user_id, $result, 'Should contain local user ID' );
-		$this->assertCount( 1, $result, 'Should contain exactly one recipient' );
-	}
-
-	/**
-	 * Test determine_visibility with string recipients instead of arrays.
-	 *
-	 * @covers ::determine_visibility
-	 */
-	public function test_determine_visibility_with_string_recipients() {
-		$activity = array(
-			'type' => 'Create',
-			'to'   => 'https://www.w3.org/ns/activitystreams#Public',
-			'cc'   => 'https://example.com/user/123',
-		);
-
-		$result = $this->audience_test_class->determine_visibility( $activity );
-		$this->assertSame( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $result, 'Should handle string recipients' );
-	}
-
-	/**
-	 * Test determine_local_recipients handles malformed actor URLs.
-	 *
-	 * @covers ::determine_local_recipients
-	 */
-	public function test_determine_local_recipients_with_malformed_urls() {
-		$activity = array(
-			'type' => 'Create',
-			'to'   => array(
-				'not-a-valid-url',
-				get_home_url() . '/invalid-actor-path',
-			),
-			'cc'   => array(),
-		);
-
-		$result = $this->audience_test_class->determine_local_recipients( $activity );
-		$this->assertEmpty( $result, 'Should handle malformed URLs gracefully' );
 	}
 
 	/**

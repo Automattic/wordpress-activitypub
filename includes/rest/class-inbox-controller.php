@@ -8,7 +8,12 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use Activitypub\Moderation;
+
+use function Activitypub\extract_recipients_from_activity;
+use function Activitypub\is_same_domain;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Inbox_Controller class.
@@ -146,7 +151,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 */
 			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
-			$recipients = $this->determine_local_recipients( $data );
+			$recipients = $this->get_recipients( $data );
 			$visibility = $this->determine_visibility( $data );
 
 			foreach ( $recipients as $recipient ) {
@@ -273,5 +278,38 @@ class Inbox_Controller extends \WP_REST_Controller {
 		$this->schema = $schema;
 
 		return $this->add_additional_fields_schema( $this->schema );
+	}
+
+	/**
+	 * Extract recipients from the given Activity.
+	 *
+	 * @param array $activity The activity data.
+	 *
+	 * @return array An array of user IDs who are the recipients of the activity.
+	 */
+	private function get_recipients( $activity ) {
+		$recipients = extract_recipients_from_activity( $activity );
+		$user_ids   = array();
+
+		foreach ( $recipients as $recipient ) {
+
+			if ( ! is_same_domain( $recipient ) ) {
+				continue;
+			}
+
+			$user_id = Actors::get_id_by_resource( $recipient );
+
+			if ( \is_wp_error( $user_id ) ) {
+				continue;
+			}
+
+			if ( ! user_can_activitypub( $user_id ) ) {
+				continue;
+			}
+
+			$user_ids[] = $user_id;
+		}
+
+		return $user_ids;
 	}
 }

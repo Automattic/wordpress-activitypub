@@ -7,12 +7,7 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Collection\Actors;
-
-use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\extract_recipients_from_activity_property;
-use function Activitypub\is_same_domain;
-use function Activitypub\user_can_activitypub;
 
 /**
  * Audience Trait.
@@ -20,39 +15,6 @@ use function Activitypub\user_can_activitypub;
  * Provides methods for handling ActivityPub audience and recipient extraction.
  */
 trait Audience {
-	/**
-	 * Extract recipients from the given Activity.
-	 *
-	 * @param array $activity The activity data.
-	 *
-	 * @return array An array of user IDs who are the recipients of the activity.
-	 */
-	public function determine_local_recipients( $activity ) {
-		$recipients = extract_recipients_from_activity( $activity );
-		$user_ids   = array();
-
-		foreach ( $recipients as $recipient ) {
-
-			if ( ! is_same_domain( $recipient ) ) {
-				continue;
-			}
-
-			$user_id = Actors::get_id_by_resource( $recipient );
-
-			if ( \is_wp_error( $user_id ) ) {
-				continue;
-			}
-
-			if ( ! user_can_activitypub( $user_id ) ) {
-				continue;
-			}
-
-			$user_ids[] = $user_id;
-		}
-
-		return $user_ids;
-	}
-
 	/**
 	 * Determine the visibility of the activity based on its recipients.
 	 *
