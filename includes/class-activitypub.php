@@ -568,7 +568,6 @@ class Activitypub {
 		return $meta_value;
 	}
 
-
 	/**
 	 * Register user meta.
 	 */
