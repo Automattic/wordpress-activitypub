@@ -55,14 +55,20 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'commentURL'        => $selected_comment,
 		'copyButtonText'    => __( 'Copy', 'activitypub' ),
 		'errorMessage'      => '',
-		'hasRemoteUser'     => false,
 		'isError'           => false,
 		'isLoading'         => false,
 		'modal'             => array( 'isOpen' => false ),
-		'profileURL'        => '',
 		'remoteProfile'     => '',
 		'shouldSaveProfile' => true,
-		'template'          => '',
+	)
+);
+
+wp_interactivity_state(
+	'activitypub/remote-reply',
+	array(
+		'hasRemoteUser' => false,
+		'profileURL'    => '',
+		'template'      => '',
 	)
 );
 
@@ -149,7 +155,7 @@ $modal_content = ob_get_clean();
 	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 	<?php echo $wrapper_context; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 >
-	<div class="activitypub-remote-profile" hidden data-wp-bind--hidden="!context.hasRemoteUser">
+	<div class="activitypub-remote-profile" hidden data-wp-bind--hidden="!state.hasRemoteUser">
 		<a
 			href=""
 			class="comment-reply-link activitypub-remote-profile__link"
@@ -160,7 +166,7 @@ $modal_content = ob_get_clean();
 			printf(
 				/* translators: %s: profile name */
 				esc_html__( 'Reply as %s', 'activitypub' ),
-				'<span data-wp-text="context.profileURL"></span>'
+				'<span data-wp-text="state.profileURL"></span>'
 			);
 			?>
 		</a>
@@ -181,7 +187,7 @@ $modal_content = ob_get_clean();
 		class="comment-reply-link activitypub-remote-reply__link"
 		data-wp-on-async--click="actions.toggleModal"
 		data-wp-on-async--keydown="actions.onReplyLinkKeydown"
-		data-wp-bind--hidden="context.hasRemoteUser"
+		data-wp-bind--hidden="state.hasRemoteUser"
 		data-wp-bind--aria-expanded="context.modal.isOpen"
 		aria-label="<?php esc_attr_e( 'Reply on the Fediverse', 'activitypub' ); ?>"
 		aria-haspopup="dialog"
