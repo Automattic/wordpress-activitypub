@@ -126,6 +126,9 @@ jobs:
             # Extract warnings to temporary file to avoid subshell issues
             sed -n '/There w.*warning/,/WARNINGS!/p' coverage-output.log > temp-warnings.txt
 
+            # Track processed file:line combinations to avoid duplicates
+            declare -A processed_annotations
+
             # Process each line
             while IFS= read -r line; do
               echo "Processing line: $line"
@@ -146,13 +149,25 @@ jobs:
                     echo "Found test file: $TEST_FILE"
                     if LINE_NUM=$(grep -n "@covers.*$METHOD_NAME" "$TEST_FILE" | head -1 | cut -d: -f1); then
                       echo "Found line number: $LINE_NUM"
-                      # Escape XML characters and add checkstyle entry
-                      MESSAGE=$(echo "Invalid @covers annotation: $COVERS_TARGET" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
-                      cat >> coverage-warnings.xml << EOF
+
+                      # Create unique key for this file:line combination
+                      FILE_LINE_KEY="$TEST_FILE:$LINE_NUM"
+
+                      # Only process if we haven't seen this file:line before
+                      if [[ -z "${processed_annotations[$FILE_LINE_KEY]}" ]]; then
+                        echo "Adding annotation for $FILE_LINE_KEY"
+                        processed_annotations[$FILE_LINE_KEY]=1
+
+                        # Escape XML characters and add checkstyle entry
+                        MESSAGE=$(echo "Invalid @covers annotation: $COVERS_TARGET" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
+                        cat >> coverage-warnings.xml << EOF
           <file name="$TEST_FILE">
             <error line="$LINE_NUM" column="1" severity="warning" message="$MESSAGE" source="phpunit.coverage"/>
           </file>
           EOF
+                      else
+                        echo "Skipping duplicate annotation for $FILE_LINE_KEY"
+                      fi
                     fi
                   fi
                 fi
