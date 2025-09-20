@@ -410,7 +410,7 @@ class Settings {
 		$settings_tabs = \apply_filters( 'activitypub_admin_settings_tabs', $settings_tabs );
 
 		if ( empty( $settings_tabs ) ) {
-			_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', 'unreleased' );
+			_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', '7.0.0' );
 			$settings_tabs['settings'] = $settings_tab;
 		}
 

@@ -3,7 +3,21 @@ on:
   push:
     branches:
       - trunk
+    paths:
+      - '**/*.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml.dist'
+      - 'phpcs.xml'
+      - '.github/workflows/phpunit.yml'
   pull_request:
+    paths:
+      - '**/*.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml.dist'
+      - 'phpcs.xml'
+      - '.github/workflows/phpunit.yml'
 jobs:
   phpunit:
     runs-on: ubuntu-latest
@@ -103,15 +117,15 @@ jobs:
           # Check for PHPUnit warnings and process them
           if grep -q "WARNINGS!\|There was.*warning" coverage-output.log; then
             echo "Processing coverage warnings for checkstyle report..."
-            
+
             # Show warnings section for debugging
             echo "--- Warnings Found ---"
             sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log | head -10
             echo "--- End Warnings ---"
-            
+
             # Extract warnings to temporary file to avoid subshell issues
             sed -n '/There was.*warning/,/WARNINGS!/p' coverage-output.log > temp-warnings.txt
-            
+
             # Process each line
             while IFS= read -r line; do
               echo "Processing line: $line"
@@ -122,7 +136,7 @@ jobs:
                 if [[ "$line" =~ \"@covers\ ([^\"]+)\" ]]; then
                   COVERS_TARGET="${BASH_REMATCH[1]}"
                   echo "Processing @covers warning for: $COVERS_TARGET"
-                  
+
                   # Find test file and line number
                   echo "Searching for @covers annotation with target: $COVERS_TARGET"
                   # Extract just the method name from the full class::method
@@ -147,7 +161,7 @@ jobs:
                 echo "::warning::PHPUnit deprecation warning: ${line}"
               fi
             done < temp-warnings.txt
-            
+
             rm -f temp-warnings.txt
             WARNINGS_FOUND=true
           else

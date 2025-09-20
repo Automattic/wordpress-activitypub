@@ -159,6 +159,23 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test reply link generation.
+	 *
+	 * Pleroma prepends `acct:` to the webfinger identifier, which we'd want to normalize.
+	 *
+	 * @covers ::generate_reply_link
+	 */
+	public function test_generate_reply_link() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ), 10, 2 );
+
+		$reply_link = Blocks::generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
+
+		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ) );
+	}
+
+	/**
 	 * Test filter_import_mastodon_post_data with regular paragraphs.
 	 *
 	 * @covers ::filter_import_mastodon_post_data
@@ -263,5 +280,33 @@ class Test_Blocks extends \WP_UnitTestCase {
 		remove_all_filters( 'pre_comment_approved' );
 
 		return $post_id;
+	}
+
+	/**
+	 * Filter pleroma object.
+	 *
+	 * @param array|string|null $response The response.
+	 * @param array|string|null $url      The Object URL.
+	 * @return string[]
+	 */
+	public function filter_pleroma_object( $response, $url ) {
+		if ( 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' === $url ) {
+			$response = array(
+				'type'         => 'Note',
+				'attributedTo' => 'https://devs.live/users/tester',
+				'content'      => 'Cake day it is',
+			);
+		}
+		if ( 'https://devs.live/users/tester' === $url ) {
+			$response = array(
+				'id'                => 'https://devs.live/users/tester',
+				'type'              => 'Person',
+				'preferredUsername' => 'tester',
+				'url'               => 'https://devs.live/users/tester',
+				'webfinger'         => 'acct:tester@devs.live',
+			);
+		}
+
+		return $response;
 	}
 }

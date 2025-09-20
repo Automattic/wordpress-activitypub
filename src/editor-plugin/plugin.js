@@ -1,7 +1,14 @@
 import { PluginDocumentSettingPanel, PluginPreviewMenuItem, store as editorStore } from '@wordpress/editor';
 import { PluginDocumentSettingPanel as DocumentSettingPanel } from '@wordpress/edit-post';
 import { registerPlugin } from '@wordpress/plugins';
-import { TextControl, RadioControl, RangeControl, __experimentalText as Text, Tooltip } from '@wordpress/components';
+import {
+	TextControl,
+	RadioControl,
+	RangeControl,
+	__experimentalText as Text,
+	Tooltip,
+	SelectControl,
+} from '@wordpress/components';
 import { Icon, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
@@ -149,6 +156,25 @@ const EditorPlugin = () => {
 					setMeta( { ...meta, activitypub_content_visibility: value } );
 				} }
 				className="activitypub-visibility"
+			/>
+
+			<SelectControl
+				label={ __( 'Who can quote this post?', 'activitypub' ) }
+				help={ __(
+					'Quoting allows others to reshare your post while adding their own commentary.',
+					'activitypub'
+				) }
+				value={ meta?.activitypub_interaction_policy_quote }
+				options={ [
+					{ label: __( 'Anyone', 'activitypub' ), value: 'anyone' },
+					{ label: __( 'Followers only', 'activitypub' ), value: 'followers' },
+					{ label: __( 'Just me', 'activitypub' ), value: 'me' },
+				] }
+				onChange={ ( value ) => {
+					setMeta( { ...meta, activitypub_interaction_policy_quote: value } );
+				} }
+				__next40pxDefaultSize
+				__nextHasNoMarginBottom
 			/>
 		</SettingsPanel>
 	);

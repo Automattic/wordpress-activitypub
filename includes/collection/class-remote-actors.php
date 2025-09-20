@@ -9,6 +9,8 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Http;
+use Activitypub\Sanitize;
+use Activitypub\Webfinger;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_actor;
@@ -484,5 +486,42 @@ class Remote_Actors {
 		}
 
 		return new \WP_Error( 'activitypub_no_remote_key_found', 'No Public-Key found', array( 'status' => 401 ) );
+	}
+
+	/**
+	 * Get the acct of a remote actor.
+	 *
+	 * @uses Webfinger::uri_to_acct to resolve the acct by the actor URI.
+	 * @uses Webfinger::guess       to guess a acct if the actors acct is not resolvable.
+	 *
+	 * @param int $id The ID of the remote actor.
+	 *
+	 * @return string The acct of the remote actor or empty string on failure.
+	 */
+	public static function get_acct( $id ) {
+		$acct = \get_post_meta( $id, '_activitypub_acct', true );
+
+		if ( $acct ) {
+			return $acct;
+		}
+
+		$post = \get_post( $id );
+
+		if ( ! $post ) {
+			return '';
+		}
+
+		$acct = Webfinger::uri_to_acct( $post->guid );
+
+		if ( \is_wp_error( $acct ) ) {
+			$actor = self::get_actor( $post );
+			$acct  = Webfinger::guess( $actor );
+		}
+
+		$acct = Sanitize::webfinger( $acct );
+
+		\update_post_meta( $id, '_activitypub_acct', $acct );
+
+		return $acct;
 	}
 }
