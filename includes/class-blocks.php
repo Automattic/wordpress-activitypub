@@ -46,6 +46,9 @@ class Blocks {
 					'single'            => true,
 					'type'              => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
+					'auth_callback'     => function() {
+						return current_user_can( 'edit_posts' );
+					},
 				)
 			);
 
@@ -69,6 +72,9 @@ class Blocks {
 
 						return $value;
 					},
+					'auth_callback'     => function() {
+						return current_user_can( 'edit_posts' );
+					},
 				)
 			);
 
@@ -81,6 +87,9 @@ class Blocks {
 					'show_in_rest'      => true,
 					'default'           => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
 					'sanitize_callback' => 'absint',
+					'auth_callback'     => function() {
+						return current_user_can( 'edit_posts' );
+					},
 				)
 			);
 
@@ -103,6 +112,9 @@ class Blocks {
 						}
 
 						return $value;
+					},
+					'auth_callback'     => function() {
+						return current_user_can( 'edit_posts' );
 					},
 				)
 			);
@@ -130,7 +142,12 @@ class Blocks {
 			return;
 		}
 
-		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/editor-plugin/plugin.asset.php';
+		$asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/editor-plugin/plugin.asset.php';
+		if ( ! file_exists( $asset_file ) ) {
+			return;
+		}
+
+		$asset_data = include $asset_file;
 		$plugin_url = plugins_url( 'build/editor-plugin/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		wp_enqueue_script( 'activitypub-block-editor', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
@@ -145,7 +162,12 @@ class Blocks {
 			return;
 		}
 
-		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/reply-intent/plugin.asset.php';
+		$asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/reply-intent/plugin.asset.php';
+		if ( ! file_exists( $asset_file ) ) {
+			return;
+		}
+
+		$asset_data = include $asset_file;
 		$plugin_url = plugins_url( 'build/reply-intent/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		wp_enqueue_script( 'activitypub-reply-intent', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
@@ -154,16 +176,28 @@ class Blocks {
 	 * Register the blocks.
 	 */
 	public static function register_blocks() {
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
-
-		\register_block_type_from_metadata(
-			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
-			array(
-				'render_callback' => array( self::class, 'render_reply_block' ),
-			)
+		$blocks = array(
+			'/build/follow-me',
+			'/build/followers',
+			'/build/reactions',
 		);
+
+		foreach ( $blocks as $block ) {
+			$block_path = ACTIVITYPUB_PLUGIN_DIR . $block;
+			if ( file_exists( $block_path ) ) {
+				\register_block_type_from_metadata( $block_path );
+			}
+		}
+
+		$reply_block_path = ACTIVITYPUB_PLUGIN_DIR . '/build/reply';
+		if ( file_exists( $reply_block_path ) ) {
+			\register_block_type_from_metadata(
+				$reply_block_path,
+				array(
+					'render_callback' => array( self::class, 'render_reply_block' ),
+				)
+			);
+		}
 	}
 
 	/**
@@ -184,7 +218,11 @@ class Blocks {
 				 * @return int The number of published posts.
 				 */
 				'get_callback' => function ( $response, $field_name, $request ) {
-					return (int) count_user_posts( $request->get_param( 'id' ), 'post', true );
+					$user_id = $request->get_param( 'id' );
+					if ( ! $user_id || ! is_numeric( $user_id ) ) {
+						return 0;
+					}
+					return (int) count_user_posts( absint( $user_id ), 'post', true );
 				},
 				'schema'       => array(
 					'description' => 'Number of published posts',
@@ -240,7 +278,7 @@ class Blocks {
 
 		// For a single post, use the post author's ID.
 		if ( is_a( $queried_object, 'WP_Post' ) ) {
-			return get_the_author_meta( 'ID' );
+			return get_post_field( 'post_author', $queried_object->ID );
 		}
 
 		// We won't properly account for some conditions, like tag archives.
@@ -261,7 +299,7 @@ class Blocks {
 
 		// Return early if no URL is provided.
 		if ( empty( $attrs['url'] ) ) {
-			return null;
+			return '';
 		}
 
 		$show_embed = isset( $attrs['embedPost'] ) && $attrs['embedPost'];
@@ -270,7 +308,7 @@ class Blocks {
 			array(
 				'aria-label'       => __( 'Reply', 'activitypub' ),
 				'class'            => 'activitypub-reply-block',
-				'data-in-reply-to' => $attrs['url'],
+				'data-in-reply-to' => esc_attr( $attrs['url'] ),
 			)
 		);
 
@@ -287,12 +325,13 @@ class Blocks {
 
 		// Only show the link if we're not showing the embed.
 		if ( ! $show_embed ) {
+			$cleaned_url = str_replace( array( 'https://', 'http://' ), '', esc_url( $attrs['url'] ) );
 			$html .= sprintf(
-				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank" rel="noopener noreferrer">%3$s</a></p>',
 				esc_url( $attrs['url'] ),
 				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
 				// translators: %s is the URL of the post being replied to.
-				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', esc_url( $attrs['url'] ) ) )
+				sprintf( __( '&#8620;%s', 'activitypub' ), esc_html( $cleaned_url ) )
 			);
 		}
 
@@ -347,7 +386,7 @@ class Blocks {
 					</div>
 				<?php endif; ?>
 				<div class="activitypub-modal__content">
-					<?php echo $args['content']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					<?php echo wp_kses_post( $args['content'] ); ?>
 				</div>
 			</div>
 		</div>
@@ -364,18 +403,20 @@ class Blocks {
 	 */
 	public static function filter_import_mastodon_post_data( $data, $post ) {
 		// Convert paragraphs to blocks.
-		\preg_match_all( '#<p>.*?</p>#is', $data['post_content'], $matches );
-		$blocks = \array_map(
-			function ( $paragraph ) {
-				return '<!-- wp:paragraph -->' . PHP_EOL . $paragraph . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL;
-			},
-			$matches[0] ?? array()
-		);
+		if ( ! empty( $data['post_content'] ) ) {
+			\preg_match_all( '#<p>.*?</p>#is', $data['post_content'], $matches );
+			$blocks = \array_map(
+				function ( $paragraph ) {
+					return '<!-- wp:paragraph -->' . PHP_EOL . $paragraph . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL;
+				},
+				$matches[0] ?? array()
+			);
 
-		$data['post_content'] = \rtrim( \implode( PHP_EOL, $blocks ), PHP_EOL );
+			$data['post_content'] = \rtrim( \implode( PHP_EOL, $blocks ), PHP_EOL );
+		}
 
 		// Add reply block if it's a reply.
-		if ( null !== $post->object->inReplyTo ) {
+		if ( isset( $post->object->inReplyTo ) && null !== $post->object->inReplyTo ) {
 			$reply_block          = \sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, \esc_url( $post->object->inReplyTo ) );
 			$data['post_content'] = $reply_block . $data['post_content'];
 		}
@@ -418,9 +459,11 @@ class Blocks {
 		\add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
 
 		// Only transform reply link if it's the first block in the post.
-		$blocks = \parse_blocks( $post->post_content );
-		if ( ! empty( $blocks ) && 'activitypub/reply' === $blocks[0]['blockName'] ) {
-			\add_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ), 10, 2 );
+		if ( ! empty( $post->post_content ) ) {
+			$blocks = \parse_blocks( $post->post_content );
+			if ( ! empty( $blocks ) && 'activitypub/reply' === $blocks[0]['blockName'] ) {
+				\add_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ), 10, 2 );
+			}
 		}
 	}
 
@@ -514,6 +557,6 @@ class Blocks {
 		if ( ! isset( $block['attrs']['url'] ) ) {
 			return $block_content;
 		}
-		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . esc_html( $block['attrs']['url'] ) . '</a></p>';
 	}
 }
