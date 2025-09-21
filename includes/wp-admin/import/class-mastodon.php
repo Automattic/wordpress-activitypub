@@ -95,7 +95,7 @@ class Mastodon {
 
 		\check_admin_referer( 'import-upload' );
 
-		if ( ! isset( $_FILES['import']['name'] ) ) {
+		if ( ! isset( $_FILES['import']['name'] ) || empty( $_FILES['import']['name'] ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
 			\printf(
 				/* translators: 1: php.ini, 2: post_max_size, 3: upload_max_filesize */
@@ -142,6 +142,12 @@ class Mastodon {
 		// Save the data.
 		self::$import_id = wp_insert_attachment( $attachment, $upload['file'] );
 
+		if ( is_wp_error( self::$import_id ) ) {
+			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+			echo \esc_html( self::$import_id->get_error_message() ) . '</p>';
+			return false;
+		}
+
 		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
 		wp_schedule_single_event( time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
 
@@ -153,7 +159,57 @@ class Mastodon {
 	 */
 	public static function import_options() {
 		$author = 0;
-		if ( isset( self::$outbox->{'orderedItems'}[0] ) ) {
+		
+		// Try to read and parse the outbox file first
+		$file = \get_attached_file( self::$import_id );
+		if ( ! $file ) {
+			echo '<p><strong>' . \esc_html__( 'Sorry, there has been an error.', 'activitypub' ) . '</strong><br />';
+			echo \esc_html__( 'Could not find the uploaded file.', 'activitypub' ) . '</p>';
+			return;
+		}
+
+		\WP_Filesystem();
+		global $wp_filesystem;
+		
+		$import_folder = $wp_filesystem->wp_content_dir() . 'import/';
+		$archive_path = $import_folder . \basename( \basename( $file, '.txt' ), '.zip' );
+
+		// Clean up working directory.
+		if ( $wp_filesystem->is_dir( $archive_path ) ) {
+			$wp_filesystem->delete( $archive_path, true );
+		}
+
+		// Unzip package to working directory.
+		$unzip_result = \unzip_file( $file, $archive_path );
+		if ( is_wp_error( $unzip_result ) ) {
+			echo '<p><strong>' . \esc_html__( 'Sorry, there has been an error.', 'activitypub' ) . '</strong><br />';
+			echo \esc_html( $unzip_result->get_error_message() ) . '</p>';
+			return;
+		}
+
+		$files = $wp_filesystem->dirlist( $archive_path );
+
+		if ( ! isset( $files['outbox.json'] ) ) {
+			echo '<p><strong>' . \esc_html__( 'Sorry, there has been an error.', 'activitypub' ) . '</strong><br />';
+			echo \esc_html__( 'The archive does not contain an Outbox file, please try again.', 'activitypub' ) . '</p>';
+			return;
+		}
+
+		$outbox_content = $wp_filesystem->get_contents( $archive_path . '/outbox.json' );
+		if ( false === $outbox_content ) {
+			echo '<p><strong>' . \esc_html__( 'Sorry, there has been an error.', 'activitypub' ) . '</strong><br />';
+			echo \esc_html__( 'Could not read the outbox file.', 'activitypub' ) . '</p>';
+			return;
+		}
+
+		self::$outbox = \json_decode( $outbox_content );
+		if ( null === self::$outbox ) {
+			echo '<p><strong>' . \esc_html__( 'Sorry, there has been an error.', 'activitypub' ) . '</strong><br />';
+			echo \esc_html__( 'Invalid JSON in outbox file.', 'activitypub' ) . '</p>';
+			return;
+		}
+
+		if ( isset( self::$outbox->{'orderedItems'}[0] ) && isset( self::$outbox->{'orderedItems'}[0]->actor ) ) {
 			$users = \get_users(
 				array(
 					'fields'     => 'ID',
@@ -211,6 +267,12 @@ class Mastodon {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
 		$file          = \get_attached_file( self::$import_id );
 
+		if ( ! $file ) {
+			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+			echo \esc_html__( 'Could not find the uploaded file.', 'activitypub' ) . '</p>';
+			return;
+		}
+
 		\WP_Filesystem();
 
 		global $wp_filesystem;
@@ -223,16 +285,34 @@ class Mastodon {
 		}
 
 		// Unzip package to working directory.
-		\unzip_file( $file, self::$archive );
+		$unzip_result = \unzip_file( $file, self::$archive );
+		if ( is_wp_error( $unzip_result ) ) {
+			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+			echo \esc_html( $unzip_result->get_error_message() ) . '</p>';
+			return;
+		}
+
 		$files = $wp_filesystem->dirlist( self::$archive );
 
 		if ( ! isset( $files['outbox.json'] ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
 			echo \esc_html__( 'The archive does not contain an Outbox file, please try again.', 'activitypub' ) . '</p>';
+			return;
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		self::$outbox = \json_decode( \file_get_contents( self::$archive . '/outbox.json' ) );
+		$outbox_content = $wp_filesystem->get_contents( self::$archive . '/outbox.json' );
+		if ( false === $outbox_content ) {
+			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+			echo \esc_html__( 'Could not read the outbox file.', 'activitypub' ) . '</p>';
+			return;
+		}
+
+		self::$outbox = \json_decode( $outbox_content );
+		if ( null === self::$outbox ) {
+			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+			echo \esc_html__( 'Invalid JSON in outbox file.', 'activitypub' ) . '</p>';
+			return;
+		}
 
 		\wp_suspend_cache_invalidation();
 		\wp_defer_term_counting( true );
@@ -274,6 +354,10 @@ class Mastodon {
 	 * @return true|\WP_Error True on success, WP_Error on failure.
 	 */
 	public static function import_posts() {
+		if ( ! isset( self::$outbox->{'orderedItems'} ) || ! is_array( self::$outbox->{'orderedItems'} ) ) {
+			return new \WP_Error( 'no_posts', \__( 'No posts found in the outbox file.', 'activitypub' ) );
+		}
+
 		$skipped  = array();
 		$imported = 0;
 
@@ -291,23 +375,28 @@ class Mastodon {
 
 			$post_data = array(
 				'post_author'  => self::$author,
-				'post_date'    => $post->published,
+				'post_date'    => $post->published ?? current_time( 'mysql' ),
 				'post_excerpt' => $post->object->summary ?? '',
-				'post_content' => $post->object->content,
+				'post_content' => $post->object->content ?? '',
 				'post_status'  => 'publish',
 				'post_type'    => 'post',
-				'meta_input'   => array( '_source_id' => $post->object->id ),
-				'tags_input'   => \array_map(
-					function ( $tag ) {
-						if ( 'Hashtag' === $tag->type ) {
-							return \ltrim( $tag->name, '#' );
-						}
-
-						return '';
-					},
-					$post->object->tag
-				),
+				'meta_input'   => array( '_source_id' => $post->object->id ?? '' ),
 			);
+
+			// Handle tags
+			if ( isset( $post->object->tag ) && is_array( $post->object->tag ) ) {
+				$post_data['tags_input'] = \array_filter(
+					\array_map(
+						function ( $tag ) {
+							if ( isset( $tag->type ) && 'Hashtag' === $tag->type && isset( $tag->name ) ) {
+								return \ltrim( $tag->name, '#' );
+							}
+							return '';
+						},
+						$post->object->tag
+					)
+				);
+			}
 
 			/**
 			 * Filter the post data before inserting it into the database.
@@ -333,7 +422,7 @@ class Mastodon {
 			$post_exists = \apply_filters( 'wp_import_existing_post', $post_exists, $post_data );
 
 			if ( $post_exists ) {
-				$skipped[] = $post->object->id;
+				$skipped[] = $post->object->id ?? 'Unknown ID';
 				continue;
 			}
 
@@ -347,7 +436,7 @@ class Mastodon {
 
 			// Process attachments if enabled.
 			$attachment_ids = array();
-			if ( self::$fetch_attachments && ! empty( $post->object->attachment ) ) {
+			if ( self::$fetch_attachments && ! empty( $post->object->attachment ) && is_array( $post->object->attachment ) ) {
 				global $wp_filesystem;
 
 				require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -436,7 +525,7 @@ class Mastodon {
 
 		if ( ! empty( $skipped ) ) {
 			echo '<p>' . \esc_html__( 'Skipped posts:', 'activitypub' ) . '<br>';
-			echo wp_kses( implode( '<br>', $skipped ), array( 'br' => array() ) );
+			echo wp_kses( implode( '<br>', array_map( 'esc_html', $skipped ) ), array( 'br' => array() ) );
 			echo '</p>';
 		}
 
@@ -469,13 +558,14 @@ class Mastodon {
 		echo '<p>' . \wp_kses(
 			\sprintf(
 				/* translators: %s: URL to Mastodon export documentation */
-				\__( 'This importer allows you to bring your Mastodon posts into your WordPress site. For a smooth import experience, check out the <a href="%s" target="_blank">Mastodon documentation</a>.', 'activitypub' ),
+				\__( 'This importer allows you to bring your Mastodon posts into your WordPress site. For a smooth import experience, check out the <a href="%s" target="_blank" rel="noopener noreferrer">Mastodon documentation</a>.', 'activitypub' ),
 				'https://docs.joinmastodon.org/user/moving/#export'
 			),
 			array(
 				'a' => array(
 					'href'   => array(),
 					'target' => array(),
+					'rel'    => array(),
 				),
 			)
 		) . '</p>';
@@ -499,8 +589,12 @@ class Mastodon {
 	 * @return string The gallery block markup.
 	 */
 	private static function get_gallery_block( $attachment_ids ) {
+		if ( empty( $attachment_ids ) ) {
+			return '';
+		}
+
 		// Block editor: Use gallery block.
-		$gallery  = '<!-- wp:gallery {"ids":[' . \implode( ',', $attachment_ids ) . '],"linkTo":"none"} -->' . "\n";
+		$gallery  = '<!-- wp:gallery {"ids":[' . \implode( ',', array_map( 'absint', $attachment_ids ) ) . '],"linkTo":"none"} -->' . "\n";
 		$gallery .= '<figure class="wp-block-gallery has-nested-images columns-default is-cropped">';
 
 		foreach ( $attachment_ids as $id ) {
