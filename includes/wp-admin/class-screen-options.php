@@ -95,10 +95,12 @@ class Screen_Options {
 	 * @param mixed  $status Screen option value. Default false to skip.
 	 * @param string $option The option name.
 	 * @param mixed  $value  The option value.
-	 * @return int
+	 * @return int|mixed
 	 */
 	public static function set_per_page_option( $status, $option, $value ) {
-		if ( 'activitypub_followers_per_page' === $option || 'activitypub_following_per_page' === $option || 'activitypub_blocked_actors_per_page' === $option ) {
+		$valid_options = array( 'activitypub_followers_per_page', 'activitypub_following_per_page', 'activitypub_blocked_actors_per_page' );
+		
+		if ( in_array( $option, $valid_options, true ) ) {
 			$value = (int) $value;
 
 			if ( $value > 0 && $value <= 100 ) {
@@ -118,12 +120,13 @@ class Screen_Options {
 	 * @return string The screen settings.
 	 */
 	public static function add_screen_option( $screen_settings, $screen ) {
-		if ( 'settings_page_activitypub' !== $screen->id ) {
+		if ( ! $screen || 'settings_page_activitypub' !== $screen->id ) {
 			return $screen_settings;
 		}
 
 		// No screen options on followers, following, and blocked-actors tabs. The per_page screen options interfere with them.
-		if ( \in_array( \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ), array( 'followers', 'following', 'blocked-actors' ), true ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+		$current_tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( \in_array( $current_tab, array( 'followers', 'following', 'blocked-actors' ), true ) ) {
 			return $screen_settings;
 		}
 
@@ -185,7 +188,7 @@ class Screen_Options {
 	 * @return bool Whether to show the submit button.
 	 */
 	public static function screen_options_show_submit( $show_submit, $screen ) {
-		if ( 'settings_page_activitypub' !== $screen->id ) {
+		if ( ! $screen || 'settings_page_activitypub' !== $screen->id ) {
 			return $show_submit;
 		}
 
