@@ -1566,3 +1566,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.0.2...0.1.0
 [0.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/0.0.1...0.0.2
 [0.0.1]: https://github.com/Automattic/wordpress-activitypub/releases
+
+Significance: patch
+Type: security
+
+Security: Fix XSS and CSRF issues in ActivityPub admin files.  
+- Added escaping with `esc_html()`, `esc_attr()`, `esc_url()`.  
+- Added nonce verification in AJAX handlers.  
+- Improved sanitization and error handling.  
+
