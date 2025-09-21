@@ -998,7 +998,7 @@ class Post extends Base {
 	}
 
 	/**
-	 * Get the actor ID(s) for the `me` audience in the Quote interaction policy.
+	 * Get the actor ID(s) for the `me` audience for use in interaction policies.
 	 *
 	 * @return string|array The actor ID(s).
 	 */
