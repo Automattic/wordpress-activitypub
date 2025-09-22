@@ -713,7 +713,7 @@ function url_to_commentid( $url ) {
  *
  * @param array|string $data The ActivityPub object.
  *
- * @return string The URI of the ActivityPub object or empty string if not found.
+ * @return string The URI of the ActivityPub object.
  */
 function object_to_uri( $data ) {
 	// Check whether it is already simple.
@@ -750,10 +750,10 @@ function object_to_uri( $data ) {
 			$data = object_to_uri( $data['url'] );
 			break;
 		case 'Link':
-			$data = $data['href'] ?? '';
+			$data = $data['href'];
 			break;
 		default:
-			$data = $data['id'] ?? $data['url'] ?? '';
+			$data = $data['id'] ?? $data['url'];
 			break;
 	}
 
