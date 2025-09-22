@@ -114,7 +114,7 @@ class Test_Move extends \WP_UnitTestCase {
 			'object' => $target,
 		);
 
-		Move::handle_move( $activity );
+		Move::handle_move( $activity, 1 );
 
 		$old_follower     = Remote_Actors::get_by_uri( $origin );
 		$updated_follower = Remote_Actors::get_by_uri( $target );
@@ -170,7 +170,7 @@ class Test_Move extends \WP_UnitTestCase {
 			'object' => $target,
 		);
 
-		Move::handle_move( $activity );
+		Move::handle_move( $activity, 1 );
 
 		// Assert that the original follower still exists and wasn't modified.
 		$existing_follower = Followers::get_follower( $this->user_id, $origin );
@@ -213,7 +213,7 @@ class Test_Move extends \WP_UnitTestCase {
 			'type' => 'Move',
 		);
 
-		Move::handle_move( $activity );
+		Move::handle_move( $activity, 1 );
 
 		// Verify that no followers were added or removed.
 		$final_followers = Followers::get_followers( $this->user_id );
@@ -300,12 +300,7 @@ class Test_Move extends \WP_UnitTestCase {
 		};
 
 		// Mock the HTTP request.
-		add_filter(
-			'pre_http_request',
-			$filter,
-			10,
-			3
-		);
+		add_filter( 'pre_http_request', $filter, 10, 3 );
 
 		$activity = array(
 			'type'   => 'Move',
@@ -313,7 +308,7 @@ class Test_Move extends \WP_UnitTestCase {
 			'object' => $target,
 		);
 
-		Move::handle_move( $activity );
+		Move::handle_move( $activity, 1 );
 
 		// Check if the user IDs were moved correctly.
 		$target_users = \get_post_meta( $target_id, Followers::FOLLOWER_META_KEY, false );

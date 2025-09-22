@@ -112,7 +112,7 @@ class Test_Follow extends \WP_UnitTestCase {
 
 		// Test with WP_Error follower - should not create outbox entry.
 		$wp_error = new \WP_Error( 'test_error', 'Test Error' );
-		Follow::queue_accept( $actor, $activity_object, self::$user_id, $wp_error );
+		Follow::queue_accept( $activity_object, self::$user_id, true, $wp_error );
 
 		$outbox_posts = \get_posts(
 			array(
@@ -148,7 +148,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		);
 		$remote_actor = \get_post( $remote_actor );
 
-		Follow::queue_accept( $actor, $activity_object, self::$user_id, $remote_actor );
+		Follow::queue_accept( $activity_object, self::$user_id, $remote_actor, $remote_actor );
 
 		$outbox_posts = \get_posts(
 			array(

@@ -23,12 +23,7 @@ class Announce {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action(
-			'activitypub_inbox_announce',
-			array( self::class, 'handle_announce' ),
-			10,
-			3
-		);
+		\add_action( 'activitypub_inbox_announce', array( self::class, 'handle_announce' ), 10, 3 );
 	}
 
 	/**
@@ -114,13 +109,13 @@ class Announce {
 		}
 
 		/**
-		 * Fires after an Announce has been saved.
+		 * Fires after an ActivityPub Announce activity has been handled.
 		 *
-		 * @param array $activity The activity-object.
-		 * @param int   $user_id  The id of the local blog-user.
-		 * @param mixed $state    The state of the reaction.
-		 * @param mixed $reaction The reaction.
+		 * @param array      $activity The ActivityPub activity data.
+		 * @param int|null   $user_id  The local user ID, or null if not applicable.
+		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
+		 * @param mixed|null $reaction The WP_Comment object of the created announce/repost comment, or null if creation failed.
 		 */
-		do_action( 'activitypub_handled_announce', $activity, $user_id, $state, $reaction );
+		\do_action( 'activitypub_handled_announce', $activity, $user_id, $state, $reaction );
 	}
 }

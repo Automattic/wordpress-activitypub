@@ -74,7 +74,7 @@ class Test_Update extends \WP_UnitTestCase {
 		\add_filter( 'pre_http_request', $fake_request, 10 );
 
 		// Execute the update_actor method.
-		Update::update_actor( $activity );
+		Update::update_actor( $activity, 1 );
 
 		// Check that the follower was correctly updated.
 		$follower = Remote_Actors::get_by_uri( $actor_url );
@@ -103,7 +103,7 @@ class Test_Update extends \WP_UnitTestCase {
 		// Mock of get_remote_metadata_by_actor function.
 		\add_filter( 'pre_http_request', $fake_request, 10 );
 
-		Update::update_actor( $activity );
+		Update::update_actor( $activity, 1 );
 
 		\clean_post_cache( $follower_initial->get_id() );
 
@@ -140,7 +140,7 @@ class Test_Update extends \WP_UnitTestCase {
 		\add_filter( 'pre_http_request', $fake_request, 10 );
 
 		// Execute the update_actor method.
-		Update::update_actor( $activity );
+		Update::update_actor( $activity, 1 );
 
 		// Check that no follower was created.
 		$follower = Remote_Actors::get_by_uri( 'https://example.com/nonexistent' );

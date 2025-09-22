@@ -10,7 +10,6 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
-use Activitypub\Notification;
 
 use function Activitypub\object_to_uri;
 
@@ -22,19 +21,8 @@ class Reject {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action(
-			'activitypub_inbox_reject',
-			array( self::class, 'handle_reject' ),
-			10,
-			2
-		);
-
-		\add_filter(
-			'activitypub_validate_object',
-			array( self::class, 'validate_object' ),
-			10,
-			3
-		);
+		\add_action( 'activitypub_inbox_reject', array( self::class, 'handle_reject' ), 10, 2 );
+		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
@@ -75,16 +63,17 @@ class Reject {
 			return;
 		}
 
-		Following::reject( $actor_post, $user_id );
+		$status = Following::reject( $actor_post, $user_id );
 
-		// Send notification.
-		$notification = new Notification(
-			'reject',
-			$actor_post->guid,
-			$reject,
-			$user_id
-		);
-		$notification->send();
+		/**
+		 * Fires after an ActivityPub Reject activity has been handled.
+		 *
+		 * @param array      $reject     The ActivityPub activity data.
+		 * @param int|null   $user_id    The local user ID, or null if not applicable.
+		 * @param mixed      $status     The status result of the rejection operation.
+		 * @param mixed|null $actor_post The WP_Post object of the actor being rejected, or WP_Error if failed.
+		 */
+		\do_action( 'activitypub_handled_reject', $reject, $user_id, $status, $actor_post );
 	}
 
 	/**

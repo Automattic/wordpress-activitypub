@@ -21,12 +21,7 @@ class Undo {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action(
-			'activitypub_inbox_undo',
-			array( self::class, 'handle_undo' ),
-			10,
-			2
-		);
+		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_undo' ), 10, 2 );
 	}
 
 	/**
@@ -76,12 +71,13 @@ class Undo {
 		}
 
 		/**
-		 * Fires after an "Undo" activity has been handled.
+		 * Fires after an ActivityPub Undo activity has been handled.
 		 *
-		 * @param array    $activity The JSON "Undo" Activity.
-		 * @param int|null $user_id  The ID of the user who initiated the "Undo" activity otherwise null.
-		 * @param mixed    $state    The state of the "Undo" activity.
+		 * @param array      $activity The ActivityPub activity data.
+		 * @param int|null   $user_id  The local user ID, or null if not applicable.
+		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
+		 * @param null       $context  Always null for Undo activities.
 		 */
-		do_action( 'activitypub_handled_undo', $activity, $user_id, $state );
+		\do_action( 'activitypub_handled_undo', $activity, $user_id, $state, null );
 	}
 }

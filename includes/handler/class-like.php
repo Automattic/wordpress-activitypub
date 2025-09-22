@@ -54,14 +54,14 @@ class Like {
 		}
 
 		/**
-		 * Fires after a Like has been handled.
+		 * Fires after an ActivityPub Like activity has been handled.
 		 *
-		 * @param array $like     The Activity array.
-		 * @param int   $user_id  The ID of the local blog user.
-		 * @param mixed $state    The state of the reaction.
-		 * @param mixed $reaction The reaction object.
+		 * @param array      $like     The ActivityPub activity data.
+		 * @param int|null   $user_id  The local user ID, or null if not applicable.
+		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
+		 * @param mixed|null $reaction The WP_Comment object of the created like comment, or null if creation failed.
 		 */
-		do_action( 'activitypub_handled_like', $like, $user_id, $state, $reaction );
+		\do_action( 'activitypub_handled_like', $like, $user_id, $state, $reaction );
 	}
 
 	/**

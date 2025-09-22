@@ -21,7 +21,7 @@ class Delete {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ) );
+		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
 		\add_action( 'activitypub_delete_actor_interactions', array( self::class, 'delete_interactions' ) );
 
@@ -33,9 +33,12 @@ class Delete {
 	 * Handles "Delete" requests.
 	 *
 	 * @param array $activity The delete activity.
+	 * @param int   $user_id  The local user ID.
 	 */
-	public static function handle_delete( $activity ) {
+	public static function handle_delete( $activity, $user_id ) {
 		$object_type = $activity['object']['type'] ?? '';
+		$state       = null;
+		$reaction    = null;
 
 		switch ( $object_type ) {
 			/*
@@ -48,7 +51,7 @@ class Delete {
 			case 'Organization':
 			case 'Service':
 			case 'Application':
-				self::maybe_delete_follower( $activity );
+				$state = self::maybe_delete_follower( $activity );
 				break;
 
 			/*
@@ -95,6 +98,16 @@ class Delete {
 				// Maybe handle Delete Activity for other Object Types.
 				break;
 		}
+
+		/**
+		 * Fires after an ActivityPub Delete activity has been handled.
+		 *
+		 * @param array      $activity The ActivityPub activity data.
+		 * @param int|null   $user_id  The local user ID, or null if not applicable.
+		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
+		 * @param mixed|null $reaction The result of the delete operation (e.g., WP_Comment object or deletion status).
+		 */
+		\do_action( 'activitypub_handled_delete', $activity, $user_id, $state, $reaction );
 	}
 
 	/**
@@ -107,9 +120,11 @@ class Delete {
 
 		// Verify that Actor is deleted.
 		if ( ! is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
-			Remote_Actors::delete( $follower->ID );
+			$state = Remote_Actors::delete( $follower->ID );
 			self::maybe_delete_interactions( $activity );
 		}
+
+		return $state ?? null;
 	}
 
 	/**
