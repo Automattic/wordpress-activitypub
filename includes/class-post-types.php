@@ -68,13 +68,7 @@ class Post_Types {
 			array(
 				'type'              => 'string',
 				'single'            => false,
-				'sanitize_callback' => function ( $value ) {
-					if ( ! is_string( $value ) ) {
-						throw new \Exception( 'Error message is no valid string' );
-					}
-
-					return \esc_sql( $value );
-				},
+				'sanitize_callback' => 'sanitize_text_field',
 			)
 		);
 
@@ -84,7 +78,7 @@ class Post_Types {
 			array(
 				'type'              => 'string',
 				'single'            => false,
-				'sanitize_callback' => 'esc_sql',
+				'sanitize_callback' => 'sanitize_text_field',
 			)
 		);
 	}
