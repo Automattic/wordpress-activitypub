@@ -121,7 +121,7 @@ class Update {
 		 * @param array      $activity The ActivityPub activity data.
 		 * @param int|null   $user_id  The local user ID, or null if not applicable.
 		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
-		 * @param mixed|null $actor.   Additional context or resulting object (e.g., comment, reaction), or null if not applicable.
+		 * @param mixed|null $actor    Additional context or resulting object (e.g., comment, reaction), or null if not applicable.
 		 */
 		\do_action( 'activitypub_handled_update', $activity, $user_id, $state, $actor );
 	}
