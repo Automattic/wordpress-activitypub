@@ -49,6 +49,7 @@ class Accept {
 		}
 
 		$reaction = Following::accept( $actor_post, $user_id );
+		$success  = ! \is_wp_error( $reaction );
 
 		/**
 		 * Fires after an ActivityPub Accept activity has been handled.
@@ -58,7 +59,6 @@ class Accept {
 		 * @param bool       $success  Whether the follow request was accepted successfully.
 		 * @param mixed      $reaction The result of accepting the follow request (contextual object).
 		 */
-		$success = ! \is_wp_error( $reaction );
 		\do_action( 'activitypub_handled_accept', $accept, $user_id, $success, $reaction );
 	}
 
