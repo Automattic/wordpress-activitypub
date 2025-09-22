@@ -119,61 +119,19 @@ class Post_Types {
 		\register_post_meta(
 			Inbox::POST_TYPE,
 			'_activitypub_object_id',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'description'       => 'The ID (ActivityPub URI) of the object that the inbox item is about.',
-				'sanitize_callback' => 'sanitize_url',
-			)
+			self::get_object_id_meta_args()
 		);
 
 		\register_post_meta(
 			Inbox::POST_TYPE,
 			'_activitypub_activity_type',
-			array(
-				'type'              => 'string',
-				'description'       => 'The type of the activity',
-				'single'            => true,
-				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
-					$value  = ucfirst( strtolower( $value ) );
-					$schema = array(
-						'type'    => 'string',
-						'enum'    => Activity::TYPES,
-						'default' => 'Create',
-					);
-
-					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
-						return $schema['default'];
-					}
-
-					return $value;
-				},
-			)
+			self::get_activity_type_meta_args( 'Create' )
 		);
 
 		\register_post_meta(
 			Inbox::POST_TYPE,
 			'_activitypub_activity_actor',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'description'       => 'The type of the local actor that received the activity.',
-				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
-					$schema = array(
-						'type'    => 'string',
-						'enum'    => array( 'application', 'blog', 'user' ),
-						'default' => 'user',
-					);
-
-					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
-						return $schema['default'];
-					}
-
-					return $value;
-				},
-			)
+			self::get_activity_actor_meta_args()
 		);
 
 		\register_post_meta(
@@ -190,25 +148,7 @@ class Post_Types {
 		\register_post_meta(
 			Inbox::POST_TYPE,
 			'activitypub_content_visibility',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'description'       => 'The visibility of the content.',
-				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
-					$schema = array(
-						'type'    => 'string',
-						'enum'    => array( 'public', 'unlisted', 'private', 'direct' ),
-						'default' => 'public',
-					);
-
-					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
-						return $schema['default'];
-					}
-
-					return $value;
-				},
-			)
+			self::get_content_visibility_meta_args()
 		);
 	}
 
@@ -247,49 +187,13 @@ class Post_Types {
 		\register_post_meta(
 			Outbox::POST_TYPE,
 			'_activitypub_activity_type',
-			array(
-				'type'              => 'string',
-				'description'       => 'The type of the activity',
-				'single'            => true,
-				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
-					$value  = ucfirst( strtolower( $value ) );
-					$schema = array(
-						'type'    => 'string',
-						'enum'    => Activity::TYPES,
-						'default' => 'Announce',
-					);
-
-					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
-						return $schema['default'];
-					}
-
-					return $value;
-				},
-			)
+			self::get_activity_type_meta_args( 'Announce' )
 		);
 
 		\register_post_meta(
 			Outbox::POST_TYPE,
 			'_activitypub_activity_actor',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
-					$schema = array(
-						'type'    => 'string',
-						'enum'    => array( 'application', 'blog', 'user' ),
-						'default' => 'user',
-					);
-
-					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
-						return $schema['default'];
-					}
-
-					return $value;
-				},
-			)
+			self::get_activity_actor_meta_args()
 		);
 
 		\register_post_meta(
@@ -307,35 +211,13 @@ class Post_Types {
 		\register_post_meta(
 			Outbox::POST_TYPE,
 			'_activitypub_object_id',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'description'       => 'The ID (ActivityPub URI) of the object that the outbox item is about.',
-				'sanitize_callback' => 'sanitize_url',
-			)
+			self::get_object_id_meta_args()
 		);
 
 		\register_post_meta(
 			Outbox::POST_TYPE,
 			'activitypub_content_visibility',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
-					$schema = array(
-						'type'    => 'string',
-						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
-						'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-					);
-
-					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
-						return $schema['default'];
-					}
-
-					return $value;
-				},
-			)
+			self::get_content_visibility_meta_args()
 		);
 	}
 
@@ -398,24 +280,7 @@ class Post_Types {
 			\register_post_meta(
 				$post_type,
 				'activitypub_content_visibility',
-				array(
-					'type'              => 'string',
-					'single'            => true,
-					'show_in_rest'      => true,
-					'sanitize_callback' => function ( $value ) {
-						$schema = array(
-							'type'    => 'string',
-							'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
-							'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-						);
-
-						if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
-							return $schema['default'];
-						}
-
-						return $value;
-					},
-				)
+				self::get_content_visibility_meta_args()
 			);
 
 			\register_post_meta(
@@ -512,5 +377,100 @@ class Post_Types {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get common args for _activitypub_object_id meta.
+	 *
+	 * @return array The meta args.
+	 */
+	private static function get_object_id_meta_args() {
+		return array(
+			'type'              => 'string',
+			'single'            => true,
+			'description'       => 'The ID (ActivityPub URI) of the object that the inbox/outbox item is about.',
+			'sanitize_callback' => 'sanitize_url',
+		);
+	}
+
+	/**
+	 * Get common args for _activitypub_activity_actor meta.
+	 *
+	 * @return array The meta args.
+	 */
+	private static function get_activity_actor_meta_args() {
+		return array(
+			'type'              => 'string',
+			'single'            => true,
+			'show_in_rest'      => true,
+			'sanitize_callback' => function ( $value ) {
+				$schema = array(
+					'type'    => 'string',
+					'enum'    => array( 'application', 'blog', 'user' ),
+					'default' => 'user',
+				);
+
+				if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+					return $schema['default'];
+				}
+
+				return $value;
+			},
+		);
+	}
+
+	/**
+	 * Get common args for _activitypub_activity_type meta.
+	 *
+	 * @param string $default_type The default activity type.
+	 * @return array The meta args.
+	 */
+	private static function get_activity_type_meta_args( $default_type = 'Create' ) {
+		return array(
+			'type'              => 'string',
+			'description'       => 'The type of the activity',
+			'single'            => true,
+			'show_in_rest'      => true,
+			'sanitize_callback' => function ( $value ) use ( $default_type ) {
+				$value  = ucfirst( strtolower( $value ) );
+				$schema = array(
+					'type'    => 'string',
+					'enum'    => Activity::TYPES,
+					'default' => $default_type,
+				);
+
+				if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+					return $schema['default'];
+				}
+
+				return $value;
+			},
+		);
+	}
+
+	/**
+	 * Get common args for activitypub_content_visibility meta.
+	 *
+	 * @return array The meta args.
+	 */
+	private static function get_content_visibility_meta_args() {
+		return array(
+			'type'              => 'string',
+			'single'            => true,
+			'show_in_rest'      => true,
+			'sanitize_callback' => function ( $value ) {
+				$schema = array(
+					'type'    => 'string',
+					'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+					'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				);
+
+				if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+					return $schema['default'];
+				}
+
+				return $value;
+			},
+		);
 	}
 }
