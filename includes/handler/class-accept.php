@@ -55,10 +55,11 @@ class Accept {
 		 *
 		 * @param array      $accept   The ActivityPub activity data.
 		 * @param int|null   $user_id  The local user ID, or null if not applicable.
-		 * @param mixed      $reaction The result of accepting the follow request.
-		 * @param mixed|null $reaction The result of accepting the follow request (duplicate parameter).
+		 * @param bool       $success  Whether the follow request was accepted successfully.
+		 * @param mixed      $reaction The result of accepting the follow request (contextual object).
 		 */
-		\do_action( 'activitypub_handled_accept', $accept, $user_id, $reaction, $reaction );
+		$success = ! \is_wp_error( $reaction );
+		\do_action( 'activitypub_handled_accept', $accept, $user_id, $success, $reaction );
 	}
 
 	/**
