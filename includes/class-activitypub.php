@@ -42,9 +42,9 @@ class Activitypub {
 
 		\add_action( 'user_register', array( self::class, 'user_register' ) );
 
-		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
-		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
-		\add_filter( 'default_post_metadata', array( self::class, 'default_post_metadata' ), 10, 3 );
+		\add_filter( 'add_post_metadata', array( Post_Types::class, 'prevent_empty_post_meta' ), 10, 4 );
+		\add_filter( 'update_post_metadata', array( Post_Types::class, 'prevent_empty_post_meta' ), 10, 4 );
+		\add_filter( 'default_post_metadata', array( Post_Types::class, 'default_post_meta_data' ), 10, 3 );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 		\add_action( 'activitypub_add_user_block', array( Followers::class, 'remove_blocked_actors' ), 10, 3 );
@@ -505,67 +505,6 @@ class Activitypub {
 			$user = \get_user_by( 'id', $user_id );
 			$user->add_cap( 'activitypub' );
 		}
-	}
-
-	/**
-	 * Prevent empty or default meta values.
-	 *
-	 * @param null|bool $check      Whether to allow updating metadata for the given type.
-	 * @param int       $object_id  ID of the object metadata is for.
-	 * @param string    $meta_key   Metadata key.
-	 * @param mixed     $meta_value Metadata value. Must be serializable if non-scalar.
-	 */
-	public static function prevent_empty_post_meta( $check, $object_id, $meta_key, $meta_value ) {
-		$post_metas = array(
-			'activitypub_content_visibility'       => '',
-			'activitypub_content_warning'          => '',
-			'activitypub_interaction_policy_quote' => ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
-			'activitypub_max_image_attachments'    => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
-		);
-
-		if ( isset( $post_metas[ $meta_key ] ) && $post_metas[ $meta_key ] === (string) $meta_value ) {
-			if ( 'update_post_metadata' === current_action() ) {
-				\delete_post_meta( $object_id, $meta_key );
-			}
-
-			$check = true;
-		}
-
-		return $check;
-	}
-
-	/**
-	 * Adjusts default post meta values.
-	 *
-	 * @param mixed  $meta_value The meta value.
-	 * @param int    $object_id  ID of the object metadata is for.
-	 * @param string $meta_key   Metadata key.
-	 *
-	 * @return mixed The meta value.
-	 */
-	public static function default_post_metadata( $meta_value, $object_id, $meta_key ) {
-		// Check if the meta key is `activitypub_content_visibility`.
-		if ( 'activitypub_content_visibility' !== $meta_key ) {
-			return $meta_value;
-		}
-
-		// If meta value is already explicitly set, respect the author's choice.
-		if ( null !== $meta_value ) {
-			return $meta_value;
-		}
-
-		// If the post is federated, return the default visibility.
-		if ( 'federated' === \get_post_meta( $object_id, 'activitypub_status', true ) ) {
-			return $meta_value;
-		}
-
-		// If the post is not federated and older than a year, return local visibility.
-		$date = \get_the_date( 'U', $object_id );
-		if ( $date < \strtotime( '-1 month' ) ) {
-			return ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
-		}
-
-		return $meta_value;
 	}
 
 	/**

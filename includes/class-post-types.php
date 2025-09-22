@@ -454,4 +454,63 @@ class Post_Types {
 			);
 		}
 	}
+
+	/**
+	 * Prevent empty or default meta values.
+	 *
+	 * @param null|bool $check      Whether to allow updating metadata for the given type.
+	 * @param int       $object_id  ID of the object metadata is for.
+	 * @param string    $meta_key   Metadata key.
+	 * @param mixed     $meta_value Metadata value. Must be serializable if non-scalar.
+	 */
+	public static function prevent_empty_post_meta( $check, $object_id, $meta_key, $meta_value ) {
+		$post_metas = array(
+			'activitypub_content_visibility'       => '',
+			'activitypub_content_warning'          => '',
+			'activitypub_interaction_policy_quote' => ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
+			'activitypub_max_image_attachments'    => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+		);
+
+		if ( isset( $post_metas[ $meta_key ] ) && $post_metas[ $meta_key ] === (string) $meta_value ) {
+			if ( 'update_post_metadata' === current_action() ) {
+				\delete_post_meta( $object_id, $meta_key );
+			}
+
+			$check = true;
+		}
+
+		return $check;
+	}
+
+	/**
+	 * Adjusts default post meta values.
+	 *
+	 * @param mixed  $meta_value The meta value.
+	 * @param int    $object_id  ID of the object metadata is for.
+	 * @param string $meta_key   Metadata key.
+	 *
+	 * @return string|null The meta value.
+	 */
+	public static function default_post_meta_data( $meta_value, $object_id, $meta_key ) {
+		if ( 'activitypub_content_visibility' !== $meta_key ) {
+			return $meta_value;
+		}
+
+		// If meta value is already explicitly set, respect the author's choice.
+		if ( null !== $meta_value ) {
+			return $meta_value;
+		}
+
+		// If the post is federated, return the default visibility.
+		if ( 'federated' === \get_post_meta( $object_id, 'activitypub_status', true ) ) {
+			return null;
+		}
+
+		// If the post is not federated and older than a month, return local visibility.
+		if ( \get_the_date( 'U', $object_id ) < \strtotime( '-1 month' ) ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
+		}
+
+		return null;
+	}
 }
