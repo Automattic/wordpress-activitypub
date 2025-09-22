@@ -753,7 +753,7 @@ function object_to_uri( $data ) {
 			$data = $data['href'];
 			break;
 		default:
-			$data = $data['id'] ?? $data['url'];
+			$data = $data['id'];
 			break;
 	}
 

@@ -1132,17 +1132,20 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				'attribute' => 'to',
 				'expected'  => array(),
 			),
-			'object_without_id'                  => array(
+			'object_with_id'                     => array(
 				'data'      => array(
 					'to' => array(
 						array(
+							'id'   => 'https://example.com/users/kate',
 							'type' => 'Person',
 							'name' => 'Kate',
-						), // No 'id' key.
+						),
 					),
 				),
 				'attribute' => 'to',
-				'expected'  => array(), // Should be ignored.
+				'expected'  => array(
+					'https://example.com/users/kate',
+				), // Should be ignored.
 			),
 			'public_recipients'                  => array(
 				'data'      => array(
