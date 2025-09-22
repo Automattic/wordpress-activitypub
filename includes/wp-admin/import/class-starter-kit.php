@@ -39,7 +39,7 @@ class Starter_Kit {
 	/**
 	 * Starter Kit JSON.
 	 *
-	 * @var object
+	 * @var array
 	 */
 	private static $starter_kit;
 
@@ -126,7 +126,7 @@ class Starter_Kit {
 
 		\check_admin_referer( 'import-upload' );
 
-		if ( ! isset( $_FILES['import']['name'] ) ) {
+		if ( ! isset( $_FILES['import']['name'] ) || empty( $_FILES['import']['name'] ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
 			\printf(
 				/* translators: 1: php.ini, 2: post_max_size, 3: upload_max_filesize */
@@ -170,6 +170,11 @@ class Starter_Kit {
 		// Save the data.
 		self::$import_id = \wp_insert_attachment( $attachment, $upload['file'] );
 
+		if ( is_wp_error( self::$import_id ) ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( self::$import_id->get_error_message() ) );
+			return false;
+		}
+
 		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
 		\wp_schedule_single_event( time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
 
@@ -191,7 +196,7 @@ class Starter_Kit {
 		}
 
 		// Validate URL format.
-		if ( ! \filter_var( $url, FILTER_VALIDATE_URL ) ) {
+		if ( ! \filter_var( $url, FILTER_VALIDATE_URL ) || ! wp_http_validate_url( $url ) ) {
 			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'The provided URL is not valid.', 'activitypub' ) );
 			return false;
 		}
@@ -260,9 +265,12 @@ class Starter_Kit {
 		}
 
 		// Construct the attachment array.
+		$parsed_url = \wp_parse_url( $url );
+		$path_basename = ! empty( $parsed_url['path'] ) ? \basename( $parsed_url['path'] ) : '';
+		$post_title = ! empty( $path_basename ) ? \sanitize_file_name( $path_basename ) : 'starter-kit.json';
+		
 		$attachment = array(
-			// phpcs:ignore
-			'post_title'     => \sanitize_file_name( \basename( \wp_parse_url( $url, PHP_URL_PATH ) ) ) ?: 'starter-kit.json',
+			'post_title'     => $post_title,
 			'post_content'   => $url,
 			'post_mime_type' => 'application/json',
 			'guid'           => $url,
@@ -293,6 +301,7 @@ class Starter_Kit {
 		$actors = self::get_actor_list();
 		if ( \is_wp_error( $actors ) ) {
 			self::render_error( $actors );
+			self::cleanup_blog_user_filter();
 			return;
 		}
 
@@ -393,7 +402,7 @@ class Starter_Kit {
 		if ( ! empty( self::$starter_kit['attributedTo'] ) ) {
 			echo \wp_kses_post(
 				\sprintf(
-					'Created by <a href="%1$s" target="_blank">%1$s</a>',
+					'Created by <a href="%1$s" target="_blank" rel="noopener noreferrer">%1$s</a>',
 					\esc_url( self::$starter_kit['attributedTo'] )
 				)
 			);
@@ -505,6 +514,10 @@ class Starter_Kit {
 
 		$items = self::$actor_list;
 
+		if ( empty( $items ) ) {
+			return new \WP_Error( 'no_actors', \__( 'No actors to follow.', 'activitypub' ) );
+		}
+
 		foreach ( $items as $actor_id ) {
 			$actor_id = object_to_uri( $actor_id );
 			$actor_id = \ltrim( $actor_id, '@' );
@@ -598,13 +611,17 @@ class Starter_Kit {
 	private static function get_actor_list() {
 		$file = \get_attached_file( self::$import_id );
 
+		if ( ! $file ) {
+			return new \WP_Error( 'file_not_found', \esc_html__( 'Could not find the uploaded file.', 'activitypub' ) );
+		}
+
 		\WP_Filesystem();
 
 		global $wp_filesystem;
 
 		$file_contents = $wp_filesystem->get_contents( $file );
 		if ( false === $file_contents ) {
-			return new \WP_Error( 'file_not_found', \esc_html__( 'Could not read the uploaded file.', 'activitypub' ) );
+			return new \WP_Error( 'file_not_readable', \esc_html__( 'Could not read the uploaded file.', 'activitypub' ) );
 		}
 
 		self::$starter_kit = \json_decode( $file_contents, true );
@@ -614,11 +631,15 @@ class Starter_Kit {
 
 		$actors = self::$starter_kit['items'] ?? self::$starter_kit['orderedItems'] ?? array();
 
+		if ( ! is_array( $actors ) ) {
+			return new \WP_Error( 'invalid_actors', \esc_html__( 'Invalid actors format in the uploaded file.', 'activitypub' ) );
+		}
+
 		// Limit list to 150 actors.
 		// TODO: Make this configurable.
 		$actors = \array_slice( $actors, 0, 150 );
 
-		if ( ! $actors ) {
+		if ( empty( $actors ) ) {
 			return new \WP_Error( 'empty_actor_list', \esc_html__( 'The uploaded file does not contain any actors.', 'activitypub' ) );
 		}
 

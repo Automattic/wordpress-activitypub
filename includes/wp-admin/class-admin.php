@@ -268,7 +268,7 @@ class Admin {
 			),
 			array( 'jquery' ),
 			ACTIVITYPUB_PLUGIN_VERSION,
-			false
+			true
 		);
 
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
@@ -289,7 +289,7 @@ class Admin {
 				),
 				array( 'jquery', 'wp-util' ),
 				ACTIVITYPUB_PLUGIN_VERSION,
-				false
+				true
 			);
 
 			// Plugin cards in help tab.
@@ -346,6 +346,10 @@ class Admin {
 	public static function edit_comment() {
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$comment_id = \absint( $_GET['c'] ?? 0 );
+		if ( ! $comment_id ) {
+			return;
+		}
+
 		if ( Comment::was_received( $comment_id ) ) {
 			$path = 'edit-comments.php';
 
@@ -384,13 +388,16 @@ class Admin {
 				}
 
 				$post = get_post( $arg[2] );
+				if ( ! $post ) {
+					return $all_caps;
+				}
 
 				if ( ! Extra_Fields::is_extra_field_post_type( $post->post_type ) ) {
 					return $all_caps;
 				}
 
 				if ( get_current_user_id() !== (int) $post->post_author ) {
-					return false;
+					$all_caps['edit_post'] = false;
 				}
 
 				return $all_caps;
@@ -420,7 +427,8 @@ class Admin {
 		add_filter(
 			"views_{$screen_id}",
 			function ( $views ) {
-				if ( Extra_Fields::is_extra_fields_post_type( get_current_screen()->post_type ) ) {
+				$current_screen = get_current_screen();
+				if ( $current_screen && Extra_Fields::is_extra_fields_post_type( $current_screen->post_type ) ) {
 					return array();
 				}
 
@@ -442,7 +450,8 @@ class Admin {
 			unset( $actions['edit'], $actions['quickedit'] );
 		}
 
-		if ( in_array( get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
+		$comment_type = get_comment_type( $comment );
+		if ( in_array( $comment_type, Comment::get_comment_type_slugs(), true ) ) {
 			unset( $actions['reply'] );
 		}
 
@@ -489,7 +498,11 @@ class Admin {
 		if ( Extra_Fields::is_extra_fields_post_type( $post_type ) ) {
 			$after_key = 'title';
 			$index     = array_search( $after_key, array_keys( $columns ), true );
-			$columns   = array_slice( $columns, 0, $index + 1 ) + array( 'extra_field_content' => esc_attr__( 'Content', 'activitypub' ) ) + $columns;
+			if ( false !== $index ) {
+				$columns = array_slice( $columns, 0, $index + 1 ) + array( 'extra_field_content' => esc_attr__( 'Content', 'activitypub' ) ) + array_slice( $columns, $index + 1 );
+			} else {
+				$columns['extra_field_content'] = esc_attr__( 'Content', 'activitypub' );
+			}
 		}
 
 		return $columns;
@@ -498,12 +511,13 @@ class Admin {
 	/**
 	 * Add "comment-type" and "protocol" as column in WP-Admin.
 	 *
-	 * @param array $column     The column to implement.
-	 * @param int   $comment_id The comment id.
+	 * @param string $column     The column to implement.
+	 * @param int    $comment_id The comment id.
 	 */
 	public static function manage_comments_custom_column( $column, $comment_id ) {
 		if ( 'comment_type' === $column && ! defined( 'WEBMENTION_PLUGIN_DIR' ) ) {
-			echo esc_attr( ucfirst( get_comment_type( $comment_id ) ) );
+			$comment_type = get_comment_type( $comment_id );
+			echo esc_attr( ucfirst( $comment_type ) );
 		} elseif ( 'comment_protocol' === $column ) {
 			$protocol = get_comment_meta( $comment_id, 'protocol', true );
 
@@ -562,8 +576,8 @@ class Admin {
 	public static function manage_posts_custom_column( $column_name, $post_id ) {
 		if ( 'extra_field_content' === $column_name ) {
 			$post = get_post( $post_id );
-			if ( Extra_Fields::is_extra_fields_post_type( $post->post_type ) ) {
-				echo esc_attr( wp_strip_all_tags( $post->post_content ) );
+			if ( $post && Extra_Fields::is_extra_fields_post_type( $post->post_type ) ) {
+				echo esc_html( wp_strip_all_tags( $post->post_content ) );
 			}
 		}
 	}
@@ -600,21 +614,25 @@ class Admin {
 			case 'add_activitypub_cap':
 				foreach ( $users as $user_id ) {
 					$user = new \WP_User( $user_id );
-					$user->add_cap( 'activitypub' );
+					if ( $user->exists() ) {
+						$user->add_cap( 'activitypub' );
+					}
 				}
 				return $send_back;
 			case 'remove_activitypub_cap':
 				$removed_count = 0;
+				$valid_users   = array();
 
 				// Remove capabilities immediately.
-				foreach ( $users as $key => $user_id ) {
+				foreach ( $users as $user_id ) {
 					$user = new \WP_User( $user_id );
 
-					// Check if user has ActivityPub capability.
-					if ( ! $user->has_cap( 'activitypub' ) ) {
-						unset( $users[ $key ] );
+					// Check if user exists and has ActivityPub capability.
+					if ( ! $user->exists() || ! $user->has_cap( 'activitypub' ) ) {
 						continue;
 					}
+
+					$valid_users[] = $user_id;
 
 					// Remove the capability.
 					$user->remove_cap( 'activitypub' );
@@ -626,6 +644,10 @@ class Admin {
 					++$removed_count;
 				}
 
+				if ( empty( $valid_users ) ) {
+					return $send_back;
+				}
+
 				// Build the query args with proper array handling for fediverse deletion confirmation.
 				$query_args = array(
 					'action'    => 'activitypub_confirm_removal',
@@ -633,7 +655,7 @@ class Admin {
 				);
 
 				// Add user IDs as separate parameters.
-				foreach ( $users as $index => $user_id ) {
+				foreach ( $valid_users as $index => $user_id ) {
 					$query_args[ sprintf( 'users[%d]', $index ) ] = absint( $user_id );
 				}
 
@@ -671,19 +693,21 @@ class Admin {
 		$users = \array_filter( $users );
 
 		// Validate send_back URL.
-		if ( empty( $send_back ) ) {
+		if ( empty( $send_back ) || ! wp_http_validate_url( $send_back ) ) {
 			$send_back = \admin_url( 'users.php' );
 		}
 
 		// Load template and exit to prevent WordPress from trying to load other admin pages.
-		\load_template(
-			ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-actor-delete-confirmation.php',
-			false,
-			array(
-				'users'     => $users,
-				'send_back' => $send_back,
-			)
-		);
+		if ( file_exists( ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-actor-delete-confirmation.php' ) ) {
+			\load_template(
+				ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-actor-delete-confirmation.php',
+				false,
+				array(
+					'users'     => $users,
+					'send_back' => $send_back,
+				)
+			);
+		}
 		exit;
 	}
 
@@ -843,7 +867,7 @@ class Admin {
 		$preview_url = add_query_arg( 'activitypub', 'true', \get_preview_post_link( $post ) );
 
 		$actions['activitypub'] = sprintf(
-			'<a href="%s" target="_blank">%s</a>',
+			'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
 			\esc_url( $preview_url ),
 			\esc_html__( 'Fediverse Preview ⁂', 'activitypub' )
 		);
@@ -884,7 +908,9 @@ class Admin {
 	 * Adds meta box on wp-admin/tools.php.
 	 */
 	public static function tool_box() {
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
+		if ( file_exists( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
+		}
 	}
 
 	/**
@@ -895,7 +921,12 @@ class Admin {
 	 */
 	public static function open_help_tab() {
 		// get all tabs registered for the ActivityPub settings page.
-		$tabs = \get_current_screen()->get_help_tabs();
+		$screen = \get_current_screen();
+		if ( ! $screen ) {
+			return;
+		}
+
+		$tabs = $screen->get_help_tabs();
 		$ids  = \array_values( \wp_list_pluck( $tabs, 'id' ) );
 		$ids  = \array_map(
 			function ( $id ) {
@@ -912,8 +943,14 @@ class Admin {
 				const delay = ( event && event.type === 'hashchange' ) ? 0 : 200;
 
 				setTimeout( function() {
-					document.getElementById( 'contextual-help-link' ).click();
-					document.querySelector( window.location.hash + ' > a[href^="#tab-panel-"]' ).click();
+					const helpLink = document.getElementById( 'contextual-help-link' );
+					if ( helpLink ) {
+						helpLink.click();
+					}
+					const tabLink = document.querySelector( window.location.hash + ' > a[href^="#tab-panel-"]' );
+					if ( tabLink ) {
+						tabLink.click();
+					}
 				}, delay );
 			}
 		}
@@ -958,6 +995,9 @@ class Admin {
 	 */
 	public static function profile_dashboard_widget() {
 		$user = Actors::get_by_id( \get_current_user_id() );
+		if ( ! $user ) {
+			return;
+		}
 		?>
 		<p>
 			<?php \esc_html_e( 'People can follow you by using your author name:', 'activitypub' ); ?>
@@ -982,8 +1022,8 @@ class Admin {
 		<p>
 			<?php \esc_html_e( 'People can follow your blog by using:', 'activitypub' ); ?>
 		</p>
-		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
-		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
+		<p><label for="activitypub-blog-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-blog-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
+		<p><label for="activitypub-blog-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-blog-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
 		<p>
 			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
 			<?php if ( current_user_can( 'manage_options' ) ) : ?>
@@ -999,6 +1039,11 @@ class Admin {
 	 * AJAX handler for moderation settings (add/remove blocks).
 	 */
 	public static function ajax_moderation_settings() {
+		// Verify nonce first
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_moderation_settings' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
 		$context   = \sanitize_text_field( \wp_unslash( $_POST['context'] ?? '' ) );
 		$operation = \sanitize_text_field( \wp_unslash( $_POST['operation'] ?? '' ) );
 		$type      = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
@@ -1011,11 +1056,6 @@ class Admin {
 
 		if ( empty( $type ) || empty( $value ) || ! in_array( $type, array( 'domain', 'keyword' ), true ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid parameters.', 'activitypub' ) ) );
-		}
-
-		// Verify nonce for all operations.
-		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_moderation_settings' ) ) {
-			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
 		}
 
 		if ( ! \current_user_can( 'manage_options' ) ) {
