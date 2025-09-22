@@ -1334,7 +1334,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * Test get_activity_visibility function.
 	 *
 	 * @dataProvider visibility_data_provider
-	 * @covers ::get_activity_visibility
 	 *
 	 * @param array  $activity    The activity data.
 	 * @param string $expected    Expected visibility level.
@@ -1347,8 +1346,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 	/**
 	 * Test get_activity_visibility with minimal activity data.
-	 *
-	 * @covers ::get_activity_visibility
 	 */
 	public function test_get_activity_visibility_with_minimal_activity() {
 		$activity = array(
