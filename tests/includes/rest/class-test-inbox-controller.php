@@ -454,18 +454,18 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
-	 * Test get_recipients method with no recipients.
+	 * Test get_local_recipients method with no recipients.
 	 *
-	 * @covers ::get_recipients
+	 * @covers ::get_local_recipients
 	 */
-	public function test_get_recipients_no_recipients() {
+	public function test_get_local_recipients_no_recipients() {
 		$activity = array(
 			'type' => 'Create',
 		);
 
 		// Use reflection to test the private method.
 		$reflection = new \ReflectionClass( $this->inbox_controller );
-		$method     = $reflection->getMethod( 'get_recipients' );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
 		$method->setAccessible( true );
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
@@ -473,11 +473,11 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
-	 * Test get_recipients with external recipients only.
+	 * Test get_local_recipients with external recipients only.
 	 *
-	 * @covers ::get_recipients
+	 * @covers ::get_local_recipients
 	 */
-	public function test_get_recipients_external_only() {
+	public function test_get_local_recipients_external_only() {
 		$activity = array(
 			'type' => 'Create',
 			'to'   => array( 'https://external.example.com/user/123' ),
@@ -486,7 +486,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		// Use reflection to test the private method.
 		$reflection = new \ReflectionClass( $this->inbox_controller );
-		$method     = $reflection->getMethod( 'get_recipients' );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
 		$method->setAccessible( true );
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
@@ -494,11 +494,11 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
-	 * Test get_recipients with actual local actor.
+	 * Test get_local_recipients with actual local actor.
 	 *
-	 * @covers ::get_recipients
+	 * @covers ::get_local_recipients
 	 */
-	public function test_get_recipients_with_local_actor() {
+	public function test_get_local_recipients_with_local_actor() {
 		// Get the actual actor ID for the user.
 		$actor    = Actors::get_by_id( self::$user_id );
 		$actor_id = $actor->get_id();
@@ -511,7 +511,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		// Use reflection to test the private method.
 		$reflection = new \ReflectionClass( $this->inbox_controller );
-		$method     = $reflection->getMethod( 'get_recipients' );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
 		$method->setAccessible( true );
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
@@ -520,11 +520,11 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
-	 * Test get_recipients handles malformed actor URLs.
+	 * Test get_local_recipients handles malformed actor URLs.
 	 *
-	 * @covers ::get_recipients
+	 * @covers ::get_local_recipients
 	 */
-	public function test_get_recipients_with_malformed_urls() {
+	public function test_get_local_recipients_with_malformed_urls() {
 		$activity = array(
 			'type' => 'Create',
 			'to'   => array(
@@ -536,7 +536,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		// Use reflection to test the private method.
 		$reflection = new \ReflectionClass( $this->inbox_controller );
-		$method     = $reflection->getMethod( 'get_recipients' );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
 		$method->setAccessible( true );
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
