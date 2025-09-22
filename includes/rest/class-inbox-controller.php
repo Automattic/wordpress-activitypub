@@ -150,7 +150,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 */
 			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
-			$recipients = $this->get_recipients( $data );
+			$recipients = $this->get_local_recipients( $data );
 			$visibility = get_activity_visibility( $data );
 
 			foreach ( $recipients as $recipient ) {
@@ -286,7 +286,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 *
 	 * @return array An array of user IDs who are the recipients of the activity.
 	 */
-	private function get_recipients( $activity ) {
+	private function get_local_recipients( $activity ) {
 		$recipients = extract_recipients_from_activity( $activity );
 		$user_ids   = array();
 
