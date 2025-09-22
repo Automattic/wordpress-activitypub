@@ -13,6 +13,7 @@ use Activitypub\Collection\Outbox;
 use function Activitypub\add_to_outbox;
 use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\extract_recipients_from_activity_property;
+use function Activitypub\get_activity_visibility;
 
 /**
  * Test class for Functions.
@@ -1239,5 +1240,124 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		$actual = extract_recipients_from_activity( $data );
 		$this->assertSame( array( 'https://example.com/users/alice' ), $actual );
 		$this->assertCount( 1, $actual, 'Should return unique recipients only.' );
+	}
+
+	/**
+	 * Data provider for visibility determination tests.
+	 *
+	 * @return array
+	 */
+	public function visibility_data_provider() {
+		return array(
+			// Public visibility - 'to' contains public identifier.
+			array(
+				'activity'    => array(
+					'type' => 'Create',
+					'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'cc'   => array(),
+				),
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				'description' => 'Public visibility via to field',
+			),
+			// Quiet public visibility - 'cc' contains public identifier.
+			array(
+				'activity'    => array(
+					'type' => 'Create',
+					'to'   => array( 'https://example.com/user/123' ),
+					'cc'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				),
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+				'description' => 'Quiet public visibility via cc field',
+			),
+			// Private visibility - no public identifiers.
+			array(
+				'activity'    => array(
+					'type' => 'Create',
+					'to'   => array( 'https://example.com/user/123' ),
+					'cc'   => array( 'https://example.com/user/456' ),
+				),
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				'description' => 'Private visibility',
+			),
+			// Special activity types always private - Accept.
+			array(
+				'activity'    => array(
+					'type' => 'Accept',
+					'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'cc'   => array(),
+				),
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				'description' => 'Accept activity always private',
+			),
+			// Special activity types always private - Delete.
+			array(
+				'activity'    => array(
+					'type' => 'Delete',
+					'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'cc'   => array(),
+				),
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				'description' => 'Delete activity always private',
+			),
+			// Special activity types always private - Follow.
+			array(
+				'activity'    => array(
+					'type' => 'Follow',
+					'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'cc'   => array(),
+				),
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				'description' => 'Follow activity always private',
+			),
+			// Alternative public identifier - as:Public.
+			array(
+				'activity'    => array(
+					'type' => 'Create',
+					'to'   => array( 'as:Public' ),
+					'cc'   => array(),
+				),
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				'description' => 'Public visibility via as:Public identifier',
+			),
+			// Empty activity.
+			array(
+				'activity'    => array(
+					'type' => 'Create',
+				),
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				'description' => 'Empty activity defaults to private',
+			),
+		);
+	}
+
+	/**
+	 * Test get_activity_visibility function.
+	 *
+	 * @dataProvider visibility_data_provider
+	 * @covers ::get_activity_visibility
+	 *
+	 * @param array  $activity    The activity data.
+	 * @param string $expected    Expected visibility level.
+	 * @param string $description Test description.
+	 */
+	public function test_get_activity_visibility( $activity, $expected, $description ) {
+		$result = \Activitypub\get_activity_visibility( $activity );
+		$this->assertSame( $expected, $result, $description );
+	}
+
+	/**
+	 * Test get_activity_visibility with minimal activity data.
+	 *
+	 * @covers ::get_activity_visibility
+	 */
+	public function test_get_activity_visibility_with_minimal_activity() {
+		$activity = array(
+			'type' => 'Create',
+			'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'cc'   => array(),
+		);
+
+		$result = \Activitypub\get_activity_visibility( $activity );
+		$this->assertSame( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $result, 'Should work with minimal activity data' );
 	}
 }

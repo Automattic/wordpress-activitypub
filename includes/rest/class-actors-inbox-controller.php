@@ -10,6 +10,7 @@ namespace Activitypub\Rest;
 use Activitypub\Activity\Activity;
 use Activitypub\Moderation;
 
+use function Activitypub\get_activity_visibility;
 use function Activitypub\get_context;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
@@ -23,7 +24,6 @@ use function Activitypub\get_rest_url_by_path;
  */
 class Actors_Inbox_Controller extends Actors_Controller {
 	use Collection;
-	use Audience;
 
 	/**
 	 * Register routes.
@@ -178,7 +178,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 */
 			do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 		} else {
-			$visibility = $this->determine_visibility( $data );
+			$visibility = get_activity_visibility( $data );
 
 			/**
 			 * ActivityPub inbox action.

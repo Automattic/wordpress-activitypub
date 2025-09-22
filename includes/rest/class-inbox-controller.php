@@ -12,6 +12,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Moderation;
 
 use function Activitypub\extract_recipients_from_activity;
+use function Activitypub\get_activity_visibility;
 use function Activitypub\is_same_domain;
 use function Activitypub\user_can_activitypub;
 
@@ -23,8 +24,6 @@ use function Activitypub\user_can_activitypub;
  * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox_Controller extends \WP_REST_Controller {
-	use Audience;
-
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -152,7 +151,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
 			$recipients = $this->get_recipients( $data );
-			$visibility = $this->determine_visibility( $data );
+			$visibility = get_activity_visibility( $data );
 
 			foreach ( $recipients as $recipient ) {
 				// Check user-specific blocks for this recipient.
