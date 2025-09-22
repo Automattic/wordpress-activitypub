@@ -83,10 +83,10 @@ class Post extends Base {
 	 */
 	public function get_interaction_policy() {
 		return array(
-			'canAnnounce' => $this->get_policy_for_anyone(),
-			'canLike'     => $this->get_policy_for_anyone(),
+			'canAnnounce' => $this->get_public_interaction_policy(),
+			'canLike'     => $this->get_public_interaction_policy(),
 			'canQuote'    => $this->get_quote_policy(),
-			'canReply'    => $this->get_policy_for_anyone(),
+			'canReply'    => $this->get_public_interaction_policy(),
 		);
 	}
 
@@ -978,10 +978,10 @@ class Post extends Base {
 				return array( 'automaticApproval' => get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->item->post_author ) ) );
 
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
-				return array( 'automaticApproval' => $this->get_policy_for_me() );
+				return array( 'automaticApproval' => $this->get_self_interaction_policy() );
 
 			default:
-				return $this->get_policy_for_anyone();
+				return $this->get_public_interaction_policy();
 		}
 	}
 
@@ -990,7 +990,7 @@ class Post extends Base {
 	 *
 	 * @return array The public interaction policy.
 	 */
-	private function get_policy_for_anyone() {
+	private function get_public_interaction_policy() {
 		return array(
 			'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
 			'always'            => 'https://www.w3.org/ns/activitystreams#Public',
@@ -1002,7 +1002,7 @@ class Post extends Base {
 	 *
 	 * @return string|array The actor ID(s).
 	 */
-	private function get_policy_for_me() {
+	private function get_self_interaction_policy() {
 		switch ( \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 			case ACTIVITYPUB_BLOG_MODE:
 				return ( new Blog() )->get_id();
