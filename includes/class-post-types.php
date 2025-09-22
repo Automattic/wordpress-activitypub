@@ -30,9 +30,16 @@ class Post_Types {
 
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 
+		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
+
 		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'default_post_metadata', array( self::class, 'default_post_meta_data' ), 10, 3 );
+
+		// Add support for ActivityPub to custom post types.
+		foreach ( \get_option( 'activitypub_support_post_types', array( 'post' ) ) as $post_type ) {
+			\add_post_type_support( $post_type, 'activitypub' );
+		}
 	}
 
 	/**

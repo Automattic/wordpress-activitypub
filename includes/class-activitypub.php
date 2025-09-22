@@ -8,7 +8,6 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
@@ -39,14 +38,8 @@ class Activitypub {
 
 		\add_action( 'user_register', array( self::class, 'user_register' ) );
 
-		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 		\add_action( 'activitypub_add_user_block', array( Followers::class, 'remove_blocked_actors' ), 10, 3 );
 		\add_action( 'activitypub_add_user_block', array( Following::class, 'remove_blocked_actors' ), 10, 3 );
-
-		// Add support for ActivityPub to custom post types.
-		foreach ( \get_option( 'activitypub_support_post_types', array( 'post' ) ) as $post_type ) {
-			\add_post_type_support( $post_type, 'activitypub' );
-		}
 	}
 
 	/**
