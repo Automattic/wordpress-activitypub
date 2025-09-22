@@ -113,8 +113,8 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 *
 	 * @param array      $activity     The ActivityPub activity data.
 	 * @param int|null   $user_id      The local user ID, or null if not applicable.
-	 * @param mixed      $state        The WP_Post object of the remote actor/follower, or WP_Error if failed.
-	 * @param mixed|null $context      The WP_Post object of the remote actor/follower (duplicate parameter).
+	 * @param mixed      $state        Status or WP_Error object indicating the result of the follow handling.
+	 * @param \WP_Post|null $context   The WP_Post object representing the remote actor/follower.
 	 */
 	public function callback_activitypub_handled_follow( $activity, $user_id, $state, $context ) {
 		$actor_url = \is_object( $context ) && ! \is_wp_error( $context ) ? $context->guid : $activity['actor'];
