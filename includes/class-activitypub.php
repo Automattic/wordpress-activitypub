@@ -12,7 +12,6 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Remote_Actors;
 
 /**
  * ActivityPub Class.
@@ -27,8 +26,6 @@ class Activitypub {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
-
-		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 
 		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
@@ -462,33 +459,6 @@ class Activitypub {
 				);
 			}
 		}
-	}
-
-
-	/**
-	 * Register REST field for ap_actor posts.
-	 */
-	public static function register_ap_actor_rest_field() {
-		\register_rest_field(
-			Remote_Actors::POST_TYPE,
-			'activitypub_json',
-			array(
-				/**
-				 * Get the raw post content without WordPress content filtering.
-				 *
-				 * @param array $response Prepared response array.
-				 * @return string The raw post content.
-				 */
-				'get_callback' => function ( $response ) {
-					return \get_post_field( 'post_content', $response['id'] );
-				},
-				'schema'       => array(
-					'description' => 'Raw ActivityPub JSON data without WordPress content filtering',
-					'type'        => 'string',
-					'context'     => array( 'view', 'edit' ),
-				),
-			)
-		);
 	}
 
 	/**
