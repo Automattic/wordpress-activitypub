@@ -27,6 +27,10 @@ class Post_Types {
 		self::register_outbox_post_type();
 		self::register_extra_fields_post_types();
 		self::register_activitypub_post_meta();
+
+		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
+		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
+		\add_filter( 'default_post_metadata', array( self::class, 'default_post_meta_data' ), 10, 3 );
 	}
 
 	/**
