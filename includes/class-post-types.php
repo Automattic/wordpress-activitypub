@@ -187,13 +187,12 @@ class Post_Types {
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				'description'       => 'The visibility of the content.',
 				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
-						'enum'    => array( 'public', 'unlisted', 'private', 'direct' ),
-						'default' => 'public',
+						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+						'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
 					);
 
 					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
