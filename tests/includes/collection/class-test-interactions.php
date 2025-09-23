@@ -97,7 +97,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		\add_filter( 'pre_get_remote_metadata_by_actor', array( __CLASS__, 'get_remote_metadata_by_actor' ), 0, 2 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( __CLASS__, 'get_remote_metadata_by_actor' ), 0, 2 );
 	}
 
 	/**
@@ -117,12 +117,14 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 */
 	public static function get_remote_metadata_by_actor( $value, $actor ) {
 		return array(
-			'name' => 'Example User',
-			'icon' => array(
+			'name'  => 'Example User',
+			'type'  => 'Person',
+			'icon'  => array(
 				'url' => 'https://example.com/icon',
 			),
-			'url'  => $actor,
-			'id'   => 'http://example.org/users/example',
+			'url'   => $actor,
+			'id'    => 'http://example.org/users/example',
+			'inbox' => $actor . '/inbox',
 		);
 	}
 
@@ -183,7 +185,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( self::$user_url, $basic_comment['comment_author_url'] );
 		$this->assertEquals( 'example', $basic_comment['comment_content'] );
 		$this->assertEquals( 'comment', $basic_comment['comment_type'] );
-		$this->assertEquals( '', $basic_comment['comment_author_email'] );
+		$this->assertEquals( 'example@example.org', $basic_comment['comment_author_email'] );
 		$this->assertEquals( 0, $basic_comment['comment_parent'] );
 		$this->assertEquals( 'https://example.com/123', get_comment_meta( $basic_comment_id, 'source_id', true ) );
 		$this->assertEquals( 'https://example.com/example', get_comment_meta( $basic_comment_id, 'source_url', true ) );
@@ -337,7 +339,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Mock actor metadata.
 		add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () {
 				return array(
 					'name'              => 'Test User',
@@ -353,7 +355,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertFalse( $result, 'Comment should not be added to disabled post' );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 		wp_delete_post( $disabled_post_id, true );
 	}
 
@@ -375,7 +377,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Mock actor metadata.
 		add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () {
 				return array(
 					'name'              => 'Test User',
@@ -390,7 +392,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$result = Interactions::add_comment( $activity );
 		$this->assertFalse( $result, 'Comment should not be added to disabled post' );
 
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -418,7 +420,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Mock actor metadata.
 		add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () {
 				return array(
 					'name'              => 'Test User',
@@ -434,7 +436,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertFalse( $result, 'Reaction should not be added to disabled post' );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 		wp_delete_post( $disabled_post_id, true );
 	}
 
@@ -453,7 +455,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Mock actor metadata.
 		add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () {
 				return array(
 					'name'              => 'Test User',
@@ -468,7 +470,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$result = Interactions::add_reaction( $activity );
 		$this->assertFalse( $result, 'Reaction should not be added to disabled post' );
 
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -560,7 +562,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'actor_meta_data_comment_author' ), 10, 2 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'actor_meta_data_comment_author' ), 10, 2 );
 
 		// No name => preferredUsername.
 		$comment_data = Interactions::activity_to_comment( $activity );
@@ -582,7 +584,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$comment_data      = Interactions::activity_to_comment( $activity );
 		$this->assertSame( \__( 'Anonymous', 'activitypub' ), $comment_data['comment_author'] );
 
-		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'actor_meta_data_comment_author' ) );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'actor_meta_data_comment_author' ) );
 		\update_option( 'require_name_email', '1' );
 	}
 
@@ -597,26 +599,32 @@ class Test_Interactions extends \WP_UnitTestCase {
 	public function actor_meta_data_comment_author( $response, $url ) {
 		if ( 'https://example.com/users/tester_no_name' === $url ) {
 			$response = array(
+				'type'              => 'Person',
 				'name'              => '',
 				'preferredUsername' => 'test',
 				'id'                => 'https://example.com/users/test',
 				'url'               => 'https://example.com/@test',
+				'inbox'             => 'https://example.com/users/test/inbox',
 			);
 		}
 		if ( 'https://example.com/users/tester_no_preferredUsername' === $url ) {
 			$response = array(
+				'type'              => 'Person',
 				'name'              => 'Test User',
 				'preferredUsername' => '',
 				'id'                => 'https://example.com/users/test',
 				'url'               => 'https://example.com/@test',
+				'inbox'             => 'https://example.com/users/test/inbox',
 			);
 		}
 		if ( 'https://example.com/users/tester_anonymous' === $url ) {
 			$response = array(
+				'type'              => 'Person',
 				'name'              => '',
 				'preferredUsername' => '',
 				'id'                => 'https://example.com/users/test',
 				'url'               => 'https://example.com/@test',
+				'inbox'             => 'https://example.com/users/test/inbox',
 			);
 		}
 

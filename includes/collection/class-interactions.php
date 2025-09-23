@@ -7,11 +7,9 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
-use Activitypub\Webfinger;
-use WP_Comment_Query;
 
-use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_post_disabled;
 use function Activitypub\object_id_to_comment;
 use function Activitypub\object_to_uri;
@@ -67,7 +65,8 @@ class Interactions {
 	 * @return array|string|int|\WP_Error|false The comment data or false on failure.
 	 */
 	public static function update_comment( $activity ) {
-		$meta = get_remote_metadata_by_actor( $activity['actor'] );
+		$url  = object_to_uri( $activity['actor'] );
+		$post = Remote_Actors::fetch_by_uri( $url );
 
 		// Determine comment_ID.
 		$comment      = object_id_to_comment( \esc_url_raw( $activity['object']['id'] ) );
@@ -78,7 +77,7 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author']  = \esc_attr( $meta['name'] ?? $meta['preferredUsername'] );
+		$comment_data['comment_author']  = \esc_attr( $post->post_title );
 		$comment_data['comment_content'] = \addslashes( $activity['object']['content'] );
 
 		return self::persist( $comment_data, self::UPDATE );
@@ -157,7 +156,7 @@ class Interactions {
 			),
 		);
 
-		$query = new WP_Comment_Query( $args );
+		$query = new \WP_Comment_Query( $args );
 		return $query->comments;
 	}
 
@@ -169,16 +168,17 @@ class Interactions {
 	 * @return array The interactions as WP_Comment objects.
 	 */
 	public static function get_interactions_by_actor( $actor ) {
-		$meta = get_remote_metadata_by_actor( $actor );
+		$url  = object_to_uri( $actor );
+		$post = Remote_Actors::fetch_by_uri( $url );
 
 		// Get URL, because $actor seems to be the ID.
-		if ( $meta && ! is_wp_error( $meta ) && isset( $meta['url'] ) ) {
-			$actor = object_to_uri( $meta['url'] );
+		if ( \is_wp_error( $post ) ) {
+			return array();
 		}
 
 		$args = array(
 			'nopaging'   => true,
-			'author_url' => $actor,
+			'author_url' => $post->guid,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				array(
@@ -226,34 +226,28 @@ class Interactions {
 	 */
 	public static function activity_to_comment( $activity ) {
 		$comment_content = null;
-		$actor           = object_to_uri( $activity['actor'] ?? null );
-		$actor           = get_remote_metadata_by_actor( $actor );
+		$actor_id        = object_to_uri( $activity['actor'] ?? null );
+		$post            = Remote_Actors::fetch_by_uri( $actor_id );
 
 		// Check Actor-Meta.
-		if ( ! $actor || is_wp_error( $actor ) ) {
+		if ( \is_wp_error( $post ) ) {
 			return false;
 		}
 
-		// Check Actor-Name.
-		$comment_author = null;
-		if ( ! empty( $actor['name'] ) ) {
-			$comment_author = $actor['name'];
-		} elseif ( ! empty( $actor['preferredUsername'] ) ) {
-			$comment_author = $actor['preferredUsername'];
-		}
+		$comment_author = $post->post_title;
+		$actor          = json_decode( $post->post_content, true );
+		$url            = object_to_uri( $actor['url'] ?? $post->guid );
 
 		if ( empty( $comment_author ) && \get_option( 'require_name_email' ) ) {
 			return false;
 		}
 
-		$url = object_to_uri( $actor['url'] ?? $actor['id'] );
-
 		if ( isset( $activity['object']['content'] ) ) {
 			$comment_content = \addslashes( $activity['object']['content'] );
 		}
 
-		$webfinger = Webfinger::uri_to_acct( $url );
-		if ( is_wp_error( $webfinger ) ) {
+		$webfinger = Remote_Actors::get_acct( $post->ID );
+		if ( \is_wp_error( $webfinger ) ) {
 			$webfinger = '';
 		} else {
 			$webfinger = str_replace( 'acct:', '', $webfinger );
@@ -262,7 +256,7 @@ class Interactions {
 		$date = $activity['object']['published'] ?? 'now';
 
 		$comment_data = array(
-			'comment_author'       => $comment_author ?? __( 'Anonymous', 'activitypub' ),
+			'comment_author'       => $comment_author ?: __( 'Anonymous', 'activitypub' ), // phpcs:ignore Universal.Operators.DisallowShortTernary
 			'comment_author_url'   => \esc_url_raw( $url ),
 			'comment_content'      => $comment_content,
 			'comment_type'         => 'comment',
