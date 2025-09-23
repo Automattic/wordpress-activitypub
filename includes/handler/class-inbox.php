@@ -63,10 +63,10 @@ class Inbox {
 		/**
 		 * Fires after an ActivityPub Inbox activity has been handled.
 		 *
-		 * @param array      $data     The ActivityPub activity data.
-		 * @param int        $user_id  The local user ID, or null if not applicable.
-		 * @param mixed      $id       The ID of the inbox item that was created, or WP_Error if failed.
-		 * @param mixed|null $activity The Activity object or WP_Error from processing the inbox request.
+		 * @param array              $data     The ActivityPub activity data.
+		 * @param int                $user_id  The local user ID.
+		 * @param \WP_Error|int      $id       The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param Activity|\WP_Error $activity The Activity object or WP_Error from processing the inbox request.
 		 */
 		\do_action( 'activitypub_handled_inbox', $data, $user_id, $id, $activity );
 	}
