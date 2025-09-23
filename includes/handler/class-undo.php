@@ -73,10 +73,10 @@ class Undo {
 		/**
 		 * Fires after an ActivityPub Undo activity has been handled.
 		 *
-		 * @param array      $activity The ActivityPub activity data.
-		 * @param int        $user_id  The local user ID, or null if not applicable.
-		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
-		 * @param WP_Comment $comment  Always null for Undo activities.
+		 * @param array       $activity The ActivityPub activity data.
+		 * @param int         $user_id  The local user ID.
+		 * @param bool        $state    True on success, false on failure.
+		 * @param \WP_Comment $comment  The comment that was deleted.
 		 */
 		\do_action( 'activitypub_handled_undo', $activity, $user_id, $state, $comment );
 	}
