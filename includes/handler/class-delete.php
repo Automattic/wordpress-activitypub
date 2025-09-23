@@ -115,7 +115,7 @@ class Delete {
 	 *
 	 * @param array $activity The delete activity.
 	 *
-	 * @return mixed The state/result of the delete operation, or false if no action was taken.
+	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_follower( $activity ) {
 		$follower = Remote_Actors::get_by_uri( $activity['actor'] );
