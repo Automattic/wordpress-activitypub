@@ -114,6 +114,8 @@ class Delete {
 	 * Delete a Follower if Actor-URL is a Tombstone.
 	 *
 	 * @param array $activity The delete activity.
+	 *
+	 * @return mixed The state/result of the delete operation, or false if no action was taken.
 	 */
 	public static function maybe_delete_follower( $activity ) {
 		$follower = Remote_Actors::get_by_uri( $activity['actor'] );
@@ -124,7 +126,7 @@ class Delete {
 			self::maybe_delete_interactions( $activity );
 		}
 
-		return $state ?? null;
+		return $state ?? false;
 	}
 
 	/**
