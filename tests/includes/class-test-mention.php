@@ -23,9 +23,12 @@ class Test_Mention extends \WP_UnitTestCase {
 	 */
 	public static $actors = array(
 		'username@example.org' => array(
-			'id'   => 'https://example.org/users/username',
-			'url'  => 'https://example.org/users/username',
-			'name' => 'username',
+			'id'                => 'https://example.org/users/username',
+			'type'              => 'Person',
+			'url'               => 'https://example.org/users/username',
+			'name'              => 'username',
+			'preferredUsername' => 'username',
+			'inbox'             => 'https://example.org/users/username/inbox',
 		),
 	);
 
@@ -34,7 +37,7 @@ class Test_Mention extends \WP_UnitTestCase {
 	 */
 	public function set_up() {
 		parent::set_up();
-		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
+		add_filter( 'activitypub_pre_http_get_remote_object', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
 		add_filter( 'pre_http_request', array( $this, 'pre_http_request' ), 10, 3 );
 	}
 
@@ -42,7 +45,7 @@ class Test_Mention extends \WP_UnitTestCase {
 	 * Tear down the test case.
 	 */
 	public function tear_down() {
-		remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
+		remove_filter( 'activitypub_pre_http_get_remote_object', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
 		remove_filter( 'pre_http_request', array( $this, 'pre_http_request' ) );
 		parent::tear_down();
 	}
