@@ -118,10 +118,10 @@ class Update {
 		/**
 		 * Fires after an ActivityPub Update activity has been handled.
 		 *
-		 * @param array      $activity The ActivityPub activity data.
-		 * @param int|null   $user_id  The local user ID, or null if not applicable.
-		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
-		 * @param mixed|null $actor    Additional context or resulting object (e.g., comment, reaction), or null if not applicable.
+		 * @param array         $activity The ActivityPub activity data.
+		 * @param int.          $user_id  The local user ID.
+		 * @param int|\WP_Error $state    Actor post ID on success, WP_Error on failure.
+		 * @param array         $actor    Remote actor meta data.
 		 */
 		\do_action( 'activitypub_handled_update', $activity, $user_id, $state, $actor );
 	}
