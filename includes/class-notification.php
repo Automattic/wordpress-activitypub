@@ -64,7 +64,22 @@ class Notification {
 	public function send() {
 		$type = \strtolower( $this->type );
 
+		/**
+		 * Action to send ActivityPub notifications.
+		 *
+		 * @deprecated unreleased Use "activitypub_handled_{$type}" instead.
+		 *
+		 * @param Notification $instance The notification object.
+		 */
 		\do_action_deprecated( 'activitypub_notification', array( $this ), 'unreleased', "activitypub_handled_{$type}" );
+
+		/**
+		 * Type-specific action to send ActivityPub notifications.
+		 *
+		 * @deprecated unreleased Use "activitypub_handled_{$type}" instead.
+		 *
+		 * @param Notification $instance The notification object.
+		 */
 		\do_action_deprecated( "activitypub_notification_{$type}", array( $this ), 'unreleased', "activitypub_handled_{$type}" );
 	}
 }
