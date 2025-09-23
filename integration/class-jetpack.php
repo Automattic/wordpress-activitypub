@@ -33,7 +33,6 @@ class Jetpack {
 	 * @return array The Jetpack sync allow list with ActivityPub meta keys.
 	 */
 	public static function add_sync_meta( $allow_list ) {
-		$allow_list[] = '_activitypub_user_id';
 		$allow_list[] = Followers::FOLLOWER_META_KEY;
 		$allow_list[] = Following::FOLLOWING_META_KEY;
 
