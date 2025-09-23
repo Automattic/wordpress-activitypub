@@ -52,12 +52,12 @@ class Follow {
 		/**
 		 * Fires after a Follow activity has been handled.
 		 *
-		 * @param array      $activity     The ActivityPub activity data.
-		 * @param int|null   $user_id      The local user ID, or null if not applicable.
-		 * @param mixed      $remote_actor The WP_Post object of the remote actor/follower, or WP_Error if failed.
-		 * @param mixed|null $remote_actor The WP_Post object of the remote actor/follower (duplicate parameter).
+		 * @param array    $activity     The ActivityPub activity data.
+		 * @param int|null $user_id      The local user ID, or null if not applicable.
+		 * @param mixed    $remote_actor The WP_Post object of the remote actor/follower, or WP_Error if failed.
+		 * @param array    $activity     The ActivityPub activity data.
 		 */
-		\do_action( 'activitypub_handled_follow', $activity, $user_id, $remote_actor, $remote_actor );
+		\do_action( 'activitypub_handled_follow', $activity, $user_id, $remote_actor, $activity );
 	}
 
 	/**
