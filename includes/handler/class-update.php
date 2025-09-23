@@ -91,10 +91,10 @@ class Update {
 		/**
 		 * Fires after an ActivityPub Update activity has been handled.
 		 *
-		 * @param array      $activity The ActivityPub activity data.
-		 * @param int      $user_id  The local user ID, or null if not applicable.
-		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
-		 * @param mixed|null $result   The WP_Comment object of the updated comment, or null if update failed.
+		 * @param array            $activity The ActivityPub activity data.
+		 * @param int              $user_id  The local user ID.
+		 * @param mixed            $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
+		 * @param \WP_Comment|null $result   The updated comment, or null if update failed.
 		 */
 		\do_action( 'activitypub_handled_update', $activity, $user_id, $state, $result );
 	}
