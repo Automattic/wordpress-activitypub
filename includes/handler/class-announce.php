@@ -111,10 +111,10 @@ class Announce {
 		/**
 		 * Fires after an ActivityPub Announce activity has been handled.
 		 *
-		 * @param array      $activity The ActivityPub activity data.
-		 * @param int        $user_id  The local user ID, or null if not applicable.
-		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
-		 * @param mixed|null $result   The WP_Comment object of the created announce/repost comment, or null if creation failed.
+		 * @param array            $activity The ActivityPub activity data.
+		 * @param int              $user_id  The local user ID.
+		 * @param mixed            $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
+		 * @param \WP_Comment|null $result   The WP_Comment object of the created announce/repost comment, or null if creation failed.
 		 */
 		\do_action( 'activitypub_handled_announce', $activity, $user_id, $state, $result );
 	}
