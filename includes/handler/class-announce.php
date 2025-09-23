@@ -101,21 +101,21 @@ class Announce {
 			return;
 		}
 
-		$state    = Interactions::add_reaction( $activity );
-		$reaction = null;
+		$state  = Interactions::add_reaction( $activity );
+		$result = null;
 
 		if ( $state && ! is_wp_error( $state ) ) {
-			$reaction = get_comment( $state );
+			$result = get_comment( $state );
 		}
 
 		/**
 		 * Fires after an ActivityPub Announce activity has been handled.
 		 *
 		 * @param array      $activity The ActivityPub activity data.
-		 * @param int|null   $user_id  The local user ID, or null if not applicable.
+		 * @param int        $user_id  The local user ID, or null if not applicable.
 		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
-		 * @param mixed|null $reaction The WP_Comment object of the created announce/repost comment, or null if creation failed.
+		 * @param mixed|null $result   The WP_Comment object of the created announce/repost comment, or null if creation failed.
 		 */
-		\do_action( 'activitypub_handled_announce', $activity, $user_id, $state, $reaction );
+		\do_action( 'activitypub_handled_announce', $activity, $user_id, $state, $result );
 	}
 }
