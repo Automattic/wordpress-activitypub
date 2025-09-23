@@ -64,7 +64,7 @@ class Inbox {
 		 * Fires after an ActivityPub Inbox activity has been handled.
 		 *
 		 * @param array      $data     The ActivityPub activity data.
-		 * @param int|null   $user_id  The local user ID, or null if not applicable.
+		 * @param int        $user_id  The local user ID, or null if not applicable.
 		 * @param mixed      $id       The ID of the inbox item that was created, or WP_Error if failed.
 		 * @param mixed|null $activity The Activity object or WP_Error from processing the inbox request.
 		 */

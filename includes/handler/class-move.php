@@ -92,10 +92,10 @@ class Move {
 		/**
 		 * Fires after an ActivityPub Move activity has been handled.
 		 *
-		 * @param array      $activity The ActivityPub activity data.
-		 * @param int|null   $user_id  The local user ID, or null if not applicable.
-		 * @param mixed      $status   The status result of the move operation.
-		 * @param array      $context  Array containing the origin and target objects: array( $origin_object, $target_object ).
+		 * @param array $activity The ActivityPub activity data.
+		 * @param int   $user_id  The local user ID, or null if not applicable.
+		 * @param mixed $status   The status result of the move operation.
+		 * @param array $context  Array containing the origin and target objects: array( $origin_object, $target_object ).
 		 */
 		\do_action( 'activitypub_handled_move', $activity, $user_id, $status, array( $origin_object, $target_object ) );
 	}
