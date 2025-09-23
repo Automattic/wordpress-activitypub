@@ -74,15 +74,7 @@ class Mention {
 		$actor = \json_decode( $post->post_content, true );
 		$url   = object_to_uri( $actor );
 
-		$username = ltrim( $result[0], '@' );
-		if ( ! empty( $actor['name'] ) ) {
-			$username = $actor['name'];
-		}
-		if ( ! empty( $actor['preferredUsername'] ) ) {
-			$username = $actor['preferredUsername'];
-		}
-
-		return \sprintf( '<a rel="mention" class="u-url mention" href="%1$s">@%2$s</a>', esc_url( $url ), esc_html( $username ) );
+		return \sprintf( '<a rel="mention" class="u-url mention" href="%1$s">@%2$s</a>', \esc_url( $url ), \esc_html( $result[1] ) );
 	}
 
 	/**

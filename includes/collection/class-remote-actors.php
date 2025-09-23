@@ -210,6 +210,14 @@ class Remote_Actors {
 	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
 	 */
 	public static function fetch_by_uri( $actor_uri ) {
+		if ( \preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $actor_uri ) ) {
+			$actor_uri = Webfinger::resolve( $actor_uri );
+		}
+
+		if ( \is_wp_error( $actor_uri ) ) {
+			return $actor_uri;
+		}
+
 		$post = self::get_by_uri( $actor_uri );
 
 		if ( ! \is_wp_error( $post ) ) {
