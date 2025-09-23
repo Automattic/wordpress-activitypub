@@ -54,7 +54,7 @@ class Move {
 
 		$target_object = Remote_Actors::get_by_uri( $target_uri );
 		$origin_object = Remote_Actors::get_by_uri( $origin_uri );
-		$status        = null;
+		$status        = false;
 
 		/*
 		 * If the new target is followed, but the origin is not,
@@ -94,7 +94,7 @@ class Move {
 		 *
 		 * @param array $activity The ActivityPub activity data.
 		 * @param int   $user_id  The local user ID, or null if not applicable.
-		 * @param mixed $status   The status result of the move operation.
+		 * @param bool  $status   The status result of the move operation.
 		 * @param array $context  Array containing the origin and target objects: array( $origin_object, $target_object ).
 		 */
 		\do_action( 'activitypub_handled_move', $activity, $user_id, $status, array( $origin_object, $target_object ) );
