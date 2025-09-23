@@ -68,10 +68,10 @@ class Reject {
 		/**
 		 * Fires after an ActivityPub Reject activity has been handled.
 		 *
-		 * @param array      $reject     The ActivityPub activity data.
-		 * @param int        $user_id    The local user ID, or null if not applicable.
-		 * @param mixed      $status     The status result of the rejection operation.
-		 * @param mixed|null $actor_post The WP_Post object of the actor being rejected, or WP_Error if failed.
+		 * @param array              $reject     The ActivityPub activity data.
+		 * @param int                $user_id    The local user ID.
+		 * @param \WP_Post|\WP_Error $status     Actor post on success, WP_Error on failure.
+		 * @param \WP_Post           $actor_post The actor whose follow request was rejected.
 		 */
 		\do_action( 'activitypub_handled_reject', $reject, $user_id, $status, $actor_post );
 	}
