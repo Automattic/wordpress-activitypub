@@ -53,10 +53,10 @@ class Accept {
 		/**
 		 * Fires after an ActivityPub Accept activity has been handled.
 		 *
-		 * @param array   $accept     The ActivityPub activity data.
-		 * @param int     $user_id    The local user ID.
-		 * @param mixed   $result     The result of accepting the follow request (contextual object).
-		 * @param WP_Post $actor_post The remote actor post.
+		 * @param array    $accept     The ActivityPub activity data.
+		 * @param int      $user_id    The local user ID.
+		 * @param mixed    $result     The result of accepting the follow request (contextual object).
+		 * @param \WP_Post $actor_post The remote actor post.
 		 */
 		\do_action( 'activitypub_handled_accept', $accept, $user_id, $result, $actor_post );
 	}
