@@ -103,8 +103,8 @@ class Delete {
 		 * Fires after an ActivityPub Delete activity has been handled.
 		 *
 		 * @param array      $activity The ActivityPub activity data.
-		 * @param int|null   $user_id  The local user ID, or null if not applicable.
-		 * @param mixed      $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
+		 * @param int        $user_id  The local user ID.
+		 * @param bool       $state    True on successful deletion, false otherwise.
 		 * @param mixed|null $reaction The result of the delete operation (e.g., WP_Comment object or deletion status).
 		 */
 		\do_action( 'activitypub_handled_delete', $activity, $user_id, $state, $reaction );
