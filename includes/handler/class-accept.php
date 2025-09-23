@@ -48,18 +48,17 @@ class Accept {
 			return;
 		}
 
-		$reaction = Following::accept( $actor_post, $user_id );
-		$success  = ! \is_wp_error( $reaction );
+		$result = Following::accept( $actor_post, $user_id );
 
 		/**
 		 * Fires after an ActivityPub Accept activity has been handled.
 		 *
-		 * @param array      $accept   The ActivityPub activity data.
-		 * @param int|null   $user_id  The local user ID, or null if not applicable.
-		 * @param bool       $success  Whether the follow request was accepted successfully.
-		 * @param mixed      $reaction The result of accepting the follow request (contextual object).
+		 * @param array   $accept     The ActivityPub activity data.
+		 * @param int     $user_id    The local user ID.
+		 * @param mixed   $result     The result of accepting the follow request (contextual object).
+		 * @param WP_Post $actor_post The remote actor post.
 		 */
-		\do_action( 'activitypub_handled_accept', $accept, $user_id, $success, $reaction );
+		\do_action( 'activitypub_handled_accept', $accept, $user_id, $result, $actor_post );
 	}
 
 	/**
