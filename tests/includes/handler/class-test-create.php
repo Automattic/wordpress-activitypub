@@ -209,7 +209,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 *
 	 * @covers ::handle_create
 	 */
-	public function test_handle_create_check_dupplicate_content() {
+	public function test_handle_create_check_duplicate_content() {
 		$id     = 'https://example.com/id/' . microtime( true );
 		$object = $this->create_test_object( $id );
 		Create::handle_create( $object, $this->user_id );
