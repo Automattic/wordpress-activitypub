@@ -49,50 +49,52 @@ class Test_Undo extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test handle_undo with follow activity.
+	 * Test handle_undo with follow activities.
 	 *
+	 * @dataProvider follow_undo_provider
 	 * @covers ::handle_undo
+	 *
+	 * @param string $actor_url     The actor URL to test with.
+	 * @param string $description   Description of the test case.
 	 */
-	public function test_handle_undo_follow() {
-		$actor = 'https://example.com/test-actor';
-
+	public function test_handle_undo_follow( $actor_url, $description ) {
 		// Mock HTTP requests for actor metadata.
 		\add_filter(
 			'pre_get_remote_metadata_by_actor',
-			function () use ( $actor ) {
+			function () use ( $actor_url ) {
 				return array(
-					'id'                => $actor,
+					'id'                => $actor_url,
 					'type'              => 'Person',
 					'name'              => 'Test Actor',
 					'preferredUsername' => 'testactor',
-					'inbox'             => $actor . '/inbox',
-					'outbox'            => $actor . '/outbox',
-					'url'               => $actor,
+					'inbox'             => $actor_url . '/inbox',
+					'outbox'            => $actor_url . '/outbox',
+					'url'               => $actor_url,
 				);
 			}
 		);
 
 		// Add follower first.
-		$add_result = Followers::add_follower( self::$user_id, $actor );
-		$this->assertIsInt( $add_result, 'Adding follower should return post ID' );
+		$add_result = Followers::add_follower( self::$user_id, $actor_url );
+		$this->assertIsInt( $add_result, $description . ' - Adding follower should return post ID' );
 
 		// Verify follower was added.
 		$followers = Followers::get_followers( self::$user_id );
-		$this->assertNotEmpty( $followers, 'Should have followers after adding one' );
+		$this->assertNotEmpty( $followers, $description . ' - Should have followers after adding one' );
 
 		$user_actor     = Actors::get_by_id( self::$user_id );
 		$user_actor_url = $user_actor->get_id();
 
-		// Debug: Check what the user actor URL looks like.
-		$this->assertNotEmpty( $user_actor_url, 'User actor URL should not be empty' );
+		// Verify user actor URL exists.
+		$this->assertNotEmpty( $user_actor_url, $description . ' - User actor URL should not be empty' );
 
 		// Create undo follow activity.
 		$activity = array(
 			'type'   => 'Undo',
-			'actor'  => $actor,
+			'actor'  => $actor_url,
 			'object' => array(
 				'type'   => 'Follow',
-				'actor'  => $actor,
+				'actor'  => $actor_url,
 				'object' => $user_actor_url,
 			),
 		);
@@ -102,188 +104,112 @@ class Test_Undo extends \WP_UnitTestCase {
 
 		// Verify follower was removed.
 		$followers_after = Followers::get_followers( self::$user_id );
-		$this->assertEmpty( $followers_after, 'Should have no followers after undo' );
+		$this->assertEmpty( $followers_after, $description . ' - Should have no followers after undo' );
 	}
 
 	/**
-	 * Test handle_undo with like activity.
+	 * Data provider for follow undo tests.
 	 *
-	 * @covers ::handle_undo
+	 * @return array Test cases with actor URLs and descriptions.
 	 */
-	public function test_handle_undo_like() {
-		// Verify the constant is set to false for interactions to work.
-		$this->assertFalse( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS, 'Interactions should be enabled for this test' );
+	public function follow_undo_provider() {
+		return array(
+			'basic_follow'          => array(
+				'https://example.com/test-actor',
+				'Basic follow undo should remove follower',
+			),
+			'follow_with_subdomain' => array(
+				'https://social.example.com/users/testactor',
+				'Follow undo with subdomain should work',
+			),
+			'follow_with_path'      => array(
+				'https://example.com/users/testactor',
+				'Follow undo with user path should work',
+			),
+		);
+	}
 
-		// Create a post to like.
+	/**
+	 * Test handle_undo with comment-based activities (Like, Create, Announce).
+	 *
+	 * @dataProvider comment_undo_provider
+	 * @covers ::handle_undo
+	 *
+	 * @param string $activity_type  The type of activity to undo.
+	 * @param string $comment_content The content for the comment.
+	 * @param string $source_id      The source ID for the comment.
+	 * @param string $description    Description of the test case.
+	 */
+	public function test_handle_undo_comment_activities( $activity_type, $comment_content, $source_id, $description ) {
+		// Create a post for the comment.
 		$post_id = $this->factory->post->create(
 			array(
 				'post_author' => self::$user_id,
 			)
 		);
 
-		// Create a like comment.
+		// Create the comment with metadata.
 		$comment_id = $this->factory->comment->create(
 			array(
 				'comment_post_ID' => $post_id,
-				'comment_content' => '👍',
+				'comment_content' => $comment_content,
 			)
 		);
-		\add_comment_meta( $comment_id, 'source_id', 'https://example.com/like/123', true );
+		\add_comment_meta( $comment_id, 'source_id', $source_id, true );
 		\add_comment_meta( $comment_id, 'protocol', 'activitypub', true );
 
 		// Verify comment exists.
 		$comment = \get_comment( $comment_id );
-		$this->assertNotNull( $comment );
+		$this->assertNotNull( $comment, $description . ' - Comment should exist before undo' );
 
-		// Create undo like activity.
+		// Create undo activity.
 		$activity = array(
 			'type'   => 'Undo',
 			'actor'  => 'https://example.com/actor',
 			'object' => array(
-				'type' => 'Like',
-				'id'   => 'https://example.com/like/123',
+				'type' => $activity_type,
+				'id'   => $source_id,
 			),
 		);
 
 		// Verify the comment can be found by source_id before processing.
-		$found_comment = Comment::object_id_to_comment( 'https://example.com/like/123' );
-		$this->assertNotFalse( $found_comment, 'Comment should be found by source_id before undo' );
-
-		// Debug: Check if constant is actually false.
-		$this->assertFalse( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS, 'Constant should be false' );
-
-		// Debug: Test what the handler will actually receive.
-		$object_id  = \Activitypub\object_to_uri( $activity['object'] );
-		$escaped_id = \esc_url_raw( $object_id );
-		$this->assertEquals( 'https://example.com/like/123', $object_id, 'object_to_uri should extract ID' );
-		$this->assertEquals( 'https://example.com/like/123', $escaped_id, 'esc_url_raw should not change the ID' );
-
-		// Debug: Test that the handler can find the comment with the same logic.
-		$handler_comment = Comment::object_id_to_comment( $escaped_id );
-		$this->assertNotFalse( $handler_comment, 'Handler should find comment with escaped URL' );
-
-		// Debug: Test manual comment deletion to see if it works.
-		$manual_delete_result = \wp_delete_comment( $handler_comment, true );
-		$this->assertNotFalse( $manual_delete_result, 'Manual comment deletion should work' );
-
-		// Recreate the comment since we just deleted it.
-		$comment_id = $this->factory->comment->create(
-			array(
-				'comment_post_ID' => $post_id,
-				'comment_content' => '👍',
-			)
-		);
-		\add_comment_meta( $comment_id, 'source_id', 'https://example.com/like/123', true );
-		\add_comment_meta( $comment_id, 'protocol', 'activitypub', true );
+		$found_comment = Comment::object_id_to_comment( $source_id );
+		$this->assertNotFalse( $found_comment, $description . ' - Comment should be found by source_id before undo' );
 
 		// Process the undo.
 		Undo::handle_undo( $activity, self::$user_id );
 
-		// Debug: Check if comment can still be found after undo.
-		$found_comment_after = Comment::object_id_to_comment( 'https://example.com/like/123' );
-		$this->assertFalse( $found_comment_after, 'Comment should not be found after undo' );
-
 		// Verify comment was deleted.
 		$comment_after = \get_comment( $comment_id );
-		$this->assertNull( $comment_after );
+		$this->assertNull( $comment_after, $description . ' - Comment should be deleted after undo' );
 	}
 
 	/**
-	 * Test handle_undo with create activity.
+	 * Data provider for comment-based undo tests.
 	 *
-	 * @covers ::handle_undo
+	 * @return array Test cases with activity type, comment content, source ID, and description.
 	 */
-	public function test_handle_undo_create() {
-		// Create a post to comment on.
-		$post_id = $this->factory->post->create(
-			array(
-				'post_author' => self::$user_id,
-			)
-		);
-
-		// Create a comment.
-		$comment_id = $this->factory->comment->create(
-			array(
-				'comment_post_ID' => $post_id,
-				'comment_content' => 'Test comment',
-			)
-		);
-		\add_comment_meta( $comment_id, 'source_id', 'https://example.com/note/123', true );
-		\add_comment_meta( $comment_id, 'protocol', 'activitypub', true );
-
-		// Verify comment exists.
-		$comment = \get_comment( $comment_id );
-		$this->assertNotNull( $comment );
-
-		// Create undo create activity.
-		$activity = array(
-			'type'   => 'Undo',
-			'actor'  => 'https://example.com/actor',
-			'object' => array(
-				'type' => 'Create',
-				'id'   => 'https://example.com/note/123',
+	public function comment_undo_provider() {
+		return array(
+			'undo_like'     => array(
+				'Like',
+				'👍',
+				'https://example.com/like/123',
+				'Undo Like activity should delete like comment',
+			),
+			'undo_create'   => array(
+				'Create',
+				'Test comment',
+				'https://example.com/note/123',
+				'Undo Create activity should delete created comment',
+			),
+			'undo_announce' => array(
+				'Announce',
+				'Shared a post',
+				'https://example.com/announce/456',
+				'Undo Announce activity should delete announce comment',
 			),
 		);
-
-		// Verify the comment can be found by source_id before processing.
-		$found_comment = Comment::object_id_to_comment( 'https://example.com/note/123' );
-		$this->assertNotFalse( $found_comment, 'Comment should be found by source_id before undo' );
-
-		// Process the undo.
-		Undo::handle_undo( $activity, self::$user_id );
-
-		// Verify comment was deleted.
-		$comment_after = \get_comment( $comment_id );
-		$this->assertNull( $comment_after );
-	}
-
-	/**
-	 * Test handle_undo with announce activity.
-	 *
-	 * @covers ::handle_undo
-	 */
-	public function test_handle_undo_announce() {
-		// Create a post to announce.
-		$post_id = $this->factory->post->create(
-			array(
-				'post_author' => self::$user_id,
-			)
-		);
-
-		// Create an announce comment.
-		$comment_id = $this->factory->comment->create(
-			array(
-				'comment_post_ID' => $post_id,
-				'comment_content' => 'Shared a post',
-			)
-		);
-		\add_comment_meta( $comment_id, 'source_id', 'https://example.com/announce/456', true );
-		\add_comment_meta( $comment_id, 'protocol', 'activitypub', true );
-
-		// Verify comment exists.
-		$comment = \get_comment( $comment_id );
-		$this->assertNotNull( $comment );
-
-		// Create undo announce activity.
-		$activity = array(
-			'type'   => 'Undo',
-			'actor'  => 'https://example.com/actor',
-			'object' => array(
-				'type' => 'Announce',
-				'id'   => 'https://example.com/announce/456',
-			),
-		);
-
-		// Verify the comment can be found by source_id before processing.
-		$found_comment = Comment::object_id_to_comment( 'https://example.com/announce/456' );
-		$this->assertNotFalse( $found_comment, 'Comment should be found by source_id before undo' );
-
-		// Process the undo.
-		Undo::handle_undo( $activity, self::$user_id );
-
-		// Verify comment was deleted.
-		$comment_after = \get_comment( $comment_id );
-		$this->assertNull( $comment_after );
 	}
 
 	/**
