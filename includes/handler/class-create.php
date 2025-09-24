@@ -9,6 +9,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
 
+use function Activitypub\get_activity_visibility;
 use function Activitypub\is_activity_reply;
 use function Activitypub\is_self_ping;
 use function Activitypub\object_id_to_comment;
@@ -21,7 +22,7 @@ class Create {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 4 );
+		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 3 );
 		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
@@ -31,12 +32,11 @@ class Create {
 	 * @param array                          $activity        The activity-object.
 	 * @param int                            $user_id         The id of the local blog-user.
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
-	 * @param string                         $visibility      The visibility of the activity.
 	 */
-	public static function handle_create( $activity, $user_id, $activity_object = null, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ) {
+	public static function handle_create( $activity, $user_id, $activity_object = null ) {
 		// Check if Activity is public or not.
 		if (
-			ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ||
+			ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ||
 			! is_activity_reply( $activity )
 		) {
 			return;

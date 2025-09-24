@@ -10,7 +10,6 @@ namespace Activitypub\Rest;
 use Activitypub\Activity\Activity;
 use Activitypub\Moderation;
 
-use function Activitypub\get_activity_visibility;
 use function Activitypub\get_context;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
@@ -178,8 +177,6 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 */
 			do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 		} else {
-			$visibility = get_activity_visibility( $data );
-
 			/**
 			 * ActivityPub inbox action.
 			 *
@@ -187,9 +184,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param int|null           $user_id    The user ID.
 			 * @param string             $type       The type of the activity.
 			 * @param Activity|\WP_Error $activity   The Activity object.
-			 * @param string             $visibility The visibility of the activity.
 			 */
-			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity, $visibility );
+			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
 
 			/**
 			 * ActivityPub inbox action for specific activity types.
@@ -197,9 +193,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param array              $data       The data array.
 			 * @param int|null           $user_id    The user ID.
 			 * @param Activity|\WP_Error $activity   The Activity object.
-			 * @param string             $visibility The visibility of the activity.
 			 */
-			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, $visibility );
+			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
 		}
 
 		$response = \rest_ensure_response(
