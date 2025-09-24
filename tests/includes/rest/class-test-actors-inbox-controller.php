@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Rest\Server;
 
 /**
  * Test class for Actors_Inbox_Controller.
@@ -51,7 +52,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	public function set_up() {
 		\add_option( 'permalink_structure', '/%postname%/' );
 
-		\Activitypub\Rest\Server::add_hooks();
+		Server::init();
 	}
 
 	/**

@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Actors;
+
 /**
  * Test class for Activitypub Rest Inbox.
  *
@@ -22,10 +24,26 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	protected static $user_id;
 
 	/**
+	 * Inbox Controller instance for testing.
+	 *
+	 * @var \Activitypub\Rest\Inbox_Controller
+	 */
+	private $inbox_controller;
+
+	/**
 	 * Create fake data before tests run.
 	 */
 	public static function set_up_before_class() {
 		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+	}
+
+	/**
+	 * Set up the test.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		$this->inbox_controller = new \Activitypub\Rest\Inbox_Controller();
 	}
 
 	/**
@@ -433,5 +451,95 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertEquals( 400, $response->get_status() );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	}
+
+	/**
+	 * Test get_local_recipients method with no recipients.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_no_recipients() {
+		$activity = array(
+			'type' => 'Create',
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+		$this->assertEmpty( $result, 'Should return empty array when no recipients' );
+	}
+
+	/**
+	 * Test get_local_recipients with external recipients only.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_external_only() {
+		$activity = array(
+			'type' => 'Create',
+			'to'   => array( 'https://external.example.com/user/123' ),
+			'cc'   => array( 'https://another.example.com/user/456' ),
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+		$this->assertEmpty( $result, 'Should return empty array for external recipients only' );
+	}
+
+	/**
+	 * Test get_local_recipients with actual local actor.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_with_local_actor() {
+		// Get the actual actor ID for the user.
+		$actor    = Actors::get_by_id( self::$user_id );
+		$actor_id = $actor->get_id();
+
+		$activity = array(
+			'type' => 'Create',
+			'to'   => array( $actor_id ),
+			'cc'   => array( 'https://external.example.com/user/123' ),
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+		$this->assertContains( self::$user_id, $result, 'Should contain local user ID' );
+		$this->assertCount( 1, $result, 'Should contain exactly one recipient' );
+	}
+
+	/**
+	 * Test get_local_recipients handles malformed actor URLs.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_with_malformed_urls() {
+		$activity = array(
+			'type' => 'Create',
+			'to'   => array(
+				'not-a-valid-url',
+				get_home_url() . '/invalid-actor-path',
+			),
+			'cc'   => array(),
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+		$this->assertEmpty( $result, 'Should handle malformed URLs gracefully' );
 	}
 }

@@ -9,8 +9,8 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Activitypub;
 use Activitypub\Collection\Inbox;
+use Activitypub\Post_Types;
 
 /**
  * Test class for Inbox collection.
@@ -214,7 +214,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test post meta registration exists.
 	 */
 	public function test_post_meta_registration() {
-		Activitypub::register_post_types();
+		Post_Types::register_inbox_post_type();
 
 		// Verify that post meta is registered for inbox post type.
 		$registered_meta = \get_registered_meta_keys( 'post', Inbox::POST_TYPE );

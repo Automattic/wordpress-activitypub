@@ -47,63 +47,79 @@ class Test_Reject extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test validate_object returns false if type is missing.
+	 * Test validate_object with various scenarios.
 	 *
+	 * @dataProvider validate_object_provider
 	 * @covers ::validate_object
+	 *
+	 * @param array  $request_data     The request data to test.
+	 * @param bool   $input_valid      The input valid state.
+	 * @param bool   $expected_result  The expected validation result.
+	 * @param string $description      Description of the test case.
 	 */
-	public function test_validate_object_missing_type() {
+	public function test_validate_object( $request_data, $input_valid, $expected_result, $description ) {
 		$request = $this->createMock( 'WP_REST_Request' );
-		$request->method( 'get_json_params' )->willReturn( array() );
-		$this->assertFalse( Reject::validate_object( true, 'param', $request ) );
+		$request->method( 'get_json_params' )->willReturn( $request_data );
+
+		$result = Reject::validate_object( $input_valid, 'param', $request );
+
+		$this->assertEquals( $expected_result, $result, $description );
 	}
 
 	/**
-	 * Test validate_object returns true if type is not Reject.
+	 * Data provider for validate_object tests.
 	 *
-	 * @covers ::validate_object
+	 * @return array Test cases with request data, input valid state, expected result, and description.
 	 */
-	public function test_validate_object_type_not_accept() {
-		$request = $this->createMock( 'WP_REST_Request' );
-		$request->method( 'get_json_params' )->willReturn( array( 'type' => 'Follow' ) );
-		$this->assertTrue( Reject::validate_object( true, 'param', $request ) );
-	}
-
-	/**
-	 * Test validate_object returns false if required fields are missing.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_missing_required_fields() {
-		$request = $this->createMock( 'WP_REST_Request' );
-		$request->method( 'get_json_params' )->willReturn(
-			array(
-				'type'  => 'Reject',
-				'actor' => 'foo',
-			)
-		);
-		$this->assertFalse( Reject::validate_object( true, 'param', $request ) );
-	}
-
-	/**
-	 * Test validate_object returns true if all checks pass.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_success() {
-		$request = $this->createMock( 'WP_REST_Request' );
-		$request->method( 'get_json_params' )->willReturn(
-			array(
-				'type'   => 'Reject',
-				'actor'  => 'foo',
-				'object' => array(
-					'id'     => 'bar',
-					'actor'  => 'foo',
-					'type'   => 'Follow',
-					'object' => 'foo',
+	public function validate_object_provider() {
+		return array(
+			// Invalid cases.
+			'missing_type'            => array(
+				array(),
+				true,
+				false,
+				'Should return false when type is missing',
+			),
+			'missing_required_fields' => array(
+				array(
+					'type'  => 'Reject',
+					'actor' => 'foo',
 				),
-			)
+				true,
+				false,
+				'Should return false when required fields are missing',
+			),
+			// Valid cases - non-Reject type should pass through.
+			'type_not_reject'         => array(
+				array( 'type' => 'Follow' ),
+				true,
+				true,
+				'Should return true when type is not Reject',
+			),
+			// Valid Reject activity.
+			'valid_reject_activity'   => array(
+				array(
+					'type'   => 'Reject',
+					'actor'  => 'foo',
+					'object' => array(
+						'id'     => 'bar',
+						'actor'  => 'foo',
+						'type'   => 'Follow',
+						'object' => 'foo',
+					),
+				),
+				true,
+				true,
+				'Should return true for valid Reject activity',
+			),
+			// Test with input_valid false.
+			'input_valid_false'       => array(
+				array( 'type' => 'Follow' ),
+				false,
+				false,
+				'Should preserve input_valid when type is not Reject',
+			),
 		);
-		$this->assertTrue( Reject::validate_object( true, 'param', $request ) );
 	}
 
 	/**

@@ -149,23 +149,9 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 */
 			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
-			$recipients = extract_recipients_from_activity( $data );
+			$recipients = $this->get_local_recipients( $data );
 
-			foreach ( $recipients as $recipient ) {
-				if ( ! is_same_domain( $recipient ) ) {
-					continue;
-				}
-
-				$user_id = Actors::get_id_by_various( $recipient );
-
-				if ( \is_wp_error( $user_id ) ) {
-					continue;
-				}
-
-				if ( ! user_can_activitypub( $user_id ) ) {
-					continue;
-				}
-
+			foreach ( $recipients as $user_id ) {
 				// Check user-specific blocks for this recipient.
 				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
 					/**
@@ -287,5 +273,38 @@ class Inbox_Controller extends \WP_REST_Controller {
 		$this->schema = $schema;
 
 		return $this->add_additional_fields_schema( $this->schema );
+	}
+
+	/**
+	 * Extract recipients from the given Activity.
+	 *
+	 * @param array $activity The activity data.
+	 *
+	 * @return array An array of user IDs who are the recipients of the activity.
+	 */
+	private function get_local_recipients( $activity ) {
+		$recipients = extract_recipients_from_activity( $activity );
+		$user_ids   = array();
+
+		foreach ( $recipients as $recipient ) {
+
+			if ( ! is_same_domain( $recipient ) ) {
+				continue;
+			}
+
+			$user_id = Actors::get_id_by_resource( $recipient );
+
+			if ( \is_wp_error( $user_id ) ) {
+				continue;
+			}
+
+			if ( ! user_can_activitypub( $user_id ) ) {
+				continue;
+			}
+
+			$user_ids[] = $user_id;
+		}
+
+		return $user_ids;
 	}
 }
