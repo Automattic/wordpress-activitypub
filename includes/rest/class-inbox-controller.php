@@ -182,7 +182,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param array              $data       The data array.
 				 * @param int                $user_id    The user ID.
 				 * @param Activity|\WP_Error $activity   The Activity object.
-					 */
+				 */
 				\do_action( 'activitypub_inbox_' . $type, $data, $recipient, $activity );
 			}
 		}
