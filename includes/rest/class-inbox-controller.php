@@ -151,9 +151,9 @@ class Inbox_Controller extends \WP_REST_Controller {
 		} else {
 			$recipients = $this->get_local_recipients( $data );
 
-			foreach ( $recipients as $recipient ) {
+			foreach ( $recipients as $user_id ) {
 				// Check user-specific blocks for this recipient.
-				if ( Moderation::activity_is_blocked_for_user( $activity, $recipient ) ) {
+				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
 					/**
 					 * ActivityPub inbox disallowed activity for specific user.
 					 *
@@ -162,7 +162,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 					 * @param string             $type     The type of the activity.
 					 * @param Activity|\WP_Error $activity The Activity object.
 					 */
-					\do_action( 'activitypub_rest_inbox_disallowed', $data, $recipient, $type, $activity );
+					\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 					continue;
 				}
 
@@ -174,7 +174,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param string             $type     The type of the activity.
 				 * @param Activity|\WP_Error $activity The Activity object.
 				 */
-				\do_action( 'activitypub_inbox', $data, $recipient, $type, $activity );
+				\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
 
 				/**
 				 * ActivityPub inbox action for specific activity types.
@@ -183,7 +183,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param int                $user_id  The user ID.
 				 * @param Activity|\WP_Error $activity The Activity object.
 				 */
-				\do_action( 'activitypub_inbox_' . $type, $data, $recipient, $activity );
+				\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
 			}
 		}
 
