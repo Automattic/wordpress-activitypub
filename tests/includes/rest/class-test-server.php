@@ -271,7 +271,6 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$this->assertEquals( $response, $result );
 	}
 
-
 	/**
 	 * Data provider for request_parameter_order scenarios.
 	 *
