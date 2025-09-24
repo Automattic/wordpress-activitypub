@@ -54,14 +54,15 @@ class Move {
 
 		$target_object = Remote_Actors::get_by_uri( $target_uri );
 		$origin_object = Remote_Actors::get_by_uri( $origin_uri );
-		$status        = false;
+		$result        = null;
+		$success       = false;
 
 		/*
 		 * If the new target is followed, but the origin is not,
 		 * everything is fine, so we can return.
 		 */
 		if ( ! \is_wp_error( $target_object ) && \is_wp_error( $origin_object ) ) {
-			$status = false;
+			$success = false;
 		} elseif ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
@@ -74,7 +75,8 @@ class Move {
 			// Clear the cache.
 			\wp_cache_delete( $origin_object->ID, 'posts' );
 
-			$status = Remote_Actors::upsert( $target_json );
+			$success = true;
+			$result  = Remote_Actors::upsert( $target_json );
 		} elseif ( ! \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			$origin_users = \get_post_meta( $origin_object->ID, Followers::FOLLOWER_META_KEY, false );
 			$target_users = \get_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, false );
@@ -86,7 +88,8 @@ class Move {
 				\add_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, $user_id );
 			}
 
-			$status = \wp_delete_post( $origin_object->ID );
+			$success = true;
+			$result  = \wp_delete_post( $origin_object->ID );
 		}
 
 		/**
@@ -94,10 +97,10 @@ class Move {
 		 *
 		 * @param array $activity The ActivityPub activity data.
 		 * @param int   $user_id  The local user ID, or null if not applicable.
-		 * @param bool  $status   The status result of the move operation.
-		 * @param array $context  Array containing the origin and target objects: array( $origin_object, $target_object ).
+		 * @param bool  $success  The status result of the move operation.
+		 * @param mixed $result   Array containing the origin and target objects: array( $origin_object, $target_object ).
 		 */
-		\do_action( 'activitypub_handled_move', $activity, $user_id, $status, array( $origin_object, $target_object ) );
+		\do_action( 'activitypub_handled_move', $activity, $user_id, $success, $result );
 	}
 
 	/**

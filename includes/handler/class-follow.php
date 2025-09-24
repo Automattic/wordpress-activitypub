@@ -43,6 +43,8 @@ class Follow {
 			$activity['actor']
 		);
 
+		$success = ! \is_wp_error( $remote_actor );
+
 		if ( ! \is_wp_error( $remote_actor ) ) {
 			$remote_actor = \get_post( $remote_actor );
 		}
@@ -64,10 +66,10 @@ class Follow {
 		 *
 		 * @param array              $activity     The ActivityPub activity data.
 		 * @param int                $user_id      The local user ID.
+		 * @param bool               $success      True on success, false otherwise.
 		 * @param \WP_Post|\WP_Error $remote_actor The remote actor/follower, or WP_Error if failed.
-		 * @param array    $activity     The ActivityPub activity data.
 		 */
-		\do_action( 'activitypub_handled_follow', $activity, $user_id, $remote_actor, $activity );
+		\do_action( 'activitypub_handled_follow', $activity, $user_id, $success, $remote_actor );
 	}
 
 	/**
@@ -75,10 +77,10 @@ class Follow {
 	 *
 	 * @param array      $activity_object The ActivityPub activity data.
 	 * @param int|null   $user_id         The local user ID, or null if not applicable.
-	 * @param mixed      $status          The WP_Post object of the remote actor/follower, or WP_Error if failed.
+	 * @param bool       $success         True on success, false otherwise.
 	 * @param mixed|null $remote_actor    The WP_Post object of the remote actor/follower (duplicate parameter).
 	 */
-	public static function queue_accept( $activity_object, $user_id, $status, $remote_actor ) {
+	public static function queue_accept( $activity_object, $user_id, $success, $remote_actor ) {
 		if ( \is_wp_error( $remote_actor ) ) {
 			// Impossible to send a "Reject" because we can not get the Remote-Inbox.
 			return;

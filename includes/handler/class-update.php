@@ -79,24 +79,24 @@ class Update {
 	 */
 	public static function update_interaction( $activity, $user_id ) {
 		$comment_data = Interactions::update_comment( $activity );
-		$result       = null;
+		$success      = false;
 
 		if ( ! empty( $comment_data['comment_ID'] ) ) {
-			$state  = 1;
-			$result = \get_comment( $comment_data['comment_ID'] );
+			$success = true;
+			$result  = \get_comment( $comment_data['comment_ID'] );
 		} else {
-			$state = $comment_data;
+			$result = $comment_data;
 		}
 
 		/**
 		 * Fires after an ActivityPub Update activity has been handled.
 		 *
-		 * @param array            $activity The ActivityPub activity data.
-		 * @param int              $user_id  The local user ID.
-		 * @param mixed            $state    The state/result of the operation (e.g., comment ID, WP_Error, or status).
-		 * @param \WP_Comment|null $result   The updated comment, or null if update failed.
+		 * @param array                            $activity The ActivityPub activity data.
+		 * @param int                              $user_id  The local user ID.
+		 * @param bool                             $success  The state/result of the operation (e.g., comment ID, WP_Error, or status).
+		 * @param array|string|int|\WP_Error|false $result   The updated comment, or null if update failed.
 		 */
-		\do_action( 'activitypub_handled_update', $activity, $user_id, $state, $result );
+		\do_action( 'activitypub_handled_update', $activity, $user_id, $success, $result );
 	}
 
 	/**

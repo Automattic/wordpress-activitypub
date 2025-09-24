@@ -37,8 +37,8 @@ class Delete {
 	 */
 	public static function handle_delete( $activity, $user_id ) {
 		$object_type = $activity['object']['type'] ?? '';
-		$state       = null;
-		$reaction    = null;
+		$success     = false;
+		$result      = null;
 
 		switch ( $object_type ) {
 			/*
@@ -51,7 +51,7 @@ class Delete {
 			case 'Organization':
 			case 'Service':
 			case 'Application':
-				$state = self::maybe_delete_follower( $activity );
+				$result = self::maybe_delete_follower( $activity );
 				break;
 
 			/*
@@ -66,7 +66,7 @@ class Delete {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::maybe_delete_interaction( $activity );
+				$result = self::maybe_delete_interaction( $activity );
 				break;
 
 			/*
@@ -75,7 +75,7 @@ class Delete {
 			 * @see: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone
 			 */
 			case 'Tombstone':
-				self::maybe_delete_interaction( $activity );
+				$result = self::maybe_delete_interaction( $activity );
 				break;
 
 			/*
@@ -91,23 +91,25 @@ class Delete {
 
 				// Check if Object is an Actor.
 				if ( $activity['actor'] === $activity['object'] ) {
-					self::maybe_delete_follower( $activity );
+					$result = self::maybe_delete_follower( $activity );
 				} else { // Assume an interaction otherwise.
-					self::maybe_delete_interaction( $activity );
+					$result = self::maybe_delete_interaction( $activity );
 				}
 				// Maybe handle Delete Activity for other Object Types.
 				break;
 		}
+
+		$success = (bool) $result;
 
 		/**
 		 * Fires after an ActivityPub Delete activity has been handled.
 		 *
 		 * @param array      $activity The ActivityPub activity data.
 		 * @param int        $user_id  The local user ID.
-		 * @param bool       $state    True on successful deletion, false otherwise.
-		 * @param mixed|null $reaction The result of the delete operation (e.g., WP_Comment object or deletion status).
+		 * @param bool       $success  True on successful deletion, false otherwise.
+		 * @param mixed|null $result   The result of the delete operation (e.g., WP_Comment object or deletion status).
 		 */
-		\do_action( 'activitypub_handled_delete', $activity, $user_id, $state, $reaction );
+		\do_action( 'activitypub_handled_delete', $activity, $user_id, $success, $result );
 	}
 
 	/**
@@ -133,6 +135,8 @@ class Delete {
 	 * Delete Reactions if Actor-URL is a Tombstone.
 	 *
 	 * @param array $activity The delete activity.
+	 *
+	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_interactions( $activity ) {
 		// Verify that Actor is deleted.
@@ -142,13 +146,19 @@ class Delete {
 				'activitypub_delete_actor_interactions',
 				array( $activity['actor'] )
 			);
+
+			return true;
 		}
+
+		return false;
 	}
 
 	/**
 	 * Delete comments from an Actor.
 	 *
 	 * @param string $actor The URL of the actor whose comments to delete.
+	 *
+	 * @return bool True on success, false otherwise.
 	 */
 	public static function delete_interactions( $actor ) {
 		$comments = Interactions::get_interactions_by_actor( $actor );
@@ -156,12 +166,20 @@ class Delete {
 		foreach ( $comments as $comment ) {
 			wp_delete_comment( $comment, true );
 		}
+
+		if ( $comments ) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	/**
 	 * Delete a Reaction if URL is a Tombstone.
 	 *
 	 * @param array $activity The delete activity.
+	 *
+	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_interaction( $activity ) {
 		if ( is_array( $activity['object'] ) ) {
@@ -176,7 +194,11 @@ class Delete {
 			foreach ( $comments as $comment ) {
 				wp_delete_comment( $comment->comment_ID, true );
 			}
+
+			return true;
 		}
+
+		return false;
 	}
 
 	/**

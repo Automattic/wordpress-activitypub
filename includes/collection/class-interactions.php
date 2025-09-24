@@ -89,7 +89,7 @@ class Interactions {
 	 *
 	 * @param array $activity Activity array.
 	 *
-	 * @return array|false Comment data or `false` on failure.
+	 * @return array|string|int|\WP_Error|false Comment data or `false` on failure.
 	 */
 	public static function add_reaction( $activity ) {
 		$url               = object_to_uri( $activity['object'] );

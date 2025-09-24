@@ -38,8 +38,9 @@ class Undo {
 			return;
 		}
 
-		$type  = $activity['object']['type'];
-		$state = false;
+		$type    = $activity['object']['type'];
+		$success = false;
+		$result  = null;
 
 		// Handle "Unfollow" requests.
 		if ( 'Follow' === $type ) {
@@ -50,8 +51,8 @@ class Undo {
 				return;
 			}
 
-			$actor = object_to_uri( $activity['actor'] );
-			$state = Followers::remove_follower( $user_id, $actor );
+			$result  = object_to_uri( $activity['actor'] );
+			$success = Followers::remove_follower( $user_id, $result );
 		}
 
 		// Handle "Undo" requests for "Like" and "Create" activities.
@@ -61,23 +62,23 @@ class Undo {
 			}
 
 			$object_id = object_to_uri( $activity['object'] );
-			$comment   = Comment::object_id_to_comment( esc_url_raw( $object_id ) );
+			$result    = Comment::object_id_to_comment( esc_url_raw( $object_id ) );
 
-			if ( empty( $comment ) ) {
+			if ( empty( $result ) ) {
 				return;
 			}
 
-			$state = wp_delete_comment( $comment, true );
+			$success = \wp_delete_comment( $result, true );
 		}
 
 		/**
 		 * Fires after an ActivityPub Undo activity has been handled.
 		 *
-		 * @param array       $activity The ActivityPub activity data.
-		 * @param int         $user_id  The local user ID.
-		 * @param bool        $state    True on success, false on failure.
-		 * @param \WP_Comment $comment  The comment that was deleted.
+		 * @param array              $activity The ActivityPub activity data.
+		 * @param int                $user_id  The local user ID.
+		 * @param bool               $success  True on success, false on failure.
+		 * @param \WP_Comment|string $result   The target, based on the activity that is being undone.
 		 */
-		\do_action( 'activitypub_handled_undo', $activity, $user_id, $state, $comment );
+		\do_action( 'activitypub_handled_undo', $activity, $user_id, $success, $result );
 	}
 }
