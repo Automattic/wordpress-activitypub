@@ -23,90 +23,12 @@ class Blocks {
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
-		\add_action( 'init', array( self::class, 'register_postmeta' ), 11 );
 		\add_action( 'rest_api_init', array( self::class, 'register_rest_fields' ) );
 
 		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
 
 		\add_action( 'activitypub_before_get_content', array( self::class, 'add_post_transformation_callbacks' ) );
 		\add_filter( 'activitypub_the_content', array( self::class, 'remove_post_transformation_callbacks' ) );
-	}
-
-	/**
-	 * Register post meta for content warnings.
-	 */
-	public static function register_postmeta() {
-		$ap_post_types = \get_post_types_by_support( 'activitypub' );
-		foreach ( $ap_post_types as $post_type ) {
-			\register_post_meta(
-				$post_type,
-				'activitypub_content_warning',
-				array(
-					'show_in_rest'      => true,
-					'single'            => true,
-					'type'              => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
-				)
-			);
-
-			\register_post_meta(
-				$post_type,
-				'activitypub_content_visibility',
-				array(
-					'type'              => 'string',
-					'single'            => true,
-					'show_in_rest'      => true,
-					'sanitize_callback' => function ( $value ) {
-						$schema = array(
-							'type'    => 'string',
-							'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
-							'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-						);
-
-						if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
-							return $schema['default'];
-						}
-
-						return $value;
-					},
-				)
-			);
-
-			\register_post_meta(
-				$post_type,
-				'activitypub_max_image_attachments',
-				array(
-					'type'              => 'integer',
-					'single'            => true,
-					'show_in_rest'      => true,
-					'default'           => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
-					'sanitize_callback' => 'absint',
-				)
-			);
-
-			\register_post_meta(
-				$post_type,
-				'activitypub_interaction_policy_quote',
-				array(
-					'type'              => 'string',
-					'single'            => true,
-					'show_in_rest'      => true,
-					'sanitize_callback' => function ( $value ) {
-						$schema = array(
-							'type'    => 'string',
-							'enum'    => array( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS, ACTIVITYPUB_INTERACTION_POLICY_ME ),
-							'default' => ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
-						);
-
-						if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
-							return $schema['default'];
-						}
-
-						return $value;
-					},
-				)
-			);
-		}
 	}
 
 	/**
