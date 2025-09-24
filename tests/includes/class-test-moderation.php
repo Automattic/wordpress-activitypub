@@ -514,6 +514,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 			},
 			E_NOTICE | E_WARNING
 		);
+
 		// PHP 7.2 uses "Undefined index", PHP 8+ uses "Undefined array key".
 		if ( version_compare( PHP_VERSION, '8.0.0', '>=' ) ) {
 			$this->expectExceptionMessage( 'Undefined array key &quot;id&quot;' );
