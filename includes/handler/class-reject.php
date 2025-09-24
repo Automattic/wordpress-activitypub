@@ -71,8 +71,8 @@ class Reject {
 		 *
 		 * @param array              $reject  The ActivityPub activity data.
 		 * @param int                $user_id The local user ID.
-		 * @param bool               $success  The status result of the reject operation.
-		 * @param \WP_Post|\WP_Error $result   Actor post on success, WP_Error on failure.
+		 * @param bool               $success True on success, false otherwise.
+		 * @param \WP_Post|\WP_Error $result  Actor post on success, WP_Error on failure.
 		 */
 		\do_action( 'activitypub_handled_reject', $reject, $user_id, $success, $result );
 	}

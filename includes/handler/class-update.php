@@ -93,7 +93,7 @@ class Update {
 		 *
 		 * @param array                            $activity The ActivityPub activity data.
 		 * @param int                              $user_id  The local user ID.
-		 * @param bool                             $success  The state/result of the operation (e.g., comment ID, WP_Error, or status).
+		 * @param bool                             $success  True on success, false otherwise.
 		 * @param array|string|int|\WP_Error|false $result   The updated comment, or null if update failed.
 		 */
 		\do_action( 'activitypub_handled_update', $activity, $user_id, $success, $result );

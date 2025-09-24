@@ -97,7 +97,7 @@ class Move {
 		 *
 		 * @param array $activity The ActivityPub activity data.
 		 * @param int   $user_id  The local user ID, or null if not applicable.
-		 * @param bool  $success  The status result of the move operation.
+		 * @param bool  $success  True on success, false otherwise.
 		 * @param mixed $result   Array containing the origin and target objects: array( $origin_object, $target_object ).
 		 */
 		\do_action( 'activitypub_handled_move', $activity, $user_id, $success, $result );

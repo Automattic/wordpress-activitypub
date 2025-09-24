@@ -56,7 +56,7 @@ class Accept {
 		 *
 		 * @param array              $accept  The ActivityPub activity data.
 		 * @param int                $user_id The local user ID.
-		 * @param bool               $success Whether the follow request was successfully accepted.
+		 * @param bool               $success True on success, false otherwise.
 		 * @param \WP_Post|\WP_Error $result  The remote actor post or error.
 		 */
 		\do_action( 'activitypub_handled_accept', $accept, $user_id, $success, $result );

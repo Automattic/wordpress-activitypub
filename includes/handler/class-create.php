@@ -74,7 +74,7 @@ class Create {
 		 *
 		 * @param array                            $activity The ActivityPub activity data.
 		 * @param int                              $user_id  The local user ID.
-		 * @param bool                             $success  The state/result of the operation (e.g., comment ID, WP_Error, or status).
+		 * @param bool                             $success  True on success, false otherwise.
 		 * @param array|string|int|\WP_Error|false $result   The WP_Comment object of the created comment, or null if creation failed.
 		 */
 		\do_action( 'activitypub_handled_create', $activity, $user_id, $success, $result );
