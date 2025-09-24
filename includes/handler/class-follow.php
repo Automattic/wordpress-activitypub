@@ -10,7 +10,6 @@ namespace Activitypub\Handler;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Notification;
 
 use function Activitypub\add_to_outbox;
 
@@ -23,7 +22,7 @@ class Follow {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow' ), 10, 2 );
-		\add_action( 'activitypub_followers_post_follow', array( self::class, 'queue_accept' ), 10, 4 );
+		\add_action( 'activitypub_handled_follow', array( self::class, 'queue_accept' ), 10, 4 );
 	}
 
 	/**
@@ -44,45 +43,50 @@ class Follow {
 			$activity['actor']
 		);
 
-		if ( \is_wp_error( $remote_actor ) ) {
-			return $remote_actor;
-		}
+		$success = ! \is_wp_error( $remote_actor );
 
-		$remote_actor = \get_post( $remote_actor );
+		if ( ! \is_wp_error( $remote_actor ) ) {
+			$remote_actor = \get_post( $remote_actor );
+		}
 
 		/**
 		 * Fires after a new follower has been added.
+		 *
+		 * @deprecated unreleased Use "activitypub_handled_follow" instead.
 		 *
 		 * @param string             $actor        The URL of the actor (follower) who initiated the follow.
 		 * @param array              $activity     The complete activity data of the follow request.
 		 * @param int                $user_id      The ID of the WordPress user being followed.
 		 * @param \WP_Post|\WP_Error $remote_actor The Actor object containing the new follower's data.
 		 */
-		do_action( 'activitypub_followers_post_follow', $activity['actor'], $activity, $user_id, $remote_actor );
+		\do_action_deprecated( 'activitypub_followers_post_follow', array( $activity['actor'], $activity, $user_id, $remote_actor ), 'unreleased', 'activitypub_handled_follow' );
 
-		// Send notification.
-		$notification = new Notification(
-			'follow',
-			$remote_actor->guid,
-			$activity,
-			$user_id
-		);
-		$notification->send();
+		/**
+		 * Fires after a Follow activity has been handled.
+		 *
+		 * @param array              $activity     The ActivityPub activity data.
+		 * @param int                $user_id      The local user ID.
+		 * @param bool               $success      True on success, false otherwise.
+		 * @param \WP_Post|\WP_Error $remote_actor The remote actor/follower, or WP_Error if failed.
+		 */
+		\do_action( 'activitypub_handled_follow', $activity, $user_id, $success, $remote_actor );
 	}
 
 	/**
 	 * Send Accept response.
 	 *
-	 * @param string             $actor           The Actor URL.
-	 * @param array              $activity_object The Activity object.
-	 * @param int                $user_id         The ID of the WordPress User.
-	 * @param \WP_Post|\WP_Error $remote_actor    The Actor object.
+	 * @param array              $activity_object The ActivityPub activity data.
+	 * @param int                $user_id         The local user ID.
+	 * @param bool               $success         True on success, false otherwise.
+	 * @param \WP_Post|\WP_Error $remote_actor    The remote actor/follower, or WP_Error if failed.
 	 */
-	public static function queue_accept( $actor, $activity_object, $user_id, $remote_actor ) {
+	public static function queue_accept( $activity_object, $user_id, $success, $remote_actor ) {
 		if ( \is_wp_error( $remote_actor ) ) {
 			// Impossible to send a "Reject" because we can not get the Remote-Inbox.
 			return;
 		}
+
+		$actor = $activity_object['actor'];
 
 		// Only send minimal data.
 		$activity_object = array_intersect_key(

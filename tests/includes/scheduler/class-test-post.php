@@ -117,6 +117,16 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
+		// Test bulk edit with missing post_author (should not generate PHP warnings).
+		$_REQUEST['bulk_edit'] = 1;
+		$_REQUEST['_status']   = -1;
+		$_REQUEST['post']      = array( $post_id );
+
+		bulk_edit_posts( $_REQUEST ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		$outbox_item = $this->get_latest_outbox_item( $activitypub_id );
+		$this->assertNotSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
+
 		// Test bulk edit that should bail (no author or status change).
 		$_REQUEST['bulk_edit']   = 1;
 		$_REQUEST['post_author'] = -1;
@@ -152,7 +162,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertSame( 'Delete', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		// Clean up.
-		unset( $_REQUEST['bulk_edit'], $_REQUEST['post_author'], $_REQUEST['post_status'] );
+		unset( $_REQUEST['bulk_edit'], $_REQUEST['post_author'], $_REQUEST['_status'], $_REQUEST['post'] );
 		\wp_delete_post( $post_id, true );
 	}
 

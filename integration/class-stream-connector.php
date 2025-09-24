@@ -33,7 +33,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 * @var array
 	 */
 	public $actions = array(
-		'activitypub_notification_follow',
+		'activitypub_handled_follow',
 		'activitypub_sent_to_inbox',
 		'activitypub_outbox_processing_complete',
 		'activitypub_outbox_processing_batch_complete',
@@ -109,24 +109,30 @@ class Stream_Connector extends \WP_Stream\Connector {
 	}
 
 	/**
-	 * Callback for activitypub_notification_follow.
+	 * Callback for activitypub_handled_follow.
 	 *
-	 * @param \Activitypub\Notification $notification The notification object.
+	 * @param array         $activity     The ActivityPub activity data.
+	 * @param int|null      $user_id      The local user ID, or null if not applicable.
+	 * @param mixed         $state        Status or WP_Error object indicating the result of the follow handling.
+	 * @param \WP_Post|null $context   The WP_Post object representing the remote actor/follower.
 	 */
-	public function callback_activitypub_notification_follow( $notification ) {
+	public function callback_activitypub_handled_follow( $activity, $user_id, $state, $context ) {
+		$actor_url = \is_object( $context ) && ! \is_wp_error( $context ) ? $context->guid : $activity['actor'];
+
 		$this->log(
-			sprintf(
+			\sprintf(
 				// translators: %s is a URL.
-				__( 'New Follower: %s', 'activitypub' ),
-				$notification->actor
+				\__( 'New Follower: %s', 'activitypub' ),
+				$actor_url
 			),
 			array(
-				'notification' => \wp_json_encode( $notification, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+				'activity'     => \wp_json_encode( $activity, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+				'remote_actor' => \wp_json_encode( $context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
 			),
 			null,
 			'notification',
-			$notification->type,
-			$notification->target
+			'follow',
+			$user_id
 		);
 	}
 
