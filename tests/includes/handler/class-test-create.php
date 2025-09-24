@@ -98,6 +98,7 @@ class Test_Create extends \WP_UnitTestCase {
 	public function create_test_object( $id = 'https://example.com/123' ) {
 		return array(
 			'actor'  => $this->user_url,
+			'type'   => 'Create',
 			'id'     => 'https://example.com/id/' . microtime( true ),
 			'to'     => array( $this->user_url ),
 			'cc'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -118,7 +119,7 @@ class Test_Create extends \WP_UnitTestCase {
 	public function test_handle_create_non_public_rejected() {
 		$object       = $this->create_test_object();
 		$object['cc'] = array();
-		$converted    = Create::handle_create( $object, $this->user_id, null, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+		$converted    = Create::handle_create( $object, $this->user_id );
 		$this->assertNull( $converted );
 	}
 
@@ -129,7 +130,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 */
 	public function test_handle_create_public_accepted() {
 		$object = $this->create_test_object();
-		Create::handle_create( $object, $this->user_id, null, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+		Create::handle_create( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'comment',
@@ -141,5 +142,142 @@ class Test_Create extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Comment', $result[0] );
 		$this->assertEquals( 'example', $result[0]->comment_content );
+		$this->assertCount( 1, $result );
+	}
+
+	/**
+	 * Test handle create.
+	 *
+	 * @covers ::handle_create
+	 */
+	public function test_handle_create_public_accepted_without_type() {
+		$object = $this->create_test_object( 'https://example.com/123456' );
+		unset( $object['type'] );
+
+		Create::handle_create( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'comment',
+			'post_id' => $this->post_id,
+		);
+
+		$query  = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertInstanceOf( 'WP_Comment', $result[0] );
+		$this->assertEquals( 'example', $result[0]->comment_content );
+	}
+
+	/**
+	 * Test handle create check duplicate ID.
+	 *
+	 * @covers ::handle_create
+	 */
+	public function test_handle_create_check_dupplicate_id() {
+		$id     = 'https://example.com/id/' . microtime( true );
+		$object = $this->create_test_object( $id );
+		Create::handle_create( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'comment',
+			'post_id' => $this->post_id,
+		);
+
+		$query  = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertInstanceOf( 'WP_Comment', $result[0] );
+		$this->assertEquals( 'example', $result[0]->comment_content );
+		$this->assertCount( 1, $result );
+
+		$object['object']['content'] = 'example2';
+		Create::handle_create( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'comment',
+			'post_id' => $this->post_id,
+		);
+
+		$query  = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertCount( 1, $result );
+	}
+
+	/**
+	 * Test handle create check duplicate content.
+	 *
+	 * @covers ::handle_create
+	 */
+	public function test_handle_create_check_dupplicate_content() {
+		$id     = 'https://example.com/id/' . microtime( true );
+		$object = $this->create_test_object( $id );
+		Create::handle_create( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'comment',
+			'post_id' => $this->post_id,
+		);
+
+		$query  = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertInstanceOf( 'WP_Comment', $result[0] );
+		$this->assertEquals( 'example', $result[0]->comment_content );
+		$this->assertCount( 1, $result );
+
+		$id     = 'https://example.com/id/' . microtime( true );
+		$object = $this->create_test_object( $id );
+		Create::handle_create( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'comment',
+			'post_id' => $this->post_id,
+		);
+
+		$query  = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertCount( 1, $result );
+	}
+
+	/**
+	 * Test handle create multiple comments.
+	 *
+	 * @covers ::handle_create
+	 */
+	public function test_handle_create_check_multiple_comments() {
+		$id     = 'https://example.com/id/4711';
+		$object = $this->create_test_object( $id );
+		Create::handle_create( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'comment',
+			'post_id' => $this->post_id,
+		);
+
+		$query  = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertInstanceOf( 'WP_Comment', $result[0] );
+		$this->assertEquals( 'example', $result[0]->comment_content );
+		$this->assertCount( 1, $result );
+
+		$id                          = 'https://example.com/id/23';
+		$object                      = $this->create_test_object( $id );
+		$object['object']['content'] = 'example2';
+		Create::handle_create( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'comment',
+			'post_id' => $this->post_id,
+		);
+
+		$query  = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertInstanceOf( 'WP_Comment', $result[1] );
+		$this->assertEquals( 'example2', $result[1]->comment_content );
+		$this->assertCount( 2, $result );
 	}
 }
