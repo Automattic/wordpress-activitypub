@@ -17,7 +17,6 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test handle_inbox_requests with various activity scenarios.
 	 *
 	 * @dataProvider inbox_requests_provider
-	 * @covers ::handle_inbox_requests
 	 *
 	 * @param array  $activity_data    The activity data to test.
 	 * @param string $activity_type    The activity type.
