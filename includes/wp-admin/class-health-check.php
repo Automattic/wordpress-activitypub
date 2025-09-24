@@ -104,6 +104,11 @@ class Health_Check {
 			'test'  => array( self::class, 'test_pretty_permalinks' ),
 		);
 
+		$tests['direct']['activitypub_check_for_captcha_plugins'] = array(
+			'label' => \__( 'Check for Captcha Plugins', 'activitypub' ),
+			'test'  => array( self::class, 'test_check_for_captcha_plugins' ),
+		);
+
 		return $tests;
 	}
 
@@ -463,6 +468,66 @@ class Health_Check {
 					/* translators: %s: Permalink settings URL. */
 					\__( 'Your current permalink structure includes <code>/index.php</code> which is not compatible with ActivityPub. Please <a href="%s">update your permalink settings</a> to use a standard format without <code>/index.php</code>.', 'activitypub' ),
 					esc_url( admin_url( 'options-permalink.php' ) )
+				)
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Check for Captcha Plugins.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_check_for_captcha_plugins() {
+		$result = array(
+			'label'       => \__( 'Check for Captcha Plugins', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'No known Captcha plugins detected that might interfere with ActivityPub functionality.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_check_for_captcha_plugins',
+		);
+
+		$active_plugins = (array) get_option( 'active_plugins', array() );
+
+		// search for the word 'captcha' in the list of active plugins.
+		$captcha_plugins = array_filter(
+			$active_plugins,
+			function ( $plugin ) {
+				return str_contains( strtolower( $plugin ), 'captcha' );
+			}
+		);
+
+		if ( ! empty( $captcha_plugins ) ) {
+			// Get nice plugin names instead of file paths.
+			$captcha_plugin_names = array_map(
+				function ( $plugin_file ) {
+					$plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_file, false, false );
+					if ( ! empty( $plugin_data['Name'] ) ) {
+						return $plugin_data['Name'];
+					}
+					return false;
+				},
+				$captcha_plugins
+			);
+
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'Captcha plugins detected', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p>',
+				sprintf(
+					/* translators: %s: List of captcha plugins. */
+					\esc_html__( 'The following Captcha plugins are active and may interfere with ActivityPub functionality: %s.', 'activitypub' ),
+					implode( ', ', array_map( 'esc_html', array_filter( $captcha_plugin_names ) ) )
 				)
 			);
 		}
