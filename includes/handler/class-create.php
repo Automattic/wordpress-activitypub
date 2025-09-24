@@ -9,7 +9,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
 
-use function Activitypub\is_activity_public;
+use function Activitypub\get_activity_visibility;
 use function Activitypub\is_activity_reply;
 use function Activitypub\is_self_ping;
 use function Activitypub\object_id_to_comment;
@@ -36,7 +36,7 @@ class Create {
 	public static function handle_create( $activity, $user_id, $activity_object = null ) {
 		// Check if Activity is public or not.
 		if (
-			! is_activity_public( $activity ) ||
+			ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ||
 			! is_activity_reply( $activity )
 		) {
 			return;
