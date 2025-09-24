@@ -19,7 +19,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 	/**
 	 * Test register_post_meta.
 	 *
-	 * @covers ::register_postmeta
+	 * @covers \Activitypub\Post_Types::register_activitypub_post_meta
 	 */
 	public function test_register_post_meta() {
 		// Empty option should not trigger _doing_it_wrong() notice.
