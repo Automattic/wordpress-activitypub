@@ -525,40 +525,60 @@ function extract_recipients_from_activity( $data ) {
 	$recipient_items = array();
 
 	foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-		if ( array_key_exists( $i, $data ) ) {
-			if ( is_array( $data[ $i ] ) ) {
-				$recipient = $data[ $i ];
-			} else {
-				$recipient = array( $data[ $i ] );
-			}
-			$recipient_items = array_merge( $recipient_items, $recipient );
-		}
-
-		if ( is_array( $data['object'] ) && array_key_exists( $i, $data['object'] ) ) {
-			if ( is_array( $data['object'][ $i ] ) ) {
-				$recipient = $data['object'][ $i ];
-			} else {
-				$recipient = array( $data['object'][ $i ] );
-			}
-			$recipient_items = array_merge( $recipient_items, $recipient );
-		}
+		$recipient_items = \array_merge( $recipient_items, extract_recipients_from_activity_property( $i, $data ) );
 	}
 
+	return \array_unique( $recipient_items );
+}
+
+/**
+ * Extract recipient URLs from a specific property of an Activity object.
+ *
+ * @param string $property The property to extract recipients from (e.g., 'to', 'cc').
+ * @param array  $data     The Activity object as array.
+ *
+ * @return array The list of user URLs.
+ */
+function extract_recipients_from_activity_property( $property, $data ) {
 	$recipients = array();
 
-	// Flatten array.
-	foreach ( $recipient_items as $recipient ) {
-		if ( is_array( $recipient ) ) {
-			// Check if recipient is an object.
-			if ( array_key_exists( 'id', $recipient ) ) {
-				$recipients[] = $recipient['id'];
-			}
-		} else {
-			$recipients[] = $recipient;
-		}
+	if ( ! empty( $data[ $property ] ) ) {
+		$recipients = $data[ $property ];
+	} elseif ( ! empty( $data['object'][ $property ] ) ) {
+		$recipients = $data['object'][ $property ];
 	}
 
-	return array_unique( $recipients );
+	$recipients = \array_map( '\Activitypub\object_to_uri', (array) $recipients );
+
+	return \array_unique( \array_filter( $recipients ) );
+}
+
+/**
+ * Determine the visibility of the activity based on its recipients.
+ *
+ * @param array $activity The activity data.
+ *
+ * @return string The visibility level: 'public', 'private', or 'direct'.
+ */
+function get_activity_visibility( $activity ) {
+	// Set default visibility for specific activity types.
+	if ( ! empty( $activity['type'] ) && in_array( $activity['type'], array( 'Accept', 'Delete', 'Follow', 'Reject', 'Undo' ), true ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
+	}
+
+	// Check 'to' field for public visibility.
+	$to = extract_recipients_from_activity_property( 'to', $activity );
+	if ( ! empty( array_intersect( $to, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+	}
+
+	// Check 'cc' field for quiet public visibility.
+	$cc = extract_recipients_from_activity_property( 'cc', $activity );
+	if ( ! empty( array_intersect( $cc, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
+	}
+
+	return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 }
 
 /**
@@ -696,7 +716,7 @@ function url_to_commentid( $url ) {
  *
  * @param array|string $data The ActivityPub object.
  *
- * @return string The URI of the ActivityPub object
+ * @return string The URI of the ActivityPub object.
  */
 function object_to_uri( $data ) {
 	// Check whether it is already simple.

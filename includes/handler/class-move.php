@@ -25,7 +25,7 @@ class Move {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_move', array( self::class, 'handle_move' ) );
+		\add_action( 'activitypub_inbox_move', array( self::class, 'handle_move' ), 10, 2 );
 		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 	}
 
@@ -33,8 +33,9 @@ class Move {
 	 * Handle Move requests.
 	 *
 	 * @param array $activity The JSON "Move" Activity.
+	 * @param int   $user_id  The local user ID.
 	 */
-	public static function handle_move( $activity ) {
+	public static function handle_move( $activity, $user_id ) {
 		$target_uri = self::extract_target( $activity );
 		$origin_uri = self::extract_origin( $activity );
 
@@ -53,20 +54,16 @@ class Move {
 
 		$target_object = Remote_Actors::get_by_uri( $target_uri );
 		$origin_object = Remote_Actors::get_by_uri( $origin_uri );
+		$result        = null;
+		$success       = false;
 
 		/*
 		 * If the new target is followed, but the origin is not,
 		 * everything is fine, so we can return.
 		 */
 		if ( ! \is_wp_error( $target_object ) && \is_wp_error( $origin_object ) ) {
-			return;
-		}
-
-		/*
-		 * If the new target is not followed, but the origin is,
-		 * update the origin follower to the new target.
-		 */
-		if ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
+			$success = false;
+		} elseif ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
@@ -78,16 +75,9 @@ class Move {
 			// Clear the cache.
 			\wp_cache_delete( $origin_object->ID, 'posts' );
 
-			Remote_Actors::upsert( $target_json );
-
-			return;
-		}
-
-		/*
-		 * If the new target is followed, and the origin is followed,
-		 * move users and delete the origin follower.
-		 */
-		if ( ! \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
+			$success = true;
+			$result  = Remote_Actors::upsert( $target_json );
+		} elseif ( ! \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			$origin_users = \get_post_meta( $origin_object->ID, Followers::FOLLOWER_META_KEY, false );
 			$target_users = \get_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, false );
 
@@ -98,8 +88,19 @@ class Move {
 				\add_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, $user_id );
 			}
 
-			\wp_delete_post( $origin_object->ID );
+			$success = true;
+			$result  = \wp_delete_post( $origin_object->ID );
 		}
+
+		/**
+		 * Fires after an ActivityPub Move activity has been handled.
+		 *
+		 * @param array $activity The ActivityPub activity data.
+		 * @param int   $user_id  The local user ID, or null if not applicable.
+		 * @param bool  $success  True on success, false otherwise.
+		 * @param mixed $result   The result of the operation (e.g., post ID, WP_Error, or status).
+		 */
+		\do_action( 'activitypub_handled_move', $activity, $user_id, $success, $result );
 	}
 
 	/**

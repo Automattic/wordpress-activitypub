@@ -70,129 +70,99 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the get_type method returns note for short content.
+	 * Test get_type method with various scenarios.
 	 *
+	 * @dataProvider get_type_provider
 	 * @covers ::get_type
-	 */
-	public function test_get_type_returns_note_for_short_content() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => 'Test Post',
-				'post_content' => 'Short content',
-			)
-		);
-		$post    = get_post( $post_id );
-
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
-
-		$this->assertSame( 'Note', $type );
-	}
-
-	/**
-	 * Test that the get_type method returns note for posts without title.
 	 *
-	 * @covers ::get_type
+	 * @param array  $post_data      The post data to create.
+	 * @param string $post_format    The post format to set (or null).
+	 * @param string $expected_type  The expected ActivityPub type.
+	 * @param string $description    Description of the test case.
 	 */
-	public function test_get_type_returns_note_for_posts_without_title() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => '',
-				'post_content' => str_repeat( 'Long content. ', 100 ),
-			)
-		);
-		$post    = get_post( $post_id );
+	public function test_get_type( $post_data, $post_format, $expected_type, $description ) {
+		$post_id = $this->factory->post->create( $post_data );
 
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
+		if ( $post_format ) {
+			set_post_format( $post_id, $post_format );
+		}
 
-		$this->assertSame( 'Note', $type );
-	}
-
-	/**
-	 * Test that the get_type method returns article for standard post format.
-	 *
-	 * @covers ::get_type
-	 */
-	public function test_get_type_returns_article_for_standard_post_format() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => 'Test Post',
-				'post_content' => str_repeat( 'Long content. ', 100 ),
-				'post_type'    => 'post',
-			)
-		);
-		set_post_format( $post_id, 'standard' );
 		$post = get_post( $post_id );
 
 		$transformer = new Post( $post );
 		$type        = $this->reflection_method->invoke( $transformer );
 
-		$this->assertSame( 'Article', $type );
+		$this->assertSame( $expected_type, $type, $description );
 	}
 
 	/**
-	 * Test that the get_type method returns page for page post type.
+	 * Data provider for get_type tests.
 	 *
-	 * @covers ::get_type
+	 * @return array Test cases with post data, post format, expected type, and description.
 	 */
-	public function test_get_type_returns_page_for_page_post_type() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => 'Test Page',
-				'post_content' => str_repeat( 'Long content. ', 100 ),
-				'post_type'    => 'page',
-			)
+	public function get_type_provider() {
+		$long_content = str_repeat( 'Long content. ', 100 );
+
+		return array(
+			'short_content'        => array(
+				array(
+					'post_title'   => 'Test Post',
+					'post_content' => 'Short content',
+				),
+				null,
+				'Note',
+				'Should return Note for short content',
+			),
+			'no_title'             => array(
+				array(
+					'post_title'   => '',
+					'post_content' => $long_content,
+				),
+				null,
+				'Note',
+				'Should return Note for posts without title',
+			),
+			'standard_post_format' => array(
+				array(
+					'post_title'   => 'Test Post',
+					'post_content' => $long_content,
+					'post_type'    => 'post',
+				),
+				'standard',
+				'Article',
+				'Should return Article for standard post format',
+			),
+			'page_post_type'       => array(
+				array(
+					'post_title'   => 'Test Page',
+					'post_content' => $long_content,
+					'post_type'    => 'page',
+				),
+				null,
+				'Page',
+				'Should return Page for page post type',
+			),
+			'aside_post_format'    => array(
+				array(
+					'post_title'   => 'Test Post',
+					'post_content' => $long_content,
+					'post_type'    => 'post',
+				),
+				'aside',
+				'Note',
+				'Should return Note for non-standard post format',
+			),
+			'default_post_format'  => array(
+				array(
+					'post_title'   => 'Test Post',
+					'post_content' => $long_content,
+					'post_type'    => 'post',
+				),
+				null,
+				'Article',
+				'Should return Article for default post format',
+			),
 		);
-		$post    = get_post( $post_id );
-
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
-
-		$this->assertSame( 'Page', $type );
-	}
-
-	/**
-	 * Test that the get_type method returns note for non-standard post format.
-	 *
-	 * @covers ::get_type
-	 */
-	public function test_get_type_returns_note_for_non_standard_post_format() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => 'Test Post',
-				'post_content' => str_repeat( 'Long content. ', 100 ),
-				'post_type'    => 'post',
-			)
-		);
-		set_post_format( $post_id, 'aside' );
-		$post = get_post( $post_id );
-
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
-
-		$this->assertSame( 'Note', $type );
-	}
-
-	/**
-	 * Test that the get_type method returns note for missing post format.
-	 *
-	 * @covers ::get_type
-	 */
-	public function test_get_type_handles_missing_post_format() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => 'Test Post',
-				'post_content' => str_repeat( 'Long content. ', 100 ),
-				'post_type'    => 'post',
-			)
-		);
-		$post    = get_post( $post_id );
-
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
-
-		$this->assertSame( 'Article', $type );
 	}
 
 	/**

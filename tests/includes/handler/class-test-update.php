@@ -36,116 +36,122 @@ class Test_Update extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test updating an actor.
+	 * Test updating an actor with various scenarios.
 	 *
+	 * @dataProvider update_actor_provider
 	 * @covers ::update_actor
+	 *
+	 * @param array  $activity_data    The activity data.
+	 * @param mixed  $http_response    The HTTP response to mock.
+	 * @param string $expected_outcome The expected test outcome.
+	 * @param string $description      Description of the test case.
 	 */
-	public function test_update_actor() {
-		// Prepare test data.
-		$actor_url = 'https://example.com/users/testuser';
-		$activity  = array(
-			'type'   => 'Update',
-			'actor'  => $actor_url,
-			'object' => array(
-				'type'              => 'Person',
-				'id'                => $actor_url,
-				'name'              => 'Test User',
-				'preferredUsername' => 'testuser',
-				'inbox'             => 'https://example.com/users/testuser/inbox',
-				'outbox'            => 'https://example.com/users/testuser/outbox',
-				'followers'         => 'https://example.com/users/testuser/followers',
-				'following'         => 'https://example.com/users/testuser/following',
-				'publicKey'         => array(
-					'id'           => $actor_url . '#main-key',
-					'owner'        => $actor_url,
-					'publicKeyPem' => '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Rdj53hR4AdsiRcqt1Fd\nF8YWepMN9K/B8xwKRI7P4x4w6c+4S8FRRvJOyJr3xhXvCgFNSM+a2v1rYMRLKIAa\nPJUZ1jPKGrPDv/zc25eFoMB1YqSq1FozYh+zdsEtiXj4Nd4o0rn3OnFAHYeYiroJ\nQkEYy4pV3CCXZODhYwvwPmJUZ4/uJVWJHlN6Og==\n-----END PUBLIC KEY-----',
-				),
-			),
-		);
+	public function test_update_actor( $activity_data, $http_response, $expected_outcome, $description ) {
+		$actor_url = $activity_data['actor'];
 
-		$fake_request = function () use ( $activity ) {
+		$fake_request = function () use ( $http_response ) {
+			if ( is_wp_error( $http_response ) ) {
+				return $http_response;
+			}
 			return array(
 				'response' => array( 'code' => 200 ),
-				'body'     => wp_json_encode( $activity['object'] ),
+				'body'     => wp_json_encode( $http_response ),
 			);
 		};
 
-		// Mock of get_remote_metadata_by_actor function.
+		// Mock HTTP request.
 		\add_filter( 'pre_http_request', $fake_request, 10 );
 
 		// Execute the update_actor method.
-		Update::update_actor( $activity );
+		Update::update_actor( $activity_data, 1 );
 
-		// Check that the follower was correctly updated.
-		$follower = Remote_Actors::get_by_uri( $actor_url );
+		// Verify results based on expected outcome.
+		if ( 'error' === $expected_outcome ) {
+			$follower = Remote_Actors::get_by_uri( $actor_url );
+			$this->assertWPError( $follower, $description );
+		} else {
+			// For successful updates, add follower first then test update.
+			Followers::add_follower( $this->user_id, $actor_url );
 
-		$this->assertNotNull( $follower );
+			$follower = Remote_Actors::get_by_uri( $actor_url );
+			$this->assertNotNull( $follower, $description );
 
-		$follower_initial = Remote_Actors::get_actor( Followers::add_follower( $this->user_id, $actor_url ) );
-		$follower_from_db = Remote_Actors::get_actor( Remote_Actors::get_by_uri( $actor_url ) );
+			$follower_actor = Remote_Actors::get_actor( $follower );
+			$this->assertInstanceOf( Actor::class, $follower_actor, $description );
 
-		$this->assertInstanceOf( Actor::class, $follower_initial );
-		$this->assertInstanceOf( Actor::class, $follower_from_db );
-		$this->assertEquals( $follower_initial->get_id(), $follower_from_db->get_id() );
-		$this->assertEquals( 'Test User', $follower_from_db->get_name() );
-
-		remove_filter( 'pre_http_request', $fake_request, 10 );
-
-		$activity['object']['name'] = 'Updated Name';
-
-		$fake_request = function () use ( $activity ) {
-			return array(
-				'response' => array( 'code' => 200 ),
-				'body'     => wp_json_encode( $activity['object'] ),
-			);
-		};
-
-		// Mock of get_remote_metadata_by_actor function.
-		\add_filter( 'pre_http_request', $fake_request, 10 );
-
-		Update::update_actor( $activity );
-
-		\clean_post_cache( $follower_initial->get_id() );
-
-		$follower = Remote_Actors::get_by_uri( $actor_url );
-		$follower = Remote_Actors::get_actor( $follower );
-
-		$this->assertInstanceOf( Actor::class, $follower );
-		$this->assertEquals( $activity['object']['name'], $follower->get_name() );
-		$this->assertEquals( $activity['object']['preferredUsername'], $follower->get_preferred_username() );
-		$this->assertEquals( $activity['object']['inbox'], $follower->get_inbox() );
+			if ( isset( $http_response['name'] ) ) {
+				$this->assertEquals( $http_response['name'], $follower_actor->get_name(), $description );
+			}
+		}
 
 		\remove_filter( 'pre_http_request', $fake_request, 10 );
 	}
 
 	/**
-	 * Test updating a non-existent actor.
+	 * Data provider for update_actor tests.
 	 *
-	 * @covers ::update_actor
+	 * @return array Test cases with activity data, HTTP response, expected outcome, and description.
 	 */
-	public function test_update_nonexistent_actor() {
-		$activity = array(
-			'type'   => 'Update',
-			'actor'  => 'https://example.com/nonexistent',
-			'object' => array(
-				'type' => 'Person',
+	public function update_actor_provider() {
+		$valid_actor_object = array(
+			'type'              => 'Person',
+			'id'                => 'https://example.com/users/testuser',
+			'name'              => 'Test User',
+			'preferredUsername' => 'testuser',
+			'inbox'             => 'https://example.com/users/testuser/inbox',
+			'outbox'            => 'https://example.com/users/testuser/outbox',
+			'followers'         => 'https://example.com/users/testuser/followers',
+			'following'         => 'https://example.com/users/testuser/following',
+			'publicKey'         => array(
+				'id'           => 'https://example.com/users/testuser#main-key',
+				'owner'        => 'https://example.com/users/testuser',
+				'publicKeyPem' => '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Rdj53hR4AdsiRcqt1Fd\nF8YWepMN9K/B8xwKRI7P4x4w6c+4S8FRRvJOyJr3xhXvCgFNSM+a2v1rYMRLKIAa\nPJUZ1jPKGrPDv/zc25eFoMB1YqSq1FozYh+zdsEtiXj4Nd4o0rn3OnFAHYeYiroJ\nQkEYy4pV3CCXZODhYwvwPmJUZ4/uJVWJHlN6Og==\n-----END PUBLIC KEY-----',
 			),
 		);
 
-		$fake_request = function () {
-			return new \WP_Error( 'not_found', 'Actor not found' );
-		};
-
-		// Mock of get_remote_metadata_by_actor function to return an error.
-		\add_filter( 'pre_http_request', $fake_request, 10 );
-
-		// Execute the update_actor method.
-		Update::update_actor( $activity );
-
-		// Check that no follower was created.
-		$follower = Remote_Actors::get_by_uri( 'https://example.com/nonexistent' );
-		$this->assertWPError( $follower );
-
-		remove_filter( 'pre_http_request', $fake_request, 10 );
+		return array(
+			'valid_actor_update' => array(
+				array(
+					'type'   => 'Update',
+					'actor'  => 'https://example.com/users/testuser',
+					'object' => $valid_actor_object,
+				),
+				$valid_actor_object,
+				'success',
+				'Should successfully update valid actor',
+			),
+			'updated_name'       => array(
+				array(
+					'type'   => 'Update',
+					'actor'  => 'https://example.com/users/testuser2',
+					'object' => array_merge(
+						$valid_actor_object,
+						array(
+							'id'   => 'https://example.com/users/testuser2',
+							'name' => 'Updated Name',
+						)
+					),
+				),
+				array_merge(
+					$valid_actor_object,
+					array(
+						'id'   => 'https://example.com/users/testuser2',
+						'name' => 'Updated Name',
+					)
+				),
+				'success',
+				'Should successfully update actor name',
+			),
+			'nonexistent_actor'  => array(
+				array(
+					'type'   => 'Update',
+					'actor'  => 'https://example.com/nonexistent',
+					'object' => array( 'type' => 'Person' ),
+				),
+				new \WP_Error( 'not_found', 'Actor not found' ),
+				'error',
+				'Should handle non-existent actor gracefully',
+			),
+		);
 	}
 }

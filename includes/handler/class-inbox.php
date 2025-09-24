@@ -34,6 +34,8 @@ class Inbox {
 	 * @param Activity|\WP_Error $activity The Activity object.
 	 */
 	public static function handle_inbox_requests( $data, $user_id, $type, $activity ) {
+		$success = true;
+
 		/**
 		 * Filters the activity types to persist in the inbox.
 		 *
@@ -43,31 +45,37 @@ class Inbox {
 		$activity_types = \array_map( 'strtolower', $activity_types );
 
 		if ( ! \in_array( \strtolower( $type ), $activity_types, true ) ) {
-			return;
+			$success = false;
+			$id      = new \WP_Error( 'activitypub_inbox_ignored', 'Activity type not configured to be persisted in inbox.' );
+		}
+
+		if ( $success ) {
+			/**
+			 * Filters the object types to persist in the inbox.
+			 *
+			 * @param array $object_types The object types to persist in the inbox.
+			 */
+			$object_types = \apply_filters( 'activitypub_persist_inbox_object_types', Base_Object::TYPES );
+			$object_types = \array_map( 'strtolower', $object_types );
+
+			if ( isset( $data['object']['type'] ) && ! \in_array( \strtolower( $data['object']['type'] ), $object_types, true ) ) {
+				$success = false;
+				$id      = new \WP_Error( 'activitypub_inbox_ignored', 'Activity type not configured to be persisted in inbox.' );
+			}
+		}
+
+		if ( $success ) {
+			$id = Inbox_Collection::add( $activity, $user_id );
 		}
 
 		/**
-		 * Filters the object types to persist in the inbox.
+		 * Fires after an ActivityPub Inbox activity has been handled.
 		 *
-		 * @param array $object_types The object types to persist in the inbox.
+		 * @param array         $data    The ActivityPub activity data.
+		 * @param int           $user_id The local user ID.
+		 * @param bool          $success True on success, false otherwise.
+		 * @param \WP_Error|int $id      The ID of the inbox item that was created, or WP_Error if failed.
 		 */
-		$object_types = \apply_filters( 'activitypub_persist_inbox_object_types', Base_Object::TYPES );
-		$object_types = \array_map( 'strtolower', $object_types );
-
-		if ( isset( $data['object']['type'] ) && ! \in_array( \strtolower( $data['object']['type'] ), $object_types, true ) ) {
-			return;
-		}
-
-		$id = Inbox_Collection::add( $activity, $user_id );
-
-		/**
-		 * Fires after an inbox item has been handled.
-		 *
-		 * @param array              $data     The data array.
-		 * @param int                $user_id  The ID of the local blog user.
-		 * @param \WP_Error|int      $id       The ID of the inbox item.
-		 * @param Activity|\WP_Error $activity The Activity object.
-		 */
-		\do_action( 'activitypub_handled_inbox', $data, $user_id, $id, $activity );
+		\do_action( 'activitypub_handled_inbox', $data, $user_id, $success, $id );
 	}
 }
