@@ -75,10 +75,10 @@ class Follow {
 	/**
 	 * Send Accept response.
 	 *
-	 * @param array      $activity_object The ActivityPub activity data.
-	 * @param int|null   $user_id         The local user ID, or null if not applicable.
-	 * @param bool       $success         True on success, false otherwise.
-	 * @param mixed|null $remote_actor    The WP_Post object of the remote actor/follower (duplicate parameter).
+	 * @param array              $activity_object The ActivityPub activity data.
+	 * @param int                $user_id         The local user ID.
+	 * @param bool               $success         True on success, false otherwise.
+	 * @param \WP_Post|\WP_Error $remote_actor    The remote actor/follower, or WP_Error if failed.
 	 */
 	public static function queue_accept( $activity_object, $user_id, $success, $remote_actor ) {
 		if ( \is_wp_error( $remote_actor ) ) {

@@ -71,10 +71,10 @@ class Inbox {
 		/**
 		 * Fires after an ActivityPub Inbox activity has been handled.
 		 *
-		 * @param array              $data     The ActivityPub activity data.
-		 * @param int                $user_id  The local user ID.
-		 * @param bool               $success  True on success, false otherwise.
-		 * @param \WP_Error|int      $id       The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param array         $data    The ActivityPub activity data.
+		 * @param int           $user_id The local user ID.
+		 * @param bool          $success True on success, false otherwise.
+		 * @param \WP_Error|int $id      The ID of the inbox item that was created, or WP_Error if failed.
 		 */
 		\do_action( 'activitypub_handled_inbox', $data, $user_id, $success, $id );
 	}

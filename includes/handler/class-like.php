@@ -59,7 +59,7 @@ class Like {
 		 *
 		 * @param array                                        $like    The ActivityPub activity data.
 		 * @param int                                          $user_id The local user ID.
-		 * @param bool                                         $success Whether the like was successfully processed.
+		 * @param bool                                         $success True on success, false otherwise.
 		 * @param array|false|int|string|\WP_Comment|\WP_Error $result  The WP_Comment object of the created like comment, or null if creation failed.
 		 */
 		\do_action( 'activitypub_handled_like', $like, $user_id, $success, $result );

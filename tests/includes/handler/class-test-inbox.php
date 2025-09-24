@@ -17,12 +17,12 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test handle_inbox_requests.
 	 */
 	public function test_handle_inbox_requests() {
-		$was_success = false;
+		$was_successful = false;
 
 		\add_filter(
 			'activitypub_handled_inbox',
-			function ( $data, $user_id, $success ) use ( &$was_success ) {
-				$was_success = $success;
+			function ( $data, $user_id, $success ) use ( &$was_successful ) {
+				$was_successful = $success;
 				return $data;
 			},
 			10,
@@ -44,17 +44,17 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		Inbox::handle_inbox_requests( $data, $user_id, $type, $activity );
 
-		$this->assertTrue( $was_success );
+		$this->assertTrue( $was_successful );
 
-		$was_success = false;
+		$was_successful = false;
 
 		$data['object']['type'] = 'Person';
 		$activity               = \Activitypub\Activity\Activity::init_from_array( $data );
 		Inbox::handle_inbox_requests( $data, $user_id, $type, $activity );
 
-		$this->assertFalse( $was_success );
+		$this->assertFalse( $was_successful );
 
-		$was_success = false;
+		$was_successful = false;
 
 		$data['type']           = 'Delete';
 		$data['object']['type'] = 'Article';
@@ -62,15 +62,15 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$activity               = \Activitypub\Activity\Activity::init_from_array( $data );
 		Inbox::handle_inbox_requests( $data, $user_id, $type, $activity );
 
-		$this->assertFalse( $was_success );
+		$this->assertFalse( $was_successful );
 
-		$was_success = false;
+		$was_successful = false;
 
 		$data['type'] = 'Update';
 		$type         = 'Update';
 		$activity     = \Activitypub\Activity\Activity::init_from_array( $data );
 		Inbox::handle_inbox_requests( $data, $user_id, $type, $activity );
 
-		$this->assertTrue( $was_success );
+		$this->assertTrue( $was_successful );
 	}
 }
