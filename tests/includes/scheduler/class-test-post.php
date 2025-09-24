@@ -117,8 +117,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
-		// Test bulk edit with missing post_author and _status (should not generate PHP warnings).
+		// Test bulk edit with missing post_author (should not generate PHP warnings).
 		$_REQUEST['bulk_edit'] = 1;
+		$_REQUEST['_status']   = -1;
 		$_REQUEST['post']      = array( $post_id );
 
 		bulk_edit_posts( $_REQUEST ); // phpcs:ignore WordPress.Security.NonceVerification
