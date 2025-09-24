@@ -746,6 +746,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			array(
 				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
 				'post_status' => 'any',
+				'author'      => $user_id,
 			)
 		);
 
