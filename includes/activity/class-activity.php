@@ -75,7 +75,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-object-term
 	 *
-	 * @var string|Base_Object|null
+	 * @var string|Base_Object|array|null
 	 */
 	protected $object;
 
@@ -102,7 +102,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-target
 	 *
-	 * @var string|array
+	 * @var string|array|null
 	 */
 	protected $target;
 
@@ -114,7 +114,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-result
 	 *
-	 * @var string|Base_Object
+	 * @var string|Base_Object|null
 	 */
 	protected $result;
 
@@ -126,7 +126,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
 	 *
-	 * @var array
+	 * @var array|null
 	 */
 	protected $replies;
 
@@ -140,7 +140,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-origin
 	 *
-	 * @var string|array
+	 * @var string|array|null
 	 */
 	protected $origin;
 
@@ -150,7 +150,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-instrument
 	 *
-	 * @var string|array
+	 * @var string|array|null
 	 */
 	protected $instrument;
 
@@ -162,33 +162,17 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
-	 * @param array|string|Base_Object|Activity|Actor|null $data     Activity object.
+	 * @param array|string|Base_Object|Activity|Actor|null $data Activity object.
 	 */
 	public function set_object( $data ) {
 		$object = $data;
 
 		// Convert array to appropriate object type.
 		if ( is_array( $data ) ) {
-			$type = $data['type'] ?? null;
-
-			if ( in_array( $type, self::TYPES, true ) ) {
-				$object = self::init_from_array( $data );
-			} elseif ( in_array( $type, Actor::TYPES, true ) ) {
-				$object = Actor::init_from_array( $data );
-			} elseif ( in_array( $type, Base_Object::TYPES, true ) ) {
-				switch ( $type ) {
-					case 'Event':
-						$object = Event::init_from_array( $data );
-						break;
-					case 'Place':
-						$object = Place::init_from_array( $data );
-						break;
-					default:
-						$object = Base_Object::init_from_array( $data );
-						break;
-				}
+			if ( array_is_list( $data ) ) {
+				$object = array_map( array( $this, 'maybe_convert_to_object' ), $data );
 			} else {
-				$object = Generic_Object::init_from_array( $data );
+				$object = $this->maybe_convert_to_object( $data );
 			}
 		}
 
@@ -237,6 +221,10 @@ class Activity extends Base_Object {
 			$this->set( 'in_reply_to', $object->get_in_reply_to() );
 		}
 
+		if ( $object->get_interaction_policy() && ! $this->get_interaction_policy() ) {
+			$this->set( 'interaction_policy', $object->get_interaction_policy() );
+		}
+
 		if ( $object->get_id() && ! $this->get_id() ) {
 			$id = strtok( $object->get_id(), '#' );
 			if ( $object->get_updated() ) {
@@ -256,7 +244,7 @@ class Activity extends Base_Object {
 	 * @return array $context A compacted JSON-LD context.
 	 */
 	public function get_json_ld_context() {
-		if ( $this->object instanceof Base_Object ) {
+		if ( \is_object( $this->object ) ) {
 			$class = get_class( $this->object );
 			if ( $class && $class::JSON_LD_CONTEXT ) {
 				// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'.
@@ -265,5 +253,42 @@ class Activity extends Base_Object {
 		}
 
 		return static::JSON_LD_CONTEXT;
+	}
+
+	/**
+	 * Convert data to the appropriate object type if it has an ActivityPub type.
+	 *
+	 * @param array|string|Base_Object|Activity|Actor|null $data The data to convert.
+	 *
+	 * @return Activity|Actor|Base_Object|Generic_Object|string|\WP_Error|null The converted object or original data.
+	 */
+	private function maybe_convert_to_object( $data ) {
+		if ( ! is_array( $data ) ) {
+			return $data;
+		}
+
+		$type = $data['type'] ?? null;
+
+		if ( in_array( $type, self::TYPES, true ) ) {
+			$object = self::init_from_array( $data );
+		} elseif ( in_array( $type, Actor::TYPES, true ) ) {
+			$object = Actor::init_from_array( $data );
+		} elseif ( in_array( $type, Base_Object::TYPES, true ) ) {
+			switch ( $type ) {
+				case 'Event':
+					$object = Event::init_from_array( $data );
+					break;
+				case 'Place':
+					$object = Place::init_from_array( $data );
+					break;
+				default:
+					$object = Base_Object::init_from_array( $data );
+					break;
+			}
+		} else {
+			$object = Generic_Object::init_from_array( $data );
+		}
+
+		return $object;
 	}
 }

@@ -6,6 +6,7 @@
  */
 
 use Activitypub\Blocks;
+
 use function Activitypub\is_activitypub_request;
 
 if ( is_activitypub_request() || is_feed() ) {
@@ -22,8 +23,8 @@ $selected_comment = $attributes['selectedComment'] ?? '';
 // Generate a unique ID for the block.
 $block_id = 'activitypub-remote-reply-block-' . wp_unique_id();
 
-// Set up the Interactivity API state.
-$state = wp_interactivity_state(
+// Set up the Interactivity API config.
+wp_interactivity_config(
 	'activitypub/remote-reply',
 	array(
 		'namespace' => ACTIVITYPUB_REST_NAMESPACE,
@@ -32,7 +33,7 @@ $state = wp_interactivity_state(
 			'copy'                => __( 'Copy', 'activitypub' ),
 			'emptyProfileError'   => __( 'Please enter a profile URL or handle.', 'activitypub' ),
 			'genericError'        => __( 'An error occurred. Please try again.', 'activitypub' ),
-			'invalidProfileError' => __( 'Please enter a valid URL or handle.', 'activitypub' ),
+			'invalidProfileError' => __( 'Please enter a valid profile URL or handle.', 'activitypub' ),
 		),
 	)
 );
@@ -52,16 +53,22 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'blockId'           => $block_id,
 		'commentId'         => $comment_id,
 		'commentURL'        => $selected_comment,
-		'copyButtonText'    => $state['i18n']['copy'],
+		'copyButtonText'    => __( 'Copy', 'activitypub' ),
 		'errorMessage'      => '',
-		'hasRemoteUser'     => false,
 		'isError'           => false,
 		'isLoading'         => false,
 		'modal'             => array( 'isOpen' => false ),
-		'profileURL'        => '',
 		'remoteProfile'     => '',
 		'shouldSaveProfile' => true,
-		'template'          => '',
+	)
+);
+
+wp_interactivity_state(
+	'activitypub/remote-reply',
+	array(
+		'hasRemoteUser' => false,
+		'profileURL'    => '',
+		'template'      => '',
 	)
 );
 
@@ -148,7 +155,7 @@ $modal_content = ob_get_clean();
 	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 	<?php echo $wrapper_context; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 >
-	<div class="activitypub-remote-profile" hidden data-wp-bind--hidden="!context.hasRemoteUser">
+	<div class="activitypub-remote-profile" hidden data-wp-bind--hidden="!state.hasRemoteUser">
 		<a
 			href=""
 			class="comment-reply-link activitypub-remote-profile__link"
@@ -159,7 +166,7 @@ $modal_content = ob_get_clean();
 			printf(
 				/* translators: %s: profile name */
 				esc_html__( 'Reply as %s', 'activitypub' ),
-				'<span data-wp-text="context.profileURL"></span>'
+				'<span data-wp-text="state.profileURL"></span>'
 			);
 			?>
 		</a>
@@ -180,7 +187,7 @@ $modal_content = ob_get_clean();
 		class="comment-reply-link activitypub-remote-reply__link"
 		data-wp-on-async--click="actions.toggleModal"
 		data-wp-on-async--keydown="actions.onReplyLinkKeydown"
-		data-wp-bind--hidden="context.hasRemoteUser"
+		data-wp-bind--hidden="state.hasRemoteUser"
 		data-wp-bind--aria-expanded="context.modal.isOpen"
 		aria-label="<?php esc_attr_e( 'Reply on the Fediverse', 'activitypub' ); ?>"
 		aria-haspopup="dialog"

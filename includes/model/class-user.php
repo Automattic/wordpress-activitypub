@@ -11,9 +11,9 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
-use function Activitypub\is_blog_public;
-use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_attribution_domains;
+use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_blog_public;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -51,8 +51,10 @@ class User extends Actor {
 	protected $generator = array(
 		'type'       => 'Application',
 		'implements' => array(
-			'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
-			'name' => 'RFC-9421: HTTP Message Signatures',
+			array(
+				'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
+				'name' => 'RFC-9421: HTTP Message Signatures',
+			),
 		),
 	);
 

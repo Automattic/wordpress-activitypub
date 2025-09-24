@@ -207,4 +207,19 @@ class Tombstone {
 
 		\update_option( 'activitypub_tombstone_urls', $urls );
 	}
+
+	/**
+	 * Remove a URL from the local tombstone registry.
+	 *
+	 * Removes a URL from the local tombstone URL registry.
+	 * The URL is normalized before comparison to ensure consistent matching.
+	 * This marks the URL as no longer tombstoned for future local checks.
+	 *
+	 * @param string $url The URL to remove from the tombstone registry.
+	 */
+	public static function remove( $url ) {
+		$urls = \get_option( 'activitypub_tombstone_urls', array() );
+		$urls = \array_diff( $urls, array( normalize_url( $url ) ) );
+		\update_option( 'activitypub_tombstone_urls', $urls );
+	}
 }

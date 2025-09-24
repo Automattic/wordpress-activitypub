@@ -221,7 +221,7 @@ class Following {
 	 */
 	public static function get_following_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
+			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',
@@ -287,7 +287,7 @@ class Following {
 	 */
 	public static function get_pending_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
+			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',
@@ -353,7 +353,7 @@ class Following {
 	 */
 	public static function get_all_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
-			'post_type'      => Actors::POST_TYPE,
+			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'orderby'        => 'ID',
@@ -439,5 +439,27 @@ class Following {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Remove blocked actors from following list.
+	 *
+	 * @see \Activitypub\Activitypub::init()
+	 *
+	 * @param string $value   The blocked actor URI or domain/keyword.
+	 * @param string $type    The block type (actor, domain, keyword).
+	 * @param int    $user_id The user ID.
+	 */
+	public static function remove_blocked_actors( $value, $type, $user_id ) {
+		if ( 'actor' !== $type ) {
+			return;
+		}
+
+		$actor_id = Actors::get_id_by_various( $value );
+		if ( \is_wp_error( $actor_id ) ) {
+			return;
+		}
+
+		self::unfollow( $actor_id, $user_id );
 	}
 }

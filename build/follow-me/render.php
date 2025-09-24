@@ -39,8 +39,8 @@ $style            = wp_get_global_styles();
 $background_color = $attributes['backgroundColor'] ?? $style['color']['background'] ?? '';
 $button_style     = $attributes['style'] ?? array();
 
-// Set up the Interactivity API state.
-wp_interactivity_state(
+// Set up the Interactivity API config.
+wp_interactivity_config(
 	'activitypub/follow-me',
 	array(
 		'namespace' => ACTIVITYPUB_REST_NAMESPACE,

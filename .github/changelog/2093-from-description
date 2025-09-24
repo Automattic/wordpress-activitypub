@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Moderation now checks blocked keywords across all language variants of the content, summary and name fields.

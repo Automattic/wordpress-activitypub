@@ -8,6 +8,7 @@
 namespace Activitypub\Integration;
 
 use Activitypub\Collection\Actors;
+
 use function Activitypub\url_to_authorid;
 use function Activitypub\url_to_commentid;
 

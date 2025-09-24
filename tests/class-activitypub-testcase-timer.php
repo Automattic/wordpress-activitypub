@@ -9,9 +9,9 @@
 
 namespace Activitypub\Tests;
 
+use PHPUnit\Framework\Test;
 use PHPUnit\Framework\TestListener;
 use PHPUnit\Framework\TestListenerDefaultImplementation;
-use PHPUnit\Framework\Test;
 use PHPUnit\Framework\TestSuite;
 
 /**

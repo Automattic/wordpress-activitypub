@@ -11,7 +11,6 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Outbox;
-use Activitypub\Tombstone;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_user_type_disabled;
@@ -175,19 +174,11 @@ class Actor {
 	 * @param int $user_id The user ID being deleted.
 	 */
 	public static function schedule_user_delete( $user_id ) {
-		// Don't bother if the user can't publish ActivityPub content.
-		if ( ! \user_can( $user_id, 'activitypub' ) ) {
-			return;
-		}
-
 		// Get the actor before deletion to ensure we have the data.
 		$actor = Actors::get_by_id( $user_id );
 		if ( \is_wp_error( $actor ) ) {
 			return;
 		}
-
-		Tombstone::bury( $actor->get_id() );
-		Tombstone::bury( $actor->get_url() );
 
 		$activity = new Activity();
 		$activity->set_actor( $actor->get_id() );

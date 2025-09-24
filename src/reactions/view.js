@@ -1,4 +1,4 @@
-import { getContext, getElement, store, withScope } from '@wordpress/interactivity';
+import { getContext, getElement, store, withScope, getConfig } from '@wordpress/interactivity';
 import { createModalStore } from '../shared/modal';
 
 /** @var {Object} window.wp WordPress global object */
@@ -9,8 +9,6 @@ createModalStore( 'activitypub/reactions' );
 /**
  * @typedef {Object} state
  * @property {Object} reactions Reactions data, keyed by post ID.
- * @property {String} defaultAvatarUrl Default avatar URL.
- * @property {String} namespace API namespace for ActivityPub.
  */
 
 /**
@@ -31,7 +29,7 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 		 */
 		async fetchReactions() {
 			const context = getContext();
-			const { namespace } = state;
+			const { namespace } = getConfig();
 
 			if ( ! context.postId ) return;
 
@@ -129,7 +127,7 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 		 * @param {Object} event The error event.
 		 */
 		setDefaultAvatar( event ) {
-			event.target.src = state.defaultAvatarUrl;
+			event.target.src = getConfig().defaultAvatarUrl;
 		},
 
 		/**

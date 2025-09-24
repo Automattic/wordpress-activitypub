@@ -1,9 +1,11 @@
+.claude
 build
+coverage
 node_modules
-tests
+tests/fixtures
 vendor
+package-lock.json
 
 # Temporary ignores while breaking out each component.
 assets
-src/reply
 src/reply-intent

@@ -9,8 +9,6 @@ namespace Activitypub\Tests;
 
 use Activitypub\Search;
 
-use function Activitypub\is_activity_reply;
-
 /**
  * Test class for ActivityPub Search Enhancement
  */

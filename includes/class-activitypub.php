@@ -11,8 +11,10 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * ActivityPub Class.
@@ -28,7 +30,8 @@ class Activitypub {
 		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 		\add_action( 'init', array( self::class, 'register_post_types' ), 11 );
-		\add_action( 'init', array( self::class, 'register_oembed_providers' ), 11 );
+
+		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 
 		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
@@ -47,6 +50,8 @@ class Activitypub {
 		\add_filter( 'default_post_metadata', array( self::class, 'default_post_metadata' ), 10, 3 );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
+		\add_action( 'activitypub_add_user_block', array( Followers::class, 'remove_blocked_actors' ), 10, 3 );
+		\add_action( 'activitypub_add_user_block', array( Following::class, 'remove_blocked_actors' ), 10, 3 );
 
 		// Add support for ActivityPub to custom post types.
 		foreach ( \get_option( 'activitypub_support_post_types', array( 'post' ) ) as $post_type ) {
@@ -56,24 +61,46 @@ class Activitypub {
 
 	/**
 	 * Activation Hook.
+	 *
+	 * @param bool $network_wide Whether to activate the plugin for all sites in the network or just the current site.
 	 */
-	public static function activate() {
+	public static function activate( $network_wide ) {
 		self::flush_rewrite_rules();
 		Scheduler::register_schedules();
 
 		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
 		Migration::update_comment_counts();
+
+		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
+			$sites = \get_sites( array( 'fields' => 'ids' ) );
+			foreach ( $sites as $site ) {
+				\switch_to_blog( $site );
+				self::flush_rewrite_rules();
+				\restore_current_blog();
+			}
+		}
 	}
 
 	/**
 	 * Deactivation Hook.
+	 *
+	 * @param bool $network_wide Whether to deactivate the plugin for all sites in the network or just the current site.
 	 */
-	public static function deactivate() {
+	public static function deactivate( $network_wide ) {
 		self::flush_rewrite_rules();
 		Scheduler::deregister_schedules();
 
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
+
+		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
+			$sites = \get_sites( array( 'fields' => 'ids' ) );
+			foreach ( $sites as $site ) {
+				\switch_to_blog( $site );
+				self::flush_rewrite_rules();
+				\restore_current_blog();
+			}
+		}
 	}
 
 	/**
@@ -449,7 +476,7 @@ class Activitypub {
 	 */
 	public static function register_post_types() {
 		\register_post_type(
-			Actors::POST_TYPE,
+			Remote_Actors::POST_TYPE,
 			array(
 				'labels'           => array(
 					'name'          => _x( 'Followers', 'post_type plural name', 'activitypub' ),
@@ -467,7 +494,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Actors::POST_TYPE,
+			Remote_Actors::POST_TYPE,
 			'_activitypub_inbox',
 			array(
 				'type'              => 'string',
@@ -477,7 +504,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Actors::POST_TYPE,
+			Remote_Actors::POST_TYPE,
 			'_activitypub_errors',
 			array(
 				'type'              => 'string',
@@ -493,7 +520,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Actors::POST_TYPE,
+			Remote_Actors::POST_TYPE,
 			Followers::FOLLOWER_META_KEY,
 			array(
 				'type'              => 'string',
@@ -782,6 +809,32 @@ class Activitypub {
 	}
 
 	/**
+	 * Register REST field for ap_actor posts.
+	 */
+	public static function register_ap_actor_rest_field() {
+		\register_rest_field(
+			Remote_Actors::POST_TYPE,
+			'activitypub_json',
+			array(
+				/**
+				 * Get the raw post content without WordPress content filtering.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return string The raw post content.
+				 */
+				'get_callback' => function ( $response ) {
+					return \get_post_field( 'post_content', $response['id'] );
+				},
+				'schema'       => array(
+					'description' => 'Raw ActivityPub JSON data without WordPress content filtering',
+					'type'        => 'string',
+					'context'     => array( 'view', 'edit' ),
+				),
+			)
+		);
+	}
+
+	/**
 	 * Add the 'activitypub' capability to users who can publish posts.
 	 *
 	 * @param int $user_id User ID.
@@ -803,9 +856,10 @@ class Activitypub {
 	 */
 	public static function prevent_empty_post_meta( $check, $object_id, $meta_key, $meta_value ) {
 		$post_metas = array(
-			'activitypub_content_visibility'    => '',
-			'activitypub_content_warning'       => '',
-			'activitypub_max_image_attachments' => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+			'activitypub_content_visibility'       => '',
+			'activitypub_content_warning'          => '',
+			'activitypub_interaction_policy_quote' => ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
+			'activitypub_max_image_attachments'    => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
 		);
 
 		if ( isset( $post_metas[ $meta_key ] ) && $post_metas[ $meta_key ] === (string) $meta_value ) {
@@ -834,6 +888,11 @@ class Activitypub {
 			return $meta_value;
 		}
 
+		// If meta value is already explicitly set, respect the author's choice.
+		if ( null !== $meta_value ) {
+			return $meta_value;
+		}
+
 		// If the post is federated, return the default visibility.
 		if ( 'federated' === \get_post_meta( $object_id, 'activitypub_status', true ) ) {
 			return $meta_value;
@@ -846,18 +905,6 @@ class Activitypub {
 		}
 
 		return $meta_value;
-	}
-
-	/**
-	 * Register some Mastodon oEmbed providers.
-	 */
-	public static function register_oembed_providers() {
-		\wp_oembed_add_provider( '#https?://mastodon\.social/(@.+)/([0-9]+)#i', 'https://mastodon.social/api/oembed', true );
-		\wp_oembed_add_provider( '#https?://mastodon\.online/(@.+)/([0-9]+)#i', 'https://mastodon.online/api/oembed', true );
-		\wp_oembed_add_provider( '#https?://mastodon\.cloud/(@.+)/([0-9]+)#i', 'https://mastodon.cloud/api/oembed', true );
-		\wp_oembed_add_provider( '#https?://mstdn\.social/(@.+)/([0-9]+)#i', 'https://mstdn.social/api/oembed', true );
-		\wp_oembed_add_provider( '#https?://mastodon\.world/(@.+)/([0-9]+)#i', 'https://mastodon.world/api/oembed', true );
-		\wp_oembed_add_provider( '#https?://mas\.to/(@.+)/([0-9]+)#i', 'https://mas.to/api/oembed', true );
 	}
 
 	/**

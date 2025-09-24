@@ -11,11 +11,12 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
-use Activitypub\Transformer\Post;
+use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory as Transformer_Factory;
+use Activitypub\Transformer\Post;
 
 /**
  * Returns the ActivityPub default JSON-context.
@@ -71,7 +72,7 @@ function safe_remote_get( $url ) {
  * @return string The User resource.
  */
 function get_webfinger_resource( $user_id ) {
-	\_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Webfinger::get_user_resource' );
+	\_deprecated_function( __FUNCTION__, '7.1.0', 'Activitypub\Webfinger::get_user_resource' );
 
 	return Webfinger::get_user_resource( $user_id );
 }
@@ -179,7 +180,7 @@ function url_to_authorid( $url ) {
  * @return int|bool Comment ID or false if not found.
  */
 function is_comment() {
-	\_deprecated_function( __FUNCTION__, 'unreleased' );
+	\_deprecated_function( __FUNCTION__, '7.1.0' );
 
 	$comment_id = get_query_var( 'c', null );
 
@@ -197,6 +198,7 @@ function is_comment() {
 /**
  * Check for Tombstone Objects.
  *
+ * @deprecated 7.3.0 Use {@see Tombstone::exists_in_error()}.
  * @see https://www.w3.org/TR/activitypub/#delete-activity-outbox
  *
  * @param \WP_Error $wp_error A WP_Error-Response of an HTTP-Request.
@@ -204,7 +206,7 @@ function is_comment() {
  * @return boolean True if HTTP-Code is 410 or 404.
  */
 function is_tombstone( $wp_error ) {
-	_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Tombstone::exists_in_error' );
+	\_deprecated_function( __FUNCTION__, '7.3.0', 'Activitypub\Tombstone::exists_in_error' );
 
 	return Tombstone::exists_in_error( $wp_error );
 }
@@ -342,6 +344,7 @@ function is_post_disabled( $post ) {
  * This function checks if a user is enabled for ActivityPub.
  *
  * @param int|string $user_id The user ID.
+ *
  * @return boolean True if the user is enabled, false otherwise.
  */
 function user_can_activitypub( $user_id ) {
@@ -485,14 +488,14 @@ function site_supports_blocks() {
 /**
  * Check if data is valid JSON.
  *
- * @deprecated 7.1.0 Use {@see \json_decode} instead.
+ * @deprecated 7.1.0 Use {@see \json_decode}.
  *
  * @param string $data The data to check.
  *
  * @return boolean True if the data is JSON, false otherwise.
  */
 function is_json( $data ) {
-	\_deprecated_function( __FUNCTION__, 'unreleased', 'json_decode' );
+	\_deprecated_function( __FUNCTION__, '7.1.0', 'json_decode' );
 
 	return \is_array( \json_decode( $data, true ) );
 }
@@ -561,6 +564,8 @@ function extract_recipients_from_activity( $data ) {
 /**
  * Check if passed Activity is Public.
  *
+ * @see https://github.com/w3c/activitypub/issues/404#issuecomment-2926310561
+ *
  * @param Base_Object|array $data The Activity object as Base_Object or array.
  *
  * @return boolean True if public, false if not.
@@ -572,7 +577,7 @@ function is_activity_public( $data ) {
 
 	$recipients = extract_recipients_from_activity( $data );
 
-	return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
+	return ! empty( array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
 }
 
 /**
@@ -858,7 +863,7 @@ function get_post_type_description( $post_type ) {
 			$description = '';
 			break;
 		case 'attachment':
-			$description = ' - ' . __( 'The attachments that you have uploaded to a post (images, videos, documents or other files).', 'activitypub' );
+			$description = ' - ' . __( 'Files uploaded to the media library (such as images, videos, documents, or other attachments). Note: This federates every file upload, not just published content.', 'activitypub' );
 			break;
 		default:
 			$description = '';
@@ -1560,7 +1565,7 @@ function follow( $remote_actor, $user_id ) {
 		return $remote_actor;
 	}
 
-	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+	$remote_actor_post = Remote_Actors::fetch_by_uri( $remote_actor );
 
 	if ( \is_wp_error( $remote_actor_post ) ) {
 		return $remote_actor_post;
@@ -1590,7 +1595,7 @@ function unfollow( $remote_actor, $user_id ) {
 		return $remote_actor;
 	}
 
-	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+	$remote_actor_post = Remote_Actors::fetch_by_uri( $remote_actor );
 
 	if ( \is_wp_error( $remote_actor_post ) ) {
 		return $remote_actor_post;

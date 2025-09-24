@@ -147,6 +147,25 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	/**
 	 * Response code is 404 -> is_tombstone returns true
 	 *
+	 * @covers ::bury
+	 */
+	public function test_bury() {
+		$url = 'https://fake.test/object/123';
+
+		$response = Tombstone::exists_local( $url );
+		$this->assertFalse( $response );
+
+		Tombstone::bury( $url );
+
+		$response = Tombstone::exists_local( $url );
+		$this->assertTrue( $response );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Response code is 404 -> is_tombstone returns true
+	 *
 	 * @covers ::exists_local
 	 */
 	public function test_exists_local() {
@@ -161,5 +180,25 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$this->assertTrue( $response );
 
 		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that the remove method removes a URL from the tombstone list,
+	 * so that exists_local returns false after removing.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove() {
+		$url = 'https://fake.test/object/123';
+
+		Tombstone::bury( $url );
+
+		$response = Tombstone::exists_local( $url );
+		$this->assertTrue( $response );
+
+		Tombstone::remove( $url );
+
+		$response = Tombstone::exists_local( $url );
+		$this->assertFalse( $response );
 	}
 }

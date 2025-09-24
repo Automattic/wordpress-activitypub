@@ -12,10 +12,10 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\esc_hashtag;
-use function Activitypub\is_single_user;
-use function Activitypub\is_blog_public;
-use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_attribution_domains;
+use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_blog_public;
+use function Activitypub\is_single_user;
 
 /**
  * Blog class.
@@ -41,8 +41,10 @@ class Blog extends Actor {
 	protected $generator = array(
 		'type'       => 'Application',
 		'implements' => array(
-			'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
-			'name' => 'RFC-9421: HTTP Message Signatures',
+			array(
+				'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
+				'name' => 'RFC-9421: HTTP Message Signatures',
+			),
 		),
 	);
 

@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-A global Inbox handler and persistence layer to log incoming Create and Update requests for debugging and verifying Activity handling.

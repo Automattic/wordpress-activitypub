@@ -5,8 +5,9 @@
  * @package ActivityPub
  */
 
-use Activitypub\Comment;
 use Activitypub\Blocks;
+use Activitypub\Comment;
+
 use function Activitypub\is_activitypub_request;
 
 if ( is_activitypub_request() || is_feed() ) {
@@ -87,17 +88,17 @@ if ( empty( $reactions ) ) {
 	return;
 }
 
-// Set up the Interactivity API state.
-wp_interactivity_state(
+// Set up the Interactivity API config.
+wp_interactivity_config(
 	'activitypub/reactions',
 	array(
 		'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
 		'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
-		'reactions'        => array(
-			$_post_id => $reactions,
-		),
 	)
 );
+
+// Set up the Interactivity API state.
+wp_interactivity_state( 'activitypub/reactions', array( 'reactions' => array( $_post_id => $reactions ) ) );
 
 // Render a subset of the most recent reactions.
 $reactions = array_map(

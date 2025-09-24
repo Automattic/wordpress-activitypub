@@ -7,11 +7,11 @@
 
 namespace Activitypub;
 
-use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory;
 
 /**
@@ -197,6 +197,10 @@ class Migration {
 			if ( ! \wp_next_scheduled( 'activitypub_cleanup_remote_actors' ) ) {
 				\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
 			}
+		}
+
+		if ( \version_compare( $version_from_db, '7.3.0', '<' ) ) {
+			self::remove_pending_application_user_follow_requests();
 		}
 
 		// Ensure all required cron schedules are registered.
@@ -498,7 +502,7 @@ class Migration {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB
 		$followers = $wpdb->get_col(
-			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Actors::POST_TYPE )
+			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Remote_Actors::POST_TYPE )
 		);
 		foreach ( $followers as $id ) {
 			clean_post_cache( $id );
@@ -982,7 +986,7 @@ class Migration {
 
 		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->posts,
-			array( 'post_type' => Actors::POST_TYPE ),
+			array( 'post_type' => Remote_Actors::POST_TYPE ),
 			array( 'post_type' => 'ap_follower' ),
 			array( '%s' ),
 			array( '%s' )
@@ -1054,5 +1058,21 @@ class Migration {
 				'batch_size' => $batch_size,
 			);
 		}
+	}
+
+	/**
+	 * Removes pending follow requests for the application user.
+	 */
+	public static function remove_pending_application_user_follow_requests() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete(
+			$wpdb->postmeta,
+			array(
+				'meta_key'   => '_activitypub_following', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value' => Actors::APPLICATION_USER_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
 	}
 }

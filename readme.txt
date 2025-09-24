@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 7.2.0
+Stable tag: 7.4.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,72 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.4.0 - 2025-09-15
+#### Added
+- Add activitypub_json REST field for ap_actor posts to access raw JSON data
+- Add Delete activity support for permanently deleted federated comments.
+- Added a new WP-CLI command to manage Actors.
+- Added confirmation step for bulk removal of ActivityPub capability, asking whether to also delete users from the Fediverse.
+- Adds support for virtual deletes and restores, allowing objects to be removed from the fediverse without being deleted locally.
+- Add Yoast SEO integration for media pages site health check
+- Optimized WebFinger lookups by centralizing and caching account resolution for faster, more consistent handling across lists.
+
+#### Changed
+- Clarified the 'attachment' post type description to explain it refers to media library uploads and recommend disabling federation in most cases.
+- Hide site-wide checkbox in block confirmations when accessed from ActivityPub settings page
+- Improved ActivityPub compatibility by aligning with Mastodon’s Application Actor.
+- It’s now possible to reply to multiple posts using multiple reply blocks.
+- Refactored Reply block to use WordPress core embed functionality for better compatibility and performance.
+- Use wp_interactivity_config() for static values instead of wp_interactivity_state() to improve performance and code clarity
+
+#### Deprecated
+- ActivityPub now defaults to automated object type selection, with the old manual option moved to Advanced settings for compatibility.
+
+#### Fixed
+- Fix content visibility override issue preventing authors from changing visibility on older posts.
+- Fix PHP warning when saving ActivityPub settings.
+- Fix query args preservation in collection pagination links
+- Fix release script to catch more 'unreleased' deprecation patterns that were previously missed during version updates.
+- Fix reply block rendering inconsistency where blocks were always converted to @-mentions in ActivityPub content. Now only first reply blocks become @-mentions, others remain as regular links.
+- Stop sending follow notifications to the Application user, since system-level accounts cannot be followed.
+
+### 7.3.0 - 2025-08-28
+#### Added
+- Add actor blocking functionality with list table interface for managing blocked users and site-wide blocks
+- Add code coverage reporting to GitHub Actions PHPUnit workflow with dedicated coverage job using Xdebug
+- Add comprehensive blocking and moderation system for ActivityPub with user-specific and site-wide controls for actors, domains, and keywords.
+- Add comprehensive unit tests for Followers and Following table classes with proper ActivityPub icon object handling.
+- Added link and explanation for the existing Starter Kit importer on the help tab of the Following pages.
+- Adds a self-destruct feature to remove a blog from the Fediverse by sending Delete activities to followers.
+- Adds a User Interface to select accounts during Starter Kit import
+- Adds support for importing Starter Kits from a link (URL).
+- Adds support for searching (remote) URLs similar to Mastodon, redirecting to existing replies or importing them if missing.
+- Adds support for sending Delete activities when a user is removed.
+- Adds support for Starter Kit collections in the ActivityPub API.
+- A global Inbox handler and persistence layer to log incoming Create and Update requests for debugging and verifying Activity handling.
+- Follower lists now include the option to block individual accounts.
+- Improved handling of deleted content with a new unified system for better tracking and compatibility.
+- Moderation now checks blocked keywords across all language variants of the content, summary and name fields.
+- When activated or deactivated network-wide, the plugin now refreshes rewrite rules across all sites.
+
+#### Changed
+- Add default avatars for actors without icons in admin tables
+- Added support for list of Actor IDs in Starter Kits.
+- Improve Following class documentation and optimize count methods for better performance
+- Refactor actor blocking with unified API for better maintainability
+
+#### Fixed
+- Blocks relying on user selectors no longer error due to a race condition when fetching users.
+- Fix duplicate HTML IDs and missing form labels in modal blocks
+- Fix malformed ActivityPub handles for users with email-based logins (e.g., from Site Kit Google authentication)
+- Fix PHP 8.4 deprecation warnings by preventing null values from being passed to WordPress core functions
+- Improves handling of author URLs by converting them to a proper format.
+- Improves REST responses by skipping invalid actors in Followers and Following controllers.
+- More reliable Actor checks during the follow process.
+- Prevents Application users from being followed.
+- Proper implementation of FEP 844e.
+- Switches ActivityPub summaries to plain text for better compatibility.
 
 ### 7.2.0 - 2025-07-30
 #### Added
@@ -216,9 +282,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.1.0 =
+= 7.3.0 =
 
-Improved Followers table, smarter migrations, and no more accidental re-federation of old posts.
+Moderation has been improved with stronger tools, and user deletion now includes support for federated deletes across the network.
 
 == Installation ==
 

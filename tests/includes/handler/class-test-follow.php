@@ -46,6 +46,56 @@ class Test_Follow extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test handle_follow method.
+	 *
+	 * @covers ::handle_follow
+	 */
+	public function test_handle_follow() {
+		$local_actor     = Actors::get_by_id( Actors::APPLICATION_USER_ID );
+		$actor           = 'https://example.com/actor';
+		$activity_object = array(
+			'id'     => 'https://example.com/activity/123',
+			'type'   => 'Follow',
+			'actor'  => $actor,
+			'object' => $local_actor->get_id(),
+		);
+
+		Follow::handle_follow( $activity_object, Actors::APPLICATION_USER_ID );
+
+		$outbox_posts = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Accept',
+					),
+				),
+			)
+		);
+		$this->assertEmpty( $outbox_posts );
+
+		$outbox_posts = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Reject',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $outbox_posts );
+
+		_delete_all_posts();
+	}
+
+	/**
 	 * Test queue_accept method.
 	 *
 	 * @covers ::queue_accept
@@ -64,7 +114,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		$wp_error = new \WP_Error( 'test_error', 'Test Error' );
 		Follow::queue_accept( $actor, $activity_object, self::$user_id, $wp_error );
 
-		$outbox_posts = get_posts(
+		$outbox_posts = \get_posts(
 			array(
 				'post_type'   => Outbox::POST_TYPE,
 				'author'      => self::$user_id,
@@ -100,7 +150,7 @@ class Test_Follow extends \WP_UnitTestCase {
 
 		Follow::queue_accept( $actor, $activity_object, self::$user_id, $remote_actor );
 
-		$outbox_posts = get_posts(
+		$outbox_posts = \get_posts(
 			array(
 				'post_type'   => Outbox::POST_TYPE,
 				'author'      => self::$user_id,

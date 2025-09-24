@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Add comprehensive unit tests for Followers and Following table classes with proper ActivityPub icon object handling.

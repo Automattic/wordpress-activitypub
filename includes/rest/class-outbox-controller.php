@@ -10,6 +10,7 @@ namespace Activitypub\Rest;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 
@@ -210,7 +211,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 */
 		$response = \apply_filters( 'activitypub_rest_outbox_array', $response, $request );
 
-		\do_action_deprecated( 'activitypub_outbox_post', array( $request ), 'unreleased', 'activitypub_rest_outbox_post' );
+		\do_action_deprecated( 'activitypub_outbox_post', array( $request ), '5.9.0', 'activitypub_rest_outbox_post' );
 
 		/**
 		 * Action triggered after the ActivityPub profile has been created and sent to the client.
