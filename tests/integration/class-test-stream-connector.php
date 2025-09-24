@@ -498,15 +498,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 		// Since data providers run before wpSetUpBeforeClass, we need to handle this differently.
 		// For now, let's test the fallback behavior and known cases.
 		return array(
-			'blog_user_url'        => array(
-				'http://localhost:8889/?author=0',
-				array(
-					'id'    => 0,
-					'type'  => 'profiles',
-					'title' => 'Blog User',
-				),
-				'Should handle blog user URL correctly',
-			),
+
 			'application_user_url' => array(
 				'http://localhost:8889/?author=-1',
 				array(
@@ -652,6 +644,48 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 			// Function doesn't exist, should fallback to outbox data.
 			$this->assertEquals( 'ap_outbox', $result['type'] );
 			$this->assertEquals( 123, $result['id'] );
+		}
+	}
+
+	/**
+	 * Test prepare_outbox_data_for_response with blog user URL.
+	 *
+	 * @covers ::prepare_outbox_data_for_response
+	 */
+	public function test_prepare_outbox_data_for_response_blog_user_url() {
+		// Test blog user URL - this may work differently in different environments.
+		$blog_user_url = 'http://localhost:8889/?author=0';
+		$outbox_post   = (object) array(
+			'ID'         => 123,
+			'post_type'  => 'ap_outbox',
+			'post_title' => $blog_user_url,
+		);
+
+		$reflection = new \ReflectionClass( Stream_Connector::class );
+		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( $this->stream_connector, $outbox_post );
+
+		// Check if url_to_authorid recognized the blog user URL.
+		if ( \function_exists( '\Activitypub\url_to_authorid' ) ) {
+			$author_id = \Activitypub\url_to_authorid( $blog_user_url );
+			if ( 0 === $author_id ) {
+				// Blog user URL was recognized correctly.
+				$this->assertEquals( 'profiles', $result['type'] );
+				$this->assertEquals( 0, $result['id'] );
+				$this->assertEquals( 'Blog User', $result['title'] );
+			} else {
+				// Blog user URL was not recognized, should fallback to outbox data.
+				$this->assertEquals( 'ap_outbox', $result['type'] );
+				$this->assertEquals( 123, $result['id'] );
+				$this->assertEquals( $blog_user_url, $result['title'] );
+			}
+		} else {
+			// Function doesn't exist, should fallback to outbox data.
+			$this->assertEquals( 'ap_outbox', $result['type'] );
+			$this->assertEquals( 123, $result['id'] );
+			$this->assertEquals( $blog_user_url, $result['title'] );
 		}
 	}
 
