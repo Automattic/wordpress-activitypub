@@ -36,19 +36,12 @@ class Scheduler {
 	public static function init() {
 		self::register_schedulers();
 
-		self::$batch_callbacks = array(
-			'activitypub_send_activity'  => array( Dispatcher::class, 'send_to_followers' ),
-			'activitypub_retry_activity' => array( Dispatcher::class, 'retry_send_to_followers' ),
-		);
-
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_remote_actors', array( self::class, 'update_remote_actors' ) );
 		\add_action( 'activitypub_cleanup_remote_actors', array( self::class, 'cleanup_remote_actors' ) );
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
-		\add_action( 'activitypub_send_activity', array( self::class, 'async_batch' ), 10, 3 );
-		\add_action( 'activitypub_retry_activity', array( self::class, 'async_batch' ), 10, 3 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 
@@ -72,6 +65,28 @@ class Scheduler {
 		 * @since 5.0.0
 		 */
 		do_action( 'activitypub_register_schedulers' );
+	}
+
+	/**
+	 * Register a batch callback for async processing.
+	 *
+	 * @param string   $hook     The cron event hook name.
+	 * @param callable $callback The callback to execute.
+	 */
+	public static function register_async_batch_callback( $hook, $callback ) {
+		if ( \did_action( 'init' ) && ! \doing_action( 'init' ) ) {
+			\_doing_it_wrong( __METHOD__, 'Async batch callbacks should be registered before or during the init action.', 'unreleased' );
+			return;
+		}
+
+		if ( ! \is_callable( $callback ) ) {
+			return;
+		}
+
+		self::$batch_callbacks[ $hook ] = $callback;
+
+		// Register the WordPress action hook to trigger async_batch.
+		\add_action( $hook, array( self::class, 'async_batch' ), 10, 99 );
 	}
 
 	/**
@@ -336,7 +351,7 @@ class Scheduler {
 			return;
 		}
 
-		$key = \md5( \serialize( $args[0] ?? $args ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+		$key = \md5( \serialize( $callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 		// Bail if the existing lock is still valid.
 		if ( self::is_locked( $key ) ) {

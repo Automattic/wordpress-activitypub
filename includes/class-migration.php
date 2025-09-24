@@ -24,11 +24,12 @@ class Migration {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
-		\add_action( 'activitypub_upgrade', array( self::class, 'async_upgrade' ), 10, 99 );
-		\add_action( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ), 10, 2 );
-
 		self::maybe_migrate();
+
+		Scheduler::register_async_batch_callback( 'activitypub_migrate_from_0_17', array( self::class, 'migrate_from_0_17' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_create_post_outbox_items', array( self::class, 'create_post_outbox_items' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_create_comment_outbox_items', array( self::class, 'create_comment_outbox_items' ) );
 	}
 
 	/**
@@ -122,12 +123,11 @@ class Migration {
 			$version_from_db = ACTIVITYPUB_PLUGIN_VERSION;
 		}
 
-		// Schedule the async migration.
-		if ( ! \wp_next_scheduled( 'activitypub_migrate', $version_from_db ) ) {
-			\wp_schedule_single_event( \time(), 'activitypub_migrate', array( $version_from_db ) );
-		}
 		if ( \version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
+		}
+		if ( \version_compare( $version_from_db, '1.0.0', '<' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_migrate_from_0_17' );
 		}
 		if ( \version_compare( $version_from_db, '1.3.0', '<' ) ) {
 			self::migrate_from_1_2_0();
@@ -160,8 +160,9 @@ class Migration {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.0.0', '<' ) ) {
-			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
-			\wp_schedule_single_event( \time() + 15, 'activitypub_upgrade', array( 'create_comment_outbox_items' ) );
+			Scheduler::register_schedules();
+			\wp_schedule_single_event( \time(), 'activitypub_create_post_outbox_items' );
+			\wp_schedule_single_event( \time() + 15, 'activitypub_create_comment_outbox_items' );
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.4.0', '<' ) ) {
@@ -229,49 +230,6 @@ class Migration {
 		\update_option( 'activitypub_db_version', ACTIVITYPUB_PLUGIN_VERSION );
 
 		self::unlock();
-	}
-
-	/**
-	 * Asynchronously migrates the database structure.
-	 *
-	 * @param string $version_from_db The version from which to migrate.
-	 */
-	public static function async_migration( $version_from_db ) {
-		if ( \version_compare( $version_from_db, '1.0.0', '<' ) ) {
-			self::migrate_from_0_17();
-		}
-	}
-
-	/**
-	 * Asynchronously runs upgrade routines.
-	 *
-	 * @param callable $callback Callable upgrade routine. Must be a method of this class.
-	 * @params mixed   ...$args  Optional. Parameters that get passed to the callback.
-	 */
-	public static function async_upgrade( $callback ) {
-		$args = \func_get_args();
-
-		// Bail if the existing lock is still valid.
-		if ( self::is_locked() ) {
-			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_upgrade', $args );
-			return;
-		}
-
-		self::lock();
-
-		$callback = array_shift( $args ); // Remove $callback from arguments.
-		$next     = \call_user_func_array( array( self::class, $callback ), $args );
-
-		self::unlock();
-
-		if ( ! empty( $next ) ) {
-			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event(
-				\time() + 30,
-				'activitypub_upgrade',
-				\array_merge( array( $callback ), \array_values( $next ) )
-			);
-		}
 	}
 
 	/**
@@ -515,24 +473,11 @@ class Migration {
 	 * @see Comment::pre_wp_update_comment_count_now()
 	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
 	 * @param int $offset     Optional. Number of posts to skip. Default 0.
+	 *
+	 * @return int[]|void Array with batch size and offset if there are more posts to process.
 	 */
 	public static function update_comment_counts( $batch_size = 100, $offset = 0 ) {
 		global $wpdb;
-
-		// Bail if the existing lock is still valid.
-		if ( self::is_locked() ) {
-			\wp_schedule_single_event(
-				time() + ( 5 * MINUTE_IN_SECONDS ),
-				'activitypub_update_comment_counts',
-				array(
-					'batch_size' => $batch_size,
-					'offset'     => $offset,
-				)
-			);
-			return;
-		}
-
-		self::lock();
 
 		Comment::register_comment_types();
 		$comment_types  = Comment::get_comment_type_slugs();
@@ -554,17 +499,8 @@ class Migration {
 
 		if ( count( $post_ids ) === $batch_size ) {
 			// Schedule next batch.
-			\wp_schedule_single_event(
-				time() + MINUTE_IN_SECONDS,
-				'activitypub_update_comment_counts',
-				array(
-					'batch_size' => $batch_size,
-					'offset'     => $offset + $batch_size,
-				)
-			);
+			return array( $batch_size, $offset + $batch_size );
 		}
-
-		self::unlock();
 	}
 
 	/**
