@@ -46,22 +46,23 @@ class Like {
 			return;
 		}
 
-		$state    = Interactions::add_reaction( $like );
-		$reaction = null;
+		$success = false;
+		$result  = Interactions::add_reaction( $like );
 
-		if ( $state && ! is_wp_error( $state ) ) {
-			$reaction = get_comment( $state );
+		if ( $result && ! is_wp_error( $result ) ) {
+			$success = true;
+			$result  = get_comment( $result );
 		}
 
 		/**
-		 * Fires after a Like has been handled.
+		 * Fires after an ActivityPub Like activity has been handled.
 		 *
-		 * @param array $like     The Activity array.
-		 * @param int   $user_id  The ID of the local blog user.
-		 * @param mixed $state    The state of the reaction.
-		 * @param mixed $reaction The reaction object.
+		 * @param array                                        $like    The ActivityPub activity data.
+		 * @param int                                          $user_id The local user ID.
+		 * @param bool                                         $success True on success, false otherwise.
+		 * @param array|false|int|string|\WP_Comment|\WP_Error $result  The WP_Comment object of the created like comment, or null if creation failed.
 		 */
-		do_action( 'activitypub_handled_like', $like, $user_id, $state, $reaction );
+		\do_action( 'activitypub_handled_like', $like, $user_id, $success, $result );
 	}
 
 	/**

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed an issue where post metadata in the block editor was missing or failed to update.

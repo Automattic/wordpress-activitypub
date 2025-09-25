@@ -178,13 +178,13 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$id = Remote_Actors::create( $actor );
 		$this->assertNotWPError( $id );
 
-		// Should find the actor locally.
+		// Test 1: Should find the actor locally.
 		$post = Remote_Actors::fetch_by_uri( 'https://remote.example.com/actor/bob' );
-
 		$this->assertInstanceOf( 'WP_Post', $post );
 		$this->assertEquals( 'https://remote.example.com/actor/bob', $post->guid );
+		$this->assertEquals( $id, $post->ID );
 
-		// Delete local post, mock remote fetch.
+		// Test 2: Delete local post, mock remote fetch.
 		\wp_delete_post( $id );
 
 		add_filter(
@@ -200,17 +200,344 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		);
 
 		$post = Remote_Actors::fetch_by_uri( 'https://remote.example.com/actor/bob' );
-
 		$this->assertInstanceOf( 'WP_Post', $post );
 		$this->assertEquals( 'https://remote.example.com/actor/bob', $post->guid );
 
 		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 		\wp_delete_post( $post->ID );
 
-		// Should return WP_Error for invalid URI.
-		$not_found = Remote_Actors::fetch_by_uri( '' );
+		// Test 3: Should return WP_Error for empty URI.
+		$empty_uri = Remote_Actors::fetch_by_uri( '' );
+		$this->assertWPError( $empty_uri );
 
+		// Test 4: Should return WP_Error when remote fetch fails.
+		add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function () {
+				return new \WP_Error( 'http_request_failed', 'Request failed' );
+			},
+			10,
+			2
+		);
+
+		$failed_fetch = Remote_Actors::fetch_by_uri( 'https://nonexistent.example.com/actor/missing' );
+		$this->assertWPError( $failed_fetch );
+
+		// Test 5: Should return WP_Error when remote object is not an actor.
+		add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function () {
+				return array(
+					'id'      => 'https://remote.example.com/note/123',
+					'type'    => 'Note',
+					'content' => 'This is not an actor',
+				);
+			},
+			10,
+			2
+		);
+
+		$not_actor = Remote_Actors::fetch_by_uri( 'https://remote.example.com/note/123' );
+		$this->assertWPError( $not_actor );
+		$this->assertEquals( 'activitypub_no_actor', $not_actor->get_error_code() );
+
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+	}
+
+	/**
+	 * Test fetch_by_various method.
+	 *
+	 * @covers ::fetch_by_various
+	 */
+	public function test_fetch_by_various() {
+		// Test 1: Valid URL should call fetch_by_uri.
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/charlie',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/charlie',
+			'inbox'             => 'https://remote.example.com/actor/charlie/inbox',
+			'name'              => 'Charlie',
+			'preferredUsername' => 'charlie',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		$id = Remote_Actors::create( $actor );
+		$this->assertNotWPError( $id );
+
+		$post = Remote_Actors::fetch_by_various( 'https://remote.example.com/actor/charlie' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( 'https://remote.example.com/actor/charlie', $post->guid );
+
+		\wp_delete_post( $id );
+
+		// Test 2: Acct identifier should call fetch_by_acct.
+		// Mock webfinger resolution.
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $parsed_args, $url ) {
+				if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:charlie@remote.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://remote.example.com/actor/charlie',
+									),
+								),
+							)
+						),
+					);
+				}
+				return $preempt;
+			},
+			10,
+			3
+		);
+
+		add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function ( $pre, $url_or_object ) use ( $actor ) {
+				if ( $url_or_object === $actor['id'] ) {
+					return $actor;
+				}
+				return $pre;
+			},
+			10,
+			2
+		);
+
+		$post = Remote_Actors::fetch_by_various( 'charlie@remote.example.com' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( 'https://remote.example.com/actor/charlie', $post->guid );
+
+		// Verify acct meta was stored.
+		$stored_acct = \get_post_meta( $post->ID, '_activitypub_acct', true );
+		$this->assertEquals( 'charlie@remote.example.com', $stored_acct );
+
+		remove_all_filters( 'pre_http_request' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\wp_delete_post( $post->ID );
+
+		// Test 3: Invalid input returns WP_Error.
+		$invalid = Remote_Actors::fetch_by_various( '' );
+		$this->assertWPError( $invalid );
+
+		// Test 4: URL without scheme.
+		$no_scheme = Remote_Actors::fetch_by_various( 'example.com/actor/test' );
+		$this->assertWPError( $no_scheme );
+
+		// Test 5: Malformed acct.
+		$malformed_acct = Remote_Actors::fetch_by_various( 'not-an-email-or-url' );
+		$this->assertWPError( $malformed_acct );
+	}
+
+	/**
+	 * Test fetch_by_acct method.
+	 *
+	 * @covers ::fetch_by_acct
+	 */
+	public function test_fetch_by_acct() {
+		// Test 1: Find existing actor by acct meta.
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/diana',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/diana',
+			'inbox'             => 'https://remote.example.com/actor/diana/inbox',
+			'name'              => 'Diana',
+			'preferredUsername' => 'diana',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		$id = Remote_Actors::create( $actor );
+		$this->assertNotWPError( $id );
+		\update_post_meta( $id, '_activitypub_acct', 'diana@remote.example.com' );
+
+		$post = Remote_Actors::fetch_by_acct( 'diana@remote.example.com' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( $id, $post->ID );
+
+		\wp_delete_post( $id );
+
+		// Test 2: Webfinger resolution and remote fetch.
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $parsed_args, $url ) {
+				if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:diana@remote.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://remote.example.com/actor/diana',
+									),
+								),
+							)
+						),
+					);
+				}
+				return $preempt;
+			},
+			10,
+			3
+		);
+
+		add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function ( $pre, $url_or_object ) use ( $actor ) {
+				if ( $url_or_object === $actor['id'] ) {
+					return $actor;
+				}
+				return $pre;
+			},
+			10,
+			2
+		);
+
+		$post = Remote_Actors::fetch_by_acct( 'diana@remote.example.com' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( 'https://remote.example.com/actor/diana', $post->guid );
+
+		// Verify acct meta was stored after remote fetch.
+		$stored_acct = \get_post_meta( $post->ID, '_activitypub_acct', true );
+		$this->assertEquals( 'diana@remote.example.com', $stored_acct );
+
+		\wp_delete_post( $post->ID );
+		remove_all_filters( 'pre_http_request' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+
+		// Test 3: Webfinger resolution failure.
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $parsed_args, $url ) {
+				if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 404 ),
+						'body'     => 'Not Found',
+					);
+				}
+				return $preempt;
+			},
+			10,
+			3
+		);
+
+		$not_found = Remote_Actors::fetch_by_acct( 'notfound@example.com' );
 		$this->assertWPError( $not_found );
+
+		remove_all_filters( 'pre_http_request' );
+
+		// Test 4: Invalid acct format.
+		$invalid = Remote_Actors::fetch_by_acct( 'invalid-acct-format' );
+		$this->assertWPError( $invalid );
+
+		// Test 5: Empty acct.
+		$empty = Remote_Actors::fetch_by_acct( '' );
+		$this->assertWPError( $empty );
+
+		// Test 6: Acct sanitization (with @acct: prefix).
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $parsed_args, $url ) {
+				if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:diana@remote.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://remote.example.com/actor/diana',
+									),
+								),
+							)
+						),
+					);
+				}
+				return $preempt;
+			},
+			10,
+			3
+		);
+
+		add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function ( $pre, $url_or_object ) use ( $actor ) {
+				if ( $url_or_object === $actor['id'] ) {
+					return $actor;
+				}
+				return $pre;
+			},
+			10,
+			2
+		);
+
+		// Test with @acct: prefix - should be sanitized.
+		$post = Remote_Actors::fetch_by_acct( '@acct:diana@remote.example.com' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+
+		// Verify acct was properly sanitized and stored.
+		$stored_acct = \get_post_meta( $post->ID, '_activitypub_acct', true );
+		$this->assertEquals( 'diana@remote.example.com', $stored_acct );
+
+		\wp_delete_post( $post->ID );
+		remove_all_filters( 'pre_http_request' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+
+		// Test 7: Webfinger succeeds but remote fetch fails.
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $parsed_args, $url ) {
+				if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:broken@remote.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://broken.example.com/actor/broken',
+									),
+								),
+							)
+						),
+					);
+				}
+				return $preempt;
+			},
+			10,
+			3
+		);
+
+		add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function () {
+				return new \WP_Error( 'http_request_failed', 'Actor fetch failed' );
+			},
+			10,
+			2
+		);
+
+		$fetch_failed = Remote_Actors::fetch_by_acct( 'broken@remote.example.com' );
+		$this->assertWPError( $fetch_failed );
+
+		remove_all_filters( 'pre_http_request' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**

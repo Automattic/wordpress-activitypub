@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+New site health check warns if active Captcha plugins may block ActivityPub comments.
