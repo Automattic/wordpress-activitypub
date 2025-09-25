@@ -278,7 +278,7 @@ class Remote_Actors {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT post_id FROM $wpdb->postmeta WHERE meta_key='_activitypub_acct' AND meta_value=%s",
-				esc_sql( $acct )
+				$acct
 			)
 		);
 
