@@ -490,7 +490,7 @@ class Health_Check {
 			),
 			'description' => \sprintf(
 				'<p>%s</p>',
-				\__( 'No known Captcha plugins detected that might interfere with ActivityPub functionality.', 'activitypub' )
+				\__( 'No Captcha plugins were found that could interfere with ActivityPub functionality.', 'activitypub' )
 			),
 			'actions'     => '',
 			'test'        => 'test_check_for_captcha_plugins',
@@ -506,31 +506,42 @@ class Health_Check {
 			}
 		);
 
-		if ( ! empty( $captcha_plugins ) ) {
-			// Get nice plugin names instead of file paths.
-			$captcha_plugin_names = array_map(
-				function ( $plugin_file ) {
-					$plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_file, false, false );
-					if ( ! empty( $plugin_data['Name'] ) ) {
-						return $plugin_data['Name'];
-					}
-					return false;
-				},
-				$captcha_plugins
-			);
-
-			$result['status']         = 'recommended';
-			$result['label']          = \__( 'Captcha plugins detected', 'activitypub' );
-			$result['badge']['color'] = 'orange';
-			$result['description']    = \sprintf(
-				'<p>%s</p>',
-				sprintf(
-					/* translators: %s: List of captcha plugins. */
-					\esc_html__( 'The following Captcha plugins are active and may interfere with ActivityPub functionality: %s.', 'activitypub' ),
-					implode( ', ', array_map( 'esc_html', array_filter( $captcha_plugin_names ) ) )
-				)
-			);
+		if ( ! $captcha_plugins ) {
+			return $result;
 		}
+
+		// Get nice plugin names instead of file paths.
+		$captcha_plugin_names = array_map(
+			function ( $plugin_file ) {
+				$plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_file, false, false );
+				if ( ! empty( $plugin_data['Name'] ) ) {
+					return $plugin_data['Name'];
+				}
+				return false;
+			},
+			$captcha_plugins
+		);
+
+		$result['status']         = 'recommended';
+		$result['label']          = \__( 'Captcha plugins detected', 'activitypub' );
+		$result['badge']['color'] = 'orange';
+		$result['description']    = \sprintf(
+			'<p>%s</p><p>%s</p>',
+			sprintf(
+				/* translators: %s: List of captcha plugins. */
+				\esc_html__( 'The following Captcha plugins are active and may interfere with ActivityPub functionality: %s', 'activitypub' ),
+				implode( ', ', array_map( 'esc_html', array_filter( $captcha_plugin_names ) ) )
+			),
+			__( 'Captcha plugins require verification for comment submissions, but some may not distinguish between regular comments and those sent via an API (such as from ActivityPub). As a result, federated comments might be blocked because they cannot provide a Captcha response. If you experience missing comments, try disabling the Captcha plugin to determine if it resolves the issue.', 'activitypub' )
+		);
+		$result['actions'] = sprintf(
+			'<p>%s</p>',
+			sprintf(
+				// translators: %s: Plugin page URL.
+				\__( 'They can be disabled from the <a href="%s">Plugin Page</a>.', 'activitypub' ),
+				esc_url( admin_url( 'plugins.php?s=captcha&plugin_status=all' ) )
+			)
+		);
 
 		return $result;
 	}
