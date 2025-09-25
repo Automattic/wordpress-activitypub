@@ -203,6 +203,29 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Fetch a remote actor post by either actor URI or acct, fetching from remote if not found locally.
+	 *
+	 * @param string $uri_or_acct The actor URI or acct identifier.
+	 *
+	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
+	 */
+	public static function fetch_by_various( $uri_or_acct ) {
+		if ( \filter_var( $uri_or_acct, FILTER_VALIDATE_URL ) ) {
+			return self::fetch_by_uri( $uri_or_acct );
+		}
+
+		if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $uri_or_acct ) ) {
+			return self::fetch_by_acct( $uri_or_acct );
+		}
+
+		return new \WP_Error(
+			'activitypub_invalid_actor_identifier',
+			'The actor identifier is not supported',
+			array( 'status' => 400 )
+		);
+	}
+
+	/**
 	 * Lookup a remote actor post by actor URI (guid), fetching from remote if not found locally.
 	 *
 	 * @param string $actor_uri The actor URI.
@@ -237,6 +260,45 @@ class Remote_Actors {
 		}
 
 		return \get_post( $post_id );
+	}
+
+	/**
+	 * Fetch a remote actor post by acct, fetching from remote if not found locally.
+	 *
+	 * @param string $acct The acct identifier.
+	 *
+	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
+	 */
+	public static function fetch_by_acct( $acct ) {
+		$acct = Sanitize::webfinger( $acct );
+
+		// Check local DB for acct post meta.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT post_id FROM $wpdb->postmeta WHERE meta_key='_activitypub_acct' AND meta_value=%s",
+				$acct
+			)
+		);
+
+		if ( $post_id ) {
+			return \get_post( $post_id );
+		}
+
+		$profile_uri = Webfinger::resolve( $acct );
+
+		if ( \is_wp_error( $profile_uri ) ) {
+			return $profile_uri;
+		}
+
+		$post = self::fetch_by_uri( $profile_uri );
+
+		if ( ! \is_wp_error( $post ) ) {
+			\update_post_meta( $post->ID, '_activitypub_acct', $acct );
+		}
+
+		return $post;
 	}
 
 	/**

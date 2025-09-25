@@ -85,7 +85,7 @@ function get_webfinger_resource( $user_id ) {
  *
  * @return array|\WP_Error The Actor profile as array or WP_Error on failure.
  */
-function get_remote_metadata_by_actor( $actor, $cached = true ) {
+function get_remote_metadata_by_actor( $actor, $cached = true ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 	/**
 	 * Filters the metadata before it is retrieved from a remote actor.
 	 *
@@ -101,7 +101,13 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		return $pre;
 	}
 
-	return Http::get_remote_object( $actor, $cached );
+	$remote_actor = Remote_Actors::fetch_by_various( $actor );
+
+	if ( is_wp_error( $remote_actor ) ) {
+		return $remote_actor;
+	}
+
+	return json_decode( $remote_actor->post_content, true );
 }
 
 /**
