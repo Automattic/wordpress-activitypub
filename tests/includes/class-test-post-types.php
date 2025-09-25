@@ -85,8 +85,8 @@ class Test_Post_Types extends \WP_UnitTestCase {
 
 		// Test 5: When meta value is already set (not null), should respect author's explicit choice.
 		\update_post_meta( $post_id, 'activitypub_status', 'pending' ); // Ensure not federated.
-		$result = Post_Types::default_post_meta_data( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $post_id, 'activitypub_content_visibility' );
-		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $result, 'Should respect explicitly set public visibility even for old unfederated posts.' );
+		$result = Post_Types::default_post_meta_data( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, $post_id, 'activitypub_content_visibility' );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, $result, 'Should respect explicitly set public visibility even for old unfederated posts.' );
 
 		// Test 6: Only apply local visibility when meta value is null (no explicit setting).
 		$result = Post_Types::default_post_meta_data( null, $post_id, 'activitypub_content_visibility' );

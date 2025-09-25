@@ -22,11 +22,11 @@ class Post_Types {
 	 * Initialize the class, registering all custom post types and post meta.
 	 */
 	public static function init() {
-		self::register_remote_actors_post_type();
-		self::register_inbox_post_type();
-		self::register_outbox_post_type();
-		self::register_extra_fields_post_types();
-		self::register_activitypub_post_meta();
+		\add_action( 'init', array( self::class, 'register_remote_actors_post_type' ), 11 );
+		\add_action( 'init', array( self::class, 'register_inbox_post_type' ), 11 );
+		\add_action( 'init', array( self::class, 'register_outbox_post_type' ), 11 );
+		\add_action( 'init', array( self::class, 'register_extra_fields_post_types' ), 11 );
+		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
 
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 
@@ -529,13 +529,13 @@ class Post_Types {
 		}
 
 		// If meta value is already explicitly set, respect the author's choice.
-		if ( null !== $meta_value ) {
+		if ( $meta_value ) {
 			return $meta_value;
 		}
 
 		// If the post is federated, return the default visibility.
 		if ( 'federated' === \get_post_meta( $object_id, 'activitypub_status', true ) ) {
-			return null;
+			return $meta_value;
 		}
 
 		// If the post is not federated and older than a month, return local visibility.
@@ -543,6 +543,6 @@ class Post_Types {
 			return ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
 		}
 
-		return null;
+		return $meta_value;
 	}
 }
