@@ -496,13 +496,13 @@ class Health_Check {
 			'test'        => 'test_check_for_captcha_plugins',
 		);
 
-		$active_plugins = (array) get_option( 'active_plugins', array() );
+		$active_plugins = (array) \get_option( 'active_plugins', array() );
 
 		// search for the word 'captcha' in the list of active plugins.
 		$captcha_plugins = array_filter(
 			$active_plugins,
 			function ( $plugin ) {
-				return str_contains( strtolower( $plugin ), 'captcha' );
+				return \str_contains( strtolower( $plugin ), 'captcha' );
 			}
 		);
 
@@ -510,12 +510,12 @@ class Health_Check {
 			return $result;
 		}
 
-		// Get nice plugin names instead of file paths.
+		// Get nice plugin names instead of file paths using WordPress built-in functions.
+		$all_plugins          = \get_plugins();
 		$captcha_plugin_names = array_map(
-			function ( $plugin_file ) {
-				$plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_file, false, false );
-				if ( ! empty( $plugin_data['Name'] ) ) {
-					return $plugin_data['Name'];
+			function ( $plugin_file ) use ( $all_plugins ) {
+				if ( isset( $all_plugins[ $plugin_file ]['Name'] ) ) {
+					return $all_plugins[ $plugin_file ]['Name'];
 				}
 				return false;
 			},
@@ -527,16 +527,16 @@ class Health_Check {
 		$result['badge']['color'] = 'orange';
 		$result['description']    = \sprintf(
 			'<p>%s</p><p>%s</p>',
-			sprintf(
+			\sprintf(
 				/* translators: %s: List of captcha plugins. */
 				\esc_html__( 'The following Captcha plugins are active and may interfere with ActivityPub functionality: %s', 'activitypub' ),
 				implode( ', ', array_map( 'esc_html', array_filter( $captcha_plugin_names ) ) )
 			),
-			__( 'Captcha plugins require verification for comment submissions, but some may not distinguish between regular comments and those sent via an API (such as from ActivityPub). As a result, federated comments might be blocked because they cannot provide a Captcha response. If you experience missing comments, try disabling the Captcha plugin to determine if it resolves the issue.', 'activitypub' )
+			\__( 'Captcha plugins require verification for comment submissions, but some may not distinguish between regular comments and those sent via an API (such as from ActivityPub). As a result, federated comments might be blocked because they cannot provide a Captcha response. If you experience missing comments, try disabling the Captcha plugin to determine if it resolves the issue.', 'activitypub' )
 		);
-		$result['actions'] = sprintf(
+		$result['actions'] = \sprintf(
 			'<p>%s</p>',
-			sprintf(
+			\sprintf(
 				// translators: %s: Plugin page URL.
 				\__( 'They can be disabled from the <a href="%s">Plugin Page</a>.', 'activitypub' ),
 				esc_url( admin_url( 'plugins.php?s=captcha&plugin_status=all' ) )
