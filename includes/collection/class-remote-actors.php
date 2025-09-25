@@ -214,7 +214,15 @@ class Remote_Actors {
 			return self::fetch_by_uri( $uri_or_acct );
 		}
 
-		return self::fetch_by_acct( $uri_or_acct );
+		if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $uri_or_acct ) ) {
+			return self::fetch_by_acct( $uri_or_acct );
+		}
+
+		return new \WP_Error(
+			'activitypub_invalid_actor_identifier',
+			'The actor identifier is not supported',
+			array( 'status' => 400 )
+		);
 	}
 
 	/**
