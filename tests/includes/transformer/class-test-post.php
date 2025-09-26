@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Transformer;
 
 use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Actors;
 use Activitypub\Transformer\Post;
 
 /**
@@ -286,12 +287,15 @@ class Test_Post extends \WP_UnitTestCase {
 		$object = Post::transform( get_post( $post_id ) )->to_object();
 		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', $object->get_cc() );
 
+		\delete_post_meta( $post_id, 'activitypub_status' );
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		$actor = Actors::get_by_id( 1 );
 
 		$this->assertTrue( \Activitypub\is_post_disabled( $post_id ) );
 		$object = Post::transform( get_post( $post_id ) )->to_object();
-		$this->assertEmpty( $object->get_to() );
-		$this->assertEmpty( $object->get_cc() );
+		$this->assertEquals( array( $actor->get_id() ), $object->get_to() );
+		$this->assertEquals( array( $actor->get_id() ), $object->get_cc() );
 	}
 
 	/**

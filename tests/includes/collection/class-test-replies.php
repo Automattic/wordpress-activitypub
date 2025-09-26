@@ -72,6 +72,7 @@ class Test_Replies extends \WP_UnitTestCase {
 		);
 
 		// Test with disabled post.
+		delete_post_meta( $context_post_id, 'activitypub_status' );
 		add_post_meta( $context_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 		$this->assertFalse( Replies::get_context_collection( $context_post_id ), 'Should return false for disabled posts' );
 		delete_post_meta( $context_post_id, 'activitypub_content_visibility' );

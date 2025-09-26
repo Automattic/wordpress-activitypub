@@ -325,16 +325,27 @@ function is_post_disabled( $post ) {
 		return true;
 	}
 
-	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
-
 	if (
-		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ||
-		ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ||
 		! \post_type_supports( $post->post_type, 'activitypub' ) ||
 		'private' === $post->post_status ||
 		! empty( $post->post_password )
 	) {
 		$disabled = true;
+	}
+
+	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+
+	if (
+		! $disabled &&
+		\in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true )
+	) {
+		if ( 'federated' === \get_post_meta( $post->ID, 'activitypub_status', true ) ) {
+			// If post was already federated, we need to send an update with the new visibility.
+			$disabled = false;
+
+		} else {
+			$disabled = true;
+		}
 	}
 
 	/**

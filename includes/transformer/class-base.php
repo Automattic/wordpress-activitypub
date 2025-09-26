@@ -206,6 +206,10 @@ abstract class Base {
 			case ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE:
 				$activity_object->add_to( $mentions );
 				$activity_object->add_to( $replied_to );
+				break;
+			case ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL:
+				$activity_object->add_to( $actor->get_id() );
+				$activity_object->add_cc( $actor->get_id() );
 		}
 
 		return $activity_object;
