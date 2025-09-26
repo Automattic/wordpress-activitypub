@@ -561,7 +561,7 @@ class Comment {
 	 */
 	public static function get_comment_type_slugs() {
 		if ( ! did_action( 'init' ) ) {
-			_doing_it_wrong( __METHOD__, 'This function should not be called before register_comment_types() has run.', 'unreleased' );
+			_doing_it_wrong( __METHOD__, 'This function should not be called before the init action has run. Comment types are only available after init.', 'unreleased' );
 
 			return array();
 		}
