@@ -337,13 +337,10 @@ function is_post_disabled( $post ) {
 
 	if (
 		! $disabled &&
-		\in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true )
+		\in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true ) &&
+		'federated' !== \get_post_meta( $post->ID, 'activitypub_status', true )
 	) {
-		if ( 'federated' === \get_post_meta( $post->ID, 'activitypub_status', true ) ) {
-			// If post was already federated, we need to send an update with the new visibility.
-			$disabled = false;
-
-		} else {
+			// If post wasn't federated, we don't need to send an update with the new visibility.
 			$disabled = true;
 		}
 	}
