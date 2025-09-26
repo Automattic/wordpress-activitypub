@@ -1,0 +1,4 @@
+Significance: minor
+Type: fixed
+
+Improved handling of posts switched to 'local' visibility so they update correctly and can be re-enabled by changing visibility again.
