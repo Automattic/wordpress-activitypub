@@ -560,6 +560,12 @@ class Comment {
 	 * @return array The registered custom comment type slugs.
 	 */
 	public static function get_comment_type_slugs() {
+		if ( ! did_action( 'init' ) ) {
+			_doing_it_wrong( __METHOD__, 'This function should not be called before register_comment_types() has run.', 'unreleased' );
+
+			return array();
+		}
+
 		return array_keys( self::get_comment_types() );
 	}
 
