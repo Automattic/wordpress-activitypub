@@ -402,7 +402,7 @@ class Blocked_Actors extends \WP_List_Table {
 		 *
 		 * This filter is evaluated for each blocked actor item in the list table.
 		 *
-		 * @since 2.8.0
+		 * @since unreleased
 		 *
 		 * @param string[] $actions An array of row action links. Defaults are
 		 *                          'Unblock'.
