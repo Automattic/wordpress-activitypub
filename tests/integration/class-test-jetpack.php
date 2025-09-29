@@ -240,7 +240,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 					'identifier' => 'https://example.com/feed',
 				),
 				'feed_id'                 => false,
-				'expected_url'            => 'https://wordpress.com/reader/feeds/lookup/https://example.com/feed',
+				'expected_url'            => 'https://wordpress.com/reader/feeds/lookup/https%3A%2F%2Fexample.com%2Ffeed',
 				'should_have_reader_link' => true,
 			),
 			'pending following should not have reader link' => array(
@@ -276,7 +276,8 @@ class Test_Jetpack extends \WP_UnitTestCase {
 				'get_post_metadata',
 				function ( $value, $object_id, $meta_key ) use ( $item, $feed_id ) {
 					if ( $object_id === $item['id'] && '_activitypub_actor_feed' === $meta_key ) {
-						return $feed_id;
+						// Return as array of values (WordPress expects this format).
+						return array( array( 'feed_id' => $feed_id ) );
 					}
 					return $value;
 				},
@@ -301,7 +302,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 			$this->assertArrayNotHasKey( 'reader', $updated_actions );
 		}
 
-		// Clean up filter.
+		// Clean up filters.
 		remove_all_filters( 'get_post_metadata' );
 	}
 
