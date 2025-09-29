@@ -38,8 +38,14 @@ class Quote_Request {
 	 * @param int   $user_id  The user ID.
 	 */
 	public static function handle_quote_request( $activity, $user_id ) {
-		$post           = \get_post( object_to_uri( $activity['object'] ) );
-		$content_policy = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true );
+		$post_id = \url_to_postid( object_to_uri( $activity['object'] ) );
+
+		if ( ! $post_id ) {
+			self::queue_reject( $activity, $user_id );
+			return;
+		}
+
+		$content_policy = \get_post_meta( $post_id, 'activitypub_interaction_policy_quote', true );
 
 		switch ( $content_policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
@@ -84,6 +90,12 @@ class Quote_Request {
 	 * @param int   $user_id         The user ID.
 	 */
 	public static function queue_accept( $activity_object, $user_id ) {
+		$actor = Actors::get_by_id( $user_id );
+
+		if ( \is_wp_error( $actor ) ) {
+			return;
+		}
+
 		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
 		// Only send minimal data.
@@ -100,7 +112,7 @@ class Quote_Request {
 
 		$activity = new Activity();
 		$activity->set_type( 'Accept' );
-		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+		$activity->set_actor( $actor->get_id() );
 		$activity->set_object( $activity_object );
 		$activity->add_to( object_to_uri( $activity_object['actor'] ) );
 
@@ -116,6 +128,12 @@ class Quote_Request {
 	 * @param int   $user_id  The user ID.
 	 */
 	public static function queue_reject( $activity_object, $user_id ) {
+		$actor = Actors::get_by_id( $user_id );
+
+		if ( \is_wp_error( $actor ) ) {
+			return;
+		}
+
 		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
 		// Only send minimal data.
@@ -132,7 +150,7 @@ class Quote_Request {
 
 		$activity = new Activity();
 		$activity->set_type( 'Reject' );
-		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+		$activity->set_actor( $actor->get_id() );
 		$activity->set_object( $activity_object );
 		$activity->add_to( object_to_uri( $activity_object['actor'] ) );
 
@@ -149,16 +167,17 @@ class Quote_Request {
 	 * @return bool The validation state: true if valid, false if not.
 	 */
 	public static function validate_object( $valid, $param, $request ) {
+		if ( \is_wp_error( $request ) ) {
+			return $valid;
+		}
+
 		$json_params = $request->get_json_params();
 
 		if ( empty( $json_params['type'] ) ) {
 			return false;
 		}
 
-		if (
-			'QuoteRequest' !== $json_params['type'] ||
-			\is_wp_error( $request )
-		) {
+		if ( 'QuoteRequest' !== $json_params['type'] ) {
 			return $valid;
 		}
 
