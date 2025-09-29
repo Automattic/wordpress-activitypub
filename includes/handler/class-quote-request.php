@@ -41,19 +41,19 @@ class Quote_Request {
 
 		switch ( $content_policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
-				self::send_accept( $activity, $user_id );
+				self::queue_accept( $activity, $user_id );
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
 				$follower = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
 				if ( ! \is_wp_error( $follower ) && Followers::follows( $follower->ID, $user_id ) ) {
-					self::send_accept( $activity, $user_id );
+					self::queue_accept( $activity, $user_id );
 				} else {
-					self::send_reject( $activity, $user_id );
+					self::queue_reject( $activity, $user_id );
 				}
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
 			default:
-				self::send_reject( $activity, $user_id );
+				self::queue_reject( $activity, $user_id );
 				break;
 		}
 	}
@@ -76,25 +76,61 @@ class Quote_Request {
 	/**
 	 * Send an Accept activity in response to the QuoteRequest.
 	 *
-	 * @param array $activity The activity object.
-	 * @param int   $user_id  The user ID.
+	 * @param array $activity_object The activity object.
+	 * @param int   $user_id         The user ID.
 	 */
-	public static function send_accept( $activity, $user_id ) {
-		$activity = self::normalize_activity( $activity );
+	public static function queue_accept( $activity_object, $user_id ) {
+		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
-		add_to_outbox( $activity, 'Accept', $user_id );
+		// Only send minimal data.
+		$activity_object = array_intersect_key(
+			$activity_object,
+			array(
+				'id'         => 1,
+				'type'       => 1,
+				'actor'      => 1,
+				'object'     => 1,
+				'instrument' => 1,
+			)
+		);
+
+		$activity = new Activity();
+		$activity->set_type( 'Accept' );
+		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+		$activity->set_object( $activity_object );
+		$activity->add_to( object_to_uri( $activity_object['actor'] ) );
+
+		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}
 
 	/**
 	 * Send a Reject activity in response to the QuoteRequest.
 	 *
-	 * @param array $activity The activity object.
+	 * @param array $activity_object The activity object.
 	 * @param int   $user_id  The user ID.
 	 */
-	public static function send_reject( $activity, $user_id ) {
-		$activity = self::normalize_activity( $activity );
+	public static function queue_reject( $activity_object, $user_id ) {
+		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
-		add_to_outbox( $activity, 'Reject', $user_id );
+		// Only send minimal data.
+		$activity_object = array_intersect_key(
+			$activity_object,
+			array(
+				'id'         => 1,
+				'type'       => 1,
+				'actor'      => 1,
+				'object'     => 1,
+				'instrument' => 1,
+			)
+		);
+
+		$activity = new Activity();
+		$activity->set_type( 'Reject' );
+		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+		$activity->set_object( $activity_object );
+		$activity->add_to( object_to_uri( $activity_object['actor'] ) );
+
+		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}
 
 	/**
@@ -142,24 +178,5 @@ class Quote_Request {
 		}
 
 		return $valid;
-	}
-
-	/**
-	 * Normalize the activity.
-	 *
-	 * @param array $activity The activity object.
-	 *
-	 * @return array The normalized activity object.
-	 */
-	private static function normalize_activity( $activity ) {
-		if ( empty( $activity['type'] ) ) {
-			$activity['type'] = 'QuoteRequest';
-		}
-
-		if ( empty( $activity['id'] ) ) {
-			$activity['id'] = \wp_generate_uuid4();
-		}
-
-		return $activity;
 	}
 }
