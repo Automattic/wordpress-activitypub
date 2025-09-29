@@ -71,27 +71,42 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test init method registers hooks correctly.
+	 * Test init method registers sync hooks correctly.
 	 *
 	 * @covers ::init
 	 */
-	public function test_init_registers_hooks() {
+	public function test_init_registers_sync_hooks() {
 		// Ensure hooks are not already registered.
 		$this->assertFalse( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
+
+		// Initialize Jetpack integration.
+		Jetpack::init();
+
+		// Check that sync hooks are registered (when not on WordPress.com).
+		$this->assertTrue( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
+		$this->assertTrue( has_filter( 'jetpack_sync_comment_meta_whitelist' ) );
+		$this->assertTrue( has_filter( 'jetpack_sync_whitelisted_comment_types' ) );
+		$this->assertTrue( has_filter( 'jetpack_json_api_comment_types' ) );
+		$this->assertTrue( has_filter( 'jetpack_api_include_comment_types_count' ) );
+	}
+
+	/**
+	 * Test that following UI hooks are not registered without proper conditions.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_skips_following_ui_hooks_without_conditions() {
+		// Ensure hooks are not already registered.
 		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
 		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
 
 		// Initialize Jetpack integration.
 		Jetpack::init();
 
-		// Check that hooks are registered.
-		$this->assertTrue( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
-		$this->assertTrue( has_filter( 'jetpack_sync_comment_meta_whitelist' ) );
-		$this->assertTrue( has_filter( 'jetpack_sync_whitelisted_comment_types' ) );
-		$this->assertTrue( has_filter( 'jetpack_json_api_comment_types' ) );
-		$this->assertTrue( has_filter( 'jetpack_api_include_comment_types_count' ) );
-		$this->assertTrue( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertTrue( has_filter( 'pre_option_activitypub_following_ui' ) );
+		// Following UI hooks should NOT be registered in test environment
+		// because neither IS_WPCOM is defined nor is Jetpack connected.
+		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
+		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
 	}
 
 	/**
@@ -122,9 +137,9 @@ class Test_Jetpack extends \WP_UnitTestCase {
 			$this->assertTrue( has_filter( 'jetpack_json_api_comment_types' ) );
 			$this->assertTrue( has_filter( 'jetpack_api_include_comment_types_count' ) );
 
-			// Following UI hooks should also be registered.
-			$this->assertTrue( has_filter( 'activitypub_following_row_actions' ) );
-			$this->assertTrue( has_filter( 'pre_option_activitypub_following_ui' ) );
+			// Following UI hooks should NOT be registered in normal test environment.
+			$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
+			$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
 
 			// Clear hooks again for the WPCOM simulation.
 			remove_all_filters( 'jetpack_sync_post_meta_whitelist' );
@@ -151,7 +166,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$this->assertFalse( has_filter( 'jetpack_json_api_comment_types' ) );
 		$this->assertFalse( has_filter( 'jetpack_api_include_comment_types_count' ) );
 
-		// But following UI hooks should still be registered.
+		// But following UI hooks should be registered when IS_WPCOM is true.
 		$this->assertTrue( has_filter( 'activitypub_following_row_actions' ) );
 		$this->assertTrue( has_filter( 'pre_option_activitypub_following_ui' ) );
 	}
@@ -351,17 +366,18 @@ class Test_Jetpack extends \WP_UnitTestCase {
 			$this->assertNotContains( 'avatar_url', $comment_meta );
 		}
 
-		// Test following UI filter integration (always available).
-		$ui_enabled = apply_filters( 'pre_option_activitypub_following_ui', '0' );
-		$this->assertEquals( '1', $ui_enabled );
+		// Test following UI filter integration - test direct method calls.
+		$ui_result = Jetpack::pre_option_activitypub_following_ui();
+		$this->assertEquals( '1', $ui_result );
 
-		// Test reader link filter integration (always available).
-		$test_item = array(
+		// Test reader link method directly.
+		$test_item        = array(
 			'id'         => 123,
 			'status'     => 'active',
 			'identifier' => 'https://example.com/feed',
 		);
-		$actions   = apply_filters( 'activitypub_following_row_actions', array(), $test_item );
-		$this->assertArrayHasKey( 'reader', $actions );
+		$original_actions = array( 'edit' => '<a href="#">Edit</a>' );
+		$updated_actions  = Jetpack::add_reader_link( $original_actions, $test_item );
+		$this->assertArrayHasKey( 'reader', $updated_actions );
 	}
 }
