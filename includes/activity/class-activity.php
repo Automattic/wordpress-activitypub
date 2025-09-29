@@ -22,6 +22,10 @@ use Activitypub\Activity\Extended_Object\Place;
 class Activity extends Base_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
+		array(
+			'toot'         => 'http://joinmastodon.org/ns#',
+			'QuoteRequest' => 'toot:QuoteRequest',
+		),
 	);
 
 	/**
@@ -50,6 +54,7 @@ class Activity extends Base_Object {
 		'Listen',
 		'Move',
 		'Offer',
+		'QuoteRequest', // @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md
 		'Read',
 		'Reject',
 		'Remove',

@@ -42,6 +42,7 @@ class Handler {
 		Inbox::init();
 		Like::init();
 		Move::init();
+		Quote_Request::init();
 		Reject::init();
 		Undo::init();
 		Update::init();
