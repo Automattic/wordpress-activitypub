@@ -7,6 +7,8 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 
@@ -70,7 +72,7 @@ class Quote_Request {
 			return;
 		}
 
-		self::send_reject( $activity, $user_id );
+		self::queue_reject( $activity, $user_id );
 	}
 
 	/**
