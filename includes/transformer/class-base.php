@@ -208,8 +208,8 @@ abstract class Base {
 				$activity_object->add_to( $replied_to );
 				break;
 			case ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL:
-				$activity_object->set_to( array() );
-				$activity_object->set_cc( array() );
+				$activity_object->add_to( $actor->get_id() );
+				$activity_object->add_cc( $actor->get_id() );
 		}
 
 		return $activity_object;
