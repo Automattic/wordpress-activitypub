@@ -397,6 +397,20 @@ class Blocked_Actors extends \WP_List_Table {
 			),
 		);
 
+		/**
+		 * Filters the array of row action links on the Blocked Actors list table.
+		 *
+		 * The filter is evaluated only for non-hierarchical post types.
+		 *
+		 * @since 2.8.0
+		 *
+		 * @param string[] $actions An array of row action links. Defaults are
+		 *                          'Edit', 'Quick Edit', 'Restore', 'Trash',
+		 *                          'Delete Permanently', 'Preview', and 'View'.
+		 * @param array    $item    The current blocked actor item.
+		 */
+		$actions = apply_filters( 'activitypub_blocked_actors_row_actions', $actions, $item );
+
 		return $this->row_actions( $actions );
 	}
 }

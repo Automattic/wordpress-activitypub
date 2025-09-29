@@ -481,6 +481,7 @@ class Following extends \WP_List_Table {
 	 * @param array  $item        The current following item.
 	 * @param string $column_name The current column name.
 	 * @param string $primary     The primary column name.
+	 *
 	 * @return string HTML for the row actions.
 	 */
 	protected function handle_row_actions( $item, $column_name, $primary ) {
@@ -497,6 +498,20 @@ class Following extends \WP_List_Table {
 				\esc_html__( 'Unfollow', 'activitypub' )
 			),
 		);
+
+		/**
+		 * Filters the array of row action links on the Following list table.
+		 *
+		 * The filter is evaluated only for non-hierarchical post types.
+		 *
+		 * @since 2.8.0
+		 *
+		 * @param string[] $actions An array of row action links. Defaults are
+		 *                          'Edit', 'Quick Edit', 'Restore', 'Trash',
+		 *                          'Delete Permanently', 'Preview', and 'View'.
+		 * @param array    $item    The current following item.
+		 */
+		$actions = apply_filters( 'activitypub_following_row_actions', $actions, $item );
 
 		return $this->row_actions( $actions );
 	}
