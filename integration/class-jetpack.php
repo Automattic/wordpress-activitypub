@@ -88,10 +88,10 @@ class Jetpack {
 			return $actions;
 		}
 
-		$reader_id = \get_post_meta( $item['id'], '_activitypub_actor_feed', true );
+		$feed = \get_post_meta( $item['id'], '_activitypub_actor_feed', true );
 
-		if ( $reader_id ) {
-			$url = sprintf( 'https://wordpress.com/reader/feed/%d', (int) $reader_id );
+		if ( isset( $feed['feed_id'] ) ) {
+			$url = sprintf( 'https://wordpress.com/reader/feed/%d', (int) $feed['feed_id'] );
 		} else {
 			$url = sprintf( 'https://wordpress.com/reader/feeds/lookup/%s', $item['identifier'] );
 		}
