@@ -99,7 +99,7 @@ class Jetpack {
 		$actions['reader'] = sprintf(
 			'<a href="%s" target="_blank">%s</a>',
 			esc_url( $url ),
-			esc_html__( 'Open in Reader', 'activitypub' )
+			esc_html__( 'View Feed', 'activitypub' )
 		);
 
 		return $actions;

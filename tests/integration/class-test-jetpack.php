@@ -294,7 +294,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 			// Check that reader link is added.
 			$this->assertArrayHasKey( 'reader', $updated_actions );
 			$this->assertStringContainsString( $expected_url, $updated_actions['reader'] );
-			$this->assertStringContainsString( 'Open in Reader', $updated_actions['reader'] );
+			$this->assertStringContainsString( 'View Feed', $updated_actions['reader'] );
 			$this->assertStringContainsString( 'target="_blank"', $updated_actions['reader'] );
 		} else {
 			// Check that reader link is not added for pending items.
