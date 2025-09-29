@@ -28,7 +28,10 @@ class Jetpack {
 			\add_filter( 'jetpack_api_include_comment_types_count', array( self::class, 'add_comment_types' ) );
 		}
 
-		if ( ( \defined( 'IS_WPCOM' ) && IS_WPCOM ) || \Jetpack::is_connection_ready() ) {
+		if (
+			( \defined( 'IS_WPCOM' ) && IS_WPCOM ) ||
+			( \class_exists( '\Jetpack' ) && \Jetpack::is_connection_ready() )
+		) {
 			\add_filter( 'activitypub_following_row_actions', array( self::class, 'add_reader_link' ), 10, 2 );
 			\add_filter( 'pre_option_activitypub_following_ui', array( self::class, 'pre_option_activitypub_following_ui' ) );
 		}
