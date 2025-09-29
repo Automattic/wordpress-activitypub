@@ -24,7 +24,7 @@ class Quote_Request {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_quoterequest', array( self::class, 'handle_quote_request' ), 10, 2 );
-		\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'handle_blocked_request' ), 10, 4 );
+		\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'handle_blocked_request' ), 10, 3 );
 
 		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
