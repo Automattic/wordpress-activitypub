@@ -93,7 +93,7 @@ class Jetpack {
 		if ( isset( $feed['feed_id'] ) ) {
 			$url = sprintf( 'https://wordpress.com/reader/feed/%d', (int) $feed['feed_id'] );
 		} else {
-			$url = sprintf( 'https://wordpress.com/reader/feeds/lookup/%s', $item['identifier'] );
+			$url = sprintf( 'https://wordpress.com/reader/feeds/lookup/%s', rawurlencode( $item['identifier'] ) );
 		}
 
 		$actions['reader'] = sprintf(
