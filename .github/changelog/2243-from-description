@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add upgrade routine to enable ActivityPub feeds in WordPress.com Reader
