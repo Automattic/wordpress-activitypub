@@ -78,6 +78,8 @@ class Quote_Request {
 	/**
 	 * Send an Accept activity in response to the QuoteRequest.
 	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md#example-accept
+	 *
 	 * @param array $activity_object The activity object.
 	 * @param int   $user_id         The user ID.
 	 */
@@ -107,6 +109,8 @@ class Quote_Request {
 
 	/**
 	 * Send a Reject activity in response to the QuoteRequest.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md#example-reject
 	 *
 	 * @param array $activity_object The activity object.
 	 * @param int   $user_id  The user ID.
