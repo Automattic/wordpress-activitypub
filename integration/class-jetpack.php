@@ -96,13 +96,16 @@ class Jetpack {
 			$url = sprintf( 'https://wordpress.com/reader/feeds/lookup/%s', rawurlencode( $item['identifier'] ) );
 		}
 
-		$actions['reader'] = sprintf(
-			'<a href="%s" target="_blank">%s</a>',
-			esc_url( $url ),
-			esc_html__( 'View Feed', 'activitypub' )
+		return array_merge(
+			array(
+				'reader' => sprintf(
+					'<a href="%s" target="_blank">%s</a>',
+					esc_url( $url ),
+					esc_html__( 'View Feed', 'activitypub' )
+				),
+			),
+			$actions
 		);
-
-		return $actions;
 	}
 
 	/**
