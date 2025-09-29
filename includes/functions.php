@@ -987,7 +987,12 @@ function get_comment_ancestors( $comment ) {
 	$ancestors[] = $id;
 
 	while ( $id > 0 ) {
-		$ancestor  = \get_comment( $id );
+		$ancestor = \get_comment( $id );
+
+		if ( ! $ancestor ) {
+			break;
+		}
+
 		$parent_id = (int) $ancestor->comment_parent;
 
 		// Loop detection: If the ancestor has been seen before, break.
