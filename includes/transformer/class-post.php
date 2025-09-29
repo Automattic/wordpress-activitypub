@@ -578,10 +578,6 @@ class Post extends Base {
 	 * @return string|array|null The in-reply-to URL of the post.
 	 */
 	protected function get_in_reply_to() {
-		if ( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $this->get_content_visibility() ) {
-			return null;
-		}
-
 		if ( ! site_supports_blocks() ) {
 			return null;
 		}
