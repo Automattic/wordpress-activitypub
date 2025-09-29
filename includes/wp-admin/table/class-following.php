@@ -502,13 +502,11 @@ class Following extends \WP_List_Table {
 		/**
 		 * Filters the array of row action links on the Following list table.
 		 *
-		 * The filter is evaluated only for non-hierarchical post types.
+		 * This filter allows you to modify the row actions for each following item in the Following list table.
 		 *
 		 * @since 2.8.0
 		 *
-		 * @param string[] $actions An array of row action links. Defaults are
-		 *                          'Edit', 'Quick Edit', 'Restore', 'Trash',
-		 *                          'Delete Permanently', 'Preview', and 'View'.
+		 * @param string[] $actions An array of row action links. Defaults include 'Unfollow'.
 		 * @param array    $item    The current following item.
 		 */
 		$actions = apply_filters( 'activitypub_following_row_actions', $actions, $item );
