@@ -159,21 +159,10 @@ class Quote_Request {
 		$required_attributes = array(
 			'actor',
 			'object',
-		);
-
-		if ( ! empty( \array_diff( $required_attributes, \array_keys( $json_params ) ) ) ) {
-			return false;
-		}
-
-		$required_object_attributes = array(
-			'id',
-			'type',
-			'actor',
-			'object',
 			'instrument',
 		);
 
-		if ( ! empty( \array_diff( $required_object_attributes, \array_keys( $json_params['object'] ) ) ) ) {
+		if ( ! empty( \array_diff( $required_attributes, \array_keys( $json_params ) ) ) ) {
 			return false;
 		}
 
