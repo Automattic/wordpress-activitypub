@@ -1157,7 +1157,6 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Track action calls for the specific meta key we care about.
 		$following_actions = array();
 		$capture_action    = function ( $meta_id, $post_id, $meta_key, $meta_value ) use ( &$following_actions ) {
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 			if ( Following::FOLLOWING_META_KEY === $meta_key ) {
 				$following_actions[] = array( $meta_id, $post_id, $meta_key, $meta_value );
 			}
