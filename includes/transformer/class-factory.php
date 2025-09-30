@@ -11,6 +11,7 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Comment as Comment_Helper;
 use Activitypub\Http;
 
+use function Activitypub\get_user_id;
 use function Activitypub\is_post_disabled;
 use function Activitypub\user_can_activitypub;
 
@@ -90,7 +91,7 @@ class Factory {
 			case 'WP_Post':
 				if ( 'attachment' === $data->post_type && ! is_post_disabled( $data ) ) {
 					return new Attachment( $data );
-				} elseif ( ! is_post_disabled( $data ) ) {
+				} elseif ( ! is_post_disabled( $data ) && get_user_id( $data->post_author ) ) {
 					return new Post( $data );
 				}
 				break;

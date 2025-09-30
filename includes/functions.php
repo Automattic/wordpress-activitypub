@@ -1300,9 +1300,11 @@ function get_content_warning( $post_id ) {
 /**
  * Get the ActivityPub ID of a User by the WordPress User ID.
  *
+ * Fall back to blog user if in blog mode or if user is not found.
+ *
  * @param int $id The WordPress User ID.
  *
- * @return string The ActivityPub ID (a URL) of the User.
+ * @return string|false The ActivityPub ID (a URL) of the User or false if not found.
  */
 function get_user_id( $id ) {
 	$mode = \get_option( 'activitypub_actor_mode', 'default' );
