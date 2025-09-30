@@ -23,16 +23,37 @@ class Comment {
 	public static function init() {
 		self::register_comment_types();
 
+		\add_filter( 'map_meta_cap', array( self::class, 'map_meta_cap' ), 10, 4 );
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
+		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
-		\add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+	}
+
+	/**
+	 * Remove edit capabilities for comments received via ActivityPub.
+	 *
+	 * @param array  $caps    Array of capabilities.
+	 * @param string $cap     Capability name.
+	 * @param int    $user_id User ID.
+	 * @param array  $args    Array of arguments.
+	 *
+	 * @return array Modified array of capabilities.
+	 */
+	public static function map_meta_cap( $caps, $cap, $user_id, $args ) {
+		if ( 'edit_comment' === $cap && self::was_received( $args[0] ) ) {
+			if ( ! \is_admin() || ( isset( $GLOBALS['current_screen'] ) && 'comment' === $GLOBALS['current_screen']->id ) ) {
+				$caps[] = 'do_not_allow';
+			}
+		}
+
+		return $caps;
 	}
 
 	/**
@@ -56,24 +77,23 @@ class Comment {
 			return $link;
 		}
 
-		$attrs = array(
+		if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( 'activitypub/remote-reply' ) ) {
+			\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply' );
+		}
+
+		$attributes = array(
 			'selectedComment' => self::generate_id( $comment ),
 			'commentId'       => $comment->comment_ID,
 		);
 
-		$div = sprintf(
-			'<div class="reply activitypub-remote-reply" data-attrs="%s"></div>',
-			esc_attr( wp_json_encode( $attrs ) )
-		);
+		$block = \do_blocks( \sprintf( '<!-- wp:activitypub/remote-reply %s /-->', \wp_json_encode( $attributes ) ) );
 
 		/**
 		 * Filters the HTML markup for the ActivityPub remote comment reply container.
 		 *
-		 * @param string $div The HTML markup for the remote reply container. Default is a div
-		 *                    with class 'activitypub-remote-reply' and data attributes for
-		 *                    the selected comment ID and internal comment ID.
+		 * @param string $block The HTML markup for the remote reply container.
 		 */
-		return apply_filters( 'activitypub_comment_reply_link', $div );
+		return \apply_filters( 'activitypub_comment_reply_link', $block );
 	}
 
 	/**
@@ -343,6 +363,38 @@ class Comment {
 	}
 
 	/**
+	 * Makes the comment feed filterable by comment type.
+	 *
+	 * Also excludes ActivityPub comment types from the feed when no type is specified.
+	 *
+	 * @param string $where The `WHERE` clause for the comment feed query.
+	 *
+	 * @return string The modified `WHERE` clause.
+	 */
+	public static function comment_feed_where( $where ) {
+		global $wpdb;
+
+		$comment_type = \get_query_var( 'type' );
+
+		if ( 'all' === $comment_type ) {
+			return $where;
+		}
+
+		$comment_types = self::get_comment_type_slugs();
+
+		if ( \in_array( $comment_type, $comment_types, true ) ) {
+			$where .= $wpdb->prepare( ' AND comment_type = %s', $comment_type );
+		} else {
+			$comment_types = \array_map( 'esc_sql', $comment_types );
+			$placeholders  = implode( ', ', array_fill( 0, count( $comment_types ), '%s' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared
+			$where .= $wpdb->prepare( sprintf( ' AND comment_type NOT IN (%s)', $placeholders ), ...$comment_types );
+		}
+
+		return $where;
+	}
+
+	/**
 	 * Gets the public comment id via the WordPress comments meta.
 	 *
 	 * @param  int  $wp_comment_id The internal WordPress comment ID.
@@ -395,9 +447,12 @@ class Comment {
 			return $comment_link;
 		}
 
-		$public_comment_link = self::get_source_url( $comment->comment_ID );
+		$remote_comment_link = null;
+		if ( 'comment' === $comment->comment_type ) {
+			$remote_comment_link = self::get_source_url( $comment->comment_ID );
+		}
 
-		return $public_comment_link ?? $comment_link;
+		return $remote_comment_link ?? $comment_link;
 	}
 
 
@@ -450,60 +505,6 @@ class Comment {
 		);
 
 		return ! empty( $comments );
-	}
-
-	/**
-	 * Enqueue scripts for remote comments
-	 */
-	public static function enqueue_scripts() {
-		if ( ! \is_singular() || \is_user_logged_in() ) {
-			// Only on single pages, only for logged-out users.
-			return;
-		}
-
-		if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
-			// Post type does not support ActivityPub.
-			return;
-		}
-
-		if ( ! \comments_open() || ! \get_comments_number() ) {
-			// No comments, no need to load the script.
-			return;
-		}
-
-		if ( ! self::post_has_remote_comments( \get_the_ID() ) ) {
-			// No remote comments, no need to load the script.
-			return;
-		}
-
-		$handle     = 'activitypub-remote-reply';
-		$data       = array(
-			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-		);
-		$js         = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
-		$asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply/index.asset.php';
-
-		if ( \file_exists( $asset_file ) ) {
-			$assets = require_once $asset_file;
-
-			\wp_enqueue_script(
-				$handle,
-				\plugins_url( 'build/remote-reply/index.js', __DIR__ ),
-				$assets['dependencies'],
-				$assets['version'],
-				true
-			);
-			\wp_add_inline_script( $handle, $js, 'before' );
-			\wp_set_script_translations( $handle, 'activitypub' );
-
-			\wp_enqueue_style(
-				$handle,
-				\plugins_url( 'build/remote-reply/style-index.css', __DIR__ ),
-				array( 'wp-components' ),
-				$assets['version']
-			);
-		}
 	}
 
 	/**
@@ -561,19 +562,6 @@ class Comment {
 	 */
 	public static function get_comment_type_slugs() {
 		return array_keys( self::get_comment_types() );
-	}
-
-	/**
-	 * Return the registered custom comment type slugs.
-	 *
-	 * @deprecated 4.5.0 Use get_comment_type_slugs instead.
-	 *
-	 * @return array The registered custom comment type slugs.
-	 */
-	public static function get_comment_type_names() {
-		_deprecated_function( __METHOD__, '4.5.0', 'get_comment_type_slugs' );
-
-		return self::get_comment_type_slugs();
 	}
 
 	/**
@@ -740,6 +728,14 @@ class Comment {
 	public static function pre_comment_approved( $approved, $comment_data ) {
 		if ( $approved || \is_wp_error( $approved ) ) {
 			return $approved;
+		}
+
+		// Maybe auto-approve likes and reposts.
+		if (
+			\in_array( $comment_data['comment_type'], self::get_comment_type_slugs(), true ) &&
+			'1' === \get_option( 'activitypub_auto_approve_reactions' )
+		) {
+			return 1;
 		}
 
 		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {

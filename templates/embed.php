@@ -25,7 +25,8 @@ $args = wp_parse_args(
 	)
 );
 
-\wp_enqueue_style( 'activitypub-embed', ACTIVITYPUB_PLUGIN_URL . 'assets/css/activitypub-embed.css', array(), ACTIVITYPUB_PLUGIN_VERSION );
+\wp_enqueue_style( 'activitypub-embed', ACTIVITYPUB_PLUGIN_URL . 'build/embed/embed.css', array(), ACTIVITYPUB_PLUGIN_VERSION );
+\wp_style_add_data( 'activitypub-embed', 'rtl', 'replace' );
 ?>
 
 <div class="activitypub-embed u-in-reply-to h-cite">

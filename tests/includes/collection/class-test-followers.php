@@ -111,32 +111,12 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$db_followers = array_map(
 			function ( $item ) {
-				return $item->get_id();
+				return $item->guid;
 			},
 			$db_followers
 		);
 
 		$this->assertEquals( array( 'http://sally.example.org', 'https://example.org/author/doe', 'https://example.com/author/jon' ), $db_followers );
-	}
-
-	/**
-	 * Tests get_followers with corrupted json.
-	 *
-	 * @covers ::get_followers
-	 */
-	public function test_get_followers_without_errors() {
-		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
-
-		foreach ( $followers as $follower ) {
-			Followers::add_follower( 1, $follower );
-		}
-
-		$follower = Followers::get_follower( 1, 'https://example.org/author/doe' );
-		update_post_meta( $follower->get__id(), '_activitypub_actor_json', 'invalid json' );
-
-		$db_followers = Followers::get_followers( 1 );
-
-		$this->assertEquals( 2, \count( $db_followers ) );
 	}
 
 	/**
@@ -164,17 +144,17 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * @covers ::add_follower
 	 */
 	public function test_add_follower_error() {
-		$follower = 'error@example.com';
+		$follower = 'error@example.net';
 
 		$result = Followers::add_follower( 1, $follower );
 
-		$this->assertTrue( is_wp_error( $result ) );
+		$this->assertTrue( \is_wp_error( $result ) );
 
-		$follower2 = 'https://error.example.com';
+		$follower2 = 'https://error.example.net';
 
 		$result = Followers::add_follower( 1, $follower2 );
 
-		$this->assertTrue( is_wp_error( $result ) );
+		$this->assertTrue( \is_wp_error( $result ) );
 
 		$db_followers = Followers::get_followers( 1 );
 
@@ -199,20 +179,20 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower->get_id() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		$this->assertNull( $follower );
+		$this->assertWPError( $follower );
 
 		$follower = Followers::get_follower( 1, 'https://user2.example.com' );
-		$this->assertNull( $follower );
+		$this->assertWPError( $follower );
 
 		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower->get_id() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
 		$follower2 = Followers::get_follower( 2, 'https://user2.example.com' );
-		$this->assertEquals( 'https://user2.example.com', $follower2->get_id() );
-		$this->assertEquals( 'úser2', $follower2->get_name() );
+		$this->assertEquals( 'https://user2.example.com', $follower2->guid );
+		$this->assertEquals( 'úser2', Actors::get_actor( $follower2 )->get_name() );
 	}
 
 	/**
@@ -239,21 +219,52 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower->get_id() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
 		$followers = Followers::get_followers( 1 );
 		$this->assertEquals( 2, count( $followers ) );
 
 		$follower2 = Followers::get_follower( 2, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_id() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower2->guid );
 
+		$this->setExpectedDeprecated( 'Activitypub\Collection\Followers::remove_follower' );
 		Followers::remove_follower( 1, 'https://example.com/author/jon' );
 
 		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertNull( $follower );
+		$this->assertWPError( $follower );
 
 		$follower2 = Followers::get_follower( 2, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_id() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower2->guid );
+
+		$followers = Followers::get_followers( 1 );
+		$this->assertEquals( 1, count( $followers ) );
+	}
+
+	/**
+	 * Tests remove_follower.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove() {
+		$followers = array(
+			'https://example.com/author/jon',
+			'https://example.org/author/doe',
+		);
+
+		foreach ( $followers as $follower ) {
+			Followers::add_follower( 1, $follower );
+		}
+
+		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
+
+		$followers = Followers::get_followers( 1 );
+		$this->assertEquals( 2, count( $followers ) );
+
+		Followers::remove( $followers[0]->ID, 1 );
+
+		$follower = Followers::get_follower( 1, $followers[0]->guid );
+		$this->assertWPError( $follower );
 
 		$followers = Followers::get_followers( 1 );
 		$this->assertEquals( 1, count( $followers ) );
@@ -281,7 +292,6 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$post_modified     = gmdate( $mysql_time_format, $time );
 		$post_modified_gmt = gmdate( $mysql_time_format, ( $time + get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) );
-		$post_id           = $follower->get__id();
 
 		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
@@ -289,16 +299,16 @@ class Test_Followers extends \WP_UnitTestCase {
 				array(
 					$post_modified,
 					$post_modified_gmt,
-					$post_id,
+					$follower->ID,
 				)
 			)
 		);
 
-		clean_post_cache( $post_id );
+		clean_post_cache( $follower->ID );
 
-		$followers = Followers::get_outdated_followers();
-		$this->assertEquals( 1, count( $followers ) );
-		$this->assertEquals( 'https://example.com/author/jon', $followers[0] );
+		$actors = Actors::get_outdated();
+		$this->assertEquals( 1, \count( $actors ) );
+		$this->assertEquals( 'https://example.com/author/jon', $actors[0]->guid );
 	}
 
 	/**
@@ -316,25 +326,21 @@ class Test_Followers extends \WP_UnitTestCase {
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
-			add_post_meta( $follower->get__id(), '_activitypub_errors', 'error ' . $i );
+			\add_post_meta( $follower->ID, '_activitypub_errors', 'error ' . $i );
 		}
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		$follower->count_errors();
+		$actors   = Actors::get_faulty();
 
-		$followers = Followers::get_faulty_followers();
+		$this->assertEquals( 1, \count( $actors ) );
+		$this->assertEquals( 'http://sally.example.org', $actors[0]->guid );
 
-		$this->assertEquals( 1, count( $followers ) );
-		$this->assertEquals( 'http://sally.example.org', $followers[0] );
-
-		$follower->reset_errors();
+		Actors::clear_errors( $follower->ID );
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
-		$follower->count_errors();
+		$actors   = Actors::get_faulty();
 
-		$followers = Followers::get_faulty_followers();
-
-		$this->assertEquals( 0, count( $followers ) );
+		$this->assertEquals( 0, \count( $actors ) );
 	}
 
 	/**
@@ -357,7 +363,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertStringContainsString( $follower, serialize( $db_followers ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 		$follower = current( $db_followers );
-		$meta     = get_post_meta( $follower->get__id(), '_activitypub_user_id', false );
+		$meta     = get_post_meta( $follower->ID, Followers::FOLLOWER_META_KEY, false );
 
 		$this->assertCount( 1, $meta );
 	}
@@ -415,7 +421,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			2
 		);
 
-		add_user_meta( $user_id, 'activitypub_followers', $followers, true );
+		\add_user_meta( $user_id, 'activitypub_followers', $followers, true );
 
 		\Activitypub\Migration::migrate_from_0_17();
 
@@ -426,7 +432,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			// Verify each valid follower was migrated correctly.
 			$db_follower_ids = array_map(
 				function ( $follower ) {
-					return $follower->get_id();
+					return $follower->guid;
 				},
 				$db_followers
 			);
@@ -442,24 +448,8 @@ class Test_Followers extends \WP_UnitTestCase {
 		}
 
 		// Clean up.
-		delete_user_meta( $user_id, 'activitypub_followers' );
-		remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
-	}
-
-	/**
-	 * Tests extract_name_from_uri.
-	 *
-	 * @dataProvider extract_name_from_uri_content_provider
-	 *
-	 * @param string $uri  The URI.
-	 * @param string $name The name.
-	 */
-	public function test_extract_name_from_uri( $uri, $name ) {
-		$follower = new \Activitypub\Model\Follower();
-
-		$follower->set_id( $uri );
-
-		$this->assertEquals( $name, $follower->get_name() );
+		\delete_user_meta( $user_id, 'activitypub_followers' );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
 	}
 
 	/**
@@ -479,12 +469,9 @@ class Test_Followers extends \WP_UnitTestCase {
 				'publicKeyPem'      => $i,
 			);
 
-			$follower = new \Activitypub\Model\Follower();
-			$follower->from_array( $meta );
+			$id = Actors::upsert( $meta );
 
-			$id = $follower->upsert();
-
-			add_post_meta( $id, '_activitypub_user_id', 1 );
+			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
 		$inboxes = Followers::get_inboxes( 1 );
@@ -505,12 +492,9 @@ class Test_Followers extends \WP_UnitTestCase {
 				'publicKeyPem'      => $k,
 			);
 
-			$follower = new \Activitypub\Model\Follower();
-			$follower->from_array( $meta );
+			$id = Actors::upsert( $meta );
 
-			$id = $follower->upsert();
-
-			add_post_meta( $id, '_activitypub_user_id', 1 );
+			add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
 		$inboxes2 = Followers::get_inboxes( 1 );
@@ -522,6 +506,8 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * Tests get_all_followers.
 	 *
 	 * @covers ::get_all_followers
+	 *
+	 * @expectedDeprecated Activitypub\Collection\Followers::get_all_followers
 	 */
 	public function test_get_all_followers() {
 		for ( $i = 0; $i < 30; $i++ ) {
@@ -535,12 +521,9 @@ class Test_Followers extends \WP_UnitTestCase {
 				'publicKeyPem'      => $i,
 			);
 
-			$follower = new \Activitypub\Model\Follower();
-			$follower->from_array( $meta );
+			$id = Actors::upsert( $meta );
 
-			$id = $follower->upsert();
-
-			add_post_meta( $id, '_activitypub_user_id', 1 );
+			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
 		$followers = Followers::get_all_followers();
@@ -647,6 +630,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			50,
 			0
 		);
+
 		// username and jon have sharedInbox endpoints.
 		$this->assertCount( 2, $inboxes, 'Should retrieve exactly 3 inboxes.' );
 		$this->assertContains( self::$actors['username@example.org']['endpoints']['sharedInbox'], $inboxes, 'Should contain first inbox.' );
@@ -662,7 +646,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertCount( 1, $inboxes, 'Should retrieve exactly 1 inbox with batch size 1.' );
 
 		// Test with blog user in dual mode.
-		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		Followers::add_follower( Actors::BLOG_USER_ID, self::$actors['sally@example.org']['id'] );
 
 		$inboxes = Followers::get_inboxes_for_activity(
@@ -712,62 +696,5 @@ class Test_Followers extends \WP_UnitTestCase {
 			array( 'user@example.com', 'user' ),
 			array( 'https://example.com', 'https://example.com' ),
 		);
-	}
-
-	/**
-	 * Tests clear_errors.
-	 *
-	 * @covers ::clear_errors
-	 */
-	public function test_clear_errors() {
-		$follower = 'https://example.com/author/jon';
-		$result   = Followers::add_follower( 1, $follower );
-		$this->assertNotWPError( $result );
-
-		// Add some errors.
-		Followers::add_error( $result->get__id(), 'Test error 1' );
-		Followers::add_error( $result->get__id(), 'Test error 2' );
-
-		// Verify errors were added.
-		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
-		$this->assertCount( 2, $errors );
-
-		// Clear errors.
-		$cleared = Followers::clear_errors( $result->get__id() );
-		$this->assertTrue( $cleared );
-
-		// Verify errors were cleared.
-		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
-		$this->assertEmpty( $errors );
-	}
-
-	/**
-	 * Tests clear_errors with no errors.
-	 *
-	 * @covers ::clear_errors
-	 */
-	public function test_clear_errors_no_errors() {
-		$follower = 'https://example.com/author/jon';
-		$result   = Followers::add_follower( 1, $follower );
-		$this->assertNotWPError( $result );
-
-		// Clear errors when none exist.
-		$cleared = Followers::clear_errors( $result->get__id() );
-		$this->assertFalse( $cleared );
-
-		// Verify no errors exist.
-		$errors = get_post_meta( $result->get__id(), '_activitypub_errors', false );
-		$this->assertEmpty( $errors );
-	}
-
-	/**
-	 * Tests clear_errors with invalid follower ID.
-	 *
-	 * @covers ::clear_errors
-	 */
-	public function test_clear_errors_invalid_id() {
-		// Try to clear errors for non-existent follower.
-		$cleared = Followers::clear_errors( 99999 );
-		$this->assertFalse( $cleared );
 	}
 }

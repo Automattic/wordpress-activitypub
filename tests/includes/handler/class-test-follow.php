@@ -7,17 +7,17 @@
 
 namespace Activitypub\Tests\Handler;
 
-use Activitypub\Handler\Follow;
-use Activitypub\Model\Follower;
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
-use WP_UnitTestCase;
+use Activitypub\Handler\Follow;
 
 /**
  * Test class for Follow handler.
  *
  * @coversDefaultClass \Activitypub\Handler\Follow
  */
-class Test_Follow extends WP_UnitTestCase {
+class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test user ID.
 	 *
@@ -28,7 +28,7 @@ class Test_Follow extends WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create(
@@ -51,12 +51,13 @@ class Test_Follow extends WP_UnitTestCase {
 	 * @covers ::queue_accept
 	 */
 	public function test_queue_accept() {
+		$local_actor     = Actors::get_by_id( self::$user_id );
 		$actor           = 'https://example.com/actor';
 		$activity_object = array(
 			'id'     => 'https://example.com/activity/123',
 			'type'   => 'Follow',
 			'actor'  => $actor,
-			'object' => 'https://example.com/user/1',
+			'object' => $local_actor->get_id(),
 		);
 
 		// Test with WP_Error follower - should not create outbox entry.
@@ -79,13 +80,25 @@ class Test_Follow extends WP_UnitTestCase {
 		);
 		$this->assertEmpty( $outbox_posts, 'No outbox entry should be created for WP_Error follower' );
 
-		// Test with valid follower.
-		$follower = new Follower();
-		$follower->set_actor( $actor );
-		$follower->set_type( 'Person' );
-		$follower->set_inbox( 'https://example.com/inbox' );
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () use ( $actor ) {
+				return array(
+					'id'    => $actor,
+					'actor' => $actor,
+					'type'  => 'Person',
+					'inbox' => 'https://example.com/inbox',
+				);
+			}
+		);
 
-		Follow::queue_accept( $actor, $activity_object, self::$user_id, $follower );
+		$remote_actor = Followers::add_follower(
+			self::$user_id,
+			$activity_object['actor']
+		);
+		$remote_actor = \get_post( $remote_actor );
+
+		Follow::queue_accept( $actor, $activity_object, self::$user_id, $remote_actor );
 
 		$outbox_posts = get_posts(
 			array(
@@ -114,11 +127,14 @@ class Test_Follow extends WP_UnitTestCase {
 		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility );
 
 		$this->assertEquals( 'Follow', $activity_json['object']['type'] );
-		$this->assertEquals( 'https://example.com/user/1', $activity_json['object']['object'] );
+		$this->assertEquals( $local_actor->get_id(), $activity_json['object']['object'] );
 		$this->assertEquals( array( $actor ), $activity_json['to'] );
 		$this->assertEquals( $actor, $activity_json['object']['actor'] );
+		$this->assertEquals( $local_actor->get_id(), $activity_json['actor'] );
 
 		// Clean up.
 		wp_delete_post( $outbox_post->ID, true );
+		wp_delete_post( $remote_actor->ID, true );
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
 }

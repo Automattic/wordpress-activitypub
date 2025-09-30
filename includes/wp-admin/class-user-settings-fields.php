@@ -87,7 +87,7 @@ class User_Settings_Fields {
 			array( self::class, 'also_known_as_callback' ),
 			'activitypub_user_settings',
 			'activitypub_user_profile',
-			array( 'label_for' => 'activitypub_blog_user_also_known_as' )
+			array( 'label_for' => 'activitypub_also_known_as' )
 		);
 	}
 
@@ -262,15 +262,15 @@ class User_Settings_Fields {
 		?>
 		<textarea
 			class="large-text"
-			name="activitypub_blog_user_also_known_as"
-			id="activitypub_blog_user_also_known_as"
+			name="activitypub_also_known_as"
+			id="activitypub_also_known_as"
 			rows="5"
 		><?php echo \esc_textarea( implode( PHP_EOL, (array) $also_known_as ) ); ?></textarea>
 		<p class="description">
 			<?php \esc_html_e( 'If you&#8217;re moving from another account to this one, you&#8217;ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn&#8217;t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
 		</p>
 		<p class="description">
-			<?php \esc_html_e( 'Enter one URL per line.', 'activitypub' ); ?>
+			<?php echo \wp_kses_post( \__( 'Enter one account per line. Profile links or usernames like <code>@username@example.com</code> are accepted and will be automatically normalized to the correct format.', 'activitypub' ) ); ?>
 		</p>
 		<?php
 	}

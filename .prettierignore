@@ -1,13 +1,5 @@
 build
+coverage
 node_modules
 tests
 vendor
-
-# Temporary ignores while breaking out each component.
-assets
-src/follow-me
-src/followers
-src/reactions
-src/remote-reply
-src/reply
-src/reply-intent

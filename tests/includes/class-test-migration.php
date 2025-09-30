@@ -7,12 +7,13 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Collection\Followers;
-use Activitypub\Collection\Outbox;
 use Activitypub\Migration;
 use Activitypub\Comment;
-use Activitypub\Model\Follower;
+use Activitypub\Activity\Actor;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Followers;
+use Activitypub\Collection\Outbox;
 
 /**
  * Test class for Activitypub Migrate.
@@ -275,7 +276,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]", $template );
 		$this->assertFalse( $content_type );
 
-		$custom = '[ap_title] [ap_content] [ap_hashcats] [ap_authorurl]';
+		$custom = '[ap_title] [ap_content] [ap_authorurl]';
 
 		\update_option( 'activitypub_post_content_type', 'custom' );
 		\update_option( 'activitypub_custom_post_content', $custom );
@@ -592,23 +593,20 @@ class Test_Migration extends \WP_UnitTestCase {
 	 * @covers ::update_actor_json_slashing
 	 */
 	public function test_update_actor_json_slashing() {
-		$follower = new Follower();
-		$follower->from_array(
-			array(
-				'type'               => 'Person',
-				'name'               => 'Test Follower',
-				'preferred_username' => 'Follower',
-				'summary'            => '<p>unescaped backslash 04\2024</p>',
-			)
+		$follower = array(
+			'id'                 => 'https://example.com/users/test',
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>unescaped backslash 04\2024</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
 		);
-		$unslashed_json = $follower->to_json();
 
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type'  => Followers::POST_TYPE,
-				'meta_input' => array( '_activitypub_actor_json' => $unslashed_json ),
-			)
-		);
+		$post_id = Actors::upsert( $follower );
+
+		\add_post_meta( $post_id, '_activitypub_actor_json', \wp_json_encode( $follower ) );
 
 		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
 		$this->assertNull( \json_decode( $original_meta, true ) );
@@ -841,5 +839,159 @@ class Test_Migration extends \WP_UnitTestCase {
 		\delete_user_option( $user_id1, 'activitypub_mailer_new_follower' );
 		\delete_user_option( $user_id1, 'activitypub_mailer_new_mention' );
 		\wp_delete_user( $user_id1 );
+	}
+
+	/**
+	 * Test migrate followers to AP Actor CPT.
+	 *
+	 * @covers ::migrate_followers_to_ap_actor_cpt
+	 */
+	public function test_migrate_followers_to_ap_actor_cpt() {
+		$follower = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_follower',
+			)
+		);
+
+		\add_post_meta( $follower, '_activitypub_user_id', '5' );
+
+		Migration::migrate_followers_to_ap_actor_cpt();
+
+		\clean_post_cache( $follower );
+
+		$this->assertEquals( Actors::POST_TYPE, \get_post_type( $follower ) );
+		$this->assertEquals( '5', \get_post_meta( $follower, Followers::FOLLOWER_META_KEY, true ) );
+
+		\wp_delete_post( $follower );
+	}
+
+	/**
+	 * Test update_actor_json_storage with valid JSON.
+	 *
+	 * @covers ::update_actor_json_storage
+	 */
+	public function test_update_actor_json_storage() {
+		$actor_array = array(
+			'id'                 => 'https://example.com/users/test',
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>HTML content</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
+		);
+
+		$remote_actor = function () use ( $actor_array ) {
+			return array(
+				'code' => 200,
+				'body' => $actor_array,
+			);
+		};
+
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			$remote_actor
+		);
+
+		$post_id = Actors::upsert( $actor_array );
+
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_type'    => Actors::POST_TYPE,
+				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
+			)
+		);
+
+		\add_post_meta( $post_id, '_activitypub_actor_json', \wp_slash( \wp_json_encode( $actor_array ) ) );
+
+		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertIsObject( \json_decode( $original_meta ) );
+
+		$result = Migration::update_actor_json_storage();
+
+		// No additional batch should be scheduled.
+		$this->assertNull( $result );
+
+		\clean_post_cache( $post_id );
+
+		$post    = \get_post( $post_id );
+		$content = \json_decode( $post->post_content, true );
+		$meta    = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertEmpty( $meta, 'Updated meta should be empty' );
+		$this->assertEquals( JSON_ERROR_NONE, \json_last_error() );
+		$this->assertIsObject( \json_decode( $original_meta ) );
+		$this->assertContains( 'Test Follower', $content );
+		$this->assertContains( '<p>HTML content</p>', $content );
+
+		$actor = Actor::init_from_json( $post->post_content );
+
+		$this->assertEquals( '<p>HTML content</p>', $actor->get_summary() );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+		\wp_delete_post( $post_id );
+	}
+
+	/**
+	 * Test update_actor_json_storage with broken JSON.
+	 *
+	 * @covers ::update_actor_json_storage
+	 */
+	public function test_update_actor_json_storage_broken_json() {
+		$actor_array = array(
+			'id'                 => 'https://example.com/users/test',
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>HTML content</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
+		);
+
+		$remote_actor = function () use ( $actor_array ) {
+			return $actor_array;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+
+		$post_id = Actors::upsert( $actor_array );
+
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_type'    => Actors::POST_TYPE,
+				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
+			)
+		);
+
+		\add_post_meta( $post_id, '_activitypub_actor_json', 'no json' );
+
+		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertEmpty( \json_decode( $original_meta ) );
+
+		$result = Migration::update_actor_json_storage();
+
+		// No additional batch should be scheduled.
+		$this->assertNull( $result );
+
+		\clean_post_cache( $post_id );
+
+		$post    = \get_post( $post_id );
+		$content = \json_decode( $post->post_content, true );
+		$meta    = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		$this->assertEmpty( $meta, 'Updated meta should be empty' );
+		$this->assertContains( 'Test Follower', $content );
+		$this->assertContains( '<p>HTML content</p>', $content );
+
+		$actor = Actor::init_from_json( $post->post_content );
+
+		$this->assertEquals( '<p>HTML content</p>', $actor->get_summary() );
+
+		\wp_delete_post( $post_id );
 	}
 }

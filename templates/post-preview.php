@@ -15,7 +15,8 @@ if ( \is_wp_error( $transformer ) ) {
 	);
 }
 
-\wp_register_style( 'activitypub-post-preview', ACTIVITYPUB_PLUGIN_URL . '/assets/css/activitypub-post-preview.css', array(), ACTIVITYPUB_PLUGIN_VERSION );
+\wp_register_style( 'activitypub-post-preview', plugins_url( 'build/wp-admin/post-preview.css', ACTIVITYPUB_PLUGIN_FILE ), array(), ACTIVITYPUB_PLUGIN_VERSION );
+\wp_style_add_data( 'activitypub-post-preview', 'rtl', 'replace' );
 
 $object = $transformer->to_object();
 $user   = $transformer->get_actor_object();
@@ -46,7 +47,7 @@ foreach ( $object->get_attachment() as $attachment ) {
 
 ?>
 <DOCTYPE html>
-<html>
+<html <?php language_attributes(); ?>>
 	<head>
 		<meta charset="utf-8">
 		<title><?php echo esc_html( $object->get_name() ); ?></title>

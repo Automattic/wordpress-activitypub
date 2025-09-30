@@ -48,8 +48,9 @@ class Activitypub {
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
-		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
-		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
+		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
+		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
+		\add_filter( 'default_post_metadata', array( self::class, 'default_post_metadata' ), 10, 3 );
 
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
@@ -309,6 +310,7 @@ class Activitypub {
 		$vars[] = 'preview';
 		$vars[] = 'author';
 		$vars[] = 'actor';
+		$vars[] = 'type';
 		$vars[] = 'c';
 		$vars[] = 'p';
 
@@ -332,18 +334,14 @@ class Activitypub {
 			return $args;
 		}
 
+		/**
+		 * Filter allowed comment types for avatars.
+		 *
+		 * @param array $allowed_comment_types Array of allowed comment types.
+		 */
 		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment' ) );
-		if (
-			! empty( $id_or_email->comment_type ) &&
-			! \in_array(
-				$id_or_email->comment_type,
-				(array) $allowed_comment_types,
-				true
-			)
-		) {
-			$args['url'] = false;
-			/** This filter is documented in wp-includes/link-template.php */
-			return \apply_filters( 'get_avatar_data', $args, $id_or_email );
+		if ( ! \in_array( $id_or_email->comment_type ?: 'comment', $allowed_comment_types, true ) ) { // phpcs:ignore Universal.Operators.DisallowShortTernary
+			return $args;
 		}
 
 		// Check if comment has an avatar.
@@ -356,8 +354,12 @@ class Activitypub {
 				$args['class'] = \explode( ' ', $args['class'] );
 			}
 
-			$args['url']     = $avatar;
+			/** This filter is documented in wp-includes/link-template.php */
+			$args['url']     = \apply_filters( 'get_avatar_url', $avatar, $id_or_email, $args );
+			$args['class'][] = 'avatar';
 			$args['class'][] = 'avatar-activitypub';
+			$args['class'][] = 'avatar-' . (int) $args['size'];
+			$args['class'][] = 'photo';
 			$args['class'][] = 'u-photo';
 			$args['class']   = \array_unique( $args['class'] );
 		}
@@ -455,7 +457,7 @@ class Activitypub {
 	 */
 	private static function register_post_types() {
 		\register_post_type(
-			Followers::POST_TYPE,
+			Actors::POST_TYPE,
 			array(
 				'labels'           => array(
 					'name'          => _x( 'Followers', 'post_type plural name', 'activitypub' ),
@@ -472,7 +474,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Followers::POST_TYPE,
+			Actors::POST_TYPE,
 			'_activitypub_inbox',
 			array(
 				'type'              => 'string',
@@ -482,7 +484,7 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Followers::POST_TYPE,
+			Actors::POST_TYPE,
 			'_activitypub_errors',
 			array(
 				'type'              => 'string',
@@ -498,25 +500,13 @@ class Activitypub {
 		);
 
 		\register_post_meta(
-			Followers::POST_TYPE,
-			'_activitypub_user_id',
+			Actors::POST_TYPE,
+			Followers::FOLLOWER_META_KEY,
 			array(
 				'type'              => 'string',
 				'single'            => false,
 				'sanitize_callback' => function ( $value ) {
 					return esc_sql( $value );
-				},
-			)
-		);
-
-		\register_post_meta(
-			Followers::POST_TYPE,
-			'_activitypub_actor_json',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => function ( $value ) {
-					return sanitize_text_field( $value );
 				},
 			)
 		);
@@ -692,18 +682,58 @@ class Activitypub {
 	}
 
 	/**
-	 * Delete `activitypub_content_visibility` when updated to an empty value.
+	 * Prevent empty or default meta values.
 	 *
-	 * @param int    $meta_id    ID of updated metadata entry.
-	 * @param int    $object_id  Post ID.
-	 * @param string $meta_key   Metadata key.
-	 * @param mixed  $meta_value Metadata value. This will be a PHP-serialized string representation of the value
-	 *                           if the value is an array, an object, or itself a PHP-serialized string.
+	 * @param null|bool $check      Whether to allow updating metadata for the given type.
+	 * @param int       $object_id  ID of the object metadata is for.
+	 * @param string    $meta_key   Metadata key.
+	 * @param mixed     $meta_value Metadata value. Must be serializable if non-scalar.
 	 */
-	public static function updated_postmeta( $meta_id, $object_id, $meta_key, $meta_value ) {
-		if ( 'activitypub_content_visibility' === $meta_key && empty( $meta_value ) ) {
-			\delete_post_meta( $object_id, 'activitypub_content_visibility' );
+	public static function prevent_empty_post_meta( $check, $object_id, $meta_key, $meta_value ) {
+		$post_metas = array(
+			'activitypub_content_visibility'    => '',
+			'activitypub_content_warning'       => '',
+			'activitypub_max_image_attachments' => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+		);
+
+		if ( isset( $post_metas[ $meta_key ] ) && $post_metas[ $meta_key ] === (string) $meta_value ) {
+			if ( 'update_post_metadata' === current_action() ) {
+				\delete_post_meta( $object_id, $meta_key );
+			}
+
+			$check = true;
 		}
+
+		return $check;
+	}
+
+	/**
+	 * Adjusts default post meta values.
+	 *
+	 * @param mixed  $meta_value The meta value.
+	 * @param int    $object_id  ID of the object metadata is for.
+	 * @param string $meta_key   Metadata key.
+	 *
+	 * @return mixed The meta value.
+	 */
+	public static function default_post_metadata( $meta_value, $object_id, $meta_key ) {
+		// Check if the meta key is `activitypub_content_visibility`.
+		if ( 'activitypub_content_visibility' !== $meta_key ) {
+			return $meta_value;
+		}
+
+		// If the post is federated, return the default visibility.
+		if ( 'federated' === \get_post_meta( $object_id, 'activitypub_status', true ) ) {
+			return $meta_value;
+		}
+
+		// If the post is not federated and older than a year, return local visibility.
+		$date = \get_the_date( 'U', $object_id );
+		if ( $date < \strtotime( '-1 month' ) ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
+		}
+
+		return $meta_value;
 	}
 
 	/**
@@ -732,7 +762,7 @@ class Activitypub {
 				'description'       => 'An array of URLs that the user is known by.',
 				'single'            => true,
 				'default'           => array(),
-				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
 			)
 		);
 

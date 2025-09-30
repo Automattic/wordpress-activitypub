@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "name": "activitypub/remote-reply",
+  "apiVersion": 3,
+  "version": "2.0.0",
+  "title": "Reply on the Fediverse",
+  "category": "widgets",
+  "description": "",
+  "textdomain": "activitypub",
+  "style": "file:./style-view.css",
+  "viewScriptModule": "file:./view.js",
+  "viewScript": "wp-api-fetch",
+  "render": "file:./render.php"
+}

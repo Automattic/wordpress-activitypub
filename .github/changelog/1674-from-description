@@ -1,0 +1,5 @@
+Significance: minor
+Type: added
+
+Post Preview now supports RTL languages.
+Embed and wp-admin styles are optimized for RTL languages.

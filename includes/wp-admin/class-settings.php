@@ -24,8 +24,6 @@ class Settings {
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
 
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'handle_welcome_query_arg' ) );
-		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
-		\add_filter( 'screen_options_show_submit', array( self::class, 'screen_options_show_submit' ), 10, 2 );
 	}
 
 	/**
@@ -162,6 +160,17 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
+			'activitypub_auto_approve_reactions',
+			array(
+				'type'              => 'integer',
+				'description'       => \__( 'Auto approve Reactions.', 'activitypub' ),
+				'default'           => '0',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_relays',
 			array(
 				'type'              => 'array',
@@ -207,6 +216,16 @@ class Settings {
 			array(
 				'type'        => 'boolean',
 				'description' => \__( 'Require HTTP signature authentication.', 'activitypub' ),
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_rfc9421_signature',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Use RFC-9421 signature.',
 				'default'     => false,
 			)
 		);
@@ -292,7 +311,7 @@ class Settings {
 				'type'              => 'array',
 				'description'       => 'An array of URLs that the blog user is known by.',
 				'default'           => array(),
-				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
 			)
 		);
 	}
@@ -303,16 +322,11 @@ class Settings {
 	public static function settings_page() {
 		$show_welcome_tab  = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
 		$show_advanced_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true );
-		$default_tab       = $show_welcome_tab ? 'welcome' : 'settings';
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
-
-		// Redirect welcome tab to settings if skipped.
-		if ( 'welcome' === $tab && ! $show_welcome_tab ) {
-			$tab = 'settings';
-		}
-
-		$settings_tabs = array();
+		$settings_tabs     = array();
+		$settings_tab      = array(
+			'label'    => __( 'Settings', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
+		);
 
 		if ( $show_welcome_tab ) {
 			$settings_tabs['welcome'] = array(
@@ -321,10 +335,7 @@ class Settings {
 			);
 		}
 
-		$settings_tabs['settings'] = array(
-			'label'    => __( 'Settings', 'activitypub' ),
-			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
-		);
+		$settings_tabs['settings'] = $settings_tab;
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || $show_advanced_tab ) {
@@ -341,8 +352,15 @@ class Settings {
 			);
 			$settings_tabs['followers']    = array(
 				'label'    => __( 'Followers', 'activitypub' ),
-				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-followers-list.php',
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php',
 			);
+
+			if ( \apply_filters( 'activitypub_show_following_ui', false ) ) {
+				$settings_tabs['following'] = array(
+					'label'    => __( 'Following', 'activitypub' ),
+					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php',
+				);
+			}
 		}
 
 		/**
@@ -350,8 +368,21 @@ class Settings {
 		 *
 		 * @param array $settings_tabs The tabs to display.
 		 */
-		$custom_tabs   = \apply_filters( 'activitypub_admin_settings_tabs', array() );
-		$settings_tabs = \array_merge( $settings_tabs, $custom_tabs );
+		$settings_tabs = \apply_filters( 'activitypub_admin_settings_tabs', $settings_tabs );
+
+		if ( empty( $settings_tabs ) ) {
+			_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', 'unreleased' );
+			$settings_tabs['settings'] = $settings_tab;
+		}
+
+		$tab_keys    = array_keys( $settings_tabs );
+		$default_tab = reset( $tab_keys );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
+
+		if ( ! isset( $settings_tabs[ $tab ] ) ) {
+			$tab = $default_tab;
+		}
 
 		switch ( $tab ) {
 			case 'blog-profile':
@@ -370,14 +401,9 @@ class Settings {
 				break;
 		}
 
-		if ( ! isset( $settings_tabs[ $tab ] ) ) {
-			$tab = $default_tab;
-		}
-
 		// Only show tabs if there are more than one.
-		if ( \count( $settings_tabs ) <= 1 ) {
-			$labels = array();
-		} else {
+		$labels = array();
+		if ( \count( $settings_tabs ) > 1 ) {
 			$labels = \wp_list_pluck( $settings_tabs, 'label' );
 		}
 
@@ -516,77 +542,6 @@ class Settings {
 			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) );
 			exit;
 		}
-	}
-
-	/**
-	 * Add screen option.
-	 *
-	 * @param string $screen_settings The screen settings.
-	 * @param object $screen          The screen object.
-	 *
-	 * @return string The screen settings.
-	 */
-	public static function add_screen_option( $screen_settings, $screen ) {
-		if ( 'settings_page_activitypub' !== $screen->id ) {
-			return $screen_settings;
-		}
-
-		// Verify screen options nonce.
-		if ( isset( $_POST['screenoptionnonce'] ) ) {
-			$nonce = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
-			if ( ! \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
-				return $screen_settings;
-			}
-		}
-
-		if ( isset( $_POST['activitypub_show_welcome_tab'] ) ) {
-			$welcome         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
-			$welcome_checked = empty( $welcome ) ? 0 : 1;
-			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
-		}
-
-		if ( isset( $_POST['activitypub_show_advanced_tab'] ) ) {
-			$advanced_settings         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_advanced_tab'] ) );
-			$advanced_settings_checked = empty( $advanced_settings ) ? 0 : 1;
-			\update_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', $advanced_settings_checked );
-		}
-
-		$screen_settings = '<fieldset>
-		<legend class="screen-layout">' . \esc_html__( 'Settings Pages', 'activitypub' ) . '</legend>
-		<p>
-			' . \esc_html__( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
-		</p>
-		<div class="metabox-prefs-container">
-			<label for="activitypub_show_welcome_tab">
-				<input name="activitypub_show_welcome_tab" type="hidden" value="0" />
-				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
-				' . \esc_html__( 'Welcome Page', 'activitypub' ) . '
-			</label>
-			<label for="activitypub_show_advanced_tab">
-				<input name="activitypub_show_advanced_tab" type="hidden" value="0" />
-				<input name="activitypub_show_advanced_tab" type="checkbox" id="activitypub_show_advanced_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true ), false ) . ' />
-				' . \esc_html__( 'Advanced Settings', 'activitypub' ) . '
-			</label>
-		</div>
-	</fieldset>';
-
-		return $screen_settings;
-	}
-
-	/**
-	 * Show the submit button on the screen options page.
-	 *
-	 * @param bool   $show_submit Whether to show the submit button.
-	 * @param object $screen      The screen object.
-	 *
-	 * @return bool Whether to show the submit button.
-	 */
-	public static function screen_options_show_submit( $show_submit, $screen ) {
-		if ( 'settings_page_activitypub' !== $screen->id ) {
-			return $show_submit;
-		}
-
-		return true;
 	}
 
 	/**

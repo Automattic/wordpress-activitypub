@@ -25,6 +25,23 @@ if ( ! function_exists( 'str_starts_with' ) ) {
 	}
 }
 
+if ( ! function_exists( 'str_ends_with' ) ) {
+	/**
+	 * Polyfill for `str_ends_with()` function added in PHP 8.0.
+	 *
+	 * Performs a case-sensitive check indicating if
+	 * the haystack ends with needle.
+	 *
+	 * @param string $haystack The string to search in.
+	 * @param string $needle   The substring to search for in the `$haystack`.
+	 *
+	 * @return bool True if `$haystack` ends with `$needle`, otherwise false.
+	 */
+	function str_ends_with( $haystack, $needle ) {
+		return strlen( $needle ) === 0 || substr( $haystack, - strlen( $needle ) ) === $needle;
+	}
+}
+
 if ( ! function_exists( 'is_countable' ) ) {
 	/**
 	 * Polyfill for `is_countable()` function added in PHP 7.3.
@@ -94,18 +111,5 @@ if ( ! function_exists( 'str_contains' ) ) {
 		}
 
 		return false !== strpos( $haystack, $needle );
-	}
-}
-
-if ( ! function_exists( 'wp_is_serving_rest_request' ) ) {
-	/**
-	 * Polyfill for `wp_is_serving_rest_request()` function added in WordPress 6.5.
-	 *
-	 * @see https://developer.wordpress.org/reference/functions/wp_is_serving_rest_request/
-	 *
-	 * @return bool True if it's a WordPress REST API request, false otherwise.
-	 */
-	function wp_is_serving_rest_request() {
-		return defined( 'REST_REQUEST' ) && REST_REQUEST;
 	}
 }

@@ -241,15 +241,21 @@ class Health_Check {
 				$allowed
 			);
 
+			$data       = $url->get_error_data();
+			$author_url = $resource;
+			if ( isset( $data['data'] ) && \is_string( $data['data'] ) ) {
+				$author_url = $data['data'];
+			}
+
 			$health_messages = array(
 				'webfinger_url_not_accessible'   => \sprintf(
 					$not_accessible,
-					$url->get_error_data()['data']
+					$author_url
 				),
 				'webfinger_url_invalid_response' => \sprintf(
 					// translators: %s: Author URL.
 					$invalid_response,
-					$url->get_error_data()['data']
+					$author_url
 				),
 			);
 			$message         = null;
@@ -320,15 +326,27 @@ class Health_Check {
 			'private' => false,
 		);
 
-		$info['activitypub']['fields']['authorized_fetch'] = array(
-			'label'   => \__( 'Authorized Fetch', 'activitypub' ),
-			'value'   => \esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
+		$info['activitypub']['fields']['activitypub_outbox_purge_days'] = array(
+			'label'   => \__( 'Outbox Retention Period', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_outbox_purge_days', 180 ) ),
 			'private' => false,
 		);
 
 		$info['activitypub']['fields']['vary_header'] = array(
 			'label'   => \__( 'Vary Header', 'activitypub' ),
 			'value'   => \esc_attr( (int) \get_option( 'activitypub_vary_header', '1' ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['content_negotiation'] = array(
+			'label'   => \__( 'Content Negotiation', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_content_negotiation', '1' ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['authorized_fetch'] = array(
+			'label'   => \__( 'Authorized Fetch', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
 			'private' => false,
 		);
 

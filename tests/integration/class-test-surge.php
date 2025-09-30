@@ -147,6 +147,8 @@ class Test_Surge extends \WP_UnitTestCase {
 	 * @access public
 	 */
 	public function test_init_with_surge_inactive() {
+		// Needs to be set, because of the dummy `wp-config.php` file.
+		\define( 'WP_CACHE_CONFIG', 'dummy' );
 		// phpcs:ignore
 		\file_put_contents( Surge::get_config_file_path(), "<?php\n" . Surge::get_cache_config() . "\n\n/* That's all, stop editing! */" );
 		\add_filter( 'pre_option_active_plugins', array( $this, 'get_inactive_plugins' ) );

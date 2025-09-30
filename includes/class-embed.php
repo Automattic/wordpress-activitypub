@@ -132,8 +132,8 @@ class Embed {
 		);
 
 		if ( $inline_css ) {
-			// Grab the CSS.
-			$css = \file_get_contents( ACTIVITYPUB_PLUGIN_DIR . 'assets/css/activitypub-embed.css' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$path = \is_rtl() ? 'build/embed/embed-rtl.css' : 'build/embed/embed.css';
+			$css  = \file_get_contents( ACTIVITYPUB_PLUGIN_DIR . $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 			// We embed CSS directly because this may be in an iframe.
 			printf( '<style>%s</style>', $css ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}

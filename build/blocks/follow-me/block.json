@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "name": "activitypub/follow-me",
+  "apiVersion": 3,
+  "version": "2.2.0",
+  "title": "Follow me on the Fediverse",
+  "category": "widgets",
+  "description": "Display your Fediverse profile so that visitors can follow you.",
+  "textdomain": "activitypub",
+  "icon": "groups",
+  "example": {
+    "attributes": {
+      "className": "is-style-default"
+    }
+  },
+  "supports": {
+    "html": false,
+    "interactivity": true,
+    "color": {
+      "gradients": true,
+      "link": true,
+      "__experimentalDefaultControls": {
+        "background": true,
+        "text": true,
+        "link": true
+      }
+    },
+    "__experimentalBorder": {
+      "radius": true,
+      "width": true,
+      "color": true,
+      "style": true
+    },
+    "shadow": true,
+    "typography": {
+      "fontSize": true,
+      "__experimentalDefaultControls": {
+        "fontSize": true
+      }
+    },
+    "innerBlocks": {
+      "allowedBlocks": [
+        "core/button"
+      ]
+    }
+  },
+  "styles": [
+    {
+      "name": "default",
+      "label": "Default",
+      "isDefault": true
+    },
+    {
+      "name": "button-only",
+      "label": "Button"
+    },
+    {
+      "name": "profile",
+      "label": "Profile"
+    }
+  ],
+  "attributes": {
+    "selectedUser": {
+      "type": "string",
+      "default": "blog"
+    }
+  },
+  "usesContext": [
+    "postType",
+    "postId"
+  ],
+  "editorScript": "file:./index.js",
+  "viewScriptModule": "file:./view.js",
+  "viewScript": "wp-api-fetch",
+  "style": "file:./style-index.css",
+  "render": "file:./render.php"
+}

@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Improved Account-Aliases handling by internally normalizing input formats.

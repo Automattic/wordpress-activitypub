@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 5.9.0
+ * Version: 7.0.1
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -19,7 +19,7 @@ namespace Activitypub;
 
 use WP_CLI;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '5.9.0' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '7.0.1' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -96,8 +96,10 @@ function plugin_init() {
  * Initialize plugin admin.
  */
 function plugin_admin_init() {
-	// Menus are registered before `admin_init`, because of course they are.
+	// Screen Options and Menus are set before `admin_init`.
+	\add_filter( 'init', array( __NAMESPACE__ . '\WP_Admin\Screen_Options', 'init' ) );
 	\add_action( 'admin_menu', array( __NAMESPACE__ . '\WP_Admin\Menu', 'admin_menu' ) );
+
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Admin', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Health_Check', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
@@ -151,50 +153,7 @@ function activation_redirect( $plugin ) {
 	)
 );
 
-
-/**
- * `get_plugin_data` wrapper.
- *
- * @deprecated 4.2.0 Use `get_plugin_data` instead.
- *
- * @param array $default_headers Optional. The default plugin headers. Default empty array.
- * @return array The plugin metadata array.
- */
-function get_plugin_meta( $default_headers = array() ) {
-	_deprecated_function( __FUNCTION__, '4.2.0', 'get_plugin_data' );
-
-	if ( ! $default_headers ) {
-		$default_headers = array(
-			'Name'        => 'Plugin Name',
-			'PluginURI'   => 'Plugin URI',
-			'Version'     => 'Version',
-			'Description' => 'Description',
-			'Author'      => 'Author',
-			'AuthorURI'   => 'Author URI',
-			'TextDomain'  => 'Text Domain',
-			'DomainPath'  => 'Domain Path',
-			'Network'     => 'Network',
-			'RequiresWP'  => 'Requires at least',
-			'RequiresPHP' => 'Requires PHP',
-			'UpdateURI'   => 'Update URI',
-		);
-	}
-
-	return \get_file_data( __FILE__, $default_headers, 'plugin' );
-}
-
-/**
- * Plugin Version Number used for caching.
- *
- * @deprecated 4.2.0 Use constant ACTIVITYPUB_PLUGIN_VERSION directly.
- */
-function get_plugin_version() {
-	_deprecated_function( __FUNCTION__, '4.2.0', 'ACTIVITYPUB_PLUGIN_VERSION' );
-
-	return ACTIVITYPUB_PLUGIN_VERSION;
-}
-
-// Check for CLI env, to add the CLI commands.
+// Check for CLI env, to add the CLI commands.Add commentMore actions.
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command(
 		'activitypub',

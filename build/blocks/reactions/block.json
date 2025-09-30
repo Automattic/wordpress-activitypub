@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "name": "activitypub/reactions",
+  "apiVersion": 3,
+  "version": "3.0.3",
+  "title": "Fediverse Reactions",
+  "category": "widgets",
+  "icon": "heart",
+  "description": "Display Fediverse likes and reposts",
+  "supports": {
+    "align": [
+      "wide",
+      "full"
+    ],
+    "color": {
+      "gradients": true
+    },
+    "__experimentalBorder": {
+      "radius": true,
+      "width": true,
+      "color": true,
+      "style": true
+    },
+    "html": false,
+    "interactivity": true,
+    "layout": {
+      "default": {
+        "type": "constrained",
+        "orientation": "vertical",
+        "justifyContent": "center"
+      },
+      "allowEditing": false
+    },
+    "shadow": true,
+    "typography": {
+      "fontSize": true,
+      "__experimentalDefaultControls": {
+        "fontSize": true
+      }
+    }
+  },
+  "blockHooks": {
+    "core/post-content": "after"
+  },
+  "textdomain": "activitypub",
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css",
+  "viewScriptModule": "file:./view.js",
+  "viewScript": "wp-api-fetch",
+  "render": "file:./render.php"
+}

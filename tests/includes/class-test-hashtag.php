@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
@@ -43,14 +44,14 @@ class Test_Hashtag extends \WP_UnitTestCase {
 	 */
 	public function the_content_provider() {
 		$code     = '<code>text with some #object and <a> tag inside</code>';
-		$style    = <<<ENDSTYLE
+		$style    = <<<'ENDSTYLE'
 <style type="text/css">
 <![CDATA[
 color: #ccc;
 ]]>
 </style>
 ENDSTYLE;
-		$pre      = <<<ENDPRE
+		$pre      = <<<'ENDPRE'
 <pre>
 Please don't #touch
   this.
@@ -116,7 +117,7 @@ ENDPRE;
 		$post_id = self::factory()->post->create(
 			array(
 				'post_content' => 'Testing #php and #programming',
-				'post_type'    => Followers::POST_TYPE,
+				'post_type'    => Actors::POST_TYPE,
 			)
 		);
 

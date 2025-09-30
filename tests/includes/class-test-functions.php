@@ -7,6 +7,11 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Outbox;
+
+use function Activitypub\add_to_outbox;
+
 /**
  * Test class for Functions.
  */
@@ -31,6 +36,15 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				'post_content' => 'test',
 			)
 		);
+	}
+
+	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
+		parent::tear_down();
+
+		_delete_all_posts();
 	}
 
 	/**
@@ -546,5 +560,242 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				'6',
 			),
 		);
+	}
+
+	/**
+	 * Test generate_post_summary function.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 * @dataProvider get_post_summary_data
+	 *
+	 * @param string $desc     The description of the test.
+	 * @param object $post     The post object.
+	 * @param string $expected The expected summary.
+	 * @param int    $length   The length of the summary.
+	 */
+	public function test_generate_post_summary( $desc, $post, $expected, $length = 500 ) {
+		\add_shortcode(
+			'activitypub_test_shortcode',
+			function () {
+				return 'mighty short code';
+			}
+		);
+
+		$post_id = \wp_insert_post( $post );
+
+		$this->assertEquals(
+			$expected,
+			\Activitypub\generate_post_summary( $post_id, $length ),
+			$desc
+		);
+
+		\wp_delete_post( $post_id, true );
+		\remove_shortcode( 'activitypub_test_shortcode' );
+	}
+
+	/**
+	 * Data provider for test_generate_post_summary.
+	 *
+	 * @return array[]
+	 */
+	public function get_post_summary_data() {
+		return array(
+			array(
+				'Excerpt',
+				array(
+					'post_excerpt' => 'Hello World',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Content',
+				array(
+					'post_content' => 'Hello World',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Content with more tag',
+				array(
+					'post_content' => 'Hello World <!--more--> More',
+				),
+				'<p>Hello World […]</p>' . PHP_EOL,
+			),
+			array(
+				'Excerpt with shortcode',
+				array(
+					'post_excerpt' => 'Hello World [activitypub_test_shortcode]',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Content with shortcode',
+				array(
+					'post_content' => 'Hello World [activitypub_test_shortcode]',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Excerpt more than limit',
+				array(
+					'post_excerpt' => 'Hello World Hello World Hello World Hello World Hello World',
+				),
+				'<p>Hello World Hello World Hello World Hello World Hello World</p>' . PHP_EOL,
+				10,
+			),
+			array(
+				'Content more than limit',
+				array(
+					'post_content' => 'Hello World Hello World Hello World Hello World Hello World',
+				),
+				'<p>Hello […]</p>' . PHP_EOL,
+				10,
+			),
+			array(
+				'Content more than limit with more tag',
+				array(
+					'post_content' => 'Hello World Hello <!--more--> World Hello World Hello World Hello World',
+				),
+				'<p>Hello World Hello […]</p>' . PHP_EOL,
+				1,
+			),
+			array(
+				'Test HTML content',
+				array(
+					'post_content' => '<p>Hello World</p>',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Test HTML content with anchor',
+				array(
+					'post_content' => 'Hello <a href="https://example.com">World</a>',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Test HTML excerpt',
+				array(
+					'post_excerpt' => '<p>Hello World</p>',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+			array(
+				'Test HTML excerpt with anchor',
+				array(
+					'post_excerpt' => 'Hello <a href="https://example.com">World</a>',
+				),
+				'<p>Hello World</p>' . PHP_EOL,
+			),
+		);
+	}
+
+	/**
+	 * Test get_user_id function.
+	 *
+	 * @covers \Activitypub\get_user_id
+	 */
+	public function test_get_user_id() {
+		$this->assertFalse( \Activitypub\get_user_id( 90210 ) );
+
+		$user = self::factory()->user->create_and_get();
+		$user->add_cap( 'activitypub' );
+
+		$this->assertIsString( \Activitypub\get_user_id( $user->ID ) );
+	}
+
+	/**
+	 * Tests follow method.
+	 *
+	 * @covers ::follow
+	 */
+	public function test_follow() {
+		$user_id = self::factory()->user->create(
+			array(
+				'role' => 'administrator',
+			)
+		);
+
+		$actor_array = array(
+			'id'                 => 'https://example.com/users/test',
+			'type'               => 'Person',
+			'name'               => 'Test Follower',
+			'preferred_username' => 'Follower',
+			'summary'            => '<p>HTML content</p>',
+			'endpoints'          => array(
+				'sharedInbox' => 'https://example.com/inbox',
+			),
+		);
+
+		$remote_actor = function () use ( $actor_array ) {
+			return $actor_array;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+
+		\Activitypub\follow( 'https://example.com/users/test', $user_id );
+
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => \Activitypub\Collection\Outbox::POST_TYPE,
+				'post_status' => 'any',
+			)
+		);
+
+		$this->assertEquals( 1, count( $outbox_items ) );
+		$this->assertEquals( 'Follow', \get_post_meta( $outbox_items[0]->ID, '_activitypub_activity_type', true ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+	}
+
+	/**
+	 * Test that Update activities have the updated attribute set.
+	 *
+	 * @covers ::add_to_outbox
+	 */
+	public function test_webfinger_support() {
+		$follow = new Activity();
+		$follow->set_type( 'Follow' );
+		$follow->set_actor( 'https://example.com/user/1' );
+		$follow->set_object( 'user1@example.com' );
+		$follow->set_to( array( 'https://example.com/user/2' ) );
+
+		$filter = function () {
+			return array(
+				'response' => array(
+					'code' => 200,
+				),
+				'body'     => wp_json_encode(
+					array(
+						'subject' => 'acct:pfefferle@example.org',
+						'aliases' => array( 'https://example.org/?author=1' ),
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'href' => 'https://example.org/?author=1',
+								'type' => 'application/activity+json',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$id = add_to_outbox( $follow, null, 1 );
+
+		$this->assertNotFalse( $id );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Get the activity from the outbox.
+		$activity = Outbox::get_activity( $id );
+		$this->assertNotInstanceOf( \WP_Error::class, $activity );
+
+		$this->assertEquals( 'Follow', $activity->get_type() );
+		$this->assertEquals( 'https://example.org/?author=1', get_post_meta( $id, '_activitypub_object_id', true ) );
+
+		// Delete the Outbox item.
+		wp_delete_post( $id );
 	}
 }

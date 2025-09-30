@@ -427,4 +427,70 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		wp_delete_post( $announce_outbox_id, true );
 		remove_all_filters( 'schedule_event' );
 	}
+
+	/**
+	 * Test cleanup_remote_actors method.
+	 *
+	 * @covers ::cleanup_remote_actors
+	 */
+	public function test_cleanup_remote_actors() {
+		// Mock actor metadata.
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function () {
+				return array(
+					'name'              => 'Test User',
+					'preferredUsername' => 'test',
+					'id'                => 'https://example.com/users/test',
+					'url'               => 'https://example.com/@test',
+					'inbox'             => 'https://example.com/users/test/inbox',
+				);
+			}
+		);
+
+		$actor = Actors::fetch_remote_by_uri( 'https://example.com/users/test' );
+
+		for ( $i = 0; $i < 6; $i++ ) {
+			Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata ' . $i );
+		}
+
+		// Track scheduled events.
+		$scheduled_events = array();
+		\add_filter(
+			'schedule_event',
+			function ( $event ) use ( &$scheduled_events ) {
+				if ( 'activitypub_delete_actor_interactions' === $event->hook ) {
+					$scheduled_events[] = array(
+						'hook' => $event->hook,
+						'args' => $event->args,
+						'time' => $event->timestamp,
+					);
+				}
+				return $event;
+			}
+		);
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return new \WP_Error( 'no_actor', 'No actor found' );
+			}
+		);
+
+		// Run the cleanup function.
+		Scheduler::cleanup_remote_actors();
+
+		// Verify that the event was scheduled with the actor URL as parameter.
+		$this->assertCount( 1, $scheduled_events, 'Should schedule 1 event' );
+		$this->assertEquals( 'activitypub_delete_actor_interactions', $scheduled_events[0]['hook'], 'Should schedule the correct hook' );
+		$this->assertCount( 1, $scheduled_events[0]['args'], 'Should have 1 argument' );
+		$this->assertEquals( 'https://example.com/users/test', $scheduled_events[0]['args'][0], 'Should pass actor URL as parameter' );
+
+		// Verify the actor was deleted.
+		$this->assertNull( \get_post( $actor->ID ), 'Actor should be deleted' );
+
+		// Clean up.
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'schedule_event' );
+	}
 }

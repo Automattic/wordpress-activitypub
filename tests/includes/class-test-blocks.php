@@ -8,7 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Blocks;
-use WP_UnitTestCase;
+use Activitypub\Collection\Interactions;
 
 /**
  * Test class for Blocks.
@@ -200,5 +200,68 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( '<!-- wp:activitypub/reply {"url":"https://mastodon.social/@user/123456","embedPost":true} /-->', $result['post_content'] );
 		$this->assertStringContainsString( "<!-- wp:paragraph -->\n<p>This is a reply</p>\n<!-- /wp:paragraph -->", $result['post_content'] );
+	}
+
+	/**
+	 * Test the reactions block with deprecated markup.
+	 */
+	public function test_render_reactions_block_with_deprecated_markup() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"title":"What people think about it on the Fediverse!","postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+		$expected     = '<h6 class="wp-block-heading">What people think about it on the Fediverse!</h6>';
+
+		$this->assertStringContainsString( $expected, $output );
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+		$expected     = '<h6 class="wp-block-heading">Fediverse Reactions</h6>';
+
+		$this->assertStringContainsString( $expected, $output );
+	}
+
+	/**
+	 * Get a post ID with reactions.
+	 *
+	 * @return int Post ID.
+	 */
+	private function get_post_id_with_reactions() {
+		$post_id = self::factory()->post->create();
+
+		$activity = array(
+			'type'   => 'Like',
+			'actor'  => 'https://example.com/users/test',
+			'object' => get_permalink( $post_id ),
+			'id'     => 'https://example.com/activities/like/123',
+		);
+
+		// Mock actor metadata.
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Test User',
+					'preferredUsername' => 'test',
+					'id'                => 'https://example.com/users/test',
+					'url'               => 'https://example.com/@test',
+				);
+			}
+		);
+
+		\add_filter(
+			'pre_comment_approved',
+			function () {
+				return '1';
+			}
+		);
+
+		Interactions::add_reaction( $activity );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'pre_comment_approved' );
+
+		return $post_id;
 	}
 }

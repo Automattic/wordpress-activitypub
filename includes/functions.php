@@ -7,13 +7,13 @@
 
 namespace Activitypub;
 
-use WP_Error;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Transformer\Post;
 use Activitypub\Transformer\Factory as Transformer_Factory;
 
@@ -44,7 +44,7 @@ function get_context() {
  * @param string $body    The Post Body.
  * @param int    $user_id The WordPress user ID.
  *
- * @return array|WP_Error The POST Response or an WP_Error.
+ * @return array|\WP_Error The POST Response or an WP_Error.
  */
 function safe_remote_post( $url, $body, $user_id ) {
 	return Http::post( $url, $body, $user_id );
@@ -55,7 +55,7 @@ function safe_remote_post( $url, $body, $user_id ) {
  *
  * @param string $url The URL endpoint.
  *
- * @return array|WP_Error The GET Response or an WP_Error.
+ * @return array|\WP_Error The GET Response or an WP_Error.
  */
 function safe_remote_get( $url ) {
 	return Http::get( $url );
@@ -64,11 +64,15 @@ function safe_remote_get( $url ) {
 /**
  * Returns a users WebFinger "resource".
  *
+ * @deprecated unreleased Use {@see \Activitypub\Webfinger::get_user_resource} instead.
+ *
  * @param int $user_id The user ID.
  *
  * @return string The User resource.
  */
 function get_webfinger_resource( $user_id ) {
+	\_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Webfinger::get_user_resource' );
+
 	return Webfinger::get_user_resource( $user_id );
 }
 
@@ -78,7 +82,7 @@ function get_webfinger_resource( $user_id ) {
  * @param array|string $actor  The Actor array or URL.
  * @param bool         $cached Optional. Whether the result should be cached. Default true.
  *
- * @return array|WP_Error The Actor profile as array or WP_Error on failure.
+ * @return array|\WP_Error The Actor profile as array or WP_Error on failure.
  */
 function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	/**
@@ -170,9 +174,13 @@ function url_to_authorid( $url ) {
 /**
  * Verify that url is a wp_ap_comment or a previously received remote comment.
  *
+ * @deprecated unreleased
+ *
  * @return int|bool Comment ID or false if not found.
  */
 function is_comment() {
+	\_deprecated_function( __FUNCTION__, 'unreleased' );
+
 	$comment_id = get_query_var( 'c', null );
 
 	if ( ! is_null( $comment_id ) ) {
@@ -191,7 +199,7 @@ function is_comment() {
  *
  * @see https://www.w3.org/TR/activitypub/#delete-activity-outbox
  *
- * @param WP_Error $wp_error A WP_Error-Response of an HTTP-Request.
+ * @param \WP_Error $wp_error A WP_Error-Response of an HTTP-Request.
  *
  * @return boolean True if HTTP-Code is 410 or 404.
  */
@@ -371,37 +379,12 @@ function user_can_activitypub( $user_id ) {
 	}
 
 	/**
-	 * Allow plugins to disable users for ActivityPub.
-	 *
-	 * @deprecated 5.7.0 Use the `activitypub_user_can_activitypub` filter instead.
-	 *
-	 * @param boolean $disabled True if the user is disabled, false otherwise.
-	 * @param int     $user_id  The user ID.
-	 */
-	$enabled = ! \apply_filters_deprecated( 'activitypub_is_user_disabled', array( ! $enabled, $user_id ), '5.7.0', 'activitypub_user_can_activitypub' );
-
-	/**
 	 * Allow plugins to enable/disable users for ActivityPub.
 	 *
 	 * @param boolean $enabled True if the user is enabled, false otherwise.
 	 * @param int     $user_id The user ID.
 	 */
 	return apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
-}
-
-/**
- * This function checks if a user is disabled for ActivityPub.
- *
- * @deprecated 5.7.0 Use the `user_can_activitypub` function instead.
- *
- * @param int $user_id The user ID.
- *
- * @return boolean True if the user is disabled, false otherwise.
- */
-function is_user_disabled( $user_id ) {
-	_deprecated_function( __FUNCTION__, 'unreleased', 'user_can_activitypub' );
-
-	return ! user_can_activitypub( $user_id );
 }
 
 /**
@@ -457,7 +440,7 @@ function is_user_type_disabled( $type ) {
 			$disabled = false;
 			break;
 		default:
-			$disabled = new WP_Error(
+			$disabled = new \WP_Error(
 				'activitypub_wrong_user_type',
 				__( 'Wrong user type', 'activitypub' ),
 				array( 'status' => 400 )
@@ -508,11 +491,15 @@ function site_supports_blocks() {
 /**
  * Check if data is valid JSON.
  *
+ * @deprecated unreleased Use {@see \json_decode} instead.
+ *
  * @param string $data The data to check.
  *
  * @return boolean True if the data is JSON, false otherwise.
  */
 function is_json( $data ) {
+	\_deprecated_function( __FUNCTION__, 'unreleased', 'json_decode' );
+
 	return \is_array( \json_decode( $data, true ) );
 }
 
@@ -1208,16 +1195,6 @@ function generate_post_summary( $post, $length = 500 ) {
 		return '';
 	}
 
-	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
-
-	if ( $content ) {
-		/** This filter is documented in wp-includes/post-template.php */
-		return \apply_filters( 'the_excerpt', $content );
-	}
-
-	$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
-	$content_parts = \get_extended( $content );
-
 	/**
 	 * Filters the excerpt more value.
 	 *
@@ -1226,15 +1203,26 @@ function generate_post_summary( $post, $length = 500 ) {
 	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[…]' );
 	$length       = $length - strlen( $excerpt_more );
 
-	// Check for the <!--more--> tag.
-	if (
-		! empty( $content_parts['extended'] ) &&
-		! empty( $content_parts['main'] )
-	) {
-		$content = $content_parts['main'] . ' ' . $excerpt_more;
-		$length  = null;
+	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
+
+	if ( $content ) {
+		// Ignore length if excerpt is set.
+		$length = null;
+	} else {
+		$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
+		$content_parts = \get_extended( $content );
+
+		// Check for the <!--more--> tag.
+		if (
+			! empty( $content_parts['extended'] ) &&
+			! empty( $content_parts['main'] )
+		) {
+			$content = \trim( $content_parts['main'] ) . ' ' . $excerpt_more;
+			$length  = null;
+		}
 	}
 
+	$content = \strip_shortcodes( $content );
 	$content = \html_entity_decode( $content );
 	$content = \wp_strip_all_tags( $content );
 	$content = \trim( $content );
@@ -1247,12 +1235,8 @@ function generate_post_summary( $post, $length = 500 ) {
 		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
-	/*
-	Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
-	/** This filter is documented in wp-includes/post-template.php
+	// This filter is documented in wp-includes/post-template.php.
 	return \apply_filters( 'the_excerpt', $content );
-	*/
-	return $content;
 }
 
 /**
@@ -1286,7 +1270,7 @@ function get_content_warning( $post_id ) {
 function get_user_id( $id ) {
 	$user = Actors::get_by_id( $id );
 
-	if ( ! $user ) {
+	if ( \is_wp_error( $user ) ) {
 		return false;
 	}
 
@@ -1508,12 +1492,34 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 	}
 
 	if ( ! $activity || \is_wp_error( $activity ) ) {
+		/**
+		 * Action triggered when adding an object to the outbox fails.
+		 *
+		 * @param \WP_Error   $activity           The error object or false.
+		 * @param mixed       $data               The object that failed to be added to the outbox.
+		 * @param string|null $activity_type      The type of the Activity or null if `$data` is an Activity.
+		 * @param int         $user_id            The User ID.
+		 * @param string      $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+		 */
+		\do_action( 'activitypub_add_to_outbox_failed', $activity, $data, $activity_type, $user_id, $content_visibility );
+
 		return false;
 	}
 
 	$outbox_activity_id = Outbox::add( $activity, $user_id, $content_visibility );
 
-	if ( ! $outbox_activity_id ) {
+	if ( ! $outbox_activity_id || \is_wp_error( $outbox_activity_id ) ) {
+		/**
+		 * Action triggered when adding an object to the outbox fails.
+		 *
+		 * @param false|\WP_Error $outbox_activity_id The error object or false.
+		 * @param mixed           $data               The object that failed to be added to the outbox.
+		 * @param string|null     $activity_type      The type of the Activity or null if `$data` is an Activity.
+		 * @param int             $user_id            The User ID.
+		 * @param string          $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+		 */
+		\do_action( 'activitypub_add_to_outbox_failed', $outbox_activity_id, $data, $activity_type, $user_id, $content_visibility );
+
 		return false;
 	}
 
@@ -1530,6 +1536,66 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 	set_wp_object_state( $data, 'federated' );
 
 	return $outbox_activity_id;
+}
+
+/**
+ * Follow a user.
+ *
+ * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
+ * @param int        $user_id      The ID of the WordPress User.
+ *
+ * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ */
+function follow( $remote_actor, $user_id ) {
+	if ( \is_numeric( $remote_actor ) ) {
+		return Following::follow( $remote_actor, $user_id );
+	}
+
+	if ( ! \filter_var( $remote_actor, FILTER_VALIDATE_URL ) ) {
+		$remote_actor = Webfinger::resolve( $remote_actor );
+	}
+
+	if ( \is_wp_error( $remote_actor ) ) {
+		return $remote_actor;
+	}
+
+	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+
+	if ( \is_wp_error( $remote_actor_post ) ) {
+		return $remote_actor_post;
+	}
+
+	return Following::follow( $remote_actor_post, $user_id );
+}
+
+/**
+ * Unfollow a user.
+ *
+ * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
+ * @param int        $user_id      The ID of the WordPress User.
+ *
+ * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ */
+function unfollow( $remote_actor, $user_id ) {
+	if ( \is_numeric( $remote_actor ) ) {
+		return Following::unfollow( $remote_actor, $user_id );
+	}
+
+	if ( ! \filter_var( $remote_actor, FILTER_VALIDATE_URL ) ) {
+		$remote_actor = Webfinger::resolve( $remote_actor );
+	}
+
+	if ( \is_wp_error( $remote_actor ) ) {
+		return $remote_actor;
+	}
+
+	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+
+	if ( \is_wp_error( $remote_actor_post ) ) {
+		return $remote_actor_post;
+	}
+
+	return Following::unfollow( $remote_actor_post, $user_id );
 }
 
 /**
@@ -1626,4 +1692,45 @@ function _is_type_of( $data, $types ) {
  */
 function get_embed_html( $url, $inline_css = true ) {
 	return Embed::get_html( $url, $inline_css );
+}
+
+/**
+ * Infer a shortname from the Actor ID or URL. Used only for fallbacks,
+ * we will try to use what's supplied.
+ *
+ * @param string $uri The URI.
+ *
+ * @return string Hopefully the name of the Follower.
+ */
+function extract_name_from_uri( $uri ) {
+	$name = $uri;
+
+	if ( \filter_var( $name, FILTER_VALIDATE_URL ) ) {
+		$name = \rtrim( $name, '/' );
+		$path = \wp_parse_url( $name, PHP_URL_PATH );
+		if ( $path ) {
+			if ( \strpos( $name, '@' ) !== false ) {
+				// Expected: https://example.com/@user (default URL pattern).
+				$name = \preg_replace( '|^/@?|', '', $path );
+			} else {
+				// Expected: https://example.com/users/user (default ID pattern).
+				$parts = \explode( '/', $path );
+				$name  = \array_pop( $parts );
+			}
+		}
+	} elseif (
+		\is_email( $name ) ||
+		\strpos( $name, 'acct' ) === 0 ||
+		\strpos( $name, '@' ) === 0
+	) {
+		// Expected: user@example.com or acct:user@example (WebFinger).
+		$name = \ltrim( $name, '@' );
+		if ( str_starts_with( $name, 'acct:' ) ) {
+			$name = \substr( $name, 5 );
+		}
+		$parts = \explode( '@', $name );
+		$name  = $parts[0];
+	}
+
+	return $name;
 }

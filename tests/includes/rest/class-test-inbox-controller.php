@@ -465,6 +465,12 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				'to'     => array( $user_actor->get_id() ),
 			);
 
+			// `Accept` needs an `object` with `actor` and `object`.
+			if ( 'Accept' === $type ) {
+				$json['object']['actor']  = 'https://remote.example/@test';
+				$json['object']['object'] = 'https://remote.example/post/test';
+			}
+
 			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 			$request->set_header( 'Content-Type', 'application/activity+json' );
 			$request->set_body( \wp_json_encode( $json ) );

@@ -37,6 +37,10 @@ class Surge {
 	 * Add the Surge cache config.
 	 */
 	public static function add_cache_config() {
+		if ( \defined( 'WP_CACHE_CONFIG' ) ) {
+			return;
+		}
+
 		$file = self::get_config_file_path();
 
 		if ( ! \wp_is_writable( $file ) ) {
@@ -72,6 +76,10 @@ class Surge {
 	 * Remove the Surge cache config.
 	 */
 	public static function remove_cache_config() {
+		if ( ! \defined( 'WP_CACHE_CONFIG' ) ) {
+			return;
+		}
+
 		$file = self::get_config_file_path();
 
 		if ( ! \wp_is_writable( $file ) ) {

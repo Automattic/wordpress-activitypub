@@ -26,6 +26,11 @@ class Blog_Settings_Fields {
 	 * Register all settings fields.
 	 */
 	public static function register_settings() {
+		// If we're in blog mode, and we're on the blog profile tab, mark the profile setup step as done.
+		if ( isset( $_GET['tab'] ) && 'blog-profile' === \sanitize_key( $_GET['tab'] ) && ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			\update_option( 'activitypub_checklist_profile_setup_visited', '1' );
+		}
+
 		add_settings_section(
 			'activitypub_blog_profile',
 			__( 'Blog Profile', 'activitypub' ),
@@ -293,7 +298,7 @@ class Blog_Settings_Fields {
 			<?php esc_html_e( 'If you’re moving from another account to this one, you’ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn’t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
 		</p>
 		<p class="description">
-			<?php esc_html_e( 'Enter one URL per line.', 'activitypub' ); ?>
+		<?php echo \wp_kses_post( \__( 'Enter one account per line. Profile links or usernames like <code>@username@example.com</code> are accepted and will be automatically normalized to the correct format.', 'activitypub' ) ); ?>
 		</p>
 		<?php
 	}

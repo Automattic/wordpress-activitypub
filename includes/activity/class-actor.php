@@ -23,6 +23,7 @@ class Actor extends Base_Object {
 		'https://www.w3.org/ns/activitystreams',
 		'https://w3id.org/security/v1',
 		'https://purl.archive.org/socialweb/webfinger',
+		'https://w3id.org/fep/844e',
 		array(
 			'schema'                    => 'http://schema.org#',
 			'toot'                      => 'http://joinmastodon.org/ns#',
@@ -221,4 +222,90 @@ class Actor extends Base_Object {
 	 * @var array
 	 */
 	protected $also_known_as;
+
+	/**
+	 * The Featured-Posts.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
+	 *
+	 * @context {
+	 *   "@id": "http://joinmastodon.org/ns#featured",
+	 *   "@type": "@id"
+	 * }
+	 *
+	 * @var string
+	 */
+	protected $featured;
+
+	/**
+	 * The Featured-Tags.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#featuredTags
+	 *
+	 * @context {
+	 *   "@id": "http://joinmastodon.org/ns#featuredTags",
+	 *   "@type": "@id"
+	 * }
+	 *
+	 * @var string
+	 */
+	protected $featured_tags;
+
+	/**
+	 * Whether the User is discoverable.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
+	 *
+	 * @context http://joinmastodon.org/ns#discoverable
+	 *
+	 * @var boolean
+	 */
+	protected $discoverable;
+
+	/**
+	 * Whether the User is indexable.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#indexable
+	 *
+	 * @context http://joinmastodon.org/ns#indexable
+	 *
+	 * @var boolean
+	 */
+	protected $indexable;
+
+	/**
+	 * The WebFinger Resource.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/2c59/fep-2c59.md
+	 *
+	 * @var string
+	 */
+	protected $webfinger;
+
+	/**
+	 * URL to the Moderators endpoint.
+	 *
+	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
+	 *
+	 * @var string
+	 */
+	protected $moderators;
+
+	/**
+	 * Restrict posting to mods.
+	 *
+	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
+	 *
+	 * @var boolean
+	 */
+	protected $posting_restricted_to_mods;
+
+	/**
+	 * Listing Implemented Specifications on the Application Actor
+	 *
+	 * @see https://codeberg.org/helge/fep/src/commit/e1b2a16707b542ea5ea0cfb390ac1abce89f05bb/fep/aaa3/fep-aaa3.md
+	 *
+	 * @var array
+	 */
+	protected $implemented;
 }

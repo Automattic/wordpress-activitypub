@@ -83,16 +83,14 @@ class Settings_Fields {
 			);
 		}
 
-		if ( ! site_supports_blocks() || \is_plugin_active( 'classic-editor/classic-editor.php' ) ) {
-			add_settings_field(
-				'activitypub_max_image_attachments',
-				__( 'Media attachments', 'activitypub' ),
-				array( self::class, 'render_max_image_attachments_field' ),
-				'activitypub_settings',
-				'activitypub_activities',
-				array( 'label_for' => 'activitypub_max_image_attachments' )
-			);
-		}
+		add_settings_field(
+			'activitypub_max_image_attachments',
+			__( 'Media attachments', 'activitypub' ),
+			array( self::class, 'render_max_image_attachments_field' ),
+			'activitypub_settings',
+			'activitypub_activities',
+			array( 'label_for' => 'activitypub_max_image_attachments' )
+		);
 
 		add_settings_field(
 			'activitypub_support_post_types',
@@ -337,6 +335,7 @@ class Settings_Fields {
 
 		$allow_likes   = get_option( 'activitypub_allow_likes', '1' );
 		$allow_reposts = get_option( 'activitypub_allow_reposts', '1' );
+		$auto_approve  = get_option( 'activitypub_auto_approve_reactions', '0' );
 		?>
 		<fieldset>
 			<p>
@@ -351,7 +350,13 @@ class Settings_Fields {
 					<?php esc_html_e( 'Receive reblogs (boosts)', 'activitypub' ); ?>
 				</label>
 			</p>
-			<p class="description"><?php esc_html_e( 'Types of interactions from the Fediverse your blog should accept.', 'activitypub' ); ?></p>
+			<p class="interactions description"><?php esc_html_e( 'Types of interactions from the Fediverse your blog should accept.', 'activitypub' ); ?></p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_auto_approve_reactions" value="1" <?php checked( '1', $auto_approve ); ?> />
+					<?php esc_html_e( 'Auto approve reactions', 'activitypub' ); ?>
+				</label>
+			</p>
 		</fieldset>
 		<?php
 	}
