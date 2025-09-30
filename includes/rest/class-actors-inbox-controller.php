@@ -10,6 +10,7 @@ namespace Activitypub\Rest;
 use Activitypub\Activity\Activity;
 use Activitypub\Moderation;
 
+use function Activitypub\camel_to_snake_case;
 use function Activitypub\get_context;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
@@ -160,7 +161,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	public function create_item( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 		$data    = $request->get_json_params();
-		$type    = \strtolower( $request->get_param( 'type' ) );
+		$type    = camel_to_snake_case( $request->get_param( 'type' ) );
 
 		/* @var Activity $activity Activity object.*/
 		$activity = Activity::init_from_array( $data );
