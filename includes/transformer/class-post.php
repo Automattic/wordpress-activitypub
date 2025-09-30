@@ -11,7 +11,6 @@ use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Replies;
-use Activitypub\Http;
 use Activitypub\Model\Blog;
 use Activitypub\Shortcodes;
 
@@ -21,7 +20,6 @@ use function Activitypub\get_content_visibility;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_enclosures;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\is_activity_object;
 use function Activitypub\is_single_user;
 use function Activitypub\site_supports_blocks;
 
@@ -588,8 +586,12 @@ class Post extends Base {
 		$blocks     = \parse_blocks( $this->item->post_content );
 
 		foreach ( $blocks as $block ) {
-			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) && is_activity_object( Http::get_remote_object( $block['attrs']['url'] ) ) ) {
-				$reply_urls[] = $block['attrs']['url'];
+			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) ) {
+
+				// Check if the URL has been validated as ActivityPub. Default to true for backwards compatibility.
+				if ( $block['attrs']['isValidActivityPub'] ?? true ) {
+					$reply_urls[] = $block['attrs']['url'];
+				}
 			}
 		}
 

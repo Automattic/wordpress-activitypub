@@ -119,16 +119,19 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 					} );
 
 					if ( response && response.provider_name ) {
-						setAttributes( { embedPost: true } ); // Auto-enable embedding when we get valid embed info.
+						setAttributes( { embedPost: true, isValidActivityPub: true } ); // Auto-enable embedding when we get valid embed info.
 						setIsValidEmbed( true );
 					} else {
+						setAttributes( { isValidActivityPub: false } );
 						setIsValidEmbed( false );
 					}
 				} catch ( error ) {
 					console.log( 'Could not fetch embed:', error );
+					setAttributes( { isValidActivityPub: false } );
 					setIsValidEmbed( false );
 				}
 			} catch ( error ) {
+				setAttributes( { isValidActivityPub: false } );
 				setIsValidEmbed( false );
 			} finally {
 				setIsCheckingEmbed( false );
