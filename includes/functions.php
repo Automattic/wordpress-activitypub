@@ -1316,7 +1316,7 @@ function get_user_id( $id ) {
 	}
 
 	if ( \is_wp_error( $user ) ) {
-		$user = Actors::get_by_id( 0 );
+		$user = Actors::get_by_id( Actors::BLOG_USER_ID );
 	}
 
 	if ( \is_wp_error( $user ) ) {
