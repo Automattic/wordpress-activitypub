@@ -38,6 +38,7 @@ class Quote_Request {
 	 * @param int   $user_id  The user ID.
 	 */
 	public static function handle_quote_request( $activity, $user_id ) {
+		$state   = true;
 		$post_id = \url_to_postid( object_to_uri( $activity['object'] ) );
 
 		if ( ! $post_id ) {
@@ -49,21 +50,32 @@ class Quote_Request {
 
 		switch ( $content_policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
-				self::queue_reject( $activity, $user_id );
+				self::queue_reject( $activity, $user_id, $post_id );
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
 				$follower = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
 				if ( ! \is_wp_error( $follower ) && Followers::follows( $follower->ID, $user_id ) ) {
-					self::queue_accept( $activity, $user_id );
+					self::queue_accept( $activity, $user_id, $post_id );
 				} else {
 					self::queue_reject( $activity, $user_id );
+					$state = false;
 				}
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
 			default:
-				self::queue_accept( $activity, $user_id );
+				self::queue_accept( $activity, $user_id, $post_id );
 				break;
 		}
+
+		/**
+		 * Fires after an ActivityPub Announce activity has been handled.
+		 *
+		 * @param array                            $activity The ActivityPub activity data.
+		 * @param int                              $user_id  The local user ID.
+		 * @param bool                             $success  True on success, false otherwise.
+		 * @param array|string|int|\WP_Error|false $result   The WP_Comment object of the created announce/repost comment, or null if creation failed.
+		 */
+		\do_action( 'activitypub_handled_quoterequest', $activity, $user_id, $state, null );
 	}
 
 	/**
@@ -88,8 +100,9 @@ class Quote_Request {
 	 *
 	 * @param array $activity_object The activity object.
 	 * @param int   $user_id         The user ID.
+	 * @param int   $post_id         The post ID.
 	 */
-	public static function queue_accept( $activity_object, $user_id ) {
+	public static function queue_accept( $activity_object, $user_id, $post_id ) {
 		$actor = Actors::get_by_id( $user_id );
 
 		if ( \is_wp_error( $actor ) ) {
@@ -97,6 +110,23 @@ class Quote_Request {
 		}
 
 		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
+
+		$post_meta = \get_post_meta( $post_id, '_activitypub_quoted_by', false );
+		if ( in_array( $activity_object['instrument'], $post_meta, true ) ) {
+			global $wpdb;
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$meta_id = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT meta_id FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s AND meta_value = %s LIMIT 1",
+					$post_id,
+					'_activitypub_quoted_by',
+					$activity_object['instrument']
+				)
+			);
+		} else {
+			$meta_id = \add_post_meta( $post_id, '_activitypub_quoted_by', $activity_object['instrument'] );
+		}
 
 		// Only send minimal data.
 		$activity_object = array_intersect_key(
@@ -110,10 +140,19 @@ class Quote_Request {
 			)
 		);
 
+		$url = \add_query_arg(
+			array(
+				'p'     => $post_id,
+				'stamp' => $meta_id,
+			),
+			\trailingslashit( \home_url() )
+		);
+
 		$activity = new Activity();
 		$activity->set_type( 'Accept' );
 		$activity->set_actor( $actor->get_id() );
 		$activity->set_object( $activity_object );
+		$activity->set_result( $url );
 		$activity->add_to( object_to_uri( $activity_object['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
