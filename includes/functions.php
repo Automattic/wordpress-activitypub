@@ -1313,10 +1313,10 @@ function get_user_id( $id ) {
 		$user = Actors::get_by_id( Actors::BLOG_USER_ID );
 	} else {
 		$user = Actors::get_by_id( $id );
-	}
 
-	if ( \is_wp_error( $user ) ) {
-		$user = Actors::get_by_id( Actors::BLOG_USER_ID );
+		if ( \is_wp_error( $user ) ) {
+			$user = Actors::get_by_id( Actors::BLOG_USER_ID );
+		}
 	}
 
 	if ( \is_wp_error( $user ) ) {
