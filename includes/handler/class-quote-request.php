@@ -82,9 +82,9 @@ class Quote_Request {
 	/**
 	 * ActivityPub inbox disallowed activity.
 	 *
-	 * @param array  $activity The activity array.
-	 * @param null   $user_id  The user ID.
-	 * @param string $type     The type of the activity.
+	 * @param array    $activity The activity array.
+	 * @param int|null $user_id  The user ID.
+	 * @param string   $type     The type of the activity.
 	 */
 	public static function handle_blocked_request( $activity, $user_id, $type ) {
 		if ( 'quoterequest' !== \strtolower( $type ) ) {
