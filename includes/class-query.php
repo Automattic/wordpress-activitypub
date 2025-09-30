@@ -12,9 +12,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Transformer\Factory;
 
-use function Activitypub\get_post_id;
-use function Activitypub\get_user_id;
-
 /**
  * Singleton class to handle and store the ActivityPub query.
  */
