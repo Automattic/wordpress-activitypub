@@ -199,6 +199,7 @@ class Router {
 
 		$query_params = \wp_parse_args( $query );
 		unset( $query_params['activitypub'] );
+		unset( $query_params['stamp'] );
 
 		if ( 1 !== count( $query_params ) ) {
 			return $redirect_url;
@@ -273,6 +274,7 @@ class Router {
 		$vars[] = 'preview';
 		$vars[] = 'author';
 		$vars[] = 'actor';
+		$vars[] = 'stamp';
 		$vars[] = 'type';
 		$vars[] = 'c';
 		$vars[] = 'p';

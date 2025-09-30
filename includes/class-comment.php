@@ -473,7 +473,7 @@ class Comment {
 		}
 
 		// Generate URI based on comment ID.
-		return \add_query_arg( 'c', $comment->comment_ID, \trailingslashit( \home_url() ) );
+		return \add_query_arg( 'c', $comment->comment_ID, \home_url( '/' ) );
 	}
 
 	/**

@@ -39,6 +39,7 @@ use function Activitypub\snake_to_camel_case;
  * @method string|string[]|null          get_origin()             Gets the origin property of the object.
  * @method string|null                   get_preferred_username() Gets the preferred username of the object.
  * @method string|null                   get_published()          Gets the date and time the object was published in ISO 8601 format.
+ * @method string|null                   get_result()             Gets the result property of the object.
  * @method bool|null                     get_sensitive()          Gets the sensitive property of the object.
  * @method string|null                   get_summary()            Gets the natural language summary of the object.
  * @method string[]|null                 get_summary_map()        Gets the summary map property of the object.
@@ -70,6 +71,7 @@ use function Activitypub\snake_to_camel_case;
  * @method Base_Object set_object( string|array|Base_Object|null $data ) Sets the direct object of the activity.
  * @method Base_Object set_origin( string|array|null $origin )           Sets the origin property of the object.
  * @method Base_Object set_published( string|null $published )           Sets the date and time the object was published in ISO 8601 format.
+ * @method Base_Object set_result( string|null $result )                 Sets the result property of the object.
  * @method Base_Object set_sensitive( bool|null $sensitive )             Sets the sensitive property of the object.
  * @method Base_Object set_summary( string $summary )                    Sets the natural language summary of the object.
  * @method Base_Object set_summary_map( array|null $summary_map )        Sets the summary property of the object.

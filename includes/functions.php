@@ -1334,14 +1334,15 @@ function get_user_id( $id ) {
  * @return string The ActivityPub ID (a URL) of the Post.
  */
 function get_post_id( $id ) {
-	$post = get_post( $id );
+	$last_legacy_id = (int) \get_option( 'activitypub_last_post_with_permalink_as_id', 0 );
+	$post_id        = (int) $id;
 
-	if ( ! $post ) {
-		return false;
+	if ( $post_id > $last_legacy_id ) {
+		// Generate URI based on post ID.
+		return \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 	}
 
-	$transformer = new Post( $post );
-	return $transformer->get_id();
+	return \get_permalink( $post_id );
 }
 
 /**

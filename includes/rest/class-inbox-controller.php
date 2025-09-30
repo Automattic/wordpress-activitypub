@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Moderation;
 
+use function Activitypub\camel_to_snake_case;
 use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\is_same_domain;
 use function Activitypub\user_can_activitypub;
@@ -132,7 +133,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 */
 	public function create_item( $request ) {
 		$data = $request->get_json_params();
-		$type = \strtolower( $request->get_param( 'type' ) );
+		$type = camel_to_snake_case( $request->get_param( 'type' ) );
 
 		/* @var Activity $activity Activity object.*/
 		$activity = Activity::init_from_array( $data );

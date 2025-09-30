@@ -1372,4 +1372,38 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		$result = \Activitypub\get_activity_visibility( $activity );
 		$this->assertSame( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $result, 'Should work with minimal activity data' );
 	}
+
+	/**
+	 * Data provider for camel to snake case and snake to camel case tests.
+	 *
+	 * @return array
+	 */
+	public function camel_snake_case_provider() {
+		return array(
+			'SimpleCamelCase'    => array( 'SimpleCamelCase', 'simple_camel_case' ),
+			'camelCase'          => array( 'camelCase', 'camel_case' ),
+			'XMLHttpRequest'     => array( 'XMLHttpRequest', 'x_m_l_http_request' ),
+			'already_snake_case' => array( 'already_snake_case', 'already_snake_case' ),
+			'with_numbers123'    => array( 'withNumbers123', 'with_numbers123' ),
+			'leadingUpperCase'   => array( 'LeadingUpperCase', 'leading_upper_case' ),
+			'singleletter'       => array( 'a', 'a' ),
+			'emptyString'        => array( '', '' ),
+			'nonStringInput'     => array( 12345, '12345' ),
+			'CreateActivity'     => array( 'CreateActivity', 'create_activity' ),
+			'Follow'             => array( 'Follow', 'follow' ),
+			'QuoteRequest'       => array( 'QuoteRequest', 'quote_request' ),
+		);
+	}
+
+	/**
+	 * Test camel_to_snake_case function.
+	 *
+	 * @dataProvider camel_snake_case_provider
+	 *
+	 * @param string $original The original string.
+	 * @param string $expected The expected result.
+	 */
+	public function test_camel_to_snake_case( $original, $expected ) {
+		$this->assertSame( $expected, \Activitypub\camel_to_snake_case( $original ) );
+	}
 }

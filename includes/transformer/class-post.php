@@ -130,7 +130,7 @@ class Post extends Base {
 
 		if ( $post_id > $last_legacy_id ) {
 			// Generate URI based on post ID.
-			return \add_query_arg( 'p', $post_id, \trailingslashit( \home_url() ) );
+			return \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 		}
 
 		return $this->get_url();
