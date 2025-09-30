@@ -323,6 +323,8 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	 *
 	 * @dataProvider reader_link_data
 	 * @covers ::add_reader_link
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
 	 *
 	 * @param array       $item                    The following item.
 	 * @param int|false   $feed_id                 The feed ID or false.
@@ -331,6 +333,12 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	 */
 	public function test_add_reader_link( $item, $feed_id, $expected_url, $should_have_reader_link ) {
 		$original_actions = array( 'edit' => '<a href="#">Edit</a>' );
+
+		// Set up WPCOM environment if expecting WPCOM-style URL.
+		$is_wpcom_test = $expected_url && strpos( $expected_url, '/reader/feed/' ) !== false;
+		if ( $is_wpcom_test && ! defined( 'IS_WPCOM' ) ) {
+			define( 'IS_WPCOM', true );
+		}
 
 		// Mock the feed ID meta if provided.
 		if ( false !== $feed_id ) {
