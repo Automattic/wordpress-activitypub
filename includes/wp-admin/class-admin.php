@@ -82,6 +82,7 @@ class Admin {
 	 */
 	public static function admin_notices() {
 		$current_screen = get_current_screen();
+
 		if ( ! $current_screen ) {
 			return;
 		}
