@@ -104,8 +104,9 @@ class Jetpack {
 		return array_merge(
 			array(
 				'reader' => sprintf(
-					'<a href="%s" target="_blank" class="activitypub-external">%s</a>',
+					'<a href="%s" target="_blank" class="activitypub-external" aria-label="%s">%s</a>',
 					esc_url( $url ),
+					esc_html__( 'View feed in the WordPress.com Reader', 'activitypub' ),
 					esc_html__( 'View Feed', 'activitypub' )
 				),
 			),
