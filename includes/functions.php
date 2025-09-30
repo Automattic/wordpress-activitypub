@@ -1308,17 +1308,17 @@ function get_user_id( $id ) {
 	$mode = \get_option( 'activitypub_actor_mode', 'default' );
 
 	if ( ACTIVITYPUB_BLOG_MODE === $mode ) {
-		$user = Actors::get_by_id( 0 );
+		$user = Actors::get_by_id( Actors::BLOG_USER_ID );
 	} else {
 		$user = Actors::get_by_id( $id );
+
+		if ( \is_wp_error( $user ) ) {
+			$user = Actors::get_by_id( Actors::BLOG_USER_ID );
+		}
 	}
 
 	if ( \is_wp_error( $user ) ) {
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			$user = Actors::get_by_id( 0 );
-		} else {
-			return false;
-		}
+		return false;
 	}
 
 	return $user->get_id();
