@@ -96,7 +96,11 @@ class Jetpack {
 
 		$feed = \get_post_meta( $item['id'], '_activitypub_actor_feed', true );
 
-		if ( isset( $feed['feed_id'] ) ) {
+		// Generate Reader URL based on environment.
+		if ( \defined( 'IS_WPCOM' ) && IS_WPCOM ) {
+			if ( empty( $feed['feed_id'] ) ) {
+				return $actions; // No feed_id available on WPCOM.
+			}
 			$url = sprintf( 'https://wordpress.com/reader/feed/%d', (int) $feed['feed_id'] );
 		} else {
 			$url = sprintf( 'https://wordpress.com/reader/feeds/lookup/%s', rawurlencode( $item['identifier'] ) );
