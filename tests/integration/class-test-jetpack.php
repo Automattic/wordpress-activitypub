@@ -55,6 +55,15 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Load mock Manager class for specific tests.
+	 */
+	private function load_mock_manager() {
+		if ( ! class_exists( '\Automattic\Jetpack\Connection\Manager' ) ) {
+			require_once AP_TESTS_DIR . '/data/class-manager.php';
+		}
+	}
+
+	/**
 	 * Clean up after tests.
 	 */
 	public function tear_down() {
@@ -71,42 +80,80 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test init method registers sync hooks correctly.
+	 * Test init method registers sync hooks without Manager class.
+	 *
+	 * This test must run before the Manager class is loaded to test the behavior
+	 * when the class doesn't exist.
 	 *
 	 * @covers ::init
 	 */
-	public function test_init_registers_sync_hooks() {
+	public function test_a_init_registers_sync_hooks_without_manager() {
+		// Verify Manager class is not yet loaded.
+		$this->assertFalse( class_exists( '\Automattic\Jetpack\Connection\Manager' ), 'Manager class should not exist yet' );
+
 		// Ensure hooks are not already registered.
 		$this->assertFalse( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
+		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
+		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
 
-		// Initialize Jetpack integration.
+		// Initialize Jetpack integration without Manager class loaded.
 		Jetpack::init();
 
-		// Check that sync hooks are registered (when not on WordPress.com).
+		// Check that sync hooks are registered regardless of Manager class.
 		$this->assertTrue( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
 		$this->assertTrue( has_filter( 'jetpack_sync_comment_meta_whitelist' ) );
 		$this->assertTrue( has_filter( 'jetpack_sync_whitelisted_comment_types' ) );
 		$this->assertTrue( has_filter( 'jetpack_json_api_comment_types' ) );
 		$this->assertTrue( has_filter( 'jetpack_api_include_comment_types_count' ) );
+
+		// Following UI hooks should NOT be registered without Manager class.
+		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
+		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
 	}
 
 	/**
-	 * Test that following UI hooks are not registered without proper conditions.
+	 * Test init method registers all hooks with Manager class available.
 	 *
 	 * @covers ::init
 	 */
-	public function test_init_skips_following_ui_hooks_without_conditions() {
+	public function test_b_init_registers_hooks_with_manager() {
+		// Load mock Manager class.
+		$this->load_mock_manager();
+
 		// Ensure hooks are not already registered.
+		$this->assertFalse( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
 		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
 		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
 
-		// Initialize Jetpack integration.
+		// Initialize Jetpack integration with Manager class.
 		Jetpack::init();
 
-		// Following UI hooks should NOT be registered in test environment
-		// because neither IS_WPCOM is defined nor is Jetpack connected.
-		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
+		// Check that sync hooks are registered.
+		$this->assertTrue( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
+		$this->assertTrue( has_filter( 'jetpack_sync_comment_meta_whitelist' ) );
+		$this->assertTrue( has_filter( 'jetpack_sync_whitelisted_comment_types' ) );
+		$this->assertTrue( has_filter( 'jetpack_json_api_comment_types' ) );
+		$this->assertTrue( has_filter( 'jetpack_api_include_comment_types_count' ) );
+
+		// Following UI hooks should also be registered (mock Manager returns connected).
+		$this->assertTrue( has_filter( 'activitypub_following_row_actions' ) );
+		$this->assertTrue( has_filter( 'pre_option_activitypub_following_ui' ) );
+	}
+
+	/**
+	 * Test that Manager class connection check works when available.
+	 *
+	 * @covers ::init
+	 */
+	public function test_c_manager_connection_check() {
+		// Load mock Manager class.
+		$this->load_mock_manager();
+
+		// Test that our mock Manager class exists and works.
+		$this->assertTrue( class_exists( '\Automattic\Jetpack\Connection\Manager' ), 'Mock Manager class should exist' );
+
+		$manager = new \Automattic\Jetpack\Connection\Manager();
+		$this->assertTrue( $manager->is_user_connected(), 'Mock Manager should return connected' );
 	}
 
 	/**
