@@ -10,7 +10,6 @@ namespace Activitypub\Integration;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Comment;
-use Automattic\Jetpack\Connection\Manager;
 
 /**
  * Jetpack integration class.
@@ -31,7 +30,7 @@ class Jetpack {
 
 		if (
 			( \defined( 'IS_WPCOM' ) && IS_WPCOM ) ||
-			( \class_exists( 'Automattic\Jetpack\Connection\Manager' ) && ( new Manager() )->is_user_connected() )
+			( \class_exists( '\Jetpack' ) && \Jetpack::is_connection_ready() )
 		) {
 			\add_filter( 'activitypub_following_row_actions', array( self::class, 'add_reader_link' ), 10, 2 );
 			\add_filter( 'pre_option_activitypub_following_ui', array( self::class, 'pre_option_activitypub_following_ui' ) );
