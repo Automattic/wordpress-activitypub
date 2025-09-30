@@ -284,7 +284,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	public function test_queue_accept() {
 		$activity = $this->create_quote_request_activity();
 
-		Quote_Request::queue_accept( $activity, self::$user_id );
+		Quote_Request::queue_accept( $activity, self::$user_id, self::$post_id );
 
 		// Check outbox for Accept response.
 		$outbox_posts = get_posts(
