@@ -13,14 +13,13 @@ use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Factory;
 use Activitypub\Transformer\Json;
 use Activitypub\Transformer\Post;
-use WP_UnitTestCase;
 
 /**
  * Test class for Transformer Factory.
  *
  * @coversDefaultClass \Activitypub\Transformer\Factory
  */
-class Test_Factory extends WP_UnitTestCase {
+class Test_Factory extends \WP_UnitTestCase {
 	/**
 	 * Test post ID.
 	 *
@@ -110,6 +109,20 @@ class Test_Factory extends WP_UnitTestCase {
 	 * @covers ::get_transformer
 	 */
 	public function test_get_transformer_post() {
+		$post        = get_post( self::$post_id );
+		$transformer = Factory::get_transformer( $post );
+
+		$this->assertInstanceOf( \WP_Error::class, $transformer );
+
+		\add_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$post        = get_post( self::$post_id );
+		$transformer = Factory::get_transformer( $post );
+
+		$this->assertInstanceOf( Post::class, $transformer );
+
+		\add_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
 		$post        = get_post( self::$post_id );
 		$transformer = Factory::get_transformer( $post );
 
