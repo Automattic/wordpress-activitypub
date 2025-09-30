@@ -68,12 +68,12 @@ class Quote_Request {
 		}
 
 		/**
-		 * Fires after an ActivityPub Announce activity has been handled.
+		 * Fires after an ActivityPub QuoteRequest activity has been handled.
 		 *
-		 * @param array                            $activity The ActivityPub activity data.
-		 * @param int                              $user_id  The local user ID.
-		 * @param bool                             $success  True on success, false otherwise.
-		 * @param array|string|int|\WP_Error|false $result   The WP_Comment object of the created announce/repost comment, or null if creation failed.
+		 * @param array $activity The ActivityPub activity data.
+		 * @param int   $user_id  The local user ID.
+		 * @param bool  $success  True on success, false otherwise.
+		 * @param null  $result   Reserved for future use. Currently always null for QuoteRequest activities.
 		 */
 		\do_action( 'activitypub_handled_quoterequest', $activity, $user_id, $state, null );
 	}
