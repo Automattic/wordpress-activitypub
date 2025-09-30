@@ -4,6 +4,8 @@
  * as defined in FEP-044f (https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md#quoteauthorization).
  *
  * This class represents a QuoteAuthorization activity for ActivityPub implementations.
+ *
+ * @package Activitypub
  */
 
 namespace Activitypub\Activity\Extended_Object;
