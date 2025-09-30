@@ -397,6 +397,19 @@ class Blocked_Actors extends \WP_List_Table {
 			),
 		);
 
+		/**
+		 * Filters the array of row action links on the Blocked Actors list table.
+		 *
+		 * This filter is evaluated for each blocked actor item in the list table.
+		 *
+		 * @since unreleased
+		 *
+		 * @param string[] $actions An array of row action links. Defaults are
+		 *                          'Unblock'.
+		 * @param array    $item    The current blocked actor item.
+		 */
+		$actions = apply_filters( 'activitypub_blocked_actors_row_actions', $actions, $item );
+
 		return $this->row_actions( $actions );
 	}
 }
