@@ -314,7 +314,9 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 
 		// Check that the activity object contains only minimal data.
 		$expected_keys = array( 'id', 'type', 'object', 'actor', 'instrument' );
-		$this->assertEquals( $expected_keys, array_keys( $activity_json['object'] ) );
+		$actual_keys   = array_keys( $activity_json['object'] );
+		$this->assertEmpty( array_diff( $expected_keys, $actual_keys ), 'All expected keys should be present' );
+		$this->assertEmpty( array_diff( $actual_keys, $expected_keys ), 'No unexpected keys should be present' );
 	}
 
 	/**
@@ -355,7 +357,9 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 
 		// Check that the activity object contains only minimal data.
 		$expected_keys = array( 'id', 'type', 'object', 'actor', 'instrument' );
-		$this->assertEquals( $expected_keys, array_keys( $activity_json['object'] ) );
+		$actual_keys   = array_keys( $activity_json['object'] );
+		$this->assertEmpty( array_diff( $expected_keys, $actual_keys ), 'All expected keys should be present' );
+		$this->assertEmpty( array_diff( $actual_keys, $expected_keys ), 'No unexpected keys should be present' );
 	}
 
 	/**
