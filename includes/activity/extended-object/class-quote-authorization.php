@@ -1,9 +1,9 @@
 <?php
 /**
- * Event is an implementation of one of the
- * Activity Streams Event object type
+ * Quote_Authorization is an implementation of the QuoteAuthorization activity type,
+ * as defined in FEP-044f (https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md#quoteauthorization).
  *
- * @package activity-event-transformers
+ * This class represents a QuoteAuthorization activity for ActivityPub implementations.
  */
 
 namespace Activitypub\Activity\Extended_Object;
