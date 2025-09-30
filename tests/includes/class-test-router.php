@@ -12,7 +12,7 @@ use Activitypub\Query;
 use Activitypub\Router;
 
 /**
- * Test class for Activitypub.
+ * Test class for Router.
  *
  * @coversDefaultClass \Activitypub\Router
  */
