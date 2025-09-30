@@ -23,7 +23,7 @@ const HELP_TEXT = {
 		</>
 	),
 	valid: __( 'The author will be notified of your response.', 'activitypub' ),
-	error: __( 'This URL probably won’t receive your reply. We’ll still try.', 'activitypub' ),
+	error: __( 'This site doesn\u2019t have ActivityPub enabled and won\u2019t receive your reply.', 'activitypub' ),
 };
 
 /**
