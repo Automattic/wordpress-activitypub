@@ -1,6 +1,6 @@
 <?php
 /**
- * Move handler file.
+ * Handler for QuoteRequest activities.
  *
  * @package Activitypub
  */
