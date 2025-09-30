@@ -95,6 +95,7 @@ class Test_Router extends \WP_UnitTestCase {
 	 * Test that ActivityPub requests for custom post types with built-in ActivityPub support return 200.
 	 *
 	 * This specifically tests custom post types registered with 'supports' => array( 'activitypub' ).
+	 *
 	 * @covers ::render_activitypub_template
 	 */
 	public function test_custom_post_type_with_support_returns_200() {
