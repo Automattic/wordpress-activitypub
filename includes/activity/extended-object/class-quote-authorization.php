@@ -16,6 +16,14 @@ use Activitypub\Activity\Base_Object;
  * Class representing a QuoteAuthorization activity.
  *
  * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md#quoteauthorization
+ *
+ * @since unreleased
+ *
+ * @method Base_Object|string|array|null get_interacting_object() Gets the interacting object property of the object.
+ * @method Base_Object|string|array|null get_interaction_target() Gets the interaction target property of the object.
+ *
+ * @method Quote_Authorization set_interacting_object( string|array|Base_Object|null $data ) Sets the interacting object property of the object.
+ * @method Quote_Authorization set_interaction_target( string|array|Base_Object|null $data ) Sets the interaction target property of the object.
  */
 class Quote_Authorization extends Base_Object {
 	/**
@@ -49,14 +57,14 @@ class Quote_Authorization extends Base_Object {
 	/**
 	 * The object that is being interacted with.
 	 *
-	 * @var mixed
+	 * @var string|Base_Object|array|null
 	 */
 	protected $interacting_object;
 
 	/**
 	 * The target of the interaction.
 	 *
-	 * @var mixed
+	 * @var string|Base_Object|array|null
 	 */
 	protected $interaction_target;
 }
