@@ -122,7 +122,7 @@ class User extends Actor {
 			return $this->get_url();
 		}
 
-		return \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) );
+		return \add_query_arg( 'author', $this->_id, \home_url( '/' ) );
 	}
 
 	/**

@@ -146,7 +146,7 @@ class Quote_Request {
 				'p'     => $post_id,
 				'stamp' => $meta_id,
 			),
-			\trailingslashit( \home_url() )
+			\home_url( '/' )
 		);
 
 		$activity = new Activity();

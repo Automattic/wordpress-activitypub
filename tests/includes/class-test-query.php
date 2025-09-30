@@ -429,7 +429,7 @@ class Test_Query extends \WP_UnitTestCase {
 				'p'     => self::$post_id,
 				'stamp' => $meta_id,
 			),
-			\trailingslashit( \home_url() )
+			\home_url( '/' )
 		);
 		$this->assertEquals( $expected_id, $object->get_id(), 'Should have correct stamp URI as ID' );
 

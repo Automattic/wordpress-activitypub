@@ -404,7 +404,7 @@ class Query {
 				'p'     => $post->ID,
 				'stamp' => $meta->meta_id,
 			),
-			\trailingslashit( \home_url() )
+			\home_url( '/' )
 		);
 
 		$activitypub_object = new Quote_Authorization();
