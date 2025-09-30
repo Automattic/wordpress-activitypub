@@ -76,7 +76,7 @@ class Quote_Request {
 		 * @param bool  $success  True on success, false otherwise.
 		 * @param null  $result   Reserved for future use. Currently always null for QuoteRequest activities.
 		 */
-		\do_action( 'activitypub_handled_quoterequest', $activity, $user_id, $state, null );
+		\do_action( 'activitypub_handled_quote_request', $activity, $user_id, $state, null );
 	}
 
 	/**
