@@ -11,6 +11,7 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
@@ -35,6 +36,11 @@ class Test_Migration extends \WP_UnitTestCase {
 	 * Set up the test.
 	 */
 	public static function set_up_before_class() {
+		// Mock Jetpack class if it doesn't exist.
+		if ( ! class_exists( 'Jetpack' ) ) {
+			require_once AP_TESTS_DIR . '/data/class-jetpack.php';
+		}
+
 		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
 		\remove_action( 'transition_comment_status', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity' ), 20 );
 		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
@@ -1096,5 +1102,75 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		// Clean up.
 		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test sync_jetpack_following_meta triggers actions correctly.
+	 *
+	 * @covers ::sync_jetpack_following_meta
+	 */
+	public function test_sync_jetpack_following_meta() {
+		// Create test posts with following meta.
+		$posts = self::factory()->post->create_many( 3, array( 'post_type' => Remote_Actors::POST_TYPE ) );
+
+		// Add following meta to each post.
+		\add_post_meta( $posts[0], Following::FOLLOWING_META_KEY, '123' );
+		\add_post_meta( $posts[1], Following::FOLLOWING_META_KEY, '456' );
+		\add_post_meta( $posts[2], Following::FOLLOWING_META_KEY, '789' );
+
+		// Track action calls.
+		$action_calls   = array();
+		$capture_action = function () use ( &$action_calls ) {
+			$action_calls[] = func_get_args();
+		};
+
+		\add_action( 'added_post_meta', $capture_action, 10, 4 );
+
+		// Run the migration with Jetpack available.
+		Migration::sync_jetpack_following_meta();
+
+		// Verify the correct actions were triggered.
+		$this->assertCount( 3, $action_calls, 'Should trigger action for each following meta entry' );
+
+		// Check the first action call structure.
+		$this->assertCount( 4, $action_calls[0], 'Action should be called with 4 parameters' );
+		list( $meta_id, $post_id, $meta_key, $meta_value ) = $action_calls[0];
+
+		$this->assertEquals( Following::FOLLOWING_META_KEY, $meta_key, 'Meta key should be Following::FOLLOWING_META_KEY' );
+		$this->assertIsNumeric( $meta_id, 'Meta ID should be numeric' );
+		$this->assertIsNumeric( $post_id, 'Post ID should be numeric' );
+		$this->assertContains( $meta_value, array( '123', '456', '789' ), 'Meta value should be one of the test values' );
+
+		// Clean up.
+		\remove_action( 'added_post_meta', $capture_action, 10 );
+		foreach ( $posts as $post ) {
+			\wp_delete_post( $post, true );
+		}
+	}
+
+	/**
+	 * Test sync_jetpack_following_meta with no following meta.
+	 *
+	 * @covers ::sync_jetpack_following_meta
+	 */
+	public function test_sync_jetpack_following_meta_no_entries() {
+		// Track action calls for the specific meta key we care about.
+		$following_actions = array();
+		$capture_action    = function ( $meta_id, $post_id, $meta_key, $meta_value ) use ( &$following_actions ) {
+			if ( Following::FOLLOWING_META_KEY === $meta_key ) {
+				$following_actions[] = array( $meta_id, $post_id, $meta_key, $meta_value );
+			}
+		};
+
+		\add_action( 'added_post_meta', $capture_action, 10, 4 );
+
+		// Run migration with no following meta (should not trigger our specific actions).
+		Migration::sync_jetpack_following_meta();
+
+		// Verify no following-specific actions were triggered.
+		$this->assertEmpty( $following_actions, 'No following-specific actions should be triggered when no following meta exists' );
+
+		// Clean up.
+		\remove_action( 'added_post_meta', $capture_action, 10 );
 	}
 }
