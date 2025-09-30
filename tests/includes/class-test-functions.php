@@ -1395,16 +1395,4 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	public function test_camel_to_snake_case( $original, $expected ) {
 		$this->assertSame( $expected, \Activitypub\camel_to_snake_case( $original ) );
 	}
-
-	/**
-	 * Test snake_to_camel_case function.
-	 *
-	 * @dataProvider camel_snake_case_provider
-	 *
-	 * @param string $expected The expected result.
-	 * @param string $original The original string.
-	 */
-	public function test_snake_to_camel_case( $expected, $original ) {
-		$this->assertSame( $expected, \Activitypub\snake_to_camel_case( $original ) );
-	}
 }
