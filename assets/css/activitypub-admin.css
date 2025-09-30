@@ -176,6 +176,11 @@ summary {
 	transform: translateY(-30%) rotate(-135deg);
 }
 
+table.followings .dashicons {
+	font-size: 1em;
+	line-height: 1.7;
+}
+
 .activitypub-settings-accordion-trigger:active,
 .activitypub-settings-accordion-trigger:hover {
 	background: #f6f7f7;

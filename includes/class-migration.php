@@ -10,6 +10,7 @@ namespace Activitypub;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory;
@@ -202,6 +203,10 @@ class Migration {
 
 		if ( \version_compare( $version_from_db, '7.3.0', '<' ) ) {
 			self::remove_pending_application_user_follow_requests();
+		}
+
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::sync_jetpack_following_meta();
 		}
 
 		// Ensure all required cron schedules are registered.
@@ -1010,5 +1015,40 @@ class Migration {
 				'meta_value' => Actors::APPLICATION_USER_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			)
 		);
+	}
+
+	/**
+	 * Sync Jetpack meta for all followings.
+	 *
+	 * Replays the added_post_meta sync action for Jetpack with the Following::FOLLOWING_META_KEY meta key.
+	 */
+	public static function sync_jetpack_following_meta() {
+		if ( ! \class_exists( 'Jetpack' ) || ! \Jetpack::is_connection_ready() ) {
+			return;
+		}
+
+		global $wpdb;
+
+		// Get all posts that have the following meta key.
+		$posts_with_following = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT meta_id, post_id, meta_key, meta_value FROM {$wpdb->postmeta} WHERE meta_key = %s",
+				Following::FOLLOWING_META_KEY
+			),
+			ARRAY_N
+		);
+
+		// Trigger the added_post_meta action for each following relationship.
+		foreach ( $posts_with_following as $meta ) {
+			/**
+			 * Fires when post meta is added.
+			 *
+			 * @param int    $meta_id    ID of the metadata entry.
+			 * @param int    $object_id  Post ID.
+			 * @param string $meta_key   Metadata key.
+			 * @param mixed  $meta_value Metadata value.
+			 */
+			\do_action( 'added_post_meta', ...$meta );
+		}
 	}
 }
