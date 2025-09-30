@@ -1300,8 +1300,6 @@ function get_content_warning( $post_id ) {
 /**
  * Get the ActivityPub ID of a User by the WordPress User ID.
  *
- * If
- *
  * @param int $id The WordPress User ID.
  *
  * @return string The ActivityPub ID (a URL) of the User.
