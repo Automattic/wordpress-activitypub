@@ -466,7 +466,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	 */
 	public function test_init_registers_hooks() {
 		// Remove existing hooks first.
-		remove_all_actions( 'activitypub_inbox_quoterequest' );
+		remove_all_actions( 'activitypub_inbox_quote_request' );
 		remove_all_actions( 'activitypub_rest_inbox_disallowed' );
 		remove_all_filters( 'activitypub_validate_object' );
 
@@ -474,7 +474,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		Quote_Request::init();
 
 		// Check that hooks are registered.
-		$this->assertTrue( has_action( 'activitypub_inbox_quoterequest' ) );
+		$this->assertTrue( has_action( 'activitypub_inbox_quote_request' ) );
 		$this->assertTrue( has_action( 'activitypub_rest_inbox_disallowed' ) );
 		$this->assertTrue( has_filter( 'activitypub_validate_object' ) );
 	}
