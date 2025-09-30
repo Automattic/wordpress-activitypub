@@ -62,7 +62,7 @@ function plugin_init() {
 	 *
 	 * @see https://jetpack.com/
 	 */
-	if ( \defined( 'JETPACK__VERSION' ) && ! \defined( 'IS_WPCOM' ) ) {
+	if ( \defined( 'JETPACK__VERSION' ) ) {
 		Jetpack::init();
 	}
 
