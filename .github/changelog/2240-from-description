@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added support for QuoteRequest activities (FEP-044f), enabling proper handling, validation, and policy-based acceptance or rejection of quote requests.
