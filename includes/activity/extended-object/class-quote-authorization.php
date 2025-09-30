@@ -57,14 +57,14 @@ class Quote_Authorization extends Base_Object {
 	/**
 	 * The object that is being interacted with.
 	 *
-	 * @var string|Base_Object|array|null
+	 * @var Base_Object|string|array|null
 	 */
 	protected $interacting_object;
 
 	/**
 	 * The target of the interaction.
 	 *
-	 * @var string|Base_Object|array|null
+	 * @var Base_Object|string|array|null
 	 */
 	protected $interaction_target;
 }
