@@ -38,7 +38,7 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertArrayHasKey( 'links', $data );
-		$this->assertCount( 3, $data['links'] );
+		$this->assertCount( 5, $data['links'] );
 
 		/*
 		 * Test first link.
@@ -53,8 +53,16 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 		$this->assertStringEndsWith( '/nodeinfo/2.0', $data['links'][1]['href'] );
 
 		// Test third link.
-		$this->assertEquals( 'https://www.w3.org/ns/activitystreams#Application', $data['links'][2]['rel'] );
-		$this->assertStringEndsWith( '/application', $data['links'][2]['href'] );
+		$this->assertEquals( 'http://nodeinfo.diaspora.software/ns/schema/2.1', $data['links'][2]['rel'] );
+		$this->assertStringEndsWith( '/nodeinfo/2.1', $data['links'][2]['href'] );
+
+		// Test forth link.
+		$this->assertEquals( 'https://nodeinfo.diaspora.software/ns/schema/2.1', $data['links'][3]['rel'] );
+		$this->assertStringEndsWith( '/nodeinfo/2.1', $data['links'][3]['href'] );
+
+		// Test fifth link.
+		$this->assertEquals( 'https://www.w3.org/ns/activitystreams#Application', $data['links'][4]['rel'] );
+		$this->assertStringEndsWith( '/application', $data['links'][4]['href'] );
 
 		// Make sure the links work.
 		$request  = new \WP_REST_Request( 'GET', str_replace( \get_rest_url(), '/', $data['links'][0]['href'] ) );
@@ -70,7 +78,7 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	 * Test get_item method with valid version.
 	 *
 	 * @covers ::get_item
-	 * @covers ::get_version_2_0
+	 * @covers ::get_version_2_X
 	 */
 	public function test_get_item() {
 		self::factory()->post->create();
