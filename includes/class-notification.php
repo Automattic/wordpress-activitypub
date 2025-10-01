@@ -71,7 +71,7 @@ class Notification {
 		 *
 		 * @param Notification $instance The notification object.
 		 */
-		\do_action_deprecated( 'activitypub_notification', array( $this ), 'unreleased', "activitypub_handled_{$type}" );
+		\do_action_deprecated( 'activitypub_notification', array( $this ), '7.5.0', "activitypub_handled_{$type}" );
 
 		/**
 		 * Type-specific action to send ActivityPub notifications.
@@ -80,6 +80,6 @@ class Notification {
 		 *
 		 * @param Notification $instance The notification object.
 		 */
-		\do_action_deprecated( "activitypub_notification_{$type}", array( $this ), 'unreleased', "activitypub_handled_{$type}" );
+		\do_action_deprecated( "activitypub_notification_{$type}", array( $this ), '7.5.0', "activitypub_handled_{$type}" );
 	}
 }
