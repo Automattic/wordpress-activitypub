@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix PHP warning in bulk edit scenario when post_author is missing from $_REQUEST

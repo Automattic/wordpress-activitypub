@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Standardized notification handling with new hooks for better extensibility and consistency.

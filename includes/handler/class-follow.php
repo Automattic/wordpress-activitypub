@@ -52,14 +52,14 @@ class Follow {
 		/**
 		 * Fires after a new follower has been added.
 		 *
-		 * @deprecated unreleased Use "activitypub_handled_follow" instead.
+		 * @deprecated 7.5.0 Use "activitypub_handled_follow" instead.
 		 *
 		 * @param string             $actor        The URL of the actor (follower) who initiated the follow.
 		 * @param array              $activity     The complete activity data of the follow request.
 		 * @param int                $user_id      The ID of the WordPress user being followed.
 		 * @param \WP_Post|\WP_Error $remote_actor The Actor object containing the new follower's data.
 		 */
-		\do_action_deprecated( 'activitypub_followers_post_follow', array( $activity['actor'], $activity, $user_id, $remote_actor ), 'unreleased', 'activitypub_handled_follow' );
+		\do_action_deprecated( 'activitypub_followers_post_follow', array( $activity['actor'], $activity, $user_id, $remote_actor ), '7.5.0', 'activitypub_handled_follow' );
 
 		/**
 		 * Fires after a Follow activity has been handled.

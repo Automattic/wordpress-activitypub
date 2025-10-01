@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 7.4.0
+Stable tag: 7.5.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,33 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.5.0 - 2025-10-01
+#### Added
+- Added a setting to control who can quote your posts.
+- Added support for QuoteRequest activities (FEP-044f), enabling proper handling, validation, and policy-based acceptance or rejection of quote requests.
+- Add upgrade routine to enable ActivityPub feeds in WordPress.com Reader
+- Add Yoast SEO integration for author archives site health check.
+- Improved interaction policies with clearer defaults and better Mastodon compatibility.
+- New site health check warns if active Captcha plugins may block ActivityPub comments.
+- Sync following meta to enable RSS feed subscriptions for ActivityPub actors in WordPress.com Reader
+- You can now follow people and see their updates right in the WordPress.com Reader when using Jetpack or WordPress.com.
+
+#### Changed
+- Added support for fetching actors by account identifiers and improved reliability of actor retrieval.
+- Clarify error messages in account modal to specify full profile URL format.
+- Improved checks to better identify public Activities.
+- Improved compatibility by making the 'implements' field always use multiple entries.
+- Improved recipient handling for clarity and improved visibility handling of activities.
+- Remote reply blocks now sync account info across all blocks on the same page
+- Standardized notification handling with new hooks for better extensibility and consistency.
+- Updated sync allowlist to add support for Jetpack notifications of likes and reposts.
+
+#### Fixed
+- Fixed an issue where post metadata in the block editor was missing or failed to update.
+- Fix Flag activity object list processing to preserve URL arrays
+- Fix PHP warning in bulk edit scenario when post_author is missing from $_REQUEST
+- Posts now only fall back to the blog user when blog mode is enabled and no valid author exists, ensuring content negotiation only runs if an Actor is available.
 
 ### 7.4.0 - 2025-09-15
 #### Added
@@ -282,9 +309,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.3.0 =
+= 7.5.0 =
 
-Moderation has been improved with stronger tools, and user deletion now includes support for federated deletes across the network.
+You can now choose who’s allowed to quote your posts on Mastodon—everyone, only your followers, or just you. Set it in the Block Editor sidebar, and your choice will be applied automatically.
 
 == Installation ==
 
