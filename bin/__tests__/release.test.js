@@ -177,16 +177,50 @@ function old_function() {}`;
 		} );
 
 		test( 'replaces unreleased in apply_filters_deprecated calls', () => {
-			const content = `$value = apply_filters_deprecated( 
-	'old_filter', 
-	array( $value ), 
-	'unreleased', 
-	'new_filter' 
+			const content = `$value = apply_filters_deprecated(
+	'old_filter',
+	array( $value ),
+	'unreleased',
+	'new_filter'
 );`;
 
 			const result = applyVersionReplacements( content, testVersion, patterns );
 			expect( result ).toContain( `'${ testVersion }',` );
 			expect( result ).not.toContain( `'unreleased',` );
+		} );
+
+		test( 'replaces unreleased in do_action_deprecated calls with single quotes', () => {
+			const content = `do_action_deprecated( 'old_action', array( $this ), 'unreleased', 'new_action' );`;
+
+			const doActionPatterns = [
+				{
+					search: /(?<=\b(?:apply_filters_deprecated|do_action_deprecated)\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=['"],\s*['"])/gi,
+					replace: testVersion,
+				},
+			];
+
+			const result = applyVersionReplacements( content, testVersion, doActionPatterns );
+			expect( result ).toContain(
+				`do_action_deprecated( 'old_action', array( $this ), '${ testVersion }', 'new_action' )`
+			);
+			expect( result ).not.toContain( `'unreleased'` );
+		} );
+
+		test( 'replaces unreleased in do_action_deprecated calls with double quotes', () => {
+			const content = `\\do_action_deprecated( 'activitypub_notification', array( $this ), 'unreleased', "new_action" );`;
+
+			const doActionPatterns = [
+				{
+					search: /(?<=\b(?:apply_filters_deprecated|do_action_deprecated)\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=['"],\s*['"])/gi,
+					replace: testVersion,
+				},
+			];
+
+			const result = applyVersionReplacements( content, testVersion, doActionPatterns );
+			expect( result ).toContain(
+				`\\do_action_deprecated( 'activitypub_notification', array( $this ), '${ testVersion }', "new_action" )`
+			);
+			expect( result ).not.toContain( `'unreleased'` );
 		} );
 
 		test( 'handles case insensitive @since and @deprecated', () => {

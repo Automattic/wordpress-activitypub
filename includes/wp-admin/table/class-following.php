@@ -504,7 +504,7 @@ class Following extends \WP_List_Table {
 		 *
 		 * This filter allows you to modify the row actions for each following item in the Following list table.
 		 *
-		 * @since unreleased
+		 * @since 7.5.0
 		 *
 		 * @param string[] $actions An array of row action links. Defaults include 'Unfollow'.
 		 * @param array    $item    The current following item.

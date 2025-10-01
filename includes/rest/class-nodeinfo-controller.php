@@ -7,10 +7,8 @@
 
 namespace Activitypub\Rest;
 
-use function Activitypub\get_active_users;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\get_total_users;
 
 /**
  * ActivityPub NodeInfo Controller.
@@ -94,6 +92,14 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 					'href' => get_rest_url_by_path( '/nodeinfo/2.0' ),
 				),
 				array(
+					'rel'  => 'http://nodeinfo.diaspora.software/ns/schema/2.1',
+					'href' => get_rest_url_by_path( '/nodeinfo/2.1' ),
+				),
+				array(
+					'rel'  => 'https://nodeinfo.diaspora.software/ns/schema/2.1',
+					'href' => get_rest_url_by_path( '/nodeinfo/2.1' ),
+				),
+				array(
 					'rel'  => 'https://www.w3.org/ns/activitystreams#Application',
 					'href' => get_rest_url_by_path( 'application' ),
 				),
@@ -121,7 +127,8 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 
 		switch ( $version ) {
 			case '2.0':
-				$response = $this->get_version_2_0();
+			case '2.1':
+				$response = $this->get_version_2_X( $version );
 				break;
 
 			default:
@@ -135,30 +142,22 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 	/**
 	 * Get the NodeInfo 2.0 data.
 	 *
-	 * @return array
+	 * @param string $version The NodeInfo version.
+	 *
+	 * @return array The NodeInfo data.
 	 */
-	public function get_version_2_0() {
+	public function get_version_2_X( $version ) {
 		$posts    = \wp_count_posts();
 		$comments = \wp_count_comments();
 
-		return array(
-			'version'           => '2.0',
+		$nodeinfo = array(
+			'version'           => $version,
 			'software'          => array(
 				'name'    => 'wordpress',
 				'version' => get_masked_wp_version(),
 			),
-			'protocols'         => array( 'activitypub' ),
-			'services'          => array(
-				'inbound'  => array(),
-				'outbound' => array(),
-			),
 			'openRegistrations' => (bool) get_option( 'users_can_register' ),
 			'usage'             => array(
-				'users'         => array(
-					'total'          => get_total_users(),
-					'activeHalfyear' => get_active_users( 6 ),
-					'activeMonth'    => get_active_users(),
-				),
 				'localPosts'    => (int) $posts->publish,
 				'localComments' => $comments->approved,
 			),
@@ -168,5 +167,13 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 				'nodeIcon'        => \get_site_icon_url(),
 			),
 		);
+
+		/**
+		 * Filter the NodeInfo data.
+		 *
+		 * @param array  $nodeinfo The NodeInfo data.
+		 * @param string $version  The NodeInfo version.
+		 */
+		return \apply_filters( 'nodeinfo_data', $nodeinfo, $version );
 	}
 }
