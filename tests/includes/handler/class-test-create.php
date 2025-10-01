@@ -271,6 +271,8 @@ class Test_Create extends \WP_UnitTestCase {
 		$args = array(
 			'type'    => 'comment',
 			'post_id' => $this->post_id,
+			'orderby' => 'comment_ID',
+			'order'   => 'ASC',
 		);
 
 		$query  = new \WP_Comment_Query( $args );
