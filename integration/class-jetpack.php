@@ -101,7 +101,7 @@ class Jetpack {
 			if ( empty( $feed['feed_id'] ) ) {
 				return $actions; // No feed_id available on WPCOM.
 			}
-			$url = sprintf( 'https://wordpress.com/reader/feed/%d', (int) $feed['feed_id'] );
+			$url = sprintf( 'https://wordpress.com/reader/feeds/%d', (int) $feed['feed_id'] );
 		} else {
 			$url = sprintf( 'https://wordpress.com/reader/feeds/lookup/%s', rawurlencode( $item['identifier'] ) );
 		}
