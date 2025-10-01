@@ -23,6 +23,9 @@ class Webfinger {
 	public static function init() {
 		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 1, 3 );
 		\add_filter( 'webfinger_data', array( self::class, 'add_pseudo_user_discovery' ), 1, 2 );
+
+		\add_filter( 'webfinger_user_data', array( self::class, 'add_interaction_links' ), 11 );
+		\add_filter( 'webfinger_data', array( self::class, 'add_interaction_links' ), 11 );
 	}
 
 	/**
@@ -53,11 +56,6 @@ class Webfinger {
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
 			'href' => $user->get_id(),
-		);
-
-		$jrd['links'][] = array(
-			'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
-			'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
 		);
 
 		return $jrd;
@@ -101,10 +99,6 @@ class Webfinger {
 					'type' => 'text/html',
 					'href' => $user->get_id(),
 				),
-				array(
-					'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
-					'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
-				),
 			),
 		);
 
@@ -115,5 +109,43 @@ class Webfinger {
 		}
 
 		return $profile;
+	}
+
+	/**
+	 * Add interaction links to the WebFinger data.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md
+	 *
+	 * @param array $jrd  The jrd array.
+	 *
+	 * @return array The jrd array.
+	 */
+	public static function add_interaction_links( $jrd ) {
+		if ( ! is_array( $jrd ) ) {
+			return $jrd;
+		}
+
+		$jrd['links'][] = array(
+			'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+			'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
+		);
+
+		/*
+		 * Note: The parameter name `{inReplyTo}` is used here for all 'Create' intents,
+		 * not just replies, to maintain compatibility with existing implementations and
+		 * the FEP-3b86 specification. If a more generic parameter name is adopted in the
+		 * future, this should be updated accordingly.
+		 */
+		$jrd['links'][] = array(
+			'rel'      => 'https://w3id.org/fep/3b86/Create',
+			'template' => get_rest_url_by_path( 'interactions?uri={inReplyTo}&intent=create' ),
+		);
+
+		$jrd['links'][] = array(
+			'rel'      => 'https://w3id.org/fep/3b86/Follow',
+			'template' => get_rest_url_by_path( 'interactions?uri={object}&intent=follow' ),
+		);
+
+		return $jrd;
 	}
 }
