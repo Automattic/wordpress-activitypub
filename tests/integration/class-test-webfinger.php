@@ -111,8 +111,8 @@ class Test_Webfinger extends \WP_UnitTestCase {
 
 		// Check subject is set correctly.
 		$this->assertArrayHasKey( 'subject', $result );
-		$this->assertStringContains( 'acct:', $result['subject'] );
-		$this->assertStringContains( $user->user_login, $result['subject'] );
+		$this->assertStringContainsString( 'acct:', $result['subject'] );
+		$this->assertStringContainsString( $user->user_login, $result['subject'] );
 
 		// Check aliases are added.
 		$this->assertArrayHasKey( 'aliases', $result );
@@ -180,7 +180,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 
 		// Check subject is set.
 		$this->assertArrayHasKey( 'subject', $result );
-		$this->assertStringContains( 'acct:', $result['subject'] );
+		$this->assertStringContainsString( 'acct:', $result['subject'] );
 
 		// Check aliases are set.
 		$this->assertArrayHasKey( 'aliases', $result );
@@ -295,17 +295,17 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			}
 
 			$this->assertIsString( $link['template'] );
-			$this->assertStringContains( 'interactions', $link['template'] );
+			$this->assertStringContainsString( 'interactions', $link['template'] );
 
 			// Check that template has the right placeholder based on rel.
 			if ( 'http://ostatus.org/schema/1.0/subscribe' === $link['rel'] ) {
-				$this->assertStringContains( '{uri}', $link['template'] );
+				$this->assertStringContainsString( '{uri}', $link['template'] );
 			} elseif ( 'https://w3id.org/fep/3b86/Create' === $link['rel'] ) {
-				$this->assertStringContains( '{inReplyTo}', $link['template'] );
-				$this->assertStringContains( 'intent=create', $link['template'] );
+				$this->assertStringContainsString( '{inReplyTo}', $link['template'] );
+				$this->assertStringContainsString( 'intent=create', $link['template'] );
 			} elseif ( 'https://w3id.org/fep/3b86/Follow' === $link['rel'] ) {
-				$this->assertStringContains( '{object}', $link['template'] );
-				$this->assertStringContains( 'intent=follow', $link['template'] );
+				$this->assertStringContainsString( '{object}', $link['template'] );
+				$this->assertStringContainsString( 'intent=follow', $link['template'] );
 			}
 		}
 	}
