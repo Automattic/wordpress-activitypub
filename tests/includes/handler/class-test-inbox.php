@@ -52,6 +52,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertEquals( $expected_success, $was_successful, $description );
 
+		\remove_all_filters( 'activitypub_persist_inbox_activity_types' );
 		\remove_all_filters( 'activitypub_handled_inbox' );
 	}
 
