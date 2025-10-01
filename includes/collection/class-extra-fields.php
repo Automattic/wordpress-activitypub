@@ -107,15 +107,12 @@ class Extra_Fields {
 		\add_filter( 'activitypub_link_rel', array( self::class, 'add_rel_me' ) );
 
 		foreach ( $fields as $post ) {
+			$title         = \html_entity_decode( \get_the_title( $post ), \ENT_QUOTES, 'UTF-8' );
 			$content       = self::get_formatted_content( $post );
 			$attachments[] = array(
 				'type'  => 'PropertyValue',
-				'name'  => \get_the_title( $post ),
-				'value' => \html_entity_decode(
-					$content,
-					\ENT_QUOTES,
-					'UTF-8'
-				),
+				'name'  => $title,
+				'value' => \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' ),
 			);
 
 			$attachment = false;
@@ -134,7 +131,7 @@ class Extra_Fields {
 				if ( 'A' === $tags->get_tag() ) {
 					$attachment = array(
 						'type' => 'Link',
-						'name' => \get_the_title( $post ),
+						'name' => $title,
 						'href' => \esc_url( $tags->get_attribute( 'href' ) ),
 					);
 
@@ -149,12 +146,8 @@ class Extra_Fields {
 			if ( ! $attachment ) {
 				$attachment = array(
 					'type'    => 'Note',
-					'name'    => \get_the_title( $post ),
-					'content' => \html_entity_decode(
-						$content,
-						\ENT_QUOTES,
-						'UTF-8'
-					),
+					'name'    => $title,
+					'content' => \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' ),
 				);
 			}
 
