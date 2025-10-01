@@ -7,6 +7,7 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Http;
 
@@ -52,6 +53,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 						'intent' => array(
 							'description' => 'The intent of the interaction, e.g., follow, reply, import.',
 							'type'        => 'string',
+							'enum'        => array_map( 'Activitypub\camel_to_snake_case', Activity::TYPES ),
 						),
 					),
 				),
