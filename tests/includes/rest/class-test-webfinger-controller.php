@@ -146,7 +146,7 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 				$this->assertEquals( 'acct:test_user@' . WP_TESTS_DOMAIN, $webfinger );
 				return $test_data;
 			},
-			10,
+			20,
 			2
 		);
 

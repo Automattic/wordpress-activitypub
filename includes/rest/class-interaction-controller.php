@@ -43,11 +43,17 @@ class Interaction_Controller extends \WP_REST_Controller {
 					'callback'            => array( $this, 'get_item' ),
 					'permission_callback' => '__return_true',
 					'args'                => array(
-						'uri' => array(
+						'uri'    => array(
 							'description'       => 'The URI or webfinger ID of the object to interact with.',
 							'type'              => 'string',
 							'required'          => true,
 							'sanitize_callback' => array( $this, 'sanitize_uri' ),
+						),
+						'intent' => array(
+							'default'     => '',
+							'description' => 'The intent of the interaction, e.g., follow, reply, import.',
+							'type'        => 'string',
+							'required'    => false,
 						),
 					),
 				),
