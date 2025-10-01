@@ -11,7 +11,7 @@ namespace Activitypub\Activity\Extended_Object;
 use Activitypub\Activity\Base_Object;
 
 /**
- * Place is an implementation of one of the Activity Streams Place object type.
+ * Place is an implementation of the Activity Streams Place object type.
  *
  * The Place object represents a logical or physical location.
  *

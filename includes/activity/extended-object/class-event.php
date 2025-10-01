@@ -10,7 +10,7 @@ namespace Activitypub\Activity\Extended_Object;
 use Activitypub\Activity\Base_Object;
 
 /**
- * Event is an implementation of one of the Activity Streams Event object type.
+ * Event is an implementation of Activity Streams Event object type.
  *
  * This class contains extra keys as used by Mobilizon to ensure compatibility.
  *
