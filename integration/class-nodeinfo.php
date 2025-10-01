@@ -54,6 +54,16 @@ class Nodeinfo {
 		$nodeinfo['metadata']['federation']    = array( 'enabled' => true );
 		$nodeinfo['metadata']['staffAccounts'] = self::get_staff();
 
+		if ( empty( $nodeinfo['services'] ) ) {
+			$nodeinfo['services'] = array(
+				'inbound'  => array(),
+				'outbound' => array(),
+			);
+		}
+
+		$nodeinfo['services']['inbound'][]  = 'activitypub';
+		$nodeinfo['services']['outbound'][] = 'activitypub';
+
 		return $nodeinfo;
 	}
 

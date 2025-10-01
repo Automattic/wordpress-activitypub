@@ -88,7 +88,15 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 					'href' => get_rest_url_by_path( '/nodeinfo/2.0' ),
 				),
 				array(
+					'rel'  => 'https://nodeinfo.diaspora.software/ns/schema/2.0',
+					'href' => get_rest_url_by_path( '/nodeinfo/2.0' ),
+				),
+				array(
 					'rel'  => 'http://nodeinfo.diaspora.software/ns/schema/2.1',
+					'href' => get_rest_url_by_path( '/nodeinfo/2.1' ),
+				),
+				array(
+					'rel'  => 'https://nodeinfo.diaspora.software/ns/schema/2.1',
 					'href' => get_rest_url_by_path( '/nodeinfo/2.1' ),
 				),
 				array(
@@ -108,7 +116,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response Response object.
 	 */
 	public function get_item( $request ) {
-		$version = $request->get_param( 'version', '2.1' );
+		$version = $request->get_param( 'version', '2.0' );
 
 		/**
 		 * Fires before the NodeInfo data is created and sent to the client.
