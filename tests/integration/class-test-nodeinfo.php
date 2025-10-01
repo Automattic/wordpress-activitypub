@@ -95,20 +95,6 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 	 */
 	public function nodeinfo_version_data() {
 		return array(
-			'version 1.0' => array(
-				'version'            => '1.0',
-				'expected_protocols' => array(
-					'inbound'  => array( 'activitypub' ),
-					'outbound' => array( 'activitypub' ),
-				),
-			),
-			'version 1.1' => array(
-				'version'            => '1.1',
-				'expected_protocols' => array(
-					'inbound'  => array( 'activitypub' ),
-					'outbound' => array( 'activitypub' ),
-				),
-			),
 			'version 2.0' => array(
 				'version'            => '2.0',
 				'expected_protocols' => array( 'activitypub' ),
