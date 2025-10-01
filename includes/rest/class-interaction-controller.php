@@ -50,10 +50,8 @@ class Interaction_Controller extends \WP_REST_Controller {
 							'sanitize_callback' => array( $this, 'sanitize_uri' ),
 						),
 						'intent' => array(
-							'default'     => '',
 							'description' => 'The intent of the interaction, e.g., follow, reply, import.',
 							'type'        => 'string',
-							'required'    => false,
 						),
 					),
 				),
