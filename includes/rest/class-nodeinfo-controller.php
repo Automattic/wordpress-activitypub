@@ -116,7 +116,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response Response object.
 	 */
 	public function get_item( $request ) {
-		$version = $request->get_param( 'version', '2.0' );
+		$version = $request->get_param( 'version' );
 
 		/**
 		 * Fires before the NodeInfo data is created and sent to the client.
