@@ -274,7 +274,7 @@ async function createRelease() {
 				replace: ( match ) => match.replace( /unreleased/i, version ),
 			},
 			{
-				search: /(?<=\b(?:apply_filters_deprecated|do_action_deprecated)\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=',\s*['<=>])/gi,
+				search: /(?<=\b(?:apply_filters_deprecated|do_action_deprecated)\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=['"],\s*['"])/gi,
 				replace: ( match ) => match.replace( /unreleased/i, version ),
 			},
 		] );
