@@ -205,7 +205,7 @@ class Migration {
 			self::remove_pending_application_user_follow_requests();
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '7.5.0', '<' ) ) {
 			self::sync_jetpack_following_meta();
 		}
 

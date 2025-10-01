@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Posts now only fall back to the blog user when blog mode is enabled and no valid author exists, ensuring content negotiation only runs if an Actor is available.

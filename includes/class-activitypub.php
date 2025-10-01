@@ -174,10 +174,10 @@ class Activitypub {
 	/**
 	 * Add rewrite rules.
 	 *
-	 * @deprecated unreleased Use {@see Router::add_rewrite_rules()}.
+	 * @deprecated 7.5.0 Use {@see Router::add_rewrite_rules()}.
 	 */
 	public static function add_rewrite_rules() {
-		_deprecated_function( __FUNCTION__, 'unreleased', '\Activitypub\Router::add_rewrite_rules()' );
+		_deprecated_function( __FUNCTION__, '7.5.0', '\Activitypub\Router::add_rewrite_rules()' );
 
 		Router::add_rewrite_rules();
 	}

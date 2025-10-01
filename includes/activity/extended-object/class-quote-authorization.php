@@ -17,7 +17,7 @@ use Activitypub\Activity\Base_Object;
  *
  * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md#quoteauthorization
  *
- * @since unreleased
+ * @since 7.5.0
  *
  * @method Base_Object|string|array|null get_interacting_object() Gets the interacting object property of the object.
  * @method Base_Object|string|array|null get_interaction_target() Gets the interaction target property of the object.
