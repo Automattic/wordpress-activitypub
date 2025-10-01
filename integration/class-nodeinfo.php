@@ -7,6 +7,8 @@
 
 namespace Activitypub\Integration;
 
+use Activitypub\Webfinger;
+
 use function Activitypub\get_active_users;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_total_users;
@@ -36,7 +38,7 @@ class Nodeinfo {
 	 * @return array The extended array.
 	 */
 	public static function add_nodeinfo_data( $nodeinfo, $version ) {
-		if ( $version >= '2.0' ) {
+		if ( \version_compare( $version, '2.0', '>=' ) ) {
 			$nodeinfo['protocols'][] = 'activitypub';
 		} else {
 			$nodeinfo['protocols']['inbound'][]  = 'activitypub';
@@ -48,6 +50,9 @@ class Nodeinfo {
 			'activeMonth'    => get_active_users(),
 			'activeHalfyear' => get_active_users( 6 ),
 		);
+
+		$nodeinfo['metadata']['federation']    = array( 'enabled' => true );
+		$nodeinfo['metadata']['staffAccounts'] = self::get_staff();
 
 		return $nodeinfo;
 	}
@@ -85,5 +90,30 @@ class Nodeinfo {
 		);
 
 		return $data;
+	}
+
+	/**
+	 * Get all admin users with the cap activitypub.
+	 *
+	 * @return array The list of staff accounts.
+	 */
+	private static function get_staff() {
+		// Get all admin users with the cap activitypub.
+		$admins = get_users(
+			array(
+				'role'    => 'administrator',
+				'orderby' => 'ID',
+				'order'   => 'ASC',
+				'cap'     => 'activitypub',
+				'fields'  => array( 'ID' ),
+			)
+		);
+
+		return array_map(
+			function ( $user ) {
+				return Webfinger::get_user_resource( $user->ID );
+			},
+			$admins
+		);
 	}
 }
