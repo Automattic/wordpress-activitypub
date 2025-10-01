@@ -110,12 +110,8 @@ class Extra_Fields {
 			$content       = self::get_formatted_content( $post );
 			$attachments[] = array(
 				'type'  => 'PropertyValue',
-				'name'  => \get_the_title( $post ),
-				'value' => \html_entity_decode(
-					$content,
-					\ENT_QUOTES,
-					'UTF-8'
-				),
+				'name'  => \html_entity_decode( \get_the_title( $post ), \ENT_QUOTES, 'UTF-8' ),
+				'value' => \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' ),
 			);
 
 			$attachment = false;
