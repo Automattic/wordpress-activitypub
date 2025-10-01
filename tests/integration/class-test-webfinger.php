@@ -363,16 +363,4 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		}
 	}
 
-	/**
-	 * Helper method to check if string contains substring.
-	 *
-	 * @param string $needle   The substring to search for.
-	 * @param string $haystack The string to search in.
-	 */
-	private function assertStringContains( $needle, $haystack ) {
-		$this->assertTrue(
-			false !== strpos( $haystack, $needle ),
-			sprintf( 'Failed asserting that "%s" contains "%s"', $haystack, $needle )
-		);
-	}
 }
