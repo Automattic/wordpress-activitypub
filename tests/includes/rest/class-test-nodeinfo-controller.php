@@ -78,7 +78,7 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	 * Test get_item method with valid version.
 	 *
 	 * @covers ::get_item
-	 * @covers ::get_version_2_0
+	 * @covers ::get_version_2_X
 	 */
 	public function test_get_item() {
 		self::factory()->post->create();
