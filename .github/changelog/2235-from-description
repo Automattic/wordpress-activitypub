@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Added support for fetching actors by account identifiers and improved reliability of actor retrieval.

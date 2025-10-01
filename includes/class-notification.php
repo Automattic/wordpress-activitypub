@@ -10,7 +10,7 @@ namespace Activitypub;
 /**
  * Notification class.
  *
- * @deprecated unreleased Use action hooks like 'activitypub_handled_{type}' instead.
+ * @deprecated 7.5.0 Use action hooks like 'activitypub_handled_{type}' instead.
  */
 class Notification {
 	/**
@@ -50,7 +50,7 @@ class Notification {
 	 * @param int    $target   The WordPress User-Id.
 	 */
 	public function __construct( $type, $actor, $activity, $target ) {
-		\_deprecated_class( __CLASS__, 'unreleased', 'Use action hooks like "activitypub_handled_{type}" instead.' );
+		\_deprecated_class( __CLASS__, '7.5.0', 'Use action hooks like "activitypub_handled_{type}" instead.' );
 
 		$this->type   = $type;
 		$this->actor  = $actor;
@@ -67,7 +67,7 @@ class Notification {
 		/**
 		 * Action to send ActivityPub notifications.
 		 *
-		 * @deprecated unreleased Use "activitypub_handled_{$type}" instead.
+		 * @deprecated 7.5.0 Use "activitypub_handled_{$type}" instead.
 		 *
 		 * @param Notification $instance The notification object.
 		 */
@@ -76,7 +76,7 @@ class Notification {
 		/**
 		 * Type-specific action to send ActivityPub notifications.
 		 *
-		 * @deprecated unreleased Use "activitypub_handled_{$type}" instead.
+		 * @deprecated 7.5.0 Use "activitypub_handled_{$type}" instead.
 		 *
 		 * @param Notification $instance The notification object.
 		 */
