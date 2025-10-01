@@ -117,9 +117,9 @@ class Nodeinfo {
 	}
 
 	/**
-	 * Get all admin users with the cap activitypub.
+	 * Get all staff accounts (admin users with the "activitypub" capability) and return them in WebFinger resource format.
 	 *
-	 * @return array The list of staff accounts.
+	 * @return array List of staff accounts in WebFinger resource format.
 	 */
 	private static function get_staff() {
 		// Get all admin users with the cap activitypub.
