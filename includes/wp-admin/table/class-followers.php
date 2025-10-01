@@ -483,7 +483,7 @@ class Followers extends \WP_List_Table {
 		 * This filter allows you to modify the available row actions (such as Delete, Block, or Follow back)
 		 * for each follower item displayed in the table.
 		 *
-		 * @since unreleased
+		 * @since 7.5.0
 		 *
 		 * @param string[] $actions An array of row action links. Defaults are
 		 *                          'Delete', 'Block', and optionally 'Follow back'.

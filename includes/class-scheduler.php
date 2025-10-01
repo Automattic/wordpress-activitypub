@@ -75,7 +75,7 @@ class Scheduler {
 	 */
 	public static function register_async_batch_callback( $hook, $callback ) {
 		if ( \did_action( 'init' ) && ! \doing_action( 'init' ) ) {
-			\_doing_it_wrong( __METHOD__, 'Async batch callbacks should be registered before or during the init action.', 'unreleased' );
+			\_doing_it_wrong( __METHOD__, 'Async batch callbacks should be registered before or during the init action.', '7.5.0' );
 			return;
 		}
 

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.5.0] - 2025-10-01
+### Added
+- Added a setting to control who can quote your posts. [#2207]
+- Added support for QuoteRequest activities (FEP-044f), enabling proper handling, validation, and policy-based acceptance or rejection of quote requests. [#2240]
+- Add upgrade routine to enable ActivityPub feeds in WordPress.com Reader [#2243]
+- Add Yoast SEO integration for author archives site health check. [#2193]
+- Improved interaction policies with clearer defaults and better Mastodon compatibility. [#2221]
+- New site health check warns if active Captcha plugins may block ActivityPub comments. [#2231]
+- Sync following meta to enable RSS feed subscriptions for ActivityPub actors in WordPress.com Reader [#2226]
+- You can now follow people and see their updates right in the WordPress.com Reader when using Jetpack or WordPress.com. [#2241]
+
+### Changed
+- Added support for fetching actors by account identifiers and improved reliability of actor retrieval. [#2235]
+- Clarify error messages in account modal to specify full profile URL format. [#2209]
+- Improved checks to better identify public Activities. [#2206]
+- Improved compatibility by making the 'implements' field always use multiple entries. [#2195]
+- Improved recipient handling for clarity and improved visibility handling of activities. [#2210]
+- Remote reply blocks now sync account info across all blocks on the same page [#2211]
+- Standardized notification handling with new hooks for better extensibility and consistency. [#2223]
+- Updated sync allowlist to add support for Jetpack notifications of likes and reposts. [#2233]
+
+### Fixed
+- Fixed an issue where post metadata in the block editor was missing or failed to update. [#2232]
+- Fix Flag activity object list processing to preserve URL arrays [#2200]
+- Fix PHP warning in bulk edit scenario when post_author is missing from $_REQUEST [#2230]
+- Posts now only fall back to the blog user when blog mode is enabled and no valid author exists, ensuring content negotiation only runs if an Actor is available. [#2246]
+
 ## [7.4.0] - 2025-09-15
 ### Added
 - Add activitypub_json REST field for ap_actor posts to access raw JSON data [#2121]
@@ -1437,6 +1464,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.4.0...7.5.0
 [7.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.3.0...7.4.0
 [7.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.2.0...7.3.0
 [7.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.1.0...7.2.0
