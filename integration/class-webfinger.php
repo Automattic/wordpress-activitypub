@@ -24,8 +24,8 @@ class Webfinger {
 		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 1, 3 );
 		\add_filter( 'webfinger_data', array( self::class, 'add_pseudo_user_discovery' ), 1, 2 );
 
-		\add_filter( 'webfinger_user_data', array( self::class, 'add_interaction_links' ), 11, 2 );
-		\add_filter( 'webfinger_data', array( self::class, 'add_interaction_links' ), 11, 2 );
+		\add_filter( 'webfinger_user_data', array( self::class, 'add_interaction_links' ), 11 );
+		\add_filter( 'webfinger_data', array( self::class, 'add_interaction_links' ), 11 );
 	}
 
 	/**
@@ -116,12 +116,11 @@ class Webfinger {
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md
 	 *
-	 * @param array  $jrd  The jrd array.
-	 * @param string $uri  The WebFinger resource.
+	 * @param array $jrd  The jrd array.
 	 *
 	 * @return array The jrd array.
 	 */
-	public static function add_interaction_links( $jrd, $uri ) {
+	public static function add_interaction_links( $jrd ) {
 		if ( ! is_array( $jrd ) ) {
 			return $jrd;
 		}
