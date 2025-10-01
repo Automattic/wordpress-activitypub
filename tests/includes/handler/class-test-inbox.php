@@ -97,7 +97,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 					'actor'  => 'https://example.com/actor/1',
 				),
 				'create',
-				true,
+				false,
 				'Should handle Create activity with Note object successfully',
 			),
 			'create_person_failure'     => array(

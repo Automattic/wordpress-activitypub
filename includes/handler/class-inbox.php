@@ -60,7 +60,7 @@ class Inbox {
 
 			if ( ! is_array( $data['object'] ) ) {
 				$success = true;
-			} elseif ( ! empty( $data['object']['type'] ) && ! \in_array( \strtolower( $data['object']['type'] ), $object_types, true ) ) {
+			} elseif ( empty( $data['object']['type'] ) || ! \in_array( \strtolower( $data['object']['type'] ), $object_types, true ) ) {
 				$success = false;
 				$id      = new \WP_Error( 'activitypub_inbox_ignored', 'Activity type not configured to be persisted in inbox.' );
 			}
