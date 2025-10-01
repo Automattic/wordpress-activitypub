@@ -292,7 +292,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 					'identifier' => 'https://example.com/feed',
 				),
 				'feed_id'                 => 456,
-				'expected_url'            => 'https://wordpress.com/reader/feed/456',
+				'expected_url'            => 'https://wordpress.com/reader/feeds/456',
 				'should_have_reader_link' => true,
 			),
 			'active following without feed ID' => array(
@@ -335,7 +335,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$original_actions = array( 'edit' => '<a href="#">Edit</a>' );
 
 		// Set up WPCOM environment if expecting WPCOM-style URL.
-		$is_wpcom_test = $expected_url && strpos( $expected_url, '/reader/feed/' ) !== false;
+		$is_wpcom_test = $expected_url && strpos( $expected_url, '/reader/feeds/lookup/' ) === false;
 		if ( $is_wpcom_test && ! defined( 'IS_WPCOM' ) ) {
 			define( 'IS_WPCOM', true );
 		}
