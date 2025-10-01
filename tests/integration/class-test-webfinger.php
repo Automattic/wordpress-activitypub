@@ -362,5 +362,4 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			$this->assertArrayHasKey( 'links', $data );
 		}
 	}
-
 }
