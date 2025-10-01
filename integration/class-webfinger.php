@@ -130,10 +130,12 @@ class Webfinger {
 			'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
 		);
 
-		// Note: The parameter name `{inReplyTo}` is used here for all 'Create' intents,
-		// not just replies, to maintain compatibility with existing implementations and
-		// the FEP-3b86 specification. If a more generic parameter name is adopted in the
-		// future, this should be updated accordingly.
+		/*
+		 * Note: The parameter name `{inReplyTo}` is used here for all 'Create' intents,
+		 * not just replies, to maintain compatibility with existing implementations and
+		 * the FEP-3b86 specification. If a more generic parameter name is adopted in the
+		 * future, this should be updated accordingly.
+		 */
 		$jrd['links'][] = array(
 			'rel'      => 'https://w3id.org/fep/3b86/Create',
 			'template' => get_rest_url_by_path( 'interactions?uri={inReplyTo}&intent=create' ),
