@@ -84,7 +84,7 @@ class Inbox {
 	/**
 	 * Get the title of an activity recursively.
 	 *
-	 * @param Base_Object $activity_object The activity object.
+	 * @param Activity|Base_Object $activity_object The activity object.
 	 *
 	 * @return string The title.
 	 */

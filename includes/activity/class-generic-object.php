@@ -166,7 +166,7 @@ class Generic_Object {
 	 *
 	 * @param string $json The JSON string.
 	 *
-	 * @return Generic_Object|\WP_Error An Object built from the JSON string or WP_Error when it's not a JSON string.
+	 * @return static|\WP_Error An Object built from the JSON string or WP_Error when it's not a JSON string.
 	 */
 	public static function init_from_json( $json ) {
 		$array = \json_decode( $json, true );
@@ -183,7 +183,7 @@ class Generic_Object {
 	 *
 	 * @param array $data The object array.
 	 *
-	 * @return Generic_Object|\WP_Error An Object built from the input array or WP_Error when it's not an array.
+	 * @return static|\WP_Error An Object built from the input array or WP_Error when it's not an array.
 	 */
 	public static function init_from_array( $data ) {
 		if ( ! is_array( $data ) ) {
