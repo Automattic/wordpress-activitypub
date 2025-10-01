@@ -20,6 +20,85 @@ namespace Activitypub\Activity;
  * 'Base_' for this reason.
  *
  * @see https://www.w3.org/TR/activitystreams-core/#object
+ *
+ * @method string|null          get_attachment()         Gets the attachment property of the object.
+ * @method string|null          get_attributed_to()      Gets the entity attributed as the original author.
+ * @method string|null          get_audience()           Gets the total population of entities for which the object can be considered relevant.
+ * @method string[]|string|null get_bcc()                Gets the private secondary audience of the object.
+ * @method string[]|string|null get_bto()                Gets the private primary audience of the object.
+ * @method string[]|string|null get_cc()                 Gets the secondary recipients of the object.
+ * @method string|null          get_content()            Gets the content property of the object.
+ * @method string[]|null        get_content_map()        Gets the content map property of the object.
+ * @method string|null          get_context()            Gets the context within which the object exists.
+ * @method array|null           get_dcterms()            Gets the Dublin Core terms property of the object.
+ * @method string|null          get_duration()           Gets the duration property of time-bound resources.
+ * @method string|null          get_end_time()           Gets the date and time describing the ending time of the object.
+ * @method string|null          get_generator()          Gets the entity that generated the object.
+ * @method string[]|null        get_icon()               Gets the icon property of the object.
+ * @method string|null          get_id()                 Gets the object's unique global identifier.
+ * @method string[]|null        get_image()              Gets the image property of the object.
+ * @method string[]|string|null get_in_reply_to()        Gets the objects this object is in reply to.
+ * @method array|null           get_interaction_policy() Gets the interaction policy property of the object.
+ * @method array|null           get_likes()              Gets the collection of likes for this object.
+ * @method string|null          get_location()           Gets the physical or logical locations associated with the object.
+ * @method string|null          get_media_type()         Gets the MIME media type of the content property.
+ * @method string|null          get_name()               Gets the natural language name of the object.
+ * @method string[]|null        get_name_map()           Gets the name map property of the object.
+ * @method string|null          get_preview()            Gets the entity that provides a preview of this object.
+ * @method string|null          get_published()          Gets the date and time the object was published in ISO 8601 format.
+ * @method string|array|null    get_replies()            Gets the collection of responses to this object.
+ * @method bool|null            get_sensitive()          Gets the sensitive property of the object.
+ * @method array|null           get_shares()             Gets the collection of shares for this object.
+ * @method array|null           get_source()             Gets the source property indicating content markup derivation.
+ * @method string|null          get_start_time()         Gets the date and time describing the starting time of the object.
+ * @method string|null          get_summary()            Gets the natural language summary of the object.
+ * @method string[]|null        get_summary_map()        Gets the summary map property of the object.
+ * @method array[]|null         get_tag()                Gets the tag property of the object.
+ * @method string[]|string|null get_to()                 Gets the primary recipients of the object.
+ * @method string               get_type()               Gets the type of the object.
+ * @method string|null          get_updated()            Gets the date and time the object was updated in ISO 8601 format.
+ * @method string|null          get_url()                Gets the URL of the object.
+ *
+ * @method string|string[] add_cc( string|array $cc ) Adds one or more entities to the secondary audience of the object.
+ * @method string|string[] add_to( string|array $to ) Adds one or more entities to the primary audience of the object.
+ *
+ * @method Base_Object set_attachment( array $attachment )             Sets the attachment property of the object.
+ * @method Base_Object set_attributed_to( string $attributed_to )      Sets the entity attributed as the original author.
+ * @method Base_Object set_audience( string $audience )                Sets the total population of entities for which the object can be considered relevant.
+ * @method Base_Object set_bcc( array|string $bcc )                    Sets the private secondary audience of the object.
+ * @method Base_Object set_bto( array|string $bto )                    Sets the private primary audience of the object.
+ * @method Base_Object set_cc( array|string $cc )                      Sets the secondary recipients of the object.
+ * @method Base_Object set_content( string $content )                  Sets the content property of the object.
+ * @method Base_Object set_content_map( array $content_map )           Sets the content property of the object.
+ * @method Base_Object set_context( string $context )                  Sets the context within which the object exists.
+ * @method Base_Object set_dcterms( array $dcterms )                   Sets the Dublin Core terms property of the object.
+ * @method Base_Object set_duration( string $duration )                Sets the duration property of time-bound resources.
+ * @method Base_Object set_end_time( string $end_time )                Sets the date and time describing the ending time of the object.
+ * @method Base_Object set_generator( string $generator )              Sets the entity that generated the object.
+ * @method Base_Object set_icon( array $icon )                         Sets the icon property of the object.
+ * @method Base_Object set_id( string $id )                            Sets the object's unique global identifier.
+ * @method Base_Object set_image( array $image )                       Sets the image property of the object.
+ * @method Base_Object set_in_reply_to( string|string[] $in_reply_to ) Sets the is in reply to property of the object.
+ * @method Base_Object set_interaction_policy( array|null $policy )    Sets the interaction policy property of the object.
+ * @method Base_Object set_likes( array $likes )                       Sets the collection of likes for this object.
+ * @method Base_Object set_location( string $location )                Sets the physical or logical locations associated with the object.
+ * @method Base_Object set_media_type( string $media_type )            Sets the MIME media type of the content property.
+ * @method Base_Object set_name( string $name )                        Sets the natural language name of the object.
+ * @method Base_Object set_name_map( array|null $name_map )            Sets the name map property of the object.
+ * @method Base_Object set_preview( string $preview )                  Sets the entity that provides a preview of this object.
+ * @method Base_Object set_published( string|null $published )         Sets the date and time the object was published in ISO 8601 format.
+ * @method Base_Object set_replies( string|array $replies )            Sets the collection of responses to this object.
+ * @method Base_Object set_sensitive( bool|null $sensitive )           Sets the sensitive property of the object.
+ * @method Base_Object set_shares( array $shares )                     Sets the collection of shares for this object.
+ * @method Base_Object set_source( array $source )                     Sets the source property indicating content markup derivation.
+ * @method Base_Object set_start_time( string $start_time )            Sets the date and time describing the starting time of the object.
+ * @method Base_Object set_summary( string $summary )                  Sets the natural language summary of the object.
+ * @method Base_Object set_summary_map( array|null $summary_map )      Sets the summary property of the object.
+ * @method Base_Object set_tag( array|null $tag )                      Sets the tag property of the object.
+ * @method Base_Object set_to( string|string[] $to )                   Sets the primary recipients of the object.
+ * @method Base_Object set_type( string $type )                        Sets the type of the object.
+ * @method Base_Object set_updated( string $updated )                  Sets the date and time the object was updated in ISO 8601 format.
+ * @method Base_Object set_url( string $url )                          Sets the URL of the object.
  */
 class Base_Object extends Generic_Object {
 	/**
