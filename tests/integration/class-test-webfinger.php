@@ -246,7 +246,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'links'   => array(),
 		);
 
-		$result = Webfinger::add_interaction_links( $initial_jrd, $uri );
+		$result = Webfinger::add_interaction_links( $initial_jrd );
 
 		// Check that links were added.
 		$this->assertArrayHasKey( 'links', $result );
@@ -282,11 +282,8 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	 * @covers ::add_interaction_links
 	 */
 	public function test_add_interaction_links_templates() {
-		$user = get_user_by( 'id', self::$user_ids['author'] );
-		$uri  = 'acct:' . $user->user_login . '@' . wp_parse_url( home_url(), PHP_URL_HOST );
-
 		$initial_jrd = array( 'links' => array() );
-		$result      = Webfinger::add_interaction_links( $initial_jrd, $uri );
+		$result      = Webfinger::add_interaction_links( $initial_jrd );
 
 		// Check templates contain required placeholders.
 		foreach ( $result['links'] as $link ) {
