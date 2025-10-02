@@ -16,7 +16,6 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory as Transformer_Factory;
-use Activitypub\Transformer\Post;
 
 /**
  * Returns the ActivityPub default JSON-context.
