@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Reply block now properly validates ActivityPub URLs before setting inReplyTo field

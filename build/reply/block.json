@@ -29,6 +29,10 @@
     "embedPost": {
       "type": "boolean",
       "default": null
+    },
+    "isValidActivityPub": {
+      "type": "boolean",
+      "default": true
     }
   }
 }
