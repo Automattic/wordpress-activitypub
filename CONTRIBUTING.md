@@ -42,7 +42,7 @@ This helps us organize feedback effectively and ensures your questions get the r
 
 ## Translate the plugin
 
-If you speak a foreign language, you can help translate the ActivityPub plugin into your own language. [here is how.](docs/translations)
+If you speak a foreign language, you can help translate the ActivityPub plugin into your own language. [Here is how to get started with translating.](docs/translations.md)
 
 ## License
 
