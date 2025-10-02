@@ -44,7 +44,7 @@ class Emoji {
 	 * @return array {
 	 *      Array of emoji data with url and name keys.
 	 *
-	 *      @type string $url The URL of the emoji image.
+	 *      @type string $url  The URL of the emoji image.
 	 *      @type string $name The shortcode name of the emoji (e.g., ":emoji:").
 	 *  }
 	 */
@@ -73,7 +73,7 @@ class Emoji {
 	 * @param array $emoji_data {
 	 *      Array of emoji data with url and name keys.
 	 *
-	 *      @type string $url The URL of the emoji image.
+	 *      @type string $url  The URL of the emoji image.
 	 *      @type string $name The shortcode name of the emoji (e.g., ":emoji:").
 	 * }
 	 *
