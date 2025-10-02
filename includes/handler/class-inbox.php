@@ -58,9 +58,7 @@ class Inbox {
 			$object_types = \apply_filters( 'activitypub_persist_inbox_object_types', Base_Object::TYPES );
 			$object_types = \array_map( 'Activitypub\camel_to_snake_case', $object_types );
 
-			if ( ! is_array( $data['object'] ) ) {
-				$success = true;
-			} elseif ( empty( $data['object']['type'] ) || ! \in_array( \strtolower( $data['object']['type'] ), $object_types, true ) ) {
+			if ( is_array( $data['object'] ) && ( empty( $data['object']['type'] ) || ! \in_array( \strtolower( $data['object']['type'] ), $object_types, true ) ) ) {
 				$success = false;
 				$id      = new \WP_Error( 'activitypub_inbox_ignored', 'Activity type not configured to be persisted in inbox.' );
 			}
