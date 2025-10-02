@@ -24,7 +24,6 @@ class Webfinger {
 		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 1, 3 );
 		\add_filter( 'webfinger_data', array( self::class, 'add_pseudo_user_discovery' ), 1, 2 );
 
-		\add_filter( 'webfinger_user_data', array( self::class, 'add_interaction_links' ), 11 );
 		\add_filter( 'webfinger_data', array( self::class, 'add_interaction_links' ), 11 );
 	}
 
