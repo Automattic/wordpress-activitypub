@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed activity processing to handle QuoteRequest and other edge cases more reliably.
