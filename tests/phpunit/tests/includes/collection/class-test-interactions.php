@@ -794,9 +794,16 @@ class Test_Interactions extends \WP_UnitTestCase {
 			$comment->comment_content
 		);
 
-		// Test emoji replacement in author name.
+		// Test that shortcode is stored in database, not HTML.
+		$this->assertSame( 'Test User :kappa:', $comment->comment_author );
+
+		// Test that emoji metadata is stored.
+		$emoji_data = get_comment_meta( $comment_id, 'activitypub_author_emoji', true );
+		$this->assertNotEmpty( $emoji_data );
+
+		// Test emoji replacement on display via comment_author filter.
 		$author_with_emoji = get_comment_author( $comment_id );
-		$this->assertSame( 'Test User <img src="https://example.com/files/kappa.png" alt="kappa" class="emoji" />', $author_with_emoji );
+		$this->assertStringContainsString( '<img src="https://example.com/files/kappa.png" alt="kappa" class="emoji" />', $author_with_emoji );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $filter, 10 );
 	}
