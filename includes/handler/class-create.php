@@ -90,31 +90,21 @@ class Create {
 	 * @return bool The validation state: true if valid, false if not.
 	 */
 	public static function validate_object( $valid, $param, $request ) {
-		$json_params = $request->get_json_params();
+		$activity = $request->get_json_params();
 
-		if ( empty( $json_params['type'] ) ) {
+		if ( empty( $activity['type'] ) ) {
 			return false;
 		}
 
-		if (
-			'Create' !== $json_params['type'] ||
-			is_wp_error( $request )
-		) {
+		if ( 'Create' !== $activity['type'] ) {
 			return $valid;
 		}
 
-		$object = $json_params['object'];
-
-		if ( ! is_array( $object ) ) {
+		if ( ! isset( $activity['object'] ) || ! \is_array( $activity['object'] ) ) {
 			return false;
 		}
 
-		$required = array(
-			'id',
-			'content',
-		);
-
-		if ( array_intersect( $required, array_keys( $object ) ) !== $required ) {
+		if ( ! isset( $activity['object']['id'], $activity['object']['content'] ) ) {
 			return false;
 		}
 

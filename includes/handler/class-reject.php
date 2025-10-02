@@ -87,20 +87,17 @@ class Reject {
 	 * @return bool The validation state: true if valid, false if not.
 	 */
 	public static function validate_object( $valid, $param, $request ) {
-		$json_params = $request->get_json_params();
+		$activity = $request->get_json_params();
 
-		if ( empty( $json_params['type'] ) ) {
+		if ( empty( $activity['type'] ) ) {
 			return false;
 		}
 
-		if (
-			'Reject' !== $json_params['type'] ||
-			\is_wp_error( $request )
-		) {
+		if ( 'Reject' !== $activity['type'] ) {
 			return $valid;
 		}
 
-		if ( empty( $json_params['actor'] ) || empty( $json_params['object'] ) ) {
+		if ( ! isset( $activity['actor'], $activity['object'] ) ) {
 			return false;
 		}
 
