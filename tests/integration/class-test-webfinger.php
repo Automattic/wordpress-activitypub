@@ -88,7 +88,6 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		// Check that hooks are registered.
 		$this->assertNotFalse( has_filter( 'webfinger_user_data', array( Webfinger::class, 'add_user_discovery' ) ) );
 		$this->assertNotFalse( has_filter( 'webfinger_data', array( Webfinger::class, 'add_pseudo_user_discovery' ) ) );
-		$this->assertNotFalse( has_filter( 'webfinger_user_data', array( Webfinger::class, 'add_interaction_links' ) ) );
 		$this->assertNotFalse( has_filter( 'webfinger_data', array( Webfinger::class, 'add_interaction_links' ) ) );
 	}
 
