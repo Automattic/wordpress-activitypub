@@ -399,4 +399,123 @@ class Test_Query extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_content_negotiation' );
 		\delete_option( 'permalink_structure' );
 	}
+
+	/**
+	 * Test maybe_get_stamp method for QuoteAuthorization objects.
+	 *
+	 * @covers ::maybe_get_stamp
+	 * @covers ::get_activitypub_object
+	 * @covers ::get_activitypub_object_id
+	 */
+	public function test_maybe_get_stamp() {
+		// Create a post meta entry to simulate a quote authorization stamp.
+		$meta_id = \add_post_meta( self::$post_id, '_activitypub_quoted_by', 'https://remote.example.com/posts/456' );
+
+		// Test with valid stamp query parameter.
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . self::$post_id . '&stamp=' . $meta_id ) );
+		\set_query_var( 'stamp', $meta_id );
+
+		$query  = Query::get_instance();
+		$object = $query->get_activitypub_object();
+
+		// Test that we get a QuoteAuthorization object.
+		$this->assertNotNull( $object, 'Should create QuoteAuthorization object for valid stamp' );
+		$this->assertEquals( 'QuoteAuthorization', $object->get_type(), 'Should be QuoteAuthorization type' );
+
+		// Test the object properties.
+		$expected_id = \add_query_arg(
+			array(
+				'p'     => self::$post_id,
+				'stamp' => $meta_id,
+			),
+			\home_url( '/' )
+		);
+		$this->assertEquals( $expected_id, $object->get_id(), 'Should have correct stamp URI as ID' );
+
+		// Test object ID separately.
+		$this->assertEquals( $expected_id, $query->get_activitypub_object_id(), 'Should return correct object ID' );
+
+		// Test with invalid stamp.
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . self::$post_id . '&stamp=999999' ) );
+		\set_query_var( 'stamp', '999999' );
+
+		$query  = Query::get_instance();
+		$object = $query->get_activitypub_object();
+
+		// Should fall back to regular post object.
+		$this->assertNotNull( $object, 'Should fall back to post object for invalid stamp' );
+		$this->assertNotEquals( 'QuoteAuthorization', $object->get_type(), 'Should not be QuoteAuthorization for invalid stamp' );
+
+		// Test without stamp parameter.
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . self::$post_id ) );
+
+		$query  = Query::get_instance();
+		$object = $query->get_activitypub_object();
+
+		// Should get regular post object.
+		$this->assertNotNull( $object, 'Should get post object without stamp parameter' );
+		$this->assertNotEquals( 'QuoteAuthorization', $object->get_type(), 'Should not be QuoteAuthorization without stamp parameter' );
+
+		// Clean up.
+		\delete_post_meta( self::$post_id, '_activitypub_quoted_by' );
+	}
+
+	/**
+	 * Test maybe_get_stamp with non-existent meta ID.
+	 *
+	 * @covers ::maybe_get_stamp
+	 */
+	public function test_maybe_get_stamp_invalid_meta() {
+		// Test with non-existent meta ID.
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . self::$post_id . '&stamp=999999' ) );
+		\set_query_var( 'stamp', '999999' );
+
+		$reflection = new \ReflectionClass( Query::class );
+		$method     = $reflection->getMethod( 'maybe_get_stamp' );
+		$method->setAccessible( true );
+
+		$query  = Query::get_instance();
+		$result = $method->invoke( $query );
+
+		$this->assertFalse( $result, 'Should return false for non-existent meta ID' );
+	}
+
+	/**
+	 * Test maybe_get_stamp with invalid post author.
+	 *
+	 * @covers ::maybe_get_stamp
+	 */
+	public function test_maybe_get_stamp_invalid_author() {
+		// Create a post with invalid author.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => 999999, // Non-existent user ID.
+				'post_title'   => 'Test Post Invalid Author',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$meta_id = \add_post_meta( $post_id, '_activitypub_quoted_by', 'https://remote.example.com/posts/456' );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . $post_id . '&stamp=' . $meta_id ) );
+		\set_query_var( 'stamp', $meta_id );
+
+		$reflection = new \ReflectionClass( Query::class );
+		$method     = $reflection->getMethod( 'maybe_get_stamp' );
+		$method->setAccessible( true );
+
+		$query  = Query::get_instance();
+		$result = $method->invoke( $query );
+
+		$this->assertFalse( $result, 'Should return false for invalid post author' );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
+	}
 }

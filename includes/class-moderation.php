@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Blocked_Actors;
 
@@ -362,6 +363,7 @@ class Moderation {
 			$content_map[] = $object->get_name();
 
 			if ( is_actor( $object ) ) {
+				/* @var Actor $object Actor object */
 				$content_map[] = $object->get_preferred_username();
 			}
 

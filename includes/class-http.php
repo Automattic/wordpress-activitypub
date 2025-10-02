@@ -7,7 +7,6 @@
 
 namespace Activitypub;
 
-use WP_Error;
 use Activitypub\Collection\Actors;
 
 /**
@@ -23,7 +22,7 @@ class Http {
 	 * @param string $body    The Post Body.
 	 * @param int    $user_id The WordPress User-ID.
 	 *
-	 * @return array|WP_Error The POST Response or an WP_Error.
+	 * @return array|\WP_Error The POST Response or an WP_Error.
 	 */
 	public static function post( $url, $body, $user_id ) {
 		/**
@@ -60,7 +59,7 @@ class Http {
 		$code     = \wp_remote_retrieve_response_code( $response );
 
 		if ( $code >= 400 ) {
-			$response = new WP_Error(
+			$response = new \WP_Error(
 				$code,
 				__( 'Failed HTTP Request', 'activitypub' ),
 				array(
@@ -73,10 +72,10 @@ class Http {
 		/**
 		 * Action to save the response of the remote POST request.
 		 *
-		 * @param array|WP_Error $response The response of the remote POST request.
-		 * @param string         $url      The URL endpoint.
-		 * @param string         $body     The Post Body.
-		 * @param int            $user_id  The WordPress User-ID.
+		 * @param array|\WP_Error $response The response of the remote POST request.
+		 * @param string          $url      The URL endpoint.
+		 * @param string          $body     The Post Body.
+		 * @param int             $user_id  The WordPress User-ID.
 		 */
 		\do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
 
@@ -89,7 +88,7 @@ class Http {
 	 * @param string   $url    The URL endpoint.
 	 * @param bool|int $cached Optional. Whether the result should be cached, or its duration. Default false.
 	 *
-	 * @return array|WP_Error The GET Response or a WP_Error.
+	 * @return array|\WP_Error The GET Response or a WP_Error.
 	 */
 	public static function get( $url, $cached = false ) {
 		/**
@@ -108,8 +107,8 @@ class Http {
 				/**
 				 * Action to save the response of the remote GET request.
 				 *
-				 * @param array|WP_Error $response The response of the remote GET request.
-				 * @param string         $url      The URL endpoint.
+				 * @param array|\WP_Error $response The response of the remote GET request.
+				 * @param string          $url      The URL endpoint.
 				 */
 				\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
@@ -152,14 +151,14 @@ class Http {
 		$code     = \wp_remote_retrieve_response_code( $response );
 
 		if ( $code >= 400 ) {
-			$response = new WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+			$response = new \WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
 		}
 
 		/**
 		 * Action to save the response of the remote GET request.
 		 *
-		 * @param array|WP_Error $response The response of the remote GET request.
-		 * @param string         $url      The URL endpoint.
+		 * @param array|\WP_Error $response The response of the remote GET request.
+		 * @param string          $url      The URL endpoint.
 		 */
 		\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
@@ -204,7 +203,7 @@ class Http {
 	 * @param array|string $url_or_object The Object or the Object URL.
 	 * @param bool         $cached        Optional. Whether the result should be cached. Default true.
 	 *
-	 * @return array|WP_Error The Object data as array or WP_Error on failure.
+	 * @return array|\WP_Error The Object data as array or WP_Error on failure.
 	 */
 	public static function get_remote_object( $url_or_object, $cached = true ) {
 		/**
@@ -225,7 +224,7 @@ class Http {
 		}
 
 		if ( ! $url ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'activitypub_no_valid_actor_identifier',
 				\__( 'The "actor" identifier is not valid', 'activitypub' ),
 				array(
@@ -251,7 +250,7 @@ class Http {
 		}
 
 		if ( ! \wp_http_validate_url( $url ) ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'activitypub_no_valid_object_url',
 				\__( 'The "object" is/has no valid URL', 'activitypub' ),
 				array(
@@ -271,7 +270,7 @@ class Http {
 		$data = \json_decode( $data, true );
 
 		if ( ! $data ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'activitypub_invalid_json',
 				\__( 'No valid JSON data', 'activitypub' ),
 				array(

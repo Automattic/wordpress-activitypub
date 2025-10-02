@@ -7,13 +7,16 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Migration;
-use Activitypub\Comment;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
+use Activitypub\Comment;
+use Activitypub\Migration;
+use Activitypub\Scheduler;
 
 /**
  * Test class for Activitypub Migrate.
@@ -33,6 +36,11 @@ class Test_Migration extends \WP_UnitTestCase {
 	 * Set up the test.
 	 */
 	public static function set_up_before_class() {
+		// Mock Jetpack class if it doesn't exist.
+		if ( ! class_exists( 'Jetpack' ) ) {
+			require_once AP_TESTS_DIR . '/data/class-jetpack.php';
+		}
+
 		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
 		\remove_action( 'transition_comment_status', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity' ), 20 );
 		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
@@ -165,23 +173,6 @@ class Test_Migration extends \WP_UnitTestCase {
 		Migration::migrate_actor_mode();
 
 		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
-	}
-
-	/**
-	 * Tests scheduling of migration.
-	 *
-	 * @covers ::maybe_migrate
-	 */
-	public function test_migration_scheduling() {
-		update_option( 'activitypub_db_version', '0.0.1' );
-
-		Migration::maybe_migrate();
-
-		$schedule = \wp_next_scheduled( 'activitypub_migrate', array( '0.0.1' ) );
-		$this->assertNotFalse( $schedule );
-
-		// Clean up.
-		delete_option( 'activitypub_db_version' );
 	}
 
 	/**
@@ -396,12 +387,12 @@ class Test_Migration extends \WP_UnitTestCase {
 		Comment::register_comment_types();
 
 		// Create test comments.
-		$post_id    = $this->factory->post->create(
+		$post_id    = self::factory()->post->create(
 			array(
 				'post_author' => 1,
 			)
 		);
-		$comment_id = $this->factory->comment->create(
+		$comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => $post_id,
 				'comment_approved' => '1',
@@ -417,41 +408,6 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Clean up.
 		wp_delete_comment( $comment_id, true );
 		wp_delete_post( $post_id, true );
-	}
-
-	/**
-	 * Test update_comment_counts() with existing valid lock.
-	 *
-	 * @covers ::update_comment_counts
-	 */
-	public function test_update_comment_counts_with_existing_valid_lock() {
-		// Register comment types.
-		Comment::register_comment_types();
-
-		// Set a lock.
-		Migration::lock();
-
-		Migration::update_comment_counts( 10, 0 );
-
-		// Verify a scheduled event was created.
-		$next_scheduled = wp_next_scheduled(
-			'activitypub_update_comment_counts',
-			array(
-				'batch_size' => 10,
-				'offset'     => 0,
-			)
-		);
-		$this->assertNotFalse( $next_scheduled );
-
-		// Clean up.
-		delete_option( 'activitypub_migration_lock' );
-		wp_clear_scheduled_hook(
-			'activitypub_update_comment_counts',
-			array(
-				'batch_size' => 10,
-				'offset'     => 0,
-			)
-		);
 	}
 
 	/**
@@ -526,42 +482,15 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test async upgrade functionality.
-	 *
-	 * @covers ::async_upgrade
-	 * @covers ::lock
-	 * @covers ::unlock
-	 * @covers ::create_post_outbox_items
-	 */
-	public function test_async_upgrade() {
-		// Test that lock prevents simultaneous upgrades.
-		Migration::lock();
-		Migration::async_upgrade( 'create_post_outbox_items' );
-		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
-		$this->assertNotFalse( $scheduled );
-		Migration::unlock();
-
-		// Test scheduling next batch when callback returns more work.
-		Migration::async_upgrade( 'create_post_outbox_items', 1, 0 ); // Small batch size to force multiple batches.
-		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items', 1, 1 ) );
-		$this->assertNotFalse( $scheduled );
-
-		// Test no scheduling when callback returns null (no more work).
-		Migration::async_upgrade( 'create_post_outbox_items', 100, 1000 ); // Large offset to ensure no posts found.
-		$this->assertFalse(
-			\wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items', 100, 1100 ) )
-		);
-	}
-
-	/**
 	 * Test async upgrade with multiple arguments.
 	 *
-	 * @covers ::async_upgrade
+	 * @covers ::update_comment_counts
+	 * @covers \Activitypub\Scheduler::async_batch
 	 */
 	public function test_async_upgrade_multiple_args() {
 		// Test that multiple arguments are passed correctly.
-		Migration::async_upgrade( 'update_comment_counts', 50, 100 );
-		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'update_comment_counts', 50, 150 ) );
+		Scheduler::async_batch( array( Migration::class, 'update_comment_counts' ), 50, 100 );
+		$scheduled = \wp_next_scheduled( 'activitypub_async_batch', array( array( Migration::class, 'update_comment_counts' ), 50, 150 ) );
 		$this->assertFalse( $scheduled, 'Should not schedule next batch when no comments found' );
 	}
 
@@ -604,7 +533,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			),
 		);
 
-		$post_id = Actors::upsert( $follower );
+		$post_id = Remote_Actors::upsert( $follower );
 
 		\add_post_meta( $post_id, '_activitypub_actor_json', \wp_json_encode( $follower ) );
 
@@ -859,7 +788,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		\clean_post_cache( $follower );
 
-		$this->assertEquals( Actors::POST_TYPE, \get_post_type( $follower ) );
+		$this->assertEquals( Remote_Actors::POST_TYPE, \get_post_type( $follower ) );
 		$this->assertEquals( '5', \get_post_meta( $follower, Followers::FOLLOWER_META_KEY, true ) );
 
 		\wp_delete_post( $follower );
@@ -894,12 +823,12 @@ class Test_Migration extends \WP_UnitTestCase {
 			$remote_actor
 		);
 
-		$post_id = Actors::upsert( $actor_array );
+		$post_id = Remote_Actors::upsert( $actor_array );
 
 		\wp_update_post(
 			array(
 				'ID'           => $post_id,
-				'post_type'    => Actors::POST_TYPE,
+				'post_type'    => Remote_Actors::POST_TYPE,
 				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
 			)
 		);
@@ -957,12 +886,12 @@ class Test_Migration extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
 
-		$post_id = Actors::upsert( $actor_array );
+		$post_id = Remote_Actors::upsert( $actor_array );
 
 		\wp_update_post(
 			array(
 				'ID'           => $post_id,
-				'post_type'    => Actors::POST_TYPE,
+				'post_type'    => Remote_Actors::POST_TYPE,
 				'post_excerpt' => \sanitize_text_field( \wp_kses( $actor_array['summary'], 'user_description' ) ),
 			)
 		);
@@ -1173,5 +1102,75 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		// Clean up.
 		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test sync_jetpack_following_meta triggers actions correctly.
+	 *
+	 * @covers ::sync_jetpack_following_meta
+	 */
+	public function test_sync_jetpack_following_meta() {
+		// Create test posts with following meta.
+		$posts = self::factory()->post->create_many( 3, array( 'post_type' => Remote_Actors::POST_TYPE ) );
+
+		// Add following meta to each post.
+		\add_post_meta( $posts[0], Following::FOLLOWING_META_KEY, '123' );
+		\add_post_meta( $posts[1], Following::FOLLOWING_META_KEY, '456' );
+		\add_post_meta( $posts[2], Following::FOLLOWING_META_KEY, '789' );
+
+		// Track action calls.
+		$action_calls   = array();
+		$capture_action = function () use ( &$action_calls ) {
+			$action_calls[] = func_get_args();
+		};
+
+		\add_action( 'added_post_meta', $capture_action, 10, 4 );
+
+		// Run the migration with Jetpack available.
+		Migration::sync_jetpack_following_meta();
+
+		// Verify the correct actions were triggered.
+		$this->assertCount( 3, $action_calls, 'Should trigger action for each following meta entry' );
+
+		// Check the first action call structure.
+		$this->assertCount( 4, $action_calls[0], 'Action should be called with 4 parameters' );
+		list( $meta_id, $post_id, $meta_key, $meta_value ) = $action_calls[0];
+
+		$this->assertEquals( Following::FOLLOWING_META_KEY, $meta_key, 'Meta key should be Following::FOLLOWING_META_KEY' );
+		$this->assertIsNumeric( $meta_id, 'Meta ID should be numeric' );
+		$this->assertIsNumeric( $post_id, 'Post ID should be numeric' );
+		$this->assertContains( $meta_value, array( '123', '456', '789' ), 'Meta value should be one of the test values' );
+
+		// Clean up.
+		\remove_action( 'added_post_meta', $capture_action, 10 );
+		foreach ( $posts as $post ) {
+			\wp_delete_post( $post, true );
+		}
+	}
+
+	/**
+	 * Test sync_jetpack_following_meta with no following meta.
+	 *
+	 * @covers ::sync_jetpack_following_meta
+	 */
+	public function test_sync_jetpack_following_meta_no_entries() {
+		// Track action calls for the specific meta key we care about.
+		$following_actions = array();
+		$capture_action    = function ( $meta_id, $post_id, $meta_key, $meta_value ) use ( &$following_actions ) {
+			if ( Following::FOLLOWING_META_KEY === $meta_key ) {
+				$following_actions[] = array( $meta_id, $post_id, $meta_key, $meta_value );
+			}
+		};
+
+		\add_action( 'added_post_meta', $capture_action, 10, 4 );
+
+		// Run migration with no following meta (should not trigger our specific actions).
+		Migration::sync_jetpack_following_meta();
+
+		// Verify no following-specific actions were triggered.
+		$this->assertEmpty( $following_actions, 'No following-specific actions should be triggered when no following meta exists' );
+
+		// Clean up.
+		\remove_action( 'added_post_meta', $capture_action, 10 );
 	}
 }

@@ -107,6 +107,15 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings',
 			array( 'label_for' => 'activitypub_persist_inbox' )
 		);
+
+		\add_settings_field(
+			'activitypub_object_type',
+			\__( 'Activity-Object-Type', 'activitypub' ),
+			array( self::class, 'render_object_type_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_object_type' )
+		);
 	}
 
 	/**
@@ -276,6 +285,24 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			For now, this is only used for debugging purposes. If you have no actual need for this, please keep it disabled to avoid unnecessary database writes. Future versions may enable this feature by default.
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render object type field.
+	 */
+	public static function render_object_type_field() {
+		$value = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" name="activitypub_object_type" value="note" <?php \checked( 'note', $value ); ?> />
+				<?php \esc_html_e( 'Use Template Tags instead of letting the plugin choose the best possible format for you.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'This is mainly for backwards compatibility. It is not recommended to use the Template Tags, because it might not be supported in future versions.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

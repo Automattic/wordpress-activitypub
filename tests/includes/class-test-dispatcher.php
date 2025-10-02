@@ -9,8 +9,8 @@ namespace Activitypub\Tests;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Outbox;
 use Activitypub\Dispatcher;
 
 /**

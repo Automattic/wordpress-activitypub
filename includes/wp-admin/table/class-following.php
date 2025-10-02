@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -124,7 +125,7 @@ class Following extends \WP_List_Table {
 				}
 
 				$original = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$profile  = Actors::normalize_identifier( $original );
+				$profile  = Remote_Actors::normalize_identifier( $original );
 				if ( ! $profile ) {
 					/* translators: %s: Account profile that could not be followed */
 					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
@@ -242,7 +243,7 @@ class Following extends \WP_List_Table {
 		);
 
 		foreach ( $followings as $following ) {
-			$actor = Actors::get_actor( $following );
+			$actor = Remote_Actors::get_actor( $following );
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
@@ -253,7 +254,7 @@ class Following extends \WP_List_Table {
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
-				'webfinger'  => $this->get_webfinger( $actor ),
+				'webfinger'  => Remote_Actors::get_acct( $following->ID ),
 				'status'     => Following_Collection::check_status( $this->user_id, $following->ID ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $following->post_modified_gmt,
@@ -443,7 +444,7 @@ class Following extends \WP_List_Table {
 		$search = Webfinger::resolve( $search );
 
 		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
-			$actor = Actors::fetch_remote_by_uri( $search );
+			$actor = Remote_Actors::fetch_by_uri( $search );
 			if ( ! is_wp_error( $actor ) ) {
 				echo ' ';
 				\printf(
@@ -480,6 +481,7 @@ class Following extends \WP_List_Table {
 	 * @param array  $item        The current following item.
 	 * @param string $column_name The current column name.
 	 * @param string $primary     The primary column name.
+	 *
 	 * @return string HTML for the row actions.
 	 */
 	protected function handle_row_actions( $item, $column_name, $primary ) {
@@ -496,6 +498,18 @@ class Following extends \WP_List_Table {
 				\esc_html__( 'Unfollow', 'activitypub' )
 			),
 		);
+
+		/**
+		 * Filters the array of row action links on the Following list table.
+		 *
+		 * This filter allows you to modify the row actions for each following item in the Following list table.
+		 *
+		 * @since 7.5.0
+		 *
+		 * @param string[] $actions An array of row action links. Defaults include 'Unfollow'.
+		 * @param array    $item    The current following item.
+		 */
+		$actions = apply_filters( 'activitypub_following_row_actions', $actions, $item );
 
 		return $this->row_actions( $actions );
 	}

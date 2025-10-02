@@ -349,14 +349,17 @@ class Actors_Controller extends \WP_REST_Controller {
 							'type' => 'string',
 						),
 						'implements' => array(
-							'type'       => 'object',
-							'properties' => array(
-								'href' => array(
-									'type'   => 'string',
-									'format' => 'uri',
-								),
-								'name' => array(
-									'type' => 'string',
+							'type'  => 'array',
+							'items' => array(
+								'type'       => 'object',
+								'properties' => array(
+									'href' => array(
+										'type'   => 'string',
+										'format' => 'uri',
+									),
+									'name' => array(
+										'type' => 'string',
+									),
 								),
 							),
 						),

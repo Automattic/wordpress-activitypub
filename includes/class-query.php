@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Extended_Object\Quote_Authorization;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Transformer\Factory;
@@ -137,6 +138,10 @@ class Query {
 	 */
 	private function prepare_activitypub_data() {
 		$queried_object = $this->get_queried_object();
+
+		if ( $queried_object instanceof \WP_Post && \get_query_var( 'stamp' ) ) {
+			return $this->maybe_get_stamp();
+		}
 
 		// Check for Outbox Activity.
 		if (
@@ -311,7 +316,7 @@ class Query {
 	 */
 	public function should_negotiate_content() {
 		$return           = false;
-		$always_negotiate = array( 'p', 'c', 'author', 'actor', 'preview', 'activitypub' );
+		$always_negotiate = array( 'p', 'c', 'author', 'actor', 'stamp', 'preview', 'activitypub' );
 		$url              = \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY );
 		$query            = array();
 		\wp_parse_str( $url, $query );
@@ -367,5 +372,47 @@ class Query {
 	 */
 	public function set_old_host_request( $state = true ) {
 		$this->is_old_host_request = $state;
+	}
+
+	/**
+	 * Maybe get a QuoteAuthorization object from a stamp.
+	 *
+	 * @return bool True if the object was prepared, false otherwise.
+	 */
+	private function maybe_get_stamp() {
+		require_once ABSPATH . 'wp-admin/includes/post.php';
+
+		$stamp = \get_query_var( 'stamp' );
+		$meta  = \get_post_meta_by_id( (int) $stamp );
+
+		if ( ! $meta ) {
+			return false;
+		}
+
+		$post     = $this->get_queried_object();
+		$user_uri = get_user_id( $post->post_author );
+
+		if ( ! $user_uri ) {
+			return false;
+		}
+
+		$stamp_uri = \add_query_arg(
+			array(
+				'p'     => $post->ID,
+				'stamp' => $meta->meta_id,
+			),
+			\home_url( '/' )
+		);
+
+		$activitypub_object = new Quote_Authorization();
+		$activitypub_object->set_id( $stamp_uri );
+		$activitypub_object->set_attributed_to( $user_uri );
+		$activitypub_object->set_interacting_object( $meta->meta_value );
+		$activitypub_object->set_interaction_target( get_post_id( $post->ID ) );
+
+		$this->activitypub_object    = $activitypub_object;
+		$this->activitypub_object_id = $activitypub_object->get_id();
+
+		return true;
 	}
 }

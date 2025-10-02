@@ -7,10 +7,9 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Notification;
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\object_to_uri;
 
@@ -22,19 +21,8 @@ class Accept {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action(
-			'activitypub_inbox_accept',
-			array( self::class, 'handle_accept' ),
-			10,
-			2
-		);
-
-		\add_filter(
-			'activitypub_validate_object',
-			array( self::class, 'validate_object' ),
-			10,
-			3
-		);
+		\add_action( 'activitypub_inbox_accept', array( self::class, 'handle_accept' ), 10, 2 );
+		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
@@ -54,22 +42,24 @@ class Accept {
 			return;
 		}
 
-		$actor_post = Actors::get_remote_by_uri( object_to_uri( $accept['object']['object'] ) );
+		$actor_post = Remote_Actors::get_by_uri( object_to_uri( $accept['object']['object'] ) );
 
 		if ( \is_wp_error( $actor_post ) ) {
 			return;
 		}
 
-		Following::accept( $actor_post, $user_id );
+		$result  = Following::accept( $actor_post, $user_id );
+		$success = ! \is_wp_error( $result );
 
-		// Send notification.
-		$notification = new Notification(
-			'accept',
-			$actor_post->guid,
-			$accept,
-			$user_id
-		);
-		$notification->send();
+		/**
+		 * Fires after an ActivityPub Accept activity has been handled.
+		 *
+		 * @param array              $accept  The ActivityPub activity data.
+		 * @param int                $user_id The local user ID.
+		 * @param bool               $success True on success, false otherwise.
+		 * @param \WP_Post|\WP_Error $result  The remote actor post or error.
+		 */
+		\do_action( 'activitypub_handled_accept', $accept, $user_id, $success, $result );
 	}
 
 	/**

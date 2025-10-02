@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Stopp sending follow notifications to the Application user, since system-level accounts cannot be followed.

@@ -29,6 +29,7 @@ class Comment {
 		// Comment transitions.
 		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
 		\add_action( 'wp_insert_comment', array( self::class, 'schedule_comment_activity_on_insert' ), 10, 2 );
+		\add_action( 'delete_comment', array( self::class, 'schedule_comment_delete_activity' ), 10, 2 );
 	}
 
 	/**
@@ -67,6 +68,7 @@ class Comment {
 			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', time(), true );
 		} elseif (
 			'trash' === $new_status ||
+			( 'delete' === $new_status && '' === $old_status ) || // Went through schedule_comment_delete_activity().
 			'spam' === $new_status
 		) {
 			$type = 'Delete';
@@ -133,6 +135,19 @@ class Comment {
 	public static function schedule_comment_activity_on_insert( $comment_id, $comment ) {
 		if ( 1 === (int) $comment->comment_approved ) {
 			self::schedule_comment_activity( 'approved', '', $comment );
+		}
+	}
+
+	/**
+	 * Schedule Delete activity when a comment is permanently deleted.
+	 *
+	 * @param int         $comment_id Comment ID.
+	 * @param \WP_Comment $comment    Comment object.
+	 */
+	public static function schedule_comment_delete_activity( $comment_id, $comment ) {
+		// Only send Delete activities for comments that were previously federated.
+		if ( Comment_Utils::was_sent( $comment ) ) {
+			self::schedule_comment_activity( 'delete', '', $comment );
 		}
 	}
 }

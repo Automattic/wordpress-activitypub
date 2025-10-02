@@ -7,9 +7,6 @@
 
 namespace Activitypub\WP_Admin\Table;
 
-use Activitypub\Activity\Actor;
-use Activitypub\Webfinger;
-
 /**
  * Actor Table Trait.
  */
@@ -27,26 +24,6 @@ trait Actor_List_Table {
 		$search = \str_replace( '@', ' ', $search );
 
 		return \trim( $search );
-	}
-
-	/**
-	 * Returns the WebFinger of an actor.
-	 *
-	 * Falls back to the preferred username if the WebFinger lookup fails or
-	 * tries to extract the username from the profile URL.
-	 *
-	 * @param Actor $actor The actor object.
-	 *
-	 * @return string The WebFinger of the actor.
-	 */
-	public function get_webfinger( $actor ) {
-		$webfinger = Webfinger::uri_to_acct( $actor->get_id() );
-
-		if ( ! \is_wp_error( $webfinger ) ) {
-			return $webfinger;
-		}
-
-		return Webfinger::guess( $actor );
 	}
 
 	/**

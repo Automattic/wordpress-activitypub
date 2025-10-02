@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 7.3.0
+ * Version: 7.5.0
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -17,7 +17,7 @@
 
 namespace Activitypub;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '7.3.0' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '7.5.0' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -55,7 +55,6 @@ function rest_init() {
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
-	( new Rest\URL_Validator_Controller() )->register_routes();
 	( new Rest\Webfinger_Controller() )->register_routes();
 
 	// Load NodeInfo endpoints only if blog is public.
@@ -81,6 +80,8 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ), 1 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Move', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Options', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Post_Types', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Router', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );

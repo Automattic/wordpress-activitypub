@@ -10,8 +10,8 @@ namespace Activitypub\Collection;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 
-use function Activitypub\object_to_uri;
 use function Activitypub\is_activity_public;
+use function Activitypub\object_to_uri;
 
 /**
  * ActivityPub Inbox Collection
@@ -84,7 +84,7 @@ class Inbox {
 	/**
 	 * Get the title of an activity recursively.
 	 *
-	 * @param Base_Object $activity_object The activity object.
+	 * @param Activity|Base_Object $activity_object The activity object.
 	 *
 	 * @return string The title.
 	 */

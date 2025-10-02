@@ -7,11 +7,12 @@
 
 namespace Activitypub;
 
-use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory;
 
 /**
@@ -24,11 +25,12 @@ class Migration {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
-		\add_action( 'activitypub_upgrade', array( self::class, 'async_upgrade' ), 10, 99 );
-		\add_action( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ), 10, 2 );
-
 		self::maybe_migrate();
+
+		Scheduler::register_async_batch_callback( 'activitypub_migrate_from_0_17', array( self::class, 'migrate_from_0_17' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_create_post_outbox_items', array( self::class, 'create_post_outbox_items' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_create_comment_outbox_items', array( self::class, 'create_comment_outbox_items' ) );
 	}
 
 	/**
@@ -122,12 +124,11 @@ class Migration {
 			$version_from_db = ACTIVITYPUB_PLUGIN_VERSION;
 		}
 
-		// Schedule the async migration.
-		if ( ! \wp_next_scheduled( 'activitypub_migrate', $version_from_db ) ) {
-			\wp_schedule_single_event( \time(), 'activitypub_migrate', array( $version_from_db ) );
-		}
 		if ( \version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
+		}
+		if ( \version_compare( $version_from_db, '1.0.0', '<' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_migrate_from_0_17' );
 		}
 		if ( \version_compare( $version_from_db, '1.3.0', '<' ) ) {
 			self::migrate_from_1_2_0();
@@ -160,8 +161,9 @@ class Migration {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.0.0', '<' ) ) {
-			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
-			\wp_schedule_single_event( \time() + 15, 'activitypub_upgrade', array( 'create_comment_outbox_items' ) );
+			Scheduler::register_schedules();
+			\wp_schedule_single_event( \time(), 'activitypub_create_post_outbox_items' );
+			\wp_schedule_single_event( \time() + 15, 'activitypub_create_comment_outbox_items' );
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.4.0', '<' ) ) {
@@ -203,6 +205,10 @@ class Migration {
 			self::remove_pending_application_user_follow_requests();
 		}
 
+		if ( \version_compare( $version_from_db, '7.5.0', '<' ) ) {
+			self::sync_jetpack_following_meta();
+		}
+
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
 
@@ -229,49 +235,6 @@ class Migration {
 		\update_option( 'activitypub_db_version', ACTIVITYPUB_PLUGIN_VERSION );
 
 		self::unlock();
-	}
-
-	/**
-	 * Asynchronously migrates the database structure.
-	 *
-	 * @param string $version_from_db The version from which to migrate.
-	 */
-	public static function async_migration( $version_from_db ) {
-		if ( \version_compare( $version_from_db, '1.0.0', '<' ) ) {
-			self::migrate_from_0_17();
-		}
-	}
-
-	/**
-	 * Asynchronously runs upgrade routines.
-	 *
-	 * @param callable $callback Callable upgrade routine. Must be a method of this class.
-	 * @params mixed   ...$args  Optional. Parameters that get passed to the callback.
-	 */
-	public static function async_upgrade( $callback ) {
-		$args = \func_get_args();
-
-		// Bail if the existing lock is still valid.
-		if ( self::is_locked() ) {
-			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_upgrade', $args );
-			return;
-		}
-
-		self::lock();
-
-		$callback = array_shift( $args ); // Remove $callback from arguments.
-		$next     = \call_user_func_array( array( self::class, $callback ), $args );
-
-		self::unlock();
-
-		if ( ! empty( $next ) ) {
-			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event(
-				\time() + 30,
-				'activitypub_upgrade',
-				\array_merge( array( $callback ), \array_values( $next ) )
-			);
-		}
 	}
 
 	/**
@@ -502,7 +465,7 @@ class Migration {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB
 		$followers = $wpdb->get_col(
-			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Actors::POST_TYPE )
+			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Remote_Actors::POST_TYPE )
 		);
 		foreach ( $followers as $id ) {
 			clean_post_cache( $id );
@@ -515,24 +478,11 @@ class Migration {
 	 * @see Comment::pre_wp_update_comment_count_now()
 	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
 	 * @param int $offset     Optional. Number of posts to skip. Default 0.
+	 *
+	 * @return int[]|void Array with batch size and offset if there are more posts to process.
 	 */
 	public static function update_comment_counts( $batch_size = 100, $offset = 0 ) {
 		global $wpdb;
-
-		// Bail if the existing lock is still valid.
-		if ( self::is_locked() ) {
-			\wp_schedule_single_event(
-				time() + ( 5 * MINUTE_IN_SECONDS ),
-				'activitypub_update_comment_counts',
-				array(
-					'batch_size' => $batch_size,
-					'offset'     => $offset,
-				)
-			);
-			return;
-		}
-
-		self::lock();
 
 		Comment::register_comment_types();
 		$comment_types  = Comment::get_comment_type_slugs();
@@ -554,17 +504,8 @@ class Migration {
 
 		if ( count( $post_ids ) === $batch_size ) {
 			// Schedule next batch.
-			\wp_schedule_single_event(
-				time() + MINUTE_IN_SECONDS,
-				'activitypub_update_comment_counts',
-				array(
-					'batch_size' => $batch_size,
-					'offset'     => $offset + $batch_size,
-				)
-			);
+			return array( $batch_size, $offset + $batch_size );
 		}
-
-		self::unlock();
 	}
 
 	/**
@@ -986,7 +927,7 @@ class Migration {
 
 		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->posts,
-			array( 'post_type' => Actors::POST_TYPE ),
+			array( 'post_type' => Remote_Actors::POST_TYPE ),
 			array( 'post_type' => 'ap_follower' ),
 			array( '%s' ),
 			array( '%s' )
@@ -1074,5 +1015,40 @@ class Migration {
 				'meta_value' => Actors::APPLICATION_USER_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			)
 		);
+	}
+
+	/**
+	 * Sync Jetpack meta for all followings.
+	 *
+	 * Replays the added_post_meta sync action for Jetpack with the Following::FOLLOWING_META_KEY meta key.
+	 */
+	public static function sync_jetpack_following_meta() {
+		if ( ! \class_exists( 'Jetpack' ) || ! \Jetpack::is_connection_ready() ) {
+			return;
+		}
+
+		global $wpdb;
+
+		// Get all posts that have the following meta key.
+		$posts_with_following = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT meta_id, post_id, meta_key, meta_value FROM {$wpdb->postmeta} WHERE meta_key = %s",
+				Following::FOLLOWING_META_KEY
+			),
+			ARRAY_N
+		);
+
+		// Trigger the added_post_meta action for each following relationship.
+		foreach ( $posts_with_following as $meta ) {
+			/**
+			 * Fires when post meta is added.
+			 *
+			 * @param int    $meta_id    ID of the metadata entry.
+			 * @param int    $object_id  Post ID.
+			 * @param string $meta_key   Metadata key.
+			 * @param mixed  $meta_value Metadata value.
+			 */
+			\do_action( 'added_post_meta', ...$meta );
+		}
 	}
 }

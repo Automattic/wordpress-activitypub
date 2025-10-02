@@ -26,6 +26,7 @@ class Options {
 
 		\add_filter( 'default_option_activitypub_negotiate_content', array( self::class, 'default_option_activitypub_negotiate_content' ) );
 		\add_filter( 'option_activitypub_max_image_attachments', array( self::class, 'default_max_image_attachments' ) );
+		\add_filter( 'option_activitypub_object_type', array( self::class, 'default_object_type' ) );
 	}
 
 	/**
@@ -134,21 +135,6 @@ class Options {
 	}
 
 	/**
-	 * Default max image attachments.
-	 *
-	 * @param string $value The value of the option.
-	 *
-	 * @return string|int The value of the option.
-	 */
-	public static function default_max_image_attachments( $value ) {
-		if ( ! \is_numeric( $value ) ) {
-			$value = ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
-		}
-
-		return $value;
-	}
-
-	/**
 	 * Default option filter for the Content-Negotiation.
 	 *
 	 * @see https://github.com/Automattic/wordpress-activitypub/wiki/Caching
@@ -173,5 +159,35 @@ class Options {
 		}
 
 		return $default_value;
+	}
+
+	/**
+	 * Default max image attachments.
+	 *
+	 * @param string $value The value of the option.
+	 *
+	 * @return string|int The value of the option.
+	 */
+	public static function default_max_image_attachments( $value ) {
+		if ( ! \is_numeric( $value ) ) {
+			$value = ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Default object type.
+	 *
+	 * @param string $value The value of the option.
+	 *
+	 * @return string The value of the option.
+	 */
+	public static function default_object_type( $value ) {
+		if ( ! $value ) {
+			$value = ACTIVITYPUB_DEFAULT_OBJECT_TYPE;
+		}
+
+		return $value;
 	}
 }

@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin\Table;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Blocked_Actors as Blocked_Actors_Collection;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -123,7 +124,7 @@ class Blocked_Actors extends \WP_List_Table {
 				}
 
 				$original = \sanitize_text_field( \wp_unslash( $_REQUEST['activitypub-profile'] ) );
-				$profile  = Actors::normalize_identifier( $original );
+				$profile  = Remote_Actors::normalize_identifier( $original );
 				if ( ! $profile ) {
 					/* translators: %s: Account profile that could not be blocked */
 					\add_settings_error( 'activitypub', 'blocked', \sprintf( \__( 'Unable to block actor &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $original ) ) );
@@ -222,7 +223,7 @@ class Blocked_Actors extends \WP_List_Table {
 		);
 
 		foreach ( $blocked_actor_posts as $blocked_actor_post ) {
-			$actor = Actors::get_actor( $blocked_actor_post );
+			$actor = Remote_Actors::get_actor( $blocked_actor_post );
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
@@ -233,7 +234,7 @@ class Blocked_Actors extends \WP_List_Table {
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
-				'webfinger'  => $this->get_webfinger( $actor ),
+				'webfinger'  => Remote_Actors::get_acct( $blocked_actor_post->ID ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $blocked_actor_post->post_modified_gmt,
 			);
@@ -343,7 +344,7 @@ class Blocked_Actors extends \WP_List_Table {
 		$search = Webfinger::resolve( $search );
 
 		if ( ! \is_wp_error( $search ) && \filter_var( $search, FILTER_VALIDATE_URL ) ) {
-			$actor = Actors::fetch_remote_by_uri( $search );
+			$actor = Remote_Actors::fetch_by_uri( $search );
 			if ( ! \is_wp_error( $actor ) ) {
 				echo ' ';
 				\printf(
@@ -395,6 +396,19 @@ class Blocked_Actors extends \WP_List_Table {
 				\esc_html__( 'Unblock', 'activitypub' )
 			),
 		);
+
+		/**
+		 * Filters the array of row action links on the Blocked Actors list table.
+		 *
+		 * This filter is evaluated for each blocked actor item in the list table.
+		 *
+		 * @since 7.5.0
+		 *
+		 * @param string[] $actions An array of row action links. Defaults are
+		 *                          'Unblock'.
+		 * @param array    $item    The current blocked actor item.
+		 */
+		$actions = apply_filters( 'activitypub_blocked_actors_row_actions', $actions, $item );
 
 		return $this->row_actions( $actions );
 	}

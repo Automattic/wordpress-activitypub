@@ -473,7 +473,7 @@ class Comment {
 		}
 
 		// Generate URI based on comment ID.
-		return \add_query_arg( 'c', $comment->comment_ID, \trailingslashit( \home_url() ) );
+		return \add_query_arg( 'c', $comment->comment_ID, \home_url( '/' ) );
 	}
 
 	/**
@@ -560,6 +560,12 @@ class Comment {
 	 * @return array The registered custom comment type slugs.
 	 */
 	public static function get_comment_type_slugs() {
+		if ( ! did_action( 'init' ) ) {
+			_doing_it_wrong( __METHOD__, 'This function should not be called before the init action has run. Comment types are only available after init.', '7.5.0' );
+
+			return array();
+		}
+
 		return array_keys( self::get_comment_types() );
 	}
 

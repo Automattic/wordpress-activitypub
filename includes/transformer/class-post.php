@@ -7,21 +7,21 @@
 
 namespace Activitypub\Transformer;
 
+use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Replies;
 use Activitypub\Collection\Interactions;
-use Activitypub\Http;
+use Activitypub\Collection\Replies;
 use Activitypub\Model\Blog;
 use Activitypub\Shortcodes;
 
 use function Activitypub\esc_hashtag;
-use function Activitypub\is_single_user;
-use function Activitypub\get_enclosures;
-use function Activitypub\get_content_warning;
-use function Activitypub\get_rest_url_by_path;
-use function Activitypub\site_supports_blocks;
 use function Activitypub\generate_post_summary;
 use function Activitypub\get_content_visibility;
+use function Activitypub\get_content_warning;
+use function Activitypub\get_enclosures;
+use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_single_user;
+use function Activitypub\site_supports_blocks;
 
 /**
  * WordPress Post Transformer.
@@ -75,6 +75,22 @@ class Post extends Base {
 	}
 
 	/**
+	 * Get the Interaction Policy.
+	 *
+	 * @see https://docs.gotosocial.org/en/latest/federation/interaction_policy/
+	 *
+	 * @return array The interaction policy.
+	 */
+	public function get_interaction_policy() {
+		return array(
+			'canAnnounce' => $this->get_public_interaction_policy(),
+			'canLike'     => $this->get_public_interaction_policy(),
+			'canQuote'    => $this->get_quote_policy(),
+			'canReply'    => $this->get_public_interaction_policy(),
+		);
+	}
+
+	/**
 	 * Returns the User-Object of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the Blog-User is returned.
@@ -114,7 +130,7 @@ class Post extends Base {
 
 		if ( $post_id > $last_legacy_id ) {
 			// Generate URI based on post ID.
-			return \add_query_arg( 'p', $post_id, \trailingslashit( \home_url() ) );
+			return \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 		}
 
 		return $this->get_url();
@@ -497,6 +513,10 @@ class Post extends Base {
 
 		global $post;
 
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$post    = $this->item;
+		$content = $this->get_post_content_template();
+
 		/**
 		 * Provides an action hook so plugins can add their own hooks/filters before AP content is generated.
 		 *
@@ -505,13 +525,6 @@ class Post extends Base {
 		 * @param \WP_Post $post The post object.
 		 */
 		\do_action( 'activitypub_before_get_content', $post );
-
-		\add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
-		\add_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ), 10, 2 );
-
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$post    = $this->item;
-		$content = $this->get_post_content_template();
 
 		// It seems that shortcodes are only applied to published posts.
 		if ( is_preview() ) {
@@ -529,26 +542,22 @@ class Post extends Base {
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content = \trim( $content );
 
+		// Don't need these anymore, should never appear in a post.
+		Shortcodes::unregister();
+
 		/**
 		 * Filters the post content after it was transformed for ActivityPub.
 		 *
 		 * @param string   $content The transformed post content.
 		 * @param \WP_Post $post    The post object being transformed.
 		 */
-		$content = \apply_filters( 'activitypub_the_content', $content, $post );
-
-		// Don't need these anymore, should never appear in a post.
-		Shortcodes::unregister();
-
-		// Remove filters.
-		\remove_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ) );
-		\remove_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ) );
-
-		return $content;
+		return \apply_filters( 'activitypub_the_content', $content, $post );
 	}
 
 	/**
 	 * Generate HTML @ link for reply block.
+	 *
+	 * @deprecated 7.4.0 Use {@see Blocks::generate_reply_link()}.
 	 *
 	 * @param string $block_content The block content.
 	 * @param array  $block         The block data.
@@ -556,51 +565,9 @@ class Post extends Base {
 	 * @return string The HTML @ link.
 	 */
 	public function generate_reply_link( $block_content, $block ) {
-		// Return empty string if no URL is provided.
-		if ( empty( $block['attrs']['url'] ) ) {
-			return '';
-		}
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Blocks::generate_reply_link' );
 
-		$url = $block['attrs']['url'];
-
-		// Try to get ActivityPub representation. Is likely already cached.
-		$object = Http::get_remote_object( $url );
-		if ( \is_wp_error( $object ) ) {
-			return '';
-		}
-
-		$author_url = $object['attributedTo'] ?? '';
-		if ( ! $author_url ) {
-			return '';
-		}
-
-		// Fetch author information.
-		$author = Http::get_remote_object( $author_url );
-		if ( \is_wp_error( $author ) ) {
-			return '';
-		}
-
-		// Get webfinger identifier.
-		$webfinger = '';
-		if ( ! empty( $author['webfinger'] ) ) {
-			$webfinger = \str_replace( 'acct:', '', $author['webfinger'] );
-		} elseif ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
-			// Construct webfinger-style identifier from username and domain.
-			$domain    = \wp_parse_url( $author['url'], PHP_URL_HOST );
-			$webfinger = '@' . $author['preferredUsername'] . '@' . $domain;
-		}
-
-		if ( ! $webfinger ) {
-			return '';
-		}
-
-		// Generate HTML @ link.
-		return \sprintf(
-			'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
-			\esc_url( $url ),
-			\esc_attr( $webfinger ),
-			\esc_html( '@' . strtok( $webfinger, '@' ) )
-		);
+		return Blocks::generate_reply_link( $block_content, $block );
 	}
 
 	/**
@@ -615,16 +582,25 @@ class Post extends Base {
 			return null;
 		}
 
-		$blocks = \parse_blocks( $this->item->post_content );
+		$reply_urls = array();
+		$blocks     = \parse_blocks( $this->item->post_content );
 
 		foreach ( $blocks as $block ) {
 			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) ) {
 				// We only support one reply block per post for now.
-				return $block['attrs']['url'];
+				$reply_urls[] = $block['attrs']['url'];
 			}
 		}
 
-		return null;
+		if ( empty( $reply_urls ) ) {
+			return null;
+		}
+
+		if ( 1 === count( $reply_urls ) ) {
+			return \current( $reply_urls );
+		}
+
+		return \array_values( \array_unique( $reply_urls ) );
 	}
 
 	/**
@@ -682,6 +658,8 @@ class Post extends Base {
 	 *
 	 * Remote servers will simply drop iframe elements, rendering incomplete content.
 	 *
+	 * @deprecated 7.4.0 Use {@see Blocks::revert_embed_links()}.
+	 *
 	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
 	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
 	 *
@@ -691,10 +669,9 @@ class Post extends Base {
 	 * @return string A block level link
 	 */
 	public function revert_embed_links( $block_content, $block ) {
-		if ( ! isset( $block['attrs']['url'] ) ) {
-			return $block_content;
-		}
-		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Blocks::revert_embed_links' );
+
+		return Blocks::revert_embed_links( $block_content, $block );
 	}
 
 	/**
@@ -988,5 +965,56 @@ class Post extends Base {
 			'type'    => 'Note',
 			'content' => $this->get_summary(),
 		);
+	}
+
+	/**
+	 * Get the quote policy.
+	 *
+	 * @return array The quote policy.
+	 */
+	private function get_quote_policy() {
+		switch ( \get_post_meta( $this->item->ID, 'activitypub_interaction_policy_quote', true ) ) {
+			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
+				return array( 'automaticApproval' => get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->item->post_author ) ) );
+
+			case ACTIVITYPUB_INTERACTION_POLICY_ME:
+				return array( 'automaticApproval' => $this->get_self_interaction_policy() );
+
+			default:
+				return $this->get_public_interaction_policy();
+		}
+	}
+
+	/**
+	 * Get the public interaction policy.
+	 *
+	 * @return array The public interaction policy.
+	 */
+	private function get_public_interaction_policy() {
+		return array(
+			'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
+			'always'            => 'https://www.w3.org/ns/activitystreams#Public',
+		);
+	}
+
+	/**
+	 * Get the actor ID(s) for the `me` audience for use in interaction policies.
+	 *
+	 * @return string|array The actor ID(s).
+	 */
+	private function get_self_interaction_policy() {
+		switch ( \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
+			case ACTIVITYPUB_BLOG_MODE:
+				return ( new Blog() )->get_id();
+
+			case ACTIVITYPUB_ACTOR_AND_BLOG_MODE:
+				return array(
+					$this->get_actor_object()->get_id(),
+					( new Blog() )->get_id(),
+				);
+
+			default:
+				return $this->get_actor_object()->get_id();
+		}
 	}
 }

@@ -70,129 +70,99 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the get_type method returns note for short content.
+	 * Test get_type method with various scenarios.
 	 *
+	 * @dataProvider get_type_provider
 	 * @covers ::get_type
-	 */
-	public function test_get_type_returns_note_for_short_content() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => 'Test Post',
-				'post_content' => 'Short content',
-			)
-		);
-		$post    = get_post( $post_id );
-
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
-
-		$this->assertSame( 'Note', $type );
-	}
-
-	/**
-	 * Test that the get_type method returns note for posts without title.
 	 *
-	 * @covers ::get_type
+	 * @param array  $post_data      The post data to create.
+	 * @param string $post_format    The post format to set (or null).
+	 * @param string $expected_type  The expected ActivityPub type.
+	 * @param string $description    Description of the test case.
 	 */
-	public function test_get_type_returns_note_for_posts_without_title() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => '',
-				'post_content' => str_repeat( 'Long content. ', 100 ),
-			)
-		);
-		$post    = get_post( $post_id );
+	public function test_get_type( $post_data, $post_format, $expected_type, $description ) {
+		$post_id = $this->factory->post->create( $post_data );
 
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
+		if ( $post_format ) {
+			set_post_format( $post_id, $post_format );
+		}
 
-		$this->assertSame( 'Note', $type );
-	}
-
-	/**
-	 * Test that the get_type method returns article for standard post format.
-	 *
-	 * @covers ::get_type
-	 */
-	public function test_get_type_returns_article_for_standard_post_format() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => 'Test Post',
-				'post_content' => str_repeat( 'Long content. ', 100 ),
-				'post_type'    => 'post',
-			)
-		);
-		set_post_format( $post_id, 'standard' );
 		$post = get_post( $post_id );
 
 		$transformer = new Post( $post );
 		$type        = $this->reflection_method->invoke( $transformer );
 
-		$this->assertSame( 'Article', $type );
+		$this->assertSame( $expected_type, $type, $description );
 	}
 
 	/**
-	 * Test that the get_type method returns page for page post type.
+	 * Data provider for get_type tests.
 	 *
-	 * @covers ::get_type
+	 * @return array Test cases with post data, post format, expected type, and description.
 	 */
-	public function test_get_type_returns_page_for_page_post_type() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => 'Test Page',
-				'post_content' => str_repeat( 'Long content. ', 100 ),
-				'post_type'    => 'page',
-			)
+	public function get_type_provider() {
+		$long_content = str_repeat( 'Long content. ', 100 );
+
+		return array(
+			'short_content'        => array(
+				array(
+					'post_title'   => 'Test Post',
+					'post_content' => 'Short content',
+				),
+				null,
+				'Note',
+				'Should return Note for short content',
+			),
+			'no_title'             => array(
+				array(
+					'post_title'   => '',
+					'post_content' => $long_content,
+				),
+				null,
+				'Note',
+				'Should return Note for posts without title',
+			),
+			'standard_post_format' => array(
+				array(
+					'post_title'   => 'Test Post',
+					'post_content' => $long_content,
+					'post_type'    => 'post',
+				),
+				'standard',
+				'Article',
+				'Should return Article for standard post format',
+			),
+			'page_post_type'       => array(
+				array(
+					'post_title'   => 'Test Page',
+					'post_content' => $long_content,
+					'post_type'    => 'page',
+				),
+				null,
+				'Page',
+				'Should return Page for page post type',
+			),
+			'aside_post_format'    => array(
+				array(
+					'post_title'   => 'Test Post',
+					'post_content' => $long_content,
+					'post_type'    => 'post',
+				),
+				'aside',
+				'Note',
+				'Should return Note for non-standard post format',
+			),
+			'default_post_format'  => array(
+				array(
+					'post_title'   => 'Test Post',
+					'post_content' => $long_content,
+					'post_type'    => 'post',
+				),
+				null,
+				'Article',
+				'Should return Article for default post format',
+			),
 		);
-		$post    = get_post( $post_id );
-
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
-
-		$this->assertSame( 'Page', $type );
-	}
-
-	/**
-	 * Test that the get_type method returns note for non-standard post format.
-	 *
-	 * @covers ::get_type
-	 */
-	public function test_get_type_returns_note_for_non_standard_post_format() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => 'Test Post',
-				'post_content' => str_repeat( 'Long content. ', 100 ),
-				'post_type'    => 'post',
-			)
-		);
-		set_post_format( $post_id, 'aside' );
-		$post = get_post( $post_id );
-
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
-
-		$this->assertSame( 'Note', $type );
-	}
-
-	/**
-	 * Test that the get_type method returns note for missing post format.
-	 *
-	 * @covers ::get_type
-	 */
-	public function test_get_type_handles_missing_post_format() {
-		$post_id = $this->factory->post->create(
-			array(
-				'post_title'   => 'Test Post',
-				'post_content' => str_repeat( 'Long content. ', 100 ),
-				'post_type'    => 'post',
-			)
-		);
-		$post    = get_post( $post_id );
-
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
-
-		$this->assertSame( 'Article', $type );
 	}
 
 	/**
@@ -700,7 +670,8 @@ class Test_Post extends \WP_UnitTestCase {
 		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ), 10, 2 );
 
 		$transformer = new Post( self::factory()->post->create_and_get() );
-		$reply_link  = $transformer->generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
+		$this->setExpectedDeprecated( 'Activitypub\Transformer\Post::generate_reply_link' );
+		$reply_link = $transformer->generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
 
 		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
 
@@ -774,5 +745,291 @@ class Test_Post extends \WP_UnitTestCase {
 		$object = $get_content->invoke( new Post( $post ), $object );
 
 		$this->assertEmpty( $object->get_content() );
+	}
+
+	/**
+	 * Test that reply blocks get transformed into mention links when they are the first block in a post.
+	 *
+	 * @covers ::to_object
+	 * @covers ::get_content
+	 */
+	public function test_reply_block_transforms_to_mention_link_when_first_block() {
+		// Set up a filter to intercept HTTP requests for remote objects.
+		$filter_remote_object = function ( $pre, $url ) {
+			if ( 'https://example.com/posts/123' === $url ) {
+				return array(
+					'attributedTo' => 'https://example.com/users/author',
+				);
+			} elseif ( 'https://example.com/users/author' === $url ) {
+				return array(
+					'preferredUsername' => 'author',
+					'url'               => 'https://example.com/users/author',
+				);
+			}
+			return $pre;
+		};
+
+		add_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object, 10, 2 );
+
+		// Create a post with a reply block as the first block.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Reply Post',
+				'post_content' => '<!-- wp:activitypub/reply {"url":"https://example.com/posts/123"} /-->' . PHP_EOL .
+									'<!-- wp:paragraph --><p>This is a test post with a reply block first.</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Transform the post to an ActivityPub object.
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		// Assert that the reply block was transformed into a mention link.
+		$this->assertStringContainsString( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
+
+		// Clean up.
+		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
+	}
+
+	/**
+	 * Test that reply blocks do not get transformed into mention links when they are not the first block in a post.
+	 *
+	 * @covers ::to_object
+	 * @covers ::get_content
+	 */
+	public function test_reply_block_not_transformed_when_not_first_block() {
+		// Create a post with a reply block that is not the first block.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Reply Post',
+				'post_content' => '<!-- wp:paragraph --><p>This is a test post with a reply block that is not first.</p><!-- /wp:paragraph -->' . PHP_EOL .
+									'<!-- wp:activitypub/reply {"url":"https://example.com/posts/123"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Transform the post to an ActivityPub object.
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		// Get the content from the object.
+		$content = $object->get_content();
+
+		// Assert that the reply block was not transformed into a mention link.
+		$this->assertStringContainsString( '<div class="activitypub-reply-block wp-block-activitypub-reply" aria-label="Reply" data-in-reply-to="https://example.com/posts/123"><p><a title="This post is a response to the referenced content." aria-label="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to" target="_blank">&#8620;example.com/posts/123</a></p></div>', $content );
+	}
+
+	/**
+	 * Test that when multiple reply blocks exist, only the first one gets transformed to @-mention.
+	 *
+	 * @covers ::to_object
+	 * @covers ::get_content
+	 */
+	public function test_multiple_reply_blocks_only_first_becomes_mention() {
+		// Set up a filter to intercept HTTP requests for remote objects.
+		$filter_remote_object = function ( $pre, $url ) {
+			if ( 'https://example.com/posts/123' === $url ) {
+				return array(
+					'attributedTo' => 'https://example.com/users/author1',
+				);
+			} elseif ( 'https://example.com/users/author1' === $url ) {
+				return array(
+					'preferredUsername' => 'author1',
+					'url'               => 'https://example.com/users/author1',
+				);
+			} elseif ( 'https://other.site/posts/456' === $url ) {
+				return array(
+					'attributedTo' => 'https://other.site/users/author2',
+				);
+			} elseif ( 'https://other.site/users/author2' === $url ) {
+				return array(
+					'preferredUsername' => 'author2',
+					'url'               => 'https://other.site/users/author2',
+				);
+			}
+			return $pre;
+		};
+
+		add_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object, 10, 2 );
+
+		// Create a post with two reply blocks - first one should become @-mention, second should remain as link.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Multiple Reply Post',
+				'post_content' => '<!-- wp:activitypub/reply {"url":"https://example.com/posts/123"} /-->' . PHP_EOL .
+									'<!-- wp:paragraph --><p>This is a response to the first post, but also references another post.</p><!-- /wp:paragraph -->' . PHP_EOL .
+									'<!-- wp:activitypub/reply {"url":"https://other.site/posts/456"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Transform the post to an ActivityPub object.
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		// Get the content from the object.
+		$content = $object->get_content();
+
+		// Assert that the first reply block was transformed into a mention link.
+		$this->assertStringContainsString( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
+
+		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
+		$this->assertStringContainsString( '<div class="activitypub-reply-block wp-block-activitypub-reply" aria-label="Reply" data-in-reply-to="https://other.site/posts/456"><p><a title="This post is a response to the referenced content." aria-label="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to" target="_blank">&#8620;other.site/posts/456</a></p></div>', $content );
+
+		// Clean up.
+		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
+	}
+
+	/*
+	 * =========================
+	 * get_interaction_policy()
+	 * =========================
+	 */
+
+	/**
+	 * Helper to create a published post with a fresh author.
+	 *
+	 * @return \WP_Post
+	 */
+	private function create_test_post() {
+		$user_id = self::factory()->user->create();
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Interaction Policy Test',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+				'post_author'  => $user_id,
+			)
+		);
+		return get_post( $post_id );
+	}
+
+	/**
+	 * Test policy generation for the 'anyone' permission.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_anyone() {
+		$post = $this->create_test_post();
+		\update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$stored = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true );
+		$this->assertEmpty( $stored, 'Meta value not stored as expected.' );
+
+		$transformer = new Post( $post );
+		$policy      = $transformer->get_interaction_policy();
+
+		$this->assertIsArray( $policy, 'Policy should be array.' );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertSame(
+			array(
+				'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
+				'always'            => 'https://www.w3.org/ns/activitystreams#Public',
+			),
+			$policy['canQuote'],
+			"'anyone' permission should map to public policy."
+		);
+	}
+
+	/**
+	 * Test fallback to 'anyone' when no quote permission meta is set.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_no_meta_fallback() {
+		$post        = $this->create_test_post();
+		$transformer = new Post( $post );
+		$policy      = $transformer->get_interaction_policy();
+
+		$this->assertIsArray( $policy, 'Should fall back to anyone policy when no meta set.' );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertSame(
+			array(
+				'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
+				'always'            => 'https://www.w3.org/ns/activitystreams#Public',
+			),
+			$policy['canQuote'],
+			'No meta should fall back to anyone (public) policy.'
+		);
+	}
+
+	/**
+	 * Test policy generation for the 'followers' permission.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_followers() {
+		$post = $this->create_test_post();
+		update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS );
+
+		$transformer = new Post( $post );
+		$policy      = $transformer->get_interaction_policy();
+
+		$this->assertIsArray( $policy );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertArrayHasKey( 'automaticApproval', $policy['canQuote'] );
+		$this->assertStringContainsString( '/followers', $policy['canQuote']['automaticApproval'], 'Followers permission should point to followers collection.' );
+	}
+
+	/**
+	 * Test policy generation for the 'me' permission across actor modes.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_me_actor_modes() {
+		$post = $this->create_test_post();
+		update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_ME );
+
+		$actor_modes = array(
+			ACTIVITYPUB_ACTOR_MODE,
+			ACTIVITYPUB_BLOG_MODE,
+			ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+		);
+
+		foreach ( $actor_modes as $mode ) {
+			update_option( 'activitypub_actor_mode', $mode );
+			$transformer = new Post( get_post( $post->ID ) ); // fresh instance.
+			$policy      = $transformer->get_interaction_policy();
+
+			$this->assertIsArray( $policy, 'Policy should be array for mode ' . $mode );
+			$this->assertArrayHasKey( 'canQuote', $policy );
+			$this->assertArrayHasKey( 'automaticApproval', $policy['canQuote'] );
+
+			$auto = $policy['canQuote']['automaticApproval'];
+			if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE === $mode ) {
+				$this->assertIsArray( $auto, 'Actor+Blog mode should return an array of IDs.' );
+				$this->assertCount( 2, $auto, 'Actor+Blog mode should supply two IDs.' );
+			} else {
+				$this->assertIsString( $auto, 'Single mode should return a single ID string.' );
+			}
+		}
+
+		// Cleanup.
+		delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Ensure invalid permission values fall back to 'anyone' policy.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_invalid_value_returns_null() {
+		$post = $this->create_test_post();
+		\update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', 'not-a-valid-permission' );
+
+		$transformer = new Post( $post );
+		$policy      = $transformer->get_interaction_policy();
+
+		$this->assertIsArray( $policy, 'Invalid permission should fall back to anyone policy.' );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertSame(
+			array(
+				'automaticApproval' => 'https://www.w3.org/ns/activitystreams#Public',
+				'always'            => 'https://www.w3.org/ns/activitystreams#Public',
+			),
+			$policy['canQuote'],
+			'Invalid permission should fall back to anyone (public) policy.'
+		);
 	}
 }

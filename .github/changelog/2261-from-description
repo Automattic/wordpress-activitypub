@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed HTML entity encoding in extra field names when displayed on ActivityPub platforms

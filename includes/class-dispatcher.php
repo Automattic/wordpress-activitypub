@@ -45,6 +45,9 @@ class Dispatcher {
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_relays' ), 10, 3 );
+
+		Scheduler::register_async_batch_callback( 'activitypub_send_activity', array( self::class, 'send_to_followers' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_retry_activity', array( self::class, 'retry_send_to_followers' ) );
 	}
 
 	/**

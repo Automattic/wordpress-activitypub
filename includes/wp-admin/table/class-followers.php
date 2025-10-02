@@ -10,6 +10,7 @@ namespace Activitypub\WP_Admin\Table;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -274,7 +275,7 @@ class Followers extends \WP_List_Table {
 		);
 
 		foreach ( $followers as $follower ) {
-			$actor = Actors::get_actor( $follower );
+			$actor = Remote_Actors::get_actor( $follower );
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
@@ -285,7 +286,7 @@ class Followers extends \WP_List_Table {
 				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
-				'webfinger'  => $this->get_webfinger( $actor ),
+				'webfinger'  => Remote_Actors::get_acct( $follower->ID ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $follower->post_modified_gmt,
 			);
@@ -476,6 +477,20 @@ class Followers extends \WP_List_Table {
 			}
 		}
 
+		/**
+		 * Filters the array of row action links for each follower in the Followers list table.
+		 *
+		 * This filter allows you to modify the available row actions (such as Delete, Block, or Follow back)
+		 * for each follower item displayed in the table.
+		 *
+		 * @since 7.5.0
+		 *
+		 * @param string[] $actions An array of row action links. Defaults are
+		 *                          'Delete', 'Block', and optionally 'Follow back'.
+		 * @param array    $item    The current follower item.
+		 */
+		$actions = apply_filters( 'activitypub_followers_row_actions', $actions, $item );
+
 		return $this->row_actions( $actions );
 	}
 
@@ -490,7 +505,7 @@ class Followers extends \WP_List_Table {
 		$fail_count    = 0;
 
 		foreach ( $follower_ids as $follower ) {
-			$actor = Actors::get_actor( $follower );
+			$actor = Remote_Actors::get_actor( $follower );
 			if ( \is_wp_error( $actor ) ) {
 				++$fail_count;
 				continue;
@@ -547,7 +562,7 @@ class Followers extends \WP_List_Table {
 			return false;
 		}
 
-		$actor = Actors::fetch_remote_by_uri( $search );
+		$actor = Remote_Actors::fetch_by_uri( $search );
 		if ( \is_wp_error( $actor ) ) {
 			return false;
 		}
