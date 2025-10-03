@@ -48,7 +48,7 @@ class Undo {
 					$success = Followers::remove( $post, $user_id );
 				}
 			}
-		} if ( in_array( $type, array( 'Like', 'Create', 'Announce' ), true ) ) { // Handle "Undo" requests for "Like" and "Create" activities.
+		} elseif ( in_array( $type, array( 'Like', 'Create', 'Announce' ), true ) ) { // Handle "Undo" requests for "Like" and "Create" activities.
 			if ( ! ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
 				$object_id = object_to_uri( $activity['object'] );
 				$result    = Comment::object_id_to_comment( esc_url_raw( $object_id ) );
