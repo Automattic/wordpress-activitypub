@@ -241,14 +241,14 @@ class Advanced_Settings_Fields {
 		<p>
 			<label>
 				<input type="checkbox" id="activitypub_following_ui" name="activitypub_following_ui" value="1" <?php checked( '1', $value ); ?> />
-				<?php \esc_html_e( 'Display the "Following" interface in the admin menus and settings.', 'activitypub' ); ?>
+				Display the "Following" interface in the admin menus and settings.
 			</label>
 		</p>
 		<p class="description">
-			<?php \esc_html_e( 'Activates the Following feature, letting you follow other ActivityPub accounts directly from your WordPress site. Adds a "Following" menu and tab to manage followed accounts.', 'activitypub' ); ?>
+			Activates the Following feature, letting you follow other ActivityPub accounts directly from your WordPress site. Adds a "Following" menu and tab to manage followed accounts.
 		</p>
 		<p class="description">
-			<?php \esc_html_e( '⚠ A reader interface is not available yet. Please follow accounts sparingly—you won\'t be able to see their posts or shares. This feature is intended for testing the follow functionality. Once fully implemented, it will be enabled by default.', 'activitypub' ); ?>
+			⚠ A reader interface is not available yet. Please follow accounts sparingly—you won't be able to see their posts or shares. This feature is intended for testing the follow functionality. Once fully implemented, it will be enabled by default.
 		</p>
 		<?php
 	}
@@ -280,11 +280,11 @@ class Advanced_Settings_Fields {
 		<p>
 			<label>
 				<input type="checkbox" id="activitypub_persist_inbox" name="activitypub_persist_inbox" value="1" <?php checked( '1', $value ); ?> />
-				<?php \esc_html_e( 'Persist all incoming Activities.', 'activitypub' ); ?>
+				Persist all incoming Activities.
 			</label>
 		</p>
 		<p class="description">
-			<?php \esc_html_e( 'For now, this is only used for debugging purposes. If you have no actual need for this, please keep it disabled to avoid unnecessary database writes. Future versions may enable this feature by default.', 'activitypub' ); ?>
+			For now, this is only used for debugging purposes. If you have no actual need for this, please keep it disabled to avoid unnecessary database writes. Future versions may enable this feature by default.
 		</p>
 		<?php
 	}
