@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Added a default `Announce` type when missing and improved validation to correctly handle URI objects.
