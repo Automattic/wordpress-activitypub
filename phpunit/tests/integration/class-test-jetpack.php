@@ -59,7 +59,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	 */
 	private function load_mock_manager() {
 		if ( ! class_exists( '\Automattic\Jetpack\Connection\Manager' ) ) {
-			require_once AP_TESTS_DIR . '/data/class-manager.php';
+			require_once AP_TESTS_DIR . '/data/mocks/class-manager.php';
 		}
 	}
 
