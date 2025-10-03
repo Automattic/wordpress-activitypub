@@ -452,6 +452,16 @@ class Test_Undo extends \WP_UnitTestCase {
 				false,
 				'Missing object.object should fail validation',
 			),
+			'uri_object'                        => array(
+				array(
+					'type'   => 'Undo',
+					'actor'  => 'https://example.com/actor',
+					'object' => 'https://example.com/activity/123',
+				),
+				true,
+				true,
+				'URI object should pass validation',
+			),
 		);
 	}
 
