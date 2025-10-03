@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -29,12 +29,17 @@ jobs:
       - name: Check for changes and commit
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            echo "Formatting changes detected, committing files..."
-            git config user.name "Automattic Bot"
-            git config user.email "sysops+ghmatticbot@automattic.com"
-            git add .
-            git commit -m "Prettify"
-            git push
+            if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+              echo "::error::Formatting changes detected in PR from fork. Please run 'npm run format' locally and push the changes."
+              exit 1
+            else
+              echo "Formatting changes detected, committing files..."
+              git config user.name "Automattic Bot"
+              git config user.email "sysops+ghmatticbot@automattic.com"
+              git add .
+              git commit -m "Prettify"
+              git push
+            fi
           else
             echo "No formatting changes needed"
           fi
