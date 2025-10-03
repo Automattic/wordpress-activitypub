@@ -42,7 +42,7 @@
 		"@wordpress/data": "^10.0.0",
 		"@wordpress/dom-ready": "^4.0.0",
 		"@wordpress/edit-post": "^8.31.0",
-		"@wordpress/editor": "^14.30.0",
+		"@wordpress/editor": "^14.32.0",
 		"@wordpress/element": "^6.0.0",
 		"@wordpress/env": "^10.31.0",
 		"@wordpress/i18n": "^6.0.0",
