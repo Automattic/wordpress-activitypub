@@ -33,7 +33,7 @@ class Undo {
 	 * @param int|null $user_id  The ID of the user who initiated the "Undo" activity.
 	 */
 	public static function handle_undo( $activity, $user_id ) {
-		$type    = $activity['object']['type'] ?? 'Announce';
+		$type    = $activity['object']['type'];
 		$success = false;
 		$result  = null;
 
@@ -48,7 +48,10 @@ class Undo {
 					$success = Followers::remove( $post, $user_id );
 				}
 			}
-		} if ( in_array( $type, array( 'Like', 'Create', 'Announce' ), true ) ) { // Handle "Undo" requests for "Like" and "Create" activities.
+		}
+
+		// Handle "Undo" requests for "Like" and "Create" activities.
+		if ( in_array( $type, array( 'Like', 'Create', 'Announce' ), true ) ) {
 			if ( ! ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
 				$object_id = object_to_uri( $activity['object'] );
 				$result    = Comment::object_id_to_comment( esc_url_raw( $object_id ) );
@@ -104,17 +107,15 @@ class Undo {
 			return false;
 		}
 
-		if ( \is_array( $json_params['object'] ) ) {
-			$required_object_attributes = array(
-				'id',
-				'type',
-				'actor',
-				'object',
-			);
+		$required_object_attributes = array(
+			'id',
+			'type',
+			'actor',
+			'object',
+		);
 
-			if ( ! empty( \array_diff( $required_object_attributes, \array_keys( $json_params['object'] ) ) ) ) {
-				return false;
-			}
+		if ( ! empty( \array_diff( $required_object_attributes, \array_keys( $json_params['object'] ) ) ) ) {
+			return false;
 		}
 
 		return $valid;
