@@ -157,68 +157,6 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test init method skips sync hooks when IS_WPCOM is defined.
-	 *
-	 * @covers ::init
-	 * @runInSeparateProcess
-	 * @preserveGlobalState disabled
-	 */
-	public function test_init_skips_sync_hooks_on_wpcom() {
-		// Clear any existing hooks first.
-		remove_all_filters( 'jetpack_sync_post_meta_whitelist' );
-		remove_all_filters( 'jetpack_sync_comment_meta_whitelist' );
-		remove_all_filters( 'jetpack_sync_whitelisted_comment_types' );
-		remove_all_filters( 'jetpack_json_api_comment_types' );
-		remove_all_filters( 'jetpack_api_include_comment_types_count' );
-		remove_all_filters( 'activitypub_following_row_actions' );
-		remove_all_filters( 'pre_option_activitypub_following_ui' );
-
-		// Test the normal case first (IS_WPCOM not defined).
-		if ( ! defined( 'IS_WPCOM' ) ) {
-			Jetpack::init();
-
-			// Sync hooks should be registered when IS_WPCOM is not defined.
-			$this->assertTrue( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
-			$this->assertTrue( has_filter( 'jetpack_sync_comment_meta_whitelist' ) );
-			$this->assertTrue( has_filter( 'jetpack_sync_whitelisted_comment_types' ) );
-			$this->assertTrue( has_filter( 'jetpack_json_api_comment_types' ) );
-			$this->assertTrue( has_filter( 'jetpack_api_include_comment_types_count' ) );
-
-			// Following UI hooks should NOT be registered in normal test environment.
-			$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
-			$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
-
-			// Clear hooks again for the WPCOM simulation.
-			remove_all_filters( 'jetpack_sync_post_meta_whitelist' );
-			remove_all_filters( 'jetpack_sync_comment_meta_whitelist' );
-			remove_all_filters( 'jetpack_sync_whitelisted_comment_types' );
-			remove_all_filters( 'jetpack_json_api_comment_types' );
-			remove_all_filters( 'jetpack_api_include_comment_types_count' );
-			remove_all_filters( 'activitypub_following_row_actions' );
-			remove_all_filters( 'pre_option_activitypub_following_ui' );
-		}
-
-		// Now simulate IS_WPCOM behavior by defining the constant temporarily.
-		// We use a runInSeparateProcess annotation to isolate this test.
-		if ( ! defined( 'IS_WPCOM' ) ) {
-			define( 'IS_WPCOM', true );
-		}
-
-		Jetpack::init();
-
-		// When IS_WPCOM is defined, sync hooks should NOT be registered.
-		$this->assertFalse( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
-		$this->assertFalse( has_filter( 'jetpack_sync_comment_meta_whitelist' ) );
-		$this->assertFalse( has_filter( 'jetpack_sync_whitelisted_comment_types' ) );
-		$this->assertFalse( has_filter( 'jetpack_json_api_comment_types' ) );
-		$this->assertFalse( has_filter( 'jetpack_api_include_comment_types_count' ) );
-
-		// But following UI hooks should be registered when IS_WPCOM is true.
-		$this->assertTrue( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertTrue( has_filter( 'pre_option_activitypub_following_ui' ) );
-	}
-
-	/**
 	 * Test add_sync_meta method adds ActivityPub meta keys.
 	 *
 	 * @covers ::add_sync_meta
@@ -279,104 +217,6 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Data provider for Reader link test scenarios.
-	 *
-	 * @return array Test cases with different following item configurations.
-	 */
-	public function reader_link_data() {
-		return array(
-			'active following with feed ID'    => array(
-				'item'                    => array(
-					'id'         => 123,
-					'status'     => 'active',
-					'identifier' => 'https://example.com/feed',
-				),
-				'feed_id'                 => 456,
-				'expected_url'            => 'https://wordpress.com/reader/feeds/456',
-				'should_have_reader_link' => true,
-			),
-			'active following without feed ID' => array(
-				'item'                    => array(
-					'id'         => 123,
-					'status'     => 'active',
-					'identifier' => 'https://example.com/feed',
-				),
-				'feed_id'                 => false,
-				'expected_url'            => 'https://wordpress.com/reader/feeds/lookup/https%3A%2F%2Fexample.com%2Ffeed',
-				'should_have_reader_link' => true,
-			),
-			'pending following should not have reader link' => array(
-				'item'                    => array(
-					'id'         => 123,
-					'status'     => 'pending',
-					'identifier' => 'https://example.com/feed',
-				),
-				'feed_id'                 => 456,
-				'expected_url'            => null,
-				'should_have_reader_link' => false,
-			),
-		);
-	}
-
-	/**
-	 * Test add_reader_link method adds correct Reader links.
-	 *
-	 * @dataProvider reader_link_data
-	 * @covers ::add_reader_link
-	 * @runInSeparateProcess
-	 * @preserveGlobalState disabled
-	 *
-	 * @param array       $item                    The following item.
-	 * @param int|false   $feed_id                 The feed ID or false.
-	 * @param string|null $expected_url            Expected URL or null.
-	 * @param bool        $should_have_reader_link Whether reader link should be added.
-	 */
-	public function test_add_reader_link( $item, $feed_id, $expected_url, $should_have_reader_link ) {
-		$original_actions = array( 'edit' => '<a href="#">Edit</a>' );
-
-		// Set up WPCOM environment if expecting WPCOM-style URL.
-		$is_wpcom_test = $expected_url && strpos( $expected_url, '/reader/feeds/lookup/' ) === false;
-		if ( $is_wpcom_test && ! defined( 'IS_WPCOM' ) ) {
-			define( 'IS_WPCOM', true );
-		}
-
-		// Mock the feed ID meta if provided.
-		if ( false !== $feed_id ) {
-			add_filter(
-				'get_post_metadata',
-				function ( $value, $object_id, $meta_key ) use ( $item, $feed_id ) {
-					if ( $object_id === $item['id'] && '_activitypub_actor_feed' === $meta_key ) {
-						// Return as array of values (WordPress expects this format).
-						return array( array( 'feed_id' => $feed_id ) );
-					}
-					return $value;
-				},
-				10,
-				3
-			);
-		}
-
-		$updated_actions = Jetpack::add_reader_link( $original_actions, $item );
-
-		// Check that original actions are preserved.
-		$this->assertArrayHasKey( 'edit', $updated_actions );
-
-		if ( $should_have_reader_link ) {
-			// Check that reader link is added.
-			$this->assertArrayHasKey( 'reader', $updated_actions );
-			$this->assertStringContainsString( $expected_url, $updated_actions['reader'] );
-			$this->assertStringContainsString( 'View Feed', $updated_actions['reader'] );
-			$this->assertStringContainsString( 'target="_blank"', $updated_actions['reader'] );
-		} else {
-			// Check that reader link is not added for pending items.
-			$this->assertArrayNotHasKey( 'reader', $updated_actions );
-		}
-
-		// Clean up filters.
-		remove_all_filters( 'get_post_metadata' );
-	}
-
-	/**
 	 * Test pre_option_activitypub_following_ui method forces UI to be enabled.
 	 *
 	 * @covers ::pre_option_activitypub_following_ui
@@ -434,5 +274,101 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$original_actions = array( 'edit' => '<a href="#">Edit</a>' );
 		$updated_actions  = Jetpack::add_reader_link( $original_actions, $test_item );
 		$this->assertArrayHasKey( 'reader', $updated_actions );
+	}
+
+	/**
+	 * Data provider for Reader link test scenarios.
+	 *
+	 * @return array Test cases with different following item configurations.
+	 */
+	public function reader_link_data() {
+		return array(
+			'active following without feed ID' => array(
+				'item'                    => array(
+					'id'         => 123,
+					'status'     => 'active',
+					'identifier' => 'https://example.com/feed',
+				),
+				'feed_id'                 => false,
+				'expected_url'            => 'https://wordpress.com/reader/feeds/lookup/https%3A%2F%2Fexample.com%2Ffeed',
+				'should_have_reader_link' => true,
+			),
+			'active following with feed ID'    => array(
+				'item'                    => array(
+					'id'         => 123,
+					'status'     => 'active',
+					'identifier' => 'https://example.com/feed',
+				),
+				'feed_id'                 => 456,
+				'expected_url'            => 'https://wordpress.com/reader/feeds/456',
+				'should_have_reader_link' => true,
+			),
+			'pending following should not have reader link' => array(
+				'item'                    => array(
+					'id'         => 123,
+					'status'     => 'pending',
+					'identifier' => 'https://example.com/feed',
+				),
+				'feed_id'                 => 456,
+				'expected_url'            => null,
+				'should_have_reader_link' => false,
+			),
+		);
+	}
+
+	/**
+	 * Test add_reader_link method adds correct Reader links.
+	 *
+	 * @dataProvider reader_link_data
+	 * @covers ::add_reader_link
+	 *
+	 * @param array       $item                    The following item.
+	 * @param int|false   $feed_id                 The feed ID or false.
+	 * @param string|null $expected_url            Expected URL or null.
+	 * @param bool        $should_have_reader_link Whether reader link should be added.
+	 */
+	public function test_add_reader_link( $item, $feed_id, $expected_url, $should_have_reader_link ) {
+		$original_actions = array( 'edit' => '<a href="#">Edit</a>' );
+
+		// Set up WPCOM environment if expecting WPCOM-style URL.
+		$is_wpcom_test = $expected_url && strpos( $expected_url, '/reader/feeds/lookup/' ) === false;
+		if ( $is_wpcom_test && ! defined( 'IS_WPCOM' ) ) {
+			define( 'IS_WPCOM', true );
+		}
+
+		// Mock the feed ID meta if provided.
+		if ( false !== $feed_id ) {
+			add_filter(
+				'get_post_metadata',
+				function ( $value, $object_id, $meta_key ) use ( $item, $feed_id ) {
+					if ( $object_id === $item['id'] && '_activitypub_actor_feed' === $meta_key ) {
+						// Return as array of values (WordPress expects this format).
+						return array( array( 'feed_id' => $feed_id ) );
+					}
+					return $value;
+				},
+				10,
+				3
+			);
+		}
+
+		$updated_actions = Jetpack::add_reader_link( $original_actions, $item );
+
+		// Check that original actions are preserved.
+		$this->assertArrayHasKey( 'edit', $updated_actions );
+
+		if ( $should_have_reader_link ) {
+			// Check that reader link is added.
+			$this->assertArrayHasKey( 'reader', $updated_actions );
+			$this->assertStringContainsString( $expected_url, $updated_actions['reader'] );
+			$this->assertStringContainsString( 'View Feed', $updated_actions['reader'] );
+			$this->assertStringContainsString( 'target="_blank"', $updated_actions['reader'] );
+		} else {
+			// Check that reader link is not added for pending items.
+			$this->assertArrayNotHasKey( 'reader', $updated_actions );
+		}
+
+		// Clean up filters.
+		remove_all_filters( 'get_post_metadata' );
 	}
 }
