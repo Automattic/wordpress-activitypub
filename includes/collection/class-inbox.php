@@ -192,15 +192,17 @@ class Inbox {
 				$activity = Activity::init_from_json( $post->post_content, true );
 				$user_id  = Actors::get_id_by_resource( object_to_uri( $activity['object']['object'] ) );
 
-				if ( ! \is_wp_error( $user_id ) ) {
-					$post = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
-
-					if ( ! \is_wp_error( $post ) ) {
-						return Followers::remove( $post, $user_id );
-					}
+				if ( \is_wp_error( $user_id ) ) {
+					return $user_id;
 				}
 
-				break;
+				$post = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
+
+				if ( \is_wp_error( $post ) ) {
+					return $post;
+				}
+
+				return Followers::remove( $post, $user_id );
 			case 'Like':
 			case 'Create':
 			case 'Announce':
