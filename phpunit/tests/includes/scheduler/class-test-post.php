@@ -26,7 +26,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		wp_set_current_user( self::$user_id );
 
 		// Create.
-		$post_id        = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+		$post_id        = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 		$outbox_item    = $this->get_latest_outbox_item( $activitypub_id );
 

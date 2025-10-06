@@ -300,7 +300,7 @@ class Test_Post extends \WP_UnitTestCase {
 	 * @covers ::to_object
 	 */
 	public function test_block_attachments_with_fallback() {
-		$attachment_id  = $this->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+		$attachment_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
 		$attachment_src = \wp_get_attachment_image_src( $attachment_id );
 
 		$post_id = \wp_insert_post(
@@ -507,7 +507,7 @@ class Test_Post extends \WP_UnitTestCase {
 		$post    = get_post( $post_id );
 
 		// Create test image.
-		$attachment_id = $this->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
 
 		// Set up reflection method.
 		$reflection = new \ReflectionClass( Post::class );
