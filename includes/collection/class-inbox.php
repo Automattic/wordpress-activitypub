@@ -182,9 +182,12 @@ class Inbox {
 		$type = '';
 		$post = self::get_by_guid( $id );
 
-		if ( ! \is_wp_error( $post ) ) {
-			$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
+		if ( \is_wp_error( $post ) ) {
+			// If inbox entry not found, return the error.
+			return $post;
 		}
+
+		$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
 
 		switch ( $type ) {
 			case 'Follow':
@@ -200,7 +203,6 @@ class Inbox {
 			case 'Like':
 			case 'Create':
 			case 'Announce':
-			default:
 				if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
 					return new \WP_Error(
 						'activitypub_inbox_undo_interactions_disabled',
@@ -209,7 +211,7 @@ class Inbox {
 					);
 				}
 
-				$result = Comment::object_id_to_comment( esc_url_raw( $post->guid ?? $id ) );
+				$result = Comment::object_id_to_comment( esc_url_raw( $post->guid ) );
 
 				if ( empty( $result ) ) {
 					return new \WP_Error(
@@ -220,12 +222,12 @@ class Inbox {
 				}
 
 				return \wp_delete_comment( $result, true );
+			default:
+				return new \WP_Error(
+					'activitypub_inbox_undo_unsupported',
+					\__( 'Undo is only supported for Follow, Like, Create, and Announce activities.', 'activitypub' ),
+					array( 'status' => 400 )
+				);
 		}
-
-		return new \WP_Error(
-			'activitypub_inbox_undo_unsupported',
-			\__( 'Undo is only supported for Follow, Like, Create, and Announce activities.', 'activitypub' ),
-			array( 'status' => 400 )
-		);
 	}
 }
