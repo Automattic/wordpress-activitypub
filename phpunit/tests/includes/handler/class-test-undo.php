@@ -421,8 +421,8 @@ class Test_Undo extends \WP_UnitTestCase {
 					),
 				),
 				true,
-				false,
-				'Missing object.type should fail validation',
+				true,
+				'Missing object.type should validate (not required)',
 			),
 			'missing_object_actor'              => array(
 				array(
@@ -435,8 +435,8 @@ class Test_Undo extends \WP_UnitTestCase {
 					),
 				),
 				true,
-				false,
-				'Missing object.actor should fail validation',
+				true,
+				'Missing object.actor should validate (not required)',
 			),
 			'missing_object_object'             => array(
 				array(
@@ -449,8 +449,18 @@ class Test_Undo extends \WP_UnitTestCase {
 					),
 				),
 				true,
-				false,
-				'Missing object.object should fail validation',
+				true,
+				'Missing object.object should validate (not required)',
+			),
+			'object_id'                         => array(
+				array(
+					'type'   => 'Undo',
+					'actor'  => 'https://example.com/actor',
+					'object' => 'https://example.com/activity/123',
+				),
+				true,
+				true,
+				'String object should validate',
 			),
 		);
 	}

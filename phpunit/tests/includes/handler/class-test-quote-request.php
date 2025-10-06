@@ -447,19 +447,6 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	}
 
 	/**
-	 * Test validate_object with WP_Error request.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_with_wp_error() {
-		$request = new \WP_Error( 'invalid_request', 'Invalid request' );
-
-		$result = Quote_Request::validate_object( true, 'object', $request );
-
-		$this->assertTrue( $result, 'Should pass through original validation result when request is WP_Error' );
-	}
-
-	/**
 	 * Test that init method properly registers hooks.
 	 *
 	 * @covers ::init

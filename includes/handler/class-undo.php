@@ -72,11 +72,11 @@ class Undo {
 			return false;
 		}
 
-		if ( ! \is_array( $activity['object'] ) ) {
+		if ( ! \is_array( $activity['object'] ) && ! \is_string( $activity['object'] ) ) {
 			return false;
 		}
 
-		if ( ! isset( $activity['object']['id'], $activity['object']['type'], $activity['object']['actor'], $activity['object']['object'] ) ) {
+		if ( \is_array( $activity['object'] ) && ! isset( $activity['object']['id'] ) ) {
 			return false;
 		}
 
