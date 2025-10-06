@@ -10,6 +10,7 @@ on:
       - 'phpunit.xml.dist'
       - 'phpcs.xml'
       - '.github/workflows/phpcs.yml'
+      - '!build/**/*.asset.php'
   pull_request:
     paths:
       - '**/*.php'
@@ -18,6 +19,7 @@ on:
       - 'phpunit.xml.dist'
       - 'phpcs.xml'
       - '.github/workflows/phpcs.yml'
+      - '!build/**/*.asset.php'
 jobs:
   phpcs:
     runs-on: ubuntu-latest
