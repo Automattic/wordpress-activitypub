@@ -72,36 +72,25 @@ class Accept {
 	 * @return bool The validation state: true if valid, false if not.
 	 */
 	public static function validate_object( $valid, $param, $request ) {
-		$json_params = $request->get_json_params();
+		$activity = $request->get_json_params();
 
-		if ( empty( $json_params['type'] ) ) {
+		if ( empty( $activity['type'] ) ) {
 			return false;
 		}
 
-		if (
-			'Accept' !== $json_params['type'] ||
-			\is_wp_error( $request )
-		) {
+		if ( 'Accept' !== $activity['type'] ) {
 			return $valid;
 		}
 
-		$required_attributes = array(
-			'actor',
-			'object',
-		);
-
-		if ( ! empty( \array_diff( $required_attributes, \array_keys( $json_params ) ) ) ) {
+		if ( ! isset( $activity['actor'], $activity['object'] ) ) {
 			return false;
 		}
 
-		$required_object_attributes = array(
-			'id',
-			'type',
-			'actor',
-			'object',
-		);
+		if ( ! \is_array( $activity['object'] ) ) {
+			return false;
+		}
 
-		if ( ! empty( \array_diff( $required_object_attributes, \array_keys( $json_params['object'] ) ) ) ) {
+		if ( ! isset( $activity['object']['id'], $activity['object']['type'], $activity['object']['actor'], $activity['object']['object'] ) ) {
 			return false;
 		}
 
