@@ -47,6 +47,29 @@ jobs:
       - name: Log running Docker containers
         run: docker ps -a
 
+      - name: Wait for WordPress to be ready
+        run: |
+          echo "Waiting for WordPress to be ready..."
+          attempt=0
+          max_attempts=30
+
+          while [ $attempt -lt $max_attempts ]; do
+            attempt=$((attempt + 1))
+
+            if curl -s -f -o /dev/null http://localhost:8888/wp-json/; then
+              echo "✓ WordPress is ready after $attempt attempts!"
+              exit 0
+            fi
+
+            echo "Attempt $attempt/$max_attempts: WordPress not ready yet..."
+            sleep 3
+          done
+
+          echo "✗ WordPress failed to become ready after $max_attempts attempts"
+          echo "Checking Docker logs:"
+          docker compose logs
+          exit 1
+
       - name: Configure permalinks
         run: |
           echo "Configuring pretty permalinks..."
