@@ -206,14 +206,25 @@ class Inbox {
 			case 'Like':
 			case 'Create':
 			case 'Announce':
-				if ( ! ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
-					$result = Comment::object_id_to_comment( esc_url_raw( $post->guid ) );
-
-					if ( ! empty( $result ) ) {
-						return \wp_delete_comment( $result, true );
-					}
+				if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
+					return new \WP_Error(
+						'activitypub_inbox_undo_interactions_disabled',
+						\__( 'Undo is not possible because incoming interactions are disabled.', 'activitypub' ),
+						array( 'status' => 403 )
+					);
 				}
-				break;
+
+				$result = Comment::object_id_to_comment( esc_url_raw( $post->guid ) );
+
+				if ( empty( $result ) ) {
+					return new \WP_Error(
+						'activitypub_inbox_undo_comment_not_found',
+						\__( 'Undo is not possible because the comment was not found.', 'activitypub' ),
+						array( 'status' => 404 )
+					);
+				}
+
+				return \wp_delete_comment( $result, true );
 		}
 
 		return new \WP_Error(
