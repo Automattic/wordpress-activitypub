@@ -145,7 +145,7 @@ jobs:
                   # Extract just the method name from the full class::method
                   METHOD_NAME=$(echo "$COVERS_TARGET" | sed 's/.*:://')
                   echo "Extracted method name: $METHOD_NAME"
-                  if TEST_FILE=$(find tests/ -name "*.php" -type f -exec grep -l "@covers.*$METHOD_NAME" {} \; | head -1); then
+                  if TEST_FILE=$(find phpunit/tests/ -name "*.php" -type f -exec grep -l "@covers.*$METHOD_NAME" {} \; | head -1); then
                     echo "Found test file: $TEST_FILE"
                     if LINE_NUM=$(grep -n "@covers.*$METHOD_NAME" "$TEST_FILE" | head -1 | cut -d: -f1); then
                       echo "Found line number: $LINE_NUM"

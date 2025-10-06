@@ -81,7 +81,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			\wp_delete_post( $post->ID, true );
 		}
 
-		$attachment_id = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
 
 		// Update activitypub_description.
 		$actor->update_summary( 'test summary' );
@@ -168,7 +168,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		Actor::init();
 
-		$attachment_id = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
 		\update_option( $option, $attachment_id );
 
 		$expected = array(
