@@ -75,10 +75,10 @@ class Inbox_Controller extends \WP_REST_Controller {
 								/**
 								 * Filter the ActivityPub object validation.
 								 *
-								 * @param bool   $validate The validation result.
-								 * @param array  $param    The object data.
-								 * @param object $request  The request object.
-								 * @param string $key      The key.
+								 * @param bool             $validate The validation result.
+								 * @param array            $param    The object data.
+								 * @param \WP_REST_Request $request  The request object.
+								 * @param string           $key      The key.
 								 */
 								return \apply_filters( 'activitypub_validate_object', true, $param, $request, $key );
 							},
