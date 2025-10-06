@@ -1,0 +1,17 @@
+{
+	"headers": {
+		"server": "nginx",
+		"date": "Fri, 03 May 2024 06:39:09 GMT",
+		"content-type": "application/json",
+		"access-control-expose-headers": "content-type, cache-control, vary, content-encoding",
+		"content-encoding": "br",
+		"vary": "accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+		"cache-control": "public, max-age=259200",
+		"referrer-policy": "same-origin",
+		"x-content-type-options": "nosniff",
+		"x-frame-options": "DENY",
+		"x-xss-protection": "1; mode=block"
+	},
+	"body": "{\"subject\":\"acct:pfefferle@lemmy.ml\",\"links\":[{\"rel\":\"http://webfinger.net/rel/profile-page\",\"type\":\"text/html\",\"href\":\"https://lemmy.ml/u/pfefferle\",\"template\":null},{\"rel\":\"self\",\"type\":\"application/activity+json\",\"href\":\"https://lemmy.ml/u/pfefferle\",\"template\":null,\"properties\":{\"https://www.w3.org/ns/activitystreams#type\":\"Person\"}},{\"rel\":\"http://ostatus.org/schema/1.0/subscribe\",\"type\":null,\"href\":null,\"template\":\"https://lemmy.ml/activitypub/externalInteraction?uri={uri}\"}]}",
+	"response": { "code": 200 }
+}
