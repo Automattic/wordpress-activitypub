@@ -37,11 +37,6 @@ trait Collection {
 			);
 		}
 
-		// No need to add links if there's only one page.
-		if ( 1 >= $max_pages && null === $page ) {
-			return $response;
-		}
-
 		$response['id']    = \add_query_arg( $request->get_query_params(), $response['id'] );
 		$response['first'] = \add_query_arg( 'page', 1, $response['id'] );
 		$response['last']  = \add_query_arg( 'page', $max_pages, $response['id'] );
