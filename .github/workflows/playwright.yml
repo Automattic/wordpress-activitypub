@@ -57,23 +57,28 @@ jobs:
 
       - name: Wait for WordPress to be ready
         run: |
-          echo "Waiting for WordPress to be ready..."
+          echo "Giving WordPress initial time to start up..."
+          sleep 10
+
+          echo "Waiting for WordPress to respond..."
           attempt=0
           max_attempts=30
 
           while [ $attempt -lt $max_attempts ]; do
             attempt=$((attempt + 1))
 
-            if curl -s -f -o /dev/null http://localhost:8888/wp-json/; then
-              echo "✓ WordPress is ready after $attempt attempts!"
+            # Check if WordPress is responding (even if returning HTML)
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8888/ | grep -q "200"; then
+              echo "✓ WordPress is responding after $attempt attempts!"
+              echo "Note: REST API may not be ready yet, will configure permalinks next"
               exit 0
             fi
 
-            echo "Attempt $attempt/$max_attempts: WordPress not ready yet..."
-            sleep 3
+            echo "Attempt $attempt/$max_attempts: WordPress not responding yet..."
+            sleep 5
           done
 
-          echo "✗ WordPress failed to become ready after $max_attempts attempts"
+          echo "✗ WordPress failed to respond after $max_attempts attempts"
           echo ""
           echo "=== Docker containers status ==="
           docker ps -a
