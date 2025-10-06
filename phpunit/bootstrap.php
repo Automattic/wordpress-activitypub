@@ -124,8 +124,8 @@ function tests_remove_outbox_rest( $args, $post_type ) {
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
-require __DIR__ . '/class-activitypub-outbox-testcase.php';
-require __DIR__ . '/class-activitypub-testcase-cache-http.php';
-require __DIR__ . '/class-test-rest-controller-testcase.php';
+require __DIR__ . '/includes/class-activitypub-outbox-testcase.php';
+require __DIR__ . '/includes/class-activitypub-testcase-cache-http.php';
+require __DIR__ . '/includes/class-test-rest-controller-testcase.php';
 
 \Activitypub\Migration::add_default_settings();

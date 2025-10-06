@@ -98,7 +98,7 @@ class Test_User extends \WP_UnitTestCase {
 		$user    = User::from_wp_user( $user_id );
 
 		// Add attachment.
-		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/assets/test.jpg' );
+		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
 
 		// Navigate to attachment page.
 		$this->go_to( get_attachment_link( $attachment_id ) );

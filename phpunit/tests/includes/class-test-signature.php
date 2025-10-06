@@ -33,7 +33,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		parent::set_up_before_class();
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		self::$test_keys = \json_decode( \file_get_contents( \dirname( __DIR__ ) . '/fixtures/http-signature-keys.json' ), true );
+		self::$test_keys = \json_decode( \file_get_contents( AP_TESTS_DIR . '/data/fixtures/http-signature-keys.json' ), true );
 	}
 
 	/**

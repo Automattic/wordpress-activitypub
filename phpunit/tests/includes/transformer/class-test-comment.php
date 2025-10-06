@@ -146,7 +146,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	public function test_comment_image_attachments() {
 		// Create a test image attachment.
 		$attachment_id = self::factory()->attachment->create_upload_object(
-			ACTIVITYPUB_PLUGIN_DIR . '/tests/assets/test.jpg',
+			AP_TESTS_DIR . '/data/assets/test.jpg',
 			self::$post_id
 		);
 
