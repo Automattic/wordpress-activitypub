@@ -19,7 +19,7 @@ class Blog_Settings_Fields {
 	 * Initialize the settings fields.
 	 */
 	public static function init() {
-		add_action( 'load-settings_page_activitypub', array( self::class, 'register_settings' ) );
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_settings' ) );
 	}
 
 	/**
@@ -31,41 +31,41 @@ class Blog_Settings_Fields {
 			\update_option( 'activitypub_checklist_profile_setup_visited', '1' );
 		}
 
-		add_settings_section(
+		\add_settings_section(
 			'activitypub_blog_profile',
-			__( 'Blog Profile', 'activitypub' ),
+			\__( 'Blog Profile', 'activitypub' ),
 			'__return_empty_string',
 			'activitypub_blog_settings'
 		);
 
-		add_settings_field(
+		\add_settings_field(
 			'activitypub_blog_avatar',
-			__( 'Manage Avatar', 'activitypub' ),
+			\__( 'Manage Avatar', 'activitypub' ),
 			array( self::class, 'avatar_callback' ),
 			'activitypub_blog_settings',
 			'activitypub_blog_profile'
 		);
 
-		add_settings_field(
+		\add_settings_field(
 			'activitypub_header_image',
-			__( 'Manage Header Image', 'activitypub' ),
+			\__( 'Manage Header Image', 'activitypub' ),
 			array( self::class, 'header_image_callback' ),
 			'activitypub_blog_settings',
 			'activitypub_blog_profile'
 		);
 
-		add_settings_field(
+		\add_settings_field(
 			'activitypub_blog_identifier',
-			__( 'Change Profile ID', 'activitypub' ),
+			\__( 'Change Profile ID', 'activitypub' ),
 			array( self::class, 'profile_id_callback' ),
 			'activitypub_blog_settings',
 			'activitypub_blog_profile',
 			array( 'label_for' => 'activitypub_blog_identifier' )
 		);
 
-		add_settings_field(
+		\add_settings_field(
 			'activitypub_blog_description',
-			__( 'Change Description', 'activitypub' ),
+			\__( 'Change Description', 'activitypub' ),
 			array( self::class, 'description_callback' ),
 			'activitypub_blog_settings',
 			'activitypub_blog_profile',
@@ -80,18 +80,26 @@ class Blog_Settings_Fields {
 			'activitypub_blog_profile'
 		);
 
-		add_settings_field(
+		\add_settings_field(
 			'activitypub_extra_fields',
-			__( 'Extra Fields', 'activitypub' ),
+			\__( 'Extra Fields', 'activitypub' ),
 			array( self::class, 'extra_fields_callback' ),
 			'activitypub_blog_settings',
 			'activitypub_blog_profile'
 		);
 
-		add_settings_field(
+		\add_settings_field(
 			'activitypub_blog_user_also_known_as',
-			__( 'Account Aliases', 'activitypub' ),
+			\__( 'Account Aliases', 'activitypub' ),
 			array( self::class, 'also_known_as_callback' ),
+			'activitypub_blog_settings',
+			'activitypub_blog_profile'
+		);
+
+		\add_settings_field(
+			'activitypub_hide_social_graph',
+			\__( 'Followers and Followings', 'activitypub' ),
+			array( self::class, 'hide_followers_callback' ),
 			'activitypub_blog_settings',
 			'activitypub_blog_profile'
 		);
@@ -102,16 +110,16 @@ class Blog_Settings_Fields {
 	 */
 	public static function avatar_callback() {
 		?>
-		<?php if ( has_site_icon() ) : ?>
-			<p><img src="<?php echo esc_url( get_site_icon_url( 50 ) ); ?>" alt="" /></p>
+		<?php if ( \has_site_icon() ) : ?>
+			<p><img src="<?php echo \esc_url( \get_site_icon_url( 50 ) ); ?>" alt="" /></p>
 		<?php endif; ?>
 		<p class="description">
 			<?php
-			echo wp_kses(
+			echo \wp_kses(
 				sprintf(
 					// translators: %s is a URL.
-					__( 'The ActivityPub plugin uses the WordPress Site Icon as Avatar for the Blog-Profile, you can change the Site Icon in the "<a href="%s">General Settings</a>" of WordPress.', 'activitypub' ),
-					esc_url( admin_url( 'options-general.php' ) )
+					\__( 'The ActivityPub plugin uses the WordPress Site Icon as Avatar for the Blog-Profile, you can change the Site Icon in the "<a href="%s">General Settings</a>" of WordPress.', 'activitypub' ),
+					\esc_url( \admin_url( 'options-general.php' ) )
 				),
 				'default'
 			);
@@ -295,10 +303,25 @@ class Blog_Settings_Fields {
 			><?php echo esc_textarea( implode( PHP_EOL, (array) $also_known_as ) ); ?></textarea>
 		</label>
 		<p class="description">
-			<?php esc_html_e( 'If you’re moving from another account to this one, you’ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn’t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
+			<?php esc_html_e( 'If you&#8217;re moving from another account to this one, you&#8217;ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn’t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
 		</p>
 		<p class="description">
 		<?php echo \wp_kses_post( \__( 'Enter one account per line. Profile links or usernames like <code>@username@example.com</code> are accepted and will be automatically normalized to the correct format.', 'activitypub' ) ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Hide Social Graph field callback.
+	 */
+	public static function hide_followers_callback() {
+		?>
+		<label>
+			<input type="checkbox" name="activitypub_hide_social_graph" id="activitypub_hide_social_graph" value="1" <?php \checked( '1', \get_option( 'activitypub_hide_social_graph', '0' ) ); ?> />
+			<?php \esc_html_e( 'Hide Followers and Following on Profile', 'activitypub' ); ?>
+		</label>
+		<p class="description">
+			<?php esc_html_e( 'People you follow will still see that you follow them.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

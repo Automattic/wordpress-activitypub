@@ -104,12 +104,15 @@ class Following_Controller extends Actors_Controller {
 		$data = Following::get_following_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
 		$response = array(
-			'@context'     => get_context(),
-			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user_id ) ),
-			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
-			'type'         => 'OrderedCollection',
-			'totalItems'   => $data['total'],
-			'orderedItems' => \array_filter(
+			'@context'   => get_context(),
+			'id'         => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user_id ) ),
+			'generator'  => 'https://wordpress.org/?v=' . get_masked_wp_version(),
+			'type'       => 'OrderedCollection',
+			'totalItems' => $data['total'],
+		);
+
+		if ( Actors::show_social_graph( $user_id ) ) {
+			$response['orderedItems'] = \array_filter(
 				\array_map(
 					function ( $item ) use ( $context ) {
 						if ( 'full' === $context ) {
@@ -123,8 +126,8 @@ class Following_Controller extends Actors_Controller {
 					},
 					$data['following']
 				)
-			),
-		);
+			);
+		}
 
 		/**
 		 * Filter the list of following urls

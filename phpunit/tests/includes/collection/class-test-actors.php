@@ -271,4 +271,76 @@ class Test_Actors extends \WP_UnitTestCase {
 		$this->assertEquals( $key_pair['public_key'], $public_key );
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 	}
+
+	/**
+	 * Test show_social_graph for blog user.
+	 *
+	 * @covers ::show_social_graph
+	 */
+	public function test_show_social_graph_blog_user() {
+		// Default should be to show social graph.
+		$this->assertTrue( Actors::show_social_graph( Actors::BLOG_USER_ID ) );
+
+		// Test with option set to hide social graph.
+		\update_option( 'activitypub_hide_social_graph', '1' );
+		$this->assertFalse( Actors::show_social_graph( Actors::BLOG_USER_ID ) );
+
+		// Test with option set to show social graph explicitly.
+		\update_option( 'activitypub_hide_social_graph', '0' );
+		$this->assertTrue( Actors::show_social_graph( Actors::BLOG_USER_ID ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_hide_social_graph' );
+	}
+
+	/**
+	 * Test show_social_graph for regular user.
+	 *
+	 * @covers ::show_social_graph
+	 */
+	public function test_show_social_graph_regular_user() {
+		$user_id = 1;
+
+		// Default should be to show social graph.
+		$this->assertTrue( Actors::show_social_graph( $user_id ) );
+
+		// Test with user option set to hide social graph.
+		\update_user_option( $user_id, 'activitypub_hide_social_graph', '1' );
+		$this->assertFalse( Actors::show_social_graph( $user_id ) );
+
+		// Test with user option set to show social graph explicitly.
+		\update_user_option( $user_id, 'activitypub_hide_social_graph', '0' );
+		$this->assertTrue( Actors::show_social_graph( $user_id ) );
+
+		// Clean up.
+		\delete_user_option( $user_id, 'activitypub_hide_social_graph' );
+	}
+
+	/**
+	 * Test show_social_graph with various user IDs.
+	 *
+	 * @covers ::show_social_graph
+	 */
+	public function test_show_social_graph_various_users() {
+		// Test with blog user as integer.
+		$this->assertTrue( Actors::show_social_graph( 0 ) );
+
+		// Test with blog user and hide option set.
+		\update_option( 'activitypub_hide_social_graph', '1' );
+		$this->assertFalse( Actors::show_social_graph( 0 ) );
+
+		// Test that regular user is not affected by blog option.
+		$user_id = 1;
+		$this->assertTrue( Actors::show_social_graph( $user_id ) );
+
+		// Test that blog user is not affected by user option.
+		\update_user_option( $user_id, 'activitypub_hide_social_graph', '1' );
+		\update_option( 'activitypub_hide_social_graph', '0' );
+		$this->assertTrue( Actors::show_social_graph( Actors::BLOG_USER_ID ) );
+		$this->assertFalse( Actors::show_social_graph( $user_id ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_hide_social_graph' );
+		\delete_user_option( $user_id, 'activitypub_hide_social_graph' );
+	}
 }

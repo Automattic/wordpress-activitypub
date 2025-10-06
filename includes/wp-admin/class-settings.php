@@ -336,6 +336,17 @@ class Settings {
 			)
 		);
 
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_hide_social_graph',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Hide Followers and Followings on Profile.',
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
 		// Moderation settings.
 		\register_setting(
 			'activitypub',

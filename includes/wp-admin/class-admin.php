@@ -245,6 +245,7 @@ class Admin {
 
 		// User options that have a default value and therefore can't be empty (Empty triggers the default value).
 		$required_user_options = array(
+			'activitypub_hide_social_graph',
 			'activitypub_mailer_new_dm',
 			'activitypub_mailer_new_follower',
 			'activitypub_mailer_new_mention',

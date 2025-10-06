@@ -236,6 +236,18 @@ class Activitypub {
 
 		\register_meta(
 			'user',
+			$blog_prefix . 'activitypub_hide_social_graph',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Hide Followers and Followings on Profile.',
+				'single'            => true,
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_meta(
+			'user',
 			$blog_prefix . 'activitypub_old_host_data',
 			array(
 				'description' => 'Actor object for the user on the old host.',
