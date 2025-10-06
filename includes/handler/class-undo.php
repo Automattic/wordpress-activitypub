@@ -30,7 +30,12 @@ class Undo {
 	 * @param int|null $user_id  The ID of the user who initiated the "Undo" activity.
 	 */
 	public static function handle_undo( $activity, $user_id ) {
-		$success = Inbox_Collection::undo( object_to_uri( $activity['object'] ) );
+		$success = false;
+		$result  = Inbox_Collection::undo( object_to_uri( $activity['object'] ) );
+
+		if ( $result && ! \is_wp_error( $result ) ) {
+			$success = true;
+		}
 
 		/**
 		 * Fires after an ActivityPub Undo activity has been handled.
