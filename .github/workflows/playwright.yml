@@ -47,5 +47,13 @@ jobs:
       - name: Log running Docker containers
         run: docker ps -a
 
+      - name: Configure permalinks
+        run: |
+          echo "Configuring pretty permalinks..."
+          npm run env -- run tests-cli wp rewrite structure '/%year%/%monthnum%/%postname%/'
+          npm run env -- run tests-cli wp rewrite flush
+          echo "Verifying permalink structure..."
+          npm run env -- run tests-cli wp rewrite list
+
       - name: Run Playwright tests
         run: npm run test:e2e
