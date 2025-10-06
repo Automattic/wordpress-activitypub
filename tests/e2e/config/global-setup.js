@@ -9,6 +9,37 @@ import { request } from '@playwright/test';
 import { RequestUtils } from '@wordpress/e2e-test-utils-playwright';
 
 /**
+ * Wait for WordPress to be ready.
+ *
+ * @param {string} baseURL - The base URL of the WordPress site
+ * @param {number} maxAttempts - Maximum number of attempts
+ * @returns {Promise<void>}
+ */
+async function waitForWordPress( baseURL, maxAttempts = 30 ) {
+	for ( let attempt = 1; attempt <= maxAttempts; attempt++ ) {
+		try {
+			const requestContext = await request.newContext( { baseURL } );
+			const response = await requestContext.get( '/wp-json/' );
+			await requestContext.dispose();
+
+			if ( response.ok() ) {
+				console.log( `✓ WordPress is ready after ${ attempt } attempt(s)` );
+				return;
+			}
+		} catch ( error ) {
+			// WordPress not ready yet
+		}
+
+		if ( attempt < maxAttempts ) {
+			console.log( `Attempt ${ attempt }/${ maxAttempts }: WordPress not ready yet, waiting...` );
+			await new Promise( ( resolve ) => setTimeout( resolve, 2000 ) );
+		}
+	}
+
+	throw new Error( 'WordPress failed to become ready' );
+}
+
+/**
  * Global setup for ActivityPub E2E tests.
  *
  * @param {import('@playwright/test').FullConfig} config
@@ -17,6 +48,10 @@ import { RequestUtils } from '@wordpress/e2e-test-utils-playwright';
 async function globalSetup( config ) {
 	const { storageState, baseURL } = config.projects[ 0 ].use;
 	const storageStatePath = typeof storageState === 'string' ? storageState : undefined;
+
+	// Wait for WordPress to be ready before proceeding
+	console.log( 'Waiting for WordPress to be ready...' );
+	await waitForWordPress( baseURL );
 
 	const requestContext = await request.newContext( {
 		baseURL,
