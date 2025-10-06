@@ -80,6 +80,18 @@ class Undo {
 			return false;
 		}
 
+		if ( is_array( $json_params['object'] ) ) {
+			$required_object_attributes = array(
+				'id',
+				'type',
+				'actor',
+				'object',
+			);
+			if ( ! empty( \array_diff( $required_object_attributes, \array_keys( $json_params['object'] ) ) ) ) {
+				return false;
+			}
+		}
+
 		return $valid;
 	}
 }
