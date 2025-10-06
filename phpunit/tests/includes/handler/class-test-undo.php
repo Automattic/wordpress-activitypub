@@ -93,6 +93,7 @@ class Test_Undo extends \WP_UnitTestCase {
 			'type'   => 'Undo',
 			'actor'  => $actor_url,
 			'object' => array(
+				'id'     => $user_actor_url,
 				'type'   => 'Follow',
 				'actor'  => $actor_url,
 				'object' => $user_actor_url,

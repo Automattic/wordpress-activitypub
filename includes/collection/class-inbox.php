@@ -179,13 +179,12 @@ class Inbox {
 	 * @return bool|\WP_Error True on success, WP_Error on failure.
 	 */
 	public static function undo( $id ) {
+		$type = '';
 		$post = self::get_by_guid( $id );
 
-		if ( \is_wp_error( $post ) ) {
-			return $post;
+		if ( ! \is_wp_error( $post ) ) {
+			$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
 		}
-
-		$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
 
 		switch ( $type ) {
 			case 'Follow':
@@ -201,6 +200,7 @@ class Inbox {
 			case 'Like':
 			case 'Create':
 			case 'Announce':
+			default:
 				if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
 					return new \WP_Error(
 						'activitypub_inbox_undo_interactions_disabled',
@@ -209,7 +209,7 @@ class Inbox {
 					);
 				}
 
-				$result = Comment::object_id_to_comment( esc_url_raw( $post->guid ) );
+				$result = Comment::object_id_to_comment( esc_url_raw( $post->guid ?? $id ) );
 
 				if ( empty( $result ) ) {
 					return new \WP_Error(
