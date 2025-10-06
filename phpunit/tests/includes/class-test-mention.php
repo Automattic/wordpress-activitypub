@@ -102,22 +102,22 @@ ENDPRE;
 		// Mock responses for remote users.
 		if ( 'https://notiz.blog/.well-known/webfinger?resource=acct%3Apfefferle%40notiz.blog' === $url ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-			return json_decode( file_get_contents( AP_TESTS_DIR . '/fixtures/notiz-blog-well-known-webfinger.json' ), true );
+			return json_decode( file_get_contents( AP_TESTS_DIR . '/data/fixtures/notiz-blog-well-known-webfinger.json' ), true );
 		}
 
 		if ( 'https://lemmy.ml/.well-known/webfinger?resource=acct%3Apfefferle%40lemmy.ml' === $url ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-			return json_decode( file_get_contents( AP_TESTS_DIR . '/fixtures/lemmy-ml-well-known-webfinger.json' ), true );
+			return json_decode( file_get_contents( AP_TESTS_DIR . '/data/fixtures/lemmy-ml-well-known-webfinger.json' ), true );
 		}
 
 		if ( 'https://notiz.blog/author/matthias-pfefferle/' === $url ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-			return json_decode( file_get_contents( AP_TESTS_DIR . '/fixtures/notiz-blog-author-matthias-pfefferle.json' ), true );
+			return json_decode( file_get_contents( AP_TESTS_DIR . '/data/fixtures/notiz-blog-author-matthias-pfefferle.json' ), true );
 		}
 
 		if ( 'https://lemmy.ml/u/pfefferle' === $url ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-			return json_decode( file_get_contents( AP_TESTS_DIR . '/fixtures/lemmy-ml-u-pfefferle.json' ), true );
+			return json_decode( file_get_contents( AP_TESTS_DIR . '/data/fixtures/lemmy-ml-u-pfefferle.json' ), true );
 		}
 
 		return $response;

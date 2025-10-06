@@ -79,7 +79,7 @@ Both commands support additional PHPUnit arguments. Add them after `--`:
 npm run env-test -- --filter=test_migrate_to_4_1_0
 
 # Run tests in a specific file
-npm run env-test -- tests/includes/class-test-migration.php
+npm run env-test -- phpunit/tests/includes/class-test-migration.php
 
 # Run tests with a specific group
 npm run env-test -- --group=migration

@@ -65,7 +65,7 @@ class ActivityPub_TestCase_Cache_HTTP extends \WP_UnitTestCase {
 	 */
 	public static function pre_http_request( $preempt, $request, $url ) {
 		$p     = wp_parse_url( $url );
-		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
+		$cache = AP_TESTS_DIR . '/data/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
 		if ( file_exists( $cache ) ) {
 			return apply_filters(
 				'fake_http_response',
@@ -134,7 +134,7 @@ class ActivityPub_TestCase_Cache_HTTP extends \WP_UnitTestCase {
 	 */
 	public static function http_response( $response, $args, $url ) {
 		$p     = wp_parse_url( $url );
-		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
+		$cache = AP_TESTS_DIR . '/data/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
 		if ( ! file_exists( $cache ) ) {
 			$headers = wp_remote_retrieve_headers( $response );
 			file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions
