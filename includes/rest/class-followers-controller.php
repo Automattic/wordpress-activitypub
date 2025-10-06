@@ -106,7 +106,7 @@ class Followers_Controller extends Actors_Controller {
 			'totalItems' => $data['total'],
 		);
 
-		if ( Actors::show_followers( $user_id ) ) {
+		if ( Actors::show_social_graph( $user_id ) ) {
 			$response['orderedItems'] = \array_filter(
 				\array_map(
 					function ( $item ) use ( $context ) {

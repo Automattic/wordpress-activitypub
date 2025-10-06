@@ -338,7 +338,7 @@ class Settings {
 
 		\register_setting(
 			'activitypub_blog',
-			'activitypub_hide_followers',
+			'activitypub_hide_social_graph',
 			array(
 				'type'              => 'integer',
 				'description'       => 'Hide Followers and Followings on Profile.',

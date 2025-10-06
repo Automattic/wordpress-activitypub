@@ -92,7 +92,7 @@ class User_Settings_Fields {
 		);
 
 		\add_settings_field(
-			'activitypub_hide_followers',
+			'activitypub_hide_social_graph',
 			\__( 'Followers and Followings', 'activitypub' ),
 			array( self::class, 'hide_followers_callback' ),
 			'activitypub_user_settings',
@@ -390,14 +390,14 @@ class User_Settings_Fields {
 	}
 
 	/**
-	 * Hide Followers and Following field callback.
+	 * Hide Social Graph field callback.
 	 */
 	public static function hide_followers_callback() {
-		$hide_followers = \get_user_option( 'activitypub_hide_followers', \get_current_user_id() );
+		$hide_followers = \get_user_option( 'activitypub_hide_social_graph', \get_current_user_id() );
 		?>
 		<label>
-			<input type="checkbox" name="activitypub_hide_followers" id="activitypub_hide_followers" value="1" <?php \checked( '1', $hide_followers ); ?> />
-			<?php \esc_html_e( 'Hide Followers and Followings on Profile', 'activitypub' ); ?>
+			<input type="checkbox" name="activitypub_hide_social_graph" id="activitypub_hide_social_graph" value="1" <?php \checked( '1', $hide_followers ); ?> />
+			<?php \esc_html_e( 'Hide Followers and Following on Profile', 'activitypub' ); ?>
 		</label>
 		<p class="description">
 			<?php esc_html_e( 'By default, these lists are public. Hiding them removes them from your profile, but people you follow will still see that you follow them.', 'activitypub' ); ?>
