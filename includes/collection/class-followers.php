@@ -481,4 +481,266 @@ class Followers {
 
 		self::remove( $actor_id, $user_id );
 	}
+
+	/**
+	 * Compute the partial follower collection digest for a specific instance.
+	 *
+	 * Implements FEP-8fcf: Followers collection synchronization.
+	 * The digest is created by XORing together the individual SHA256 digests
+	 * of each follower's ID.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
+	 *
+	 * @param int    $user_id  The user ID whose followers to compute.
+	 * @param string $authority The URI authority (scheme + host) to filter by.
+	 *
+	 * @return string The hex-encoded digest, or empty string if no followers.
+	 */
+	public static function compute_partial_digest( $user_id, $authority ) {
+		$followers = self::get_partial_followers( $user_id, $authority );
+
+		if ( empty( $followers ) ) {
+			return '';
+		}
+
+		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
+		$digest = str_repeat( '0', 64 );
+
+		foreach ( $followers as $follower_url ) {
+			// Compute SHA256 hash of the follower ID.
+			$hash = hash( 'sha256', $follower_url );
+
+			// XOR the hash with the running digest.
+			$digest = self::xor_hex_strings( $digest, $hash );
+		}
+
+		return $digest;
+	}
+
+	/**
+	 * Get partial followers collection for a specific instance.
+	 *
+	 * Returns only followers whose ID shares the specified URI authority.
+	 * Used for FEP-8fcf synchronization.
+	 *
+	 * @param int    $user_id  The user ID whose followers to get.
+	 * @param string $authority The URI authority (scheme + host) to filter by.
+	 *
+	 * @return array Array of follower URLs.
+	 */
+	public static function get_partial_followers( $user_id, $authority ) {
+		// Get all followers.
+		$followers = self::get_followers( $user_id );
+
+		if ( empty( $followers ) ) {
+			return array();
+		}
+
+		// Filter by authority.
+		$partial_followers = array();
+
+		foreach ( $followers as $follower ) {
+			$follower_url = is_string( $follower ) ? $follower : $follower->guid;
+
+			if ( empty( $follower_url ) ) {
+				continue;
+			}
+
+			// Parse the URL and check if authority matches.
+			$parsed = wp_parse_url( $follower_url );
+
+			if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+				continue;
+			}
+
+			$follower_authority = $parsed['scheme'] . '://' . $parsed['host'];
+
+			// Add port if it's not the default for the scheme.
+			if ( ! empty( $parsed['port'] ) ) {
+				$default_ports = array(
+					'http'  => 80,
+					'https' => 443,
+				);
+				if ( ! isset( $default_ports[ $parsed['scheme'] ] ) || $default_ports[ $parsed['scheme'] ] !== $parsed['port'] ) {
+					$follower_authority .= ':' . $parsed['port'];
+				}
+			}
+
+			if ( $follower_authority === $authority ) {
+				$partial_followers[] = $follower_url;
+			}
+		}
+
+		// Sort for consistency.
+		sort( $partial_followers );
+
+		return $partial_followers;
+	}
+
+	/**
+	 * XOR two hexadecimal strings.
+	 *
+	 * Used for FEP-8fcf digest computation.
+	 *
+	 * @param string $hex1 First hex string.
+	 * @param string $hex2 Second hex string.
+	 *
+	 * @return string The XORed result as a hex string.
+	 */
+	private static function xor_hex_strings( $hex1, $hex2 ) {
+		$result = '';
+
+		// Ensure both strings are the same length (should be 64 chars for SHA256).
+		$length = max( strlen( $hex1 ), strlen( $hex2 ) );
+		$hex1   = str_pad( $hex1, $length, '0', STR_PAD_LEFT );
+		$hex2   = str_pad( $hex2, $length, '0', STR_PAD_LEFT );
+
+		// XOR each pair of hex digits.
+		for ( $i = 0; $i < $length; $i += 2 ) {
+			$byte1   = hexdec( substr( $hex1, $i, 2 ) );
+			$byte2   = hexdec( substr( $hex2, $i, 2 ) );
+			$result .= str_pad( dechex( $byte1 ^ $byte2 ), 2, '0', STR_PAD_LEFT );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Generate the Collection-Synchronization header value for FEP-8fcf.
+	 *
+	 * @param int    $user_id   The user ID whose followers collection to sync.
+	 * @param string $authority The authority of the receiving instance.
+	 *
+	 * @return string|false The header value, or false if cannot generate.
+	 */
+	public static function generate_sync_header( $user_id, $authority ) {
+		// Compute the digest for this specific authority.
+		$digest = self::compute_partial_digest( $user_id, $authority );
+
+		if ( empty( $digest ) ) {
+			return false;
+		}
+
+		// Build the collection ID (followers collection URL).
+		$collection_id = \Activitypub\get_rest_url_by_path( sprintf( 'actors/%d/followers', $user_id ) );
+
+		// Build the partial followers URL.
+		$url = \Activitypub\get_rest_url_by_path(
+			sprintf(
+				'actors/%d/followers-sync?authority=%s',
+				$user_id,
+				rawurlencode( $authority )
+			)
+		);
+
+		// Format as per FEP-8fcf (similar to HTTP Signatures format).
+		return sprintf(
+			'collectionId="%s", url="%s", digest="%s"',
+			$collection_id,
+			$url,
+			$digest
+		);
+	}
+
+	/**
+	 * Parse the Collection-Synchronization header.
+	 *
+	 * @param string $header The header value.
+	 *
+	 * @return array|false Array with collectionId, url, and digest, or false on failure.
+	 */
+	public static function parse_sync_header( $header ) {
+		if ( empty( $header ) ) {
+			return false;
+		}
+
+		// Parse the signature-style format.
+		$params = array();
+
+		if ( preg_match_all( '/(\w+)="([^"]*)"/', $header, $matches, PREG_SET_ORDER ) ) {
+			foreach ( $matches as $match ) {
+				$params[ $match[1] ] = $match[2];
+			}
+		}
+
+		// Validate required fields.
+		if ( empty( $params['collectionId'] ) || empty( $params['url'] ) || empty( $params['digest'] ) ) {
+			return false;
+		}
+
+		return $params;
+	}
+
+	/**
+	 * Validate Collection-Synchronization header parameters.
+	 *
+	 * @param array  $params  Parsed header parameters.
+	 * @param string $actor_url The actor URL that sent the activity.
+	 *
+	 * @return bool True if valid, false otherwise.
+	 */
+	public static function validate_sync_header_params( $params, $actor_url ) {
+		if ( empty( $params['collectionId'] ) || empty( $params['url'] ) ) {
+			return false;
+		}
+
+		// Parse the actor URL to get the expected followers collection.
+		$expected_collection = $actor_url . '/followers';
+
+		// Check if collectionId matches the actor's followers collection.
+		if ( $params['collectionId'] !== $expected_collection ) {
+			return false;
+		}
+
+		// Check if url has the same authority as collectionId (prevent SSRF).
+		$collection_parsed = wp_parse_url( $params['collectionId'] );
+		$url_parsed        = wp_parse_url( $params['url'] );
+
+		if ( ! $collection_parsed || ! $url_parsed ) {
+			return false;
+		}
+
+		// Build authorities for comparison.
+		$collection_authority = $collection_parsed['scheme'] . '://' . $collection_parsed['host'];
+		$url_authority        = $url_parsed['scheme'] . '://' . $url_parsed['host'];
+
+		if ( ! empty( $collection_parsed['port'] ) ) {
+			$collection_authority .= ':' . $collection_parsed['port'];
+		}
+
+		if ( ! empty( $url_parsed['port'] ) ) {
+			$url_authority .= ':' . $url_parsed['port'];
+		}
+
+		return $collection_authority === $url_authority;
+	}
+
+	/**
+	 * Get the authority (scheme + host + port) from a URL.
+	 *
+	 * @param string $url The URL to parse.
+	 *
+	 * @return string|false The authority, or false on failure.
+	 */
+	public static function get_authority( $url ) {
+		$parsed = wp_parse_url( $url );
+
+		if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+			return false;
+		}
+
+		$authority = $parsed['scheme'] . '://' . $parsed['host'];
+
+		if ( ! empty( $parsed['port'] ) ) {
+			$default_ports = array(
+				'http'  => 80,
+				'https' => 443,
+			);
+			if ( ! isset( $default_ports[ $parsed['scheme'] ] ) || $default_ports[ $parsed['scheme'] ] !== $parsed['port'] ) {
+				$authority .= ':' . $parsed['port'];
+			}
+		}
+
+		return $authority;
+	}
 }

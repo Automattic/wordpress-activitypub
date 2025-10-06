@@ -74,6 +74,34 @@ class Followers_Controller extends Actors_Controller {
 				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
+
+		// FEP-8fcf: Partial followers collection for synchronization.
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/followers-sync',
+			array(
+				'args' => array(
+					'user_id' => array(
+						'description'       => 'The ID of the actor.',
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => array( $this, 'validate_user_id' ),
+					),
+				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_partial_followers' ),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'args'                => array(
+						'authority' => array(
+							'description' => 'The URI authority to filter followers by.',
+							'type'        => 'string',
+							'required'    => true,
+						),
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -124,6 +152,50 @@ class Followers_Controller extends Actors_Controller {
 		if ( \is_wp_error( $response ) ) {
 			return $response;
 		}
+
+		$response = \rest_ensure_response( $response );
+		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
+
+		return $response;
+	}
+
+	/**
+	 * Retrieves partial followers list for FEP-8fcf synchronization.
+	 *
+	 * Returns only followers whose ID shares the specified URI authority.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
+	 */
+	public function get_partial_followers( $request ) {
+		$user_id   = $request->get_param( 'user_id' );
+		$authority = $request->get_param( 'authority' );
+
+		// Validate authority format.
+		if ( ! preg_match( '#^https?://[^/]+$#', $authority ) ) {
+			return new \WP_Error(
+				'invalid_authority',
+				\__( 'Invalid authority format.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Get partial followers filtered by authority.
+		$partial_followers = Followers::get_partial_followers( $user_id, $authority );
+
+		$response = array(
+			'@context'     => get_context(),
+			'id'           => get_rest_url_by_path(
+				\sprintf(
+					'actors/%d/followers-sync?authority=%s',
+					$user_id,
+					rawurlencode( $authority )
+				)
+			),
+			'type'         => 'OrderedCollection',
+			'totalItems'   => count( $partial_followers ),
+			'orderedItems' => $partial_followers,
+		);
 
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );

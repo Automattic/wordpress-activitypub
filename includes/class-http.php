@@ -55,6 +55,18 @@ class Http {
 			'private_key'         => Actors::get_private_key( $user_id ),
 		);
 
+		// FEP-8fcf: Add Collection-Synchronization header for Create activities.
+		$activity = \json_decode( $body );
+		if ( $activity && isset( $activity->type ) && 'Create' === $activity->type ) {
+			$inbox_authority = Collection\Followers::get_authority( $url );
+			if ( $inbox_authority ) {
+				$sync_header = Collection\Followers::generate_sync_header( $user_id, $inbox_authority );
+				if ( $sync_header ) {
+					$args['headers']['Collection-Synchronization'] = $sync_header;
+				}
+			}
+		}
+
 		$response = \wp_safe_remote_post( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
 

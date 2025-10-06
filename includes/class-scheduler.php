@@ -14,6 +14,7 @@ use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Comment;
+use Activitypub\Scheduler\Follower;
 use Activitypub\Scheduler\Post;
 
 /**
@@ -58,6 +59,7 @@ class Scheduler {
 		Post::init();
 		Actor::init();
 		Comment::init();
+		Follower::init();
 
 		/**
 		 * Register additional schedulers.

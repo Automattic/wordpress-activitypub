@@ -24,6 +24,8 @@ use function Activitypub\user_can_activitypub;
  * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox_Controller extends \WP_REST_Controller {
+	use Followers_Sync;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -166,6 +168,9 @@ class Inbox_Controller extends \WP_REST_Controller {
 					\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 					continue;
 				}
+
+				// FEP-8fcf: Process Collection-Synchronization header if present.
+				$this->process_followers_synchronization( $request, $data, $user_id );
 
 				/**
 				 * ActivityPub inbox action.
