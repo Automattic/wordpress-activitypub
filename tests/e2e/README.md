@@ -77,7 +77,7 @@ test.describe( 'Your Test Suite', () => {
 
 Current test coverage includes:
 
-### Followers Endpoint (`/activitypub/1.0/users/{id}/followers`)
+### Followers Endpoint (`/wp-json/activitypub/1.0/actors/{id}/followers`)
 - ✅ Returns 200 status code
 - ✅ Returns valid ActivityStreams OrderedCollection
 - ✅ Handles empty followers list
