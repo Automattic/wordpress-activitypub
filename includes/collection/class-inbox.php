@@ -185,18 +185,13 @@ class Inbox {
 			return $post;
 		}
 
-		$type = get_post_meta( $post->ID, '_activitypub_activity_type', true );
+		$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
 
 		switch ( $type ) {
 			case 'Follow':
-				$activity = Activity::init_from_json( $post->post_content, true );
-				$user_id  = Actors::get_id_by_resource( object_to_uri( $activity['object']['object'] ) );
-
-				if ( \is_wp_error( $user_id ) ) {
-					return $user_id;
-				}
-
-				$post = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
+				$actor   = \get_post_meta( $post->ID, '_activitypub_activity_remote_actor', true );
+				$user_id = $post->post_author;
+				$post    = Remote_Actors::get_by_uri( $actor );
 
 				if ( \is_wp_error( $post ) ) {
 					return $post;
