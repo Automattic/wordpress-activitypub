@@ -29,12 +29,6 @@ async function globalSetup( config ) {
 	// Authenticate and save the storageState to disk.
 	await requestUtils.setupRest();
 
-	// Ensure pretty permalinks are enabled for ActivityPub REST API endpoints
-	// This is critical for the /wp-json/ routes to work properly
-	await requestUtils.updateSiteSettings( {
-		permalink_structure: '/%year%/%monthnum%/%postname%/',
-	} );
-
 	// Reset the test environment before running the tests.
 	await Promise.all( [
 		requestUtils.activateTheme( 'twentytwentyone' ),
