@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Comment;
 
 use function Activitypub\is_activity_public;
 use function Activitypub\object_to_uri;
@@ -139,5 +140,84 @@ class Inbox {
 		}
 
 		return \get_post( $post_id );
+	}
+
+	/**
+	 * Get an inbox item by its GUID.
+	 *
+	 * @param string $guid The GUID of the inbox item.
+	 *
+	 * @return \WP_Post|\WP_Error The inbox item or WP_Error.
+	 */
+	public static function get_by_guid( $guid ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				\esc_url( $guid ),
+				self::POST_TYPE
+			)
+		);
+
+		if ( ! $post_id ) {
+			return new \WP_Error(
+				'activitypub_inbox_item_not_found',
+				\__( 'Inbox item not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return \get_post( $post_id );
+	}
+
+	/**
+	 * Undo a received activity.
+	 *
+	 * @param string $id The ID of the inbox item to be removed.
+	 *
+	 * @return bool|\WP_Error True on success, WP_Error on failure.
+	 */
+	public static function undo( $id ) {
+		$post = self::get_by_guid( $id );
+
+		if ( \is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		$type = get_post_meta( $post->ID, '_activitypub_activity_type', true );
+
+		switch ( $type ) {
+			case 'Follow':
+				$activity = Activity::init_from_json( $post->post_content, true );
+				$user_id  = Actors::get_id_by_resource( object_to_uri( $activity['object']['object'] ) );
+
+				if ( ! \is_wp_error( $user_id ) ) {
+					$post = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
+
+					if ( ! \is_wp_error( $post ) ) {
+						return Followers::remove( $post, $user_id );
+					}
+				}
+
+				break;
+			case 'Like':
+			case 'Create':
+			case 'Announce':
+				if ( ! ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
+					$result = Comment::object_id_to_comment( esc_url_raw( $post->guid ) );
+
+					if ( ! empty( $result ) ) {
+						return \wp_delete_comment( $result, true );
+					}
+				}
+				break;
+		}
+
+		return new \WP_Error(
+			'activitypub_inbox_undo_unsupported',
+			\__( 'Undo is only supported for Follow, Like, Create, and Announce activities.', 'activitypub' ),
+			array( 'status' => 400 )
+		);
 	}
 }

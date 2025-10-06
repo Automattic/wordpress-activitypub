@@ -41,7 +41,7 @@ class Inbox {
 		 *
 		 * @param array $activity_types The activity types to persist in the inbox.
 		 */
-		$activity_types = \apply_filters( 'activitypub_persist_inbox_activity_types', array( 'Create', 'Update', 'Follow' ) );
+		$activity_types = \apply_filters( 'activitypub_persist_inbox_activity_types', array( 'Create', 'Update', 'Follow', 'Like', 'Announce' ) );
 		$activity_types = \array_map( 'Activitypub\camel_to_snake_case', $activity_types );
 
 		if ( ! \in_array( \strtolower( $type ), $activity_types, true ) ) {
