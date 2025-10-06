@@ -29,7 +29,11 @@ class Buddypress {
 	 * @return object The author object.
 	 */
 	public static function add_user_metadata( $author, $author_id ) {
-		$author->url = bp_core_get_user_domain( $author_id ); // Add BP member profile URL as user URL.
+		if ( \function_exists( 'bp_members_get_user_url' ) ) {
+			$author->url = bp_members_get_user_url( $author_id );
+		} else {
+			$author->url = bp_core_get_user_domain( $author_id );
+		}
 
 		// Add BuddyPress' cover_image instead of WordPress' header_image.
 		$cover_image_url = bp_attachments_get_attachment( 'url', array( 'item_id' => $author_id ) );
@@ -48,9 +52,9 @@ class Buddypress {
 			'value' => \html_entity_decode(
 				sprintf(
 					'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
-					\esc_attr( bp_core_get_user_domain( $author_id ) ),
-					\bp_core_get_user_domain( $author_id ),
-					\wp_parse_url( \bp_core_get_user_domain( $author_id ), \PHP_URL_HOST )
+					\esc_attr( $author->url ),
+					\esc_url( $author->url ),
+					\wp_parse_url( $author->url, \PHP_URL_HOST )
 				),
 				\ENT_QUOTES,
 				'UTF-8'
