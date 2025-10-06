@@ -7,6 +7,9 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Collection\Followers;
+use Activitypub\Http;
+
 /**
  * Collection Trait.
  *
@@ -141,5 +144,149 @@ trait Collection {
 		}
 
 		return $collection_schema;
+	}
+
+	/**
+	 * Process Collection-Synchronization header if present (FEP-8fcf).
+	 *
+	 * This method handles the FEP-8fcf Collection Synchronization protocol for any collection type.
+	 * It detects the collection type from the URL and delegates to the appropriate handler.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @param array            $data    The activity data.
+	 * @param int              $user_id The local user ID receiving the activity.
+	 */
+	protected function process_collection_synchronization( $request, $data, $user_id ) {
+		// Get the Collection-Synchronization header.
+		$sync_header = $request->get_header( 'collection_synchronization' );
+
+		if ( empty( $sync_header ) ) {
+			return;
+		}
+
+		// Parse the header using the generic HTTP parser.
+		$params = \Activitypub\Http::parse_collection_sync_header( $sync_header );
+
+		if ( false === $params ) {
+			return;
+		}
+
+		// Ensure we have a URL parameter to determine collection type.
+		if ( ! isset( $params['url'] ) ) {
+			return;
+		}
+
+		// Determine the collection type from the URL.
+		$collection_type = $this->detect_collection_type( $params['url'] );
+
+		if ( ! $collection_type ) {
+			// Unknown or unsupported collection type.
+			return;
+		}
+
+		// Get the actor URL for validation.
+		$actor_url = isset( $data['actor'] ) ? $data['actor'] : null;
+
+		if ( ! $actor_url ) {
+			return;
+		}
+
+		/**
+		 * Filters whether collection synchronization should be processed for a specific collection type.
+		 *
+		 * Allows collection handlers to implement their own synchronization logic.
+		 * Return true to indicate that synchronization was handled, false to skip.
+		 *
+		 * @param bool             $handled  Whether the synchronization was handled.
+		 * @param string           $type     The collection type (e.g., 'followers', 'following', 'liked').
+		 * @param array            $params   The parsed Collection-Synchronization header parameters.
+		 * @param int              $user_id  The local user ID.
+		 * @param string           $actor    The remote actor URL.
+		 * @param \WP_REST_Request $request  The request object.
+		 * @param array            $data     The activity data.
+		 */
+		$handled = \apply_filters(
+			'activitypub_collection_synchronization',
+			false,
+			$collection_type,
+			$params,
+			$user_id,
+			$actor_url,
+			$request,
+			$data
+		);
+
+		// If no handler processed it, use the default followers handler.
+		if ( ! $handled && 'followers' === $collection_type ) {
+			$this->process_followers_collection_sync( $params, $user_id, $actor_url );
+		}
+	}
+
+	/**
+	 * Detect the collection type from a URL.
+	 *
+	 * @param string $url The collection URL.
+	 * @return string|false The collection type (e.g., 'followers', 'following', 'liked') or false if unknown.
+	 */
+	protected function detect_collection_type( $url ) {
+		// Check for followers collection.
+		if ( preg_match( '#/followers(?:-sync)?(?:\?|$)#', $url ) ) {
+			return 'followers';
+		}
+
+		/**
+		 * Filters the collection type detection.
+		 *
+		 * Allows plugins to register custom collection types for synchronization.
+		 *
+		 * @param string|false $type The detected collection type, or false if unknown.
+		 * @param string       $url  The collection URL.
+		 */
+		return \apply_filters( 'activitypub_detect_collection_type', false, $url );
+	}
+
+	/**
+	 * Process followers collection synchronization.
+	 *
+	 * @param array  $params    The parsed Collection-Synchronization header parameters.
+	 * @param int    $user_id   The local user ID.
+	 * @param string $actor_url The remote actor URL.
+	 */
+	protected function process_followers_collection_sync( $params, $user_id, $actor_url ) {
+		// Validate the header parameters.
+		if ( ! Http::validate_collection_sync_header_params( $params, $actor_url ) ) {
+			return;
+		}
+
+		// Get our local authority.
+		$our_authority = Http::get_authority( \home_url() );
+
+		if ( ! $our_authority ) {
+			return;
+		}
+
+		// Compute our local digest for this actor's followers from our instance.
+		$local_digest = Followers::compute_partial_digest( $user_id, $our_authority );
+
+		// Compare digests.
+		if ( $local_digest === $params['digest'] ) {
+			// Digests match, no synchronization needed.
+			return;
+		}
+
+		// Digests do not match, trigger reconciliation.
+
+		/**
+		 * Action triggered when Collection-Synchronization digest mismatch is detected for followers.
+		 *
+		 * This allows for async processing of the reconciliation.
+		 *
+		 * @param int    $user_id    The local user ID.
+		 * @param string $actor_url  The remote actor URL.
+		 * @param array  $params     The parsed Collection-Synchronization header parameters.
+		 */
+		\do_action( 'activitypub_followers_sync_mismatch', $user_id, $actor_url, $params );
 	}
 }

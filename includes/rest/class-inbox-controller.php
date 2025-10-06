@@ -24,7 +24,7 @@ use function Activitypub\user_can_activitypub;
  * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox_Controller extends \WP_REST_Controller {
-	use Followers_Sync;
+	use Collection;
 
 	/**
 	 * The namespace of this controller's route.
@@ -170,7 +170,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				}
 
 				// FEP-8fcf: Process Collection-Synchronization header if present.
-				$this->process_followers_synchronization( $request, $data, $user_id );
+				$this->process_collection_synchronization( $request, $data, $user_id );
 
 				/**
 				 * ActivityPub inbox action.

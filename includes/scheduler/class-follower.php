@@ -70,7 +70,7 @@ class Follower {
 		$remote_followers = $data['orderedItems'];
 
 		// Get our authority.
-		$our_authority = Followers::get_authority( \home_url() );
+		$our_authority = Http::get_authority( \home_url() );
 
 		if ( ! $our_authority ) {
 			return;

@@ -24,7 +24,6 @@ use function Activitypub\get_rest_url_by_path;
  */
 class Actors_Inbox_Controller extends Actors_Controller {
 	use Collection;
-	use Followers_Sync;
 
 	/**
 	 * Register routes.
@@ -180,7 +179,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 		} else {
 			// FEP-8fcf: Process Collection-Synchronization header if present.
-			$this->process_followers_synchronization( $request, $data, $user_id );
+			$this->process_collection_synchronization( $request, $data, $user_id );
 
 			/**
 			 * ActivityPub inbox action.

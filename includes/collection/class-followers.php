@@ -511,7 +511,7 @@ class Followers {
 			$hash = hash( 'sha256', $follower_url );
 
 			// XOR the hash with the running digest.
-			$digest = self::xor_hex_strings( $digest, $hash );
+			$digest = \Activitypub\Http::xor_hex_strings( $digest, $hash );
 		}
 
 		return $digest;
@@ -578,34 +578,6 @@ class Followers {
 	}
 
 	/**
-	 * XOR two hexadecimal strings.
-	 *
-	 * Used for FEP-8fcf digest computation.
-	 *
-	 * @param string $hex1 First hex string.
-	 * @param string $hex2 Second hex string.
-	 *
-	 * @return string The XORed result as a hex string.
-	 */
-	private static function xor_hex_strings( $hex1, $hex2 ) {
-		$result = '';
-
-		// Ensure both strings are the same length (should be 64 chars for SHA256).
-		$length = max( strlen( $hex1 ), strlen( $hex2 ) );
-		$hex1   = str_pad( $hex1, $length, '0', STR_PAD_LEFT );
-		$hex2   = str_pad( $hex2, $length, '0', STR_PAD_LEFT );
-
-		// XOR each pair of hex digits.
-		for ( $i = 0; $i < $length; $i += 2 ) {
-			$byte1   = hexdec( substr( $hex1, $i, 2 ) );
-			$byte2   = hexdec( substr( $hex2, $i, 2 ) );
-			$result .= str_pad( dechex( $byte1 ^ $byte2 ), 2, '0', STR_PAD_LEFT );
-		}
-
-		return $result;
-	}
-
-	/**
 	 * Generate the Collection-Synchronization header value for FEP-8fcf.
 	 *
 	 * @param int    $user_id   The user ID whose followers collection to sync.
@@ -640,107 +612,5 @@ class Followers {
 			$url,
 			$digest
 		);
-	}
-
-	/**
-	 * Parse the Collection-Synchronization header.
-	 *
-	 * @param string $header The header value.
-	 *
-	 * @return array|false Array with collectionId, url, and digest, or false on failure.
-	 */
-	public static function parse_sync_header( $header ) {
-		if ( empty( $header ) ) {
-			return false;
-		}
-
-		// Parse the signature-style format.
-		$params = array();
-
-		if ( preg_match_all( '/(\w+)="([^"]*)"/', $header, $matches, PREG_SET_ORDER ) ) {
-			foreach ( $matches as $match ) {
-				$params[ $match[1] ] = $match[2];
-			}
-		}
-
-		// Validate required fields.
-		if ( empty( $params['collectionId'] ) || empty( $params['url'] ) || empty( $params['digest'] ) ) {
-			return false;
-		}
-
-		return $params;
-	}
-
-	/**
-	 * Validate Collection-Synchronization header parameters.
-	 *
-	 * @param array  $params  Parsed header parameters.
-	 * @param string $actor_url The actor URL that sent the activity.
-	 *
-	 * @return bool True if valid, false otherwise.
-	 */
-	public static function validate_sync_header_params( $params, $actor_url ) {
-		if ( empty( $params['collectionId'] ) || empty( $params['url'] ) ) {
-			return false;
-		}
-
-		// Parse the actor URL to get the expected followers collection.
-		$expected_collection = $actor_url . '/followers';
-
-		// Check if collectionId matches the actor's followers collection.
-		if ( $params['collectionId'] !== $expected_collection ) {
-			return false;
-		}
-
-		// Check if url has the same authority as collectionId (prevent SSRF).
-		$collection_parsed = wp_parse_url( $params['collectionId'] );
-		$url_parsed        = wp_parse_url( $params['url'] );
-
-		if ( ! $collection_parsed || ! $url_parsed ) {
-			return false;
-		}
-
-		// Build authorities for comparison.
-		$collection_authority = $collection_parsed['scheme'] . '://' . $collection_parsed['host'];
-		$url_authority        = $url_parsed['scheme'] . '://' . $url_parsed['host'];
-
-		if ( ! empty( $collection_parsed['port'] ) ) {
-			$collection_authority .= ':' . $collection_parsed['port'];
-		}
-
-		if ( ! empty( $url_parsed['port'] ) ) {
-			$url_authority .= ':' . $url_parsed['port'];
-		}
-
-		return $collection_authority === $url_authority;
-	}
-
-	/**
-	 * Get the authority (scheme + host + port) from a URL.
-	 *
-	 * @param string $url The URL to parse.
-	 *
-	 * @return string|false The authority, or false on failure.
-	 */
-	public static function get_authority( $url ) {
-		$parsed = wp_parse_url( $url );
-
-		if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
-			return false;
-		}
-
-		$authority = $parsed['scheme'] . '://' . $parsed['host'];
-
-		if ( ! empty( $parsed['port'] ) ) {
-			$default_ports = array(
-				'http'  => 80,
-				'https' => 443,
-			);
-			if ( ! isset( $default_ports[ $parsed['scheme'] ] ) || $default_ports[ $parsed['scheme'] ] !== $parsed['port'] ) {
-				$authority .= ':' . $parsed['port'];
-			}
-		}
-
-		return $authority;
 	}
 }
