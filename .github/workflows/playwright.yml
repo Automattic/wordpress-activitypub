@@ -22,7 +22,8 @@ on:
 
 jobs:
   playwright:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -37,28 +38,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright system dependencies
-        run: sudo npx playwright install-deps chromium
-
       - name: Install Playwright browsers
-        run: npx playwright install chromium
+        run: npx playwright install --with-deps
 
       - name: Start WordPress environment
         run: npm run env-start
 
-      - name: Wait for WordPress to be ready
-        run: |
-          echo "Waiting for WordPress to be ready..."
-          for i in {1..30}; do
-            if curl -s -f http://localhost:8888/wp-json/ > /dev/null 2>&1; then
-              echo "WordPress is ready!"
-              exit 0
-            fi
-            echo "Attempt $i/30: WordPress not ready yet, waiting..."
-            sleep 2
-          done
-          echo "WordPress failed to become ready"
-          exit 1
+      - name: Log running Docker containers
+        run: docker ps -a
 
       - name: Run Playwright tests
         run: npm run test:e2e
