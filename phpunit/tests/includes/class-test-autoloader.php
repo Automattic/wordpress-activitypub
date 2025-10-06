@@ -69,7 +69,7 @@ class Test_Autoloader extends \WP_UnitTestCase {
 	 * @covers ::load
 	 */
 	public function test_load() {
-		$autoloader = new Autoloader( __NAMESPACE__, dirname( __DIR__ ) );
+		$autoloader = new Autoloader( __NAMESPACE__, AP_TESTS_DIR );
 
 		// Wrong prefix.
 		$autoloader->load( 'Activitypub\Autoload_Test_File' );
