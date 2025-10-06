@@ -42,10 +42,18 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Start WordPress environment
-        run: npm run env-start
+        run: |
+          echo "Starting wp-env..."
+          npm run env-start
+          echo "wp-env start command completed"
 
       - name: Log running Docker containers
-        run: docker ps -a
+        run: |
+          echo "=== All Docker containers ==="
+          docker ps -a
+          echo ""
+          echo "=== WordPress containers ==="
+          docker ps --filter "name=wordpress"
 
       - name: Wait for WordPress to be ready
         run: |
@@ -66,8 +74,18 @@ jobs:
           done
 
           echo "✗ WordPress failed to become ready after $max_attempts attempts"
-          echo "Checking Docker logs:"
-          docker compose logs
+          echo ""
+          echo "=== Docker containers status ==="
+          docker ps -a
+          echo ""
+          echo "=== Checking if port 8888 is listening ==="
+          netstat -tlnp 2>/dev/null | grep 8888 || echo "Port 8888 not found"
+          echo ""
+          echo "=== Trying to access WordPress directly ==="
+          curl -v http://localhost:8888/ || echo "Failed to connect to localhost:8888"
+          echo ""
+          echo "=== Docker container logs ==="
+          docker logs $(docker ps -q --filter "name=wordpress") 2>&1 | tail -50 || echo "No WordPress container found"
           exit 1
 
       - name: Configure permalinks
