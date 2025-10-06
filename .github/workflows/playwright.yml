@@ -38,13 +38,27 @@ jobs:
         run: npm ci
 
       - name: Install Playwright system dependencies
-        run: npx playwright install-deps chromium
+        run: sudo npx playwright install-deps chromium
 
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
       - name: Start WordPress environment
         run: npm run env-start
+
+      - name: Wait for WordPress to be ready
+        run: |
+          echo "Waiting for WordPress to be ready..."
+          for i in {1..30}; do
+            if curl -s -f http://localhost:8888/wp-json/ > /dev/null 2>&1; then
+              echo "WordPress is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30: WordPress not ready yet, waiting..."
+            sleep 2
+          done
+          echo "WordPress failed to become ready"
+          exit 1
 
       - name: Run Playwright tests
         run: npm run test:e2e
