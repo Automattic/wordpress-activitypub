@@ -400,7 +400,7 @@ class User_Settings_Fields {
 			<?php \esc_html_e( 'Hide Followers and Following on Profile', 'activitypub' ); ?>
 		</label>
 		<p class="description">
-			<?php esc_html_e( 'By default, these lists are public. Hiding them removes them from your profile, but people you follow will still see that you follow them.', 'activitypub' ); ?>
+			<?php esc_html_e( 'People you follow will still see that you follow them.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}
