@@ -1,0 +1,22 @@
+{
+	"headers": {
+		"date": "Fri, 09 Dec 2022 10:39:51 GMT",
+		"content-type": "application/activity+json",
+		"server": "nginx",
+		"x-xrds-location": "https://notiz.blog/?xrds",
+		"x-yadis-location": "https://notiz.blog/?xrds",
+		"link": "<https://notiz.blog/wp-api/micropub/1.0/media>; rel=\"micropub_media\", <https://notiz.blog/wp-api/micropub/1.0/endpoint>; rel=\"micropub\", <https://notiz.blog/wp-api/friends/v1>; rel=\"friends-base-url\", <https://notiz.blog/wp-api/indieauth/1.0/auth>; rel=\"authorization_endpoint\", <https://notiz.blog/wp-api/indieauth/1.0/token>; rel=\"token_endpoint\", <https://notiz.blog/wp-api/indieauth/1.0/metadata>; rel=\"indieauth-metadata\", <https://notiz.blog/wp-api/>; rel=\"https://api.w.org/\", <https://notiz.blog/wp-api/wp/v2/users/1>; rel=\"alternate\"; type=\"application/json\"",
+		"cache-control": "max-age=0, public",
+		"expires": "Fri, 09 Dec 2022 10:39:51 GMT",
+		"x-xss-protection": "1; mode=block",
+		"x-content-type-options": "nosniff",
+		"strict-transport-security": "max-age=31536000",
+		"x-frame-options": "SAMEORIGIN",
+		"referrer-policy": "strict-origin-when-cross-origin",
+		"x-clacks-overhead": "GNU Terry Pratchett"
+	},
+	"body": "{\"@context\":[\"https:\\/\\/www.w3.org\\/ns\\/activitystreams\",\"https:\\/\\/w3id.org\\/security\\/v1\",{\"manuallyApprovesFollowers\":\"as:manuallyApprovesFollowers\",\"PropertyValue\":\"schema:PropertyValue\",\"schema\":\"http:\\/\\/schema.org#\",\"pt\":\"https:\\/\\/joinpeertube.org\\/ns#\",\"toot\":\"http:\\/\\/joinmastodon.org\\/ns#\",\"value\":\"schema:value\",\"Hashtag\":\"as:Hashtag\",\"featured\":{\"@id\":\"toot:featured\",\"@type\":\"@id\"},\"featuredTags\":{\"@id\":\"toot:featuredTags\",\"@type\":\"@id\"}}],\"id\":\"https:\\/\\/notiz.blog\\/author\\/matthias-pfefferle\\/\",\"type\":\"Person\",\"name\":\"Matthias Pfefferle\",\"summary\":\"Ich bin Webworker und arbeite als \\u0022Head of WordPress Development\\u0022 f\\u00fcr IONOS in Karlsruhe. Ich blogge, podcaste und schreibe \\u003Cdel\\u003Eeine Kolumne\\u003C\\/del\\u003E \\u00fcber das open, independent und federated social Web. \\u003Ca href=\\u0022https:\\/\\/notiz.blog\\/about\\/\\u0022\\u003EMehr \\u00fcber mich.\\u003C\\/a\\u003E\",\"preferredUsername\":\"pfefferle\",\"url\":\"https:\\/\\/notiz.blog\\/author\\/matthias-pfefferle\\/\",\"icon\":{\"type\":\"Image\",\"url\":\"https:\\/\\/secure.gravatar.com\\/avatar\\/75512bb584bbceae57dfc503692b16b2?s=120\\u0026d=mm\\u0026r=g\"},\"image\":{\"type\":\"Image\",\"url\":\"https:\\/\\/notiz.blog\\/wp-content\\/uploads\\/2017\\/02\\/cropped-Unknown-2.jpeg\"},\"inbox\":\"https:\\/\\/notiz.blog\\/wp-api\\/activitypub\\/1.0\\/users\\/1\\/inbox\",\"outbox\":\"https:\\/\\/notiz.blog\\/wp-api\\/activitypub\\/1.0\\/users\\/1\\/outbox\",\"followers\":\"https:\\/\\/notiz.blog\\/wp-api\\/activitypub\\/1.0\\/users\\/1\\/followers\",\"following\":\"https:\\/\\/notiz.blog\\/wp-api\\/activitypub\\/1.0\\/users\\/1\\/following\",\"manuallyApprovesFollowers\":false,\"publicKey\":{\"id\":\"https:\\/\\/notiz.blog\\/author\\/matthias-pfefferle\\/#main-key\",\"owner\":\"https:\\/\\/notiz.blog\\/author\\/matthias-pfefferle\\/\",\"publicKeyPem\":\"-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA039CnlArzn6nsRjcC2RJ\\nrjY3K5ZrLnFUbPtHLGNXMJUGW+rFYE1DzhdKPTj9giiXE+J7ADI0Tme5rSWw14bT\\nLhOMBs2ma8d03\\/wnF1+kxDBeRyvyoki2TjtiJdoPu1jwZLLYTuzWTXdDiqrwSKOL\\nncKFGIkjyzOLoYuIKPgIuFg3Mt8rI6teQ2Q65YsGvOG\\/mjBOUwl5FjgcGt9aQARd\\nmFxW5XydxfNrCZwuE34Zbq\\/IC7rvaUx98zvrEHrD237YQ8O4M3afC9Kbu5Xp7k8Q\\n5JG80RItV7n8xjyt0i9LaVwlZDDYmLDYv50VhjcwRvtVFVfaN7yxDnHttd1NNENK\\nCwIDAQAB\\n-----END PUBLIC KEY-----\"},\"tag\":[],\"attachment\":[{\"type\":\"PropertyValue\",\"name\":\"Blog\",\"value\":\"\\u003Ca rel=\\u0022me\\u0022 title=\\u0022https:\\/\\/notiz.blog\\/\\u0022 target=\\u0022_blank\\u0022 href=\\u0022https:\\/\\/notiz.blog\\/\\u0022\\u003Enotiz.blog\\u003C\\/a\\u003E\"},{\"type\":\"PropertyValue\",\"name\":\"Profil\",\"value\":\"\\u003Ca rel=\\u0022me\\u0022 title=\\u0022https:\\/\\/notiz.blog\\/author\\/matthias-pfefferle\\/\\u0022 target=\\u0022_blank\\u0022 href=\\u0022https:\\/\\/notiz.blog\\/author\\/matthias-pfefferle\\/\\u0022\\u003Enotiz.blog\\u003C\\/a\\u003E\"},{\"type\":\"PropertyValue\",\"name\":\"Website\",\"value\":\"\\u003Ca rel=\\u0022me\\u0022 title=\\u0022https:\\/\\/pfefferle.org\\/\\u0022 target=\\u0022_blank\\u0022 href=\\u0022https:\\/\\/pfefferle.org\\/\\u0022\\u003Epfefferle.org\\u003C\\/a\\u003E\"}]}",
+	"response": {
+		"code": 200
+	}
+}

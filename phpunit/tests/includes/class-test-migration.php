@@ -38,7 +38,7 @@ class Test_Migration extends \WP_UnitTestCase {
 	public static function set_up_before_class() {
 		// Mock Jetpack class if it doesn't exist.
 		if ( ! class_exists( 'Jetpack' ) ) {
-			require_once AP_TESTS_DIR . '/data/class-jetpack.php';
+			require_once AP_TESTS_DIR . '/data/mocks/class-jetpack.php';
 		}
 
 		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );

@@ -1,5 +1,5 @@
 <phpunit
-	bootstrap="tests/bootstrap.php"
+	bootstrap="phpunit/bootstrap.php"
 	backupGlobals="false"
 	colors="true"
 	convertErrorsToExceptions="true"
@@ -8,11 +8,11 @@
 	>
 	<testsuites>
 		<testsuite name="ActivityPub">
-			<directory prefix="class-test-" suffix=".php">./tests</directory>
+			<directory prefix="class-test-" suffix=".php">./phpunit/tests</directory>
 		</testsuite>
 	</testsuites>
 	<listeners>
-		<listener class="Activitypub\Tests\Activitypub_Testcase_Timer" file="tests/class-activitypub-testcase-timer.php" />
+		<listener class="Activitypub\Tests\Activitypub_Testcase_Timer" file="phpunit/includes/class-activitypub-testcase-timer.php" />
 	</listeners>
 	<coverage>
 		<include>
