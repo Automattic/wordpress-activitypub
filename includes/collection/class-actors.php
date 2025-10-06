@@ -817,4 +817,19 @@ class Actors {
 		_deprecated_function( __METHOD__, '7.4.0', 'Remote_Actors::normalize_identifier' );
 		return Remote_Actors::normalize_identifier( $actor );
 	}
+
+	/**
+	 * Determine if followers should be shown for a given user.
+	 *
+	 * @param int $user_id The user ID.
+	 *
+	 * @return bool True if followers should be shown, false otherwise.
+	 */
+	public static function show_followers( $user_id ) {
+		if ( self::BLOG_USER_ID === (int) $user_id ) {
+			return ! (bool) \get_option( 'activitypub_hide_followers' );
+		} else {
+			return ! (bool) \get_user_option( 'activitypub_hide_followers', $user_id );
+		}
+	}
 }

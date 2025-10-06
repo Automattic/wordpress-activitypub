@@ -271,4 +271,76 @@ class Test_Actors extends \WP_UnitTestCase {
 		$this->assertEquals( $key_pair['public_key'], $public_key );
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 	}
+
+	/**
+	 * Test show_followers for blog user.
+	 *
+	 * @covers ::show_followers
+	 */
+	public function test_show_followers_blog_user() {
+		// Default should be to show followers.
+		$this->assertTrue( Actors::show_followers( Actors::BLOG_USER_ID ) );
+
+		// Test with option set to hide followers.
+		\update_option( 'activitypub_hide_followers', '1' );
+		$this->assertFalse( Actors::show_followers( Actors::BLOG_USER_ID ) );
+
+		// Test with option set to show followers explicitly.
+		\update_option( 'activitypub_hide_followers', '0' );
+		$this->assertTrue( Actors::show_followers( Actors::BLOG_USER_ID ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_hide_followers' );
+	}
+
+	/**
+	 * Test show_followers for regular user.
+	 *
+	 * @covers ::show_followers
+	 */
+	public function test_show_followers_regular_user() {
+		$user_id = 1;
+
+		// Default should be to show followers.
+		$this->assertTrue( Actors::show_followers( $user_id ) );
+
+		// Test with user option set to hide followers.
+		\update_user_option( $user_id, 'activitypub_hide_followers', '1' );
+		$this->assertFalse( Actors::show_followers( $user_id ) );
+
+		// Test with user option set to show followers explicitly.
+		\update_user_option( $user_id, 'activitypub_hide_followers', '0' );
+		$this->assertTrue( Actors::show_followers( $user_id ) );
+
+		// Clean up.
+		\delete_user_option( $user_id, 'activitypub_hide_followers' );
+	}
+
+	/**
+	 * Test show_followers with various user IDs.
+	 *
+	 * @covers ::show_followers
+	 */
+	public function test_show_followers_various_users() {
+		// Test with blog user as integer.
+		$this->assertTrue( Actors::show_followers( 0 ) );
+
+		// Test with blog user and hide option set.
+		\update_option( 'activitypub_hide_followers', '1' );
+		$this->assertFalse( Actors::show_followers( 0 ) );
+
+		// Test that regular user is not affected by blog option.
+		$user_id = 1;
+		$this->assertTrue( Actors::show_followers( $user_id ) );
+
+		// Test that blog user is not affected by user option.
+		\update_user_option( $user_id, 'activitypub_hide_followers', '1' );
+		\update_option( 'activitypub_hide_followers', '0' );
+		$this->assertTrue( Actors::show_followers( Actors::BLOG_USER_ID ) );
+		$this->assertFalse( Actors::show_followers( $user_id ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_hide_followers' );
+		\delete_user_option( $user_id, 'activitypub_hide_followers' );
+	}
 }
