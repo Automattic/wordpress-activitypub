@@ -1,0 +1,63 @@
+name: Playwright E2E Testing
+
+on:
+  push:
+    branches:
+      - trunk
+    paths:
+      - 'tests/e2e/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.wp-env.json'
+      - '.github/workflows/playwright.yml'
+      - 'includes/rest/**'
+  pull_request:
+    paths:
+      - 'tests/e2e/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.wp-env.json'
+      - '.github/workflows/playwright.yml'
+      - 'includes/rest/**'
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start WordPress environment
+        run: npm run wp-env start
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: artifacts/test-results/
+          retention-days: 30
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

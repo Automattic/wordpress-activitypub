@@ -18,6 +18,8 @@
 		"test:unit": "wp-scripts test-unit-js",
 		"test:unit:watch": "wp-scripts test-unit-js --watch",
 		"test:unit:debug": "wp-scripts --inspect-brk test-unit-js --runInBand --no-cache",
+		"test:e2e": "wp-scripts test-playwright --config tests/e2e/playwright.config.js",
+		"test:e2e:debug": "wp-scripts test-playwright --config tests/e2e/playwright.config.js --debug",
 		"env": "wp-env",
 		"env-start": "wp-env start",
 		"env-stop": "wp-env stop",

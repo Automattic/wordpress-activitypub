@@ -12,6 +12,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/jest.yml'
+      - '!tests/e2e/**'
   pull_request:
     paths:
       - '**/*.js'
@@ -21,6 +22,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/jest.yml'
+      - '!tests/e2e/**'
 
 jobs:
   jest:
