@@ -54,13 +54,37 @@ jobs:
       - name: Cache wp-env directory
         uses: actions/cache@v4
         with:
-          path: ~/.wp-env
+          path: ~/wp-env
           key: ${{ runner.os }}-wp-env-${{ hashFiles('.wp-env.json') }}
           restore-keys: |
             ${{ runner.os }}-wp-env-
 
+      - name: Cache Docker images
+        id: docker-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/docker-images
+          key: ${{ runner.os }}-docker-${{ hashFiles('.wp-env.json') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+
+      - name: Load cached Docker images
+        if: steps.docker-cache.outputs.cache-hit == 'true'
+        run: |
+          for image in /tmp/docker-images/*.tar; do
+            [ -f "$image" ] && docker load -i "$image"
+          done
+
       - name: Start WordPress environment
         run: npm run env-start
+
+      - name: Save Docker images to cache
+        if: steps.docker-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/docker-images
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(wordpress|mariadb|phpmyadmin)" | while read image; do
+            docker save "$image" -o "/tmp/docker-images/$(echo $image | tr ':/' '--').tar"
+          done
 
       - name: Run Playwright tests
         run: npm run test:e2e
