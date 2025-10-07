@@ -51,16 +51,18 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Restore Docker layers from cache
+      - name: Cache wp-env directory
         uses: actions/cache@v4
         with:
-          path: /tmp/.buildx-cache
+          path: ~/.wp-env
           key: ${{ runner.os }}-wp-env-${{ hashFiles('.wp-env.json') }}
           restore-keys: |
             ${{ runner.os }}-wp-env-
+
+      - name: Cache Docker images
+        uses: ScribeMD/docker-cache@0.5.0
+        with:
+          key: docker-${{ runner.os }}-${{ hashFiles('.wp-env.json') }}
 
       - name: Start WordPress environment
         run: npm run env-start
