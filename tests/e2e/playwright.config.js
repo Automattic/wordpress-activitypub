@@ -18,7 +18,7 @@ const config = defineConfig( {
 	testDir: './specs',
 	webServer: {
 		...baseConfig.webServer,
-		command: 'npm run env:start',
+		command: 'npm run env-start',
 	},
 } );
 

@@ -33,6 +33,7 @@ async function globalSetup( config ) {
 	await Promise.all( [
 		requestUtils.activateTheme( 'twentytwentyfour' ),
 		requestUtils.deleteAllPosts(),
+		requestUtils.deleteAllBlocks(),
 		requestUtils.resetPreferences(),
 	] );
 
