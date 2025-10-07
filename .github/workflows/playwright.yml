@@ -98,11 +98,6 @@ jobs:
       - name: Start WordPress environment
         run: npm run env-start
 
-      - name: Check Docker images used by wp-env
-        run: |
-          echo "All Docker images after wp-env start:"
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
-
       - name: Save Docker images to cache
         if: steps.docker-cache.outputs.cache-hit != 'true'
         run: |
