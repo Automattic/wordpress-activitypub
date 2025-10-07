@@ -179,19 +179,19 @@ class Inbox {
 	 * @return bool|\WP_Error True on success, WP_Error on failure.
 	 */
 	public static function undo( $id ) {
-		$post = self::get_by_guid( $id );
+		$inbox_item = self::get_by_guid( $id );
 
-		if ( \is_wp_error( $post ) ) {
+		if ( \is_wp_error( $inbox_item ) ) {
 			// If inbox entry not found, return the error.
-			return $post;
+			return $inbox_item;
 		}
 
-		$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
+		$type = \get_post_meta( $inbox_item->ID, '_activitypub_activity_type', true );
 
 		switch ( $type ) {
 			case 'Follow':
-				$actor   = \get_post_meta( $post->ID, '_activitypub_activity_remote_actor', true );
-				$user_id = $post->post_author;
+				$actor   = \get_post_meta( $inbox_item->ID, '_activitypub_activity_remote_actor', true );
+				$user_id = $inbox_item->post_author;
 				$post    = Remote_Actors::get_by_uri( $actor );
 
 				if ( \is_wp_error( $post ) ) {
@@ -211,7 +211,7 @@ class Inbox {
 					);
 				}
 
-				$result = Comment::object_id_to_comment( esc_url_raw( $post->guid ) );
+				$result = Comment::object_id_to_comment( esc_url_raw( $inbox_item->guid ) );
 
 				if ( empty( $result ) ) {
 					return new \WP_Error(
