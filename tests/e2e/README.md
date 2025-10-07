@@ -38,6 +38,8 @@ npx playwright test tests/e2e/specs/your-test.test.js --config tests/e2e/playwri
 
 ## Test Structure
 
+Try to map the folder structure of the plugin if possible.
+
 ```
 tests/e2e/
 ├── config/
