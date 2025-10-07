@@ -51,7 +51,7 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Cache Docker volumes
+      - name: Restore Docker volumes from cache
         id: volumes-cache
         uses: actions/cache@v4
         with:
@@ -60,15 +60,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-volumes-
 
-      - name: Start WordPress environment
-        run: npm run env-start
-
-      - name: Restore Docker volumes
+      - name: Import cached Docker volumes
         if: steps.volumes-cache.outputs.cache-hit == 'true'
         run: |
-          # Stop containers to restore volumes
-          npm run env-stop || true
-          # Import volumes
+          # Import volumes before starting
           for volume_tar in /tmp/docker-volumes/*.tar; do
             if [ -f "$volume_tar" ]; then
               volume_name=$(basename "$volume_tar" .tar)
@@ -76,10 +71,16 @@ jobs:
               docker run --rm -v "$volume_name:/volume" -v /tmp/docker-volumes:/backup alpine sh -c "cd /volume && tar xf /backup/$volume_name.tar"
             fi
           done
-          # Restart with restored volumes
-          npm run env-start
 
-      - name: Save Docker volumes
+      - name: Start WordPress environment
+        run: npm run env-start
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        env:
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: 1
+
+      - name: Export Docker volumes to cache
         if: steps.volumes-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p /tmp/docker-volumes
@@ -87,8 +88,3 @@ jobs:
           for volume in $(docker volume ls --format '{{.Name}}' | grep -E '^[a-f0-9]{32}_'); do
             docker run --rm -v "$volume:/volume" -v /tmp/docker-volumes:/backup alpine tar cf "/backup/$volume.tar" -C /volume .
           done
-
-      - name: Run Playwright tests
-        run: npm run test:e2e
-        env:
-          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: 1
