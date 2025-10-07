@@ -286,17 +286,18 @@ class Outbox_Controller extends \WP_REST_Controller {
 	public function overload_total_items( $response, $request ) {
 		$posts = new \WP_Query(
 			array(
-				'post_status' => 'publish',
-				'author'      => $request->get_param( 'user_id' ),
+				'post_status'   => 'publish',
+				'author'        => $request->get_param( 'user_id' ),
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'  => array(
+				'meta_query'    => array(
 					array(
 						'key'     => 'activitypub_status',
 						'compare' => 'EXISTS',
 					),
 				),
-				'fields'      => 'ids',
-				'nopaging'    => true,
+				'fields'        => 'ids',
+				'no_found_rows' => false,
+				'number'        => 1,
 			)
 		);
 
