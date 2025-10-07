@@ -45,7 +45,7 @@ tests/e2e/
 ├── config/
 │   └── global-setup.js             # Test environment setup.
 ├── specs/
-│   └── your-test.test.js            # Your test file.
+│   └── your-test.test.js           # Your test file.
 ├── playwright.config.js            # Playwright configuration.
 └── README.md                       # This file.
 ```
