@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Improved REST collection pagination by using explicit total item counts for more accurate results.

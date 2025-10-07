@@ -1,0 +1,60 @@
+name: Playwright E2E Testing
+
+on:
+  push:
+    branches:
+      - trunk
+    paths:
+      - 'tests/e2e/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.wp-env.json'
+      - '.github/workflows/playwright.yml'
+      - 'includes/rest/**'
+  pull_request:
+    paths:
+      - 'tests/e2e/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.wp-env.json'
+      - '.github/workflows/playwright.yml'
+      - 'includes/rest/**'
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore Playwright browsers from cache
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers and dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Start WordPress environment
+        run: npm run env-start
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        env:
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: 1
