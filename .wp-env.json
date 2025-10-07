@@ -1,5 +1,4 @@
 {
-	"core": null,
 	"plugins": [ "." ],
 	"env": {
 		"tests": {

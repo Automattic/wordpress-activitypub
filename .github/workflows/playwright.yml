@@ -107,7 +107,9 @@ jobs:
         if: steps.docker-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p /tmp/docker-images
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(wordpress|mariadb|phpmyadmin|alpine)" | while read image; do
+          echo "Saving Docker images to cache:"
+          # Save all images (wp-env custom images, wordpress, mariadb, phpmyadmin, alpine)
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep -v '<none>' | while read image; do
             echo "Saving $image"
             docker save "$image" -o "/tmp/docker-images/$(echo $image | tr ':/' '--').tar"
           done
