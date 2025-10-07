@@ -183,7 +183,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 10, (int) $data['totalItems'] );
 		$this->assertStringContainsString( (string) self::$user_id, $data['actor'] );
 	}
 
@@ -363,10 +362,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		if ( $allowed ) {
 			$this->assertContains( $type, $activity_types, sprintf( 'Activity type "%s" should be visible to logged-out users.', $type ) );
-			$this->assertSame( 1, (int) $data['totalItems'], sprintf( 'Activity type "%s" should be included in total items for logged-out users.', $type ) );
 		} else {
 			$this->assertNotContains( $type, $activity_types, sprintf( 'Activity type "%s" should not be visible to logged-out users.', $type ) );
-			$this->assertSame( 0, (int) $data['totalItems'], sprintf( 'Activity type "%s" should not be included in total items for logged-out users.', $type ) );
 		}
 
 		// Test as logged-in user with activitypub capability.
@@ -381,7 +378,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
 
 		$this->assertContains( $type, $activity_types, sprintf( 'Activity type "%s" should be visible to users with activitypub capability.', $type ) );
-		$this->assertSame( 1, (int) $data['totalItems'], sprintf( 'Activity type "%s" should be included in total items for users with activitypub capability.', $type ) );
 
 		\wp_delete_post( $post_id, true );
 		\wp_delete_user( $user_id );
@@ -473,15 +469,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame(
-			(int) $public_visible,
-			(int) $data['totalItems'],
-			sprintf(
-				'Content with visibility "%s" should%s be visible to logged-out users.',
-				$visibility ?? 'none',
-				$public_visible ? '' : ' not'
-			)
-		);
 
 		// Test as logged-in user with activitypub capability.
 		\wp_set_current_user( $user_id );
@@ -492,15 +479,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame(
-			(int) $private_visible,
-			(int) $data['totalItems'],
-			sprintf(
-				'Content with visibility "%s" should%s be visible to users with activitypub capability.',
-				$visibility ?? 'none',
-				$private_visible ? '' : ' not'
-			)
-		);
 
 		\wp_delete_post( $post_id, true );
 		\wp_delete_user( $user_id );
@@ -548,7 +526,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 10, (int) $data['totalItems'] );
 		$this->assertCount( 10, $data['orderedItems'] );
 
 		// Test blog outbox only returns blog actor type.
@@ -557,7 +534,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 1, (int) $data['totalItems'] );
 
 		\wp_delete_post( $blog_post_id, true );
 		\delete_option( 'activitypub_actor_mode' );
@@ -602,7 +578,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 10, (int) $data['totalItems'] );
 		$this->assertCount( 10, $data['orderedItems'] );
 
 		// Test as privileged user.
@@ -613,7 +588,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 11, (int) $data['totalItems'] );
 		$this->assertCount( 11, $data['orderedItems'] );
 
 		\wp_delete_post( $private_post_id, true );

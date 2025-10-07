@@ -28,9 +28,10 @@ trait Collection {
 	 * @return array|\WP_Error The response array with navigation links or WP_Error on invalid page.
 	 */
 	public function prepare_collection_response( $response, $request, $total_items = 0 ) {
-		$page = $request->get_param( 'page' );
 		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-		$max_pages = \ceil( $total_items ?: $response['totalItems'] / $request->get_param( 'per_page' ) );
+		$total     = $total_items ?: $response['totalItems'];
+		$page      = $request->get_param( 'page' );
+		$max_pages = \ceil( $total / $request->get_param( 'per_page' ) );
 
 		if ( $page > $max_pages ) {
 			return new \WP_Error(
