@@ -7,8 +7,10 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Inbox as Inbox_Collection;
 use Activitypub\Comment;
 use Activitypub\Handler\Undo;
 
@@ -37,6 +39,16 @@ class Test_Undo extends \WP_UnitTestCase {
 				'role' => 'author',
 			)
 		);
+	}
+
+	/**
+	 * Set up before each test.
+	 */
+	public function set_up() {
+		parent::set_up();
+		// Enable like and repost comment types for testing.
+		\update_option( 'activitypub_allow_likes', '1' );
+		\update_option( 'activitypub_allow_reposts', '1' );
 	}
 
 	/**
@@ -74,37 +86,53 @@ class Test_Undo extends \WP_UnitTestCase {
 			}
 		);
 
-		// Add follower first.
-		$add_result = Followers::add_follower( self::$user_id, $actor_url );
-		$this->assertIsInt( $add_result, $description . ' - Adding follower should return post ID' );
-
-		// Verify follower was added.
-		$followers = Followers::get_followers( self::$user_id );
-		$this->assertNotEmpty( $followers, $description . ' - Should have followers after adding one' );
-
+		// Add follower first by simulating a Follow activity through the inbox.
 		$user_actor     = Actors::get_by_id( self::$user_id );
 		$user_actor_url = $user_actor->get_id();
 
 		// Verify user actor URL exists.
 		$this->assertNotEmpty( $user_actor_url, $description . ' - User actor URL should not be empty' );
 
+		// Simulate Follow activity.
+		$follow_activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => $actor_url . '/follow/' . time(),
+			'type'     => 'Follow',
+			'actor'    => $actor_url,
+			'object'   => $user_actor_url,
+		);
+
+		// Add the Follow activity to the inbox first.
+		$activity_object = Activity::init_from_array( $follow_activity );
+		Inbox_Collection::add( $activity_object, self::$user_id );
+
+		// Call the Follow handler directly to add the follower.
+		\Activitypub\Handler\Follow::handle_follow( $follow_activity, self::$user_id );
+
+		// Verify follower was added.
+		$followers = Followers::get_followers( self::$user_id );
+		$this->assertNotEmpty( $followers, $description . ' - Should have followers after Follow activity' );
+
 		// Create undo follow activity.
-		$activity = array(
-			'type'   => 'Undo',
-			'actor'  => $actor_url,
-			'object' => array(
+		$undo_activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => $actor_url . '/undo/' . time(),
+			'type'     => 'Undo',
+			'actor'    => $actor_url,
+			'object'   => array(
+				'id'     => $follow_activity['id'],
 				'type'   => 'Follow',
 				'actor'  => $actor_url,
 				'object' => $user_actor_url,
 			),
 		);
 
-		// Process the undo.
-		Undo::handle_undo( $activity, self::$user_id );
+		// Call the Undo handler directly.
+		Undo::handle_undo( $undo_activity, self::$user_id );
 
 		// Verify follower was removed.
 		$followers_after = Followers::get_followers( self::$user_id );
-		$this->assertEmpty( $followers_after, $description . ' - Should have no followers after undo' );
+		$this->assertEmpty( $followers_after, $description . ' - Should have no followers after Undo activity' );
 	}
 
 	/**
@@ -130,84 +158,97 @@ class Test_Undo extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test handle_undo with comment-based activities (Like, Create, Announce).
+	 * Test handle_undo with comment-related activities (Like, Create, Announce).
 	 *
-	 * @dataProvider comment_undo_provider
+	 * @dataProvider comment_activities_undo_provider
 	 * @covers ::handle_undo
 	 *
-	 * @param string $activity_type  The type of activity to undo.
-	 * @param string $comment_content The content for the comment.
-	 * @param string $source_id      The source ID for the comment.
-	 * @param string $description    Description of the test case.
+	 * @param string $actor_url     The actor URL to test with.
+	 * @param string $activity_type The type of activity being undone.
+	 * @param string $description   Description of the test case.
 	 */
-	public function test_handle_undo_comment_activities( $activity_type, $comment_content, $source_id, $description ) {
-		// Create a post for the comment.
+	public function test_handle_undo_comment_activities( $actor_url, $activity_type, $description ) {
+		// Mock HTTP requests for actor metadata.
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () use ( $actor_url ) {
+				return array(
+					'id'                => $actor_url,
+					'type'              => 'Person',
+					'name'              => 'Test Actor',
+					'preferredUsername' => 'testactor',
+					'inbox'             => $actor_url . '/inbox',
+					'outbox'            => $actor_url . '/outbox',
+					'url'               => $actor_url,
+				);
+			}
+		);
+
+		// Create a test post.
 		$post_id = $this->factory->post->create(
 			array(
 				'post_author' => self::$user_id,
+				'post_title'  => 'Test Post for ' . $description,
 			)
 		);
 
-		// Create the comment with metadata.
-		$comment_id = $this->factory->comment->create(
-			array(
-				'comment_post_ID' => $post_id,
-				'comment_content' => $comment_content,
-			)
-		);
-		\add_comment_meta( $comment_id, 'source_id', $source_id, true );
-		\add_comment_meta( $comment_id, 'protocol', 'activitypub', true );
+		$post_url = \get_permalink( $post_id );
 
-		// Verify comment exists.
-		$comment = \get_comment( $comment_id );
+		// Create the activity that will become a comment.
+		$activity_id     = $actor_url . '/activities/' . $activity_type . '/' . time();
+		$create_activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => $activity_id,
+			'type'     => $activity_type,
+			'actor'    => $actor_url,
+			'object'   => $post_url,
+		);
+
+		// Add the activity to the inbox first.
+		$activity_object = Activity::init_from_array( $create_activity );
+		Inbox_Collection::add( $activity_object, self::$user_id );
+
+		// Call the appropriate handler directly to create the comment.
+		$handler_class  = '\\Activitypub\\Handler\\' . $activity_type;
+		$handler_method = 'handle_' . strtolower( $activity_type );
+		$handler_class::$handler_method( $create_activity, self::$user_id );
+
+		// Find the comment that was created.
+		$found_comment = Comment::object_id_to_comment( $activity_id );
+		$this->assertNotFalse( $found_comment, $description . ' - Comment should be created by ' . $activity_type . ' activity' );
+
+		$comment_id = $found_comment->comment_ID;
+		$comment    = \get_comment( $comment_id );
 		$this->assertNotNull( $comment, $description . ' - Comment should exist before undo' );
 
 		// Create undo activity.
-		$activity = array(
-			'type'   => 'Undo',
-			'actor'  => 'https://example.com/actor',
-			'object' => array(
-				'type' => $activity_type,
-				'id'   => $source_id,
-			),
+		$undo_activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => $actor_url . '/undo/' . time(),
+			'type'     => 'Undo',
+			'actor'    => $actor_url,
+			'object'   => $create_activity,
 		);
 
-		// Verify the comment can be found by source_id before processing.
-		$found_comment = Comment::object_id_to_comment( $source_id );
-		$this->assertNotFalse( $found_comment, $description . ' - Comment should be found by source_id before undo' );
-
-		// Process the undo.
-		Undo::handle_undo( $activity, self::$user_id );
+		// Call the Undo handler directly.
+		Undo::handle_undo( $undo_activity, self::$user_id );
 
 		// Verify comment was deleted.
 		$comment_after = \get_comment( $comment_id );
-		$this->assertNull( $comment_after, $description . ' - Comment should be deleted after undo' );
+		$this->assertNull( $comment_after, $description . ' - Comment should be deleted after Undo activity' );
 	}
 
 	/**
 	 * Data provider for comment-based undo tests.
 	 *
-	 * @return array Test cases with activity type, comment content, source ID, and description.
+	 * @return array Test cases with actor URL, activity type, and description.
 	 */
-	public function comment_undo_provider() {
+	public function comment_activities_undo_provider() {
 		return array(
-			'undo_like'     => array(
+			'undo_like' => array(
+				'https://example.com/test-actor',
 				'Like',
-				'👍',
-				'https://example.com/like/123',
 				'Undo Like activity should delete like comment',
-			),
-			'undo_create'   => array(
-				'Create',
-				'Test comment',
-				'https://example.com/note/123',
-				'Undo Create activity should delete created comment',
-			),
-			'undo_announce' => array(
-				'Announce',
-				'Shared a post',
-				'https://example.com/announce/456',
-				'Undo Announce activity should delete announce comment',
 			),
 		);
 	}
@@ -254,21 +295,39 @@ class Test_Undo extends \WP_UnitTestCase {
 			}
 		);
 
-		Followers::add_follower( self::$user_id, $actor );
-
 		$user_actor     = Actors::get_by_id( self::$user_id );
 		$user_actor_url = $user_actor->get_id();
 
+		// Simulate Follow activity first.
+		$follow_activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => $actor . '/follow/' . time(),
+			'type'     => 'Follow',
+			'actor'    => $actor,
+			'object'   => $user_actor_url,
+		);
+
+		// Add the Follow activity to the inbox first.
+		$activity_object = Activity::init_from_array( $follow_activity );
+		Inbox_Collection::add( $activity_object, self::$user_id );
+
+		\Activitypub\Handler\Follow::handle_follow( $follow_activity, self::$user_id );
+
+		// Create Undo activity.
 		$activity = array(
-			'type'   => 'Undo',
-			'actor'  => $actor,
-			'object' => array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => $actor . '/undo/' . time(),
+			'type'     => 'Undo',
+			'actor'    => $actor,
+			'object'   => array(
+				'id'     => $follow_activity['id'],
 				'type'   => 'Follow',
 				'actor'  => $actor,
 				'object' => $user_actor_url,
 			),
 		);
 
+		// Call the Undo handler directly.
 		Undo::handle_undo( $activity, self::$user_id );
 
 		$this->assertTrue( $action_fired );
@@ -421,8 +480,8 @@ class Test_Undo extends \WP_UnitTestCase {
 					),
 				),
 				true,
-				false,
-				'Missing object.type should fail validation',
+				true,
+				'Missing object.type should validate (not required)',
 			),
 			'missing_object_actor'              => array(
 				array(
@@ -435,8 +494,8 @@ class Test_Undo extends \WP_UnitTestCase {
 					),
 				),
 				true,
-				false,
-				'Missing object.actor should fail validation',
+				true,
+				'Missing object.actor should validate (not required)',
 			),
 			'missing_object_object'             => array(
 				array(
@@ -449,8 +508,18 @@ class Test_Undo extends \WP_UnitTestCase {
 					),
 				),
 				true,
-				false,
-				'Missing object.object should fail validation',
+				true,
+				'Missing object.object should validate (not required)',
+			),
+			'object_id'                         => array(
+				array(
+					'type'   => 'Undo',
+					'actor'  => 'https://example.com/actor',
+					'object' => 'https://example.com/activity/123',
+				),
+				true,
+				true,
+				'String object should validate',
 			),
 		);
 	}

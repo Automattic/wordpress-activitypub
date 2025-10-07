@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Extended inbox support for undoing Like, Create, and Announce activities, with refactored undo logic and improved activity persistence.

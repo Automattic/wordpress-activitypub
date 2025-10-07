@@ -23,6 +23,7 @@ trait Collection {
 	 *
 	 * @param array            $response The collection response array.
 	 * @param \WP_REST_Request $request  The request object.
+	 *
 	 * @return array|\WP_Error The response array with navigation links or WP_Error on invalid page.
 	 */
 	public function prepare_collection_response( $response, $request ) {
@@ -76,6 +77,7 @@ trait Collection {
 	 * that controllers can use to compose their full schema by passing in their item schema.
 	 *
 	 * @param array $item_schema Optional. The schema for the items in the collection. Default empty array.
+	 *
 	 * @return array The collection schema.
 	 */
 	public function get_collection_schema( $item_schema = array() ) {

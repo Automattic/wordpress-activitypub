@@ -7,10 +7,7 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Followers;
-use Activitypub\Collection\Remote_Actors;
-use Activitypub\Comment;
+use Activitypub\Collection\Inbox as Inbox_Collection;
 
 use function Activitypub\object_to_uri;
 
@@ -33,35 +30,11 @@ class Undo {
 	 * @param int|null $user_id  The ID of the user who initiated the "Undo" activity.
 	 */
 	public static function handle_undo( $activity, $user_id ) {
-		$type    = $activity['object']['type'];
 		$success = false;
-		$result  = null;
+		$result  = Inbox_Collection::undo( object_to_uri( $activity['object'] ) );
 
-		// Handle "Unfollow" requests.
-		if ( 'Follow' === $type ) {
-			$user_id = Actors::get_id_by_resource( object_to_uri( $activity['object']['object'] ) );
-
-			if ( ! \is_wp_error( $user_id ) ) {
-				$post = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
-
-				if ( ! \is_wp_error( $post ) ) {
-					$success = Followers::remove( $post, $user_id );
-				}
-			}
-		}
-
-		// Handle "Undo" requests for "Like" and "Create" activities.
-		if ( in_array( $type, array( 'Like', 'Create', 'Announce' ), true ) ) {
-			if ( ! ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
-				$object_id = object_to_uri( $activity['object'] );
-				$result    = Comment::object_id_to_comment( esc_url_raw( $object_id ) );
-
-				if ( empty( $result ) ) {
-					$success = false;
-				} else {
-					$success = \wp_delete_comment( $result, true );
-				}
-			}
+		if ( $result && ! \is_wp_error( $result ) ) {
+			$success = true;
 		}
 
 		/**
@@ -99,11 +72,11 @@ class Undo {
 			return false;
 		}
 
-		if ( ! \is_array( $activity['object'] ) ) {
+		if ( ! \is_array( $activity['object'] ) && ! \is_string( $activity['object'] ) ) {
 			return false;
 		}
 
-		if ( ! isset( $activity['object']['id'], $activity['object']['type'], $activity['object']['actor'], $activity['object']['object'] ) ) {
+		if ( \is_array( $activity['object'] ) && ! isset( $activity['object']['id'] ) ) {
 			return false;
 		}
 
