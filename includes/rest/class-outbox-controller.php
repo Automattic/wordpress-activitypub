@@ -77,7 +77,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			)
 		);
 
-		\add_filter( 'activitypub_rest_outbox_array', array( $this, 'overload_total_items' ), 10, 3 );
+		\add_filter( 'activitypub_rest_outbox_array', array( $this, 'overload_total_items' ), 10, 2 );
 	}
 
 	/**
@@ -278,14 +278,29 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * The `totalItems` property is used by Mastodon to show the overall
 	 * number of federated posts.
 	 *
-	 * @param array $response The response array.
+	 * @param array            $response The response array.
+	 * @param \WP_REST_Request $request  The request object.
 	 *
 	 * @return array The modified response array.
 	 */
-	public function overload_total_items( $response ) {
-		if ( isset( $response['totalItems'] ) ) {
-			$response['totalItems'] = 100;
-		}
+	public function overload_total_items( $response, $request ) {
+		$posts = new \WP_Query(
+			array(
+				'post_status' => 'publish',
+				'author'      => $request->get_param( 'user_id' ),
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => 'activitypub_status',
+						'compare' => 'EXISTS',
+					),
+				),
+				'fields'      => 'ids',
+				'nopaging'    => true,
+			)
+		);
+
+		$response['totalItems'] = (int) $posts->found_posts;
 
 		return $response;
 	}
