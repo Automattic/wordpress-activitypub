@@ -33,7 +33,7 @@ npm run test:e2e:debug
 ### Run Specific Test File
 
 ```bash
-npx playwright test tests/e2e/specs/followers-endpoint.test.js --config tests/e2e/playwright.config.js
+npx playwright test tests/e2e/specs/your-test.test.js --config tests/e2e/playwright.config.js
 ```
 
 ## Test Structure
@@ -43,7 +43,7 @@ tests/e2e/
 ├── config/
 │   └── global-setup.js             # Test environment setup.
 ├── specs/
-│   └── followers-endpoint.test.js  # Followers endpoint tests.
+│   └── your-test.test.js            # Your test file.
 ├── playwright.config.js            # Playwright configuration.
 └── README.md                       # This file.
 ```
