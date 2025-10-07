@@ -46,11 +46,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-playwright-
 
-      - name: Install Playwright system dependencies
-        run: npx playwright install-deps chromium
-
       - name: Install Playwright browsers
-        run: npx playwright install chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
