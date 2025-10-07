@@ -276,7 +276,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * Overload total items.
 	 *
 	 * The `totalItems` property is used by Mastodon to show the overall
-	 * number of federated posts.
+	 * number of federated posts and comments.
 	 *
 	 * @param array            $response The response array.
 	 * @param \WP_REST_Request $request  The request object.
@@ -300,7 +300,19 @@ class Outbox_Controller extends \WP_REST_Controller {
 			)
 		);
 
-		$response['totalItems'] = (int) $posts->found_posts;
+		$comments = new \WP_Comment_Query(
+			array(
+				'status'        => 'approve',
+				'user_id'       => $request->get_param( 'user_id' ),
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'      => 'activitypub_status',
+				'fields'        => 'ids',
+				'no_found_rows' => false,
+				'number'        => 1,
+			)
+		);
+
+		$response['totalItems'] = (int) $posts->found_posts + (int) $comments->found_comments;
 
 		return $response;
 	}
