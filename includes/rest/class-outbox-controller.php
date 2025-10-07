@@ -76,6 +76,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
+
+		\add_filter( 'activitypub_rest_outbox_array', array( $this, 'overload_total_items' ), 10, 3 );
 	}
 
 	/**
@@ -268,5 +270,23 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$this->schema = $schema;
 
 		return $this->add_additional_fields_schema( $this->schema );
+	}
+
+	/**
+	 * Overload total items.
+	 *
+	 * The `totalItems` property is used by Mastodon to show the overall
+	 * number of federated posts.
+	 *
+	 * @param array $response The response array.
+	 *
+	 * @return array The modified response array.
+	 */
+	public function overload_total_items( $response ) {
+		if ( isset( $response['totalItems'] ) ) {
+			$response['totalItems'] = 100;
+		}
+
+		return $response;
 	}
 }
