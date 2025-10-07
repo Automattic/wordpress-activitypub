@@ -19,9 +19,7 @@ async function globalSetup( config ) {
 		storageStatePath: storageState,
 	} );
 
-	// Clean up test environment
-	// Note: Keep this minimal to avoid REST API issues during setup
-	await requestUtils.activateTheme( 'twentytwentyone' );
+	await requestUtils.activateTheme( 'twentytwentyfour' );
 	await requestUtils.deleteAllPosts();
 
 	await requestUtils.rest.dispose();
