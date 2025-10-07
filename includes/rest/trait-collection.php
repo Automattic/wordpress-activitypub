@@ -21,8 +21,8 @@ trait Collection {
 	 * based on the current page and total items. Also handles the transformation
 	 * between Collection and CollectionPage types.
 	 *
-	 * @param array            $response    The collection response array.
-	 * @param \WP_REST_Request $request     The request object.
+	 * @param array            $response The collection response array.
+	 * @param \WP_REST_Request $request  The request object.
 	 *
 	 * @return array|\WP_Error The response array with navigation links or WP_Error on invalid page.
 	 */
