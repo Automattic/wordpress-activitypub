@@ -175,9 +175,21 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => $outbox_query->found_posts,
+			'totalItems'   => 0,
 			'orderedItems' => array(),
 		);
+
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
+
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			$count_posts            = \count_user_posts( $user_id, $post_types, true );
+			$response['totalItems'] = \intval( $count_posts );
+		} else {
+			foreach ( $post_types as $post_type ) {
+				$count_posts             = \wp_count_posts( $post_type );
+				$response['totalItems'] += \intval( $count_posts->publish );
+			}
+		}
 
 		\update_postmeta_cache( \wp_list_pluck( $query_result, 'ID' ) );
 		foreach ( $query_result as $outbox_item ) {
@@ -198,7 +210,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
 		}
 
-		$response = $this->prepare_collection_response( $response, $request );
+		$response = $this->prepare_collection_response( $response, $request, $outbox_query->found_posts );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}

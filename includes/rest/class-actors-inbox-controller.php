@@ -135,7 +135,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		 */
 		$response = \apply_filters( 'activitypub_rest_inbox_array', $response );
 
-		$response = $this->prepare_collection_response( $response, $request );
+		$response = $this->prepare_collection_response( $response, $request, $response['totalItems'] );
 		if ( \is_wp_error( $response ) ) {
 			return $response;
 		}

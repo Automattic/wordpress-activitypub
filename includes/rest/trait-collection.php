@@ -21,13 +21,15 @@ trait Collection {
 	 * based on the current page and total items. Also handles the transformation
 	 * between Collection and CollectionPage types.
 	 *
-	 * @param array            $response The collection response array.
-	 * @param \WP_REST_Request $request  The request object.
+	 * @param array            $response    The collection response array.
+	 * @param \WP_REST_Request $request     The request object.
+	 * @param int              $total_items The total number of items in the collection.
+	 *
 	 * @return array|\WP_Error The response array with navigation links or WP_Error on invalid page.
 	 */
-	public function prepare_collection_response( $response, $request ) {
+	public function prepare_collection_response( $response, $request, $total_items ) {
 		$page      = $request->get_param( 'page' );
-		$max_pages = \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) );
+		$max_pages = \ceil( $total_items / $request->get_param( 'per_page' ) );
 
 		if ( $page > $max_pages ) {
 			return new \WP_Error(
