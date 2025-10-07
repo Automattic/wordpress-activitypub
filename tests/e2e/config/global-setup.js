@@ -19,9 +19,7 @@ async function globalSetup( config ) {
 		storageStatePath: storageState,
 	} );
 
-	await requestUtils.activateTheme( 'twentytwentyfour' );
 	await requestUtils.deleteAllPosts();
-
 	await requestUtils.rest.dispose();
 }
 
