@@ -218,14 +218,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			}
 		);
 
-		$this->setExpectedDeprecated( 'activitypub_outbox_post' );
-		\add_action(
-			'activitypub_outbox_post',
-			function () use ( &$post_called ) {
-				$post_called = true;
-			}
-		);
-
 		$request = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/%s/outbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
 		\rest_get_server()->dispatch( $request );
 

@@ -23,15 +23,12 @@ trait Collection {
 	 *
 	 * @param array            $response    The collection response array.
 	 * @param \WP_REST_Request $request     The request object.
-	 * @param int              $total_items The total number of items in the collection.
 	 *
 	 * @return array|\WP_Error The response array with navigation links or WP_Error on invalid page.
 	 */
-	public function prepare_collection_response( $response, $request, $total_items = 0 ) {
-		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-		$total     = $total_items ?: $response['totalItems'];
+	public function prepare_collection_response( $response, $request ) {
 		$page      = $request->get_param( 'page' );
-		$max_pages = \ceil( $total / $request->get_param( 'per_page' ) );
+		$max_pages = \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) );
 
 		if ( $page > $max_pages ) {
 			return new \WP_Error(

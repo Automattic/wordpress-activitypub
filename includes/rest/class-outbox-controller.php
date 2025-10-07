@@ -154,8 +154,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		$args = \apply_filters_deprecated( 'rest_activitypub_outbox_query', array( $args, $request ), '5.9.0', 'activitypub_rest_outbox_query' );
-
 		/**
 		 * Filters WP_Query arguments when querying Outbox items via the REST API.
 		 *
@@ -175,21 +173,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => 0,
+			'totalItems'   => (int) $outbox_query->found_posts,
 			'orderedItems' => array(),
 		);
-
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
-
-		if ( $user_id > Actors::BLOG_USER_ID ) {
-			$count_posts            = \count_user_posts( $user_id, $post_types, true );
-			$response['totalItems'] = \intval( $count_posts );
-		} else {
-			foreach ( $post_types as $post_type ) {
-				$count_posts             = \wp_count_posts( $post_type );
-				$response['totalItems'] += \intval( $count_posts->publish );
-			}
-		}
 
 		\update_postmeta_cache( \wp_list_pluck( $query_result, 'ID' ) );
 		foreach ( $query_result as $outbox_item ) {
@@ -210,7 +196,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
 		}
 
-		$response = $this->prepare_collection_response( $response, $request, $outbox_query->found_posts );
+		$response = $this->prepare_collection_response( $response, $request );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
@@ -222,8 +208,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 * @param \WP_REST_Request $request  The request object.
 		 */
 		$response = \apply_filters( 'activitypub_rest_outbox_array', $response, $request );
-
-		\do_action_deprecated( 'activitypub_outbox_post', array( $request ), '5.9.0', 'activitypub_rest_outbox_post' );
 
 		/**
 		 * Action triggered after the ActivityPub profile has been created and sent to the client.
