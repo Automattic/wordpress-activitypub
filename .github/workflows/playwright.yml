@@ -38,68 +38,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-wp-env-${{ hashFiles('.wp-env.json') }}
+          restore-keys: |
+            ${{ runner.os }}-wp-env-
 
       - name: Start WordPress environment
-        run: |
-          echo "Starting wp-env..."
-          npm run env-start
-          echo "wp-env start command completed"
-
-      - name: Log running Docker containers
-        run: |
-          echo "=== All Docker containers ==="
-          docker ps -a
-          echo ""
-          echo "=== WordPress containers ==="
-          docker ps --filter "name=wordpress"
-
-      - name: Wait for WordPress to be ready
-        run: |
-          echo "Giving WordPress initial time to start up..."
-          sleep 10
-
-          echo "Waiting for WordPress to respond..."
-          attempt=0
-          max_attempts=30
-
-          while [ $attempt -lt $max_attempts ]; do
-            attempt=$((attempt + 1))
-
-            # Check if WordPress is responding (even if returning HTML)
-            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8888/ | grep -q "200"; then
-              echo "✓ WordPress is responding after $attempt attempts!"
-              echo "Note: REST API may not be ready yet, will configure permalinks next"
-              exit 0
-            fi
-
-            echo "Attempt $attempt/$max_attempts: WordPress not responding yet..."
-            sleep 5
-          done
-
-          echo "✗ WordPress failed to respond after $max_attempts attempts"
-          echo ""
-          echo "=== Docker containers status ==="
-          docker ps -a
-          echo ""
-          echo "=== Checking if port 8888 is listening ==="
-          netstat -tlnp 2>/dev/null | grep 8888 || echo "Port 8888 not found"
-          echo ""
-          echo "=== Trying to access WordPress directly ==="
-          curl -v http://localhost:8888/ || echo "Failed to connect to localhost:8888"
-          echo ""
-          echo "=== Docker container logs ==="
-          docker logs $(docker ps -q --filter "name=wordpress") 2>&1 | tail -50 || echo "No WordPress container found"
-          exit 1
-
-      - name: Configure permalinks
-        run: |
-          echo "Configuring pretty permalinks..."
-          npm run env -- run tests-cli wp rewrite structure '/%year%/%monthnum%/%postname%/'
-          npm run env -- run tests-cli wp rewrite flush
-          echo "Verifying permalink structure..."
-          npm run env -- run tests-cli wp rewrite list
+        run: npm run env-start
 
       - name: Run Playwright tests
         run: npm run test:e2e

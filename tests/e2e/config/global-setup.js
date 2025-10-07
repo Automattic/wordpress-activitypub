@@ -1,46 +1,30 @@
 /**
- * External dependencies
- */
-import { request } from '@playwright/test';
-
-/**
  * WordPress dependencies
  */
 import { RequestUtils } from '@wordpress/e2e-test-utils-playwright';
 
 /**
  * Global setup for ActivityPub E2E tests.
+ * Based on WordPress core patterns.
  *
  * @param {import('@playwright/test').FullConfig} config
  * @returns {Promise<void>}
  */
 async function globalSetup( config ) {
 	const { storageState, baseURL } = config.projects[ 0 ].use;
-	const storageStatePath = typeof storageState === 'string' ? storageState : undefined;
 
-	const requestContext = await request.newContext( {
+	// Setup request utils with authentication
+	const requestUtils = await RequestUtils.setup( {
 		baseURL,
+		storageStatePath: storageState,
 	} );
 
-	const requestUtils = new RequestUtils( requestContext, {
-		storageStatePath,
-	} );
+	// Clean up test environment
+	// Note: Keep this minimal to avoid REST API issues during setup
+	await requestUtils.activateTheme( 'twentytwentyone' );
+	await requestUtils.deleteAllPosts();
 
-	// Authenticate and save the storageState to disk.
-	await requestUtils.setupRest();
-
-	// Reset the test environment before running the tests.
-	await Promise.all( [
-		requestUtils.activateTheme( 'twentytwentyone' ),
-		requestUtils.deleteAllPosts(),
-		requestUtils.resetPreferences(),
-	] );
-
-	// Note: ActivityPub plugin should already be active in the test environment
-	// If you need to activate it, use wp-cli instead:
-	// wp-env run tests-cli wp plugin activate activitypub
-
-	await requestContext.dispose();
+	await requestUtils.rest.dispose();
 }
 
 export default globalSetup;
