@@ -144,7 +144,7 @@ class Collections_Controller extends Actors_Controller {
 			);
 		}
 
-		return $this->prepare_collection_response( $response, $request, $response['totalItems'] );
+		return $this->prepare_collection_response( $response, $request );
 	}
 
 	/**
@@ -203,7 +203,7 @@ class Collections_Controller extends Actors_Controller {
 			$response['orderedItems'][] = $transformer->to_object()->to_array( false );
 		}
 
-		return $this->prepare_collection_response( $response, $request, $response['totalItems'] );
+		return $this->prepare_collection_response( $response, $request );
 	}
 
 	/**

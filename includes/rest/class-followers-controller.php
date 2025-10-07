@@ -124,7 +124,7 @@ class Followers_Controller extends Actors_Controller {
 			);
 		}
 
-		$response = $this->prepare_collection_response( $response, $request, $data['total'] );
+		$response = $this->prepare_collection_response( $response, $request );
 		if ( \is_wp_error( $response ) ) {
 			return $response;
 		}
