@@ -191,14 +191,13 @@ class Inbox {
 		switch ( $type ) {
 			case 'Follow':
 				$actor        = \get_post_meta( $inbox_item->ID, '_activitypub_activity_remote_actor', true );
-				$user_id      = $inbox_item->post_author;
 				$remote_actor = Remote_Actors::get_by_uri( $actor );
 
 				if ( \is_wp_error( $remote_actor ) ) {
 					return $remote_actor;
 				}
 
-				return Followers::remove( $remote_actor, $user_id );
+				return Followers::remove( $remote_actor, $inbox_item->post_author );
 
 			case 'Like':
 			case 'Create':
