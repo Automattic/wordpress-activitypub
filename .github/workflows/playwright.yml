@@ -63,11 +63,17 @@ jobs:
       - name: Load cached Docker images
         if: steps.docker-cache.outputs.cache-hit == 'true'
         run: |
+          echo "Loading cached Docker images:"
           if [ -d /tmp/docker-images ]; then
             for image in /tmp/docker-images/*.tar; do
-              [ -f "$image" ] && docker load -i "$image" && echo "Loaded $(basename $image)"
+              if [ -f "$image" ]; then
+                echo "Loading $(basename $image)..."
+                docker load -i "$image"
+              fi
             done
           fi
+          echo "Images loaded from cache:"
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
 
       - name: Restore Docker volumes from cache
         id: volumes-cache
@@ -92,11 +98,16 @@ jobs:
       - name: Start WordPress environment
         run: npm run env-start
 
+      - name: Check Docker images used by wp-env
+        run: |
+          echo "All Docker images after wp-env start:"
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
+
       - name: Save Docker images to cache
         if: steps.docker-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p /tmp/docker-images
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(wordpress|mariadb|phpmyadmin)" | while read image; do
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(wordpress|mariadb|phpmyadmin|alpine)" | while read image; do
             echo "Saving $image"
             docker save "$image" -o "/tmp/docker-images/$(echo $image | tr ':/' '--').tar"
           done
