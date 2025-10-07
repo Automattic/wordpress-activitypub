@@ -22,7 +22,7 @@ on:
 
 jobs:
   playwright:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
@@ -51,71 +51,8 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Restore Docker images from cache
-        id: docker-cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/docker-images
-          key: ${{ runner.os }}-docker-${{ hashFiles('.wp-env.json') }}
-          restore-keys: |
-            ${{ runner.os }}-docker-
-
-      - name: Load cached Docker images
-        if: steps.docker-cache.outputs.cache-hit == 'true'
-        run: |
-          echo "Loading cached Docker images:"
-          if [ -d /tmp/docker-images ]; then
-            for image in /tmp/docker-images/*.tar; do
-              if [ -f "$image" ]; then
-                echo "Loading $(basename $image)..."
-                docker load -i "$image"
-              fi
-            done
-          fi
-          echo "Images loaded from cache:"
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
-
-      - name: Restore Docker volumes from cache
-        id: volumes-cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/docker-volumes
-          key: ${{ runner.os }}-volumes-${{ hashFiles('.wp-env.json', 'package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-volumes-
-
-      - name: Import cached Docker volumes
-        if: steps.volumes-cache.outputs.cache-hit == 'true'
-        run: |
-          for volume_tar in /tmp/docker-volumes/*.tar; do
-            if [ -f "$volume_tar" ]; then
-              volume_name=$(basename "$volume_tar" .tar)
-              docker volume create "$volume_name"
-              docker run --rm -v "$volume_name:/volume" -v /tmp/docker-volumes:/backup alpine sh -c "cd /volume && tar xf /backup/$volume_name.tar"
-            fi
-          done
-
       - name: Start WordPress environment
         run: npm run env-start
-
-      - name: Save Docker images to cache
-        if: steps.docker-cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p /tmp/docker-images
-          echo "Saving Docker images to cache:"
-          # Save all images (wp-env custom images, wordpress, mariadb, phpmyadmin, alpine)
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep -v '<none>' | while read image; do
-            echo "Saving $image"
-            docker save "$image" -o "/tmp/docker-images/$(echo $image | tr ':/' '--').tar"
-          done
-
-      - name: Export Docker volumes to cache
-        if: steps.volumes-cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p /tmp/docker-volumes
-          for volume in $(docker volume ls --format '{{.Name}}' | grep -E '^[a-f0-9]{32}_'); do
-            docker run --rm -v "$volume:/volume" -v /tmp/docker-volumes:/backup alpine tar cf "/backup/$volume.tar" -C /volume .
-          done
 
       - name: Run Playwright tests
         run: npm run test:e2e
