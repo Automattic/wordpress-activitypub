@@ -20,7 +20,9 @@ async function globalSetup( config ) {
 	} );
 
 	await requestUtils.deleteAllPosts();
-	await requestUtils.rest.dispose();
+
+	// Dispose of the request context properly
+	await requestUtils.requestContext.dispose();
 }
 
 export default globalSetup;
