@@ -179,7 +179,6 @@ class Inbox {
 	 * @return bool|\WP_Error True on success, WP_Error on failure.
 	 */
 	public static function undo( $id ) {
-		$type = '';
 		$post = self::get_by_guid( $id );
 
 		if ( \is_wp_error( $post ) ) {
