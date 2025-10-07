@@ -77,6 +77,7 @@ trait Collection {
 	 * that controllers can use to compose their full schema by passing in their item schema.
 	 *
 	 * @param array $item_schema Optional. The schema for the items in the collection. Default empty array.
+	 *
 	 * @return array The collection schema.
 	 */
 	public function get_collection_schema( $item_schema = array() ) {
