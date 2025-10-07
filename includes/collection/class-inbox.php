@@ -224,7 +224,8 @@ class Inbox {
 			default:
 				return new \WP_Error(
 					'activitypub_inbox_undo_unsupported',
-					\__( 'Undo is only supported for Follow, Like, Create, and Announce activities.', 'activitypub' ),
+					// Translators: %s is the activity type.
+					\sprintf( \__( 'Undo is not supported for %s activities.', 'activitypub' ), $type ),
 					array( 'status' => 400 )
 				);
 		}
