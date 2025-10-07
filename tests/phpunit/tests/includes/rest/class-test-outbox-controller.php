@@ -469,6 +469,15 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame(
+			(int) $public_visible,
+			(int) \count( $data['orderedItems'] ),
+			sprintf(
+				'Content with visibility "%s" should%s be visible to logged-out users.',
+				$visibility ?? 'none',
+				$public_visible ? '' : ' not'
+			)
+		);
 
 		// Test as logged-in user with activitypub capability.
 		\wp_set_current_user( $user_id );
@@ -479,6 +488,15 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame(
+			(int) $private_visible,
+			(int) \count( $data['orderedItems'] ),
+			sprintf(
+				'Content with visibility "%s" should%s be visible to users with activitypub capability.',
+				$visibility ?? 'none',
+				$private_visible ? '' : ' not'
+			)
+		);
 
 		\wp_delete_post( $post_id, true );
 		\wp_delete_user( $user_id );
