@@ -199,6 +199,7 @@ class Inbox {
 				}
 
 				return Followers::remove( $post, $user_id );
+
 			case 'Like':
 			case 'Create':
 			case 'Announce':
@@ -221,6 +222,7 @@ class Inbox {
 				}
 
 				return \wp_delete_comment( $result, true );
+
 			default:
 				return new \WP_Error(
 					'activitypub_inbox_undo_unsupported',
