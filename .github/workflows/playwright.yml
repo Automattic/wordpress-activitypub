@@ -67,24 +67,42 @@ jobs:
           for volume_tar in /tmp/docker-volumes/*.tar; do
             if [ -f "$volume_tar" ]; then
               volume_name=$(basename "$volume_tar" .tar)
+              echo "Restoring volume: $volume_name"
               docker volume create "$volume_name"
               docker run --rm -v "$volume_name:/volume" -v /tmp/docker-volumes:/backup alpine sh -c "cd /volume && tar xf /backup/$volume_name.tar"
             fi
           done
+          echo "Existing volumes after restore:"
+          docker volume ls
+
+      - name: Check volumes before starting WordPress
+        run: |
+          echo "Volumes before wp-env start:"
+          docker volume ls
 
       - name: Start WordPress environment
         run: npm run env-start
 
-      - name: Run Playwright tests
-        run: npm run test:e2e
-        env:
-          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: 1
+      - name: Check volumes after starting WordPress
+        run: |
+          echo "Volumes after wp-env start:"
+          docker volume ls
+          echo "Checking if WordPress is already installed:"
+          npm run env -- run cli wp core is-installed && echo "WordPress was already installed (volumes were reused!)" || echo "WordPress was freshly installed (volumes were not reused)"
 
       - name: Export Docker volumes to cache
         if: steps.volumes-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p /tmp/docker-volumes
+          echo "Volumes to export:"
+          docker volume ls
           # Export all wp-env volumes
           for volume in $(docker volume ls --format '{{.Name}}' | grep -E '^[a-f0-9]{32}_'); do
+            echo "Exporting volume: $volume"
             docker run --rm -v "$volume:/volume" -v /tmp/docker-volumes:/backup alpine tar cf "/backup/$volume.tar" -C /volume .
           done
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        env:
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: 1
