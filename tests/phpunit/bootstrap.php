@@ -26,8 +26,8 @@ require_once $_tests_dir . '/includes/functions.php';
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
-	require \dirname( __DIR__ ) . '/activitypub.php';
-	$enable_mastodon_apps_plugin = dirname( dirname( __DIR__ ) ) . '/enable-mastodon-apps/enable-mastodon-apps.php'; // phpcs:ignore
+	require __DIR__ . '/../../activitypub.php';
+	$enable_mastodon_apps_plugin = __DIR__ . '/../../../enable-mastodon-apps/enable-mastodon-apps.php';
 	if ( file_exists( $enable_mastodon_apps_plugin ) ) {
 		require $enable_mastodon_apps_plugin;
 	}

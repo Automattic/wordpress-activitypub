@@ -45,5 +45,5 @@ README.md
 readme.md
 SECURITY.md
 src
-phpunit
+tests
 vendor
