@@ -144,10 +144,13 @@ class Jetpack {
 		$url = \sanitize_url( \wp_unslash( $_GET['url'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
 
 		if ( is_activity_object( Http::get_remote_object( $url ) ) ) {
-			$_GET['in_reply_to'] = $url;
-			unset( $_GET['is_post_share'], $_GET['url'] );
+			$args = array(
+				'post_type'   => 'post',
+				'in_reply_to' => $url,
+			);
 
-			\wp_safe_redirect( \add_query_arg( $_GET, \admin_url( 'post-new.php' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+			\wp_safe_redirect( \add_query_arg( $args, \admin_url( 'post-new.php' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+			exit;
 		}
 	}
 }
