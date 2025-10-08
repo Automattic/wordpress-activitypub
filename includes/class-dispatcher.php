@@ -41,6 +41,8 @@ class Dispatcher {
 	public static function init() {
 		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
 
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_immediate_accept' ), 10, 2 );
+
 		// Default filters to add Inboxes to sent to.
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
@@ -413,5 +415,22 @@ class Dispatcher {
 		}
 
 		return array_merge( $inboxes, $relays );
+	}
+
+	/**
+	 * Send an immediate Accept activity for the given Outbox item.
+	 *
+	 * @param int      $outbox_id The Outbox item ID.
+	 * @param Activity $activity  The Activity that was just added to the Outbox.
+	 */
+	public static function send_immediate_accept( $outbox_id, $activity ) {
+		$outbox_item = \get_post( $outbox_id );
+
+		if ( ! $outbox_item || 'Accept' !== $activity->get_type() ) {
+			return;
+		}
+
+		// Send to mentioned and replied-to users. Everyone other than followers.
+		self::send_to_additional_inboxes( $activity, $outbox_item->post_author, $outbox_item );
 	}
 }
