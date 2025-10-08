@@ -26,7 +26,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	public function set_up() {
 		parent::set_up();
 
-		add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'add_follower' ), 10, 2 );
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'add_follower' ), 10, 2 );
 	}
 
 	/**
@@ -34,7 +34,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	 */
 	public function tear_down() {
 		\delete_option( 'activitypub_actor_mode' );
-		remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'add_follower' ) );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'add_follower' ) );
 
 		parent::tear_down();
 	}
@@ -78,7 +78,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		$this->assertEquals( 'publish', \get_post( $outbox_item->ID )->post_status );
 
-		remove_filter( 'activitypub_send_activity_to_followers', $test_callback );
+		\remove_filter( 'activitypub_send_activity_to_followers', $test_callback );
 	}
 
 	/**
@@ -113,7 +113,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
 
 		// Mock safe_remote_post to simulate a failed request.
-		add_filter(
+		\add_filter(
 			'pre_http_request',
 			function () use ( $code, $message ) {
 				return new \WP_Error( $code, $message );
@@ -128,7 +128,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		$this->assertSame( $expected, $retries, 'Expected all inboxes to be scheduled for retry' );
 
-		remove_all_filters( 'pre_http_request' );
+		\remove_all_filters( 'pre_http_request' );
 	}
 
 	/**
@@ -145,7 +145,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 			return new \WP_Error( 'test', 'test' );
 		};
 
-		add_filter( 'pre_http_request', $fake_request, 10, 3 );
+		\add_filter( 'pre_http_request', $fake_request, 10, 3 );
 
 		// Make `Dispatcher::send_to_additional_inboxes` a public method.
 		$send_to_additional_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_additional_inboxes' );
@@ -342,7 +342,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		};
 
 		// Mock the HTTP response for the remote object.
-		add_filter( 'pre_http_request', $callback, 10, 3 );
+		\add_filter( 'pre_http_request', $callback, 10, 3 );
 
 		// Get inboxes for the activity.
 		$inboxes = Dispatcher::add_inboxes_of_replied_urls( array(), $actor_id, $activity );
@@ -351,6 +351,178 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$this->assertContains( 'https://mastodon.social/inbox', $inboxes, 'Inbox should be added for different domain in_reply_to URLs' );
 
 		// Clean up.
-		remove_filter( 'pre_http_request', $callback );
+		\remove_filter( 'pre_http_request', $callback );
+	}
+
+	/**
+	 * Test send_immediate_accept sends Accept activities immediately.
+	 *
+	 * @covers ::send_immediate_accept
+	 */
+	public function test_send_immediate_accept() {
+		global $wp_actions;
+
+		// Create an Accept activity.
+		$accept_activity = new Activity();
+		$accept_activity->set_type( 'Accept' );
+		$accept_activity->set_id( 'https://example.com/accept/123' );
+		$accept_activity->set_actor( 'https://example.com/users/testuser' );
+		$accept_activity->set_object(
+			array(
+				'type'  => 'Follow',
+				'id'    => 'https://mastodon.social/users/follower#follow/1',
+				'actor' => 'https://mastodon.social/users/follower',
+			)
+		);
+		$accept_activity->set_to( array( 'https://mastodon.social/users/follower' ) );
+
+		// Create an outbox item with the activity content.
+		$outbox_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_outbox',
+				'post_status'  => 'pending',
+				'post_author'  => self::$user_id,
+				'post_content' => \wp_json_encode( $accept_activity->to_array() ),
+			)
+		);
+
+		// Mock the HTTP request to prevent actual sending.
+		$fake_request = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '',
+			);
+		};
+		\add_filter( 'pre_http_request', $fake_request, 10, 3 );
+
+		// Reset action counter.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$wp_actions = null;
+
+		// Call send_immediate_accept.
+		Dispatcher::send_immediate_accept( $outbox_id, $accept_activity );
+
+		// Verify that the activity was sent (activitypub_sent_to_inbox action was called).
+		$this->assertTrue( \did_action( 'activitypub_sent_to_inbox' ) > 0, 'Accept activity should be sent immediately' );
+
+		// Clean up.
+		\remove_filter( 'pre_http_request', $fake_request );
+		\wp_delete_post( $outbox_id, true );
+	}
+
+	/**
+	 * Test send_immediate_accept ignores non-Accept activities.
+	 *
+	 * @covers ::send_immediate_accept
+	 */
+	public function test_send_immediate_accept_ignores_non_accept() {
+		global $wp_actions;
+
+		// Create a Create activity (not an Accept).
+		$create_activity = new Activity();
+		$create_activity->set_type( 'Create' );
+		$create_activity->set_id( 'https://example.com/create/123' );
+
+		// Create an outbox item.
+		$outbox_id = wp_insert_post(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'post_author' => self::$user_id,
+			)
+		);
+
+		// Reset action counter.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$wp_actions = null;
+
+		// Call send_immediate_accept.
+		Dispatcher::send_immediate_accept( $outbox_id, $create_activity );
+
+		// Verify that no activity was sent.
+		$this->assertSame( 0, did_action( 'activitypub_sent_to_inbox' ), 'Non-Accept activities should not be sent immediately' );
+
+		// Clean up.
+		\wp_delete_post( $outbox_id, true );
+	}
+
+	/**
+	 * Test send_immediate_accept handles invalid outbox ID.
+	 *
+	 * @covers ::send_immediate_accept
+	 */
+	public function test_send_immediate_accept_invalid_outbox() {
+		global $wp_actions;
+
+		// Create an Accept activity.
+		$accept_activity = new Activity();
+		$accept_activity->set_type( 'Accept' );
+
+		// Reset action counter.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$wp_actions = null;
+
+		// Call with invalid outbox ID.
+		Dispatcher::send_immediate_accept( 99999, $accept_activity );
+
+		// Verify that no activity was sent.
+		$this->assertSame( 0, \did_action( 'activitypub_sent_to_inbox' ), 'Should handle invalid outbox ID gracefully' );
+	}
+
+	/**
+	 * Test that post_activitypub_add_to_outbox hook triggers send_immediate_accept.
+	 *
+	 * @covers ::send_immediate_accept
+	 */
+	public function test_post_activitypub_add_to_outbox_hook() {
+		global $wp_actions;
+
+		// Create an Accept activity.
+		$accept_activity = new Activity();
+		$accept_activity->set_type( 'Accept' );
+		$accept_activity->set_id( 'https://example.com/accept/456' );
+		$accept_activity->set_actor( 'https://example.com/users/testuser' );
+		$accept_activity->set_object(
+			array(
+				'type'  => 'Follow',
+				'id'    => 'https://mastodon.social/users/follower#follow/2',
+				'actor' => 'https://mastodon.social/users/follower',
+			)
+		);
+		$accept_activity->set_to( array( 'https://mastodon.social/users/follower' ) );
+
+		// Create an outbox item with the activity content.
+		$outbox_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_outbox',
+				'post_status'  => 'pending',
+				'post_author'  => self::$user_id,
+				'post_content' => \wp_json_encode( $accept_activity->to_array() ),
+			)
+		);
+
+		// Mock the HTTP request.
+		$fake_request = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '',
+			);
+		};
+		\add_filter( 'pre_http_request', $fake_request, 10, 3 );
+
+		// Reset action counter.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$wp_actions = null;
+
+		// Trigger the hook (simulating what happens in the Outbox class).
+		// Hook signature: do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity, $user_id, $content_visibility ).
+		\do_action( 'post_activitypub_add_to_outbox', $outbox_id, $accept_activity, self::$user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		// Verify that send_immediate_accept was called via the hook.
+		$this->assertTrue( \did_action( 'activitypub_sent_to_inbox' ) > 0, 'Hook should trigger immediate Accept sending' );
+
+		// Clean up.
+		\remove_filter( 'pre_http_request', $fake_request );
+		\wp_delete_post( $outbox_id, true );
 	}
 }
