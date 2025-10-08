@@ -24,6 +24,11 @@ class Jetpack {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		// Replace the Reader's "Share Post" with the Federated Reply block.
+		if ( isset( $_GET['is_post_share'], $_GET['url'] ) && $_GET['is_post_share'] ) { // phpcs:ignore WordPress.Security
+			self::adapt_post_share();
+		}
+
 		if ( ! \defined( 'IS_WPCOM' ) ) {
 			\add_filter( 'jetpack_sync_post_meta_whitelist', array( self::class, 'add_sync_meta' ) );
 			\add_filter( 'jetpack_sync_comment_meta_whitelist', array( self::class, 'add_sync_comment_meta' ) );
@@ -38,11 +43,6 @@ class Jetpack {
 		) {
 			\add_filter( 'activitypub_following_row_actions', array( self::class, 'add_reader_link' ), 10, 2 );
 			\add_filter( 'pre_option_activitypub_following_ui', array( self::class, 'pre_option_activitypub_following_ui' ) );
-
-			// Replace the Reader's "Share Post" with the Federated Reply block.
-			if ( isset( $_GET['is_post_share'], $_GET['url'] ) && $_GET['is_post_share'] ) { // phpcs:ignore WordPress.Security
-				\add_action( 'load-post-new.php', array( self::class, 'adapt_post_share' ), 9 ); // Before Blocks::handle_in_reply_to_get_param().
-			}
 		}
 	}
 
@@ -147,7 +147,7 @@ class Jetpack {
 			$_GET['in_reply_to'] = $url;
 			unset( $_GET['is_post_share'], $_GET['url'] );
 
-			\remove_action( 'wp_insert_post', 'wpcomsh_insert_shared_post_data' );
+			\wp_safe_redirect( \add_query_arg( $_GET, \admin_url( 'post-new.php' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		}
 	}
 }
