@@ -599,7 +599,7 @@ class Followers {
 		// Build the partial followers URL.
 		$url = \Activitypub\get_rest_url_by_path(
 			sprintf(
-				'actors/%d/followers-sync?authority=%s',
+				'actors/%d/followers/sync?authority=%s',
 				$user_id,
 				rawurlencode( $authority )
 			)

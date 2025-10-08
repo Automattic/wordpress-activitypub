@@ -20,7 +20,7 @@ This is implemented in `includes/class-http.php`.
 
 ### 2. Partial Followers Collection
 
-A new REST endpoint `/actors/{user_id}/followers-sync` provides partial followers collections filtered by instance authority. This endpoint only returns followers whose IDs match the requesting instance's domain.
+A new REST endpoint `/actors/{user_id}/followers/sync` provides partial followers collections filtered by instance authority. This endpoint only returns followers whose IDs match the requesting instance's domain.
 
 This is implemented in `includes/rest/class-followers-controller.php`.
 
@@ -71,7 +71,7 @@ This is implemented in `includes/scheduler/class-collection-sync.php`.
 ### Modified Classes
 
 - **`Http`** - Adds Collection-Synchronization header to outgoing Create activities
-- **`Followers_Controller`** - Adds `/followers-sync` endpoint for partial collections
+- **`Followers_Controller`** - Adds `/followers/sync` endpoint for partial collections
 - **`Inbox_Controller`** - Uses `Followers_Sync` trait to process incoming headers
 - **`Actors_Inbox_Controller`** - Uses `Followers_Sync` trait to process incoming headers
 - **`Scheduler`** - Registers the Collection_Sync scheduler

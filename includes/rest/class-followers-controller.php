@@ -79,7 +79,7 @@ class Followers_Controller extends Actors_Controller {
 		// FEP-8fcf: Partial followers collection for synchronization.
 		\register_rest_route(
 			$this->namespace,
-			'/' . $this->rest_base . '/followers-sync',
+			'/' . $this->rest_base . '/followers/sync',
 			array(
 				'args' => array(
 					'user_id' => array(
@@ -191,7 +191,7 @@ class Followers_Controller extends Actors_Controller {
 			'@context'     => get_context(),
 			'id'           => get_rest_url_by_path(
 				\sprintf(
-					'actors/%d/followers-sync?authority=%s',
+					'actors/%d/followers/sync?authority=%s',
 					$user_id,
 					rawurlencode( $authority )
 				)
