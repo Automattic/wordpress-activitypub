@@ -10,7 +10,10 @@ namespace Activitypub\Integration;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Comment;
+use Activitypub\Http;
 use Automattic\Jetpack\Connection\Manager;
+
+use function Activitypub\is_activity_object;
 
 /**
  * Jetpack integration class.
@@ -35,6 +38,11 @@ class Jetpack {
 		) {
 			\add_filter( 'activitypub_following_row_actions', array( self::class, 'add_reader_link' ), 10, 2 );
 			\add_filter( 'pre_option_activitypub_following_ui', array( self::class, 'pre_option_activitypub_following_ui' ) );
+
+			// Replace the Reader's "Share Post" with the Federated Reply block.
+			if ( isset( $_GET['is_post_share'], $_GET['url'] ) && $_GET['is_post_share'] ) { // phpcs:ignore WordPress.Security
+				\add_action( 'load-post-new.php', array( self::class, 'adapt_post_share' ), 9 ); // Before Blocks::handle_in_reply_to_get_param().
+			}
 		}
 	}
 
@@ -127,5 +135,19 @@ class Jetpack {
 	 */
 	public static function pre_option_activitypub_following_ui() {
 		return '1';
+	}
+
+	/**
+	 * Adapt the parameters for a post share request to be compatible with the Federated Reply block.
+	 */
+	public static function adapt_post_share() {
+		$url = \sanitize_url( \wp_unslash( $_GET['url'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		if ( is_activity_object( Http::get_remote_object( $url ) ) ) {
+			$_GET['in_reply_to'] = $url;
+			unset( $_GET['is_post_share'], $_GET['url'] );
+
+			\remove_action( 'wp_insert_post', 'wpcomsh_insert_shared_post_data' );
+		}
 	}
 }
