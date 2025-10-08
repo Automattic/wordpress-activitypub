@@ -149,7 +149,7 @@ class Jetpack {
 				'in_reply_to' => $url,
 			);
 
-			\wp_safe_redirect( \add_query_arg( $args, \admin_url( 'post-new.php' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+			\wp_safe_redirect( \add_query_arg( $args, \admin_url( 'post-new.php' ) ) );
 			exit;
 		}
 	}
