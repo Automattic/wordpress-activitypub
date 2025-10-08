@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Integrate Federated Reply block with WP.com Reader's post share functionality, allowing users to reply to ActivityPub posts directly from the Reader.
