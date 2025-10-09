@@ -86,10 +86,11 @@ class Test_Follow extends \WP_UnitTestCase {
 				'pre_get_remote_metadata_by_actor',
 				function () use ( $actor_url ) {
 					return array(
-						'id'    => $actor_url,
-						'actor' => $actor_url,
-						'type'  => 'Person',
-						'inbox' => str_replace( '/actor', '/inbox', $actor_url ),
+						'id'                => $actor_url,
+						'actor'             => $actor_url,
+						'type'              => 'Person',
+						'preferredUsername' => 'testactor',
+						'inbox'             => str_replace( '/actor', '/inbox', $actor_url ),
 					);
 				}
 			);
@@ -213,10 +214,11 @@ class Test_Follow extends \WP_UnitTestCase {
 			'pre_get_remote_metadata_by_actor',
 			function () use ( $actor ) {
 				return array(
-					'id'    => $actor,
-					'actor' => $actor,
-					'type'  => 'Person',
-					'inbox' => 'https://example.com/inbox',
+					'id'                => $actor,
+					'actor'             => $actor,
+					'type'              => 'Person',
+					'preferredUsername' => 'testactor',
+					'inbox'             => 'https://example.com/inbox',
 				);
 			}
 		);
@@ -352,10 +354,11 @@ class Test_Follow extends \WP_UnitTestCase {
 			'pre_get_remote_metadata_by_actor',
 			function () use ( $actor_url ) {
 				return array(
-					'id'    => $actor_url,
-					'actor' => $actor_url,
-					'type'  => 'Person',
-					'inbox' => str_replace( '/deprecated-test-actor', '/inbox', $actor_url ),
+					'id'                => $actor_url,
+					'actor'             => $actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'testactor',
+					'inbox'             => str_replace( '/deprecated-test-actor', '/inbox', $actor_url ),
 				);
 			}
 		);
@@ -429,10 +432,11 @@ class Test_Follow extends \WP_UnitTestCase {
 			'pre_get_remote_metadata_by_actor',
 			function () use ( $actor_url ) {
 				return array(
-					'id'    => $actor_url,
-					'actor' => $actor_url,
-					'type'  => 'Person',
-					'inbox' => str_replace( '/new-hook-test-actor', '/inbox', $actor_url ),
+					'id'                => $actor_url,
+					'actor'             => $actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'testactor',
+					'inbox'             => str_replace( '/new-hook-test-actor', '/inbox', $actor_url ),
 				);
 			}
 		);
