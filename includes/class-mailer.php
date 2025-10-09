@@ -399,9 +399,11 @@ class Mailer {
 
 		$actor = self::normalize_actor( $actor );
 
-		// Get the quoted post/object.
-		// For QuoteRequest activities, object is the quoted URL string.
-		// For regular quote posts, object.quoteUrl contains the quoted URL.
+		/*
+		 * Get the quoted post/object.
+		 * For QuoteRequest activities, object is the quoted URL string.
+		 * For regular quote posts, object.quoteUrl contains the quoted URL.
+		*/
 		$quoted_url = null;
 		if ( is_string( $activity['object'] ) ) {
 			// QuoteRequest format.
@@ -427,8 +429,11 @@ class Mailer {
 
 		$alt_function = function ( $mailer ) use ( $actor, $activity, $quoted_url ) {
 			$content = '';
-			// For QuoteRequest, instrument contains the quote post URL.
-			// For regular quotes, object contains the quote post.
+
+			/*
+			 * For QuoteRequest, instrument contains the quote post URL.
+			 * For regular quotes, object contains the quote post.
+			 */
 			$quote_object = $activity['instrument'] ?? $activity['object'];
 			if ( ! empty( $quote_object['content'] ) ) {
 				$content = \html_entity_decode(
@@ -452,7 +457,7 @@ class Mailer {
 			}
 
 			// Get the quote post URL.
-			$quote_url = is_array( $quote_object ) && ! empty( $quote_object['id'] ) ? $quote_object['id'] : ( $activity['instrument'] ?? '' );
+			$quote_url = $quote_object['id'] ?? $activity['instrument'] ?? '';
 			if ( $quote_url ) {
 				/* translators: Quote post URL */
 				$message .= \sprintf( \esc_html__( 'Quote URL: %s', 'activitypub' ), \esc_url( $quote_url ) ) . "\r\n\r\n";
