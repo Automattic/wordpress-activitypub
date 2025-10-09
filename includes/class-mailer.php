@@ -22,7 +22,7 @@ class Mailer {
 
 		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 4 );
 		\add_action( 'activitypub_handled_create', array( self::class, 'direct_message' ), 10, 4 );
-		\add_action( 'activitypub_handled_create', array( self::class, 'mention' ), 20, 4 );
+		\add_action( 'activitypub_handled_create', array( self::class, 'mention' ), 10, 4 );
 	}
 
 	/**
@@ -219,7 +219,7 @@ class Mailer {
 	 */
 	public static function direct_message( $activity, $user_id, $success ) {
 		// Only send notification if the activity was successfully handled.
-		if ( ! $success ) {
+		if ( $success ) {
 			return;
 		}
 
