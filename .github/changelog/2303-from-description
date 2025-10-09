@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added email notifications for quoted posts, with user and blog-level settings and a new customizable email template.
