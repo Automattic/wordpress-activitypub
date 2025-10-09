@@ -430,7 +430,7 @@ class Mailer {
 			// For QuoteRequest, instrument contains the quote post URL.
 			// For regular quotes, object contains the quote post.
 			$quote_object = $activity['instrument'] ?? $activity['object'];
-			if ( is_array( $quote_object ) && ! empty( $quote_object['content'] ) ) {
+			if ( ! empty( $quote_object['content'] ) ) {
 				$content = \html_entity_decode(
 					\wp_strip_all_tags(
 						str_replace( '</p>', PHP_EOL . PHP_EOL, $quote_object['content'] )
