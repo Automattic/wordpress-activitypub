@@ -410,7 +410,7 @@ class Mailer {
 			$quoted_url = $activity['object'];
 		} elseif ( ! empty( $activity['object']['quoteUrl'] ) ) {
 			// Regular quote post format.
-			$quoted_url = $activity['object']['quoteUrl'];
+			$quoted_url = object_to_uri( $activity['object']['quoteUrl'] );
 		}
 
 		$template_args = array(
