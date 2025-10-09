@@ -126,7 +126,7 @@ class Mailer {
 	 * @param int   $user_id  The id of the local blog-user.
 	 * @param bool  $success  True on success, false otherwise.
 	 */
-	public static function new_follower( $activity, $user_id, $success = true ) {
+	public static function new_follower( $activity, $user_id, $success ) {
 		// Only send notification if the follow was successful.
 		if ( ! $success ) {
 			return;
@@ -217,7 +217,7 @@ class Mailer {
 	 * @param int   $user_id  The id of the local blog-user.
 	 * @param bool  $success  True on success, false otherwise.
 	 */
-	public static function direct_message( $activity, $user_id, $success = true ) {
+	public static function direct_message( $activity, $user_id, $success ) {
 		// Only send notification if the activity was successfully handled.
 		if ( ! $success ) {
 			return;
@@ -298,7 +298,7 @@ class Mailer {
 	 * @param int   $user_id  The id of the local blog-user.
 	 * @param bool  $success  True on success, false otherwise.
 	 */
-	public static function mention( $activity, $user_id, $success = true ) {
+	public static function mention( $activity, $user_id, $success ) {
 		// Only send notification if the activity was successfully handled.
 		if ( ! $success ) {
 			return;
