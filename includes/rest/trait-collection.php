@@ -169,7 +169,7 @@ trait Collection {
 		}
 
 		// Parse the header using the generic HTTP parser.
-		$params = \Activitypub\Http::parse_collection_sync_header( $sync_header );
+		$params = Http::parse_collection_sync_header( $sync_header );
 
 		if ( false === $params ) {
 			return;

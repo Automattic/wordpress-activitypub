@@ -7,9 +7,11 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Http;
 use Activitypub\Tombstone;
 
 use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\get_rest_url_by_path;
 
 /**
  * ActivityPub Followers Collection.
@@ -511,7 +513,7 @@ class Followers {
 			$hash = hash( 'sha256', $follower_url );
 
 			// XOR the hash with the running digest.
-			$digest = \Activitypub\Http::xor_hex_strings( $digest, $hash );
+			$digest = Http::xor_hex_strings( $digest, $hash );
 		}
 
 		return $digest;
@@ -594,10 +596,10 @@ class Followers {
 		}
 
 		// Build the collection ID (followers collection URL).
-		$collection_id = \Activitypub\get_rest_url_by_path( sprintf( 'actors/%d/followers', $user_id ) );
+		$collection_id = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user_id ) );
 
 		// Build the partial followers URL.
-		$url = \Activitypub\get_rest_url_by_path(
+		$url = get_rest_url_by_path(
 			sprintf(
 				'actors/%d/followers/sync?authority=%s',
 				$user_id,
