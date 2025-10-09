@@ -218,7 +218,7 @@ class Mailer {
 	 * @param bool  $success  True on success, false otherwise.
 	 */
 	public static function direct_message( $activity, $user_id, $success ) {
-		// Only send notification if the activity was successfully handled.
+		// Only send notification if the activity was not successfully handled.
 		if ( $success ) {
 			return;
 		}
