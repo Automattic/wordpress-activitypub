@@ -254,8 +254,8 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 10, \has_filter( 'comment_notification_subject', array( Mailer::class, 'comment_notification_subject' ) ) );
 		$this->assertEquals( 10, \has_filter( 'comment_notification_text', array( Mailer::class, 'comment_notification_text' ) ) );
 		$this->assertEquals( 10, \has_action( 'activitypub_handled_follow', array( Mailer::class, 'new_follower' ) ) );
-		$this->assertEquals( 10, \has_action( 'activitypub_handled_create', array( Mailer::class, 'direct_message' ) ) );
-		$this->assertEquals( 20, \has_action( 'activitypub_handled_create', array( Mailer::class, 'mention' ) ) );
+		$this->assertEquals( 10, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) ) );
+		$this->assertEquals( 20, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'mention' ) ) );
 	}
 
 	/**
@@ -416,7 +416,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		}
 
-		Mailer::direct_message( $activity, $user_id, true );
+		Mailer::direct_message( $activity, $user_id );
 
 		$this->assertEquals( $send_email ? 1 : 0, $mock->get_call_count() );
 
@@ -537,7 +537,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			}
 		);
 
-		Mailer::direct_message( $activity, $user_id, true );
+		Mailer::direct_message( $activity, $user_id );
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
@@ -632,7 +632,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
 
 		// Call the method.
-		Mailer::mention( $activity, self::$user_id, true );
+		Mailer::mention( $activity, self::$user_id );
 
 		// Assert no email was sent.
 		$this->assertEquals( 0, $mock->get_call_count() );
