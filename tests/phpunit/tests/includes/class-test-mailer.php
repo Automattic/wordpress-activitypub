@@ -698,7 +698,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
 
 		// Call the method with blog user ID.
-		Mailer::direct_message( $activity, Actors::BLOG_USER_ID, true );
+		Mailer::direct_message( $activity, Actors::BLOG_USER_ID );
 
 		// Assert no email was sent.
 		$this->assertEquals( 0, $mock->get_call_count() );
