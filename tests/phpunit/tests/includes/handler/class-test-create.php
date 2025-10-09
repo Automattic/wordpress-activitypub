@@ -80,12 +80,13 @@ class Test_Create extends \WP_UnitTestCase {
 	 */
 	public static function get_remote_metadata_by_actor( $value, $actor ) {
 		return array(
-			'name' => 'Example User',
-			'icon' => array(
+			'name'              => 'Example User',
+			'preferredUsername' => 'exampleuser',
+			'icon'              => array(
 				'url' => 'https://example.com/icon',
 			),
-			'url'  => $actor,
-			'id'   => 'http://example.org/users/example',
+			'url'               => $actor,
+			'id'                => 'http://example.org/users/example',
 		);
 	}
 
