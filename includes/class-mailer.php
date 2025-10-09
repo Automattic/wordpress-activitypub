@@ -20,9 +20,9 @@ class Mailer {
 		\add_filter( 'comment_notification_subject', array( self::class, 'comment_notification_subject' ), 10, 2 );
 		\add_filter( 'comment_notification_text', array( self::class, 'comment_notification_text' ), 10, 2 );
 
-		\add_action( 'activitypub_inbox_follow', array( self::class, 'new_follower' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );  /** After @see \Activitypub\Handler\Create::handle_create() */
+		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 4 );
+		\add_action( 'activitypub_handled_create', array( self::class, 'direct_message' ), 10, 4 );
+		\add_action( 'activitypub_handled_create', array( self::class, 'mention' ), 20, 4 );
 	}
 
 	/**
@@ -124,8 +124,14 @@ class Mailer {
 	 *
 	 * @param array $activity The activity object.
 	 * @param int   $user_id  The id of the local blog-user.
+	 * @param bool  $success  True on success, false otherwise.
 	 */
-	public static function new_follower( $activity, $user_id ) {
+	public static function new_follower( $activity, $user_id, $success = true ) {
+		// Only send notification if the follow was successful.
+		if ( ! $success ) {
+			return;
+		}
+
 		// Do not send notifications to the Application user.
 		if ( Actors::APPLICATION_USER_ID === $user_id ) {
 			return;
@@ -209,8 +215,14 @@ class Mailer {
 	 *
 	 * @param array $activity The activity object.
 	 * @param int   $user_id  The id of the local blog-user.
+	 * @param bool  $success  True on success, false otherwise.
 	 */
-	public static function direct_message( $activity, $user_id ) {
+	public static function direct_message( $activity, $user_id, $success = true ) {
+		// Only send notification if the activity was successfully handled.
+		if ( ! $success ) {
+			return;
+		}
+
 		if (
 			is_activity_public( $activity ) ||
 			// Only accept messages that have the user in the "to" field.
@@ -284,8 +296,14 @@ class Mailer {
 	 *
 	 * @param array $activity The activity object.
 	 * @param int   $user_id  The id of the local blog-user.
+	 * @param bool  $success  True on success, false otherwise.
 	 */
-	public static function mention( $activity, $user_id ) {
+	public static function mention( $activity, $user_id, $success = true ) {
+		// Only send notification if the activity was successfully handled.
+		if ( ! $success ) {
+			return;
+		}
+
 		if (
 			// Only accept messages that have the user in the "cc" field.
 			empty( $activity['cc'] ) ||
