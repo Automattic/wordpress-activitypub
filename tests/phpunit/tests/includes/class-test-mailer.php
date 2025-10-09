@@ -748,7 +748,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test quote notification.
 	 *
-	 * @covers ::quoted
+	 * @covers ::quote
 	 */
 	public function test_quoted() {
 		$activity = array(
@@ -797,7 +797,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test quote notification when state is false.
 	 *
-	 * @covers ::quoted
+	 * @covers ::quote
 	 */
 	public function test_quoted_with_false_state() {
 		$activity = array(
@@ -828,7 +828,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test quote notification when user option is disabled.
 	 *
-	 * @covers ::quoted
+	 * @covers ::quote
 	 */
 	public function test_quoted_with_disabled_option() {
 		// Disable the user option.
@@ -862,7 +862,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test quote notification for blog user.
 	 *
-	 * @covers ::quoted
+	 * @covers ::quote
 	 */
 	public function test_blog_quoted() {
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
@@ -914,7 +914,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test quote notification for blog user when option is disabled.
 	 *
-	 * @covers ::quoted
+	 * @covers ::quote
 	 */
 	public function test_blog_quoted_with_disabled_option() {
 		// Set blog option to false (0).
@@ -951,7 +951,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test quote notification does not send to Application user.
 	 *
-	 * @covers ::quoted
+	 * @covers ::quote
 	 */
 	public function test_quoted_application_user() {
 		$activity = array(
