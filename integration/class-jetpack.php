@@ -24,11 +24,6 @@ class Jetpack {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		// Replace the Reader's "Share Post" with the Federated Reply block.
-		if ( isset( $_GET['is_post_share'], $_GET['url'] ) && $_GET['is_post_share'] ) { // phpcs:ignore WordPress.Security
-			self::adapt_post_share();
-		}
-
 		if ( ! \defined( 'IS_WPCOM' ) ) {
 			\add_filter( 'jetpack_sync_post_meta_whitelist', array( self::class, 'add_sync_meta' ) );
 			\add_filter( 'jetpack_sync_comment_meta_whitelist', array( self::class, 'add_sync_comment_meta' ) );
@@ -44,6 +39,8 @@ class Jetpack {
 			\add_filter( 'activitypub_following_row_actions', array( self::class, 'add_reader_link' ), 10, 2 );
 			\add_filter( 'pre_option_activitypub_following_ui', array( self::class, 'pre_option_activitypub_following_ui' ) );
 		}
+
+		\add_action( 'load-post-new.php', array( self::class, 'adapt_post_share' ) );
 	}
 
 	/**
@@ -141,7 +138,11 @@ class Jetpack {
 	 * Adapt the parameters for a post share request to be compatible with the Federated Reply block.
 	 */
 	public static function adapt_post_share() {
-		$url = \sanitize_url( \wp_unslash( $_GET['url'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( ! isset( $_GET['is_post_share'], $_GET['url'] ) || ! $_GET['is_post_share'] ) { // phpcs:ignore WordPress.Security
+			return;
+		}
+
+		$url = \sanitize_url( \wp_unslash( $_GET['url'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
 
 		if ( is_activity_object( Http::get_remote_object( $url ) ) ) {
 			$args = array(
