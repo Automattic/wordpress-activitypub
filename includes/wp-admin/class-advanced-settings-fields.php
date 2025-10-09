@@ -170,14 +170,14 @@ class Advanced_Settings_Fields {
 	 * Render inbox purge days field.
 	 */
 	public static function render_inbox_purge_days_field() {
-		$value = \get_option( 'activitypub_inbox_purge_days', 360 );
+		$value = \get_option( 'activitypub_inbox_purge_days', 180 );
 		echo '<input type="number" id="activitypub_inbox_purge_days" name="activitypub_inbox_purge_days" value="' . esc_attr( $value ) . '" class="small-text" min="0" max="365" />';
 		echo '<p class="description">' . \wp_kses(
 			sprintf(
-				// translators: 1: Definition of Inbox; 2: Default value (360).
+				// translators: 1: Definition of Inbox; 2: Default value (180).
 				\__( 'Maximum number of days to keep items in the <abbr title="%1$s">Inbox</abbr>. A lower value might be better for sites with lots of activity to maintain site performance. Default: <code>%2$s</code>', 'activitypub' ),
 				\esc_attr__( 'A virtual mailbox where a user receives all incoming activities (posts, likes, follows, replies) from other users across the Fediverse, allowing them to see and interact with content directed at them', 'activitypub' ),
-				\esc_html( 360 )
+				\esc_html( 180 )
 			),
 			array(
 				'abbr' => array( 'title' => array() ),

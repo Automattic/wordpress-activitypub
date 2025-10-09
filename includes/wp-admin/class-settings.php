@@ -182,7 +182,7 @@ class Settings {
 			array(
 				'type'        => 'integer',
 				'description' => \__( 'Number of days to keep items in the Inbox.', 'activitypub' ),
-				'default'     => 360,
+				'default'     => 180,
 			)
 		);
 

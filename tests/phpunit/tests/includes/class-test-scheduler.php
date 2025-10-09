@@ -631,14 +631,14 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			2
 		);
 
-		// Run purge_inbox with default days (360).
+		// Run purge_inbox with default days (180).
 		Scheduler::purge_inbox();
 		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
 		remove_all_filters( 'wp_count_posts' );
 
-		// Verify posts are not deleted (2 months < 360 days).
+		// Verify posts are not deleted (2 months < 180 days).
 		$this->assertEquals( 25, wp_count_posts( Inbox::POST_TYPE )->publish );
 
 		// Change the purge days option to 30 days.

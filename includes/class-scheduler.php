@@ -338,7 +338,7 @@ class Scheduler {
 			return;
 		}
 
-		$days     = (int) get_option( 'activitypub_inbox_purge_days', 360 );
+		$days     = (int) get_option( 'activitypub_inbox_purge_days', 180 );
 		$timezone = new \DateTimeZone( 'UTC' );
 		$date     = new \DateTime( 'now', $timezone );
 
