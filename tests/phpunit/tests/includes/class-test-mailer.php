@@ -468,7 +468,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Call the method.
-		Mailer::direct_message( $activity, self::$user_id, true );
+		Mailer::direct_message( $activity, self::$user_id );
 
 		// Clean up.
 		remove_all_filters( 'wp_before_load_template' );
@@ -599,7 +599,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
 
 		// Call the method.
-		Mailer::direct_message( $activity, self::$user_id, true );
+		Mailer::direct_message( $activity, self::$user_id );
 
 		// Assert no email was sent.
 		$this->assertEquals( 0, $mock->get_call_count() );
@@ -733,7 +733,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
 
 		// Call the method with blog user ID.
-		Mailer::mention( $activity, Actors::BLOG_USER_ID, true );
+		Mailer::mention( $activity, Actors::BLOG_USER_ID );
 
 		// Assert no email was sent.
 		$this->assertEquals( 0, $mock->get_call_count() );
