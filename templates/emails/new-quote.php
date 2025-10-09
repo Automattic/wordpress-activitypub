@@ -21,13 +21,8 @@ require __DIR__ . '/parts/header.php';
 
 <p>
 	<?php
-	if ( Actors::BLOG_USER_ID === $args['user_id'] ) :
-		/* translators: %s: The name of the person who quoted the blog. */
-		$message = __( 'Looks like someone&#8217;s sharing one of your posts! Your post was just quoted by %s on the Fediverse. Here&#8217;s what they said:', 'activitypub' );
-	else :
-		/* translators: %s: The name of the person who quoted the user. */
-		$message = __( 'Looks like someone&#8217;s sharing one of your posts! Your post was just quoted by %s on the Fediverse. Here&#8217;s what they said:', 'activitypub' );
-	endif;
+	/* translators: %s: The name of the person who quoted the post. */
+	$message = __( 'Looks like someone&#8217;s sharing one of your posts! Your post was just quoted by %s on the Fediverse. Here&#8217;s what they said:', 'activitypub' );
 
 	printf( esc_html( $message ), '<a href="' . esc_url( $args['actor']['url'] ) . '">' . esc_html( $args['actor']['webfinger'] ) . '</a>' );
 	?>
