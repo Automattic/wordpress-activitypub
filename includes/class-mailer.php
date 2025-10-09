@@ -22,7 +22,10 @@ class Mailer {
 
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'new_follower' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );  /** After @see \Activitypub\Handler\Create::handle_create() */
+		/** After @see \Activitypub\Handler\Create::handle_create() */
+		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );
+
+		\add_action( 'activitypub_handled_quote_request', array( self::class, 'quote' ), 10, 3 );
 	}
 
 	/**
@@ -350,6 +353,112 @@ class Mailer {
 			$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
 			/* translators: Message URL */
 			$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $activity['object']['id'] ) ) . "\r\n\r\n";
+
+			$mailer->{'AltBody'} = $message;
+		};
+		\add_action( 'phpmailer_init', $alt_function );
+
+		\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
+
+		\remove_action( 'phpmailer_init', $alt_function );
+	}
+
+	/**
+	 * Send a quoted notification.
+	 *
+	 * @param array $activity The ActivityPub activity data.
+	 * @param int   $user_id  The local user ID.
+	 * @param bool  $state    True on success, false otherwise.
+	 */
+	public static function quote( $activity, $user_id, $state ) {
+		if ( ! $state ) {
+			return;
+		}
+
+		// Do not send notifications to the Application user.
+		if ( Actors::APPLICATION_USER_ID === $user_id ) {
+			return;
+		}
+
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			if ( ! \get_user_option( 'activitypub_mailer_new_quote', $user_id ) ) {
+				return;
+			}
+
+			$email = \get_userdata( $user_id )->user_email;
+		} else {
+			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_quote', '1' ) ) {
+				return;
+			}
+
+			$email = \get_option( 'admin_email' );
+		}
+
+		$actor = get_remote_metadata_by_actor( $activity['actor'] );
+		if ( ! $actor || \is_wp_error( $actor ) ) {
+			return;
+		}
+
+		$actor = self::normalize_actor( $actor );
+
+		// Get the quoted post/object.
+		// For QuoteRequest activities, object is the quoted URL string.
+		// For regular quote posts, object.quoteUrl contains the quoted URL.
+		$quoted_url = null;
+		if ( is_string( $activity['object'] ) ) {
+			// QuoteRequest format.
+			$quoted_url = $activity['object'];
+		} elseif ( ! empty( $activity['object']['quoteUrl'] ) ) {
+			// Regular quote post format.
+			$quoted_url = $activity['object']['quoteUrl'];
+		}
+
+		$template_args = array(
+			'activity'   => $activity,
+			'actor'      => $actor,
+			'user_id'    => $user_id,
+			'quoted_url' => $quoted_url,
+		);
+
+		/* translators: 1: Blog name, 2: Actor name */
+		$subject = \sprintf( \esc_html__( '[%1$s] Quote from: %2$s', 'activitypub' ), \esc_html( \get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
+
+		\ob_start();
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-quote.php', false, $template_args );
+		$html_message = \ob_get_clean();
+
+		$alt_function = function ( $mailer ) use ( $actor, $activity, $quoted_url ) {
+			$content = '';
+			// For QuoteRequest, instrument contains the quote post URL.
+			// For regular quotes, object contains the quote post.
+			$quote_object = $activity['instrument'] ?? $activity['object'];
+			if ( is_array( $quote_object ) && ! empty( $quote_object['content'] ) ) {
+				$content = \html_entity_decode(
+					\wp_strip_all_tags(
+						str_replace( '</p>', PHP_EOL . PHP_EOL, $quote_object['content'] )
+					),
+					ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
+				);
+			}
+
+			/* translators: Actor name */
+			$message = \sprintf( \esc_html__( '%1$s quoted your post:', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n\r\n";
+
+			if ( $content ) {
+				$message .= $content . "\r\n\r\n";
+			}
+
+			if ( $quoted_url ) {
+				/* translators: Quoted post URL */
+				$message .= \sprintf( \esc_html__( 'Your post: %s', 'activitypub' ), \esc_url( $quoted_url ) ) . "\r\n";
+			}
+
+			// Get the quote post URL.
+			$quote_url = is_array( $quote_object ) && ! empty( $quote_object['id'] ) ? $quote_object['id'] : ( $activity['instrument'] ?? '' );
+			if ( $quote_url ) {
+				/* translators: Quote post URL */
+				$message .= \sprintf( \esc_html__( 'Quote URL: %s', 'activitypub' ), \esc_url( $quote_url ) ) . "\r\n\r\n";
+			}
 
 			$mailer->{'AltBody'} = $message;
 		};

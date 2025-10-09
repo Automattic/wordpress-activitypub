@@ -151,10 +151,11 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 			'pre_get_remote_metadata_by_actor',
 			function () use ( $actor_url ) {
 				return array(
-					'id'    => $actor_url,
-					'actor' => $actor_url,
-					'type'  => 'Person',
-					'inbox' => str_replace( '/users/', '/inbox/', $actor_url ),
+					'id'                => $actor_url,
+					'actor'             => $actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'remote_user',
+					'inbox'             => str_replace( '/users/', '/inbox/', $actor_url ),
 				);
 			}
 		);

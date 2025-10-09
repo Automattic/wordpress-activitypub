@@ -327,6 +327,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub_blog',
+			'activitypub_blog_user_mailer_new_quote',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send a notification when someone quotes a user of the blog.',
+				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
 			'activitypub_blog_user_also_known_as',
 			array(
 				'type'              => 'array',

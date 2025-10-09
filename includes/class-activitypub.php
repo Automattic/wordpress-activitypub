@@ -342,6 +342,18 @@ class Activitypub {
 
 		\register_meta(
 			'user',
+			$blog_prefix . 'activitypub_mailer_new_quote',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a notification when someone quotes this user.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		\add_filter( 'get_user_option_activitypub_mailer_new_quote', array( self::class, 'user_options_default' ) );
+
+		\register_meta(
+			'user',
 			'activitypub_show_welcome_tab',
 			array(
 				'type'              => 'integer',

@@ -250,6 +250,12 @@ class User_Settings_Fields {
 					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
 				</label>
 			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_new_quote" id="activitypub_mailer_new_quote" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_quote' ) ); ?> />
+					<?php \esc_html_e( 'New Quotes', 'activitypub' ); ?>
+				</label>
+			</p>
 		</fieldset>
 		<?php
 	}

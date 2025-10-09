@@ -46,6 +46,7 @@ class Test_Mailer extends WP_UnitTestCase {
 					$blog_prefix . 'activitypub_mailer_new_dm'       => 1,
 					$blog_prefix . 'activitypub_mailer_new_follower' => 1,
 					$blog_prefix . 'activitypub_mailer_new_mention'  => 1,
+					$blog_prefix . 'activitypub_mailer_new_quote'    => 1,
 				),
 			)
 		);
@@ -742,5 +743,239 @@ class Test_Mailer extends WP_UnitTestCase {
 		remove_all_filters( 'wp_before_load_template' );
 		delete_option( 'activitypub_blog_user_mailer_new_mention' );
 		delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test quote notification.
+	 *
+	 * @covers ::quoted
+	 */
+	public function test_quoted() {
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'       => 'https://example.com/post/1',
+				'type'     => 'Note',
+				'content'  => '<p>Great article! I have some thoughts on this.</p>',
+				'quoteUrl' => get_permalink( self::$post_id ),
+			),
+		);
+
+		// Mock remote metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Test Quoter',
+					'url'               => 'https://example.com/author',
+					'preferredUsername' => 'quoter',
+				);
+			}
+		);
+
+		// Capture email.
+		add_filter(
+			'wp_mail',
+			function ( $args ) {
+				$this->assertStringContainsString( 'Test Quoter', $args['subject'] );
+				$this->assertStringContainsString( 'Quote from', $args['subject'] );
+				$this->assertStringContainsString( 'https://example.com/post/1', $args['message'] );
+				$this->assertStringContainsString( 'Great article', $args['message'] );
+				$this->assertEquals( get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
+				return $args;
+			}
+		);
+
+		Mailer::quote( $activity, self::$user_id, true );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'wp_mail' );
+	}
+
+	/**
+	 * Test quote notification when state is false.
+	 *
+	 * @covers ::quoted
+	 */
+	public function test_quoted_with_false_state() {
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'       => 'https://example.com/post/1',
+				'type'     => 'Note',
+				'content'  => '<p>Great article!</p>',
+				'quoteUrl' => get_permalink( self::$post_id ),
+			),
+		);
+
+		// Add a filter to fail the test if an email is sent.
+		$mock = new \MockAction();
+		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
+
+		// Call with false state - should not send email.
+		Mailer::quote( $activity, self::$user_id, false );
+
+		// Assert no email was sent.
+		$this->assertEquals( 0, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
+	}
+
+	/**
+	 * Test quote notification when user option is disabled.
+	 *
+	 * @covers ::quoted
+	 */
+	public function test_quoted_with_disabled_option() {
+		// Disable the user option.
+		update_user_option( self::$user_id, 'activitypub_mailer_new_quote', false );
+
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'       => 'https://example.com/post/1',
+				'type'     => 'Note',
+				'content'  => '<p>Great article!</p>',
+				'quoteUrl' => get_permalink( self::$post_id ),
+			),
+		);
+
+		// Add a filter to fail the test if an email is sent.
+		$mock = new \MockAction();
+		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
+
+		Mailer::quote( $activity, self::$user_id, true );
+
+		// Assert no email was sent.
+		$this->assertEquals( 0, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
+		delete_user_option( self::$user_id, 'activitypub_mailer_new_quote' );
+	}
+
+	/**
+	 * Test quote notification for blog user.
+	 *
+	 * @covers ::quoted
+	 */
+	public function test_blog_quoted() {
+		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		update_option( 'activitypub_blog_user_mailer_new_quote', '1' );
+
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'       => 'https://example.com/post/1',
+				'type'     => 'Note',
+				'content'  => '<p>Great blog post!</p>',
+				'quoteUrl' => get_permalink( self::$post_id ),
+			),
+		);
+
+		// Mock remote metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Test Quoter',
+					'url'               => 'https://example.com/author',
+					'preferredUsername' => 'quoter',
+				);
+			}
+		);
+
+		// Capture email.
+		add_filter(
+			'wp_mail',
+			function ( $args ) {
+				$this->assertStringContainsString( 'Test Quoter', $args['subject'] );
+				$this->assertStringContainsString( 'https://example.com/post/1', $args['message'] );
+				$this->assertEquals( get_option( 'admin_email' ), $args['to'] );
+				return $args;
+			}
+		);
+
+		Mailer::quote( $activity, Actors::BLOG_USER_ID, true );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'wp_mail' );
+		delete_option( 'activitypub_blog_user_mailer_new_quote' );
+		delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test quote notification for blog user when option is disabled.
+	 *
+	 * @covers ::quoted
+	 */
+	public function test_blog_quoted_with_disabled_option() {
+		// Set blog option to false (0).
+		update_option( 'activitypub_blog_user_mailer_new_quote', '0' );
+		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'       => 'https://example.com/post/1',
+				'type'     => 'Note',
+				'content'  => '<p>Great blog!</p>',
+				'quoteUrl' => get_permalink( self::$post_id ),
+			),
+		);
+
+		// Add a filter to fail the test if an email is sent.
+		$mock = new \MockAction();
+		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
+
+		// Call the method with blog user ID.
+		Mailer::quote( $activity, Actors::BLOG_USER_ID, true );
+
+		// Assert no email was sent.
+		$this->assertEquals( 0, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
+		delete_option( 'activitypub_blog_user_mailer_new_quote' );
+		delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test quote notification does not send to Application user.
+	 *
+	 * @covers ::quoted
+	 */
+	public function test_quoted_application_user() {
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'       => 'https://example.com/post/1',
+				'type'     => 'Note',
+				'content'  => '<p>Great article!</p>',
+				'quoteUrl' => get_permalink( self::$post_id ),
+			),
+		);
+
+		// Add a filter to fail the test if an email is sent.
+		$mock = new \MockAction();
+		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
+
+		// Call with Application user - should not send email.
+		Mailer::quote( $activity, Actors::APPLICATION_USER_ID, true );
+
+		// Assert no email was sent.
+		$this->assertEquals( 0, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
 	}
 }

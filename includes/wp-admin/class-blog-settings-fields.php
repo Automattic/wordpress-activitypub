@@ -236,6 +236,12 @@ class Blog_Settings_Fields {
 					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
 				</label>
 			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_blog_user_mailer_new_quote" id="activitypub_blog_user_mailer_new_quote" value="1" <?php \checked( '1', \get_option( 'activitypub_blog_user_mailer_new_quote', '1' ) ); ?> />
+					<?php \esc_html_e( 'New Quotes', 'activitypub' ); ?>
+				</label>
+			</p>
 		</fieldset>
 		<?php
 	}
