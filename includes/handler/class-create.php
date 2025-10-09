@@ -34,14 +34,6 @@ class Create {
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 */
 	public static function handle_create( $activity, $user_id, $activity_object = null ) {
-		// Check if Activity is public or not.
-		if (
-			ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ||
-			! is_activity_reply( $activity )
-		) {
-			return;
-		}
-
 		$check_dupe = object_id_to_comment( $activity['object']['id'] );
 
 		// If comment exists, call update action.
@@ -62,7 +54,15 @@ class Create {
 		}
 
 		$success = false;
-		$result  = Interactions::add_comment( $activity );
+		$result  = false;
+
+		// Check if Activity is public or not.
+		if (
+			in_array( get_activity_visibility( $activity ), array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ), true ) ||
+			is_activity_reply( $activity )
+		) {
+			$result = Interactions::add_comment( $activity );
+		}
 
 		if ( $result && ! \is_wp_error( $result ) ) {
 			$success = true;
