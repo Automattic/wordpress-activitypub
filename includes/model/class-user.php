@@ -11,6 +11,7 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
+use function Activitypub\encode_url_path;
 use function Activitypub\get_attribution_domains;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_blog_public;
@@ -153,7 +154,7 @@ class User extends Actor {
 	 * @return string The User url.
 	 */
 	public function get_url() {
-		return \esc_url( \get_author_posts_url( $this->_id ) );
+		return encode_url_path( \get_author_posts_url( $this->_id ) );
 	}
 
 	/**

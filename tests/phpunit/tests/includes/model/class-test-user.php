@@ -10,6 +10,8 @@ namespace Activitypub\Tests\Model;
 use Activitypub\Model\User;
 use Activitypub\Move;
 
+use function Activitypub\encode_url_path;
+
 /**
  * Test class for Activitypub User.
  *
@@ -173,5 +175,40 @@ class Test_User extends \WP_UnitTestCase {
 		$user3    = User::from_wp_user( $user_id3 );
 
 		$this->assertSame( 'normaluser', $user3->get_preferred_username() );
+	}
+
+	/**
+	 * Test that URLs with Unicode characters are properly percent-encoded for RFC 3986 compliance.
+	 *
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/issues/763
+	 * @covers ::get_url
+	 */
+	public function test_unicode_url_encoding() {
+		// Test with Japanese characters.
+		$test_url_japanese = 'https://example.jp/著者/testauthor/';
+		$encoded           = encode_url_path( $test_url_japanese );
+
+		// Japanese characters 著者 should be percent-encoded.
+		$this->assertStringNotContainsString( '著者', $encoded );
+		$this->assertStringContainsString( '%E8%91%97%E8%80%85', $encoded );
+		$this->assertStringContainsString( 'example.jp', $encoded );
+		$this->assertStringContainsString( 'testauthor', $encoded );
+
+		// Test with Arabic characters.
+		$test_url_arabic = 'https://example.com/مقالة/author/user/';
+		$encoded_arabic  = encode_url_path( $test_url_arabic );
+
+		// Arabic characters should be percent-encoded.
+		$this->assertStringNotContainsString( 'مقالة', $encoded_arabic );
+		$this->assertStringContainsString( '%D9%85%D9%82%D8%A7%D9%84%D8%A9', $encoded_arabic );
+
+		// Test with Cyrillic characters.
+		$test_url_cyrillic = 'https://example.ru/статья/автор/';
+		$encoded_cyrillic  = encode_url_path( $test_url_cyrillic );
+
+		// Cyrillic characters should be percent-encoded.
+		$this->assertStringNotContainsString( 'статья', $encoded_cyrillic );
+		$this->assertStringNotContainsString( 'автор', $encoded_cyrillic );
+		$this->assertStringContainsString( '%D1%81%D1%82%D0%B0%D1%82%D1%8C%D1%8F', $encoded_cyrillic );
 	}
 }

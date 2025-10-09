@@ -231,6 +231,31 @@ function get_rest_url_by_path( $path = '' ) {
 }
 
 /**
+ * Encode a URL path to be RFC 3986 compliant.
+ *
+ * This function ensures that URLs with Unicode characters in the path are properly
+ * percent-encoded for ActivityPub compliance. It only encodes the path component,
+ * leaving the scheme, host, port, and query string intact.
+ *
+ * @param string $url The URL to encode.
+ *
+ * @return string The URL with an encoded path.
+ */
+function encode_url_path( $url ) {
+	$path = \wp_parse_url( $url, PHP_URL_PATH );
+
+	if ( empty( $path ) ) {
+		return \esc_url_raw( $url );
+	}
+
+	// Encode each path segment to be RFC 3986 compliant.
+	$segments     = explode( '/', $path );
+	$encoded_path = implode( '/', array_map( 'rawurlencode', $segments ) );
+
+	return \esc_url_raw( str_replace( $path, $encoded_path, $url ) );
+}
+
+/**
  * Convert a string from camelCase to snake_case.
  *
  * @param string $input The string to convert.
