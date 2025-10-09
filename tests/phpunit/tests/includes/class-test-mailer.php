@@ -195,7 +195,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			}
 		);
 
-		Mailer::new_follower( $activity, self::$user_id );
+		Mailer::new_follower( $activity, self::$user_id, true );
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
@@ -236,7 +236,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			}
 		);
 
-		Mailer::new_follower( $activity, self::$user_id );
+		Mailer::new_follower( $activity, self::$user_id, true );
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
@@ -416,7 +416,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		}
 
-		Mailer::direct_message( $activity, $user_id );
+		Mailer::direct_message( $activity, $user_id, true );
 
 		$this->assertEquals( $send_email ? 1 : 0, $mock->get_call_count() );
 
@@ -468,7 +468,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Call the method.
-		Mailer::direct_message( $activity, self::$user_id );
+		Mailer::direct_message( $activity, self::$user_id, true );
 
 		// Clean up.
 		remove_all_filters( 'wp_before_load_template' );
@@ -537,7 +537,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			}
 		);
 
-		Mailer::direct_message( $activity, $user_id );
+		Mailer::direct_message( $activity, $user_id, true );
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
@@ -565,7 +565,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
 
 		// Call the method.
-		Mailer::new_follower( $activity, self::$user_id );
+		Mailer::new_follower( $activity, self::$user_id, true );
 
 		// Assert no email was sent.
 		$this->assertEquals( 0, $mock->get_call_count() );
@@ -599,7 +599,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
 
 		// Call the method.
-		Mailer::direct_message( $activity, self::$user_id );
+		Mailer::direct_message( $activity, self::$user_id, true );
 
 		// Assert no email was sent.
 		$this->assertEquals( 0, $mock->get_call_count() );
@@ -632,7 +632,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
 
 		// Call the method.
-		Mailer::mention( $activity, self::$user_id );
+		Mailer::mention( $activity, self::$user_id, true );
 
 		// Assert no email was sent.
 		$this->assertEquals( 0, $mock->get_call_count() );
@@ -663,7 +663,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
 
 		// Call the method with blog user ID.
-		Mailer::new_follower( $activity, Actors::BLOG_USER_ID );
+		Mailer::new_follower( $activity, Actors::BLOG_USER_ID, true );
 
 		// Assert no email was sent.
 		$this->assertEquals( 0, $mock->get_call_count() );
@@ -698,7 +698,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
 
 		// Call the method with blog user ID.
-		Mailer::direct_message( $activity, Actors::BLOG_USER_ID );
+		Mailer::direct_message( $activity, Actors::BLOG_USER_ID, true );
 
 		// Assert no email was sent.
 		$this->assertEquals( 0, $mock->get_call_count() );
@@ -733,7 +733,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
 
 		// Call the method with blog user ID.
-		Mailer::mention( $activity, Actors::BLOG_USER_ID );
+		Mailer::mention( $activity, Actors::BLOG_USER_ID, true );
 
 		// Assert no email was sent.
 		$this->assertEquals( 0, $mock->get_call_count() );
