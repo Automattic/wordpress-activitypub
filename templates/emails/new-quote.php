@@ -5,7 +5,6 @@
  * @package Activitypub
  */
 
-use Activitypub\Collection\Actors;
 use Activitypub\Embed;
 
 use function Activitypub\site_supports_blocks;
@@ -22,7 +21,7 @@ require __DIR__ . '/parts/header.php';
 <p>
 	<?php
 	/* translators: %s: The name of the person who quoted the post. */
-	$message = __( 'Looks like someone&#8217;s shared one of your posts! Your post was just quoted by %s on the Fediverse. Here&#8217;s what they said:', 'activitypub' );
+	$message = __( 'Your post was shared by %s on the Fediverse. Here&#8217;s what they said:', 'activitypub' );
 
 	printf( esc_html( $message ), '<a href="' . esc_url( $args['actor']['url'] ) . '">' . esc_html( $args['actor']['webfinger'] ) . '</a>' );
 	?>
