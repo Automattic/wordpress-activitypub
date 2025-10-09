@@ -39,6 +39,15 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_outbox_purge_days' )
 		);
 
+		\add_settings_field(
+			'activitypub_inbox_purge_days',
+			\__( 'Inbox Retention Period', 'activitypub' ),
+			array( self::class, 'render_inbox_purge_days_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_inbox_purge_days' )
+		);
+
 		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
 			\add_settings_field(
 				'activitypub_vary_header',
@@ -149,6 +158,26 @@ class Advanced_Settings_Fields {
 				\__( 'Maximum number of days to keep items in the <abbr title="%1$s">Outbox</abbr>. A lower value might be better for sites with lots of activity to maintain site performance. Default: <code>%2$s</code>', 'activitypub' ),
 				\esc_attr__( 'A virtual location on a user&#8217;s profile where all the activities (posts, likes, replies) they publish are stored, acting as a feed that other users can access to see their publicly shared content', 'activitypub' ),
 				\esc_html( 180 )
+			),
+			array(
+				'abbr' => array( 'title' => array() ),
+				'code' => array(),
+			)
+		) . '</p>';
+	}
+
+	/**
+	 * Render inbox purge days field.
+	 */
+	public static function render_inbox_purge_days_field() {
+		$value = \get_option( 'activitypub_inbox_purge_days', 360 );
+		echo '<input type="number" id="activitypub_inbox_purge_days" name="activitypub_inbox_purge_days" value="' . esc_attr( $value ) . '" class="small-text" min="0" max="365" />';
+		echo '<p class="description">' . \wp_kses(
+			sprintf(
+				// translators: 1: Definition of Inbox; 2: Default value (360).
+				\__( 'Maximum number of days to keep items in the <abbr title="%1$s">Inbox</abbr>. A lower value might be better for sites with lots of activity to maintain site performance. Default: <code>%2$s</code>', 'activitypub' ),
+				\esc_attr__( 'A virtual mailbox where a user receives all incoming activities (posts, likes, follows, replies) from other users across the Fediverse, allowing them to see and interact with content directed at them', 'activitypub' ),
+				\esc_html( 360 )
 			),
 			array(
 				'abbr' => array( 'title' => array() ),
