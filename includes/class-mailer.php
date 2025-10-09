@@ -23,7 +23,7 @@ class Mailer {
 		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 3 );
 
 		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );
+		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 ); /** After @see \Activitypub\Handler\Create::handle_create() */
 	}
 
 	/**
