@@ -420,6 +420,10 @@ class Mailer {
 			$quoted_url = object_to_uri( $activity['object']['quoteUrl'] );
 		}
 
+		if ( ! $quoted_url ) {
+			return;
+		}
+
 		$template_args = array(
 			'activity'   => $activity,
 			'actor'      => $actor,
