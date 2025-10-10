@@ -107,7 +107,7 @@ class Followers_Controller extends Actors_Controller {
 
 		if ( 'full' === $context ) {
 			// Ensure the context is the first element in the response.
-			$response = array_merge( array( '@context' => Base_Object::JSON_LD_CONTEXT ), $response );
+			$response = array( '@context' => Base_Object::JSON_LD_CONTEXT ) + $response;
 		}
 
 		if ( Actors::show_social_graph( $user_id ) ) {
