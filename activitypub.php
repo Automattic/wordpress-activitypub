@@ -48,7 +48,8 @@ function rest_init() {
 	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();
 	( new Rest\Comments_Controller() )->register_routes();
-	( new Rest\Fapi_Controller() )->register_routes();
+	( new Rest\Fasp_Controller() )->register_routes();
+	( new Rest\Fasp_Registration_Controller() )->register_routes();
 	( new Rest\Followers_Controller() )->register_routes();
 	( new Rest\Following_Controller() )->register_routes();
 	( new Rest\Inbox_Controller() )->register_routes();
@@ -76,7 +77,9 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Fapi', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Fasp', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Fasp_Registration', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Fasp_Registration_Admin', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );

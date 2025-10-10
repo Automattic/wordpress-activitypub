@@ -1,8 +1,8 @@
-# FAPI Signature Handling Implementation
+# FASP Signature Handling Implementation
 
 ## Overview
 
-The FAPI controller now implements proper HTTP Message Signatures (RFC-9421) for both request authentication and response signing, matching the existing ActivityPub signature infrastructure.
+The FASP controller now implements proper HTTP Message Signatures (RFC-9421) for both request authentication and response signing, matching the existing ActivityPub signature infrastructure.
 
 ## Request Authentication
 
@@ -45,8 +45,8 @@ private function sign_response( $response, $content ) {
     \openssl_sign( $signature_base, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
 
     // Add signature headers
-    $response->header( 'Signature-Input', 'fapi=(' . $identifiers . ')' . $params );
-    $response->header( 'Signature', 'fapi=:' . $signature_b64 . ':' );
+    $response->header( 'Signature-Input', 'fasp=(' . $identifiers . ')' . $params );
+    $response->header( 'Signature', 'fasp=:' . $signature_b64 . ':' );
 }
 ```
 
@@ -92,7 +92,7 @@ private function sign_response( $response, $content ) {
 - **Key Caching**: Remote actors cached for performance
 - **Key Rotation**: Supports key updates through actor profile changes
 
-## FAPI Specification Compliance
+## FASP Specification Compliance
 
 ### Required Features ✅
 - **Provider Info Endpoint**: Properly authenticated with signatures
@@ -101,7 +101,7 @@ private function sign_response( $response, $content ) {
 - **Response Signing**: Signed responses for integrity
 
 ### Implementation Details
-- **Signature Label**: Uses "fapi" as signature label for responses
+- **Signature Label**: Uses "fasp" as signature label for responses
 - **Algorithm**: RSA-v1.5-SHA256 (same as other ActivityPub endpoints)
 - **Components**: @status and content-digest for responses
 - **Fallback**: Graceful degradation if signing fails
@@ -132,4 +132,4 @@ private function sign_response( $response, $content ) {
 - **Signature Headers**: Validates signature header format
 - **Error Recovery**: Tests graceful failure when signing fails
 
-This implementation makes the FAPI endpoint secure and compliant with both the FAPI specification and ActivityPub security standards.
+This implementation makes the FASP endpoint secure and compliant with both the FASP specification and ActivityPub security standards.

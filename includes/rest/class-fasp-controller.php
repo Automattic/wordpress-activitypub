@@ -1,6 +1,6 @@
 <?php
 /**
- * FAPI controller file.
+ * FASP controller file.
  *
  * @package Activitypub
  */
@@ -8,26 +8,26 @@
 namespace Activitypub\Rest;
 
 /**
- * ActivityPub FAPI Controller.
+ * ActivityPub FASP Controller.
  *
- * Implements the Fediverse Auxiliary Service Provider (FAPI) specification v0.1.
+ * Implements the Fediverse Auxiliary Service Provider (FASP) specification v0.1.
  *
  * @see https://github.com/mastodon/fediverse_auxiliary_service_provider_specifications/tree/main/general/v0.1
  */
-class Fapi_Controller extends \WP_REST_Controller {
+class Fasp_Controller extends \WP_REST_Controller {
 	/**
 	 * The namespace of this controller's route.
 	 *
 	 * @var string
 	 */
-	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
+	protected $namespace = 'activitypub/1.0';
 
 	/**
 	 * The REST base for this controller's route.
 	 *
 	 * @var string
 	 */
-	protected $rest_base = 'fapi';
+	protected $rest_base = 'fasp';
 
 	/**
 	 * Register routes.
@@ -113,7 +113,7 @@ class Fapi_Controller extends \WP_REST_Controller {
 		}
 
 		try {
-			// Use the blog/application actor for signing FAPI responses.
+			// Use the blog/application actor for signing FASP responses.
 			$blog_user_id = \Activitypub\Collection\Actors::APPLICATION_USER_ID;
 			$private_key  = \Activitypub\Collection\Actors::get_private_key( $blog_user_id );
 			$actor        = \Activitypub\Collection\Actors::get_by_id( $blog_user_id );
@@ -146,8 +146,8 @@ class Fapi_Controller extends \WP_REST_Controller {
 			$identifiers = \array_keys( $components );
 			$params_str  = $this->build_params_string( $params );
 
-			$response->header( 'Signature-Input', 'fapi=(' . \implode( ' ', $identifiers ) . ')' . $params_str );
-			$response->header( 'Signature', 'fapi=:' . $signature_b64 . ':' );
+			$response->header( 'Signature-Input', 'fasp=(' . \implode( ' ', $identifiers ) . ')' . $params_str );
+			$response->header( 'Signature', 'fasp=:' . $signature_b64 . ':' );
 
 		} catch ( \Exception $e ) {
 			// Silently fail - don't break the response if signing fails.
@@ -217,7 +217,7 @@ class Fapi_Controller extends \WP_REST_Controller {
 	 */
 	private function get_provider_name() {
 		$site_name = \get_bloginfo( 'name' );
-		return $site_name ? $site_name . ' ActivityPub FAPI' : 'WordPress ActivityPub FAPI';
+		return $site_name ? $site_name . ' ActivityPub FASP' : 'WordPress ActivityPub FASP';
 	}
 
 	/**
@@ -249,11 +249,11 @@ class Fapi_Controller extends \WP_REST_Controller {
 		$capabilities = array();
 
 		/**
-		 * Filter the FAPI capabilities.
+		 * Filter the FASP capabilities.
 		 *
 		 * @param array $capabilities Current capabilities.
 		 */
-		return \apply_filters( 'activitypub_fapi_capabilities', $capabilities );
+		return \apply_filters( 'activitypub_fasp_capabilities', $capabilities );
 	}
 
 	/**
@@ -293,12 +293,12 @@ class Fapi_Controller extends \WP_REST_Controller {
 	public function get_provider_info_schema() {
 		return array(
 			'$schema'    => 'http://json-schema.org/draft-04/schema#',
-			'title'      => 'FAPI Provider Info',
+			'title'      => 'FASP Provider Info',
 			'type'       => 'object',
 			'properties' => array(
 				'name'             => array(
 					'type'        => 'string',
-					'description' => 'The name of the FAPI provider.',
+					'description' => 'The name of the FASP provider.',
 				),
 				'privacyPolicy'    => array(
 					'type'        => 'array',

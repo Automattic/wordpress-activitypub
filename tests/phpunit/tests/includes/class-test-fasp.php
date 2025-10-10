@@ -1,26 +1,26 @@
 <?php
 /**
- * Test file for FAPI classes.
+ * Test file for FASP classes.
  *
  * @package Activitypub
  */
 
 namespace Activitypub\Tests;
 
-use Activitypub\Fapi;
-use Activitypub\Rest\Fapi_Controller;
+use Activitypub\Fasp;
+use Activitypub\Rest\Fasp_Controller;
 
 /**
- * Test class for FAPI.
+ * Test class for FASP.
  *
- * @coversDefaultClass \Activitypub\Rest\Fapi_Controller
+ * @coversDefaultClass \Activitypub\Rest\Fasp_Controller
  */
-class Test_Fapi extends \WP_UnitTestCase {
+class Test_Fasp extends \WP_UnitTestCase {
 
 	/**
-	 * FAPI Controller instance.
+	 * FASP Controller instance.
 	 *
-	 * @var Fapi_Controller
+	 * @var Fasp_Controller
 	 */
 	private $controller;
 
@@ -35,7 +35,7 @@ class Test_Fapi extends \WP_UnitTestCase {
 		$wp_rest_server = new \WP_REST_Server();
 		do_action( 'rest_api_init' );
 
-		$this->controller = new Fapi_Controller();
+		$this->controller = new Fasp_Controller();
 	}
 
 	/**
@@ -49,9 +49,9 @@ class Test_Fapi extends \WP_UnitTestCase {
 		$this->controller->register_routes();
 
 		$routes = $wp_rest_server->get_routes();
-		$this->assertArrayHasKey( '/activitypub/v1/fapi/provider_info', $routes );
+		$this->assertArrayHasKey( '/activitypub/1.0/fasp/provider_info', $routes );
 
-		$route = $routes['/activitypub/v1/fapi/provider_info'];
+		$route = $routes['/activitypub/1.0/fasp/provider_info'];
 		$this->assertCount( 1, $route );
 		$this->assertEquals( 'GET', $route[0]['methods']['GET'] );
 	}
@@ -62,7 +62,7 @@ class Test_Fapi extends \WP_UnitTestCase {
 	 * @covers ::get_provider_info
 	 */
 	public function test_provider_info() {
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/v1/fapi/provider_info' );
+		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
 		$response = $this->controller->get_provider_info( $request );
 
 		$this->assertInstanceOf( 'WP_REST_Response', $response );
@@ -100,7 +100,7 @@ class Test_Fapi extends \WP_UnitTestCase {
 		);
 		update_option( 'wp_page_for_privacy_policy', $privacy_page_id );
 
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/v1/fapi/provider_info' );
+		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
 		$response = $this->controller->get_provider_info( $request );
 
 		$data = $response->get_data();
@@ -120,14 +120,14 @@ class Test_Fapi extends \WP_UnitTestCase {
 	 * @covers ::get_provider_info
 	 */
 	public function test_provider_info_optional_fields() {
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/v1/fapi/provider_info' );
+		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
 		$response = $this->controller->get_provider_info( $request );
 
 		$data = $response->get_data();
 
 		// signInUrl should be present (WordPress admin).
 		$this->assertArrayHasKey( 'signInUrl', $data );
-		$this->assertStringContains( 'wp-admin', $data['signInUrl'] );
+		$this->assertStringContainsString( 'wp-admin', $data['signInUrl'] );
 
 		// contactEmail should be present (admin email).
 		$this->assertArrayHasKey( 'contactEmail', $data );
@@ -138,19 +138,19 @@ class Test_Fapi extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test FAPI base URL in nodeinfo metadata.
+	 * Test FASP base URL in nodeinfo metadata.
 	 *
-	 * @covers ::add_fapi_base_url
+	 * @covers ::add_fasp_base_url
 	 */
-	public function test_add_fapi_base_url() {
+	public function test_add_fasp_base_url() {
 		$metadata = array( 'existing' => 'data' );
-		$result   = Fapi::add_fapi_base_url( $metadata );
+		$result   = Fasp::add_fasp_base_url( $metadata );
 
 		$this->assertArrayHasKey( 'faspBaseUrl', $result );
 		$this->assertArrayHasKey( 'existing', $result );
 		$this->assertEquals( 'data', $result['existing'] );
 
-		$expected_base_url = rest_url( 'activitypub/v1/fapi' );
+		$expected_base_url = rest_url( 'activitypub/1.0/fasp' );
 		$this->assertEquals( $expected_base_url, $result['faspBaseUrl'] );
 	}
 
@@ -160,7 +160,7 @@ class Test_Fapi extends \WP_UnitTestCase {
 	 * @covers ::authenticate_request
 	 */
 	public function test_authenticate_request() {
-		$request = new \WP_REST_Request( 'GET', '/activitypub/v1/fapi/provider_info' );
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
 		$result  = $this->controller->authenticate_request( $request );
 
 		// Should use the same signature verification as other ActivityPub endpoints.
@@ -176,7 +176,7 @@ class Test_Fapi extends \WP_UnitTestCase {
 	public function test_capabilities_filter() {
 		// Add a test capability via filter.
 		add_filter(
-			'activitypub_fapi_capabilities',
+			'activitypub_fasp_capabilities',
 			function ( $capabilities ) {
 				$capabilities[] = array(
 					'id'      => 'test_capability',
@@ -186,7 +186,7 @@ class Test_Fapi extends \WP_UnitTestCase {
 			}
 		);
 
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/v1/fapi/provider_info' );
+		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
 		$response = $this->controller->get_provider_info( $request );
 
 		$data = $response->get_data();
@@ -196,7 +196,7 @@ class Test_Fapi extends \WP_UnitTestCase {
 		$this->assertEquals( '1.0', $data['capabilities'][0]['version'] );
 
 		// Clean up.
-		remove_all_filters( 'activitypub_fapi_capabilities' );
+		remove_all_filters( 'activitypub_fasp_capabilities' );
 	}
 
 	/**
@@ -208,17 +208,17 @@ class Test_Fapi extends \WP_UnitTestCase {
 		// Test with custom site name.
 		update_option( 'blogname', 'Test Site' );
 
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/v1/fapi/provider_info' );
+		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
 		$response = $this->controller->get_provider_info( $request );
 
 		$data = $response->get_data();
-		$this->assertEquals( 'Test Site ActivityPub FAPI', $data['name'] );
+		$this->assertEquals( 'Test Site ActivityPub FASP', $data['name'] );
 
 		// Test with empty site name.
 		update_option( 'blogname', '' );
 
 		$response = $this->controller->get_provider_info( $request );
 		$data     = $response->get_data();
-		$this->assertEquals( 'WordPress ActivityPub FAPI', $data['name'] );
+		$this->assertEquals( 'WordPress ActivityPub FASP', $data['name'] );
 	}
 }
