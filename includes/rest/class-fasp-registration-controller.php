@@ -52,7 +52,7 @@ class Fasp_Registration_Controller extends \WP_REST_Controller {
 		// Capability activation endpoints.
 		\register_rest_route(
 			$this->namespace,
-			'/capabilities/(?P<identifier>[a-zA-Z0-9_-]+)/(?P<version>[0-9]+)/activation',
+			'/' . $this->rest_base . '/capabilities/(?P<identifier>[a-zA-Z0-9_-]+)/(?P<version>[0-9]+)/activation',
 			array(
 				array(
 					'methods'             => array( \WP_REST_Server::CREATABLE, \WP_REST_Server::DELETABLE ),
