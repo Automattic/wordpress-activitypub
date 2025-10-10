@@ -50,7 +50,7 @@ trait Collection {
 		// Set the JSON-LD context if not already set.
 		if ( empty( $response['@context'] ) ) {
 			// Ensure the context is the first element in the response.
-			$response = array_merge( array( '@context' => $this->json_ld_context ), $response );
+			$response = array( '@context' => $this->json_ld_context ) + $response;
 		}
 
 		// No need to add links if there's only one page.
