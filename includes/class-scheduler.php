@@ -123,11 +123,11 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function deregister_schedules() {
-		wp_unschedule_hook( 'activitypub_update_remote_actors' );
-		wp_unschedule_hook( 'activitypub_cleanup_remote_actors' );
-		wp_unschedule_hook( 'activitypub_reprocess_outbox' );
-		wp_unschedule_hook( 'activitypub_outbox_purge' );
-		wp_unschedule_hook( 'activitypub_inbox_purge' );
+		\wp_unschedule_hook( 'activitypub_update_remote_actors' );
+		\wp_unschedule_hook( 'activitypub_cleanup_remote_actors' );
+		\wp_unschedule_hook( 'activitypub_reprocess_outbox' );
+		\wp_unschedule_hook( 'activitypub_outbox_purge' );
+		\wp_unschedule_hook( 'activitypub_inbox_purge' );
 	}
 
 	/**
@@ -371,9 +371,9 @@ class Scheduler {
 	 */
 	public static function handle_outbox_purge_days_update( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
-			wp_clear_scheduled_hook( 'activitypub_outbox_purge' );
-		} elseif ( ! wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
-			wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
+			\wp_clear_scheduled_hook( 'activitypub_outbox_purge' );
+		} elseif ( ! \wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
+			\wp_schedule_event( \time(), 'daily', 'activitypub_outbox_purge' );
 		}
 	}
 
@@ -385,9 +385,9 @@ class Scheduler {
 	 */
 	public static function handle_inbox_purge_days_update( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
-			wp_clear_scheduled_hook( 'activitypub_inbox_purge' );
-		} elseif ( ! wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
-			wp_schedule_event( time(), 'daily', 'activitypub_inbox_purge' );
+			\wp_clear_scheduled_hook( 'activitypub_inbox_purge' );
+		} elseif ( ! \wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
+			\wp_schedule_event( \time(), 'daily', 'activitypub_inbox_purge' );
 		}
 	}
 
