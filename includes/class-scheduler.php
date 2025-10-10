@@ -10,6 +10,7 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Scheduler\Actor;
@@ -44,11 +45,13 @@ class Scheduler {
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
+		\add_action( 'activitypub_inbox_purge', array( self::class, 'purge_inbox' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
 
 		\add_action( 'update_option_activitypub_outbox_purge_days', array( self::class, 'handle_outbox_purge_days_update' ), 10, 2 );
+		\add_action( 'update_option_activitypub_inbox_purge_days', array( self::class, 'handle_inbox_purge_days_update' ), 10, 2 );
 	}
 
 	/**
@@ -64,7 +67,7 @@ class Scheduler {
 		 *
 		 * @since 5.0.0
 		 */
-		do_action( 'activitypub_register_schedulers' );
+		\do_action( 'activitypub_register_schedulers' );
 	}
 
 	/**
@@ -108,6 +111,10 @@ class Scheduler {
 		if ( ! wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
 			wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
 		}
+
+		if ( ! wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
+			wp_schedule_event( time(), 'daily', 'activitypub_inbox_purge' );
+		}
 	}
 
 	/**
@@ -116,10 +123,11 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function deregister_schedules() {
-		wp_unschedule_hook( 'activitypub_update_remote_actors' );
-		wp_unschedule_hook( 'activitypub_cleanup_remote_actors' );
-		wp_unschedule_hook( 'activitypub_reprocess_outbox' );
-		wp_unschedule_hook( 'activitypub_outbox_purge' );
+		\wp_unschedule_hook( 'activitypub_update_remote_actors' );
+		\wp_unschedule_hook( 'activitypub_cleanup_remote_actors' );
+		\wp_unschedule_hook( 'activitypub_reprocess_outbox' );
+		\wp_unschedule_hook( 'activitypub_outbox_purge' );
+		\wp_unschedule_hook( 'activitypub_inbox_purge' );
 	}
 
 	/**
@@ -322,6 +330,35 @@ class Scheduler {
 	}
 
 	/**
+	 * Purge inbox items based on a schedule.
+	 */
+	public static function purge_inbox() {
+		$total_posts = (int) wp_count_posts( Inbox::POST_TYPE )->publish;
+		if ( $total_posts <= 200 ) {
+			return;
+		}
+
+		$days     = (int) get_option( 'activitypub_inbox_purge_days', 180 );
+		$post_ids = \get_posts(
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'numberposts' => -1,
+				'date_query'  => array(
+					array(
+						'before' => gmdate( 'Y-m-d', time() - ( $days * DAY_IN_SECONDS ) ),
+					),
+				),
+			)
+		);
+
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
+		}
+	}
+
+	/**
 	 * Update schedules when outbox purge days settings change.
 	 *
 	 * @param int $old_value The old value.
@@ -329,9 +366,23 @@ class Scheduler {
 	 */
 	public static function handle_outbox_purge_days_update( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
-			wp_clear_scheduled_hook( 'activitypub_outbox_purge' );
-		} elseif ( ! wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
-			wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
+			\wp_clear_scheduled_hook( 'activitypub_outbox_purge' );
+		} elseif ( ! \wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
+			\wp_schedule_event( \time(), 'daily', 'activitypub_outbox_purge' );
+		}
+	}
+
+	/**
+	 * Update schedules when inbox purge days settings change.
+	 *
+	 * @param int $old_value The old value.
+	 * @param int $value     The new value.
+	 */
+	public static function handle_inbox_purge_days_update( $old_value, $value ) {
+		if ( 0 === (int) $value ) {
+			\wp_clear_scheduled_hook( 'activitypub_inbox_purge' );
+		} elseif ( ! \wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
+			\wp_schedule_event( \time(), 'daily', 'activitypub_inbox_purge' );
 		}
 	}
 
