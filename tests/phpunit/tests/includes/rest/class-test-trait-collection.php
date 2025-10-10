@@ -46,6 +46,7 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 		$request->set_param( 'per_page', 10 );
 
 		$response = array(
+			'@context'   => array( 'https://www.w3.org/ns/activitystreams' ),
 			'type'       => 'Collection',
 			'id'         => 'https://example.org/collection',
 			'totalItems' => 5,

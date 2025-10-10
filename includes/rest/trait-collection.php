@@ -14,6 +14,11 @@ namespace Activitypub\Rest;
  * and type transitions between Collection and CollectionPage.
  */
 trait Collection {
+	/**
+	 * The JSON-LD context for ActivityPub collections.
+	 *
+	 * @var array
+	 */
 	private $json_ld_context = array(
 		'https://www.w3.org/ns/activitystreams',
 	);
