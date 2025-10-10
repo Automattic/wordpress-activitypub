@@ -37,7 +37,7 @@ class Fasp_Registration_Controller extends \WP_REST_Controller {
 		// Registration endpoint for FASP providers to register with this server.
 		\register_rest_route(
 			$this->namespace,
-			'/' . $this->rest_base . '/registeration',
+			'/' . $this->rest_base . '/registration',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
