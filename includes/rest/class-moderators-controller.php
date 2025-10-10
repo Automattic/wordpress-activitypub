@@ -9,13 +9,13 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
 
-use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
 
 /**
  * ActivityPub Moderators_Controller class.
  */
 class Moderators_Controller extends \WP_REST_Controller {
+	use Collection;
 
 	/**
 	 * The namespace of this controller's route.
@@ -43,6 +43,26 @@ class Moderators_Controller extends \WP_REST_Controller {
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
 					'permission_callback' => '__return_true',
+					'args'                => array(
+						'page'     => array(
+							'description' => 'Current page of the collection.',
+							'type'        => 'integer',
+							'minimum'     => 1,
+							// No default so we can differentiate between Collection and CollectionPage requests.
+						),
+						'per_page' => array(
+							'description' => 'Maximum number of items to be returned in result set.',
+							'type'        => 'integer',
+							'default'     => 100,
+							'minimum'     => 1,
+						),
+						'order'    => array(
+							'description' => 'Order sort attribute ascending or descending.',
+							'type'        => 'string',
+							'default'     => 'desc',
+							'enum'        => array( 'asc', 'desc' ),
+						),
+					),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
 			)
@@ -70,11 +90,17 @@ class Moderators_Controller extends \WP_REST_Controller {
 		$actors = apply_filters( 'activitypub_rest_moderators', $actors );
 
 		$response = array(
-			'@context'     => get_context(),
 			'id'           => get_rest_url_by_path( 'collections/moderators' ),
 			'type'         => 'OrderedCollection',
+			'totalItems'   => \count( $actors ),
 			'orderedItems' => $actors,
 		);
+
+		$response = $this->prepare_collection_response( $response, $request );
+
+		if ( \is_wp_error( $response ) ) {
+			return $response;
+		}
 
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
@@ -120,6 +146,11 @@ class Moderators_Controller extends \WP_REST_Controller {
 						'type'   => 'string',
 						'format' => 'uri',
 					),
+					'required' => true,
+				),
+				'totalItems'   => array(
+					'type'     => 'integer',
+					'minimum'  => 0,
 					'required' => true,
 				),
 			),

@@ -21,8 +21,12 @@ use Activitypub\Transformer\Factory as Transformer_Factory;
  * Returns the ActivityPub default JSON-context.
  *
  * @return array The activitypub context.
+ *
+ * @deprecated unreleased Use the respective context function instead.
  */
 function get_context() {
+	\_deprecated_function( __FUNCTION__, 'unreleased', 'Use the respective context function instead.' );
+
 	$context = Activity::JSON_LD_CONTEXT;
 
 	/**
