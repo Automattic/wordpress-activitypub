@@ -11,8 +11,8 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
-use Activitypub\Collection\Objects;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
 
 /**
@@ -352,11 +352,11 @@ class Post_Types {
 	 */
 	public static function register_object_post_type() {
 		\register_post_type(
-			Objects::POST_TYPE,
+			Posts::POST_TYPE,
 			array(
 				'labels'              => array(
-					'name'          => \_x( 'Objects', 'post_type plural name', 'activitypub' ),
-					'singular_name' => \_x( 'Object', 'post_type single name', 'activitypub' ),
+					'name'          => \_x( 'Posts', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'Post', 'post_type single name', 'activitypub' ),
 				),
 				'capabilities'        => array(
 					'create_posts' => false,
@@ -376,7 +376,7 @@ class Post_Types {
 
 		\register_taxonomy(
 			'ap_tag',
-			array( Objects::POST_TYPE ),
+			array( Posts::POST_TYPE ),
 			array(
 				'labels'       => array(
 					'name'          => \_x( 'Tags', 'taxonomy general name', 'activitypub' ),
@@ -398,7 +398,7 @@ class Post_Types {
 
 		\register_taxonomy(
 			'ap_object_type',
-			array( Objects::POST_TYPE ),
+			array( Posts::POST_TYPE ),
 			array(
 				'labels'       => array(
 					'name'          => \_x( 'Object Types', 'taxonomy general name', 'activitypub' ),

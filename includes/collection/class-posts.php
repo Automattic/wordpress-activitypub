@@ -1,6 +1,6 @@
 <?php
 /**
- * Objects collection file.
+ * Posts collection file.
  *
  * @package Activitypub
  */
@@ -12,17 +12,17 @@ use Activitypub\Sanitize;
 use function Activitypub\object_to_uri;
 
 /**
- * Objects collection.
+ * Posts collection.
  *
- * Provides methods to retrieve, create, update, and manage ActivityPub objects (posts, notes, media, etc.).
+ * Provides methods to retrieve, create, update, and manage ActivityPub posts (posts, notes, media, etc.).
  */
-class Objects {
+class Posts {
 	/**
-	 * The post type for the objects.
+	 * The post type for the posts.
 	 *
 	 * @var string
 	 */
-	const POST_TYPE = 'ap_object';
+	const POST_TYPE = 'ap_post';
 
 	/**
 	 * Add an object to the collection.

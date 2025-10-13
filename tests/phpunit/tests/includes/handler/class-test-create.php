@@ -7,7 +7,7 @@
 
 namespace Activitypub\Tests\Handler;
 
-use Activitypub\Collection\Objects;
+use Activitypub\Collection\Posts;
 use Activitypub\Handler\Create;
 use Activitypub\Post_Types;
 
@@ -346,7 +346,7 @@ class Test_Create extends \WP_UnitTestCase {
 		Create::handle_create( $activity, $this->user_id );
 
 		// Verify the object was created with sanitized content.
-		$created_object = Objects::get_by_guid( 'https://example.com/objects/note_sanitize' );
+		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_sanitize' );
 
 		$this->assertNotNull( $created_object );
 
@@ -380,7 +380,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects before.
 		$objects_before = get_posts(
 			array(
-				'post_type'      => Objects::POST_TYPE,
+				'post_type'      => Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -391,7 +391,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects after.
 		$objects_after = get_posts(
 			array(
-				'post_type'      => Objects::POST_TYPE,
+				'post_type'      => Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -416,7 +416,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects before.
 		$objects_before = get_posts(
 			array(
-				'post_type'      => Objects::POST_TYPE,
+				'post_type'      => Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -427,7 +427,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects after.
 		$objects_after = get_posts(
 			array(
-				'post_type'      => Objects::POST_TYPE,
+				'post_type'      => Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)

@@ -8,7 +8,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
-use Activitypub\Collection\Objects;
+use Activitypub\Collection\Posts;
 
 use function Activitypub\get_activity_visibility;
 use function Activitypub\is_activity_reply;
@@ -105,7 +105,7 @@ class Create {
 	 * @return \WP_Post|\WP_Error The post on success or WP_Error on failure.
 	 */
 	public static function create_object( $activity, $user_id, $activity_object = null ) {
-		$check_dupe = Objects::get_by_guid( $activity['object']['id'] );
+		$check_dupe = Posts::get_by_guid( $activity['object']['id'] );
 
 		// If comment exists, call update action.
 		if ( ! \is_wp_error( $check_dupe ) ) {
@@ -120,7 +120,7 @@ class Create {
 			return;
 		}
 
-		return Objects::add( $activity );
+		return Posts::add( $activity );
 	}
 
 	/**

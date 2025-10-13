@@ -8,7 +8,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
-use Activitypub\Collection\Objects;
+use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -90,7 +90,7 @@ class Update {
 				$result = $comment_data;
 			}
 		} else {
-			$result = Objects::update( $activity );
+			$result = Posts::update( $activity );
 		}
 
 		$success = ( $result && ! \is_wp_error( $result ) );
