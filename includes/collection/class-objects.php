@@ -29,7 +29,7 @@ class Objects {
 	 *
 	 * @param array $activity The activity object data.
 	 *
-	 * @return WP_Post|\WP_Error The object post or WP_Error on failure.
+	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
 	 */
 	public static function add( $activity ) {
 		$activity_object = $activity['object'];
