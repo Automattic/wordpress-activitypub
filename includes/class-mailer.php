@@ -424,11 +424,19 @@ class Mailer {
 			return;
 		}
 
+		// Try to get the quoted post title.
+		$quoted_title = null;
+		$post_id      = \url_to_postid( $quoted_url );
+		if ( $post_id ) {
+			$quoted_title = \get_the_title( $post_id );
+		}
+
 		$template_args = array(
-			'activity'   => $activity,
-			'actor'      => $actor,
-			'user_id'    => $user_id,
-			'quoted_url' => $quoted_url,
+			'activity'     => $activity,
+			'actor'        => $actor,
+			'user_id'      => $user_id,
+			'quoted_url'   => $quoted_url,
+			'quoted_title' => $quoted_title,
 		);
 
 		/* translators: 1: Blog name, 2: Actor name */
