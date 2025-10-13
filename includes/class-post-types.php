@@ -355,8 +355,8 @@ class Post_Types {
 			Objects::POST_TYPE,
 			array(
 				'labels'              => array(
-					'name'          => \_x( 'Posts', 'post_type plural name', 'activitypub' ),
-					'singular_name' => \_x( 'Post', 'post_type single name', 'activitypub' ),
+					'name'          => \_x( 'Objects', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'Object', 'post_type single name', 'activitypub' ),
 				),
 				'capabilities'        => array(
 					'create_posts' => false,
