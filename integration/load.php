@@ -19,8 +19,7 @@ function plugin_init() {
 	 * Adds Classic Editor support.
 	 *
 	 * This class handles the compatibility with the Classic Editor plugin
-	 * and sites without block editor support, providing shortcode-based
-	 * attachment markup instead of block markup.
+	 * and sites without block editor support.
 	 *
 	 * @see https://wordpress.org/plugins/classic-editor/
 	 */
