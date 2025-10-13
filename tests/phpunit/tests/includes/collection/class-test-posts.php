@@ -73,8 +73,7 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Mock attachment downloads.
 		if ( 'https://example.com/image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
-			$test_image = AP_TESTS_DIR . '/data/assets/test.jpg';
-			copy( $test_image, $parsed_args['filename'] );
+			copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
 
 			return array(
 				'response' => array( 'code' => 200 ),
@@ -437,8 +436,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			'pre_http_request',
 			function ( $response, $parsed_args, $url ) {
 				if ( 'https://example.com/new-image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
-					$test_image = AP_TESTS_DIR . '/data/assets/test.jpg';
-					copy( $test_image, $parsed_args['filename'] );
+					copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
 
 					return array(
 						'response' => array( 'code' => 200 ),

@@ -105,8 +105,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	public function mock_download_url( $response, $parsed_args, $url ) {
 		// Mock successful downloads by copying test image to the temp file.
 		if ( 'https://example.com/image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
-			$test_image = AP_TESTS_DIR . '/data/assets/test.jpg';
-			copy( $test_image, $parsed_args['filename'] );
+			copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
 
 			return array(
 				'response' => array(
