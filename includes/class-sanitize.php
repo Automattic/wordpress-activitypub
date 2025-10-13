@@ -195,10 +195,6 @@ class Sanitize {
 		$content = \wpautop( $content );
 		$content = \wp_kses_post( $content );
 
-		if ( ! site_supports_blocks() ) {
-			return $content;
-		}
-
-		return Blocks::convert_from_html( $content );
+		return $content;
 	}
 }
