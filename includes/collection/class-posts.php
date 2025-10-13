@@ -53,7 +53,7 @@ class Posts {
 
 		// Process attachments if present.
 		if ( ! empty( $activity_object['attachment'] ) ) {
-			Attachments::process( $activity_object['attachment'], $post_id, $actor->ID );
+			Attachments::process( $activity_object['attachment'], $post_id );
 		}
 
 		return \get_post( $post_id );
@@ -133,7 +133,7 @@ class Posts {
 			}
 
 			// Add new attachments.
-			Attachments::process( $activity['object']['attachment'], $post_id, $actor_id );
+			Attachments::process( $activity['object']['attachment'], $post_id );
 		}
 
 		return \get_post( $post_id );

@@ -17,12 +17,12 @@ class Attachments {
 	 *
 	 * @param array  $attachments Array of ActivityPub attachment objects.
 	 * @param int    $post_id     The post ID to attach files to.
-	 * @param int    $author_id   The author ID for the attachments.
+	 * @param int    $author_id   Optional. User ID to set as attachment author. Default 0.
 	 * @param string $base_path   Optional. Base path for local files. Default empty.
 	 *
 	 * @return array Array of attachment IDs.
 	 */
-	public static function process( $attachments, $post_id, $author_id, $base_path = '' ) {
+	public static function process( $attachments, $post_id, $author_id = 0, $base_path = '' ) {
 		if ( empty( $attachments ) || ! is_array( $attachments ) ) {
 			return array();
 		}
@@ -80,12 +80,12 @@ class Attachments {
 	 *
 	 * @param array  $attachment_data The normalized attachment data.
 	 * @param int    $post_id         The post ID to attach to.
-	 * @param int    $author_id       The author ID.
+	 * @param int    $author_id       Optional. User ID to set as attachment author. Default 0.
 	 * @param string $base_path       The base path for local files. Default empty.
 	 *
 	 * @return int|\WP_Error The attachment ID or WP_Error on failure.
 	 */
-	private static function save_attachment( $attachment_data, $post_id, $author_id, $base_path = '' ) {
+	private static function save_attachment( $attachment_data, $post_id, $author_id = 0, $base_path = '' ) {
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
 		if ( $is_local ) {
