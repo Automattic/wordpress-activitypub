@@ -446,7 +446,7 @@ class Blocks {
 	 *
 	 * @return string The content converted to blocks.
 	 */
-	public static function html_to_blocks( $content ) {
+	public static function convert_from_html( $content ) {
 		if ( empty( $content ) ) {
 			return '';
 		}

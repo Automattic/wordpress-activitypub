@@ -199,6 +199,6 @@ class Sanitize {
 			return $content;
 		}
 
-		return Blocks::html_to_blocks( $content );
+		return Blocks::convert_from_html( $content );
 	}
 }
