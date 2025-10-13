@@ -84,13 +84,8 @@ class Delete {
 			 * @see https://www.w3.org/TR/activitystreams-core/#example-1
 			 */
 			default:
-				// Ignore non Minimal Activities.
-				if ( ! is_string( $activity['object'] ) ) {
-					return;
-				}
-
 				// Check if Object is an Actor.
-				if ( $activity['actor'] === $activity['object'] ) {
+				if ( object_to_uri( $activity['object'] ) === $activity['actor'] ) {
 					$result = self::maybe_delete_follower( $activity );
 				} else { // Assume an interaction otherwise.
 					$result = self::maybe_delete_interaction( $activity );

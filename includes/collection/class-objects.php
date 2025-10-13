@@ -120,6 +120,33 @@ class Objects {
 	}
 
 	/**
+	 * Delete an object from the collection.
+	 *
+	 * @param int $id The object ID.
+	 *
+	 * @return bool|int|null The deleted post ID, false on failure, or null if no post to delete.
+	 */
+	public static function delete( $id ) {
+		return \wp_delete_post( $id, true );
+	}
+
+	/**
+	 * Delete an object from the collection by its GUID.
+	 *
+	 * @param string $guid The object GUID.
+	 *
+	 * @return bool|int|null The deleted post ID, false on failure, or null if no post to delete.
+	 */
+	public static function delete_by_guid( $guid ) {
+		$post = self::get_by_guid( $guid );
+		if ( \is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		return self::delete( $post->ID );
+	}
+
+	/**
 	 * Convert JSON input to a Base_Object.
 	 *
 	 * @param array $activity The activity array.
