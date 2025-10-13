@@ -7,6 +7,8 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Sanitize;
+
 use function Activitypub\object_to_uri;
 
 /**
@@ -131,7 +133,7 @@ class Objects {
 
 		$post = array(
 			'post_title'   => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
-			'post_content' => isset( $activity['content'] ) ? \wp_kses_post( $activity['content'] ) : '',
+			'post_content' => isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '',
 			'post_excerpt' => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : '',
 			'post_status'  => 'publish',
 			'post_type'    => self::POST_TYPE,
