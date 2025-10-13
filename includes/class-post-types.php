@@ -370,7 +370,7 @@ class Post_Types {
 				'delete_with_user'    => true,
 				'can_export'          => true,
 				'exclude_from_search' => true,
-				'taxonomies'          => array( 'ap_tag' ),
+				'taxonomies'          => array( 'ap_tag', 'ap_object_type' ),
 			)
 		);
 
