@@ -196,33 +196,37 @@ class Attachments {
 			return '';
 		}
 
-		$type = strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
+		/**
+		 * Filters the media markup for ActivityPub attachments.
+		 *
+		 * Allows plugins to provide custom markup for attachments.
+		 * If this filter returns a non-empty string, it will be used instead of
+		 * the default block markup.
+		 *
+		 * @param string $markup         The custom markup. Default empty string.
+		 * @param array  $attachment_ids Array of attachment IDs.
+		 */
+		$custom_markup = \apply_filters( 'activitypub_attachments_media_markup', '', $attachment_ids );
 
-		if ( site_supports_blocks() ) {
-			// Single video or audio file.
-			if ( 1 === \count( $attachment_ids ) && ( 'video' === $type || 'audio' === $type ) ) {
-				return sprintf(
-					'<!-- wp:%1$s {"id":"%2$s"} --><figure class="wp-block-%1$s"><%1$s controls src="%3$s"></%1$s></figure><!-- /wp:%1$s -->',
-					\esc_attr( $type ),
-					\esc_attr( $attachment_ids[0] ),
-					\esc_url( \wp_get_attachment_url( $attachment_ids[0] ) )
-				);
-			}
-
-			// Multiple attachments or images: use gallery block.
-			return self::get_gallery_block( $attachment_ids );
+		if ( ! empty( $custom_markup ) ) {
+			return $custom_markup;
 		}
 
-		// Classic editor: Use shortcodes.
+		// Default to block markup.
+		$type = strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
+
+		// Single video or audio file.
 		if ( 1 === \count( $attachment_ids ) && ( 'video' === $type || 'audio' === $type ) ) {
 			return sprintf(
-				'[%1$s src="%2$s"]',
+				'<!-- wp:%1$s {"id":"%2$s"} --><figure class="wp-block-%1$s"><%1$s controls src="%3$s"></%1$s></figure><!-- /wp:%1$s -->',
 				\esc_attr( $type ),
+				\esc_attr( $attachment_ids[0] ),
 				\esc_url( \wp_get_attachment_url( $attachment_ids[0] ) )
 			);
 		}
 
-		return '[gallery ids="' . \implode( ',', $attachment_ids ) . '" link="none"]';
+		// Multiple attachments or images: use gallery block.
+		return self::get_gallery_block( $attachment_ids );
 	}
 
 	/**
