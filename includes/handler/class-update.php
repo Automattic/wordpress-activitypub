@@ -117,10 +117,10 @@ class Update {
 		$actor = get_remote_metadata_by_actor( $activity['actor'], false );
 
 		if ( ! $actor || \is_wp_error( $actor ) || ! isset( $actor['id'] ) ) {
-			return;
+			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: could not fetch actor data' );
+		} else {
+			$state = Remote_Actors::upsert( $actor );
 		}
-
-		$state = Remote_Actors::upsert( $actor );
 
 		/**
 		 * Fires after an ActivityPub Update activity has been handled.
