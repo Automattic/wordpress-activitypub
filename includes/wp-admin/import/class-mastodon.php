@@ -348,7 +348,10 @@ class Mastodon {
 
 			// Process attachments if enabled.
 			if ( self::$fetch_attachments && ! empty( $post->object->attachment ) ) {
-				Attachments::process( $post->object->attachment, $post_id, self::$author, self::$archive );
+				// Prepend archive path to attachment URLs for local files.
+				$attachments = array_map( array( self::class, 'prepend_archive_path' ), $post->object->attachment );
+
+				Attachments::process( $attachments, $post_id, self::$author );
 			}
 
 			// phpcs:ignore
@@ -415,5 +418,20 @@ class Mastodon {
 
 		\wp_import_upload_form( 'admin.php?import=mastodon&amp;step=1' );
 		echo '</div>';
+	}
+
+	/**
+	 * Prepend archive path to local attachment URLs.
+	 *
+	 * @param object $attachment The attachment object.
+	 *
+	 * @return object The attachment object with updated URL.
+	 */
+	private static function prepend_archive_path( $attachment ) {
+		if ( ! empty( $attachment->url ) && ! preg_match( '#^https?://#i', $attachment->url ) ) {
+			$attachment->url = self::$archive . $attachment->url;
+		}
+
+		return $attachment;
 	}
 }

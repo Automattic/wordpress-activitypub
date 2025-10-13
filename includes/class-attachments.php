@@ -15,14 +15,13 @@ class Attachments {
 	/**
 	 * Process attachments from an ActivityPub object and attach them to a post.
 	 *
-	 * @param array  $attachments Array of ActivityPub attachment objects.
-	 * @param int    $post_id     The post ID to attach files to.
-	 * @param int    $author_id   Optional. User ID to set as attachment author. Default 0.
-	 * @param string $base_path   Optional. Base path for local files. Default empty.
+	 * @param array $attachments Array of ActivityPub attachment objects.
+	 * @param int   $post_id     The post ID to attach files to.
+	 * @param int   $author_id   Optional. User ID to set as attachment author. Default 0.
 	 *
 	 * @return array Array of attachment IDs.
 	 */
-	public static function process( $attachments, $post_id, $author_id = 0, $base_path = '' ) {
+	public static function process( $attachments, $post_id, $author_id = 0 ) {
 		if ( empty( $attachments ) || ! is_array( $attachments ) ) {
 			return array();
 		}
@@ -35,7 +34,7 @@ class Attachments {
 				continue;
 			}
 
-			$attachment_id = self::save_attachment( $attachment_data, $post_id, $author_id, $base_path );
+			$attachment_id = self::save_attachment( $attachment_data, $post_id, $author_id );
 
 			if ( ! \is_wp_error( $attachment_id ) ) {
 				$attachment_ids[] = $attachment_id;
@@ -78,14 +77,13 @@ class Attachments {
 	/**
 	 * Save an attachment (local file or remote URL) to the media library.
 	 *
-	 * @param array  $attachment_data The normalized attachment data.
-	 * @param int    $post_id         The post ID to attach to.
-	 * @param int    $author_id       Optional. User ID to set as attachment author. Default 0.
-	 * @param string $base_path       The base path for local files. Default empty.
+	 * @param array $attachment_data The normalized attachment data.
+	 * @param int   $post_id         The post ID to attach to.
+	 * @param int   $author_id       Optional. User ID to set as attachment author. Default 0.
 	 *
 	 * @return int|\WP_Error The attachment ID or WP_Error on failure.
 	 */
-	private static function save_attachment( $attachment_data, $post_id, $author_id = 0, $base_path = '' ) {
+	private static function save_attachment( $attachment_data, $post_id, $author_id = 0 ) {
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
 		if ( $is_local ) {
@@ -93,16 +91,14 @@ class Attachments {
 			\WP_Filesystem();
 			global $wp_filesystem;
 
-			$source_file = $base_path . $attachment_data['url'];
-
-			if ( ! $wp_filesystem->exists( $source_file ) ) {
+			if ( ! $wp_filesystem->exists( $attachment_data['url'] ) ) {
 				/* translators: %s: file path */
-				return new \WP_Error( 'file_not_found', sprintf( \__( 'File not found: %s', 'activitypub' ), $source_file ) );
+				return new \WP_Error( 'file_not_found', sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
 			}
 
 			// Copy to temp file so media_handle_sideload doesn't move the original.
-			$tmp_file = \wp_tempnam( \basename( $source_file ) );
-			$wp_filesystem->copy( $source_file, $tmp_file, true );
+			$tmp_file = \wp_tempnam( \basename( $attachment_data['url'] ) );
+			$wp_filesystem->copy( $attachment_data['url'], $tmp_file, true );
 		} else {
 			// Download remote URL.
 			$tmp_file = \download_url( $attachment_data['url'] );

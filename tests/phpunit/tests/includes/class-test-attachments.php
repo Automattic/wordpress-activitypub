@@ -237,17 +237,14 @@ class Test_Attachments extends \WP_UnitTestCase {
 	public function test_process_local_file_attachment() {
 		$attachments = array(
 			array(
-				'url'       => '/test.jpg',
+				'url'       => AP_TESTS_DIR . '/data/assets/test.jpg',
 				'mediaType' => 'image/jpeg',
 				'name'      => 'Test Local Image',
 				'type'      => 'Image',
 			),
 		);
 
-		// Use the test assets directory as base path.
-		$base_path = AP_TESTS_DIR . '/data/assets';
-
-		$result = Attachments::process( $attachments, self::$post_id, self::$author_id, $base_path );
+		$result = Attachments::process( $attachments, self::$post_id, self::$author_id );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $result );
@@ -261,7 +258,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		// Verify source URL was stored.
 		$source_url = get_post_meta( $result[0], '_activitypub_source_url', true );
-		$this->assertEquals( '/test.jpg', $source_url );
+		$this->assertEquals( AP_TESTS_DIR . '/data/assets/test.jpg', $source_url );
 
 		// Verify alt text was stored for image.
 		$alt_text = get_post_meta( $result[0], '_wp_attachment_image_alt', true );
@@ -282,21 +279,20 @@ class Test_Attachments extends \WP_UnitTestCase {
 	public function test_process_multiple_attachments() {
 		$attachments = array(
 			array(
-				'url'       => '/test.jpg',
+				'url'       => AP_TESTS_DIR . '/data/assets/test.jpg',
 				'mediaType' => 'image/jpeg',
 				'name'      => 'First Image',
 				'type'      => 'Image',
 			),
 			array(
-				'url'       => '/test.jpg',
+				'url'       => AP_TESTS_DIR . '/data/assets/test.jpg',
 				'mediaType' => 'image/jpeg',
 				'name'      => 'Second Image',
 				'type'      => 'Image',
 			),
 		);
 
-		$base_path = AP_TESTS_DIR . '/data/assets';
-		$result    = Attachments::process( $attachments, self::$post_id, self::$author_id, $base_path );
+		$result = Attachments::process( $attachments, self::$post_id, self::$author_id );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 2, $result );
@@ -315,15 +311,14 @@ class Test_Attachments extends \WP_UnitTestCase {
 	public function test_process_attachment_objects() {
 		$attachments = array(
 			(object) array(
-				'url'       => '/test.jpg',
+				'url'       => AP_TESTS_DIR . '/data/assets/test.jpg',
 				'mediaType' => 'image/jpeg',
 				'name'      => 'Test Image',
 				'type'      => 'Image',
 			),
 		);
 
-		$base_path = AP_TESTS_DIR . '/data/assets';
-		$result    = Attachments::process( $attachments, self::$post_id, self::$author_id, $base_path );
+		$result = Attachments::process( $attachments, self::$post_id, self::$author_id );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $result );
@@ -361,15 +356,14 @@ class Test_Attachments extends \WP_UnitTestCase {
 	public function test_non_image_no_alt_text() {
 		$attachments = array(
 			array(
-				'url'       => '/test.jpg',
+				'url'       => AP_TESTS_DIR . '/data/assets/test.jpg',
 				'mediaType' => 'video/mp4',  // Treating as video, not image.
 				'name'      => 'Test Video',
 				'type'      => 'Video',
 			),
 		);
 
-		$base_path = AP_TESTS_DIR . '/data/assets';
-		$result    = Attachments::process( $attachments, self::$post_id, self::$author_id, $base_path );
+		$result = Attachments::process( $attachments, self::$post_id, self::$author_id );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $result );
@@ -402,8 +396,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 			),
 		);
 
-		$base_path = AP_TESTS_DIR . '/data/assets';
-		Attachments::process( $attachments, self::$post_id, self::$author_id, $base_path );
+		Attachments::process( $attachments, self::$post_id, self::$author_id );
 
 		// Verify no extra separator when content is empty.
 		$post = get_post( self::$post_id );
