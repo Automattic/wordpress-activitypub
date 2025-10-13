@@ -46,7 +46,7 @@ class Test_Update extends \WP_UnitTestCase {
 	 * @param string $expected_outcome The expected test outcome.
 	 * @param string $description      Description of the test case.
 	 */
-	public function test_update_actor( $activity_data, $http_response, $expected_outcome, $description ) {
+	public function test_handle_actor_update( $activity_data, $http_response, $expected_outcome, $description ) {
 		$actor_url = $activity_data['actor'];
 
 		$fake_request = function () use ( $http_response ) {
@@ -63,7 +63,7 @@ class Test_Update extends \WP_UnitTestCase {
 		\add_filter( 'pre_http_request', $fake_request, 10 );
 
 		// Execute the update_actor method.
-		Update::update_actor( $activity_data, 1 );
+		Update::handle_actor_update( $activity_data, 1 );
 
 		// Verify results based on expected outcome.
 		if ( 'error' === $expected_outcome ) {
