@@ -169,9 +169,6 @@ class Inbox_Controller extends \WP_REST_Controller {
 					continue;
 				}
 
-				// FEP-8fcf: Process Collection-Synchronization header if present.
-				$this->process_collection_synchronization( $request, $data, $user_id );
-
 				/**
 				 * ActivityPub inbox action.
 				 *

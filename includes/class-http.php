@@ -359,50 +359,6 @@ class Http {
 	}
 
 	/**
-	 * Validate Collection-Synchronization header parameters.
-	 *
-	 * @param array  $params    Parsed header parameters.
-	 * @param string $actor_url The actor URL that sent the activity.
-	 *
-	 * @return bool True if valid, false otherwise.
-	 */
-	public static function validate_collection_sync_header_params( $params, $actor_url ) {
-		if ( empty( $params['collectionId'] ) || empty( $params['url'] ) ) {
-			return false;
-		}
-
-		// Parse the actor URL to get the expected followers collection.
-		$expected_collection = $actor_url . '/followers';
-
-		// Check if collectionId matches the actor's followers collection.
-		if ( $params['collectionId'] !== $expected_collection ) {
-			return false;
-		}
-
-		// Check if url has the same authority as collectionId (prevent SSRF).
-		$collection_parsed = wp_parse_url( $params['collectionId'] );
-		$url_parsed        = wp_parse_url( $params['url'] );
-
-		if ( ! $collection_parsed || ! $url_parsed ) {
-			return false;
-		}
-
-		// Build authorities for comparison.
-		$collection_authority = $collection_parsed['scheme'] . '://' . $collection_parsed['host'];
-		$url_authority        = $url_parsed['scheme'] . '://' . $url_parsed['host'];
-
-		if ( ! empty( $collection_parsed['port'] ) ) {
-			$collection_authority .= ':' . $collection_parsed['port'];
-		}
-
-		if ( ! empty( $url_parsed['port'] ) ) {
-			$url_authority .= ':' . $url_parsed['port'];
-		}
-
-		return $collection_authority === $url_authority;
-	}
-
-	/**
 	 * Get the authority (scheme + host + port) from a URL.
 	 *
 	 * @param string $url The URL to parse.

@@ -192,7 +192,6 @@ class Followers_Controller extends Actors_Controller {
 		$partial_followers = Followers::get_partial_followers( $user_id, $authority );
 
 		$response = array(
-			'@context'     => get_context(),
 			'id'           => get_rest_url_by_path(
 				\sprintf(
 					'actors/%d/followers/sync?authority=%s',
