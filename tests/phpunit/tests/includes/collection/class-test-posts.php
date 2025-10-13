@@ -28,7 +28,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		Post_Types::register_remote_actors_post_type();
 		Post_Types::register_object_post_type();
 
-		// Mock HTTP requests for Remote_Actors::fetch_by_uri.
+		// Mock HTTP requests for Remote_Actors::fetch_by_uri and attachment downloads.
 		add_filter( 'pre_http_request', array( $this, 'mock_http_request' ), 10, 3 );
 	}
 
@@ -41,7 +41,7 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Mock HTTP requests for remote actor fetching.
+	 * Mock HTTP requests for remote actor fetching and attachment downloads.
 	 *
 	 * @param mixed  $response The response to return.
 	 * @param array  $parsed_args The parsed arguments.
@@ -69,6 +69,17 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		if ( 'https://nonexistent.com/users/unknown' === $url ) {
 			return new \WP_Error( 'http_request_failed', 'Could not resolve host' );
+		}
+
+		// Mock attachment downloads.
+		if ( 'https://example.com/image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
+			$test_image = AP_TESTS_DIR . '/data/assets/test.jpg';
+			copy( $test_image, $parsed_args['filename'] );
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'headers'  => array( 'content-type' => 'image/jpeg' ),
+			);
 		}
 
 		return $response;
@@ -268,5 +279,245 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertEquals( '', $result['post_excerpt'] );
 		$this->assertEquals( Posts::POST_TYPE, $result['post_type'] );
 		$this->assertEquals( 'publish', $result['post_status'] );
+	}
+
+	/**
+	 * Test adding an object with attachments.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_with_attachments() {
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/with-attachment',
+				'type'         => 'Note',
+				'name'         => 'Post with Image',
+				'content'      => '<p>Test content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'attachment'   => array(
+					array(
+						'url'       => 'https://example.com/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'Test Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$result = Posts::add( $activity );
+
+		$this->assertInstanceOf( '\WP_Post', $result );
+		$this->assertEquals( 'Post with Image', $result->post_title );
+
+		// Verify attachment was created.
+		$attachments = get_attached_media( '', $result->ID );
+		$this->assertCount( 1, $attachments );
+
+		$attachment = reset( $attachments );
+		$this->assertEquals( 'attachment', $attachment->post_type );
+		$this->assertEquals( $result->ID, $attachment->post_parent );
+
+		// Verify source URL was stored.
+		$source_url = get_post_meta( $attachment->ID, '_activitypub_source_url', true );
+		$this->assertEquals( 'https://example.com/image.jpg', $source_url );
+
+		// Verify alt text was stored.
+		$alt_text = get_post_meta( $attachment->ID, '_wp_attachment_image_alt', true );
+		$this->assertEquals( 'Test Image', $alt_text );
+
+		// Verify content includes media markup.
+		$this->assertStringContainsString( 'wp-image-' . $attachment->ID, $result->post_content );
+	}
+
+	/**
+	 * Test updating an object with new attachments.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_with_new_attachments() {
+		// Create initial post without attachments.
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/update-test',
+				'type'         => 'Note',
+				'name'         => 'Original Post',
+				'content'      => '<p>Original content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$original_post = Posts::add( $activity );
+		$this->assertInstanceOf( '\WP_Post', $original_post );
+
+		// Verify no attachments initially.
+		$attachments = get_attached_media( '', $original_post->ID );
+		$this->assertEmpty( $attachments );
+
+		// Update with attachments.
+		$update_activity = array(
+			'object' => array(
+				'id'         => 'https://example.com/objects/update-test',
+				'type'       => 'Note',
+				'name'       => 'Updated Post',
+				'content'    => '<p>Updated content</p>',
+				'attachment' => array(
+					array(
+						'url'       => 'https://example.com/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'New Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$updated_post = Posts::update( $update_activity );
+		$this->assertInstanceOf( '\WP_Post', $updated_post );
+
+		// Verify attachment was added.
+		$attachments = get_attached_media( '', $updated_post->ID );
+		$this->assertCount( 1, $attachments );
+
+		$attachment = reset( $attachments );
+		$source_url = get_post_meta( $attachment->ID, '_activitypub_source_url', true );
+		$this->assertEquals( 'https://example.com/image.jpg', $source_url );
+	}
+
+	/**
+	 * Test updating an object with changed attachments.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_with_changed_attachments() {
+		// Create post with attachment.
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/change-test',
+				'type'         => 'Note',
+				'name'         => 'Original Post',
+				'content'      => '<p>Original content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'attachment'   => array(
+					array(
+						'url'       => 'https://example.com/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'Original Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$original_post        = Posts::add( $activity );
+		$original_attachments = get_attached_media( '', $original_post->ID );
+		$this->assertCount( 1, $original_attachments );
+		$original_attachment_id = reset( $original_attachments )->ID;
+
+		// Update with different attachment URL.
+		$update_activity = array(
+			'object' => array(
+				'id'         => 'https://example.com/objects/change-test',
+				'type'       => 'Note',
+				'name'       => 'Updated Post',
+				'content'    => '<p>Updated content</p>',
+				'attachment' => array(
+					array(
+						'url'       => 'https://example.com/new-image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'New Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		// Mock the new image URL.
+		add_filter(
+			'pre_http_request',
+			function ( $response, $parsed_args, $url ) {
+				if ( 'https://example.com/new-image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
+					$test_image = AP_TESTS_DIR . '/data/assets/test.jpg';
+					copy( $test_image, $parsed_args['filename'] );
+
+					return array(
+						'response' => array( 'code' => 200 ),
+						'headers'  => array( 'content-type' => 'image/jpeg' ),
+					);
+				}
+				return $response;
+			},
+			11,
+			3
+		);
+
+		$updated_post = Posts::update( $update_activity );
+
+		// Verify old attachment was deleted.
+		$this->assertNull( get_post( $original_attachment_id ) );
+
+		// Verify new attachment was created.
+		$new_attachments = get_attached_media( '', $updated_post->ID );
+		$this->assertCount( 1, $new_attachments );
+
+		$new_attachment = reset( $new_attachments );
+		$source_url     = get_post_meta( $new_attachment->ID, '_activitypub_source_url', true );
+		$this->assertEquals( 'https://example.com/new-image.jpg', $source_url );
+	}
+
+	/**
+	 * Test updating an object keeps same attachments when unchanged.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_keeps_same_attachments() {
+		// Create post with attachment.
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/keep-test',
+				'type'         => 'Note',
+				'name'         => 'Original Post',
+				'content'      => '<p>Original content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'attachment'   => array(
+					array(
+						'url'       => 'https://example.com/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'Test Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$original_post        = Posts::add( $activity );
+		$original_attachments = get_attached_media( '', $original_post->ID );
+		$this->assertCount( 1, $original_attachments );
+		$original_attachment_id = reset( $original_attachments )->ID;
+
+		// Update with same attachment URL (just change content).
+		$update_activity = array(
+			'object' => array(
+				'id'         => 'https://example.com/objects/keep-test',
+				'type'       => 'Note',
+				'name'       => 'Updated Post',
+				'content'    => '<p>Updated content</p>',
+				'attachment' => array(
+					array(
+						'url'       => 'https://example.com/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'Test Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$updated_post = Posts::update( $update_activity );
+
+		// Verify attachment was NOT recreated (same ID still exists).
+		$updated_attachments = get_attached_media( '', $updated_post->ID );
+		$this->assertCount( 1, $updated_attachments );
+		$this->assertEquals( $original_attachment_id, reset( $updated_attachments )->ID );
 	}
 }
