@@ -45,7 +45,7 @@ class Update {
 			case 'Organization':
 			case 'Service':
 			case 'Application':
-				self::handle_actor_update( $activity, $user_id );
+				self::update_actor( $activity, $user_id );
 				break;
 
 			/*
@@ -112,7 +112,7 @@ class Update {
 	 * @param array $activity The Activity object.
 	 * @param int   $user_id  The user ID. Always null for Update activities.
 	 */
-	public static function handle_actor_update( $activity, $user_id ) {
+	public static function update_actor( $activity, $user_id ) {
 		// Update cache.
 		$actor = get_remote_metadata_by_actor( $activity['actor'], false );
 
