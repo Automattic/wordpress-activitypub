@@ -80,14 +80,14 @@ class Update {
 	 * @param int   $user_id  The user ID. Always null for Update activities.
 	 */
 	public static function handle_object_update( $activity, $user_id ) {
+		$result = new \WP_Error( 'activitypub_update_failed', 'Update failed' );
+
 		// Check for private and/or direct messages.
 		if ( is_activity_reply( $activity ) ) {
 			$comment_data = Interactions::update_comment( $activity );
 
 			if ( ! empty( $comment_data['comment_ID'] ) ) {
 				$result = \get_comment( $comment_data['comment_ID'] );
-			} else {
-				$result = $comment_data;
 			}
 		} else {
 			$result = Posts::update( $activity );
@@ -98,10 +98,10 @@ class Update {
 		/**
 		 * Fires after an ActivityPub Update activity has been handled.
 		 *
-		 * @param array                            $activity The ActivityPub activity data.
-		 * @param int                              $user_id  The local user ID.
-		 * @param bool                             $success  True on success, false otherwise.
-		 * @param array|string|int|\WP_Error|false $result   The updated comment, or null if update failed.
+		 * @param array                          $activity The ActivityPub activity data.
+		 * @param int                            $user_id  The local user ID.
+		 * @param bool                           $success  True on success, false otherwise.
+		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The updated post, comment, or error.
 		 */
 		\do_action( 'activitypub_handled_update', $activity, $user_id, $success, $result );
 	}
