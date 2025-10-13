@@ -99,6 +99,24 @@ class Followers_Controller extends Actors_Controller {
 							'type'        => 'string',
 							'required'    => true,
 						),
+						'page'      => array(
+							'description' => 'Current page of the collection.',
+							'type'        => 'integer',
+							'minimum'     => 1,
+							// No default so we can differentiate between Collection and CollectionPage requests.
+						),
+						'per_page'  => array(
+							'description' => 'Maximum number of items to be returned in result set.',
+							'type'        => 'integer',
+							'default'     => 20,
+							'minimum'     => 1,
+						),
+						'order'     => array(
+							'description' => 'Order sort attribute ascending or descending.',
+							'type'        => 'string',
+							'default'     => 'desc',
+							'enum'        => array( 'asc', 'desc' ),
+						),
 					),
 				),
 			)
@@ -203,6 +221,12 @@ class Followers_Controller extends Actors_Controller {
 			'totalItems'   => count( $partial_followers ),
 			'orderedItems' => $partial_followers,
 		);
+
+		$response = $this->prepare_collection_response( $response, $request );
+
+		if ( \is_wp_error( $response ) ) {
+			return $response;
+		}
 
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
