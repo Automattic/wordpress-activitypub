@@ -11,7 +11,6 @@ use Activitypub\Activity\Activity;
 use Activitypub\Moderation;
 
 use function Activitypub\camel_to_snake_case;
-use function Activitypub\get_context;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 
@@ -120,7 +119,6 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		\do_action( 'activitypub_rest_inbox_pre' );
 
 		$response = array(
-			'@context'     => get_context(),
 			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'         => 'OrderedCollection',

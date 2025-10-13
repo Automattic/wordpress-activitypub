@@ -178,6 +178,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_inbox_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => \__( 'Number of days to keep items in the Inbox.', 'activitypub' ),
+				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_vary_header',
 			array(
 				'type'        => 'boolean',

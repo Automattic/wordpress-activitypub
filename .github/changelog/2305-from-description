@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added a scheduled task and setting to automatically purge old inbox items, helping maintain site performance and storage control.

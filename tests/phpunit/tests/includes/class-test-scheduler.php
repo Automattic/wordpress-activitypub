@@ -10,6 +10,7 @@ namespace Activitypub\Tests;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
@@ -512,6 +513,159 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		wp_delete_post( $outbox_activity_id, true );
 		wp_delete_post( $announce_outbox_id, true );
 		remove_all_filters( 'schedule_event' );
+	}
+
+	/**
+	 * Test purge_inbox method with more than 200 posts.
+	 *
+	 * @covers ::purge_inbox
+	 */
+	public function test_purge_inbox_more_than_200_posts() {
+		// Create 25 posts, 5 older than 1 year.
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 month' ) ),
+				'meta_input'  => array(
+					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Follow',
+				),
+			)
+		);
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-13 months' ) ),
+				'meta_input'  => array(
+					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Follow',
+				),
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		add_filter(
+			'wp_count_posts',
+			function ( $counts, $type ) {
+				if ( Inbox::POST_TYPE === $type ) {
+					$counts->publish = 225;
+				}
+				return $counts;
+			},
+			10,
+			2
+		);
+
+		Scheduler::purge_inbox();
+		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+
+		// Assert that 5 posts were deleted, leaving 20.
+		$actual_count = get_posts(
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+		$this->assertEquals( 20, count( $actual_count ) );
+
+		// Clean up filter.
+		remove_all_filters( 'wp_count_posts' );
+	}
+
+	/**
+	 * Test purge_inbox method with 200 or fewer posts.
+	 *
+	 * @covers ::purge_inbox
+	 */
+	public function test_purge_inbox_200_or_fewer_posts() {
+		// Create 20 posts, all older than 1 year.
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-13 months' ) ),
+			)
+		);
+
+		Scheduler::purge_inbox();
+		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+
+		// Assert that no posts were deleted.
+		$this->assertEquals( 20, wp_count_posts( Inbox::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Test purge_inbox method with changing activitypub_inbox_purge_days option.
+	 *
+	 * @covers ::purge_inbox
+	 */
+	public function test_purge_inbox_with_different_purge_days() {
+		// Create posts older than 2 months.
+		self::factory()->post->create_many(
+			25,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 months' ) ),
+				'post_status' => 'publish',
+				'meta_input'  => array(
+					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Follow',
+				),
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		add_filter(
+			'wp_count_posts',
+			function ( $counts, $type ) {
+				if ( Inbox::POST_TYPE === $type ) {
+					$counts->publish = 225;
+				}
+				return $counts;
+			},
+			10,
+			2
+		);
+
+		// Run purge_inbox with default days (180).
+		Scheduler::purge_inbox();
+		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+
+		// Remove filter before checking actual count.
+		remove_all_filters( 'wp_count_posts' );
+
+		// Verify posts are not deleted (2 months < 180 days).
+		$this->assertEquals( 25, wp_count_posts( Inbox::POST_TYPE )->publish );
+
+		// Change the purge days option to 30 days.
+		update_option( 'activitypub_inbox_purge_days', 30 );
+
+		// Re-add the mock filter for the second purge run.
+		add_filter(
+			'wp_count_posts',
+			function ( $counts, $type ) {
+				if ( Inbox::POST_TYPE === $type ) {
+					$counts->publish = 225;
+				}
+				return $counts;
+			},
+			10,
+			2
+		);
+
+		// Run purge_inbox with changed days.
+		Scheduler::purge_inbox();
+		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+
+		// Remove filter before checking actual count.
+		remove_all_filters( 'wp_count_posts' );
+
+		// Verify posts are deleted (2 months > 30 days).
+		$this->assertEquals( 0, wp_count_posts( Inbox::POST_TYPE )->publish );
 	}
 
 	/**

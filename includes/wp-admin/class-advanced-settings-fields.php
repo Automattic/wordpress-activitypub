@@ -30,15 +30,6 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings'
 		);
 
-		\add_settings_field(
-			'activitypub_outbox_purge_days',
-			\__( 'Outbox Retention Period', 'activitypub' ),
-			array( self::class, 'render_outbox_purge_days_field' ),
-			'activitypub_advanced_settings',
-			'activitypub_advanced_settings',
-			array( 'label_for' => 'activitypub_outbox_purge_days' )
-		);
-
 		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
 			\add_settings_field(
 				'activitypub_vary_header',
@@ -135,26 +126,6 @@ class Advanced_Settings_Fields {
 			?>
 		</p>
 		<?php
-	}
-
-	/**
-	 * Render outbox purge days field.
-	 */
-	public static function render_outbox_purge_days_field() {
-		$value = \get_option( 'activitypub_outbox_purge_days', 180 );
-		echo '<input type="number" id="activitypub_outbox_purge_days" name="activitypub_outbox_purge_days" value="' . esc_attr( $value ) . '" class="small-text" min="0" max="365" />';
-		echo '<p class="description">' . \wp_kses(
-			sprintf(
-				// translators: 1: Definition of Outbox; 2: Default value (180).
-				\__( 'Maximum number of days to keep items in the <abbr title="%1$s">Outbox</abbr>. A lower value might be better for sites with lots of activity to maintain site performance. Default: <code>%2$s</code>', 'activitypub' ),
-				\esc_attr__( 'A virtual location on a user&#8217;s profile where all the activities (posts, likes, replies) they publish are stored, acting as a feed that other users can access to see their publicly shared content', 'activitypub' ),
-				\esc_html( 180 )
-			),
-			array(
-				'abbr' => array( 'title' => array() ),
-				'code' => array(),
-			)
-		) . '</p>';
 	}
 
 	/**
