@@ -1,0 +1,169 @@
+<?php
+/**
+ * Objects collection file.
+ *
+ * @package Activitypub
+ */
+
+namespace Activitypub\Collection;
+
+use function Activitypub\object_to_uri;
+
+/**
+ * Objects collection.
+ *
+ * Provides methods to retrieve, create, update, and manage ActivityPub objects (posts, notes, media, etc.).
+ */
+class Objects {
+	/**
+	 * The post type for the objects.
+	 *
+	 * @var string
+	 */
+	const POST_TYPE = 'ap_object';
+
+	/**
+	 * Add an object to the collection.
+	 *
+	 * @param array $activity The activity object data.
+	 *
+	 * @return WP_Post|\WP_Error The object post or WP_Error on failure.
+	 */
+	public static function add( $activity ) {
+		$activity_object = $activity['object'];
+		$actor           = Remote_Actors::fetch_by_uri( object_to_uri( $activity_object['attributedTo'] ) );
+
+		if ( \is_wp_error( $actor ) ) {
+			return $actor;
+		}
+
+		$post_array = self::activity_to_post( $activity_object );
+		$post_id    = \wp_insert_post( $post_array, true );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor->ID );
+
+		self::add_taxonomies( $post_id, $activity_object );
+
+		return \get_post( $post_id );
+	}
+
+	/**
+	 * Get an object from the collection.
+	 *
+	 * @param int $id The object ID.
+	 *
+	 * @return \WP_Post|array|null The object post or WP_Error on failure.
+	 */
+	public static function get( $id ) {
+		return \get_post( $id );
+	}
+
+	/**
+	 * Get an object by its GUID.
+	 *
+	 * @param string $guid The object GUID.
+	 *
+	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
+	 */
+	public static function get_by_guid( $guid ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				\esc_url( $guid ),
+				self::POST_TYPE
+			)
+		);
+
+		if ( ! $post_id ) {
+			return new \WP_Error(
+				'activitypub_object_not_found',
+				\__( 'Object not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return \get_post( $post_id );
+	}
+
+	/**
+	 * Update an object in the collection.
+	 *
+	 * @param array $activity The activity object data.
+	 *
+	 * @return \WP_Post|\WP_Error The updated object post or WP_Error on failure.
+	 */
+	public static function update( $activity ) {
+		$post = self::get_by_guid( $activity['object']['id'] );
+		if ( \is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		$post_array       = self::activity_to_post( $activity['object'] );
+		$post_array['ID'] = $post->ID;
+		$post_id          = \wp_update_post( $post_array, true );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		self::add_taxonomies( $post_id, $activity['object'] );
+
+		return \get_post( $post_id );
+	}
+
+	/**
+	 * Convert JSON input to a Base_Object.
+	 *
+	 * @param array $activity The activity array.
+	 *
+	 * @return \WP_Post|\WP_Error An Object built from the JSON string or WP_Error when it's not a JSON string.
+	 */
+	private static function activity_to_post( $activity ) {
+		if ( ! is_array( $activity ) ) {
+			return new \WP_Error( 'invalid_activity', __( 'Invalid activity format', 'activitypub' ) );
+		}
+
+		$post = array(
+			'post_title'   => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
+			'post_content' => isset( $activity['content'] ) ? \wp_kses_post( $activity['content'] ) : '',
+			'post_excerpt' => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : '',
+			'post_status'  => 'publish',
+			'post_type'    => self::POST_TYPE,
+			'guid'         => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
+		);
+
+		return $post;
+	}
+
+	/**
+	 * Add taxonomies to the object post.
+	 *
+	 * @param int   $post_id         The post ID.
+	 * @param array $activity_object The activity object data.
+	 *
+	 * @return void
+	 */
+	private static function add_taxonomies( $post_id, $activity_object ) {
+		// Save Object Type as Taxonomy item.
+		\wp_set_post_terms( $post_id, array( $activity_object['type'] ), 'ap_object_type' );
+
+		$tags = array();
+
+		// Save the Hashtags as Taxonomy items.
+		if ( ! empty( $activity_object['tag'] ) && \is_array( $activity_object['tag'] ) ) {
+			foreach ( $activity_object['tag'] as $tag ) {
+				if ( isset( $tag['type'] ) && 'Hashtag' === $tag['type'] && isset( $tag['name'] ) ) {
+					$tags[] = \wp_strip_all_tags( ltrim( $tag['name'], '#' ) );
+				}
+			}
+		}
+
+		\wp_set_post_terms( $post_id, $tags, 'ap_tag' );
+	}
+}

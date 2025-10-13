@@ -20,6 +20,11 @@ use function Activitypub\object_to_uri;
  * @link https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox {
+	/**
+	 * The post type for the objects.
+	 *
+	 * @var string
+	 */
 	const POST_TYPE = 'ap_inbox';
 
 	/**

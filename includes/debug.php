@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Objects;
 use Activitypub\Collection\Outbox;
 
 /**
@@ -32,8 +33,8 @@ function allow_localhost( $parsed_args ) {
  *
  * @return array The arguments for the post type.
  */
-function debug_outbox_post_type( $args, $post_type ) {
-	if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE ), true ) ) {
+function debug_post_type( $args, $post_type ) {
+	if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE, Objects::POST_TYPE ), true ) ) {
 		return $args;
 	}
 
@@ -43,11 +44,33 @@ function debug_outbox_post_type( $args, $post_type ) {
 		$args['menu_icon'] = 'dashicons-upload';
 	} elseif ( Inbox::POST_TYPE === $post_type ) {
 		$args['menu_icon'] = 'dashicons-download';
+	} elseif ( Objects::POST_TYPE === $post_type ) {
+		$args['menu_icon'] = 'dashicons-media-document';
 	}
 
 	return $args;
 }
-\add_filter( 'register_post_type_args', '\Activitypub\debug_outbox_post_type', 10, 2 );
+\add_filter( 'register_post_type_args', '\Activitypub\debug_post_type', 10, 2 );
+
+/**
+ * Debug the object type taxonomy.
+ *
+ * @param array  $args     The arguments for the taxonomy.
+ * @param string $taxonomy The taxonomy.
+ *
+ * @return array The arguments for the taxonomy.
+ */
+function debug_taxonomy( $args, $taxonomy ) {
+	if ( ! in_array( $taxonomy, array( 'ap_object_type', 'ap_tag' ), true ) ) {
+		return $args;
+	}
+
+	$args['show_ui']      = true;
+	$args['show_in_menu'] = true;
+
+	return $args;
+}
+\add_filter( 'register_taxonomy_args', '\Activitypub\debug_taxonomy', 10, 2 );
 
 /**
  * Debug the outbox post type column.

@@ -8,10 +8,11 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
+use Activitypub\Collection\Objects;
 use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_remote_metadata_by_actor;
-
+use function Activitypub\is_activity_reply;
 /**
  * Handle Update requests.
  */
@@ -58,7 +59,12 @@ class Update {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::update_interaction( $activity, $user_id );
+				// Check for private and/or direct messages.
+				if ( is_activity_reply( $activity ) ) {
+					self::update_interaction( $activity, $user_id );
+				} else {
+					self::update_object( $activity, $user_id );
+				}
 				break;
 
 			/*
@@ -87,6 +93,27 @@ class Update {
 		} else {
 			$result = $comment_data;
 		}
+
+		/**
+		 * Fires after an ActivityPub Update activity has been handled.
+		 *
+		 * @param array                            $activity The ActivityPub activity data.
+		 * @param int                              $user_id  The local user ID.
+		 * @param bool                             $success  True on success, false otherwise.
+		 * @param array|string|int|\WP_Error|false $result   The updated comment, or null if update failed.
+		 */
+		\do_action( 'activitypub_handled_update', $activity, $user_id, $success, $result );
+	}
+
+	/**
+	 * Update an Object.
+	 *
+	 * @param array $activity The Activity object.
+	 * @param int   $user_id  The user ID. Always null for Update activities.
+	 */
+	public static function update_object( $activity, $user_id ) {
+		$result  = Objects::update( $activity );
+		$success = ( false !== $result && ! \is_wp_error( $result ) );
 
 		/**
 		 * Fires after an ActivityPub Update activity has been handled.

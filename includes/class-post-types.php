@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Objects;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 
@@ -25,6 +26,7 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_remote_actors_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_inbox_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_outbox_post_type' ), 11 );
+		\add_action( 'init', array( self::class, 'register_object_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_extra_fields_post_types' ), 11 );
 		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
 
@@ -341,6 +343,78 @@ class Post_Types {
 
 					return $value;
 				},
+			)
+		);
+	}
+
+	/**
+	 * Register the Object post type.
+	 */
+	public static function register_object_post_type() {
+		\register_post_type(
+			Objects::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'Posts', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'Post', 'post_type single name', 'activitypub' ),
+				),
+				'capabilities'        => array(
+					'create_posts' => false,
+				),
+				'map_meta_cap'        => true,
+				'public'              => false,
+				'show_in_rest'        => true,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'supports'            => array( 'title', 'editor', 'author', 'custom-fields', 'excerpt', 'comments' ),
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+				'taxonomies'          => array( 'ap_tag' ),
+			)
+		);
+
+		\register_taxonomy(
+			'ap_tag',
+			array( Objects::POST_TYPE ),
+			array(
+				'labels'       => array(
+					'name'          => \_x( 'Tags', 'taxonomy general name', 'activitypub' ),
+					'singular_name' => \_x( 'Tag', 'taxonomy singular name', 'activitypub' ),
+					'search_items'  => \__( 'Search Tags', 'activitypub' ),
+					'all_items'     => \__( 'All Tags', 'activitypub' ),
+					'edit_item'     => \__( 'Edit Tag', 'activitypub' ),
+					'update_item'   => \__( 'Update Tag', 'activitypub' ),
+					'add_new_item'  => \__( 'Add New Tag', 'activitypub' ),
+					'new_item_name' => \__( 'New Tag Name', 'activitypub' ),
+					'menu_name'     => \__( 'Tags', 'activitypub' ),
+				),
+				'public'       => false,
+				'query_var'    => true,
+				'show_in_rest' => true,
+				'rewrite'      => array( 'slug' => 'ap_tag' ),
+			)
+		);
+
+		\register_taxonomy(
+			'ap_object_type',
+			array( Objects::POST_TYPE ),
+			array(
+				'labels'       => array(
+					'name'          => \_x( 'Object Types', 'taxonomy general name', 'activitypub' ),
+					'singular_name' => \_x( 'Object Type', 'taxonomy singular name', 'activitypub' ),
+					'search_items'  => \__( 'Search Object Types', 'activitypub' ),
+					'all_items'     => \__( 'All Object Types', 'activitypub' ),
+					'edit_item'     => \__( 'Edit Object Type', 'activitypub' ),
+					'update_item'   => \__( 'Update Object Type', 'activitypub' ),
+					'add_new_item'  => \__( 'Add New Object Type', 'activitypub' ),
+					'new_item_name' => \__( 'New Object Type Name', 'activitypub' ),
+					'menu_name'     => \__( 'Object Types', 'activitypub' ),
+				),
+				'public'       => false,
+				'query_var'    => true,
+				'show_in_rest' => true,
+				'rewrite'      => array( 'slug' => 'ap_object_type' ),
 			)
 		);
 	}
