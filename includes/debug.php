@@ -8,8 +8,8 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Inbox;
-use Activitypub\Collection\Objects;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Posts;
 
 /**
  * Allow localhost URLs if WP_DEBUG is true.
@@ -34,7 +34,7 @@ function allow_localhost( $parsed_args ) {
  * @return array The arguments for the post type.
  */
 function debug_post_type( $args, $post_type ) {
-	if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE, Objects::POST_TYPE ), true ) ) {
+	if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE, Posts::POST_TYPE ), true ) ) {
 		return $args;
 	}
 
@@ -44,7 +44,7 @@ function debug_post_type( $args, $post_type ) {
 		$args['menu_icon'] = 'dashicons-upload';
 	} elseif ( Inbox::POST_TYPE === $post_type ) {
 		$args['menu_icon'] = 'dashicons-download';
-	} elseif ( Objects::POST_TYPE === $post_type ) {
+	} elseif ( Posts::POST_TYPE === $post_type ) {
 		$args['menu_icon'] = 'dashicons-media-document';
 	}
 

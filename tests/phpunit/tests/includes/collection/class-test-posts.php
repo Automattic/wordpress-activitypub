@@ -1,22 +1,22 @@
 <?php
 /**
- * Test Objects Collection.
+ * Test Posts Collection.
  *
  * @package Activitypub
  */
 
 namespace Activitypub\Tests\Collection;
 
-use Activitypub\Collection\Objects;
+use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Post_Types;
 
 /**
- * Objects Collection Test Class.
+ * Posts Collection Test Class.
  *
- * @coversDefaultClass \Activitypub\Collection\Objects
+ * @coversDefaultClass \Activitypub\Collection\Posts
  */
-class Test_Objects extends \WP_UnitTestCase {
+class Test_Posts extends \WP_UnitTestCase {
 
 	/**
 	 * Set up test environment.
@@ -92,11 +92,11 @@ class Test_Objects extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Objects::add( $activity );
+		$result = Posts::add( $activity );
 
 		$this->assertInstanceOf( '\WP_Post', $result );
 		$this->assertEquals( 'Test Object', $result->post_title );
-		$this->assertEquals( Objects::POST_TYPE, $result->post_type );
+		$this->assertEquals( Posts::POST_TYPE, $result->post_type );
 		$this->assertEquals( 'publish', $result->post_status );
 		$this->assertEquals( 'https://example.com/objects/123', $result->guid );
 	}
@@ -118,7 +118,7 @@ class Test_Objects extends \WP_UnitTestCase {
 			),
 		);
 
-		$original_post = Objects::add( $activity );
+		$original_post = Posts::add( $activity );
 		$this->assertInstanceOf( '\WP_Post', $original_post );
 
 		// Now update it.
@@ -131,7 +131,7 @@ class Test_Objects extends \WP_UnitTestCase {
 			),
 		);
 
-		$updated_post = Objects::update( $update_activity );
+		$updated_post = Posts::update( $update_activity );
 
 		$this->assertInstanceOf( '\WP_Post', $updated_post );
 		$this->assertEquals( 'Updated Title', $updated_post->post_title );
@@ -154,7 +154,7 @@ class Test_Objects extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Objects::update( $activity );
+		$result = Posts::update( $activity );
 
 		$this->assertInstanceOf( '\WP_Error', $result );
 	}
@@ -176,11 +176,11 @@ class Test_Objects extends \WP_UnitTestCase {
 			),
 		);
 
-		$post = Objects::add( $activity );
+		$post = Posts::add( $activity );
 		$this->assertInstanceOf( '\WP_Post', $post );
 
 		// Test retrieval.
-		$retrieved_post = Objects::get_by_guid( 'https://example.com/objects/789' );
+		$retrieved_post = Posts::get_by_guid( 'https://example.com/objects/789' );
 
 		$this->assertInstanceOf( '\WP_Post', $retrieved_post );
 		$this->assertEquals( $post->ID, $retrieved_post->ID );
@@ -193,7 +193,7 @@ class Test_Objects extends \WP_UnitTestCase {
 	 * @covers ::get_by_guid
 	 */
 	public function test_get_by_guid_nonexistent() {
-		$result = Objects::get_by_guid( 'https://example.com/objects/nonexistent' );
+		$result = Posts::get_by_guid( 'https://example.com/objects/nonexistent' );
 
 		$this->assertInstanceOf( '\WP_Error', $result );
 	}
@@ -214,7 +214,7 @@ class Test_Objects extends \WP_UnitTestCase {
 		);
 
 		// Use reflection to access the private method.
-		$reflection = new \ReflectionClass( Objects::class );
+		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
 		$method->setAccessible( true );
 
@@ -223,7 +223,7 @@ class Test_Objects extends \WP_UnitTestCase {
 		$this->assertIsArray( $result );
 		$this->assertEquals( 'Test Title', $result['post_title'] );
 		$this->assertEquals( 'Test summary', $result['post_excerpt'] );
-		$this->assertEquals( Objects::POST_TYPE, $result['post_type'] );
+		$this->assertEquals( Posts::POST_TYPE, $result['post_type'] );
 		$this->assertEquals( 'publish', $result['post_status'] );
 		$this->assertEquals( 'https://example.com/objects/test', $result['guid'] );
 		$this->assertStringContainsString( 'Test content', $result['post_content'] );
@@ -236,7 +236,7 @@ class Test_Objects extends \WP_UnitTestCase {
 	 */
 	public function test_activity_to_post_invalid() {
 		// Use reflection to access the private method.
-		$reflection = new \ReflectionClass( Objects::class );
+		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
 		$method->setAccessible( true );
 
@@ -256,7 +256,7 @@ class Test_Objects extends \WP_UnitTestCase {
 		);
 
 		// Use reflection to access the private method.
-		$reflection = new \ReflectionClass( Objects::class );
+		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
 		$method->setAccessible( true );
 
@@ -266,7 +266,7 @@ class Test_Objects extends \WP_UnitTestCase {
 		$this->assertEquals( '', $result['post_title'] );
 		$this->assertEquals( '', $result['post_content'] );
 		$this->assertEquals( '', $result['post_excerpt'] );
-		$this->assertEquals( Objects::POST_TYPE, $result['post_type'] );
+		$this->assertEquals( Posts::POST_TYPE, $result['post_type'] );
 		$this->assertEquals( 'publish', $result['post_status'] );
 	}
 }
