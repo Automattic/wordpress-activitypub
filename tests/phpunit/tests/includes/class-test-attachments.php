@@ -108,12 +108,8 @@ class Test_Attachments extends \WP_UnitTestCase {
 			copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
 
 			return array(
-				'response' => array(
-					'code' => 200,
-				),
-				'headers'  => array(
-					'content-type' => 'image/jpeg',
-				),
+				'response' => array( 'code' => 200 ),
+				'headers'  => array( 'content-type' => 'image/jpeg' ),
 			);
 		}
 
