@@ -296,7 +296,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 * Test handling create activity for objects with content sanitization.
 	 *
 	 * @covers ::handle_create
-	 * @covers ::create_object
+	 * @covers ::create_post
 	 */
 	public function test_handle_create_object_with_sanitization() {
 		// Mock HTTP request for Remote_Actors::fetch_by_uri.

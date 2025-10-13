@@ -14,7 +14,7 @@ use function Activitypub\object_to_uri;
 /**
  * Posts collection.
  *
- * Provides methods to retrieve, create, update, and manage ActivityPub posts (posts, notes, media, etc.).
+ * Provides methods to retrieve, create, update, and manage ActivityPub posts (articles, notes, media, etc.).
  */
 class Posts {
 	/**
@@ -58,7 +58,7 @@ class Posts {
 	 *
 	 * @param int $id The object ID.
 	 *
-	 * @return \WP_Post|array|null The object post or WP_Error on failure.
+	 * @return \WP_Post|null The post object or null on failure.
 	 */
 	public static function get( $id ) {
 		return \get_post( $id );
@@ -147,18 +147,18 @@ class Posts {
 	}
 
 	/**
-	 * Convert JSON input to a Base_Object.
+	 * Convert an activity to a post array.
 	 *
 	 * @param array $activity The activity array.
 	 *
-	 * @return \WP_Post|\WP_Error An Object built from the JSON string or WP_Error when it's not a JSON string.
+	 * @return array|\WP_Error The post array or WP_Error on failure.
 	 */
 	private static function activity_to_post( $activity ) {
 		if ( ! is_array( $activity ) ) {
 			return new \WP_Error( 'invalid_activity', __( 'Invalid activity format', 'activitypub' ) );
 		}
 
-		$post = array(
+		return array(
 			'post_title'   => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
 			'post_content' => isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '',
 			'post_excerpt' => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : '',
@@ -166,8 +166,6 @@ class Posts {
 			'post_type'    => self::POST_TYPE,
 			'guid'         => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
 		);
-
-		return $post;
 	}
 
 	/**
@@ -175,8 +173,6 @@ class Posts {
 	 *
 	 * @param int   $post_id         The post ID.
 	 * @param array $activity_object The activity object data.
-	 *
-	 * @return void
 	 */
 	private static function add_taxonomies( $post_id, $activity_object ) {
 		// Save Object Type as Taxonomy item.

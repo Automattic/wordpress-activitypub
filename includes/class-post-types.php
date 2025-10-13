@@ -370,7 +370,7 @@ class Post_Types {
 				'delete_with_user'    => true,
 				'can_export'          => true,
 				'exclude_from_search' => true,
-				'taxonomies'          => array( 'ap_tag' ),
+				'taxonomies'          => array( 'ap_tag', 'ap_object_type' ),
 			)
 		);
 
@@ -378,21 +378,9 @@ class Post_Types {
 			'ap_tag',
 			array( Posts::POST_TYPE ),
 			array(
-				'labels'       => array(
-					'name'          => \_x( 'Tags', 'taxonomy general name', 'activitypub' ),
-					'singular_name' => \_x( 'Tag', 'taxonomy singular name', 'activitypub' ),
-					'search_items'  => \__( 'Search Tags', 'activitypub' ),
-					'all_items'     => \__( 'All Tags', 'activitypub' ),
-					'edit_item'     => \__( 'Edit Tag', 'activitypub' ),
-					'update_item'   => \__( 'Update Tag', 'activitypub' ),
-					'add_new_item'  => \__( 'Add New Tag', 'activitypub' ),
-					'new_item_name' => \__( 'New Tag Name', 'activitypub' ),
-					'menu_name'     => \__( 'Tags', 'activitypub' ),
-				),
 				'public'       => false,
 				'query_var'    => true,
 				'show_in_rest' => true,
-				'rewrite'      => array( 'slug' => 'ap_tag' ),
 			)
 		);
 
@@ -400,21 +388,20 @@ class Post_Types {
 			'ap_object_type',
 			array( Posts::POST_TYPE ),
 			array(
-				'labels'       => array(
-					'name'          => \_x( 'Object Types', 'taxonomy general name', 'activitypub' ),
-					'singular_name' => \_x( 'Object Type', 'taxonomy singular name', 'activitypub' ),
-					'search_items'  => \__( 'Search Object Types', 'activitypub' ),
-					'all_items'     => \__( 'All Object Types', 'activitypub' ),
-					'edit_item'     => \__( 'Edit Object Type', 'activitypub' ),
-					'update_item'   => \__( 'Update Object Type', 'activitypub' ),
-					'add_new_item'  => \__( 'Add New Object Type', 'activitypub' ),
-					'new_item_name' => \__( 'New Object Type Name', 'activitypub' ),
-					'menu_name'     => \__( 'Object Types', 'activitypub' ),
-				),
 				'public'       => false,
 				'query_var'    => true,
 				'show_in_rest' => true,
-				'rewrite'      => array( 'slug' => 'ap_object_type' ),
+			)
+		);
+
+		\register_post_meta(
+			Posts::POST_TYPE,
+			'_activitypub_remote_actor_id',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'The local ID of the remote actor that created the object.',
+				'sanitize_callback' => 'absint',
 			)
 		);
 	}

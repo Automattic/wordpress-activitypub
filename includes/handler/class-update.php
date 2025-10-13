@@ -45,7 +45,7 @@ class Update {
 			case 'Organization':
 			case 'Service':
 			case 'Application':
-				self::handle_actor_update( $activity, $user_id );
+				self::update_actor( $activity, $user_id );
 				break;
 
 			/*
@@ -86,11 +86,13 @@ class Update {
 
 			if ( ! empty( $comment_data['comment_ID'] ) ) {
 				$result = \get_comment( $comment_data['comment_ID'] );
-			} else {
-				$result = $comment_data;
 			}
 		} else {
 			$result = Posts::update( $activity );
+		}
+
+		if ( ! $result ) {
+			$result = new \WP_Error( 'activitypub_update_failed', 'Update failed' );
 		}
 
 		$success = ( $result && ! \is_wp_error( $result ) );
@@ -98,10 +100,10 @@ class Update {
 		/**
 		 * Fires after an ActivityPub Update activity has been handled.
 		 *
-		 * @param array                            $activity The ActivityPub activity data.
-		 * @param int                              $user_id  The local user ID.
-		 * @param bool                             $success  True on success, false otherwise.
-		 * @param array|string|int|\WP_Error|false $result   The updated comment, or null if update failed.
+		 * @param array                          $activity The ActivityPub activity data.
+		 * @param int                            $user_id  The local user ID.
+		 * @param bool                           $success  True on success, false otherwise.
+		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The updated post, comment, or error.
 		 */
 		\do_action( 'activitypub_handled_update', $activity, $user_id, $success, $result );
 	}
@@ -112,7 +114,7 @@ class Update {
 	 * @param array $activity The Activity object.
 	 * @param int   $user_id  The user ID. Always null for Update activities.
 	 */
-	public static function handle_actor_update( $activity, $user_id ) {
+	public static function update_actor( $activity, $user_id ) {
 		// Update cache.
 		$actor = get_remote_metadata_by_actor( $activity['actor'], false );
 

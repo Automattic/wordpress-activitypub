@@ -41,7 +41,11 @@ class Create {
 		} elseif ( is_activity_reply( $activity ) ) { // Check for replies.
 			$result = self::create_interaction( $activity, $user_id, $activity_object );
 		} else { // Handle non-interaction objects.
-			$result = self::create_object( $activity, $user_id, $activity_object );
+			$result = self::create_post( $activity, $user_id, $activity_object );
+		}
+
+		if ( ! $result ) {
+			$result = new \WP_Error( 'activitypub_create_failed', 'Create failed' );
 		}
 
 		$success = ( false !== $result && ! \is_wp_error( $result ) );
@@ -49,10 +53,10 @@ class Create {
 		/**
 		 * Fires after an ActivityPub Create activity has been handled.
 		 *
-		 * @param array                            $activity The ActivityPub activity data.
-		 * @param int                              $user_id  The local user ID.
-		 * @param bool                             $success  True on success, false otherwise.
-		 * @param array|string|int|\WP_Error|false $result   The WP_Comment object of the created comment, or null if creation failed.
+		 * @param array                          $activity The ActivityPub activity data.
+		 * @param int                            $user_id  The local user ID.
+		 * @param bool                           $success  True on success, false otherwise.
+		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The WP_Comment object of the created comment, or null if creation failed.
 		 */
 		\do_action( 'activitypub_handled_create', $activity, $user_id, $success, $result );
 	}
@@ -96,7 +100,7 @@ class Create {
 	}
 
 	/**
-	 * Handle non-interaction objects like posts.
+	 * Handle non-interaction posts like posts.
 	 *
 	 * @param array                          $activity        The activity-object.
 	 * @param int                            $user_id         The id of the local blog-user.
@@ -104,7 +108,7 @@ class Create {
 	 *
 	 * @return \WP_Post|\WP_Error The post on success or WP_Error on failure.
 	 */
-	public static function create_object( $activity, $user_id, $activity_object = null ) {
+	public static function create_post( $activity, $user_id, $activity_object = null ) {
 		$check_dupe = Posts::get_by_guid( $activity['object']['id'] );
 
 		// If comment exists, call update action.
