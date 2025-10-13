@@ -44,15 +44,19 @@ class Create {
 			$result = self::create_post( $activity, $user_id, $activity_object );
 		}
 
+		if ( ! $result ) {
+			$result = new \WP_Error( 'activitypub_create_failed', 'Create failed' );
+		}
+
 		$success = ( false !== $result && ! \is_wp_error( $result ) );
 
 		/**
 		 * Fires after an ActivityPub Create activity has been handled.
 		 *
-		 * @param array                            $activity The ActivityPub activity data.
-		 * @param int                              $user_id  The local user ID.
-		 * @param bool                             $success  True on success, false otherwise.
-		 * @param array|string|int|\WP_Error|false $result   The WP_Comment object of the created comment, or null if creation failed.
+		 * @param array                          $activity The ActivityPub activity data.
+		 * @param int                            $user_id  The local user ID.
+		 * @param bool                           $success  True on success, false otherwise.
+		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The WP_Comment object of the created comment, or null if creation failed.
 		 */
 		\do_action( 'activitypub_handled_create', $activity, $user_id, $success, $result );
 	}
