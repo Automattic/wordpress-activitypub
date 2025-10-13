@@ -494,8 +494,9 @@ class Blocks {
 
 		// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		foreach ( $body->childNodes as $node ) {
-			$node_name = strtolower( $node->nodeName );
-			$block     = $block_map[ $node_name ] ?? 'html';
+			$node_name  = strtolower( $node->nodeName );
+			$block      = $block_map[ $node_name ] ?? 'html';
+			$attributes = array();
 
 			// Skip unsupported elements.
 			if ( in_array( $node_name, array( 'br', 'cite', 'source' ), true ) ) {
@@ -505,55 +506,14 @@ class Blocks {
 			// Get the HTML content for this specific node instead of entire content.
 			$node_html = $dom->saveHTML( $node );
 
-			// Get block attributes based on node type.
-			$attributes = self::get_node_attributes( $node, $block );
+			if ( 'ol' === strtolower( $node->nodeName ) ) {
+				$attributes['ordered'] = true;
+			}
 
 			$_content .= \get_comment_delimited_block_content( $block, $attributes, $node_html );
 		}
 		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
 		return $_content;
-	}
-
-	/**
-	 * Get block attributes for a DOM node based on block type.
-	 *
-	 * @param \DOMNode $node       The DOM node.
-	 * @param string   $block_type The block type.
-	 *
-	 * @return array The block attributes.
-	 */
-	private static function get_node_attributes( $node, $block_type ) {
-		$attributes = array();
-
-		// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		switch ( $block_type ) {
-			case 'heading':
-				$level = (int) substr( $node->nodeName, 1 ); // Extract number from h1, h2, etc.
-				if ( $level > 1 ) {
-					$attributes['level'] = $level;
-				}
-				break;
-
-			case 'list':
-				if ( 'ol' === strtolower( $node->nodeName ) ) {
-					$attributes['ordered'] = true;
-				}
-				break;
-
-			case 'image':
-				if ( $node instanceof \DOMElement ) {
-					if ( $node->hasAttribute( 'src' ) ) {
-						$attributes['url'] = $node->getAttribute( 'src' );
-					}
-					if ( $node->hasAttribute( 'alt' ) ) {
-						$attributes['alt'] = $node->getAttribute( 'alt' );
-					}
-				}
-				break;
-		}
-		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-
-		return $attributes;
 	}
 }
