@@ -110,7 +110,7 @@ class Create {
 		// If comment exists, call update action.
 		if ( ! \is_wp_error( $check_dupe ) ) {
 			/**
-			 * Fires when a Create activity is received for an existing comment.
+			 * Fires when a Create activity is received for an existing object.
 			 *
 			 * @param array                          $activity        The activity-object.
 			 * @param int                            $user_id         The id of the local blog-user.
