@@ -215,7 +215,7 @@ class Posts {
 			$stored_urls[] = \get_post_meta( $attachment->ID, '_activitypub_source_url', true );
 		}
 
-		// Compare the arrays.
-		return array_filter( $stored_urls ) !== $new_urls;
+		// Compare the arrays (reindex after filtering to ensure proper comparison).
+		return array_values( array_filter( $stored_urls ) ) !== $new_urls;
 	}
 }
