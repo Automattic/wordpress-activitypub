@@ -417,6 +417,17 @@ class Post_Types {
 				'rewrite'      => array( 'slug' => 'ap_object_type' ),
 			)
 		);
+
+		\register_post_meta(
+			Posts::POST_TYPE,
+			'_activitypub_remote_actor_id',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'The local ID of the remote actor that created the object.',
+				'sanitize_callback' => 'absint',
+			)
+		);
 	}
 
 	/**
