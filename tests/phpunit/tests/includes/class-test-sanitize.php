@@ -182,4 +182,76 @@ class Test_Sanitize extends \WP_UnitTestCase {
 
 		\wp_delete_user( $user_id );
 	}
+
+	/**
+	 * Test content sanitization without blocks support.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_without_blocks() {
+		// Mock site_supports_blocks to return false.
+		add_filter( 'activitypub_site_supports_blocks', '__return_false' );
+
+		$content = '<h1>Test Heading</h1><p>Test paragraph</p>';
+		$result  = Sanitize::content( $content );
+
+		// Should not convert to blocks when blocks are not supported.
+		$this->assertStringNotContainsString( '<!-- wp:', $result );
+		$this->assertStringContainsString( '<h1>Test Heading</h1>', $result );
+		$this->assertStringContainsString( '<p>Test paragraph</p>', $result );
+
+		remove_filter( 'activitypub_site_supports_blocks', '__return_false' );
+	}
+
+	/**
+	 * Test content sanitization with malicious content.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_security() {
+		$malicious_content = '<p>Safe content</p><script>alert("XSS")</script><iframe src="evil.com"></iframe>';
+		$result            = Sanitize::content( $malicious_content );
+
+		$this->assertStringContainsString( 'Safe content', $result );
+		$this->assertStringNotContainsString( 'script', $result );
+		$this->assertStringNotContainsString( 'iframe', $result );
+		$this->assertStringNotContainsString( 'evil.com', $result );
+	}
+
+	/**
+	 * Test content sanitization with URLs.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_urls() {
+		$content = 'Visit https://example.com for more info';
+		$result  = Sanitize::content( $content );
+
+		// Should make URLs clickable.
+		$this->assertStringContainsString( '<a href="https://example.com"', $result );
+	}
+
+	/**
+	 * Test content sanitization with empty content.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_empty() {
+		$this->assertEquals( '', Sanitize::content( '' ) );
+		// Whitespace-only content gets processed and becomes empty.
+		$this->assertEquals( '', Sanitize::content( '   ' ) );
+	}
+
+	/**
+	 * Test content sanitization preserves safe HTML.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_preserves_safe_html() {
+		$content = '<p><strong>Bold</strong> and <em>italic</em> text</p>';
+		$result  = Sanitize::content( $content );
+
+		$this->assertStringContainsString( '<strong>Bold</strong>', $result );
+		$this->assertStringContainsString( '<em>italic</em>', $result );
+	}
 }

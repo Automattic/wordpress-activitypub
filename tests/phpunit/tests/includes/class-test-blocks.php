@@ -309,4 +309,24 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		return $response;
 	}
+
+	/**
+	 * Test content sanitization with HTML to blocks conversion.
+	 *
+	 * @covers ::convert_from_html
+	 */
+	public function test_convert_from_html() {
+		// Mock site_supports_blocks to return true.
+		\add_filter( 'wp_is_block_theme', '__return_true' );
+
+		$content = '<h1>Test Heading</h1><p>Test paragraph</p><img src="test.jpg" alt="Test image" />';
+		$result  = Blocks::convert_from_html( $content );
+
+		// Should convert to blocks when blocks are supported.
+		$this->assertIsString( $result );
+		$this->assertStringContainsString( 'Test Heading', $result );
+		$this->assertStringContainsString( 'Test paragraph', $result );
+
+		\remove_filter( 'wp_is_block_theme', '__return_true' );
+	}
 }
