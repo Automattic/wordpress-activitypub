@@ -438,4 +438,122 @@ class Blocks {
 		}
 		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
 	}
+
+	/**
+	 * Convert HTML content to blocks.
+	 *
+	 * @param string $content The HTML content.
+	 *
+	 * @return string The content converted to blocks.
+	 */
+	public static function html_to_blocks( $content ) {
+		if ( empty( $content ) ) {
+			return '';
+		}
+
+		// Load the content into a DOMDocument.
+		$dom = new \DOMDocument();
+		\libxml_use_internal_errors( true );
+		$dom->loadHTML( '<?xml encoding="utf-8" ?>' . $content );
+		\libxml_clear_errors();
+		$body = $dom->getElementsByTagName( 'body' )->item( 0 );
+
+		if ( ! $body ) {
+			return $content;
+		}
+
+		$_content = '';
+
+		// Pre-compute block type mapping for better performance.
+		static $block_map = array(
+			'ul'         => 'list',
+			'ol'         => 'list',
+			'img'        => 'image',
+			'blockquote' => 'quote',
+			'h1'         => 'heading',
+			'h2'         => 'heading',
+			'h3'         => 'heading',
+			'h4'         => 'heading',
+			'h5'         => 'heading',
+			'h6'         => 'heading',
+			'p'          => 'paragraph',
+			'a'          => 'paragraph',
+			'abbr'       => 'paragraph',
+			'b'          => 'paragraph',
+			'code'       => 'paragraph',
+			'em'         => 'paragraph',
+			'i'          => 'paragraph',
+			'strong'     => 'paragraph',
+			'sub'        => 'paragraph',
+			'sup'        => 'paragraph',
+			'span'       => 'paragraph',
+			'u'          => 'paragraph',
+			'figure'     => 'image',
+			'hr'         => 'separator',
+		);
+
+		// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		foreach ( $body->childNodes as $node ) {
+			$node_name = strtolower( $node->nodeName );
+			$block     = $block_map[ $node_name ] ?? 'html';
+
+			// Skip unsupported elements.
+			if ( in_array( $node_name, array( 'br', 'cite', 'source' ), true ) ) {
+				continue;
+			}
+
+			// Get the HTML content for this specific node instead of entire content.
+			$node_html = $dom->saveHTML( $node );
+
+			// Get block attributes based on node type.
+			$attributes = self::get_node_attributes( $node, $block );
+
+			$_content .= \get_comment_delimited_block_content( $block, $attributes, $node_html );
+		}
+		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+
+		return $_content;
+	}
+
+	/**
+	 * Get block attributes for a DOM node based on block type.
+	 *
+	 * @param \DOMNode $node       The DOM node.
+	 * @param string   $block_type The block type.
+	 *
+	 * @return array The block attributes.
+	 */
+	private static function get_node_attributes( $node, $block_type ) {
+		$attributes = array();
+
+		// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		switch ( $block_type ) {
+			case 'heading':
+				$level = (int) substr( $node->nodeName, 1 ); // Extract number from h1, h2, etc.
+				if ( $level > 1 ) {
+					$attributes['level'] = $level;
+				}
+				break;
+
+			case 'list':
+				if ( 'ol' === strtolower( $node->nodeName ) ) {
+					$attributes['ordered'] = true;
+				}
+				break;
+
+			case 'image':
+				if ( $node instanceof \DOMElement ) {
+					if ( $node->hasAttribute( 'src' ) ) {
+						$attributes['url'] = $node->getAttribute( 'src' );
+					}
+					if ( $node->hasAttribute( 'alt' ) ) {
+						$attributes['alt'] = $node->getAttribute( 'alt' );
+					}
+				}
+				break;
+		}
+		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+
+		return $attributes;
+	}
 }

@@ -195,30 +195,10 @@ class Sanitize {
 		$content = \wpautop( $content );
 		$content = \wp_kses_post( $content );
 
-		var_dump( $content );
-
 		if ( ! site_supports_blocks() ) {
 			return $content;
 		}
 
-		$content = \preg_split( '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i', $content );
-		$content = array_map( 'trim', $content );
-		$content = array_map(
-			function ( $el ) {
-				$el = preg_replace( '/^<p>/i', '', $el );
-				$el = preg_replace( '/<\/p>$/i', '', $el );
-
-				return $el;
-			},
-			$content
-		);
-
-		$content = array_filter( $content );
-
-		if ( empty( $content ) ) {
-			return '';
-		}
-
-		return '<!-- wp:paragraph -->' . PHP_EOL . '<p>' . implode( '</p>' . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL . PHP_EOL . '<!-- wp:paragraph -->' . PHP_EOL . '<p>', $content ) . '</p>' . PHP_EOL . '<!-- /wp:paragraph -->';
+		return Blocks::html_to_blocks( $content );
 	}
 }
