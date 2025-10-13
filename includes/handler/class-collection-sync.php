@@ -88,7 +88,7 @@ class Collection_Sync {
 	 */
 	protected static function detect_collection_type( $url ) {
 		// Check for followers collection.
-		if ( preg_match( '#/followers(?:-sync)?(?:\?|$)#', $url ) ) {
+		if ( preg_match( '#/followers(?:/sync)?(?:\?|$)#', $url ) ) {
 			return 'followers';
 		}
 
