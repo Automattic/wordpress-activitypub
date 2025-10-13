@@ -381,7 +381,6 @@ class Post_Types {
 				'public'       => false,
 				'query_var'    => true,
 				'show_in_rest' => true,
-				'rewrite'      => array( 'slug' => 'ap_tag' ),
 			)
 		);
 
@@ -392,7 +391,6 @@ class Post_Types {
 				'public'       => false,
 				'query_var'    => true,
 				'show_in_rest' => true,
-				'rewrite'      => array( 'slug' => 'ap_object_type' ),
 			)
 		);
 
