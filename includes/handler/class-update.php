@@ -80,6 +80,8 @@ class Update {
 	 * @param int   $user_id  The user ID. Always null for Update activities.
 	 */
 	public static function handle_object_update( $activity, $user_id ) {
+		$result = new \WP_Error( 'activitypub_update_failed', 'Update failed' );
+
 		// Check for private and/or direct messages.
 		if ( is_activity_reply( $activity ) ) {
 			$comment_data = Interactions::update_comment( $activity );
@@ -89,10 +91,6 @@ class Update {
 			}
 		} else {
 			$result = Posts::update( $activity );
-		}
-
-		if ( ! $result ) {
-			$result = new \WP_Error( 'activitypub_update_failed', 'Update failed' );
 		}
 
 		$success = ( $result && ! \is_wp_error( $result ) );
@@ -119,10 +117,10 @@ class Update {
 		$actor = get_remote_metadata_by_actor( $activity['actor'], false );
 
 		if ( ! $actor || \is_wp_error( $actor ) || ! isset( $actor['id'] ) ) {
-			return;
+			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: could not fetch actor data' );
+		} else {
+			$state = Remote_Actors::upsert( $actor );
 		}
-
-		$state = Remote_Actors::upsert( $actor );
 
 		/**
 		 * Fires after an ActivityPub Update activity has been handled.
