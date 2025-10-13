@@ -39,7 +39,7 @@ class Test_Update extends \WP_UnitTestCase {
 	 * Test updating an actor with various scenarios.
 	 *
 	 * @dataProvider update_actor_provider
-	 * @covers ::update_actor
+	 * @covers ::handle_actor_update
 	 *
 	 * @param array  $activity_data    The activity data.
 	 * @param mixed  $http_response    The HTTP response to mock.
