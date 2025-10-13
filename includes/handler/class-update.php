@@ -13,6 +13,7 @@ use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_activity_reply;
+
 /**
  * Handle Update requests.
  */
