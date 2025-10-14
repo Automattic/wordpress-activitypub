@@ -65,7 +65,7 @@ const ActivityPubCommands = (): null => {
 			label: __( 'ActivityPub: View Your Followers', 'activitypub' ),
 			icon: activityPubIcon,
 			callback: ( { close } ) => {
-				document.location.href = 'users.php?page=activitypub-followers-list';
+				document.location = 'users.php?page=activitypub-followers-list';
 				close();
 			},
 		} );
@@ -77,7 +77,7 @@ const ActivityPubCommands = (): null => {
 				label: __( 'ActivityPub: View Who You Follow', 'activitypub' ),
 				icon: activityPubIcon,
 				callback: ( { close } ) => {
-					document.location.href = 'users.php?page=activitypub-following-list';
+					document.location = 'users.php?page=activitypub-following-list';
 					close();
 				},
 			} );
@@ -92,7 +92,7 @@ const ActivityPubCommands = (): null => {
 			label: __( 'ActivityPub: View Blog Followers', 'activitypub' ),
 			icon: activityPubIcon,
 			callback: ( { close } ) => {
-				document.location.href = 'options-general.php?page=activitypub&tab=followers';
+				document.location = 'options-general.php?page=activitypub&tab=followers';
 				close();
 			},
 		} );
@@ -104,7 +104,7 @@ const ActivityPubCommands = (): null => {
 				label: __( 'ActivityPub: View Blog Following', 'activitypub' ),
 				icon: activityPubIcon,
 				callback: ( { close } ) => {
-					document.location.href = 'options-general.php?page=activitypub&tab=following';
+					document.location = 'options-general.php?page=activitypub&tab=following';
 					close();
 				},
 			} );
@@ -117,7 +117,7 @@ const ActivityPubCommands = (): null => {
 		label: __( 'ActivityPub: View Blocked Actors', 'activitypub' ),
 		icon: activityPubIcon,
 		callback: ( { close } ) => {
-			document.location.href = 'users.php?page=activitypub-blocked-actors-list';
+			document.location = 'users.php?page=activitypub-blocked-actors-list';
 			close();
 		},
 	} );
@@ -129,7 +129,7 @@ const ActivityPubCommands = (): null => {
 			label: __( 'ActivityPub: View Settings', 'activitypub' ),
 			icon: activityPubIcon,
 			callback: ( { close } ) => {
-				document.location.href = 'options-general.php?page=activitypub&tab=settings';
+				document.location = 'options-general.php?page=activitypub&tab=settings';
 				close();
 			},
 		} );
@@ -141,7 +141,7 @@ const ActivityPubCommands = (): null => {
 		label: __( 'ActivityPub: View Extra Fields', 'activitypub' ),
 		icon: activityPubIcon,
 		callback: ( { close } ) => {
-			document.location.href = 'edit.php?post_type=ap_extrafield';
+			document.location = 'edit.php?post_type=ap_extrafield';
 			close();
 		},
 	} );
@@ -152,7 +152,7 @@ const ActivityPubCommands = (): null => {
 		label: __( 'ActivityPub: Add New Extra Field', 'activitypub' ),
 		icon: activityPubIcon,
 		callback: ( { close } ) => {
-			document.location.href = 'post-new.php?post_type=ap_extrafield';
+			document.location = 'post-new.php?post_type=ap_extrafield';
 			close();
 		},
 	} );
