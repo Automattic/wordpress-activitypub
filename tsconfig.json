@@ -1,0 +1,11 @@
+{
+	"extends": "./node_modules/@wordpress/scripts/config/tsconfig.json",
+	"compilerOptions": {
+		"jsx": "react",
+		"esModuleInterop": true,
+		"typeRoots": [ "./node_modules/@types", "./src" ],
+		"skipLibCheck": true
+	},
+	"include": [ "src/**/*" ],
+	"exclude": [ "node_modules", "build", "vendor" ]
+}

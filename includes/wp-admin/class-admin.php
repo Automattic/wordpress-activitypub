@@ -273,6 +273,28 @@ class Admin {
 			false
 		);
 
+		// Register and enqueue command palette integration.
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/command-palette/plugin.asset.php';
+			wp_enqueue_script(
+				'activitypub-command-palette',
+				plugins_url( 'build/command-palette/plugin.js', ACTIVITYPUB_PLUGIN_FILE ),
+				$asset_data['dependencies'],
+				$asset_data['version'],
+				true
+			);
+
+			wp_localize_script(
+				'activitypub-command-palette',
+				'activitypubCommandPalette',
+				array(
+					'followingEnabled' => '1' === \get_option( 'activitypub_following_ui', '0' ),
+					'actorMode'        => \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ),
+					'canManageOptions' => \current_user_can( 'manage_options' ),
+				)
+			);
+		}
+
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
 			wp_enqueue_style(
 				'activitypub-admin-styles',
