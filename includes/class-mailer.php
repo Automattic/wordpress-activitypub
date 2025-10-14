@@ -409,26 +409,24 @@ class Mailer {
 		/*
 		 * Get the quoted post/object.
 		 * For QuoteRequest activities, object is the quoted URL string.
-		 * For regular quote posts, object.quoteUrl contains the quoted URL.
+		 * For regular quote posts, check both 'quote' (FEP-044f) and 'quoteUrl' properties.
 		*/
-		$quoted_url = null;
 		if ( is_string( $activity['object'] ) ) {
 			// QuoteRequest format.
-			$quoted_url = $activity['object'];
-		} elseif ( ! empty( $activity['object']['quoteUrl'] ) ) {
-			// Regular quote post format.
-			$quoted_url = object_to_uri( $activity['object']['quoteUrl'] );
+			$quoted_url   = $activity['object'];
+			$quote_object = $activity['instrument'] ?? null;
+		} else {
+			$quoted_url   = object_to_uri( $activity['object']['quote'] ?? $activity['object']['quoteUrl'] ?? '' );
+			$quote_object = $activity['object'];
 		}
 
 		if ( ! $quoted_url ) {
 			return;
 		}
 
-		// Try to get the quoted post title.
-		$quoted_title = null;
-		$post_id      = \url_to_postid( $quoted_url );
-		if ( $post_id ) {
-			$quoted_title = \get_the_title( $post_id );
+		$fetched = Http::get_remote_object( $quote_object );
+		if ( ! \is_wp_error( $fetched ) && is_array( $fetched ) ) {
+			$quote_object = $fetched;
 		}
 
 		$template_args = array(
@@ -436,7 +434,8 @@ class Mailer {
 			'actor'        => $actor,
 			'user_id'      => $user_id,
 			'quoted_url'   => $quoted_url,
-			'quoted_title' => $quoted_title,
+			'quoted_title' => \get_the_title( \url_to_postid( $quoted_url ) ),
+			'quote_object' => $quote_object,
 		);
 
 		/* translators: 1: Blog name, 2: Actor name */
@@ -446,15 +445,11 @@ class Mailer {
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-quote.php', false, $template_args );
 		$html_message = \ob_get_clean();
 
-		$alt_function = function ( $mailer ) use ( $actor, $activity, $quoted_url ) {
+		$alt_function = function ( $mailer ) use ( $actor, $activity, $quoted_url, $quote_object ) {
 			$content = '';
 
-			/*
-			 * For QuoteRequest, instrument contains the quote post URL.
-			 * For regular quotes, object contains the quote post.
-			 */
-			$quote_object = $activity['instrument'] ?? $activity['object'];
-			if ( ! empty( $quote_object['content'] ) ) {
+			// Extract content from the quote object if available.
+			if ( is_array( $quote_object ) && ! empty( $quote_object['content'] ) ) {
 				$content = \html_entity_decode(
 					\wp_strip_all_tags(
 						str_replace( '</p>', PHP_EOL . PHP_EOL, $quote_object['content'] )
