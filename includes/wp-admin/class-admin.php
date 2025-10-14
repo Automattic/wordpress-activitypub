@@ -428,16 +428,6 @@ class Admin {
 	 * Add ActivityPub specific actions/filters to the post list view.
 	 */
 	public static function list_posts() {
-		// Show only the user's extra fields.
-		\add_action(
-			'pre_get_posts',
-			function ( $query ) {
-				if ( $query->get( 'post_type' ) === 'ap_extrafield' ) {
-					$query->set( 'author', get_current_user_id() );
-				}
-			}
-		);
-
 		// Remove all views for the extra fields.
 		$screen_id = get_current_screen()->id;
 

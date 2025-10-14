@@ -6,9 +6,12 @@
  */
 
 import React from 'react';
-import { useCommand } from '@wordpress/commands';
-import { __ } from '@wordpress/i18n';
+import { useCommand, useCommandLoader } from '@wordpress/commands';
+import { __, sprintf } from '@wordpress/i18n';
 import { registerPlugin } from '@wordpress/plugins';
+import { useSelect } from '@wordpress/data';
+import { store as coreStore } from '@wordpress/core-data';
+import { useMemo } from '@wordpress/element';
 
 // TypeScript interface for the configuration passed from PHP.
 interface ActivityPubCommandPaletteConfig {
@@ -43,6 +46,60 @@ const activityPubIcon = (
 		/>
 	</svg>
 );
+
+/**
+ * Hook to load extra fields as dynamic commands.
+ */
+const useExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
+	// Retrieving the extra fields for the "search" term.
+	const { records, isLoading } = useSelect(
+		( select ) => {
+			const store = select( coreStore ) as any;
+			const currentUser = store.getCurrentUser();
+			const query = {
+				search: !! search ? search : undefined,
+				per_page: 10,
+				orderby: search ? 'relevance' : 'date',
+				status: 'any',
+				author: currentUser?.id,
+			};
+
+			return {
+				records: store.getEntityRecords( 'postType', 'ap_extrafield', query ),
+				isLoading: ! store.hasFinishedResolution( 'getEntityRecords', [ 'postType', 'ap_extrafield', query ] ),
+			};
+		},
+		[ search ]
+	);
+
+	// Creating the commands.
+	const commands = useMemo( () => {
+		return ( records ?? [] ).slice( 0, 10 ).map( ( record: any ) => {
+			const title = record.title?.rendered || __( '(no title)', 'activitypub' );
+			// Remove all quotes and special characters that could break CSS selectors.
+			const sanitizedTitle = title.replace( /["'`]/g, '' );
+			return {
+				// Use ID in the name to ensure uniqueness even with duplicate titles.
+				name: `activitypub/edit-extra-field/${ record.id }`,
+				label: sprintf(
+					/* translators: %s: Extra field title */
+					__( 'ActivityPub: Edit - %s', 'activitypub' ),
+					sanitizedTitle
+				),
+				icon: activityPubIcon,
+				callback: ( { close }: { close: () => void } ) => {
+					document.location = `post.php?post=${ record.id }&action=edit`;
+					close();
+				},
+			};
+		} );
+	}, [ records ] );
+
+	return {
+		commands,
+		isLoading,
+	};
+};
 
 /**
  * Component that registers all ActivityPub commands.
@@ -155,6 +212,12 @@ const ActivityPubCommands = (): null => {
 			document.location = 'post-new.php?post_type=ap_extrafield';
 			close();
 		},
+	} );
+
+	// Dynamic command loader: Edit existing extra fields.
+	useCommandLoader( {
+		name: 'activitypub/extra-fields-search',
+		hook: useExtraFieldsCommandLoader,
 	} );
 
 	return null;
