@@ -4,6 +4,7 @@
 		"jsx": "react",
 		"esModuleInterop": true,
 		"typeRoots": [ "./node_modules/@types", "./src" ],
+		"types": [ "jest" ],
 		"skipLibCheck": true
 	},
 	"include": [ "src/**/*" ],
