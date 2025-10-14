@@ -410,7 +410,7 @@ class Mailer {
 		 * Get the quoted post/object.
 		 * For QuoteRequest activities, object is the quoted URL string.
 		 * For regular quote posts, check both 'quote' (FEP-044f) and 'quoteUrl' properties.
-		*/
+		 */
 		if ( is_string( $activity['object'] ) ) {
 			// QuoteRequest format.
 			$quoted_url   = $activity['object'];
