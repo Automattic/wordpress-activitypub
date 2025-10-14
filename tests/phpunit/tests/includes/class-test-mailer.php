@@ -774,13 +774,25 @@ class Test_Mailer extends WP_UnitTestCase {
 			}
 		);
 
+		// Mock HTTP request to fetch quote object.
+		add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function ( $preempt, $url ) use ( $activity ) {
+				if ( 'https://example.com/post/1' === $url || $url === $activity['object'] ) {
+					return $activity['object'];
+				}
+				return $preempt;
+			},
+			10,
+			2
+		);
+
 		// Capture email.
 		add_filter(
 			'wp_mail',
 			function ( $args ) {
 				$this->assertStringContainsString( 'Test Quoter', $args['subject'] );
 				$this->assertStringContainsString( 'Quote from', $args['subject'] );
-				$this->assertStringContainsString( 'https://example.com/post/1', $args['message'] );
 				$this->assertStringContainsString( 'Great article', $args['message'] );
 				$this->assertEquals( get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
 				return $args;
@@ -791,6 +803,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 		remove_all_filters( 'wp_mail' );
 	}
 
@@ -891,12 +904,25 @@ class Test_Mailer extends WP_UnitTestCase {
 			}
 		);
 
+		// Mock HTTP request to fetch quote object.
+		add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function ( $preempt, $url ) use ( $activity ) {
+				if ( 'https://example.com/post/1' === $url || $url === $activity['object'] ) {
+					return $activity['object'];
+				}
+				return $preempt;
+			},
+			10,
+			2
+		);
+
 		// Capture email.
 		add_filter(
 			'wp_mail',
 			function ( $args ) {
 				$this->assertStringContainsString( 'Test Quoter', $args['subject'] );
-				$this->assertStringContainsString( 'https://example.com/post/1', $args['message'] );
+				$this->assertStringContainsString( 'Great blog post!', $args['message'] );
 				$this->assertEquals( get_option( 'admin_email' ), $args['to'] );
 				return $args;
 			}
@@ -906,6 +932,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 		remove_all_filters( 'wp_mail' );
 		delete_option( 'activitypub_blog_user_mailer_new_quote' );
 		delete_option( 'activitypub_actor_mode' );

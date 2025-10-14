@@ -160,6 +160,23 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 			}
 		);
 
+		// Mock HTTP request to fetch quote object (instrument).
+		add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function ( $preempt, $url ) use ( $activity ) {
+				if ( $activity['instrument'] === $url ) {
+					return array(
+						'id'      => $activity['instrument'],
+						'type'    => 'Note',
+						'content' => '<p>Great post! I have some thoughts.</p>',
+					);
+				}
+				return $preempt;
+			},
+			10,
+			2
+		);
+
 		$remote_actor_id = false;
 
 		// Run setup callback if provided.
@@ -473,6 +490,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	public function tear_down() {
 		// Remove all the filters we added during tests.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 
 		parent::tear_down();
 	}
