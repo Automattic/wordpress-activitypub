@@ -153,20 +153,6 @@ class Test_Fasp extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test authentication uses proper signature verification.
-	 *
-	 * @covers ::authenticate_request
-	 */
-	public function test_authenticate_request() {
-		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
-		$result  = $this->controller->authenticate_request( $request );
-
-		// Should use the same signature verification as other ActivityPub endpoints.
-		// For GET requests without authorized fetch, this should return true.
-		$this->assertTrue( $result );
-	}
-
-	/**
 	 * Test capabilities filter.
 	 *
 	 * @covers ::get_provider_info

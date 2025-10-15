@@ -154,10 +154,12 @@ class Fasp_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Sign the response using HTTP Message Signatures.
+	 * Sign the response using HTTP Message Signatures (RFC-9421).
+	 *
+	 * Uses the existing signature infrastructure and Application user's RSA keypair.
 	 *
 	 * @param \WP_REST_Response $response The response to sign.
-	 * @param string            $content  The response content.
+	 * @param string            $content  The response content (unused, for future use).
 	 */
 	private function sign_response( $response, $content ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		// Skip signing if RFC-9421 signatures are not enabled.
@@ -166,12 +168,13 @@ class Fasp_Controller extends \WP_REST_Controller {
 		}
 
 		try {
-			// Use the blog/application actor for signing FASP responses.
+			// Use the Application actor's existing RSA keypair for signing FASP responses.
 			$blog_user_id = \Activitypub\Collection\Actors::APPLICATION_USER_ID;
 			$private_key  = \Activitypub\Collection\Actors::get_private_key( $blog_user_id );
+			$public_key   = \Activitypub\Collection\Actors::get_public_key( $blog_user_id );
 			$actor        = \Activitypub\Collection\Actors::get_by_id( $blog_user_id );
 
-			if ( ! $private_key || ! $actor ) {
+			if ( ! $private_key || ! $public_key || ! $actor ) {
 				return;
 			}
 
@@ -187,10 +190,10 @@ class Fasp_Controller extends \WP_REST_Controller {
 				'alg'     => 'rsa-v1_5-sha256',
 			);
 
-			// Build signature base string.
+			// Build signature base string using RFC-9421 format.
 			$signature_base = $this->build_signature_base( $components, $params );
 
-			// Sign the base string.
+			// Sign the base string using RSA.
 			$signature = null;
 			\openssl_sign( $signature_base, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
 			$signature_b64 = \base64_encode( $signature ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
@@ -204,7 +207,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 
 		} catch ( \Exception $e ) {
 			// Silently fail - don't break the response if signing fails.
-			// In production, this could be logged to a debug log if needed.
 			unset( $e );
 		}
 	}
@@ -253,14 +255,14 @@ class Fasp_Controller extends \WP_REST_Controller {
 	private function build_params_string( $params ) {
 		$parts = array();
 		foreach ( $params as $key => $value ) {
-			if ( 'keyid' === $key ) {
-				$parts[] = $key . '="' . $value . '"';
+			if ( is_numeric( $value ) ) {
+				$parts[] = ';' . $key . '=' . $value;
 			} else {
-				$parts[] = $key . '=' . $value;
+				$parts[] = ';' . $key . '="' . $value . '"';
 			}
 		}
 
-		return ';' . \implode( ';', $parts );
+		return \implode( '', $parts );
 	}
 
 	/**
@@ -359,12 +361,15 @@ class Fasp_Controller extends \WP_REST_Controller {
 			}
 		}
 
-		// Generate keypair for this server.
-		$keypair = $this->generate_ed25519_keypair();
-		if ( ! $keypair ) {
+		// Use the Application user's existing RSA keypair instead of generating new keys.
+		$blog_user_id = \Activitypub\Collection\Actors::APPLICATION_USER_ID;
+		$public_key   = \Activitypub\Collection\Actors::get_public_key( $blog_user_id );
+		$private_key  = \Activitypub\Collection\Actors::get_private_key( $blog_user_id );
+
+		if ( ! $public_key || ! $private_key ) {
 			return new \WP_Error(
-				'keypair_generation_failed',
-				'Failed to generate Ed25519 keypair',
+				'keypair_not_available',
+				'Server keypair not available',
 				array( 'status' => 500 )
 			);
 		}
@@ -379,8 +384,8 @@ class Fasp_Controller extends \WP_REST_Controller {
 			'base_url'           => esc_url_raw( $params['baseUrl'] ),
 			'server_id'          => sanitize_text_field( $params['serverId'] ),
 			'fasp_public_key'    => sanitize_text_field( $params['publicKey'] ),
-			'server_public_key'  => $keypair['public_key'],
-			'server_private_key' => $keypair['private_key'],
+			'server_public_key'  => $public_key,
+			'server_private_key' => $private_key,
 			'status'             => 'pending',
 			'requested_at'       => current_time( 'mysql', true ),
 		);
@@ -397,10 +402,10 @@ class Fasp_Controller extends \WP_REST_Controller {
 		// Generate registration completion URI.
 		$completion_uri = admin_url( 'admin.php?page=activitypub-fasp-registrations&highlight=' . $fasp_id );
 
-		// Return successful response.
+		// Return successful response with the Application user's RSA public key.
 		$response_data = array(
 			'faspId'                    => $fasp_id,
-			'publicKey'                 => $keypair['public_key'],
+			'publicKey'                 => $public_key,
 			'registrationCompletionUri' => $completion_uri,
 		);
 
@@ -477,32 +482,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 		// Capability endpoints require FASP authentication.
 		$fasp_data = $this->get_authenticated_fasp( $request );
 		return ! is_wp_error( $fasp_data );
-	}
-
-	/**
-	 * Generate Ed25519 keypair.
-	 *
-	 * @return array|false Keypair array with 'public_key' and 'private_key', or false on failure.
-	 */
-	private function generate_ed25519_keypair() {
-		// For now, use a simple implementation. In production, this should use.
-		// proper Ed25519 key generation (requires sodium extension or similar).
-		if ( ! function_exists( 'sodium_crypto_sign_keypair' ) ) {
-			// Fallback for systems without sodium.
-			return array(
-				'public_key'  => base64_encode( wp_generate_password( 32, false ) ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-				'private_key' => base64_encode( wp_generate_password( 64, false ) ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-			);
-		}
-
-		$keypair    = sodium_crypto_sign_keypair();
-		$public_key = sodium_crypto_sign_publickey( $keypair );
-		$secret_key = sodium_crypto_sign_secretkey( $keypair );
-
-		return array(
-			'public_key'  => base64_encode( $public_key ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-			'private_key' => base64_encode( $secret_key ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-		);
 	}
 
 	/**
