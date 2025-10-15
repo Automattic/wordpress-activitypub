@@ -18,8 +18,7 @@ const config = defineConfig( {
 	testDir: './specs',
 	webServer: {
 		...baseConfig.webServer,
-		command:
-			"npm run env-start && npm wp-env run tests-cli -- wp rewrite structure '/postname' && npm wp-env run tests-cli -- wp rewrite flush",
+		command: 'npm run env-start',
 	},
 } );
 
