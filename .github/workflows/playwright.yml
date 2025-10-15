@@ -55,7 +55,7 @@ jobs:
         run: npm run env-start
 
       - name: Set rewrite structure
-        run: npx wp-env run test-cli wp rewrite structure /%year%/%monthnum%/%postname%/
+        run: npx wp-env run tests-cli wp rewrite structure /%year%/%monthnum%/%postname%/
 
       - name: Run Playwright tests
         run: npm run test:e2e
