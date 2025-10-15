@@ -274,7 +274,7 @@ class Admin {
 		);
 
 		// Register and enqueue command palette integration.
-		if ( user_can_activitypub( \get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) || \current_user_can( 'manage_options' ) ) {
 			$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/command-palette/plugin.asset.php';
 			wp_enqueue_script(
 				'activitypub-command-palette',
