@@ -91,11 +91,16 @@ class Http_Message_Signature implements Http_Signature {
 	 */
 	public function sign( $args, $url ) {
 		// Standard components to sign.
-		$components  = array(
+		$components = array(
 			'"@method"'     => \strtoupper( $args['method'] ),
 			'"@target-uri"' => $url,
 			'"@authority"'  => \wp_parse_url( $url, PHP_URL_HOST ),
 		);
+
+		if ( isset( $args['headers']['Collection-Synchronization'] ) ) {
+			$components['"collection-synchronization"'] = $args['headers']['Collection-Synchronization'];
+		}
+
 		$identifiers = \array_keys( $components );
 
 		// Add digest if provided.

@@ -501,10 +501,6 @@ class Followers {
 	public static function compute_partial_digest( $user_id, $authority ) {
 		$followers = self::get_partial_followers( $user_id, $authority );
 
-		if ( empty( $followers ) ) {
-			return '';
-		}
-
 		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
 		$digest = str_repeat( '0', 64 );
 
@@ -590,10 +586,6 @@ class Followers {
 	public static function generate_sync_header( $user_id, $authority ) {
 		// Compute the digest for this specific authority.
 		$digest = self::compute_partial_digest( $user_id, $authority );
-
-		if ( empty( $digest ) ) {
-			return false;
-		}
 
 		// Build the collection ID (followers collection URL).
 		$collection_id = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user_id ) );
