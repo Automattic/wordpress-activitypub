@@ -175,10 +175,9 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 			const testAuthority = 'https://example.com';
 
 			const response = await requestUtils.rest( {
-				path: `/activitypub/1.0/actors/1/followers/sync?authority=${ encodeURIComponent( testAuthority ) }`,
+				path: `/activitypub/1.0/actors/1/followers/sync`,
+				params: { authority: testAuthority },
 			} );
-
-			// Should return an OrderedCollection
 			expect( response ).toHaveProperty( 'type', 'OrderedCollection' );
 			expect( response ).toHaveProperty( 'totalItems' );
 			expect( response ).toHaveProperty( 'orderedItems' );
@@ -199,7 +198,8 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 
 			try {
 				await requestUtils.rest( {
-					path: `/activitypub/1.0/actors/1/followers/sync?authority=${ invalidAuthority }`,
+					path: `/activitypub/1.0/actors/1/followers/sync`,
+					params: { authority: invalidAuthority },
 				} );
 				// If no error is thrown, fail the test
 				expect( false ).toBe( true );
@@ -231,7 +231,8 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 			const testAuthority = 'https://non-existent-instance.test';
 
 			const response = await requestUtils.rest( {
-				path: `/activitypub/1.0/actors/1/followers/sync?authority=${ encodeURIComponent( testAuthority ) }`,
+				path: `/activitypub/1.0/actors/1/followers/sync`,
+				params: { authority: testAuthority },
 			} );
 
 			expect( response.type ).toBe( 'OrderedCollection' );
@@ -247,7 +248,8 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 			const testAuthority = 'https://mastodon.social';
 
 			const response = await requestUtils.rest( {
-				path: `/activitypub/1.0/actors/1/followers/sync?authority=${ encodeURIComponent( testAuthority ) }`,
+				path: `/activitypub/1.0/actors/1/followers/sync`,
+				params: { authority: testAuthority },
 			} );
 
 			// Validate ActivityStreams OrderedCollection structure
@@ -266,7 +268,8 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 			const testAuthority = 'https://example.com';
 
 			const response = await requestUtils.rest( {
-				path: `/activitypub/1.0/actors/1/followers/sync?authority=${ encodeURIComponent( testAuthority ) }`,
+				path: `/activitypub/1.0/actors/1/followers/sync`,
+				params: { authority: testAuthority },
 			} );
 
 			// If we got data back, the content type was acceptable
@@ -288,7 +291,8 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 
 			for ( const authority of authorities ) {
 				const response = await requestUtils.rest( {
-					path: `/activitypub/1.0/actors/1/followers/sync?authority=${ encodeURIComponent( authority ) }`,
+					path: `/activitypub/1.0/actors/1/followers/sync`,
+					params: { authority },
 				} );
 
 				expect( response.type ).toBe( 'OrderedCollection' );
@@ -306,9 +310,8 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 
 			try {
 				await requestUtils.rest( {
-					path: `/activitypub/1.0/actors/99999/followers/sync?authority=${ encodeURIComponent(
-						testAuthority
-					) }`,
+					path: `/activitypub/1.0/actors/99999/followers/sync`,
+					params: { authority: testAuthority },
 				} );
 				// If no error is thrown, fail the test
 				expect( false ).toBe( true );
@@ -331,7 +334,8 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 			for ( const authority of malformedAuthorities ) {
 				try {
 					await requestUtils.rest( {
-						path: `/activitypub/1.0/actors/1/followers/sync?authority=${ encodeURIComponent( authority ) }`,
+						path: `/activitypub/1.0/actors/1/followers/sync`,
+						params: { authority },
 					} );
 					// If no error is thrown, fail the test
 					expect( false ).toBe( true );
@@ -351,11 +355,13 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 
 			// Make two requests to the same endpoint
 			const response1 = await requestUtils.rest( {
-				path: `/activitypub/1.0/actors/1/followers/sync?authority=${ encodeURIComponent( testAuthority ) }`,
+				path: `/activitypub/1.0/actors/1/followers/sync`,
+				params: { authority: testAuthority },
 			} );
 
 			const response2 = await requestUtils.rest( {
-				path: `/activitypub/1.0/actors/1/followers/sync?authority=${ encodeURIComponent( testAuthority ) }`,
+				path: `/activitypub/1.0/actors/1/followers/sync`,
+				params: { authority: testAuthority },
 			} );
 
 			// Results should be consistent
@@ -370,11 +376,13 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 			const authority2 = 'https://pixelfed.social';
 
 			const response1 = await requestUtils.rest( {
-				path: `/activitypub/1.0/actors/1/followers/sync?authority=${ encodeURIComponent( authority1 ) }`,
+				path: `/activitypub/1.0/actors/1/followers/sync`,
+				params: { authority: authority1 },
 			} );
 
 			const response2 = await requestUtils.rest( {
-				path: `/activitypub/1.0/actors/1/followers/sync?authority=${ encodeURIComponent( authority2 ) }`,
+				path: `/activitypub/1.0/actors/1/followers/sync`,
+				params: { authority: authority2 },
 			} );
 
 			// Both should return valid collections (even if empty)
