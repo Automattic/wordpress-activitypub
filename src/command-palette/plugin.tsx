@@ -48,7 +48,7 @@ const activityPubIcon = (
 );
 
 /**
- * Hook to load extra fields as dynamic commands.
+ * Hook to load user extra fields as dynamic commands.
  */
 const useExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 	// Retrieving the extra fields for the "search" term.
@@ -102,11 +102,67 @@ const useExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 };
 
 /**
+ * Hook to load blog extra fields as dynamic commands.
+ */
+const useBlogExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
+	// Retrieving the blog extra fields for the "search" term.
+	const { records, isLoading } = useSelect(
+		( select ) => {
+			const store = select( coreStore ) as any;
+			const query = {
+				search: !! search ? search : undefined,
+				per_page: 10,
+				orderby: search ? 'relevance' : 'date',
+				status: 'any',
+			};
+
+			return {
+				records: store.getEntityRecords( 'postType', 'ap_extrafield_blog', query ),
+				isLoading: ! store.hasFinishedResolution( 'getEntityRecords', [
+					'postType',
+					'ap_extrafield_blog',
+					query,
+				] ),
+			};
+		},
+		[ search ]
+	);
+
+	// Creating the commands.
+	const commands = useMemo( () => {
+		return ( records ?? [] ).slice( 0, 10 ).map( ( record: any ) => {
+			const title = record.title?.rendered || __( '(no title)', 'activitypub' );
+			// Remove all quotes and special characters that could break CSS selectors.
+			const sanitizedTitle = title.replace( /["'`]/g, '' );
+			return {
+				// Use ID in the name to ensure uniqueness even with duplicate titles.
+				name: `activitypub/edit-blog-extra-field/${ record.id }`,
+				label: sprintf(
+					/* translators: %s: Blog extra field title */
+					__( 'ActivityPub: Edit Blog - %s', 'activitypub' ),
+					sanitizedTitle
+				),
+				icon: activityPubIcon,
+				callback: ( { close }: { close: () => void } ) => {
+					document.location = `post.php?post=${ record.id }&action=edit`;
+					close();
+				},
+			};
+		} );
+	}, [ records ] );
+
+	return {
+		commands,
+		isLoading,
+	};
+};
+
+/**
  * Component that registers all ActivityPub commands.
  *
  * Commands are registered based on actor mode and user capabilities:
  *
- * - **Actor mode (actor/actor_blog)**: User-specific commands
+ * - Actor mode (actor/actor_blog): User-specific commands
  *   - View Your Followers
  *   - View Who You Follow (if following enabled)
  *   - View Extra Fields
@@ -114,10 +170,13 @@ const useExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
  *   - Edit Extra Field (dynamic search)
  *   - View Blocked Actors
  *
- * - **Blog mode (blog/actor_blog) with manage_options**: Blog-specific commands
+ * - Blog mode (blog/actor_blog) with manage_options: Blog-specific commands
  *   - View Blog Followers
  *   - View Blog Following (if following enabled)
  *   - View Settings
+ *   - View Blog Extra Fields
+ *   - Add New Blog Extra Field
+ *   - Edit Blog Extra Field (dynamic search)
  *
  * @see https://make.wordpress.org/core/2023/07/17/introducing-the-wordpress-command-palette-api/
  */
@@ -155,7 +214,7 @@ const ActivityPubCommands = (): null => {
 			} );
 		}
 
-		// User Extra Fields commands
+		// User Extra Fields commands.
 		useCommand( {
 			name: 'activitypub/navigate-extra-fields',
 			label: __( 'ActivityPub: View Extra Fields', 'activitypub' ),
@@ -182,7 +241,7 @@ const ActivityPubCommands = (): null => {
 			hook: useExtraFieldsCommandLoader,
 		} );
 
-		// Blocked Actors command (user-specific)
+		// Blocked Actors command (user-specific).
 		useCommand( {
 			name: 'activitypub/navigate-blocked-actors',
 			label: __( 'ActivityPub: View Blocked Actors', 'activitypub' ),
@@ -229,6 +288,33 @@ const ActivityPubCommands = (): null => {
 				document.location = 'options-general.php?page=activitypub&tab=settings';
 				close();
 			},
+		} );
+
+		// Blog Extra Fields commands.
+		useCommand( {
+			name: 'activitypub/navigate-blog-extra-fields',
+			label: __( 'ActivityPub: View Blog Extra Fields', 'activitypub' ),
+			icon: activityPubIcon,
+			callback: ( { close } ) => {
+				document.location = 'edit.php?post_type=ap_extrafield_blog';
+				close();
+			},
+		} );
+
+		useCommand( {
+			name: 'activitypub/add-blog-extra-field',
+			label: __( 'ActivityPub: Add New Blog Extra Field', 'activitypub' ),
+			icon: activityPubIcon,
+			callback: ( { close } ) => {
+				document.location = 'post-new.php?post_type=ap_extrafield_blog';
+				close();
+			},
+		} );
+
+		// Dynamic command loader: Edit existing blog extra fields.
+		useCommandLoader( {
+			name: 'activitypub/blog-extra-fields-search',
+			hook: useBlogExtraFieldsCommandLoader,
 		} );
 	}
 
