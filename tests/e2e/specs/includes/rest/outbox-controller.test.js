@@ -79,7 +79,7 @@ test.describe( 'ActivityPub Outbox REST API', () => {
 				path: '/activitypub/1.0/users/999999/outbox',
 			} );
 			// If we reach here, the test should fail
-			expect( true ).toBe( false );
+			expect.fail();
 		} catch ( error ) {
 			// Should return 400 or 404 for invalid/non-existent user
 			expect( [ 400, 404 ] ).toContain( error.status || error.code );
