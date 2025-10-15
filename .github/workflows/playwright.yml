@@ -52,10 +52,10 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Start WordPress environment
-        run: npm run env-start
-
-      - name: Set rewrite structure
-        run: npx wp-env run tests-cli wp rewrite structure /%year%/%monthnum%/%postname%/
+        run: |
+          npm run env-start
+          npx wp-env run tests-cli wp rewrite structure /%year%/%monthnum%/%postname%/
+          npx wp-env run tests-cli wp rewrite flush
 
       - name: Run Playwright tests
         run: npm run test:e2e
