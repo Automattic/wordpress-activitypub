@@ -84,6 +84,13 @@ class Attachments {
 	 * @return int|\WP_Error The attachment ID or WP_Error on failure.
 	 */
 	private static function save_attachment( $attachment_data, $post_id, $author_id = 0 ) {
+		// Ensure required WordPress functions are loaded.
+		if ( ! \function_exists( 'media_handle_sideload' ) || ! \function_exists( 'download_url' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
+
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
 		if ( $is_local ) {
@@ -132,13 +139,6 @@ class Attachments {
 			if ( 'image' === strtok( $mime_type, '/' ) ) {
 				$post_data['meta_input']['_wp_attachment_image_alt'] = $attachment_data['name'];
 			}
-		}
-
-		// Ensure required WordPress functions are loaded.
-		if ( ! function_exists( 'media_handle_sideload' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/media.php';
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
 		// Sideload the attachment into WordPress.
