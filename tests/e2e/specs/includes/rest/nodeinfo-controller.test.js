@@ -67,10 +67,11 @@ test.describe( 'NodeInfo REST API', () => {
 		);
 
 		if ( nodeinfoLink ) {
-			// Extract REST API path from href (remove /wp-json/ prefix)
+			// Extract REST API path from href (remove /wp-json/ prefix if present)
 			const url = new URL( nodeinfoLink.href );
 			let path = url.pathname + url.search;
-			path = path.replace( '/wp-json/', '' );
+			// Remove /wp-json/ prefix and ensure leading slash
+			path = path.replace( /^\/wp-json\//, '/' );
 
 			const nodeinfo = await requestUtils.rest( {
 				path: path,
@@ -102,7 +103,8 @@ test.describe( 'NodeInfo REST API', () => {
 		if ( nodeinfoLink ) {
 			const url = new URL( nodeinfoLink.href );
 			let path = url.pathname + url.search;
-			path = path.replace( '/wp-json/', '' );
+			// Remove /wp-json/ prefix and ensure leading slash
+			path = path.replace( /^\/wp-json\//, '/' );
 
 			const nodeinfo = await requestUtils.rest( {
 				path: path,
@@ -128,7 +130,8 @@ test.describe( 'NodeInfo REST API', () => {
 		if ( nodeinfoLink ) {
 			const url = new URL( nodeinfoLink.href );
 			let path = url.pathname + url.search;
-			path = path.replace( '/wp-json/', '' );
+			// Remove /wp-json/ prefix and ensure leading slash
+			path = path.replace( /^\/wp-json\//, '/' );
 
 			const nodeinfo = await requestUtils.rest( {
 				path: path,
@@ -157,7 +160,8 @@ test.describe( 'NodeInfo REST API', () => {
 		if ( nodeinfoLink ) {
 			const url = new URL( nodeinfoLink.href );
 			let path = url.pathname + url.search;
-			path = path.replace( '/wp-json/', '' );
+			// Remove /wp-json/ prefix and ensure leading slash
+			path = path.replace( /^\/wp-json\//, '/' );
 
 			const nodeinfo = await requestUtils.rest( {
 				path: path,
