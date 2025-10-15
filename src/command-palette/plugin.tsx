@@ -104,6 +104,21 @@ const useExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 /**
  * Component that registers all ActivityPub commands.
  *
+ * Commands are registered based on actor mode and user capabilities:
+ *
+ * - **Actor mode (actor/actor_blog)**: User-specific commands
+ *   - View Your Followers
+ *   - View Who You Follow (if following enabled)
+ *   - View Extra Fields
+ *   - Add New Extra Field
+ *   - Edit Extra Field (dynamic search)
+ *   - View Blocked Actors
+ *
+ * - **Blog mode (blog/actor_blog) with manage_options**: Blog-specific commands
+ *   - View Blog Followers
+ *   - View Blog Following (if following enabled)
+ *   - View Settings
+ *
  * @see https://make.wordpress.org/core/2023/07/17/introducing-the-wordpress-command-palette-api/
  */
 const ActivityPubCommands = (): null => {
@@ -114,7 +129,7 @@ const ActivityPubCommands = (): null => {
 	};
 	const { actorMode, canManageOptions, followingEnabled } = config;
 
-	// Register follower commands based on actor mode.
+	// User-specific commands (for actor and actor_blog modes).
 	if ( actorMode === 'actor' || actorMode === 'actor_blog' ) {
 		// User Followers command
 		useCommand( {
@@ -139,9 +154,47 @@ const ActivityPubCommands = (): null => {
 				},
 			} );
 		}
+
+		// User Extra Fields commands
+		useCommand( {
+			name: 'activitypub/navigate-extra-fields',
+			label: __( 'ActivityPub: View Extra Fields', 'activitypub' ),
+			icon: activityPubIcon,
+			callback: ( { close } ) => {
+				document.location = 'edit.php?post_type=ap_extrafield';
+				close();
+			},
+		} );
+
+		useCommand( {
+			name: 'activitypub/add-extra-field',
+			label: __( 'ActivityPub: Add New Extra Field', 'activitypub' ),
+			icon: activityPubIcon,
+			callback: ( { close } ) => {
+				document.location = 'post-new.php?post_type=ap_extrafield';
+				close();
+			},
+		} );
+
+		// Dynamic command loader: Edit existing extra fields.
+		useCommandLoader( {
+			name: 'activitypub/extra-fields-search',
+			hook: useExtraFieldsCommandLoader,
+		} );
+
+		// Blocked Actors command (user-specific)
+		useCommand( {
+			name: 'activitypub/navigate-blocked-actors',
+			label: __( 'ActivityPub: View Blocked Actors', 'activitypub' ),
+			icon: activityPubIcon,
+			callback: ( { close } ) => {
+				document.location = 'users.php?page=activitypub-blocked-actors-list';
+				close();
+			},
+		} );
 	}
 
-	// Blog-related commands (require manage_options capability).
+	// Blog-related commands (for blog and actor_blog modes with manage_options capability).
 	if ( canManageOptions && ( actorMode === 'blog' || actorMode === 'actor_blog' ) ) {
 		// Blog Followers command
 		useCommand( {
@@ -166,21 +219,8 @@ const ActivityPubCommands = (): null => {
 				},
 			} );
 		}
-	}
 
-	// Command: Navigate to Blocked Actors list.
-	useCommand( {
-		name: 'activitypub/navigate-blocked-actors',
-		label: __( 'ActivityPub: View Blocked Actors', 'activitypub' ),
-		icon: activityPubIcon,
-		callback: ( { close } ) => {
-			document.location = 'users.php?page=activitypub-blocked-actors-list';
-			close();
-		},
-	} );
-
-	// Command: Navigate to ActivityPub Settings (requires manage_options capability).
-	if ( canManageOptions ) {
+		// Settings command (blog-related, requires manage_options).
 		useCommand( {
 			name: 'activitypub/navigate-settings',
 			label: __( 'ActivityPub: View Settings', 'activitypub' ),
@@ -191,34 +231,6 @@ const ActivityPubCommands = (): null => {
 			},
 		} );
 	}
-
-	// Command: Navigate to Extra Fields.
-	useCommand( {
-		name: 'activitypub/navigate-extra-fields',
-		label: __( 'ActivityPub: View Extra Fields', 'activitypub' ),
-		icon: activityPubIcon,
-		callback: ( { close } ) => {
-			document.location = 'edit.php?post_type=ap_extrafield';
-			close();
-		},
-	} );
-
-	// Command: Add New Extra Field.
-	useCommand( {
-		name: 'activitypub/add-extra-field',
-		label: __( 'ActivityPub: Add New Extra Field', 'activitypub' ),
-		icon: activityPubIcon,
-		callback: ( { close } ) => {
-			document.location = 'post-new.php?post_type=ap_extrafield';
-			close();
-		},
-	} );
-
-	// Dynamic command loader: Edit existing extra fields.
-	useCommandLoader( {
-		name: 'activitypub/extra-fields-search',
-		hook: useExtraFieldsCommandLoader,
-	} );
 
 	return null;
 };
