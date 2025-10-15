@@ -17,7 +17,7 @@ test.describe( 'WebFinger REST API', () => {
 				path: '/activitypub/1.0/webfinger',
 			} );
 			// If we reach here, the test should fail
-			expect( true ).toBe( false );
+			expect.fail();
 		} catch ( error ) {
 			// Should return an error (rest_missing_callback_param or similar)
 			expect( error ).toBeDefined();
