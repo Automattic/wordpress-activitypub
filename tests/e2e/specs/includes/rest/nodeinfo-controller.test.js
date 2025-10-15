@@ -56,11 +56,11 @@ test.describe( 'NodeInfo REST API', () => {
 	} );
 
 	test( 'should fetch nodeinfo document from discovered URL', async ( { requestUtils } ) => {
-		const discoveryData = await requestUtils.rest( {
+		const data = await requestUtils.rest( {
 			path: '/activitypub/1.0/nodeinfo',
 		} );
 
-		const nodeinfoLink = discoveryData.links.find(
+		const nodeinfoLink = data.links.find(
 			( link ) =>
 				link.rel === 'http://nodeinfo.diaspora.software/ns/schema/2.0' ||
 				link.rel === 'http://nodeinfo.diaspora.software/ns/schema/2.1'
@@ -95,11 +95,11 @@ test.describe( 'NodeInfo REST API', () => {
 	} );
 
 	test( 'should include server metadata in nodeinfo', async ( { requestUtils } ) => {
-		const discoveryData = await requestUtils.rest( {
+		const data = await requestUtils.rest( {
 			path: '/activitypub/1.0/nodeinfo',
 		} );
 
-		const nodeinfoLink = discoveryData.links[ 0 ];
+		const nodeinfoLink = data.links[ 0 ];
 		if ( nodeinfoLink ) {
 			const url = new URL( nodeinfoLink.href );
 			let path = url.pathname + url.search;
@@ -122,11 +122,11 @@ test.describe( 'NodeInfo REST API', () => {
 	} );
 
 	test( 'should include usage statistics', async ( { requestUtils } ) => {
-		const discoveryData = await requestUtils.rest( {
+		const data = await requestUtils.rest( {
 			path: '/activitypub/1.0/nodeinfo',
 		} );
 
-		const nodeinfoLink = discoveryData.links[ 0 ];
+		const nodeinfoLink = data.links[ 0 ];
 		if ( nodeinfoLink ) {
 			const url = new URL( nodeinfoLink.href );
 			let path = url.pathname + url.search;
@@ -152,11 +152,11 @@ test.describe( 'NodeInfo REST API', () => {
 	} );
 
 	test( 'should list supported services', async ( { requestUtils } ) => {
-		const discoveryData = await requestUtils.rest( {
+		const data = await requestUtils.rest( {
 			path: '/activitypub/1.0/nodeinfo',
 		} );
 
-		const nodeinfoLink = discoveryData.links[ 0 ];
+		const nodeinfoLink = data.links[ 0 ];
 		if ( nodeinfoLink ) {
 			const url = new URL( nodeinfoLink.href );
 			let path = url.pathname + url.search;
