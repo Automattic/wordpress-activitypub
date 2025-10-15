@@ -98,7 +98,7 @@ test.describe( 'ActivityPub Replies Collection REST API', () => {
 				path: `/activitypub/1.0/users/${ testUserId }/posts/999999/replies`,
 			} );
 			// If we reach here, the test should fail
-			expect( true ).toBe( false );
+			expect.fail();
 		} catch ( error ) {
 			expect( error.status || error.code ).toBe( 404 );
 		}
