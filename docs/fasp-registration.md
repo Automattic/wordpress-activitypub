@@ -58,18 +58,19 @@ Features:
 
 ### Classes
 
-#### `Fasp_Registration_Controller`
-- Handles REST API endpoints
+#### `Fasp_Controller`
+- Handles all FASP REST API endpoints (provider info, registration, capability activation)
 - Processes registration requests
 - Manages capability activation/deactivation
 
-#### `Fasp_Registration`
+#### `Fasp`
 - Manages registration data using WordPress options
 - Provides methods for approval/rejection
 - Handles capability management
+- Adds FASP base URL to nodeinfo metadata
 
-#### `Fasp_Registration_Admin`
-- WordPress admin interface
+#### `Fasp_Admin`
+- WordPress admin interface (in `wp-admin` folder)
 - Registration management UI
 - Action handlers for approve/reject/delete
 
@@ -148,9 +149,9 @@ curl -X DELETE "https://example.com/wp-json/activitypub/1.0/capabilities/trends/
 
 ## Testing
 
-Run FASP registration tests:
+Run FASP tests (including registration):
 ```bash
-./vendor/bin/phpunit tests/phpunit/tests/includes/class-test-fasp-registration.php
+./vendor/bin/phpunit tests/phpunit/tests/includes/class-test-fasp.php
 ```
 
 ## Future Enhancements

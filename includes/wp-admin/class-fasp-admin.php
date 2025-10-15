@@ -1,18 +1,20 @@
 <?php
 /**
- * FASP Registration Admin interface.
+ * FASP Admin interface.
  *
  * @package Activitypub
  */
 
-namespace Activitypub;
+namespace Activitypub\Wp_Admin;
+
+use Activitypub\Fasp;
 
 /**
- * FASP Registration Admin class.
+ * FASP Admin class.
  *
  * Handles the WordPress admin interface for managing FASP registrations.
  */
-class Fasp_Registration_Admin {
+class Fasp_Admin {
 
 	/**
 	 * Initialize admin interface.
@@ -42,8 +44,8 @@ class Fasp_Registration_Admin {
 	 * Render the admin page.
 	 */
 	public static function render_admin_page() {
-		$pending_registrations  = Fasp_Registration::get_pending_registrations();
-		$approved_registrations = Fasp_Registration::get_approved_registrations();
+		$pending_registrations  = Fasp::get_pending_registrations();
+		$approved_registrations = Fasp::get_approved_registrations();
 		$highlighted_id         = isset( $_GET['highlight'] ) ? sanitize_text_field( wp_unslash( $_GET['highlight'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 		?>
@@ -135,7 +137,7 @@ class Fasp_Registration_Admin {
 	 * @param bool   $highlighted  Whether to highlight this card.
 	 */
 	private static function render_registration_card( $registration, $status, $highlighted = false ) {
-		$fingerprint = Fasp_Registration::get_public_key_fingerprint( $registration['fasp_public_key'] );
+		$fingerprint = Fasp::get_public_key_fingerprint( $registration['fasp_public_key'] );
 		$nonce       = wp_create_nonce( 'fasp_registration_' . $registration['fasp_id'] );
 
 		?>
@@ -209,7 +211,7 @@ class Fasp_Registration_Admin {
 			wp_die( esc_html__( 'Invalid nonce.', 'activitypub' ) );
 		}
 
-		$result = Fasp_Registration::approve_registration( $fasp_id, get_current_user_id() );
+		$result = Fasp::approve_registration( $fasp_id, get_current_user_id() );
 
 		if ( $result ) {
 			wp_safe_redirect( admin_url( 'admin.php?page=activitypub-fasp-registrations&approved=1' ) );
@@ -234,7 +236,7 @@ class Fasp_Registration_Admin {
 			wp_die( esc_html__( 'Invalid nonce.', 'activitypub' ) );
 		}
 
-		$result = Fasp_Registration::reject_registration( $fasp_id, get_current_user_id() );
+		$result = Fasp::reject_registration( $fasp_id, get_current_user_id() );
 
 		if ( $result ) {
 			wp_safe_redirect( admin_url( 'admin.php?page=activitypub-fasp-registrations&rejected=1' ) );
@@ -259,7 +261,7 @@ class Fasp_Registration_Admin {
 			wp_die( esc_html__( 'Invalid nonce.', 'activitypub' ) );
 		}
 
-		$result = Fasp_Registration::delete_registration( $fasp_id );
+		$result = Fasp::delete_registration( $fasp_id );
 
 		if ( $result ) {
 			wp_safe_redirect( admin_url( 'admin.php?page=activitypub-fasp-registrations&deleted=1' ) );

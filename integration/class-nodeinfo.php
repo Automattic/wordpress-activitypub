@@ -83,6 +83,7 @@ class Nodeinfo {
 
 		$nodeinfo['metadata']['federation']    = array( 'enabled' => true );
 		$nodeinfo['metadata']['staffAccounts'] = self::get_staff();
+		$nodeinfo['metadata']['faspBaseUrl']   = get_rest_url_by_path( 'fasp' );
 
 		return $nodeinfo;
 	}
