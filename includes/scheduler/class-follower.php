@@ -109,6 +109,8 @@ class Follower {
 		 * For now, just log these for potential manual review.
 		 */
 		foreach ( $to_check as $follower_url ) {
+			Followers::add_follower( $user_id, $follower_url );
+
 			/**
 			 * Action triggered when a follower exists remotely but not locally.
 			 *
