@@ -42,7 +42,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_provider_info' ),
-					'permission_callback' => array( $this, 'authenticate_request' ),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
 				),
 				'schema' => array( $this, 'get_provider_info_schema' ),
 			)
@@ -151,17 +151,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 		$this->sign_response( $response, $content );
 
 		return $response;
-	}
-
-	/**
-	 * Authenticate incoming requests using HTTP Message Signatures.
-	 *
-	 * @param \WP_REST_Request $request The REST request.
-	 * @return bool|\WP_Error True if authenticated, WP_Error otherwise.
-	 */
-	public function authenticate_request( $request ) {
-		// Use the same signature verification as other ActivityPub endpoints.
-		return \Activitypub\Rest\Server::verify_signature( $request );
 	}
 
 	/**
