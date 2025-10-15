@@ -400,19 +400,23 @@ class Following {
 		$pending  = \get_post_meta( $post->ID, self::PENDING_META_KEY, false );
 
 		return array(
-			'followers'   => \array_map(
-				function ( $user_id ) {
-					$actor = Actors::get_by_id( $user_id );
-					return ! \is_wp_error( $actor ) ? $actor->get_id() : null;
-				},
-				$accepted
+			'followers'   => array_filter(
+				\array_map(
+					function ( $user_id ) {
+						$actor = Actors::get_by_id( $user_id );
+						return ! \is_wp_error( $actor ) ? $actor->get_id() : null;
+					},
+					$accepted
+				)
 			),
-			'pending'     => \array_map(
-				function ( $user_id ) {
-					$actor = Actors::get_by_id( $user_id );
-					return ! \is_wp_error( $actor ) ? $actor->get_id() : null;
-				},
-				$pending
+			'pending'     => array_filter(
+				\array_map(
+					function ( $user_id ) {
+						$actor = Actors::get_by_id( $user_id );
+						return ! \is_wp_error( $actor ) ? $actor->get_id() : null;
+					},
+					$pending
+				)
 			),
 			'remote_post' => $post,
 		);
