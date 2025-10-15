@@ -82,12 +82,10 @@ This is implemented in `includes/scheduler/class-follower.php`.
   - Fetches authoritative partial followers from remote server
   - Removes out-of-sync followers
   - Reports mismatches via action hooks
-  - Methods: `reconcile_followers_collection()`
+  - Methods: `reconcile_followers()`
 
 - **`Scheduler`** (`includes/class-scheduler.php`)
   - Registers the follower reconciliation scheduled action
-  - Initializes the Collection_Sync handler
-
 ## Privacy Considerations
 
 FEP-8fcf is designed with privacy in mind:
