@@ -131,6 +131,44 @@ class Http_Message_Signature implements Http_Signature {
 	}
 
 	/**
+	 * Sign a WP_REST_Response with RFC-9421 HTTP Message Signatures.
+	 *
+	 * @param \WP_REST_Response $response    The response to sign.
+	 * @param string            $private_key The private key to sign with.
+	 * @param string            $key_id      The key ID to use in the signature.
+	 * @param string            $label       Optional signature label (default: 'sig').
+	 *
+	 * @return \WP_REST_Response The response with signature headers added.
+	 */
+	public function sign_response( $response, $private_key, $key_id, $label = 'wp' ) {
+		// Build signature components for response.
+		$components  = array(
+			'"@status"'        => (string) $response->get_status(),
+			'"content-digest"' => $response->get_headers()['Content-Digest'] ?? '',
+		);
+		$identifiers = \array_keys( $components );
+
+		$params = array(
+			'created' => \time(),
+			'keyid'   => $key_id,
+			'alg'     => 'rsa-v1_5-sha256',
+		);
+
+		// Build the signature base string as per RFC-9421.
+		$signature_base = $this->get_signature_base_string( $components, $params );
+
+		$signature = null;
+		\openssl_sign( $signature_base, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
+		$signature = \base64_encode( $signature );
+
+		// Add signature headers.
+		$response->header( 'Signature-Input', $label . '=(' . \implode( ' ', $identifiers ) . ')' . $this->get_params_string( $params ) );
+		$response->header( 'Signature', $label . '=:' . $signature . ':' );
+
+		return $response;
+	}
+
+	/**
 	 * Verify the HTTP Signature against a request.
 	 *
 	 * @param array       $headers The HTTP headers.
@@ -358,7 +396,7 @@ class Http_Message_Signature implements Http_Signature {
 	 *
 	 * @return string Base string to compare signature with.
 	 */
-	private function get_signature_base_string( $components, $params ) {
+	public function get_signature_base_string( $components, $params ) {
 		$signature_base = '';
 
 		foreach ( $components as $component => $value ) {
@@ -378,7 +416,7 @@ class Http_Message_Signature implements Http_Signature {
 	 *
 	 * @return string Signature params.
 	 */
-	private function get_params_string( $params ) {
+	public function get_params_string( $params ) {
 		$signature_params = '';
 
 		foreach ( $params as $key => $value ) {
