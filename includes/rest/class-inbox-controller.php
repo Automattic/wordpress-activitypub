@@ -24,8 +24,6 @@ use function Activitypub\user_can_activitypub;
  * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox_Controller extends \WP_REST_Controller {
-	use Collection;
-
 	/**
 	 * The namespace of this controller's route.
 	 *
