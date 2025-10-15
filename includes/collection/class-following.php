@@ -377,6 +377,48 @@ class Following {
 	}
 
 	/**
+	 * Retrieve a snapshot of local followers information for a remote actor.
+	 *
+	 * @param string $actor_url The remote actor URL.
+	 *
+	 * @return array|\WP_Error {
+	 *     Snapshot data or WP_Error when the remote actor is unknown.
+	 *
+	 *     @type array    $followers   Map of local actor URLs to user IDs for accepted follows.
+	 *     @type array    $pending     Map of local actor URLs to user IDs for pending follows.
+	 *     @type \WP_Post $remote_post Remote actor post object.
+	 * }
+	 */
+	public static function get_local_followers_snapshot( $actor_url ) {
+		$post = Remote_Actors::fetch_by_uri( $actor_url );
+
+		if ( \is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		$accepted = \get_post_meta( $post->ID, self::FOLLOWING_META_KEY, false );
+		$pending  = \get_post_meta( $post->ID, self::PENDING_META_KEY, false );
+
+		return array(
+			'followers'   => \array_map(
+				function ( $user_id ) {
+					$actor = Actors::get_by_id( $user_id );
+					return ! \is_wp_error( $actor ) ? $actor->get_id() : null;
+				},
+				$accepted
+			),
+			'pending'     => \array_map(
+				function ( $user_id ) {
+					$actor = Actors::get_by_id( $user_id );
+					return ! \is_wp_error( $actor ) ? $actor->get_id() : null;
+				},
+				$pending
+			),
+			'remote_post' => $post,
+		);
+	}
+
+	/**
 	 * Get all followings of a given user.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.

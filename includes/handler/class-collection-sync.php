@@ -7,7 +7,8 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 
 /**
@@ -123,12 +124,21 @@ class Collection_Sync {
 			return;
 		}
 
-		// Compute our local digest for this actor's followers from our instance.
-		$local_digest = Followers::compute_partial_digest( $user_id, $our_authority );
+		$local_actor_urls = self::get_local_actor_urls_for_remote( $actor_url, $our_authority );
 
-		// Compare digests.
-		if ( $local_digest === $params['digest'] ) {
-			// Digests match, no synchronization needed.
+		if ( \is_wp_error( $local_actor_urls ) ) {
+			return;
+		}
+
+		$remote_digest = strtolower( trim( $params['digest'] ) );
+
+		if ( 64 !== strlen( $remote_digest ) || preg_match( '/[^0-9a-f]/', $remote_digest ) ) {
+			return;
+		}
+
+		$local_digest = self::compute_digest_from_actor_urls( $local_actor_urls );
+
+		if ( \hash_equals( $local_digest, $remote_digest ) ) {
 			return;
 		}
 
@@ -159,12 +169,18 @@ class Collection_Sync {
 			return false;
 		}
 
-		// Parse the actor URL to get the expected followers collection.
-		$expected_collection = $actor_url . '/followers';
+		$expected_collection = self::get_followers_collection_id( $actor_url );
 
-		// Check if collectionId matches the actor's followers collection.
-		if ( $params['collectionId'] !== $expected_collection ) {
-			return false;
+		if ( $expected_collection ) {
+			if ( self::normalize_collection_url( $params['collectionId'] ) !== self::normalize_collection_url( $expected_collection ) ) {
+				return false;
+			}
+		} else {
+			$default_collection = rtrim( $actor_url, '/' ) . '/followers';
+
+			if ( self::normalize_collection_url( $params['collectionId'] ) !== self::normalize_collection_url( $default_collection ) ) {
+				return false;
+			}
 		}
 
 		// Check if url has the same authority as collectionId (prevent SSRF).
@@ -188,5 +204,108 @@ class Collection_Sync {
 		}
 
 		return $collection_authority === $url_authority;
+	}
+
+	/**
+	 * Retrieve local actor URLs that follow the remote actor and share the given authority.
+	 *
+	 * @param string $actor_url The remote actor URL.
+	 * @param string $authority The authority to filter by.
+	 *
+	 * @return array|\WP_Error Array of actor URLs or WP_Error on failure.
+	 */
+	protected static function get_local_actor_urls_for_remote( $actor_url, $authority ) {
+		$snapshot = Following::get_local_followers_snapshot( $actor_url );
+
+		if ( \is_wp_error( $snapshot ) ) {
+			return $snapshot;
+		}
+
+		$actor_urls = array_keys( $snapshot['followers'] );
+		$actor_urls = self::filter_actor_urls_by_authority( $actor_urls, $authority );
+		sort( $actor_urls );
+
+		return $actor_urls;
+	}
+
+	/**
+	 * Filter actor URLs by authority.
+	 *
+	 * @param array  $actor_urls Array of actor URLs.
+	 * @param string $authority  Authority to match.
+	 *
+	 * @return array Filtered list of actor URLs.
+	 */
+	protected static function filter_actor_urls_by_authority( array $actor_urls, $authority ) {
+		$matched = array();
+
+		foreach ( $actor_urls as $actor_uri ) {
+			$actor_authority = Http::get_authority( $actor_uri );
+
+			if ( $actor_authority && $actor_authority === $authority ) {
+				$matched[] = $actor_uri;
+			}
+		}
+
+		return $matched;
+	}
+
+	/**
+	 * Compute the partial collection digest from a list of actor URLs.
+	 *
+	 * @param array $actor_urls Actor URLs to include in the digest.
+	 *
+	 * @return string The computed digest.
+	 */
+	protected static function compute_digest_from_actor_urls( array $actor_urls ) {
+		$digest = str_repeat( '0', 64 );
+
+		foreach ( $actor_urls as $actor_uri ) {
+			$digest = Http::xor_hex_strings( $digest, hash( 'sha256', $actor_uri ) );
+		}
+
+		return $digest;
+	}
+
+	/**
+	 * Retrieve the followers collection ID for the remote actor if known.
+	 *
+	 * @param string $actor_url The remote actor URL.
+	 *
+	 * @return string|null The followers collection ID or null if unavailable.
+	 */
+	protected static function get_followers_collection_id( $actor_url ) {
+		$post = Remote_Actors::get_by_uri( $actor_url );
+
+		if ( \is_wp_error( $post ) ) {
+			$post = Remote_Actors::fetch_by_uri( $actor_url );
+
+			if ( \is_wp_error( $post ) ) {
+				return null;
+			}
+		}
+
+		$actor = Remote_Actors::get_actor( $post );
+
+		if ( \is_wp_error( $actor ) ) {
+			return null;
+		}
+
+		return $actor->get_followers();
+	}
+
+	/**
+	 * Normalize a collection URL for comparison.
+	 *
+	 * @param string $url The URL to normalize.
+	 *
+	 * @return string Normalized URL without trailing slash.
+	 */
+	protected static function normalize_collection_url( $url ) {
+		if ( ! \is_string( $url ) ) {
+			return '';
+		}
+
+		return rtrim( $url, '/' );
 	}
 }

@@ -16,7 +16,7 @@ When sending Create activities to followers, the plugin automatically adds a `Co
 - `url`: URL to fetch the partial followers collection for that specific instance (e.g., `/actors/{id}/followers/sync?authority=https://example.com`)
 - `digest`: A cryptographic digest (XOR'd SHA256 hashes) of followers from the receiving instance
 
-The header is added during HTTP delivery in `Http::post()` when sending to inboxes.
+The header is added during HTTP delivery in `Http::post()` when sending to inboxes and is automatically covered by the HTTP signature to meet the FEP requirement for authenticity.
 
 This is implemented in `includes/class-http.php`.
 
@@ -42,13 +42,14 @@ This is implemented in `includes/handler/class-collection-sync.php`.
 When a digest mismatch is detected, the plugin triggers a scheduled reconciliation job that:
 
 1. Fetches the authoritative partial followers collection from the remote server
-2. Compares it with the local follower list
-3. Removes followers that shouldn't exist locally
-4. Reports followers that exist remotely but not locally (for review)
+2. Compares it with the local *following* relationships for that remote actor
+3. Removes local follow records that the remote server no longer recognises
+4. Promotes pending follow requests that the remote server already lists as accepted
+5. Issues Undo Follow activities for any unexpected entries reported by the remote server
 
 The reconciliation is handled asynchronously via WordPress's cron system.
 
-This is implemented in `includes/scheduler/class-follower.php`.
+This is implemented in `includes/scheduler/class-collection-sync.php`.
 
 ## Components
 
@@ -67,9 +68,14 @@ This is implemented in `includes/scheduler/class-follower.php`.
   - Methods: `handle_collection_synchronization()`, `detect_collection_type()`, `process_followers_collection_sync()`, `validate_collection_sync_header_params()`
 
 - **`Followers`** (`includes/collection/class-followers.php`)
-  - Computes partial follower digests using XOR'd SHA256 hashes
-  - Filters followers by instance authority
+  - Computes partial follower digests for outgoing deliveries using XOR'd SHA256 hashes
+  - Filters followers by instance authority when building partial collections
   - Methods: `compute_partial_digest()`, `get_partial_followers()`
+
+- **`Following`** (`includes/collection/class-following.php`)
+  - Exposes local following state for reconciliation and digest calculations
+  - Maps local user IDs to ActivityPub actor URLs for comparison
+  - Methods: `get_local_followers_snapshot()`
 
 - **`Followers_Controller`** (`includes/rest/class-followers-controller.php`)
   - Adds `/actors/{id}/followers/sync` REST endpoint for partial collections
@@ -77,11 +83,11 @@ This is implemented in `includes/scheduler/class-follower.php`.
   - Returns ActivityStreams OrderedCollection with only matching followers
   - Methods: `get_partial_followers()`
 
-- **`Follower`** (`includes/scheduler/class-follower.php`)
+- **`Collection_Sync`** (`includes/scheduler/class-collection-sync.php`)
   - Handles async reconciliation when digest mismatches occur
-  - Fetches authoritative partial followers from remote server
-  - Removes out-of-sync followers
-  - Reports mismatches via action hooks
+  - Fetches authoritative partial followers from the remote server
+  - Removes stale local follow relationships, promotes pending accepts, and cleans up unexpected entries
+  - Reports changes via action hooks
   - Methods: `reconcile_followers()`
 
 - **`Scheduler`** (`includes/class-scheduler.php`)
@@ -102,14 +108,17 @@ The implementation provides several action hooks for monitoring and extending:
 // Triggered when digest mismatch is detected
 do_action( 'activitypub_followers_sync_mismatch', $user_id, $actor_url, $params );
 
-// Triggered when a follower is removed during sync
-do_action( 'activitypub_followers_sync_follower_removed', $user_id, $follower_url, $actor_url );
+// Triggered when a local follow record is removed during sync
+do_action( 'activitypub_followers_sync_follower_removed', $local_user_id, $local_actor_uri, $actor_url );
 
-// Triggered when follower exists remotely but not locally
-do_action( 'activitypub_followers_sync_follower_mismatch', $user_id, $follower_url, $actor_url );
+// Triggered when a pending follow is auto-accepted during sync
+do_action( 'activitypub_followers_sync_follow_request_accepted', $local_user_id, $local_actor_uri, $actor_url );
+
+// Triggered when an unexpected remote entry requires an Undo Follow
+do_action( 'activitypub_followers_sync_follower_mismatch', $local_user_id, $local_actor_uri, $actor_url );
 
 // Triggered after reconciliation completes
-do_action( 'activitypub_followers_sync_reconciled', $user_id, $actor_url, $to_remove, $to_check );
+do_action( 'activitypub_followers_sync_reconciled', $user_id, $actor_url, $removed_actor_uris, $undo_actor_uris );
 ```
 
 ## REST API Endpoints

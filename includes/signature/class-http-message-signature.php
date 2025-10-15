@@ -144,6 +144,28 @@ class Http_Message_Signature implements Http_Signature {
 		}
 
 		$errors = new \WP_Error();
+
+		$collection_header_present = isset( $headers['collection-synchronization'] ) || isset( $headers['collection_synchronization'] );
+		if ( $collection_header_present ) {
+			$covered = false;
+
+			foreach ( $parsed as $data ) {
+				foreach ( $data['components'] as $component ) {
+					$normalized = strtolower( trim( $component, '"' ) );
+
+					if ( 'collection-synchronization' === $normalized ) {
+						$covered = true;
+						break 2;
+					}
+				}
+			}
+
+			if ( ! $covered ) {
+				$errors->add( 'activitypub_signature', 'Collection-Synchronization header must be signed.' );
+			}
+		}
+
+		$errors = new \WP_Error();
 		foreach ( $parsed as $data ) {
 			$result = $this->verify_signature_label( $data, $headers, $body );
 			if ( true === $result ) {

@@ -103,6 +103,16 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'activitypub_signature', 'No Key ID present.' );
 		}
 
+		$collection_header_present = isset( $headers['collection-synchronization'] ) || isset( $headers['collection_synchronization'] );
+
+		if ( $collection_header_present ) {
+			$lower_headers = \array_map( 'strtolower', $parsed['headers'] );
+
+			if ( ! in_array( 'collection-synchronization', $lower_headers, true ) ) {
+				return new \WP_Error( 'activitypub_signature', 'Collection-Synchronization header must be signed.' );
+			}
+		}
+
 		$public_key = Remote_Actors::get_public_key( $parsed['keyId'] );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
