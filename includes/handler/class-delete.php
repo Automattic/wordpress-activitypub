@@ -26,6 +26,7 @@ class Delete {
 		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
 		\add_action( 'activitypub_delete_actor_interactions', array( self::class, 'delete_interactions' ) );
+		\add_action( 'activitypub_delete_actor_posts', array( self::class, 'delete_posts' ) );
 
 		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'post_add_to_outbox' ), 10, 2 );
@@ -106,7 +107,7 @@ class Delete {
 		if ( is_activity_reply( $activity ) ) {
 			$result = self::maybe_delete_interaction( $activity );
 		} else {
-			$result = self::maybe_delete_posts( $activity );
+			$result = self::maybe_delete_post( $activity );
 		}
 
 		$success = ( $result && ! \is_wp_error( $result ) );
@@ -146,24 +147,6 @@ class Delete {
 	}
 
 	/**
-	 * Delete a post from the Posts collection.
-	 *
-	 * @param array $activity The delete activity.
-	 *
-	 * @return bool|\WP_Error True on success, false or WP_Error on failure.
-	 */
-	public static function maybe_delete_posts( $activity ) {
-		$id = object_to_uri( $activity['object'] );
-
-		// Check if the object exists and is a tombstone.
-		if ( Tombstone::exists( $id ) ) {
-			return Posts::delete_by_guid( $id );
-		}
-
-		return false;
-	}
-
-	/**
 	 * Delete a Follower if Actor-URL is a Tombstone.
 	 *
 	 * @param array $activity The delete activity.
@@ -177,6 +160,7 @@ class Delete {
 		if ( ! is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
 			$state = Remote_Actors::delete( $follower->ID );
 			self::maybe_delete_interactions( $activity );
+			self::maybe_delete_posts( $activity );
 		}
 
 		return $state ?? false;
@@ -195,6 +179,28 @@ class Delete {
 			\wp_schedule_single_event(
 				\time(),
 				'activitypub_delete_actor_interactions',
+				array( $activity['actor'] )
+			);
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Delete Reactions if Actor-URL is a Tombstone.
+	 *
+	 * @param array $activity The delete activity.
+	 *
+	 * @return bool True on success, false otherwise.
+	 */
+	public static function maybe_delete_posts( $activity ) {
+		// Verify that Actor is deleted.
+		if ( Tombstone::exists( $activity['actor'] ) ) {
+			\wp_schedule_single_event(
+				\time(),
+				'activitypub_delete_actor_posts',
 				array( $activity['actor'] )
 			);
 
@@ -226,6 +232,27 @@ class Delete {
 	}
 
 	/**
+	 * Delete comments from an Actor.
+	 *
+	 * @param string $actor The URL of the actor whose comments to delete.
+	 *
+	 * @return bool True on success, false otherwise.
+	 */
+	public static function delete_posts( $actor ) {
+		$posts = Posts::get_by_remote_actor( $actor );
+
+		foreach ( $posts as $post ) {
+			Posts::delete( $post->ID );
+		}
+
+		if ( $posts ) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/**
 	 * Delete a Reaction if URL is a Tombstone.
 	 *
 	 * @param array $activity The delete activity.
@@ -247,6 +274,24 @@ class Delete {
 			}
 
 			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Delete a post from the Posts collection.
+	 *
+	 * @param array $activity The delete activity.
+	 *
+	 * @return bool|\WP_Error True on success, false or WP_Error on failure.
+	 */
+	public static function maybe_delete_post( $activity ) {
+		$id = object_to_uri( $activity['object'] );
+
+		// Check if the object exists and is a tombstone.
+		if ( Tombstone::exists( $id ) ) {
+			return Posts::delete_by_guid( $id );
 		}
 
 		return false;

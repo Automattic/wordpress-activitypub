@@ -191,4 +191,31 @@ class Posts {
 
 		\wp_set_post_terms( $post_id, $tags, 'ap_tag' );
 	}
+
+	/**
+	 * Get posts by remote actor.
+	 *
+	 * @param string $actor The remote actor URI.
+	 *
+	 * @return array Array of WP_Post objects.
+	 */
+	public static function get_by_remote_actor( $actor ) {
+		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
+		if ( \is_wp_error( $remote_actor ) ) {
+			return array();
+		}
+
+		$query = new \WP_Query(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'posts_per_page' => -1,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'       => '_activitypub_remote_actor_id',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_value'     => $remote_actor->ID,
+			)
+		);
+
+		return $query->posts;
+	}
 }
