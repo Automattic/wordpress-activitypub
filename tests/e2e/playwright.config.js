@@ -17,7 +17,7 @@ const config = defineConfig( {
 	globalSetup: require.resolve( './config/global-setup.js' ),
 	webServer: {
 		...baseConfig.webServer,
-		command: 'npm run env-start',
+		command: 'npm run env-start && npx wp-env run tests-cli wp rewrite structure "/%year%/%monthnum%/%postname%/"',
 	},
 } );
 
