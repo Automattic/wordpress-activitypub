@@ -396,7 +396,7 @@ class Http_Message_Signature implements Http_Signature {
 	 *
 	 * @return string Base string to compare signature with.
 	 */
-	public function get_signature_base_string( $components, $params ) {
+	private function get_signature_base_string( $components, $params ) {
 		$signature_base = '';
 
 		foreach ( $components as $component => $value ) {
@@ -416,7 +416,7 @@ class Http_Message_Signature implements Http_Signature {
 	 *
 	 * @return string Signature params.
 	 */
-	public function get_params_string( $params ) {
+	private function get_params_string( $params ) {
 		$signature_params = '';
 
 		foreach ( $params as $key => $value ) {
