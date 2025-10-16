@@ -389,7 +389,7 @@ class Following {
 	 *     @type \WP_Post $remote_post Remote actor post object.
 	 * }
 	 */
-	public static function get_local_followers_snapshot( $actor_url ) {
+	public static function get_local_followers( $actor_url ) {
 		$post = Remote_Actors::fetch_by_uri( $actor_url );
 
 		if ( \is_wp_error( $post ) ) {
@@ -400,7 +400,7 @@ class Following {
 		$pending  = \get_post_meta( $post->ID, self::PENDING_META_KEY, false );
 
 		return array(
-			'followers'   => array_filter(
+			'accepted'    => array_filter(
 				\array_map(
 					function ( $user_id ) {
 						$actor = Actors::get_by_id( $user_id );

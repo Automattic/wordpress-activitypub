@@ -12,6 +12,7 @@ use Activitypub\Tombstone;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_url_authority;
 
 /**
  * ActivityPub Followers Collection.
@@ -499,7 +500,7 @@ class Followers {
 	 * @return string The hex-encoded digest, or empty string if no followers.
 	 */
 	public static function compute_partial_digest( $user_id, $authority ) {
-		$followers = self::get_partial_followers( $user_id, $authority );
+		$followers = self::get_by_authority( $user_id, $authority );
 
 		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
 		$digest = str_repeat( '0', 64 );
@@ -526,53 +527,20 @@ class Followers {
 	 *
 	 * @return array Array of follower URLs.
 	 */
-	public static function get_partial_followers( $user_id, $authority ) {
-		// Get all followers.
+	public static function get_by_authority( $user_id, $authority ) {
 		$followers = self::get_followers( $user_id );
 
-		if ( empty( $followers ) ) {
-			return array();
-		}
-
-		// Filter by authority.
-		$partial_followers = array();
-
-		foreach ( $followers as $follower ) {
-			$follower_url = is_string( $follower ) ? $follower : $follower->guid;
-
-			if ( empty( $follower_url ) ) {
-				continue;
-			}
-
-			// Parse the URL and check if authority matches.
-			$parsed = wp_parse_url( $follower_url );
-
-			if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
-				continue;
-			}
-
-			$follower_authority = $parsed['scheme'] . '://' . $parsed['host'];
-
-			// Add port if it's not the default for the scheme.
-			if ( ! empty( $parsed['port'] ) ) {
-				$default_ports = array(
-					'http'  => 80,
-					'https' => 443,
-				);
-				if ( ! isset( $default_ports[ $parsed['scheme'] ] ) || $default_ports[ $parsed['scheme'] ] !== $parsed['port'] ) {
-					$follower_authority .= ':' . $parsed['port'];
+		$authority_followers = array_map(
+			function ( $post ) use ( $authority ) {
+				if ( get_url_authority( $post->guid ) === $authority ) {
+					return $post->guid;
 				}
-			}
+				return null;
+			},
+			$followers
+		);
 
-			if ( $follower_authority === $authority ) {
-				$partial_followers[] = $follower_url;
-			}
-		}
-
-		// Sort for consistency.
-		sort( $partial_followers );
-
-		return $partial_followers;
+		return array_filter( $authority_followers );
 	}
 
 	/**
@@ -584,7 +552,7 @@ class Followers {
 	 * @return string|false The header value, or false if cannot generate.
 	 */
 	public static function generate_sync_header( $user_id, $authority ) {
-		$followers = self::get_partial_followers( $user_id, $authority );
+		$followers = self::get_by_authority( $user_id, $authority );
 		// Compute the digest for this specific authority.
 		$digest = Signature::compute_collection_digest( $followers );
 
