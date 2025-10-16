@@ -20,6 +20,11 @@ use function Activitypub\add_to_outbox;
  * @link https://www.w3.org/TR/activitypub/#outbox
  */
 class Outbox {
+	/**
+	 * The post type for the objects.
+	 *
+	 * @var string
+	 */
 	const POST_TYPE = 'ap_outbox';
 
 	/**

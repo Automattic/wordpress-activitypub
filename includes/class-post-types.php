@@ -12,6 +12,7 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
 
 /**
@@ -25,6 +26,7 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_remote_actors_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_inbox_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_outbox_post_type' ), 11 );
+		\add_action( 'init', array( self::class, 'register_post_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_extra_fields_post_types' ), 11 );
 		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
 
@@ -341,6 +343,65 @@ class Post_Types {
 
 					return $value;
 				},
+			)
+		);
+	}
+
+	/**
+	 * Register the Object post type.
+	 */
+	public static function register_post_post_type() {
+		\register_post_type(
+			Posts::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'Posts', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'Post', 'post_type single name', 'activitypub' ),
+				),
+				'capabilities'        => array(
+					'create_posts' => false,
+				),
+				'map_meta_cap'        => true,
+				'public'              => false,
+				'show_in_rest'        => true,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'supports'            => array( 'title', 'editor', 'author', 'custom-fields', 'excerpt', 'comments' ),
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+				'taxonomies'          => array( 'ap_tag', 'ap_object_type' ),
+			)
+		);
+
+		\register_taxonomy(
+			'ap_tag',
+			array( Posts::POST_TYPE ),
+			array(
+				'public'       => false,
+				'query_var'    => true,
+				'show_in_rest' => true,
+			)
+		);
+
+		\register_taxonomy(
+			'ap_object_type',
+			array( Posts::POST_TYPE ),
+			array(
+				'public'       => false,
+				'query_var'    => true,
+				'show_in_rest' => true,
+			)
+		);
+
+		\register_post_meta(
+			Posts::POST_TYPE,
+			'_activitypub_remote_actor_id',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'The local ID of the remote actor that created the object.',
+				'sanitize_callback' => 'absint',
 			)
 		);
 	}
