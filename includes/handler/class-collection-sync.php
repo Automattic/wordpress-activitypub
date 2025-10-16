@@ -105,9 +105,21 @@ class Collection_Sync {
 	 * @return array Modified HTTP request arguments.
 	 */
 	public static function maybe_add_headers( $args, $url ) {
-		// FEP-8fcf: Add Collection-Synchronization header for Create activities.
-		$activity = \json_decode( $args['body'] ?? '' );
-		if ( ! $activity || ! isset( $activity->type ) || 'Create' !== $activity->type ) {
+		if ( empty( $args['body'] ) ) {
+			return $args;
+		}
+
+		if ( ! is_array( $args['body'] ) ) {
+			$body = \json_decode( $args['body'], true );
+			if ( null === $body ) {
+				return $args;
+			}
+			$args['body'] = $body;
+		} else {
+			$body = $args['body'];
+		}
+
+		if ( ! isset( $body['type'] ) || 'Create' !== $body['type'] ) {
 			return $args;
 		}
 
