@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 
 /**
  * ActivityPub HTTP Class
@@ -59,11 +60,9 @@ class Http {
 		$activity = \json_decode( $body );
 		if ( $activity && isset( $activity->type ) && 'Create' === $activity->type ) {
 			$inbox_authority = self::get_authority( $url );
-			if ( $inbox_authority ) {
-				$sync_header = Collection\Followers::generate_sync_header( $user_id, $inbox_authority );
-				if ( $sync_header ) {
-					$args['headers']['Collection-Synchronization'] = $sync_header;
-				}
+			$sync_header     = Followers::generate_sync_header( $user_id, $inbox_authority );
+			if ( $sync_header ) {
+				$args['headers']['Collection-Synchronization'] = $sync_header;
 			}
 		}
 
