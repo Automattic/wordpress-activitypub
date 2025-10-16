@@ -10,8 +10,9 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
-use Activitypub\Http;
 use Activitypub\Signature;
+
+use function Activitypub\get_url_authority;
 
 /**
  * Collection Sync Handler.
@@ -122,7 +123,7 @@ class Collection_Sync {
 			return $args;
 		}
 
-		$inbox_authority = Http::get_authority( $url );
+		$inbox_authority = get_url_authority( $url );
 		$sync_header     = Followers::generate_sync_header( $args['user_id'], $inbox_authority );
 		if ( $sync_header ) {
 			$args['headers']['Collection-Synchronization'] = $sync_header;
@@ -163,12 +164,12 @@ class Collection_Sync {
 	 */
 	protected static function process_followers_collection_sync( $params, $user_id, $actor_url ) {
 		// Validate the header parameters.
-		if ( ! self::validate_collection_sync_header_params( $params, $actor_url ) ) {
+		if ( ! self::validate_header_params( $params, $actor_url ) ) {
 			return;
 		}
 
 		// Get our local authority.
-		$our_authority = Http::get_authority( \home_url() );
+		$our_authority = get_url_authority( \home_url() );
 
 		if ( ! $our_authority ) {
 			return;
@@ -214,7 +215,7 @@ class Collection_Sync {
 	 *
 	 * @return bool True if valid, false otherwise.
 	 */
-	public static function validate_collection_sync_header_params( $params, $actor_url ) {
+	public static function validate_header_params( $params, $actor_url ) {
 		if ( empty( $params['collectionId'] ) || empty( $params['url'] ) ) {
 			return false;
 		}
@@ -233,25 +234,9 @@ class Collection_Sync {
 			}
 		}
 
-		// Check if url has the same authority as collectionId (prevent SSRF).
-		$collection_parsed = wp_parse_url( $params['collectionId'] );
-		$url_parsed        = wp_parse_url( $params['url'] );
-
-		if ( ! $collection_parsed || ! $url_parsed ) {
-			return false;
-		}
-
 		// Build authorities for comparison.
-		$collection_authority = $collection_parsed['scheme'] . '://' . $collection_parsed['host'];
-		$url_authority        = $url_parsed['scheme'] . '://' . $url_parsed['host'];
-
-		if ( ! empty( $collection_parsed['port'] ) ) {
-			$collection_authority .= ':' . $collection_parsed['port'];
-		}
-
-		if ( ! empty( $url_parsed['port'] ) ) {
-			$url_authority .= ':' . $url_parsed['port'];
-		}
+		$collection_authority = get_url_authority( $params['collectionId'] );
+		$url_authority        = get_url_authority( $params['url'] );
 
 		return $collection_authority === $url_authority;
 	}
@@ -290,7 +275,7 @@ class Collection_Sync {
 		$matched = array();
 
 		foreach ( $actor_urls as $actor_uri ) {
-			$actor_authority = Http::get_authority( $actor_uri );
+			$actor_authority = get_url_authority( $actor_uri );
 
 			if ( $actor_authority && $actor_authority === $authority ) {
 				$matched[] = $actor_uri;

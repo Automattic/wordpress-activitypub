@@ -1790,3 +1790,33 @@ function extract_name_from_uri( $uri ) {
 
 	return $name;
 }
+
+/**
+ * Get the authority (scheme + host + port) from a URL.
+ *
+ * @param string $url The URL to parse.
+ *
+ * @return string|false The authority, or false on failure.
+ */
+function get_url_authority( $url ) {
+	$parsed = wp_parse_url( $url );
+
+	if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+		return false;
+	}
+
+	$authority = $parsed['scheme'] . '://' . $parsed['host'];
+
+	if ( ! empty( $parsed['port'] ) ) {
+		$default_ports = array(
+			'http'  => 80,
+			'https' => 443,
+		);
+
+		if ( ! isset( $default_ports[ $parsed['scheme'] ] ) || $default_ports[ $parsed['scheme'] ] !== $parsed['port'] ) {
+			$authority .= ':' . $parsed['port'];
+		}
+	}
+
+	return $authority;
+}

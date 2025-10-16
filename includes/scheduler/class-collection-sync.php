@@ -14,6 +14,8 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Http;
 
+use function Activitypub\get_url_authority;
+
 /**
  * Collection_Sync class.
  */
@@ -71,7 +73,7 @@ class Collection_Sync {
 		$remote_followers = $data['orderedItems'];
 
 		// Get our authority.
-		$our_authority = Http::get_authority( \home_url() );
+		$our_authority = get_url_authority( \home_url() );
 
 		if ( ! $our_authority ) {
 			return;
@@ -170,7 +172,7 @@ class Collection_Sync {
 				continue;
 			}
 
-			$actor_authority = Http::get_authority( $actor_uri );
+			$actor_authority = get_url_authority( $actor_uri );
 
 			if ( $actor_authority && $actor_authority === $authority ) {
 				$matched[] = $actor_uri;
@@ -192,7 +194,7 @@ class Collection_Sync {
 		$filtered = array();
 
 		foreach ( $map as $actor_uri => $user_id ) {
-			$actor_authority = Http::get_authority( $actor_uri );
+			$actor_authority = get_url_authority( $actor_uri );
 
 			if ( $actor_authority && $actor_authority === $authority ) {
 				$filtered[ $actor_uri ] = $user_id;
