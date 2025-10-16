@@ -512,15 +512,15 @@ class Signature {
 		$result = '';
 
 		// Ensure both strings are the same length (should be 64 chars for SHA256).
-		$length = max( strlen( $hex1 ), strlen( $hex2 ) );
-		$hex1   = str_pad( $hex1, $length, '0', STR_PAD_LEFT );
-		$hex2   = str_pad( $hex2, $length, '0', STR_PAD_LEFT );
+		$length = \max( \strlen( $hex1 ), \strlen( $hex2 ) );
+		$hex1   = \str_pad( $hex1, $length, '0', STR_PAD_LEFT );
+		$hex2   = \str_pad( $hex2, $length, '0', STR_PAD_LEFT );
 
 		// XOR each pair of hex digits.
 		for ( $i = 0; $i < $length; $i += 2 ) {
-			$byte1   = hexdec( substr( $hex1, $i, 2 ) );
-			$byte2   = hexdec( substr( $hex2, $i, 2 ) );
-			$result .= str_pad( dechex( $byte1 ^ $byte2 ), 2, '0', STR_PAD_LEFT );
+			$byte1   = \hexdec( \substr( $hex1, $i, 2 ) );
+			$byte2   = \hexdec( \substr( $hex2, $i, 2 ) );
+			$result .= \str_pad( \dechex( $byte1 ^ $byte2 ), 2, '0', STR_PAD_LEFT );
 		}
 
 		return $result;
@@ -545,7 +545,7 @@ class Signature {
 		// Parse the signature-style format: key="value", key="value".
 		$params = array();
 
-		if ( preg_match_all( '/(\w+)="([^"]*)"/', $header, $matches, PREG_SET_ORDER ) ) {
+		if ( \preg_match_all( '/(\w+)="([^"]*)"/', $header, $matches, PREG_SET_ORDER ) ) {
 			foreach ( $matches as $match ) {
 				$params[ $match[1] ] = $match[2];
 			}
