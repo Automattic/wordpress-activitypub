@@ -324,6 +324,7 @@ class Test_Signature extends \WP_UnitTestCase {
 				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
 				'key_id'      => 'https://example.org/author/admin#main-key',
 				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
 				'headers'     => array(
 					'Content-Type' => 'application/activity+json',
 					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
@@ -402,6 +403,7 @@ class Test_Signature extends \WP_UnitTestCase {
 				),
 				'key_id'      => 'https://example.org/author/admin#main-key',
 				'private_key' => \openssl_pkey_get_private( $keys['private_key'] ),
+				'user_id'     => 1,
 			),
 			'https://example.org/wp-json/activitypub/1.0/inbox'
 		);
@@ -680,7 +682,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$test = function ( $args ) {
 			$this->assertFalse( isset( $args['headers']['Signature-Input'] ) );
 			// FEP-8fcf: Collection-Synchronization header is added for Create activities.
-			$this->assertStringContainsString( 'headers="(request-target) host date digest collection-synchronization"', $args['headers']['Signature'] );
+			$this->assertStringContainsString( 'headers="(request-target) host date digest"', $args['headers']['Signature'] );
 
 			return $args;
 		};
