@@ -6,26 +6,12 @@
  */
 
 import React from 'react';
-import { useCommand, useCommandLoader } from '@wordpress/commands';
 import { __, sprintf } from '@wordpress/i18n';
-import { registerPlugin } from '@wordpress/plugins';
-import { useSelect } from '@wordpress/data';
+import { dispatch, useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
+import type { Post } from '@wordpress/core-data';
 import { useMemo } from '@wordpress/element';
-
-// TypeScript interface for the configuration passed from PHP.
-interface ActivityPubCommandPaletteConfig {
-	followingEnabled: boolean;
-	actorMode: 'actor' | 'blog' | 'actor_blog';
-	canManageOptions: boolean;
-}
-
-// Declare global window property.
-declare global {
-	interface Window {
-		activitypubCommandPalette?: ActivityPubCommandPaletteConfig;
-	}
-}
+import type { CommandConfig, CommandLoaderConfig } from './types';
 
 // Icon for ActivityPub commands - using the official ActivityPub plugin icon.
 const activityPubIcon = (
@@ -47,6 +33,31 @@ const activityPubIcon = (
 	</svg>
 );
 
+// Get configuration from PHP.
+const { actorMode, canManageOptions, followingEnabled } = window.activitypubCommandPalette || {
+	followingEnabled: false,
+	actorMode: 'actor' as const,
+	canManageOptions: false,
+};
+
+// Helper function to register a command.
+const registerCommand = ( command: CommandConfig ) => {
+	try {
+		dispatch( 'core/commands' ).registerCommand( command );
+	} catch ( error ) {
+		console.error( 'Failed to register ActivityPub command:', command.name, error );
+	}
+};
+
+// Helper function to register a command loader for dynamic commands.
+const registerCommandLoader = ( loaderConfig: CommandLoaderConfig ) => {
+	try {
+		dispatch( 'core/commands' ).registerCommandLoader( loaderConfig );
+	} catch ( error ) {
+		console.error( 'Failed to register ActivityPub command loader:', loaderConfig.name, error );
+	}
+};
+
 /**
  * Hook to load user extra fields as dynamic commands.
  */
@@ -54,7 +65,7 @@ const useExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 	// Retrieving the extra fields for the "search" term.
 	const { records, isLoading } = useSelect(
 		( select ) => {
-			const store = select( coreStore ) as any;
+			const store = select( coreStore );
 			const currentUser = store.getCurrentUser();
 			const query = {
 				search: !! search ? search : undefined,
@@ -65,8 +76,12 @@ const useExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 			};
 
 			return {
-				records: store.getEntityRecords( 'postType', 'ap_extrafield', query ),
-				isLoading: ! store.hasFinishedResolution( 'getEntityRecords', [ 'postType', 'ap_extrafield', query ] ),
+				records: store.getEntityRecords< Post >( 'postType', 'ap_extrafield', query ),
+				isLoading: ! ( store as any ).hasFinishedResolution( 'getEntityRecords', [
+					'postType',
+					'ap_extrafield',
+					query,
+				] ),
 			};
 		},
 		[ search ]
@@ -74,7 +89,7 @@ const useExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 
 	// Creating the commands.
 	const commands = useMemo( () => {
-		return ( records ?? [] ).slice( 0, 10 ).map( ( record: any ) => {
+		return ( records ?? [] ).slice( 0, 10 ).map( ( record ) => {
 			const title = record.title?.rendered || __( '(no title)', 'activitypub' );
 			// Remove all quotes and special characters that could break CSS selectors.
 			const sanitizedTitle = title.replace( /["'`]/g, '' );
@@ -108,7 +123,7 @@ const useBlogExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 	// Retrieving the blog extra fields for the "search" term.
 	const { records, isLoading } = useSelect(
 		( select ) => {
-			const store = select( coreStore ) as any;
+			const store = select( coreStore );
 			const query = {
 				search: !! search ? search : undefined,
 				per_page: 10,
@@ -117,8 +132,8 @@ const useBlogExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 			};
 
 			return {
-				records: store.getEntityRecords( 'postType', 'ap_extrafield_blog', query ),
-				isLoading: ! store.hasFinishedResolution( 'getEntityRecords', [
+				records: store.getEntityRecords< Post >( 'postType', 'ap_extrafield_blog', query ),
+				isLoading: ! ( store as any ).hasFinishedResolution( 'getEntityRecords', [
 					'postType',
 					'ap_extrafield_blog',
 					query,
@@ -130,7 +145,7 @@ const useBlogExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 
 	// Creating the commands.
 	const commands = useMemo( () => {
-		return ( records ?? [] ).slice( 0, 10 ).map( ( record: any ) => {
+		return ( records ?? [] ).slice( 0, 10 ).map( ( record ) => {
 			const title = record.title?.rendered || __( '(no title)', 'activitypub' );
 			// Remove all quotes and special characters that could break CSS selectors.
 			const sanitizedTitle = title.replace( /["'`]/g, '' );
@@ -157,171 +172,132 @@ const useBlogExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 	};
 };
 
-/**
- * Component that registers all ActivityPub commands.
- *
- * Commands are registered based on actor mode and user capabilities:
- *
- * - Actor mode (actor/actor_blog): User-specific commands
- *   - View Your Followers
- *   - View Who You Follow (if following enabled)
- *   - View Extra Fields
- *   - Add New Extra Field
- *   - Edit Extra Field (dynamic search)
- *   - View Blocked Actors
- *
- * - Blog mode (blog/actor_blog) with manage_options: Blog-specific commands
- *   - View Blog Followers
- *   - View Blog Following (if following enabled)
- *   - View Settings
- *   - View Blog Extra Fields
- *   - Add New Blog Extra Field
- *   - Edit Blog Extra Field (dynamic search)
- *
- * @see https://make.wordpress.org/core/2023/07/17/introducing-the-wordpress-command-palette-api/
- */
-const ActivityPubCommands = (): null => {
-	const config = window.activitypubCommandPalette || {
-		followingEnabled: false,
-		actorMode: 'actor' as const,
-		canManageOptions: false,
-	};
-	const { actorMode, canManageOptions, followingEnabled } = config;
+// User-specific commands (for actor and actor_blog modes).
+if ( actorMode === 'actor' || actorMode === 'actor_blog' ) {
+	// User Followers command.
+	registerCommand( {
+		name: 'activitypub/navigate-user-followers',
+		label: __( 'ActivityPub: View Your Followers', 'activitypub' ),
+		icon: activityPubIcon,
+		callback: ( { close } ) => {
+			document.location.href = 'users.php?page=activitypub-followers-list';
+			close();
+		},
+	} );
 
-	// User-specific commands (for actor and actor_blog modes).
-	if ( actorMode === 'actor' || actorMode === 'actor_blog' ) {
-		// User Followers command
-		useCommand( {
-			name: 'activitypub/navigate-user-followers',
-			label: __( 'ActivityPub: View Your Followers', 'activitypub' ),
+	// User Following command (only if enabled).
+	if ( followingEnabled ) {
+		registerCommand( {
+			name: 'activitypub/navigate-user-following',
+			label: __( 'ActivityPub: View Who You Follow', 'activitypub' ),
 			icon: activityPubIcon,
 			callback: ( { close } ) => {
-				document.location = 'users.php?page=activitypub-followers-list';
-				close();
-			},
-		} );
-
-		// User Following command (only if enabled).
-		if ( followingEnabled ) {
-			useCommand( {
-				name: 'activitypub/navigate-user-following',
-				label: __( 'ActivityPub: View Who You Follow', 'activitypub' ),
-				icon: activityPubIcon,
-				callback: ( { close } ) => {
-					document.location = 'users.php?page=activitypub-following-list';
-					close();
-				},
-			} );
-		}
-
-		// User Extra Fields commands.
-		useCommand( {
-			name: 'activitypub/navigate-extra-fields',
-			label: __( 'ActivityPub: View Extra Fields', 'activitypub' ),
-			icon: activityPubIcon,
-			callback: ( { close } ) => {
-				document.location = 'edit.php?post_type=ap_extrafield';
-				close();
-			},
-		} );
-
-		useCommand( {
-			name: 'activitypub/add-extra-field',
-			label: __( 'ActivityPub: Add New Extra Field', 'activitypub' ),
-			icon: activityPubIcon,
-			callback: ( { close } ) => {
-				document.location = 'post-new.php?post_type=ap_extrafield';
-				close();
-			},
-		} );
-
-		// Dynamic command loader: Edit existing extra fields.
-		useCommandLoader( {
-			name: 'activitypub/extra-fields-search',
-			hook: useExtraFieldsCommandLoader,
-		} );
-
-		// Blocked Actors command (user-specific).
-		useCommand( {
-			name: 'activitypub/navigate-blocked-actors',
-			label: __( 'ActivityPub: View Blocked Actors', 'activitypub' ),
-			icon: activityPubIcon,
-			callback: ( { close } ) => {
-				document.location = 'users.php?page=activitypub-blocked-actors-list';
+				document.location.href = 'users.php?page=activitypub-following-list';
 				close();
 			},
 		} );
 	}
 
-	// Blog-related commands (for blog and actor_blog modes with manage_options capability).
-	if ( canManageOptions && ( actorMode === 'blog' || actorMode === 'actor_blog' ) ) {
-		// Blog Followers command
-		useCommand( {
-			name: 'activitypub/navigate-blog-followers',
-			label: __( 'ActivityPub: View Blog Followers', 'activitypub' ),
+	// User Extra Fields commands.
+	registerCommand( {
+		name: 'activitypub/navigate-extra-fields',
+		label: __( 'ActivityPub: View Extra Fields', 'activitypub' ),
+		icon: activityPubIcon,
+		callback: ( { close } ) => {
+			document.location.href = 'edit.php?post_type=ap_extrafield';
+			close();
+		},
+	} );
+
+	registerCommand( {
+		name: 'activitypub/add-extra-field',
+		label: __( 'ActivityPub: Add New Extra Field', 'activitypub' ),
+		icon: activityPubIcon,
+		callback: ( { close } ) => {
+			document.location.href = 'post-new.php?post_type=ap_extrafield';
+			close();
+		},
+	} );
+
+	// Dynamic command loader: Edit existing extra fields.
+	registerCommandLoader( {
+		name: 'activitypub/extra-fields-search',
+		hook: useExtraFieldsCommandLoader,
+	} );
+
+	// Blocked Actors command (user-specific).
+	registerCommand( {
+		name: 'activitypub/navigate-blocked-actors',
+		label: __( 'ActivityPub: View Blocked Actors', 'activitypub' ),
+		icon: activityPubIcon,
+		callback: ( { close } ) => {
+			document.location.href = 'users.php?page=activitypub-blocked-actors-list';
+			close();
+		},
+	} );
+}
+
+// Blog-related commands (for blog and actor_blog modes with manage_options capability).
+if ( canManageOptions && ( actorMode === 'blog' || actorMode === 'actor_blog' ) ) {
+	// Blog Followers command.
+	registerCommand( {
+		name: 'activitypub/navigate-blog-followers',
+		label: __( 'ActivityPub: View Blog Followers', 'activitypub' ),
+		icon: activityPubIcon,
+		callback: ( { close } ) => {
+			document.location.href = 'options-general.php?page=activitypub&tab=followers';
+			close();
+		},
+	} );
+
+	// Blog Following command (only if enabled).
+	if ( followingEnabled ) {
+		registerCommand( {
+			name: 'activitypub/navigate-blog-following',
+			label: __( 'ActivityPub: View Blog Following', 'activitypub' ),
 			icon: activityPubIcon,
 			callback: ( { close } ) => {
-				document.location = 'options-general.php?page=activitypub&tab=followers';
+				document.location.href = 'options-general.php?page=activitypub&tab=following';
 				close();
 			},
-		} );
-
-		// Blog Following command (only if enabled).
-		if ( followingEnabled ) {
-			useCommand( {
-				name: 'activitypub/navigate-blog-following',
-				label: __( 'ActivityPub: View Blog Following', 'activitypub' ),
-				icon: activityPubIcon,
-				callback: ( { close } ) => {
-					document.location = 'options-general.php?page=activitypub&tab=following';
-					close();
-				},
-			} );
-		}
-
-		// Settings command (blog-related, requires manage_options).
-		useCommand( {
-			name: 'activitypub/navigate-settings',
-			label: __( 'ActivityPub: View Settings', 'activitypub' ),
-			icon: activityPubIcon,
-			callback: ( { close } ) => {
-				document.location = 'options-general.php?page=activitypub&tab=settings';
-				close();
-			},
-		} );
-
-		// Blog Extra Fields commands.
-		useCommand( {
-			name: 'activitypub/navigate-blog-extra-fields',
-			label: __( 'ActivityPub: View Blog Extra Fields', 'activitypub' ),
-			icon: activityPubIcon,
-			callback: ( { close } ) => {
-				document.location = 'edit.php?post_type=ap_extrafield_blog';
-				close();
-			},
-		} );
-
-		useCommand( {
-			name: 'activitypub/add-blog-extra-field',
-			label: __( 'ActivityPub: Add New Blog Extra Field', 'activitypub' ),
-			icon: activityPubIcon,
-			callback: ( { close } ) => {
-				document.location = 'post-new.php?post_type=ap_extrafield_blog';
-				close();
-			},
-		} );
-
-		// Dynamic command loader: Edit existing blog extra fields.
-		useCommandLoader( {
-			name: 'activitypub/blog-extra-fields-search',
-			hook: useBlogExtraFieldsCommandLoader,
 		} );
 	}
 
-	return null;
-};
+	// Settings command (blog-related, requires manage_options).
+	registerCommand( {
+		name: 'activitypub/navigate-settings',
+		label: __( 'ActivityPub: View Settings', 'activitypub' ),
+		icon: activityPubIcon,
+		callback: ( { close } ) => {
+			document.location.href = 'options-general.php?page=activitypub&tab=settings';
+			close();
+		},
+	} );
 
-// Register the plugin that adds our commands.
-registerPlugin( 'activitypub-command-palette', {
-	render: ActivityPubCommands,
-} );
+	// Blog Extra Fields commands.
+	registerCommand( {
+		name: 'activitypub/navigate-blog-extra-fields',
+		label: __( 'ActivityPub: View Blog Extra Fields', 'activitypub' ),
+		icon: activityPubIcon,
+		callback: ( { close } ) => {
+			document.location.href = 'edit.php?post_type=ap_extrafield_blog';
+			close();
+		},
+	} );
+
+	registerCommand( {
+		name: 'activitypub/add-blog-extra-field',
+		label: __( 'ActivityPub: Add New Blog Extra Field', 'activitypub' ),
+		icon: activityPubIcon,
+		callback: ( { close } ) => {
+			document.location.href = 'post-new.php?post_type=ap_extrafield_blog';
+			close();
+		},
+	} );
+
+	// Dynamic command loader: Edit existing blog extra fields.
+	registerCommandLoader( {
+		name: 'activitypub/blog-extra-fields-search',
+		hook: useBlogExtraFieldsCommandLoader,
+	} );
+}
