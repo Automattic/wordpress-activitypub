@@ -681,7 +681,6 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$test = function ( $args ) {
 			$this->assertFalse( isset( $args['headers']['Signature-Input'] ) );
-			// FEP-8fcf: Collection-Synchronization header is added for Create activities.
 			$this->assertStringContainsString( 'headers="(request-target) host date digest"', $args['headers']['Signature'] );
 
 			return $args;
