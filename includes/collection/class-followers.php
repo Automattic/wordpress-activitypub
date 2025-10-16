@@ -7,7 +7,7 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Http;
+use Activitypub\Signature;
 use Activitypub\Tombstone;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -509,7 +509,7 @@ class Followers {
 			$hash = hash( 'sha256', $follower_url );
 
 			// XOR the hash with the running digest.
-			$digest = Http::xor_hex_strings( $digest, $hash );
+			$digest = Signature::xor_hex_strings( $digest, $hash );
 		}
 
 		return $digest;
@@ -584,8 +584,13 @@ class Followers {
 	 * @return string|false The header value, or false if cannot generate.
 	 */
 	public static function generate_sync_header( $user_id, $authority ) {
+		$followers = self::get_partial_followers( $user_id, $authority );
 		// Compute the digest for this specific authority.
-		$digest = self::compute_partial_digest( $user_id, $authority );
+		$digest = Signature::compute_collection_digest( $followers );
+
+		if ( ! $digest ) {
+			return false;
+		}
 
 		// Build the collection ID (followers collection URL).
 		$collection_id = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user_id ) );

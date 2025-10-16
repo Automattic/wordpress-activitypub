@@ -10,6 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
+use Activitypub\Signature;
 
 /**
  * Collection Sync Handler.
@@ -53,7 +54,7 @@ class Collection_Sync {
 		$sync_header = \wp_unslash( $_SERVER['HTTP_COLLECTION_SYNCHRONIZATION'] );
 
 		// Parse the header using the generic HTTP parser.
-		$params = Http::parse_collection_sync_header( $sync_header );
+		$params = Signature::parse_collection_sync_header( $sync_header );
 
 		if ( false === $params ) {
 			return;
@@ -268,7 +269,7 @@ class Collection_Sync {
 		$digest = str_repeat( '0', 64 );
 
 		foreach ( $actor_urls as $actor_uri ) {
-			$digest = Http::xor_hex_strings( $digest, hash( 'sha256', $actor_uri ) );
+			$digest = Signature::xor_hex_strings( $digest, hash( 'sha256', $actor_uri ) );
 		}
 
 		return $digest;

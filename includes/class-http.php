@@ -297,67 +297,6 @@ class Http {
 	}
 
 	/**
-	 * Parse a Collection-Synchronization header (FEP-8fcf).
-	 *
-	 * Parses the signature-style format used by the Collection-Synchronization header.
-	 *
-	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
-	 *
-	 * @param string $header The header value.
-	 *
-	 * @return array|false Array with parsed parameters (collectionId, url, digest), or false on failure.
-	 */
-	public static function parse_collection_sync_header( $header ) {
-		if ( empty( $header ) ) {
-			return false;
-		}
-
-		// Parse the signature-style format: key="value", key="value".
-		$params = array();
-
-		if ( preg_match_all( '/(\w+)="([^"]*)"/', $header, $matches, PREG_SET_ORDER ) ) {
-			foreach ( $matches as $match ) {
-				$params[ $match[1] ] = $match[2];
-			}
-		}
-
-		// Validate required fields for FEP-8fcf.
-		if ( empty( $params['collectionId'] ) || empty( $params['url'] ) || empty( $params['digest'] ) ) {
-			return false;
-		}
-
-		return $params;
-	}
-
-	/**
-	 * XOR two hexadecimal strings.
-	 *
-	 * Used for FEP-8fcf digest computation.
-	 *
-	 * @param string $hex1 First hex string.
-	 * @param string $hex2 Second hex string.
-	 *
-	 * @return string The XORed result as a hex string.
-	 */
-	public static function xor_hex_strings( $hex1, $hex2 ) {
-		$result = '';
-
-		// Ensure both strings are the same length (should be 64 chars for SHA256).
-		$length = max( strlen( $hex1 ), strlen( $hex2 ) );
-		$hex1   = str_pad( $hex1, $length, '0', STR_PAD_LEFT );
-		$hex2   = str_pad( $hex2, $length, '0', STR_PAD_LEFT );
-
-		// XOR each pair of hex digits.
-		for ( $i = 0; $i < $length; $i += 2 ) {
-			$byte1   = hexdec( substr( $hex1, $i, 2 ) );
-			$byte2   = hexdec( substr( $hex2, $i, 2 ) );
-			$result .= str_pad( dechex( $byte1 ^ $byte2 ), 2, '0', STR_PAD_LEFT );
-		}
-
-		return $result;
-	}
-
-	/**
 	 * Get the authority (scheme + host + port) from a URL.
 	 *
 	 * @param string $url The URL to parse.
