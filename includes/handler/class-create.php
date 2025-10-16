@@ -106,7 +106,7 @@ class Create {
 	 * @param int                            $user_id         The id of the local blog-user.
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 *
-	 * @return \WP_Post|\WP_Error The post on success or WP_Error on failure.
+	 * @return \WP_Post|\WP_Error|false The post on success or WP_Error on failure.
 	 */
 	public static function create_post( $activity, $user_id, $activity_object = null ) {
 		$check_dupe = Posts::get_by_guid( $activity['object']['id'] );

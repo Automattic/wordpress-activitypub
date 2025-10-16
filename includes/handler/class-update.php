@@ -60,7 +60,7 @@ class Update {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::handle_object_update( $activity, $user_id );
+				self::update_object( $activity, $user_id );
 				break;
 
 			/*
@@ -79,7 +79,7 @@ class Update {
 	 * @param array $activity The Activity object.
 	 * @param int   $user_id  The user ID. Always null for Update activities.
 	 */
-	public static function handle_object_update( $activity, $user_id ) {
+	public static function update_object( $activity, $user_id ) {
 		$result = new \WP_Error( 'activitypub_update_failed', 'Update failed' );
 
 		// Check for private and/or direct messages.
