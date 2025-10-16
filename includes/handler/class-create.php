@@ -48,7 +48,7 @@ class Create {
 			return;
 		}
 
-		$success = ( false !== $result && ! \is_wp_error( $result ) );
+		$success = ! \is_wp_error( $result );
 
 		/**
 		 * Fires after an ActivityPub Create activity has been handled.
