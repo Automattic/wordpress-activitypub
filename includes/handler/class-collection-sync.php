@@ -222,16 +222,12 @@ class Collection_Sync {
 
 		$expected_collection = self::get_followers_collection_id( $actor_url );
 
-		if ( $expected_collection ) {
-			if ( self::normalize_collection_url( $params['collectionId'] ) !== self::normalize_collection_url( $expected_collection ) ) {
-				return false;
-			}
-		} else {
-			$default_collection = rtrim( $actor_url, '/' ) . '/followers';
+		if ( \is_wp_error( $expected_collection ) ) {
+			return false;
+		}
 
-			if ( self::normalize_collection_url( $params['collectionId'] ) !== self::normalize_collection_url( $default_collection ) ) {
-				return false;
-			}
+		if ( trailingslashit( $params['collectionId'] ) !== trailingslashit( $expected_collection ) ) {
+			return false;
 		}
 
 		// Build authorities for comparison.
@@ -290,40 +286,21 @@ class Collection_Sync {
 	 *
 	 * @param string $actor_url The remote actor URL.
 	 *
-	 * @return string|null The followers collection ID or null if unavailable.
+	 * @return string|\WP_Error The followers collection ID or null if unavailable.
 	 */
 	protected static function get_followers_collection_id( $actor_url ) {
-		$post = Remote_Actors::get_by_uri( $actor_url );
+		$post = Remote_Actors::fetch_by_uri( $actor_url );
 
 		if ( \is_wp_error( $post ) ) {
-			$post = Remote_Actors::fetch_by_uri( $actor_url );
-
-			if ( \is_wp_error( $post ) ) {
-				return null;
-			}
+			return $post;
 		}
 
 		$actor = Remote_Actors::get_actor( $post );
 
 		if ( \is_wp_error( $actor ) ) {
-			return null;
+			return $actor;
 		}
 
 		return $actor->get_followers();
-	}
-
-	/**
-	 * Normalize a collection URL for comparison.
-	 *
-	 * @param string $url The URL to normalize.
-	 *
-	 * @return string Normalized URL without trailing slash.
-	 */
-	protected static function normalize_collection_url( $url ) {
-		if ( ! \is_string( $url ) ) {
-			return '';
-		}
-
-		return rtrim( $url, '/' );
 	}
 }
