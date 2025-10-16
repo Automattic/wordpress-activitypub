@@ -8,7 +8,6 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Followers;
-use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Signature;
 
@@ -69,8 +68,11 @@ class Collection_Sync {
 			return;
 		}
 
-		// Determine the collection type from the URL.
-		$collection_type = self::detect_collection_type( $params['url'] );
+		// Check for followers collection.
+		$collection_type = null;
+		if ( preg_match( '#/followers(?:/sync)?(?:\?|$)#', $params['url'] ) ) {
+			$collection_type = 'followers';
+		}
 
 		if ( ! $collection_type ) {
 			// Unknown or unsupported collection type.
@@ -84,13 +86,22 @@ class Collection_Sync {
 			return;
 		}
 
-		switch ( $collection_type ) {
-			case 'followers':
-				self::process_followers_collection_sync( $params, $user_id, $actor_url );
-				break;
-			default:
-				break;
+		// Validate the header parameters.
+		if ( ! self::validate_header_params( $params, $actor_url ) ) {
+			return;
 		}
+
+		/**
+		 * Action triggered Collection Sync.
+		 *
+		 * This allows for async processing of the reconciliation.
+		 *
+		 * @param string $collection_type The collection type (e.g., 'followers', 'following', 'liked').
+		 * @param int    $user_id         The local user ID.
+		 * @param string $actor_url       The remote actor URL.
+		 * @param array  $params          The parsed Collection-Synchronization header parameters.
+		 */
+		\do_action( 'activitypub_collection_sync', $collection_type, $user_id, $actor_url, $params );
 	}
 
 	/**
@@ -133,81 +144,6 @@ class Collection_Sync {
 	}
 
 	/**
-	 * Detect the collection type from a URL.
-	 *
-	 * @param string $url The collection URL.
-	 * @return string|false The collection type (e.g., 'followers', 'following', 'liked') or false if unknown.
-	 */
-	protected static function detect_collection_type( $url ) {
-		// Check for followers collection.
-		if ( preg_match( '#/followers(?:/sync)?(?:\?|$)#', $url ) ) {
-			return 'followers';
-		}
-
-		/**
-		 * Filters the collection type detection.
-		 *
-		 * Allows plugins to register custom collection types for synchronization.
-		 *
-		 * @param string|false $type The detected collection type, or false if unknown.
-		 * @param string       $url  The collection URL.
-		 */
-		return \apply_filters( 'activitypub_detect_collection_type', false, $url );
-	}
-
-	/**
-	 * Process followers collection synchronization.
-	 *
-	 * @param array  $params    The parsed Collection-Synchronization header parameters.
-	 * @param int    $user_id   The local user ID.
-	 * @param string $actor_url The remote actor URL.
-	 */
-	protected static function process_followers_collection_sync( $params, $user_id, $actor_url ) {
-		// Validate the header parameters.
-		if ( ! self::validate_header_params( $params, $actor_url ) ) {
-			return;
-		}
-
-		// Get our local authority.
-		$our_authority = get_url_authority( \home_url() );
-
-		if ( ! $our_authority ) {
-			return;
-		}
-
-		$local_actor_urls = self::get_local_actor_urls_for_remote( $actor_url, $our_authority );
-
-		if ( \is_wp_error( $local_actor_urls ) ) {
-			return;
-		}
-
-		$remote_digest = strtolower( trim( $params['digest'] ) );
-
-		if ( 64 !== strlen( $remote_digest ) || preg_match( '/[^0-9a-f]/', $remote_digest ) ) {
-			return;
-		}
-
-		$local_digest = Signature::compute_collection_digest( $local_actor_urls );
-
-		if ( \hash_equals( $local_digest, $remote_digest ) ) {
-			return;
-		}
-
-		// Digests do not match, trigger reconciliation.
-
-		/**
-		 * Action triggered when Collection-Synchronization digest mismatch is detected for followers.
-		 *
-		 * This allows for async processing of the reconciliation.
-		 *
-		 * @param int    $user_id   The local user ID.
-		 * @param string $actor_url The remote actor URL.
-		 * @param array  $params    The parsed Collection-Synchronization header parameters.
-		 */
-		\do_action( 'activitypub_followers_sync_mismatch', $user_id, $actor_url, $params );
-	}
-
-	/**
 	 * Validate Collection-Synchronization header parameters.
 	 *
 	 * @param array  $params    Parsed header parameters.
@@ -235,50 +171,6 @@ class Collection_Sync {
 		$url_authority        = get_url_authority( $params['url'] );
 
 		return $collection_authority === $url_authority;
-	}
-
-	/**
-	 * Retrieve local actor URLs that follow the remote actor and share the given authority.
-	 *
-	 * @param string $actor_url The remote actor URL.
-	 * @param string $authority The authority to filter by.
-	 *
-	 * @return array|\WP_Error Array of actor URLs or WP_Error on failure.
-	 */
-	protected static function get_local_actor_urls_for_remote( $actor_url, $authority ) {
-		$snapshot = Following::get_local_followers_snapshot( $actor_url );
-
-		if ( \is_wp_error( $snapshot ) ) {
-			return $snapshot;
-		}
-
-		$actor_urls = array_keys( $snapshot['followers'] );
-		$actor_urls = self::filter_actor_urls_by_authority( $actor_urls, $authority );
-		sort( $actor_urls );
-
-		return $actor_urls;
-	}
-
-	/**
-	 * Filter actor URLs by authority.
-	 *
-	 * @param array  $actor_urls Array of actor URLs.
-	 * @param string $authority  Authority to match.
-	 *
-	 * @return array Filtered list of actor URLs.
-	 */
-	protected static function filter_actor_urls_by_authority( array $actor_urls, $authority ) {
-		$matched = array();
-
-		foreach ( $actor_urls as $actor_uri ) {
-			$actor_authority = get_url_authority( $actor_uri );
-
-			if ( $actor_authority && $actor_authority === $authority ) {
-				$matched[] = $actor_uri;
-			}
-		}
-
-		return $matched;
 	}
 
 	/**
