@@ -48,7 +48,7 @@ class Collection_Sync {
 
 		// Check if sync-header is part of signature (required by FEP).
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$signature = \wp_unslash( $_SERVER['HTTP_SIGNATURE_INPUT'] ?? $_SERVER['HTTP_SIGNATURE'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '' );
+		$signature = \wp_unslash( $_SERVER['HTTP_SIGNATURE'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '' );
 		if ( false === \stripos( $signature, 'collection-synchronization' ) ) {
 			return;
 		}
