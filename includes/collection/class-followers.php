@@ -12,7 +12,6 @@ use Activitypub\Tombstone;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\get_url_authority;
 
 /**
  * ActivityPub Followers Collection.
@@ -500,7 +499,7 @@ class Followers {
 	 * @return string The hex-encoded digest, or empty string if no followers.
 	 */
 	public static function compute_partial_digest( $user_id, $authority ) {
-		$followers = self::get_by_authority( $user_id, $authority );
+		$followers = self::get_id_by_authority( $user_id, $authority );
 
 		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
 		$digest = str_repeat( '0', 64 );
@@ -527,20 +526,35 @@ class Followers {
 	 *
 	 * @return array Array of follower URLs.
 	 */
-	public static function get_by_authority( $user_id, $authority ) {
-		$followers = self::get_followers( $user_id );
-
-		$authority_followers = array_map(
-			function ( $post ) use ( $authority ) {
-				if ( get_url_authority( $post->guid ) === $authority ) {
-					return $post->guid;
-				}
-				return null;
-			},
-			$followers
+	public static function get_id_by_authority( $user_id, $authority ) {
+		$posts = new \WP_Query(
+			array(
+				'post_type'      => Remote_Actors::POST_TYPE,
+				'posts_per_page' => -1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'   => self::FOLLOWER_META_KEY,
+						'value' => $user_id,
+					),
+					array(
+						'key'     => '_activitypub_inbox',
+						'compare' => 'LIKE',
+						'value'   => $authority,
+					),
+				),
+			)
 		);
 
-		return array_filter( $authority_followers );
+		return array_map(
+			function ( $post ) {
+				return $post->guid;
+			},
+			$posts->posts
+		);
 	}
 
 	/**
@@ -552,7 +566,7 @@ class Followers {
 	 * @return string|false The header value, or false if cannot generate.
 	 */
 	public static function generate_sync_header( $user_id, $authority ) {
-		$followers = self::get_by_authority( $user_id, $authority );
+		$followers = self::get_id_by_authority( $user_id, $authority );
 		// Compute the digest for this specific authority.
 		$digest = Signature::compute_collection_digest( $followers );
 
