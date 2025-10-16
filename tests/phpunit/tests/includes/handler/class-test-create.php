@@ -54,7 +54,7 @@ class Test_Create extends \WP_UnitTestCase {
 
 		// Register required post types.
 		Post_Types::register_remote_actors_post_type();
-		Post_Types::register_object_post_type();
+		Post_Types::register_post_post_type();
 
 		$this->user_id  = 1;
 		$authordata     = \get_userdata( $this->user_id );
