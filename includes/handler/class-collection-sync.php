@@ -42,6 +42,13 @@ class Collection_Sync {
 			return;
 		}
 
+		// Check if sync-header is part of signature (required by FEP).
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$signature = $_SERVER['HTTP_SIGNATURE'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+		if ( false === \stripos( \wp_unslash( $signature ), 'collection-synchronization' ) ) {
+			return;
+		}
+
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		$sync_header = \wp_unslash( $_SERVER['HTTP_COLLECTION_SYNCHRONIZATION'] );
 
