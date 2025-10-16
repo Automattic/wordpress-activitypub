@@ -24,7 +24,7 @@ class Signature {
 	 * Initialize the class.
 	 */
 	public static function init() {
-		\add_filter( 'http_request_args', array( self::class, 'sign_request' ), 5, 2 ); // Ahead of most other filters, so signature is set.
+		\add_filter( 'http_request_args', array( self::class, 'sign_request' ), 0, 2 ); // Ahead of most other filters, so signature is set.
 		\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 	}
 

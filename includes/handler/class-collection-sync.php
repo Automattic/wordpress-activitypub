@@ -27,7 +27,7 @@ class Collection_Sync {
 	public static function init() {
 		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_collection_synchronization' ), 10, 2 );
 
-		\add_filter( 'http_request_args', array( self::class, 'maybe_add_headers' ), 1, 2 );
+		\add_filter( 'http_request_args', array( self::class, 'maybe_add_headers' ), -1, 2 );
 	}
 
 	/**
@@ -47,9 +47,9 @@ class Collection_Sync {
 		}
 
 		// Check if sync-header is part of signature (required by FEP).
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$signature = $_SERVER['HTTP_SIGNATURE'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-		if ( false === \stripos( \wp_unslash( $signature ), 'collection-synchronization' ) ) {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$signature = \wp_unslash( $_SERVER['HTTP_SIGNATURE_INPUT'] ?? $_SERVER['HTTP_SIGNATURE'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '' );
+		if ( false === \stripos( $signature, 'collection-synchronization' ) ) {
 			return;
 		}
 
