@@ -114,7 +114,6 @@ class Collection_Sync {
 			if ( null === $body ) {
 				return $args;
 			}
-			$args['body'] = $body;
 		} else {
 			$body = $args['body'];
 		}
