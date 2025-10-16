@@ -24,22 +24,23 @@ class Collection_Sync {
 	 * Initialize the scheduler.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_followers_sync_mismatch', array( self::class, 'schedule_reconciliation' ), 10, 3 );
+		\add_action( 'activitypub_collection_sync', array( self::class, 'schedule_reconciliation' ), 10, 4 );
 		\add_action( 'activitypub_followers_sync_reconcile', array( self::class, 'reconcile_followers' ), 10, 3 );
 	}
 
 	/**
 	 * Schedule a reconciliation job.
 	 *
+	 * @param string $type      The collection type (e.g., 'followers').
 	 * @param int    $user_id   The local user ID.
 	 * @param string $actor_url The remote actor URL.
 	 * @param array  $params    The Collection-Synchronization header parameters.
 	 */
-	public static function schedule_reconciliation( $user_id, $actor_url, $params ) {
+	public static function schedule_reconciliation( $type, $user_id, $actor_url, $params ) {
 		// Schedule async processing to avoid blocking the inbox.
 		\wp_schedule_single_event(
 			time() + 60, // Process in 1 minute.
-			'activitypub_followers_sync_reconcile',
+			"activitypub_{$type}_sync_reconcile",
 			array( $user_id, $actor_url, $params )
 		);
 	}
@@ -154,53 +155,5 @@ class Collection_Sync {
 		 * @param array  $remote_unknown  Local actor URIs that required Undo operations.
 		 */
 		\do_action( 'activitypub_followers_sync_reconciled', $user_id, $actor_url, $to_remove, $remote_unknown );
-	}
-
-	/**
-	 * Filter a list of actor URIs by authority.
-	 *
-	 * @param array  $actors    Actor URIs.
-	 * @param string $authority Authority to match.
-	 *
-	 * @return array Filtered actor URIs.
-	 */
-	protected static function filter_actor_list_by_authority( array $actors, $authority ) {
-		$matched = array();
-
-		foreach ( $actors as $actor_uri ) {
-			if ( ! is_string( $actor_uri ) ) {
-				continue;
-			}
-
-			$actor_authority = get_url_authority( $actor_uri );
-
-			if ( $actor_authority && $actor_authority === $authority ) {
-				$matched[] = $actor_uri;
-			}
-		}
-
-		return $matched;
-	}
-
-	/**
-	 * Filter a map of actor URIs keyed to user IDs by authority.
-	 *
-	 * @param array  $map       Map of actor URIs to user IDs.
-	 * @param string $authority Authority to match.
-	 *
-	 * @return array Filtered map with matching entries.
-	 */
-	protected static function filter_actor_map_by_authority( array $map, $authority ) {
-		$filtered = array();
-
-		foreach ( $map as $actor_uri => $user_id ) {
-			$actor_authority = get_url_authority( $actor_uri );
-
-			if ( $actor_authority && $actor_authority === $authority ) {
-				$filtered[ $actor_uri ] = $user_id;
-			}
-		}
-
-		return $filtered;
 	}
 }

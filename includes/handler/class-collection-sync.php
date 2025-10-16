@@ -63,11 +63,6 @@ class Collection_Sync {
 			return;
 		}
 
-		// Ensure we have a URL parameter to determine collection type.
-		if ( ! isset( $params['url'] ) ) {
-			return;
-		}
-
 		// Check for followers collection.
 		$collection_type = null;
 		if ( preg_match( '#/followers(?:/sync)?(?:\?|$)#', $params['url'] ) ) {
@@ -156,7 +151,19 @@ class Collection_Sync {
 			return false;
 		}
 
-		$expected_collection = self::get_followers_collection_id( $actor_url );
+		$post = Remote_Actors::fetch_by_uri( $actor_url );
+
+		if ( \is_wp_error( $post ) ) {
+			return false;
+		}
+
+		$actor = Remote_Actors::get_actor( $post );
+
+		if ( \is_wp_error( $actor ) ) {
+			return false;
+		}
+
+		$expected_collection = $actor->get_followers();
 
 		if ( \is_wp_error( $expected_collection ) ) {
 			return false;
@@ -171,28 +178,5 @@ class Collection_Sync {
 		$url_authority        = get_url_authority( $params['url'] );
 
 		return $collection_authority === $url_authority;
-	}
-
-	/**
-	 * Retrieve the followers collection ID for the remote actor if known.
-	 *
-	 * @param string $actor_url The remote actor URL.
-	 *
-	 * @return string|\WP_Error The followers collection ID or null if unavailable.
-	 */
-	protected static function get_followers_collection_id( $actor_url ) {
-		$post = Remote_Actors::fetch_by_uri( $actor_url );
-
-		if ( \is_wp_error( $post ) ) {
-			return $post;
-		}
-
-		$actor = Remote_Actors::get_actor( $post );
-
-		if ( \is_wp_error( $actor ) ) {
-			return $actor;
-		}
-
-		return $actor->get_followers();
 	}
 }
