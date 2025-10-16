@@ -26,9 +26,9 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Register required post types.
 		Post_Types::register_remote_actors_post_type();
-		Post_Types::register_object_post_type();
+		Post_Types::register_post_post_type();
 
-		// Mock HTTP requests for Remote_Actors::fetch_by_uri and attachment downloads.
+		// Mock HTTP requests for Remote_Actors::fetch_by_uri.
 		add_filter( 'pre_http_request', array( $this, 'mock_http_request' ), 10, 3 );
 	}
 

@@ -26,7 +26,7 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_remote_actors_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_inbox_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_outbox_post_type' ), 11 );
-		\add_action( 'init', array( self::class, 'register_object_post_type' ), 11 );
+		\add_action( 'init', array( self::class, 'register_post_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_extra_fields_post_types' ), 11 );
 		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
 
@@ -350,7 +350,7 @@ class Post_Types {
 	/**
 	 * Register the Object post type.
 	 */
-	public static function register_object_post_type() {
+	public static function register_post_post_type() {
 		\register_post_type(
 			Posts::POST_TYPE,
 			array(

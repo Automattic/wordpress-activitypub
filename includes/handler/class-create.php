@@ -44,11 +44,11 @@ class Create {
 			$result = self::create_post( $activity, $user_id, $activity_object );
 		}
 
-		if ( ! $result ) {
-			$result = new \WP_Error( 'activitypub_create_failed', 'Create failed' );
+		if ( false === $result ) {
+			return;
 		}
 
-		$success = ( false !== $result && ! \is_wp_error( $result ) );
+		$success = ! \is_wp_error( $result );
 
 		/**
 		 * Fires after an ActivityPub Create activity has been handled.
@@ -83,11 +83,11 @@ class Create {
 			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
 			 */
 			\do_action( 'activitypub_inbox_update', $activity, $user_id, $activity_object );
-			return;
+			return false;
 		}
 
 		if ( is_self_ping( $activity['object']['id'] ) ) {
-			return;
+			return false;
 		}
 
 		$result = Interactions::add_comment( $activity );
@@ -106,7 +106,7 @@ class Create {
 	 * @param int                            $user_id         The id of the local blog-user.
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 *
-	 * @return \WP_Post|\WP_Error The post on success or WP_Error on failure.
+	 * @return \WP_Post|\WP_Error|false The post on success or WP_Error on failure.
 	 */
 	public static function create_post( $activity, $user_id, $activity_object = null ) {
 		$check_dupe = Posts::get_by_guid( $activity['object']['id'] );
@@ -121,7 +121,7 @@ class Create {
 			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
 			 */
 			\do_action( 'activitypub_inbox_update', $activity, $user_id, $activity_object );
-			return;
+			return false;
 		}
 
 		return Posts::add( $activity );
