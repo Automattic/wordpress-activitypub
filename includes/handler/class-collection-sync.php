@@ -7,6 +7,7 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
@@ -25,6 +26,8 @@ class Collection_Sync {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_collection_synchronization' ), 10, 2 );
+
+		\add_filter( 'http_request_args', array( self::class, 'maybe_add_headers' ), 1, 2 );
 	}
 
 	/**
@@ -87,6 +90,34 @@ class Collection_Sync {
 			default:
 				break;
 		}
+	}
+
+	/**
+	 * Add Collection-Synchronization header to Create activities (FEP-8fcf).
+	 *
+	 * This method adds the Collection-Synchronization header to outgoing Create activities.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
+	 *
+	 * @param array  $args    The HTTP request arguments.
+	 * @param string $url     The request URL.
+	 *
+	 * @return array Modified HTTP request arguments.
+	 */
+	public static function maybe_add_headers( $args, $url ) {
+		// FEP-8fcf: Add Collection-Synchronization header for Create activities.
+		$activity = \json_decode( $args['body'] ?? '' );
+		if ( ! $activity || ! isset( $activity->type ) || 'Create' !== $activity->type ) {
+			return $args;
+		}
+
+		$inbox_authority = Http::get_authority( $url );
+		$sync_header     = Followers::generate_sync_header( $args['user_id'], $inbox_authority );
+		if ( $sync_header ) {
+			$args['headers']['Collection-Synchronization'] = $sync_header;
+		}
+
+		return $args;
 	}
 
 	/**
