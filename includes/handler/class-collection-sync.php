@@ -93,9 +93,9 @@ class Collection_Sync {
 	}
 
 	/**
-	 * Add Collection-Synchronization header to Create activities (FEP-8fcf).
+	 * Add Collection-Synchronization header to `Create` activities (FEP-8fcf).
 	 *
-	 * This method adds the Collection-Synchronization header to outgoing Create activities.
+	 * This method adds the Collection-Synchronization header to outgoing `Create` activities.
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
 	 *
