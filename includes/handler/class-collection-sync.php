@@ -187,7 +187,7 @@ class Collection_Sync {
 			return;
 		}
 
-		$local_digest = self::compute_digest_from_actor_urls( $local_actor_urls );
+		$local_digest = Signature::compute_collection_digest( $local_actor_urls );
 
 		if ( \hash_equals( $local_digest, $remote_digest ) ) {
 			return;
@@ -283,23 +283,6 @@ class Collection_Sync {
 		}
 
 		return $matched;
-	}
-
-	/**
-	 * Compute the partial collection digest from a list of actor URLs.
-	 *
-	 * @param array $actor_urls Actor URLs to include in the digest.
-	 *
-	 * @return string The computed digest.
-	 */
-	protected static function compute_digest_from_actor_urls( array $actor_urls ) {
-		$digest = str_repeat( '0', 64 );
-
-		foreach ( $actor_urls as $actor_uri ) {
-			$digest = Signature::xor_hex_strings( $digest, hash( 'sha256', $actor_uri ) );
-		}
-
-		return $digest;
 	}
 
 	/**
