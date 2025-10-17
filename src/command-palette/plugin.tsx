@@ -254,7 +254,7 @@ if ( canManageOptions && ( actorMode === 'blog' || actorMode === 'actor_blog' ) 
 	if ( followingEnabled ) {
 		registerCommand( {
 			name: 'activitypub/navigate-blog-following',
-			label: __( 'ActivityPub: View Who Blog Follows', 'activitypub' ),
+			label: __( 'ActivityPub: View Blog Following', 'activitypub' ),
 			icon: activityPubIcon,
 			callback: ( { close } ) => {
 				document.location.href = 'options-general.php?page=activitypub&tab=following';
