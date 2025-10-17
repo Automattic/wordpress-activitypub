@@ -20,6 +20,44 @@ use Activitypub\Handler\Update;
 class Test_Update extends \WP_UnitTestCase {
 
 	/**
+	 * Test that the activitypub_inbox_create fallback is triggered.
+	 */
+	public function test_activitypub_inbox_create_fallback() {
+		$called     = false;
+		$test_actor = 'https://example.com/users/fallback';
+		$activity   = array(
+			'id'     => 'https://example.com/activities/12345',
+			'type'   => 'Create',
+			'actor'  => $test_actor,
+			'object' => array(
+				'id'      => 'https://example.com/objects/12345',
+				'type'    => 'Note',
+				'content' => 'Test note',
+			),
+		);
+
+		// Add a fallback handler for the action.
+		\add_action(
+			'activitypub_inbox_create',
+			function ( $activity_data ) use ( &$called, $test_actor ) {
+				if ( isset( $activity_data['actor'] ) && $activity_data['actor'] === $test_actor ) {
+					$called = true;
+				}
+			},
+			10,
+			3
+		);
+
+		// Call the handler (simulate inbox create for unknown type).
+		\do_action( 'activitypub_inbox_update', $activity, $this->user_id, null );
+
+		$this->assertTrue( $called, 'The fallback activitypub_inbox_create action should be triggered.' );
+
+		// Clean up by removing the action.
+		\remove_all_actions( 'activitypub_inbox_create' );
+	}
+
+	/**
 	 * User ID.
 	 *
 	 * @var int

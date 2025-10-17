@@ -25,6 +25,8 @@ class Router {
 		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
 		\add_filter( 'redirect_canonical', array( self::class, 'no_trailing_redirect' ), 10, 2 );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
+
+		\add_action( 'parse_query', array( self::class, 'fix_is_home_check' ) );
 	}
 
 	/**
@@ -280,5 +282,23 @@ class Router {
 		$vars[] = 'p';
 
 		return $vars;
+	}
+
+	/**
+	 * Optimize home page query for ActivityPub requests.
+	 *
+	 * Skip the database query entirely for ActivityPub requests on the home page
+	 * since we only need to return the blog actor, not posts.
+	 *
+	 * @param \WP_Query $wp_query The WP_Query instance.
+	 */
+	public static function fix_is_home_check( $wp_query ) {
+		if (
+			$wp_query->get( 'actor' ) ||
+			$wp_query->get( 'stamp' ) ||
+			$wp_query->get( 'c' )
+		) {
+			$wp_query->is_home = false;
+		}
 	}
 }

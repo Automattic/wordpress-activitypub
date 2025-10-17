@@ -222,13 +222,6 @@ class Actors {
 			// Check for http(s) URIs.
 			case 'http':
 			case 'https':
-				// Check locally stored remote Actor.
-				$post = Remote_Actors::get_by_uri( $uri );
-
-				if ( ! \is_wp_error( $post ) ) {
-					return $post->ID;
-				}
-
 				// Check for http(s)://blog.example.com/@username.
 				$resource_path = \wp_parse_url( $uri, PHP_URL_PATH );
 
