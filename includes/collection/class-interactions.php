@@ -374,7 +374,7 @@ class Interactions {
 			if ( \preg_match( $url_pattern, $full_match[0], $url_matches ) ) {
 				$activity['object']['inReplyTo'] = \esc_url_raw( $url_matches[1] );
 				// Remove the entire quote-inline paragraph from content.
-				$activity['object']['content'] = \preg_replace( $full_pattern, '', $content );
+				$activity['object']['content'] = \preg_replace( $full_pattern, '', $content, 1 );
 			}
 		}
 
