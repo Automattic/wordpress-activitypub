@@ -33,7 +33,7 @@
 	},
 	"homepage": "https://github.com/automattic/wordpress-activitypub#readme",
 	"devDependencies": {
-		"@playwright/test": "^1.56.0",
+		"@playwright/test": "^1.56.1",
 		"@testing-library/react": "^16.3.0",
 		"@testing-library/user-event": "^14.4.3",
 		"@wordpress/api-fetch": "^7.32.0",
