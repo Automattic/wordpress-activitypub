@@ -35,7 +35,12 @@ class Interactions {
 		$comment_data = self::activity_to_comment( $activity );
 
 		if ( ! $comment_data || ! isset( $activity['object']['inReplyTo'] ) ) {
-			return false;
+			$activity = self::extract_quote_link( $activity );
+			if ( ! empty( $activity['object']['inReplyTo'] ) ) {
+				$comment_data['comment_type'] = 'quote';
+			} else {
+				return false;
+			}
 		}
 
 		$in_reply_to       = object_to_uri( $activity['object']['inReplyTo'] );
@@ -345,5 +350,34 @@ class Interactions {
 				'fields'  => 'ids',
 			)
 		);
+	}
+
+	/**
+	 * Extract quote link from HTML content.
+	 *
+	 * Detects quote/reply links in the format used by Mastodon and other Fediverse platforms.
+	 * Pattern: <p class="quote-inline">RE: <a href="...">...</a></p>.
+	 *
+	 * @param array $activity The activity array to search.
+	 *
+	 * @return array The extracted quote link or an empty array if not found.
+	 */
+	public static function extract_quote_link( $activity ) {
+		$content = $activity['object']['content'] ?? '';
+
+		// Pattern to match the entire quote-inline paragraph.
+		$full_pattern = '/<p[^>]*class=["\']quote-inline["\'][^>]*>.*?<\/p>/is';
+
+		if ( \preg_match( $full_pattern, $content, $full_match ) ) {
+			// Extract the URL from the href attribute within the matched content.
+			$url_pattern = '/href=["\'](https?:\/\/[^"\']+)["\']/i';
+			if ( \preg_match( $url_pattern, $full_match[0], $url_matches ) ) {
+				$activity['object']['inReplyTo'] = \esc_url_raw( $url_matches[1] );
+				// Remove the entire quote-inline paragraph from content.
+				$activity['object']['content'] = \preg_replace( $full_pattern, '', $content );
+			}
+		}
+
+		return $activity;
 	}
 }

@@ -636,7 +636,7 @@ class Comment {
 			array(
 				'label'          => __( 'Reposts', 'activitypub' ),
 				'singular'       => __( 'Repost', 'activitypub' ),
-				'description'    => __( 'A repost on the indieweb is a post that is purely a 100% re-publication of another (typically someone else\'s) post.', 'activitypub' ),
+				'description'    => __( 'A repost (or Announce) is when a post appears in the timeline because someone else shared it, while still showing the original author as the source.', 'activitypub' ),
 				'icon'           => '♻️',
 				'class'          => 'p-repost',
 				'type'           => 'repost',
@@ -655,7 +655,7 @@ class Comment {
 			array(
 				'label'          => __( 'Likes', 'activitypub' ),
 				'singular'       => __( 'Like', 'activitypub' ),
-				'description'    => __( 'A like is a popular webaction button and in some cases post type on various silos such as Facebook and Instagram.', 'activitypub' ),
+				'description'    => __( 'A like is a small positive reaction that shows appreciation for a post without sharing it further.', 'activitypub' ),
 				'icon'           => '👍',
 				'class'          => 'p-like',
 				'type'           => 'like',
@@ -666,6 +666,25 @@ class Comment {
 				'count_single'   => _x( '%d like', 'number of likes', 'activitypub' ),
 				/* translators: %d: Number of likes */
 				'count_plural'   => _x( '%d likes', 'number of likes', 'activitypub' ),
+			)
+		);
+
+		register_comment_type(
+			'quote',
+			array(
+				'label'          => __( 'Quotes', 'activitypub' ),
+				'singular'       => __( 'Quote', 'activitypub' ),
+				'description'    => __( 'A quote is when a post is shared along with an added comment, so the original post appears together with the sharer&#8217;s own words.', 'activitypub' ),
+				'icon'           => '❞',
+				'class'          => 'p-quote',
+				'type'           => 'quote',
+				'collection'     => 'quotes',
+				'activity_types' => array( 'quote' ),
+				'excerpt'        => html_entity_decode( \__( '&hellip; quoted this!', 'activitypub' ) ),
+				/* translators: %d: Number of quotes */
+				'count_single'   => _x( '%d quote', 'number of quotes', 'activitypub' ),
+				/* translators: %d: Number of quotes */
+				'count_plural'   => _x( '%d quotes', 'number of quotes', 'activitypub' ),
 			)
 		);
 	}

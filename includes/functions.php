@@ -617,7 +617,20 @@ function is_activity_public( $data ) {
  * @return boolean True if a reply, false if not.
  */
 function is_activity_reply( $data ) {
-	return ! empty( $data['object']['inReplyTo'] );
+	if ( ! empty( $data['object']['inReplyTo'] ) ) {
+		return true;
+	}
+
+	if ( empty( $data['object']['content'] ) ) {
+		return false;
+	}
+
+	// very simple check for quote content.
+	if ( \preg_match( '/^<p class="quote-inline">.*<\/p>/i', $data['object']['content'] ) ) {
+		return true;
+	}
+
+	return false;
 }
 
 /**
