@@ -626,7 +626,7 @@ function is_activity_reply( $data ) {
 	}
 
 	// very simple check for quote content.
-	if ( \preg_match( '/^<p class="quote-inline">.*<\/p>/i', $data['object']['content'] ) ) {
+	if ( \preg_match( '/^<p class="quote-inline">.*?<\/p>/i', $data['object']['content'] ) ) {
 		return true;
 	}
 
