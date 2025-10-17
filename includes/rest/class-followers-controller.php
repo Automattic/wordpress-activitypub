@@ -207,7 +207,13 @@ class Followers_Controller extends Actors_Controller {
 		}
 
 		// Get partial followers filtered by authority.
-		$partial_followers = Followers::get_id_by_authority( $user_id, $authority );
+		$followers = Followers::get_id_by_authority( $user_id, $authority );
+		$followers = array_map(
+			function ( $post ) {
+				return $post->guid;
+			},
+			$followers
+		);
 
 		$response = array(
 			'id'           => get_rest_url_by_path(
@@ -218,8 +224,8 @@ class Followers_Controller extends Actors_Controller {
 				)
 			),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => count( $partial_followers ),
-			'orderedItems' => $partial_followers,
+			'totalItems'   => count( $followers ),
+			'orderedItems' => $followers,
 		);
 
 		$response = $this->prepare_collection_response( $response, $request );

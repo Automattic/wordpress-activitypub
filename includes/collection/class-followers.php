@@ -504,9 +504,9 @@ class Followers {
 		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
 		$digest = str_repeat( '0', 64 );
 
-		foreach ( $followers as $follower_url ) {
+		foreach ( $followers as $follower ) {
 			// Compute SHA256 hash of the follower ID.
-			$hash = hash( 'sha256', $follower_url );
+			$hash = hash( 'sha256', $follower->guid );
 
 			// XOR the hash with the running digest.
 			$digest = Signature::xor_hex_strings( $digest, $hash );
@@ -524,7 +524,7 @@ class Followers {
 	 * @param int    $user_id  The user ID whose followers to get.
 	 * @param string $authority The URI authority (scheme + host) to filter by.
 	 *
-	 * @return array Array of follower URLs.
+	 * @return \WP_Post[] Array of WP_Post objects.
 	 */
 	public static function get_id_by_authority( $user_id, $authority ) {
 		$posts = new \WP_Query(
@@ -549,12 +549,7 @@ class Followers {
 			)
 		);
 
-		return array_map(
-			function ( $post ) {
-				return $post->guid;
-			},
-			$posts->posts
-		);
+		return $posts->posts ?? array();
 	}
 
 	/**
@@ -567,6 +562,13 @@ class Followers {
 	 */
 	public static function generate_sync_header( $user_id, $authority ) {
 		$followers = self::get_id_by_authority( $user_id, $authority );
+		$followers = array_map(
+			function ( $post ) {
+				return $post->guid;
+			},
+			$followers
+		);
+
 		// Compute the digest for this specific authority.
 		$digest = Signature::compute_collection_digest( $followers );
 
