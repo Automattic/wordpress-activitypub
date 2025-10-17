@@ -207,7 +207,7 @@ class Followers_Controller extends Actors_Controller {
 		}
 
 		// Get partial followers filtered by authority.
-		$followers = Followers::get_id_by_authority( $user_id, $authority );
+		$followers = Followers::get_by_authority( $user_id, $authority );
 		$followers = array_map(
 			function ( $post ) {
 				return $post->guid;

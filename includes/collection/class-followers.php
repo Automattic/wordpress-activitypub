@@ -499,7 +499,7 @@ class Followers {
 	 * @return string The hex-encoded digest, or empty string if no followers.
 	 */
 	public static function compute_partial_digest( $user_id, $authority ) {
-		$followers = self::get_id_by_authority( $user_id, $authority );
+		$followers = self::get_by_authority( $user_id, $authority );
 
 		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
 		$digest = str_repeat( '0', 64 );
@@ -526,7 +526,7 @@ class Followers {
 	 *
 	 * @return \WP_Post[] Array of WP_Post objects.
 	 */
-	public static function get_id_by_authority( $user_id, $authority ) {
+	public static function get_by_authority( $user_id, $authority ) {
 		$posts = new \WP_Query(
 			array(
 				'post_type'      => Remote_Actors::POST_TYPE,
@@ -561,7 +561,7 @@ class Followers {
 	 * @return string|false The header value, or false if cannot generate.
 	 */
 	public static function generate_sync_header( $user_id, $authority ) {
-		$followers = self::get_id_by_authority( $user_id, $authority );
+		$followers = self::get_by_authority( $user_id, $authority );
 		$followers = array_map(
 			function ( $post ) {
 				return $post->guid;

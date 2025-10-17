@@ -57,44 +57,38 @@ class Collection_Sync {
 		}
 
 		// Fetch the authoritative partial followers collection.
-		$response = Http::get( $params['url'], 300 ); // Cache for 5 minutes.
+		$data = Http::get_remote_object( $params['url'], 300 ); // Cache for 5 minutes.
 
-		if ( \is_wp_error( $response ) ) {
-			return;
-		}
-
-		$body = \wp_remote_retrieve_body( $response );
-		$data = \json_decode( $body, true );
-
-		if ( empty( $data['orderedItems'] ) || ! \is_array( $data['orderedItems'] ) ) {
+		if ( \is_wp_error( $data ) || empty( $data['orderedItems'] ) || ! \is_array( $data['orderedItems'] ) ) {
 			return;
 		}
 
 		$remote_followers = $data['orderedItems'];
 
 		// Get our authority.
-		$our_authority = get_url_authority( \home_url() );
+		$home_authority = get_url_authority( \home_url() );
 
-		foreach ( $remote_followers as $actor_uri ) {
-			if ( get_url_authority( $actor_uri ) !== $our_authority ) {
-				continue;
+		$accepted = Following::get_by_authority( $user_id, $home_authority );
+		foreach ( $accepted as $following ) {
+			$key = array_search( $following->guid, $remote_followers, true );
+			if ( false === $key ) {
+				Following::reject( $following, $user_id );
+			} else {
+				unset( $remote_followers[ $key ] );
 			}
+		}
 
-			if ( in_array( $actor_uri, $accepted_followers, true ) ) {
-				continue;
+		$remote_followers = array_values( $remote_followers ); // Reindex.
+
+		$pending = Following::get_by_authority( $user_id, $home_authority, Following::PENDING );
+		foreach ( $pending as $following ) {
+			$key = array_search( $following->guid, $remote_followers, true );
+			if ( false === $key ) {
+				Following::reject( $following, $user_id );
+			} else {
+				Following::accept( $following, $user_id );
+				unset( $remote_followers[ $key ] );
 			}
-
-			$user_to_remove = $accepted_followers[ $actor_uri ];
-			Following::unfollow( $snapshot['remote_post'], $user_to_remove );
-
-			/**
-			 * Action triggered when a follow is removed due to synchronization.
-			 *
-			 * @param int    $user_id      The local user ID whose follow was undone.
-			 * @param string $actor_uri    The local actor URI.
-			 * @param string $remote_actor The remote actor URL.
-			 */
-			\do_action( 'activitypub_followers_sync_follower_removed', $user_to_remove, $actor_uri, $actor_url );
 		}
 
 		/**

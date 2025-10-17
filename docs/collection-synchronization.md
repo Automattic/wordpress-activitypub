@@ -41,13 +41,15 @@ This is implemented in `includes/handler/class-collection-sync.php`.
 
 When a digest mismatch is detected, the plugin triggers a scheduled reconciliation job that:
 
-1. Fetches the authoritative partial followers collection from the remote server
-2. Compares it with the local *following* relationships for that remote actor
-3. Removes local follow records that the remote server no longer recognises
-4. Promotes pending follow requests that the remote server already lists as accepted
-5. Issues Undo Follow activities for any unexpected entries reported by the remote server
+1. Fetches the authoritative partial followers collection from the remote server (using the URL from the Collection-Synchronization header)
+2. Compares it with the local *following* relationships for that remote actor (filtered by authority)
+3. For **accepted** following relationships:
+   - If the remote actor is NOT in the remote followers list, reject the local follow (remote server no longer recognizes it)
+4. For **pending** following relationships:
+   - If the remote actor IS in the remote followers list, accept the pending follow (remote server already accepted it)
+   - If the remote actor is NOT in the remote followers list, reject the pending follow (remote server doesn't recognize it)
 
-The reconciliation is handled asynchronously via WordPress's cron system.
+The reconciliation is handled asynchronously via WordPress's cron system to avoid blocking inbox processing.
 
 This is implemented in `includes/scheduler/class-collection-sync.php`.
 
@@ -74,8 +76,9 @@ This is implemented in `includes/scheduler/class-collection-sync.php`.
 
 - **`Following`** (`includes/collection/class-following.php`)
   - Exposes local following state for reconciliation and digest calculations
-  - Maps local user IDs to ActivityPub actor URLs for comparison
-  - Methods: `get_local_followers_snapshot()`
+  - Filters following relationships by authority (instance domain)
+  - Handles accept/reject operations for follow relationships
+  - Methods: `get_by_authority()`, `accept()`, `reject()`
 
 - **`Followers_Controller`** (`includes/rest/class-followers-controller.php`)
   - Adds `/actors/{id}/followers/sync` REST endpoint for partial collections
@@ -85,10 +88,13 @@ This is implemented in `includes/scheduler/class-collection-sync.php`.
 
 - **`Collection_Sync`** (`includes/scheduler/class-collection-sync.php`)
   - Handles async reconciliation when digest mismatches occur
-  - Fetches authoritative partial followers from the remote server
-  - Removes stale local follow relationships, promotes pending accepts, and cleans up unexpected entries
-  - Reports changes via action hooks
-  - Methods: `reconcile_followers()`
+  - Fetches authoritative partial followers from the remote server using the sync URL
+  - Compares remote followers with local following relationships filtered by home authority
+  - Rejects accepted follows not recognized by remote server
+  - Accepts pending follows already in remote followers list
+  - Rejects pending follows not in remote followers list
+  - Reports completion via action hooks
+  - Methods: `reconcile_followers()`, `schedule_reconciliation()`
 
 - **`Scheduler`** (`includes/class-scheduler.php`)
   - Registers the follower reconciliation scheduled action
@@ -102,24 +108,19 @@ FEP-8fcf is designed with privacy in mind:
 
 ## Action Hooks
 
-The implementation provides several action hooks for monitoring and extending:
+The implementation provides action hooks for monitoring and extending:
 
 ```php
-// Triggered when digest mismatch is detected
-do_action( 'activitypub_followers_sync_mismatch', $user_id, $actor_url, $params );
+// Triggered when a digest mismatch is detected and reconciliation is scheduled
+// Fired in includes/handler/class-collection-sync.php
+do_action( 'activitypub_collection_sync', $collection_type, $user_id, $actor_url, $params );
 
-// Triggered when a local follow record is removed during sync
-do_action( 'activitypub_followers_sync_follower_removed', $local_user_id, $local_actor_uri, $actor_url );
-
-// Triggered when a pending follow is auto-accepted during sync
-do_action( 'activitypub_followers_sync_follow_request_accepted', $local_user_id, $local_actor_uri, $actor_url );
-
-// Triggered when an unexpected remote entry requires an Undo Follow
-do_action( 'activitypub_followers_sync_follower_mismatch', $local_user_id, $local_actor_uri, $actor_url );
-
-// Triggered after reconciliation completes
-do_action( 'activitypub_followers_sync_reconciled', $user_id, $actor_url, $removed_actor_uris, $undo_actor_uris );
+// Triggered after reconciliation completes successfully
+// Fired in includes/scheduler/class-collection-sync.php
+do_action( 'activitypub_followers_sync_reconciled', $user_id, $actor_url );
 ```
+
+**Note:** The `Following::accept()` and `Following::reject()` methods trigger their own action hooks for tracking individual follow state changes.
 
 ## REST API Endpoints
 

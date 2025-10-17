@@ -377,49 +377,41 @@ class Following {
 	}
 
 	/**
-	 * Retrieve a snapshot of local followers information for a remote actor.
+	 * Get partial followers collection for a specific instance.
 	 *
-	 * @param string $actor_url The remote actor URL.
+	 * Returns only followers whose ID shares the specified URI authority.
+	 * Used for FEP-8fcf synchronization.
 	 *
-	 * @return array|\WP_Error {
-	 *     Snapshot data or WP_Error when the remote actor is unknown.
+	 * @param int    $user_id   The user ID whose followers to get.
+	 * @param string $authority The URI authority (scheme + host) to filter by.
+	 * @param string $state     The following state to filter by (accepted or pending). Default is accepted.
 	 *
-	 *     @type array    $followers   Map of local actor URLs to user IDs for accepted follows.
-	 *     @type array    $pending     Map of local actor URLs to user IDs for pending follows.
-	 *     @type \WP_Post $remote_post Remote actor post object.
-	 * }
+	 * @return array Array of follower URLs.
 	 */
-	public static function get_local_followers( $actor_url ) {
-		$post = Remote_Actors::fetch_by_uri( $actor_url );
-
-		if ( \is_wp_error( $post ) ) {
-			return $post;
-		}
-
-		$accepted = \get_post_meta( $post->ID, self::FOLLOWING_META_KEY, false );
-		$pending  = \get_post_meta( $post->ID, self::PENDING_META_KEY, false );
-
-		return array(
-			'accepted'    => array_filter(
-				\array_map(
-					function ( $user_id ) {
-						$actor = Actors::get_by_id( $user_id );
-						return ! \is_wp_error( $actor ) ? $actor->get_id() : null;
-					},
-					$accepted
-				)
-			),
-			'pending'     => array_filter(
-				\array_map(
-					function ( $user_id ) {
-						$actor = Actors::get_by_id( $user_id );
-						return ! \is_wp_error( $actor ) ? $actor->get_id() : null;
-					},
-					$pending
-				)
-			),
-			'remote_post' => $post,
+	public static function get_by_authority( $user_id, $authority, $state = self::FOLLOWING_META_KEY ) {
+		$posts = new \WP_Query(
+			array(
+				'post_type'      => Remote_Actors::POST_TYPE,
+				'posts_per_page' => -1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'   => $state,
+						'value' => $user_id,
+					),
+					array(
+						'key'     => '_activitypub_inbox',
+						'compare' => 'LIKE',
+						'value'   => $authority,
+					),
+				),
+			)
 		);
+
+		return $posts->posts ?? array();
 	}
 
 	/**
