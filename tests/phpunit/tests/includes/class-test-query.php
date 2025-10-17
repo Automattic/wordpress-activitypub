@@ -518,4 +518,77 @@ class Test_Query extends \WP_UnitTestCase {
 		// Clean up.
 		\wp_delete_post( $post_id, true );
 	}
+
+	/**
+	 * Test get_activitypub_object method for home page in Actor mode.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_home_page_actor_mode() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$actor_queries = array();
+
+		// Track database queries using the 'query' filter.
+		$query_filter = function ( $query ) use ( &$actor_queries ) {
+			if ( strpos( $query, 'ap_actor' ) !== false ) {
+				$actor_queries[] = $query;
+			}
+			return $query;
+		};
+
+		add_filter( 'query', $query_filter );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/' ) );
+		$object = Query::get_instance()->get_activitypub_object();
+
+		remove_filter( 'query', $query_filter );
+
+		$message = 'Should not query Remote_Actors table for home page.';
+		if ( ! empty( $actor_queries ) ) {
+			$message .= ' Found queries: ' . wp_json_encode( $actor_queries );
+		}
+
+		$this->assertNull( $object, 'Home page should return null, because the Blog user is disabled.' );
+		$this->assertEmpty( $actor_queries, $message );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test get_activitypub_object method for home page in Actor and Blog mode.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_home_page_actor_and_blog_mode() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$actor_queries = array();
+
+		// Track database queries using the 'query' filter.
+		$query_filter = function ( $query ) use ( &$actor_queries ) {
+			if ( strpos( $query, 'ap_actor' ) !== false ) {
+				$actor_queries[] = $query;
+			}
+			return $query;
+		};
+
+		\add_filter( 'query', $query_filter );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/' ) );
+		$object = Query::get_instance()->get_activitypub_object();
+
+		\remove_filter( 'query', $query_filter );
+
+		$message = 'Should not query Remote_Actors table for home page.';
+		if ( ! empty( $actor_queries ) ) {
+			$message .= ' Found queries: ' . wp_json_encode( $actor_queries );
+		}
+
+		$this->assertNotNull( $object, 'Home page should return an object' );
+		$this->assertEmpty( $actor_queries, $message );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
 }
