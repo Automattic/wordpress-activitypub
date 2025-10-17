@@ -550,7 +550,7 @@ class Test_Query extends \WP_UnitTestCase {
 			$message .= ' Found queries: ' . wp_json_encode( $actor_queries );
 		}
 
-		$this->assertNull( $object, 'Home page should return an object' );
+		$this->assertNull( $object, 'Home page should return null, because the Blog user is disabled.' );
 		$this->assertEmpty( $actor_queries, $message );
 
 		\delete_option( 'activitypub_actor_mode' );
