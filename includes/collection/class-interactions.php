@@ -34,7 +34,11 @@ class Interactions {
 	public static function add_comment( $activity ) {
 		$comment_data = self::activity_to_comment( $activity );
 
-		if ( ! $comment_data || ! isset( $activity['object']['inReplyTo'] ) ) {
+		if ( ! $comment_data ) {
+			return false;
+		}
+
+		if ( empty( $activity['object']['inReplyTo'] ) ) {
 			$activity = self::extract_quote_link( $activity );
 			if ( ! empty( $activity['object']['inReplyTo'] ) ) {
 				$comment_data['comment_type'] = 'quote';
