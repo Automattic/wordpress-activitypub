@@ -59,7 +59,7 @@ class Collection_Sync {
 		// Fetch the authoritative partial followers collection.
 		$data = Http::get_remote_object( $params['url'], 300 ); // Cache for 5 minutes.
 
-		if ( \is_wp_error( $data ) || empty( $data['orderedItems'] ) || ! \is_array( $data['orderedItems'] ) ) {
+		if ( \is_wp_error( $data ) || ! isset( $data['orderedItems'] ) || ! \is_array( $data['orderedItems'] ) ) {
 			return;
 		}
 
@@ -80,7 +80,7 @@ class Collection_Sync {
 
 		$remote_followers = array_values( $remote_followers ); // Reindex.
 
-		$pending = Following::get_by_authority( $user_id, $home_authority, Following::PENDING );
+		$pending = Following::get_by_authority( $user_id, $home_authority, Following::PENDING_META_KEY );
 		foreach ( $pending as $following ) {
 			$key = array_search( $following->guid, $remote_followers, true );
 			if ( false === $key ) {
