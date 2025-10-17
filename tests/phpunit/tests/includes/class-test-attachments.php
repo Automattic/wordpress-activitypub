@@ -38,7 +38,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		parent::set_up_before_class();
 
 		// Register post type for tests.
-		Post_Types::register_object_post_type();
+		Post_Types::register_post_post_type();
 
 		// Create test author.
 		self::$author_id = self::factory()->user->create( array( 'role' => 'editor' ) );
