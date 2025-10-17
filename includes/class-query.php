@@ -234,7 +234,11 @@ class Query {
 		}
 
 		// Check for Blog Actor.
-		if ( ( is_home() || is_front_page() ) && ! is_user_type_disabled( 'blog' ) ) {
+		if ( is_home() || is_front_page() ) {
+			if ( is_user_type_disabled( 'blog' ) ) {
+				return null;
+			}
+
 			$author_id = Actors::BLOG_USER_ID;
 		} else {
 			$author_id = url_to_authorid( $url );
