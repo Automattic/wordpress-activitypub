@@ -573,13 +573,13 @@ class Test_Query extends \WP_UnitTestCase {
 			return $query;
 		};
 
-		add_filter( 'query', $query_filter );
+		\add_filter( 'query', $query_filter );
 
 		Query::get_instance()->__destruct();
 		$this->go_to( home_url( '/' ) );
 		$object = Query::get_instance()->get_activitypub_object();
 
-		remove_filter( 'query', $query_filter );
+		\remove_filter( 'query', $query_filter );
 
 		$message = 'Should not query Remote_Actors table for home page.';
 		if ( ! empty( $actor_queries ) ) {
