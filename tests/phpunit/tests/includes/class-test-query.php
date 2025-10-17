@@ -525,7 +525,7 @@ class Test_Query extends \WP_UnitTestCase {
 	 * @covers ::get_activitypub_object
 	 */
 	public function test_home_page_actor_mode() {
-		\add_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 
 		$actor_queries = array();
 
@@ -562,7 +562,7 @@ class Test_Query extends \WP_UnitTestCase {
 	 * @covers ::get_activitypub_object
 	 */
 	public function test_home_page_actor_and_blog_mode() {
-		\add_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		$actor_queries = array();
 
 		// Track database queries using the 'query' filter.
