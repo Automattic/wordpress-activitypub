@@ -84,8 +84,8 @@ class Posts {
 
 		if ( ! $post_id ) {
 			return new \WP_Error(
-				'activitypub_object_not_found',
-				\__( 'Object not found', 'activitypub' ),
+				'activitypub_post_not_found',
+				\__( 'Post not found', 'activitypub' ),
 				array( 'status' => 404 )
 			);
 		}
