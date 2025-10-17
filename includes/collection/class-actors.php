@@ -259,13 +259,6 @@ class Actors {
 					return self::BLOG_USER_ID;
 				}
 
-				// Check locally stored remote Actor.
-				$post = Remote_Actors::get_by_uri( $uri );
-
-				if ( ! \is_wp_error( $post ) ) {
-					return $post->ID;
-				}
-
 				return new \WP_Error(
 					'activitypub_no_user_found',
 					\__( 'Actor not found', 'activitypub' ),
