@@ -433,10 +433,15 @@ class Post_Types {
 			'show_in_rest'        => true,
 			'map_meta_cap'        => true,
 			'show_ui'             => true,
-			'supports'            => array( 'title', 'editor', 'page-attributes' ),
+			'supports'            => array( 'title', 'editor', 'page-attributes', 'author' ),
+			'capabilities'        => array(
+				'edit_others_posts' => 'do_not_allow', // Disallow editing others' Extra Fields (only own ones).
+			),
 		);
 
 		\register_post_type( Extra_Fields::USER_POST_TYPE, $extra_field_args );
+
+		unset( $extra_field_args['capabilities'] ); // Allow editing the Blog's Extra Fields.
 		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $extra_field_args );
 
 		/**
