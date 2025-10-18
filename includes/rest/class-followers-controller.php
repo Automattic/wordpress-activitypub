@@ -208,12 +208,7 @@ class Followers_Controller extends Actors_Controller {
 
 		// Get partial followers filtered by authority.
 		$followers = Followers::get_by_authority( $user_id, $authority );
-		$followers = array_map(
-			function ( $post ) {
-				return $post->guid;
-			},
-			$followers
-		);
+		$followers = \wp_list_pluck( $followers, 'guid' );
 
 		$response = array(
 			'id'           => get_rest_url_by_path(
