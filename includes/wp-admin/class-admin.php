@@ -273,6 +273,28 @@ class Admin {
 			false
 		);
 
+		// Register and enqueue command palette integration.
+		if ( user_can_activitypub( \get_current_user_id() ) || \current_user_can( 'manage_options' ) ) {
+			$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/command-palette/plugin.asset.php';
+			wp_enqueue_script(
+				'activitypub-command-palette',
+				plugins_url( 'build/command-palette/plugin.js', ACTIVITYPUB_PLUGIN_FILE ),
+				$asset_data['dependencies'],
+				$asset_data['version'],
+				true
+			);
+
+			wp_localize_script(
+				'activitypub-command-palette',
+				'activitypubCommandPalette',
+				array(
+					'followingEnabled' => '1' === \get_option( 'activitypub_following_ui', '0' ),
+					'actorMode'        => \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ),
+					'canManageOptions' => \current_user_can( 'manage_options' ),
+				)
+			);
+		}
+
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
 			wp_enqueue_style(
 				'activitypub-admin-styles',
@@ -406,16 +428,6 @@ class Admin {
 	 * Add ActivityPub specific actions/filters to the post list view.
 	 */
 	public static function list_posts() {
-		// Show only the user's extra fields.
-		\add_action(
-			'pre_get_posts',
-			function ( $query ) {
-				if ( $query->get( 'post_type' ) === 'ap_extrafield' ) {
-					$query->set( 'author', get_current_user_id() );
-				}
-			}
-		);
-
 		// Remove all views for the extra fields.
 		$screen_id = get_current_screen()->id;
 
