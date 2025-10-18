@@ -562,12 +562,7 @@ class Followers {
 	 */
 	public static function generate_sync_header( $user_id, $authority ) {
 		$followers = self::get_by_authority( $user_id, $authority );
-		$followers = array_map(
-			function ( $post ) {
-				return $post->guid;
-			},
-			$followers
-		);
+		$followers = \wp_list_pluck( $followers, 'guid' );
 
 		// Compute the digest for this specific authority.
 		$digest = Signature::compute_collection_digest( $followers );
