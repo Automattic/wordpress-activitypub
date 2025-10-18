@@ -38,7 +38,7 @@ class Collection_Sync {
 	public static function schedule_reconciliation( $type, $user_id, $actor_url, $params ) {
 		// Schedule async processing to avoid blocking the inbox.
 		\wp_schedule_single_event(
-			time() + 60, // Process in 1 minute.
+			time() + MINUTE_IN_SECONDS,
 			"activitypub_{$type}_sync_reconcile",
 			array( $user_id, $actor_url, $params )
 		);
