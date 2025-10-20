@@ -105,18 +105,18 @@ class Test_Follow extends \WP_UnitTestCase {
 		);
 
 		// Track followers count before.
-		$followers_before       = Followers::get_followers( $target_user_id );
+		$followers_before       = Followers::get_many( $target_user_id );
 		$followers_count_before = count( $followers_before );
 
 		Follow::handle_follow( $activity_object, $target_user_id );
 
 		// Check if follower was added.
 		if ( $should_add_follower ) {
-			$followers_after       = Followers::get_followers( $target_user_id );
+			$followers_after       = Followers::get_many( $target_user_id );
 			$followers_count_after = count( $followers_after );
 			$this->assertEquals( $followers_count_before + 1, $followers_count_after, $description . ' - Follower should be added' );
 		} else {
-			$followers_after       = Followers::get_followers( $target_user_id );
+			$followers_after       = Followers::get_many( $target_user_id );
 			$followers_count_after = count( $followers_after );
 			$this->assertEquals( $followers_count_before, $followers_count_after, $description . ' - Follower should not be added' );
 		}
@@ -223,7 +223,7 @@ class Test_Follow extends \WP_UnitTestCase {
 			}
 		);
 
-		$remote_actor = Followers::add_follower(
+		$remote_actor = Followers::add(
 			self::$user_id,
 			$activity_object['actor']
 		);

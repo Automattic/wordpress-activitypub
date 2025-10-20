@@ -109,7 +109,7 @@ class Test_Update extends \WP_UnitTestCase {
 			$this->assertWPError( $follower, $description );
 		} else {
 			// For successful updates, add follower first then test update.
-			Followers::add_follower( $this->user_id, $actor_url );
+			Followers::add( $this->user_id, $actor_url );
 
 			$follower = Remote_Actors::get_by_uri( $actor_url );
 			$this->assertNotNull( $follower, $description );
