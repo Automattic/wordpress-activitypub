@@ -268,7 +268,7 @@ class Following extends \WP_List_Table {
 	 * @return string[]
 	 */
 	public function get_views() {
-		$count  = Following_Collection::count( $this->user_id );
+		$count  = Following_Collection::count_by_status( $this->user_id );
 		$path   = 'users.php?page=activitypub-following-list';
 		$status = Following_Collection::ALL;
 
