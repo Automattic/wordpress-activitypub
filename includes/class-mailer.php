@@ -87,7 +87,11 @@ class Mailer {
 		}
 
 		$post                  = \get_post( $comment->comment_post_ID );
-		$comment_author_domain = \gethostbyaddr( $comment->comment_author_IP );
+		$comment_author_domain = '';
+		// Only attempt to resolve hostname if we have a valid IP address.
+		if ( ! empty( $comment->comment_author_IP ) && \filter_var( $comment->comment_author_IP, FILTER_VALIDATE_IP ) ) {
+			$comment_author_domain = \gethostbyaddr( $comment->comment_author_IP );
+		}
 
 		// Check if this is a reaction to a post or a comment.
 		if ( 0 === (int) $comment->comment_parent ) {
