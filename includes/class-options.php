@@ -185,11 +185,7 @@ class Options {
 	 * @return string[] The value of the option.
 	 */
 	public static function support_post_types_ensure_array( $value ) {
-		if ( empty( $value ) && ! \is_array( $value ) ) {
-			return array();
-		}
-
-		return $value;
+		return (array) $value;
 	}
 
 	/**
