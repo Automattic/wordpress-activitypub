@@ -76,7 +76,7 @@ class Collection_Sync {
 		}
 
 		// Get the actor URL for validation.
-		$actor_url = isset( $data['actor'] ) ? $data['actor'] : null;
+		$actor_url = $data['actor'] ?? false;
 
 		if ( ! $actor_url ) {
 			return;
