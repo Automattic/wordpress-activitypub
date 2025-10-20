@@ -185,7 +185,7 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function api_account_followers( $followers, $user_id ) {
 		$user_id               = self::maybe_map_user_to_blog( $user_id );
-		$activitypub_followers = Followers::get_followers( $user_id, 40 );
+		$activitypub_followers = Followers::get_many( $user_id, 40 );
 		$mastodon_followers    = array_map(
 			function ( $item ) {
 				$actor = Remote_Actors::get_actor( $item );
@@ -323,7 +323,7 @@ class Enable_Mastodon_Apps {
 			$account->fields
 		);
 
-		$account->followers_count = Followers::count_followers( $user_id );
+		$account->followers_count = Followers::count( $user_id );
 
 		return $account;
 	}
@@ -476,7 +476,7 @@ class Enable_Mastodon_Apps {
 		}
 		$q = sanitize_text_field( wp_unslash( $q ) );
 
-		$followers = Followers::get_followers( $user_id, 40, null, array( 's' => $q ) );
+		$followers = Followers::get_many( $user_id, 40, null, array( 's' => $q ) );
 		if ( ! $followers ) {
 			return $search_data;
 		}

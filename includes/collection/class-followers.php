@@ -40,7 +40,7 @@ class Followers {
 	 *
 	 * @return int|\WP_Error The Follower ID or an WP_Error.
 	 */
-	public static function add_follower( $user_id, $actor ) {
+	public static function add( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
 		if ( Tombstone::exists( $meta ) ) {
@@ -64,6 +64,21 @@ class Followers {
 		}
 
 		return $post_id;
+	}
+
+	/**
+	 * Add new Follower.
+	 *
+	 * @deprecated unreleased Use {@see Followers::add()}
+	 *
+	 * @param int    $user_id The ID of the WordPress User.
+	 * @param string $actor   The Actor URL.
+	 *
+	 * @return int|\WP_Error The Follower ID or an WP_Error.
+	 */
+	public static function add_follower( $user_id, $actor ) {
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::add' );
+		return self::add( $user_id, $actor );
 	}
 
 	/**
@@ -109,7 +124,7 @@ class Followers {
 	public static function remove_follower( $user_id, $actor ) {
 		_deprecated_function( __METHOD__, '7.1.0', 'Activitypub\Collection\Followers::remove' );
 
-		$remote_actor = self::get_follower( $user_id, $actor );
+		$remote_actor = self::get_by_uri( $user_id, $actor );
 
 		if ( \is_wp_error( $remote_actor ) ) {
 			return false;
@@ -119,14 +134,14 @@ class Followers {
 	}
 
 	/**
-	 * Get a Follower.
+	 * Get a Follower by URI.
 	 *
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
 	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
-	public static function get_follower( $user_id, $actor ) {
+	public static function get_by_uri( $user_id, $actor ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -154,6 +169,21 @@ class Followers {
 	}
 
 	/**
+	 * Get a Follower.
+	 *
+	 * @deprecated unreleased Use {@see Followers::get_by_uri()}
+	 *
+	 * @param int    $user_id The ID of the WordPress User.
+	 * @param string $actor   The Actor URL.
+	 *
+	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
+	 */
+	public static function get_follower( $user_id, $actor ) {
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::get_by_uri' );
+		return self::get_by_uri( $user_id, $actor );
+	}
+
+	/**
 	 * Get a Follower by Actor independent of the User.
 	 *
 	 * @deprecated 7.4.0
@@ -169,7 +199,25 @@ class Followers {
 	}
 
 	/**
+	 * Get many followers.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 * @param int      $number  Maximum number of results to return.
+	 * @param int      $page    Page number.
+	 * @param array    $args    The WP_Query arguments.
+	 *
+	 * @return \WP_Post[] List of `Follower` objects.
+	 */
+	public static function get_many( $user_id, $number = -1, $page = null, $args = array() ) {
+		$data = self::query( $user_id, $number, $page, $args );
+
+		return $data['followers'];
+	}
+
+	/**
 	 * Get the Followers of a given user.
+	 *
+	 * @deprecated unreleased Use {@see Followers::get_many()}
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -179,13 +227,14 @@ class Followers {
 	 * @return \WP_Post[] List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
-		$data = self::get_followers_with_count( $user_id, $number, $page, $args );
-
-		return $data['followers'];
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::get_many' );
+		return self::get_many( $user_id, $number, $page, $args );
 	}
 
 	/**
 	 * Get the Followers of a given user, along with a total count for pagination purposes.
+	 *
+	 * @deprecated unreleased Use {@see Followers::query()}
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -200,6 +249,26 @@ class Followers {
 	 *  }
 	 */
 	public static function get_followers_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::query' );
+		return self::query( $user_id, $number, $page, $args );
+	}
+
+	/**
+	 * Query followers with pagination info.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 * @param int      $number  Maximum number of results to return.
+	 * @param int      $page    Page number.
+	 * @param array    $args    The WP_Query arguments.
+	 *
+	 * @return array {
+	 *      Data about the followers.
+	 *
+	 *      @type \WP_Post[] $followers List of `Follower` objects.
+	 *      @type int        $total     Total number of followers.
+	 *  }
+	 */
+	public static function query( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
 			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
@@ -230,14 +299,28 @@ class Followers {
 	}
 
 	/**
-	 * Count the total number of followers
+	 * Count the total number of followers.
+	 *
+	 * @param int $user_id The ID of the WordPress User.
+	 *
+	 * @return int The number of Followers
+	 */
+	public static function count( $user_id ) {
+		return self::query( $user_id, 1 )['total'];
+	}
+
+	/**
+	 * Count the total number of followers.
+	 *
+	 * @deprecated unreleased Use {@see Followers::count()}
 	 *
 	 * @param int $user_id The ID of the WordPress User.
 	 *
 	 * @return int The number of Followers
 	 */
 	public static function count_followers( $user_id ) {
-		return self::get_followers_with_count( $user_id, 1 )['total'];
+		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::count' );
+		return self::count( $user_id );
 	}
 
 	/**
@@ -377,7 +460,7 @@ class Followers {
 				),
 			),
 		);
-		return self::get_followers( null, null, null, $args );
+		return self::get_many( null, null, null, $args );
 	}
 
 	/**

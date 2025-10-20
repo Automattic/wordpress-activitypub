@@ -173,12 +173,12 @@ class Test_Move extends \WP_UnitTestCase {
 		Move::handle_move( $activity, 1 );
 
 		// Assert that the original follower still exists and wasn't modified.
-		$existing_follower = Followers::get_follower( $this->user_id, $origin );
+		$existing_follower = Followers::get_by_uri( $this->user_id, $origin );
 		$this->assertNotNull( $existing_follower );
 		$this->assertEquals( $origin, $existing_follower->guid );
 
 		// Assert that no new follower was created for the target.
-		$target_follower = Followers::get_follower( $this->user_id, $target );
+		$target_follower = Followers::get_by_uri( $this->user_id, $target );
 		$this->assertWPError( $target_follower );
 
 		// Cleanup.
@@ -206,7 +206,7 @@ class Test_Move extends \WP_UnitTestCase {
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		// Store initial followers count.
-		$initial_followers = Followers::get_followers( $this->user_id );
+		$initial_followers = Followers::get_many( $this->user_id );
 		$initial_count     = count( $initial_followers );
 
 		$activity = array(
@@ -216,11 +216,11 @@ class Test_Move extends \WP_UnitTestCase {
 		Move::handle_move( $activity, 1 );
 
 		// Verify that no followers were added or removed.
-		$final_followers = Followers::get_followers( $this->user_id );
+		$final_followers = Followers::get_many( $this->user_id );
 		$this->assertEquals( $initial_count, count( $final_followers ) );
 
 		// Verify that our test follower remains unchanged.
-		$existing_follower = Followers::get_follower( $this->user_id, 'https://example.com/test-profile' );
+		$existing_follower = Followers::get_by_uri( $this->user_id, 'https://example.com/test-profile' );
 		$this->assertNotNull( $existing_follower );
 
 		$actor = Remote_Actors::get_actor( $existing_follower );

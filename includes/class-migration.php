@@ -284,7 +284,7 @@ class Migration {
 
 			if ( $followers ) {
 				foreach ( $followers as $actor ) {
-					Followers::add_follower( $user_id, $actor );
+					Followers::add( $user_id, $actor );
 				}
 			}
 		}
@@ -378,14 +378,14 @@ class Migration {
 		);
 
 		foreach ( $users as $user ) {
-			$followers = Followers::get_followers( $user->ID );
+			$followers = Followers::get_many( $user->ID );
 
 			if ( $followers ) {
 				\update_user_option( $user->ID, 'activitypub_use_permalink_as_id', '1' );
 			}
 		}
 
-		$followers = Followers::get_followers( Actors::BLOG_USER_ID );
+		$followers = Followers::get_many( Actors::BLOG_USER_ID );
 
 		if ( $followers ) {
 			\update_option( 'activitypub_use_permalink_as_id_for_blog', '1' );
