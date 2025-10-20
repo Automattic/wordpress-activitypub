@@ -26,6 +26,7 @@ class Options {
 
 		\add_filter( 'default_option_activitypub_negotiate_content', array( self::class, 'default_option_activitypub_negotiate_content' ) );
 		\add_filter( 'option_activitypub_max_image_attachments', array( self::class, 'default_max_image_attachments' ) );
+		\add_filter( 'option_activitypub_support_post_types', array( self::class, 'support_post_types_ensure_array' ) );
 		\add_filter( 'option_activitypub_object_type', array( self::class, 'default_object_type' ) );
 	}
 
@@ -171,6 +172,21 @@ class Options {
 	public static function default_max_image_attachments( $value ) {
 		if ( ! \is_numeric( $value ) ) {
 			$value = ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Ensure support post types is an array.
+	 *
+	 * @param string[] $value The value of the option.
+	 *
+	 * @return string[] The value of the option.
+	 */
+	public static function support_post_types_ensure_array( $value ) {
+		if ( empty( $value ) && ! \is_array( $value ) ) {
+			return array();
 		}
 
 		return $value;
