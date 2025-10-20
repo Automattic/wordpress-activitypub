@@ -346,7 +346,7 @@ class Following {
 	 */
 	public static function get_all_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::query' );
-		return self::get_all( $user_id, $number = -1, $page = null, $args = array() );
+		return self::get_all( $user_id, $number, $page, $args );
 	}
 
 	/**
