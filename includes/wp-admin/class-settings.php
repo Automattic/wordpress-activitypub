@@ -238,6 +238,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_create_posts',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Allow creating posts via ActivityPub.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_shared_inbox',
 			array(
 				'type'        => 'boolean',
