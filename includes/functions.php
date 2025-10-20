@@ -121,7 +121,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) { // phpcs:ignor
  * @return array The followers.
  */
 function get_followers( $user_id ) {
-	return Followers::get_followers( $user_id );
+	return Followers::get_many( $user_id );
 }
 
 /**
@@ -132,7 +132,7 @@ function get_followers( $user_id ) {
  * @return int The number of followers.
  */
 function count_followers( $user_id ) {
-	return Followers::count_followers( $user_id );
+	return Followers::count( $user_id );
 }
 
 /**

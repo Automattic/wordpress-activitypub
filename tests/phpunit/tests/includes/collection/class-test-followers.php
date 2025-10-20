@@ -103,10 +103,10 @@ class Test_Followers extends \WP_UnitTestCase {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
 
 		foreach ( $followers as $follower ) {
-			Followers::add_follower( 1, $follower );
+			Followers::add( 1, $follower );
 		}
 
-		$db_followers = Followers::get_followers( 1 );
+		$db_followers = Followers::get_many( 1 );
 
 		$this->assertEquals( 3, \count( $db_followers ) );
 
@@ -128,12 +128,12 @@ class Test_Followers extends \WP_UnitTestCase {
 	public function test_add_follower() {
 		$follower  = 'https://12345.example.com';
 		$follower2 = 'https://user2.example.com';
-		Followers::add_follower( 1, $follower );
-		Followers::add_follower( 2, $follower );
-		Followers::add_follower( 2, $follower2 );
+		Followers::add( 1, $follower );
+		Followers::add( 2, $follower );
+		Followers::add( 2, $follower2 );
 
-		$db_followers  = Followers::get_followers( 1 );
-		$db_followers2 = Followers::get_followers( 2 );
+		$db_followers  = Followers::get_many( 1 );
+		$db_followers2 = Followers::get_many( 2 );
 
 		$this->assertStringContainsString( $follower, serialize( $db_followers ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 		$this->assertStringContainsString( $follower2, serialize( $db_followers2 ) );  // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
@@ -147,17 +147,17 @@ class Test_Followers extends \WP_UnitTestCase {
 	public function test_add_follower_error() {
 		$follower = 'error@example.net';
 
-		$result = Followers::add_follower( 1, $follower );
+		$result = Followers::add( 1, $follower );
 
 		$this->assertTrue( \is_wp_error( $result ) );
 
 		$follower2 = 'https://error.example.net';
 
-		$result = Followers::add_follower( 1, $follower2 );
+		$result = Followers::add( 1, $follower2 );
 
 		$this->assertTrue( \is_wp_error( $result ) );
 
-		$db_followers = Followers::get_followers( 1 );
+		$db_followers = Followers::get_many( 1 );
 
 		$this->assertEmpty( $db_followers );
 	}
@@ -172,26 +172,26 @@ class Test_Followers extends \WP_UnitTestCase {
 		$followers2 = array( 'https://user2.example.com' );
 
 		foreach ( $followers as $follower ) {
-			Followers::add_follower( 1, $follower );
+			Followers::add( 1, $follower );
 		}
 
 		foreach ( $followers2 as $follower ) {
-			Followers::add_follower( 2, $follower );
+			Followers::add( 2, $follower );
 		}
 
-		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$follower = Followers::get_by_uri( 1, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
-		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
+		$follower = Followers::get_by_uri( 1, 'http://sally.example.org' );
 		$this->assertWPError( $follower );
 
-		$follower = Followers::get_follower( 1, 'https://user2.example.com' );
+		$follower = Followers::get_by_uri( 1, 'https://user2.example.com' );
 		$this->assertWPError( $follower );
 
-		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$follower = Followers::get_by_uri( 1, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
-		$follower2 = Followers::get_follower( 2, 'https://user2.example.com' );
+		$follower2 = Followers::get_by_uri( 2, 'https://user2.example.com' );
 		$this->assertEquals( 'https://user2.example.com', $follower2->guid );
 		$this->assertEquals( 'úser2', Remote_Actors::get_actor( $follower2 )->get_name() );
 	}
@@ -209,35 +209,35 @@ class Test_Followers extends \WP_UnitTestCase {
 		$followers2 = array( 'https://user2.example.com' );
 
 		foreach ( $followers as $follower ) {
-			Followers::add_follower( 1, $follower );
-			Followers::add_follower( 1, $follower );
-			Followers::add_follower( 1, $follower );
-			Followers::add_follower( 2, $follower );
+			Followers::add( 1, $follower );
+			Followers::add( 1, $follower );
+			Followers::add( 1, $follower );
+			Followers::add( 2, $follower );
 		}
 
 		foreach ( $followers2 as $follower2 ) {
-			Followers::add_follower( 2, $follower2 );
+			Followers::add( 2, $follower2 );
 		}
 
-		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$follower = Followers::get_by_uri( 1, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
-		$followers = Followers::get_followers( 1 );
+		$followers = Followers::get_many( 1 );
 		$this->assertEquals( 2, count( $followers ) );
 
-		$follower2 = Followers::get_follower( 2, 'https://example.com/author/jon' );
+		$follower2 = Followers::get_by_uri( 2, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower2->guid );
 
 		$this->setExpectedDeprecated( 'Activitypub\Collection\Followers::remove_follower' );
 		Followers::remove_follower( 1, 'https://example.com/author/jon' );
 
-		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$follower = Followers::get_by_uri( 1, 'https://example.com/author/jon' );
 		$this->assertWPError( $follower );
 
-		$follower2 = Followers::get_follower( 2, 'https://example.com/author/jon' );
+		$follower2 = Followers::get_by_uri( 2, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower2->guid );
 
-		$followers = Followers::get_followers( 1 );
+		$followers = Followers::get_many( 1 );
 		$this->assertEquals( 1, count( $followers ) );
 	}
 
@@ -253,21 +253,21 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 
 		foreach ( $followers as $follower ) {
-			Followers::add_follower( 1, $follower );
+			Followers::add( 1, $follower );
 		}
 
-		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$follower = Followers::get_by_uri( 1, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower->guid );
 
-		$followers = Followers::get_followers( 1 );
+		$followers = Followers::get_many( 1 );
 		$this->assertEquals( 2, count( $followers ) );
 
 		Followers::remove( $followers[0]->ID, 1 );
 
-		$follower = Followers::get_follower( 1, $followers[0]->guid );
+		$follower = Followers::get_by_uri( 1, $followers[0]->guid );
 		$this->assertWPError( $follower );
 
-		$followers = Followers::get_followers( 1 );
+		$followers = Followers::get_many( 1 );
 		$this->assertEquals( 1, count( $followers ) );
 	}
 
@@ -280,10 +280,10 @@ class Test_Followers extends \WP_UnitTestCase {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
 
 		foreach ( $followers as $follower ) {
-			Followers::add_follower( 1, $follower );
+			Followers::add( 1, $follower );
 		}
 
-		$follower = Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$follower = Followers::get_by_uri( 1, 'https://example.com/author/jon' );
 
 		global $wpdb;
 
@@ -321,16 +321,16 @@ class Test_Followers extends \WP_UnitTestCase {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
 
 		foreach ( $followers as $follower ) {
-			Followers::add_follower( 1, $follower );
+			Followers::add( 1, $follower );
 		}
 
-		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
+		$follower = Followers::get_by_uri( 1, 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
 			\add_post_meta( $follower->ID, '_activitypub_errors', 'error ' . $i );
 		}
 
-		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
+		$follower = Followers::get_by_uri( 1, 'http://sally.example.org' );
 		$actors   = Remote_Actors::get_faulty();
 
 		$this->assertEquals( 1, \count( $actors ) );
@@ -338,7 +338,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		Remote_Actors::clear_errors( $follower->ID );
 
-		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
+		$follower = Followers::get_by_uri( 1, 'http://sally.example.org' );
 		$actors   = Remote_Actors::get_faulty();
 
 		$this->assertEquals( 0, \count( $actors ) );
@@ -352,14 +352,14 @@ class Test_Followers extends \WP_UnitTestCase {
 	public function test_add_duplicate_follower() {
 		$follower = 'https://12345.example.com';
 
-		Followers::add_follower( 1, $follower );
-		Followers::add_follower( 1, $follower );
-		Followers::add_follower( 1, $follower );
-		Followers::add_follower( 1, $follower );
-		Followers::add_follower( 1, $follower );
-		Followers::add_follower( 1, $follower );
+		Followers::add( 1, $follower );
+		Followers::add( 1, $follower );
+		Followers::add( 1, $follower );
+		Followers::add( 1, $follower );
+		Followers::add( 1, $follower );
+		Followers::add( 1, $follower );
 
-		$db_followers = Followers::get_followers( 1 );
+		$db_followers = Followers::get_many( 1 );
 
 		$this->assertStringContainsString( $follower, serialize( $db_followers ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
@@ -426,7 +426,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		\Activitypub\Migration::migrate_from_0_17();
 
-		$db_followers = Followers::get_followers( 1 );
+		$db_followers = Followers::get_many( 1 );
 		$this->assertCount( $expected_count, $db_followers );
 
 		if ( $expected_count > 0 ) {
@@ -624,7 +624,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		// Create test followers.
 		foreach ( $followers as $follower ) {
 			$actor = self::$actors[ $follower ];
-			Followers::add_follower( $actor_id, $actor['id'] );
+			Followers::add( $actor_id, $actor['id'] );
 		}
 
 		// Test basic retrieval.
@@ -651,7 +651,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		// Test with blog user in dual mode.
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-		Followers::add_follower( Actors::BLOG_USER_ID, self::$actors['sally@example.org']['id'] );
+		Followers::add( Actors::BLOG_USER_ID, self::$actors['sally@example.org']['id'] );
 
 		$inboxes = Followers::get_inboxes_for_activity(
 			'{"type":"Delete"}',

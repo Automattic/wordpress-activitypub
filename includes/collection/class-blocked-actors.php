@@ -21,7 +21,7 @@ class Blocked_Actors {
 	 * @param string $value   The actor URI to block.
 	 * @return bool True on success, false on failure.
 	 */
-	public static function add_block( $user_id, $value ) {
+	public static function add( $user_id, $value ) {
 		// Find or create actor post.
 		$actor_post = Remote_Actors::fetch_by_uri( $value );
 		if ( \is_wp_error( $actor_post ) ) {
@@ -55,7 +55,7 @@ class Blocked_Actors {
 	 * @param string|int $value   The actor URI or post ID to unblock.
 	 * @return bool True on success, false on failure.
 	 */
-	public static function remove_block( $user_id, $value ) {
+	public static function remove( $user_id, $value ) {
 		// Handle both post ID and URI formats.
 		if ( \is_numeric( $value ) ) {
 			$post_id = (int) $value;
@@ -84,7 +84,7 @@ class Blocked_Actors {
 	}
 
 	/**
-	 * Get the blocked actors of a given user, along with a total count for pagination purposes.
+	 * Query blocked actors of a given user, with pagination info.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -98,7 +98,7 @@ class Blocked_Actors {
 	 *      @type int        $total         Total number of blocked actors.
 	 *  }
 	 */
-	public static function get_blocked_actors_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
+	public static function query( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
 			'post_type'      => Remote_Actors::POST_TYPE,
 			'posts_per_page' => $number,
@@ -123,7 +123,76 @@ class Blocked_Actors {
 	}
 
 	/**
+	 * Get many blocked actors.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 * @param int      $number  Maximum number of results to return.
+	 * @param int      $page    Page number.
+	 * @param array    $args    The WP_Query arguments.
+	 *
+	 * @return \WP_Post[] List of blocked Actors.
+	 */
+	public static function get_many( $user_id, $number = -1, $page = null, $args = array() ) {
+		return self::query( $user_id, $number, $page, $args )['blocked_actors'];
+	}
+
+	/**
+	 * Add an actor block for a user.
+	 *
+	 * @deprecated unreleased Use {@see Blocked_Actors::add()}.
+	 *
+	 * @param int    $user_id The user ID.
+	 * @param string $value   The actor URI to block.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function add_block( $user_id, $value ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::add' );
+
+		return self::add( $user_id, $value );
+	}
+
+	/**
+	 * Remove an actor block for a user.
+	 *
+	 * @deprecated unreleased Use {@see Blocked_Actors::remove()}.
+	 *
+	 * @param int        $user_id The user ID.
+	 * @param string|int $value   The actor URI or post ID to unblock.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function remove_block( $user_id, $value ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::remove' );
+
+		return self::remove( $user_id, $value );
+	}
+
+	/**
+	 * Get the blocked actors of a given user, along with a total count for pagination purposes.
+	 *
+	 * @deprecated unreleased Use {@see Blocked_Actors::query()}.
+	 *
+	 * @param int|null $user_id The ID of the WordPress User.
+	 * @param int      $number  Maximum number of results to return.
+	 * @param int      $page    Page number.
+	 * @param array    $args    The WP_Query arguments.
+	 *
+	 * @return array {
+	 *      Data about the blocked actors.
+	 *
+	 *      @type \WP_Post[] $blocked_actors List of blocked Actor WP_Post objects.
+	 *      @type int        $total         Total number of blocked actors.
+	 *  }
+	 */
+	public static function get_blocked_actors_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::query' );
+
+		return self::query( $user_id, $number, $page, $args );
+	}
+
+	/**
 	 * Get the blocked actors of a given user.
+	 *
+	 * @deprecated unreleased Use {@see Blocked_Actors::get_many()}.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -133,6 +202,8 @@ class Blocked_Actors {
 	 * @return \WP_Post[] List of blocked Actors.
 	 */
 	public static function get_blocked_actors( $user_id, $number = -1, $page = null, $args = array() ) {
-		return self::get_blocked_actors_with_count( $user_id, $number, $page, $args )['blocked_actors'];
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::get_many' );
+
+		return self::get_many( $user_id, $number, $page, $args );
 	}
 }

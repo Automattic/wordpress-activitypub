@@ -299,12 +299,12 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		Interactions::add_comment( $object );
 		$comment      = \Activitypub\object_id_to_comment( $id );
-		$interactions = Interactions::get_interaction_by_id( $id );
+		$interactions = Interactions::get_by_id( $id );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
 
 		$comment      = \Activitypub\object_id_to_comment( $id );
-		$interactions = Interactions::get_interaction_by_id( $url );
+		$interactions = Interactions::get_by_id( $url );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
 	}

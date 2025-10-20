@@ -46,7 +46,7 @@ if ( is_wp_error( $user ) ) {
 }
 
 $_per_page     = absint( $attributes['per_page'] );
-$follower_data = Followers::get_followers_with_count( $user_id, $_per_page );
+$follower_data = Followers::query( $user_id, $_per_page );
 
 // Prepare Followers data for the Interactivity API context.
 $followers = array_map(
