@@ -151,9 +151,7 @@ class Collection_Sync {
 			/**
 			 * Filter the frequency of Collection-Synchronization headers sent to a given authority.
 			 *
-			 * Default is one week.
-			 *
-			 * @param int    $frequency       The frequency in seconds.
+			 * @param int    $frequency       The frequency in seconds. Default is one week.
 			 * @param int    $user_id         The local user ID.
 			 * @param string $inbox_authority The inbox authority.
 			 */
