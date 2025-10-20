@@ -325,6 +325,7 @@ class Following {
 				),
 			),
 		);
+
 		return self::query( $user_id, 1, null, $args )['total'];
 	}
 
