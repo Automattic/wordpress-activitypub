@@ -130,10 +130,26 @@ class Collection_Sync {
 			return $args;
 		}
 
+		// Only send header if we haven't sent one to this authority in the last day.
 		$inbox_authority = get_url_authority( $url );
-		$sync_header     = Followers::generate_sync_header( $args['user_id'], $inbox_authority );
+		$user_id         = $args['user_id'] ?? 0;
+
+		if ( ! $user_id || ! $inbox_authority ) {
+			return $args;
+		}
+
+		// Check if we've already sent a sync header to this authority today.
+		$transient_key = 'activitypub_sync_sent_' . $user_id . '_' . md5( $inbox_authority );
+		if ( false !== \get_transient( $transient_key ) ) {
+			return $args;
+		}
+
+		$sync_header = Followers::generate_sync_header( $user_id, $inbox_authority );
 		if ( $sync_header ) {
 			$args['headers']['Collection-Synchronization'] = $sync_header;
+
+			// Store that we've sent the header (expires in 1 week).
+			\set_transient( $transient_key, time(), WEEK_IN_SECONDS );
 		}
 
 		return $args;
