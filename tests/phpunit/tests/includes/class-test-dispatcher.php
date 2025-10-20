@@ -48,8 +48,8 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
 
-		Followers::add_follower( self::$user_id, 'https://example.org/users/username' );
-		Followers::add_follower( self::$user_id, 'https://example.com/users/username' );
+		Followers::add( self::$user_id, 'https://example.org/users/username' );
+		Followers::add( self::$user_id, 'https://example.com/users/username' );
 
 		$result = Dispatcher::send_to_followers( $outbox_item->ID, 1 );
 
@@ -219,7 +219,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$this->assertFalse( $should_send->invoke( null, $activity, Actors::get_by_id( self::$user_id ), $outbox_item ) );
 
 		// Add a follower.
-		Followers::add_follower( self::$user_id, 'https://example.org/users/username' );
+		Followers::add( self::$user_id, 'https://example.org/users/username' );
 
 		$this->assertTrue( $should_send->invoke( null, $activity, Actors::get_by_id( self::$user_id ), $outbox_item ) );
 	}

@@ -96,7 +96,7 @@ class Followers_Controller extends Actors_Controller {
 		$page     = $request->get_param( 'page' ) ?? 1;
 		$context  = $request->get_param( 'context' );
 
-		$data = Followers::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
+		$data = Followers::query( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
 		$response = array(
 			'id'         => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user_id ) ),

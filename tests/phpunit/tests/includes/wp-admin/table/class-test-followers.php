@@ -86,7 +86,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 
 		// Add the follower.
-		Follower_Collection::add_follower( get_current_user_id(), $actor_url );
+		Follower_Collection::add( get_current_user_id(), $actor_url );
 
 		// Use the real prepare_items() method.
 		$this->followers_table->prepare_items();
@@ -222,7 +222,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 
 		// Add follower using the actor object.
-		Follower_Collection::add_follower( get_current_user_id(), $actor_data['id'] );
+		Follower_Collection::add( get_current_user_id(), $actor_data['id'] );
 
 		// Prepare items to test normalization.
 		$this->followers_table->prepare_items();

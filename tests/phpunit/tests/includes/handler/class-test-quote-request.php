@@ -163,7 +163,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 
 		// Run setup callback if provided.
 		if ( 'add_follower' === $setup_callback ) {
-			$remote_actor_id = Followers::add_follower( self::$user_id, $actor_url );
+			$remote_actor_id = Followers::add( self::$user_id, $actor_url );
 			$this->assertNotFalse( $remote_actor_id, 'Should successfully add follower' );
 		} elseif ( 'mock_actor_error' === $setup_callback ) {
 			// Override the actor metadata filter to return an error.

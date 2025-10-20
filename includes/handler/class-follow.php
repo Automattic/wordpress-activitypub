@@ -38,7 +38,7 @@ class Follow {
 		}
 
 		// Save follower.
-		$remote_actor = Followers::add_follower(
+		$remote_actor = Followers::add(
 			$user_id,
 			$activity['actor']
 		);

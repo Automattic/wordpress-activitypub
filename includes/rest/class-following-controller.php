@@ -101,7 +101,7 @@ class Following_Controller extends Actors_Controller {
 		$page     = $request->get_param( 'page' ) ?? 1;
 		$context  = $request->get_param( 'context' );
 
-		$data = Following::get_following_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
+		$data = Following::query( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
 		$response = array(
 			'id'         => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user_id ) ),

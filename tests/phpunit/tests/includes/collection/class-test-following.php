@@ -396,11 +396,11 @@ class Test_Following extends \WP_UnitTestCase {
 		Accept::handle_accept( $accept_5, -1 );
 
 		// User 1 follows https://example.com/actor/1.
-		$following = Following::get_following_with_count( $user_ids[0] );
+		$following = Following::query( $user_ids[0] );
 		$this->assertCount( 1, $following['following'] );
 		$this->assertSame( 1, $following['total'] );
 
-		$following = Following::get_following_with_count( -1 );
+		$following = Following::query( -1 );
 		$this->assertCount( 1, $following['following'] );
 		$this->assertSame( 1, $following['total'] );
 
@@ -410,11 +410,11 @@ class Test_Following extends \WP_UnitTestCase {
 		// User 3 unfollows https://example.com/actor/1.
 		Following::unfollow( Remote_Actors::get_by_uri( 'https://example.com/actor/1' ), 0 );
 
-		$following = Following::get_following_with_count( 0 );
+		$following = Following::query( 0 );
 		$this->assertCount( 0, $following['following'] );
 		$this->assertSame( 0, $following['total'] );
 
-		$following = Following::get_following_with_count( -1 );
+		$following = Following::query( -1 );
 		$this->assertCount( 1, $following['following'] );
 		$this->assertSame( 1, $following['total'] );
 

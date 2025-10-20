@@ -218,7 +218,7 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function delete_interactions( $actor ) {
-		$comments = Interactions::get_interactions_by_actor( $actor );
+		$comments = Interactions::get_by_actor( $actor );
 
 		foreach ( $comments as $comment ) {
 			\wp_delete_comment( $comment, true );
@@ -266,7 +266,7 @@ class Delete {
 			$id = $activity['object'];
 		}
 
-		$comments = Interactions::get_interaction_by_id( $id );
+		$comments = Interactions::get_by_id( $id );
 
 		if ( $comments && Tombstone::exists( $id ) ) {
 			foreach ( $comments as $comment ) {
