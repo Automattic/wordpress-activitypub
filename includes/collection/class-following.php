@@ -281,6 +281,7 @@ class Following {
 				'value' => $user_id,
 			),
 		);
+
 		return self::query( $user_id, $number, $page, $args );
 	}
 
