@@ -27,6 +27,7 @@ class Collection_Sync {
 	public static function init() {
 		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_collection_synchronization' ), 10, 2 );
 
+		// The Collection-Synchronization header needs to be part of the signature, so it must be added before signing.
 		\add_filter( 'http_request_args', array( self::class, 'maybe_add_headers' ), -1, 2 );
 	}
 
