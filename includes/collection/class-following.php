@@ -256,9 +256,7 @@ class Following {
 	}
 
 	/**
-	 * Get the Followings of a given user, along with a total count for pagination purposes.
-	 *
-	 * @deprecated unreleased Use {@see Following::query()} with status parameter
+	 * Get the pending followings of a given user, along with a total count for pagination purposes.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -266,21 +264,24 @@ class Following {
 	 * @param array    $args    The WP_Query arguments.
 	 *
 	 * @return array {
-	 *      Data about the followings.
+	 *      Data about the pending followings.
 	 *
-	 *      @type \WP_Post[] $followings List of `Following` objects.
-	 *      @type int        $total      Total number of followings.
+	 *      @type \WP_Post[] $following List of `Following` objects.
+	 *      @type int        $total     Total number of pending followings.
 	 *  }
 	 */
 	public static function get_pending_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::query' );
-		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-		$args['meta_query'] = array(
-			array(
-				'key'   => self::PENDING_META_KEY,
-				'value' => $user_id,
+		$defaults = array(
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				array(
+					'key'   => self::PENDING_META_KEY,
+					'value' => $user_id,
+				),
 			),
 		);
+
+		$args = \wp_parse_args( $args, $defaults );
 
 		return self::query( $user_id, $number, $page, $args );
 	}
@@ -330,9 +331,7 @@ class Following {
 	}
 
 	/**
-	 * Get all followings of a given user, along with a total count for pagination purposes.
-	 *
-	 * @deprecated unreleased Use {@see Following::query()} with status parameter
+	 * Get all followings of a given user (both accepted and pending), along with a total count for pagination purposes.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -340,15 +339,31 @@ class Following {
 	 * @param array    $args    The WP_Query arguments.
 	 *
 	 * @return array {
-	 *      Data about the followings.
+	 *      Data about all followings.
 	 *
-	 *      @type \WP_Post[] $followers List of `Follower` objects.
-	 *      @type int $total Total number of followers.
+	 *      @type \WP_Post[] $following List of `Following` objects.
+	 *      @type int        $total     Total number of all followings.
 	 * }
 	 */
 	public static function get_all_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::query' );
-		return self::get_all( $user_id, $number, $page, $args );
+		$defaults = array(
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				'relation' => 'OR',
+				array(
+					'key'   => self::FOLLOWING_META_KEY,
+					'value' => $user_id,
+				),
+				array(
+					'key'   => self::PENDING_META_KEY,
+					'value' => $user_id,
+				),
+			),
+		);
+
+		$args = \wp_parse_args( $args, $defaults );
+
+		return self::query( $user_id, $number, $page, $args );
 	}
 
 	/**

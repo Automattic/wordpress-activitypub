@@ -223,30 +223,11 @@ class Following extends \WP_List_Table {
 		}
 
 		if ( Following_Collection::PENDING === $status ) {
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			$args['meta_query']   = array(
-				array(
-					'key'   => Following_Collection::PENDING_META_KEY,
-					'value' => $this->user_id,
-				),
-			);
-			$following_with_count = Following_Collection::query( $this->user_id, $per_page, $page_num, $args );
+			$following_with_count = Following_Collection::get_pending_with_count( $this->user_id, $per_page, $page_num, $args );
 		} elseif ( Following_Collection::ACCEPTED === $status ) {
 			$following_with_count = Following_Collection::query( $this->user_id, $per_page, $page_num, $args );
 		} else {
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			$args['meta_query']   = array(
-				'relation' => 'OR',
-				array(
-					'key'   => Following_Collection::FOLLOWING_META_KEY,
-					'value' => $this->user_id,
-				),
-				array(
-					'key'   => Following_Collection::PENDING_META_KEY,
-					'value' => $this->user_id,
-				),
-			);
-			$following_with_count = Following_Collection::query( $this->user_id, $per_page, $page_num, $args );
+			$following_with_count = Following_Collection::get_all_with_count( $this->user_id, $per_page, $page_num, $args );
 		}
 
 		$followings = $following_with_count['following'];
