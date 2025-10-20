@@ -116,7 +116,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertNotNull( \get_comment( $other_comment_id ), 'Other comment should exist' );
 
 		// Trigger the delete_interactions action.
-		\do_action( 'activitypub_delete_actor_interactions', $actor_url );
+		\do_action( 'activitypub_delete_remote_actor_interactions', $actor_url );
 
 		// Verify ActivityPub comments were deleted.
 		foreach ( $comment_ids as $comment_id ) {
@@ -142,19 +142,19 @@ class Test_Delete extends \WP_UnitTestCase {
 		// Mock the return value to capture it.
 		$result = null;
 		\add_action(
-			'activitypub_delete_actor_interactions',
+			'activitypub_delete_remote_actor_interactions',
 			function ( $actor ) use ( &$result ) {
 				$result = Delete::delete_interactions( $actor );
 			},
 			5
 		);
 
-		\do_action( 'activitypub_delete_actor_interactions', $actor_url );
+		\do_action( 'activitypub_delete_remote_actor_interactions', $actor_url );
 
 		// Verify it returns false when no comments exist.
 		$this->assertFalse( $result, 'Should return false when no comments exist' );
 
-		\remove_all_actions( 'activitypub_delete_actor_interactions', 5 );
+		\remove_all_actions( 'activitypub_delete_remote_actor_interactions', 5 );
 	}
 
 	/**
@@ -204,7 +204,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		}
 
 		// Trigger the delete_posts action.
-		\do_action( 'activitypub_delete_actor_posts', $actor_url );
+		\do_action( 'activitypub_delete_remote_actor_posts', $actor_url );
 
 		// Verify posts were deleted.
 		foreach ( $post_ids as $post_id ) {
@@ -227,19 +227,19 @@ class Test_Delete extends \WP_UnitTestCase {
 		// Mock the return value to capture it.
 		$result = null;
 		\add_action(
-			'activitypub_delete_actor_posts',
+			'activitypub_delete_remote_actor_posts',
 			function ( $actor ) use ( &$result ) {
 				$result = Delete::delete_posts( $actor );
 			},
 			5
 		);
 
-		\do_action( 'activitypub_delete_actor_posts', $actor_url );
+		\do_action( 'activitypub_delete_remote_actor_posts', $actor_url );
 
 		// Verify it returns false when no posts exist.
 		$this->assertFalse( $result, 'Should return false when no posts exist' );
 
-		\remove_all_actions( 'activitypub_delete_actor_posts', 5 );
+		\remove_all_actions( 'activitypub_delete_remote_actor_posts', 5 );
 	}
 
 	/**

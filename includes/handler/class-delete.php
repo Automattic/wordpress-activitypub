@@ -25,8 +25,8 @@ class Delete {
 	public static function init() {
 		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
-		\add_action( 'activitypub_delete_actor_interactions', array( self::class, 'delete_interactions' ) );
-		\add_action( 'activitypub_delete_actor_posts', array( self::class, 'delete_posts' ) );
+		\add_action( 'activitypub_delete_remote_actor_interactions', array( self::class, 'delete_interactions' ) );
+		\add_action( 'activitypub_delete_remote_actor_posts', array( self::class, 'delete_posts' ) );
 
 		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'post_add_to_outbox' ), 10, 2 );
@@ -52,7 +52,7 @@ class Delete {
 			case 'Organization':
 			case 'Service':
 			case 'Application':
-				self::handle_actor_delete( $activity, $user_id );
+				self::delete_remote_actor( $activity, $user_id );
 				break;
 
 			/*
@@ -67,7 +67,7 @@ class Delete {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::handle_object_delete( $activity, $user_id );
+				self::delete_object( $activity, $user_id );
 				break;
 
 			/*
@@ -76,7 +76,7 @@ class Delete {
 			 * @see: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone
 			 */
 			case 'Tombstone':
-				self::handle_object_delete( $activity, $user_id );
+				self::delete_object( $activity, $user_id );
 				break;
 
 			/*
@@ -87,9 +87,9 @@ class Delete {
 			default:
 				// Check if Object is an Actor.
 				if ( object_to_uri( $activity['object'] ) === $activity['actor'] ) {
-					self::handle_actor_delete( $activity, $user_id );
+					self::delete_remote_actor( $activity, $user_id );
 				} else { // Assume an object otherwise.
-					self::handle_object_delete( $activity, $user_id );
+					self::delete_object( $activity, $user_id );
 				}
 				// Maybe handle Delete Activity for other Object Types.
 				break;
@@ -102,7 +102,7 @@ class Delete {
 	 * @param array $activity The Activity object.
 	 * @param int   $user_id  The user ID.
 	 */
-	public static function handle_object_delete( $activity, $user_id ) {
+	public static function delete_object( $activity, $user_id ) {
 		// Check for private and/or direct messages.
 		if ( is_activity_reply( $activity ) ) {
 			$result = self::maybe_delete_interaction( $activity );
@@ -129,7 +129,7 @@ class Delete {
 	 * @param array $activity The Activity object.
 	 * @param int   $user_id  The user ID.
 	 */
-	public static function handle_actor_delete( $activity, $user_id ) {
+	public static function delete_remote_actor( $activity, $user_id ) {
 		$result  = self::maybe_delete_follower( $activity );
 		$success = ( $result && ! \is_wp_error( $result ) );
 
@@ -178,7 +178,7 @@ class Delete {
 		if ( Tombstone::exists( $activity['actor'] ) ) {
 			\wp_schedule_single_event(
 				\time(),
-				'activitypub_delete_actor_interactions',
+				'activitypub_delete_remote_actor_interactions',
 				array( $activity['actor'] )
 			);
 
@@ -200,7 +200,7 @@ class Delete {
 		if ( Tombstone::exists( $activity['actor'] ) ) {
 			\wp_schedule_single_event(
 				\time(),
-				'activitypub_delete_actor_posts',
+				'activitypub_delete_remote_actor_posts',
 				array( $activity['actor'] )
 			);
 
