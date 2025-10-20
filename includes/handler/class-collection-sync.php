@@ -148,8 +148,15 @@ class Collection_Sync {
 		if ( $sync_header ) {
 			$args['headers']['Collection-Synchronization'] = $sync_header;
 
-			// Store that we've sent the header (expires in 1 week).
-			\set_transient( $transient_key, time(), WEEK_IN_SECONDS );
+			/**
+			 * Filter the frequency of Collection-Synchronization headers sent to a given authority.
+			 *
+			 * @param int    $frequency       The frequency in seconds.
+			 * @param int    $user_id         The local user ID.
+			 * @param string $inbox_authority The inbox authority.
+			 */
+			$frequency = \apply_filters( 'activitypub_collection_sync_frequency', WEEK_IN_SECONDS, $user_id, $inbox_authority );
+			\set_transient( $transient_key, time(), $frequency );
 		}
 
 		return $args;
