@@ -51,7 +51,7 @@ class Cli extends \WP_CLI_Command {
 		$user_id   = get_flag_value( $assoc_args, 'user', Actors::BLOG_USER_ID );
 		\WP_CLI::log( sprintf( 'Adding follower %s to user %d...', $actor_url, $user_id ) );
 
-		$result = Followers::add_follower( $user_id, $actor_url );
+		$result = Followers::add( $user_id, $actor_url );
 
 		if ( \is_wp_error( $result ) ) {
 			\WP_CLI::error( $result->get_error_message() );

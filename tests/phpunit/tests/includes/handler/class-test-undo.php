@@ -110,7 +110,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		\Activitypub\Handler\Follow::handle_follow( $follow_activity, self::$user_id );
 
 		// Verify follower was added.
-		$followers = Followers::get_followers( self::$user_id );
+		$followers = Followers::get_many( self::$user_id );
 		$this->assertNotEmpty( $followers, $description . ' - Should have followers after Follow activity' );
 
 		// Create undo follow activity.
@@ -131,7 +131,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		Undo::handle_undo( $undo_activity, self::$user_id );
 
 		// Verify follower was removed.
-		$followers_after = Followers::get_followers( self::$user_id );
+		$followers_after = Followers::get_many( self::$user_id );
 		$this->assertEmpty( $followers_after, $description . ' - Should have no followers after Undo activity' );
 	}
 

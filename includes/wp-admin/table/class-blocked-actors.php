@@ -208,7 +208,7 @@ class Blocked_Actors extends \WP_List_Table {
 			$args['s'] = $this->normalize_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		}
 
-		$blocked_with_count = Blocked_Actors_Collection::get_blocked_actors_with_count( $this->user_id, $per_page, $page_num, $args );
+		$blocked_with_count = Blocked_Actors_Collection::query( $this->user_id, $per_page, $page_num, $args );
 
 		$blocked_actor_posts = $blocked_with_count['blocked_actors'];
 		$counter             = $blocked_with_count['total'];

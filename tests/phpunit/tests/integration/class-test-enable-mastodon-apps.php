@@ -119,7 +119,7 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
 
 		foreach ( $followers as $follower ) {
-			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+			\Activitypub\Collection\Followers::add( 1, $follower );
 		}
 
 		$account = new \Enable_Mastodon_Apps\Entity\Account();
