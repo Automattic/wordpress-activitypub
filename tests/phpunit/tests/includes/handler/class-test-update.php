@@ -23,6 +23,8 @@ class Test_Update extends \WP_UnitTestCase {
 	 * Test that the activitypub_inbox_create fallback is triggered.
 	 */
 	public function test_activitypub_inbox_create_fallback() {
+		\update_option( 'activitypub_create_posts', true );
+
 		$called     = false;
 		$test_actor = 'https://example.com/users/fallback';
 		$activity   = array(
@@ -55,6 +57,7 @@ class Test_Update extends \WP_UnitTestCase {
 
 		// Clean up by removing the action.
 		\remove_all_actions( 'activitypub_inbox_create' );
+		\delete_option( 'activitypub_create_posts' );
 	}
 
 	/**
