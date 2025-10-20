@@ -87,6 +87,14 @@ class Collection_Sync {
 			return;
 		}
 
+		$cache_key = 'activitypub_collection_sync_received_' . $user_id . '_' . md5( $actor_url );
+		if ( false === \get_transient( $cache_key ) ) {
+			$frequency = self::get_frequency();
+			\set_transient( $cache_key, time(), $frequency );
+		} else {
+			return;
+		}
+
 		/**
 		 * Action triggered Collection Sync.
 		 *
@@ -139,7 +147,7 @@ class Collection_Sync {
 		}
 
 		// Check if we've already sent a sync header to this authority today.
-		$transient_key = 'activitypub_sync_sent_' . $user_id . '_' . md5( $inbox_authority );
+		$transient_key = 'activitypub_collection_sync_sent_' . $user_id . '_' . md5( $inbox_authority );
 		if ( false !== \get_transient( $transient_key ) ) {
 			return $args;
 		}
@@ -148,14 +156,7 @@ class Collection_Sync {
 		if ( $sync_header ) {
 			$args['headers']['Collection-Synchronization'] = $sync_header;
 
-			/**
-			 * Filter the frequency of Collection-Synchronization headers sent to a given authority.
-			 *
-			 * @param int    $frequency       The frequency in seconds. Default is one week.
-			 * @param int    $user_id         The local user ID.
-			 * @param string $inbox_authority The inbox authority.
-			 */
-			$frequency = \apply_filters( 'activitypub_collection_sync_frequency', WEEK_IN_SECONDS, $user_id, $inbox_authority );
+			$frequency = self::get_frequency();
 			\set_transient( $transient_key, time(), $frequency );
 		}
 
@@ -202,5 +203,21 @@ class Collection_Sync {
 		$url_authority        = get_url_authority( $params['url'] );
 
 		return $collection_authority === $url_authority;
+	}
+
+	/**
+	 * Get the frequency for Collection-Synchronization headers.
+	 *
+	 * @return int Frequency in seconds.
+	 */
+	private static function get_frequency() {
+		/**
+			 * Filter the frequency of Collection-Synchronization headers sent to a given authority.
+		 *
+		 * @param int    $frequency       The frequency in seconds. Default is one week.
+		 * @param int    $user_id         The local user ID.
+		 * @param string $inbox_authority The inbox authority.
+		 */
+		return \apply_filters( 'activitypub_collection_sync_frequency', WEEK_IN_SECONDS );
 	}
 }
