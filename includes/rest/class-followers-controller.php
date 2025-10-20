@@ -95,7 +95,7 @@ class Followers_Controller extends Actors_Controller {
 					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
 					'args'                => array(
 						'authority' => array(
-							'description' => 'The URI authority to filter followers by.',
+							'description' => 'The host to filter followers by.',
 							'type'        => 'string',
 							'required'    => true,
 						),
