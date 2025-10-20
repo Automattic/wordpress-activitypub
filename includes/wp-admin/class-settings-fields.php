@@ -283,8 +283,8 @@ class Settings_Fields {
 	 * Render support post types field.
 	 */
 	public static function render_support_post_types_field() {
-		$post_types           = get_post_types( array( 'public' => true ), 'objects' );
-		$supported_post_types = (array) get_option( 'activitypub_support_post_types', array( 'post' ) );
+		$post_types           = \get_post_types( array( 'public' => true ), 'objects' );
+		$supported_post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 		?>
 		<fieldset>
 			<?php esc_html_e( 'Automatically publish items of the selected post types to the fediverse:', 'activitypub' ); ?>
