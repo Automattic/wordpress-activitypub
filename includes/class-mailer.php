@@ -90,7 +90,7 @@ class Mailer {
 		$comment_author_domain = '';
 
 		// Only attempt to resolve hostname if we have a valid IP address.
-		if ( filter_var( $comment->comment_author_IP, FILTER_VALIDATE_IP ) ) {
+		if ( \filter_var( $comment->comment_author_IP, FILTER_VALIDATE_IP ) ) {
 			$comment_author_domain = \gethostbyaddr( $comment->comment_author_IP );
 		}
 
