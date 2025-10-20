@@ -40,15 +40,15 @@ class Posts {
 			return $actor;
 		}
 
-		$post_array               = self::activity_to_post( $activity_object );
-		$post_array['meta_input'] = array( '_activitypub_user_id' => $user_id );
-		$post_id                  = \wp_insert_post( $post_array, true );
+		$post_array = self::activity_to_post( $activity_object );
+		$post_id    = \wp_insert_post( $post_array, true );
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
 
 		\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor->ID );
+		\add_post_meta( $post_id, '_activitypub_user_id', $user_id );
 
 		self::add_taxonomies( $post_id, $activity_object );
 
