@@ -700,7 +700,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		\add_filter(
 			'schedule_event',
 			function ( $event ) use ( &$scheduled_events ) {
-				if ( 'activitypub_delete_actor_interactions' === $event->hook ) {
+				if ( 'activitypub_delete_remote_actor_interactions' === $event->hook ) {
 					$scheduled_events[] = array(
 						'hook' => $event->hook,
 						'args' => $event->args,
@@ -722,7 +722,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		// Verify that the event was scheduled with the actor URL as parameter.
 		$this->assertCount( 1, $scheduled_events, 'Should schedule 1 event' );
-		$this->assertEquals( 'activitypub_delete_actor_interactions', $scheduled_events[0]['hook'], 'Should schedule the correct hook' );
+		$this->assertEquals( 'activitypub_delete_remote_actor_interactions', $scheduled_events[0]['hook'], 'Should schedule the correct hook' );
 		$this->assertCount( 1, $scheduled_events[0]['args'], 'Should have 1 argument' );
 		$this->assertEquals( 'https://example.com/users/test', $scheduled_events[0]['args'][0], 'Should pass actor URL as parameter' );
 
