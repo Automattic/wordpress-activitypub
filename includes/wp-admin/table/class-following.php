@@ -223,11 +223,11 @@ class Following extends \WP_List_Table {
 		}
 
 		if ( Following_Collection::PENDING === $status ) {
-			$following_with_count = Following_Collection::get_pending_with_count( $this->user_id, $per_page, $page_num, $args );
+			$following_with_count = Following_Collection::query_pending( $this->user_id, $per_page, $page_num, $args );
 		} elseif ( Following_Collection::ACCEPTED === $status ) {
 			$following_with_count = Following_Collection::query( $this->user_id, $per_page, $page_num, $args );
 		} else {
-			$following_with_count = Following_Collection::get_all_with_count( $this->user_id, $per_page, $page_num, $args );
+			$following_with_count = Following_Collection::query_all( $this->user_id, $per_page, $page_num, $args );
 		}
 
 		$followings = $following_with_count['following'];

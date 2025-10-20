@@ -256,7 +256,7 @@ class Following {
 	}
 
 	/**
-	 * Get the pending followings of a given user, along with a total count for pagination purposes.
+	 * Query pending followings of a given user, with pagination info.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -270,7 +270,7 @@ class Following {
 	 *      @type int        $total     Total number of pending followings.
 	 *  }
 	 */
-	public static function get_pending_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
+	public static function query_pending( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
@@ -297,14 +297,7 @@ class Following {
 	 * @return \WP_Post[] List of `Following` objects.
 	 */
 	public static function get_pending( $user_id, $number = -1, $page = null, $args = array() ) {
-		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-		$args['meta_query'] = array(
-			array(
-				'key'   => self::PENDING_META_KEY,
-				'value' => $user_id,
-			),
-		);
-		$data               = self::query( $user_id, $number, $page, $args );
+		$data = self::query_pending( $user_id, $number, $page, $args );
 
 		return $data['following'];
 	}
@@ -317,21 +310,11 @@ class Following {
 	 * @return int The total number of pending followings.
 	 */
 	public static function count_pending( $user_id ) {
-		$args = array(
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query' => array(
-				array(
-					'key'   => self::PENDING_META_KEY,
-					'value' => $user_id,
-				),
-			),
-		);
-
-		return self::query( $user_id, 1, null, $args )['total'];
+		return self::query_pending( $user_id, 1 )['total'];
 	}
 
 	/**
-	 * Get all followings of a given user (both accepted and pending), along with a total count for pagination purposes.
+	 * Query all followings of a given user (both accepted and pending), with pagination info.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -345,7 +328,7 @@ class Following {
 	 *      @type int        $total     Total number of all followings.
 	 * }
 	 */
-	public static function get_all_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
+	public static function query_all( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
@@ -374,22 +357,7 @@ class Following {
 	 * @return \WP_Post[] List of `Following` objects.
 	 */
 	public static function get_all( $user_id ) {
-		$args = array(
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query' => array(
-				'relation' => 'OR',
-				array(
-					'key'   => self::FOLLOWING_META_KEY,
-					'value' => $user_id,
-				),
-				array(
-					'key'   => self::PENDING_META_KEY,
-					'value' => $user_id,
-				),
-			),
-		);
-
-		return self::query( $user_id, -1, null, $args )['following'];
+		return self::query_all( $user_id, -1 )['following'];
 	}
 
 	/**
@@ -400,22 +368,7 @@ class Following {
 	 * @return int The total number of all followings.
 	 */
 	public static function count_all( $user_id ) {
-		$args = array(
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query' => array(
-				'relation' => 'OR',
-				array(
-					'key'   => self::FOLLOWING_META_KEY,
-					'value' => $user_id,
-				),
-				array(
-					'key'   => self::PENDING_META_KEY,
-					'value' => $user_id,
-				),
-			),
-		);
-
-		return self::query( $user_id, 1, null, $args )['total'];
+		return self::query_all( $user_id, 1 )['total'];
 	}
 
 	/**
