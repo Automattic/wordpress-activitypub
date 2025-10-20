@@ -488,31 +488,27 @@ class Followers {
 	 * Compute the partial follower collection digest for a specific instance.
 	 *
 	 * Implements FEP-8fcf: Followers collection synchronization.
+	 * This is a convenience wrapper that filters followers by authority and then
+	 * computes the digest using the standard FEP-8fcf algorithm.
+	 *
 	 * The digest is created by XORing together the individual SHA256 digests
 	 * of each follower's ID.
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
+	 * @see Signature::compute_collection_digest() for the core digest algorithm
 	 *
-	 * @param int    $user_id  The user ID whose followers to compute.
+	 * @param int    $user_id   The user ID whose followers to compute.
 	 * @param string $authority The URI authority (scheme + host) to filter by.
 	 *
-	 * @return string The hex-encoded digest, or empty string if no followers.
+	 * @return string|false The hex-encoded digest, or false if no followers.
 	 */
 	public static function compute_partial_digest( $user_id, $authority ) {
-		$followers = self::get_by_authority( $user_id, $authority );
+		// Get followers filtered by authority.
+		$followers    = self::get_by_authority( $user_id, $authority );
+		$follower_ids = \wp_list_pluck( $followers, 'guid' );
 
-		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
-		$digest = str_repeat( '0', 64 );
-
-		foreach ( $followers as $follower ) {
-			// Compute SHA256 hash of the follower ID.
-			$hash = hash( 'sha256', $follower->guid );
-
-			// XOR the hash with the running digest.
-			$digest = Signature::xor_hex_strings( $digest, $hash );
-		}
-
-		return $digest;
+		// Delegate to the core digest computation algorithm.
+		return Signature::compute_collection_digest( $follower_ids );
 	}
 
 	/**
