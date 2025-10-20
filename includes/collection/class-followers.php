@@ -69,7 +69,7 @@ class Followers {
 	/**
 	 * Add new Follower.
 	 *
-	 * @deprecated unreleased Use {@see Followers::add()}
+	 * @deprecated unreleased Use {@see Followers::add()}.
 	 *
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
@@ -77,7 +77,8 @@ class Followers {
 	 * @return int|\WP_Error The Follower ID or an WP_Error.
 	 */
 	public static function add_follower( $user_id, $actor ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::add' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::add' );
+
 		return self::add( $user_id, $actor );
 	}
 
@@ -114,7 +115,7 @@ class Followers {
 	/**
 	 * Remove a Follower.
 	 *
-	 * @deprecated Use Activitypub\Collection\Followers::remove instead.
+	 * @deprecated 7.1.0 Use {@see Followers::remove()}.
 	 *
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
@@ -122,7 +123,7 @@ class Followers {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_follower( $user_id, $actor ) {
-		_deprecated_function( __METHOD__, '7.1.0', 'Activitypub\Collection\Followers::remove' );
+		\_deprecated_function( __METHOD__, '7.1.0', 'Activitypub\Collection\Followers::remove' );
 
 		$remote_actor = self::get_by_uri( $user_id, $actor );
 
@@ -186,14 +187,14 @@ class Followers {
 	/**
 	 * Get a Follower by Actor independent of the User.
 	 *
-	 * @deprecated 7.4.0
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_by_uri()}.
 	 *
 	 * @param string $actor The Actor URL.
 	 *
 	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower_by_actor( $actor ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_by_uri' );
+		\_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_by_uri' );
 
 		return Remote_Actors::get_by_uri( $actor );
 	}
@@ -234,7 +235,7 @@ class Followers {
 	/**
 	 * Get the Followers of a given user, along with a total count for pagination purposes.
 	 *
-	 * @deprecated unreleased Use {@see Followers::query()}
+	 * @deprecated unreleased Use {@see Followers::query()}.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -249,7 +250,8 @@ class Followers {
 	 *  }
 	 */
 	public static function get_followers_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::query' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::query' );
+
 		return self::query( $user_id, $number, $page, $args );
 	}
 
@@ -312,14 +314,15 @@ class Followers {
 	/**
 	 * Count the total number of followers.
 	 *
-	 * @deprecated unreleased Use {@see Followers::count()}
+	 * @deprecated unreleased Use {@see Followers::count()}.
 	 *
 	 * @param int $user_id The ID of the WordPress User.
 	 *
 	 * @return int The number of Followers
 	 */
 	public static function count_followers( $user_id ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::count' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Followers::count' );
+
 		return self::count( $user_id );
 	}
 
@@ -508,7 +511,7 @@ class Followers {
 	 * @return int|false The meta ID on success, false on failure.
 	 */
 	public static function add_error( $post_id, $error ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::add_error' );
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::add_error' );
 
 		return Remote_Actors::add_error( $post_id, $error );
 	}
@@ -523,7 +526,7 @@ class Followers {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function clear_errors( $post_id ) {
-		_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::clear_errors' );
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Remote_Actors::clear_errors' );
 
 		return Remote_Actors::clear_errors( $post_id );
 	}

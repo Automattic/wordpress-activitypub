@@ -297,9 +297,7 @@ class Following {
 	 * @return \WP_Post[] List of `Following` objects.
 	 */
 	public static function get_pending( $user_id, $number = -1, $page = null, $args = array() ) {
-		$data = self::query_pending( $user_id, $number, $page, $args );
-
-		return $data['following'];
+		return self::query_pending( $user_id, $number, $page, $args )['following'];
 	}
 
 	/**
@@ -446,7 +444,7 @@ class Following {
 	/**
 	 * Get the Followings of a given user, along with a total count for pagination purposes.
 	 *
-	 * @deprecated unreleased Use {@see Following::query()}
+	 * @deprecated unreleased Use {@see Following::query()}.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -461,14 +459,15 @@ class Following {
 	 *  }
 	 */
 	public static function get_following_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::query' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::query' );
+
 		return self::query( $user_id, $number, $page, $args );
 	}
 
 	/**
 	 * Get pending followings of a given user, along with a total count for pagination purposes.
 	 *
-	 * @deprecated unreleased Use {@see Following::query_pending()}
+	 * @deprecated unreleased Use {@see Following::query_pending()}.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -483,14 +482,15 @@ class Following {
 	 *  }
 	 */
 	public static function get_pending_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::query_pending' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::query_pending' );
+
 		return self::query_pending( $user_id, $number, $page, $args );
 	}
 
 	/**
 	 * Get all followings of a given user (both accepted and pending), along with a total count for pagination purposes.
 	 *
-	 * @deprecated unreleased Use {@see Following::query_all()}
+	 * @deprecated unreleased Use {@see Following::query_all()}.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -505,14 +505,15 @@ class Following {
 	 *  }
 	 */
 	public static function get_all_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::query_all' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::query_all' );
+
 		return self::query_all( $user_id, $number, $page, $args );
 	}
 
 	/**
 	 * Get the Followings of a given user.
 	 *
-	 * @deprecated unreleased Use {@see Following::get_many()}
+	 * @deprecated unreleased Use {@see Following::get_many()}.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -522,7 +523,8 @@ class Following {
 	 * @return \WP_Post[] List of `Following` objects.
 	 */
 	public static function get_following( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::get_many' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Following::get_many' );
+
 		return self::get_many( $user_id, $number, $page, $args );
 	}
 }

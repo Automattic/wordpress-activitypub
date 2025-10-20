@@ -139,35 +139,37 @@ class Blocked_Actors {
 	/**
 	 * Add an actor block for a user.
 	 *
-	 * @deprecated unreleased Use {@see Blocked_Actors::add()}
+	 * @deprecated unreleased Use {@see Blocked_Actors::add()}.
 	 *
 	 * @param int    $user_id The user ID.
 	 * @param string $value   The actor URI to block.
 	 * @return bool True on success, false on failure.
 	 */
 	public static function add_block( $user_id, $value ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::add' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::add' );
+
 		return self::add( $user_id, $value );
 	}
 
 	/**
 	 * Remove an actor block for a user.
 	 *
-	 * @deprecated unreleased Use {@see Blocked_Actors::remove()}
+	 * @deprecated unreleased Use {@see Blocked_Actors::remove()}.
 	 *
 	 * @param int        $user_id The user ID.
 	 * @param string|int $value   The actor URI or post ID to unblock.
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_block( $user_id, $value ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::remove' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::remove' );
+
 		return self::remove( $user_id, $value );
 	}
 
 	/**
 	 * Get the blocked actors of a given user, along with a total count for pagination purposes.
 	 *
-	 * @deprecated unreleased Use {@see Blocked_Actors::query()}
+	 * @deprecated unreleased Use {@see Blocked_Actors::query()}.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -182,14 +184,15 @@ class Blocked_Actors {
 	 *  }
 	 */
 	public static function get_blocked_actors_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::query' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::query' );
+
 		return self::query( $user_id, $number, $page, $args );
 	}
 
 	/**
 	 * Get the blocked actors of a given user.
 	 *
-	 * @deprecated unreleased Use {@see Blocked_Actors::get_many()}
+	 * @deprecated unreleased Use {@see Blocked_Actors::get_many()}.
 	 *
 	 * @param int|null $user_id The ID of the WordPress User.
 	 * @param int      $number  Maximum number of results to return.
@@ -199,7 +202,8 @@ class Blocked_Actors {
 	 * @return \WP_Post[] List of blocked Actors.
 	 */
 	public static function get_blocked_actors( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::get_many' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Blocked_Actors::get_many' );
+
 		return self::get_many( $user_id, $number, $page, $args );
 	}
 }
