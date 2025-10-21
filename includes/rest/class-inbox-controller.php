@@ -10,7 +10,7 @@ namespace Activitypub\Rest;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
-use Activitypub\Collection\Remote_Actors;
+use Activitypub\Http;
 use Activitypub\Moderation;
 
 use function Activitypub\camel_to_snake_case;
@@ -299,13 +299,13 @@ class Inbox_Controller extends \WP_REST_Controller {
 		foreach ( $recipients as $recipient ) {
 
 			if ( ! is_same_domain( $recipient ) ) {
-				$actor_or_collection = Remote_Actors::get_by_uri( $recipient );
+				$collection = Http::get_remote_object( $recipient );
 				// If it is a remote actor we can skip it.
-				if ( ! is_wp_error( $actor_or_collection ) ) {
+				if ( \is_wp_error( $collection ) ) {
 					continue;
 				}
 
-				if ( is_collection( $actor_or_collection ) ) {
+				if ( is_collection( $collection ) ) {
 					$_user_ids = Following::get_user_ids( $activity['actor'] );
 					$user_ids  = array_merge( $user_ids, $_user_ids );
 					continue;
