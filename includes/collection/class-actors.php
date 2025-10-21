@@ -406,9 +406,12 @@ class Actors {
 		);
 
 		// Filter out any WP_Error instances.
-		return array_filter( $actors, function( $actor ) {
-			return ! \is_wp_error( $actor );
-		} );
+		return array_filter(
+			$actors,
+			function ( $actor ) {
+				return ! \is_wp_error( $actor );
+			}
+		);
 	}
 
 	/**
