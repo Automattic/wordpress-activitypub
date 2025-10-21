@@ -94,8 +94,8 @@ class Collection_Sync {
 		/**
 		 * Action triggered after reconciliation is complete.
 		 *
-		 * @param int    $user_id         The local user ID that triggered the reconciliation.
-		 * @param string $actor_url       The remote actor URL.
+		 * @param int    $user_id   The local user ID that triggered the reconciliation.
+		 * @param string $actor_url The remote actor URL.
 		 */
 		\do_action( 'activitypub_followers_sync_reconciled', $user_id, $actor_url );
 	}
