@@ -348,7 +348,7 @@ class Post_Types {
 	}
 
 	/**
-	 * Register the Object post type.
+	 * Register the Post post type.
 	 */
 	public static function register_post_post_type() {
 		\register_post_type(

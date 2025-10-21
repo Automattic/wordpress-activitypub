@@ -120,6 +120,33 @@ class Posts {
 	}
 
 	/**
+	 * Delete an object from the collection.
+	 *
+	 * @param int $id The object ID.
+	 *
+	 * @return bool|int|null The deleted post ID, false on failure, or null if no post to delete.
+	 */
+	public static function delete( $id ) {
+		return \wp_delete_post( $id, true );
+	}
+
+	/**
+	 * Delete an object from the collection by its GUID.
+	 *
+	 * @param string $guid The object GUID.
+	 *
+	 * @return bool|int|null The deleted post ID, false on failure, or null if no post to delete.
+	 */
+	public static function delete_by_guid( $guid ) {
+		$post = self::get_by_guid( $guid );
+		if ( \is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		return self::delete( $post->ID );
+	}
+
+	/**
 	 * Convert an activity to a post array.
 	 *
 	 * @param array $activity The activity array.
@@ -163,5 +190,32 @@ class Posts {
 		}
 
 		\wp_set_post_terms( $post_id, $tags, 'ap_tag' );
+	}
+
+	/**
+	 * Get posts by remote actor.
+	 *
+	 * @param string $actor The remote actor URI.
+	 *
+	 * @return array Array of WP_Post objects.
+	 */
+	public static function get_by_remote_actor( $actor ) {
+		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
+		if ( \is_wp_error( $remote_actor ) ) {
+			return array();
+		}
+
+		$query = new \WP_Query(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'posts_per_page' => -1,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'       => '_activitypub_remote_actor_id',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_value'     => $remote_actor->ID,
+			)
+		);
+
+		return $query->posts;
 	}
 }
