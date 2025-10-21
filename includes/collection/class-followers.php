@@ -603,7 +603,7 @@ class Followers {
 	 * Returns only followers whose ID shares the specified URI authority.
 	 * Used for FEP-8fcf synchronization.
 	 *
-	 * @param int    $user_id  The user ID whose followers to get.
+	 * @param int    $user_id   The user ID whose followers to get.
 	 * @param string $authority The URI authority (scheme + host) to filter by.
 	 *
 	 * @return \WP_Post[] Array of WP_Post objects.
