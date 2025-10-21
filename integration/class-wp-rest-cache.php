@@ -101,7 +101,7 @@ class WP_Rest_Cache {
 			return;
 		}
 
-		$post_types   = (array) \get_option( 'activitypub_support_post_types', array() );
+		$post_types   = \get_option( 'activitypub_support_post_types', array() );
 		$post_types[] = Outbox::POST_TYPE;
 
 		if ( ! \in_array( $post->post_type, $post_types, true ) ) {

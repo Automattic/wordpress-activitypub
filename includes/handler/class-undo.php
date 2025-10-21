@@ -7,9 +7,7 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Followers;
-use Activitypub\Comment;
+use Activitypub\Collection\Inbox as Inbox_Collection;
 
 use function Activitypub\object_to_uri;
 
@@ -21,12 +19,8 @@ class Undo {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action(
-			'activitypub_inbox_undo',
-			array( self::class, 'handle_undo' ),
-			10,
-			2
-		);
+		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_undo' ), 10, 2 );
+		\add_action( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
@@ -36,55 +30,56 @@ class Undo {
 	 * @param int|null $user_id  The ID of the user who initiated the "Undo" activity.
 	 */
 	public static function handle_undo( $activity, $user_id ) {
-		if (
-			! isset( $activity['object']['type'] ) ||
-			! isset( $activity['object']['object'] )
-		) {
-			return;
-		}
+		$success = false;
+		$result  = Inbox_Collection::undo( object_to_uri( $activity['object'] ) );
 
-		$type  = $activity['object']['type'];
-		$state = false;
-
-		// Handle "Unfollow" requests.
-		if ( 'Follow' === $type ) {
-			$id   = object_to_uri( $activity['object']['object'] );
-			$user = Actors::get_by_resource( $id );
-
-			if ( ! $user || is_wp_error( $user ) ) {
-				// If we can not find a user, we can not initiate a follow process.
-				return;
-			}
-
-			$user_id = $user->get__id();
-			$actor   = object_to_uri( $activity['actor'] );
-
-			$state = Followers::remove_follower( $user_id, $actor );
-		}
-
-		// Handle "Undo" requests for "Like" and "Create" activities.
-		if ( in_array( $type, array( 'Like', 'Create', 'Announce' ), true ) ) {
-			if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
-				return;
-			}
-
-			$object_id = object_to_uri( $activity['object'] );
-			$comment   = Comment::object_id_to_comment( esc_url_raw( $object_id ) );
-
-			if ( empty( $comment ) ) {
-				return;
-			}
-
-			$state = wp_delete_comment( $comment, true );
+		if ( $result && ! \is_wp_error( $result ) ) {
+			$success = true;
 		}
 
 		/**
-		 * Fires after an "Undo" activity has been handled.
+		 * Fires after an ActivityPub Undo activity has been handled.
 		 *
-		 * @param array    $activity The JSON "Undo" Activity.
-		 * @param int|null $user_id  The ID of the user who initiated the "Undo" activity otherwise null.
-		 * @param mixed    $state    The state of the "Undo" activity.
+		 * @param array              $activity The ActivityPub activity data.
+		 * @param int                $user_id  The local user ID.
+		 * @param bool               $success  True on success, false on failure.
+		 * @param \WP_Comment|string $result   The target, based on the activity that is being undone.
 		 */
-		do_action( 'activitypub_handled_undo', $activity, $user_id, $state );
+		\do_action( 'activitypub_handled_undo', $activity, $user_id, $success, $result );
+	}
+
+	/**
+	 * Validate the object.
+	 *
+	 * @param bool             $valid   The validation state.
+	 * @param string           $param   The object parameter.
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return bool The validation state: true if valid, false if not.
+	 */
+	public static function validate_object( $valid, $param, $request ) {
+		$activity = $request->get_json_params();
+
+		if ( empty( $activity['type'] ) ) {
+			return false;
+		}
+
+		if ( 'Undo' !== $activity['type'] ) {
+			return $valid;
+		}
+
+		if ( ! isset( $activity['actor'], $activity['object'] ) ) {
+			return false;
+		}
+
+		if ( ! \is_array( $activity['object'] ) && ! \is_string( $activity['object'] ) ) {
+			return false;
+		}
+
+		if ( \is_array( $activity['object'] ) && ! isset( $activity['object']['id'] ) ) {
+			return false;
+		}
+
+		return $valid;
 	}
 }

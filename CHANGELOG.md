@@ -5,6 +5,201 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.5.0] - 2025-10-01
+### Added
+- Added a setting to control who can quote your posts. [#2207]
+- Added support for QuoteRequest activities (FEP-044f), enabling proper handling, validation, and policy-based acceptance or rejection of quote requests. [#2240]
+- Add upgrade routine to enable ActivityPub feeds in WordPress.com Reader [#2243]
+- Add Yoast SEO integration for author archives site health check. [#2193]
+- Improved interaction policies with clearer defaults and better Mastodon compatibility. [#2221]
+- New site health check warns if active Captcha plugins may block ActivityPub comments. [#2231]
+- Sync following meta to enable RSS feed subscriptions for ActivityPub actors in WordPress.com Reader [#2226]
+- You can now follow people and see their updates right in the WordPress.com Reader when using Jetpack or WordPress.com. [#2241]
+
+### Changed
+- Added support for fetching actors by account identifiers and improved reliability of actor retrieval. [#2235]
+- Clarify error messages in account modal to specify full profile URL format. [#2209]
+- Improved checks to better identify public Activities. [#2206]
+- Improved compatibility by making the 'implements' field always use multiple entries. [#2195]
+- Improved recipient handling for clarity and improved visibility handling of activities. [#2210]
+- Remote reply blocks now sync account info across all blocks on the same page [#2211]
+- Standardized notification handling with new hooks for better extensibility and consistency. [#2223]
+- Updated sync allowlist to add support for Jetpack notifications of likes and reposts. [#2233]
+
+### Fixed
+- Fixed an issue where post metadata in the block editor was missing or failed to update. [#2232]
+- Fix Flag activity object list processing to preserve URL arrays [#2200]
+- Fix PHP warning in bulk edit scenario when post_author is missing from $_REQUEST [#2230]
+- Posts now only fall back to the blog user when blog mode is enabled and no valid author exists, ensuring content negotiation only runs if an Actor is available. [#2246]
+
+## [7.4.0] - 2025-09-15
+### Added
+- Add activitypub_json REST field for ap_actor posts to access raw JSON data [#2121]
+- Add Delete activity support for permanently deleted federated comments. [#2141]
+- Added a new WP-CLI command to manage Actors. [#2118]
+- Added confirmation step for bulk removal of ActivityPub capability, asking whether to also delete users from the Fediverse. [#2150]
+- Adds support for virtual deletes and restores, allowing objects to be removed from the fediverse without being deleted locally. [#2116]
+- Add Yoast SEO integration for media pages site health check [#2136]
+- Optimized WebFinger lookups by centralizing and caching account resolution for faster, more consistent handling across lists. [#2169]
+
+### Changed
+- Clarified the 'attachment' post type description to explain it refers to media library uploads and recommend disabling federation in most cases. [#2153]
+- Hide site-wide checkbox in block confirmations when accessed from ActivityPub settings page [#2114]
+- Improved ActivityPub compatibility by aligning with Mastodon’s Application Actor. [#2113]
+- It’s now possible to reply to multiple posts using multiple reply blocks. [#2160]
+- Refactored Reply block to use WordPress core embed functionality for better compatibility and performance. [#2129]
+- Use wp_interactivity_config() for static values instead of wp_interactivity_state() to improve performance and code clarity [#2096]
+
+### Deprecated
+- ActivityPub now defaults to automated object type selection, with the old manual option moved to Advanced settings for compatibility. [#2148]
+
+### Fixed
+- Fix content visibility override issue preventing authors from changing visibility on older posts. [#2139]
+- Fix PHP warning when saving ActivityPub settings. [#2137]
+- Fix query args preservation in collection pagination links [#2120]
+- Fix release script to catch more 'unreleased' deprecation patterns that were previously missed during version updates. [#2171]
+- Fix reply block rendering inconsistency where blocks were always converted to @-mentions in ActivityPub content. Now only first reply blocks become @-mentions, others remain as regular links. [#2132]
+- Stop sending follow notifications to the Application user, since system-level accounts cannot be followed. [#2117]
+
+## [7.3.0] - 2025-08-28
+### Added
+- Add actor blocking functionality with list table interface for managing blocked users and site-wide blocks [#2027]
+- Add code coverage reporting to GitHub Actions PHPUnit workflow with dedicated coverage job using Xdebug [#2044]
+- Add comprehensive blocking and moderation system for ActivityPub with user-specific and site-wide controls for actors, domains, and keywords. [#2020]
+- Add comprehensive unit tests for Followers and Following table classes with proper ActivityPub icon object handling. [#2088]
+- Added link and explanation for the existing Starter Kit importer on the help tab of the Following pages. [#2029]
+- Adds a self-destruct feature to remove a blog from the Fediverse by sending Delete activities to followers. [#2046]
+- Adds a User Interface to select accounts during Starter Kit import [#2047]
+- Adds support for importing Starter Kits from a link (URL). [#2048]
+- Adds support for searching (remote) URLs similar to Mastodon, redirecting to existing replies or importing them if missing. [#2034]
+- Adds support for sending Delete activities when a user is removed. [#2066]
+- Adds support for Starter Kit collections in the ActivityPub API. [#2049]
+- A global Inbox handler and persistence layer to log incoming Create and Update requests for debugging and verifying Activity handling. [#2009]
+- Follower lists now include the option to block individual accounts. [#2027]
+- Improved handling of deleted content with a new unified system for better tracking and compatibility. [#2066]
+- Moderation now checks blocked keywords across all language variants of the content, summary and name fields. [#2093]
+- When activated or deactivated network-wide, the plugin now refreshes rewrite rules across all sites. [#2104]
+
+### Changed
+- Add default avatars for actors without icons in admin tables [#2106]
+- Added support for list of Actor IDs in Starter Kits. [#2039]
+- Improve Following class documentation and optimize count methods for better performance [#2086]
+- Refactor actor blocking with unified API for better maintainability [#2097]
+
+### Fixed
+- Blocks relying on user selectors no longer error due to a race condition when fetching users. [#2105]
+- Fix duplicate HTML IDs and missing form labels in modal blocks [#2083]
+- Fix malformed ActivityPub handles for users with email-based logins (e.g., from Site Kit Google authentication) [#2082]
+- Fix PHP 8.4 deprecation warnings by preventing null values from being passed to WordPress core functions [#2085]
+- Improves handling of author URLs by converting them to a proper format. [#2061]
+- Improves REST responses by skipping invalid actors in Followers and Following controllers. [#2055]
+- More reliable Actor checks during the follow process. [#2041]
+- Prevents Application users from being followed. [#2101]
+- Proper implementation of FEP 844e. [#2068]
+- Switches ActivityPub summaries to plain text for better compatibility. [#2063]
+
+## [7.2.0] - 2025-07-30
+### Added
+- Add image attachment support to federated comments - HTML images in comment content now include proper ActivityStreams attachment fields. [#1996]
+- Link to the following internal dialog for remote interactions, if the feature is enabled. [#2001]
+- The followers list now shows follow status and allows quick follow-back actions. [#2003]
+- Trigger Actor updates on (un)setting a post as sticky. [#1982]
+- You can now use `OrderedCollection`s as starter packs — just drop in the output from a Follower or Following endpoint. [#2028]
+
+### Changed
+- Ensure that tests run in production-like conditions, avoiding interference from local development tools. [#2026]
+- Moved HTTP request signing to a filter instead of calling it directly. [#1994]
+
+### Fixed
+- Allow non-administrator users to use Follow Me and Followers blocks [#2015]
+- Correct linking from followers to the following list [#2002]
+- Fix avatar rendering for followers with missing icon property [#2010]
+- Fix multibyte character corruption in post summaries, preventing Greek and other non-ASCII text from being garbled during text processing. [#1995]
+- Informational Fediverse blocks are no longer rendered when posts get added to the Outbox. [#2019]
+
+## [7.1.0] - 2025-07-23
+### Added
+- Added a first version of the Follow form, allowing users to follow other Actors by username or profile link. [#1930]
+- Added initial support for Fediverse Starter Kits, allowing users to follow recommended accounts from a predefined list. [#1919]
+- Ensure that all schedulers are registered during every plugin update. [#1959]
+- Followers and Following list tables now support Columns and Pagination screen options. [#1925]
+- The featured tags endpoint is now available again for all profiles, showing the most frequently used tags by each user. [#1922]
+- The `following` endpoint now returns the actual list of users being followed. [#1916]
+
+### Changed
+- Follower tables now look closer to what other tables in WordPress look like. [#1913]
+- Improved Account-Aliases handling by internally normalizing input formats. [#1974]
+- Minor performance improvement when querying posts of various types, by avoiding double queries. [#1907]
+- Set older unfederated posts to local visibility by default. [#1900]
+- Step counts for the Welcome checklist now only take into account steps that are added in the Welcome class. [#1942]
+- Table actions are now faster by using the Custom Post Type ID instead of the remote user URI, thanks to the unified Actor Model. [#1946]
+- The following tables now more closely match the appearance of other WordPress tables and can be filtered by status. [#1909]
+
+### Fixed
+- Ensure correct visibility handling for `Undo` and `Follow` requests [#1988]
+- Ensure that the Actor-ID is always a URL. [#1920]
+- Fixed a bug in how follow requests were accepted to ensure they work correctly. [#1931]
+- Fixed an issue where the number of followers shown didn’t always match the actual follower list. [#1918]
+- Fixed a PHP error that prevented the Follower overview from loading. [#1973]
+- Fixed missing avatar class so that CSS styles are correctly applied to ActivityPub avatars on the Dashboard. [#1932]
+- Fixed potential errors when unrelated requests get caught in double-knocking callback. [#1985]
+- Improved WebFinger fallback to better guess usernames from profile links. [#1979]
+- Prevent WordPress from loading all admin notices twice on ActivityPub settings pages. [#1943]
+- Removed follower dates to avoid confusion, as they may not have accurately reflected the actual follow time. [#1928]
+- Stop purging Follow activities from the Outbox to allow proper Unfollow (Undo) handling. [#1980]
+
+## [7.0.1] - 2025-07-10
+### Fixed
+- When deleting interactions for cleaned up actors, we use the actor's URL again to retrieve their information instead of our internal ID. [#1915]
+
+## [7.0.0] - 2025-07-09
+### Added
+- Added basic support for handling remote rejections of follow requests. [#1865]
+- Added basic support for RFC-9421 style signatures for incoming activities. [#1849]
+- Added initial Following support for Actors, hidden for now until plugins add support. [#1866]
+- Added missing "Advanced Settings" details to Site Health debug information. [#1846]
+- Added option to auto-approve reactions like likes and reposts. [#1847]
+- Added support for namespaced attributes and the dcterms:subject field (FEP-b2b8), as a first step toward phasing out summary-based content warnings. [#1893]
+- Added support for the WP Rest Cache plugin to help with caching REST API responses. [#1630]
+- Documented support for FEP-844e. [#1868]
+- Optional support for RFC-9421 style signatures for outgoing activities, including retry with Draft-Cavage-style signature. [#1858]
+- Reactions block now supports customizing colors, borders, box-shadows, and typography. [#1826]
+- Support for sending follow requests to remote actors is now in place, including outbox delivery and status updates—UI integration will follow later. [#1839]
+
+### Changed
+- Comment feeds now show only comments by default, with a new `type` filter (e.g., `like`, `all`) to customize which reactions appear. [#1877]
+- Consistent naming of Blog user in Block settings. [#1862]
+- hs2019 signatures for incoming REST API requests now have their algorithm determined based on their public key. [#1848]
+- Likes, comments, and reposts from the Fediverse now require either a name or `preferredUsername` to be set when the Discussion option `require_name_email` is set to true. It falls back to "Anonymous", if not. [#1811]
+- Management of public/private keys for Actors now lives in the Actors collection, in preparation for Signature improvements down the line. [#1832]
+- Notification emails for new reactions received from the Fediverse now link to the moderation page instead of the edit page, preventing errors and making comment management smoother. [#1887]
+- Plugins now have full control over which Settings tabs are shown in Settings > Activitypub. [#1806]
+- Reworked follower structure to simplify handling and enable reuse for following mechanism. [#1759]
+- Screen options in the Activitypub settings page are now filterable. [#1802]
+- Setting the blog identifier to empty will no longer trigger an error message about it being the same as an existing user name. [#1805]
+- Step completion tracking in the Welcome tab now even works when the number of steps gets reduced. [#1809]
+- The image attachment setting is no longer saved to the database if it matches the default value. [#1821]
+- The welcome page now links to the correct profile when Blog Only mode was selected in the profile mode step. [#1807]
+- Unified retrieval of comment avatars and re-used core filters to give access to third-part plugins. [#1812]
+
+### Fixed
+- Allow interaction redirect URLs that contain an ampersand. [#1819]
+- Comments received from the Fediverse no longer show an Edit link in the comment list, despite not being editable. [#1895]
+- Fixed an issue where links to remote likes and boosts could open raw JSON instead of a proper page. [#1857]
+- Fixed a potential error when getting an Activitypub ID based on a user ID. [#1889]
+- HTTP signatures using the hs2019 algorithm now get accepted without error. [#1814]
+- Improved compatibility with older follower data. [#1841]
+- Inbox requests that are missing an `algorithm` parameter in their signature no longer create a PHP warning. [#1803]
+- Interaction attempts that pass a webfinger ID instead of a URL will work again. [#1834]
+- Names containing HTML entities now get displayed correctly in the Reactions block's list of users. [#1810]
+- Prevent storage of empty or default post meta values. [#1829]
+- The amount of avatars shown in the Reactions block no longer depends on the amount of likes, but is comment type agnostic. [#1835]
+- The command-line interface extension, accidentally removed in a recent cleanup, has been restored. [#1878]
+- The image attachment setting now correctly respects a value of 0, instead of falling back to the default. [#1822]
+- The Welcome screen now loads with proper styling when shown as a fallback. [#1820]
+- Using categories as hashtags has been removed to prevent conflicts with tags of the same name. [#1873]
+- When verifying signatures on incoming requests, the digest header now gets checked as expected. [#1837]
+
 ## [6.0.2] - 2025-06-11
 ### Changed
 - Reactions button color is now a little more theme agnostic. [#1795]
@@ -1269,6 +1464,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.4.0...7.5.0
+[7.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.3.0...7.4.0
+[7.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.2.0...7.3.0
+[7.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.1.0...7.2.0
+[7.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.0.1...7.1.0
+[7.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.0.0...7.0.1
+[7.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.2...7.0.0
 [6.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.1...6.0.2
 [6.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/6.0.0...6.0.1
 [6.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.9.2...6.0.0

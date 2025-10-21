@@ -7,15 +7,15 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Comment;
 use Activitypub\Webfinger;
 use WP_Comment_Query;
-use Activitypub\Comment;
 
-use function Activitypub\object_to_uri;
-use function Activitypub\is_post_disabled;
-use function Activitypub\url_to_commentid;
-use function Activitypub\object_id_to_comment;
 use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\is_post_disabled;
+use function Activitypub\object_id_to_comment;
+use function Activitypub\object_to_uri;
+use function Activitypub\url_to_commentid;
 
 /**
  * ActivityPub Interactions Collection.
@@ -89,7 +89,7 @@ class Interactions {
 	 *
 	 * @param array $activity Activity array.
 	 *
-	 * @return array|false Comment data or `false` on failure.
+	 * @return array|string|int|\WP_Error|false Comment data or `false` on failure.
 	 */
 	public static function add_reaction( $activity ) {
 		$url               = object_to_uri( $activity['object'] );
@@ -127,13 +127,13 @@ class Interactions {
 	}
 
 	/**
-	 * Get interaction(s) for a given URL/ID.
+	 * Get interaction(s) by ID.
 	 *
 	 * @param string $url The URL/ID to get interactions for.
 	 *
 	 * @return array The interactions as WP_Comment objects.
 	 */
-	public static function get_interaction_by_id( $url ) {
+	public static function get_by_id( $url ) {
 		$args = array(
 			'nopaging'   => true,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -162,13 +162,28 @@ class Interactions {
 	}
 
 	/**
-	 * Get interaction(s) for a given actor.
+	 * Get interaction(s) for a given URL/ID.
+	 *
+	 * @deprecated unreleased Use {@see Interactions::get_by_id()}.
+	 *
+	 * @param string $url The URL/ID to get interactions for.
+	 *
+	 * @return array The interactions as WP_Comment objects.
+	 */
+	public static function get_interaction_by_id( $url ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Interactions::get_by_id' );
+
+		return self::get_by_id( $url );
+	}
+
+	/**
+	 * Get interaction(s) by actor.
 	 *
 	 * @param string $actor The Actor-URL.
 	 *
 	 * @return array The interactions as WP_Comment objects.
 	 */
-	public static function get_interactions_by_actor( $actor ) {
+	public static function get_by_actor( $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
 		// Get URL, because $actor seems to be the ID.
@@ -189,6 +204,21 @@ class Interactions {
 		);
 
 		return get_comments( $args );
+	}
+
+	/**
+	 * Get interaction(s) for a given actor.
+	 *
+	 * @deprecated unreleased Use {@see Interactions::get_by_actor()}.
+	 *
+	 * @param string $actor The Actor-URL.
+	 *
+	 * @return array The interactions as WP_Comment objects.
+	 */
+	public static function get_interactions_by_actor( $actor ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Interactions::get_by_actor' );
+
+		return self::get_by_actor( $actor );
 	}
 
 	/**
@@ -259,12 +289,16 @@ class Interactions {
 			$webfinger = str_replace( 'acct:', '', $webfinger );
 		}
 
+		$date = $activity['object']['published'] ?? 'now';
+
 		$comment_data = array(
 			'comment_author'       => $comment_author ?? __( 'Anonymous', 'activitypub' ),
 			'comment_author_url'   => \esc_url_raw( $url ),
 			'comment_content'      => $comment_content,
 			'comment_type'         => 'comment',
 			'comment_author_email' => $webfinger,
+			'comment_date'         => \get_date_from_gmt( \gmdate( 'Y-m-d H:i:s', \strtotime( $date ) ) ),
+			'comment_date_gmt'     => \gmdate( 'Y-m-d H:i:s', \strtotime( $date ) ),
 			'comment_meta'         => array(
 				'source_id' => \esc_url_raw( object_to_uri( $activity['object'] ) ),
 				'protocol'  => 'activitypub',

@@ -8,7 +8,6 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use WP_Comment_Query;
 
 /**
  * ActivityPub Comment Class.
@@ -23,6 +22,7 @@ class Comment {
 	public static function init() {
 		self::register_comment_types();
 
+		\add_filter( 'map_meta_cap', array( self::class, 'map_meta_cap' ), 10, 4 );
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
@@ -33,6 +33,26 @@ class Comment {
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+	}
+
+	/**
+	 * Remove edit capabilities for comments received via ActivityPub.
+	 *
+	 * @param array  $caps    Array of capabilities.
+	 * @param string $cap     Capability name.
+	 * @param int    $user_id User ID.
+	 * @param array  $args    Array of arguments.
+	 *
+	 * @return array Modified array of capabilities.
+	 */
+	public static function map_meta_cap( $caps, $cap, $user_id, $args ) {
+		if ( 'edit_comment' === $cap && self::was_received( $args[0] ) ) {
+			if ( ! \is_admin() || ( isset( $GLOBALS['current_screen'] ) && 'comment' === $GLOBALS['current_screen']->id ) ) {
+				$caps[] = 'do_not_allow';
+			}
+		}
+
+		return $caps;
 	}
 
 	/**
@@ -252,7 +272,7 @@ class Comment {
 	 * @return \WP_Comment|false Comment object, or false on failure.
 	 */
 	public static function object_id_to_comment( $id ) {
-		$comment_query = new WP_Comment_Query(
+		$comment_query = new \WP_Comment_Query(
 			array(
 				'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
@@ -277,16 +297,16 @@ class Comment {
 	 * @return string|null Comment ID or null if not found.
 	 */
 	public static function url_to_commentid( $url ) {
-		if ( ! $url || ! filter_var( $url, \FILTER_VALIDATE_URL ) ) {
+		if ( ! $url || ! \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
 			return null;
 		}
 
 		// Check for local comment.
-		if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+		if ( is_same_domain( $url ) ) {
 			$query = \wp_parse_url( $url, \PHP_URL_QUERY );
 
 			if ( $query ) {
-				parse_str( $query, $params );
+				\parse_str( $query, $params );
 
 				if ( ! empty( $params['c'] ) ) {
 					$comment = \get_comment( $params['c'] );
@@ -313,7 +333,7 @@ class Comment {
 			),
 		);
 
-		$query    = new WP_Comment_Query();
+		$query    = new \WP_Comment_Query();
 		$comments = $query->query( $args );
 
 		if ( $comments && is_array( $comments ) ) {
@@ -422,7 +442,7 @@ class Comment {
 	 * @return string $url
 	 */
 	public static function remote_comment_link( $comment_link, $comment ) {
-		if ( ! $comment || is_admin() ) {
+		if ( ! $comment || \is_admin() || \is_search() ) {
 			return $comment_link;
 		}
 
@@ -453,7 +473,7 @@ class Comment {
 		}
 
 		// Generate URI based on comment ID.
-		return \add_query_arg( 'c', $comment->comment_ID, \trailingslashit( \home_url() ) );
+		return \add_query_arg( 'c', $comment->comment_ID, \home_url( '/' ) );
 	}
 
 	/**
@@ -540,6 +560,12 @@ class Comment {
 	 * @return array The registered custom comment type slugs.
 	 */
 	public static function get_comment_type_slugs() {
+		if ( ! did_action( 'init' ) ) {
+			_doing_it_wrong( __METHOD__, 'This function should not be called before the init action has run. Comment types are only available after init.', '7.5.0' );
+
+			return array();
+		}
+
 		return array_keys( self::get_comment_types() );
 	}
 
@@ -665,10 +691,10 @@ class Comment {
 	 *
 	 * @see https://github.com/janboddez/indieblocks/blob/a2d59de358031056a649ee47a1332ce9e39d4ce2/includes/functions.php#L423-L432
 	 *
-	 * @param WP_Comment_Query $query Comment count.
+	 * @param \WP_Comment_Query $query Comment count.
 	 */
 	public static function comment_query( $query ) {
-		if ( ! $query instanceof WP_Comment_Query ) {
+		if ( ! $query instanceof \WP_Comment_Query ) {
 			return;
 		}
 

@@ -7,10 +7,12 @@
 
 namespace Activitypub\WP_Admin;
 
-use Activitypub\Comment;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Comment;
 use Activitypub\Model\Blog;
+use Activitypub\Moderation;
+use Activitypub\Scheduler\Actor;
 
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
@@ -51,6 +53,9 @@ class Admin {
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
+		\add_action( 'admin_post_delete_actor_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
+		\add_action( 'admin_action_activitypub_confirm_removal', array( self::class, 'handle_bulk_actor_delete_page' ) );
+
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
 		}
@@ -63,9 +68,13 @@ class Admin {
 			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
 		}
 
+		\add_action( 'admin_print_scripts-profile.php', array( self::class, 'enqueue_moderation_scripts' ) );
+		\add_action( 'admin_print_scripts-settings_page_activitypub', array( self::class, 'enqueue_moderation_scripts' ) );
 		\add_action( 'admin_print_footer_scripts-settings_page_activitypub', array( self::class, 'open_help_tab' ) );
 
 		\add_action( 'wp_dashboard_setup', array( self::class, 'add_dashboard_widgets' ) );
+
+		\add_action( 'wp_ajax_activitypub_moderation_settings', array( self::class, 'ajax_moderation_settings' ) );
 	}
 
 	/**
@@ -73,9 +82,28 @@ class Admin {
 	 */
 	public static function admin_notices() {
 		$current_screen = get_current_screen();
+
 		if ( ! $current_screen ) {
 			return;
 		}
+
+		// Check for self-destruct completion notice.
+		$self_destruct_complete = \get_option( 'activitypub_self_destruct_complete' );
+		if ( $self_destruct_complete ) {
+			// Show the notice only once, then remove it.
+			\delete_option( 'activitypub_self_destruct_complete' );
+			?>
+			<div class="notice notice-success is-dismissible">
+				<p>
+					<strong><?php esc_html_e( 'ActivityPub Self-Destruct Complete!', 'activitypub' ); ?></strong>
+				</p>
+				<p>
+					<?php esc_html_e( 'All Delete activities have been successfully sent to the Fediverse. Your blog is no longer discoverable via ActivityPub and all followers have been notified of the deletion.', 'activitypub' ); ?>
+				</p>
+			</div>
+			<?php
+		}
+
 		if ( 'edit' === $current_screen->base && Extra_Fields::is_extra_fields_post_type( $current_screen->post_type ) ) {
 			?>
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
@@ -88,36 +116,73 @@ class Admin {
 	}
 
 	/**
-	 * Display one admin menu notice about configuration problems or conflicts.
-	 *
-	 * @param string $admin_notice The notice to display.
-	 * @param string $level        The level of the notice (error, warning, success, info).
-	 */
-	private static function show_admin_notice( $admin_notice, $level ) {
-		?>
-
-		<div class="notice notice-<?php echo esc_attr( $level ); ?>">
-			<p><?php echo wp_kses( $admin_notice, 'data' ); ?></p>
-		</div>
-
-		<?php
-	}
-
-	/**
-	 * Load user settings page
+	 * Load user settings page.
 	 */
 	public static function followers_list_page() {
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
-			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
 		}
 	}
 
 	/**
-	 * Adds the follower list to the Help tab.
+	 * Load user following list page.
 	 */
-	public static function add_followers_list_help_tab() {
-		// todo.
+	public static function following_list_page() {
+		// User has to be able to publish posts.
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php' );
+		}
+	}
+
+	/**
+	 * Load blocked actors page.
+	 */
+	public static function blocked_actors_list_page() {
+		// User has to be able to publish posts.
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php' );
+		}
+	}
+
+	/**
+	 * Creates the followers and following list tables in ActivityPub settings.
+	 */
+	public static function add_settings_list_tables() {
+		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		switch ( $tab ) {
+			case 'followers':
+				self::add_followers_list_table();
+				break;
+			case 'following':
+				self::add_following_list_table();
+				break;
+			case 'blocked-actors':
+				self::add_blocked_actors_list_table();
+				break;
+		}
+	}
+
+	/**
+	 * Creates the followers list table.
+	 */
+	public static function add_followers_list_table() {
+		$GLOBALS['followers_list_table'] = new Table\Followers();
+	}
+
+	/**
+	 * Creates the following list table.
+	 */
+	public static function add_following_list_table() {
+		$GLOBALS['following_list_table'] = new Table\Following();
+	}
+
+	/**
+	 * Creates the blocked actors list table.
+	 */
+	public static function add_blocked_actors_list_table() {
+		$GLOBALS['blocked_actors_list_table'] = new Table\Blocked_Actors();
 	}
 
 	/**
@@ -180,6 +245,7 @@ class Admin {
 
 		// User options that have a default value and therefore can't be empty (Empty triggers the default value).
 		$required_user_options = array(
+			'activitypub_hide_social_graph',
 			'activitypub_mailer_new_dm',
 			'activitypub_mailer_new_follower',
 			'activitypub_mailer_new_mention',
@@ -206,6 +272,28 @@ class Admin {
 			ACTIVITYPUB_PLUGIN_VERSION,
 			false
 		);
+
+		// Register and enqueue command palette integration.
+		if ( user_can_activitypub( \get_current_user_id() ) || \current_user_can( 'manage_options' ) ) {
+			$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/command-palette/plugin.asset.php';
+			wp_enqueue_script(
+				'activitypub-command-palette',
+				plugins_url( 'build/command-palette/plugin.js', ACTIVITYPUB_PLUGIN_FILE ),
+				$asset_data['dependencies'],
+				$asset_data['version'],
+				true
+			);
+
+			wp_localize_script(
+				'activitypub-command-palette',
+				'activitypubCommandPalette',
+				array(
+					'followingEnabled' => '1' === \get_option( 'activitypub_following_ui', '0' ),
+					'actorMode'        => \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ),
+					'canManageOptions' => \current_user_can( 'manage_options' ),
+				)
+			);
+		}
 
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
 			wp_enqueue_style(
@@ -248,29 +336,38 @@ class Admin {
 	}
 
 	/**
+	 * Enqueue moderation admin scripts.
+	 */
+	public static function enqueue_moderation_scripts() {
+		\wp_enqueue_script(
+			'activitypub-moderation-admin',
+			ACTIVITYPUB_PLUGIN_URL . 'assets/js/activitypub-moderation-admin.js',
+			array( 'jquery', 'wp-util', 'wp-a11y' ),
+			ACTIVITYPUB_PLUGIN_VERSION,
+			true
+		);
+
+		// Localize script with translations and nonces.
+		\wp_localize_script(
+			'activitypub-moderation-admin',
+			'activitypubModerationL10n',
+			array(
+				'enterValue'        => \__( 'Please enter a value to block.', 'activitypub' ),
+				'addBlockFailed'    => \__( 'Failed to add block.', 'activitypub' ),
+				'removeBlockFailed' => \__( 'Failed to remove block.', 'activitypub' ),
+				'alreadyBlocked'    => \__( 'This term is already blocked.', 'activitypub' ),
+				'invalidDomain'     => \__( 'Please enter a valid domain (e.g., example.com).', 'activitypub' ),
+				'nonce'             => \wp_create_nonce( 'activitypub_moderation_settings' ),
+			)
+		);
+	}
+
+	/**
 	 * Hook into the edit_comment functionality.
 	 *
 	 * Disables the edit_comment capability for federated comments.
 	 */
 	public static function edit_comment() {
-		// Disable the edit_comment capability for federated comments.
-		\add_filter(
-			'user_has_cap',
-			function ( $all_caps, $caps, $arg ) {
-				if ( 'edit_comment' !== $arg[0] ) {
-					return $all_caps;
-				}
-
-				if ( was_comment_received( $arg[2] ) ) {
-					return false;
-				}
-
-				return $all_caps;
-			},
-			1,
-			3
-		);
-
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$comment_id = \absint( $_GET['c'] ?? 0 );
 		if ( Comment::was_received( $comment_id ) ) {
@@ -331,16 +428,6 @@ class Admin {
 	 * Add ActivityPub specific actions/filters to the post list view.
 	 */
 	public static function list_posts() {
-		// Show only the user's extra fields.
-		\add_action(
-			'pre_get_posts',
-			function ( $query ) {
-				if ( $query->get( 'post_type' ) === 'ap_extrafield' ) {
-					$query->set( 'author', get_current_user_id() );
-				}
-			}
-		);
-
 		// Remove all views for the extra fields.
 		$screen_id = get_current_screen()->id;
 
@@ -513,7 +600,8 @@ class Admin {
 	 * Handle bulk activitypub requests.
 	 *
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
-	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users.
+	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users (redirects to confirmation page).
+	 * * `delete_actor_confirmed` - Actually remove the capability after confirmation.
 	 *
 	 * @param string $send_back The URL to send the user back to.
 	 * @param string $action    The requested action.
@@ -522,20 +610,172 @@ class Admin {
 	 * @return string The URL to send the user back to.
 	 */
 	public static function handle_bulk_request( $send_back, $action, $users ) {
-		if (
-			'remove_activitypub_cap' !== $action &&
-			'add_activitypub_cap' !== $action
-		) {
-			return $send_back;
+		switch ( $action ) {
+			case 'add_activitypub_cap':
+				foreach ( $users as $user_id ) {
+					$user = new \WP_User( $user_id );
+					$user->add_cap( 'activitypub' );
+				}
+				return $send_back;
+			case 'remove_activitypub_cap':
+				$removed_count = 0;
+
+				// Remove capabilities immediately.
+				foreach ( $users as $key => $user_id ) {
+					$user = new \WP_User( $user_id );
+
+					// Check if user has ActivityPub capability.
+					if ( ! $user->has_cap( 'activitypub' ) ) {
+						unset( $users[ $key ] );
+						continue;
+					}
+
+					// Remove the capability.
+					$user->remove_cap( 'activitypub' );
+
+					// Force cache refresh for user capabilities.
+					\wp_cache_delete( $user_id, 'users' );
+					\wp_cache_delete( $user_id, 'user_meta' );
+
+					++$removed_count;
+				}
+
+				// Build the query args with proper array handling for fediverse deletion confirmation.
+				$query_args = array(
+					'action'    => 'activitypub_confirm_removal',
+					'send_back' => \rawurlencode( $send_back ),
+				);
+
+				// Add user IDs as separate parameters.
+				foreach ( $users as $index => $user_id ) {
+					$query_args[ sprintf( 'users[%d]', $index ) ] = absint( $user_id );
+				}
+
+				$confirmation_url = \add_query_arg( $query_args, \admin_url( 'users.php' ) );
+
+				// Force redirect instead of just returning URL.
+				\wp_safe_redirect( $confirmation_url );
+				exit;
+			case 'delete_actor_confirmed':
+				// Use unified method with no fediverse deletion (keep).
+				return self::process_capability_removal( $users, 'keep', $send_back );
+			default:
+				return $send_back;
+		}
+	}
+
+	/**
+	 * Handle the bulk capability removal page request directly.
+	 */
+	public static function handle_bulk_actor_delete_page() {
+
+		// Check permissions.
+		if ( ! \current_user_can( 'edit_users' ) ) {
+			\wp_die( \esc_html__( 'You do not have sufficient permissions to access this page.', 'activitypub' ) );
 		}
 
-		foreach ( $users as $user_id ) {
-			$user = new \WP_User( $user_id );
-			if ( 'add_activitypub_cap' === $action ) {
-				$user->add_cap( 'activitypub' );
-			} elseif ( 'remove_activitypub_cap' === $action ) {
-				$user->remove_cap( 'activitypub' );
-			}
+		// Get parameters.
+		// phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+		$users = \wp_unslash( $_GET['users'] ?? array() );
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
+
+		// Sanitize user IDs.
+		$users = \array_map( 'absint', (array) $users );
+		$users = \array_filter( $users );
+
+		// Validate send_back URL.
+		if ( empty( $send_back ) ) {
+			$send_back = \admin_url( 'users.php' );
+		}
+
+		// Load template and exit to prevent WordPress from trying to load other admin pages.
+		\load_template(
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-actor-delete-confirmation.php',
+			false,
+			array(
+				'users'     => $users,
+				'send_back' => $send_back,
+			)
+		);
+		exit;
+	}
+
+
+	/**
+	 * Handle the bulk capability removal confirmation form submission.
+	 */
+	public static function handle_bulk_actor_delete_confirmation() {
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'bulk-users' ) ) {
+			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
+		}
+
+		// Check permissions.
+		if ( ! \current_user_can( 'edit_users' ) ) {
+			\wp_die( \esc_html__( 'You do not have sufficient permissions to perform this action.', 'activitypub' ) );
+		}
+
+		// Get form data.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$selected_users = \wp_unslash( $_POST['selected_users'] ?? array() );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$remove_from_fediverse = \wp_unslash( $_POST['remove_from_fediverse'] ?? array() );
+		$send_back             = \esc_url_raw( \wp_unslash( $_POST['send_back'] ?? '' ) );
+
+		// Sanitize user IDs.
+		$selected_users = \array_map( 'absint', (array) $selected_users );
+		$selected_users = \array_filter( $selected_users );
+
+		if ( empty( $selected_users ) ) {
+			\wp_safe_redirect( $send_back );
+			exit;
+		}
+
+		// Process capability removal using unified method.
+		$result = self::process_capability_removal( $selected_users, $remove_from_fediverse, $send_back );
+
+		// Redirect back.
+		\wp_safe_redirect( $result );
+		exit;
+	}
+
+
+	/**
+	 * Process fediverse deletion for users (capabilities already removed).
+	 *
+	 * @param array        $users                  Array of user IDs.
+	 * @param array|string $remove_from_fediverse  Array of user IDs to delete from fediverse, or 'delete'/'keep' for all users.
+	 * @param string       $send_back              URL to redirect back to.
+	 *
+	 * @return string The URL to redirect to.
+	 */
+	public static function process_capability_removal( $users, $remove_from_fediverse, $send_back ) {
+		// Normalize fediverse removal parameter.
+		if ( is_string( $remove_from_fediverse ) ) {
+			// Legacy format: 'delete' or 'keep' for all users.
+			$delete_all      = ( 'delete' === $remove_from_fediverse );
+			$users_to_delete = $delete_all ? $users : array();
+		} else {
+			// New format: array of specific user IDs to delete from fediverse.
+			$remove_from_fediverse = \array_map( 'absint', (array) $remove_from_fediverse );
+			$users_to_delete       = \array_filter( $remove_from_fediverse );
+		}
+
+		// Schedule delete activities for users who should be removed from fediverse.
+		if ( ! empty( $users_to_delete ) ) {
+			// Temporarily bypass capability checks for delete activity scheduling since capabilities were already removed.
+			\add_filter( 'activitypub_user_can_activitypub', '__return_true' );
+
+			\array_map(
+				array(
+					Actor::class,
+					'schedule_user_delete',
+				),
+				$users_to_delete
+			);
+
+			\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );
 		}
 
 		return $send_back;
@@ -767,5 +1007,66 @@ class Admin {
 			<?php endif; ?>
 		</p>
 		<?php
+	}
+
+	/**
+	 * AJAX handler for moderation settings (add/remove blocks).
+	 */
+	public static function ajax_moderation_settings() {
+		$context   = \sanitize_text_field( \wp_unslash( $_POST['context'] ?? '' ) );
+		$operation = \sanitize_text_field( \wp_unslash( $_POST['operation'] ?? '' ) );
+		$type      = \sanitize_text_field( \wp_unslash( $_POST['type'] ?? '' ) );
+		$value     = \sanitize_text_field( \wp_unslash( $_POST['value'] ?? '' ) );
+
+		// Validate required parameters.
+		if ( ! in_array( $context, array( 'user', 'site' ), true ) || ! in_array( $operation, array( 'add', 'remove' ), true ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid context or action.', 'activitypub' ) ) );
+		}
+
+		if ( empty( $type ) || empty( $value ) || ! in_array( $type, array( 'domain', 'keyword' ), true ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid parameters.', 'activitypub' ) ) );
+		}
+
+		// Verify nonce for all operations.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_moderation_settings' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
+		if ( 'user' === $context ) {
+			$user_id = (int) ( \sanitize_text_field( \wp_unslash( $_POST['user_id'] ?? 0 ) ) );
+
+			// Check permissions.
+			if ( \get_current_user_id() !== $user_id ) {
+				\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+			}
+
+			if ( ! $user_id ) {
+				\wp_send_json_error( array( 'message' => \__( 'Invalid user ID.', 'activitypub' ) ) );
+			}
+
+			if ( 'add' === $operation ) {
+				$success       = Moderation::add_user_block( $user_id, $type, $value );
+				$error_message = \__( 'Failed to add block.', 'activitypub' );
+			} else {
+				$success       = Moderation::remove_user_block( $user_id, $type, $value );
+				$error_message = \__( 'Failed to remove block.', 'activitypub' );
+			}
+		} elseif ( 'add' === $operation ) {
+				$success       = Moderation::add_site_block( $type, $value );
+				$error_message = \__( 'Failed to add block.', 'activitypub' );
+		} else {
+			$success       = Moderation::remove_site_block( $type, $value );
+			$error_message = \__( 'Failed to remove block.', 'activitypub' );
+		}
+
+		if ( $success ) {
+			\wp_send_json_success();
+		} else {
+			\wp_send_json_error( array( 'message' => $error_message ) );
+		}
 	}
 }

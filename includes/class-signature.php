@@ -8,8 +8,9 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Signature\Draft_Cavage_Signature;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Signature\Http_Message_Signature;
+use Activitypub\Signature\Http_Signature_Draft;
 
 /**
  * ActivityPub Signature Class.
@@ -18,6 +19,14 @@ use Activitypub\Signature\Http_Message_Signature;
  * @author Django Doucet
  */
 class Signature {
+
+	/**
+	 * Initialize the class.
+	 */
+	public static function init() {
+		\add_filter( 'http_request_args', array( self::class, 'sign_request' ), 0, 2 ); // Ahead of all other filters, so signature is set.
+		\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
+	}
 
 	/**
 	 * Sign an HTTP Request.
@@ -33,21 +42,10 @@ class Signature {
 			return $args;
 		}
 
-		$args = \wp_parse_args(
-			$args,
-			array(
-				'method'  => 'GET',
-				'headers' => array(
-					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
-				),
-			)
-		);
-
-		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && ! self::rfc9421_is_unsupported( $url ) ) {
+		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && self::could_support_rfc9421( $url ) ) {
 			$signature = new Http_Message_Signature();
-			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 		} else {
-			$signature = new Draft_Cavage_Signature();
+			$signature = new Http_Signature_Draft();
 		}
 
 		return $signature->sign( $args, $url );
@@ -70,7 +68,7 @@ class Signature {
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Draft_Cavage_Signature();
+		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Http_Signature_Draft();
 
 		return $signature->verify( $headers, $body ?? null );
 	}
@@ -78,25 +76,27 @@ class Signature {
 	/**
 	 * If a request with RFC-9421 signature fails, we try again with the Draft Cavage signature.
 	 *
-	 * @param array  $response    HTTP response.
-	 * @param array  $parsed_args HTTP request arguments.
-	 * @param string $url         The request URL.
+	 * @param array  $response HTTP response.
+	 * @param array  $args     HTTP request arguments.
+	 * @param string $url      The request URL.
 	 *
 	 * @return array The HTTP response.
 	 */
-	public static function maybe_double_knock( $response, $parsed_args, $url ) {
-		// Remove this filter to prevent infinite recursion.
-		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
+	public static function maybe_double_knock( $response, $args, $url ) {
+		// Bail if it didn't use an RFC-9421 signature or there's nothing to sign with.
+		if ( ! isset( $args['key_id'], $args['private_key'], $args['headers']['Signature-Input'] ) ) {
+			return $response;
+		}
 
 		$response_code = \wp_remote_retrieve_response_code( $response );
 
 		// Fall back to Draft Cavage signature for any 4xx responses.
 		if ( $response_code >= 400 && $response_code < 500 ) {
-			unset( $parsed_args['headers']['Signature'], $parsed_args['headers']['Signature-Input'], $parsed_args['headers']['Content-Digest'] );
+			unset( $args['headers']['Signature'], $args['headers']['Signature-Input'], $args['headers']['Content-Digest'] );
 			self::rfc9421_add_unsupported_host( $url );
 
-			$parsed_args = ( new Draft_Cavage_Signature() )->sign( $parsed_args, $url );
-			$response    = \wp_remote_request( $url, $parsed_args );
+			$args     = ( new Http_Signature_Draft() )->sign( $args, $url );
+			$response = \wp_remote_request( $url, $args );
 		}
 
 		return $response;
@@ -152,26 +152,26 @@ class Signature {
 	}
 
 	/**
-	 * Check if RFC-9421 signature is unsupported for a given host.
+	 * Check if RFC-9421 signature could be supported.
 	 *
 	 * @param string $url The URL to check.
 	 *
-	 * @return bool True, if unsupported, false otherwise.
+	 * @return bool True, if RFC-9421 signature could be supported, false otherwise.
 	 */
-	private static function rfc9421_is_unsupported( $url ) {
+	private static function could_support_rfc9421( $url ) {
 		$host = \wp_parse_url( $url, \PHP_URL_HOST );
 		$list = \get_option( 'activitypub_rfc9421_unsupported', array() );
 
 		if ( isset( $list[ $host ] ) ) {
 			if ( $list[ $host ] > \time() ) {
-				return true;
+				return false;
 			}
 
 			unset( $list[ $host ] );
 			\update_option( 'activitypub_rfc9421_unsupported', $list );
 		}
 
-		return false;
+		return true;
 	}
 
 	/**
@@ -190,7 +190,7 @@ class Signature {
 	/**
 	 * Return the public key for a given user.
 	 *
-	 * @deprecated unreleased Use {@see Actors::get_public_key()}.
+	 * @deprecated 7.0.0 Use {@see Actors::get_public_key()}.
 	 *
 	 * @param int  $user_id The WordPress User ID.
 	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
@@ -198,7 +198,7 @@ class Signature {
 	 * @return string The public key.
 	 */
 	public static function get_public_key_for( $user_id, $force = false ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_public_key' );
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_public_key' );
 
 		return Actors::get_public_key( $user_id, $force );
 	}
@@ -206,7 +206,7 @@ class Signature {
 	/**
 	 * Return the private key for a given user.
 	 *
-	 * @deprecated unreleased Use {@see Actors::get_private_key()}.
+	 * @deprecated 7.0.0 Use {@see Actors::get_private_key()}.
 	 *
 	 * @param int  $user_id The WordPress User ID.
 	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
@@ -214,7 +214,7 @@ class Signature {
 	 * @return string The private key.
 	 */
 	public static function get_private_key_for( $user_id, $force = false ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_private_key' );
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_private_key' );
 
 		return Actors::get_private_key( $user_id, $force );
 	}
@@ -222,14 +222,14 @@ class Signature {
 	/**
 	 * Return the key pair for a given user.
 	 *
-	 * @deprecated unreleased Use {@see Actors::get_keypair()}.
+	 * @deprecated 7.0.0 Use {@see Actors::get_keypair()}.
 	 *
 	 * @param int $user_id The WordPress User ID.
 	 *
 	 * @return array The key pair.
 	 */
 	public static function get_keypair_for( $user_id ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_keypair' );
+		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_keypair' );
 
 		return Actors::get_keypair( $user_id );
 	}
@@ -237,22 +237,22 @@ class Signature {
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @deprecated unreleased Use {@see Actors::get_remote_key()}.
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_public_key()}.
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Actors::get_remote_key()' );
+		\_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_public_key()' );
 
-		return Actors::get_remote_key( $key_id );
+		return Remote_Actors::get_public_key( $key_id );
 	}
 
 	/**
 	 * Generates the Signature for an HTTP Request.
 	 *
-	 * @deprecated unreleased Use {@see Signature::sign_request()}.
+	 * @deprecated 7.0.0 Use {@see Signature::sign_request()}.
 	 *
 	 * @param int    $user_id     The WordPress User ID.
 	 * @param string $http_method The HTTP method.
@@ -263,7 +263,7 @@ class Signature {
 	 * @return string The signature.
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request()' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::sign_request()' );
 
 		$user = Actors::get_by_id( $user_id );
 		$key  = Actors::get_private_key( $user_id );
@@ -307,14 +307,14 @@ class Signature {
 	/**
 	 * Gets the signature algorithm from the signature header.
 	 *
-	 * @deprecated unreleased Use {@see Signature::verify()}.
+	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
 	 *
 	 * @param array $signature_block The signature block.
 	 *
 	 * @return string|bool The signature algorithm or false if not found.
 	 */
 	public static function get_signature_algorithm( $signature_block ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
 
 		if ( ! empty( $signature_block['algorithm'] ) ) {
 			switch ( $signature_block['algorithm'] ) {
@@ -331,14 +331,14 @@ class Signature {
 	/**
 	 * Parses the Signature header.
 	 *
-	 * @deprecated unreleased Use {@see Signature::verify()}.
+	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
 	 *
 	 * @param string $signature The signature header.
 	 *
 	 * @return array Signature parts.
 	 */
 	public static function parse_signature_header( $signature ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
 
 		$parsed_header = array();
 		$matches       = array();
@@ -372,7 +372,7 @@ class Signature {
 	/**
 	 * Gets the header data from the included pseudo headers.
 	 *
-	 * @deprecated unreleased Use {@see Signature::verify()}.
+	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
 	 *
 	 * @param array $signed_headers  The signed headers.
 	 * @param array $signature_block The signature block.
@@ -381,7 +381,7 @@ class Signature {
 	 * @return string signed headers for comparison
 	 */
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
 
 		$signed_data = '';
 
@@ -453,14 +453,14 @@ class Signature {
 	/**
 	 * Generates the digest for an HTTP Request.
 	 *
-	 * @deprecated unreleased Use {@see Signature::sign_request()}.
+	 * @deprecated 7.0.0 Use {@see Signature::sign_request()}.
 	 *
 	 * @param string $body The body of the request.
 	 *
 	 * @return string The digest.
 	 */
 	public static function generate_digest( $body ) {
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::sign_request' );
 
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return "SHA-256=$digest";

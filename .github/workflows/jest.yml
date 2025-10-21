@@ -1,0 +1,45 @@
+name: JavaScript Unit Testing
+
+on:
+  push:
+    branches:
+      - trunk
+    paths:
+      - '**/*.js'
+      - '**/*.jsx'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/jest.yml'
+      - '!tests/e2e/**'
+  pull_request:
+    paths:
+      - '**/*.js'
+      - '**/*.jsx'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/jest.yml'
+      - '!tests/e2e/**'
+
+jobs:
+  jest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run JavaScript unit tests
+        run: npm run test:unit

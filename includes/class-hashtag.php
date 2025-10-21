@@ -32,7 +32,7 @@ class Hashtag {
 	 * @return array The filtered activity object array.
 	 */
 	public static function filter_activity_object( $activity ) {
-		if ( ! empty( $activity['summary'] ) ) {
+		if ( ! empty( $activity['summary'] ) && is_actor( $activity ) ) {
 			$activity['summary'] = self::the_content( $activity['summary'] );
 		}
 

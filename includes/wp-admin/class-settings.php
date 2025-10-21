@@ -10,6 +10,7 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Sanitize;
+
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -24,8 +25,6 @@ class Settings {
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
 
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'handle_welcome_query_arg' ) );
-		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
-		\add_filter( 'screen_options_show_submit', array( self::class, 'screen_options_show_submit' ), 10, 2 );
 	}
 
 	/**
@@ -68,21 +67,6 @@ class Settings {
 				'sanitize_callback' => function ( $value ) {
 					return \is_numeric( $value ) ? \absint( $value ) : ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
 				},
-			)
-		);
-
-		\register_setting(
-			'activitypub',
-			'activitypub_object_type',
-			array(
-				'type'         => 'string',
-				'description'  => \__( 'The Activity-Object-Type', 'activitypub' ),
-				'show_in_rest' => array(
-					'schema' => array(
-						'enum' => array( 'note', 'wordpress-post-format' ),
-					),
-				),
-				'default'      => ACTIVITYPUB_DEFAULT_OBJECT_TYPE,
 			)
 		);
 
@@ -194,6 +178,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_inbox_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => \__( 'Number of days to keep items in the Inbox.', 'activitypub' ),
+				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_vary_header',
 			array(
 				'type'        => 'boolean',
@@ -234,11 +228,56 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_following_ui',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Show Following UI in admin menus and settings.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_create_posts',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Allow creating posts via ActivityPub.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_shared_inbox',
 			array(
 				'type'        => 'boolean',
 				'description' => \__( 'Enable the shared inbox.', 'activitypub' ),
 				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_persist_inbox',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable inbox collection persistence.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_object_type',
+			array(
+				'type'         => 'string',
+				'description'  => \__( 'The Activity-Object-Type', 'activitypub' ),
+				'show_in_rest' => array(
+					'schema' => array(
+						'enum' => array( 'note', 'wordpress-post-format' ),
+					),
+				),
+				'default'      => ACTIVITYPUB_DEFAULT_OBJECT_TYPE,
 			)
 		);
 
@@ -313,7 +352,30 @@ class Settings {
 				'type'              => 'array',
 				'description'       => 'An array of URLs that the blog user is known by.',
 				'default'           => array(),
-				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_hide_social_graph',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Hide Followers and Followings on Profile.',
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		// Moderation settings.
+		\register_setting(
+			'activitypub',
+			'activitypub_site_blocked_actors',
+			array(
+				'type'              => 'array',
+				'description'       => 'Site-wide blocked ActivityPub actors.',
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
 			)
 		);
 	}
@@ -347,6 +409,12 @@ class Settings {
 			);
 		}
 
+		// Add blocked actors tab for site-wide blocking.
+		$settings_tabs['blocked-actors'] = array(
+			'label'    => \__( 'Blocked Actors', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php',
+		);
+
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
 				'label'    => __( 'Blog Profile', 'activitypub' ),
@@ -354,8 +422,15 @@ class Settings {
 			);
 			$settings_tabs['followers']    = array(
 				'label'    => __( 'Followers', 'activitypub' ),
-				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-followers-list.php',
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php',
 			);
+
+			if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
+				$settings_tabs['following'] = array(
+					'label'    => __( 'Following', 'activitypub' ),
+					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php',
+				);
+			}
 		}
 
 		/**
@@ -366,7 +441,7 @@ class Settings {
 		$settings_tabs = \apply_filters( 'activitypub_admin_settings_tabs', $settings_tabs );
 
 		if ( empty( $settings_tabs ) ) {
-			_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', 'unreleased' );
+			_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', '7.0.0' );
 			$settings_tabs['settings'] = $settings_tab;
 		}
 
@@ -423,6 +498,11 @@ class Settings {
 			)
 		);
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( 'following' === \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? '' ) ) ) {
+			self::add_following_help_tab();
+		}
+
 		// Core Features.
 		\get_current_screen()->add_help_tab(
 			array(
@@ -450,14 +530,18 @@ class Settings {
 			)
 		);
 
-		// Template Tags.
-		\get_current_screen()->add_help_tab(
-			array(
-				'id'      => 'template-tags',
-				'title'   => \__( 'Template Tags', 'activitypub' ),
-				'content' => self::get_help_tab_template( 'template-tags' ),
-			)
-		);
+		// Show only if templating is enabled.
+		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+		if ( 'note' === $object_type ) {
+			// Template Tags.
+			\get_current_screen()->add_help_tab(
+				array(
+					'id'      => 'template-tags',
+					'title'   => \__( 'Template Tags', 'activitypub' ),
+					'content' => self::get_help_tab_template( 'template-tags' ),
+				)
+			);
+		}
 
 		// Recommended Plugins.
 		if ( ! empty( self::get_recommended_plugins() ) ) {
@@ -513,6 +597,27 @@ class Settings {
 	/**
 	 * Adds the ActivityPub help tab to the users page.
 	 */
+	public static function add_following_help_tab() {
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'starter-kit',
+				'title'   => \__( 'Starter Kits', 'activitypub' ),
+				'content' => \sprintf(
+					'<h2>%s</h2>' .
+					'<p>%s</p>' .
+					'<p>%s</p>',
+					\__( 'Starter Kits', 'activitypub' ),
+					\__( 'Starter kits are curated lists of accounts that help you quickly build your fediverse network. Import a starter kit to automatically follow a collection of interesting accounts in specific topics or communities.', 'activitypub' ),
+					// translators: %s: Importer URL.
+					\wp_kses_post( \sprintf( \__( 'To import a starter kit, go to <strong>Tools &#8594; Import</strong> and look for <a href="%s">the &#8220;Starter Kit&#8221; option</a>.', 'activitypub' ), \admin_url( 'admin.php?import=starter-kit' ) ) )
+				),
+			)
+		);
+	}
+
+	/**
+	 * Adds the ActivityPub help tab to the users page.
+	 */
 	public static function add_users_help_tab() {
 		\get_current_screen()->add_help_tab(
 			array(
@@ -537,85 +642,6 @@ class Settings {
 			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) );
 			exit;
 		}
-	}
-
-	/**
-	 * Add screen option.
-	 *
-	 * @param string $screen_settings The screen settings.
-	 * @param object $screen          The screen object.
-	 *
-	 * @return string The screen settings.
-	 */
-	public static function add_screen_option( $screen_settings, $screen ) {
-		if ( 'settings_page_activitypub' !== $screen->id ) {
-			return $screen_settings;
-		}
-
-		// Verify screen options nonce.
-		if ( isset( $_POST['screenoptionnonce'] ) ) {
-			$nonce = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
-			if ( ! \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
-				return $screen_settings;
-			}
-		}
-
-		$screen_options = array(
-			'activitypub_show_welcome_tab'  => __( 'Welcome Page', 'activitypub' ),
-			'activitypub_show_advanced_tab' => __( 'Advanced Settings', 'activitypub' ),
-		);
-
-		/**
-		 * Filters Activitypub settings screen options.
-		 *
-		 * @param string[] $screen_options Screen options. An array of user meta keys and screen option labels.
-		 */
-		$screen_options = \apply_filters( 'activitypub_screen_options', $screen_options );
-		if ( empty( $screen_options ) ) {
-			return $screen_settings;
-		}
-
-		foreach ( $screen_options as $option => $label ) {
-			if ( isset( $_POST[ $option ] ) ) {
-				$value = \sanitize_text_field( \wp_unslash( $_POST[ $option ] ) );
-				\update_user_meta( \get_current_user_id(), $option, empty( $value ) ? 0 : 1 );
-			}
-		}
-
-		ob_start();
-		?>
-		<fieldset>
-			<legend class="screen-layout"><?php \esc_html_e( 'Settings Pages', 'activitypub' ); ?></legend>
-			<p><?php \esc_html_e( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ); ?></p>
-			<div class="metabox-prefs-container">
-				<?php foreach ( $screen_options as $option => $label ) : ?>
-					<label for="<?php echo \esc_attr( $option ); ?>">
-						<input name="<?php echo \esc_attr( $option ); ?>" type="hidden" value="0" />
-						<input name="<?php echo \esc_attr( $option ); ?>" type="checkbox" id="<?php echo \esc_attr( $option ); ?>" value="1" <?php \checked( 1, \get_user_meta( \get_current_user_id(), $option, true ) ); ?> />
-						<?php echo \esc_html( $label ); ?>
-					</label>
-				<?php endforeach; ?>
-			</div>
-		</fieldset>
-		<?php
-
-		return ob_get_clean();
-	}
-
-	/**
-	 * Show the submit button on the screen options page.
-	 *
-	 * @param bool   $show_submit Whether to show the submit button.
-	 * @param object $screen      The screen object.
-	 *
-	 * @return bool Whether to show the submit button.
-	 */
-	public static function screen_options_show_submit( $show_submit, $screen ) {
-		if ( 'settings_page_activitypub' !== $screen->id ) {
-			return $show_submit;
-		}
-
-		return true;
 	}
 
 	/**

@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-HTTP signatures using the hs2019 algorithm now get accepted without error.

@@ -9,10 +9,12 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
-use Activitypub\Debug;
+use Activitypub\Moderation;
 
-use function Activitypub\is_same_domain;
+use function Activitypub\camel_to_snake_case;
 use function Activitypub\extract_recipients_from_activity;
+use function Activitypub\is_same_domain;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Inbox_Controller class.
@@ -73,10 +75,10 @@ class Inbox_Controller extends \WP_REST_Controller {
 								/**
 								 * Filter the ActivityPub object validation.
 								 *
-								 * @param bool   $validate The validation result.
-								 * @param array  $param    The object data.
-								 * @param object $request  The request object.
-								 * @param string $key      The key.
+								 * @param bool             $validate The validation result.
+								 * @param array            $param    The object data.
+								 * @param \WP_REST_Request $request  The request object.
+								 * @param string           $key      The key.
 								 */
 								return \apply_filters( 'activitypub_validate_object', true, $param, $request, $key );
 							},
@@ -130,12 +132,14 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object or WP_Error.
 	 */
 	public function create_item( $request ) {
-		$data     = $request->get_json_params();
+		$data = $request->get_json_params();
+		$type = camel_to_snake_case( $request->get_param( 'type' ) );
+
+		/* @var Activity $activity Activity object.*/
 		$activity = Activity::init_from_array( $data );
-		$type     = \strtolower( $request->get_param( 'type' ) );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		if ( \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
+		if ( Moderation::activity_is_blocked( $activity ) ) {
 			/**
 			 * ActivityPub inbox disallowed activity.
 			 *
@@ -146,16 +150,20 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 */
 			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
-			$recipients = extract_recipients_from_activity( $data );
+			$recipients = $this->get_local_recipients( $data );
 
-			foreach ( $recipients as $recipient ) {
-				if ( ! is_same_domain( $recipient ) ) {
-					continue;
-				}
-
-				$actor = Actors::get_by_various( $recipient );
-
-				if ( ! $actor || \is_wp_error( $actor ) ) {
+			foreach ( $recipients as $user_id ) {
+				// Check user-specific blocks for this recipient.
+				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
+					/**
+					 * ActivityPub inbox disallowed activity for specific user.
+					 *
+					 * @param array              $data     The data array.
+					 * @param int                $user_id  The user ID.
+					 * @param string             $type     The type of the activity.
+					 * @param Activity|\WP_Error $activity The Activity object.
+					 */
+					\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 					continue;
 				}
 
@@ -167,7 +175,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param string             $type     The type of the activity.
 				 * @param Activity|\WP_Error $activity The Activity object.
 				 */
-				\do_action( 'activitypub_inbox', $data, $actor->get__id(), $type, $activity );
+				\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
 
 				/**
 				 * ActivityPub inbox action for specific activity types.
@@ -176,7 +184,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 * @param int                $user_id  The user ID.
 				 * @param Activity|\WP_Error $activity The Activity object.
 				 */
-				\do_action( 'activitypub_inbox_' . $type, $data, $actor->get__id(), $activity );
+				\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
 			}
 		}
 
@@ -266,5 +274,38 @@ class Inbox_Controller extends \WP_REST_Controller {
 		$this->schema = $schema;
 
 		return $this->add_additional_fields_schema( $this->schema );
+	}
+
+	/**
+	 * Extract recipients from the given Activity.
+	 *
+	 * @param array $activity The activity data.
+	 *
+	 * @return array An array of user IDs who are the recipients of the activity.
+	 */
+	private function get_local_recipients( $activity ) {
+		$recipients = extract_recipients_from_activity( $activity );
+		$user_ids   = array();
+
+		foreach ( $recipients as $recipient ) {
+
+			if ( ! is_same_domain( $recipient ) ) {
+				continue;
+			}
+
+			$user_id = Actors::get_id_by_resource( $recipient );
+
+			if ( \is_wp_error( $user_id ) ) {
+				continue;
+			}
+
+			if ( ! user_can_activitypub( $user_id ) ) {
+				continue;
+			}
+
+			$user_ids[] = $user_id;
+		}
+
+		return $user_ids;
 	}
 }

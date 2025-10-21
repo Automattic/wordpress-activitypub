@@ -8,6 +8,8 @@
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
+
 use function Activitypub\is_activitypub_request;
 use function Activitypub\object_to_uri;
 
@@ -44,7 +46,7 @@ if ( is_wp_error( $user ) ) {
 }
 
 $_per_page     = absint( $attributes['per_page'] );
-$follower_data = Followers::get_followers_with_count( $user_id, $_per_page );
+$follower_data = Followers::query( $user_id, $_per_page );
 
 // Prepare Followers data for the Interactivity API context.
 $followers = array_map(
@@ -56,7 +58,7 @@ $followers = array_map(
 	 * @return array
 	 */
 	function ( $follower ) {
-		$actor    = Actors::get_actor( $follower );
+		$actor    = Remote_Actors::get_actor( $follower );
 		$username = $actor->get_preferred_username();
 
 		return array(
@@ -69,8 +71,8 @@ $followers = array_map(
 	$follower_data['followers']
 );
 
-// Set up the Interactivity API state.
-wp_interactivity_state(
+// Set up the Interactivity API config.
+wp_interactivity_config(
 	'activitypub/followers',
 	array(
 		'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',

@@ -9,11 +9,13 @@ namespace Activitypub;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Scheduler\Post;
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Comment;
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Outbox;
+use Activitypub\Scheduler\Post;
 
 /**
  * Scheduler class.
@@ -35,26 +37,21 @@ class Scheduler {
 	public static function init() {
 		self::register_schedulers();
 
-		self::$batch_callbacks = array(
-			'activitypub_send_activity'  => array( Dispatcher::class, 'send_to_followers' ),
-			'activitypub_retry_activity' => array( Dispatcher::class, 'retry_send_to_followers' ),
-		);
-
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_remote_actors', array( self::class, 'update_remote_actors' ) );
 		\add_action( 'activitypub_cleanup_remote_actors', array( self::class, 'cleanup_remote_actors' ) );
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
-		\add_action( 'activitypub_send_activity', array( self::class, 'async_batch' ), 10, 3 );
-		\add_action( 'activitypub_retry_activity', array( self::class, 'async_batch' ), 10, 3 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
+		\add_action( 'activitypub_inbox_purge', array( self::class, 'purge_inbox' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
 
 		\add_action( 'update_option_activitypub_outbox_purge_days', array( self::class, 'handle_outbox_purge_days_update' ), 10, 2 );
+		\add_action( 'update_option_activitypub_inbox_purge_days', array( self::class, 'handle_inbox_purge_days_update' ), 10, 2 );
 	}
 
 	/**
@@ -70,7 +67,29 @@ class Scheduler {
 		 *
 		 * @since 5.0.0
 		 */
-		do_action( 'activitypub_register_schedulers' );
+		\do_action( 'activitypub_register_schedulers' );
+	}
+
+	/**
+	 * Register a batch callback for async processing.
+	 *
+	 * @param string   $hook     The cron event hook name.
+	 * @param callable $callback The callback to execute.
+	 */
+	public static function register_async_batch_callback( $hook, $callback ) {
+		if ( \did_action( 'init' ) && ! \doing_action( 'init' ) ) {
+			\_doing_it_wrong( __METHOD__, 'Async batch callbacks should be registered before or during the init action.', '7.5.0' );
+			return;
+		}
+
+		if ( ! \is_callable( $callback ) ) {
+			return;
+		}
+
+		self::$batch_callbacks[ $hook ] = $callback;
+
+		// Register the WordPress action hook to trigger async_batch.
+		\add_action( $hook, array( self::class, 'async_batch' ), 10, 99 );
 	}
 
 	/**
@@ -92,6 +111,10 @@ class Scheduler {
 		if ( ! wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
 			wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
 		}
+
+		if ( ! wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
+			wp_schedule_event( time(), 'daily', 'activitypub_inbox_purge' );
+		}
 	}
 
 	/**
@@ -100,10 +123,11 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function deregister_schedules() {
-		wp_unschedule_hook( 'activitypub_update_remote_actors' );
-		wp_unschedule_hook( 'activitypub_cleanup_remote_actors' );
-		wp_unschedule_hook( 'activitypub_reprocess_outbox' );
-		wp_unschedule_hook( 'activitypub_outbox_purge' );
+		\wp_unschedule_hook( 'activitypub_update_remote_actors' );
+		\wp_unschedule_hook( 'activitypub_cleanup_remote_actors' );
+		\wp_unschedule_hook( 'activitypub_reprocess_outbox' );
+		\wp_unschedule_hook( 'activitypub_outbox_purge' );
+		\wp_unschedule_hook( 'activitypub_inbox_purge' );
 	}
 
 	/**
@@ -156,19 +180,19 @@ class Scheduler {
 		 * @param int $number The number of remote Actors to update.
 		 */
 		$number = apply_filters( 'activitypub_update_remote_actors_number', $number );
-		$actors = Actors::get_outdated( $number );
+		$actors = Remote_Actors::get_outdated( $number );
 
 		foreach ( $actors as $actor ) {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
+				Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
-				$id = Actors::upsert( $meta );
+				$id = Remote_Actors::upsert( $meta );
 				if ( \is_wp_error( $id ) ) {
 					continue;
 				}
-				Actors::clear_errors( $id );
+				Remote_Actors::clear_errors( $id );
 			}
 		}
 	}
@@ -189,26 +213,28 @@ class Scheduler {
 		 * @param int $number The number of remote Actors to clean up.
 		 */
 		$number = apply_filters( 'activitypub_cleanup_remote_actors_number', $number );
-		$actors = Actors::get_faulty( $number );
+		$actors = Remote_Actors::get_faulty( $number );
 
 		foreach ( $actors as $actor ) {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
-			if ( is_tombstone( $meta ) ) {
+			if ( Tombstone::exists( $meta ) ) {
 				\wp_delete_post( $actor->ID );
-			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				if ( Actors::count_errors( $actor->ID ) >= 5 ) {
+			} elseif ( empty( $meta ) || ! is_array( $meta ) || \is_wp_error( $meta ) ) {
+				if ( Remote_Actors::count_errors( $actor->ID ) >= 5 ) {
+					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_interactions', array( $actor->guid ) );
+					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_posts', array( $actor->guid ) );
 					\wp_delete_post( $actor->ID );
-					\wp_schedule_single_event(
-						\time(),
-						'activitypub_delete_actor_interactions',
-						array( $actor->ID )
-					);
 				} else {
-					Actors::add_error( $actor->ID, $meta );
+					Remote_Actors::add_error( $actor->ID, $meta );
 				}
 			} else {
-				Actors::clear_errors( $actor->ID );
+				$id = Remote_Actors::upsert( $meta );
+				if ( \is_wp_error( $id ) ) {
+					Remote_Actors::add_error( $actor->ID, $id );
+				} else {
+					Remote_Actors::clear_errors( $actor->ID );
+				}
 			}
 		}
 	}
@@ -277,7 +303,7 @@ class Scheduler {
 
 		$date->sub( \DateInterval::createFromDateString( "$days days" ) );
 
-		$post_ids = get_posts(
+		$post_ids = \get_posts(
 			array(
 				'post_type'   => Outbox::POST_TYPE,
 				'post_status' => 'any',
@@ -286,6 +312,43 @@ class Scheduler {
 				'date_query'  => array(
 					array(
 						'before' => $date->format( 'Y-m-d' ),
+					),
+				),
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => 'Follow',
+						'compare' => '!=',
+					),
+				),
+			)
+		);
+
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
+		}
+	}
+
+	/**
+	 * Purge inbox items based on a schedule.
+	 */
+	public static function purge_inbox() {
+		$total_posts = (int) wp_count_posts( Inbox::POST_TYPE )->publish;
+		if ( $total_posts <= 200 ) {
+			return;
+		}
+
+		$days     = (int) get_option( 'activitypub_inbox_purge_days', 180 );
+		$post_ids = \get_posts(
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'numberposts' => -1,
+				'date_query'  => array(
+					array(
+						'before' => gmdate( 'Y-m-d', time() - ( $days * DAY_IN_SECONDS ) ),
 					),
 				),
 			)
@@ -304,9 +367,23 @@ class Scheduler {
 	 */
 	public static function handle_outbox_purge_days_update( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
-			wp_clear_scheduled_hook( 'activitypub_outbox_purge' );
-		} elseif ( ! wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
-			wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
+			\wp_clear_scheduled_hook( 'activitypub_outbox_purge' );
+		} elseif ( ! \wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
+			\wp_schedule_event( \time(), 'daily', 'activitypub_outbox_purge' );
+		}
+	}
+
+	/**
+	 * Update schedules when inbox purge days settings change.
+	 *
+	 * @param int $old_value The old value.
+	 * @param int $value     The new value.
+	 */
+	public static function handle_inbox_purge_days_update( $old_value, $value ) {
+		if ( 0 === (int) $value ) {
+			\wp_clear_scheduled_hook( 'activitypub_inbox_purge' );
+		} elseif ( ! \wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
+			\wp_schedule_event( \time(), 'daily', 'activitypub_inbox_purge' );
 		}
 	}
 
@@ -326,7 +403,7 @@ class Scheduler {
 			return;
 		}
 
-		$key = \md5( \serialize( $args[0] ?? $args ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+		$key = \md5( \serialize( $callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 		// Bail if the existing lock is still valid.
 		if ( self::is_locked( $key ) ) {

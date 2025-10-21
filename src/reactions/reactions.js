@@ -190,3 +190,6 @@ export function Reactions( { postId = null, reactions: providedReactions = null,
 		</>
 	);
 }
+
+// Export for testing
+export { FacepileRow };

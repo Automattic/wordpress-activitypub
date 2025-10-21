@@ -44,20 +44,6 @@ To stop the environment, run:
 npm run env-stop
 ```
 
-### Docker
-
-If you prefer to use Docker, you can use the `docker-compose.yml` file in the root of the ActivityPub plugin directory.
-
-To start the environment, run:
-
-```bash
-docker-compose up -d
-```
-
-This will start a local WordPress environment with the ActivityPub plugin installed and activated.
-
-You can open the WordPress site in your browser by visiting `http://localhost:8076`.
-
 ### Composer
 
 Composer is used to install development dependencies for the ActivityPub plugin, to run unit tests, and to manage changelog entries.
@@ -93,7 +79,7 @@ Both commands support additional PHPUnit arguments. Add them after `--`:
 npm run env-test -- --filter=test_migrate_to_4_1_0
 
 # Run tests in a specific file
-npm run env-test -- tests/includes/class-test-migration.php
+npm run env-test -- tests/phpunit/tests/includes/class-test-migration.php
 
 # Run tests with a specific group
 npm run env-test -- --group=migration
@@ -118,7 +104,7 @@ The coverage configuration is already set up in `phpunit.xml.dist` to analyze th
 
 ```bash
 # Start the environment with Xdebug enabled.
-npm run env -- start --xdebug=coverage
+npm run env-start -- --xdebug=coverage
 ```
 ```bash
 # Run tests with code coverage.

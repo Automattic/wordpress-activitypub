@@ -11,9 +11,9 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
-use function Activitypub\is_blog_public;
-use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_attribution_domains;
+use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_blog_public;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -51,8 +51,10 @@ class User extends Actor {
 	protected $generator = array(
 		'type'       => 'Application',
 		'implements' => array(
-			'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
-			'name' => 'RFC-9421: HTTP Message Signatures',
+			array(
+				'href' => 'https://datatracker.ietf.org/doc/html/rfc9421',
+				'name' => 'RFC-9421: HTTP Message Signatures',
+			),
 		),
 	);
 
@@ -120,7 +122,7 @@ class User extends Actor {
 			return $this->get_url();
 		}
 
-		return \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) );
+		return \add_query_arg( 'author', $this->_id, \home_url( '/' ) );
 	}
 
 	/**
@@ -169,7 +171,14 @@ class User extends Actor {
 	 * @return string The preferred username.
 	 */
 	public function get_preferred_username() {
-		return \get_the_author_meta( 'login', $this->_id );
+		$login = \get_the_author_meta( 'login', $this->_id );
+
+		// Handle cases where login is an email address (e.g., from Site Kit Google login).
+		if ( \filter_var( $login, FILTER_VALIDATE_EMAIL ) ) {
+			$login = \get_the_author_meta( 'user_nicename', $this->_id );
+		}
+
+		return $login;
 	}
 
 	/**
@@ -291,6 +300,15 @@ class User extends Actor {
 	 */
 	public function get_featured() {
 		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
+	}
+
+	/**
+	 * Returns the Featured-Tags-API-Endpoint.
+	 *
+	 * @return string The Featured-Tags-Endpoint.
+	 */
+	public function get_featured_tags() {
+		return get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
 	}
 
 	/**

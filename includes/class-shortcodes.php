@@ -62,7 +62,7 @@ class Shortcodes {
 			$hash_tags[] = \sprintf(
 				'<a rel="tag" class="hashtag u-tag u-category" href="%s">%s</a>',
 				\esc_url( \get_tag_link( $tag ) ),
-				esc_hashtag( $tag->name )
+				esc_hashtag( $tag->slug )
 			);
 		}
 
@@ -312,7 +312,7 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_hashcats' Shortcode.
 	 *
-	 * @deprecated unreleased
+	 * @deprecated 7.0.0
 	 *
 	 * @return string The post categories as hashtags.
 	 */

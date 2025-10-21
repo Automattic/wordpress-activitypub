@@ -10,6 +10,7 @@ namespace Activitypub\Rest;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 
@@ -35,7 +36,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = '(?:users|actors)/(?P<user_id>[\w\-\.]+)/outbox';
+	protected $rest_base = '(?:users|actors)/(?P<user_id>[-]?\d+)/outbox';
 
 	/**
 	 * Register routes.
@@ -48,7 +49,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 				'args'   => array(
 					'user_id' => array(
 						'description'       => 'The ID of the user or actor.',
-						'type'              => 'string',
+						'type'              => 'integer',
 						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),
@@ -75,6 +76,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
+
+		\add_filter( 'activitypub_rest_outbox_array', array( $this, 'overload_total_items' ), 10, 2 );
 	}
 
 	/**
@@ -84,7 +87,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return bool|\WP_Error True if the user_id is valid, WP_Error otherwise.
 	 */
 	public function validate_user_id( $user_id ) {
-		$user = Actors::get_by_various( $user_id );
+		$user = Actors::get_by_id( $user_id );
 		if ( \is_wp_error( $user ) ) {
 			return $user;
 		}
@@ -100,8 +103,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 */
 	public function get_items( $request ) {
 		$page    = $request->get_param( 'page' ) ?? 1;
-		$user    = Actors::get_by_various( $request->get_param( 'user_id' ) );
-		$user_id = $user->get__id();
+		$user_id = $request->get_param( 'user_id' );
+		$user    = Actors::get_by_id( $user_id );
 
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
@@ -153,8 +156,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		$args = \apply_filters_deprecated( 'rest_activitypub_outbox_query', array( $args, $request ), '5.9.0', 'activitypub_rest_outbox_query' );
-
 		/**
 		 * Filters WP_Query arguments when querying Outbox items via the REST API.
 		 *
@@ -174,7 +175,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => $outbox_query->found_posts,
+			'totalItems'   => (int) $outbox_query->found_posts,
 			'orderedItems' => array(),
 		);
 
@@ -209,8 +210,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 * @param \WP_REST_Request $request  The request object.
 		 */
 		$response = \apply_filters( 'activitypub_rest_outbox_array', $response, $request );
-
-		\do_action_deprecated( 'activitypub_outbox_post', array( $request ), 'unreleased', 'activitypub_rest_outbox_post' );
 
 		/**
 		 * Action triggered after the ActivityPub profile has been created and sent to the client.
@@ -271,5 +270,51 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$this->schema = $schema;
 
 		return $this->add_additional_fields_schema( $this->schema );
+	}
+
+	/**
+	 * Overload total items.
+	 *
+	 * The `totalItems` property is used by Mastodon to show the overall
+	 * number of federated posts and comments.
+	 *
+	 * @param array            $response The response array.
+	 * @param \WP_REST_Request $request  The request object.
+	 *
+	 * @return array The modified response array.
+	 */
+	public function overload_total_items( $response, $request ) {
+		$posts = new \WP_Query(
+			array(
+				'post_status'   => 'publish',
+				'author'        => $request->get_param( 'user_id' ),
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'    => array(
+					array(
+						'key'     => 'activitypub_status',
+						'compare' => 'EXISTS',
+					),
+				),
+				'fields'        => 'ids',
+				'no_found_rows' => false,
+				'number'        => 1,
+			)
+		);
+
+		$comments = new \WP_Comment_Query(
+			array(
+				'status'        => 'approve',
+				'user_id'       => $request->get_param( 'user_id' ),
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'      => 'activitypub_status',
+				'fields'        => 'ids',
+				'no_found_rows' => false,
+				'number'        => 1,
+			)
+		);
+
+		$response['totalItems'] = (int) $posts->found_posts + (int) $comments->found_comments;
+
+		return $response;
 	}
 }

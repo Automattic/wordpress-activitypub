@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Model\Blog;
 
 /**
@@ -21,7 +22,7 @@ class Sanitize {
 	 */
 	public static function url_list( $value ) {
 		if ( ! \is_array( $value ) ) {
-			$value = \explode( PHP_EOL, $value );
+			$value = \explode( PHP_EOL, (string) $value );
 		}
 
 		$value = \array_filter( $value );
@@ -33,13 +34,57 @@ class Sanitize {
 	}
 
 	/**
+	 * Sanitize and normalize a list of account identifiers to ActivityPub IDs.
+	 *
+	 * This function processes various identifier formats, such as URLs and
+	 * webfinger identifiers, and normalizes them into a consistent format.
+	 *
+	 * @param string|array $value The value to sanitize.
+	 *
+	 * @return array The sanitized and normalized list of account identifiers.
+	 */
+	public static function identifier_list( $value ) {
+		if ( ! \is_array( $value ) ) {
+			$value = \explode( PHP_EOL, (string) $value );
+		}
+
+		$value = \array_filter( $value );
+		$uris  = array();
+
+		foreach ( $value as $uri ) {
+			$uri = \trim( $uri );
+			$uri = \ltrim( $uri, '@' );
+
+			if ( \is_email( $uri ) ) {
+				$_uri = Webfinger::resolve( $uri );
+				if ( \is_wp_error( $_uri ) ) {
+					$uris[] = $uri;
+					continue;
+				}
+
+				$uri = $_uri;
+			}
+
+			$uri   = \sanitize_url( $uri );
+			$actor = Remote_Actors::fetch_by_uri( $uri );
+			if ( \is_wp_error( $actor ) ) {
+				$uris[] = $uri;
+			} else {
+				$uris[] = \sanitize_url( $actor->guid );
+			}
+		}
+
+		return \array_values( \array_unique( $uris ) );
+	}
+
+	/**
 	 * Sanitize a list of hosts.
 	 *
 	 * @param string $value The value to sanitize.
 	 * @return string The sanitized list of hosts.
 	 */
 	public static function host_list( $value ) {
-		$value = \explode( PHP_EOL, $value );
+		$value = \explode( PHP_EOL, (string) $value );
 		$value = \array_map(
 			function ( $host ) {
 				$host = \trim( $host );
@@ -68,7 +113,7 @@ class Sanitize {
 	 */
 	public static function blog_identifier( $value ) {
 		// Hack to allow dots in the username.
-		$parts     = \explode( '.', $value );
+		$parts     = \explode( '.', (string) $value );
 		$sanitized = \array_map( 'sanitize_title', $parts );
 		$sanitized = \implode( '.', $sanitized );
 
@@ -122,5 +167,34 @@ class Sanitize {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Sanitize a webfinger identifier.
+	 *
+	 * @param string $value The value to sanitize.
+	 *
+	 * @return string The sanitized webfinger identifier.
+	 */
+	public static function webfinger( $value ) {
+		$value = \str_replace( 'acct:', '', $value );
+		$value = \trim( $value, '@' );
+
+		return $value;
+	}
+
+	/**
+	 * Sanitize content for ActivityPub.
+	 *
+	 * @param string $content The content to convert.
+	 *
+	 * @return string The converted content.
+	 */
+	public static function content( $content ) {
+		$content = \make_clickable( $content );
+		$content = \wpautop( $content );
+		$content = \wp_kses_post( $content );
+
+		return $content;
 	}
 }

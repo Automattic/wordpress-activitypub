@@ -6,6 +6,7 @@
 .git
 .github
 .gitignore
+.githooks
 .php_cs
 .prettierignore
 .prettierrc.js
@@ -21,6 +22,7 @@ CODE_OF_CONDUCT.md
 CONTRIBUTING.md
 composer.json
 composer.lock
+development
 Dockerfile
 docs
 docker-compose-test.yml
@@ -28,8 +30,10 @@ docker-compose.yml
 FEDERATION.md
 Gruntfile.js
 gulpfile.js
+jest.config.js
 LICENSE.md
 LINGUAS
+local
 Makefile
 node_modules
 npm-debug.log

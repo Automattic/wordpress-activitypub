@@ -10,11 +10,47 @@ namespace Activitypub\Activity\Extended_Object;
 use Activitypub\Activity\Base_Object;
 
 /**
- * Event is an implementation of one of the Activity Streams Event object type.
+ * Event is an implementation of Activity Streams Event object type.
  *
  * This class contains extra keys as used by Mobilizon to ensure compatibility.
  *
  * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-event
+ *
+ * @method string|null get_actor()                           Gets which actor created the event.
+ * @method float|null  get_altitude()                        Gets the altitude of the event location.
+ * @method bool|null   get_anonymous_participation_enabled() Gets whether anonymous participation is enabled.
+ * @method string|null get_category()                        Gets the event's category.
+ * @method bool|null   get_comments_enabled()                Gets whether comments/replies are enabled.
+ * @method array|null  get_contacts()                        Gets the event's contacts.
+ * @method string|null get_external_participation_url()      Gets the external participation URL.
+ * @method string|null get_in_language()                     Gets the language of the event.
+ * @method bool|null   get_is_online()                       Gets whether the event is online.
+ * @method string|null get_join_mode()                       Gets how new members may be able to join.
+ * @method int|null    get_maximum_attendee_capacity()       Gets how many places there can be for an event.
+ * @method string|null get_name()                            Gets the title of the event.
+ * @method int|null    get_participant_count()               Gets the participant count of the event.
+ * @method int|null    get_remaining_attendee_capacity()     Gets the number of attendee places that remain unallocated.
+ * @method string|null get_replies_moderation_option()       Gets the moderation option for replies.
+ * @method string|null get_status()                          Gets the event's status.
+ * @method string|null get_timezone()                        Gets the timezone of the event.
+ *
+ * @method Event set_actor( string $actor )                                      Sets which actor created the event.
+ * @method Event set_altitude( float $altitude )                                 Sets the altitude of the event location.
+ * @method Event set_anonymous_participation_enabled( bool $enabled )            Sets whether anonymous participation is enabled.
+ * @method Event set_category( string $category, bool $mobilizon_compatibility ) Sets the event's category.
+ * @method Event set_comments_enabled( bool $comments_enabled )                  Sets whether comments/replies are enabled.
+ * @method Event set_contacts( array $contacts )                                 Sets the event's contacts.
+ * @method Event set_external_participation_url( string $url )                   Sets the external participation URL.
+ * @method Event set_in_language( string $language )                             Sets the language of the event.
+ * @method Event set_is_online( bool $is_online )                                Sets whether the event is online.
+ * @method Event set_join_mode( string $join_mode )                              Sets how new members may be able to join.
+ * @method Event set_maximum_attendee_capacity( int $capacity )                  Sets how many places there can be for an event.
+ * @method Event set_name( string $name )                                        Sets the title of the event.
+ * @method Event set_participant_count( int $count )                             Sets the participant count of the event.
+ * @method Event set_remaining_attendee_capacity( int $capacity )                Sets the number of attendee places that remain unallocated.
+ * @method Event set_replies_moderation_option( string $type )                   Sets the moderation option for replies.
+ * @method Event set_status( string $status )                                    Sets the event's status.
+ * @method Event set_timezone( string $timezone )                                Sets the timezone of the event.
  */
 class Event extends Base_Object {
 	// Human friendly minimal context for full Mobilizon compatible ActivityPub events.

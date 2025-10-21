@@ -264,7 +264,7 @@ function Pagination( { page, pages, setPage } ) {
 function Follower( { name, icon, url, preferredUsername } ) {
 	const handle = `@${ preferredUsername }`;
 	const { defaultAvatarUrl } = useOptions();
-	const avatar = icon.url || defaultAvatarUrl;
+	const avatar = icon?.url || defaultAvatarUrl;
 
 	return (
 		<a className="follower-link" href={ url } title={ handle } onClick={ ( event ) => event.preventDefault() }>

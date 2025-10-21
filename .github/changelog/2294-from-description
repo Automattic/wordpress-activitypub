@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added a privacy option to hide followers and following lists from profiles while keeping follow relationships intact.
