@@ -97,6 +97,8 @@ class Followers_Controller extends Actors_Controller {
 						'authority' => array(
 							'description' => 'The host to filter followers by.',
 							'type'        => 'string',
+							'format'      => 'uri',
+							'pattern'     => '^https?://[^/]+$',
 							'required'    => true,
 						),
 						'page'      => array(
