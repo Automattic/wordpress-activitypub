@@ -300,6 +300,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 
 			if ( ! is_same_domain( $recipient ) ) {
 				$collection = Http::get_remote_object( $recipient );
+
 				// If it is a remote actor we can skip it.
 				if ( \is_wp_error( $collection ) ) {
 					continue;
