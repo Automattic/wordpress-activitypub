@@ -92,7 +92,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Posts::add( $activity );
+		$result = Posts::add( $activity, 1 );
 
 		$this->assertInstanceOf( '\WP_Post', $result );
 		$this->assertEquals( 'Test Object', $result->post_title );
@@ -118,7 +118,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$original_post = Posts::add( $activity );
+		$original_post = Posts::add( $activity, 1 );
 		$this->assertInstanceOf( '\WP_Post', $original_post );
 
 		// Now update it.
@@ -131,7 +131,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$updated_post = Posts::update( $update_activity );
+		$updated_post = Posts::update( $update_activity, 1 );
 
 		$this->assertInstanceOf( '\WP_Post', $updated_post );
 		$this->assertEquals( 'Updated Title', $updated_post->post_title );
@@ -154,7 +154,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Posts::update( $activity );
+		$result = Posts::update( $activity, 1 );
 
 		$this->assertInstanceOf( '\WP_Error', $result );
 	}
@@ -176,7 +176,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$post = Posts::add( $activity );
+		$post = Posts::add( $activity, 1 );
 		$this->assertInstanceOf( '\WP_Post', $post );
 
 		// Test retrieval.

@@ -163,25 +163,13 @@ class Post_Types {
 
 		\register_post_meta(
 			Inbox::POST_TYPE,
-			'_activitypub_activity_actor',
+			'_activitypub_user_id',
 			array(
-				'type'              => 'string',
+				'type'              => 'integer',
 				'single'            => true,
-				'description'       => 'The type of the local actor that received the activity.',
+				'description'       => 'The ID of the local user that received the activity.',
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
-					$schema = array(
-						'type'    => 'string',
-						'enum'    => array( 'application', 'blog', 'user' ),
-						'default' => 'user',
-					);
-
-					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
-						return $schema['default'];
-					}
-
-					return $value;
-				},
+				'sanitize_callback' => 'absint',
 			)
 		);
 
@@ -401,6 +389,17 @@ class Post_Types {
 				'type'              => 'integer',
 				'single'            => true,
 				'description'       => 'The local ID of the remote actor that created the object.',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_post_meta(
+			Posts::POST_TYPE,
+			'_activitypub_user_id',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'The ID of the local user that received the activity.',
 				'sanitize_callback' => 'absint',
 			)
 		);
