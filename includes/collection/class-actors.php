@@ -398,12 +398,7 @@ class Actors {
 	public static function get_all() {
 		$user_ids = self::get_all_ids();
 
-		$actors = array_map(
-			function ( $user_id ) {
-				return self::get_by_id( $user_id );
-			},
-			$user_ids
-		);
+		$actors = array_map( array( self::class, 'get_by_id' ), $user_ids );
 
 		// Filter out any WP_Error instances.
 		return array_filter(
