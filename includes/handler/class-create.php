@@ -40,8 +40,10 @@ class Create {
 			$result = false;
 		} elseif ( is_activity_reply( $activity ) ) { // Check for replies.
 			$result = self::create_interaction( $activity, $user_id, $activity_object );
-		} else { // Handle non-interaction objects.
+		} elseif ( \get_option( 'activitypub_create_posts', false ) ) { // Handle non-interaction objects.
 			$result = self::create_post( $activity, $user_id, $activity_object );
+		} else {
+			$result = false;
 		}
 
 		if ( false === $result ) {
@@ -124,7 +126,7 @@ class Create {
 			return false;
 		}
 
-		return Posts::add( $activity );
+		return Posts::add( $activity, $user_id );
 	}
 
 	/**

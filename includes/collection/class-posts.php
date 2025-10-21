@@ -28,10 +28,11 @@ class Posts {
 	 * Add an object to the collection.
 	 *
 	 * @param array $activity The activity object data.
+	 * @param int   $user_id  The local user ID.
 	 *
 	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
 	 */
-	public static function add( $activity ) {
+	public static function add( $activity, $user_id ) {
 		$activity_object = $activity['object'];
 		$actor           = Remote_Actors::fetch_by_uri( object_to_uri( $activity_object['attributedTo'] ) );
 
@@ -47,6 +48,7 @@ class Posts {
 		}
 
 		\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor->ID );
+		\add_post_meta( $post_id, '_activitypub_user_id', $user_id );
 
 		self::add_taxonomies( $post_id, $activity_object );
 
@@ -97,10 +99,11 @@ class Posts {
 	 * Update an object in the collection.
 	 *
 	 * @param array $activity The activity object data.
+	 * @param int   $user_id  The local user ID.
 	 *
 	 * @return \WP_Post|\WP_Error The updated object post or WP_Error on failure.
 	 */
-	public static function update( $activity ) {
+	public static function update( $activity, $user_id ) {
 		$post = self::get_by_guid( $activity['object']['id'] );
 		if ( \is_wp_error( $post ) ) {
 			return $post;
@@ -112,6 +115,11 @@ class Posts {
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
+		}
+
+		$post_meta = \get_post_meta( $post_id, '_activitypub_user_id', false );
+		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
+			\add_post_meta( $post_id, '_activitypub_user_id', $user_id );
 		}
 
 		self::add_taxonomies( $post_id, $activity['object'] );
