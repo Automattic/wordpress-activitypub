@@ -199,15 +199,6 @@ class Followers_Controller extends Actors_Controller {
 		$user_id   = $request->get_param( 'user_id' );
 		$authority = $request->get_param( 'authority' );
 
-		// Validate authority format.
-		if ( ! preg_match( '#^https?://[^/]+$#', $authority ) ) {
-			return new \WP_Error(
-				'invalid_authority',
-				\__( 'Invalid authority format.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
 		// Get partial followers filtered by authority.
 		$followers = Followers::get_by_authority( $user_id, $authority );
 		$followers = \wp_list_pluck( $followers, 'guid' );
