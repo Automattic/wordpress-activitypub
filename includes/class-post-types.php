@@ -404,6 +404,17 @@ class Post_Types {
 				'sanitize_callback' => 'absint',
 			)
 		);
+
+		\register_post_meta(
+			Posts::POST_TYPE,
+			'_activitypub_user_id',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'The ID of the local user that received the activity.',
+				'sanitize_callback' => 'absint',
+			)
+		);
 	}
 
 	/**
