@@ -702,6 +702,11 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$result = Remote_Actors::get_public_key( 'https://example.com/author/invalid' );
 		$this->assertWPError( $result );
 
+		// Test GoToSocial-style /main-key path suffix is stripped correctly.
+		$result       = Remote_Actors::get_public_key( 'https://example.com/author/x509/main-key' );
+		$key_resource = \openssl_pkey_get_details( $result );
+		$this->assertSame( $this->x509_key, $key_resource['key'] );
+
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
 	}
 
