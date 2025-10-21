@@ -343,6 +343,8 @@ class Test_Create extends \WP_UnitTestCase {
 			),
 		);
 
+		\update_option( 'activitypub_create_posts', true );
+
 		Create::handle_create( $activity, $this->user_id );
 
 		// Verify the object was created with sanitized content.
@@ -356,7 +358,8 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'Safe content', $created_object->post_content );
 
 		// Clean up filter.
-		remove_all_filters( 'pre_http_request' );
+		\remove_all_filters( 'pre_http_request' );
+		\delete_option( 'activitypub_create_posts' );
 	}
 
 	/**
