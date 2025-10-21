@@ -212,7 +212,7 @@ class Collection_Sync {
 	 */
 	private static function get_frequency() {
 		/**
-			 * Filter the frequency of Collection-Synchronization headers sent to a given authority.
+		 * Filter the frequency of Collection-Synchronization headers sent to a given authority.
 		 *
 		 * @param int    $frequency       The frequency in seconds. Default is one week.
 		 * @param int    $user_id         The local user ID.
