@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Updated inbox handling to support multiple users receiving the same activity and improve overall data consistency.
