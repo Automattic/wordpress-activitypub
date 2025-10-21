@@ -557,11 +557,43 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$user_id_2 = self::factory()->user->create( array( 'role' => 'author' ) );
 		$user_id_3 = self::factory()->user->create( array( 'role' => 'editor' ) );
 
+		// Create a remote actor and make our users follow them.
+		$remote_actor_url = 'https://example.com/actor/1';
+
+		// Mock the remote actor fetch.
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function ( $pre, $url ) use ( $remote_actor_url ) {
+				if ( $url === $remote_actor_url ) {
+					return array(
+						'@context'          => 'https://www.w3.org/ns/activitystreams',
+						'id'                => $remote_actor_url,
+						'type'              => 'Person',
+						'preferredUsername' => 'testactor',
+						'name'              => 'Test Actor',
+						'inbox'             => 'https://example.com/actor/1/inbox',
+					);
+				}
+				return $pre;
+			},
+			10,
+			2
+		);
+
+		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
+
+		// Make users follow the remote actor.
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', self::$user_id );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id_1 );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id_2 );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id_3 );
+
 		// Public activity with "to" containing the public collection.
 		$activity = array(
-			'type' => 'Create',
-			'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'cc'   => array( 'https://external.example.com/followers' ),
+			'type'  => 'Create',
+			'actor' => $remote_actor_url,
+			'to'    => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'cc'    => array( 'https://external.example.com/followers' ),
 		);
 
 		// Use reflection to test the private method.
@@ -571,22 +603,25 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
 
-		// Should return all local ActivityPub users.
+		// Should return users who follow the remote actor.
 		$this->assertNotEmpty( $result, 'Should return users for public activity' );
 		$this->assertContains( self::$user_id, $result, 'Should contain test user' );
 		$this->assertContains( $user_id_1, $result, 'Should contain user 1' );
 		$this->assertContains( $user_id_2, $result, 'Should contain user 2' );
 		$this->assertContains( $user_id_3, $result, 'Should contain user 3' );
 
-		// Verify it's getting all local ActivityPub-capable users.
-		$expected_user_ids = Actors::get_all_ids();
-		$this->assertEqualsCanonicalizing( $expected_user_ids, $result, 'Should match all local ActivityPub user IDs' );
+		// Verify it returns exactly the followers we added.
+		// Note: May include blog user (0) if blog mode is enabled.
+		$this->assertGreaterThanOrEqual( 4, count( $result ), 'Should return at least 4 followers' );
+		$this->assertLessThanOrEqual( 5, count( $result ), 'Should return at most 5 followers (4 users + optional blog)' );
 
 		// Clean up.
+		\wp_delete_post( $remote_actor->ID, true );
 		\wp_delete_user( $user_id_1 );
 		\wp_delete_user( $user_id_2 );
 		\wp_delete_user( $user_id_3 );
 		\delete_option( 'activitypub_actor_mode' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -601,11 +636,41 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		// Create a test user (authors have activitypub capability by default).
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 
+		// Create a remote actor and make our users follow them.
+		$remote_actor_url = 'https://example.com/actor/1';
+
+		// Mock the remote actor fetch.
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function ( $pre, $url ) use ( $remote_actor_url ) {
+				if ( $url === $remote_actor_url ) {
+					return array(
+						'@context'          => 'https://www.w3.org/ns/activitystreams',
+						'id'                => $remote_actor_url,
+						'type'              => 'Person',
+						'preferredUsername' => 'testactor',
+						'name'              => 'Test Actor',
+						'inbox'             => 'https://example.com/actor/1/inbox',
+					);
+				}
+				return $pre;
+			},
+			10,
+			2
+		);
+
+		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
+
+		// Make users follow the remote actor.
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', self::$user_id );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id );
+
 		// Public activity with "cc" containing the public collection.
 		$activity = array(
-			'type' => 'Create',
-			'to'   => array( 'https://external.example.com/user/specific' ),
-			'cc'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'type'  => 'Create',
+			'actor' => $remote_actor_url,
+			'to'    => array( 'https://external.example.com/user/specific' ),
+			'cc'    => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 		);
 
 		// Use reflection to test the private method.
@@ -615,13 +680,20 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
 
-		// Should return all local ActivityPub users because activity is public.
+		// Should return users who follow the remote actor because activity is public.
 		$this->assertNotEmpty( $result, 'Should return users for public activity in cc' );
 		$this->assertContains( self::$user_id, $result, 'Should contain original test user' );
 		$this->assertContains( $user_id, $result, 'Should contain new test user' );
 
+		// Verify it returns exactly the followers we added.
+		// Note: May include blog user (0) if blog mode is enabled.
+		$this->assertGreaterThanOrEqual( 2, count( $result ), 'Should return at least 2 followers' );
+		$this->assertLessThanOrEqual( 3, count( $result ), 'Should return at most 3 followers (2 users + optional blog)' );
+
 		// Clean up.
+		\wp_delete_post( $remote_actor->ID, true );
 		\wp_delete_user( $user_id );
 		\delete_option( 'activitypub_actor_mode' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 }

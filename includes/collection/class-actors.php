@@ -373,6 +373,8 @@ class Actors {
 	 * @return int[] Array of User and Blog actor IDs.
 	 */
 	public static function get_all_ids() {
+		$user_ids = array();
+
 		if ( ! is_user_type_disabled( 'user' ) ) {
 			$user_ids = \get_users(
 				array(
