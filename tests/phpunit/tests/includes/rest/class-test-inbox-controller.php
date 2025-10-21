@@ -542,4 +542,86 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$result = $method->invoke( $this->inbox_controller, $activity );
 		$this->assertEmpty( $result, 'Should handle malformed URLs gracefully' );
 	}
+
+	/**
+	 * Test get_local_recipients with public activity.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_public_activity() {
+		// Enable actor mode to allow user actors.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Create additional test users (authors have activitypub capability by default).
+		$user_id_1 = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user_id_2 = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user_id_3 = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		// Public activity with "to" containing the public collection.
+		$activity = array(
+			'type' => 'Create',
+			'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'cc'   => array( 'https://external.example.com/followers' ),
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		// Should return all local ActivityPub users.
+		$this->assertNotEmpty( $result, 'Should return users for public activity' );
+		$this->assertContains( self::$user_id, $result, 'Should contain test user' );
+		$this->assertContains( $user_id_1, $result, 'Should contain user 1' );
+		$this->assertContains( $user_id_2, $result, 'Should contain user 2' );
+		$this->assertContains( $user_id_3, $result, 'Should contain user 3' );
+
+		// Verify it's getting all local ActivityPub-capable users.
+		$expected_user_ids = Actors::get_all_ids();
+		$this->assertEqualsCanonicalizing( $expected_user_ids, $result, 'Should match all local ActivityPub user IDs' );
+
+		// Clean up.
+		\wp_delete_user( $user_id_1 );
+		\wp_delete_user( $user_id_2 );
+		\wp_delete_user( $user_id_3 );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test get_local_recipients with public activity using "cc" field.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_public_activity_in_cc() {
+		// Enable actor mode to allow user actors.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Create a test user (authors have activitypub capability by default).
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		// Public activity with "cc" containing the public collection.
+		$activity = array(
+			'type' => 'Create',
+			'to'   => array( 'https://external.example.com/user/specific' ),
+			'cc'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		// Should return all local ActivityPub users because activity is public.
+		$this->assertNotEmpty( $result, 'Should return users for public activity in cc' );
+		$this->assertContains( self::$user_id, $result, 'Should contain original test user' );
+		$this->assertContains( $user_id, $result, 'Should contain new test user' );
+
+		// Clean up.
+		\wp_delete_user( $user_id );
+		\delete_option( 'activitypub_actor_mode' );
+	}
 }
