@@ -1792,7 +1792,7 @@ function extract_name_from_uri( $uri ) {
 }
 
 /**
- * Get the authority (scheme + host + port) from a URL.
+ * Get the authority (scheme + host) from a URL.
  *
  * @param string $url The URL to parse.
  *
@@ -1805,18 +1805,5 @@ function get_url_authority( $url ) {
 		return false;
 	}
 
-	$authority = $parsed['scheme'] . '://' . $parsed['host'];
-
-	if ( ! empty( $parsed['port'] ) ) {
-		$default_ports = array(
-			'http'  => 80,
-			'https' => 443,
-		);
-
-		if ( ! isset( $default_ports[ $parsed['scheme'] ] ) || $default_ports[ $parsed['scheme'] ] !== $parsed['port'] ) {
-			$authority .= ':' . $parsed['port'];
-		}
-	}
-
-	return $authority;
+	return $parsed['scheme'] . '://' . $parsed['host'];
 }
