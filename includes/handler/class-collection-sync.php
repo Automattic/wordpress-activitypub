@@ -140,9 +140,9 @@ class Collection_Sync {
 
 		// Only send header if we haven't sent one to this authority in the last day.
 		$inbox_authority = get_url_authority( $url );
-		$user_id         = $args['user_id'] ?? 0;
+		$user_id         = $args['user_id'] ?? false;
 
-		if ( ! $user_id || ! $inbox_authority ) {
+		if ( false === $user_id || ! $inbox_authority ) {
 			return $args;
 		}
 
