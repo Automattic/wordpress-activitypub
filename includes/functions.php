@@ -1713,6 +1713,26 @@ function is_actor( $data ) {
 }
 
 /**
+ * Check if an `$data` is a Collection.
+ *
+ * @see https://www.w3.org/ns/activitystreams#collections
+ *
+ * @param array|object|string $data The data to check.
+ *
+ * @return boolean True if the `$data` is a Collection, false otherwise.
+ */
+function is_collection( $data ) {
+	/**
+	 * Filters the collection types.
+	 *
+	 * @param array $types The collection types.
+	 */
+	$types = apply_filters( 'activitypub_collection_types', array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
+
+	return _is_type_of( $data, $types );
+}
+
+/**
  * Private helper to check if $data is of a given type set.
  *
  * @param array|object|string $data  The data to check.

@@ -9,10 +9,14 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Following;
+use Activitypub\Http;
 use Activitypub\Moderation;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\extract_recipients_from_activity;
+use function Activitypub\is_activity_public;
+use function Activitypub\is_collection;
 use function Activitypub\is_same_domain;
 use function Activitypub\user_can_activitypub;
 
@@ -284,13 +288,29 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return array An array of user IDs who are the recipients of the activity.
 	 */
 	private function get_local_recipients( $activity ) {
+		// Public activity, deliver to all local ActivityPub users.
+		if ( is_activity_public( $activity ) ) {
+			return Actors::get_all_ids();
+		}
+
 		$recipients = extract_recipients_from_activity( $activity );
 		$user_ids   = array();
 
 		foreach ( $recipients as $recipient ) {
 
 			if ( ! is_same_domain( $recipient ) ) {
-				continue;
+				$collection = Http::get_remote_object( $recipient );
+
+				// If it is a remote actor we can skip it.
+				if ( \is_wp_error( $collection ) ) {
+					continue;
+				}
+
+				if ( is_collection( $collection ) ) {
+					$_user_ids = Following::get_follower_ids( $activity['actor'] );
+					$user_ids  = array_merge( $user_ids, $_user_ids );
+					continue;
+				}
 			}
 
 			$user_id = Actors::get_id_by_resource( $recipient );
@@ -306,6 +326,6 @@ class Inbox_Controller extends \WP_REST_Controller {
 			$user_ids[] = $user_id;
 		}
 
-		return $user_ids;
+		return array_unique( array_map( 'intval', $user_ids ) );
 	}
 }
