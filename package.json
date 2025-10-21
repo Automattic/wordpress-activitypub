@@ -46,7 +46,7 @@
 		"@wordpress/data": "^10.33.0",
 		"@wordpress/dom-ready": "^4.0.0",
 		"@wordpress/e2e-test-utils-playwright": "^1.32.0",
-		"@wordpress/edit-post": "^8.32.0",
+		"@wordpress/edit-post": "^8.33.1",
 		"@wordpress/editor": "^14.33.1",
 		"@wordpress/element": "^6.0.0",
 		"@wordpress/env": "^10.32.0",
