@@ -581,7 +581,7 @@ class Followers {
 	 * of each follower's ID.
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
-	 * @see Signature::compute_collection_digest() for the core digest algorithm
+	 * @see Signature::get_collection_digest() for the core digest algorithm
 	 *
 	 * @param int    $user_id   The user ID whose followers to compute.
 	 * @param string $authority The URI authority (scheme + host) to filter by.
@@ -594,7 +594,7 @@ class Followers {
 		$follower_ids = \wp_list_pluck( $followers, 'guid' );
 
 		// Delegate to the core digest computation algorithm.
-		return Signature::compute_collection_digest( $follower_ids );
+		return Signature::get_collection_digest( $follower_ids );
 	}
 
 	/**
@@ -647,7 +647,7 @@ class Followers {
 		$followers = \wp_list_pluck( $followers, 'guid' );
 
 		// Compute the digest for this specific authority.
-		$digest = Signature::compute_collection_digest( $followers );
+		$digest = Signature::get_collection_digest( $followers );
 
 		if ( ! $digest ) {
 			return false;

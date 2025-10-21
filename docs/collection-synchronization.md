@@ -60,7 +60,7 @@ This is implemented in `includes/scheduler/class-collection-sync.php`.
 - **`Signature`** (`includes/class-signature.php`)
   - Provides core digest computation algorithm using XOR'd SHA256 hashes
   - Order-independent digest for efficient collection comparison
-  - Methods: `compute_collection_digest()`, `xor_hex_strings()`, `parse_collection_sync_header()`
+  - Methods: `get_collection_digest()`, `xor_hex_strings()`, `parse_collection_sync_header()`
 
 - **`Collection_Sync`** (`includes/handler/class-collection-sync.php`)
   - Handles incoming activities with Collection-Synchronization headers
@@ -70,7 +70,7 @@ This is implemented in `includes/scheduler/class-collection-sync.php`.
   - Methods: `handle_collection_synchronization()`, `detect_collection_type()`, `process_followers_collection_sync()`, `validate_collection_sync_header_params()`
 
 - **`Followers`** (`includes/collection/class-followers.php`)
-  - Computes partial follower digests for outgoing deliveries using XOR'd SHA256 hashes (delegates to `Signature::compute_collection_digest()`)
+  - Computes partial follower digests for outgoing deliveries using XOR'd SHA256 hashes (delegates to `Signature::get_collection_digest()`)
   - Filters followers by instance authority when building partial collections
   - Methods: `compute_partial_digest()` (convenience wrapper), `generate_sync_header()`, `get_by_authority()`
 

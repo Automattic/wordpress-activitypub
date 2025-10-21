@@ -479,7 +479,7 @@ class Signature {
 	 *
 	 * @return string|false The hex-encoded digest, or false if no followers.
 	 */
-	public static function compute_collection_digest( $collection ) {
+	public static function get_collection_digest( $collection ) {
 		if ( empty( $collection ) || ! is_array( $collection ) ) {
 			return false;
 		}
