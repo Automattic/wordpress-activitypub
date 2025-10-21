@@ -115,8 +115,8 @@ class Collection_Sync {
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
 	 *
-	 * @param array  $args    The HTTP request arguments.
-	 * @param string $url     The request URL.
+	 * @param array  $args The HTTP request arguments.
+	 * @param string $url  The request URL.
 	 *
 	 * @return array Modified HTTP request arguments.
 	 */
