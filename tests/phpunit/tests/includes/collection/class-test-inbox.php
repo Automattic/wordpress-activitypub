@@ -67,10 +67,9 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$activity_type_meta = \get_post_meta( $inbox_id, '_activitypub_activity_type', true );
 		$this->assertEquals( 'Create', $activity_type_meta );
 
-		// Test _activitypub_activity_actor meta.
-		$activity_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_actor', true );
-		$expected_actor_type = \user_can( $user_id, 'activitypub' ) ? 'user' : 'blog';
-		$this->assertEquals( $expected_actor_type, $activity_actor_meta );
+		// Test _activitypub_user_id meta.
+		$user_id_meta = \get_post_meta( $inbox_id, '_activitypub_user_id', true );
+		$this->assertEquals( $user_id, $user_id_meta );
 
 		// Test _activitypub_activity_remote_actor meta.
 		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
@@ -180,9 +179,9 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertIsInt( $inbox_id );
 
-		// Verify actor type meta for blog.
-		$activity_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_actor', true );
-		$this->assertEquals( 'blog', $activity_actor_meta );
+		// Verify user_id meta for blog user.
+		$user_id_meta = \get_post_meta( $inbox_id, '_activitypub_user_id', true );
+		$this->assertEquals( 0, $user_id_meta );
 	}
 
 	/**
@@ -221,7 +220,6 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertArrayHasKey( '_activitypub_object_id', $registered_meta );
 		$this->assertArrayHasKey( '_activitypub_activity_type', $registered_meta );
-		$this->assertArrayHasKey( '_activitypub_activity_actor', $registered_meta );
 		$this->assertArrayHasKey( '_activitypub_activity_remote_actor', $registered_meta );
 		$this->assertArrayHasKey( 'activitypub_content_visibility', $registered_meta );
 
@@ -261,5 +259,66 @@ class Test_Inbox extends \WP_UnitTestCase {
 		// Verify activity type is properly capitalized.
 		$activity_type_meta = \get_post_meta( $inbox_id, '_activitypub_activity_type', true );
 		$this->assertEquals( 'Create', $activity_type_meta );
+	}
+
+	/**
+	 * Test adding the same activity for multiple users.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_for_multiple_users() {
+		// Create a test activity that will be received by multiple users.
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/multi-user-test' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/multi-user-test' );
+		$object->set_type( 'Note' );
+		$object->set_content( 'Test content for multiple users' );
+		$activity->set_object( $object );
+
+		// Add activity for first user.
+		$inbox_id_1 = Inbox::add( $activity, 1 );
+		$this->assertIsInt( $inbox_id_1 );
+		$this->assertGreaterThan( 0, $inbox_id_1 );
+
+		// Verify first user is in metadata.
+		$user_ids = \get_post_meta( $inbox_id_1, '_activitypub_user_id', false );
+		$this->assertIsArray( $user_ids );
+		$this->assertContains( '1', $user_ids );
+		$this->assertCount( 1, $user_ids );
+
+		// Add the same activity for second user.
+		$inbox_id_2 = Inbox::add( $activity, 2 );
+		$this->assertEquals( $inbox_id_1, $inbox_id_2, 'Should return the same inbox item ID' );
+
+		// Verify both users are now in metadata.
+		$user_ids = \get_post_meta( $inbox_id_1, '_activitypub_user_id', false );
+		$this->assertIsArray( $user_ids );
+		$this->assertCount( 2, $user_ids );
+		$this->assertContains( '1', $user_ids );
+		$this->assertContains( '2', $user_ids );
+
+		// Add the same activity for third user.
+		$inbox_id_3 = Inbox::add( $activity, 3 );
+		$this->assertEquals( $inbox_id_1, $inbox_id_3, 'Should return the same inbox item ID' );
+
+		// Verify all three users are in metadata.
+		$user_ids = \get_post_meta( $inbox_id_1, '_activitypub_user_id', false );
+		$this->assertIsArray( $user_ids );
+		$this->assertCount( 3, $user_ids );
+		$this->assertContains( '1', $user_ids );
+		$this->assertContains( '2', $user_ids );
+		$this->assertContains( '3', $user_ids );
+
+		// Try adding for user 1 again (should not duplicate).
+		$inbox_id_4 = Inbox::add( $activity, 1 );
+		$this->assertEquals( $inbox_id_1, $inbox_id_4, 'Should return the same inbox item ID' );
+
+		// Verify still only three unique users.
+		$user_ids = \get_post_meta( $inbox_id_1, '_activitypub_user_id', false );
+		$this->assertCount( 3, $user_ids, 'Should not duplicate user_id' );
 	}
 }
