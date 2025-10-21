@@ -426,7 +426,7 @@ class Following {
 	 *
 	 * @return int[] List of local user IDs following the actor.
 	 */
-	public static function get_user_ids( $actor_url ) {
+	public static function get_follower_ids( $actor_url ) {
 		$actor = Remote_Actors::get_by_uri( $actor_url );
 		if ( \is_wp_error( $actor ) ) {
 			return array();

@@ -307,7 +307,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				}
 
 				if ( is_collection( $collection ) ) {
-					$_user_ids = Following::get_user_ids( $activity['actor'] );
+					$_user_ids = Following::get_follower_ids( $activity['actor'] );
 					$user_ids  = array_merge( $user_ids, $_user_ids );
 					continue;
 				}

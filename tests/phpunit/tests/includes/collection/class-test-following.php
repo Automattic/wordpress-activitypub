@@ -442,11 +442,11 @@ class Test_Following extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_user_ids method.
+	 * Test get_follower_ids method.
 	 *
-	 * @covers ::get_user_ids
+	 * @covers ::get_follower_ids
 	 */
-	public function test_get_user_ids() {
+	public function test_get_follower_ids() {
 		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_actor' ), 10, 2 );
 
 		// Create a remote actor by fetching (which will use the mock).
@@ -454,7 +454,7 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertNotWPError( $remote_actor );
 
 		// Test with no followers.
-		$user_ids = Following::get_user_ids( 'https://example.com/actor/1' );
+		$user_ids = Following::get_follower_ids( 'https://example.com/actor/1' );
 		$this->assertIsArray( $user_ids );
 		$this->assertEmpty( $user_ids );
 
@@ -468,7 +468,7 @@ class Test_Following extends \WP_UnitTestCase {
 		\add_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, $user_id_3 );
 
 		// Get user IDs.
-		$user_ids = Following::get_user_ids( 'https://example.com/actor/1' );
+		$user_ids = Following::get_follower_ids( 'https://example.com/actor/1' );
 		$this->assertIsArray( $user_ids );
 		$this->assertCount( 3, $user_ids );
 		$this->assertContains( $user_id_1, $user_ids );
@@ -476,7 +476,7 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertContains( $user_id_3, $user_ids );
 
 		// Test with non-existent actor URL.
-		$user_ids = Following::get_user_ids( 'https://example.com/actor/nonexistent' );
+		$user_ids = Following::get_follower_ids( 'https://example.com/actor/nonexistent' );
 		$this->assertIsArray( $user_ids );
 		$this->assertEmpty( $user_ids );
 
