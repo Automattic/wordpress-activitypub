@@ -57,10 +57,7 @@ class Move {
 		$result        = null;
 		$success       = false;
 
-		/*
-		 * If the new target is followed, but the origin is not,
-		 * everything is fine, so we can return.
-		 */
+		// If the origin is followed but the target is not, update the origin to point to the target.
 		if ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
@@ -77,6 +74,7 @@ class Move {
 			$result  = Remote_Actors::upsert( $target_json );
 		}
 
+		// If both the target and origin are followed, merge them.
 		if ( ! \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			$origin_users = \get_post_meta( $origin_object->ID, Followers::FOLLOWER_META_KEY, false );
 			$target_users = \get_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, false );
