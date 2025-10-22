@@ -447,7 +447,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_inline_images_with_attachment_overlap() {
 		// Create a post with inline images.
-		$post_content = '<p>Inline image: <img src="https://example.com/shared.jpg" alt="Shared"> and unique: <img src="https://example.com/inline-only.jpg"  alt=""/></p>';
+		$post_content = '<p>Inline image: <img src="https://example.com/shared.jpg" alt="Shared"> and unique: <img src="https://example.com/inline-only.jpg" alt=""/></p>';
 		$post_id      = self::factory()->post->create(
 			array(
 				'post_content' => $post_content,
