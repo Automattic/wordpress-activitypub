@@ -247,7 +247,7 @@ class Posts {
 		// Extract URLs from existing attachments.
 		$stored_urls = array();
 		foreach ( $attached_media as $attachment ) {
-			$stored_urls[] = \get_post_meta( $attachment->ID, '_activitypub_source_url', true );
+			$stored_urls[] = \get_post_meta( $attachment->ID, '_source_url', true );
 		}
 
 		// Compare the arrays (reindex after filtering to ensure proper comparison).

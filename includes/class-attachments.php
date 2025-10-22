@@ -7,10 +7,55 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Posts;
+
 /**
  * Attachments processor class.
  */
 class Attachments {
+
+	/**
+	 * Initialize the class and set up filters.
+	 */
+	public static function init() {
+		\add_action( 'pre_get_posts', array( self::class, 'maybe_hide_from_media_library' ), 999 );
+	}
+
+	/**
+	 * Hide ActivityPub attachments from Media Library queries.
+	 *
+	 * This works for both the list view and the media modal by checking
+	 * if we're querying attachments without explicitly requesting the
+	 * _activitypub_import meta key.
+	 *
+	 * @param \WP_Query $query The WordPress query object.
+	 */
+	public static function maybe_hide_from_media_library( $query ) {
+		// Only filter attachment queries.
+		if ( 'attachment' !== $query->get( 'post_type' ) ) {
+			return;
+		}
+
+		// Check if the query is already explicitly looking for _activitypub_import.
+		$meta_query = $query->get( 'meta_query' ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary
+
+		$has_activitypub_query = false;
+		foreach ( $meta_query as $clause ) {
+			if ( isset( $clause['key'] ) && '_activitypub_import' === $clause['key'] ) {
+				$has_activitypub_query = true;
+				break;
+			}
+		}
+
+		// If not explicitly querying for this meta, exclude ActivityPub imports.
+		if ( ! $has_activitypub_query ) {
+			$meta_query[] = array(
+				'key'     => '_activitypub_import',
+				'compare' => 'NOT EXISTS',
+			);
+			$query->set( 'meta_query', $meta_query );
+		}
+	}
 
 	/**
 	 * Process attachments from an ActivityPub object and attach them to a post.
@@ -126,7 +171,6 @@ class Attachments {
 			'post_mime_type' => $attachment_data['mediaType'] ?? '',
 			'post_title'     => $attachment_data['name'] ?? '',
 			'post_content'   => $attachment_data['name'] ?? '',
-			'post_status'    => get_post_status( $post_id ),
 			'post_author'    => $author_id,
 			'meta_input'     => array(
 				'_source_url' => $attachment_data['url'],
@@ -139,6 +183,11 @@ class Attachments {
 			if ( 'image' === strtok( $mime_type, '/' ) ) {
 				$post_data['meta_input']['_wp_attachment_image_alt'] = $attachment_data['name'];
 			}
+		}
+
+		// Flag to filter out from Media Library.
+		if ( Posts::POST_TYPE === get_post_type( $post_id ) ) {
+			$post_data['meta_input']['_activitypub_import'] = '1';
 		}
 
 		// Sideload the attachment into WordPress.
