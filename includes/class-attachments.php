@@ -52,6 +52,14 @@ class Attachments {
 			return;
 		}
 
+		// Don't filter if we're querying attachments for an ap_post.
+		if ( $query->get( 'post_parent' ) ) {
+			$parent_post = \get_post( $query->get( 'post_parent' ) );
+			if ( $parent_post && Posts::POST_TYPE === $parent_post->post_type ) {
+				return;
+			}
+		}
+
 		// Check if the query is already explicitly looking for _activitypub_import.
 		$meta_query = $query->get( 'meta_query' ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary
 
