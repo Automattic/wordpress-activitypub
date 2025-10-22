@@ -29,10 +29,11 @@ class Posts {
 	 * Add an object to the collection.
 	 *
 	 * @param array $activity The activity object data.
+	 * @param int   $user_id  The local user ID.
 	 *
 	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
 	 */
-	public static function add( $activity ) {
+	public static function add( $activity, $user_id ) {
 		$activity_object = $activity['object'];
 		$actor           = Remote_Actors::fetch_by_uri( object_to_uri( $activity_object['attributedTo'] ) );
 
@@ -48,6 +49,7 @@ class Posts {
 		}
 
 		\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor->ID );
+		\add_post_meta( $post_id, '_activitypub_user_id', $user_id );
 
 		self::add_taxonomies( $post_id, $activity_object );
 
@@ -103,10 +105,11 @@ class Posts {
 	 * Update an object in the collection.
 	 *
 	 * @param array $activity The activity object data.
+	 * @param int   $user_id  The local user ID.
 	 *
 	 * @return \WP_Post|\WP_Error The updated object post or WP_Error on failure.
 	 */
-	public static function update( $activity ) {
+	public static function update( $activity, $user_id ) {
 		$post = self::get_by_guid( $activity['object']['id'] );
 		if ( \is_wp_error( $post ) ) {
 			return $post;
@@ -118,6 +121,11 @@ class Posts {
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
+		}
+
+		$post_meta = \get_post_meta( $post_id, '_activitypub_user_id', false );
+		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
+			\add_post_meta( $post_id, '_activitypub_user_id', $user_id );
 		}
 
 		self::add_taxonomies( $post_id, $activity['object'] );
@@ -137,6 +145,33 @@ class Posts {
 		}
 
 		return \get_post( $post_id );
+	}
+
+	/**
+	 * Delete an object from the collection.
+	 *
+	 * @param int $id The object ID.
+	 *
+	 * @return bool|int|null The deleted post ID, false on failure, or null if no post to delete.
+	 */
+	public static function delete( $id ) {
+		return \wp_delete_post( $id, true );
+	}
+
+	/**
+	 * Delete an object from the collection by its GUID.
+	 *
+	 * @param string $guid The object GUID.
+	 *
+	 * @return bool|int|null The deleted post ID, false on failure, or null if no post to delete.
+	 */
+	public static function delete_by_guid( $guid ) {
+		$post = self::get_by_guid( $guid );
+		if ( \is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		return self::delete( $post->ID );
 	}
 
 	/**
@@ -217,5 +252,32 @@ class Posts {
 
 		// Compare the arrays (reindex after filtering to ensure proper comparison).
 		return array_values( array_filter( $stored_urls ) ) !== $new_urls;
+	}
+
+	/**
+	 * Get posts by remote actor.
+	 *
+	 * @param string $actor The remote actor URI.
+	 *
+	 * @return array Array of WP_Post objects.
+	 */
+	public static function get_by_remote_actor( $actor ) {
+		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
+		if ( \is_wp_error( $remote_actor ) ) {
+			return array();
+		}
+
+		$query = new \WP_Query(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'posts_per_page' => -1,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'       => '_activitypub_remote_actor_id',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_value'     => $remote_actor->ID,
+			)
+		);
+
+		return $query->posts;
 	}
 }

@@ -238,10 +238,10 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
-			'activitypub_shared_inbox',
+			'activitypub_create_posts',
 			array(
 				'type'        => 'boolean',
-				'description' => \__( 'Enable the shared inbox.', 'activitypub' ),
+				'description' => 'Allow creating posts via ActivityPub.',
 				'default'     => false,
 			)
 		);

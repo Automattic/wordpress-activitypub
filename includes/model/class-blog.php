@@ -391,15 +391,9 @@ class Blog extends Actor {
 	 * @return string[]|null The endpoints.
 	 */
 	public function get_endpoints() {
-		$endpoints = null;
-
-		if ( \get_option( 'activitypub_shared_inbox' ) ) {
-			$endpoints = array(
-				'sharedInbox' => get_rest_url_by_path( 'inbox' ),
-			);
-		}
-
-		return $endpoints;
+		return array(
+			'sharedInbox' => get_rest_url_by_path( 'inbox' ),
+		);
 	}
 
 	/**
@@ -510,7 +504,7 @@ class Blog extends Actor {
 			$hashtags[] = array(
 				'type' => 'Hashtag',
 				'href' => \get_tag_link( $tag->term_id ),
-				'name' => esc_hashtag( $tag->name ),
+				'name' => esc_hashtag( $tag->slug ),
 			);
 		}
 

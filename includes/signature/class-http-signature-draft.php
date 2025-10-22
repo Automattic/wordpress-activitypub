@@ -49,15 +49,26 @@ class Http_Signature_Draft implements Http_Signature {
 		$http_method = \strtolower( $args['method'] );
 		$date        = $args['headers']['Date'];
 
+		$signed_parts = array(
+			sprintf( '(request-target): %s %s', $http_method, $path ),
+			sprintf( 'host: %s', $host ),
+			sprintf( 'date: %s', $date ),
+		);
+		$headers_list = array( '(request-target)', 'host', 'date' );
+
 		if ( isset( $args['body'] ) ) {
 			$args['headers']['Digest'] = $this->generate_digest( $args['body'] );
-
-			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: {$args['headers']['Digest']}";
-			$headers_list  = '(request-target) host date digest';
-		} else {
-			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
-			$headers_list  = '(request-target) host date';
+			$signed_parts[]            = sprintf( 'digest: %s', $args['headers']['Digest'] );
+			$headers_list[]            = 'digest';
 		}
+
+		if ( isset( $args['headers']['Collection-Synchronization'] ) ) {
+			$signed_parts[] = sprintf( 'collection-synchronization: %s', $args['headers']['Collection-Synchronization'] );
+			$headers_list[] = 'collection-synchronization';
+		}
+
+		$signed_string = implode( "\n", $signed_parts );
+		$headers_list  = implode( ' ', $headers_list );
 
 		$signature = null;
 		\openssl_sign( $signed_string, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );

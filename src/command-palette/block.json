@@ -1,0 +1,10 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "activitypub/command-palette",
+	"title": "ActivityPub Command Palette",
+	"category": "widgets",
+	"description": "Registers ActivityPub commands for the WordPress Command Palette.",
+	"textdomain": "activitypub",
+	"editorScript": "file:./plugin.tsx"
+}

@@ -163,25 +163,13 @@ class Post_Types {
 
 		\register_post_meta(
 			Inbox::POST_TYPE,
-			'_activitypub_activity_actor',
+			'_activitypub_user_id',
 			array(
-				'type'              => 'string',
+				'type'              => 'integer',
 				'single'            => true,
-				'description'       => 'The type of the local actor that received the activity.',
+				'description'       => 'The ID of the local user that received the activity.',
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
-					$schema = array(
-						'type'    => 'string',
-						'enum'    => array( 'application', 'blog', 'user' ),
-						'default' => 'user',
-					);
-
-					if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
-						return $schema['default'];
-					}
-
-					return $value;
-				},
+				'sanitize_callback' => 'absint',
 			)
 		);
 
@@ -348,7 +336,7 @@ class Post_Types {
 	}
 
 	/**
-	 * Register the Object post type.
+	 * Register the Post post type.
 	 */
 	public static function register_post_post_type() {
 		\register_post_type(
@@ -404,6 +392,17 @@ class Post_Types {
 				'sanitize_callback' => 'absint',
 			)
 		);
+
+		\register_post_meta(
+			Posts::POST_TYPE,
+			'_activitypub_user_id',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'The ID of the local user that received the activity.',
+				'sanitize_callback' => 'absint',
+			)
+		);
 	}
 
 	/**
@@ -433,10 +432,15 @@ class Post_Types {
 			'show_in_rest'        => true,
 			'map_meta_cap'        => true,
 			'show_ui'             => true,
-			'supports'            => array( 'title', 'editor', 'page-attributes' ),
+			'supports'            => array( 'title', 'editor', 'page-attributes', 'author' ),
+			'capabilities'        => array(
+				'edit_others_posts' => 'do_not_allow', // Disallow editing others' Extra Fields (only own ones).
+			),
 		);
 
 		\register_post_type( Extra_Fields::USER_POST_TYPE, $extra_field_args );
+
+		unset( $extra_field_args['capabilities'] ); // Allow editing the Blog's Extra Fields.
 		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $extra_field_args );
 
 		/**

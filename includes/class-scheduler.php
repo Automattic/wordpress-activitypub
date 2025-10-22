@@ -14,6 +14,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Scheduler\Actor;
+use Activitypub\Scheduler\Collection_Sync;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Scheduler\Post;
 
@@ -60,6 +61,7 @@ class Scheduler {
 	public static function register_schedulers() {
 		Post::init();
 		Actor::init();
+		Collection_Sync::init();
 		Comment::init();
 
 		/**
@@ -222,7 +224,8 @@ class Scheduler {
 				\wp_delete_post( $actor->ID );
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || \is_wp_error( $meta ) ) {
 				if ( Remote_Actors::count_errors( $actor->ID ) >= 5 ) {
-					\wp_schedule_single_event( \time(), 'activitypub_delete_actor_interactions', array( $actor->guid ) );
+					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_interactions', array( $actor->guid ) );
+					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_posts', array( $actor->guid ) );
 					\wp_delete_post( $actor->ID );
 				} else {
 					Remote_Actors::add_error( $actor->ID, $meta );

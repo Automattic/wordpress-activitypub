@@ -1406,4 +1406,123 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	public function test_camel_to_snake_case( $original, $expected ) {
 		$this->assertSame( $expected, \Activitypub\camel_to_snake_case( $original ) );
 	}
+
+	/**
+	 * Data provider for esc_hashtag tests.
+	 *
+	 * @return array Test cases with input and expected output.
+	 */
+	public function esc_hashtag_provider() {
+		return array(
+			'simple_word'             => array( 'test', '#test' ),
+			'word_with_spaces'        => array( 'test tag', '#testTag' ),
+			'multiple_spaces'         => array( 'test  multiple   spaces', '#testMultipleSpaces' ),
+			'with_special_chars'      => array( 'test@tag!', '#testTag' ),
+			'with_underscores'        => array( 'test_tag', '#testTag' ),
+			'with_leading_hashtag'    => array( '#test', '#Test' ),
+			'with_multiple_hashtags'  => array( '##test', '#Test' ),
+			'with_leading_hyphen'     => array( '-test', '#Test' ),
+			'with_trailing_hyphen'    => array( 'test-', '#test' ),
+			'mixed_case'              => array( 'TestTag', '#TestTag' ),
+			'with_numbers'            => array( 'test123', '#test123' ),
+			'with_unicode'            => array( 'tëst', '#tëst' ),
+			'with_unicode_spaces'     => array( 'tëst tàg', '#tëstTàg' ),
+			'german_umlauts'          => array( 'über straße', '#überStraße' ),
+			'japanese_characters'     => array( 'テスト', '#テスト' ),
+			'arabic_characters'       => array( 'اختبار', '#اختبار' ),
+			'cyrillic_characters'     => array( 'тест', '#тест' ),
+			'empty_string'            => array( '', '#' ),
+			'only_spaces'             => array( '   ', '#' ),
+			'only_special_chars'      => array( '@!#$%', '#' ),
+			'hyphenated_words'        => array( 'foo-bar-baz', '#fooBarBaz' ),
+			'quotes'                  => array( "test'tag", '#testTag' ),
+			'double_quotes'           => array( 'test"tag', '#testTag' ),
+			'ampersand'               => array( 'test&tag', '#testTag' ),
+			'html_entities'           => array( 'test&amp;tag', '#testTag' ),
+			'leading_trailing_spaces' => array( '  test  ', '#Test' ),
+			'multiple_hyphens'        => array( 'test--tag', '#testTag' ),
+			'camelCase_preservation'  => array( 'testTag', '#testTag' ),
+			'with_dots'               => array( 'test.tag', '#testTag' ),
+			'with_commas'             => array( 'test,tag', '#testTag' ),
+			'with_semicolons'         => array( 'test;tag', '#testTag' ),
+			'with_slashes'            => array( 'test/tag', '#testTag' ),
+			'with_backslashes'        => array( 'test\\tag', '#testTag' ),
+			'with_parentheses'        => array( 'test(tag)', '#testTag' ),
+			'with_brackets'           => array( 'test[tag]', '#testTag' ),
+			'with_braces'             => array( 'test{tag}', '#testTag' ),
+			'emoji_mixed'             => array( 'test 😀 tag', '#testTag' ),
+			'chinese_characters'      => array( '测试 标签', '#测试标签' ),
+			'korean_characters'       => array( '테스트 태그', '#테스트태그' ),
+			'greek_characters'        => array( 'δοκιμή', '#δοκιμή' ),
+			'hebrew_characters'       => array( 'בדיקה', '#בדיקה' ),
+			'thai_characters'         => array( 'ทดสอบ', '#ทดสอบ' ),
+		);
+	}
+
+	/**
+	 * Test esc_hashtag function.
+	 *
+	 * @dataProvider esc_hashtag_provider
+	 * @covers \Activitypub\esc_hashtag
+	 *
+	 * @param string $input    The input string.
+	 * @param string $expected The expected hashtag output.
+	 */
+	public function test_esc_hashtag( $input, $expected ) {
+		$result = \Activitypub\esc_hashtag( $input );
+		$this->assertSame( $expected, $result );
+	}
+
+	/**
+	 * Test esc_hashtag filter hook.
+	 *
+	 * @covers \Activitypub\esc_hashtag
+	 */
+	public function test_esc_hashtag_filter() {
+		$filter_callback = function ( $hashtag, $input ) {
+			if ( 'custom' === $input ) {
+				return '#CustomTag';
+			}
+			return $hashtag;
+		};
+
+		\add_filter( 'activitypub_esc_hashtag', $filter_callback, 10, 2 );
+
+		$result = \Activitypub\esc_hashtag( 'custom' );
+		$this->assertSame( '#CustomTag', $result );
+
+		\remove_filter( 'activitypub_esc_hashtag', $filter_callback, 10 );
+	}
+
+	/**
+	 * Test esc_hashtag with HTML special characters.
+	 *
+	 * @covers \Activitypub\esc_hashtag
+	 */
+	public function test_esc_hashtag_html_escaping() {
+		$result = \Activitypub\esc_hashtag( '<script>alert("xss")</script>' );
+		$this->assertStringNotContainsString( '<script>', $result );
+		$this->assertStringNotContainsString( 'alert', $result );
+		// The result should be HTML-escaped.
+		$this->assertStringStartsWith( '#', $result );
+	}
+
+	/**
+	 * Test esc_hashtag with quoted strings.
+	 *
+	 * @covers \Activitypub\esc_hashtag
+	 */
+	public function test_esc_hashtag_with_quotes() {
+		// Test single quotes.
+		$result = \Activitypub\esc_hashtag( "test's tag" );
+		$this->assertSame( '#testSTag', $result );
+
+		// Test double quotes.
+		$result = \Activitypub\esc_hashtag( 'test"s tag' );
+		$this->assertSame( '#testSTag', $result );
+
+		// Test HTML entities for quotes.
+		$result = \Activitypub\esc_hashtag( 'test&#039;s tag' );
+		$this->assertSame( '#testSTag', $result );
+	}
 }

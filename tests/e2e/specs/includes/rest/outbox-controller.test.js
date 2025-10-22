@@ -10,7 +10,7 @@ test.describe( 'ActivityPub Outbox REST API', () => {
 	test.beforeAll( async ( { requestUtils } ) => {
 		// Use the default test user
 		testUserId = 1;
-		outboxEndpoint = `/activitypub/1.0/users/${ testUserId }/outbox`;
+		outboxEndpoint = `/activitypub/1.0/actors/${ testUserId }/outbox`;
 	} );
 
 	test( 'should return 200 status code for outbox endpoint', async ( { requestUtils } ) => {
