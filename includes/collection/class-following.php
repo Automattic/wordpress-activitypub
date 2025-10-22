@@ -420,6 +420,27 @@ class Following {
 	}
 
 	/**
+	 * Get local user IDs following a given remote actor.
+	 *
+	 * @param string $actor_url The actor URL.
+	 *
+	 * @return int[] List of local user IDs following the actor.
+	 */
+	public static function get_follower_ids( $actor_url ) {
+		$actor = Remote_Actors::get_by_uri( $actor_url );
+		if ( \is_wp_error( $actor ) ) {
+			return array();
+		}
+
+		$user_ids = \get_post_meta( $actor->ID, self::FOLLOWING_META_KEY, false );
+		if ( ! is_array( $user_ids ) || empty( $user_ids ) ) {
+			return array();
+		}
+
+		return array_map( 'intval', $user_ids );
+	}
+
+	/**
 	 * Remove blocked actors from following list.
 	 *
 	 * @see \Activitypub\Activitypub::init()

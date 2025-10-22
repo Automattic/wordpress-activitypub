@@ -40,10 +40,16 @@ class Inbox {
 			return $activity;
 		}
 
-		$item = self::get( $activity->get_id(), $user_id );
+		$item = self::get_by_guid( $activity->get_id() );
 
 		// Check for duplicate activity.
 		if ( $item instanceof \WP_Post ) {
+			// Ensure that it is added to the inbox of the user.
+			$user_ids = \get_post_meta( $item->ID, '_activitypub_user_id', false );
+			if ( ! \in_array( (string) $user_id, $user_ids, true ) ) {
+				\add_post_meta( $item->ID, '_activitypub_user_id', $user_id );
+				\clean_post_cache( $item->ID );
+			}
 			return $item->ID;
 		}
 
@@ -59,14 +65,12 @@ class Inbox {
 				\wp_trim_words( $title, 5 )
 			),
 			'post_content' => wp_slash( $activity->to_json() ),
-			// ensure that user ID is not below 0.
-			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'publish',
 			'guid'         => $activity->get_id(),
 			'meta_input'   => array(
 				'_activitypub_object_id'             => object_to_uri( $activity->get_object() ),
 				'_activitypub_activity_type'         => $activity->get_type(),
-				'_activitypub_activity_actor'        => Actors::get_type_by_id( $user_id ),
+				'_activitypub_user_id'               => $user_id,
 				'_activitypub_activity_remote_actor' => object_to_uri( $activity->get_actor() ),
 				'activitypub_content_visibility'     => $visibility,
 			),
@@ -117,34 +121,14 @@ class Inbox {
 	}
 
 	/**
-	 * Get the inbox item by activity id.
+	 * Get the inbox item by id.
 	 *
-	 * @param string $guid    The activity id.
-	 * @param int    $user_id The id of the local blog-user.
+	 * @param int $id The inbox item id.
 	 *
-	 * @return array|\WP_Error|\WP_Post The inbox item or an error.
+	 * @return WP_Post|null The inbox item or null.
 	 */
-	public static function get( $guid, $user_id ) {
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_author=%d AND post_type=%s",
-				\esc_url_raw( $guid ),
-				\absint( $user_id ),
-				self::POST_TYPE
-			)
-		);
-
-		if ( ! $post_id ) {
-			return new \WP_Error(
-				'activitypub_inbox_item_not_found',
-				\__( 'Inbox item not found', 'activitypub' ),
-				array( 'status' => 404 )
-			);
-		}
-
-		return \get_post( $post_id );
+	public static function get( $id ) {
+		return \get_post( $id );
 	}
 
 	/**
@@ -202,7 +186,9 @@ class Inbox {
 					return $remote_actor;
 				}
 
-				return Followers::remove( $remote_actor, $inbox_item->post_author );
+				// A follow is only possible for a specific user.
+				$user_id = \get_post_meta( $inbox_item->ID, '_activitypub_user_id', true );
+				return Followers::remove( $remote_actor, $user_id );
 
 			case 'Like':
 			case 'Create':

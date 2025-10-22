@@ -266,12 +266,12 @@ function snake_to_camel_case( $input ) {
 function esc_hashtag( $input ) {
 
 	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
-	// Remove all characters that are not letters, numbers, or underscores.
-	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}_]+/u', '_', $hashtag );
+	// Remove all characters that are not letters, numbers, or hyphens.
+	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
 
-	// Capitalize every letter that is preceded by an underscore.
+	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = preg_replace_callback(
-		'/_(.)/',
+		'/-+(.)/',
 		function ( $matches ) {
 			return strtoupper( $matches[1] );
 		},
@@ -280,6 +280,7 @@ function esc_hashtag( $input ) {
 
 	// Add a hashtag to the beginning of the string.
 	$hashtag = ltrim( $hashtag, '#' );
+	$hashtag = trim( $hashtag, '-' );
 	$hashtag = '#' . $hashtag;
 
 	/**
@@ -1720,6 +1721,26 @@ function is_actor( $data ) {
 	 * @param array $types The actor types.
 	 */
 	$types = apply_filters( 'activitypub_actor_types', Actor::TYPES );
+
+	return _is_type_of( $data, $types );
+}
+
+/**
+ * Check if an `$data` is a Collection.
+ *
+ * @see https://www.w3.org/ns/activitystreams#collections
+ *
+ * @param array|object|string $data The data to check.
+ *
+ * @return boolean True if the `$data` is a Collection, false otherwise.
+ */
+function is_collection( $data ) {
+	/**
+	 * Filters the collection types.
+	 *
+	 * @param array $types The collection types.
+	 */
+	$types = apply_filters( 'activitypub_collection_types', array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
 
 	return _is_type_of( $data, $types );
 }

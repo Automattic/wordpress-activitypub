@@ -94,8 +94,8 @@ class Update {
 			} elseif ( ! empty( $comment_data['comment_ID'] ) ) {
 				$result = \get_comment( $comment_data['comment_ID'] );
 			}
-		} else {
-			$result = Posts::update( $activity );
+		} elseif ( \get_option( 'activitypub_create_posts', false ) ) {
+			$result = Posts::update( $activity, $user_id );
 
 			if ( \is_wp_error( $result ) && 'activitypub_post_not_found' === $result->get_error_code() ) {
 				$updated = false;

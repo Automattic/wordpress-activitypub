@@ -443,7 +443,7 @@ class Post extends Base {
 				$tags[] = array(
 					'type' => 'Hashtag',
 					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
-					'name' => esc_hashtag( $post_tag->name ),
+					'name' => esc_hashtag( $post_tag->slug ),
 				);
 			}
 		}
