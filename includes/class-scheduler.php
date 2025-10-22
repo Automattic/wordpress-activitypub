@@ -32,6 +32,13 @@ class Scheduler {
 	private static $batch_callbacks = array();
 
 	/**
+	 * Pause between async batches (in seconds).
+	 *
+	 * @var int
+	 */
+	public static $async_batch_pause = ACTIVITYPUB_ASYNC_BATCH_PAUSE;
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
@@ -422,7 +429,7 @@ class Scheduler {
 
 		if ( ! empty( $next ) ) {
 			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event( \time() + 30, \current_action(), \array_values( $next ) );
+			\wp_schedule_single_event( \time() + self::$async_batch_pause, \current_action(), \array_values( $next ) );
 		}
 	}
 

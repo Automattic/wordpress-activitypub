@@ -28,6 +28,22 @@ class Dispatcher {
 	public static $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE;
 
 	/**
+	 * Maximum number of retry attempts.
+	 *
+	 * @var int
+	 */
+	public static $retry_max_attempts = ACTIVITYPUB_OUTBOX_RETRY_MAX_ATTEMPTS;
+
+	/**
+	 * Retry delay unit (in seconds).
+	 *
+	 * Used to calculate exponential backoff: time() + (attempt * attempt * retry_delay_unit).
+	 *
+	 * @var int
+	 */
+	public static $retry_delay_unit = ACTIVITYPUB_OUTBOX_RETRY_DELAY_UNIT;
+
+	/**
 	 * Error codes that qualify for a retry.
 	 *
 	 * @see https://github.com/tfredrich/RestApiTutorial.com/blob/fd08b0f67f07450521d143b123cd6e1846cb2e3b/content/advanced/responses/retries.md
@@ -167,7 +183,7 @@ class Dispatcher {
 		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
 		// Retry failed inboxes.
-		if ( ++$attempt < 3 && ! empty( $retries ) ) {
+		if ( ++$attempt < self::$retry_max_attempts && ! empty( $retries ) ) {
 			self::schedule_retry( $retries, $outbox_item_id, $attempt );
 		}
 	}
@@ -227,7 +243,7 @@ class Dispatcher {
 		\set_transient( $transient_key, $retries, WEEK_IN_SECONDS );
 
 		\wp_schedule_single_event(
-			\time() + ( $attempt * $attempt * HOUR_IN_SECONDS ),
+			\time() + ( $attempt * $attempt * self::$retry_delay_unit ),
 			'activitypub_retry_activity',
 			array( $transient_key, $outbox_item_id, $attempt )
 		);
