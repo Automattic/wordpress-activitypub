@@ -209,6 +209,10 @@ class Migration {
 			self::sync_jetpack_following_meta();
 		}
 
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::migrate_to_inbox_deduplication();
+		}
+
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
 
@@ -1049,6 +1053,109 @@ class Migration {
 			 * @param mixed  $meta_value Metadata value.
 			 */
 			\do_action( 'added_post_meta', ...$meta );
+		}
+	}
+
+	/**
+	 * Migrate inbox to deduplicated storage with recipient metadata.
+	 *
+	 * This migration:
+	 * 1. Identifies duplicate inbox activities (same guid, different authors)
+	 * 2. Merges duplicates into a single post with recipient metadata
+	 * 3. Stores each recipient as separate _activitypub_user_id meta entries
+	 */
+	private static function migrate_to_inbox_deduplication() {
+		global $wpdb;
+
+		// Step 1: Find all duplicate activities (same guid, multiple posts).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$duplicates = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT guid, GROUP_CONCAT(ID ORDER BY ID) as post_ids, COUNT(*) as count
+				FROM {$wpdb->posts}
+				WHERE post_type = %s
+				AND guid != ''
+				GROUP BY guid
+				HAVING count > 1",
+				\Activitypub\Collection\Inbox::POST_TYPE
+			)
+		);
+
+		// Step 2: Merge duplicate activities.
+		foreach ( $duplicates as $duplicate ) {
+			$post_ids   = explode( ',', $duplicate->post_ids );
+			$keep_id    = (int) $post_ids[0]; // Keep the first post.
+			$recipients = array();
+
+			// Collect all recipients from duplicate posts.
+			foreach ( $post_ids as $post_id ) {
+				$post_id = (int) $post_id;
+				$post    = \get_post( $post_id );
+
+				if ( $post && $post->post_author > 0 ) {
+					$recipients[] = $post->post_author;
+				}
+
+				// Delete duplicate posts (keep only the first one).
+				if ( $post_id !== $keep_id ) {
+					\wp_delete_post( $post_id, true );
+				}
+			}
+
+			// Remove duplicates and sort recipients.
+			$recipients = array_unique( $recipients );
+			sort( $recipients );
+
+			// Update the kept post with recipient metadata (separate meta entries).
+			if ( ! empty( $recipients ) ) {
+				// Delete any existing _activitypub_user_id meta.
+				\delete_post_meta( $keep_id, '_activitypub_user_id' );
+
+				// Add each recipient as a separate meta entry.
+				foreach ( $recipients as $user_id ) {
+					\add_post_meta( $keep_id, '_activitypub_user_id', $user_id, false );
+				}
+
+				// Set post_author to 0 for shared activities, or first recipient for BC.
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->update(
+					$wpdb->posts,
+					array( 'post_author' => 0 ),
+					array( 'ID' => $keep_id ),
+					array( '%d' ),
+					array( '%d' )
+				);
+			}
+		}
+
+		// Step 3: Update existing non-duplicate activities to include recipient metadata.
+		// Get all inbox posts that don't have _activitypub_user_id meta yet.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$posts_without_recipients = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT p.ID, p.post_author
+				FROM {$wpdb->posts} p
+				LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_activitypub_user_id'
+				WHERE p.post_type = %s
+				AND pm.meta_id IS NULL
+				AND p.post_author != 0",
+				\Activitypub\Collection\Inbox::POST_TYPE
+			)
+		);
+
+		foreach ( $posts_without_recipients as $post ) {
+			// Add the post_author as the single recipient.
+			\add_post_meta( $post->ID, '_activitypub_user_id', (int) $post->post_author, false );
+
+			// Set post_author to 0 since recipients are now in meta.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->update(
+				$wpdb->posts,
+				array( 'post_author' => 0 ),
+				array( 'ID' => $post->ID ),
+				array( '%d' ),
+				array( '%d' )
+			);
 		}
 	}
 }
