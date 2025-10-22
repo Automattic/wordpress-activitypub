@@ -304,7 +304,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Posts::add( $activity );
+		$result = Posts::add( $activity, 1 );
 
 		$this->assertInstanceOf( '\WP_Post', $result );
 		$this->assertEquals( 'Post with Image', $result->post_title );
@@ -318,7 +318,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertEquals( $result->ID, $attachment->post_parent );
 
 		// Verify source URL was stored.
-		$source_url = get_post_meta( $attachment->ID, '_activitypub_source_url', true );
+		$source_url = get_post_meta( $attachment->ID, '_source_url', true );
 		$this->assertEquals( 'https://example.com/image.jpg', $source_url );
 
 		// Verify alt text was stored.
@@ -346,7 +346,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$original_post = Posts::add( $activity );
+		$original_post = Posts::add( $activity, 1 );
 		$this->assertInstanceOf( '\WP_Post', $original_post );
 
 		// Verify no attachments initially.
@@ -371,7 +371,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$updated_post = Posts::update( $update_activity );
+		$updated_post = Posts::update( $update_activity, 1 );
 		$this->assertInstanceOf( '\WP_Post', $updated_post );
 
 		// Verify attachment was added.
@@ -379,7 +379,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertCount( 1, $attachments );
 
 		$attachment = reset( $attachments );
-		$source_url = get_post_meta( $attachment->ID, '_activitypub_source_url', true );
+		$source_url = get_post_meta( $attachment->ID, '_source_url', true );
 		$this->assertEquals( 'https://example.com/image.jpg', $source_url );
 	}
 
@@ -408,7 +408,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$original_post        = Posts::add( $activity );
+		$original_post        = Posts::add( $activity, 1 );
 		$original_attachments = get_attached_media( '', $original_post->ID );
 		$this->assertCount( 1, $original_attachments );
 		$original_attachment_id = reset( $original_attachments )->ID;
@@ -449,7 +449,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			3
 		);
 
-		$updated_post = Posts::update( $update_activity );
+		$updated_post = Posts::update( $update_activity, 1 );
 
 		// Verify old attachment was deleted.
 		$this->assertNull( get_post( $original_attachment_id ) );
@@ -459,7 +459,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertCount( 1, $new_attachments );
 
 		$new_attachment = reset( $new_attachments );
-		$source_url     = get_post_meta( $new_attachment->ID, '_activitypub_source_url', true );
+		$source_url     = get_post_meta( $new_attachment->ID, '_source_url', true );
 		$this->assertEquals( 'https://example.com/new-image.jpg', $source_url );
 	}
 
@@ -488,7 +488,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$original_post        = Posts::add( $activity );
+		$original_post        = Posts::add( $activity, 1 );
 		$original_attachments = get_attached_media( '', $original_post->ID );
 		$this->assertCount( 1, $original_attachments );
 		$original_attachment_id = reset( $original_attachments )->ID;
@@ -511,7 +511,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$updated_post = Posts::update( $update_activity );
+		$updated_post = Posts::update( $update_activity, 1 );
 
 		// Verify attachment was NOT recreated (same ID still exists).
 		$updated_attachments = get_attached_media( '', $updated_post->ID );

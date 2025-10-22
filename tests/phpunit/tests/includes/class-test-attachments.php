@@ -257,7 +257,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertEquals( self::$post_id, $attachment->post_parent );
 
 		// Verify source URL was stored.
-		$source_url = get_post_meta( $result[0], '_activitypub_source_url', true );
+		$source_url = get_post_meta( $result[0], '_source_url', true );
 		$this->assertEquals( AP_TESTS_DIR . '/data/assets/test.jpg', $source_url );
 
 		// Verify alt text was stored for image.
