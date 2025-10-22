@@ -46,7 +46,7 @@ class Inbox {
 	 *
 	 * @param Activity|\WP_Error $activity   The Activity object.
 	 * @param int|array          $recipients The id(s) of the local blog-user(s).
-	 *                                        Accepts single int for backward compatibility.
+	 *                                       Accepts single int for backward compatibility.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
@@ -79,25 +79,8 @@ class Inbox {
 
 		// If activity exists, add new recipients to it.
 		if ( ! \is_wp_error( $existing ) && $existing instanceof \WP_Post ) {
-			// Get existing recipients (returns array due to single => false).
-			$existing_recipients = \get_post_meta( $existing->ID, '_activitypub_user_id', false );
-			$existing_recipients = \array_map( 'intval', $existing_recipients );
-
-			if ( empty( $existing_recipients ) && $existing->post_author > 0 ) {
-				// Migrate old posts: use post_author as recipient.
-				$existing_recipients = array( $existing->post_author );
-			}
-
-			// Find new recipients to add.
-			$new_recipients = \array_diff( $recipients, $existing_recipients );
-
-			// Add each new recipient as a separate meta entry.
-			foreach ( $new_recipients as $user_id ) {
-				\add_post_meta( $existing->ID, '_activitypub_user_id', $user_id, false );
-			}
-
-			if ( ! empty( $new_recipients ) ) {
-				\clean_post_cache( $existing->ID );
+			foreach ( $recipients as $user_id ) {
+				self::add_recipient( $existing->ID, $user_id );
 			}
 
 			return $existing->ID;
@@ -142,7 +125,7 @@ class Inbox {
 		// Add recipients as separate meta entries after post is created.
 		if ( ! \is_wp_error( $id ) && $id > 0 ) {
 			foreach ( $recipients as $user_id ) {
-				\add_post_meta( $id, '_activitypub_user_id', $user_id, false );
+				self::add_recipient( $id, $user_id );
 			}
 		}
 
