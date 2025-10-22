@@ -260,8 +260,8 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 * @covers ::create_item
 	 */
 	public function test_user_inbox_post_verification() {
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
 			function ( $json, $actor ) {
 				$public_key = Actors::get_public_key( self::$user_id );
 
@@ -286,7 +286,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		// Test valid request.
 		$actor    = Actors::get_by_id( self::$user_id );
 		$object   = \Activitypub\Transformer\Post::transform( $post )->to_object();
-		$activity = new \Activitypub\Activity\Activity( 'Like' );
+		$activity = new \Activitypub\Activity\Activity();
 		$activity->from_array(
 			array(
 				'id'     => 'https://example.com/activity/1',
@@ -330,7 +330,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 202, $response->get_status() );
 
-		remove_filter( 'pre_get_remote_metadata_by_actor', '__return_true' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**

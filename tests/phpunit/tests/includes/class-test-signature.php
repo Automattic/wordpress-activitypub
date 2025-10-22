@@ -88,7 +88,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		// Mock the remote key retrieval for this curve.
 		\add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () use ( $public_key ) {
 				return array(
 					'name'      => 'Test User',
@@ -103,7 +103,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		);
 
 		$this->assertTrue( Signature::verify_http_signature( $request ), "Valid hs2019 signature for curve {$curve} should verify" );
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -132,7 +132,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		);
 
 		\add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () use ( $public_key ) {
 				return array(
 					'name'      => 'Test User',
@@ -146,7 +146,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 		$this->assertWPError( Signature::verify_http_signature( $request ), 'Invalid hs2019 signature for curve prime256v1 should fail' );
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -191,7 +191,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		);
 
 		\add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () use ( $public_key ) {
 				return array(
 					'name'      => 'Test User',
@@ -205,7 +205,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 		$this->assertTrue( Signature::verify_http_signature( $request ), "Valid hs2019 signature for RSA {$bits} bits should verify" );
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -234,7 +234,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		);
 
 		\add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () use ( $public_key ) {
 				return array(
 					'name'      => 'Test User',
@@ -248,7 +248,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 		$this->assertWPError( Signature::verify_http_signature( $request ), 'Invalid hs2019 signature for RSA 2048 bits should fail' );
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -276,7 +276,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			),
 		);
 		\add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () use ( $public_key ) {
 				return array(
 					'name'      => 'Test User',
@@ -290,7 +290,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			}
 		);
 		$this->assertWPError( Signature::verify_http_signature( $request ), 'Unsupported EC curve secp256k1 should fail' );
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -303,7 +303,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$keys = Actors::get_keypair( 1 );
 
 		\add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () use ( $keys ) {
 				return array(
 					'name'      => 'Admin',
@@ -359,7 +359,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -377,7 +377,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$keys = self::$test_keys['rsa']['4096'];
 
 		\add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () use ( $keys ) {
 				return array(
 					'name'      => 'Admin',
@@ -441,7 +441,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		// The verification should succeed.
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 		\delete_option( 'activitypub_rfc9421_signature' );
 	}
 
@@ -496,7 +496,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$keys = self::$test_keys['rsa']['2048'];
 
 		\add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () use ( $keys ) {
 				return array(
 					'name'      => 'Admin',
@@ -558,7 +558,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		// The verification should succeed.
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -592,7 +592,7 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	private function verify_rfc9421_signature_with_keys( $keys, $algorithm ) {
 		\add_filter(
-			'pre_get_remote_metadata_by_actor',
+			'activitypub_pre_http_get_remote_object',
 			function () use ( $keys ) {
 				return array(
 					'name'      => 'Admin',
@@ -665,7 +665,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		// The verification should succeed.
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**

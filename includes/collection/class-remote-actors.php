@@ -12,7 +12,6 @@ use Activitypub\Http;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
-use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_actor;
 use function Activitypub\object_to_uri;
 
@@ -535,10 +534,12 @@ class Remote_Actors {
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_public_key( $key_id ) {
-		$actor = get_remote_metadata_by_actor( \strip_fragment_from_url( $key_id ) );
+		$actor = self::get_by_uri( \strip_fragment_from_url( $key_id ) );
 
 		if ( \is_wp_error( $actor ) ) {
 			$actor = Http::get_remote_object( $key_id );
+		} else {
+			$actor = \json_decode( $actor->post_content, true );
 		}
 
 		if ( \is_wp_error( $actor ) ) {
