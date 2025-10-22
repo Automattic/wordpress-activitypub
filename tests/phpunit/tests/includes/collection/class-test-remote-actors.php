@@ -674,7 +674,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 -----END PUBLIC KEY-----
 ';
 
-		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ), 10, 2 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'pre_http_get_remote_object' ), 10, 2 );
 
 		// X.509 key should remain unchanged.
 		$result       = Remote_Actors::get_public_key( 'https://example.com/author/x509' );
@@ -702,7 +702,12 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$result = Remote_Actors::get_public_key( 'https://example.com/author/invalid' );
 		$this->assertWPError( $result );
 
-		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
+		// Test GoToSocial-style /main-key path suffix is stripped correctly.
+		$result       = Remote_Actors::get_public_key( 'https://example.com/author/x509/main-key' );
+		$key_resource = \openssl_pkey_get_details( $result );
+		$this->assertSame( $this->x509_key, $key_resource['key'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'pre_http_get_remote_object' ) );
 	}
 
 	/**
@@ -876,54 +881,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 * @return array|\WP_Error
 	 */
 	public function pre_get_remote_metadata_by_actor( $value, $url ) {
-		if ( 'https://example.com/author/x509' === $url ) {
-			return array(
-				'name'      => 'Test Actor',
-				'url'       => 'https://example.com/author/x509',
-				'publicKey' => array(
-					'id'           => 'https://example.com/author#main-key',
-					'owner'        => 'https://example.com/author',
-					'publicKeyPem' => $this->x509_key,
-				),
-			);
-		}
-
-		if ( 'https://example.com/author/pkcs1' === $url ) {
-			return array(
-				'name'      => 'Test Actor',
-				'url'       => 'https://example.com/author/pkcs1',
-				'publicKey' => array(
-					'id'           => 'https://example.com/author#main-key',
-					'owner'        => 'https://example.com/author',
-					'publicKeyPem' => $this->pkcs1_key,
-				),
-			);
-		}
-
-		if ( 'https://example.com/author/ec' === $url ) {
-			return array(
-				'name'      => 'Test Actor',
-				'url'       => 'https://example.com/author/ec',
-				'publicKey' => array(
-					'id'           => 'https://example.com/author#main-key',
-					'owner'        => 'https://example.com/author',
-					'publicKeyPem' => $this->ec_key,
-				),
-			);
-		}
-
-		if ( 'https://example.com/author/pkcs8' === $url ) {
-			return array(
-				'name'      => 'Test Actor',
-				'url'       => 'https://example.com/author/pkcs8',
-				'publicKey' => array(
-					'id'           => 'https://example.com/author#main-key',
-					'owner'        => 'https://example.com/author',
-					'publicKeyPem' => $this->pkcs8_key,
-				),
-			);
-		}
-
 		if ( 'https://example.com/author/invalid' === $url ) {
 			return array(
 				'name'      => 'Test Actor',
@@ -937,5 +894,77 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		}
 
 		return new \WP_Error( 'invalid_url', $url );
+	}
+
+	/**
+	 * Pre http get remote object.
+	 *
+	 * @param mixed  $pre           The preempted value.
+	 * @param string $url_or_object The URL or object.
+	 * @return array|\WP_Error
+	 */
+	public function pre_http_get_remote_object( $pre, $url_or_object ) {
+
+		if ( 'https://example.com/author/x509' === $url_or_object ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/x509',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->x509_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/pkcs1' === $url_or_object ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/pkcs1',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->pkcs1_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/ec' === $url_or_object ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/ec',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->ec_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/pkcs8' === $url_or_object ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/pkcs8',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->pkcs8_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/x509/main-key' === $url_or_object ) {
+			return array(
+				'id'        => 'https://example.com/author/x509',
+				'type'      => 'Person',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->x509_key,
+				),
+			);
+		}
+
+		return $pre;
 	}
 }
