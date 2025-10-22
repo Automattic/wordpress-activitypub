@@ -703,10 +703,12 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertWPError( $result );
 
 		// Test GoToSocial-style /main-key path suffix is stripped correctly.
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'pre_http_get_remote_object' ), 10, 2 );
 		$result       = Remote_Actors::get_public_key( 'https://example.com/author/x509/main-key' );
 		$key_resource = \openssl_pkey_get_details( $result );
 		$this->assertSame( $this->x509_key, $key_resource['key'] );
 
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'pre_http_get_remote_object_strip_main_key' ) );
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
 	}
 
@@ -942,5 +944,28 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		}
 
 		return new \WP_Error( 'invalid_url', $url );
+	}
+
+	/**
+	 * Pre http get remote object.
+	 *
+	 * @param mixed  $pre           The preempted value.
+	 * @param string $url_or_object The URL or object.
+	 * @return array|\WP_Error
+	 */
+	public function pre_http_get_remote_object( $pre, $url_or_object ) {
+		if ( 'https://example.com/author/x509/main-key' === $url_or_object ) {
+			return array(
+				'id'        => 'https://example.com/author/x509',
+				'type'      => 'Person',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->x509_key,
+				),
+			);
+		}
+
+		return $pre;
 	}
 }
