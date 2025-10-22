@@ -248,16 +248,6 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
-			'activitypub_shared_inbox',
-			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Enable the shared inbox.', 'activitypub' ),
-				'default'     => false,
-			)
-		);
-
-		\register_setting(
-			'activitypub_advanced',
 			'activitypub_persist_inbox',
 			array(
 				'type'        => 'boolean',
