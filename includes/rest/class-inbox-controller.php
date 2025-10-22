@@ -355,9 +355,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @param Activity|\WP_Error $activity           The Activity object.
 	 * @param string             $context            The context of the request (shared_inbox when called from shared inbox endpoint).
 	 */
-	public function trigger_inbox_actions( $data, $allowed_recipients, $type, $activity, $context ) {
-		$hooks = array();
-
+	public function trigger_inbox_actions( array $data, array $allowed_recipients, $type, $activity, $context ) {
 		foreach ( $allowed_recipients as $user_id ) {
 			/**
 			 * ActivityPub inbox action.
@@ -380,7 +378,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 * @param string             $context  The context of the request (shared_inbox when called from shared inbox endpoint).
 			 */
-			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, Inbox::CONTEXT_SHARED_INBOX );
+			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, $context );
 		}
 	}
 }
