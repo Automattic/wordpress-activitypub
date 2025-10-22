@@ -126,10 +126,10 @@ class Attachments {
 			'post_mime_type' => $attachment_data['mediaType'] ?? '',
 			'post_title'     => $attachment_data['name'] ?? '',
 			'post_content'   => $attachment_data['name'] ?? '',
-			'post_status'    => 'inherit',
+			'post_status'    => get_post_status( $post_id ),
 			'post_author'    => $author_id,
 			'meta_input'     => array(
-				'_activitypub_source_url' => $attachment_data['url'],
+				'_source_url' => $attachment_data['url'],
 			),
 		);
 
