@@ -93,9 +93,10 @@ class Test_Attachments extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Mock HTTP download for remote URLs (for error testing).
+	 * Mock HTTP download for remote URLs.
 	 *
 	 * This follows the WordPress core pattern for mocking download_url().
+	 * Handles all test URLs for both attachment and inline image tests.
 	 *
 	 * @param mixed  $response The response to return.
 	 * @param array  $parsed_args The parsed arguments.
@@ -103,8 +104,8 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 * @return mixed The mocked response or original response.
 	 */
 	public function mock_download_url( $response, $parsed_args, $url ) {
-		// Mock successful downloads by copying test image to the temp file.
-		if ( 'https://example.com/image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
+		// Accept any URL that matches the example.com domain pattern (except missing.jpg).
+		if ( preg_match( '#^https://example\.com/(?!missing\.jpg).+#', $url ) && isset( $parsed_args['filename'] ) ) {
 			copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
 
 			return array(
@@ -402,5 +403,215 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$post = get_post( self::$post_id );
 		$this->assertStringNotContainsString( "\n\n\n", $post->post_content );
 		$this->assertStringStartsWith( '<!--', $post->post_content );
+	}
+
+	/**
+	 * Test inline image processing without attachments.
+	 *
+	 * @covers ::process_inline_images
+	 */
+	public function test_process_inline_images_only() {
+		// Create a post with inline images.
+		$post_content = '<p>Check out this image: <img src="https://example.com/image1.jpg" alt="Test image"> and this one <img src="https://example.com/image2.png"  alt=""/></p>';
+		$post_id      = self::factory()->post->create(
+			array(
+				'post_content' => $post_content,
+				'post_type'    => 'ap_post',
+			)
+		);
+
+		// Process inline images.
+		Attachments::process( array(), $post_id, self::$author_id );
+
+		// Get updated post.
+		$post = \get_post( $post_id );
+
+		// Verify images were replaced with local URLs.
+		$this->assertStringNotContainsString( 'https://example.com/image1.jpg', $post->post_content );
+		$this->assertStringNotContainsString( 'https://example.com/image2.png', $post->post_content );
+		$this->assertStringContainsString( 'wp-content/uploads', $post->post_content );
+
+		// Verify attachments were created.
+		$attachments = \get_attached_media( '', $post_id );
+		$this->assertCount( 2, $attachments );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test inline images with overlapping attachments.
+	 *
+	 * @covers ::process
+	 * @covers ::process_inline_images
+	 */
+	public function test_inline_images_with_attachment_overlap() {
+		// Create a post with inline images.
+		$post_content = '<p>Inline image: <img src="https://example.com/shared.jpg" alt="Shared"> and unique: <img src="https://example.com/inline-only.jpg"  alt=""/></p>';
+		$post_id      = self::factory()->post->create(
+			array(
+				'post_content' => $post_content,
+				'post_type'    => 'ap_post',
+			)
+		);
+
+		// Attachments array with one overlapping and one unique.
+		$attachments = array(
+			array(
+				'type'      => 'Image',
+				'url'       => 'https://example.com/shared.jpg',
+				'mediaType' => 'image/jpeg',
+				'name'      => 'Shared image',
+			),
+			array(
+				'type'      => 'Image',
+				'url'       => 'https://example.com/attachment-only.jpg',
+				'mediaType' => 'image/jpeg',
+				'name'      => 'Attachment only',
+			),
+		);
+
+		// Process attachments (which also processes inline images).
+		Attachments::process( $attachments, $post_id, self::$author_id );
+
+		// Get updated post.
+		$post = \get_post( $post_id );
+
+		// Verify inline images were replaced.
+		$this->assertStringNotContainsString( 'https://example.com/shared.jpg', $post->post_content );
+		$this->assertStringNotContainsString( 'https://example.com/inline-only.jpg', $post->post_content );
+		$this->assertStringContainsString( 'wp-content/uploads', $post->post_content );
+
+		// Verify correct number of attachments (no duplicates).
+		$attachments = \get_attached_media( '', $post_id );
+		$this->assertCount( 3, $attachments ); // shared.jpg, inline-only.jpg, attachment-only.jpg.
+
+		// Verify gallery was added for attachment-only.jpg.
+		$this->assertStringContainsString( '<!-- wp:gallery', $post->post_content );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test inline images without any overlap with attachments.
+	 *
+	 * @covers ::process
+	 * @covers ::process_inline_images
+	 */
+	public function test_inline_images_no_overlap() {
+		// Create a post with inline images.
+		$post_content = '<p>First: <img src="https://example.com/inline1.jpg" alt=""> Second: <img src="https://example.com/inline2.jpg" alt=""></p>';
+		$post_id      = self::factory()->post->create(
+			array(
+				'post_content' => $post_content,
+				'post_type'    => 'ap_post',
+			)
+		);
+
+		// Completely different attachments.
+		$attachments = array(
+			array(
+				'type'      => 'Image',
+				'url'       => 'https://example.com/attachment1.jpg',
+				'mediaType' => 'image/jpeg',
+				'name'      => 'Attachment 1',
+			),
+			array(
+				'type'      => 'Image',
+				'url'       => 'https://example.com/attachment2.jpg',
+				'mediaType' => 'image/jpeg',
+				'name'      => 'Attachment 2',
+			),
+		);
+
+		// Process attachments.
+		Attachments::process( $attachments, $post_id, self::$author_id );
+
+		// Get updated post.
+		$post = \get_post( $post_id );
+
+		// Verify all inline images were replaced.
+		$this->assertStringNotContainsString( 'https://example.com/inline1.jpg', $post->post_content );
+		$this->assertStringNotContainsString( 'https://example.com/inline2.jpg', $post->post_content );
+
+		// Verify all 4 images are attached (2 inline + 2 attachments).
+		$attachments = \get_attached_media( '', $post_id );
+		$this->assertCount( 4, $attachments );
+
+		// Verify gallery was added for the attachment images.
+		$this->assertStringContainsString( '<!-- wp:gallery', $post->post_content );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test that duplicate inline images are not processed twice.
+	 *
+	 * @covers ::process_inline_images
+	 */
+	public function test_duplicate_inline_images() {
+		// Create a post with duplicate inline images.
+		$post_content = '<p>Image 1: <img src="https://example.com/same.jpg" alt=""> Image 2: <img src="https://example.com/same.jpg" alt=""></p>';
+		$post_id      = self::factory()->post->create(
+			array(
+				'post_content' => $post_content,
+				'post_type'    => 'ap_post',
+			)
+		);
+
+		// Process with empty attachments array.
+		Attachments::process( array(), $post_id, self::$author_id );
+
+		// Verify only one attachment was created despite duplicate URLs.
+		$attachments = \get_attached_media( '', $post_id );
+		$this->assertCount( 1, $attachments );
+
+		// Get updated post.
+		$post = \get_post( $post_id );
+
+		// Both instances should be replaced with the same local URL.
+		$this->assertStringNotContainsString( 'https://example.com/same.jpg', $post->post_content );
+		preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches );
+		$this->assertCount( 2, $matches[1] );
+		$this->assertEquals( $matches[1][0], $matches[1][1] ); // Both should have same URL.
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test inline image processing with invalid URLs.
+	 *
+	 * @covers ::process_inline_images
+	 */
+	public function test_inline_images_with_invalid_urls() {
+		// Create a post with valid and invalid image URLs.
+		$post_content = '<p>Valid: <img src="https://example.com/valid.jpg" alt=""> Invalid: <img src="not-a-url" alt=""> Data URI: <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" alt=""></p>';
+		$post_id      = self::factory()->post->create(
+			array(
+				'post_content' => $post_content,
+				'post_type'    => 'ap_post',
+			)
+		);
+
+		// Process inline images.
+		Attachments::process( array(), $post_id, self::$author_id );
+
+		// Get updated post.
+		$post = \get_post( $post_id );
+
+		// Only valid URL should be replaced.
+		$this->assertStringNotContainsString( 'https://example.com/valid.jpg', $post->post_content );
+		$this->assertStringContainsString( 'not-a-url', $post->post_content ); // Invalid URL unchanged.
+		$this->assertStringContainsString( 'base64', $post->post_content ); // Data URI still present (may be modified by WordPress).
+
+		// Only one attachment should be created.
+		$attachments = \get_attached_media( '', $post_id );
+		$this->assertCount( 1, $attachments );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
 	}
 }

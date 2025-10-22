@@ -91,6 +91,9 @@ class Attachments {
 	 * @return array Array of attachment IDs.
 	 */
 	public static function process( $attachments, $post_id, $author_id = 0 ) {
+		// First, process inline images from the post content.
+		$inline_mappings = self::process_inline_images( $post_id, $author_id );
+
 		if ( empty( $attachments ) || ! is_array( $attachments ) ) {
 			return array();
 		}
@@ -100,6 +103,11 @@ class Attachments {
 			$attachment_data = self::normalize_attachment( $attachment );
 
 			if ( empty( $attachment_data['url'] ) ) {
+				continue;
+			}
+
+			// Skip if this URL was already processed as an inline image.
+			if ( isset( $inline_mappings[ $attachment_data['url'] ] ) ) {
 				continue;
 			}
 
@@ -116,6 +124,84 @@ class Attachments {
 		}
 
 		return $attachment_ids;
+	}
+
+	/**
+	 * Check if an attachment with the same source URL already exists for a post.
+	 *
+	 * @param string $source_url The source URL to check.
+	 * @param int    $post_id    The post ID to check attachments for.
+	 *
+	 * @return int|false The existing attachment ID or false if not found.
+	 */
+	private static function get_existing_attachment( $source_url, $post_id ) {
+		foreach ( \get_attached_media( '', $post_id ) as $attachment ) {
+			if ( \get_post_meta( $attachment->ID, '_source_url', true ) === $source_url ) {
+				return $attachment->ID;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Process inline images from post content.
+	 *
+	 * @param int $post_id    The post ID.
+	 * @param int $author_id  Optional. User ID to set as attachment author. Default 0.
+	 *
+	 * @return array Array of URL mappings (old URL => new URL).
+	 */
+	private static function process_inline_images( $post_id, $author_id = 0 ) {
+		$post = \get_post( $post_id );
+		if ( ! $post || empty( $post->post_content ) ) {
+			return array();
+		}
+
+		// Find all img tags in the content.
+		preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches );
+
+		if ( empty( $matches[1] ) ) {
+			return array();
+		}
+
+		$url_mappings = array();
+		$content      = $post->post_content;
+
+		foreach ( $matches[1] as $image_url ) {
+			// Skip if already processed or is a local URL.
+			if ( isset( $url_mappings[ $image_url ] ) ) {
+				continue;
+			}
+
+			// Check if this image was already processed as an attachment.
+			$attachment_id = self::get_existing_attachment( $image_url, $post_id );
+			if ( ! $attachment_id ) {
+				$attachment_id = self::save_attachment( array( 'url' => $image_url ), $post_id, $author_id );
+
+				if ( \is_wp_error( $attachment_id ) ) {
+					continue;
+				}
+			}
+
+			$new_url = \wp_get_attachment_url( $attachment_id );
+			if ( $new_url ) {
+				$url_mappings[ $image_url ] = $new_url;
+				$content                    = str_replace( $image_url, $new_url, $content );
+			}
+		}
+
+		// Update post content if URLs were replaced.
+		if ( ! empty( $url_mappings ) ) {
+			\wp_update_post(
+				array(
+					'ID'           => $post_id,
+					'post_content' => $content,
+				)
+			);
+		}
+
+		return $url_mappings;
 	}
 
 	/**
