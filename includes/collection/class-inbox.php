@@ -28,6 +28,20 @@ class Inbox {
 	const POST_TYPE = 'ap_inbox';
 
 	/**
+	 * Context for user inbox requests.
+	 *
+	 * @var string
+	 */
+	const CONTEXT_INBOX = 'inbox';
+
+	/**
+	 * Context for shared inbox requests.
+	 *
+	 * @var string
+	 */
+	const CONTEXT_SHARED_INBOX = 'shared_inbox';
+
+	/**
 	 * Add an activity to the inbox.
 	 *
 	 * @param Activity|\WP_Error $activity   The Activity object.
