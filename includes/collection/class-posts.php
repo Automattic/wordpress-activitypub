@@ -134,7 +134,7 @@ class Posts {
 		$actor_id = \get_post_meta( $post_id, '_activitypub_remote_actor_id', true );
 
 		// Process attachments if present and we have an actor ID.
-		if ( $actor_id && self::should_update_attachments( $post_id, $activity['object']['attachment'] ?? array() ) ) {
+		if ( $actor_id && self::has_updated_attachments( $post_id, $activity['object']['attachment'] ?? array() ) ) {
 			// Delete existing attachments for this post.
 			foreach ( \get_attached_media( '', $post_id ) as $attachment ) {
 				\wp_delete_attachment( $attachment->ID, true );
@@ -221,20 +221,15 @@ class Posts {
 	}
 
 	/**
-	 * Check if attachments should be updated for a post.
+	 * Check if attachments have been updated by comparing source URLs.
 	 *
 	 * @param int   $post_id     The post ID.
 	 * @param array $attachments Array of new attachment objects from ActivityPub.
 	 *
-	 * @return bool True if attachments should be updated, false otherwise.
+	 * @return bool True if attachments have changed, false otherwise.
 	 */
-	private static function should_update_attachments( $post_id, $attachments ) {
+	private static function has_updated_attachments( $post_id, $attachments ) {
 		if ( empty( $attachments ) ) {
-			return false;
-		}
-
-		// Skip attachment updates if post was created less than 5 seconds ago (likely race condition).
-		if ( ( time() - \get_post_timestamp( $post_id ) ) < 5 ) {
 			return false;
 		}
 
@@ -242,7 +237,7 @@ class Posts {
 		$attached_media = \get_attached_media( '', $post_id );
 
 		if ( empty( $attached_media ) ) {
-			// No existing attachments, but we have new ones => should update.
+			// No existing attachments, but we have new ones => changed.
 			return true;
 		}
 
