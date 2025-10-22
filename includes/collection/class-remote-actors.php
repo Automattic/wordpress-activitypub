@@ -514,7 +514,7 @@ class Remote_Actors {
 
 		// If it's an email-like webfinger address, resolve it.
 		if ( \filter_var( $actor, FILTER_VALIDATE_EMAIL ) ) {
-			$resolved = \Activitypub\Webfinger::resolve( $actor );
+			$resolved = Webfinger::resolve( $actor );
 			return \is_wp_error( $resolved ) ? null : object_to_uri( $resolved );
 		}
 

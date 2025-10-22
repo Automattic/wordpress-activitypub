@@ -10,7 +10,7 @@ test.describe( 'ActivityPub Inbox REST API', () => {
 	test.beforeAll( async ( { requestUtils } ) => {
 		// Use the default test user
 		testUserId = 1;
-		inboxEndpoint = `/activitypub/1.0/users/${ testUserId }/inbox`;
+		inboxEndpoint = `/activitypub/1.0/actors/${ testUserId }/inbox`;
 	} );
 
 	test( 'should return 200 status code for inbox GET endpoint', async ( { requestUtils } ) => {
