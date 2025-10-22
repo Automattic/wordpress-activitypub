@@ -19,6 +19,22 @@ class Attachments {
 	 */
 	public static function init() {
 		\add_action( 'pre_get_posts', array( self::class, 'maybe_hide_from_media_library' ), 999 );
+		\add_action( 'before_delete_post', array( self::class, 'delete_attachments_with_post' ) );
+	}
+
+	/**
+	 * Delete attachments when an ap_post is deleted.
+	 *
+	 * @param int $post_id The post ID being deleted.
+	 */
+	public static function delete_attachments_with_post( $post_id ) {
+		if ( Posts::POST_TYPE !== \get_post_type( $post_id ) ) {
+			return;
+		}
+
+		foreach ( \get_attached_media( '', $post_id ) as $attachment ) {
+			\wp_delete_attachment( $attachment->ID, true );
+		}
 	}
 
 	/**
