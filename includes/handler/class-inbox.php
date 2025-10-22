@@ -34,12 +34,12 @@ class Inbox {
 	 * Supports both single user_id (int) and multiple user_ids (array).
 	 *
 	 * @param array              $data         The data array.
-	 * @param int|array          $user_id      The id of the local blog-user, or array of user IDs.
+	 * @param int|array          $user_ids     The id of the local blog-user, or array of user IDs.
 	 * @param string             $type         The type of the activity.
 	 * @param Activity|\WP_Error $activity     The Activity object.
 	 * @param string             $context      The context of the request (Inbox_Collection::CONTEXT_INBOX or Inbox_Collection::CONTEXT_SHARED_INBOX).
 	 */
-	public static function handle_inbox_requests( $data, $user_id, $type, $activity, $context = Inbox_Collection::CONTEXT_INBOX ) {
+	public static function handle_inbox_requests( $data, $user_ids, $type, $activity, $context = Inbox_Collection::CONTEXT_INBOX ) {
 		$inbox_id = null;
 
 		/**
@@ -70,11 +70,11 @@ class Inbox {
 
 		if ( ! \is_wp_error( $inbox_id ) ) {
 			// Pass user_id as-is (can be int or array) to Inbox_Collection::add().
-			$inbox_id = Inbox_Collection::add( $activity, $user_id );
+			$inbox_id = Inbox_Collection::add( $activity, $user_ids );
 		}
 
 		// Normalize user_id to array for action hooks.
-		$user_ids = is_array( $user_id ) ? $user_id : array( $user_id );
+		$user_ids = is_array( $user_ids ) ? $user_ids : array( $user_ids );
 
 		/**
 		 * Fires after an ActivityPub Inbox activity has been handled.
