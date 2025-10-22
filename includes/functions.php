@@ -1811,3 +1811,20 @@ function extract_name_from_uri( $uri ) {
 
 	return $name;
 }
+
+/**
+ * Get the authority (scheme + host) from a URL.
+ *
+ * @param string $url The URL to parse.
+ *
+ * @return string|false The authority, or false on failure.
+ */
+function get_url_authority( $url ) {
+	$parsed = wp_parse_url( $url );
+
+	if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+		return false;
+	}
+
+	return $parsed['scheme'] . '://' . $parsed['host'];
+}

@@ -14,6 +14,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Scheduler\Actor;
+use Activitypub\Scheduler\Collection_Sync;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Scheduler\Post;
 
@@ -60,6 +61,7 @@ class Scheduler {
 	public static function register_schedulers() {
 		Post::init();
 		Actor::init();
+		Collection_Sync::init();
 		Comment::init();
 
 		/**

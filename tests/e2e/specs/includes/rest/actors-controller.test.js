@@ -10,7 +10,7 @@ test.describe( 'ActivityPub Actors REST API', () => {
 	test.beforeAll( async ( { requestUtils } ) => {
 		// Use the default test user
 		testUserId = 1;
-		actorEndpoint = `/activitypub/1.0/users/${ testUserId }`;
+		actorEndpoint = `/activitypub/1.0/actors/${ testUserId }`;
 	} );
 
 	test( 'should return 200 status code for actor endpoint', async ( { requestUtils } ) => {
