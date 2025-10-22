@@ -535,10 +535,11 @@ class Remote_Actors {
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_public_key( $key_id ) {
-		$actor_url = \strip_fragment_from_url( $key_id ); // Strip fragment from URL (Mastodon-style #main-key).
-		$actor_url = \preg_replace( '#/main-key$#', '', $actor_url ); // Also handle GoToSocial-style /main-key path suffix.
+		$actor = get_remote_metadata_by_actor( \strip_fragment_from_url( $key_id ) );
 
-		$actor = get_remote_metadata_by_actor( $actor_url );
+		if ( \is_wp_error( $actor ) ) {
+			$actor = Http::get_remote_object( $key_id );
+		}
 
 		if ( \is_wp_error( $actor ) ) {
 			return new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
