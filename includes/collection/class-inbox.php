@@ -71,7 +71,7 @@ class Inbox {
 		$existing = self::get_by_guid( $activity->get_id() );
 
 		// If activity exists, add new recipients to it.
-		if ( ! \is_wp_error( $existing ) && $existing instanceof \WP_Post ) {
+		if ( $existing instanceof \WP_Post ) {
 			foreach ( $recipients as $user_id ) {
 				self::add_recipient( $existing->ID, $user_id );
 			}
