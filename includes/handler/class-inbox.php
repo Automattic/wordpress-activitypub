@@ -20,6 +20,7 @@ class Inbox {
 	public static function init() {
 		// Inbox handler with middleware to filter shared inbox requests.
 		\add_action( 'activitypub_inbox', array( self::class, 'maybe_handle_inbox_request' ), 10, 5 );
+
 		// Shared inbox handler (processes directly without filtering).
 		\add_action( 'activitypub_inbox_shared', array( self::class, 'handle_inbox_requests' ), 10, 5 );
 	}
