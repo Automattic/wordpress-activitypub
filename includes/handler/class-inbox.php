@@ -96,7 +96,7 @@ class Inbox {
 		}
 
 		// Normalize user_id to array for action hooks.
-		$user_ids = is_array( $user_ids ) ? $user_ids : array( $user_ids );
+		$user_ids = (array) $user_ids;
 
 		/**
 		 * Fires after an ActivityPub Inbox activity has been handled.
