@@ -7,7 +7,7 @@
 
 namespace Activitypub\Integration;
 
-use function Activitypub\is_plugin_active_with_fallback;
+use function Activitypub\is_plugin_active;
 
 /**
  * LiteSpeed Cache integration.
@@ -46,7 +46,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 */
 	public static function init() {
 		// Add rules if LiteSpeed Cache is active and rules aren't set.
-		if ( is_plugin_active_with_fallback( 'litespeed-cache/litespeed-cache.php' ) && ! \get_option( self::$option_name ) ) {
+		if ( is_plugin_active( 'litespeed-cache/litespeed-cache.php' ) && ! \get_option( self::$option_name ) ) {
 			self::add_htaccess_rules();
 		}
 
@@ -83,7 +83,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 * @return array The site health tests with the LiteSpeed Cache config test.
 	 */
 	public static function maybe_add_site_health( $tests ) {
-		if ( ! is_plugin_active_with_fallback( 'litespeed-cache/litespeed-cache.php' ) ) {
+		if ( ! is_plugin_active( 'litespeed-cache/litespeed-cache.php' ) ) {
 			return $tests;
 		}
 

@@ -7,7 +7,7 @@
 
 namespace Activitypub\Integration;
 
-use function Activitypub\is_plugin_active_with_fallback;
+use function Activitypub\is_plugin_active;
 
 /**
  * Surge Cache integration.
@@ -40,7 +40,7 @@ class Surge {
 	 */
 	public static function add_cache_config() {
 		// Check if surge is installed and active.
-		if ( ! is_plugin_active_with_fallback( 'surge/surge.php' ) ) {
+		if ( ! is_plugin_active( 'surge/surge.php' ) ) {
 			return;
 		}
 
@@ -141,7 +141,7 @@ class Surge {
 	 * @return array The site health tests with the Surge cache config test.
 	 */
 	public static function maybe_add_site_health( $tests ) {
-		if ( ! is_plugin_active_with_fallback( 'surge/surge.php' ) ) {
+		if ( ! is_plugin_active( 'surge/surge.php' ) ) {
 			return $tests;
 		}
 
