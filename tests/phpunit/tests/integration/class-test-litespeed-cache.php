@@ -1,6 +1,6 @@
 <?php
 /**
- * Test Litespeed Cache integration.
+ * Test LiteSpeed Cache integration.
  *
  * @package Activitypub
  */
@@ -10,7 +10,7 @@ namespace Activitypub\Tests\Integration;
 use Activitypub\Integration\Litespeed_Cache;
 
 /**
- * Test Litespeed Cache integration.
+ * Test LiteSpeed Cache integration.
  *
  * @group integration
  * @coversDefaultClass \Activitypub\Integration\Litespeed_Cache
@@ -75,7 +75,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 		Litespeed_Cache::add_htaccess_rules();
 		// phpcs:ignore
 		$contents = \file_get_contents( $this->htaccess_file );
-		$this->assertStringContainsString( Litespeed_Cache::$rules, $contents, 'Litespeed rules should be present in htaccess' );
+		$this->assertStringContainsString( Litespeed_Cache::$rules, $contents, 'LiteSpeed rules should be present in htaccess' );
 	}
 
 	/**
@@ -90,7 +90,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 		Litespeed_Cache::remove_htaccess_rules();
 		// phpcs:ignore
 		$contents = \file_get_contents( $this->htaccess_file );
-		$this->assertStringNotContainsString( Litespeed_Cache::$rules, $contents, 'Litespeed rules should be removed from htaccess' );
+		$this->assertStringNotContainsString( Litespeed_Cache::$rules, $contents, 'LiteSpeed rules should be removed from htaccess' );
 	}
 
 	/**
@@ -106,7 +106,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 		$contents = \file_get_contents( $this->htaccess_file );
 		// Count number of rule blocks.
 		$rule_count = substr_count( $contents, Litespeed_Cache::$rules );
-		$this->assertEquals( 1, $rule_count, 'Litespeed rules should appear only once' );
+		$this->assertEquals( 1, $rule_count, 'LiteSpeed rules should appear only once' );
 	}
 
 	/**

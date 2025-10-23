@@ -54,7 +54,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	}
 
 	/**
-	 * Add the Litespeed Cache htaccess rules.
+	 * Add the LiteSpeed Cache htaccess rules.
 	 */
 	public static function add_htaccess_rules() {
 		$added_rules = self::append_with_markers( self::$marker, self::$rules );
@@ -67,7 +67,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	}
 
 	/**
-	 * Remove the Litespeed Cache htaccess rules.
+	 * Remove the LiteSpeed Cache htaccess rules.
 	 */
 	public static function remove_htaccess_rules() {
 		self::append_with_markers( self::$marker, '' );
@@ -76,11 +76,11 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	}
 
 	/**
-	 * Maybe add the Litespeed Cache config to the site health.
+	 * Maybe add the LiteSpeed Cache config to the site health.
 	 *
 	 * @param array $tests The site health tests.
 	 *
-	 * @return array The site health tests with the Litespeed Cache config test.
+	 * @return array The site health tests with the LiteSpeed Cache config test.
 	 */
 	public static function maybe_add_site_health( $tests ) {
 		if ( ! is_plugin_active_with_fallback( 'litespeed-cache/litespeed-cache.php' ) ) {
@@ -88,7 +88,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		}
 
 		$tests['direct']['activitypub_test_litespeed_cache_integration'] = array(
-			'label' => \__( 'Litespeed Cache Test', 'activitypub' ),
+			'label' => \__( 'LiteSpeed Cache Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_litespeed_cache_integration' ),
 		);
 
@@ -96,13 +96,13 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	}
 
 	/**
-	 * Test the Litespeed Cache integration.
+	 * Test the LiteSpeed Cache integration.
 	 *
 	 * @return array The test results.
 	 */
 	public static function test_litespeed_cache_integration() {
 		$result = array(
-			'label'       => \__( 'Compatibility with Litespeed Cache', 'activitypub' ),
+			'label'       => \__( 'Compatibility with LiteSpeed Cache', 'activitypub' ),
 			'status'      => 'good',
 			'badge'       => array(
 				'label' => \__( 'ActivityPub', 'activitypub' ),
@@ -110,7 +110,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 			),
 			'description' => \sprintf(
 				'<p>%s</p>',
-				\__( 'Litespeed Cache is well configured to work with ActivityPub.', 'activitypub' )
+				\__( 'LiteSpeed Cache is well configured to work with ActivityPub.', 'activitypub' )
 			),
 			'actions'     => '',
 			'test'        => 'test_litespeed_cache_integration',
@@ -118,15 +118,15 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 
 		if ( ! \get_option( self::$option_name ) ) {
 			$result['status']         = 'critical';
-			$result['label']          = \__( 'Litespeed Cache might not be properly configured.', 'activitypub' );
+			$result['label']          = \__( 'LiteSpeed Cache might not be properly configured.', 'activitypub' );
 			$result['badge']['color'] = 'red';
 			$result['description']    = \sprintf(
 				'<p>%s</p>',
-				\__( 'Litespeed Cache isn&#8217;t currently set up to work with ActivityPub. While this isn&#8217;t a major problem, it&#8217;s a good idea to enable support. Without it, some technical files (like JSON) might accidentally show up in your website&#8217;s cache and be visible to visitors.', 'activitypub' )
+				\__( 'LiteSpeed Cache isn&#8217;t currently set up to work with ActivityPub. While this isn&#8217;t a major problem, it&#8217;s a good idea to enable support. Without it, some technical files (like JSON) might accidentally show up in your website&#8217;s cache and be visible to visitors.', 'activitypub' )
 			);
 			$result['actions']        = \sprintf(
 				'<p>%s</p><pre>%s</pre>',
-				\__( 'To enable the ActivityPub integration with Litespeed Cache, add the following rules to your <code>.htaccess</code> file:', 'activitypub' ),
+				\__( 'To enable the ActivityPub integration with LiteSpeed Cache, add the following rules to your <code>.htaccess</code> file:', 'activitypub' ),
 				\esc_html( self::$rules )
 			);
 		}
