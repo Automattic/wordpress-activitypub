@@ -116,7 +116,7 @@ class Inbox {
 		}
 
 		// Add recipients as separate meta entries after post is created.
-		if ( ! \is_wp_error( $id ) && $id > 0 ) {
+		if ( ! \is_wp_error( $id ) ) {
 			foreach ( $recipients as $user_id ) {
 				self::add_recipient( $id, $user_id );
 			}
