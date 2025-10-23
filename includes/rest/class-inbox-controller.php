@@ -162,9 +162,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			// Filter out blocked recipients.
 			$allowed_recipients = array();
 			foreach ( $recipients as $user_id ) {
-				if ( ! Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
-					$allowed_recipients[] = $user_id;
-				} else {
+				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
 					/**
 					 * ActivityPub inbox disallowed activity for specific user.
 					 *
@@ -174,6 +172,33 @@ class Inbox_Controller extends \WP_REST_Controller {
 					 * @param Activity|\WP_Error $activity The Activity object.
 					 */
 					\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
+				} else {
+					$allowed_recipients[] = $user_id;
+
+					/**
+					 * ActivityPub inbox action.
+					 *
+					 * @deprecated unreleased Support activitypub_inbox_shared instead to avoid duplicate processing.
+					 *
+					 * @param array              $data     The data array.
+					 * @param int                $user_id  The user ID.
+					 * @param string             $type     The type of the activity.
+					 * @param Activity|\WP_Error $activity The Activity object.
+					 * @param string             $context  The context of the request (shared_inbox when called from shared inbox endpoint).
+					 */
+					\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity, Inbox::CONTEXT_SHARED_INBOX );
+
+					/**
+					 * ActivityPub inbox action for specific activity types.
+					 *
+					 * @deprecated unreleased Support activitypub_inbox_shared_{type} instead to avoid duplicate processing.
+					 *
+					 * @param array              $data     The data array.
+					 * @param int                $user_id  The user ID.
+					 * @param Activity|\WP_Error $activity The Activity object.
+					 * @param string             $context  The context of the request (shared_inbox when called from shared inbox endpoint).
+					 */
+					\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, Inbox::CONTEXT_SHARED_INBOX );
 				}
 			}
 
@@ -344,43 +369,5 @@ class Inbox_Controller extends \WP_REST_Controller {
 		}
 
 		return array_unique( array_map( 'intval', $user_ids ) );
-	}
-
-	/**
-	 * Trigger inbox actions for allowed recipients.
-	 *
-	 * @param array              $data               The data array.
-	 * @param array              $allowed_recipients Array of user IDs.
-	 * @param string             $type               The type of the activity.
-	 * @param Activity|\WP_Error $activity           The Activity object.
-	 * @param string             $context            The context of the request (shared_inbox when called from shared inbox endpoint).
-	 */
-	public function trigger_inbox_actions( array $data, array $allowed_recipients, $type, $activity, $context ) {
-		foreach ( $allowed_recipients as $user_id ) {
-			/**
-			 * ActivityPub inbox action.
-			 *
-			 * @deprecated unreleased Support activitypub_inbox_shared instead to avoid duplicate processing.
-			 *
-			 * @param array              $data     The data array.
-			 * @param int                $user_id  The user ID.
-			 * @param string             $type     The type of the activity.
-			 * @param Activity|\WP_Error $activity The Activity object.
-			 * @param string             $context  The context of the request (shared_inbox when called from shared inbox endpoint).
-			 */
-			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity, $context );
-
-			/**
-			 * ActivityPub inbox action for specific activity types.
-			 *
-			 * @deprecated unreleased Support activitypub_inbox_shared_{type} instead to avoid duplicate processing.
-			 *
-			 * @param array              $data     The data array.
-			 * @param int                $user_id  The user ID.
-			 * @param Activity|\WP_Error $activity The Activity object.
-			 * @param string             $context  The context of the request (shared_inbox when called from shared inbox endpoint).
-			 */
-			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, $context );
-		}
 	}
 }

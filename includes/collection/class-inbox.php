@@ -46,7 +46,6 @@ class Inbox {
 	 *
 	 * @param Activity|\WP_Error $activity   The Activity object.
 	 * @param int|array          $recipients The id(s) of the local blog-user(s).
-	 *                                       Accepts single int for backward compatibility.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
@@ -69,7 +68,7 @@ class Inbox {
 		}
 
 		// Sanitize recipients.
-		$recipients = \array_map( 'absint', $recipients );
+		$recipients = \array_map( 'absint', (array) $recipients );
 		$recipients = \array_unique( $recipients );
 		$recipients = \array_values( $recipients );
 
@@ -85,7 +84,7 @@ class Inbox {
 		$existing = self::get_by_guid( $activity->get_id() );
 
 		// If activity exists, add new recipients to it.
-		if ( ! \is_wp_error( $existing ) && $existing instanceof \WP_Post ) {
+		if ( $existing instanceof \WP_Post ) {
 			foreach ( $recipients as $user_id ) {
 				self::add_recipient( $existing->ID, $user_id );
 			}
@@ -130,7 +129,7 @@ class Inbox {
 		}
 
 		// Add recipients as separate meta entries after post is created.
-		if ( ! \is_wp_error( $id ) && $id > 0 ) {
+		if ( ! \is_wp_error( $id ) ) {
 			foreach ( $recipients as $user_id ) {
 				self::add_recipient( $id, $user_id );
 			}
