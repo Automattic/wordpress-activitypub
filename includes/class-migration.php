@@ -210,7 +210,7 @@ class Migration {
 		}
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
-			self::cleanup_inbox();
+			self::clean_up_inbox();
 		}
 
 		// Ensure all required cron schedules are registered.
@@ -1057,12 +1057,12 @@ class Migration {
 	}
 
 	/**
-	 * Cleanup inbox items for shared inbox migration.
+	 * Clean up inbox items for shared inbox migration.
 	 *
 	 * Deletes all existing inbox items to prepare for the new shared inbox structure
 	 * where activities are stored once with multiple recipients as metadata.
 	 */
-	private static function cleanup_inbox() {
+	private static function clean_up_inbox() {
 		global $wpdb;
 
 		// Get all inbox post IDs.

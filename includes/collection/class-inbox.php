@@ -63,19 +63,12 @@ class Inbox {
 		// Sanitize recipients.
 		$recipients = \array_map( 'absint', $recipients );
 		$recipients = \array_unique( $recipients );
-		// Filter out null/false but keep 0 (blog user).
-		$recipients = \array_filter(
-			$recipients,
-			function ( $value ) {
-				return null !== $value && false !== $value;
-			}
-		);
-		\sort( $recipients );
+		$recipients = \array_filter( $recipients );
 
 		if ( empty( $recipients ) ) {
 			return new \WP_Error(
 				'activitypub_inbox_no_recipients',
-				\__( 'No valid recipients provided', 'activitypub' ),
+				'No valid recipients provided',
 				array( 'status' => 400 )
 			);
 		}
@@ -295,6 +288,7 @@ class Inbox {
 	 */
 	public static function has_recipient( $post_id, $user_id ) {
 		$recipients = self::get_recipients( $post_id );
+
 		return \in_array( (int) $user_id, $recipients, true );
 	}
 
@@ -319,13 +313,7 @@ class Inbox {
 		}
 
 		// Add new recipient as separate meta entry.
-		$result = \add_post_meta( $post_id, '_activitypub_user_id', $user_id, false );
-
-		if ( $result ) {
-			\clean_post_cache( $post_id );
-		}
-
-		return (bool) $result;
+		return (bool) \add_post_meta( $post_id, '_activitypub_user_id', $user_id, false );
 	}
 
 	/**
@@ -338,19 +326,14 @@ class Inbox {
 	 */
 	public static function remove_recipient( $post_id, $user_id ) {
 		$user_id = (int) $user_id;
+
 		// Allow 0 for blog user, but reject negative values.
 		if ( $user_id < 0 ) {
 			return false;
 		}
 
 		// Delete the specific meta entry with this value.
-		$result = \delete_post_meta( $post_id, '_activitypub_user_id', $user_id );
-
-		if ( $result ) {
-			\clean_post_cache( $post_id );
-		}
-
-		return $result;
+		return \delete_post_meta( $post_id, '_activitypub_user_id', $user_id );
 	}
 
 	/**
@@ -374,7 +357,7 @@ class Inbox {
 		if ( ! self::has_recipient( $post->ID, $user_id ) ) {
 			return new \WP_Error(
 				'activitypub_inbox_not_recipient',
-				\__( 'User is not a recipient of this activity', 'activitypub' ),
+				'User is not a recipient of this activity',
 				array( 'status' => 404 )
 			);
 		}
