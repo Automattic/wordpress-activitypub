@@ -351,7 +351,7 @@ class Mastodon {
 				// Prepend archive path to attachment URLs for local files.
 				$attachments = array_map( array( self::class, 'prepend_archive_path' ), $post->object->attachment );
 
-				Attachments::process( $attachments, $post_id, self::$author );
+				Attachments::import( $attachments, $post_id, self::$author );
 			}
 
 			// phpcs:ignore

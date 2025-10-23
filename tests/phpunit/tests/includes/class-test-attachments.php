@@ -125,10 +125,10 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test processing empty attachments array.
 	 *
-	 * @covers ::process
+	 * @covers ::import
 	 */
 	public function test_process_empty_attachments() {
-		$result = Attachments::process( array(), self::$post_id, self::$author_id );
+		$result = Attachments::import( array(), self::$post_id, self::$author_id );
 
 		$this->assertIsArray( $result );
 		$this->assertEmpty( $result );
@@ -232,7 +232,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test processing local file attachment (like Mastodon import).
 	 *
-	 * @covers ::process
+	 * @covers ::import
 	 * @covers ::save_attachment
 	 */
 	public function test_process_local_file_attachment() {
@@ -245,7 +245,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Attachments::process( $attachments, self::$post_id, self::$author_id );
+		$result = Attachments::import( $attachments, self::$post_id, self::$author_id );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $result );
@@ -274,7 +274,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test processing multiple local file attachments.
 	 *
-	 * @covers ::process
+	 * @covers ::import
 	 * @covers ::save_attachment
 	 */
 	public function test_process_multiple_attachments() {
@@ -293,7 +293,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Attachments::process( $attachments, self::$post_id, self::$author_id );
+		$result = Attachments::import( $attachments, self::$post_id, self::$author_id );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 2, $result );
@@ -306,7 +306,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test processing attachment with object array (like Mastodon import).
 	 *
-	 * @covers ::process
+	 * @covers ::import
 	 * @covers ::normalize_attachment
 	 */
 	public function test_process_attachment_objects() {
@@ -319,7 +319,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Attachments::process( $attachments, self::$post_id, self::$author_id );
+		$result = Attachments::import( $attachments, self::$post_id, self::$author_id );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $result );
@@ -329,7 +329,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test processing attachment with download error.
 	 *
-	 * @covers ::process
+	 * @covers ::import
 	 * @covers ::save_attachment
 	 */
 	public function test_process_attachment_download_error() {
@@ -342,7 +342,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Attachments::process( $attachments, self::$post_id, self::$author_id );
+		$result = Attachments::import( $attachments, self::$post_id, self::$author_id );
 
 		// Should return empty array when attachment fails.
 		$this->assertIsArray( $result );
@@ -364,7 +364,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Attachments::process( $attachments, self::$post_id, self::$author_id );
+		$result = Attachments::import( $attachments, self::$post_id, self::$author_id );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $result );
@@ -397,7 +397,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 			),
 		);
 
-		Attachments::process( $attachments, self::$post_id, self::$author_id );
+		Attachments::import( $attachments, self::$post_id, self::$author_id );
 
 		// Verify no extra separator when content is empty.
 		$post = get_post( self::$post_id );
@@ -408,7 +408,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test inline image processing without attachments.
 	 *
-	 * @covers ::process_inline_images
+	 * @covers ::import_inline_images
 	 */
 	public function test_process_inline_images_only() {
 		// Create a post with inline images.
@@ -421,7 +421,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		// Process inline images.
-		Attachments::process( array(), $post_id, self::$author_id );
+		Attachments::import( array(), $post_id, self::$author_id );
 
 		// Get updated post.
 		$post = \get_post( $post_id );
@@ -442,8 +442,8 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test inline images with overlapping attachments.
 	 *
-	 * @covers ::process
-	 * @covers ::process_inline_images
+	 * @covers ::import
+	 * @covers ::import_inline_images
 	 */
 	public function test_inline_images_with_attachment_overlap() {
 		// Create a post with inline images.
@@ -472,7 +472,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		// Process attachments (which also processes inline images).
-		Attachments::process( $attachments, $post_id, self::$author_id );
+		Attachments::import( $attachments, $post_id, self::$author_id );
 
 		// Get updated post.
 		$post = \get_post( $post_id );
@@ -496,8 +496,8 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test inline images without any overlap with attachments.
 	 *
-	 * @covers ::process
-	 * @covers ::process_inline_images
+	 * @covers ::import
+	 * @covers ::import_inline_images
 	 */
 	public function test_inline_images_no_overlap() {
 		// Create a post with inline images.
@@ -526,7 +526,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		// Process attachments.
-		Attachments::process( $attachments, $post_id, self::$author_id );
+		Attachments::import( $attachments, $post_id, self::$author_id );
 
 		// Get updated post.
 		$post = \get_post( $post_id );
@@ -549,7 +549,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test that duplicate inline images are not processed twice.
 	 *
-	 * @covers ::process_inline_images
+	 * @covers ::import_inline_images
 	 */
 	public function test_duplicate_inline_images() {
 		// Create a post with duplicate inline images.
@@ -562,7 +562,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		// Process with empty attachments array.
-		Attachments::process( array(), $post_id, self::$author_id );
+		Attachments::import( array(), $post_id, self::$author_id );
 
 		// Verify only one attachment was created despite duplicate URLs.
 		$attachments = \get_attached_media( '', $post_id );
@@ -584,7 +584,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test inline image processing with invalid URLs.
 	 *
-	 * @covers ::process_inline_images
+	 * @covers ::import_inline_images
 	 */
 	public function test_inline_images_with_invalid_urls() {
 		// Create a post with valid and invalid image URLs.
@@ -597,7 +597,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		// Process inline images.
-		Attachments::process( array(), $post_id, self::$author_id );
+		Attachments::import( array(), $post_id, self::$author_id );
 
 		// Get updated post.
 		$post = \get_post( $post_id );

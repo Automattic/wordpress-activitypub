@@ -82,7 +82,7 @@ class Attachments {
 	}
 
 	/**
-	 * Process attachments from an ActivityPub object and attach them to a post.
+	 * Import attachments from an ActivityPub object and attach them to a post.
 	 *
 	 * @param array $attachments Array of ActivityPub attachment objects.
 	 * @param int   $post_id     The post ID to attach files to.
@@ -90,7 +90,7 @@ class Attachments {
 	 *
 	 * @return array Array of attachment IDs.
 	 */
-	public static function process( $attachments, $post_id, $author_id = 0 ) {
+	public static function import( $attachments, $post_id, $author_id = 0 ) {
 		// First, process inline images from the post content.
 		$inline_mappings = self::process_inline_images( $post_id, $author_id );
 
@@ -187,7 +187,7 @@ class Attachments {
 			$new_url = \wp_get_attachment_url( $attachment_id );
 			if ( $new_url ) {
 				$url_mappings[ $image_url ] = $new_url;
-				$content                    = str_replace( $image_url, $new_url, $content );
+				$content                    = \str_replace( $image_url, $new_url, $content );
 			}
 		}
 
@@ -213,8 +213,8 @@ class Attachments {
 	 */
 	private static function normalize_attachment( $attachment ) {
 		// Convert object to array if needed.
-		if ( is_object( $attachment ) ) {
-			$attachment = get_object_vars( $attachment );
+		if ( \is_object( $attachment ) ) {
+			$attachment = \get_object_vars( $attachment );
 		}
 
 		if ( ! is_array( $attachment ) || empty( $attachment['url'] ) ) {
@@ -296,8 +296,8 @@ class Attachments {
 		}
 
 		// Flag to filter out from Media Library.
-		if ( Posts::POST_TYPE === get_post_type( $post_id ) ) {
-			$post_data['meta_input']['_activitypub_import'] = '1';
+		if ( Posts::POST_TYPE === \get_post_type( $post_id ) ) {
+			$post_data['meta_input']['_activitypub_import'] = 'inbox';
 		}
 
 		// Sideload the attachment into WordPress.

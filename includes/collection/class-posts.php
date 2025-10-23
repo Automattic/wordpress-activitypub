@@ -55,7 +55,7 @@ class Posts {
 
 		// Process attachments if present.
 		if ( ! empty( $activity_object['attachment'] ) ) {
-			Attachments::process( $activity_object['attachment'], $post_id );
+			Attachments::import( $activity_object['attachment'], $post_id );
 		}
 
 		return \get_post( $post_id );
@@ -141,7 +141,7 @@ class Posts {
 			}
 
 			// Add new attachments.
-			Attachments::process( $activity['object']['attachment'], $post_id );
+			Attachments::import( $activity['object']['attachment'], $post_id );
 		}
 
 		return \get_post( $post_id );
