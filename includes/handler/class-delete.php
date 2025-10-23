@@ -24,6 +24,7 @@ class Delete {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
+		\add_filter( 'activitypub_defer_inbox_storage', array( self::class, 'defer_inbox_storage' ), 10, 2 );
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
 		\add_action( 'activitypub_delete_remote_actor_interactions', array( self::class, 'delete_interactions' ) );
 		\add_action( 'activitypub_delete_remote_actor_posts', array( self::class, 'delete_posts' ) );
@@ -298,6 +299,22 @@ class Delete {
 	}
 
 	/**
+	 * Defer inbox storage for `Delete` requests.
+	 *
+	 * @param bool  $defer Whether to defer inbox storage.
+	 * @param array $data  The activity data array.
+	 *
+	 * @return bool Whether to defer inbox storage.
+	 */
+	public static function defer_inbox_storage( $defer, $data ) {
+		if ( isset( $data['type'] ) && 'Delete' === $data['type'] ) {
+			return true;
+		}
+
+		return $defer;
+	}
+
+	/**
 	 * Defer signature verification for `Delete` requests.
 	 *
 	 * @param bool             $defer   Whether to defer signature verification.
@@ -312,7 +329,7 @@ class Delete {
 			return true;
 		}
 
-		return false;
+		return $defer;
 	}
 
 	/**

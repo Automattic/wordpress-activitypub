@@ -1173,4 +1173,65 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Clean up.
 		\remove_action( 'added_post_meta', $capture_action, 10 );
 	}
+
+	/**
+	 * Test clean_up_inbox migration deletes all inbox posts and metadata.
+	 */
+	public function test_clean_up_inbox() {
+		// Create some test inbox items.
+		$inbox_ids = array();
+		for ( $i = 1; $i <= 3; $i++ ) {
+			$activity = new \Activitypub\Activity\Activity();
+			$activity->set_id( "https://example.com/activity/cleanup-{$i}" );
+			$activity->set_type( 'Create' );
+			$activity->set_actor( 'https://example.com/actor/cleanup' );
+
+			$object = new \Activitypub\Activity\Base_Object();
+			$object->set_id( "https://example.com/object/cleanup-{$i}" );
+			$object->set_type( 'Note' );
+			$activity->set_object( $object );
+
+			$inbox_id = \Activitypub\Collection\Inbox::add( $activity, array( 1, 2 ) );
+			$this->assertIsInt( $inbox_id );
+			$inbox_ids[] = $inbox_id;
+		}
+
+		// Verify inbox items exist.
+		foreach ( $inbox_ids as $inbox_id ) {
+			$post = \get_post( $inbox_id );
+			$this->assertInstanceOf( 'WP_Post', $post );
+			$this->assertEquals( \Activitypub\Collection\Inbox::POST_TYPE, $post->post_type );
+
+			// Verify metadata exists.
+			$recipients = \Activitypub\Collection\Inbox::get_recipients( $inbox_id );
+			$this->assertCount( 2, $recipients );
+		}
+
+		// Run the cleanup migration using reflection to access private method.
+		$reflection = new \ReflectionClass( \Activitypub\Migration::class );
+		$method     = $reflection->getMethod( 'clean_up_inbox' );
+		$method->setAccessible( true );
+		$method->invoke( null );
+
+		// Verify all inbox items are deleted.
+		foreach ( $inbox_ids as $inbox_id ) {
+			$post = \get_post( $inbox_id );
+			$this->assertNull( $post, 'Inbox post should be deleted' );
+
+			// Verify metadata is also deleted.
+			$recipients = \get_post_meta( $inbox_id, '_activitypub_user_id', false );
+			$this->assertEmpty( $recipients, 'Metadata should be deleted' );
+		}
+
+		// Verify no inbox posts remain.
+		$remaining_posts = \get_posts(
+			array(
+				'post_type'   => \Activitypub\Collection\Inbox::POST_TYPE,
+				'post_status' => 'any',
+				'numberposts' => -1,
+			)
+		);
+
+		$this->assertEmpty( $remaining_posts, 'No inbox posts should remain after cleanup' );
+	}
 }

@@ -55,6 +55,14 @@ class Inbox {
 			return $activity;
 		}
 
+		if ( ! $activity ) {
+			return new \WP_Error(
+				'activitypub_inbox_invalid_activity',
+				'Invalid activity provided',
+				array( 'status' => 400 )
+			);
+		}
+
 		// Backward compatibility: convert single user_id to array.
 		if ( ! \is_array( $recipients ) ) {
 			$recipients = array( (int) $recipients );

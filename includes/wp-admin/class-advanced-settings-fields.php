@@ -80,15 +80,6 @@ class Advanced_Settings_Fields {
 		);
 
 		\add_settings_field(
-			'activitypub_persist_inbox',
-			\__( 'Inbox', 'activitypub' ),
-			array( self::class, 'render_persist_inbox_field' ),
-			'activitypub_advanced_settings',
-			'activitypub_advanced_settings',
-			array( 'label_for' => 'activitypub_persist_inbox' )
-		);
-
-		\add_settings_field(
 			'activitypub_object_type',
 			\__( 'Activity-Object-Type', 'activitypub' ),
 			array( self::class, 'render_object_type_field' ),
@@ -209,24 +200,6 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			⚠ A reader interface is not available yet. Please follow accounts sparingly—you won't be able to see their posts or shares. This feature is intended for testing the follow functionality. Once fully implemented, it will be enabled by default.
-		</p>
-		<?php
-	}
-
-	/**
-	 * Render inbox collection persistence field.
-	 */
-	public static function render_persist_inbox_field() {
-		$value = \get_option( 'activitypub_persist_inbox', '0' );
-		?>
-		<p>
-			<label>
-				<input type="checkbox" id="activitypub_persist_inbox" name="activitypub_persist_inbox" value="1" <?php checked( '1', $value ); ?> />
-				Persist all incoming Activities.
-			</label>
-		</p>
-		<p class="description">
-			For now, this is only used for debugging purposes. If you have no actual need for this, please keep it disabled to avoid unnecessary database writes. Future versions may enable this feature by default.
 		</p>
 		<?php
 	}
