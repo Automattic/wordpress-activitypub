@@ -21,11 +21,33 @@ class Inbox {
 	public static function init() {
 		// Check if inbox collection persistence is enabled.
 		if ( \get_option( 'activitypub_persist_inbox', '0' ) ) {
-			// Inbox handler (supports both single user_id and multiple user_ids).
-			// Context is passed as 5th parameter from the caller.
-			\add_action( 'activitypub_inbox', array( self::class, 'handle_inbox_requests' ), 10, 5 );
+			// Inbox handler with middleware to filter shared inbox requests.
+			\add_action( 'activitypub_inbox', array( self::class, 'maybe_handle_inbox_request' ), 10, 5 );
+			// Shared inbox handler (processes directly without filtering).
 			\add_action( 'activitypub_inbox_shared', array( self::class, 'handle_inbox_requests' ), 10, 5 );
 		}
+	}
+
+	/**
+	 * Maybe handle inbox request based on context.
+	 *
+	 * Only processes requests with 'inbox' context to prevent duplicate processing
+	 * when shared inbox fires both `activitypub_inbox_shared` and `activitypub_inbox`.
+	 *
+	 * @param array              $data     The data array.
+	 * @param int|array          $user_ids The id of the local blog-user, or array of user IDs.
+	 * @param string             $type     The type of the activity.
+	 * @param Activity|\WP_Error $activity The Activity object.
+	 * @param string             $context  The context of the request.
+	 */
+	public static function maybe_handle_inbox_request( $data, $user_ids, $type, $activity, $context = Inbox_Collection::CONTEXT_INBOX ) {
+		// Ignore shared inbox requests to prevent duplicate processing.
+		if ( Inbox_Collection::CONTEXT_SHARED_INBOX === $context ) {
+			return;
+		}
+
+		// Process inbox requests.
+		self::handle_inbox_requests( $data, $user_ids, $type, $activity, $context );
 	}
 
 	/**
