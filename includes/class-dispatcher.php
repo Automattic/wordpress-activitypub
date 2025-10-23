@@ -33,7 +33,7 @@ class Dispatcher {
 	 * @see https://github.com/tfredrich/RestApiTutorial.com/blob/fd08b0f67f07450521d143b123cd6e1846cb2e3b/content/advanced/responses/retries.md
 	 * @var int[]
 	 */
-	public static $retry_error_codes = array( 400, 408, 429, 500, 502, 503, 504 );
+	public static $retry_error_codes = array( 408, 429, 500, 502, 503, 504 );
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
