@@ -286,7 +286,7 @@ class Dispatcher {
 		\set_transient( $transient_key, $retries, WEEK_IN_SECONDS );
 
 		\wp_schedule_single_event(
-			\time() + ( $attempt * $attempt * self::get_retry_delay_unit() ),
+			\time() + ( $attempt * $attempt * self::get_retry_delay() ),
 			'activitypub_retry_activity',
 			array( $transient_key, $outbox_item_id, $attempt )
 		);
