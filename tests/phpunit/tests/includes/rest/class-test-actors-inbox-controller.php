@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Inbox as Inbox_Collection;
 use Activitypub\Rest\Server;
 
 /**
@@ -427,5 +428,50 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 */
 	public function test_get_item() {
 		// Controller does not implement get_item().
+	}
+
+	/**
+	 * Test context parameter is passed correctly to inbox action hook.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_inbox_context_parameter() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$captured_context = null;
+
+		\add_action(
+			'activitypub_inbox',
+			function ( $data, $user_id, $type, $activity, $context ) use ( &$captured_context ) {
+				$captured_context = $context;
+			},
+			10,
+			5
+		);
+
+		$json = array(
+			'id'     => 'https://remote.example/@id-context',
+			'type'   => 'Create',
+			'actor'  => 'https://remote.example/@test',
+			'object' => array(
+				'id'        => 'https://remote.example/post/context',
+				'type'      => 'Note',
+				'content'   => 'Testing context parameter',
+				'published' => '2020-01-01T00:00:00Z',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		// Verify context parameter was passed correctly as inbox context.
+		$this->assertEquals( Inbox_Collection::CONTEXT_INBOX, $captured_context );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_all_actions( 'activitypub_inbox' );
 	}
 }

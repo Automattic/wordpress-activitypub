@@ -286,7 +286,7 @@ class Inbox {
 			// Fallback for old posts: use post_author.
 			$post = \get_post( $post_id );
 			if ( $post && $post->post_author > 0 ) {
-				$recipients = array( $post->post_author );
+				$recipients = array( (int) $post->post_author );
 			}
 		}
 
