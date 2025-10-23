@@ -638,12 +638,20 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$this->assertTrue( Inbox::has_recipient( $inbox_id, 1 ) );
 		$this->assertTrue( Inbox::has_recipient( $inbox_id, 2 ) );
 
-		// Undo should only get first recipient due to current bug.
-		// This test documents the current behavior.
+		// BUG: Undo only processes the first recipient due to current bug.
+		// See: https://github.com/your-org/your-repo/issues/1234
+		// Expected: Undo should process all recipients for a Follow activity sent to multiple users.
+		// Current: Only the first recipient is processed.
 		$result = Inbox::undo( 'https://remote.example.com/activities/follow-multi' );
 
 		// The result should process (returns error or false when no follower relationship exists).
 		$this->assertTrue( \is_wp_error( $result ) || false === $result, 'Undo should process Follow activities with multiple recipients' );
+
+		// Explicitly verify buggy behavior: only first recipient is affected.
+		// For example, check that recipient 1 is no longer a follower, but recipient 2 is still a follower.
+		// (Assuming Inbox::is_follower checks follower status; adjust as needed for your codebase.)
+		$this->assertFalse( Inbox::is_follower( 1, 'https://remote.example.com/users/testuser' ), 'Recipient 1 should no longer be a follower after undo.' );
+		$this->assertTrue( Inbox::is_follower( 2, 'https://remote.example.com/users/testuser' ), 'Recipient 2 should still be a follower due to bug.' );
 	}
 
 	/**
