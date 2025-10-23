@@ -46,7 +46,6 @@ class Inbox {
 	 *
 	 * @param Activity|\WP_Error $activity   The Activity object.
 	 * @param int|array          $recipients The id(s) of the local blog-user(s).
-	 *                                       Accepts single int for backward compatibility.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
