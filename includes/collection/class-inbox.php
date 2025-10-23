@@ -63,7 +63,7 @@ class Inbox {
 		// Sanitize recipients.
 		$recipients = \array_map( 'absint', $recipients );
 		$recipients = \array_unique( $recipients );
-		$recipients = \array_filter( $recipients );
+		$recipients = \array_values( $recipients );
 
 		if ( empty( $recipients ) ) {
 			return new \WP_Error(
