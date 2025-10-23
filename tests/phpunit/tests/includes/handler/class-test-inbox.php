@@ -495,7 +495,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		// Add filter to defer all Create activities.
 		\add_filter(
-			'activitypub_defer_inbox_storage',
+			'activitypub_skip_inbox_storage',
 			function ( $defer, $data ) {
 				if ( isset( $data['type'] ) && 'Create' === $data['type'] ) {
 					return true;
@@ -522,7 +522,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 		// Hook should NOT fire when storage is deferred.
 		$this->assertFalse( $hook_fired, 'Hook should not fire when storage is deferred' );
 
-		\remove_all_filters( 'activitypub_defer_inbox_storage' );
+		\remove_all_filters( 'activitypub_skip_inbox_storage' );
 		\remove_all_actions( 'activitypub_handled_inbox' );
 	}
 }
