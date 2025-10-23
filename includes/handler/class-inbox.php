@@ -72,7 +72,7 @@ class Inbox {
 		 */
 		$skip = \apply_filters( 'activitypub_skip_inbox_storage', false, $data );
 
-		if ( $defer ) {
+		if ( $skip ) {
 			return;
 		}
 
