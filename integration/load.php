@@ -162,10 +162,6 @@ function plugin_init() {
 \register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'add_cache_config' ) );
 \register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'remove_cache_config' ) );
 
-// Register activation and deactivation hooks for Litespeed Cache integration.
-\register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Litespeed_Cache', 'add_htaccess_rules' ) );
-\register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Litespeed_Cache', 'remove_htaccess_rules' ) );
-
 /**
  * Register the Stream Connector for ActivityPub.
  *

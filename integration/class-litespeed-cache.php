@@ -43,8 +43,10 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 * Initialize the integration.
 	 */
 	public static function init() {
-		\add_action( 'activate_litespeed-cache/litespeed-cache.php', array( self::class, 'add_htaccess_rules' ) );
-		\add_action( 'deactivate_litespeed-cache/litespeed-cache.php', array( self::class, 'remove_htaccess_rules' ) );
+		// Add rules if LiteSpeed Cache is active and rules aren't set.
+		if ( \is_plugin_active( 'litespeed-cache/litespeed-cache.php' ) && ! \get_option( self::$option_name ) ) {
+			self::add_htaccess_rules();
+		}
 
 		\add_filter( 'site_status_tests', array( self::class, 'maybe_add_site_health' ) );
 	}
@@ -55,7 +57,11 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	public static function add_htaccess_rules() {
 		$added_rules = self::append_with_markers( self::$marker, self::$rules );
 
-		\update_option( self::$option_name, $added_rules );
+		if ( $added_rules ) {
+			\update_option( self::$option_name, '1' );
+		} else {
+			\update_option( self::$option_name, '0' );
+		}
 	}
 
 	/**
@@ -108,7 +114,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 			'test'        => 'test_litespeed_cache_integration',
 		);
 
-		if ( '0' === \get_option( self::$option_name, '0' ) ) {
+		if ( ! \get_option( self::$option_name ) ) {
 			$result['status']         = 'critical';
 			$result['label']          = \__( 'Litespeed Cache might not be properly configured.', 'activitypub' );
 			$result['badge']['color'] = 'red';
@@ -127,10 +133,10 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	}
 
 	/**
-	 * Append rules to a file with markers.
+	 * Prepend rules to the top of a file with markers.
 	 *
 	 * @param string $marker The marker to identify the rules in the file.
-	 * @param string $rules  The rules to append.
+	 * @param string $rules  The rules to prepend.
 	 *
 	 * @return bool True on success, false on failure.
 	 */
@@ -149,10 +155,20 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 
 		$htaccess = $wp_filesystem->get_contents( $htaccess_file );
 
+		// If marker exists, remove the old block first.
 		if ( strpos( $htaccess, $marker ) !== false ) {
-			return \insert_with_markers( $htaccess_file, $marker, $rules );
+			// Remove existing marker block.
+			$pattern  = '/# BEGIN ' . preg_quote( $marker, '/' ) . '.*?# END ' . preg_quote( $marker, '/' ) . '\r?\n?/s';
+			$htaccess = preg_replace( $pattern, '', $htaccess );
+			$htaccess = trim( $htaccess );
 		}
 
+		// If rules are empty, just return (for removal case).
+		if ( empty( $rules ) ) {
+			return $wp_filesystem->put_contents( $htaccess_file, $htaccess, FS_CHMOD_FILE );
+		}
+
+		// Prepend new rules to the top of the file.
 		$start_marker = "# BEGIN {$marker}";
 		$end_marker   = "# END {$marker}";
 
