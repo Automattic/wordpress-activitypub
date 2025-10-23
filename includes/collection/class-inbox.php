@@ -63,7 +63,13 @@ class Inbox {
 		// Sanitize recipients.
 		$recipients = \array_map( 'absint', $recipients );
 		$recipients = \array_unique( $recipients );
-		$recipients = \array_filter( $recipients ); // Remove zeros.
+		// Filter out null/false but keep 0 (blog user).
+		$recipients = \array_filter(
+			$recipients,
+			function ( $value ) {
+				return null !== $value && false !== $value;
+			}
+		);
 		\sort( $recipients );
 
 		if ( empty( $recipients ) ) {
@@ -310,7 +316,8 @@ class Inbox {
 	 */
 	public static function add_recipient( $post_id, $user_id ) {
 		$user_id = (int) $user_id;
-		if ( $user_id <= 0 ) {
+		// Allow 0 for blog user, but reject negative values.
+		if ( $user_id < 0 ) {
 			return false;
 		}
 

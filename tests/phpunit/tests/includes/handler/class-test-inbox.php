@@ -14,6 +14,15 @@ use Activitypub\Handler\Inbox;
  */
 class Test_Inbox extends \WP_UnitTestCase {
 	/**
+	 * Set up test environment.
+	 */
+	public function set_up() {
+		parent::set_up();
+		// Enable inbox persistence for tests.
+		\update_option( 'activitypub_persist_inbox', '1' );
+	}
+
+	/**
 	 * Test handle_inbox_requests with various activity scenarios.
 	 *
 	 * @dataProvider inbox_requests_provider
@@ -35,14 +44,14 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$was_successful = false;
 
-		\add_filter(
+		\add_action(
 			'activitypub_handled_inbox',
-			function ( $data, $user_id, $success ) use ( &$was_successful ) {
-				$was_successful = $success;
-				return $data;
+			function ( $data, $user_ids, $type, $activity, $inbox_id, $context ) use ( &$was_successful ) {
+				// Success if inbox_id is an integer, failure if it's a WP_Error.
+				$was_successful = ! \is_wp_error( $inbox_id ) && \is_int( $inbox_id );
 			},
 			10,
-			3
+			6
 		);
 
 		$user_id  = 1;
@@ -53,7 +62,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$this->assertEquals( $expected_success, $was_successful, $description );
 
 		\remove_all_filters( 'activitypub_persist_inbox_activity_types' );
-		\remove_all_filters( 'activitypub_handled_inbox' );
+		\remove_all_actions( 'activitypub_handled_inbox' );
 	}
 
 	/**
