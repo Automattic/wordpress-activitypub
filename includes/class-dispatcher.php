@@ -71,7 +71,7 @@ class Dispatcher {
 		 *
 		 * @param int $retry_delay_unit The retry delay unit in seconds. Default ACTIVITYPUB_OUTBOX_RETRY_DELAY_UNIT.
 		 */
-		return apply_filters( 'activitypub_dispatcher_retry_delay_unit', HOUR_IN_SECONDS );
+		return apply_filters( 'activitypub_dispatcher_retry_delay', HOUR_IN_SECONDS );
 	}
 
 	/**
