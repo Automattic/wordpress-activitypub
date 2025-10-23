@@ -46,12 +46,12 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		\add_action(
 			'activitypub_handled_inbox',
-			function ( $data, $user_ids, $type, $activity, $inbox_id, $context ) use ( &$was_successful ) {
+			function ( $data, $user_ids, $type, $activity, $inbox_id ) use ( &$was_successful ) {
 				// Success if inbox_id is an integer, failure if it's a WP_Error.
 				$was_successful = ! \is_wp_error( $inbox_id ) && \is_int( $inbox_id );
 			},
 			10,
-			6
+			5
 		);
 
 		$user_id  = 1;
