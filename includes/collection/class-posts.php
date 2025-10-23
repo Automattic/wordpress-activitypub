@@ -132,7 +132,7 @@ class Posts {
 	 *
 	 * @param int $id The object ID.
 	 *
-	 * @return bool|int|null The deleted post ID, false on failure, or null if no post to delete.
+	 * @return \WP_Post|false|null Post data on success, false or null on failure.
 	 */
 	public static function delete( $id ) {
 		return \wp_delete_post( $id, true );
@@ -143,7 +143,7 @@ class Posts {
 	 *
 	 * @param string $guid The object GUID.
 	 *
-	 * @return bool|int|null The deleted post ID, false on failure, or null if no post to delete.
+	 * @return \WP_Post|\WP_Error|false|null Post data on success, false or null on failure, or WP_Error if no post to delete.
 	 */
 	public static function delete_by_guid( $guid ) {
 		$post = self::get_by_guid( $guid );

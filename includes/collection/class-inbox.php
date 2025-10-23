@@ -125,7 +125,7 @@ class Inbox {
 	 *
 	 * @param int $id The inbox item id.
 	 *
-	 * @return WP_Post|null The inbox item or null.
+	 * @return \WP_Post|null The inbox item or null.
 	 */
 	public static function get( $id ) {
 		return \get_post( $id );
