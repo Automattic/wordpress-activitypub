@@ -62,7 +62,7 @@ class Inbox {
 	 * @param string             $context      The context of the request (Inbox_Collection::CONTEXT_INBOX or Inbox_Collection::CONTEXT_SHARED_INBOX).
 	 */
 	public static function handle_inbox_requests( $data, $user_ids, $type, $activity, $context = Inbox_Collection::CONTEXT_INBOX ) {
-		$inbox_id = null;
+		$result = null;
 
 		/**
 		 * Filters the activity types to persist in the inbox.
@@ -73,10 +73,10 @@ class Inbox {
 		$activity_types = \array_map( 'Activitypub\camel_to_snake_case', $activity_types );
 
 		if ( ! \in_array( \strtolower( $type ), $activity_types, true ) ) {
-			$inbox_id = new \WP_Error( 'activitypub_inbox_ignored', 'Activity type not configured to be persisted in inbox.' );
+			$result = new \WP_Error( 'activitypub_inbox_ignored', 'Activity type not configured to be persisted in inbox.' );
 		}
 
-		if ( ! \is_wp_error( $inbox_id ) ) {
+		if ( ! \is_wp_error( $result ) ) {
 			/**
 			 * Filters the object types to persist in the inbox.
 			 *
@@ -86,13 +86,13 @@ class Inbox {
 			$object_types = \array_map( 'Activitypub\camel_to_snake_case', $object_types );
 
 			if ( is_array( $data['object'] ) && ( empty( $data['object']['type'] ) || ! \in_array( \strtolower( $data['object']['type'] ), $object_types, true ) ) ) {
-				$inbox_id = new \WP_Error( 'activitypub_inbox_ignored', 'Activity type not configured to be persisted in inbox.' );
+				$result = new \WP_Error( 'activitypub_inbox_ignored', 'Activity type not configured to be persisted in inbox.' );
 			}
 		}
 
-		if ( ! \is_wp_error( $inbox_id ) ) {
+		if ( ! \is_wp_error( $result ) ) {
 			// Pass user_id as-is (can be int or array) to Inbox_Collection::add().
-			$inbox_id = Inbox_Collection::add( $activity, $user_ids );
+			$result = Inbox_Collection::add( $activity, $user_ids );
 		}
 
 		// Normalize user_id to array for action hooks.
@@ -105,10 +105,10 @@ class Inbox {
 		 * @param array              $user_ids The user IDs.
 		 * @param string             $type     The type of the activity.
 		 * @param Activity|\WP_Error $activity The Activity object.
-		 * @param \WP_Error|int      $inbox_id The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param \WP_Error|int      $result   The ID of the inbox item that was created, or WP_Error if failed.
 		 * @param string             $context  The context of the request ('inbox' or 'shared_inbox').
 		 */
-		\do_action( 'activitypub_handled_inbox', $data, $user_ids, $type, $activity, $inbox_id, $context );
+		\do_action( 'activitypub_handled_inbox', $data, $user_ids, $type, $activity, $result, $context );
 
 		/**
 		 * Fires after an ActivityPub Inbox activity has been handled.
