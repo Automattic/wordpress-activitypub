@@ -162,7 +162,17 @@ class Inbox_Controller extends \WP_REST_Controller {
 			// Filter out blocked recipients.
 			$allowed_recipients = array();
 			foreach ( $recipients as $user_id ) {
-				if ( ! Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
+				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
+					/**
+					 * ActivityPub inbox disallowed activity for specific user.
+					 *
+					 * @param array              $data     The data array.
+					 * @param int                $user_id  The user ID.
+					 * @param string             $type     The type of the activity.
+					 * @param Activity|\WP_Error $activity The Activity object.
+					 */
+					\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
+				} else {
 					$allowed_recipients[] = $user_id;
 
 					/**
@@ -189,16 +199,6 @@ class Inbox_Controller extends \WP_REST_Controller {
 					 * @param string             $context  The context of the request (shared_inbox when called from shared inbox endpoint).
 					 */
 					\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, Inbox::CONTEXT_SHARED_INBOX );
-				} else {
-					/**
-					 * ActivityPub inbox disallowed activity for specific user.
-					 *
-					 * @param array              $data     The data array.
-					 * @param int                $user_id  The user ID.
-					 * @param string             $type     The type of the activity.
-					 * @param Activity|\WP_Error $activity The Activity object.
-					 */
-					\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 				}
 			}
 
