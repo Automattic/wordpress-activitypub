@@ -360,6 +360,8 @@ class Inbox_Controller extends \WP_REST_Controller {
 			/**
 			 * ActivityPub inbox action.
 			 *
+			 * @deprecated unreleased Support activitypub_inbox_shared instead to avoid duplicate processing.
+			 *
 			 * @param array              $data     The data array.
 			 * @param int                $user_id  The user ID.
 			 * @param string             $type     The type of the activity.
@@ -371,7 +373,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			/**
 			 * ActivityPub inbox action for specific activity types.
 			 *
-			 * @deprecated Use activitypub_inbox_shared_{type} instead to avoid duplicate processing.
+			 * @deprecated unreleased Support activitypub_inbox_shared_{type} instead to avoid duplicate processing.
 			 *
 			 * @param array              $data     The data array.
 			 * @param int                $user_id  The user ID.
