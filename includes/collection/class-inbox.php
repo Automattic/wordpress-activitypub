@@ -346,7 +346,8 @@ class Inbox {
 	 */
 	public static function remove_recipient( $post_id, $user_id ) {
 		$user_id = (int) $user_id;
-		if ( $user_id <= 0 ) {
+		// Allow 0 for blog user, but reject negative values.
+		if ( $user_id < 0 ) {
 			return false;
 		}
 
