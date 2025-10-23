@@ -37,7 +37,7 @@ class Scheduler {
 	 *
 	 * @return int The pause in seconds.
 	 */
-	public static function get_async_batch_pause() {
+	public static function get_retry_delay() {
 		/**
 		 * Filters the pause between async batches (in seconds).
 		 *
@@ -438,7 +438,7 @@ class Scheduler {
 
 		if ( ! empty( $next ) ) {
 			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event( \time() + self::get_async_batch_pause(), \current_action(), \array_values( $next ) );
+			\wp_schedule_single_event( \time() + self::get_retry_delay(), \current_action(), \array_values( $next ) );
 		}
 	}
 

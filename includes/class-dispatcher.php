@@ -156,7 +156,7 @@ class Dispatcher {
 	 *
 	 * @return array|void The next batch of followers to process, or void if done.
 	 */
-	public static function send_to_followers( $outbox_item_id, $batch_size = null, $offset = 0 ) {
+	public static function send_to_followers( $outbox_item_id, $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset = 0 ) {
 		if ( null === $batch_size ) {
 			$batch_size = self::get_batch_size();
 		}
