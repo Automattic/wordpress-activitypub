@@ -29,12 +29,13 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		\add_action(
 			'activitypub_handled_inbox',
-			function ( $data, $user_ids, $type, $activity, $inbox_id ) use ( &$was_successful ) {
-				// Success if inbox_id is an integer, failure if it's a WP_Error.
-				$was_successful = ! \is_wp_error( $inbox_id ) && \is_int( $inbox_id );
+			// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+			function ( $data, $user_ids, $type, $activity, $result, $context ) use ( &$was_successful ) {
+				// Success if result is an integer, failure if it's a WP_Error.
+				$was_successful = ! \is_wp_error( $result ) && \is_int( $result );
 			},
 			10,
-			5
+			6
 		);
 
 		$user_id  = 1;
@@ -361,26 +362,27 @@ class Test_Inbox extends \WP_UnitTestCase {
 			'actor'  => 'https://example.com/actor/recipients',
 		);
 
-		$inbox_id = null;
+		$result_id = null;
 
 		\add_action(
 			'activitypub_handled_inbox',
-			function ( $data, $user_ids, $type, $activity, $item_id ) use ( &$inbox_id ) {
-				$inbox_id = $item_id;
+			// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+			function ( $data, $user_ids, $type, $activity, $result, $context ) use ( &$result_id ) {
+				$result_id = $result;
 			},
 			10,
-			5
+			6
 		);
 
 		$activity = \Activitypub\Activity\Activity::init_from_array( $activity_data );
 
 		Inbox::handle_inbox_requests( $activity_data, array( 1, 2, 0 ), 'create', $activity );
 
-		$this->assertIsInt( $inbox_id );
-		$this->assertGreaterThan( 0, $inbox_id );
+		$this->assertIsInt( $result_id );
+		$this->assertGreaterThan( 0, $result_id );
 
 		// Verify recipients were stored correctly.
-		$recipients = Inbox_Collection::get_recipients( $inbox_id );
+		$recipients = Inbox_Collection::get_recipients( $result_id );
 		$this->assertCount( 3, $recipients );
 		$this->assertContains( 0, $recipients );
 		$this->assertContains( 1, $recipients );
@@ -403,15 +405,16 @@ class Test_Inbox extends \WP_UnitTestCase {
 			'actor'  => 'https://example.com/actor/error',
 		);
 
-		$captured_inbox_id = null;
+		$captured_result = null;
 
 		\add_action(
 			'activitypub_handled_inbox',
-			function ( $data, $user_ids, $type, $activity, $inbox_id ) use ( &$captured_inbox_id ) {
-				$captured_inbox_id = $inbox_id;
+			// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+			function ( $data, $user_ids, $type, $activity, $result, $context ) use ( &$captured_result ) {
+				$captured_result = $result;
 			},
 			10,
-			5
+			6
 		);
 
 		$error = new \WP_Error( 'test_error', 'Test error message' );
@@ -419,8 +422,8 @@ class Test_Inbox extends \WP_UnitTestCase {
 		Inbox::handle_inbox_requests( $activity_data, 1, 'create', $error );
 
 		// Should still fire the action hook even with WP_Error activity.
-		// In this case, validation should fail and inbox_id should be WP_Error.
-		$this->assertInstanceOf( 'WP_Error', $captured_inbox_id );
+		// In this case, validation should fail and result should be WP_Error.
+		$this->assertInstanceOf( 'WP_Error', $captured_result );
 
 		\remove_all_actions( 'activitypub_handled_inbox' );
 	}
