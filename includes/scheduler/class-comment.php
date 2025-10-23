@@ -137,8 +137,6 @@ class Comment {
 		$announce->set_type( 'Announce' );
 		$announce->set_actor( $blog_actor_id );
 		$announce->set_object( $activity );
-		$announce->set_to( array( $blog_actor_id ) );
-		$announce->set_cc( array( $blog_actor_id ) );
 
 		// Add to outbox with error handling.
 		add_to_outbox( $announce, null, Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
