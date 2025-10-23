@@ -91,8 +91,8 @@ class Attachments {
 	 * @return array Array of attachment IDs.
 	 */
 	public static function import( $attachments, $post_id, $author_id = 0 ) {
-		// First, process inline images from the post content.
-		$inline_mappings = self::process_inline_images( $post_id, $author_id );
+		// First, import inline images from the post content.
+		$inline_mappings = self::import_inline_images( $post_id, $author_id );
 
 		if ( empty( $attachments ) || ! is_array( $attachments ) ) {
 			return array();
@@ -152,7 +152,7 @@ class Attachments {
 	 *
 	 * @return array Array of URL mappings (old URL => new URL).
 	 */
-	private static function process_inline_images( $post_id, $author_id = 0 ) {
+	private static function import_inline_images( $post_id, $author_id = 0 ) {
 		$post = \get_post( $post_id );
 		if ( ! $post || empty( $post->post_content ) ) {
 			return array();

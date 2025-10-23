@@ -412,7 +412,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_process_inline_images_only() {
 		// Create a post with inline images.
-		$post_content = '<p>Check out this image: <img src="https://example.com/image1.jpg" alt="Test image"> and this one <img src="https://example.com/image2.png"  alt=""/></p>';
+		$post_content = '<p>Check out this image: <img src="https://example.com/image1.jpg" alt="Test image"> and this one <img src="https://example.com/image2.png" alt=""/></p>';
 		$post_id      = self::factory()->post->create(
 			array(
 				'post_content' => $post_content,
