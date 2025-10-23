@@ -210,7 +210,7 @@ class Migration {
 		}
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
-			self::migrate_to_inbox_deduplication();
+			self::cleanup_inbox();
 		}
 
 		// Ensure all required cron schedules are registered.
@@ -1062,7 +1062,7 @@ class Migration {
 	 * Deletes all existing inbox items to prepare for the new shared inbox structure
 	 * where activities are stored once with multiple recipients as metadata.
 	 */
-	private static function migrate_to_inbox_deduplication() {
+	private static function cleanup_inbox() {
 		global $wpdb;
 
 		// Get all inbox post IDs.
