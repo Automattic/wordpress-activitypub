@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix logic errors in Move handler: remove redundant assignment and fix variable name collision.
