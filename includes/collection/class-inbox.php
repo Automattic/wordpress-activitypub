@@ -54,13 +54,8 @@ class Inbox {
 			return $activity;
 		}
 
-		// Backward compatibility: convert single user_id to array.
-		if ( ! \is_array( $recipients ) ) {
-			$recipients = array( (int) $recipients );
-		}
-
 		// Sanitize recipients.
-		$recipients = \array_map( 'absint', $recipients );
+		$recipients = \array_map( 'absint', (array) $recipients );
 		$recipients = \array_unique( $recipients );
 		$recipients = \array_values( $recipients );
 
