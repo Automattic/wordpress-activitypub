@@ -116,9 +116,9 @@ class Inbox {
 		 * @param array              $data     The data array.
 		 * @param array              $user_ids The user IDs.
 		 * @param Activity|\WP_Error $activity The Activity object.
-		 * @param \WP_Error|int      $inbox_id The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param \WP_Error|int      $result   The ID of the inbox item that was created, or WP_Error if failed.
 		 * @param string             $context  The context of the request ('inbox' or 'shared_inbox').
 		 */
-		\do_action( 'activitypub_handled_inbox_' . $type, $data, $user_ids, $activity, $inbox_id, $context );
+		\do_action( 'activitypub_handled_inbox_' . $type, $data, $user_ids, $activity, $result, $context );
 	}
 }

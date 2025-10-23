@@ -127,8 +127,6 @@ class Inbox_Controller extends \WP_REST_Controller {
 				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
-
-		\add_action( 'activitypub_inbox_shared', array( $this, 'trigger_inbox_actions' ), 10, 5 );
 	}
 
 	/**
