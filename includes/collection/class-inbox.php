@@ -54,14 +54,6 @@ class Inbox {
 			return $activity;
 		}
 
-		if ( ! $activity ) {
-			return new \WP_Error(
-				'activitypub_inbox_invalid_activity',
-				'Invalid activity provided',
-				array( 'status' => 400 )
-			);
-		}
-
 		// Sanitize recipients.
 		$recipients = \array_map( 'absint', (array) $recipients );
 		$recipients = \array_unique( $recipients );
