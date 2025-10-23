@@ -63,7 +63,7 @@ class Dispatcher {
 	 *
 	 * @return int The retry delay unit in seconds.
 	 */
-	public static function get_retry_delay_unit() {
+	public static function get_retry_delay() {
 		/**
 		 * Filters the retry delay unit (in seconds).
 		 *
