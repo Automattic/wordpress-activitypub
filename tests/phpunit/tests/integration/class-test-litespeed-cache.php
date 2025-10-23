@@ -190,4 +190,112 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
 		\chmod( $this->htaccess_file, 0644 );
 	}
+
+	/**
+	 * Test that rules are removed when LiteSpeed Cache is deactivated.
+	 *
+	 * @covers ::init
+	 * @covers ::remove_htaccess_rules
+	 */
+	public function test_cleanup_when_litespeed_deactivated() {
+		// Simulate rules being previously added.
+		Litespeed_Cache::add_htaccess_rules();
+		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ) );
+
+		// Mock that LiteSpeed is NOT active.
+		\add_filter(
+			'activitypub_is_plugin_active',
+			function ( $is_active, $plugin ) {
+				if ( 'litespeed-cache/litespeed-cache.php' === $plugin ) {
+					return false;
+				}
+				return $is_active;
+			},
+			10,
+			2
+		);
+
+		// Run init (should detect LiteSpeed is deactivated and clean up).
+		Litespeed_Cache::init();
+
+		// Verify cleanup occurred.
+		$this->assertFalse( \get_option( Litespeed_Cache::$option_name ), 'Option should be deleted when LiteSpeed is deactivated' );
+
+		// phpcs:ignore
+		$contents = \file_get_contents( $this->htaccess_file );
+		$this->assertStringNotContainsString( Litespeed_Cache::$rules, $contents, 'Rules should be removed when LiteSpeed is deactivated' );
+
+		\remove_all_filters( 'activitypub_is_plugin_active' );
+	}
+
+	/**
+	 * Test that rules are cleaned up when ActivityPub is deactivated.
+	 *
+	 * @covers \Activitypub\Activitypub::deactivate
+	 */
+	public function test_cleanup_on_activitypub_deactivation() {
+		// Add rules first.
+		Litespeed_Cache::add_htaccess_rules();
+		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ) );
+
+		// phpcs:ignore
+		$contents_before = \file_get_contents( $this->htaccess_file );
+		$this->assertStringContainsString( Litespeed_Cache::$rules, $contents_before );
+
+		// Simulate deactivation.
+		\Activitypub\Activitypub::deactivate( false );
+
+		// Verify cleanup.
+		$this->assertFalse( \get_option( Litespeed_Cache::$option_name ), 'Option should be deleted on deactivation' );
+
+		// phpcs:ignore
+		$contents_after = \file_get_contents( $this->htaccess_file );
+		$this->assertStringNotContainsString( Litespeed_Cache::$rules, $contents_after, 'Rules should be removed on deactivation' );
+	}
+
+	/**
+	 * Test that rules are cleaned up when LiteSpeed Cache plugin is deleted.
+	 *
+	 * @covers ::on_plugin_deleted
+	 */
+	public function test_cleanup_when_litespeed_deleted() {
+		// Add rules first.
+		Litespeed_Cache::add_htaccess_rules();
+		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ) );
+
+		// phpcs:ignore
+		$contents_before = \file_get_contents( $this->htaccess_file );
+		$this->assertStringContainsString( Litespeed_Cache::$rules, $contents_before );
+
+		// Simulate LiteSpeed Cache plugin deletion.
+		\do_action( 'deleted_plugin', 'litespeed-cache/litespeed-cache.php', false );
+
+		// Verify cleanup.
+		$this->assertFalse( \get_option( Litespeed_Cache::$option_name ), 'Option should be deleted when plugin is deleted' );
+
+		// phpcs:ignore
+		$contents_after = \file_get_contents( $this->htaccess_file );
+		$this->assertStringNotContainsString( Litespeed_Cache::$rules, $contents_after, 'Rules should be removed when plugin is deleted' );
+	}
+
+	/**
+	 * Test that rules are NOT cleaned up when a different plugin is deleted.
+	 *
+	 * @covers ::on_plugin_deleted
+	 */
+	public function test_no_cleanup_when_other_plugin_deleted() {
+		// Add rules first.
+		Litespeed_Cache::add_htaccess_rules();
+		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ) );
+
+		// Simulate a different plugin deletion.
+		\do_action( 'deleted_plugin', 'some-other-plugin/plugin.php', false );
+
+		// Verify rules still exist.
+		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ), 'Option should remain when other plugin is deleted' );
+
+		// phpcs:ignore
+		$contents = \file_get_contents( $this->htaccess_file );
+		$this->assertStringContainsString( Litespeed_Cache::$rules, $contents, 'Rules should remain when other plugin is deleted' );
+	}
 }

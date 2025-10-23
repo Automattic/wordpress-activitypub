@@ -68,6 +68,11 @@ class Activitypub {
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
 
+		// Clean up LiteSpeed Cache htaccess rules.
+		if ( \class_exists( '\Activitypub\Integration\Litespeed_Cache' ) ) {
+			\Activitypub\Integration\Litespeed_Cache::remove_htaccess_rules();
+		}
+
 		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
 			$sites = \get_sites( array( 'fields' => 'ids' ) );
 			foreach ( $sites as $site ) {

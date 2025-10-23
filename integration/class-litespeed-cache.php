@@ -50,7 +50,27 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 			self::add_htaccess_rules();
 		}
 
+		// Remove rules if LiteSpeed Cache is not active but rules were previously set.
+		if ( ! is_plugin_active( 'litespeed-cache/litespeed-cache.php' ) && \get_option( self::$option_name ) ) {
+			self::remove_htaccess_rules();
+			\delete_option( self::$option_name );
+		}
+
+		// Clean up when LiteSpeed Cache plugin is deleted.
+		\add_action( 'deleted_plugin', array( self::class, 'on_plugin_deleted' ) );
+
 		\add_filter( 'site_status_tests', array( self::class, 'maybe_add_site_health' ) );
+	}
+
+	/**
+	 * Clean up htaccess rules when LiteSpeed Cache plugin is deleted.
+	 *
+	 * @param string $plugin_file Path to the plugin file relative to the plugins directory.
+	 */
+	public static function on_plugin_deleted( $plugin_file ) {
+		if ( 'litespeed-cache/litespeed-cache.php' === $plugin_file && \get_option( self::$option_name ) ) {
+			self::remove_htaccess_rules();
+		}
 	}
 
 	/**
