@@ -57,13 +57,8 @@ class Move {
 		$result        = null;
 		$success       = false;
 
-		/*
-		 * If the new target is followed, but the origin is not,
-		 * everything is fine, so we can return.
-		 */
-		if ( ! \is_wp_error( $target_object ) && \is_wp_error( $origin_object ) ) {
-			$success = false;
-		} elseif ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
+		// If the origin is followed but the target is not, update the origin to point to the target.
+		if ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
@@ -77,15 +72,18 @@ class Move {
 
 			$success = true;
 			$result  = Remote_Actors::upsert( $target_json );
-		} elseif ( ! \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
+		}
+
+		// If both the target and origin are followed, merge them.
+		if ( ! \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
 			$origin_users = \get_post_meta( $origin_object->ID, Followers::FOLLOWER_META_KEY, false );
 			$target_users = \get_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, false );
 
 			// Get all user ids from $origin_users that are not in $target_users.
 			$users = \array_diff( $origin_users, $target_users );
 
-			foreach ( $users as $user_id ) {
-				\add_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, $user_id );
+			foreach ( $users as $follower_user_id ) {
+				\add_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, $follower_user_id );
 			}
 
 			$success = true;
