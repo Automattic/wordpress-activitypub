@@ -150,7 +150,7 @@ function plugin_init() {
 	/**
 	 * Load the LiteSpeed Cache integration.
 	 *
-	 * Only load code that needs LiteSpeed Cache to run once LiteSpeed Cache is loaded and initialized.
+	 * The check for whether LiteSpeed Cache is loaded and initialized happens inside Litespeed_Cache::init().
 	 *
 	 * @see https://wordpress.org/plugins/litespeed-cache/
 	 */
