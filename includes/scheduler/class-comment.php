@@ -89,6 +89,10 @@ class Comment {
 	/**
 	 * Announce an interaction.
 	 *
+	 * When a comment is received from another ActivityPub instance and approved,
+	 * this method creates an Announce activity so the blog's followers are notified
+	 * about the interaction.
+	 *
 	 * @param string      $new_status The new comment status.
 	 * @param string      $old_status The old comment status.
 	 * @param \WP_Comment $comment    The comment object.
@@ -110,19 +114,33 @@ class Comment {
 		// Get activity from comment meta.
 		$activity = \get_comment_meta( $comment->comment_ID, '_activitypub_activity', true );
 
-		if ( ! $activity ) {
+		// Validate activity structure.
+		if ( ! $activity || ! \is_array( $activity ) ) {
 			return;
 		}
 
-		$activity['cc'][]           = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
-		$activity['to'][]           = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
-		$activity['object']['cc'][] = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
-		$activity['object']['to'][] = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+		// Ensure object exists in the activity.
+		if ( empty( $activity['object'] ) || ! \is_array( $activity['object'] ) ) {
+			return;
+		}
 
+		// Get the blog actor.
+		$blog_actor = Actors::get_by_id( Actors::BLOG_USER_ID );
+		if ( ! $blog_actor || \is_wp_error( $blog_actor ) ) {
+			return;
+		}
+
+		$blog_actor_id = $blog_actor->get_id();
+
+		// Create the Announce activity.
 		$announce = new Activity();
 		$announce->set_type( 'Announce' );
+		$announce->set_actor( $blog_actor_id );
 		$announce->set_object( $activity );
+		$announce->set_to( array( $blog_actor_id ) );
+		$announce->set_cc( array( $blog_actor_id ) );
 
+		// Add to outbox with error handling.
 		add_to_outbox( $announce, null, Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 	}
 

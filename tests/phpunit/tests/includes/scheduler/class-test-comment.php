@@ -225,4 +225,251 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$this->assertEmpty( $outbox_posts, 'Should not create Delete activity for non-federated comment deletion' );
 	}
+
+	/**
+	 * Test that no announce is created when not in Blog and User mode.
+	 *
+	 * @covers ::maybe_announce_interaction
+	 */
+	public function test_no_announce_when_not_in_blog_and_user_mode() {
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+
+		// Set actor mode to User only mode.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Test comment content',
+			),
+		);
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => 0,
+				'comment_meta'     => array(
+					'protocol'              => 'activitypub',
+					'_activitypub_activity' => $activity,
+				),
+			)
+		);
+
+		// Get count of Announce activities before approval.
+		$before_count = \count(
+			\get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Announce',
+						),
+					),
+				)
+			)
+		);
+
+		\wp_set_comment_status( $comment_id, 'approve' );
+
+		// Get count after approval.
+		$after_count = \count(
+			\get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Announce',
+						),
+					),
+				)
+			)
+		);
+
+		$this->assertEquals( $before_count, $after_count, 'Should not create Announce when not in Blog and User mode' );
+
+		\wp_delete_comment( $comment_id, true );
+	}
+
+	/**
+	 * Test that no announce is created for non-received comments.
+	 *
+	 * @covers ::maybe_announce_interaction
+	 */
+	public function test_no_announce_for_non_received_comments() {
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		// Create a comment WITHOUT ActivityPub protocol meta (not received).
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => 0,
+			)
+		);
+
+		$before_count = \count(
+			\get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Announce',
+						),
+					),
+				)
+			)
+		);
+
+		\wp_set_comment_status( $comment_id, 'approve' );
+
+		$after_count = \count(
+			\get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Announce',
+						),
+					),
+				)
+			)
+		);
+
+		$this->assertEquals( $before_count, $after_count, 'Should not create Announce for non-received comments' );
+
+		\wp_delete_comment( $comment_id, true );
+	}
+
+	/**
+	 * Test that no announce is created when activity data is missing.
+	 *
+	 * @covers ::maybe_announce_interaction
+	 */
+	public function test_no_announce_when_activity_data_missing() {
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		// Create a comment with protocol meta but no activity data.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => 0,
+				'comment_meta'     => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$before_count = \count(
+			\get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Announce',
+						),
+					),
+				)
+			)
+		);
+
+		\wp_set_comment_status( $comment_id, 'approve' );
+
+		$after_count = \count(
+			\get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Announce',
+						),
+					),
+				)
+			)
+		);
+
+		$this->assertEquals( $before_count, $after_count, 'Should not create Announce when activity data is missing' );
+
+		\wp_delete_comment( $comment_id, true );
+	}
+
+	/**
+	 * Test that no announce is created when activity is malformed.
+	 *
+	 * @covers ::maybe_announce_interaction
+	 */
+	public function test_no_announce_when_activity_malformed() {
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		// Create a comment with malformed activity (missing 'object' field).
+		$malformed_activity = array(
+			'type'  => 'Create',
+			'actor' => 'https://example.com/users/testuser',
+		);
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => 0,
+				'comment_meta'     => array(
+					'protocol'              => 'activitypub',
+					'_activitypub_activity' => $malformed_activity,
+				),
+			)
+		);
+
+		$before_count = \count(
+			\get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Announce',
+						),
+					),
+				)
+			)
+		);
+
+		\wp_set_comment_status( $comment_id, 'approve' );
+
+		$after_count = \count(
+			\get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Announce',
+						),
+					),
+				)
+			)
+		);
+
+		$this->assertEquals( $before_count, $after_count, 'Should not create Announce when activity is malformed' );
+
+		\wp_delete_comment( $comment_id, true );
+	}
 }
