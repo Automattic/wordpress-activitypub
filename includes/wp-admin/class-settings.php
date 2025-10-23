@@ -178,6 +178,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_inbox_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => \__( 'Number of days to keep items in the Inbox.', 'activitypub' ),
+				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_vary_header',
 			array(
 				'type'        => 'boolean',
@@ -228,10 +238,10 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
-			'activitypub_shared_inbox',
+			'activitypub_create_posts',
 			array(
 				'type'        => 'boolean',
-				'description' => \__( 'Enable the shared inbox.', 'activitypub' ),
+				'description' => 'Allow creating posts via ActivityPub.',
 				'default'     => false,
 			)
 		);
@@ -333,6 +343,17 @@ class Settings {
 				'description'       => 'An array of URLs that the blog user is known by.',
 				'default'           => array(),
 				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_hide_social_graph',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Hide Followers and Followings on Profile.',
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
 			)
 		);
 

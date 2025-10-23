@@ -443,7 +443,7 @@ class Post extends Base {
 				$tags[] = array(
 					'type' => 'Hashtag',
 					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
-					'name' => esc_hashtag( $post_tag->name ),
+					'name' => esc_hashtag( $post_tag->slug ),
 				);
 			}
 		}
@@ -587,8 +587,11 @@ class Post extends Base {
 
 		foreach ( $blocks as $block ) {
 			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) ) {
-				// We only support one reply block per post for now.
-				$reply_urls[] = $block['attrs']['url'];
+
+				// Check if the URL has been validated as ActivityPub. Default to true for backwards compatibility.
+				if ( $block['attrs']['isValidActivityPub'] ?? true ) {
+					$reply_urls[] = $block['attrs']['url'];
+				}
 			}
 		}
 

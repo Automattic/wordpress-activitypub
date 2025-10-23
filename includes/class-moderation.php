@@ -112,7 +112,7 @@ class Moderation {
 	public static function add_user_block( $user_id, $type, $value ) {
 		switch ( $type ) {
 			case self::TYPE_ACTOR:
-				return Blocked_Actors::add_block( $user_id, $value );
+				return Blocked_Actors::add( $user_id, $value );
 
 			case self::TYPE_DOMAIN:
 			case self::TYPE_KEYWORD:
@@ -148,7 +148,7 @@ class Moderation {
 	public static function remove_user_block( $user_id, $type, $value ) {
 		switch ( $type ) {
 			case self::TYPE_ACTOR:
-				return Blocked_Actors::remove_block( $user_id, $value );
+				return Blocked_Actors::remove( $user_id, $value );
 
 			case self::TYPE_DOMAIN:
 			case self::TYPE_KEYWORD:
@@ -182,7 +182,7 @@ class Moderation {
 	 */
 	public static function get_user_blocks( $user_id ) {
 		return array(
-			'actors'   => \wp_list_pluck( Blocked_Actors::get_blocked_actors( $user_id ), 'guid' ),
+			'actors'   => \wp_list_pluck( Blocked_Actors::get_many( $user_id ), 'guid' ),
 			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_DOMAIN ], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_KEYWORD ], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		);
@@ -266,7 +266,7 @@ class Moderation {
 	 */
 	public static function get_site_blocks() {
 		return array(
-			'actors'   => \wp_list_pluck( Blocked_Actors::get_blocked_actors( Actors::BLOG_USER_ID ), 'guid' ),
+			'actors'   => \wp_list_pluck( Blocked_Actors::get_many( Actors::BLOG_USER_ID ), 'guid' ),
 			'domains'  => \get_option( self::OPTION_KEYS[ self::TYPE_DOMAIN ], array() ),
 			'keywords' => \get_option( self::OPTION_KEYS[ self::TYPE_KEYWORD ], array() ),
 		);

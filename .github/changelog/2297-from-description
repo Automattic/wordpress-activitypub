@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added support for FEP-8fcf follower synchronization, improving data consistency across servers with new sync headers, digest checks, and reconciliation tasks.

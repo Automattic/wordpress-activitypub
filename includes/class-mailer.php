@@ -20,7 +20,8 @@ class Mailer {
 		\add_filter( 'comment_notification_subject', array( self::class, 'comment_notification_subject' ), 10, 2 );
 		\add_filter( 'comment_notification_text', array( self::class, 'comment_notification_text' ), 10, 2 );
 
-		\add_action( 'activitypub_inbox_follow', array( self::class, 'new_follower' ), 10, 2 );
+		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 3 );
+
 		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );  /** After @see \Activitypub\Handler\Create::handle_create() */
 	}
@@ -86,7 +87,12 @@ class Mailer {
 		}
 
 		$post                  = \get_post( $comment->comment_post_ID );
-		$comment_author_domain = \gethostbyaddr( $comment->comment_author_IP );
+		$comment_author_domain = '';
+
+		// Only attempt to resolve hostname if we have a valid IP address.
+		if ( \filter_var( $comment->comment_author_IP, FILTER_VALIDATE_IP ) ) {
+			$comment_author_domain = \gethostbyaddr( $comment->comment_author_IP );
+		}
 
 		// Check if this is a reaction to a post or a comment.
 		if ( 0 === (int) $comment->comment_parent ) {
@@ -124,8 +130,14 @@ class Mailer {
 	 *
 	 * @param array $activity The activity object.
 	 * @param int   $user_id  The id of the local blog-user.
+	 * @param bool  $success  True on success, false otherwise.
 	 */
-	public static function new_follower( $activity, $user_id ) {
+	public static function new_follower( $activity, $user_id, $success ) {
+		// Only send notification if the follow was successful.
+		if ( ! $success ) {
+			return;
+		}
+
 		// Do not send notifications to the Application user.
 		if ( Actors::APPLICATION_USER_ID === $user_id ) {
 			return;

@@ -19,7 +19,7 @@ class User_Settings_Fields {
 	 * Initialize the settings fields.
 	 */
 	public static function init() {
-		add_action( 'load-profile.php', array( self::class, 'register_settings' ) );
+		\add_action( 'load-profile.php', array( self::class, 'register_settings' ) );
 	}
 
 	/**
@@ -89,6 +89,14 @@ class User_Settings_Fields {
 			'activitypub_user_settings',
 			'activitypub_user_profile',
 			array( 'label_for' => 'activitypub_also_known_as' )
+		);
+
+		\add_settings_field(
+			'activitypub_hide_social_graph',
+			\__( 'Followers and Followings', 'activitypub' ),
+			array( self::class, 'hide_followers_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_profile'
 		);
 
 		// Add moderation section.
@@ -378,6 +386,22 @@ class User_Settings_Fields {
 				</button>
 			</div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Hide Social Graph field callback.
+	 */
+	public static function hide_followers_callback() {
+		$hide_followers = \get_user_option( 'activitypub_hide_social_graph', \get_current_user_id() );
+		?>
+		<label>
+			<input type="checkbox" name="activitypub_hide_social_graph" id="activitypub_hide_social_graph" value="1" <?php \checked( '1', $hide_followers ); ?> />
+			<?php \esc_html_e( 'Hide Followers and Following on Profile', 'activitypub' ); ?>
+		</label>
+		<p class="description">
+			<?php esc_html_e( 'People you follow will still see that you follow them.', 'activitypub' ); ?>
+		</p>
 		<?php
 	}
 }

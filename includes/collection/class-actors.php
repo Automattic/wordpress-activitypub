@@ -222,13 +222,6 @@ class Actors {
 			// Check for http(s) URIs.
 			case 'http':
 			case 'https':
-				// Check locally stored remote Actor.
-				$post = Remote_Actors::get_by_uri( $uri );
-
-				if ( ! \is_wp_error( $post ) ) {
-					return $post->ID;
-				}
-
 				// Check for http(s)://blog.example.com/@username.
 				$resource_path = \wp_parse_url( $uri, PHP_URL_PATH );
 
@@ -377,38 +370,45 @@ class Actors {
 	/**
 	 * Get all active actors, including the Blog actor if enabled.
 	 *
-	 * @return array Array of User and Blog actor objects.
+	 * @return int[] Array of User and Blog actor IDs.
 	 */
-	public static function get_all() {
-		$return = array();
+	public static function get_all_ids() {
+		$user_ids = array();
 
 		if ( ! is_user_type_disabled( 'user' ) ) {
-			$users = \get_users(
+			$user_ids = \get_users(
 				array(
+					'fields'         => 'ID',
 					'capability__in' => array( 'activitypub' ),
 				)
 			);
-
-			foreach ( $users as $user ) {
-				$actor = User::from_wp_user( $user->ID );
-
-				if ( \is_wp_error( $actor ) ) {
-					continue;
-				}
-
-				$return[] = $actor;
-			}
 		}
 
 		// Also include the blog actor if active.
 		if ( ! is_user_type_disabled( 'blog' ) ) {
-			$blog_actor = self::get_by_id( self::BLOG_USER_ID );
-			if ( ! \is_wp_error( $blog_actor ) ) {
-				$return[] = $blog_actor;
-			}
+			$user_ids[] = self::BLOG_USER_ID;
 		}
 
-		return $return;
+		return array_map( 'intval', $user_ids );
+	}
+
+	/**
+	 * Get all active actors, including the Blog actor if enabled.
+	 *
+	 * @return Actor[] Array of User and Blog actor objects.
+	 */
+	public static function get_all() {
+		$user_ids = self::get_all_ids();
+
+		$actors = array_map( array( self::class, 'get_by_id' ), $user_ids );
+
+		// Filter out any WP_Error instances.
+		return array_filter(
+			$actors,
+			function ( $actor ) {
+				return ! \is_wp_error( $actor );
+			}
+		);
 	}
 
 	/**
@@ -816,5 +816,20 @@ class Actors {
 	public static function normalize_identifier( $actor ) {
 		_deprecated_function( __METHOD__, '7.4.0', 'Remote_Actors::normalize_identifier' );
 		return Remote_Actors::normalize_identifier( $actor );
+	}
+
+	/**
+	 * Determine if social graph (followers and following) should be shown for a given user.
+	 *
+	 * @param int $user_id The user ID.
+	 *
+	 * @return bool True if social graph should be shown, false otherwise.
+	 */
+	public static function show_social_graph( $user_id ) {
+		if ( self::BLOG_USER_ID === (int) $user_id ) {
+			return ! (bool) \get_option( 'activitypub_hide_social_graph' );
+		} else {
+			return ! (bool) \get_user_option( 'activitypub_hide_social_graph', $user_id );
+		}
 	}
 }

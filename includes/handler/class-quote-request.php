@@ -207,27 +207,17 @@ class Quote_Request {
 	 * @return bool The validation state: true if valid, false if not.
 	 */
 	public static function validate_object( $valid, $param, $request ) {
-		if ( \is_wp_error( $request ) ) {
-			return $valid;
-		}
+		$activity = $request->get_json_params();
 
-		$json_params = $request->get_json_params();
-
-		if ( empty( $json_params['type'] ) ) {
+		if ( empty( $activity['type'] ) ) {
 			return false;
 		}
 
-		if ( 'QuoteRequest' !== $json_params['type'] ) {
+		if ( 'QuoteRequest' !== $activity['type'] ) {
 			return $valid;
 		}
 
-		$required_attributes = array(
-			'actor',
-			'object',
-			'instrument',
-		);
-
-		if ( ! empty( \array_diff( $required_attributes, \array_keys( $json_params ) ) ) ) {
+		if ( ! isset( $activity['actor'], $activity['object'], $activity['instrument'] ) ) {
 			return false;
 		}
 

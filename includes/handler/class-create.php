@@ -8,6 +8,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
+use Activitypub\Collection\Posts;
 
 use function Activitypub\get_activity_visibility;
 use function Activitypub\is_activity_reply;
@@ -34,14 +35,44 @@ class Create {
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 */
 	public static function handle_create( $activity, $user_id, $activity_object = null ) {
-		// Check if Activity is public or not.
-		if (
-			ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ||
-			! is_activity_reply( $activity )
-		) {
+		// Check for private and/or direct messages.
+		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
+			$result = false;
+		} elseif ( is_activity_reply( $activity ) ) { // Check for replies.
+			$result = self::create_interaction( $activity, $user_id, $activity_object );
+		} elseif ( \get_option( 'activitypub_create_posts', false ) ) { // Handle non-interaction objects.
+			$result = self::create_post( $activity, $user_id, $activity_object );
+		} else {
+			$result = false;
+		}
+
+		if ( false === $result ) {
 			return;
 		}
 
+		$success = ! \is_wp_error( $result );
+
+		/**
+		 * Fires after an ActivityPub Create activity has been handled.
+		 *
+		 * @param array                          $activity The ActivityPub activity data.
+		 * @param int                            $user_id  The local user ID.
+		 * @param bool                           $success  True on success, false otherwise.
+		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The WP_Comment object of the created comment, or null if creation failed.
+		 */
+		\do_action( 'activitypub_handled_create', $activity, $user_id, $success, $result );
+	}
+
+	/**
+	 * Handle interactions like replies.
+	 *
+	 * @param array                          $activity        The activity-object.
+	 * @param int                            $user_id         The id of the local blog-user.
+	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
+	 *
+	 * @return \WP_Comment|\WP_Error|false The created comment, WP_Error on failure, false if not processed.
+	 */
+	public static function create_interaction( $activity, $user_id, $activity_object = null ) {
 		$check_dupe = object_id_to_comment( $activity['object']['id'] );
 
 		// If comment exists, call update action.
@@ -54,30 +85,48 @@ class Create {
 			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
 			 */
 			\do_action( 'activitypub_inbox_update', $activity, $user_id, $activity_object );
-			return;
+			return false;
 		}
 
 		if ( is_self_ping( $activity['object']['id'] ) ) {
-			return;
+			return false;
 		}
 
-		$success = false;
-		$result  = Interactions::add_comment( $activity );
+		$result = Interactions::add_comment( $activity );
 
-		if ( $result && ! \is_wp_error( $result ) ) {
-			$success = true;
-			$result  = \get_comment( $result );
+		if ( ! $result || \is_wp_error( $result ) ) {
+			return $result;
 		}
 
-		/**
-		 * Fires after an ActivityPub Create activity has been handled.
-		 *
-		 * @param array                            $activity The ActivityPub activity data.
-		 * @param int                              $user_id  The local user ID.
-		 * @param bool                             $success  True on success, false otherwise.
-		 * @param array|string|int|\WP_Error|false $result   The WP_Comment object of the created comment, or null if creation failed.
-		 */
-		\do_action( 'activitypub_handled_create', $activity, $user_id, $success, $result );
+		return \get_comment( $result );
+	}
+
+	/**
+	 * Handle non-interaction posts like posts.
+	 *
+	 * @param array                          $activity        The activity-object.
+	 * @param int                            $user_id         The id of the local blog-user.
+	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
+	 *
+	 * @return \WP_Post|\WP_Error|false The post on success or WP_Error on failure.
+	 */
+	public static function create_post( $activity, $user_id, $activity_object = null ) {
+		$check_dupe = Posts::get_by_guid( $activity['object']['id'] );
+
+		// If comment exists, call update action.
+		if ( ! \is_wp_error( $check_dupe ) ) {
+			/**
+			 * Fires when a Create activity is received for an existing object.
+			 *
+			 * @param array                          $activity        The activity-object.
+			 * @param int                            $user_id         The id of the local blog-user.
+			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
+			 */
+			\do_action( 'activitypub_inbox_update', $activity, $user_id, $activity_object );
+			return false;
+		}
+
+		return Posts::add( $activity, $user_id );
 	}
 
 	/**
@@ -90,31 +139,21 @@ class Create {
 	 * @return bool The validation state: true if valid, false if not.
 	 */
 	public static function validate_object( $valid, $param, $request ) {
-		$json_params = $request->get_json_params();
+		$activity = $request->get_json_params();
 
-		if ( empty( $json_params['type'] ) ) {
+		if ( empty( $activity['type'] ) ) {
 			return false;
 		}
 
-		if (
-			'Create' !== $json_params['type'] ||
-			is_wp_error( $request )
-		) {
+		if ( 'Create' !== $activity['type'] ) {
 			return $valid;
 		}
 
-		$object = $json_params['object'];
-
-		if ( ! is_array( $object ) ) {
+		if ( ! isset( $activity['object'] ) || ! \is_array( $activity['object'] ) ) {
 			return false;
 		}
 
-		$required = array(
-			'id',
-			'content',
-		);
-
-		if ( array_intersect( $required, array_keys( $object ) ) !== $required ) {
+		if ( ! isset( $activity['object']['id'], $activity['object']['content'] ) ) {
 			return false;
 		}
 

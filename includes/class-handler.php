@@ -9,6 +9,7 @@ namespace Activitypub;
 
 use Activitypub\Handler\Accept;
 use Activitypub\Handler\Announce;
+use Activitypub\Handler\Collection_Sync;
 use Activitypub\Handler\Create;
 use Activitypub\Handler\Delete;
 use Activitypub\Handler\Follow;
@@ -37,6 +38,7 @@ class Handler {
 	public static function register_handlers() {
 		Accept::init();
 		Announce::init();
+		Collection_Sync::init();
 		Create::init();
 		Delete::init();
 		Follow::init();

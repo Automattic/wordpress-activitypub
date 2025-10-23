@@ -30,6 +30,7 @@ docker-compose.yml
 FEDERATION.md
 Gruntfile.js
 gulpfile.js
+jest.config.js
 LICENSE.md
 LINGUAS
 local

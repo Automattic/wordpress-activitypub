@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Updated mailer hooks to send notifications only when activities are successfully handled, preventing emails for failed events.

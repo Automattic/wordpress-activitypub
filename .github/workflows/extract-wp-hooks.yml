@@ -3,7 +3,9 @@ name: Extract WordPress Hooks
 on:
   push:
     branches: [trunk]
-    paths: ['**.php']
+    paths:
+      - '**.php'
+      - '!build/**/*.asset.php'
   workflow_dispatch:
 
 jobs:

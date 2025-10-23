@@ -53,6 +53,7 @@ class Http {
 			'body'                => $body,
 			'key_id'              => \json_decode( $body )->actor . '#main-key',
 			'private_key'         => Actors::get_private_key( $user_id ),
+			'user_id'             => $user_id,
 		);
 
 		$response = \wp_safe_remote_post( $url, $args );
