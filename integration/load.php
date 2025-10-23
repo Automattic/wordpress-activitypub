@@ -62,7 +62,7 @@ function plugin_init() {
 	 *
 	 * @see https://jetpack.com/
 	 */
-	if ( \defined( 'JETPACK__VERSION' ) && ! \defined( 'IS_WPCOM' ) ) {
+	if ( \defined( 'JETPACK__VERSION' ) ) {
 		Jetpack::init();
 	}
 
@@ -128,6 +128,17 @@ function plugin_init() {
 	}
 
 	/**
+	 * Adds Yoast SEO support.
+	 *
+	 * This class handles the compatibility with Yoast SEO.
+	 *
+	 * @see https://wordpress.org/plugins/wordpress-seo/
+	 */
+	if ( \defined( 'WPSEO_VERSION' ) ) {
+		Yoast_Seo::init();
+	}
+
+	/**
 	 * Load the Surge integration.
 	 *
 	 * Only load code that needs Surge to run once Surge is loaded and initialized.
@@ -154,7 +165,6 @@ function plugin_init() {
 // Register activation and deactivation hooks for Litespeed Cache integration.
 \register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Litespeed_Cache', 'add_htaccess_rules' ) );
 \register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Litespeed_Cache', 'remove_htaccess_rules' ) );
-
 
 /**
  * Register the Stream Connector for ActivityPub.

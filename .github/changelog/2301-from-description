@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added immediate dispatch for Accept activities to speed up quoted posts while keeping scheduled processing for compatibility with other instances.

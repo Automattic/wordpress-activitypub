@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Simplified configuration by always enabling the shared inbox and removing its separate setting, UI field, and related logic.

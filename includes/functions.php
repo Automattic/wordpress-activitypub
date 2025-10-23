@@ -11,18 +11,22 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
-use Activitypub\Transformer\Post;
+use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory as Transformer_Factory;
 
 /**
  * Returns the ActivityPub default JSON-context.
  *
  * @return array The activitypub context.
+ *
+ * @deprecated unreleased Use the respective context function instead.
  */
 function get_context() {
+	\_deprecated_function( __FUNCTION__, 'unreleased', 'Use the respective context function instead.' );
+
 	$context = Activity::JSON_LD_CONTEXT;
 
 	/**
@@ -71,7 +75,7 @@ function safe_remote_get( $url ) {
  * @return string The User resource.
  */
 function get_webfinger_resource( $user_id ) {
-	\_deprecated_function( __FUNCTION__, 'unreleased', 'Activitypub\Webfinger::get_user_resource' );
+	\_deprecated_function( __FUNCTION__, '7.1.0', 'Activitypub\Webfinger::get_user_resource' );
 
 	return Webfinger::get_user_resource( $user_id );
 }
@@ -84,7 +88,7 @@ function get_webfinger_resource( $user_id ) {
  *
  * @return array|\WP_Error The Actor profile as array or WP_Error on failure.
  */
-function get_remote_metadata_by_actor( $actor, $cached = true ) {
+function get_remote_metadata_by_actor( $actor, $cached = true ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 	/**
 	 * Filters the metadata before it is retrieved from a remote actor.
 	 *
@@ -100,7 +104,13 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		return $pre;
 	}
 
-	return Http::get_remote_object( $actor, $cached );
+	$remote_actor = Remote_Actors::fetch_by_various( $actor );
+
+	if ( is_wp_error( $remote_actor ) ) {
+		return $remote_actor;
+	}
+
+	return json_decode( $remote_actor->post_content, true );
 }
 
 /**
@@ -111,7 +121,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
  * @return array The followers.
  */
 function get_followers( $user_id ) {
-	return Followers::get_followers( $user_id );
+	return Followers::get_many( $user_id );
 }
 
 /**
@@ -122,7 +132,7 @@ function get_followers( $user_id ) {
  * @return int The number of followers.
  */
 function count_followers( $user_id ) {
-	return Followers::count_followers( $user_id );
+	return Followers::count( $user_id );
 }
 
 /**
@@ -179,7 +189,7 @@ function url_to_authorid( $url ) {
  * @return int|bool Comment ID or false if not found.
  */
 function is_comment() {
-	\_deprecated_function( __FUNCTION__, 'unreleased' );
+	\_deprecated_function( __FUNCTION__, '7.1.0' );
 
 	$comment_id = get_query_var( 'c', null );
 
@@ -197,6 +207,7 @@ function is_comment() {
 /**
  * Check for Tombstone Objects.
  *
+ * @deprecated 7.3.0 Use {@see Tombstone::exists_in_error()}.
  * @see https://www.w3.org/TR/activitypub/#delete-activity-outbox
  *
  * @param \WP_Error $wp_error A WP_Error-Response of an HTTP-Request.
@@ -204,15 +215,9 @@ function is_comment() {
  * @return boolean True if HTTP-Code is 410 or 404.
  */
 function is_tombstone( $wp_error ) {
-	if ( ! is_wp_error( $wp_error ) ) {
-		return false;
-	}
+	\_deprecated_function( __FUNCTION__, '7.3.0', 'Activitypub\Tombstone::exists_in_error' );
 
-	if ( in_array( (int) $wp_error->get_error_code(), array( 404, 410 ), true ) ) {
-		return true;
-	}
-
-	return false;
+	return Tombstone::exists_in_error( $wp_error );
 }
 
 /**
@@ -261,12 +266,12 @@ function snake_to_camel_case( $input ) {
 function esc_hashtag( $input ) {
 
 	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
-	// Remove all characters that are not letters, numbers, or underscores.
-	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}_]+/u', '_', $hashtag );
+	// Remove all characters that are not letters, numbers, or hyphens.
+	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
 
-	// Capitalize every letter that is preceded by an underscore.
+	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = preg_replace_callback(
-		'/_(.)/',
+		'/-+(.)/',
 		function ( $matches ) {
 			return strtoupper( $matches[1] );
 		},
@@ -275,6 +280,7 @@ function esc_hashtag( $input ) {
 
 	// Add a hashtag to the beginning of the string.
 	$hashtag = ltrim( $hashtag, '#' );
+	$hashtag = trim( $hashtag, '-' );
 	$hashtag = '#' . $hashtag;
 
 	/**
@@ -348,6 +354,7 @@ function is_post_disabled( $post ) {
  * This function checks if a user is enabled for ActivityPub.
  *
  * @param int|string $user_id The user ID.
+ *
  * @return boolean True if the user is enabled, false otherwise.
  */
 function user_can_activitypub( $user_id ) {
@@ -491,14 +498,14 @@ function site_supports_blocks() {
 /**
  * Check if data is valid JSON.
  *
- * @deprecated 7.1.0 Use {@see \json_decode} instead.
+ * @deprecated 7.1.0 Use {@see \json_decode}.
  *
  * @param string $data The data to check.
  *
  * @return boolean True if the data is JSON, false otherwise.
  */
 function is_json( $data ) {
-	\_deprecated_function( __FUNCTION__, 'unreleased', 'json_decode' );
+	\_deprecated_function( __FUNCTION__, '7.1.0', 'json_decode' );
 
 	return \is_array( \json_decode( $data, true ) );
 }
@@ -528,53 +535,79 @@ function extract_recipients_from_activity( $data ) {
 	$recipient_items = array();
 
 	foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-		if ( array_key_exists( $i, $data ) ) {
-			if ( is_array( $data[ $i ] ) ) {
-				$recipient = $data[ $i ];
-			} else {
-				$recipient = array( $data[ $i ] );
-			}
-			$recipient_items = array_merge( $recipient_items, $recipient );
-		}
-
-		if ( is_array( $data['object'] ) && array_key_exists( $i, $data['object'] ) ) {
-			if ( is_array( $data['object'][ $i ] ) ) {
-				$recipient = $data['object'][ $i ];
-			} else {
-				$recipient = array( $data['object'][ $i ] );
-			}
-			$recipient_items = array_merge( $recipient_items, $recipient );
-		}
+		$recipient_items = \array_merge( $recipient_items, extract_recipients_from_activity_property( $i, $data ) );
 	}
 
+	return \array_unique( $recipient_items );
+}
+
+/**
+ * Extract recipient URLs from a specific property of an Activity object.
+ *
+ * @param string $property The property to extract recipients from (e.g., 'to', 'cc').
+ * @param array  $data     The Activity object as array.
+ *
+ * @return array The list of user URLs.
+ */
+function extract_recipients_from_activity_property( $property, $data ) {
 	$recipients = array();
 
-	// Flatten array.
-	foreach ( $recipient_items as $recipient ) {
-		if ( is_array( $recipient ) ) {
-			// Check if recipient is an object.
-			if ( array_key_exists( 'id', $recipient ) ) {
-				$recipients[] = $recipient['id'];
-			}
-		} else {
-			$recipients[] = $recipient;
-		}
+	if ( ! empty( $data[ $property ] ) ) {
+		$recipients = $data[ $property ];
+	} elseif ( ! empty( $data['object'][ $property ] ) ) {
+		$recipients = $data['object'][ $property ];
 	}
 
-	return array_unique( $recipients );
+	$recipients = \array_map( '\Activitypub\object_to_uri', (array) $recipients );
+
+	return \array_unique( \array_filter( $recipients ) );
+}
+
+/**
+ * Determine the visibility of the activity based on its recipients.
+ *
+ * @param array $activity The activity data.
+ *
+ * @return string The visibility level: 'public', 'private', or 'direct'.
+ */
+function get_activity_visibility( $activity ) {
+	// Set default visibility for specific activity types.
+	if ( ! empty( $activity['type'] ) && in_array( $activity['type'], array( 'Accept', 'Delete', 'Follow', 'Reject', 'Undo' ), true ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
+	}
+
+	// Check 'to' field for public visibility.
+	$to = extract_recipients_from_activity_property( 'to', $activity );
+	if ( ! empty( array_intersect( $to, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+	}
+
+	// Check 'cc' field for quiet public visibility.
+	$cc = extract_recipients_from_activity_property( 'cc', $activity );
+	if ( ! empty( array_intersect( $cc, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
+	}
+
+	return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 }
 
 /**
  * Check if passed Activity is Public.
  *
- * @param array $data The Activity object as array.
+ * @see https://github.com/w3c/activitypub/issues/404#issuecomment-2926310561
+ *
+ * @param Base_Object|array $data The Activity object as Base_Object or array.
  *
  * @return boolean True if public, false if not.
  */
 function is_activity_public( $data ) {
+	if ( $data instanceof Base_Object ) {
+		$data = $data->to_array();
+	}
+
 	$recipients = extract_recipients_from_activity( $data );
 
-	return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
+	return ! empty( array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
 }
 
 /**
@@ -693,7 +726,7 @@ function url_to_commentid( $url ) {
  *
  * @param array|string $data The ActivityPub object.
  *
- * @return string The URI of the ActivityPub object
+ * @return string The URI of the ActivityPub object.
  */
 function object_to_uri( $data ) {
 	// Check whether it is already simple.
@@ -726,7 +759,8 @@ function object_to_uri( $data ) {
 	// Return part of Object that makes most sense.
 	switch ( $type ) {
 		case 'Image':
-			$data = $data['url'];
+			// See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
+			$data = object_to_uri( $data['url'] );
 			break;
 		case 'Link':
 			$data = $data['href'];
@@ -859,7 +893,7 @@ function get_post_type_description( $post_type ) {
 			$description = '';
 			break;
 		case 'attachment':
-			$description = ' - ' . __( 'The attachments that you have uploaded to a post (images, videos, documents or other files).', 'activitypub' );
+			$description = ' - ' . __( 'Files uploaded to the media library (such as images, videos, documents, or other attachments). Note: This federates every file upload, not just published content.', 'activitypub' );
 			break;
 		default:
 			$description = '';
@@ -957,7 +991,12 @@ function get_comment_ancestors( $comment ) {
 	$ancestors[] = $id;
 
 	while ( $id > 0 ) {
-		$ancestor  = \get_comment( $id );
+		$ancestor = \get_comment( $id );
+
+		if ( ! $ancestor ) {
+			break;
+		}
+
 		$parent_id = (int) $ancestor->comment_parent;
 
 		// Loop detection: If the ancestor has been seen before, break.
@@ -1048,9 +1087,7 @@ function register_comment_type( $comment_type, $args = array() ) {
  */
 function normalize_url( $url ) {
 	$url = \untrailingslashit( $url );
-	$url = \str_replace( 'https://', '', $url );
-	$url = \str_replace( 'http://', '', $url );
-	$url = \str_replace( 'www.', '', $url );
+	$url = \preg_replace( '/^https?:\/\/(www\.)?/', '', $url );
 
 	return $url;
 }
@@ -1063,7 +1100,7 @@ function normalize_url( $url ) {
  * @return string The normalized host.
  */
 function normalize_host( $host ) {
-	return \str_replace( 'www.', '', $host );
+	return \preg_replace( '/^www\./', '', $host );
 }
 
 /**
@@ -1201,7 +1238,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	 * @param string $excerpt_more The excerpt more.
 	 */
 	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[…]' );
-	$length       = $length - strlen( $excerpt_more );
+	$length       = $length - \mb_strlen( $excerpt_more, 'UTF-8' );
 
 	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
 
@@ -1223,20 +1260,24 @@ function generate_post_summary( $post, $length = 500 ) {
 	}
 
 	$content = \strip_shortcodes( $content );
-	$content = \html_entity_decode( $content );
 	$content = \wp_strip_all_tags( $content );
+	$content = \html_entity_decode( $content, ENT_QUOTES, 'UTF-8' );
 	$content = \trim( $content );
-	$content = \preg_replace( '/\R+/m', "\n\n", $content );
-	$content = \preg_replace( '/[\r\t]/', '', $content );
+	$content = \preg_replace( '/\R+/mu', "\n\n", $content );
+	$content = \preg_replace( '/[\r\t]/u', '', $content );
 
-	if ( $length && \strlen( $content ) > $length ) {
+	if ( $length && \mb_strlen( $content, 'UTF-8' ) > $length ) {
 		$content = \wordwrap( $content, $length, '</activitypub-summary>' );
 		$content = \explode( '</activitypub-summary>', $content, 2 );
 		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
+	/*
+	There is no proper support for HTML in ActivityPub summaries yet.
 	// This filter is documented in wp-includes/post-template.php.
 	return \apply_filters( 'the_excerpt', $content );
+	*/
+	return $content;
 }
 
 /**
@@ -1263,12 +1304,24 @@ function get_content_warning( $post_id ) {
 /**
  * Get the ActivityPub ID of a User by the WordPress User ID.
  *
+ * Fall back to blog user if in blog mode or if user is not found.
+ *
  * @param int $id The WordPress User ID.
  *
- * @return string The ActivityPub ID (a URL) of the User.
+ * @return string|false The ActivityPub ID (a URL) of the User or false if not found.
  */
 function get_user_id( $id ) {
-	$user = Actors::get_by_id( $id );
+	$mode = \get_option( 'activitypub_actor_mode', 'default' );
+
+	if ( ACTIVITYPUB_BLOG_MODE === $mode ) {
+		$user = Actors::get_by_id( Actors::BLOG_USER_ID );
+	} else {
+		$user = Actors::get_by_id( $id );
+
+		if ( \is_wp_error( $user ) ) {
+			$user = Actors::get_by_id( Actors::BLOG_USER_ID );
+		}
+	}
 
 	if ( \is_wp_error( $user ) ) {
 		return false;
@@ -1285,14 +1338,15 @@ function get_user_id( $id ) {
  * @return string The ActivityPub ID (a URL) of the Post.
  */
 function get_post_id( $id ) {
-	$post = get_post( $id );
+	$last_legacy_id = (int) \get_option( 'activitypub_last_post_with_permalink_as_id', 0 );
+	$post_id        = (int) $id;
 
-	if ( ! $post ) {
-		return false;
+	if ( $post_id > $last_legacy_id ) {
+		// Generate URI based on post ID.
+		return \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 	}
 
-	$transformer = new Post( $post );
-	return $transformer->get_id();
+	return \get_permalink( $post_id );
 }
 
 /**
@@ -1544,7 +1598,7 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
  * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
  * @param int        $user_id      The ID of the WordPress User.
  *
- * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ * @return int|false|\WP_Post|\WP_Error The Outbox ID or false on failure, the Actor post or a WP_Error.
  */
 function follow( $remote_actor, $user_id ) {
 	if ( \is_numeric( $remote_actor ) ) {
@@ -1559,7 +1613,7 @@ function follow( $remote_actor, $user_id ) {
 		return $remote_actor;
 	}
 
-	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+	$remote_actor_post = Remote_Actors::fetch_by_uri( $remote_actor );
 
 	if ( \is_wp_error( $remote_actor_post ) ) {
 		return $remote_actor_post;
@@ -1574,7 +1628,7 @@ function follow( $remote_actor, $user_id ) {
  * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
  * @param int        $user_id      The ID of the WordPress User.
  *
- * @return \WP_Post|\WP_Error The ID of the Outbox item or a WP_Error.
+ * @return \WP_Post|\WP_Error The Actor post or a WP_Error.
  */
 function unfollow( $remote_actor, $user_id ) {
 	if ( \is_numeric( $remote_actor ) ) {
@@ -1589,7 +1643,7 @@ function unfollow( $remote_actor, $user_id ) {
 		return $remote_actor;
 	}
 
-	$remote_actor_post = Actors::fetch_remote_by_uri( $remote_actor );
+	$remote_actor_post = Remote_Actors::fetch_by_uri( $remote_actor );
 
 	if ( \is_wp_error( $remote_actor_post ) ) {
 		return $remote_actor_post;
@@ -1654,6 +1708,26 @@ function is_actor( $data ) {
 	 * @param array $types The actor types.
 	 */
 	$types = apply_filters( 'activitypub_actor_types', Actor::TYPES );
+
+	return _is_type_of( $data, $types );
+}
+
+/**
+ * Check if an `$data` is a Collection.
+ *
+ * @see https://www.w3.org/ns/activitystreams#collections
+ *
+ * @param array|object|string $data The data to check.
+ *
+ * @return boolean True if the `$data` is a Collection, false otherwise.
+ */
+function is_collection( $data ) {
+	/**
+	 * Filters the collection types.
+	 *
+	 * @param array $types The collection types.
+	 */
+	$types = apply_filters( 'activitypub_collection_types', array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
 
 	return _is_type_of( $data, $types );
 }
@@ -1736,4 +1810,21 @@ function extract_name_from_uri( $uri ) {
 	}
 
 	return $name;
+}
+
+/**
+ * Get the authority (scheme + host) from a URL.
+ *
+ * @param string $url The URL to parse.
+ *
+ * @return string|false The authority, or false on failure.
+ */
+function get_url_authority( $url ) {
+	$parsed = wp_parse_url( $url );
+
+	if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+		return false;
+	}
+
+	return $parsed['scheme'] . '://' . $parsed['host'];
 }

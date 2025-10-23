@@ -7,9 +7,6 @@
 
 namespace Activitypub\WP_Admin\Table;
 
-use Activitypub\Activity\Actor;
-use Activitypub\Webfinger;
-
 /**
  * Actor Table Trait.
  */
@@ -21,7 +18,7 @@ trait Actor_List_Table {
 	 * @param string $search The search term.
 	 * @return string The normalized search term.
 	 */
-	public static function normalize_search_term( $search ) {
+	public function normalize_search_term( $search ) {
 		$search = \sanitize_text_field( $search );
 		$search = \str_replace( array( 'acct:', 'http://', 'https://', 'www.' ), '', $search );
 		$search = \str_replace( '@', ' ', $search );
@@ -30,22 +27,21 @@ trait Actor_List_Table {
 	}
 
 	/**
-	 * Returns the WebFinger of an actor.
+	 * Get the action URL for a follower.
 	 *
-	 * Falls back to the preferred username if the WebFinger lookup fails or
-	 * tries to extract the username from the profile URL.
-	 *
-	 * @param Actor $actor The actor object.
-	 *
-	 * @return string The WebFinger of the actor.
+	 * @param string $action   The action.
+	 * @param string $follower The follower ID.
+	 * @return string The action URL.
 	 */
-	public static function get_webfinger( $actor ) {
-		$webfinger = Webfinger::uri_to_acct( $actor->get_id() );
-
-		if ( ! \is_wp_error( $webfinger ) ) {
-			return $webfinger;
-		}
-
-		return Webfinger::guess( $actor );
+	private function get_action_url( $action, $follower ) {
+		return \wp_nonce_url(
+			\add_query_arg(
+				array(
+					'action'   => $action,
+					'follower' => $follower,
+				)
+			),
+			$action . '-follower_' . $follower
+		);
 	}
 }

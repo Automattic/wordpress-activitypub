@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added fallback to trigger create handling when updates fail for missing posts or comments, ensuring objects are properly created.

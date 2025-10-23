@@ -1,10 +1,16 @@
-import { store, getContext } from '@wordpress/interactivity';
+import { store, getContext, getConfig } from '@wordpress/interactivity';
 
 /**
  * @var {Object} window.wp WordPress global object
  * @var {Function} url.addQueryArgs Function to add query arguments to a URL.
  */
 const { apiFetch, url } = window.wp;
+
+/**
+ * @typedef {Object} config
+ * @property {String} defaultAvatarUrl Default avatar URL.
+ * @property {String} namespace ActivityPub REST Namespace.
+ */
 
 /**
  * @typedef {Object} context
@@ -18,11 +24,9 @@ const { apiFetch, url } = window.wp;
  * @property {String} userId The user ID for which to fetch followers.
  */
 
-const { actions, state } = store( 'activitypub/followers', {
+const { actions } = store( 'activitypub/followers', {
 	/**
 	 * @typedef {Object} state
-	 * @property {String} defaultAvatarUrl Default avatar URL.
-	 * @property {String} namespace ActivityPub REST Namespace.
 	 * @property {Function} paginationText Get the pagination text.
 	 * @property {Function} disablePreviousLink Whether the previous link should be disabled.
 	 * @property {Function} disableNextLink Whether the next link should be disabled.
@@ -73,7 +77,8 @@ const { actions, state } = store( 'activitypub/followers', {
 
 			try {
 				// Build the API path and parameters
-				const path = url.addQueryArgs( `/${ state.namespace }/actors/${ userId }/followers`, {
+				const { namespace } = getConfig();
+				const path = url.addQueryArgs( `/${ namespace }/actors/${ userId }/followers`, {
 					context: 'full',
 					per_page,
 					order,
@@ -142,7 +147,7 @@ const { actions, state } = store( 'activitypub/followers', {
 		 * @param {Object} event The error event.
 		 */
 		setDefaultAvatar( event ) {
-			event.target.src = state.defaultAvatarUrl;
+			event.target.src = getConfig().defaultAvatarUrl;
 		},
 	},
 } );

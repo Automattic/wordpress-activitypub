@@ -8,12 +8,11 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
-use Activitypub\Collection\Actors;
-use Activitypub\Debug;
+use Activitypub\Moderation;
 
-use function Activitypub\get_context;
-use function Activitypub\get_rest_url_by_path;
+use function Activitypub\camel_to_snake_case;
 use function Activitypub\get_masked_wp_version;
+use function Activitypub\get_rest_url_by_path;
 
 /**
  * Actors_Inbox_Controller class.
@@ -35,10 +34,10 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			array(
 				'args'   => array(
 					'user_id' => array(
-						'description' => 'The ID or username of the actor.',
-						'type'        => 'string',
-						'required'    => true,
-						'pattern'     => '[\w\-\.]+',
+						'description'       => 'The ID of the actor.',
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 				),
 				array(
@@ -90,10 +89,10 @@ class Actors_Inbox_Controller extends Actors_Controller {
 								/**
 								 * Filter the ActivityPub object validation.
 								 *
-								 * @param bool   $validate The validation result.
-								 * @param array  $param    The object data.
-								 * @param object $request  The request object.
-								 * @param string $key      The key.
+								 * @param bool             $validate The validation result.
+								 * @param array            $param    The object data.
+								 * @param \WP_REST_Request $request  The request object.
+								 * @param string           $key      The key.
 								 */
 								return \apply_filters( 'activitypub_validate_object', true, $param, $request, $key );
 							},
@@ -113,11 +112,6 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = Actors::get_by_various( $user_id );
-
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
 
 		/**
 		 * Fires before the ActivityPub inbox is created and sent to the client.
@@ -125,8 +119,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		\do_action( 'activitypub_rest_inbox_pre' );
 
 		$response = array(
-			'@context'     => get_context(),
-			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user->get__id() ) ),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => 0,
@@ -165,19 +158,14 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 */
 	public function create_item( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = Actors::get_by_various( $user_id );
+		$data    = $request->get_json_params();
+		$type    = camel_to_snake_case( $request->get_param( 'type' ) );
 
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
-
-		$data     = $request->get_json_params();
+		/* @var Activity $activity Activity object.*/
 		$activity = Activity::init_from_array( $data );
-		$type     = $request->get_param( 'type' );
-		$type     = \strtolower( $type );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		if ( \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
+		if ( Moderation::activity_is_blocked( $activity, $user_id ) ) {
 			/**
 			 * ActivityPub inbox disallowed activity.
 			 *
@@ -186,7 +174,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			do_action( 'activitypub_rest_inbox_disallowed', $data, $user->get__id(), $type, $activity );
+			do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 		} else {
 			/**
 			 * ActivityPub inbox action.
@@ -196,7 +184,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			\do_action( 'activitypub_inbox', $data, $user->get__id(), $type, $activity );
+			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
 
 			/**
 			 * ActivityPub inbox action for specific activity types.
@@ -205,7 +193,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param int|null           $user_id  The user ID.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			\do_action( 'activitypub_inbox_' . $type, $data, $user->get__id(), $activity );
+			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
 		}
 
 		$response = \rest_ensure_response(

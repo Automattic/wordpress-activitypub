@@ -1,4 +1,4 @@
-import { store, getContext, getElement } from '@wordpress/interactivity';
+import { store, getContext, getElement, getConfig } from '@wordpress/interactivity';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import { createModalStore } from '../shared/modal';
 
@@ -8,7 +8,7 @@ const { apiFetch } = window.wp;
 createModalStore( 'activitypub/follow-me' );
 
 /**
- * @typedef {Object} state
+ * @typedef {Object} config
  * @property {String} namespace ActivityPub REST Namespace.
  * @property {Object} i18n Internationalization strings.
  * @property {String} i18n.copy "Copy" button text.
@@ -29,28 +29,30 @@ createModalStore( 'activitypub/follow-me' );
  * @property {boolean} isLoading Whether the remote profile is being submitted.
  * @property {Object} modal The modal state.
  * @property {boolean} modal.isOpen Whether the modal is open.
+ * @property {String} remoteProfile The remote profile.
  * @property {String} template The template for the remote reply URL.
  * @property {String} userId The user ID.
  * @property {String} webfinger The webfinger of the user.
  */
 
-const { actions, callbacks, state } = store( 'activitypub/follow-me', {
+const { actions, callbacks } = store( 'activitypub/follow-me', {
 	actions: {
 		/**
 		 * Copy the webfinger to clipboard.
 		 */
 		copyToClipboard() {
 			const context = getContext();
+			const { i18n } = getConfig();
 
 			// Use the Clipboard API to copy text.
 			navigator.clipboard.writeText( context.webfinger ).then(
 				() => {
 					// Update button text to show success.
-					context.copyButtonText = state.i18n.copied;
+					context.copyButtonText = i18n.copied;
 
 					// Reset button text after 1 second.
 					setTimeout( () => {
-						context.copyButtonText = state.i18n.copy;
+						context.copyButtonText = i18n.copy;
 					}, 1000 );
 				},
 				( error ) => {
@@ -104,19 +106,19 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 		 */
 		submitRemoteProfile: function* () {
 			const context = getContext();
-			const { namespace } = state;
+			const { namespace, i18n } = getConfig();
 			const input = context.remoteProfile.trim();
 
 			// Validate input.
 			if ( ! input ) {
 				context.isError = true;
-				context.errorMessage = state.i18n.emptyProfileError;
+				context.errorMessage = i18n.emptyProfileError;
 				return;
 			}
 
 			if ( ! callbacks.isHandle( input ) ) {
 				context.isError = true;
-				context.errorMessage = state.i18n.invalidProfileError;
+				context.errorMessage = i18n.invalidProfileError;
 				return;
 			}
 
@@ -146,7 +148,7 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 				console.error( 'Error submitting profile:', error );
 				context.isLoading = false;
 				context.isError = true;
-				context.errorMessage = error.message || state.i18n.genericError;
+				context.errorMessage = error.message || i18n.genericError;
 			}
 		},
 	},

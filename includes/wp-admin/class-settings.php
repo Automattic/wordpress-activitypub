@@ -10,6 +10,7 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Sanitize;
+
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -66,21 +67,6 @@ class Settings {
 				'sanitize_callback' => function ( $value ) {
 					return \is_numeric( $value ) ? \absint( $value ) : ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
 				},
-			)
-		);
-
-		\register_setting(
-			'activitypub',
-			'activitypub_object_type',
-			array(
-				'type'         => 'string',
-				'description'  => \__( 'The Activity-Object-Type', 'activitypub' ),
-				'show_in_rest' => array(
-					'schema' => array(
-						'enum' => array( 'note', 'wordpress-post-format' ),
-					),
-				),
-				'default'      => ACTIVITYPUB_DEFAULT_OBJECT_TYPE,
 			)
 		);
 
@@ -192,6 +178,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_inbox_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => \__( 'Number of days to keep items in the Inbox.', 'activitypub' ),
+				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_vary_header',
 			array(
 				'type'        => 'boolean',
@@ -242,11 +238,36 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
-			'activitypub_shared_inbox',
+			'activitypub_create_posts',
 			array(
 				'type'        => 'boolean',
-				'description' => \__( 'Enable the shared inbox.', 'activitypub' ),
+				'description' => 'Allow creating posts via ActivityPub.',
 				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_persist_inbox',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable inbox collection persistence.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_object_type',
+			array(
+				'type'         => 'string',
+				'description'  => \__( 'The Activity-Object-Type', 'activitypub' ),
+				'show_in_rest' => array(
+					'schema' => array(
+						'enum' => array( 'note', 'wordpress-post-format' ),
+					),
+				),
+				'default'      => ACTIVITYPUB_DEFAULT_OBJECT_TYPE,
 			)
 		);
 
@@ -324,6 +345,29 @@ class Settings {
 				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
 			)
 		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_hide_social_graph',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Hide Followers and Followings on Profile.',
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		// Moderation settings.
+		\register_setting(
+			'activitypub',
+			'activitypub_site_blocked_actors',
+			array(
+				'type'              => 'array',
+				'description'       => 'Site-wide blocked ActivityPub actors.',
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
+			)
+		);
 	}
 
 	/**
@@ -355,6 +399,12 @@ class Settings {
 			);
 		}
 
+		// Add blocked actors tab for site-wide blocking.
+		$settings_tabs['blocked-actors'] = array(
+			'label'    => \__( 'Blocked Actors', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php',
+		);
+
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
 				'label'    => __( 'Blog Profile', 'activitypub' ),
@@ -381,7 +431,7 @@ class Settings {
 		$settings_tabs = \apply_filters( 'activitypub_admin_settings_tabs', $settings_tabs );
 
 		if ( empty( $settings_tabs ) ) {
-			_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', 'unreleased' );
+			_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', '7.0.0' );
 			$settings_tabs['settings'] = $settings_tab;
 		}
 
@@ -438,6 +488,11 @@ class Settings {
 			)
 		);
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( 'following' === \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? '' ) ) ) {
+			self::add_following_help_tab();
+		}
+
 		// Core Features.
 		\get_current_screen()->add_help_tab(
 			array(
@@ -465,14 +520,18 @@ class Settings {
 			)
 		);
 
-		// Template Tags.
-		\get_current_screen()->add_help_tab(
-			array(
-				'id'      => 'template-tags',
-				'title'   => \__( 'Template Tags', 'activitypub' ),
-				'content' => self::get_help_tab_template( 'template-tags' ),
-			)
-		);
+		// Show only if templating is enabled.
+		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+		if ( 'note' === $object_type ) {
+			// Template Tags.
+			\get_current_screen()->add_help_tab(
+				array(
+					'id'      => 'template-tags',
+					'title'   => \__( 'Template Tags', 'activitypub' ),
+					'content' => self::get_help_tab_template( 'template-tags' ),
+				)
+			);
+		}
 
 		// Recommended Plugins.
 		if ( ! empty( self::get_recommended_plugins() ) ) {
@@ -522,6 +581,27 @@ class Settings {
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/issues">' . \esc_html__( 'Report an issue', 'activitypub' ) . '</a></p>' . "\n" .
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs">' . \esc_html__( 'Documentation', 'activitypub' ) . '</a></p>' . "\n" .
 			'<p><a href="https://github.com/Automattic/wordpress-activitypub/releases">' . \esc_html__( 'View latest changes', 'activitypub' ) . '</a></p>'
+		);
+	}
+
+	/**
+	 * Adds the ActivityPub help tab to the users page.
+	 */
+	public static function add_following_help_tab() {
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'starter-kit',
+				'title'   => \__( 'Starter Kits', 'activitypub' ),
+				'content' => \sprintf(
+					'<h2>%s</h2>' .
+					'<p>%s</p>' .
+					'<p>%s</p>',
+					\__( 'Starter Kits', 'activitypub' ),
+					\__( 'Starter kits are curated lists of accounts that help you quickly build your fediverse network. Import a starter kit to automatically follow a collection of interesting accounts in specific topics or communities.', 'activitypub' ),
+					// translators: %s: Importer URL.
+					\wp_kses_post( \sprintf( \__( 'To import a starter kit, go to <strong>Tools &#8594; Import</strong> and look for <a href="%s">the &#8220;Starter Kit&#8221; option</a>.', 'activitypub' ), \admin_url( 'admin.php?import=starter-kit' ) ) )
+				),
+			)
 		);
 	}
 

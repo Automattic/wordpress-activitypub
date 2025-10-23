@@ -8,8 +8,8 @@
 namespace Activitypub\Model;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\extract_name_from_uri;
 
@@ -22,6 +22,7 @@ use function Activitypub\extract_name_from_uri;
  * @author Matt Wiebe
  * @author Matthias Pfefferle
  *
+ * @deprecated 7.0.0
  * @see https://www.w3.org/TR/activitypub/#follow-activity-inbox
  *
  * @method int           get__id()       Gets the post ID of the follower record.
@@ -50,7 +51,7 @@ class Follower extends Actor {
 	 * @deprecated Use Actor instead.
 	 */
 	public function __construct() {
-		\_deprecated_class( __CLASS__, 'unreleased', Actor::class );
+		\_deprecated_class( __CLASS__, '7.0.0', Actor::class );
 	}
 
 	/**
@@ -59,7 +60,7 @@ class Follower extends Actor {
 	 * @return mixed
 	 */
 	public function get_errors() {
-		return Actors::get_errors( $this->_id );
+		return Remote_Actors::get_errors( $this->_id );
 	}
 
 	/**
@@ -68,7 +69,7 @@ class Follower extends Actor {
 	 * @return bool True on success, false on failure.
 	 */
 	public function clear_errors() {
-		return Actors::clear_errors( $this->_id );
+		return Remote_Actors::clear_errors( $this->_id );
 	}
 
 	/**
@@ -106,7 +107,7 @@ class Follower extends Actor {
 	 * @return bool True on success, false on failure.
 	 */
 	public function reset_errors() {
-		return Actors::clear_errors( $this->_id );
+		return Remote_Actors::clear_errors( $this->_id );
 	}
 
 	/**
@@ -115,7 +116,7 @@ class Follower extends Actor {
 	 * @return int The number of errors.
 	 */
 	public function count_errors() {
-		return Actors::count_errors( $this->_id );
+		return Remote_Actors::count_errors( $this->_id );
 	}
 
 	/**
@@ -174,7 +175,7 @@ class Follower extends Actor {
 			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		$id = Actors::upsert( $this );
+		$id = Remote_Actors::upsert( $this );
 		if ( \is_wp_error( $id ) ) {
 			return $id;
 		}

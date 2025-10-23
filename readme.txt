@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 7.1.0
+Stable tag: 7.5.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -16,7 +16,7 @@ Enter the fediverse with **ActivityPub**, broadcasting your blog to a wider audi
 
 https://www.youtube.com/watch?v=QzYozbNneVc
 
-With the ActivityPub plugin installed, your WordPress blog itself functions as a federated profile, along with profiles for each author. For instance, if your website is `example.com`, then the blog-wide profile can be found at `@example.com@example.com`, and authors like Jane and Bob would have their individual profiles at `@jane@example.com` and `@bobz@example.com`, respectively.
+With the ActivityPub plugin installed, your WordPress blog itself functions as a federated profile, along with profiles for each author. For instance, if your website is `example.com`, then the blog-wide profile can be found at `@example.com@example.com`, and authors like Jane and Bob would have their individual profiles at `@jane@example.com` and `@bob@example.com`, respectively.
 
 An example: I give you my Mastodon profile name: `@pfefferle@mastodon.social`. You search, see my profile, and hit follow. Now, any post I make appears in your Home feed. Similarly, with the ActivityPub plugin, you can find and follow Jane's profile at `@jane@example.com`.
 
@@ -110,6 +110,118 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+### 7.5.0 - 2025-10-01
+#### Added
+- Added a setting to control who can quote your posts.
+- Added support for QuoteRequest activities (FEP-044f), enabling proper handling, validation, and policy-based acceptance or rejection of quote requests.
+- Add upgrade routine to enable ActivityPub feeds in WordPress.com Reader
+- Add Yoast SEO integration for author archives site health check.
+- Improved interaction policies with clearer defaults and better Mastodon compatibility.
+- New site health check warns if active Captcha plugins may block ActivityPub comments.
+- Sync following meta to enable RSS feed subscriptions for ActivityPub actors in WordPress.com Reader
+- You can now follow people and see their updates right in the WordPress.com Reader when using Jetpack or WordPress.com.
+
+#### Changed
+- Added support for fetching actors by account identifiers and improved reliability of actor retrieval.
+- Clarify error messages in account modal to specify full profile URL format.
+- Improved checks to better identify public Activities.
+- Improved compatibility by making the 'implements' field always use multiple entries.
+- Improved recipient handling for clarity and improved visibility handling of activities.
+- Remote reply blocks now sync account info across all blocks on the same page
+- Standardized notification handling with new hooks for better extensibility and consistency.
+- Updated sync allowlist to add support for Jetpack notifications of likes and reposts.
+
+#### Fixed
+- Fixed an issue where post metadata in the block editor was missing or failed to update.
+- Fix Flag activity object list processing to preserve URL arrays
+- Fix PHP warning in bulk edit scenario when post_author is missing from $_REQUEST
+- Posts now only fall back to the blog user when blog mode is enabled and no valid author exists, ensuring content negotiation only runs if an Actor is available.
+
+### 7.4.0 - 2025-09-15
+#### Added
+- Add activitypub_json REST field for ap_actor posts to access raw JSON data
+- Add Delete activity support for permanently deleted federated comments.
+- Added a new WP-CLI command to manage Actors.
+- Added confirmation step for bulk removal of ActivityPub capability, asking whether to also delete users from the Fediverse.
+- Adds support for virtual deletes and restores, allowing objects to be removed from the fediverse without being deleted locally.
+- Add Yoast SEO integration for media pages site health check
+- Optimized WebFinger lookups by centralizing and caching account resolution for faster, more consistent handling across lists.
+
+#### Changed
+- Clarified the 'attachment' post type description to explain it refers to media library uploads and recommend disabling federation in most cases.
+- Hide site-wide checkbox in block confirmations when accessed from ActivityPub settings page
+- Improved ActivityPub compatibility by aligning with Mastodon’s Application Actor.
+- It’s now possible to reply to multiple posts using multiple reply blocks.
+- Refactored Reply block to use WordPress core embed functionality for better compatibility and performance.
+- Use wp_interactivity_config() for static values instead of wp_interactivity_state() to improve performance and code clarity
+
+#### Deprecated
+- ActivityPub now defaults to automated object type selection, with the old manual option moved to Advanced settings for compatibility.
+
+#### Fixed
+- Fix content visibility override issue preventing authors from changing visibility on older posts.
+- Fix PHP warning when saving ActivityPub settings.
+- Fix query args preservation in collection pagination links
+- Fix release script to catch more 'unreleased' deprecation patterns that were previously missed during version updates.
+- Fix reply block rendering inconsistency where blocks were always converted to @-mentions in ActivityPub content. Now only first reply blocks become @-mentions, others remain as regular links.
+- Stop sending follow notifications to the Application user, since system-level accounts cannot be followed.
+
+### 7.3.0 - 2025-08-28
+#### Added
+- Add actor blocking functionality with list table interface for managing blocked users and site-wide blocks
+- Add code coverage reporting to GitHub Actions PHPUnit workflow with dedicated coverage job using Xdebug
+- Add comprehensive blocking and moderation system for ActivityPub with user-specific and site-wide controls for actors, domains, and keywords.
+- Add comprehensive unit tests for Followers and Following table classes with proper ActivityPub icon object handling.
+- Added link and explanation for the existing Starter Kit importer on the help tab of the Following pages.
+- Adds a self-destruct feature to remove a blog from the Fediverse by sending Delete activities to followers.
+- Adds a User Interface to select accounts during Starter Kit import
+- Adds support for importing Starter Kits from a link (URL).
+- Adds support for searching (remote) URLs similar to Mastodon, redirecting to existing replies or importing them if missing.
+- Adds support for sending Delete activities when a user is removed.
+- Adds support for Starter Kit collections in the ActivityPub API.
+- A global Inbox handler and persistence layer to log incoming Create and Update requests for debugging and verifying Activity handling.
+- Follower lists now include the option to block individual accounts.
+- Improved handling of deleted content with a new unified system for better tracking and compatibility.
+- Moderation now checks blocked keywords across all language variants of the content, summary and name fields.
+- When activated or deactivated network-wide, the plugin now refreshes rewrite rules across all sites.
+
+#### Changed
+- Add default avatars for actors without icons in admin tables
+- Added support for list of Actor IDs in Starter Kits.
+- Improve Following class documentation and optimize count methods for better performance
+- Refactor actor blocking with unified API for better maintainability
+
+#### Fixed
+- Blocks relying on user selectors no longer error due to a race condition when fetching users.
+- Fix duplicate HTML IDs and missing form labels in modal blocks
+- Fix malformed ActivityPub handles for users with email-based logins (e.g., from Site Kit Google authentication)
+- Fix PHP 8.4 deprecation warnings by preventing null values from being passed to WordPress core functions
+- Improves handling of author URLs by converting them to a proper format.
+- Improves REST responses by skipping invalid actors in Followers and Following controllers.
+- More reliable Actor checks during the follow process.
+- Prevents Application users from being followed.
+- Proper implementation of FEP 844e.
+- Switches ActivityPub summaries to plain text for better compatibility.
+
+### 7.2.0 - 2025-07-30
+#### Added
+- Add image attachment support to federated comments - HTML images in comment content now include proper ActivityStreams attachment fields.
+- Link to the following internal dialog for remote interactions, if the feature is enabled.
+- The followers list now shows follow status and allows quick follow-back actions.
+- Trigger Actor updates on (un)setting a post as sticky.
+- You can now use `OrderedCollection`s as starter packs — just drop in the output from a Follower or Following endpoint.
+
+#### Changed
+- Ensure that tests run in production-like conditions, avoiding interference from local development tools.
+- Moved HTTP request signing to a filter instead of calling it directly.
+
+#### Fixed
+- Allow non-administrator users to use Follow Me and Followers blocks
+- Correct linking from followers to the following list
+- Fix avatar rendering for followers with missing icon property
+- Fix multibyte character corruption in post summaries, preventing Greek and other non-ASCII text from being garbled during text processing.
+- Informational Fediverse blocks are no longer rendered when posts get added to the Outbox.
+
 ### 7.1.0 - 2025-07-23
 #### Added
 - Added a first version of the Follow form, allowing users to follow other Actors by username or profile link.
@@ -197,9 +309,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.1.0 =
+= 7.5.0 =
 
-Improved Followers table, smarter migrations, and no more accidental re-federation of old posts.
+You can now choose who’s allowed to quote your posts on Mastodon—everyone, only your followers, or just you. Set it in the Block Editor sidebar, and your choice will be applied automatically.
 
 == Installation ==
 

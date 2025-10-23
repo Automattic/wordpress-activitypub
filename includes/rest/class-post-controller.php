@@ -7,9 +7,9 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Comment;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Replies;
+use Activitypub\Comment;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -32,7 +32,7 @@ class Post_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = 'posts/(?P<id>\d+)';
+	protected $rest_base = 'posts/(?P<id>[-]?\d+)';
 
 	/**
 	 * Register routes.

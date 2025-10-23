@@ -11,7 +11,10 @@
 		"html": false,
 		"inserter": true,
 		"reusable": false,
-		"lock": false
+		"lock": false,
+		"innerBlocks": {
+			"allowedBlocks": [ "core/embed" ]
+		}
 	},
 	"textdomain": "activitypub",
 	"editorScript": "file:./index.js",
@@ -24,6 +27,10 @@
 		"embedPost": {
 			"type": "boolean",
 			"default": null
+		},
+		"isValidActivityPub": {
+			"type": "boolean",
+			"default": true
 		}
 	}
 }

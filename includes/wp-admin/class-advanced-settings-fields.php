@@ -30,15 +30,6 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings'
 		);
 
-		\add_settings_field(
-			'activitypub_outbox_purge_days',
-			\__( 'Outbox Retention Period', 'activitypub' ),
-			array( self::class, 'render_outbox_purge_days_field' ),
-			'activitypub_advanced_settings',
-			'activitypub_advanced_settings',
-			array( 'label_for' => 'activitypub_outbox_purge_days' )
-		);
-
 		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
 			\add_settings_field(
 				'activitypub_vary_header',
@@ -88,16 +79,23 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_following_ui' )
 		);
 
-		if ( ! defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) ) {
-			\add_settings_field(
-				'activitypub_shared_inbox',
-				\__( 'Shared Inbox (beta)', 'activitypub' ),
-				array( self::class, 'render_shared_inbox_field' ),
-				'activitypub_advanced_settings',
-				'activitypub_advanced_settings',
-				array( 'label_for' => 'activitypub_shared_inbox' )
-			);
-		}
+		\add_settings_field(
+			'activitypub_persist_inbox',
+			\__( 'Inbox', 'activitypub' ),
+			array( self::class, 'render_persist_inbox_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_persist_inbox' )
+		);
+
+		\add_settings_field(
+			'activitypub_object_type',
+			\__( 'Activity-Object-Type', 'activitypub' ),
+			array( self::class, 'render_object_type_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_object_type' )
+		);
 	}
 
 	/**
@@ -117,26 +115,6 @@ class Advanced_Settings_Fields {
 			?>
 		</p>
 		<?php
-	}
-
-	/**
-	 * Render outbox purge days field.
-	 */
-	public static function render_outbox_purge_days_field() {
-		$value = \get_option( 'activitypub_outbox_purge_days', 180 );
-		echo '<input type="number" id="activitypub_outbox_purge_days" name="activitypub_outbox_purge_days" value="' . esc_attr( $value ) . '" class="small-text" min="0" max="365" />';
-		echo '<p class="description">' . \wp_kses(
-			sprintf(
-				// translators: 1: Definition of Outbox; 2: Default value (180).
-				\__( 'Maximum number of days to keep items in the <abbr title="%1$s">Outbox</abbr>. A lower value might be better for sites with lots of activity to maintain site performance. Default: <code>%2$s</code>', 'activitypub' ),
-				\esc_attr__( 'A virtual location on a user&#8217;s profile where all the activities (posts, likes, replies) they publish are stored, acting as a feed that other users can access to see their publicly shared content', 'activitypub' ),
-				\esc_html( 180 )
-			),
-			array(
-				'abbr' => array( 'title' => array() ),
-				'code' => array(),
-			)
-		) . '</p>';
 	}
 
 	/**
@@ -236,19 +214,37 @@ class Advanced_Settings_Fields {
 	}
 
 	/**
-	 * Render shared inbox field.
+	 * Render inbox collection persistence field.
 	 */
-	public static function render_shared_inbox_field() {
-		$value = \get_option( 'activitypub_shared_inbox', '0' );
+	public static function render_persist_inbox_field() {
+		$value = \get_option( 'activitypub_persist_inbox', '0' );
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_shared_inbox" name="activitypub_shared_inbox" value="1" <?php checked( '1', $value ); ?> />
-				<?php \esc_html_e( 'Use a shared inbox for incoming messages.', 'activitypub' ); ?>
+				<input type="checkbox" id="activitypub_persist_inbox" name="activitypub_persist_inbox" value="1" <?php checked( '1', $value ); ?> />
+				Persist all incoming Activities.
 			</label>
 		</p>
 		<p class="description">
-			<?php \esc_html_e( 'Allows your site to handle incoming ActivityPub messages more efficiently, especially helpful for busy or multi-user sites. This feature is still in beta and may encounter issues.', 'activitypub' ); ?>
+			For now, this is only used for debugging purposes. If you have no actual need for this, please keep it disabled to avoid unnecessary database writes. Future versions may enable this feature by default.
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render object type field.
+	 */
+	public static function render_object_type_field() {
+		$value = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" name="activitypub_object_type" value="note" <?php \checked( 'note', $value ); ?> />
+				<?php \esc_html_e( 'Use Template Tags instead of letting the plugin choose the best possible format for you.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'This is mainly for backwards compatibility. It is not recommended to use the Template Tags, because it might not be supported in future versions.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

@@ -54,8 +54,21 @@ class Menu {
 				);
 
 				\add_action( 'load-' . $following_list_page, array( Admin::class, 'add_following_list_table' ) );
+				\add_action( 'load-' . $following_list_page, array( Settings::class, 'add_following_help_tab' ) );
 				\add_action( 'load-' . $following_list_page, array( Screen_Options::class, 'add_following_list_options' ) );
 			}
+
+			// Only show blocked actors page if user has blocked actors.
+			$blocked_actors_list_page = \add_users_page(
+				\__( 'Blocked Actors ⁂', 'activitypub' ),
+				\__( 'Blocked Actors ⁂', 'activitypub' ),
+				'activitypub',
+				'activitypub-blocked-actors-list',
+				array( Admin::class, 'blocked_actors_list_page' )
+			);
+
+			\add_action( 'load-' . $blocked_actors_list_page, array( Admin::class, 'add_blocked_actors_list_table' ) );
+			\add_action( 'load-' . $blocked_actors_list_page, array( Screen_Options::class, 'add_blocked_actors_list_options' ) );
 
 			\add_users_page(
 				\__( 'Extra Fields ⁂', 'activitypub' ),

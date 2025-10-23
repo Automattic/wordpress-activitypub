@@ -7,6 +7,10 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Posts;
+
 /**
  * Allow localhost URLs if WP_DEBUG is true.
  *
@@ -29,17 +33,44 @@ function allow_localhost( $parsed_args ) {
  *
  * @return array The arguments for the post type.
  */
-function debug_outbox_post_type( $args, $post_type ) {
-	if ( 'ap_outbox' !== $post_type ) {
+function debug_post_type( $args, $post_type ) {
+	if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE, Posts::POST_TYPE ), true ) ) {
 		return $args;
 	}
 
-	$args['show_ui']   = true;
-	$args['menu_icon'] = 'dashicons-upload';
+	$args['show_ui'] = true;
+
+	if ( Outbox::POST_TYPE === $post_type ) {
+		$args['menu_icon'] = 'dashicons-upload';
+	} elseif ( Inbox::POST_TYPE === $post_type ) {
+		$args['menu_icon'] = 'dashicons-download';
+	} elseif ( Posts::POST_TYPE === $post_type ) {
+		$args['menu_icon'] = 'dashicons-media-document';
+	}
 
 	return $args;
 }
-\add_filter( 'register_post_type_args', '\Activitypub\debug_outbox_post_type', 10, 2 );
+\add_filter( 'register_post_type_args', '\Activitypub\debug_post_type', 10, 2 );
+
+/**
+ * Debug the object type taxonomy.
+ *
+ * @param array  $args     The arguments for the taxonomy.
+ * @param string $taxonomy The taxonomy.
+ *
+ * @return array The arguments for the taxonomy.
+ */
+function debug_taxonomy( $args, $taxonomy ) {
+	if ( ! in_array( $taxonomy, array( 'ap_object_type', 'ap_tag' ), true ) ) {
+		return $args;
+	}
+
+	$args['show_ui']      = true;
+	$args['show_in_menu'] = true;
+
+	return $args;
+}
+\add_filter( 'register_taxonomy_args', '\Activitypub\debug_taxonomy', 10, 2 );
 
 /**
  * Debug the outbox post type column.
@@ -50,11 +81,11 @@ function debug_outbox_post_type( $args, $post_type ) {
  * @return array The updated columns.
  */
 function debug_outbox_post_type_column( $columns, $post_type ) {
-	if ( 'ap_outbox' !== $post_type ) {
+	if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE ), true ) ) {
 		return $columns;
 	}
 
-	$columns['ap_outbox_meta'] = 'Meta';
+	$columns['ap_meta'] = 'Meta';
 
 	return $columns;
 }
@@ -69,7 +100,7 @@ function debug_outbox_post_type_column( $columns, $post_type ) {
  * @return void
  */
 function manage_posts_custom_column( $column_name, $post_id ) {
-	if ( 'ap_outbox_meta' === $column_name ) {
+	if ( 'ap_meta' === $column_name ) {
 		$meta = \get_post_meta( $post_id );
 		foreach ( $meta as $key => $value ) {
 			echo \esc_attr( $key ) . ': ' . \esc_html( $value[0] ) . '<br>';

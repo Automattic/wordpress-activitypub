@@ -1,4 +1,4 @@
-import { store, getContext } from '@wordpress/interactivity';
+import { store, getContext, getConfig } from '@wordpress/interactivity';
 import { createModalStore } from '../shared/modal';
 import './style.scss';
 
@@ -8,7 +8,7 @@ const { apiFetch } = window.wp;
 createModalStore( 'activitypub/remote-reply' );
 
 /**
- * @typedef {Object} state
+ * @typedef {Object} config
  * @property {String} namespace ActivityPub REST Namespace.
  * @property {Object} i18n Internationalization strings.
  * @property {String} i18n.copy "Copy" button text.
@@ -25,18 +25,15 @@ createModalStore( 'activitypub/remote-reply' );
  * @property {String} commentURL The comment URL.
  * @property {String} copyButtonText The copy button text.
  * @property {String} errorMessage The error message.
- * @property {boolean} hasRemoteUser Whether a remote user is set.
  * @property {boolean} isError Whether there is an error.
  * @property {boolean} isLoading Whether the remote profile is being submitted.
  * @property {Object} modal The modal state.
  * @property {boolean} modal.isOpen Whether the modal is open.
- * @property {String} profileURL The remote profile URL.
  * @property {String} remoteProfile The remote profile.
  * @property {boolean} shouldSaveProfile Whether to save the profile.
- * @property {String} template The template for the remote reply URL.
  */
 
-const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
+const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 	state: {
 		/**
 		 * Get the remote profile URL.
@@ -44,9 +41,9 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 * @returns {String} The remote profile URL.
 		 */
 		get remoteProfileUrl() {
-			const { commentURL, template } = getContext();
+			const { commentURL } = getContext();
 
-			return template.replace( '{uri}', encodeURIComponent( commentURL ) );
+			return state.template.replace( '{uri}', encodeURIComponent( commentURL ) );
 		},
 	},
 	actions: {
@@ -69,16 +66,17 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 */
 		copyToClipboard() {
 			const context = getContext();
+			const { i18n } = getConfig();
 
 			// Use the Clipboard API to copy text.
 			navigator.clipboard.writeText( context.commentURL ).then(
 				() => {
 					// Update button text to show success.
-					context.copyButtonText = state.i18n.copied;
+					context.copyButtonText = i18n.copied;
 
 					// Reset button text after 1 second.
 					setTimeout( () => {
-						context.copyButtonText = state.i18n.copy;
+						context.copyButtonText = i18n.copy;
 					}, 1000 );
 				},
 				( error ) => {
@@ -122,7 +120,7 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 */
 		*submitRemoteProfile() {
 			const context = getContext();
-			const { namespace, i18n } = state;
+			const { namespace, i18n } = getConfig();
 			const profileURL = context.remoteProfile.trim();
 
 			// Validate input.
@@ -164,7 +162,7 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 				// Save the remote user if the remember option is checked.
 				if ( context.shouldSaveProfile ) {
 					callbacks.setStore( { profileURL, template } );
-					Object.assign( context, { hasRemoteUser: true, profileURL, template } );
+					Object.assign( state, { hasRemoteUser: true, profileURL, template } );
 				}
 			} catch ( error ) {
 				// Handle error.
@@ -187,12 +185,10 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 * Delete the saved remote user profile.
 		 */
 		deleteRemoteUser() {
-			const context = getContext();
-
 			callbacks.deleteStore();
-			context.hasRemoteUser = false;
-			context.profileURL = '';
-			context.template = '';
+			state.hasRemoteUser = false;
+			state.profileURL = '';
+			state.template = '';
 		},
 	},
 	callbacks: {
@@ -205,12 +201,11 @@ const { state, actions, callbacks } = store( 'activitypub/remote-reply', {
 		 * Initialize the component.
 		 */
 		init() {
-			const context = getContext();
 			const { profileURL, template } = callbacks.getStore();
 
 			// Set the remote user data from localStorage if available.
 			if ( profileURL && template ) {
-				Object.assign( context, { hasRemoteUser: true, profileURL, template } );
+				Object.assign( state, { hasRemoteUser: true, profileURL, template } );
 			}
 		},
 

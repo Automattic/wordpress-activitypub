@@ -11,7 +11,7 @@
 
 namespace Activitypub\Signature;
 
-use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Class Http_Message_Signature.
@@ -91,11 +91,16 @@ class Http_Message_Signature implements Http_Signature {
 	 */
 	public function sign( $args, $url ) {
 		// Standard components to sign.
-		$components  = array(
+		$components = array(
 			'"@method"'     => \strtoupper( $args['method'] ),
 			'"@target-uri"' => $url,
 			'"@authority"'  => \wp_parse_url( $url, PHP_URL_HOST ),
 		);
+
+		if ( isset( $args['headers']['Collection-Synchronization'] ) ) {
+			$components['"collection-synchronization"'] = $args['headers']['Collection-Synchronization'];
+		}
+
 		$identifiers = \array_keys( $components );
 
 		// Add digest if provided.
@@ -229,7 +234,7 @@ class Http_Message_Signature implements Http_Signature {
 			return new \WP_Error( 'missing_keyid', 'Missing keyId in signature parameters.' );
 		}
 
-		$public_key = Actors::get_remote_key( $params['keyid'] );
+		$public_key = Remote_Actors::get_public_key( $params['keyid'] );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}

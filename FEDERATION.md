@@ -8,10 +8,12 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [WebFinger](https://www.w3.org/community/reports/socialcg/CG-FINAL-apwf-20240608/)
 - [HTTP Signatures](https://swicg.github.io/activitypub-http-signature/)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
+- [Interaction Policy](https://docs.gotosocial.org/en/latest/federation/interaction_policy/)
 
 ## Supported FEPs
 
 - [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
+- [FEP-0151: NodeInfo in Fediverse Software (2025 edition)](https://codeberg.org/fediverse/fep/src/branch/main/fep/0151/fep-0151.md)
 - [FEP-67ff: FEDERATION.md](https://codeberg.org/fediverse/fep/src/branch/main/fep/67ff/fep-67ff.md)
 - [FEP-5feb: Search indexing consent for actors](https://codeberg.org/fediverse/fep/src/branch/main/fep/5feb/fep-5feb.md)
 - [FEP-2677: Identifying the Application Actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/2677/fep-2677.md)
@@ -20,6 +22,9 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [FEP-b2b8: Long-form Text](https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md)
 - [FEP-7888: Demystifying the context property](https://codeberg.org/fediverse/fep/src/branch/main/fep/7888/fep-7888.md)
 - [FEP-844e: Capability discovery](https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md)
+- [FEP-044f: Consent-respecting quote posts](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
+- [FEP-3b86: Activity Intents](https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md)
+- [FEP-8fcf: Followers collection synchronization across servers](https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md)
 
 Partially supported FEPs
 

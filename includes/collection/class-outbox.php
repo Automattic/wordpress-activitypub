@@ -7,10 +7,10 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Scheduler;
-use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Scheduler;
+use Activitypub\Webfinger;
 
 use function Activitypub\add_to_outbox;
 
@@ -20,6 +20,11 @@ use function Activitypub\add_to_outbox;
  * @link https://www.w3.org/TR/activitypub/#outbox
  */
 class Outbox {
+	/**
+	 * The post type for the objects.
+	 *
+	 * @var string
+	 */
 	const POST_TYPE = 'ap_outbox';
 
 	/**
@@ -242,10 +247,6 @@ class Outbox {
 	 */
 	public static function get_activity( $outbox_item ) {
 		$outbox_item = \get_post( $outbox_item );
-		$actor       = self::get_actor( $outbox_item );
-		if ( is_wp_error( $actor ) ) {
-			return $actor;
-		}
 
 		$activity_object = \json_decode( $outbox_item->post_content, true );
 		$type            = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
@@ -253,9 +254,18 @@ class Outbox {
 		if ( $activity_object['type'] === $type ) {
 			$activity = Activity::init_from_array( $activity_object );
 			if ( ! $activity->get_actor() ) {
+				$actor = self::get_actor( $outbox_item );
+				if ( \is_wp_error( $actor ) ) {
+					return $actor;
+				}
 				$activity->set_actor( $actor->get_id() );
 			}
 		} else {
+			$actor = self::get_actor( $outbox_item );
+			if ( \is_wp_error( $actor ) ) {
+				return $actor;
+			}
+
 			$activity = new Activity();
 			$activity->set_type( $type );
 			$activity->set_id( $outbox_item->guid );
@@ -360,7 +370,7 @@ class Outbox {
 	/**
 	 * Get the title of an activity recursively.
 	 *
-	 * @param Base_Object $activity_object The activity object.
+	 * @param Activity|Base_Object $activity_object The activity object.
 	 *
 	 * @return string The title.
 	 */

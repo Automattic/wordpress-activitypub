@@ -8,8 +8,9 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Signature\Http_Signature_Draft;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Signature\Http_Message_Signature;
+use Activitypub\Signature\Http_Signature_Draft;
 
 /**
  * ActivityPub Signature Class.
@@ -18,6 +19,14 @@ use Activitypub\Signature\Http_Message_Signature;
  * @author Django Doucet
  */
 class Signature {
+
+	/**
+	 * Initialize the class.
+	 */
+	public static function init() {
+		\add_filter( 'http_request_args', array( self::class, 'sign_request' ), 0, 2 ); // Ahead of all other filters, so signature is set.
+		\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
+	}
 
 	/**
 	 * Sign an HTTP Request.
@@ -33,19 +42,8 @@ class Signature {
 			return $args;
 		}
 
-		$args = \wp_parse_args(
-			$args,
-			array(
-				'method'  => 'GET',
-				'headers' => array(
-					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
-				),
-			)
-		);
-
 		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && self::could_support_rfc9421( $url ) ) {
 			$signature = new Http_Message_Signature();
-			\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
 		} else {
 			$signature = new Http_Signature_Draft();
 		}
@@ -85,13 +83,10 @@ class Signature {
 	 * @return array The HTTP response.
 	 */
 	public static function maybe_double_knock( $response, $args, $url ) {
-		// Bail if there's nothing to sign with. It's likely an unrelated request getting processed first.
-		if ( ! isset( $args['key_id'], $args['private_key'], $args['headers']['Date'] ) ) {
+		// Bail if it didn't use an RFC-9421 signature or there's nothing to sign with.
+		if ( ! isset( $args['key_id'], $args['private_key'], $args['headers']['Signature-Input'] ) ) {
 			return $response;
 		}
-
-		// Remove this filter to prevent infinite recursion.
-		\remove_filter( 'http_response', array( self::class, 'maybe_double_knock' ) );
 
 		$response_code = \wp_remote_retrieve_response_code( $response );
 
@@ -242,16 +237,16 @@ class Signature {
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @deprecated 7.0.0 Use {@see Actors::get_remote_key()}.
+	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_public_key()}.
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
-		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_remote_key()' );
+		\_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_public_key()' );
 
-		return Actors::get_remote_key( $key_id );
+		return Remote_Actors::get_public_key( $key_id );
 	}
 
 	/**
@@ -268,7 +263,7 @@ class Signature {
 	 * @return string The signature.
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request()' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::sign_request()' );
 
 		$user = Actors::get_by_id( $user_id );
 		$key  = Actors::get_private_key( $user_id );
@@ -319,7 +314,7 @@ class Signature {
 	 * @return string|bool The signature algorithm or false if not found.
 	 */
 	public static function get_signature_algorithm( $signature_block ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
 
 		if ( ! empty( $signature_block['algorithm'] ) ) {
 			switch ( $signature_block['algorithm'] ) {
@@ -343,7 +338,7 @@ class Signature {
 	 * @return array Signature parts.
 	 */
 	public static function parse_signature_header( $signature ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
 
 		$parsed_header = array();
 		$matches       = array();
@@ -386,7 +381,7 @@ class Signature {
 	 * @return string signed headers for comparison
 	 */
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::verify' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
 
 		$signed_data = '';
 
@@ -465,9 +460,102 @@ class Signature {
 	 * @return string The digest.
 	 */
 	public static function generate_digest( $body ) {
-		\_deprecated_function( __METHOD__, 'unreleased', self::class . '::sign_request' );
+		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::sign_request' );
 
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return "SHA-256=$digest";
+	}
+
+	/**
+	 * Compute the collection digest for a specific instance.
+	 *
+	 * Implements FEP-8fcf: Followers collection synchronization.
+	 * The digest is created by XORing together the individual SHA256 digests
+	 * of each follower's ID.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
+	 *
+	 * @param array $collection The user ID whose followers to compute.
+	 *
+	 * @return string|false The hex-encoded digest, or false if no followers.
+	 */
+	public static function get_collection_digest( $collection ) {
+		if ( empty( $collection ) || ! is_array( $collection ) ) {
+			return false;
+		}
+
+		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
+		$digest = str_repeat( '0', 64 );
+
+		foreach ( $collection as $item ) {
+			// Compute SHA256 hash of the follower ID.
+			$hash = hash( 'sha256', $item );
+
+			// XOR the hash with the running digest.
+			$digest = self::xor_hex_strings( $digest, $hash );
+		}
+
+		return $digest;
+	}
+
+	/**
+	 * XOR two hexadecimal strings.
+	 *
+	 * Used for FEP-8fcf digest computation.
+	 *
+	 * @param string $hex1 First hex string.
+	 * @param string $hex2 Second hex string.
+	 *
+	 * @return string The XORed result as a hex string.
+	 */
+	public static function xor_hex_strings( $hex1, $hex2 ) {
+		$result = '';
+
+		// Ensure both strings are the same length (should be 64 chars for SHA256).
+		$length = \max( \strlen( $hex1 ), \strlen( $hex2 ) );
+		$hex1   = \str_pad( $hex1, $length, '0', STR_PAD_LEFT );
+		$hex2   = \str_pad( $hex2, $length, '0', STR_PAD_LEFT );
+
+		// XOR each pair of hex digits.
+		for ( $i = 0; $i < $length; $i += 2 ) {
+			$byte1   = \hexdec( \substr( $hex1, $i, 2 ) );
+			$byte2   = \hexdec( \substr( $hex2, $i, 2 ) );
+			$result .= \str_pad( \dechex( $byte1 ^ $byte2 ), 2, '0', STR_PAD_LEFT );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Parse a Collection-Synchronization header (FEP-8fcf).
+	 *
+	 * Parses the signature-style format used by the Collection-Synchronization header.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
+	 *
+	 * @param string $header The header value.
+	 *
+	 * @return array|false Array with parsed parameters (collectionId, url, digest), or false on failure.
+	 */
+	public static function parse_collection_sync_header( $header ) {
+		if ( empty( $header ) ) {
+			return false;
+		}
+
+		// Parse the signature-style format: key="value", key="value".
+		$params = array();
+
+		if ( \preg_match_all( '/(\w+)="([^"]*)"/', $header, $matches, PREG_SET_ORDER ) ) {
+			foreach ( $matches as $match ) {
+				$params[ $match[1] ] = $match[2];
+			}
+		}
+
+		// Validate required fields for FEP-8fcf.
+		if ( empty( $params['collectionId'] ) || empty( $params['url'] ) || empty( $params['digest'] ) ) {
+			return false;
+		}
+
+		return $params;
 	}
 }

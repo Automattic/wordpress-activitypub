@@ -9,14 +9,11 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
-use Activitypub\Model\Application;
-use Activitypub\Model\Blog;
-use Activitypub\Model\User;
 use Activitypub\Transformer\Factory;
 
 use function Activitypub\esc_hashtag;
-use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_single_user;
 
 /**
  * Collections_Controller class.
@@ -40,9 +37,10 @@ class Collections_Controller extends Actors_Controller {
 			array(
 				'args'   => array(
 					'user_id' => array(
-						'description' => 'The user ID or username.',
-						'type'        => 'string',
-						'required'    => true,
+						'description'       => 'The user ID or username.',
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => array( $this, 'validate_user_id' ),
 					),
 					'type'    => array(
 						'description' => 'The type of collection to query.',
@@ -84,19 +82,14 @@ class Collections_Controller extends Actors_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = Actors::get_by_various( $user_id );
-
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
 
 		switch ( $request->get_param( 'type' ) ) {
 			case 'tags':
-				$response = $this->get_tags( $request, $user );
+				$response = $this->get_tags( $request, $user_id );
 				break;
 
 			case 'featured':
-				$response = $this->get_featured( $request, $user );
+				$response = $this->get_featured( $request, $user_id );
 				break;
 
 			default:
@@ -116,12 +109,12 @@ class Collections_Controller extends Actors_Controller {
 	/**
 	 * Retrieves a collection of featured tags.
 	 *
-	 * @param \WP_REST_Request      $request The request object.
-	 * @param User|Blog|Application $user    Actor.
+	 * @param \WP_REST_Request $request The request object.
+	 * @param int              $user_id Actor ID.
 	 *
 	 * @return array Collection of featured tags.
 	 */
-	public function get_tags( $request, $user ) {
+	public function get_tags( $request, $user_id ) {
 		$tags = \get_terms(
 			array(
 				'taxonomy' => 'post_tag',
@@ -137,7 +130,7 @@ class Collections_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'   => Base_Object::JSON_LD_CONTEXT,
-			'id'         => get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $user->get__id() ) ),
+			'id'         => get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $user_id ) ),
 			'type'       => 'Collection',
 			'totalItems' => \is_countable( $tags ) ? \count( $tags ) : 0,
 			'items'      => array(),
@@ -147,7 +140,7 @@ class Collections_Controller extends Actors_Controller {
 			$response['items'][] = array(
 				'type' => 'Hashtag',
 				'href' => \esc_url( \get_tag_link( $tag ) ),
-				'name' => esc_hashtag( $tag->name ),
+				'name' => esc_hashtag( $tag->slug ),
 			);
 		}
 
@@ -157,15 +150,15 @@ class Collections_Controller extends Actors_Controller {
 	/**
 	 * Retrieves a collection of featured posts.
 	 *
-	 * @param \WP_REST_Request      $request The request object.
-	 * @param User|Blog|Application $user    Actor.
+	 * @param \WP_REST_Request $request The request object.
+	 * @param int              $user_id Actor ID.
 	 *
 	 * @return array Collection of featured posts.
 	 */
-	public function get_featured( $request, $user ) {
+	public function get_featured( $request, $user_id ) {
 		$posts = array();
 
-		if ( is_single_user() || Actors::BLOG_USER_ID !== $user->get__id() ) {
+		if ( is_single_user() || Actors::BLOG_USER_ID !== $user_id ) {
 			$sticky_posts = \get_option( 'sticky_posts' );
 
 			if ( $sticky_posts && is_array( $sticky_posts ) ) {
@@ -184,8 +177,8 @@ class Collections_Controller extends Actors_Controller {
 					),
 				);
 
-				if ( $user->get__id() > 0 ) {
-					$args['author'] = $user->get__id();
+				if ( $user_id > 0 ) {
+					$args['author'] = $user_id;
 				}
 
 				$posts = \get_posts( $args );
@@ -194,7 +187,7 @@ class Collections_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $request->get_param( 'user_id' ) ) ),
+			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => \is_countable( $posts ) ? \count( $posts ) : 0,
 			'orderedItems' => array(),
