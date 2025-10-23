@@ -33,12 +33,12 @@ class Test_Move extends \WP_UnitTestCase {
 	private $user_id_2;
 
 	/**
-	 * Setup the test.
+	 * Set up the test.
 	 */
 	public function setUp(): void {
 		parent::setUp();
-		$this->user_id   = $this->factory->user->create();
-		$this->user_id_2 = $this->factory->user->create();
+		$this->user_id   = self::factory()->user->create();
+		$this->user_id_2 = self::factory()->user->create();
 	}
 
 	/**
@@ -125,7 +125,7 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\wp_delete_post( $updated_follower->ID );
 
-		\remove_filter( 'pre_http_request', $filter, 10 );
+		\remove_filter( 'pre_http_request', $filter );
 	}
 
 	/**
@@ -230,6 +230,85 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Cleanup.
 		$test_follower->delete();
+	}
+
+	/**
+	 * Test the handle_move method when target exists but origin does not.
+	 *
+	 * This tests the scenario where the new profile is already followed,
+	 * but the old profile is not. In this case, no action should be taken.
+	 */
+	public function test_handle_move_with_existing_target_but_missing_origin() {
+		$target = 'https://example.com/new-profile';
+		$origin = 'https://example.com/old-profile';
+
+		// Create only the target follower, not the origin.
+		$target_follower = new Actor();
+		$target_follower->set_inbox( 'https://example.com/new-profile/inbox' );
+		$target_follower->set_type( 'Person' );
+		$target_follower->set_id( $target );
+		$target_follower->set_url( $target );
+		$target_id = Remote_Actors::upsert( $target_follower );
+
+		// Add user ID to target.
+		\add_post_meta( $target_id, Followers::FOLLOWER_META_KEY, $this->user_id );
+
+		$filter = function ( $preempt, $args, $url ) use ( $target, $origin ) {
+			if ( $url === $target ) {
+				return array(
+					'body'     => \wp_json_encode(
+						array(
+							'type'          => 'Person',
+							'id'            => $target,
+							'url'           => $target,
+							'name'          => 'New Profile',
+							'inbox'         => 'https://example.com/new-profile/inbox',
+							'also_known_as' => array( $origin ),
+						)
+					),
+					'response' => array( 'code' => 200 ),
+				);
+			}
+			if ( $url === $origin ) {
+				return array(
+					'body'     => \wp_json_encode(
+						array(
+							'type'    => 'Person',
+							'id'      => $origin,
+							'url'     => $origin,
+							'name'    => 'Old Profile',
+							'inbox'   => 'https://example.com/old-profile/inbox',
+							'movedTo' => $target,
+						)
+					),
+					'response' => array( 'code' => 200 ),
+				);
+			}
+			return $preempt;
+		};
+
+		// Mock the HTTP request.
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$activity = array(
+			'type'   => 'Move',
+			'actor'  => $origin,
+			'object' => $target,
+		);
+
+		Move::handle_move( $activity, 1 );
+
+		// Verify that the target still exists with the same followers.
+		$target_users = \get_post_meta( $target_id, Followers::FOLLOWER_META_KEY, false );
+		$this->assertContains( (string) $this->user_id, $target_users );
+		$this->assertCount( 1, $target_users );
+
+		// Verify that no origin follower was created.
+		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
+
+		// Cleanup.
+		\wp_delete_post( $target_id );
+		\remove_filter( 'pre_http_request', $filter );
 	}
 
 	/**
