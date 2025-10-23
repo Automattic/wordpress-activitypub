@@ -299,14 +299,14 @@ class Delete {
 	}
 
 	/**
-	 * Defer inbox storage for `Delete` requests.
+	 * Skip inbox storage for `Delete` requests.
 	 *
-	 * @param bool  $defer Whether to defer inbox storage.
-	 * @param array $data  The activity data array.
+	 * @param bool  $skip Whether to skip inbox storage.
+	 * @param array $data The activity data array.
 	 *
-	 * @return bool Whether to defer inbox storage.
+	 * @return bool Whether to skip inbox storage.
 	 */
-	public static function defer_inbox_storage( $defer, $data ) {
+	public static function skip_inbox_storage( $skip, $data ) {
 		if ( isset( $data['type'] ) && 'Delete' === $data['type'] ) {
 			return true;
 		}
