@@ -70,7 +70,7 @@ class Inbox {
 		 *
 		 * @return bool Whether to defer inbox storage.
 		 */
-		$defer = \apply_filters( 'activitypub_skip_inbox_storage', false, $data );
+		$skip = \apply_filters( 'activitypub_skip_inbox_storage', false, $data );
 
 		if ( $defer ) {
 			return;
