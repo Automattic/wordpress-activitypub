@@ -282,14 +282,6 @@ class Inbox {
 		$recipients = \get_post_meta( $post_id, '_activitypub_user_id', false );
 		$recipients = \array_map( 'intval', $recipients );
 
-		if ( empty( $recipients ) ) {
-			// Fallback for old posts: use post_author.
-			$post = \get_post( $post_id );
-			if ( $post && $post->post_author > 0 ) {
-				$recipients = array( (int) $post->post_author );
-			}
-		}
-
 		return $recipients;
 	}
 

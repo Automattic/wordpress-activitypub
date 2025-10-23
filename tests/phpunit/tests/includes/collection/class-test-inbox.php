@@ -532,56 +532,6 @@ class Test_Inbox extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test backward compatibility with old inbox items using post_author.
-	 *
-	 * @covers ::get_recipients
-	 */
-	public function test_backward_compatibility_post_author() {
-		// Ensure post type is registered.
-		Post_Types::register_inbox_post_type();
-
-		// Create a user first to ensure the user ID is valid.
-		$user_id = \wp_insert_user(
-			array(
-				'user_login' => 'testuser_' . \wp_rand(),
-				'user_pass'  => 'testpass',
-				'user_email' => 'test' . \wp_rand() . '@example.com',
-			)
-		);
-		$this->assertIsInt( $user_id, 'User creation should succeed' );
-
-		// Create an old-style inbox item directly (without using Inbox::add).
-		$post_id = \wp_insert_post(
-			array(
-				'post_type'   => Inbox::POST_TYPE,
-				'post_title'  => 'Old style inbox item',
-				'post_author' => $user_id,
-				'post_status' => 'publish',
-				'guid'        => 'https://remote.example.com/activities/old-style',
-			)
-		);
-
-		$this->assertIsInt( $post_id, 'Post creation should succeed' );
-
-		// Verify the post was created with correct author.
-		$post = \get_post( $post_id );
-		$this->assertEquals( $user_id, (int) $post->post_author, 'Post author should match user ID' );
-
-		// Ensure no _activitypub_user_id meta exists (delete if any was added).
-		\delete_post_meta( $post_id, '_activitypub_user_id' );
-
-		// Verify no meta exists.
-		$meta = \get_post_meta( $post_id, '_activitypub_user_id', false );
-		$this->assertEmpty( $meta, 'No _activitypub_user_id meta should exist' );
-
-		// Should fall back to post_author when no _activitypub_user_id meta exists.
-		$recipients = Inbox::get_recipients( $post_id );
-		$this->assertIsArray( $recipients );
-		$this->assertCount( 1, $recipients, 'Should have exactly one recipient from post_author' );
-		$this->assertContains( $user_id, $recipients, 'Should contain the post author ID' );
-	}
-
-	/**
 	 * Test adding activity with empty recipients array.
 	 *
 	 * @covers ::add
