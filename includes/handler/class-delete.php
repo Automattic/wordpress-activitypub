@@ -24,7 +24,7 @@ class Delete {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
-		\add_filter( 'activitypub_skip_inbox_storage', array( self::class, 'defer_inbox_storage' ), 10, 2 );
+		\add_filter( 'activitypub_skip_inbox_storage', array( self::class, 'skip_inbox_storage' ), 10, 2 );
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
 		\add_action( 'activitypub_delete_remote_actor_interactions', array( self::class, 'delete_interactions' ) );
 		\add_action( 'activitypub_delete_remote_actor_posts', array( self::class, 'delete_posts' ) );
