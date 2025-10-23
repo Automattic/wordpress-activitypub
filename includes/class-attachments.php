@@ -61,7 +61,7 @@ class Attachments {
 		}
 
 		// Check if the query is already explicitly looking for _activitypub_import.
-		$meta_query = $query->get( 'meta_query' ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary
+		$meta_query = $query->get( 'meta_query', array() );
 
 		$has_activitypub_query = false;
 		foreach ( $meta_query as $clause ) {
