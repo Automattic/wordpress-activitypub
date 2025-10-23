@@ -311,7 +311,7 @@ class Delete {
 			return true;
 		}
 
-		return $defer;
+		return $skip;
 	}
 
 	/**
