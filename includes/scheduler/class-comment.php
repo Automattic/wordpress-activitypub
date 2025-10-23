@@ -124,18 +124,10 @@ class Comment {
 			return;
 		}
 
-		// Get the blog actor.
-		$blog_actor = Actors::get_by_id( Actors::BLOG_USER_ID );
-		if ( ! $blog_actor || \is_wp_error( $blog_actor ) ) {
-			return;
-		}
-
-		$blog_actor_id = $blog_actor->get_id();
-
 		// Create the Announce activity.
 		$announce = new Activity();
 		$announce->set_type( 'Announce' );
-		$announce->set_actor( $blog_actor_id );
+		$announce->set_actor( Actors::BLOG_USER_ID );
 		$announce->set_object( $activity );
 
 		// Add to outbox with error handling.
