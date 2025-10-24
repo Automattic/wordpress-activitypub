@@ -555,7 +555,7 @@ class Post_Types {
 			)
 		);
 
-		// Add formatted actor data field
+		// Add formatted actor data field.
 		\register_rest_field(
 			Remote_Actors::POST_TYPE,
 			'actor_info',
@@ -582,7 +582,7 @@ class Post_Types {
 			)
 		);
 
-		// Add follow status field
+		// Add follow status field.
 		\register_rest_field(
 			Remote_Actors::POST_TYPE,
 			'follow_status',
@@ -604,8 +604,7 @@ class Post_Types {
 			)
 		);
 
-		// Add custom query parameter for filtering by follower relationships
-		\add_filter( 'rest_ap_actor_collection_params', array( self::class, 'add_follower_collection_params' ), 10, 1 );
+		// Add custom query parameter for filtering by follower relationships.
 		\add_filter( 'rest_ap_actor_query', array( self::class, 'filter_ap_actor_query_by_follower' ), 10, 2 );
 	}
 
@@ -619,7 +618,7 @@ class Post_Types {
 		$query_params['follower_of'] = array(
 			'description' => __( 'Limit result set to actors that follow a specific user ID.', 'activitypub' ),
 			'type'        => 'integer',
-			'minimum'     => 1,
+			'minimum'     => 0,
 		);
 
 		return $query_params;
@@ -636,7 +635,7 @@ class Post_Types {
 		if ( ! empty( $request['follower_of'] ) ) {
 			$user_id = (int) $request['follower_of'];
 
-			// Add meta_query to filter by _activitypub_following
+			// Add meta_query to filter by _activitypub_following.
 			if ( ! isset( $args['meta_query'] ) ) {
 				$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			}
