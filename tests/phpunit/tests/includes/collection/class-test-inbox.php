@@ -321,4 +321,262 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$user_ids = \get_post_meta( $inbox_id_1, '_activitypub_user_id', false );
 		$this->assertCount( 3, $user_ids, 'Should not duplicate user_id' );
 	}
+
+	/**
+	 * Test adding activity with array of recipients.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_array_of_recipients() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/array-recipients' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/array-recipients' );
+		$object->set_type( 'Note' );
+		$object->set_content( 'Test content for array of recipients' );
+		$activity->set_object( $object );
+
+		// Add activity with multiple recipients at once.
+		$inbox_id = Inbox::add( $activity, array( 1, 2, 3, 0 ) );
+		$this->assertIsInt( $inbox_id );
+
+		// Verify all recipients are stored.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertIsArray( $recipients );
+		$this->assertCount( 4, $recipients );
+		$this->assertContains( 0, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+		$this->assertContains( 3, $recipients );
+	}
+
+	/**
+	 * Test get_recipients function.
+	 *
+	 * @covers ::get_recipients
+	 */
+	public function test_get_recipients() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/get-recipients' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/get-recipients' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		// Add with multiple recipients.
+		$inbox_id = Inbox::add( $activity, array( 1, 2, 0 ) );
+
+		// Test get_recipients.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertIsArray( $recipients );
+		$this->assertCount( 3, $recipients );
+		$this->assertContains( 0, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+	}
+
+	/**
+	 * Test has_recipient function.
+	 *
+	 * @covers ::has_recipient
+	 */
+	public function test_has_recipient() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/has-recipient' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/has-recipient' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, array( 1, 2 ) );
+
+		// Test has_recipient for existing recipients.
+		$this->assertTrue( Inbox::has_recipient( $inbox_id, 1 ) );
+		$this->assertTrue( Inbox::has_recipient( $inbox_id, 2 ) );
+
+		// Test has_recipient for non-existing recipient.
+		$this->assertFalse( Inbox::has_recipient( $inbox_id, 3 ) );
+		$this->assertFalse( Inbox::has_recipient( $inbox_id, 0 ) );
+	}
+
+	/**
+	 * Test add_recipient function.
+	 *
+	 * @covers ::add_recipient
+	 */
+	public function test_add_recipient() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/add-recipient' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/add-recipient' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		// Add new recipient.
+		$result = Inbox::add_recipient( $inbox_id, 2 );
+		$this->assertTrue( $result );
+		$this->assertTrue( Inbox::has_recipient( $inbox_id, 2 ) );
+
+		// Add blog user (ID 0).
+		$result = Inbox::add_recipient( $inbox_id, 0 );
+		$this->assertTrue( $result );
+		$this->assertTrue( Inbox::has_recipient( $inbox_id, 0 ) );
+
+		// Try adding duplicate recipient.
+		$result = Inbox::add_recipient( $inbox_id, 1 );
+		$this->assertTrue( $result, 'Should return true for duplicate (no-op)' );
+
+		// Verify total count.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertCount( 3, $recipients );
+
+		// Test invalid user ID (negative).
+		$result = Inbox::add_recipient( $inbox_id, -1 );
+		$this->assertFalse( $result, 'Should reject negative user ID' );
+	}
+
+	/**
+	 * Test remove_recipient function.
+	 *
+	 * @covers ::remove_recipient
+	 */
+	public function test_remove_recipient() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/remove-recipient' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/remove-recipient' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, array( 0, 1, 2, 3 ) );
+
+		// Remove a recipient.
+		$result = Inbox::remove_recipient( $inbox_id, 2 );
+		$this->assertTrue( $result );
+		$this->assertFalse( Inbox::has_recipient( $inbox_id, 2 ) );
+
+		// Remove blog user (ID 0).
+		$result = Inbox::remove_recipient( $inbox_id, 0 );
+		$this->assertTrue( $result );
+		$this->assertFalse( Inbox::has_recipient( $inbox_id, 0 ) );
+
+		// Verify remaining recipients.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertCount( 2, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 3, $recipients );
+
+		// Test removing non-existent recipient.
+		$result = Inbox::remove_recipient( $inbox_id, 99 );
+		$this->assertFalse( $result, 'Should return false when removing non-existent recipient' );
+
+		// Test invalid user ID (negative).
+		$result = Inbox::remove_recipient( $inbox_id, -1 );
+		$this->assertFalse( $result, 'Should reject negative user ID' );
+	}
+
+	/**
+	 * Test get_by_guid_and_recipient function.
+	 *
+	 * @covers ::get_by_guid_and_recipient
+	 */
+	public function test_get_by_guid_and_recipient() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/guid-recipient' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/guid-recipient' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, array( 1, 2 ) );
+
+		// Test with valid recipient.
+		$post = Inbox::get_by_guid_and_recipient( 'https://remote.example.com/activities/guid-recipient', 1 );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( $inbox_id, $post->ID );
+
+		// Test with another valid recipient.
+		$post = Inbox::get_by_guid_and_recipient( 'https://remote.example.com/activities/guid-recipient', 2 );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( $inbox_id, $post->ID );
+
+		// Test with non-recipient.
+		$result = Inbox::get_by_guid_and_recipient( 'https://remote.example.com/activities/guid-recipient', 3 );
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertEquals( 'activitypub_inbox_not_recipient', $result->get_error_code() );
+
+		// Test with non-existent GUID.
+		$result = Inbox::get_by_guid_and_recipient( 'https://remote.example.com/activities/non-existent', 1 );
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertEquals( 'activitypub_inbox_item_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * Test adding activity with empty recipients array.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_empty_recipients() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/empty-recipients' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/empty-recipients' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$result = Inbox::add( $activity, array() );
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertEquals( 'activitypub_inbox_no_recipients', $result->get_error_code() );
+	}
+
+	/**
+	 * Test adding activity with duplicate recipients in array.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_duplicate_recipients() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/dup-array' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/dup-array' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		// Add with duplicate recipients in array.
+		$inbox_id = Inbox::add( $activity, array( 1, 2, 1, 3, 2 ) );
+		$this->assertIsInt( $inbox_id );
+
+		// Verify recipients are deduplicated.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertCount( 3, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+		$this->assertContains( 3, $recipients );
+	}
 }

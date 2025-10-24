@@ -28,31 +28,58 @@ class Inbox {
 	const POST_TYPE = 'ap_inbox';
 
 	/**
+	 * Context for user inbox requests.
+	 *
+	 * @var string
+	 */
+	const CONTEXT_INBOX = 'inbox';
+
+	/**
+	 * Context for shared inbox requests.
+	 *
+	 * @var string
+	 */
+	const CONTEXT_SHARED_INBOX = 'shared_inbox';
+
+	/**
 	 * Add an activity to the inbox.
 	 *
-	 * @param Activity|\WP_Error $activity The Activity object.
-	 * @param int                $user_id  The id of the local blog-user.
+	 * @param Activity|\WP_Error $activity   The Activity object.
+	 * @param int|array          $recipients The id(s) of the local blog-user(s).
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
-	public static function add( $activity, $user_id ) {
+	public static function add( $activity, $recipients ) {
 		if ( \is_wp_error( $activity ) ) {
 			return $activity;
 		}
 
-		$item = self::get_by_guid( $activity->get_id() );
+		// Sanitize recipients.
+		$recipients = \array_map( 'absint', (array) $recipients );
+		$recipients = \array_unique( $recipients );
+		$recipients = \array_values( $recipients );
 
-		// Check for duplicate activity.
-		if ( $item instanceof \WP_Post ) {
-			// Ensure that it is added to the inbox of the user.
-			$user_ids = \get_post_meta( $item->ID, '_activitypub_user_id', false );
-			if ( ! \in_array( (string) $user_id, $user_ids, true ) ) {
-				\add_post_meta( $item->ID, '_activitypub_user_id', $user_id );
-				\clean_post_cache( $item->ID );
-			}
-			return $item->ID;
+		if ( empty( $recipients ) ) {
+			return new \WP_Error(
+				'activitypub_inbox_no_recipients',
+				'No valid recipients provided',
+				array( 'status' => 400 )
+			);
 		}
 
+		// Check if activity already exists (by GUID).
+		$existing = self::get_by_guid( $activity->get_id() );
+
+		// If activity exists, add new recipients to it.
+		if ( $existing instanceof \WP_Post ) {
+			foreach ( $recipients as $user_id ) {
+				self::add_recipient( $existing->ID, $user_id );
+			}
+
+			return $existing->ID;
+		}
+
+		// Activity doesn't exist, create new post.
 		$title      = self::get_object_title( $activity->get_object() );
 		$visibility = is_activity_public( $activity ) ? ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC : ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 
@@ -65,12 +92,12 @@ class Inbox {
 				\wp_trim_words( $title, 5 )
 			),
 			'post_content' => wp_slash( $activity->to_json() ),
+			'post_author'  => 0, // No specific author, recipients stored in meta.
 			'post_status'  => 'publish',
 			'guid'         => $activity->get_id(),
 			'meta_input'   => array(
 				'_activitypub_object_id'             => object_to_uri( $activity->get_object() ),
 				'_activitypub_activity_type'         => $activity->get_type(),
-				'_activitypub_user_id'               => $user_id,
 				'_activitypub_activity_remote_actor' => object_to_uri( $activity->get_actor() ),
 				'activitypub_content_visibility'     => $visibility,
 			),
@@ -86,6 +113,13 @@ class Inbox {
 
 		if ( $has_kses ) {
 			\kses_init_filters();
+		}
+
+		// Add recipients as separate meta entries after post is created.
+		if ( ! \is_wp_error( $id ) ) {
+			foreach ( $recipients as $user_id ) {
+				self::add_recipient( $id, $user_id );
+			}
 		}
 
 		return $id;
@@ -221,5 +255,107 @@ class Inbox {
 					array( 'status' => 400 )
 				);
 		}
+	}
+
+	/**
+	 * Get all recipients for an inbox activity.
+	 *
+	 * @param int $post_id The inbox post ID.
+	 *
+	 * @return array Array of user IDs who are recipients.
+	 */
+	public static function get_recipients( $post_id ) {
+		// Get all meta values with key '_activitypub_user_id' (single => false).
+		$recipients = \get_post_meta( $post_id, '_activitypub_user_id', false );
+		$recipients = \array_map( 'intval', $recipients );
+
+		return $recipients;
+	}
+
+	/**
+	 * Check if a user is a recipient of an inbox activity.
+	 *
+	 * @param int $post_id The inbox post ID.
+	 * @param int $user_id The user ID to check.
+	 *
+	 * @return bool True if user is a recipient, false otherwise.
+	 */
+	public static function has_recipient( $post_id, $user_id ) {
+		$recipients = self::get_recipients( $post_id );
+
+		return \in_array( (int) $user_id, $recipients, true );
+	}
+
+	/**
+	 * Add a recipient to an existing inbox activity.
+	 *
+	 * @param int $post_id The inbox post ID.
+	 * @param int $user_id The user ID to add.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function add_recipient( $post_id, $user_id ) {
+		$user_id = (int) $user_id;
+		// Allow 0 for blog user, but reject negative values.
+		if ( $user_id < 0 ) {
+			return false;
+		}
+
+		// Check if already a recipient.
+		if ( self::has_recipient( $post_id, $user_id ) ) {
+			return true;
+		}
+
+		// Add new recipient as separate meta entry.
+		return (bool) \add_post_meta( $post_id, '_activitypub_user_id', $user_id, false );
+	}
+
+	/**
+	 * Remove a recipient from an inbox activity.
+	 *
+	 * @param int $post_id The inbox post ID.
+	 * @param int $user_id The user ID to remove.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function remove_recipient( $post_id, $user_id ) {
+		$user_id = (int) $user_id;
+
+		// Allow 0 for blog user, but reject negative values.
+		if ( $user_id < 0 ) {
+			return false;
+		}
+
+		// Delete the specific meta entry with this value.
+		return \delete_post_meta( $post_id, '_activitypub_user_id', $user_id );
+	}
+
+	/**
+	 * Get an inbox item by GUID for a specific recipient.
+	 *
+	 * This checks both that the activity exists and that the user is a valid recipient.
+	 *
+	 * @param string $guid    The activity GUID.
+	 * @param int    $user_id The user ID.
+	 *
+	 * @return \WP_Post|\WP_Error The inbox item or WP_Error.
+	 */
+	public static function get_by_guid_and_recipient( $guid, $user_id ) {
+		$post = self::get_by_guid( $guid );
+
+		if ( \is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		// Check if user is a recipient.
+		if ( ! self::has_recipient( $post->ID, $user_id ) ) {
+			return new \WP_Error(
+				'activitypub_inbox_not_recipient',
+				'User is not a recipient of this activity',
+				array( 'status' => 404 )
+			);
+		}
+
+		return $post;
 	}
 }

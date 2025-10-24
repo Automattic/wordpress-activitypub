@@ -33,6 +33,20 @@ class Scheduler {
 	private static $batch_callbacks = array();
 
 	/**
+	 * Get the pause between async batches (in seconds).
+	 *
+	 * @return int The pause in seconds.
+	 */
+	public static function get_retry_delay() {
+		/**
+		 * Filters the pause between async batches (in seconds).
+		 *
+		 * @param int $async_batch_pause The pause in seconds. Default 30.
+		 */
+		return apply_filters( 'activitypub_scheduler_async_batch_pause', 30 );
+	}
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
@@ -140,7 +154,7 @@ class Scheduler {
 	public static function unschedule_events_for_item( $outbox_item_id ) {
 		$event_args = array(
 			$outbox_item_id,
-			Dispatcher::$batch_size,
+			Dispatcher::get_batch_size(),
 			\get_post_meta( $outbox_item_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
 		);
 
@@ -276,7 +290,7 @@ class Scheduler {
 		foreach ( $ids as $id ) {
 			// Bail if there is a pending batch.
 			$offset = \get_post_meta( $id, '_activitypub_outbox_offset', true ) ?: 0; // phpcs:ignore
-			if ( \wp_next_scheduled( 'activitypub_send_activity', array( $id, ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset ) ) ) {
+			if ( \wp_next_scheduled( 'activitypub_send_activity', array( $id, Dispatcher::get_batch_size(), $offset ) ) ) {
 				return;
 			}
 
@@ -424,7 +438,7 @@ class Scheduler {
 
 		if ( ! empty( $next ) ) {
 			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event( \time() + 30, \current_action(), \array_values( $next ) );
+			\wp_schedule_single_event( \time() + self::get_retry_delay(), \current_action(), \array_values( $next ) );
 		}
 	}
 
