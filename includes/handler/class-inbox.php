@@ -92,6 +92,21 @@ class Inbox {
 		 */
 		\do_action( 'activitypub_handled_inbox', $data, $user_ids, $type, $activity, $result, $context );
 
+		// Normalize user_id to array for action hooks.
+		$user_ids = (array) $user_ids;
+
+		/**
+		 * Fires after an ActivityPub Inbox activity has been handled.
+		 *
+		 * @param array              $data     The data array.
+		 * @param array              $user_ids The user IDs.
+		 * @param string             $type     The type of the activity.
+		 * @param Activity|\WP_Error $activity The Activity object.
+		 * @param \WP_Error|int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param string             $context  The context of the request ('inbox' or 'shared_inbox').
+		 */
+		\do_action( 'activitypub_handled_inbox', $data, $user_ids, $type, $activity, $result, $context );
+
 		/**
 		 * Fires after an ActivityPub Inbox activity has been handled.
 		 *

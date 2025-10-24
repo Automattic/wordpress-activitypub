@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added new configuration options to better manage traffic spikes when federating posts, allowing finer control over retry limits, delays, and batch pauses.

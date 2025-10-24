@@ -15,6 +15,15 @@ use Activitypub\Handler\Inbox;
  */
 class Test_Inbox extends \WP_UnitTestCase {
 	/**
+	 * Set up test environment.
+	 */
+	public function set_up() {
+		parent::set_up();
+		// Enable inbox persistence for tests.
+		\update_option( 'activitypub_persist_inbox', '1' );
+	}
+
+	/**
 	 * Test handle_inbox_requests with various activity scenarios.
 	 *
 	 * @dataProvider inbox_requests_provider
