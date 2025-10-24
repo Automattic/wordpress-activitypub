@@ -1,0 +1,11 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "activitypub/admin-followers",
+	"title": "ActivityPub Admin Followers DataViews",
+	"category": "widgets",
+	"description": "Admin interface for managing ActivityPub followers using DataViews.",
+	"textdomain": "activitypub",
+	"editorScript": "file:./index.tsx",
+	"style": "file:./style.scss"
+}

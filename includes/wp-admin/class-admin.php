@@ -295,6 +295,41 @@ class Admin {
 			);
 		}
 
+		// Enqueue admin followers DataViews script
+		if ( 'users_page_activitypub-followers-list' === $hook_suffix ) {
+			$asset_file = include ACTIVITYPUB_PLUGIN_DIR . 'build/admin-followers/index.asset.php';
+
+			wp_enqueue_script(
+				'activitypub-admin-followers',
+				plugins_url( 'build/admin-followers/index.js', ACTIVITYPUB_PLUGIN_FILE ),
+				$asset_file['dependencies'],
+				$asset_file['version'],
+				true
+			);
+
+			// Also enqueue the styles
+			wp_enqueue_style(
+				'activitypub-admin-followers',
+				plugins_url( 'build/admin-followers/style-index.css', ACTIVITYPUB_PLUGIN_FILE ),
+				array( 'wp-components' ),
+				$asset_file['version']
+			);
+
+			// Localize script with necessary data
+			wp_localize_script(
+				'activitypub-admin-followers',
+				'activityPubAdmin',
+				array(
+					'userId'           => \get_current_user_id(),
+					'restBase'         => \rest_url(),
+					'nonce'            => \wp_create_nonce( 'wp_rest' ),
+					'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
+					'followingEnabled' => '1' === \get_option( 'activitypub_following_ui', '0' ),
+					'defaultAvatar'    => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+				)
+			);
+		}
+
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
 			wp_enqueue_style(
 				'activitypub-admin-styles',
