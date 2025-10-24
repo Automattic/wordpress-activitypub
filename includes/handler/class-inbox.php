@@ -59,6 +59,7 @@ class Inbox {
 	 * @param string             $context      The context of the request (Inbox_Collection::CONTEXT_INBOX or Inbox_Collection::CONTEXT_SHARED_INBOX).
 	 */
 	public static function handle_inbox_requests( $data, $user_ids, $type, $activity, $context = Inbox_Collection::CONTEXT_INBOX ) {
+		/**
 		 * Filter to skip inbox storage.
 		 *
 		 * Skip inbox storage for debugging purposes or to reduce load for
@@ -76,21 +77,6 @@ class Inbox {
 		}
 
 		$result = Inbox_Collection::add( $activity, $user_ids );
-
-		// Normalize user_id to array for action hooks.
-		$user_ids = (array) $user_ids;
-
-		/**
-		 * Fires after an ActivityPub Inbox activity has been handled.
-		 *
-		 * @param array              $data     The data array.
-		 * @param array              $user_ids The user IDs.
-		 * @param string             $type     The type of the activity.
-		 * @param Activity|\WP_Error $activity The Activity object.
-		 * @param \WP_Error|int      $result   The ID of the inbox item that was created, or WP_Error if failed.
-		 * @param string             $context  The context of the request ('inbox' or 'shared_inbox').
-		 */
-		\do_action( 'activitypub_handled_inbox', $data, $user_ids, $type, $activity, $result, $context );
 
 		// Normalize user_id to array for action hooks.
 		$user_ids = (array) $user_ids;
