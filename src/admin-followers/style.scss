@@ -3,8 +3,34 @@
  */
 @import "@wordpress/dataviews/build-style/style.css";
 
-.users_page_activitypub-followers-list {
+.users_page_activitypub-followers-list,
+.settings_page_activitypub {
 	background: #ffffff;
+
+	#wpcontent {
+		padding-left: 0;
+	}
+
+	.wrap {
+		margin: 10px 0 0 0;
+		padding-left: 0 !important;
+	}
+
+	.admin-ui-page__header {
+		background: #fff;
+		border-bottom: 1px solid #f0f0f0;
+		padding: 16px 48px;
+		top: 0;
+		z-index: 2;
+
+		@media not (prefers-reduced-motion) {
+			transition: padding .1s ease-out
+		}
+	}
+
+	&.admin-bar .admin-ui-page__header {
+		scroll-padding-top: var(--wp-admin--admin-bar--height);
+	}
 
 	// Snackbar positioning - fixed to bottom left of viewport.
 	.components-snackbar-list {

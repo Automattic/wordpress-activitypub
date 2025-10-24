@@ -8,17 +8,20 @@ import { store as noticesStore } from '@wordpress/notices';
 import { __, _n } from '@wordpress/i18n';
 import type { APActor, Action } from '../types';
 
+// Get dispatch functions and namespace once for all action handlers
+const { createSuccessNotice, createErrorNotice } = dispatch( noticesStore );
+const coreDispatch = dispatch( 'core' ) as any;
+const namespace = window.activityPubAdmin?.namespace || 'activitypub/1.0';
+
 /**
  * Delete follower action handler.
  */
 export async function deleteFollower( items: APActor[] ): Promise< void > {
-	const { createSuccessNotice, createErrorNotice } = dispatch( noticesStore );
-
 	try {
-		// Delete each follower relationship
+		// Delete each follower relationship.
 		const deletePromises = items.map( ( item ) =>
 			apiFetch( {
-				path: `/activitypub/1.0/admin/actors/${ item.id }/unfollow`,
+				path: `/${ namespace }/admin/actors/${ item.id }/unfollow`,
 				method: 'DELETE',
 			} )
 		);
@@ -26,7 +29,7 @@ export async function deleteFollower( items: APActor[] ): Promise< void > {
 		await Promise.all( deletePromises );
 
 		// Refresh the entity records.
-		( dispatch( 'core' ) as any ).invalidateResolutionForStoreSelector( 'getEntityRecords' );
+		coreDispatch.invalidateResolutionForStoreSelector( 'getEntityRecords' );
 
 		await createSuccessNotice( _n( 'Follower removed.', 'Followers removed.', items.length, 'activitypub' ), {
 			type: 'snackbar',
@@ -40,12 +43,10 @@ export async function deleteFollower( items: APActor[] ): Promise< void > {
  * Block actor action handler.
  */
 export async function blockActor( items: APActor[] ): Promise< void > {
-	const { createSuccessNotice, createErrorNotice } = dispatch( noticesStore );
-
 	try {
 		const blockPromises = items.map( ( item ) =>
 			apiFetch( {
-				path: `/activitypub/1.0/admin/actors/${ item.id }/block`,
+				path: `/${ namespace }/admin/actors/${ item.id }/block`,
 				method: 'POST',
 				data: {
 					site_wide: false, // User-specific block by default
@@ -56,7 +57,7 @@ export async function blockActor( items: APActor[] ): Promise< void > {
 		await Promise.all( blockPromises );
 
 		// Refresh the entity records.
-		( dispatch( 'core' ) as any ).invalidateResolutionForStoreSelector( 'getEntityRecords' );
+		coreDispatch.invalidateResolutionForStoreSelector( 'getEntityRecords' );
 
 		await createSuccessNotice( _n( 'Account blocked.', 'Accounts blocked.', items.length, 'activitypub' ), {
 			type: 'snackbar',
@@ -70,12 +71,10 @@ export async function blockActor( items: APActor[] ): Promise< void > {
  * Follow back action handler.
  */
 export async function follow( items: APActor[] ): Promise< void > {
-	const { createSuccessNotice, createErrorNotice } = dispatch( noticesStore );
-
 	try {
 		const followPromises = items.map( ( item ) =>
 			apiFetch( {
-				path: `/activitypub/1.0/admin/actors/${ item.id }/follow`,
+				path: `/${ namespace }/admin/actors/${ item.id }/follow`,
 				method: 'POST',
 			} )
 		);
@@ -83,7 +82,7 @@ export async function follow( items: APActor[] ): Promise< void > {
 		await Promise.all( followPromises );
 
 		// Refresh the entity records.
-		( dispatch( 'core' ) as any ).invalidateResolutionForStoreSelector( 'getEntityRecords' );
+		coreDispatch.invalidateResolutionForStoreSelector( 'getEntityRecords' );
 
 		await createSuccessNotice( _n( 'Account followed.', 'Accounts followed.', items.length, 'activitypub' ), {
 			type: 'snackbar',

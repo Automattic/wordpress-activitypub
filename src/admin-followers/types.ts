@@ -82,8 +82,6 @@ export interface FollowersDataViewsProps {
  */
 export interface ActivityPubAdmin {
 	userId: number;
-	restBase: string;
-	nonce: string;
 	namespace: string;
 	followingEnabled: boolean;
 	defaultAvatar: string;

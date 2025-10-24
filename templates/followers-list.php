@@ -8,10 +8,6 @@
 // phpcs:disable WordPress.Security.NonceVerification.Recommended
 ?>
 <div class="wrap">
-	<h1 class="wp-heading-inline"><?php esc_html_e( 'Followers', 'activitypub' ); ?></h1>
-
-	<hr class="wp-header-end">
-
 	<!-- React mount point for DataViews component -->
 	<div id="activitypub-followers-root"></div>
 
