@@ -4,32 +4,40 @@
 
 import React from 'react';
 import { DataViews } from '@wordpress/dataviews';
-import { useState, useMemo } from '@wordpress/element';
+import { useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import { useView } from '@wordpress/views';
 import { useFollowers } from '../hooks/useFollowers';
 import { getFollowerActions } from './FollowerActions';
 import { avatarField, nameField, webfingerField, modifiedField, followStatusField } from './fields';
-import type { FollowersDataViewsProps, Field, View } from '../types';
+import type { FollowersDataViewsProps, Field } from '../types';
+
+const DEFAULT_VIEW = {
+	type: 'table' as const,
+	perPage: 20,
+	page: 1,
+	sort: {
+		field: 'modified',
+		direction: 'desc' as const,
+	},
+	search: '',
+	filters: [],
+	fields: [ 'webfinger', 'modified', 'follow_status' ],
+	layout: {},
+	titleField: 'name',
+	mediaField: 'avatar',
+};
 
 /**
  * Followers DataViews component.
  */
 export function FollowersDataViews( { userId }: FollowersDataViewsProps ) {
-	// View state.
-	const [ view, setView ] = useState< View >( {
-		type: 'table',
-		perPage: 20,
-		page: 1,
-		sort: {
-			field: 'modified',
-			direction: 'desc',
-		},
-		search: '',
-		filters: [],
-		fields: [ 'webfinger', 'modified', 'follow_status' ],
-		layout: {},
-		titleField: 'name',
-		mediaField: 'avatar',
+	// Use the views hook to persist user preferences.
+	const { view, updateView } = useView( {
+		kind: 'postType',
+		name: 'ap_actor',
+		slug: 'followers',
+		defaultView: DEFAULT_VIEW,
 	} );
 
 	const sortField = view.sort?.field || 'modified';
@@ -65,7 +73,7 @@ export function FollowersDataViews( { userId }: FollowersDataViewsProps ) {
 			data={ followers }
 			fields={ fields }
 			view={ view }
-			onChangeView={ setView }
+			onChangeView={ updateView }
 			actions={ actions }
 			defaultLayouts={ defaultLayouts }
 			getItemId={ ( item ) => item.id.toString() }
