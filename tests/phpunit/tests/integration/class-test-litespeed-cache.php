@@ -244,6 +244,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 
 		// Simulate deactivation.
 		\Activitypub\Activitypub::deactivate( false );
+		\do_action( 'deactivate_' . ACTIVITYPUB_PLUGIN_BASENAME );
 
 		// Verify cleanup.
 		$this->assertFalse( \get_option( Litespeed_Cache::$option_name ), 'Option should be deleted on deactivation' );
