@@ -5,4 +5,15 @@
 
 .users_page_activitypub-followers-list {
 	background: #ffffff;
+
+	// Snackbar positioning - fixed to bottom left of viewport.
+	.components-snackbar-list {
+		position: fixed;
+		bottom: 16px;
+		left: 178px;
+	}
+
+	&.folded .components-snackbar-list {
+		left: 54px;
+	}
 }

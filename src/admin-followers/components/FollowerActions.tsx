@@ -5,7 +5,7 @@
 import apiFetch from '@wordpress/api-fetch';
 import { dispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import { __ } from '@wordpress/i18n';
+import { __, _n } from '@wordpress/i18n';
 import type { APActor, Action } from '../types';
 
 /**
@@ -25,19 +25,14 @@ export async function deleteFollower( items: APActor[] ): Promise< void > {
 
 		await Promise.all( deletePromises );
 
-		// Refresh the entity records
-		( dispatch( 'core' ) as any ).invalidateResolution( 'getEntityRecords', [ 'postType', 'ap_actor' ] );
+		// Refresh the entity records.
+		( dispatch( 'core' ) as any ).invalidateResolutionForStoreSelector( 'getEntityRecords' );
 
-		const message =
-			items.length === 1 ? __( 'Follower removed.', 'activitypub' ) : __( 'Followers removed.', 'activitypub' );
-
-		await createSuccessNotice( message, {
+		await createSuccessNotice( _n( 'Follower removed.', 'Followers removed.', items.length, 'activitypub' ), {
 			type: 'snackbar',
 		} );
 	} catch ( error ) {
-		await createErrorNotice( __( 'Failed to remove followers.', 'activitypub' ), {
-			type: 'snackbar',
-		} );
+		await createErrorNotice( __( 'Failed to remove followers.', 'activitypub' ), { type: 'snackbar' } );
 	}
 }
 
@@ -60,24 +55,19 @@ export async function blockActor( items: APActor[] ): Promise< void > {
 
 		await Promise.all( blockPromises );
 
-		// Refresh the entity records
-		( dispatch( 'core' ) as any ).invalidateResolution( 'getEntityRecords', [ 'postType', 'ap_actor' ] );
+		// Refresh the entity records.
+		( dispatch( 'core' ) as any ).invalidateResolutionForStoreSelector( 'getEntityRecords' );
 
-		const message =
-			items.length === 1 ? __( 'Account blocked.', 'activitypub' ) : __( 'Accounts blocked.', 'activitypub' );
-
-		await createSuccessNotice( message, {
+		await createSuccessNotice( _n( 'Account blocked.', 'Accounts blocked.', items.length, 'activitypub' ), {
 			type: 'snackbar',
 		} );
 	} catch ( error ) {
-		await createErrorNotice( __( 'Failed to block accounts.', 'activitypub' ), {
-			type: 'snackbar',
-		} );
+		await createErrorNotice( __( 'Failed to block accounts.', 'activitypub' ), { type: 'snackbar' } );
 	}
 }
 
 /**
- * Follow back action handler
+ * Follow back action handler.
  */
 export async function follow( items: APActor[] ): Promise< void > {
 	const { createSuccessNotice, createErrorNotice } = dispatch( noticesStore );
@@ -92,29 +82,30 @@ export async function follow( items: APActor[] ): Promise< void > {
 
 		await Promise.all( followPromises );
 
-		// Refresh the entity records to update follow status
-		( dispatch( 'core' ) as any ).invalidateResolution( 'getEntityRecords', [ 'postType', 'ap_actor' ] );
+		// Refresh the entity records.
+		( dispatch( 'core' ) as any ).invalidateResolutionForStoreSelector( 'getEntityRecords' );
 
-		const message =
-			items.length === 1 ? __( 'Account followed.', 'activitypub' ) : __( 'Accounts followed.', 'activitypub' );
-
-		await createSuccessNotice( message, {
+		await createSuccessNotice( _n( 'Account followed.', 'Accounts followed.', items.length, 'activitypub' ), {
 			type: 'snackbar',
 		} );
 	} catch ( error ) {
-		await createErrorNotice( __( 'Failed to follow accounts.', 'activitypub' ), {
-			type: 'snackbar',
-		} );
+		await createErrorNotice( __( 'Failed to follow accounts.', 'activitypub' ), { type: 'snackbar' } );
 	}
 }
 
 /**
- * Get all available actions for the DataViews component
+ * Get all available actions for the DataViews component.
  */
 export function getFollowerActions(): Action[] {
 	const followingEnabled = window.activityPubAdmin?.followingEnabled ?? false;
 
 	const actions: Action[] = [
+		{
+			id: 'block',
+			label: __( 'Block', 'activitypub' ),
+			isDestructive: true,
+			callback: blockActor,
+		},
 		{
 			id: 'delete',
 			label: __( 'Remove', 'activitypub' ),
@@ -122,17 +113,11 @@ export function getFollowerActions(): Action[] {
 			isDestructive: true,
 			callback: deleteFollower,
 		},
-		{
-			id: 'block',
-			label: __( 'Block', 'activitypub' ),
-			isDestructive: true,
-			callback: blockActor,
-		},
 	];
 
-	// Add follow back action if following UI is enabled
+	// Add follow back action if following UI is enabled.
 	if ( followingEnabled ) {
-		actions.push( {
+		actions.unshift( {
 			id: 'follow',
 			label: __( 'Follow Back', 'activitypub' ),
 			isEligible: ( item: APActor ) => ! item.follow_status?.follows_back,
