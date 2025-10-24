@@ -7,7 +7,6 @@
 
 namespace Activitypub\Development;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Comment;
 
@@ -43,12 +42,11 @@ class Cli extends \WP_CLI_Command {
 	 *
 	 * @synopsis <actor_url> [--user=<user>]
 	 *
-	 * @param array $args       The arguments.
-	 * @param array $assoc_args The associative arguments.
+	 * @param array $args The arguments.
 	 */
-	public function add_follower( $args, $assoc_args ) {
+	public function add_follower( $args ) {
 		$actor_url = $args[0];
-		$user_id   = get_flag_value( $assoc_args, 'user', Actors::BLOG_USER_ID );
+		$user_id   = get_current_user_id();
 		\WP_CLI::log( sprintf( 'Adding follower %s to user %d...', $actor_url, $user_id ) );
 
 		$result = Followers::add( $user_id, $actor_url );
