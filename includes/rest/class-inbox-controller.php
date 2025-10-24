@@ -10,6 +10,7 @@ namespace Activitypub\Rest;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Inbox;
 use Activitypub\Http;
 use Activitypub\Moderation;
 
@@ -156,8 +157,9 @@ class Inbox_Controller extends \WP_REST_Controller {
 		} else {
 			$recipients = $this->get_local_recipients( $data );
 
+			// Filter out blocked recipients.
+			$allowed_recipients = array();
 			foreach ( $recipients as $user_id ) {
-				// Check user-specific blocks for this recipient.
 				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
 					/**
 					 * ActivityPub inbox disallowed activity for specific user.
@@ -168,28 +170,66 @@ class Inbox_Controller extends \WP_REST_Controller {
 					 * @param Activity|\WP_Error $activity The Activity object.
 					 */
 					\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
-					continue;
+				} else {
+					$allowed_recipients[] = $user_id;
+
+					/**
+					 * ActivityPub inbox action.
+					 *
+					 * @deprecated unreleased Support activitypub_inbox_shared instead to avoid duplicate processing.
+					 *
+					 * @param array              $data     The data array.
+					 * @param int                $user_id  The user ID.
+					 * @param string             $type     The type of the activity.
+					 * @param Activity|\WP_Error $activity The Activity object.
+					 * @param string             $context  The context of the request (shared_inbox when called from shared inbox endpoint).
+					 */
+					\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity, Inbox::CONTEXT_SHARED_INBOX );
+
+					/**
+					 * ActivityPub inbox action for specific activity types.
+					 *
+					 * @deprecated unreleased Support activitypub_inbox_shared_{type} instead to avoid duplicate processing.
+					 *
+					 * @param array              $data     The data array.
+					 * @param int                $user_id  The user ID.
+					 * @param Activity|\WP_Error $activity The Activity object.
+					 * @param string             $context  The context of the request (shared_inbox when called from shared inbox endpoint).
+					 */
+					\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, Inbox::CONTEXT_SHARED_INBOX );
 				}
-
-				/**
-				 * ActivityPub inbox action.
-				 *
-				 * @param array              $data     The data array.
-				 * @param int                $user_id  The user ID.
-				 * @param string             $type     The type of the activity.
-				 * @param Activity|\WP_Error $activity The Activity object.
-				 */
-				\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
-
-				/**
-				 * ActivityPub inbox action for specific activity types.
-				 *
-				 * @param array              $data     The data array.
-				 * @param int                $user_id  The user ID.
-				 * @param Activity|\WP_Error $activity The Activity object.
-				 */
-				\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
 			}
+
+			/**
+			 * ActivityPub shared inbox action.
+			 *
+			 * This hook fires once per activity with all recipients.
+			 * Preferred for new implementations to avoid duplication.
+			 *
+			 * @since unreleased
+			 *
+			 * @param array              $data       The data array.
+			 * @param array              $recipients Array of user IDs.
+			 * @param string             $type       The type of the activity.
+			 * @param Activity|\WP_Error $activity   The Activity object.
+			 * @param string             $context    The context of the request.
+			 */
+			\do_action( 'activitypub_inbox_shared', $data, $allowed_recipients, $type, $activity, Inbox::CONTEXT_SHARED_INBOX );
+
+			/**
+			 * ActivityPub shared inbox action for specific activity types.
+			 *
+			 * This hook fires once per activity with all recipients.
+			 * Preferred for new implementations to avoid duplication.
+			 *
+			 * @since unreleased
+			 *
+			 * @param array              $data       The data array.
+			 * @param array              $recipients Array of user IDs.
+			 * @param Activity|\WP_Error $activity   The Activity object.
+			 * @param string             $context    The context of the request.
+			 */
+			\do_action( 'activitypub_inbox_shared_' . $type, $data, $allowed_recipients, $activity, Inbox::CONTEXT_SHARED_INBOX );
 		}
 
 		$response = \rest_ensure_response(

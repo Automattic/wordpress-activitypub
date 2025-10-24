@@ -163,18 +163,6 @@ class Post_Types {
 
 		\register_post_meta(
 			Inbox::POST_TYPE,
-			'_activitypub_user_id',
-			array(
-				'type'              => 'integer',
-				'single'            => true,
-				'description'       => 'The ID of the local user that received the activity.',
-				'show_in_rest'      => true,
-				'sanitize_callback' => 'absint',
-			)
-		);
-
-		\register_post_meta(
-			Inbox::POST_TYPE,
 			'_activitypub_activity_remote_actor',
 			array(
 				'type'              => 'string',
@@ -204,6 +192,18 @@ class Post_Types {
 
 					return $value;
 				},
+			)
+		);
+
+		\register_post_meta(
+			Inbox::POST_TYPE,
+			'_activitypub_user_id',
+			array(
+				'type'              => 'integer',
+				'single'            => false, // Allow multiple values - one per recipient.
+				'description'       => 'User ID of a recipient of this activity. Multiple entries allowed.',
+				'sanitize_callback' => 'absint',
+				'show_in_rest'      => true,
 			)
 		);
 	}
