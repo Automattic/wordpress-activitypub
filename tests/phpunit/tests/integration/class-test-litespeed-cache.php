@@ -206,7 +206,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 		\add_filter(
 			'activitypub_is_plugin_active',
 			function ( $is_active, $plugin ) {
-				if ( 'litespeed-cache/litespeed-cache.php' === $plugin ) {
+				if ( Litespeed_Cache::$plugin_slug === $plugin ) {
 					return false;
 				}
 				return $is_active;
@@ -269,7 +269,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 		$this->assertStringContainsString( Litespeed_Cache::$rules, $contents_before );
 
 		// Simulate LiteSpeed Cache plugin deletion.
-		\do_action( 'deleted_plugin', 'litespeed-cache/litespeed-cache.php', false );
+		\do_action( 'deleted_plugin', Litespeed_Cache::$plugin_slug, false );
 
 		// Verify cleanup.
 		$this->assertFalse( \get_option( Litespeed_Cache::$option_name ), 'Option should be deleted when plugin is deleted' );

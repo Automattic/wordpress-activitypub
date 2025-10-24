@@ -42,24 +42,31 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	public static $marker = 'ActivityPub LiteSpeed Cache';
 
 	/**
+	 * The LiteSpeed Cache plugin slug.
+	 *
+	 * @var string
+	 */
+	public static $plugin_slug = 'litespeed-cache/litespeed-cache.php';
+
+	/**
 	 * Initialize the integration.
 	 */
 	public static function init() {
 		// Add rules if LiteSpeed Cache is active and rules aren't set.
-		if ( is_plugin_active( 'litespeed-cache/litespeed-cache.php' ) && ! \get_option( self::$option_name ) ) {
-			self::add_htaccess_rules();
-		}
+		if ( is_plugin_active( self::$plugin_slug ) ) {
+			if ( ! \get_option( self::$option_name ) ) {
+				self::add_htaccess_rules();
+			}
 
-		// Remove rules if LiteSpeed Cache is not active but rules were previously set.
-		if ( ! is_plugin_active( 'litespeed-cache/litespeed-cache.php' ) && \get_option( self::$option_name ) ) {
+			\add_filter( 'site_status_tests', array( self::class, 'add_site_health_test' ) );
+
+			// Remove rules if LiteSpeed Cache is not active but rules were previously set.
+		} elseif ( \get_option( self::$option_name ) ) {
 			self::remove_htaccess_rules();
-			\delete_option( self::$option_name );
 		}
 
 		// Clean up when LiteSpeed Cache plugin is deleted.
 		\add_action( 'deleted_plugin', array( self::class, 'on_plugin_deleted' ) );
-
-		\add_filter( 'site_status_tests', array( self::class, 'maybe_add_site_health' ) );
 	}
 
 	/**
@@ -68,7 +75,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 * @param string $plugin_file Path to the plugin file relative to the plugins directory.
 	 */
 	public static function on_plugin_deleted( $plugin_file ) {
-		if ( 'litespeed-cache/litespeed-cache.php' === $plugin_file && \get_option( self::$option_name ) ) {
+		if ( self::$plugin_slug === $plugin_file && \get_option( self::$option_name ) ) {
 			self::remove_htaccess_rules();
 		}
 	}
@@ -96,17 +103,13 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	}
 
 	/**
-	 * Maybe add the LiteSpeed Cache config to the site health.
+	 * Add the LiteSpeed Cache config test to site health.
 	 *
 	 * @param array $tests The site health tests.
 	 *
 	 * @return array The site health tests with the LiteSpeed Cache config test.
 	 */
-	public static function maybe_add_site_health( $tests ) {
-		if ( ! is_plugin_active( 'litespeed-cache/litespeed-cache.php' ) ) {
-			return $tests;
-		}
-
+	public static function add_site_health_test( $tests ) {
 		$tests['direct']['activitypub_test_litespeed_cache_integration'] = array(
 			'label' => \__( 'LiteSpeed Cache Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_litespeed_cache_integration' ),
@@ -162,7 +165,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 *
 	 * @return bool True on success, false on failure.
 	 */
-	public static function append_with_markers( $marker, $rules ) {
+	private static function append_with_markers( $marker, $rules ) {
 		$htaccess_file = self::get_htaccess_file_path();
 
 		if ( ! \wp_is_writable( $htaccess_file ) ) {
@@ -205,7 +208,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 *
 	 * @return string|false The htaccess file or false.
 	 */
-	public static function get_htaccess_file_path() {
+	private static function get_htaccess_file_path() {
 		$htaccess_file = false;
 
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors
