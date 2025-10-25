@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Mention;
 
 /**
  * Class Test_Remote_Actors
@@ -881,7 +882,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 */
 	public function test_create_actor_with_self_mention_no_recursion() {
 		// Ensure the Mention filter is active to test for recursion.
-		\Activitypub\Mention::init();
+		Mention::init();
 
 		// Create an actor with a self-mention in their summary.
 		$actor = array(
@@ -898,44 +899,38 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		);
 
 		// Mock webfinger to resolve the mention.
-		\add_filter(
-			'pre_http_request',
-			function ( $preempt, $parsed_args, $url ) use ( $actor ) {
-				if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
-					return array(
-						'response' => array( 'code' => 200 ),
-						'body'     => wp_json_encode(
-							array(
-								'subject' => 'acct:selfmention@remote.example.com',
-								'links'   => array(
-									array(
-										'rel'  => 'self',
-										'type' => 'application/activity+json',
-										'href' => 'https://remote.example.com/actor/self-mention',
-									),
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => wp_json_encode(
+						array(
+							'subject' => 'acct:selfmention@remote.example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => 'https://remote.example.com/actor/self-mention',
 								),
-							)
-						),
-					);
-				}
-				return $preempt;
-			},
-			10,
-			3
-		);
+							),
+						)
+					),
+				);
+			}
+
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
 
 		// Mock remote actor fetch to return the same actor (creating potential recursion).
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $pre, $url_or_object ) use ( $actor ) {
-				if ( $url_or_object === $actor['id'] ) {
-					return $actor;
-				}
-				return $pre;
-			},
-			10,
-			2
-		);
+		$actor_fetch_callback = function ( $pre, $url_or_object ) use ( $actor ) {
+			if ( $url_or_object === $actor['id'] ) {
+				return $actor;
+			}
+
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $actor_fetch_callback, 10, 2 );
 
 		// This should not cause infinite recursion.
 		$post_id = Remote_Actors::create( $actor );
@@ -950,10 +945,12 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Verify the summary was stored correctly (without being processed for mentions).
 		$this->assertStringContainsString( '@selfmention@remote.example.com', $post->post_excerpt );
 
-		// Clean up.
-		\remove_all_filters( 'pre_http_request' );
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
-		\remove_all_filters( 'activitypub_activity_object_array' );
+		// Clean up - remove only the specific filters we added.
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $actor_fetch_callback );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
 		\wp_delete_post( $post_id, true );
 	}
 
@@ -965,7 +962,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 */
 	public function test_create_actor_with_cross_mentions_no_recursion() {
 		// Ensure the Mention filter is active to test for recursion.
-		\Activitypub\Mention::init();
+		Mention::init();
 
 		// Create two actors that mention each other in their bios.
 		$actor_a = array(
@@ -995,65 +992,59 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		);
 
 		// Mock webfinger to resolve the mentions.
-		\add_filter(
-			'pre_http_request',
-			function ( $preempt, $parsed_args, $url ) {
-				if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
-					if ( strpos( $url, 'bob@remote.example.com' ) !== false ) {
-						return array(
-							'response' => array( 'code' => 200 ),
-							'body'     => wp_json_encode(
-								array(
-									'subject' => 'acct:bob@remote.example.com',
-									'links'   => array(
-										array(
-											'rel'  => 'self',
-											'type' => 'application/activity+json',
-											'href' => 'https://remote.example.com/actor/bob-cross',
-										),
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				if ( strpos( $url, 'bob@remote.example.com' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:bob@remote.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://remote.example.com/actor/bob-cross',
 									),
-								)
-							),
-						);
-					} elseif ( strpos( $url, 'alice@remote.example.com' ) !== false ) {
-						return array(
-							'response' => array( 'code' => 200 ),
-							'body'     => wp_json_encode(
-								array(
-									'subject' => 'acct:alice@remote.example.com',
-									'links'   => array(
-										array(
-											'rel'  => 'self',
-											'type' => 'application/activity+json',
-											'href' => 'https://remote.example.com/actor/alice-cross',
-										),
+								),
+							)
+						),
+					);
+				} elseif ( strpos( $url, 'alice@remote.example.com' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:alice@remote.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://remote.example.com/actor/alice-cross',
 									),
-								)
-							),
-						);
-					}
+								),
+							)
+						),
+					);
 				}
-				return $preempt;
-			},
-			10,
-			3
-		);
+			}
+
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
 
 		// Mock the remote fetch to return the cross-mentioned actors.
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $pre, $url_or_object ) use ( $actor_a, $actor_b ) {
-				if ( $url_or_object === $actor_a['id'] ) {
-					return $actor_a;
-				}
-				if ( $url_or_object === $actor_b['id'] ) {
-					return $actor_b;
-				}
-				return $pre;
-			},
-			10,
-			2
-		);
+		$actor_fetch_callback = function ( $pre, $url_or_object ) use ( $actor_a, $actor_b ) {
+			if ( $url_or_object === $actor_a['id'] ) {
+				return $actor_a;
+			}
+			if ( $url_or_object === $actor_b['id'] ) {
+				return $actor_b;
+			}
+
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $actor_fetch_callback, 10, 2 );
 
 		// This should not cause infinite recursion when creating both actors.
 		$post_id_a = Remote_Actors::create( $actor_a );
@@ -1066,10 +1057,12 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertGreaterThan( 0, $post_id_a );
 		$this->assertGreaterThan( 0, $post_id_b );
 
-		// Clean up.
-		\remove_all_filters( 'pre_http_request' );
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
-		\remove_all_filters( 'activitypub_activity_object_array' );
+		// Clean up - remove only the specific filters we added.
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $actor_fetch_callback );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
 		\wp_delete_post( $post_id_a, true );
 		\wp_delete_post( $post_id_b, true );
 	}
