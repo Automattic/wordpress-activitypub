@@ -482,12 +482,45 @@ class Remote_Actors {
 			);
 		}
 
+		/*
+		 * Temporarily remove mention/hashtag/link filters to prevent infinite recursion when
+		 * storing remote actors with mentions/hashtags in their bios.
+		 *
+		 * PROBLEM: These filters are globally registered on 'init' for all to_json() calls,
+		 * but they're designed for OUTGOING content (federation). When processing mentions in
+		 * an actor's bio during storage, the Mention filter fetches the mentioned actor, which
+		 * then processes mentions in THEIR bio, creating infinite recursion.
+		 *
+		 * SHORTCOMINGS:
+		 * - Fragile: Easy to forget when adding new storage locations (e.g., Inbox storage).
+		 * - Scattered: Same pattern would need to be repeated anywhere we store remote content.
+		 * - Race conditions: If filters are re-added/removed elsewhere, this could break.
+		 * - Not semantic: We're working around a design issue rather than fixing it.
+		 *
+		 * BETTER LONG-TERM SOLUTION:
+		 * Distinguish between "incoming" (storage) and "outgoing" (federation) contexts:
+		 * - INCOMING: Store received ActivityPub data as-is, don't process mentions/hashtags.
+		 *   (Remote_Actors::prepare_custom_post_type, Inbox storage)
+		 * - OUTGOING: Process mentions/hashtags when serving our content to other servers.
+		 *   (Dispatcher, REST API controllers, Transformers)
+		 */
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+
+		$actor_json = $actor->to_json();
+
+		// Re-add the filters.
+		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
+		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
+		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
 			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?? $actor->get_preferred_username() ) ),
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,
-			'post_content' => \wp_slash( $actor->to_json() ),
+			'post_content' => \wp_slash( $actor_json ),
 			'post_excerpt' => \wp_kses( \wp_slash( (string) $actor->get_summary() ), 'user_description' ),
 			'post_status'  => 'publish',
 			'meta_input'   => array(
