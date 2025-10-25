@@ -34,15 +34,6 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * @param string $description      Description of the test case.
 	 */
 	public function test_handle_inbox_requests( $activity_data, $activity_type, $expected_success, $description ) {
-		add_filter(
-			'activitypub_persist_inbox_activity_types',
-			function ( $types ) {
-				$types[] = 'QuoteRequest';
-
-				return $types;
-			}
-		);
-
 		$was_successful = false;
 
 		\add_action(
@@ -63,7 +54,6 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertEquals( $expected_success, $was_successful, $description );
 
-		\remove_all_filters( 'activitypub_persist_inbox_activity_types' );
 		\remove_all_actions( 'activitypub_handled_inbox' );
 	}
 
@@ -99,7 +89,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 				true,
 				'Should handle Create activity with Note object successfully',
 			),
-			'create_note_failure'       => array(
+			'create_note_no_type'       => array(
 				array(
 					'id'     => 'https://example.com/activity/1',
 					'type'   => 'Create',
@@ -109,10 +99,10 @@ class Test_Inbox extends \WP_UnitTestCase {
 					'actor'  => 'https://example.com/actor/1',
 				),
 				'create',
-				false,
-				'Should handle Create activity with Note object successfully',
+				true,
+				'Should handle Create activity even with object missing type',
 			),
-			'create_person_failure'     => array(
+			'create_person_success'     => array(
 				array(
 					'id'     => 'https://example.com/activity/2',
 					'type'   => 'Create',
@@ -123,8 +113,8 @@ class Test_Inbox extends \WP_UnitTestCase {
 					'actor'  => 'https://example.com/actor/2',
 				),
 				'create',
-				false,
-				'Should not handle Create activity with Person object',
+				true,
+				'Should handle Create activity with Person object',
 			),
 			'delete_article_failure'    => array(
 				array(
@@ -444,6 +434,104 @@ class Test_Inbox extends \WP_UnitTestCase {
 		// In this case, validation should fail and result should be WP_Error.
 		$this->assertInstanceOf( 'WP_Error', $captured_result );
 
+		\remove_all_actions( 'activitypub_handled_inbox' );
+	}
+
+	/**
+	 * Test that Delete activities are deferred and not persisted.
+	 */
+	public function test_delete_activity_is_deferred() {
+		$activity_data = array(
+			'id'     => 'https://example.com/activity/delete-deferred',
+			'type'   => 'Delete',
+			'object' => array(
+				'id'   => 'https://example.com/object/delete-deferred',
+				'type' => 'Tombstone',
+			),
+			'actor'  => 'https://example.com/actor/delete-deferred',
+		);
+
+		$captured_inbox_id = null;
+		$hook_fired        = false;
+
+		\add_action(
+			'activitypub_handled_inbox',
+			function ( $data, $user_ids, $type, $activity, $inbox_id ) use ( &$captured_inbox_id, &$hook_fired ) {
+				$captured_inbox_id = $inbox_id;
+				$hook_fired        = true;
+			},
+			10,
+			5
+		);
+
+		$activity = \Activitypub\Activity\Activity::init_from_array( $activity_data );
+
+		Inbox::handle_inbox_requests( $activity_data, 1, 'delete', $activity );
+
+		// Hook should NOT fire because Delete is deferred via defer_inbox_storage filter.
+		$this->assertFalse( $hook_fired, 'activitypub_handled_inbox should not fire for deferred Delete activities' );
+		$this->assertNull( $captured_inbox_id, 'No inbox item should be created for Delete activities' );
+
+		// Verify no inbox item was created.
+		$posts = \get_posts(
+			array(
+				'post_type'   => Inbox_Collection::POST_TYPE,
+				'post_status' => 'any',
+				'numberposts' => -1,
+			)
+		);
+
+		foreach ( $posts as $post ) {
+			$this->assertNotEquals( 'https://example.com/activity/delete-deferred', $post->guid, 'Delete activity should not be persisted' );
+		}
+
+		\remove_all_actions( 'activitypub_handled_inbox' );
+	}
+
+	/**
+	 * Test that defer_inbox_storage filter works correctly.
+	 */
+	public function test_defer_inbox_storage_filter() {
+		$activity_data = array(
+			'id'     => 'https://example.com/activity/deferred',
+			'type'   => 'Create',
+			'object' => array(
+				'id'   => 'https://example.com/object/deferred',
+				'type' => 'Note',
+			),
+			'actor'  => 'https://example.com/actor/deferred',
+		);
+
+		// Add filter to defer all Create activities.
+		\add_filter(
+			'activitypub_skip_inbox_storage',
+			function ( $defer, $data ) {
+				if ( isset( $data['type'] ) && 'Create' === $data['type'] ) {
+					return true;
+				}
+				return $defer;
+			},
+			10,
+			2
+		);
+
+		$hook_fired = false;
+
+		\add_action(
+			'activitypub_handled_inbox',
+			function () use ( &$hook_fired ) {
+				$hook_fired = true;
+			}
+		);
+
+		$activity = \Activitypub\Activity\Activity::init_from_array( $activity_data );
+
+		Inbox::handle_inbox_requests( $activity_data, 1, 'create', $activity );
+
+		// Hook should NOT fire when storage is deferred.
+		$this->assertFalse( $hook_fired, 'Hook should not fire when storage is deferred' );
+
+		\remove_all_filters( 'activitypub_skip_inbox_storage' );
 		\remove_all_actions( 'activitypub_handled_inbox' );
 	}
 }
