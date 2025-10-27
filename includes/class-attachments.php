@@ -420,9 +420,7 @@ class Attachments {
 		$base_url   = $upload_dir['baseurl'] . self::$ap_posts_dir . $post_id;
 
 		// Create directory if it doesn't exist.
-		if ( ! file_exists( $base_dir ) ) {
-			\wp_mkdir_p( $base_dir );
-		}
+		\wp_mkdir_p( $base_dir );
 
 		// Generate unique filename.
 		$filename = \sanitize_file_name( \basename( $attachment_data['url'] ) );
