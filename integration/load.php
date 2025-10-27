@@ -178,6 +178,8 @@ add_filter(
 		$post_types[] = 'ap_actor';
 		$post_types[] = 'ap_extrafield';
 		$post_types[] = 'ap_extrafield_blog';
+		$post_types[] = 'ap_post';
+
 		return $post_types;
 	}
 );
