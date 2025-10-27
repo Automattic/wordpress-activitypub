@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Handler\Announce;
 
 /**
@@ -143,7 +144,8 @@ class Test_Announce extends \WP_UnitTestCase {
 		$inbox_action = new \MockAction();
 		\add_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
 
-		Announce::handle_announce( $announce, $this->user_id );
+		$activity = Activity::init_from_array( $announce );
+		Announce::handle_announce( $announce, $this->user_id, $activity );
 
 		$this->assertEquals( $recursion, $inbox_action->get_call_count(), $message );
 	}

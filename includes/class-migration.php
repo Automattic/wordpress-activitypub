@@ -209,6 +209,10 @@ class Migration {
 			self::sync_jetpack_following_meta();
 		}
 
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::clean_up_inbox();
+		}
+
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
 
@@ -1049,6 +1053,30 @@ class Migration {
 			 * @param mixed  $meta_value Metadata value.
 			 */
 			\do_action( 'added_post_meta', ...$meta );
+		}
+	}
+
+	/**
+	 * Clean up inbox items for shared inbox migration.
+	 *
+	 * Deletes all existing inbox items to prepare for the new shared inbox structure
+	 * where activities are stored once with multiple recipients as metadata.
+	 */
+	private static function clean_up_inbox() {
+		global $wpdb;
+
+		// Get all inbox post IDs.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$inbox_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s",
+				\Activitypub\Collection\Inbox::POST_TYPE
+			)
+		);
+
+		// Delete all inbox items and their metadata.
+		foreach ( $inbox_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
 		}
 	}
 }

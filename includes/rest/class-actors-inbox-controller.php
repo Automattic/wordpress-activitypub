@@ -8,6 +8,7 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Inbox;
 use Activitypub\Moderation;
 
 use function Activitypub\camel_to_snake_case;
@@ -183,8 +184,9 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param int|null           $user_id  The user ID.
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
+			 * @param string             $context  The context of the request.
 			 */
-			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
+			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity, Inbox::CONTEXT_INBOX );
 
 			/**
 			 * ActivityPub inbox action for specific activity types.
@@ -192,8 +194,9 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param array              $data     The data array.
 			 * @param int|null           $user_id  The user ID.
 			 * @param Activity|\WP_Error $activity The Activity object.
+			 * @param string             $context  The context of the request.
 			 */
-			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
+			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, Inbox::CONTEXT_INBOX );
 		}
 
 		$response = \rest_ensure_response(
