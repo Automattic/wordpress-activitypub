@@ -7,6 +7,8 @@
 
 namespace Activitypub\Integration;
 
+use PHPUnit\TestFixture\A;
+
 /**
  * Classic Editor integration class.
  *
@@ -78,15 +80,15 @@ class Classic_Editor {
 		<p>
 			<strong><?php \esc_html_e( 'Visibility', 'activitypub' ); ?></strong><br />
 			<label>
-				<input type="radio" name="activitypub_content_visibility" value="public" <?php \checked( $content_visibility, 'public' ); ?> />
+				<input type="radio" name="activitypub_content_visibility" value="public" <?php \checked( $content_visibility, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ); ?> />
 				<?php \esc_html_e( 'Public', 'activitypub' ); ?>
 			</label><br />
 			<label>
-				<input type="radio" name="activitypub_content_visibility" value="quiet_public" <?php \checked( $content_visibility, 'quiet_public' ); ?> />
+				<input type="radio" name="activitypub_content_visibility" value="quiet_public" <?php \checked( $content_visibility, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ); ?> />
 				<?php \esc_html_e( 'Quiet public', 'activitypub' ); ?>
 			</label><br />
 			<label>
-				<input type="radio" name="activitypub_content_visibility" value="local" <?php \checked( $content_visibility, 'local' ); ?> />
+				<input type="radio" name="activitypub_content_visibility" value="local" <?php \checked( $content_visibility, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ); ?> />
 				<?php \esc_html_e( 'Do not federate', 'activitypub' ); ?>
 			</label><br />
 			<span class="howto"><?php \esc_html_e( 'This adjusts the visibility of a post in the fediverse, but note that it won\'t affect how the post appears on the blog.', 'activitypub' ); ?></span>
