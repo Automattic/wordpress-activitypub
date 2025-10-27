@@ -98,12 +98,11 @@ class Post {
 			return;
 		}
 
-		// Do not federate imported attachments.
-		if ( \get_post_meta( $post_id, '_activitypub_import', true ) ) {
+		if ( ! \post_type_supports( 'attachment', 'activitypub' ) ) {
 			return;
 		}
 
-		if ( ! \post_type_supports( 'attachment', 'activitypub' ) ) {
+		if ( is_post_disabled( $post_id ) ) {
 			return;
 		}
 
