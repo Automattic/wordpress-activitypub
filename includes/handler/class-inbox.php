@@ -21,11 +21,11 @@ class Inbox {
 		// Inbox handler with middleware to filter shared inbox requests.
 		\add_action( 'activitypub_inbox', array( self::class, 'schedule_inbox_request' ), 10, 5 );
 
+		// Scheduled action to process collected inbox activities.
+		\add_action( 'activitypub_process_inbox', array( self::class, 'process_inbox_request' ) );
+
 		// Shared inbox handler (processes directly without filtering).
 		\add_action( 'activitypub_inbox_shared', array( self::class, 'handle_inbox_requests' ), 10, 5 );
-
-		// Scheduled action to process collected inbox activities.
-		\add_action( 'activitypub_process_inbox', array( self::class, 'process_inbox' ) );
 	}
 
 	/**
@@ -134,7 +134,7 @@ class Inbox {
 	 *
 	 * @param string $activity_id The activity ID.
 	 */
-	public static function process_inbox( $activity_id ) {
+	public static function process_inbox_request( $activity_id ) {
 		$cache_key = 'activitypub_inbox_' . md5( $activity_id );
 
 		// Deduplicate if multiple inbox items were created due to race condition.
