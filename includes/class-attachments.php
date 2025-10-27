@@ -515,12 +515,7 @@ class Attachments {
 		}
 
 		$media     = self::generate_media_markup( $attachment_ids );
-		$separator = "\n\n";
-
-		// Don't add separator if content is empty.
-		if ( empty( trim( $post->post_content ) ) ) {
-			$separator = '';
-		}
+		$separator = empty( trim( $post->post_content ) ) ? '' : "\n\n";
 
 		\wp_update_post(
 			array(
@@ -549,12 +544,7 @@ class Attachments {
 		}
 
 		$media     = self::generate_files_markup( $files );
-		$separator = "\n\n";
-
-		// Don't add separator if content is empty.
-		if ( empty( trim( $post->post_content ) ) ) {
-			$separator = '';
-		}
+		$separator = empty( trim( $post->post_content ) ) ? '' : "\n\n";
 
 		\wp_update_post(
 			array(
