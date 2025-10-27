@@ -1102,16 +1102,21 @@ class Migration {
 		global $wpdb;
 
 		// Get comments with avatar_url meta that don't have _activitypub_remote_actor_id yet.
-		// No offset needed - as we process comments, they're filtered out by the LEFT JOIN.
+		// Uses conditional aggregation to reduce JOINs from 3 to 1, improving query performance.
+		// No offset needed - as we process comments, they're filtered out by the HAVING clause.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$comments = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT c.comment_ID, c.comment_author_url, m.meta_value as avatar_url
+				"SELECT c.comment_ID, c.comment_author_url,
+					MAX(CASE WHEN cm.meta_key = 'avatar_url' THEN cm.meta_value END) AS avatar_url,
+					MAX(CASE WHEN cm.meta_key = 'protocol' THEN cm.meta_value END) AS protocol,
+					MAX(CASE WHEN cm.meta_key = '_activitypub_remote_actor_id' THEN cm.meta_value END) AS remote_actor_id
 				FROM {$wpdb->comments} c
-				INNER JOIN {$wpdb->commentmeta} m1 ON c.comment_ID = m1.comment_id AND m1.meta_key = 'protocol' AND m1.meta_value = 'activitypub'
-				INNER JOIN {$wpdb->commentmeta} m ON c.comment_ID = m.comment_id AND m.meta_key = 'avatar_url'
-				LEFT JOIN {$wpdb->commentmeta} m2 ON c.comment_ID = m2.comment_id AND m2.meta_key = '_activitypub_remote_actor_id'
-				WHERE m2.meta_id IS NULL
+				INNER JOIN {$wpdb->commentmeta} cm ON c.comment_ID = cm.comment_id
+				GROUP BY c.comment_ID, c.comment_author_url
+				HAVING protocol = 'activitypub'
+					AND avatar_url IS NOT NULL
+					AND (remote_actor_id IS NULL OR remote_actor_id = '')
 				LIMIT %d",
 				$batch_size
 			)
