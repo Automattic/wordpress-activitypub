@@ -25,11 +25,11 @@ class Cli extends \WP_CLI_Command {
 	 *
 	 * ## OPTIONS
 	 *
-	 * <actor_url>
-	 *     The URL of the actor to add as a follower.
+	 * <actor>
+	 *     The URL or Webfinger of the actor to add as a follower.
 	 *
-	 * [--user=<user>]
-	 *     The user to add the follower to. Defaults to the blog actor.
+	 * [--user=<id|login|email>]
+	 *     The WordPress user to add the follower to. Omit to add to blog actor.
 	 *     ---
 	 *     default: 0
 	 *     ---
@@ -37,10 +37,10 @@ class Cli extends \WP_CLI_Command {
 	 * ## EXAMPLES
 	 *
 	 *    $ wp activitypub add_follower https://example.com/@user
-	 *    $ wp activitypub add_follower https://example.com/@user --user=1
+	 *    $ wp activitypub add_follower user@example.com --user=1
 	 *    $ wp --user=pfefferle activitypub add_follower https://example.com/@user
 	 *
-	 * @synopsis <actor_url> [--user=<user>]
+	 * @synopsis <actor> [--user=<id|login|email>]
 	 *
 	 * @param array $args The arguments.
 	 */
