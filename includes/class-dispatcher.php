@@ -247,7 +247,10 @@ class Dispatcher {
 		$request = new \WP_REST_Request( 'POST', $rest_route );
 		$request->set_header( 'Content-Type', 'application/activity+json' );
 		$request->set_body( $json );
-		$request->get_json_params();
+		$json_params = $request->get_json_params();
+		if ( null === $json_params ) {
+			return new \WP_Error( 'invalid_json', 'The provided JSON body could not be parsed.', array( 'status' => 400 ) );
+		}
 
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		$response = \rest_do_request( $request );
