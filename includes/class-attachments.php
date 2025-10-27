@@ -372,7 +372,6 @@ class Attachments {
 			}
 		}
 
-		// Flag to filter out from Media Library.
 		// Sideload the attachment into WordPress.
 		$attachment_id = \media_handle_sideload( $file_array, $post_id, '', $post_data );
 
