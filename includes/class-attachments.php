@@ -422,28 +422,28 @@ class Attachments {
 		// Create directory if it doesn't exist.
 		\wp_mkdir_p( $base_dir );
 
-		// Generate unique filename.
-		$filename = \sanitize_file_name( \basename( $attachment_data['url'] ) );
-		$filepath = $base_dir . '/' . $filename;
+		// Generate unique file name.
+		$file_name = \sanitize_file_name( \basename( $attachment_data['url'] ) );
+		$file_path = $base_dir . '/' . $file_name;
 
 		// Initialize filesystem if needed.
 		\WP_Filesystem();
 		global $wp_filesystem;
 
-		// Make sure filename is unique.
+		// Make sure file name is unique.
 		$counter = 1;
-		while ( $wp_filesystem->exists( $filepath ) ) {
-			$path_info = pathinfo( $filename );
+		while ( $wp_filesystem->exists( $file_path ) ) {
+			$path_info = pathinfo( $file_name );
 			$file_name = $path_info['filename'] . '-' . $counter;
 			if ( ! empty( $path_info['extension'] ) ) {
 				$file_name .= '.' . $path_info['extension'];
 			}
-			$filepath = $base_dir . '/' . $file_name;
+			$file_path = $base_dir . '/' . $file_name;
 			++$counter;
 		}
 
 		// Move file to destination.
-		if ( ! $wp_filesystem->move( $tmp_file, $filepath, true ) ) {
+		if ( ! $wp_filesystem->move( $tmp_file, $file_path, true ) ) {
 			\wp_delete_file( $tmp_file );
 			return new \WP_Error( 'file_move_failed', \__( 'Failed to move file to destination.', 'activitypub' ) );
 		}
@@ -451,11 +451,11 @@ class Attachments {
 		// Get mime type.
 		$mime_type = $attachment_data['mediaType'] ?? '';
 		if ( empty( $mime_type ) && \function_exists( 'mime_content_type' ) ) {
-			$mime_type = mime_content_type( $filepath );
+			$mime_type = mime_content_type( $file_path );
 		}
 
 		return array(
-			'url'       => $base_url . '/' . $filename,
+			'url'       => $base_url . '/' . $file_name,
 			'mime_type' => $mime_type,
 			'alt'       => $attachment_data['name'] ?? '',
 		);
