@@ -1091,14 +1091,18 @@ class Migration {
 	 * 3. Adds _activitypub_remote_actor_id to comment meta
 	 * 4. Stores avatar_url in remote actor post meta
 	 *
+	 * Note: We don't use offset because as we add _activitypub_remote_actor_id,
+	 * comments are filtered out of the query. We just keep fetching the next
+	 * batch until no more comments match the criteria.
+	 *
 	 * @param int $batch_size Optional. Number of comments to process per batch. Default 50.
-	 * @param int $offset     Optional. Number of comments to skip. Default 0.
-	 * @return array|null Array with batch size and offset if there are more comments to process, null otherwise.
+	 * @return array|null Array with batch size if there are more comments to process, null otherwise.
 	 */
-	public static function migrate_avatar_to_remote_actors( $batch_size = 50, $offset = 0 ) {
+	public static function migrate_avatar_to_remote_actors( $batch_size = 50 ) {
 		global $wpdb;
 
 		// Get comments with avatar_url meta that don't have _activitypub_remote_actor_id yet.
+		// No offset needed - as we process comments, they're filtered out by the LEFT JOIN.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$comments = $wpdb->get_results(
 			$wpdb->prepare(
@@ -1108,9 +1112,8 @@ class Migration {
 				INNER JOIN {$wpdb->commentmeta} m ON c.comment_ID = m.comment_id AND m.meta_key = 'avatar_url'
 				LEFT JOIN {$wpdb->commentmeta} m2 ON c.comment_ID = m2.comment_id AND m2.meta_key = '_activitypub_remote_actor_id'
 				WHERE m2.meta_id IS NULL
-				LIMIT %d OFFSET %d",
-				$batch_size,
-				$offset
+				LIMIT %d",
+				$batch_size
 			)
 		);
 
@@ -1144,7 +1147,6 @@ class Migration {
 		if ( count( $comments ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
-				'offset'     => $offset + $batch_size,
 			);
 		}
 

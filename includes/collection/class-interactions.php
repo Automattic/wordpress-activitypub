@@ -314,11 +314,6 @@ class Interactions {
 			}
 		}
 
-		// Keep storing avatar URL for backward compatibility during migration.
-		if ( isset( $actor['icon']['url'] ) ) {
-			$comment_data['comment_meta']['avatar_url'] = \esc_url_raw( $actor['icon']['url'] );
-		}
-
 		if ( isset( $activity['object']['url'] ) ) {
 			$comment_data['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
 		}
