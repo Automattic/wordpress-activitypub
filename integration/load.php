@@ -23,7 +23,7 @@ function plugin_init() {
 	 *
 	 * @see https://wordpress.org/plugins/classic-editor/
 	 */
-	if ( class_exists( 'Classic_Editor' ) || ! site_supports_blocks() ) {
+	if ( class_exists( '\Classic_Editor' ) || ! site_supports_blocks() ) {
 		Classic_Editor::init();
 	}
 
