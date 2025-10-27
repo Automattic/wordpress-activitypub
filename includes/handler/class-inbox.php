@@ -144,12 +144,9 @@ class Inbox {
 		}
 
 		// Collect all user IDs from cache group.
-		$user_ids = array();
-		$wp_cache = \wp_cache_get_multiple( array(), $cache_key );
-		foreach ( $wp_cache as $key => $value ) {
-			if ( str_starts_with( $key, 'user_' ) ) {
-				$user_ids[] = $value;
-			}
+		$user_ids = \wp_cache_get( 'user_ids', $cache_key );
+		if ( ! is_array( $user_ids ) ) {
+			$user_ids = array();
 		}
 
 		if ( empty( $user_ids ) ) {
