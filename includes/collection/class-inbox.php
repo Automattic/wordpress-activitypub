@@ -394,16 +394,11 @@ class Inbox {
 		if ( empty( $duplicates ) ) {
 			return false;
 		}
-
-		// If only one post, return it.
-		if ( count( $duplicates ) === 1 ) {
-			return $duplicates[0];
-		}
-
-		// Keep the first post, merge recipients from others and delete.
-		$primary = $duplicates[0];
-
-		foreach ( array_slice( $duplicates, 1 ) as $duplicate ) {
+		
+		// Keep the first post, all others are duplicates.
+		$primary = array_shift( $duplicates );
+		
+		foreach ( $duplicates as $duplicate ) {
 			$recipients = \get_post_meta( $duplicate->ID, '_activitypub_user_id', false );
 			self::add_recipients( $primary->ID, $recipients );
 			\wp_delete_post( $duplicate->ID, true );
