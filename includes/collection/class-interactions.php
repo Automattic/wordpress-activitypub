@@ -203,7 +203,37 @@ class Interactions {
 			),
 		);
 
-		return get_comments( $args );
+		return \get_comments( $args );
+	}
+
+	/**
+	 * Get interaction(s) by remote actor ID.
+	 *
+	 * This is an optimized query that uses the remote actor post ID directly
+	 * instead of querying by author_url.
+	 *
+	 * @param int $remote_actor_id The remote actor post ID.
+	 *
+	 * @return array The interactions as WP_Comment objects.
+	 */
+	public static function get_by_remote_actor_id( $remote_actor_id ) {
+		$args = array(
+			'nopaging'   => true,
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key'   => 'protocol',
+					'value' => 'activitypub',
+				),
+				array(
+					'key'   => '_activitypub_remote_actor_id',
+					'value' => $remote_actor_id,
+				),
+			),
+		);
+
+		return \get_comments( $args );
 	}
 
 	/**

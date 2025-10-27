@@ -159,9 +159,9 @@ class Delete {
 
 		// Verify that Actor is deleted.
 		if ( ! is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
+			self::maybe_delete_interactions( $follower->ID );
+			self::maybe_delete_posts( $follower->ID );
 			$state = Remote_Actors::delete( $follower->ID );
-			self::maybe_delete_interactions( $activity );
-			self::maybe_delete_posts( $activity );
 		}
 
 		return $state ?? false;
@@ -170,7 +170,7 @@ class Delete {
 	/**
 	 * Delete Reactions if Actor-URL is a Tombstone.
 	 *
-	 * @param array $activity The delete activity.
+	 * @param int $activity The delete activity.
 	 *
 	 * @return bool True on success, false otherwise.
 	 */
@@ -256,6 +256,11 @@ class Delete {
 	/**
 	 * Delete a Reaction if URL is a Tombstone.
 	 *
+	 * Note: When comments are deleted, WordPress automatically deletes all associated
+	 * comment meta including _activitypub_remote_actor_id. The remote actor post itself
+	 * is not deleted, as it may be referenced by other comments or may be needed for
+	 * future interactions.
+	 *
 	 * @param array $activity The delete activity.
 	 *
 	 * @return bool True on success, false otherwise.
@@ -271,6 +276,7 @@ class Delete {
 
 		if ( $comments && Tombstone::exists( $id ) ) {
 			foreach ( $comments as $comment ) {
+				// WordPress will automatically delete all comment meta including _activitypub_remote_actor_id.
 				wp_delete_comment( $comment->comment_ID, true );
 			}
 
