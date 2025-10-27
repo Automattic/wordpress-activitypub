@@ -470,6 +470,145 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test send_to_inboxes separates local and remote inboxes.
+	 *
+	 * @covers ::send_to_inboxes
+	 */
+	public function test_send_to_inboxes_separates_local_and_remote() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		// Track which inboxes were sent to and via which method.
+		$sent_inboxes = array();
+		$http_called  = false;
+
+		// Mock HTTP requests to track remote inbox delivery.
+		$http_callback = function ( $preempt, $args, $url ) use ( &$sent_inboxes, &$http_called ) {
+			$http_called    = true;
+			$sent_inboxes[] = $url;
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '',
+			);
+		};
+		\add_filter( 'pre_http_request', $http_callback, 10, 3 );
+
+		// Track local inbox deliveries.
+		$inbox_callback = function ( $result, $inbox ) use ( &$sent_inboxes ) {
+			if ( \Activitypub\is_same_domain( $inbox ) ) {
+				$sent_inboxes[] = $inbox;
+			}
+		};
+		\add_action( 'activitypub_sent_to_inbox', $inbox_callback, 10, 2 );
+
+		// Create mixed list of local and remote inboxes.
+		$local_inbox  = \rest_url( sprintf( '/%s/users/%d/inbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		$remote_inbox = 'https://remote.example/inbox';
+		$inboxes      = array( $local_inbox, $remote_inbox );
+
+		// Make the method accessible.
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		$send_to_inboxes->setAccessible( true );
+
+		// Invoke the method.
+		$send_to_inboxes->invoke( null, $inboxes, $outbox_item->ID );
+
+		// Verify both inboxes were processed.
+		$this->assertCount( 2, $sent_inboxes, 'Both inboxes should be processed' );
+		$this->assertContains( $local_inbox, $sent_inboxes, 'Local inbox should be processed' );
+		$this->assertContains( $remote_inbox, $sent_inboxes, 'Remote inbox should be processed' );
+		$this->assertTrue( $http_called, 'HTTP should be called for remote inbox' );
+
+		// Clean up.
+		\remove_filter( 'pre_http_request', $http_callback, 10 );
+		\remove_action( 'activitypub_sent_to_inbox', $inbox_callback, 10 );
+		\wp_delete_post( $post_id );
+		\wp_delete_post( $outbox_item->ID );
+	}
+
+	/**
+	 * Test that local inboxes do not trigger HTTP requests.
+	 *
+	 * @covers ::send_to_inboxes
+	 */
+	public function test_local_inboxes_skip_http() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		$http_called = false;
+
+		// Mock HTTP requests to verify they're not called for local inboxes.
+		$http_callback = function () use ( &$http_called ) {
+			$http_called = true;
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '',
+			);
+		};
+		\add_filter( 'pre_http_request', $http_callback );
+
+		// Only local inboxes.
+		$local_inbox = \rest_url( sprintf( '/%s/users/%d/inbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		$inboxes     = array( $local_inbox );
+
+		// Make the method accessible.
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		$send_to_inboxes->setAccessible( true );
+
+		// Invoke the method.
+		$send_to_inboxes->invoke( null, $inboxes, $outbox_item->ID );
+
+		// Verify HTTP was not called.
+		$this->assertFalse( $http_called, 'HTTP should not be called for local inboxes' );
+
+		// Clean up.
+		\remove_filter( 'pre_http_request', $http_callback );
+		\wp_delete_post( $post_id );
+		\wp_delete_post( $outbox_item->ID );
+	}
+
+	/**
+	 * Test that remote inboxes still use HTTP.
+	 *
+	 * @covers ::send_to_inboxes
+	 */
+	public function test_remote_inboxes_use_http() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		$http_called = false;
+
+		// Mock HTTP requests to verify they're called for remote inboxes.
+		$http_callback = function () use ( &$http_called ) {
+			$http_called = true;
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '',
+			);
+		};
+		\add_filter( 'pre_http_request', $http_callback );
+
+		// Only remote inboxes.
+		$remote_inbox = 'https://remote.example/inbox';
+		$inboxes      = array( $remote_inbox );
+
+		// Make the method accessible.
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		$send_to_inboxes->setAccessible( true );
+
+		// Invoke the method.
+		$send_to_inboxes->invoke( null, $inboxes, $outbox_item->ID );
+
+		// Verify HTTP was called.
+		$this->assertTrue( $http_called, 'HTTP should be called for remote inboxes' );
+
+		// Clean up.
+		\remove_filter( 'pre_http_request', $http_callback );
+		\wp_delete_post( $post_id );
+		\wp_delete_post( $outbox_item->ID );
+	}
+
+	/**
 	 * Test that post_activitypub_add_to_outbox hook triggers send_immediate_accept.
 	 *
 	 * @covers ::send_immediate_accept
