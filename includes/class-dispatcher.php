@@ -22,11 +22,28 @@ class Dispatcher {
 	/**
 	 * Batch size.
 	 *
-	 * @deprecated unreleased {@see Activitypub\Dispatcher::get_batch_size()}
+	 * @deprecated unreleased Use {@see Dispatcher::get_batch_size()}.
 	 *
 	 * @var int
 	 */
 	public static $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE;
+
+	/**
+	 * Initialize the class, registering WordPress hooks.
+	 */
+	public static function init() {
+		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
+
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_immediate_accept' ), 10, 2 );
+
+		// Default filters to add Inboxes to sent to.
+		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
+		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
+		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_relays' ), 10, 3 );
+
+		Scheduler::register_async_batch_callback( 'activitypub_send_activity', array( self::class, 'send_to_followers' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_retry_activity', array( self::class, 'retry_send_to_followers' ) );
+	}
 
 	/**
 	 * Get the batch size for processing outbox items.
@@ -88,23 +105,6 @@ class Dispatcher {
 		 * @param int[] $retry_error_codes The error codes. Default array( 408, 429, 500, 502, 503, 504 ).
 		 */
 		return apply_filters( 'activitypub_dispatcher_retry_error_codes', array( 408, 429, 500, 502, 503, 504 ) );
-	}
-
-	/**
-	 * Initialize the class, registering WordPress hooks.
-	 */
-	public static function init() {
-		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
-
-		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_immediate_accept' ), 10, 2 );
-
-		// Default filters to add Inboxes to sent to.
-		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
-		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
-		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_relays' ), 10, 3 );
-
-		Scheduler::register_async_batch_callback( 'activitypub_send_activity', array( self::class, 'send_to_followers' ) );
-		Scheduler::register_async_batch_callback( 'activitypub_retry_activity', array( self::class, 'retry_send_to_followers' ) );
 	}
 
 	/**
