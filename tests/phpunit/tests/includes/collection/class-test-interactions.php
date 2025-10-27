@@ -187,8 +187,52 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 0, $basic_comment['comment_parent'] );
 		$this->assertEquals( 'https://example.com/123', get_comment_meta( $basic_comment_id, 'source_id', true ) );
 		$this->assertEquals( 'https://example.com/example', get_comment_meta( $basic_comment_id, 'source_url', true ) );
-		$this->assertEquals( 'https://example.com/icon', get_comment_meta( $basic_comment_id, 'avatar_url', true ) );
 		$this->assertEquals( 'activitypub', get_comment_meta( $basic_comment_id, 'protocol', true ) );
+
+		// Avatar URL is no longer stored in comment meta, but via remote actor reference.
+		// Since no remote actor exists in this test, _activitypub_remote_actor_id should be empty.
+		$this->assertEmpty( get_comment_meta( $basic_comment_id, '_activitypub_remote_actor_id', true ) );
+	}
+
+	/**
+	 * Test handle create with remote actor.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_handle_create_with_remote_actor() {
+		// Create a remote actor first.
+		$actor_data = array(
+			'id'                => self::$user_url,
+			'type'              => 'Person',
+			'preferredUsername' => 'testuser',
+			'name'              => 'Test User',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/avatar.jpg',
+			),
+			'inbox'             => 'https://example.com/inbox',
+		);
+
+		$remote_actor_id = \Activitypub\Collection\Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Create a comment from this actor.
+		$comment_id = Interactions::add_comment( $this->create_test_object() );
+		$comment    = get_comment( $comment_id, ARRAY_A );
+
+		$this->assertIsArray( $comment );
+		$this->assertEquals( self::$post_id, $comment['comment_post_ID'] );
+
+		// Verify remote actor reference was stored.
+		$stored_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+		$this->assertEquals( $remote_actor_id, $stored_actor_id );
+
+		// Verify avatar URL is stored on the remote actor.
+		$avatar_url = \Activitypub\Collection\Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertEquals( 'https://example.com/avatar.jpg', $avatar_url );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**

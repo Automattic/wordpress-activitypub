@@ -522,7 +522,9 @@ class Remote_Actors {
 		// Store avatar URL if available, or empty string to clear it.
 		$icon = $actor->get_icon();
 		if ( ! empty( $icon['url'] ) ) {
-			$meta_input['_activitypub_avatar_url'] = \esc_url_raw( $icon['url'] );
+			// Handle icon URL - can be a string or an array of URLs.
+			$icon_url                              = \is_array( $icon['url'] ) ? reset( $icon['url'] ) : $icon['url'];
+			$meta_input['_activitypub_avatar_url'] = \esc_url_raw( $icon_url );
 		} else {
 			// Set to empty string to clear the meta if avatar was removed.
 			$meta_input['_activitypub_avatar_url'] = '';
