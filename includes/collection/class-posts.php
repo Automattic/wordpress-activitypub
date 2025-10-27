@@ -136,7 +136,7 @@ class Posts {
 		// Process attachments if present and we have an actor ID.
 		if ( $actor_id && self::has_updated_attachments( $post_id, $activity['object']['attachment'] ?? array() ) ) {
 			// Delete old files and add new attachments.
-			Attachments::delete_files_directory( $post_id );
+			Attachments::delete_directory( $post_id );
 			Attachments::import_files( $activity['object']['attachment'], $post_id );
 		}
 

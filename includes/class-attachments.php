@@ -32,7 +32,7 @@ class Attachments {
 			return;
 		}
 
-		self::delete_files_directory( $post_id );
+		self::delete_directory( $post_id );
 	}
 
 	/**
@@ -40,7 +40,7 @@ class Attachments {
 	 *
 	 * @param int $post_id The post ID.
 	 */
-	public static function delete_files_directory( $post_id ) {
+	public static function delete_directory( $post_id ) {
 		\WP_Filesystem();
 		global $wp_filesystem;
 
