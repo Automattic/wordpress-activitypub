@@ -144,7 +144,9 @@ class Inbox {
 		$user_ids = Inbox_Collection::get_recipients( $inbox_item->ID );
 
 		/**
-		 * Fires after an ActivityPub Inbox activity has been handled.
+		 * Fires after any ActivityPub Inbox activity has been handled, regardless of activity type.
+		 *
+		 * This hook is triggered for all activity types processed by the inbox handler.
 		 *
 		 * @param array    $data     The data array.
 		 * @param array    $user_ids The user IDs.
