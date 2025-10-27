@@ -373,10 +373,6 @@ class Attachments {
 		}
 
 		// Flag to filter out from Media Library.
-		if ( Posts::POST_TYPE === \get_post_type( $post_id ) ) {
-			$post_data['meta_input']['_activitypub_import'] = 'inbox';
-		}
-
 		// Sideload the attachment into WordPress.
 		$attachment_id = \media_handle_sideload( $file_array, $post_id, '', $post_data );
 
