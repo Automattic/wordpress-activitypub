@@ -24,7 +24,6 @@ class Attachments {
 	 * Initialize the class and set up filters.
 	 */
 	public static function init() {
-		\add_action( 'pre_get_posts', array( self::class, 'maybe_hide_from_media_library' ), 999 );
 		\add_action( 'before_delete_post', array( self::class, 'delete_attachments_with_post' ) );
 	}
 
@@ -54,50 +53,6 @@ class Attachments {
 
 		if ( $wp_filesystem->is_dir( $activitypub_dir ) ) {
 			$wp_filesystem->delete( $activitypub_dir, true );
-		}
-	}
-
-	/**
-	 * Hide ActivityPub attachments from Media Library queries.
-	 *
-	 * This works for both the list view and the media modal by checking
-	 * if we're querying attachments without explicitly requesting the
-	 * _activitypub_import meta key.
-	 *
-	 * @param \WP_Query $query The WordPress query object.
-	 */
-	public static function maybe_hide_from_media_library( $query ) {
-		// Only filter attachment queries.
-		if ( 'attachment' !== $query->get( 'post_type' ) ) {
-			return;
-		}
-
-		// Don't filter if we're querying attachments for an ap_post.
-		if ( $query->get( 'post_parent' ) ) {
-			$parent_post = \get_post( $query->get( 'post_parent' ) );
-			if ( $parent_post && Posts::POST_TYPE === $parent_post->post_type ) {
-				return;
-			}
-		}
-
-		// Check if the query is already explicitly looking for _activitypub_import.
-		$meta_query = $query->get( 'meta_query', array() );
-
-		$has_activitypub_query = false;
-		foreach ( $meta_query as $clause ) {
-			if ( isset( $clause['key'] ) && '_activitypub_import' === $clause['key'] ) {
-				$has_activitypub_query = true;
-				break;
-			}
-		}
-
-		// If not explicitly querying for this meta, exclude ActivityPub imports.
-		if ( ! $has_activitypub_query ) {
-			$meta_query[] = array(
-				'key'     => '_activitypub_import',
-				'compare' => 'NOT EXISTS',
-			);
-			$query->set( 'meta_query', $meta_query );
 		}
 	}
 
