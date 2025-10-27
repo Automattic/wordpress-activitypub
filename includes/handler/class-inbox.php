@@ -66,7 +66,7 @@ class Inbox {
 		}
 
 		\wp_clear_scheduled_hook( 'activitypub_process_inbox', array( $activity_id ) );
-		\wp_schedule_single_event( time() + 5, 'activitypub_process_inbox', array( $activity_id ) );
+		\wp_schedule_single_event( time() + 30, 'activitypub_process_inbox', array( $activity_id ) );
 	}
 
 	/**

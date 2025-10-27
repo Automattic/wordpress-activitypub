@@ -320,9 +320,9 @@ class Test_Inbox extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test maybe_handle_inbox_request filters out shared inbox context.
+	 * Test schedule_inbox_request filters out shared inbox context.
 	 */
-	public function test_maybe_handle_inbox_request_filters_shared_inbox() {
+	public function test_schedule_inbox_request_filters_shared_inbox() {
 		$activity_data = array(
 			'id'     => 'https://example.com/activity/middleware',
 			'type'   => 'Create',
@@ -345,14 +345,16 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$activity = \Activitypub\Activity\Activity::init_from_array( $activity_data );
 
 		// Test with shared inbox context - should be filtered out.
-		Inbox::maybe_handle_inbox_request( $activity_data, array( 1, 2 ), 'create', $activity, Inbox_Collection::CONTEXT_SHARED_INBOX );
+		Inbox::schedule_inbox_request( $activity_data, array( 1, 2 ), 'create', $activity, Inbox_Collection::CONTEXT_SHARED_INBOX );
 
 		$this->assertFalse( $hook_fired, 'Should not process shared inbox context' );
 
-		// Test with inbox context - should process.
-		Inbox::maybe_handle_inbox_request( $activity_data, 1, 'create', $activity, Inbox_Collection::CONTEXT_INBOX );
+		// Test with inbox context without activity ID - should process immediately.
+		$activity_data_no_id = $activity_data;
+		unset( $activity_data_no_id['id'] );
+		Inbox::schedule_inbox_request( $activity_data_no_id, 1, 'create', $activity, Inbox_Collection::CONTEXT_INBOX );
 
-		$this->assertTrue( $hook_fired, 'Should process inbox context' );
+		$this->assertTrue( $hook_fired, 'Should process inbox context without activity ID immediately' );
 
 		\remove_all_actions( 'activitypub_handled_inbox' );
 	}
