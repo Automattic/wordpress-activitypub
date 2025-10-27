@@ -79,7 +79,7 @@ class Classic_Editor {
 		}
 
 		// Save quote interaction policy based on checkbox.
-		if ( isset( $_POST['activitypub_allow_quotes'] ) && '1' === $_POST['activitypub_allow_quotes'] ) {
+		if ( '1' === \sanitize_text_field( \wp_unslash( $_POST['activitypub_allow_quotes'] ?? '0' ) ) ) {
 			// Checked: allow anyone to quote (default value).
 			\update_post_meta( $post_id, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
 		} else {
