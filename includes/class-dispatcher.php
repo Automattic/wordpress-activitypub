@@ -232,44 +232,6 @@ class Dispatcher {
 	}
 
 	/**
-	 * Send an activity to a local inbox via internal REST API request.
-	 *
-	 * @param string $inbox_url The local inbox URL.
-	 * @param string $json      The ActivityPub Activity JSON.
-	 * @return array|\WP_Error The result in the format of a remote post response, or WP_Error on failure.
-	 */
-	private static function send_to_local_inbox( $inbox_url, $json ) {
-		// Parse the inbox URL to extract the REST route.
-		$path       = \wp_parse_url( $inbox_url, PHP_URL_PATH ) ?? '';
-		$rest_route = \preg_replace( '#^/wp-json#', '', $path );
-
-		// Create a REST request.
-		$request = new \WP_REST_Request( 'POST', $rest_route );
-		$request->set_header( 'Content-Type', 'application/activity+json' );
-		$request->set_body( $json );
-		$json_params = $request->get_json_params();
-		if ( null === $json_params ) {
-			return new \WP_Error( 'invalid_json', 'The provided JSON body could not be parsed.', array( 'status' => 400 ) );
-		}
-
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		$response = \rest_do_request( $request );
-		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-
-		// Return result in format similar to remote post response.
-		if ( $response->is_error() ) {
-			return $response->as_error();
-		}
-
-		return array(
-			'response' => array(
-				'code' => $response->get_status(),
-			),
-			'body'     => \wp_json_encode( $response->get_data() ),
-		);
-	}
-
-	/**
 	 * Send to inboxes.
 	 *
 	 * @param array $inboxes        The inboxes to notify.
@@ -296,10 +258,10 @@ class Dispatcher {
 				$result = self::send_to_local_inbox( $inbox, $json );
 			} else {
 				$result = safe_remote_post( $inbox, $json, $outbox_item->post_author );
+			}
 
-				if ( is_wp_error( $result ) && in_array( $result->get_error_code(), self::get_retry_error_codes(), true ) ) {
-					$retries[] = $inbox;
-				}
+			if ( \is_wp_error( $result ) && in_array( $result->get_error_code(), self::get_retry_error_codes(), true ) ) {
+				$retries[] = $inbox;
 			}
 
 			/**
@@ -315,6 +277,41 @@ class Dispatcher {
 		}
 
 		return $retries;
+	}
+
+	/**
+	 * Send an activity to a local inbox via internal REST API request.
+	 *
+	 * @param string $inbox_url The local inbox URL.
+	 * @param string $json      The ActivityPub Activity JSON.
+	 * @return array|\WP_Error The result in the format of a remote post response, or WP_Error on failure.
+	 */
+	private static function send_to_local_inbox( $inbox_url, $json ) {
+		// Parse the inbox URL to extract the REST route.
+		$path       = \wp_parse_url( $inbox_url, PHP_URL_PATH ) ?? '';
+		$rest_route = \preg_replace( '#^/' . preg_quote( \rest_get_url_prefix(), '#' ) . '#', '', $path );
+
+		// Create a REST request.
+		$request = new \WP_REST_Request( 'POST', $rest_route );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( $json );
+		$request->get_json_params();
+
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$response = \rest_do_request( $request );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		// Return result in format similar to remote post response.
+		if ( $response->is_error() ) {
+			return $response->as_error();
+		}
+
+		return array(
+			'response' => array(
+				'code' => $response->get_status(),
+			),
+			'body'     => \wp_json_encode( $response->get_data() ),
+		);
 	}
 
 	/**
