@@ -1828,3 +1828,23 @@ function get_url_authority( $url ) {
 
 	return $parsed['scheme'] . '://' . $parsed['host'];
 }
+
+/**
+ * Check if a plugin is active, loading plugin.php if necessary.
+ *
+ * This is a wrapper around the core is_plugin_active() function that ensures
+ * the function is available by loading wp-admin/includes/plugin.php if needed.
+ * This is useful when checking plugin status outside of the admin context.
+ *
+ * @param string $plugin Plugin basename (e.g., 'plugin-folder/plugin-file.php').
+ *
+ * @return bool True if the plugin is active, false otherwise.
+ */
+function is_plugin_active( $plugin ) {
+	// Include plugin.php if not already loaded (needed for core is_plugin_active).
+	if ( ! \function_exists( 'is_plugin_active' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	}
+
+	return \is_plugin_active( $plugin );
+}
