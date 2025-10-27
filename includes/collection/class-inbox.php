@@ -333,10 +333,8 @@ class Inbox {
 	/**
 	 * Add multiple recipients to an existing inbox activity.
 	 *
-	 * @param int   $post_id   The inbox post ID.
-	 * @param int[] $user_ids  The user ID or array of user IDs to add.
-	 *
-	 * @return void
+	 * @param int   $post_id  The inbox post ID.
+	 * @param int[] $user_ids The user ID or array of user IDs to add.
 	 */
 	public static function add_recipients( $post_id, $user_ids ) {
 		foreach ( $user_ids as $user_id ) {
