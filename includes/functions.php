@@ -341,6 +341,11 @@ function is_post_disabled( $post ) {
 		$disabled = true;
 	}
 
+	// Do not federate imported posts/attachments.
+	if ( 'inbox' === \get_post_meta( $post->ID, '_activitypub_import', true ) ) {
+		$disabled = true;
+	}
+
 	/**
 	 * Allow plugins to disable posts for ActivityPub.
 	 *

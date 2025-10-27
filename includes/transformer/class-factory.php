@@ -90,10 +90,6 @@ class Factory {
 		switch ( $class ) {
 			case 'WP_Post':
 				if ( 'attachment' === $data->post_type && ! is_post_disabled( $data ) ) {
-					if ( 'inbox' === \get_post_meta( $data->ID, '_activitypub_import', true ) ) {
-						return new \WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
-					}
-
 					return new Attachment( $data );
 				} elseif ( ! is_post_disabled( $data ) && get_user_id( $data->post_author ) ) {
 					return new Post( $data );
