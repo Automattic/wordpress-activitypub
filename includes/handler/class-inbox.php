@@ -46,19 +46,13 @@ class Inbox {
 			return;
 		}
 
-		$activity_id = isset( $data['id'] ) ? $data['id'] : null;
+		$activity_id = $data['id'] ?? null;
 		if ( ! $activity_id ) {
 			self::handle_inbox_requests( $data, $user_ids, $type, $activity, $context );
 			return;
 		}
 
-		// Store activity in inbox collection once.
-		$inbox_item = Inbox_Collection::get_by_guid( $activity_id );
-		if ( \is_wp_error( $inbox_item ) ) {
-			Inbox_Collection::add( $activity, (array) $user_ids );
-		} else {
-			Inbox_Collection::add_recipients( $inbox_item->ID, (array) $user_ids );
-		}
+		Inbox_Collection::add( $activity, (array) $user_ids );
 
 		\wp_clear_scheduled_hook( 'activitypub_process_inbox_request', array( $activity_id ) );
 		\wp_schedule_single_event( time() + 15, 'activitypub_process_inbox_request', array( $activity_id ) );
