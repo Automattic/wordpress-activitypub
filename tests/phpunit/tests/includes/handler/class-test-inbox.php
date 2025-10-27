@@ -333,12 +333,12 @@ class Test_Inbox extends \WP_UnitTestCase {
 			'actor'  => 'https://example.com/actor/middleware',
 		);
 
-		$hook_fired = false;
+		$hook_fired_count = 0;
 
 		\add_action(
 			'activitypub_handled_inbox',
-			function () use ( &$hook_fired ) {
-				$hook_fired = true;
+			function () use ( &$hook_fired_count ) {
+				++$hook_fired_count;
 			}
 		);
 
@@ -347,14 +347,24 @@ class Test_Inbox extends \WP_UnitTestCase {
 		// Test with shared inbox context - should be filtered out.
 		Inbox::schedule_inbox_request( $activity_data, array( 1, 2 ), 'create', $activity, Inbox_Collection::CONTEXT_SHARED_INBOX );
 
-		$this->assertFalse( $hook_fired, 'Should not process shared inbox context' );
+		$this->assertEquals( 0, $hook_fired_count, 'Should not process shared inbox context' );
 
 		// Test with inbox context without activity ID - should process immediately.
 		$activity_data_no_id = $activity_data;
 		unset( $activity_data_no_id['id'] );
 		Inbox::schedule_inbox_request( $activity_data_no_id, 1, 'create', $activity, Inbox_Collection::CONTEXT_INBOX );
 
-		$this->assertTrue( $hook_fired, 'Should process inbox context without activity ID immediately' );
+		$this->assertEquals( 1, $hook_fired_count, 'Should process inbox context without activity ID immediately' );
+
+		// Test with inbox context with activity ID - should schedule (not process immediately).
+		$hook_fired_count = 0;
+		Inbox::schedule_inbox_request( $activity_data, 1, 'create', $activity, Inbox_Collection::CONTEXT_INBOX );
+
+		$this->assertEquals( 0, $hook_fired_count, 'Should not process immediately when activity has ID (scheduled instead)' );
+
+		// Verify the scheduled event exists.
+		$scheduled = \wp_next_scheduled( 'activitypub_process_inbox_request', array( 'https://example.com/activity/middleware' ) );
+		$this->assertNotFalse( $scheduled, 'Should have scheduled the processing event' );
 
 		\remove_all_actions( 'activitypub_handled_inbox' );
 	}
