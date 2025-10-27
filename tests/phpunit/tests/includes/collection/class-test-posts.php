@@ -8,7 +8,6 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Posts;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Post_Types;
 
 /**
@@ -240,7 +239,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		$method     = $reflection->getMethod( 'activity_to_post' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( null, $activity );
+		try {
+			$result = $method->invoke( null, $activity );
+		} catch ( \Exception $exception ) {
+			$result = $exception;
+		}
 
 		$this->assertIsArray( $result );
 		$this->assertEquals( 'Test Title', $result['post_title'] );
@@ -262,7 +265,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		$method     = $reflection->getMethod( 'activity_to_post' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( null, 'invalid_data' );
+		try {
+			$result = $method->invoke( null, 'invalid_data' );
+		} catch ( \Exception $exception ) {
+			$result = $exception;
+		}
 
 		$this->assertInstanceOf( '\WP_Error', $result );
 	}
@@ -282,7 +289,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		$method     = $reflection->getMethod( 'activity_to_post' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( null, $activity );
+		try {
+			$result = $method->invoke( null, $activity );
+		} catch ( \Exception $exception ) {
+			$result = $exception;
+		}
 
 		$this->assertIsArray( $result );
 		$this->assertEquals( '', $result['post_title'] );
@@ -458,7 +469,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			3
 		);
 
-		$updated_post = Posts::update( $update_activity, 1 );
+		Posts::update( $update_activity, 1 );
 
 		// Verify old file was deleted and new file was created.
 		$new_files = glob( $file_dir . '/*' );
@@ -518,7 +529,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$updated_post = Posts::update( $update_activity, 1 );
+		Posts::update( $update_activity, 1 );
 
 		// Verify file still exists (should not be recreated since attachment hasn't changed).
 		// Note: With file-based storage, we don't detect unchanged attachments, so files get replaced.
