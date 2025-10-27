@@ -19,10 +19,13 @@ class Inbox {
 	 */
 	public static function init() {
 		// Inbox handler with middleware to filter shared inbox requests.
-		\add_action( 'activitypub_inbox', array( self::class, 'maybe_handle_inbox_request' ), 10, 5 );
+		\add_action( 'activitypub_inbox', array( self::class, 'schedule_inbox_request' ), 10, 5 );
 
 		// Shared inbox handler (processes directly without filtering).
 		\add_action( 'activitypub_inbox_shared', array( self::class, 'handle_inbox_requests' ), 10, 5 );
+
+		// Scheduled action to process collected inbox activities.
+		\add_action( 'activitypub_process_inbox', array( self::class, 'process_inbox' ) );
 	}
 
 	/**
@@ -37,14 +40,41 @@ class Inbox {
 	 * @param Activity|\WP_Error $activity The Activity object.
 	 * @param string             $context  The context of the request.
 	 */
-	public static function maybe_handle_inbox_request( $data, $user_ids, $type, $activity, $context = Inbox_Collection::CONTEXT_INBOX ) {
+	public static function schedule_inbox_request( $data, $user_ids, $type, $activity, $context = Inbox_Collection::CONTEXT_INBOX ) {
 		// Ignore shared inbox requests to prevent duplicate processing.
 		if ( Inbox_Collection::CONTEXT_SHARED_INBOX === $context ) {
 			return;
 		}
 
-		// Process inbox requests.
-		self::handle_inbox_requests( $data, $user_ids, $type, $activity, $context );
+		$activity_id = isset( $data['id'] ) ? $data['id'] : null;
+		if ( ! $activity_id ) {
+			self::handle_inbox_requests( $data, $user_ids, $type, $activity, $context );
+			return;
+		}
+
+		$cache_key = 'activitypub_inbox_' . md5( $activity_id );
+
+		// Store activity data once as transient.
+		if ( false === \get_transient( $cache_key ) ) {
+			\set_transient(
+				$cache_key,
+				array(
+					'data'     => $data,
+					'type'     => $type,
+					'activity' => $activity,
+					'context'  => $context,
+				),
+				MINUTE_IN_SECONDS * 10
+			);
+		}
+
+		// Add each user ID as a separate cache item.
+		foreach ( (array) $user_ids as $user_id ) {
+			\wp_cache_set( 'user_' . $user_id, $user_id, $cache_key, MINUTE_IN_SECONDS * 10 );
+		}
+
+		\wp_clear_scheduled_hook( 'activitypub_process_inbox', array( $activity_id ) );
+		\wp_schedule_single_event( time() + 5, 'activitypub_process_inbox', array( $activity_id ) );
 	}
 
 	/**
@@ -103,5 +133,39 @@ class Inbox {
 		 * @param string             $context  The context of the request ('inbox' or 'shared_inbox').
 		 */
 		\do_action( 'activitypub_handled_inbox_' . $type, $data, $user_ids, $activity, $result, $context );
+	}
+
+	/**
+	 * Process cached inbox activity.
+	 *
+	 * Retrieves all collected user IDs for an activity and processes them together.
+	 *
+	 * @param string $activity_id The activity ID.
+	 */
+	public static function process_inbox( $activity_id ) {
+		$cache_key = 'activitypub_inbox_' . md5( $activity_id );
+
+		// Get activity data from transient.
+		$cached = \get_transient( $cache_key );
+		if ( ! $cached ) {
+			return;
+		}
+
+		\delete_transient( $cache_key );
+
+		// Collect all user IDs from cache group.
+		$user_ids = array();
+		$wp_cache = \wp_cache_get_multiple( array(), $cache_key );
+		foreach ( $wp_cache as $key => $value ) {
+			if ( str_starts_with( $key, 'user_' ) ) {
+				$user_ids[] = $value;
+			}
+		}
+
+		if ( empty( $user_ids ) ) {
+			return;
+		}
+
+		self::handle_inbox_requests( $cached['data'], $user_ids, $cached['type'], $cached['activity'], $cached['context'] );
 	}
 }
