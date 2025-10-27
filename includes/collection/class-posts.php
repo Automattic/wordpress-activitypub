@@ -55,7 +55,7 @@ class Posts {
 
 		// Process attachments if present.
 		if ( ! empty( $activity_object['attachment'] ) ) {
-			Attachments::import( $activity_object['attachment'], $post_id );
+			Attachments::import_files( $activity_object['attachment'], $post_id );
 		}
 
 		return \get_post( $post_id );
@@ -135,13 +135,9 @@ class Posts {
 
 		// Process attachments if present and we have an actor ID.
 		if ( $actor_id && self::has_updated_attachments( $post_id, $activity['object']['attachment'] ?? array() ) ) {
-			// Delete existing attachments for this post.
-			foreach ( \get_attached_media( '', $post_id ) as $attachment ) {
-				\wp_delete_attachment( $attachment->ID, true );
-			}
-
-			// Add new attachments.
-			Attachments::import( $activity['object']['attachment'], $post_id );
+			// Delete old files and add new attachments.
+			Attachments::delete_directory( $post_id );
+			Attachments::import_files( $activity['object']['attachment'], $post_id );
 		}
 
 		return \get_post( $post_id );
