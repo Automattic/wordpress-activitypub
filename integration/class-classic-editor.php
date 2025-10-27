@@ -37,16 +37,11 @@ class Classic_Editor {
 		\wp_nonce_field( 'activitypub_quote_policy', 'activitypub_quote_policy_nonce' );
 
 		// Get current value.
-		$quote_interaction_policy = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true );
-
-		// Set default if empty.
-		if ( '' === $quote_interaction_policy ) {
-			$quote_interaction_policy = ACTIVITYPUB_INTERACTION_POLICY_ANYONE;
-		}
+		$quote_interaction_policy = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true ) ?: ACTIVITYPUB_INTERACTION_POLICY_ANYONE; // phpcs:ignore Universal.Operators.DisallowShortTernary
 		?>
 		<br class="clear" />
 		<label for="activitypub_allow_quotes" class="selectit">
-			<input name="activitypub_allow_quotes" type="checkbox" id="activitypub_allow_quotes" value="1" <?php \checked( ACTIVITYPUB_INTERACTION_POLICY_ANYONE === $quote_interaction_policy ); ?> />
+			<input name="activitypub_allow_quotes" type="checkbox" id="activitypub_allow_quotes" value="1" <?php \checked( $quote_interaction_policy, ACTIVITYPUB_INTERACTION_POLICY_ANYONE ); ?> />
 			<?php \esc_html_e( 'Allow quotes from the Fediverse', 'activitypub' ); ?>
 		</label>
 		<?php
