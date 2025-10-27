@@ -647,7 +647,7 @@ class Remote_Actors {
 	public static function get_avatar_url( $id ) {
 		$avatar_url = \get_post_meta( $id, '_activitypub_avatar_url', true );
 
-		// If not in meta, try to extract from post_content JSON.
+		// If not found in meta, try to extract from post_content JSON.
 		if ( $avatar_url ) {
 			return $avatar_url;
 		}
