@@ -305,6 +305,16 @@ class Interactions {
 			),
 		);
 
+		// Store reference to remote actor post.
+		$actor_uri = object_to_uri( $activity['actor'] ?? null );
+		if ( $actor_uri ) {
+			$remote_actor = Remote_Actors::get_by_uri( $actor_uri );
+			if ( ! \is_wp_error( $remote_actor ) && $remote_actor instanceof \WP_Post ) {
+				$comment_data['comment_meta']['_activitypub_remote_actor_id'] = $remote_actor->ID;
+			}
+		}
+
+		// Keep storing avatar URL for backward compatibility during migration.
 		if ( isset( $actor['icon']['url'] ) ) {
 			$comment_data['comment_meta']['avatar_url'] = \esc_url_raw( $actor['icon']['url'] );
 		}

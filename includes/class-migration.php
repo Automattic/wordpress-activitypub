@@ -31,6 +31,7 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_create_post_outbox_items', array( self::class, 'create_post_outbox_items' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_create_comment_outbox_items', array( self::class, 'create_comment_outbox_items' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_migrate_avatar_to_remote_actors', array( self::class, 'migrate_avatar_to_remote_actors' ) );
 	}
 
 	/**
@@ -211,6 +212,7 @@ class Migration {
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			self::clean_up_inbox();
+			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
 		}
 
 		// Ensure all required cron schedules are registered.
@@ -1078,5 +1080,74 @@ class Migration {
 		foreach ( $inbox_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
 		}
+	}
+
+	/**
+	 * Migrate avatar URLs from comment meta to remote actors in batches.
+	 *
+	 * This migration:
+	 * 1. Finds all comments with ActivityPub protocol and avatar_url meta
+	 * 2. Looks up the remote actor by comment_author_url
+	 * 3. Adds _activitypub_remote_actor_id to comment meta
+	 * 4. Stores avatar_url in remote actor post meta
+	 *
+	 * @param int $batch_size Optional. Number of comments to process per batch. Default 50.
+	 * @param int $offset     Optional. Number of comments to skip. Default 0.
+	 * @return array|null Array with batch size and offset if there are more comments to process, null otherwise.
+	 */
+	public static function migrate_avatar_to_remote_actors( $batch_size = 50, $offset = 0 ) {
+		global $wpdb;
+
+		// Get comments with avatar_url meta that don't have _activitypub_remote_actor_id yet.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$comments = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT c.comment_ID, c.comment_author_url, m.meta_value as avatar_url
+				FROM {$wpdb->comments} c
+				INNER JOIN {$wpdb->commentmeta} m1 ON c.comment_ID = m1.comment_id AND m1.meta_key = 'protocol' AND m1.meta_value = 'activitypub'
+				INNER JOIN {$wpdb->commentmeta} m ON c.comment_ID = m.comment_id AND m.meta_key = 'avatar_url'
+				LEFT JOIN {$wpdb->commentmeta} m2 ON c.comment_ID = m2.comment_id AND m2.meta_key = '_activitypub_remote_actor_id'
+				WHERE m2.meta_id IS NULL
+				LIMIT %d OFFSET %d",
+				$batch_size,
+				$offset
+			)
+		);
+
+		foreach ( $comments as $comment ) {
+			if ( empty( $comment->comment_author_url ) ) {
+				continue;
+			}
+
+			// Try to get the remote actor by URI.
+			$remote_actor = Remote_Actors::get_by_uri( $comment->comment_author_url );
+
+			// If not found, try to fetch it remotely.
+			if ( \is_wp_error( $remote_actor ) ) {
+				$remote_actor = Remote_Actors::fetch_by_uri( $comment->comment_author_url );
+			}
+
+			// If we have a valid remote actor, store the reference.
+			if ( ! \is_wp_error( $remote_actor ) && $remote_actor instanceof \WP_Post ) {
+				// Add _activitypub_remote_actor_id to comment meta.
+				\add_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $remote_actor->ID, true );
+
+				// Ensure avatar is stored on remote actor if not already present.
+				$existing_avatar = \get_post_meta( $remote_actor->ID, '_activitypub_avatar_url', true );
+				if ( empty( $existing_avatar ) && ! empty( $comment->avatar_url ) ) {
+					\update_post_meta( $remote_actor->ID, '_activitypub_avatar_url', \esc_url_raw( $comment->avatar_url ) );
+				}
+			}
+		}
+
+		// Return batch info if there are more comments to process.
+		if ( count( $comments ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
+			);
+		}
+
+		return null;
 	}
 }
