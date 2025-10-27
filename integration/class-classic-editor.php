@@ -7,8 +7,6 @@
 
 namespace Activitypub\Integration;
 
-use PHPUnit\TestFixture\A;
-
 /**
  * Classic Editor integration class.
  *
