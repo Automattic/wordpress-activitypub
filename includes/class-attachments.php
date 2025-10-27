@@ -443,11 +443,9 @@ class Attachments {
 			return new \WP_Error( 'file_move_failed', \__( 'Failed to move file to destination.', 'activitypub' ) );
 		}
 
-		// Get mime type.
-		$mime_type = $attachment_data['mediaType'] ?? '';
-		if ( empty( $mime_type ) && \function_exists( 'mime_content_type' ) ) {
-			$mime_type = mime_content_type( $file_path );
-		}
+		// Get mime type and validate file.
+		$file_info = \wp_check_filetype_and_ext( $file_path, $file_name );
+		$mime_type = $file_info['type'] ?? $attachment_data['mediaType'] ?? '';
 
 		return array(
 			'url'       => $base_url . '/' . $file_name,
