@@ -13,6 +13,12 @@ use Activitypub\Collection\Posts;
  * Attachments processor class.
  */
 class Attachments {
+	/**
+	 * Directory for storing ap_post media files.
+	 *
+	 * @var string
+	 */
+	private static $ap_posts_dir = '/activitypub/ap_posts';
 
 	/**
 	 * Initialize the class and set up filters.
@@ -44,7 +50,7 @@ class Attachments {
 		\WP_Filesystem();
 		global $wp_filesystem;
 
-		$activitypub_dir = \wp_upload_dir()['basedir'] . '/activitypub/' . $post_id;
+		$activitypub_dir = \wp_upload_dir()['basedir'] . self::$ap_posts_dir . $post_id;
 
 		if ( $wp_filesystem->is_dir( $activitypub_dir ) ) {
 			$wp_filesystem->delete( $activitypub_dir, true );
@@ -143,7 +149,7 @@ class Attachments {
 	/**
 	 * Import attachments as direct files (for ap_post types).
 	 *
-	 * Saves files directly to uploads/activitypub/{post_id}/ without creating
+	 * Saves files directly to uploads/activitypub/ap_posts/{post_id}/ without creating
 	 * WordPress attachment posts. Used for ActivityPub inbox items.
 	 *
 	 * @param array $attachments Array of ActivityPub attachment objects.
@@ -428,7 +434,7 @@ class Attachments {
 	}
 
 	/**
-	 * Save a file directly to uploads/activitypub/{post_id}/ (for ap_post types).
+	 * Save a file directly to uploads/activitypub/ap_posts/{post_id}/ (for ap_post types).
 	 *
 	 * @param array $attachment_data The normalized attachment data.
 	 * @param int   $post_id         The post ID to attach to.
@@ -455,8 +461,8 @@ class Attachments {
 
 		// Get upload directory and create activitypub subdirectory.
 		$upload_dir = \wp_upload_dir();
-		$base_dir   = $upload_dir['basedir'] . '/activitypub/' . $post_id;
-		$base_url   = $upload_dir['baseurl'] . '/activitypub/' . $post_id;
+		$base_dir   = $upload_dir['basedir'] . self::$ap_posts_dir . $post_id;
+		$base_url   = $upload_dir['baseurl'] . self::$ap_posts_dir . $post_id;
 
 		// Create directory if it doesn't exist.
 		if ( ! file_exists( $base_dir ) ) {
