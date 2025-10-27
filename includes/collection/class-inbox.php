@@ -394,10 +394,10 @@ class Inbox {
 		if ( empty( $duplicates ) ) {
 			return false;
 		}
-		
+
 		// Keep the first post, all others are duplicates.
 		$primary = array_shift( $duplicates );
-		
+
 		foreach ( $duplicates as $duplicate ) {
 			$recipients = \get_post_meta( $duplicate->ID, '_activitypub_user_id', false );
 			self::add_recipients( $primary->ID, $recipients );

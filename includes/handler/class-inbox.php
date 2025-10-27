@@ -10,6 +10,8 @@ namespace Activitypub\Handler;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Handle Inbox requests.
  */
@@ -46,7 +48,7 @@ class Inbox {
 			return;
 		}
 
-		$activity_id = $data['id'] ?? null;
+		$activity_id = object_to_uri( $data );
 		if ( ! $activity_id ) {
 			self::handle_inbox_requests( $data, $user_ids, $type, $activity, $context );
 			return;
