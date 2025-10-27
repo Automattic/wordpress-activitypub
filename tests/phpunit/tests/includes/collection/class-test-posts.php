@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Attachments;
 use Activitypub\Collection\Posts;
 use Activitypub\Post_Types;
 
@@ -325,7 +326,7 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Verify file was created in activitypub directory.
 		$upload_dir = \wp_upload_dir();
-		$file_dir   = $upload_dir['basedir'] . '/activitypub/' . $result->ID;
+		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $result->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
 
 		// Verify file exists.
@@ -333,7 +334,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertCount( 1, $files, 'One file should be created' );
 
 		// Verify content includes media markup with the file URL.
-		$this->assertStringContainsString( '/activitypub/' . $result->ID . '/', $result->post_content );
+		$this->assertStringContainsString( Attachments::$ap_posts_dir . $result->ID . '/', $result->post_content );
 	}
 
 	/**
@@ -383,7 +384,7 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Verify file was created.
 		$upload_dir = \wp_upload_dir();
-		$file_dir   = $upload_dir['basedir'] . '/activitypub/' . $updated_post->ID;
+		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $updated_post->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
 
 		$files = glob( $file_dir . '/*' );
@@ -419,7 +420,7 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Verify original file was created.
 		$upload_dir = \wp_upload_dir();
-		$file_dir   = $upload_dir['basedir'] . '/activitypub/' . $original_post->ID;
+		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $original_post->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
 		$original_files = glob( $file_dir . '/*' );
 		$this->assertCount( 1, $original_files );
@@ -497,7 +498,7 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Verify original file was created.
 		$upload_dir = \wp_upload_dir();
-		$file_dir   = $upload_dir['basedir'] . '/activitypub/' . $original_post->ID;
+		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $original_post->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
 		$original_files = glob( $file_dir . '/*' );
 		$this->assertCount( 1, $original_files );

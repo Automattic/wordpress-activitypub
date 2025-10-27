@@ -18,7 +18,7 @@ class Attachments {
 	 *
 	 * @var string
 	 */
-	private static $ap_posts_dir = '/activitypub/ap_posts';
+	public static $ap_posts_dir = '/activitypub/ap_posts/';
 
 	/**
 	 * Initialize the class and set up filters.

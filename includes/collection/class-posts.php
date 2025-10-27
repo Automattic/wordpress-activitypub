@@ -130,12 +130,8 @@ class Posts {
 
 		self::add_taxonomies( $post_id, $activity['object'] );
 
-		// Get the remote actor ID from post meta.
-		$actor_id = \get_post_meta( $post_id, '_activitypub_remote_actor_id', true );
-
-		// Process attachments if present and we have an actor ID.
-		if ( $actor_id && self::has_updated_attachments( $post_id, $activity['object']['attachment'] ?? array() ) ) {
-			// Delete old files and add new attachments.
+		// Process attachments if present.
+		if ( ! empty( $activity['object']['attachment'] ) ) {
 			Attachments::delete_directory( $post_id );
 			Attachments::import_files( $activity['object']['attachment'], $post_id );
 		}
@@ -214,40 +210,6 @@ class Posts {
 		}
 
 		\wp_set_post_terms( $post_id, $tags, 'ap_tag' );
-	}
-
-	/**
-	 * Check if attachments have been updated by comparing source URLs.
-	 *
-	 * @param int   $post_id     The post ID.
-	 * @param array $attachments Array of new attachment objects from ActivityPub.
-	 *
-	 * @return bool True if attachments have changed, false otherwise.
-	 */
-	private static function has_updated_attachments( $post_id, $attachments ) {
-		if ( empty( $attachments ) ) {
-			return false;
-		}
-
-		// Get existing attachments.
-		$attached_media = \get_attached_media( '', $post_id );
-
-		if ( empty( $attached_media ) ) {
-			// No existing attachments, but we have new ones => changed.
-			return true;
-		}
-
-		// Get URLs from new attachments.
-		$new_urls = array_map( 'Activitypub\object_to_uri', $attachments );
-
-		// Extract URLs from existing attachments.
-		$stored_urls = array();
-		foreach ( $attached_media as $attachment ) {
-			$stored_urls[] = \get_post_meta( $attachment->ID, '_source_url', true );
-		}
-
-		// Compare the arrays (reindex after filtering to ensure proper comparison).
-		return array_values( array_filter( $stored_urls ) ) !== $new_urls;
 	}
 
 	/**
