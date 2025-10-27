@@ -24,11 +24,38 @@ import { SVG, Path } from '@wordpress/primitives';
 const EditorPlugin = () => {
 	const postType = useSelect( ( select ) => select( editorStore ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
+	const postDate = useSelect( ( select ) => select( editorStore ).getCurrentPost().date, [] );
 
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {
 		return null;
 	}
+
+	// Calculate default visibility based on post age and federation status.
+	const getDefaultVisibility = () => {
+		// If already set, use that value.
+		if ( meta?.activitypub_content_visibility ) {
+			return meta.activitypub_content_visibility;
+		}
+
+		// If post is federated, use public.
+		if ( meta?.activitypub_status === 'federated' ) {
+			return 'public';
+		}
+
+		// If post is older than 1 month, default to local.
+		if ( postDate ) {
+			const postTimestamp = new Date( postDate ).getTime();
+			const oneMonthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+			if ( postTimestamp < oneMonthAgo ) {
+				return 'local';
+			}
+		}
+
+		// Default to public for new posts.
+		return 'public';
+	};
 
 	/**
 	 * SVG for the not-allowed icon. Defining our own because it's too new in @wordpress/icons.
@@ -122,7 +149,7 @@ const EditorPlugin = () => {
 					"This adjusts the visibility of a post in the fediverse, but note that it won't affect how the post appears on the blog.",
 					'activitypub'
 				) }
-				selected={ meta?.activitypub_content_visibility || 'public' }
+				selected={ getDefaultVisibility() }
 				options={ [
 					{
 						label: enhancedLabel(
