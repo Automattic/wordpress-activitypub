@@ -128,7 +128,7 @@ class Classic_Editor {
 
 		// If post is older than 1 month, default to local.
 		$post_timestamp = \strtotime( $post->post_date );
-		$one_month_ago  = \strtotime( '-1 month' );
+		$one_month_ago  = \strtotime( '-30 days' );
 
 		if ( $post_timestamp < $one_month_ago ) {
 			return ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
