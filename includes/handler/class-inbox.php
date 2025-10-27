@@ -54,18 +54,10 @@ class Inbox {
 
 		$cache_key = 'activitypub_inbox_' . md5( $activity_id );
 
-		// Store activity data once as transient.
-		if ( false === \get_transient( $cache_key ) ) {
-			\set_transient(
-				$cache_key,
-				array(
-					'data'     => $data,
-					'type'     => $type,
-					'activity' => $activity,
-					'context'  => $context,
-				),
-				MINUTE_IN_SECONDS * 10
-			);
+		// Store activity in inbox collection once.
+		$inbox_item = Inbox_Collection::get_by_guid( $activity_id );
+		if ( false === $inbox_item ) {
+			Inbox_Collection::add( $activity, (array) $user_ids );
 		}
 
 		// Add each user ID as a separate cache item.
@@ -145,13 +137,11 @@ class Inbox {
 	public static function process_inbox( $activity_id ) {
 		$cache_key = 'activitypub_inbox_' . md5( $activity_id );
 
-		// Get activity data from transient.
-		$cached = \get_transient( $cache_key );
-		if ( ! $cached ) {
+		// Deduplicate if multiple inbox items were created due to race condition.
+		$inbox_item = Inbox_Collection::deduplicate( $activity_id );
+		if ( ! $inbox_item ) {
 			return;
 		}
-
-		\delete_transient( $cache_key );
 
 		// Collect all user IDs from cache group.
 		$user_ids = array();
@@ -166,6 +156,13 @@ class Inbox {
 			return;
 		}
 
-		self::handle_inbox_requests( $cached['data'], $user_ids, $cached['type'], $cached['activity'], $cached['context'] );
+		$data = json_decode( $inbox_item->post_content, true );
+		// Reconstruct activity from inbox post.
+		$activity = Activity::init_from_array( $data );
+		$type     = $activity->get_type();
+		$context  = Inbox_Collection::CONTEXT_INBOX;
+
+		// Handle inbox requests (adds recipients and fires hooks).
+		self::handle_inbox_requests( $data, $user_ids, $type, $activity, $context );
 	}
 }
