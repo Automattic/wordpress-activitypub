@@ -37,16 +37,7 @@ class Test_Posts extends \WP_UnitTestCase {
 	public function tear_down() {
 		remove_filter( 'pre_http_request', array( $this, 'mock_http_request' ) );
 
-		// Clean up activitypub directories created during tests.
-		$upload_dir = \wp_upload_dir();
-		$base_dir   = $upload_dir['basedir'] . '/activitypub';
-
-		\WP_Filesystem();
-		global $wp_filesystem;
-
-		if ( $wp_filesystem->is_dir( $base_dir ) ) {
-			$wp_filesystem->delete( $base_dir, true );
-		}
+		$this->remove_added_uploads();
 
 		parent::tear_down();
 	}
