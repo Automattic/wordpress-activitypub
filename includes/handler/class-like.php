@@ -57,12 +57,12 @@ class Like {
 		/**
 		 * Fires after an ActivityPub Like activity has been handled.
 		 *
-		 * @param array                                        $like    The ActivityPub activity data.
-		 * @param int                                          $user_id The local user ID.
-		 * @param bool                                         $success True on success, false otherwise.
-		 * @param array|false|int|string|\WP_Comment|\WP_Error $result  The WP_Comment object of the created like comment, or null if creation failed.
+		 * @param array                                         $like     The ActivityPub activity data.
+		 * @param array                                         $user_ids The local user IDs.
+		 * @param bool                                          $success  True on success, false otherwise.
+		 * @param array|false|int|string|\WP_Comment|\WP_Error $result   The WP_Comment object of the created like comment, or null if creation failed.
 		 */
-		\do_action( 'activitypub_handled_like', $like, $user_id, $success, $result );
+		\do_action( 'activitypub_handled_like', $like, (array) $user_id, $success, $result );
 	}
 
 	/**

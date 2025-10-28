@@ -69,12 +69,12 @@ class Reject {
 		/**
 		 * Fires after an ActivityPub Reject activity has been handled.
 		 *
-		 * @param array              $reject  The ActivityPub activity data.
-		 * @param int                $user_id The local user ID.
-		 * @param bool               $success True on success, false otherwise.
-		 * @param \WP_Post|\WP_Error $result  Actor post on success, WP_Error on failure.
+		 * @param array              $reject   The ActivityPub activity data.
+		 * @param array              $user_ids The local user IDs.
+		 * @param bool               $success  True on success, false otherwise.
+		 * @param \WP_Post|\WP_Error $result   Actor post on success, WP_Error on failure.
 		 */
-		\do_action( 'activitypub_handled_reject', $reject, $user_id, $success, $result );
+		\do_action( 'activitypub_handled_reject', $reject, (array) $user_id, $success, $result );
 	}
 
 	/**

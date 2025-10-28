@@ -101,11 +101,11 @@ class Collection_Sync {
 		 * This allows for async processing of the reconciliation.
 		 *
 		 * @param string $collection_type The collection type (e.g., 'followers', 'following', 'liked').
-		 * @param int    $user_id         The local user ID.
+		 * @param array  $user_id         The local user ID.
 		 * @param string $actor_url       The remote actor URL.
 		 * @param array  $params          The parsed Collection-Synchronization header parameters.
 		 */
-		\do_action( 'activitypub_collection_sync', $collection_type, $user_id, $actor_url, $params );
+		\do_action( 'activitypub_collection_sync', $collection_type, (array) $user_id, $actor_url, $params );
 	}
 
 	/**

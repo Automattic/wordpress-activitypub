@@ -72,11 +72,11 @@ class Quote_Request {
 		 * Fires after an ActivityPub QuoteRequest activity has been handled.
 		 *
 		 * @param array  $activity       The ActivityPub activity data.
-		 * @param int    $user_id        The local user ID.
+		 * @param array  $user_ids       The local user IDs.
 		 * @param bool   $success        True on success, false otherwise.
 		 * @param string $content_policy The content policy for the quoted post.
 		 */
-		\do_action( 'activitypub_handled_quote_request', $activity, $user_id, $state, $content_policy );
+		\do_action( 'activitypub_handled_quote_request', $activity, (array) $user_id, $state, $content_policy );
 	}
 
 	/**

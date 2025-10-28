@@ -41,11 +41,11 @@ class Undo {
 		 * Fires after an ActivityPub Undo activity has been handled.
 		 *
 		 * @param array              $activity The ActivityPub activity data.
-		 * @param int                $user_id  The local user ID.
+		 * @param array              $user_ids The local user IDs.
 		 * @param bool               $success  True on success, false on failure.
 		 * @param \WP_Comment|string $result   The target, based on the activity that is being undone.
 		 */
-		\do_action( 'activitypub_handled_undo', $activity, $user_id, $success, $result );
+		\do_action( 'activitypub_handled_undo', $activity, (array) $user_id, $success, $result );
 	}
 
 	/**

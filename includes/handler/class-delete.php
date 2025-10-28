@@ -117,11 +117,11 @@ class Delete {
 		 * Fires after an ActivityPub Delete activity has been handled.
 		 *
 		 * @param array      $activity The ActivityPub activity data.
-		 * @param int        $user_id  The local user ID.
+		 * @param array      $user_ids The local user IDs.
 		 * @param bool       $success  True on success, false otherwise.
 		 * @param mixed|null $result   The result of the delete operation.
 		 */
-		\do_action( 'activitypub_handled_delete', $activity, $user_id, $success, $result );
+		\do_action( 'activitypub_handled_delete', $activity, (array) $user_id, $success, $result );
 	}
 
 	/**
@@ -138,11 +138,11 @@ class Delete {
 		 * Fires after an ActivityPub Delete activity has been handled.
 		 *
 		 * @param array      $activity The ActivityPub activity data.
-		 * @param int        $user_id  The local user ID.
+		 * @param array      $user_ids The local user IDs.
 		 * @param bool       $success  True on success, false otherwise.
 		 * @param mixed|null $result   The result of the delete operation.
 		 */
-		\do_action( 'activitypub_handled_delete', $activity, $user_id, $success, $result );
+		\do_action( 'activitypub_handled_delete', $activity, (array) $user_id, $success, $result );
 
 		return $result;
 	}
