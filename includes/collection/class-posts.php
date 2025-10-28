@@ -53,7 +53,7 @@ class Posts {
 			$existing = self::get_by_guid( $activity_object['id'] );
 
 			// If post exists, call update instead.
-			if ( ! \is_wp_error( $existing ) && $existing instanceof \WP_Post ) {
+			if ( $existing instanceof \WP_Post ) {
 				return self::update( $activity, $recipients );
 			}
 		}
