@@ -2,33 +2,9 @@
  * @jest-environment jsdom
  */
 
+import { getDefaultVisibility } from '../utils';
+
 describe( 'EditorPlugin getDefaultVisibility', () => {
-	// Helper function to simulate the getDefaultVisibility logic
-	const getDefaultVisibility = ( meta, postDate ) => {
-		// If already set, use that value.
-		if ( meta?.activitypub_content_visibility ) {
-			return meta.activitypub_content_visibility;
-		}
-
-		// If post is federated, use public.
-		if ( meta?.activitypub_status === 'federated' ) {
-			return 'public';
-		}
-
-		// If post is older than 1 month, default to local.
-		if ( postDate ) {
-			const postTimestamp = new Date( postDate ).getTime();
-			const oneMonthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-
-			if ( postTimestamp < oneMonthAgo ) {
-				return 'local';
-			}
-		}
-
-		// Default to public for new posts.
-		return 'public';
-	};
-
 	test( 'returns saved visibility value if already set', () => {
 		const meta = {
 			activitypub_content_visibility: 'quiet_public',
