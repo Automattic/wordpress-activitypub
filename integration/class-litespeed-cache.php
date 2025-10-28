@@ -172,9 +172,6 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 			return false;
 		}
 
-		// Ensure get_home_path() is declared.
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
 		global $wp_filesystem;
 		\WP_Filesystem();
 
@@ -210,6 +207,9 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 */
 	private static function get_htaccess_file_path() {
 		$htaccess_file = false;
+
+		// Ensure get_home_path() is declared.
+		require_once ABSPATH . 'wp-admin/includes/file.php';
 
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors
 		if ( @file_exists( \get_home_path() . '.htaccess' ) ) {
