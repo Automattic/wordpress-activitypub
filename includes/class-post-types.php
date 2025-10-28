@@ -522,6 +522,29 @@ class Post_Types {
 					},
 				)
 			);
+
+			\register_post_meta(
+				$post_type,
+				'activitypub_status',
+				array(
+					'type'              => 'string',
+					'single'            => true,
+					'show_in_rest'      => true,
+					'sanitize_callback' => function ( $value ) {
+						$schema = array(
+							'type'    => 'string',
+							'enum'    => array( 'pending', 'federated', 'failed' ),
+							'default' => 'pending',
+						);
+
+						if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+							return $schema['default'];
+						}
+
+						return $value;
+					},
+				)
+			);
 		}
 	}
 
