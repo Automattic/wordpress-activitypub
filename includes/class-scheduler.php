@@ -535,6 +535,7 @@ class Scheduler {
 		$announce->set_type( 'Announce' );
 		$announce->set_actor( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id() );
 		$announce->set_object( $activity );
+		$announce->add_cc( object_to_uri( $activity->get_actor() ) );
 
 		$outbox_activity_id = Outbox::add( $announce, Actors::BLOG_USER_ID );
 
