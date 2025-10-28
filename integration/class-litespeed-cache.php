@@ -172,6 +172,9 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 			return false;
 		}
 
+		// Ensure WP_Filesystem() is declared.
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+
 		global $wp_filesystem;
 		\WP_Filesystem();
 
