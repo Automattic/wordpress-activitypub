@@ -13,6 +13,8 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 use Activitypub\Dispatcher;
 
+use function Activitypub\is_same_domain;
+
 /**
  * Test class for Activitypub Dispatcher.
  *
@@ -124,7 +126,11 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$send_to_inboxes->setAccessible( true );
 
 		// Invoke the method.
-		$retries = $send_to_inboxes->invoke( null, $inboxes, $outbox_item ); // null for static methods.
+		try {
+			$retries = $send_to_inboxes->invoke( null, $inboxes, $outbox_item ); // null for static methods.
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
 
 		$this->assertSame( $expected, $retries, 'Expected all inboxes to be scheduled for retry' );
 
@@ -151,7 +157,11 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$send_to_additional_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_additional_inboxes' );
 		$send_to_additional_inboxes->setAccessible( true );
 
-		$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+		try {
+			$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
 
 		// Test how often the request was sent.
 		$this->assertEquals( 0, did_action( 'activitypub_sent_to_inbox' ) );
@@ -163,7 +173,11 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$relays = array( 'https://relay1.example.com/inbox' );
 		update_option( 'activitypub_relays', $relays );
 
-		$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+		try {
+			$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
 
 		// Test how often the request was sent.
 		$this->assertEquals( 1, did_action( 'activitypub_sent_to_inbox' ) );
@@ -175,7 +189,11 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$relays = array( 'https://relay1.example.com/inbox', 'https://relay2.example.com/inbox' );
 		update_option( 'activitypub_relays', $relays );
 
-		$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+		try {
+			$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
 
 		// Test how often the request was sent.
 		$this->assertEquals( 2, did_action( 'activitypub_sent_to_inbox' ) );
@@ -190,12 +208,16 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		// Clone object.
 		$private_activity = clone $private_activity;
 
-		$send_to_additional_inboxes->invoke( null, $private_activity, Actors::get_by_id( self::$user_id ), $outbox_item );
+		try {
+			$send_to_additional_inboxes->invoke( null, $private_activity, Actors::get_by_id( self::$user_id ), $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
 
 		// Test how often the request was sent.
 		$this->assertEquals( 0, did_action( 'activitypub_sent_to_inbox' ) );
 
-		\remove_filter( 'pre_http_request', $fake_request, 10 );
+		\remove_filter( 'pre_http_request', $fake_request );
 
 		\delete_option( 'activitypub_relays' );
 		\wp_delete_post( $post_id );
@@ -210,27 +232,37 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	public function test_should_send_to_followers() {
 		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
-		$activity    = \Activitypub\Collection\Outbox::get_activity( $outbox_item );
+		$activity    = Outbox::get_activity( $outbox_item );
 
 		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
 		$should_send->setAccessible( true );
 
 		// No followers, so should not send.
-		$this->assertFalse( $should_send->invoke( null, $activity, Actors::get_by_id( self::$user_id ), $outbox_item ) );
+		try {
+			$result = $should_send->invoke( null, $activity, Actors::get_by_id( self::$user_id ), $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+		$this->assertFalse( $result );
 
 		// Add a follower.
 		Followers::add( self::$user_id, 'https://example.org/users/username' );
 
-		$this->assertTrue( $should_send->invoke( null, $activity, Actors::get_by_id( self::$user_id ), $outbox_item ) );
+		try {
+			$result = $should_send->invoke( null, $activity, Actors::get_by_id( self::$user_id ), $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+		$this->assertTrue( $result );
 	}
 
 	/**
-	 * Returns a mock of an Activity object.
+	 * Returns a mocked Activity object.
 	 *
 	 * @return Activity
 	 */
 	private function get_activity_mock() {
-		$activity = $this->createMock( Activity::class, array( '__call' ) );
+		$activity = $this->createMock( Activity::class );
 
 		// Mock the static method using reflection.
 		$activity->expects( $this->any() )
@@ -467,6 +499,157 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Verify that no activity was sent.
 		$this->assertSame( 0, \did_action( 'activitypub_sent_to_inbox' ), 'Should handle invalid outbox ID gracefully' );
+	}
+
+	/**
+	 * Test send_to_inboxes separates local and remote inboxes.
+	 *
+	 * @covers ::send_to_inboxes
+	 */
+	public function test_send_to_inboxes_separates_local_and_remote() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		// Track which inboxes were sent to and via which method.
+		$sent_inboxes = array();
+		$http_called  = false;
+
+		// Mock HTTP requests to track remote inbox delivery.
+		$http_callback = function ( $preempt, $args, $url ) use ( &$sent_inboxes, &$http_called ) {
+			$http_called    = true;
+			$sent_inboxes[] = $url;
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '',
+			);
+		};
+		\add_filter( 'pre_http_request', $http_callback, 10, 3 );
+
+		// Track local inbox deliveries.
+		$inbox_callback = function ( $result, $inbox ) use ( &$sent_inboxes ) {
+			if ( is_same_domain( $inbox ) ) {
+				$sent_inboxes[] = $inbox;
+			}
+		};
+		\add_action( 'activitypub_sent_to_inbox', $inbox_callback, 10, 2 );
+
+		// Create mixed list of local and remote inboxes.
+		$local_inbox  = \rest_url( sprintf( '/%s/users/%d/inbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		$remote_inbox = 'https://remote.example/inbox';
+		$inboxes      = array( $local_inbox, $remote_inbox );
+
+		// Make the method accessible.
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		$send_to_inboxes->setAccessible( true );
+
+		// Invoke the method.
+		try {
+			$send_to_inboxes->invoke( null, $inboxes, $outbox_item->ID );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		// Verify both inboxes were processed.
+		$this->assertCount( 2, $sent_inboxes, 'Both inboxes should be processed' );
+		$this->assertContains( $local_inbox, $sent_inboxes, 'Local inbox should be processed' );
+		$this->assertContains( $remote_inbox, $sent_inboxes, 'Remote inbox should be processed' );
+		$this->assertTrue( $http_called, 'HTTP should be called for remote inbox' );
+
+		// Clean up.
+		\remove_filter( 'pre_http_request', $http_callback, 10 );
+		\remove_action( 'activitypub_sent_to_inbox', $inbox_callback, 10 );
+		\wp_delete_post( $post_id );
+		\wp_delete_post( $outbox_item->ID );
+	}
+
+	/**
+	 * Test that local inboxes do not trigger HTTP requests.
+	 *
+	 * @covers ::send_to_inboxes
+	 */
+	public function test_local_inboxes_skip_http() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		$http_called = false;
+
+		// Mock HTTP requests to verify they're not called for local inboxes.
+		$http_callback = function () use ( &$http_called ) {
+			$http_called = true;
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '',
+			);
+		};
+		\add_filter( 'pre_http_request', $http_callback );
+
+		// Only local inboxes.
+		$local_inbox = \rest_url( sprintf( '/%s/users/%d/inbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		$inboxes     = array( $local_inbox );
+
+		// Make the method accessible.
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		$send_to_inboxes->setAccessible( true );
+
+		// Invoke the method.
+		try {
+			$send_to_inboxes->invoke( null, $inboxes, $outbox_item->ID );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		// Verify HTTP was not called.
+		$this->assertFalse( $http_called, 'HTTP should not be called for local inboxes' );
+
+		// Clean up.
+		\remove_filter( 'pre_http_request', $http_callback );
+		\wp_delete_post( $post_id );
+		\wp_delete_post( $outbox_item->ID );
+	}
+
+	/**
+	 * Test that remote inboxes still use HTTP.
+	 *
+	 * @covers ::send_to_inboxes
+	 */
+	public function test_remote_inboxes_use_http() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		$http_called = false;
+
+		// Mock HTTP requests to verify they're called for remote inboxes.
+		$http_callback = function () use ( &$http_called ) {
+			$http_called = true;
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '',
+			);
+		};
+		\add_filter( 'pre_http_request', $http_callback );
+
+		// Only remote inboxes.
+		$remote_inbox = 'https://remote.example/inbox';
+		$inboxes      = array( $remote_inbox );
+
+		// Make the method accessible.
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		$send_to_inboxes->setAccessible( true );
+
+		// Invoke the method.
+		try {
+			$send_to_inboxes->invoke( null, $inboxes, $outbox_item->ID );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		// Verify HTTP was called.
+		$this->assertTrue( $http_called, 'HTTP should be called for remote inboxes' );
+
+		// Clean up.
+		\remove_filter( 'pre_http_request', $http_callback );
+		\wp_delete_post( $post_id );
+		\wp_delete_post( $outbox_item->ID );
 	}
 
 	/**
