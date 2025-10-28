@@ -27,16 +27,6 @@ function plugin_init() {
 	}
 
 	/**
-	 * Adds BuddyPress support.
-	 *
-	 * This class handles the compatibility with BuddyPress.
-	 * Hooks into bp_include to ensure BuddyPress is fully loaded.
-	 *
-	 * @see https://buddypress.org/
-	 */
-	\add_action( 'bp_include', array( __NAMESPACE__ . '\Buddypress', 'init' ), 0 );
-
-	/**
 	 * Adds Classic Editor support.
 	 *
 	 * This class handles the compatibility with the Classic Editor plugin
@@ -205,3 +195,12 @@ function plugin_init() {
 // Register activation and deactivation hooks for LiteSpeed Cache integration.
 \register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\LiteSpeed_Cache', 'add_htaccess_rules' ) );
 \register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\LiteSpeed_Cache', 'remove_htaccess_rules' ) );
+
+/**
+ * Load the BuddyPress integration.
+ *
+ * Only load code that needs BuddyPress to run once BP is loaded and initialized.
+ *
+ * @see https://buddypress.org/
+ */
+\add_action( 'bp_include', array( __NAMESPACE__ . '\Buddypress', 'init' ), 0 );
