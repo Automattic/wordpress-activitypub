@@ -48,11 +48,24 @@ class Inbox {
 			return;
 		}
 
-		$activity_id = object_to_uri( $data );
-		if ( ! $activity_id ) {
-			self::handle_inbox_requests( $data, $user_ids, $type, $activity, $context );
+		/**
+		 * Filter to skip inbox storage.
+		 *
+		 * Skip inbox storage for debugging purposes or to reduce load for
+		 * certain Activity-Types, like "Delete".
+		 *
+		 * @param bool  $skip Whether to skip inbox storage.
+		 * @param array $data  The activity data array.
+		 *
+		 * @return bool Whether to skip inbox storage.
+		 */
+		$skip = \apply_filters( 'activitypub_skip_inbox_storage', false, $data );
+
+		if ( $skip ) {
 			return;
 		}
+
+		$activity_id = object_to_uri( $data );
 
 		Inbox_Collection::add( $activity, (array) $user_ids );
 
