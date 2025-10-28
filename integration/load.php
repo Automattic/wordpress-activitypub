@@ -7,12 +7,26 @@
 
 namespace Activitypub\Integration;
 
+use function Activitypub\site_supports_blocks;
+
 \Activitypub\Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
 /**
  * Initialize the ActivityPub integrations.
  */
 function plugin_init() {
+	/**
+	 * Adds Classic Editor support.
+	 *
+	 * This class handles the compatibility with the Classic Editor plugin
+	 * and sites without block editor support.
+	 *
+	 * @see https://wordpress.org/plugins/classic-editor/
+	 */
+	if ( class_exists( '\Classic_Editor' ) || ! site_supports_blocks() ) {
+		Classic_Editor::init();
+	}
+
 	/**
 	 * Adds WebFinger (plugin) support.
 	 *
