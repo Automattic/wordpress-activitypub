@@ -101,6 +101,11 @@ class Announce {
 			return;
 		}
 
+		// If the object is a Create activity, extract the actual object from it.
+		if ( isset( $activity['object']['type'] ) && 'Create' === $activity['object']['type'] ) {
+			$activity['object'] = object_to_uri( $activity['object']['object'] );
+		}
+
 		$success = false;
 		$result  = Interactions::add_reaction( $activity );
 
