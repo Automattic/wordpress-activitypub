@@ -55,7 +55,7 @@ class Posts {
 
 		// Process attachments if present.
 		if ( ! empty( $activity_object['attachment'] ) ) {
-			Attachments::import_files( $activity_object['attachment'], $post_id );
+			Attachments::import_post_files( $activity_object['attachment'], $post_id );
 		}
 
 		return \get_post( $post_id );
@@ -132,8 +132,8 @@ class Posts {
 
 		// Process attachments if present.
 		if ( ! empty( $activity['object']['attachment'] ) ) {
-			Attachments::delete_directory( $post_id );
-			Attachments::import_files( $activity['object']['attachment'], $post_id );
+			Attachments::delete_ap_posts_directory( $post_id );
+			Attachments::import_post_files( $activity['object']['attachment'], $post_id );
 		}
 
 		return \get_post( $post_id );
