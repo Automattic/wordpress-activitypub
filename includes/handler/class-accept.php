@@ -55,7 +55,7 @@ class Accept {
 		 * Fires after an ActivityPub Accept activity has been handled.
 		 *
 		 * @param array              $accept  The ActivityPub activity data.
-		 * @param array              $user_id The local user ID.
+		 * @param array              $user_id The local user IDs.
 		 * @param bool               $success True on success, false otherwise.
 		 * @param \WP_Post|\WP_Error $result  The remote actor post or error.
 		 */
