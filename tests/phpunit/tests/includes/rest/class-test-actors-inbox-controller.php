@@ -498,7 +498,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	/**
 	 * Test process_create_item method processes deduplicated inbox items.
 	 *
-	 * @covers Actors_Inbox_Controller::process_create_item
+	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::process_create_item
 	 */
 	public function test_process_create_item_with_deduplication() {
 		$activity_id = 'https://remote.example/@activity-deduplicate';
@@ -583,7 +583,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	/**
 	 * Test process_create_item handles non-existent activity gracefully.
 	 *
-	 * @covers Actors_Inbox_Controller::process_create_item
+	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::process_create_item
 	 */
 	public function test_process_create_item_with_non_existent_activity() {
 		$handled_count = 0;
@@ -607,7 +607,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	/**
 	 * Test process_create_item fires type-specific hooks.
 	 *
-	 * @covers Actors_Inbox_Controller::process_create_item
+	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::process_create_item
 	 */
 	public function test_process_create_item_fires_type_specific_hooks() {
 		$activity_id = 'https://remote.example/@activity-type-hook';
@@ -651,7 +651,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	/**
 	 * Test inbox request schedules delayed processing.
 	 *
-	 * @covers Actors_Inbox_Controller::post_item
+	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::create_item
 	 */
 	public function test_inbox_request_schedules_processing() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
@@ -691,7 +691,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	/**
 	 * Test skip inbox storage filter prevents inbox persistence.
 	 *
-	 * @covers Actors_Inbox_Controller::post_item
+	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::create_item
 	 */
 	public function test_skip_inbox_storage_filter() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
