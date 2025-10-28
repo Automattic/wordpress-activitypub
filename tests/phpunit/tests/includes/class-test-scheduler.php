@@ -509,6 +509,11 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$announce_activity = json_decode( $announce_post->post_content, true );
 		$this->assertEquals( 'Announce', $announce_activity['type'] );
 
+		// Verify the original author is in the CC field.
+		$this->assertArrayHasKey( 'cc', $announce_activity, 'Announce should have a cc field' );
+		$original_author_url = Actors::get_by_id( self::$user_id )->get_id();
+		$this->assertContains( $original_author_url, $announce_activity['cc'], 'Original author should be in cc field' );
+
 		// Clean up.
 		wp_delete_post( $outbox_activity_id, true );
 		wp_delete_post( $announce_outbox_id, true );
