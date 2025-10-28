@@ -252,7 +252,8 @@ class Test_Like extends \WP_UnitTestCase {
 		// Verify hook was fired.
 		$this->assertTrue( $hook_fired, 'Action hook should be fired' );
 		$this->assertEquals( $activity, $hook_activity, 'Activity data should match' );
-		$this->assertEquals( $this->user_id, $hook_user_id, 'User ID should match' );
+		$this->assertIsArray( $hook_user_id, 'User ID should be an array' );
+		$this->assertContains( $this->user_id, $hook_user_id, 'Array should contain user ID' );
 		$this->assertTrue( $hook_success, 'Success should be true' );
 		$this->assertInstanceOf( 'WP_Comment', $hook_result, 'Result should be WP_Comment' );
 
