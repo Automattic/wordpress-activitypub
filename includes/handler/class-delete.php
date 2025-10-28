@@ -129,6 +129,8 @@ class Delete {
 	 *
 	 * @param array $activity The Activity object.
 	 * @param int   $user_id  The user ID.
+	 *
+	 * @return bool|\WP_Error True on success, false or WP_Error on failure.
 	 */
 	public static function delete_remote_actor( $activity, $user_id ) {
 		$result  = self::maybe_delete_follower( $activity );
