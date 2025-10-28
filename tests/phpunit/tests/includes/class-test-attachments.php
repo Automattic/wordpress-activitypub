@@ -377,7 +377,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 	/**
 	 * Test appending media to empty post content.
 	 *
-	 * @covers ::append_media_to_content
+	 * @covers ::append_media_to_post_content
 	 */
 	public function test_append_media_to_empty_content() {
 		// Update post to have empty content.
