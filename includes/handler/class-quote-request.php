@@ -34,10 +34,13 @@ class Quote_Request {
 	/**
 	 * Handle QuoteRequest activities.
 	 *
-	 * @param array $activity The activity object.
-	 * @param int   $user_id  The user ID.
+	 * @param array     $activity The activity object.
+	 * @param int|int[] $user_ids The user ID(s).
 	 */
-	public static function handle_quote_request( $activity, $user_id ) {
+	public static function handle_quote_request( $activity, $user_ids ) {
+		// Extract the user ID (quote requests are always for a single user).
+		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
+
 		$state   = true;
 		$post_id = \url_to_postid( object_to_uri( $activity['object'] ) );
 
@@ -72,11 +75,11 @@ class Quote_Request {
 		 * Fires after an ActivityPub QuoteRequest activity has been handled.
 		 *
 		 * @param array  $activity       The ActivityPub activity data.
-		 * @param array  $user_ids       The local user IDs.
+		 * @param int[]  $user_ids       The local user IDs.
 		 * @param bool   $success        True on success, false otherwise.
 		 * @param string $content_policy The content policy for the quoted post.
 		 */
-		\do_action( 'activitypub_handled_quote_request', $activity, (array) $user_id, $state, $content_policy );
+		\do_action( 'activitypub_handled_quote_request', $activity, (array) $user_ids, $state, $content_policy );
 	}
 
 	/**

@@ -78,7 +78,7 @@ class Update {
 	 * Update an Object.
 	 *
 	 * @param array                          $activity        The Activity object.
-	 * @param array                          $user_ids        The user IDs. Always null for Update activities.
+	 * @param int[]|null                     $user_ids        The user IDs. Always null for Update activities.
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
 	public static function update_object( $activity, $user_ids, $activity_object ) {
@@ -121,7 +121,7 @@ class Update {
 		 * Fires after an ActivityPub Update activity has been handled.
 		 *
 		 * @param array                          $activity The ActivityPub activity data.
-		 * @param array                          $user_ids The local user IDs.
+		 * @param int[]|null                     $user_ids The local user IDs.
 		 * @param bool                           $success  True on success, false otherwise.
 		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The updated post, comment, or error.
 		 */
@@ -131,8 +131,8 @@ class Update {
 	/**
 	 * Update an Actor.
 	 *
-	 * @param array $activity The Activity object.
-	 * @param array $user_ids The user IDs. Always null for Update activities.
+	 * @param array      $activity The Activity object.
+	 * @param int[]|null $user_ids The user IDs. Always null for Update activities.
 	 */
 	public static function update_actor( $activity, $user_ids ) {
 		// Update cache.
@@ -148,7 +148,7 @@ class Update {
 		 * Fires after an ActivityPub Update activity has been handled.
 		 *
 		 * @param array         $activity The ActivityPub activity data.
-		 * @param array         $user_ids The local user IDs.
+		 * @param int[]|null    $user_ids The local user IDs.
 		 * @param int|\WP_Error $state    Actor post ID on success, WP_Error on failure.
 		 * @param array         $actor    Remote actor meta data.
 		 */

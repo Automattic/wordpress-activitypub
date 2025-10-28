@@ -28,10 +28,13 @@ class Follow {
 	/**
 	 * Handle "Follow" requests.
 	 *
-	 * @param array $activity The activity object.
-	 * @param int   $user_id  The user ID.
+	 * @param array     $activity The activity object.
+	 * @param int|int[] $user_ids The user ID(s).
 	 */
-	public static function handle_follow( $activity, $user_id ) {
+	public static function handle_follow( $activity, $user_ids ) {
+		// Extract the user ID (follow requests are always for a single user).
+		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
+
 		if ( Actors::APPLICATION_USER_ID === $user_id ) {
 			self::queue_reject( $activity, $user_id );
 			return;
@@ -65,18 +68,18 @@ class Follow {
 		 * Fires after a Follow activity has been handled.
 		 *
 		 * @param array              $activity     The ActivityPub activity data.
-		 * @param array              $user_ids     The local user IDs.
+		 * @param int[]              $user_ids     The local user IDs.
 		 * @param bool               $success      True on success, false otherwise.
 		 * @param \WP_Post|\WP_Error $remote_actor The remote actor/follower, or WP_Error if failed.
 		 */
-		\do_action( 'activitypub_handled_follow', $activity, (array) $user_id, $success, $remote_actor );
+		\do_action( 'activitypub_handled_follow', $activity, (array) $user_ids, $success, $remote_actor );
 	}
 
 	/**
 	 * Send Accept response.
 	 *
 	 * @param array              $activity_object The ActivityPub activity data.
-	 * @param array              $user_ids        The local user IDs.
+	 * @param int|int[]          $user_ids        The local user IDs.
 	 * @param bool               $success         True on success, false otherwise.
 	 * @param \WP_Post|\WP_Error $remote_actor    The remote actor/follower, or WP_Error if failed.
 	 */
