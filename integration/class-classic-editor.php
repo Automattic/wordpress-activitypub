@@ -19,7 +19,6 @@ class Classic_Editor {
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_attachments_media_markup', array( self::class, 'filter_attachments_media_markup' ), 10, 2 );
-		\add_action( 'post_comment_status_meta_box-options', array( self::class, 'add_quote_policy_field' ) );
 		\add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
 		\add_action( 'save_post', array( self::class, 'save_meta_data' ) );
 	}
