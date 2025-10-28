@@ -181,25 +181,19 @@ class Classic_Editor {
 		// Save max image attachments.
 		if ( isset( $_POST['activitypub_max_image_attachments'] ) ) {
 			$max_images = \absint( $_POST['activitypub_max_image_attachments'] );
-			if ( $max_images >= 0 && $max_images <= 10 ) {
-				\update_post_meta( $post_id, 'activitypub_max_image_attachments', $max_images );
-			}
+			\update_post_meta( $post_id, 'activitypub_max_image_attachments', $max_images );
 		}
 
 		// Save content visibility.
 		if ( isset( $_POST['activitypub_content_visibility'] ) ) {
 			$visibility = \sanitize_text_field( \wp_unslash( $_POST['activitypub_content_visibility'] ) );
-			if ( \in_array( $visibility, array( 'public', 'quiet_public', 'local' ), true ) ) {
-				\update_post_meta( $post_id, 'activitypub_content_visibility', $visibility );
-			}
+			\update_post_meta( $post_id, 'activitypub_content_visibility', $visibility );
 		}
 
 		// Save quote interaction policy.
 		if ( isset( $_POST['activitypub_interaction_policy_quote'] ) ) {
 			$quote_policy = \sanitize_text_field( \wp_unslash( $_POST['activitypub_interaction_policy_quote'] ) );
-			if ( \in_array( $quote_policy, array( 'anyone', 'followers', 'me' ), true ) ) {
-				\update_post_meta( $post_id, 'activitypub_interaction_policy_quote', $quote_policy );
-			}
+			\update_post_meta( $post_id, 'activitypub_interaction_policy_quote', $quote_policy );
 		}
 	}
 }
