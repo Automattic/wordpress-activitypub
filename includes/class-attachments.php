@@ -24,20 +24,7 @@ class Attachments {
 	 * Initialize the class and set up filters.
 	 */
 	public static function init() {
-		\add_action( 'before_delete_post', array( self::class, 'delete_attachments_with_post' ) );
-	}
-
-	/**
-	 * Delete attachments when an ap_post is deleted.
-	 *
-	 * @param int $post_id The post ID being deleted.
-	 */
-	public static function delete_attachments_with_post( $post_id ) {
-		if ( Posts::POST_TYPE !== \get_post_type( $post_id ) ) {
-			return;
-		}
-
-		self::delete_directory( $post_id );
+		\add_action( 'before_delete_post', array( self::class, 'delete_directory' ) );
 	}
 
 	/**
@@ -46,6 +33,10 @@ class Attachments {
 	 * @param int $post_id The post ID.
 	 */
 	public static function delete_directory( $post_id ) {
+		if ( Posts::POST_TYPE !== \get_post_type( $post_id ) ) {
+			return;
+		}
+
 		\WP_Filesystem();
 		global $wp_filesystem;
 
@@ -95,7 +86,7 @@ class Attachments {
 
 		// Append media markup to post content.
 		if ( ! empty( $attachment_ids ) ) {
-			self::append_media_to_content( $post_id, $attachment_ids );
+			self::append_media_to_post_content( $post_id, $attachment_ids );
 		}
 
 		return $attachment_ids;
@@ -142,7 +133,7 @@ class Attachments {
 
 		// Append media markup to post content.
 		if ( ! empty( $files ) ) {
-			self::append_files_to_content( $post_id, $files );
+			self::append_files_to_post_content( $post_id, $files );
 		}
 
 		return $files;
@@ -460,7 +451,7 @@ class Attachments {
 	 * @param int   $post_id        The post ID.
 	 * @param int[] $attachment_ids Array of attachment IDs.
 	 */
-	private static function append_media_to_content( $post_id, $attachment_ids ) {
+	private static function append_media_to_post_content( $post_id, $attachment_ids ) {
 		$post = \get_post( $post_id );
 		if ( ! $post ) {
 			return;
@@ -489,7 +480,7 @@ class Attachments {
 	 *     @type string $alt       Alt text for the file.
 	 * }
 	 */
-	private static function append_files_to_content( $post_id, $files ) {
+	private static function append_files_to_post_content( $post_id, $files ) {
 		$post = \get_post( $post_id );
 		if ( ! $post ) {
 			return;
