@@ -284,7 +284,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		$data = \json_decode( $inbox_item->post_content, true );
 		// Reconstruct activity from inbox post.
 		$activity = Activity::init_from_array( $data );
-		$type     = $activity->get_type();
+		$type     = camel_to_snake_case( $activity->get_type() );
 		$context  = Inbox::CONTEXT_INBOX;
 		$user_ids = Inbox::get_recipients( $inbox_item->ID );
 

@@ -26,6 +26,13 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	protected static $user_id;
 
 	/**
+	 * Editor user ID.
+	 *
+	 * @var int
+	 */
+	protected static $editor_id;
+
+	/**
 	 * Post ID.
 	 *
 	 * @var int
@@ -36,8 +43,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 * Create fake data before tests run.
 	 */
 	public static function set_up_before_class() {
-		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
-		self::$post_id = self::factory()->post->create(
+		self::$user_id   = self::factory()->user->create( array( 'role' => 'author' ) );
+		self::$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		self::$post_id   = self::factory()->post->create(
 			array(
 				'post_author'  => self::$user_id,
 				'post_title'   => 'Test Post',
@@ -61,6 +69,18 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 */
 	public function tear_down() {
 		\delete_option( 'permalink_structure' );
+
+		// Clean up inbox posts to prevent test pollution.
+		$inbox_posts = \get_posts(
+			array(
+				'post_type'      => Inbox_Collection::POST_TYPE,
+				'posts_per_page' => -1,
+				'post_status'    => 'any',
+			)
+		);
+		foreach ( $inbox_posts as $post ) {
+			\wp_delete_post( $post->ID, true );
+		}
 	}
 
 	/**
@@ -497,9 +517,33 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 
 		$activity = \Activitypub\Activity\Activity::init_from_array( $activity_data );
 
-		// Add same activity for multiple users (simulating race condition).
-		Inbox_Collection::add( $activity, array( self::$user_id ) );
-		Inbox_Collection::add( $activity, array( self::$editor_id ) );
+		// Create duplicate inbox posts manually to simulate race condition.
+		// Using wp_insert_post directly to bypass the duplicate detection in Inbox::add().
+		$inbox_item_data = array(
+			'post_type'    => Inbox_Collection::POST_TYPE,
+			'post_title'   => '[Create] Test deduplication',
+			'post_content' => wp_slash( $activity->to_json() ),
+			'post_author'  => 0,
+			'post_status'  => 'publish',
+			'guid'         => $activity_id,
+		);
+
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			\kses_remove_filters();
+		}
+
+		// Create first duplicate with user_id.
+		$post_id_1 = \wp_insert_post( $inbox_item_data );
+		\add_post_meta( $post_id_1, '_activitypub_user_id', self::$user_id );
+
+		// Create second duplicate with editor_id.
+		$post_id_2 = \wp_insert_post( $inbox_item_data );
+		\add_post_meta( $post_id_2, '_activitypub_user_id', self::$editor_id );
+
+		if ( $has_kses ) {
+			\kses_init_filters();
+		}
 
 		$handled_count    = 0;
 		$handled_user_ids = array();
@@ -634,8 +678,8 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$this->assertEquals( 202, $response->get_status() );
 
 		// Verify activity was added to inbox collection.
-		$inbox_item = Inbox_Collection::get_by_activity_id( $activity_id, self::$user_id );
-		$this->assertNotNull( $inbox_item );
+		$inbox_item = Inbox_Collection::get_by_guid( $activity_id );
+		$this->assertInstanceOf( \WP_Post::class, $inbox_item );
 
 		// Verify scheduled action exists.
 		$scheduled = \wp_next_scheduled( 'activitypub_inbox_create_item', array( $activity_id ) );
@@ -670,8 +714,8 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$this->assertEquals( 202, $response->get_status() );
 
 		// Verify activity was NOT added to inbox collection.
-		$inbox_item = Inbox_Collection::get_by_activity_id( $activity_id, self::$user_id );
-		$this->assertNull( $inbox_item );
+		$inbox_item = Inbox_Collection::get_by_guid( $activity_id );
+		$this->assertWPError( $inbox_item );
 
 		// Verify no scheduled action exists.
 		$scheduled = \wp_next_scheduled( 'activitypub_inbox_create_item', array( $activity_id ) );
