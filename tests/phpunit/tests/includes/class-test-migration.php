@@ -1339,22 +1339,19 @@ class Test_Migration extends \WP_UnitTestCase {
 		);
 
 		// Create 3 comments (batch size will be 2).
-		$comment_ids = array();
-		for ( $i = 0; $i < 3; $i++ ) {
-			$comment_data = array(
+		$comment_ids = self::factory()->comment->create_many(
+			3,
+			array(
 				'comment_post_ID'    => $post_id,
 				'comment_author'     => 'Batch Actor',
 				'comment_author_url' => $actor_url,
-				'comment_content'    => "Test comment {$i}",
-				'comment_type'       => 'comment',
 				'comment_approved'   => 1,
-			);
-
-			$comment_id = wp_insert_comment( $comment_data );
-			add_comment_meta( $comment_id, 'avatar_url', $avatar_url );
-			add_comment_meta( $comment_id, 'protocol', 'activitypub' );
-			$comment_ids[] = $comment_id;
-		}
+				'comment_meta'       => array(
+					'avatar_url' => $avatar_url,
+					'protocol'   => 'activitypub',
+				),
+			)
+		);
 
 		// First batch (size 2) - should return batch_size indicating more work.
 		$result = Migration::migrate_avatar_to_remote_actors( 2 );
