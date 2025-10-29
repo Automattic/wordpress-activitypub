@@ -30,7 +30,7 @@ class Announce {
 	 * Handles "Announce" requests.
 	 *
 	 * @param array                          $announcement The activity-object.
-	 * @param int|int[]                      $user_ids     The id of the local blog-user.
+	 * @param int|int[]                      $user_ids     The id(s) of the local blog-user(s).
 	 * @param \Activitypub\Activity\Activity $activity     The activity object.
 	 */
 	public static function handle_announce( $announcement, $user_ids, $activity = null ) {
@@ -67,20 +67,20 @@ class Announce {
 		 * Fires after an Announce has been received.
 		 *
 		 * @param array                               $object   The object.
-		 * @param int|int[]                           $user_ids The id of the local blog-user.
+		 * @param int[]                               $user_ids The ids of the local blog-users.
 		 * @param string                              $type     The type of the activity.
 		 * @param \Activitypub\Activity\Activity|null $activity The activity object.
 		 */
-		\do_action( 'activitypub_inbox', $object, $user_ids, $type, $activity );
+		\do_action( 'activitypub_inbox', $object, (array) $user_ids, $type, $activity );
 
 		/**
 		 * Fires after an Announce of a specific type has been received.
 		 *
 		 * @param array                               $object   The object.
-		 * @param int|int[]                           $user_ids The id of the local blog-user.
+		 * @param int[]                               $user_ids The ids of the local blog-users.
 		 * @param \Activitypub\Activity\Activity|null $activity The activity object.
 		 */
-		\do_action( "activitypub_inbox_{$type}", $object, $user_ids, $activity );
+		\do_action( "activitypub_inbox_{$type}", $object, (array) $user_ids, $activity );
 	}
 
 	/**

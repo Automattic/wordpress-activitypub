@@ -148,7 +148,7 @@ class Update {
 		 * Fires after an ActivityPub Update activity has been handled.
 		 *
 		 * @param array         $activity The ActivityPub activity data.
-		 * @param int[]|null    $user_ids The local user IDs.
+		 * @param int[]         $user_ids The local user IDs.
 		 * @param int|\WP_Error $state    Actor post ID on success, WP_Error on failure.
 		 * @param array         $actor    Remote actor meta data.
 		 */

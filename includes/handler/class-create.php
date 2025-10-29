@@ -31,7 +31,7 @@ class Create {
 	 * Handles "Create" requests.
 	 *
 	 * @param array                          $activity        The activity-object.
-	 * @param int[]                          $user_ids        The ids of the local blog-users.
+	 * @param int|int[]                      $user_ids        The id(s) of the local blog-user(s).
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 */
 	public static function handle_create( $activity, $user_ids, $activity_object = null ) {
@@ -81,10 +81,10 @@ class Create {
 			 * Fires when a Create activity is received for an existing comment.
 			 *
 			 * @param array                          $activity        The activity-object.
-			 * @param array                          $user_ids        The ids of the local blog-users.
+			 * @param int[]                          $user_ids        The ids of the local blog-users.
 			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
 			 */
-			\do_action( 'activitypub_inbox_update', $activity, $user_ids, $activity_object );
+			\do_action( 'activitypub_inbox_update', $activity, (array) $user_ids, $activity_object );
 			return false;
 		}
 
@@ -105,7 +105,7 @@ class Create {
 	 * Handle non-interaction posts like posts.
 	 *
 	 * @param array                          $activity        The activity-object.
-	 * @param int[]                          $user_ids        The id of the local blog-user.
+	 * @param int[]                          $user_ids        The ids of the local blog-users.
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 *
 	 * @return \WP_Post|\WP_Error|false The post on success or WP_Error on failure.
@@ -122,7 +122,7 @@ class Create {
 			 * @param int[]                          $user_ids        The id of the local blog-user.
 			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
 			 */
-			\do_action( 'activitypub_inbox_update', $activity, $user_ids, $activity_object );
+			\do_action( 'activitypub_inbox_update', $activity, (array) $user_ids, $activity_object );
 			return false;
 		}
 
