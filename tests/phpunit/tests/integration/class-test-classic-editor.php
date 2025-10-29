@@ -243,8 +243,8 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		$existing = array( 'https://example.com/image.jpg' );
 		$result   = Classic_Editor::filter_attached_media_ids( $existing, $post );
 
-		// Should get at most 1 more image (2 max - 1 existing = 1).
-		$this->assertLessThanOrEqual( 1, count( $result ) );
+		// Should merge and slice to max of 2.
+		$this->assertLessThanOrEqual( 2, count( $result ) );
 
 		// Clean up.
 		\delete_option( 'activitypub_max_image_attachments' );
@@ -275,8 +275,8 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		$existing = array( 'https://example.com/image1.jpg', 'https://example.com/image2.jpg' );
 		$result   = Classic_Editor::filter_attached_media_ids( $existing, $post );
 
-		// Should not fetch any more images.
-		$this->assertEmpty( $result );
+		// Should return existing attachments unchanged when at max.
+		$this->assertCount( 2, $result );
 
 		// Clean up.
 		\delete_option( 'activitypub_max_image_attachments' );

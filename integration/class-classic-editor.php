@@ -67,10 +67,10 @@ class Classic_Editor {
 	 */
 	public static function filter_attached_media_ids( $attachments, $item ) {
 		$max_media    = \get_option( 'activitypub_max_image_attachments', \ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
-		$actual_count = \max( 0, $max_media - count( $attachments ) );
+		$actual_count = \max( 0, $max_media - \count( $attachments ) );
 
 		if ( $actual_count <= 0 ) {
-			return array();
+			return $attachments;
 		}
 
 		$query = new \WP_Query(
@@ -87,14 +87,14 @@ class Classic_Editor {
 		);
 
 		// Transform IDs into associative arrays.
-		$media_ids = array_map(
+		$media_ids = \array_map(
 			function ( $id ) {
 				return array( 'id' => $id );
 			},
 			$query->get_posts()
 		);
 
-		return $media_ids;
+		return \array_merge( $attachments, $media_ids );
 	}
 
 	/**
