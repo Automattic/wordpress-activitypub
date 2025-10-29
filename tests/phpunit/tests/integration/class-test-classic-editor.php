@@ -89,7 +89,7 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 	 */
 	public function test_filter_attachments_media_markup_single_audio() {
 		$audio_id = self::factory()->attachment->create_upload_object(
-			ACTIVITYPUB_PLUGIN_DIR . 'tests/phpunit/data/assets/sample-audio.mp3',
+			AP_TESTS_DIR . '/data/assets/sample-audio.mp3',
 			self::$post_id
 		);
 
