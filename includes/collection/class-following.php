@@ -77,11 +77,11 @@ class Following {
 			$post_id_query = new \WP_Query(
 				array(
 					'post_type'      => Outbox::POST_TYPE,
-					'nopaging'       => true,
+					'post_status'    => 'any',
 					'posts_per_page' => 1,
+					'no_found_rows'  => true,
 					'author'         => \max( $user_id, 0 ),
 					'fields'         => 'ids',
-					'number'         => 1,
 					'order'          => 'DESC',
 					'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 						array(

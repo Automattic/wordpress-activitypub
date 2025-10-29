@@ -288,6 +288,54 @@ class Test_Following extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test follow returns existing outbox activity when already following.
+	 *
+	 * @covers ::follow
+	 */
+	public function test_follow_returns_existing_activity_when_already_following() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_actor' ), 10, 2 );
+
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+
+		// First follow creates the relationship and outbox activity.
+		$first_result = follow( 'https://example.com/actor/1', $user_id );
+		$this->assertIsInt( $first_result, 'First follow should return an outbox activity ID' );
+
+		// Second follow should return the same outbox activity ID.
+		$second_result = follow( 'https://example.com/actor/1', $user_id );
+		$this->assertIsInt( $second_result, 'Second follow should return an outbox activity ID' );
+		$this->assertEquals( $first_result, $second_result, 'Should return the same outbox activity ID' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_actor' ) );
+	}
+
+	/**
+	 * Test follow returns error when metadata exists but outbox activity is missing.
+	 *
+	 * @covers ::follow
+	 */
+	public function test_follow_returns_error_on_inconsistent_state() {
+		// Create a remote actor post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'  => 'Test Remote Actor',
+				'post_status' => 'publish',
+				'post_type'   => Remote_Actors::POST_TYPE,
+			)
+		);
+
+		// Manually add metadata to simulate following without an outbox activity.
+		\add_post_meta( $post_id, Following::PENDING_META_KEY, '1' );
+
+		// Attempt to follow should return an error due to inconsistent state.
+		$result = Following::follow( $post_id, 1 );
+
+		$this->assertWPError( $result, 'Should return WP_Error for inconsistent state' );
+		$this->assertEquals( 'activitypub_already_following', $result->get_error_code() );
+	}
+
+	/**
 	 * Test unfollow removes user from following list.
 	 *
 	 * @covers ::unfollow
@@ -306,16 +354,16 @@ class Test_Following extends \WP_UnitTestCase {
 
 		// Use global follow() function to add a follow request.
 		$remote_actor_url = \get_post( $post_id )->guid;
-		\Activitypub\follow( $remote_actor_url, $user_id );
+		follow( $remote_actor_url, $user_id );
 		\clean_post_cache( $post_id );
 
 		// Verify user is in following list (pending or following).
-		$following = \get_post_meta( $post_id, \Activitypub\Collection\Following::FOLLOWING_META_KEY, false );
-		$pending   = \get_post_meta( $post_id, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+		$following = \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false );
+		$pending   = \get_post_meta( $post_id, Following::PENDING_META_KEY, false );
 		$this->assertTrue( in_array( (string) $user_id, $following, true ) || in_array( (string) $user_id, $pending, true ) );
 
 		// Remove following.
-		$result = \Activitypub\Collection\Following::unfollow( $post_id, $user_id );
+		$result = Following::unfollow( $post_id, $user_id );
 
 		\clean_post_cache( $post_id );
 
@@ -324,8 +372,8 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertEquals( $post_id, $result->ID );
 
 		// User should no longer be in following list.
-		$following = \get_post_meta( $post_id, \Activitypub\Collection\Following::FOLLOWING_META_KEY, false );
-		$pending   = \get_post_meta( $post_id, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+		$following = \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false );
+		$pending   = \get_post_meta( $post_id, Following::PENDING_META_KEY, false );
 
 		$this->assertNotContains( (string) $user_id, $following );
 		$this->assertNotContains( (string) $user_id, $pending );
