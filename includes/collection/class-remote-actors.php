@@ -658,7 +658,7 @@ class Remote_Actors {
 			return '';
 		}
 
-		$avatar_url = $actor_data['icon']['url'];
+		$avatar_url = object_to_uri( $actor_data['icon'] );
 		// Cache it in meta for next time.
 		\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
 
