@@ -55,7 +55,22 @@ class Posts {
 
 		// Process attachments if present.
 		if ( ! empty( $activity_object['attachment'] ) ) {
-			Attachments::import_post_files( $activity_object['attachment'], $post_id );
+			/**
+			 * Filters whether to store attachments locally for incoming ActivityPub posts.
+			 *
+			 * Allows plugins or users to disable local storage of attachments from
+			 * incoming ActivityPub posts. When disabled, attachments won't be downloaded
+			 * and stored locally, which can be useful for users with limited webspace.
+			 *
+			 * @param bool  $store_locally   Whether to store attachments locally. Default true.
+			 * @param array $activity_object The ActivityPub activity object.
+			 * @param int   $post_id         The post ID.
+			 */
+			$store_locally = \apply_filters( 'activitypub_store_attachments_locally', true, $activity_object, $post_id );
+
+			if ( $store_locally ) {
+				Attachments::import_post_files( $activity_object['attachment'], $post_id );
+			}
 		}
 
 		return \get_post( $post_id );
@@ -132,8 +147,13 @@ class Posts {
 
 		// Process attachments if present.
 		if ( ! empty( $activity['object']['attachment'] ) ) {
-			Attachments::delete_ap_posts_directory( $post_id );
-			Attachments::import_post_files( $activity['object']['attachment'], $post_id );
+			/** This filter is documented in includes/collection/class-posts.php */
+			$store_locally = \apply_filters( 'activitypub_store_attachments_locally', true, $activity['object'], $post_id );
+
+			if ( $store_locally ) {
+				Attachments::delete_ap_posts_directory( $post_id );
+				Attachments::import_post_files( $activity['object']['attachment'], $post_id );
+			}
 		}
 
 		return \get_post( $post_id );
