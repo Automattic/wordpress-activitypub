@@ -29,7 +29,7 @@ class Update {
 	 * Handle "Update" requests.
 	 *
 	 * @param array                          $activity        The Activity object.
-	 * @param array                          $user_ids        The user IDs. Always null for Update activities.
+	 * @param int[]                          $user_ids        The user IDs. Always null for Update activities.
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
 	public static function handle_update( $activity, $user_ids, $activity_object ) {
