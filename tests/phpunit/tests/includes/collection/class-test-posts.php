@@ -326,18 +326,6 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test updating an object with multiple recipients.
-	 *
-	 * @covers ::update
-	 * @covers ::get_recipients
-	 */
-	public function test_update_with_multiple_recipients() {
-		// First, create an object with one user.
-		$activity = array(
-			'object' => array(
-				'id'           => 'https://example.com/objects/multi-update',
-				'type'         => 'Note',
-				'name'         => 'Original Title',
 	 * Test adding an object with attachments.
 	 *
 	 * @covers ::add
@@ -407,7 +395,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Now update it with multiple new recipients.
 		$update_activity = array(
 			'object' => array(
-				'id'      => 'https://example.com/objects/multi-update',
+				'id'      => 'https://example.com/objects/update-test',
 				'type'    => 'Note',
 				'name'    => 'Updated Title',
 				'content' => '<p>Updated content</p>',
@@ -691,7 +679,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		);
 		$this->assertCount( 1, $posts );
 		// Verify no attachments initially.
-		$attachments = get_attached_media( '', $original_post->ID );
+		$attachments = get_attached_media( '', $post1->ID );
 		$this->assertEmpty( $attachments );
 
 		// Update with attachments.
