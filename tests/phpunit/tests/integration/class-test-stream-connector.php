@@ -761,12 +761,21 @@ if ( ! class_exists( 'WP_Stream\Connector' ) ) {
 		}
 
 		/**
-		 * Log activity.
+		 * Log handler.
 		 *
-		 * @param array $args Log arguments.
+		 * @param string   $message   sprintf-ready error message string.
+		 * @param array    $args      sprintf (and extra) arguments to use.
+		 * @param int|null $object_id Target object id (if any).
+		 * @param string   $context   Context of the event.
+		 * @param string   $action    Action of the event.
+		 * @param int      $user_id   User responsible for the event.
+		 *
+		 * @return bool
 		 */
-		public function log( $args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		public function log( $message, $args, $object_id, $context, $action, $user_id = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter
 			// Mock implementation - parameter intentionally unused.
+
+			return true;
 		}
 	}
 

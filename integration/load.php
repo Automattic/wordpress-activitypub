@@ -7,12 +7,26 @@
 
 namespace Activitypub\Integration;
 
+use function Activitypub\site_supports_blocks;
+
 \Activitypub\Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
 /**
  * Initialize the ActivityPub integrations.
  */
 function plugin_init() {
+	/**
+	 * Adds Classic Editor support.
+	 *
+	 * This class handles the compatibility with the Classic Editor plugin
+	 * and sites without block editor support.
+	 *
+	 * @see https://wordpress.org/plugins/classic-editor/
+	 */
+	if ( class_exists( '\Classic_Editor' ) || ! site_supports_blocks() ) {
+		Classic_Editor::init();
+	}
+
 	/**
 	 * Adds WebFinger (plugin) support.
 	 *
@@ -146,12 +160,26 @@ function plugin_init() {
 	 * @see https://wordpress.org/plugins/surge/
 	 */
 	Surge::init();
+
+	/**
+	 * Load the LiteSpeed Cache integration.
+	 *
+	 * The check for whether LiteSpeed Cache is loaded and initialized happens inside Litespeed_Cache::init().
+	 *
+	 * @see https://wordpress.org/plugins/litespeed-cache/
+	 */
+	Litespeed_Cache::init();
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
 // Register activation and deactivation hooks for Surge integration.
 \register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'add_cache_config' ) );
 \register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'remove_cache_config' ) );
+
+// Register activation and deactivation hooks for LiteSpeed Cache integration.
+\register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\LiteSpeed_Cache', 'add_htaccess_rules' ) );
+\register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\LiteSpeed_Cache', 'remove_htaccess_rules' ) );
+
 
 /**
  * Register the Stream Connector for ActivityPub.
@@ -176,10 +204,10 @@ add_filter(
 	'wp_stream_posts_exclude_post_types',
 	function ( $post_types ) {
 		$post_types[] = 'ap_actor';
-		// @todo remove in one of the next versions
-		$post_types[] = 'ap_follower';
 		$post_types[] = 'ap_extrafield';
 		$post_types[] = 'ap_extrafield_blog';
+		$post_types[] = 'ap_post';
+
 		return $post_types;
 	}
 );

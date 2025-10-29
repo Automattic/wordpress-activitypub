@@ -7,6 +7,7 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Attachments;
 use Activitypub\Sanitize;
 
 use function Activitypub\object_to_uri;
@@ -51,6 +52,11 @@ class Posts {
 		\add_post_meta( $post_id, '_activitypub_user_id', $user_id );
 
 		self::add_taxonomies( $post_id, $activity_object );
+
+		// Process attachments if present.
+		if ( ! empty( $activity_object['attachment'] ) ) {
+			Attachments::import_post_files( $activity_object['attachment'], $post_id );
+		}
 
 		return \get_post( $post_id );
 	}
@@ -123,6 +129,12 @@ class Posts {
 		}
 
 		self::add_taxonomies( $post_id, $activity['object'] );
+
+		// Process attachments if present.
+		if ( ! empty( $activity['object']['attachment'] ) ) {
+			Attachments::delete_ap_posts_directory( $post_id );
+			Attachments::import_post_files( $activity['object']['attachment'], $post_id );
+		}
 
 		return \get_post( $post_id );
 	}
@@ -209,10 +221,22 @@ class Posts {
 	 */
 	public static function get_by_remote_actor( $actor ) {
 		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
+
 		if ( \is_wp_error( $remote_actor ) ) {
 			return array();
 		}
 
+		return self::get_by_remote_actor_id( $remote_actor->ID );
+	}
+
+	/**
+	 * Get posts by remote actor ID.
+	 *
+	 * @param int $actor_id The remote actor post ID.
+	 *
+	 * @return array Array of WP_Post objects.
+	 */
+	public static function get_by_remote_actor_id( $actor_id ) {
 		$query = new \WP_Query(
 			array(
 				'post_type'      => self::POST_TYPE,
@@ -220,7 +244,7 @@ class Posts {
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_key'       => '_activitypub_remote_actor_id',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-				'meta_value'     => $remote_actor->ID,
+				'meta_value'     => $actor_id,
 			)
 		);
 

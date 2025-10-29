@@ -248,16 +248,6 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
-			'activitypub_persist_inbox',
-			array(
-				'type'        => 'boolean',
-				'description' => 'Enable inbox collection persistence.',
-				'default'     => false,
-			)
-		);
-
-		\register_setting(
-			'activitypub_advanced',
 			'activitypub_object_type',
 			array(
 				'type'         => 'string',

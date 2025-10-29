@@ -482,17 +482,58 @@ class Remote_Actors {
 			);
 		}
 
+		/*
+		 * Temporarily remove mention/hashtag/link filters to prevent infinite recursion when
+		 * storing remote actors with mentions/hashtags in their bios.
+		 *
+		 * PROBLEM: These filters are globally registered on 'init' for all to_json() calls,
+		 * but they're designed for OUTGOING content (federation). When processing mentions in
+		 * an actor's bio during storage, the Mention filter fetches the mentioned actor, which
+		 * then processes mentions in THEIR bio, creating infinite recursion.
+		 *
+		 * SHORTCOMINGS:
+		 * - Fragile: Easy to forget when adding new storage locations (e.g., Inbox storage).
+		 * - Scattered: Same pattern would need to be repeated anywhere we store remote content.
+		 * - Race conditions: If filters are re-added/removed elsewhere, this could break.
+		 * - Not semantic: We're working around a design issue rather than fixing it.
+		 *
+		 * BETTER LONG-TERM SOLUTION:
+		 * Distinguish between "incoming" (storage) and "outgoing" (federation) contexts:
+		 * - INCOMING: Store received ActivityPub data as-is, don't process mentions/hashtags.
+		 *   (Remote_Actors::prepare_custom_post_type, Inbox storage)
+		 * - OUTGOING: Process mentions/hashtags when serving our content to other servers.
+		 *   (Dispatcher, REST API controllers, Transformers)
+		 */
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+
+		$actor_json = $actor->to_json();
+
+		// Re-add the filters.
+		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
+		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
+		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+
+		$meta_input = array(
+			'_activitypub_inbox' => $inbox,
+		);
+
+		// Store avatar URL if available.
+		$icon = object_to_uri( $actor->get_icon() );
+		if ( $icon ) {
+			$meta_input['_activitypub_avatar_url'] = $icon;
+		}
+
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
 			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?? $actor->get_preferred_username() ) ),
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,
-			'post_content' => \wp_slash( $actor->to_json() ),
+			'post_content' => \wp_slash( $actor_json ),
 			'post_excerpt' => \wp_kses( \wp_slash( (string) $actor->get_summary() ), 'user_description' ),
 			'post_status'  => 'publish',
-			'meta_input'   => array(
-				'_activitypub_inbox' => $inbox,
-			),
+			'meta_input'   => $meta_input,
 		);
 	}
 
@@ -591,5 +632,39 @@ class Remote_Actors {
 		\update_post_meta( $id, '_activitypub_acct', $acct );
 
 		return $acct;
+	}
+
+	/**
+	 * Get the avatar URL for a remote actor.
+	 *
+	 * @param int $id The ID of the remote actor post.
+	 *
+	 * @return string The avatar URL or empty string if not found.
+	 */
+	public static function get_avatar_url( $id ) {
+		$avatar_url = \get_post_meta( $id, '_activitypub_avatar_url', true );
+		if ( $avatar_url ) {
+			return $avatar_url;
+		}
+
+		// If not found in meta, try to extract from post_content JSON.
+		$post = \get_post( $id );
+		if ( ! $post || empty( $post->post_content ) ) {
+			return '';
+		}
+
+		$actor_data = \json_decode( $post->post_content, true );
+		if ( empty( $actor_data['icon'] ) ) {
+			$default_avatar_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
+			\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $default_avatar_url ) );
+
+			return $default_avatar_url;
+		}
+
+		$avatar_url = object_to_uri( $actor_data['icon'] );
+		// Cache it in meta for next time.
+		\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
+
+		return $avatar_url;
 	}
 }
