@@ -1271,7 +1271,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
-	 * Test get_avatar_url with no avatar.
+	 * Test get_avatar_url with no avatar returns default.
 	 *
 	 * @covers ::get_avatar_url
 	 */
@@ -1288,9 +1288,10 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
-		// Test get_avatar_url returns empty string.
+		// Test get_avatar_url returns default avatar URL.
 		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
-		$this->assertEmpty( $retrieved_avatar );
+		$this->assertNotEmpty( $retrieved_avatar );
+		$this->assertStringContainsString( 'assets/img/mp.jpg', $retrieved_avatar );
 
 		// Clean up.
 		wp_delete_post( $remote_actor_id, true );
