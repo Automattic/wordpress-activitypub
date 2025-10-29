@@ -28,7 +28,7 @@ class Posts {
 	 * Add an object to the collection.
 	 *
 	 * @param array     $activity   The activity object data.
-	 * @param int|array $recipients The id(s) of the local blog-user(s).
+	 * @param int|int[] $recipients The id(s) of the local blog-user(s).
 	 *
 	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
 	 */
