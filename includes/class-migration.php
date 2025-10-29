@@ -1101,11 +1101,13 @@ class Migration {
 	public static function migrate_avatar_to_remote_actors( $batch_size = 50 ) {
 		global $wpdb;
 
-		// Get comments with avatar_url meta that don't have _activitypub_remote_actor_id yet.
-		// Uses conditional aggregation to reduce JOINs from 3 to 1, improving query performance.
-		// No offset needed - as we process comments, they're filtered out by the HAVING clause.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$comments = $wpdb->get_results(
+		/*
+		 * Get comments with avatar_url meta that don't have _activitypub_remote_actor_id yet.
+		 * Uses conditional aggregation to reduce JOINs from 3 to 1, improving query performance.
+		 * Filters meta_key before GROUP BY to reduce rows processed during aggregation.
+		 * No offset needed - as we process comments, they're filtered out by the HAVING clause.
+		 */
+		$comments = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT c.comment_ID, c.comment_author_url,
 					MAX(CASE WHEN cm.meta_key = 'avatar_url' THEN cm.meta_value END) AS avatar_url,
@@ -1113,6 +1115,7 @@ class Migration {
 					MAX(CASE WHEN cm.meta_key = '_activitypub_remote_actor_id' THEN cm.meta_value END) AS remote_actor_id
 				FROM {$wpdb->comments} c
 				INNER JOIN {$wpdb->commentmeta} cm ON c.comment_ID = cm.comment_id
+				WHERE cm.meta_key IN ('avatar_url', 'protocol', '_activitypub_remote_actor_id')
 				GROUP BY c.comment_ID, c.comment_author_url
 				HAVING protocol = 'activitypub'
 					AND avatar_url IS NOT NULL
@@ -1136,7 +1139,7 @@ class Migration {
 			}
 
 			// If we have a valid remote actor, store the reference.
-			if ( ! \is_wp_error( $remote_actor ) && $remote_actor instanceof \WP_Post ) {
+			if ( ! \is_wp_error( $remote_actor ) ) {
 				// Add _activitypub_remote_actor_id to comment meta.
 				\add_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $remote_actor->ID, true );
 
