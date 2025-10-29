@@ -139,11 +139,11 @@ curl -X POST "https://example.com/wp-json/activitypub/1.0/registration" \
 ### Testing Capability Activation
 ```bash
 # Enable capability
-curl -X POST "https://example.com/wp-json/activitypub/1.0/capabilities/trends/1/activation" \
+curl -X POST "https://example.com/wp-json/activitypub/1.0/fasp/capabilities/trends/1/activation" \
   -H "Authorization: Signature ..."
 
 # Disable capability
-curl -X DELETE "https://example.com/wp-json/activitypub/1.0/capabilities/trends/1/activation" \
+curl -X DELETE "https://example.com/wp-json/activitypub/1.0/fasp/capabilities/trends/1/activation" \
   -H "Authorization: Signature ..."
 ```
 
