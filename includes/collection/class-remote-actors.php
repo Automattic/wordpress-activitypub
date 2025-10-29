@@ -519,7 +519,7 @@ class Remote_Actors {
 			'_activitypub_inbox' => $inbox,
 		);
 
-		// Store avatar URL if available, or empty string to clear it.
+		// Store avatar URL if available.
 		$icon = object_to_uri( $actor->get_icon() );
 		if ( $icon ) {
 			$meta_input['_activitypub_avatar_url'] = $icon;
