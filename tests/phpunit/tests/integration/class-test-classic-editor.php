@@ -54,16 +54,6 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tear down after class.
-	 */
-	public static function tear_down_after_class() {
-		\wp_delete_post( self::$post_id, true );
-		\wp_delete_user( self::$user_id );
-
-		parent::tear_down_after_class();
-	}
-
-	/**
 	 * Test filter_attachments_media_markup with empty attachments.
 	 *
 	 * @covers ::filter_attachments_media_markup
