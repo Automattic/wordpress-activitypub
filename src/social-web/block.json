@@ -1,0 +1,11 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "activitypub/social-web",
+	"title": "Social Web",
+	"category": "widgets",
+	"description": "Social Web admin interface",
+	"textdomain": "activitypub",
+	"editorScript": "file:./index.tsx",
+	"editorStyle": "file:./index.css"
+}
