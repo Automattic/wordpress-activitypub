@@ -117,7 +117,7 @@ class Delete {
 		 * Fires after an ActivityPub Delete activity has been handled.
 		 *
 		 * @param array      $activity The ActivityPub activity data.
-		 * @param array      $user_ids The local user IDs.
+		 * @param int[]      $user_ids The local user IDs.
 		 * @param bool       $success  True on success, false otherwise.
 		 * @param mixed|null $result   The result of the delete operation.
 		 */
