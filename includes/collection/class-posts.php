@@ -33,10 +33,10 @@ class Posts {
 	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
 	 */
 	public static function add( $activity, $recipients ) {
+		$recipients      = (array) $recipients;
 		$activity_object = $activity['object'];
 
 		$existing = self::get_by_guid( $activity_object['id'] );
-
 		// If post exists, call update instead.
 		if ( ! \is_wp_error( $existing ) ) {
 			return self::update( $activity, $recipients );
@@ -117,18 +117,7 @@ class Posts {
 	 * @return \WP_Post|\WP_Error The updated object post or WP_Error on failure.
 	 */
 	public static function update( $activity, $recipients ) {
-		// Sanitize recipients.
-		$recipients = \array_map( 'absint', (array) $recipients );
-		$recipients = \array_unique( $recipients );
-		$recipients = \array_values( $recipients );
-
-		if ( empty( $recipients ) ) {
-			return new \WP_Error(
-				'activitypub_posts_no_recipients',
-				'No valid recipients provided',
-				array( 'status' => 400 )
-			);
-		}
+		$recipients = (array) $recipients;
 
 		$post = self::get_by_guid( $activity['object']['id'] );
 		if ( \is_wp_error( $post ) ) {
