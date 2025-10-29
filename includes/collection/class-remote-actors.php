@@ -515,6 +515,16 @@ class Remote_Actors {
 		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
 		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
 
+		$meta_input = array(
+			'_activitypub_inbox' => $inbox,
+		);
+
+		// Store avatar URL if available.
+		$icon = object_to_uri( $actor->get_icon() );
+		if ( $icon ) {
+			$meta_input['_activitypub_avatar_url'] = $icon;
+		}
+
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
 			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?? $actor->get_preferred_username() ) ),
@@ -523,9 +533,7 @@ class Remote_Actors {
 			'post_content' => \wp_slash( $actor_json ),
 			'post_excerpt' => \wp_kses( \wp_slash( (string) $actor->get_summary() ), 'user_description' ),
 			'post_status'  => 'publish',
-			'meta_input'   => array(
-				'_activitypub_inbox' => $inbox,
-			),
+			'meta_input'   => $meta_input,
 		);
 	}
 
@@ -624,5 +632,39 @@ class Remote_Actors {
 		\update_post_meta( $id, '_activitypub_acct', $acct );
 
 		return $acct;
+	}
+
+	/**
+	 * Get the avatar URL for a remote actor.
+	 *
+	 * @param int $id The ID of the remote actor post.
+	 *
+	 * @return string The avatar URL or empty string if not found.
+	 */
+	public static function get_avatar_url( $id ) {
+		$avatar_url = \get_post_meta( $id, '_activitypub_avatar_url', true );
+		if ( $avatar_url ) {
+			return $avatar_url;
+		}
+
+		// If not found in meta, try to extract from post_content JSON.
+		$post = \get_post( $id );
+		if ( ! $post || empty( $post->post_content ) ) {
+			return '';
+		}
+
+		$actor_data = \json_decode( $post->post_content, true );
+		if ( empty( $actor_data['icon'] ) ) {
+			$default_avatar_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
+			\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $default_avatar_url ) );
+
+			return $default_avatar_url;
+		}
+
+		$avatar_url = object_to_uri( $actor_data['icon'] );
+		// Cache it in meta for next time.
+		\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
+
+		return $avatar_url;
 	}
 }

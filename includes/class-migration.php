@@ -31,6 +31,7 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_create_post_outbox_items', array( self::class, 'create_post_outbox_items' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_create_comment_outbox_items', array( self::class, 'create_comment_outbox_items' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_migrate_avatar_to_remote_actors', array( self::class, 'migrate_avatar_to_remote_actors' ) );
 	}
 
 	/**
@@ -211,6 +212,7 @@ class Migration {
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			self::clean_up_inbox();
+			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
 		}
 
 		// Ensure all required cron schedules are registered.
@@ -1078,5 +1080,79 @@ class Migration {
 		foreach ( $inbox_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
 		}
+	}
+
+	/**
+	 * Migrate avatar URLs from comment meta to remote actors in batches.
+	 *
+	 * This migration:
+	 * 1. Finds all comments with ActivityPub protocol and avatar_url meta
+	 * 2. Looks up the remote actor by comment_author_url
+	 * 3. Adds _activitypub_remote_actor_id to comment meta
+	 * 4. Stores avatar_url in remote actor post meta
+	 *
+	 * Note: We don't use offset because as we add _activitypub_remote_actor_id,
+	 * comments are filtered out of the query. We just keep fetching the next
+	 * batch until no more comments match the criteria.
+	 *
+	 * @param int $batch_size Optional. Number of comments to process per batch. Default 50.
+	 * @return array|null Array with batch size if there are more comments to process, null otherwise.
+	 */
+	public static function migrate_avatar_to_remote_actors( $batch_size = 50 ) {
+		global $wpdb;
+
+		/*
+		 * Get comments with avatar_url meta that don't have _activitypub_remote_actor_id yet.
+		 * Uses conditional aggregation to reduce JOINs from 3 to 1, improving query performance.
+		 * Filters meta_key before GROUP BY to reduce rows processed during aggregation.
+		 * No offset needed - as we process comments, they're filtered out by the HAVING clause.
+		 */
+		$comments = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT c.comment_ID, c.comment_author_url,
+					MAX(CASE WHEN cm.meta_key = 'avatar_url' THEN cm.meta_value END) AS avatar_url,
+					MAX(CASE WHEN cm.meta_key = 'protocol' THEN cm.meta_value END) AS protocol,
+					MAX(CASE WHEN cm.meta_key = '_activitypub_remote_actor_id' THEN cm.meta_value END) AS remote_actor_id
+				FROM {$wpdb->comments} c
+				INNER JOIN {$wpdb->commentmeta} cm ON c.comment_ID = cm.comment_id
+				WHERE cm.meta_key IN ('avatar_url', 'protocol', '_activitypub_remote_actor_id')
+				GROUP BY c.comment_ID, c.comment_author_url
+				HAVING protocol = 'activitypub'
+					AND avatar_url IS NOT NULL
+					AND (remote_actor_id IS NULL OR remote_actor_id = '')
+				LIMIT %d",
+				$batch_size
+			)
+		);
+
+		foreach ( $comments as $comment ) {
+			if ( empty( $comment->comment_author_url ) ) {
+				continue;
+			}
+
+			// Try to get the remote actor by URI.
+			$remote_actor = Remote_Actors::fetch_by_uri( $comment->comment_author_url );
+
+			// If we have a valid remote actor, store the reference.
+			if ( ! \is_wp_error( $remote_actor ) ) {
+				// Add _activitypub_remote_actor_id to comment meta.
+				\add_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $remote_actor->ID, true );
+
+				// Ensure avatar is stored on remote actor if not already present.
+				$existing_avatar = \get_post_meta( $remote_actor->ID, '_activitypub_avatar_url', true );
+				if ( empty( $existing_avatar ) && ! empty( $comment->avatar_url ) ) {
+					\update_post_meta( $remote_actor->ID, '_activitypub_avatar_url', \esc_url_raw( $comment->avatar_url ) );
+				}
+			}
+		}
+
+		// Return batch info if there are more comments to process.
+		if ( count( $comments ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+			);
+		}
+
+		return null;
 	}
 }
