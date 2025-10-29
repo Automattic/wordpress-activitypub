@@ -1277,7 +1277,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			'comment_approved'   => 1,
 		);
 
-		$comment_id = wp_insert_comment( $comment_data );
+		$comment_id = self::factory()->comment->create( $comment_data );
 		$this->assertIsInt( $comment_id );
 
 		// Add the old-style meta (avatar_url and protocol).
