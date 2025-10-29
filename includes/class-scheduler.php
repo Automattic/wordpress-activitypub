@@ -61,6 +61,7 @@ class Scheduler {
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 		\add_action( 'activitypub_inbox_purge', array( self::class, 'purge_inbox' ) );
+		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_inbox_activity' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
@@ -373,6 +374,53 @@ class Scheduler {
 		foreach ( $post_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
 		}
+	}
+
+	/**
+	 * Process cached inbox activity.
+	 *
+	 * Retrieves all collected user IDs for an activity and processes them together.
+	 *
+	 * @param string $activity_id The activity ID.
+	 */
+	public static function process_inbox_activity( $activity_id ) {
+		// Deduplicate if multiple inbox items were created due to race condition.
+		$inbox_item = Inbox::deduplicate( $activity_id );
+		if ( ! $inbox_item ) {
+			return;
+		}
+
+		$data = \json_decode( $inbox_item->post_content, true );
+		// Reconstruct activity from inbox post.
+		$activity = Activity::init_from_array( $data );
+		$type     = \Activitypub\camel_to_snake_case( $activity->get_type() );
+		$context  = Inbox::CONTEXT_INBOX;
+		$user_ids = Inbox::get_recipients( $inbox_item->ID );
+
+		/**
+		 * Fires after any ActivityPub Inbox activity has been handled, regardless of activity type.
+		 *
+		 * This hook is triggered for all activity types processed by the inbox handler.
+		 *
+		 * @param array    $data     The data array.
+		 * @param array    $user_ids The user IDs.
+		 * @param string   $type     The type of the activity.
+		 * @param Activity $activity The Activity object.
+		 * @param int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param string   $context  The context of the request ('inbox' or 'shared_inbox').
+		 */
+		\do_action( 'activitypub_handled_inbox', $data, $user_ids, $type, $activity, $inbox_item->ID, $context );
+
+		/**
+		 * Fires after an ActivityPub Inbox activity has been handled.
+		 *
+		 * @param array    $data     The data array.
+		 * @param array    $user_ids The user IDs.
+		 * @param Activity $activity The Activity object.
+		 * @param int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param string   $context  The context of the request ('inbox' or 'shared_inbox').
+		 */
+		\do_action( 'activitypub_handled_inbox_' . $type, $data, $user_ids, $activity, $inbox_item->ID, $context );
 	}
 
 	/**

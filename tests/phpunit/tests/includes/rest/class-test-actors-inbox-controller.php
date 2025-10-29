@@ -496,9 +496,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	}
 
 	/**
-	 * Test process_create_item method processes deduplicated inbox items.
+	 * Test process_inbox_activity method processes deduplicated inbox items.
 	 *
-	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::process_create_item
+	 * @covers \Activitypub\Scheduler::process_inbox_activity
 	 */
 	public function test_process_create_item_with_deduplication() {
 		$activity_id = 'https://remote.example/@activity-deduplicate';
@@ -559,7 +559,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		);
 
 		// Process the activity.
-		\Activitypub\Rest\Actors_Inbox_Controller::process_create_item( $activity_id );
+		\Activitypub\Scheduler::process_inbox_activity( $activity_id );
 
 		// Should fire handled hook once with all user IDs.
 		$this->assertEquals( 1, $handled_count );
@@ -581,9 +581,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	}
 
 	/**
-	 * Test process_create_item handles non-existent activity gracefully.
+	 * Test process_inbox_activity handles non-existent activity gracefully.
 	 *
-	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::process_create_item
+	 * @covers \Activitypub\Scheduler::process_inbox_activity
 	 */
 	public function test_process_create_item_with_non_existent_activity() {
 		$handled_count = 0;
@@ -596,7 +596,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		);
 
 		// Process non-existent activity.
-		\Activitypub\Rest\Actors_Inbox_Controller::process_create_item( 'https://remote.example/@non-existent' );
+		\Activitypub\Scheduler::process_inbox_activity( 'https://remote.example/@non-existent' );
 
 		// Should not fire handled hook.
 		$this->assertEquals( 0, $handled_count );
@@ -605,9 +605,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	}
 
 	/**
-	 * Test process_create_item fires type-specific hooks.
+	 * Test process_inbox_activity fires type-specific hooks.
 	 *
-	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::process_create_item
+	 * @covers \Activitypub\Scheduler::process_inbox_activity
 	 */
 	public function test_process_create_item_fires_type_specific_hooks() {
 		$activity_id = 'https://remote.example/@activity-type-hook';
@@ -639,7 +639,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 			}
 		);
 
-		\Activitypub\Rest\Actors_Inbox_Controller::process_create_item( $activity_id );
+		\Activitypub\Scheduler::process_inbox_activity( $activity_id );
 
 		$this->assertTrue( $generic_hook_fired, 'Generic handled_inbox hook should fire' );
 		$this->assertTrue( $type_hook_fired, 'Type-specific handled_inbox_like hook should fire' );
