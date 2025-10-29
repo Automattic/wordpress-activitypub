@@ -128,7 +128,7 @@ class Following extends \WP_List_Table {
 				$profile  = Remote_Actors::normalize_identifier( $original );
 				if ( ! $profile ) {
 					/* translators: %s: Account profile that could not be followed */
-					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $original ) ) );
 					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
 					break;
 				}
