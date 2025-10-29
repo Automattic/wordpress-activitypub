@@ -685,7 +685,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Update with attachments.
 		$update_activity = array(
 			'object' => array(
-				'id'         => 'https://example.com/objects/update-test',
+				'id'         => 'https://example.com/objects/existing-post',
 				'type'       => 'Note',
 				'name'       => 'Updated Post',
 				'content'    => '<p>Updated content</p>',
