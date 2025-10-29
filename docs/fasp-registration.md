@@ -17,7 +17,7 @@ The implementation uses WordPress options instead of custom database tables for 
 
 ### REST API Endpoints
 
-#### Registration Endpoint (`POST /wp-json/activitypub/1.0/registration`)
+#### Registration Endpoint (`POST /wp-json/activitypub/1.0/fasp/registration`)
 
 Handles registration requests from FASP providers.
 
