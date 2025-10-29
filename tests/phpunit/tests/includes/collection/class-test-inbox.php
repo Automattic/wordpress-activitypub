@@ -579,4 +579,148 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$this->assertContains( 2, $recipients );
 		$this->assertContains( 3, $recipients );
 	}
+
+	/**
+	 * Test add_recipients function.
+	 *
+	 * @covers ::add_recipients
+	 */
+	public function test_add_recipients() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/add-recipients' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/add-recipients' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		// Add multiple recipients at once.
+		Inbox::add_recipients( $inbox_id, array( 2, 3, 4 ) );
+
+		// Verify all recipients were added.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertCount( 4, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+		$this->assertContains( 3, $recipients );
+		$this->assertContains( 4, $recipients );
+	}
+
+	/**
+	 * Test deduplicate function with no duplicates.
+	 *
+	 * @covers ::deduplicate
+	 */
+	public function test_deduplicate_no_duplicates() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/single-item' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/single-item' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		// Deduplicate should return the same post.
+		$result = Inbox::deduplicate( 'https://remote.example.com/activities/single-item' );
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( $inbox_id, $result->ID );
+	}
+
+	/**
+	 * Test deduplicate function with duplicates.
+	 *
+	 * @covers ::deduplicate
+	 */
+	public function test_deduplicate_with_duplicates() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/duplicate-guid' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/duplicate-guid' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		// Manually create duplicate inbox posts with same GUID.
+		$inbox_id_1 = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/duplicate-guid',
+			)
+		);
+		\add_post_meta( $inbox_id_1, '_activitypub_user_id', 1 );
+		\add_post_meta( $inbox_id_1, '_activitypub_user_id', 2 );
+
+		$inbox_id_2 = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/duplicate-guid',
+			)
+		);
+		\add_post_meta( $inbox_id_2, '_activitypub_user_id', 3 );
+		\add_post_meta( $inbox_id_2, '_activitypub_user_id', 4 );
+
+		$inbox_id_3 = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/duplicate-guid',
+			)
+		);
+		\add_post_meta( $inbox_id_3, '_activitypub_user_id', 5 );
+
+		// Run deduplication.
+		$result = Inbox::deduplicate( 'https://remote.example.com/activities/duplicate-guid' );
+
+		// Should return the first post.
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( $inbox_id_1, $result->ID );
+
+		// Verify all recipients were merged.
+		$recipients = Inbox::get_recipients( $inbox_id_1 );
+		$this->assertCount( 5, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+		$this->assertContains( 3, $recipients );
+		$this->assertContains( 4, $recipients );
+		$this->assertContains( 5, $recipients );
+
+		// Verify duplicates were deleted.
+		$this->assertNull( \get_post( $inbox_id_2 ) );
+		$this->assertNull( \get_post( $inbox_id_3 ) );
+
+		// Verify only one post exists with this GUID.
+		$posts = \get_posts(
+			array(
+				'post_type'      => Inbox::POST_TYPE,
+				'guid'           => 'https://remote.example.com/activities/duplicate-guid',
+				'posts_per_page' => -1,
+			)
+		);
+		$this->assertCount( 1, $posts );
+	}
+
+	/**
+	 * Test deduplicate function with non-existent GUID.
+	 *
+	 * @covers ::deduplicate
+	 */
+	public function test_deduplicate_non_existent() {
+		$result = Inbox::deduplicate( 'https://remote.example.com/activities/non-existent' );
+		$this->assertFalse( $result );
+	}
 }

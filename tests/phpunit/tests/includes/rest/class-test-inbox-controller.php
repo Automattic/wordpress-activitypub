@@ -822,9 +822,6 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		// Initialize the inbox handler.
-		\Activitypub\Handler\Inbox::init();
-
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
 

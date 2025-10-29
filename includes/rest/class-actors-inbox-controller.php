@@ -14,6 +14,7 @@ use Activitypub\Moderation;
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\object_to_uri;
 
 /**
  * Actors_Inbox_Controller class.
@@ -197,6 +198,28 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param string             $context  The context of the request.
 			 */
 			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, Inbox::CONTEXT_INBOX );
+
+			/**
+			 * Filter to skip inbox storage.
+			 *
+			 * Skip inbox storage for debugging purposes or to reduce load for
+			 * certain Activity-Types, like "Delete".
+			 *
+			 * @param bool  $skip Whether to skip inbox storage.
+			 * @param array $data  The activity data array.
+			 *
+			 * @return bool Whether to skip inbox storage.
+			 */
+			$skip = \apply_filters( 'activitypub_skip_inbox_storage', false, $data );
+
+			if ( ! $skip ) {
+				$activity_id = object_to_uri( $data );
+
+				Inbox::add( $activity, (array) $user_id );
+
+				\wp_clear_scheduled_hook( 'activitypub_inbox_create_item', array( $activity_id ) );
+				\wp_schedule_single_event( time() + 15, 'activitypub_inbox_create_item', array( $activity_id ) );
+			}
 		}
 
 		$response = \rest_ensure_response(
