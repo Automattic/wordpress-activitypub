@@ -18,8 +18,37 @@ class Classic_Editor {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_filter( 'activitypub_attachments_media_markup', array( self::class, 'filter_attachments_media_markup' ), 10, 2 );
 		\add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
 		\add_action( 'save_post', array( self::class, 'save_meta_data' ) );
+	}
+
+	/**
+	 * Filter attachment media markup to use shortcodes instead of blocks.
+	 *
+	 * @param string $markup         The custom markup. Empty string by default.
+	 * @param array  $attachment_ids Array of attachment IDs.
+	 *
+	 * @return string The generated shortcode markup.
+	 */
+	public static function filter_attachments_media_markup( $markup, $attachment_ids ) {
+		if ( empty( $attachment_ids ) ) {
+			return $markup;
+		}
+
+		$type = strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
+
+		// Single video or audio file: use media shortcode.
+		if ( 1 === \count( $attachment_ids ) && ( 'video' === $type || 'audio' === $type ) ) {
+			return sprintf(
+				'[%1$s src="%2$s"]',
+				\esc_attr( $type ),
+				\esc_url( \wp_get_attachment_url( $attachment_ids[0] ) )
+			);
+		}
+
+		// Multiple attachments or images: use gallery shortcode.
+		return '[gallery ids="' . implode( ',', $attachment_ids ) . '" link="none"]';
 	}
 
 	/**

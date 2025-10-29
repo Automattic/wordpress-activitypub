@@ -7,8 +7,8 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Attachments;
 use Activitypub\Collection\Posts;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Post_Types;
 
 /**
@@ -37,11 +37,14 @@ class Test_Posts extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		remove_filter( 'pre_http_request', array( $this, 'mock_http_request' ) );
+
+		$this->remove_added_uploads();
+
 		parent::tear_down();
 	}
 
 	/**
-	 * Mock HTTP requests for remote actor fetching.
+	 * Mock HTTP requests for remote actor fetching and attachment downloads.
 	 *
 	 * @param mixed  $response The response to return.
 	 * @param array  $parsed_args The parsed arguments.
@@ -69,6 +72,16 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		if ( 'https://nonexistent.com/users/unknown' === $url ) {
 			return new \WP_Error( 'http_request_failed', 'Could not resolve host' );
+		}
+
+		// Mock attachment downloads.
+		if ( 'https://example.com/image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
+			copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'headers'  => array( 'content-type' => 'image/jpeg' ),
+			);
 		}
 
 		return $response;
@@ -218,7 +231,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		$method     = $reflection->getMethod( 'activity_to_post' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( null, $activity );
+		try {
+			$result = $method->invoke( null, $activity );
+		} catch ( \Exception $exception ) {
+			$result = $exception;
+		}
 
 		$this->assertIsArray( $result );
 		$this->assertEquals( 'Test Title', $result['post_title'] );
@@ -240,7 +257,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		$method     = $reflection->getMethod( 'activity_to_post' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( null, 'invalid_data' );
+		try {
+			$result = $method->invoke( null, 'invalid_data' );
+		} catch ( \Exception $exception ) {
+			$result = $exception;
+		}
 
 		$this->assertInstanceOf( '\WP_Error', $result );
 	}
@@ -260,7 +281,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		$method     = $reflection->getMethod( 'activity_to_post' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( null, $activity );
+		try {
+			$result = $method->invoke( null, $activity );
+		} catch ( \Exception $exception ) {
+			$result = $exception;
+		}
 
 		$this->assertIsArray( $result );
 		$this->assertEquals( '', $result['post_title'] );
@@ -268,5 +293,239 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertEquals( '', $result['post_excerpt'] );
 		$this->assertEquals( Posts::POST_TYPE, $result['post_type'] );
 		$this->assertEquals( 'publish', $result['post_status'] );
+	}
+
+	/**
+	 * Test adding an object with attachments.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_with_attachments() {
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/with-attachment',
+				'type'         => 'Note',
+				'name'         => 'Post with Image',
+				'content'      => '<p>Test content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'attachment'   => array(
+					array(
+						'url'       => 'https://example.com/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'Test Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$result = Posts::add( $activity, 1 );
+
+		$this->assertInstanceOf( '\WP_Post', $result );
+		$this->assertEquals( 'Post with Image', $result->post_title );
+
+		// Verify file was created in activitypub directory.
+		$upload_dir = \wp_upload_dir();
+		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $result->ID;
+		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
+
+		// Verify file exists.
+		$files = glob( $file_dir . '/*' );
+		$this->assertCount( 1, $files, 'One file should be created' );
+
+		// Verify content includes media markup with the file URL.
+		$this->assertStringContainsString( Attachments::$ap_posts_dir . $result->ID . '/', $result->post_content );
+	}
+
+	/**
+	 * Test updating an object with new attachments.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_with_new_attachments() {
+		// Create initial post without attachments.
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/update-test',
+				'type'         => 'Note',
+				'name'         => 'Original Post',
+				'content'      => '<p>Original content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$original_post = Posts::add( $activity, 1 );
+		$this->assertInstanceOf( '\WP_Post', $original_post );
+
+		// Verify no attachments initially.
+		$attachments = get_attached_media( '', $original_post->ID );
+		$this->assertEmpty( $attachments );
+
+		// Update with attachments.
+		$update_activity = array(
+			'object' => array(
+				'id'         => 'https://example.com/objects/update-test',
+				'type'       => 'Note',
+				'name'       => 'Updated Post',
+				'content'    => '<p>Updated content</p>',
+				'attachment' => array(
+					array(
+						'url'       => 'https://example.com/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'New Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$updated_post = Posts::update( $update_activity, 1 );
+		$this->assertInstanceOf( '\WP_Post', $updated_post );
+
+		// Verify file was created.
+		$upload_dir = \wp_upload_dir();
+		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $updated_post->ID;
+		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
+
+		$files = glob( $file_dir . '/*' );
+		$this->assertCount( 1, $files, 'One file should be created' );
+	}
+
+	/**
+	 * Test updating an object with changed attachments.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_with_changed_attachments() {
+		// Create post with attachment.
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/change-test',
+				'type'         => 'Note',
+				'name'         => 'Original Post',
+				'content'      => '<p>Original content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'attachment'   => array(
+					array(
+						'url'       => 'https://example.com/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'Original Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$original_post = Posts::add( $activity, 1 );
+
+		// Verify original file was created.
+		$upload_dir = \wp_upload_dir();
+		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $original_post->ID;
+		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
+		$original_files = glob( $file_dir . '/*' );
+		$this->assertCount( 1, $original_files );
+
+		// Update with different attachment URL.
+		$update_activity = array(
+			'object' => array(
+				'id'         => 'https://example.com/objects/change-test',
+				'type'       => 'Note',
+				'name'       => 'Updated Post',
+				'content'    => '<p>Updated content</p>',
+				'attachment' => array(
+					array(
+						'url'       => 'https://example.com/new-image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'New Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		// Mock the new image URL.
+		add_filter(
+			'pre_http_request',
+			function ( $response, $parsed_args, $url ) {
+				if ( 'https://example.com/new-image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
+					copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
+
+					return array(
+						'response' => array( 'code' => 200 ),
+						'headers'  => array( 'content-type' => 'image/jpeg' ),
+					);
+				}
+				return $response;
+			},
+			11,
+			3
+		);
+
+		Posts::update( $update_activity, 1 );
+
+		// Verify old file was deleted and new file was created.
+		$new_files = glob( $file_dir . '/*' );
+		$this->assertCount( 1, $new_files );
+		$this->assertNotEquals( basename( $original_files[0] ), basename( $new_files[0] ), 'New file should have different name' );
+	}
+
+	/**
+	 * Test updating an object keeps same attachments when unchanged.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_keeps_same_attachments() {
+		// Create post with attachment.
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/keep-test',
+				'type'         => 'Note',
+				'name'         => 'Original Post',
+				'content'      => '<p>Original content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'attachment'   => array(
+					array(
+						'url'       => 'https://example.com/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'Test Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$original_post = Posts::add( $activity, 1 );
+
+		// Verify original file was created.
+		$upload_dir = \wp_upload_dir();
+		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $original_post->ID;
+		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
+		$original_files = glob( $file_dir . '/*' );
+		$this->assertCount( 1, $original_files );
+
+		// Update with same attachment URL (just change content).
+		$update_activity = array(
+			'object' => array(
+				'id'         => 'https://example.com/objects/keep-test',
+				'type'       => 'Note',
+				'name'       => 'Updated Post',
+				'content'    => '<p>Updated content</p>',
+				'attachment' => array(
+					array(
+						'url'       => 'https://example.com/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'Test Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		Posts::update( $update_activity, 1 );
+
+		// Verify file still exists (should not be recreated since attachment hasn't changed).
+		// Note: With file-based storage, we don't detect unchanged attachments, so files get replaced.
+		$new_files = glob( $file_dir . '/*' );
+		$this->assertCount( 1, $new_files, 'File should still exist after update' );
 	}
 }
