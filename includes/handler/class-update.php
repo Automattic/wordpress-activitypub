@@ -125,7 +125,7 @@ class Update {
 		 * @param bool                           $success  True on success, false otherwise.
 		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The updated post, comment, or error.
 		 */
-		\do_action( 'activitypub_handled_update', $activity, $user_ids, $success, $result );
+		\do_action( 'activitypub_handled_update', $activity, (array) $user_ids, $success, $result );
 	}
 
 	/**
@@ -152,6 +152,6 @@ class Update {
 		 * @param int|\WP_Error $state    Actor post ID on success, WP_Error on failure.
 		 * @param array         $actor    Remote actor meta data.
 		 */
-		\do_action( 'activitypub_handled_update', $activity, $user_ids, $state, $actor );
+		\do_action( 'activitypub_handled_update', $activity, (array) $user_ids, $state, $actor );
 	}
 }

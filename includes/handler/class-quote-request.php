@@ -85,14 +85,17 @@ class Quote_Request {
 	/**
 	 * ActivityPub inbox disallowed activity.
 	 *
-	 * @param array    $activity The activity array.
-	 * @param int|null $user_id  The user ID.
-	 * @param string   $type     The type of the activity.
+	 * @param array          $activity The activity array.
+	 * @param int|int[]|null $user_ids The user ID(s).
+	 * @param string         $type     The type of the activity.
 	 */
-	public static function handle_blocked_request( $activity, $user_id, $type ) {
+	public static function handle_blocked_request( $activity, $user_ids, $type ) {
 		if ( 'quoterequest' !== \strtolower( $type ) ) {
 			return;
 		}
+
+		// Extract the user ID (quote requests are always for a single user).
+		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 
 		self::queue_reject( $activity, $user_id );
 	}

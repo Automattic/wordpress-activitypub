@@ -60,7 +60,7 @@ class Create {
 		 * @param bool                           $success  True on success, false otherwise.
 		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The WP_Comment object of the created comment, or null if creation failed.
 		 */
-		\do_action( 'activitypub_handled_create', $activity, $user_ids, $success, $result );
+		\do_action( 'activitypub_handled_create', $activity, (array) $user_ids, $success, $result );
 	}
 
 	/**
