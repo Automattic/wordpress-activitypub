@@ -1,6 +1,6 @@
 <?php
 /**
- * Avatar class file.
+ * Avatars class file.
  *
  * @package Activitypub
  */
@@ -10,9 +10,9 @@ namespace Activitypub;
 use Activitypub\Collection\Remote_Actors;
 
 /**
- * ActivityPub Avatar class.
+ * ActivityPub Avatars class.
  */
-class Avatar {
+class Avatars {
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
