@@ -654,7 +654,7 @@ class Remote_Actors {
 		}
 
 		$actor_data = \json_decode( $post->post_content, true );
-		if ( empty( $actor_data['icon']['url'] ) ) {
+		if ( empty( $actor_data['icon'] ) ) {
 			return '';
 		}
 
