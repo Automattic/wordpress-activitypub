@@ -36,7 +36,6 @@ class Post_Types {
 
 		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
-		\add_filter( 'default_post_metadata', array( self::class, 'default_post_meta_data' ), 10, 3 );
 
 		// Add support for ActivityPub to custom post types.
 		foreach ( \get_option( 'activitypub_support_post_types', array( 'post' ) ) as $post_type ) {
@@ -523,6 +522,29 @@ class Post_Types {
 					},
 				)
 			);
+
+			\register_post_meta(
+				$post_type,
+				'activitypub_status',
+				array(
+					'type'              => 'string',
+					'single'            => true,
+					'show_in_rest'      => true,
+					'sanitize_callback' => function ( $value ) {
+						$schema = array(
+							'type'    => 'string',
+							'enum'    => array( 'pending', 'federated', 'failed' ),
+							'default' => 'pending',
+						);
+
+						if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
+							return $schema['default'];
+						}
+
+						return $value;
+					},
+				)
+			);
 		}
 	}
 
@@ -577,37 +599,5 @@ class Post_Types {
 		}
 
 		return $check;
-	}
-
-	/**
-	 * Adjusts default post meta values.
-	 *
-	 * @param mixed  $meta_value The meta value.
-	 * @param int    $object_id  ID of the object metadata is for.
-	 * @param string $meta_key   Metadata key.
-	 *
-	 * @return string|null The meta value.
-	 */
-	public static function default_post_meta_data( $meta_value, $object_id, $meta_key ) {
-		if ( 'activitypub_content_visibility' !== $meta_key ) {
-			return $meta_value;
-		}
-
-		// If meta value is already explicitly set, respect the author's choice.
-		if ( $meta_value ) {
-			return $meta_value;
-		}
-
-		// If the post is federated, return the default visibility.
-		if ( 'federated' === \get_post_meta( $object_id, 'activitypub_status', true ) ) {
-			return $meta_value;
-		}
-
-		// If the post is not federated and older than a month, return local visibility.
-		if ( \get_the_date( 'U', $object_id ) < \strtotime( '-1 month' ) ) {
-			return ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
-		}
-
-		return $meta_value;
 	}
 }

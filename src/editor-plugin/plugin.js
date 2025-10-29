@@ -15,6 +15,7 @@ import { useEntityProp } from '@wordpress/core-data';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 import { SVG, Path } from '@wordpress/primitives';
+import { getDefaultVisibility } from './utils';
 
 /**
  * Editor plugin for ActivityPub settings in the block editor.
@@ -24,6 +25,7 @@ import { SVG, Path } from '@wordpress/primitives';
 const EditorPlugin = () => {
 	const postType = useSelect( ( select ) => select( editorStore ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
+	const postDate = useSelect( ( select ) => select( editorStore ).getCurrentPost().date, [] );
 
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {
@@ -122,7 +124,7 @@ const EditorPlugin = () => {
 					"This adjusts the visibility of a post in the fediverse, but note that it won't affect how the post appears on the blog.",
 					'activitypub'
 				) }
-				selected={ meta?.activitypub_content_visibility || 'public' }
+				selected={ getDefaultVisibility( meta, postDate ) }
 				options={ [
 					{
 						label: enhancedLabel(

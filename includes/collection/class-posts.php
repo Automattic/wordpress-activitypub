@@ -7,6 +7,7 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Attachments;
 use Activitypub\Sanitize;
 
 use function Activitypub\object_to_uri;
@@ -51,6 +52,11 @@ class Posts {
 		\add_post_meta( $post_id, '_activitypub_user_id', $user_id );
 
 		self::add_taxonomies( $post_id, $activity_object );
+
+		// Process attachments if present.
+		if ( ! empty( $activity_object['attachment'] ) ) {
+			Attachments::import_post_files( $activity_object['attachment'], $post_id );
+		}
 
 		return \get_post( $post_id );
 	}
@@ -123,6 +129,12 @@ class Posts {
 		}
 
 		self::add_taxonomies( $post_id, $activity['object'] );
+
+		// Process attachments if present.
+		if ( ! empty( $activity['object']['attachment'] ) ) {
+			Attachments::delete_ap_posts_directory( $post_id );
+			Attachments::import_post_files( $activity['object']['attachment'], $post_id );
+		}
 
 		return \get_post( $post_id );
 	}
