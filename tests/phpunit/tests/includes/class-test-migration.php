@@ -1300,11 +1300,6 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Verify avatar is stored on remote actor.
 		$stored_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( $avatar_url, $stored_avatar );
-
-		// Clean up.
-		wp_delete_comment( $comment_id, true );
-		wp_delete_post( $remote_actor_id, true );
-		wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -1372,12 +1367,5 @@ class Test_Migration extends \WP_UnitTestCase {
 			$stored_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
 			$this->assertEquals( $remote_actor_id, $stored_actor_id );
 		}
-
-		// Clean up.
-		foreach ( $comment_ids as $comment_id ) {
-			wp_delete_comment( $comment_id, true );
-		}
-		wp_delete_post( $remote_actor_id, true );
-		wp_delete_post( $post_id, true );
 	}
 }
