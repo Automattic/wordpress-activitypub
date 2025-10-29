@@ -108,7 +108,7 @@ class Update {
 			 * Fires when a Create activity is received for an existing object.
 			 *
 			 * @param array                          $activity        The activity-object.
-			 * @param array                          $user_ids        The ids of the local blog-users.
+			 * @param int[]                          $user_ids        The ids of the local blog-users.
 			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
 			 */
 			\do_action( 'activitypub_inbox_create', $activity, $user_ids, $activity_object );
