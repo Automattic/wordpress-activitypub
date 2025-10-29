@@ -230,6 +230,46 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 * @param string             $context    The context of the request.
 			 */
 			\do_action( 'activitypub_inbox_shared_' . $type, $data, $allowed_recipients, $activity, Inbox::CONTEXT_SHARED_INBOX );
+
+			/**
+			 * Filter to skip inbox storage.
+			 *
+			 * Skip inbox storage for debugging purposes or to reduce load for
+			 * certain Activity-Types, like "Delete".
+			 *
+			 * @param bool  $skip Whether to skip inbox storage.
+			 * @param array $data  The activity data array.
+			 *
+			 * @return bool Whether to skip inbox storage.
+			 */
+			$skip = \apply_filters( 'activitypub_skip_inbox_storage', false, $data );
+
+			if ( ! $skip ) {
+				$result = Inbox::add( $activity, $allowed_recipients );
+
+				/**
+				 * Fires after an ActivityPub Inbox activity has been handled.
+				 *
+				 * @param array              $data     The data array.
+				 * @param array              $user_ids The user IDs.
+				 * @param string             $type     The type of the activity.
+				 * @param Activity|\WP_Error $activity The Activity object.
+				 * @param \WP_Error|int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+				 * @param string             $context  The context of the request ('inbox' or 'shared_inbox').
+				 */
+				\do_action( 'activitypub_handled_inbox', $data, $allowed_recipients, $type, $activity, $result, Inbox::CONTEXT_SHARED_INBOX );
+
+				/**
+				 * Fires after an ActivityPub Inbox activity has been handled.
+				 *
+				 * @param array              $data     The data array.
+				 * @param array              $user_ids The user IDs.
+				 * @param Activity|\WP_Error $activity The Activity object.
+				 * @param \WP_Error|int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+				 * @param string             $context  The context of the request ('inbox' or 'shared_inbox').
+				 */
+				\do_action( 'activitypub_handled_inbox_' . $type, $data, $allowed_recipients, $activity, $result, Inbox::CONTEXT_SHARED_INBOX );
+			}
 		}
 
 		$response = \rest_ensure_response(
