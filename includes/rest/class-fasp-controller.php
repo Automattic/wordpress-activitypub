@@ -96,7 +96,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => array( \WP_REST_Server::CREATABLE, \WP_REST_Server::DELETABLE ),
 					'callback'            => array( $this, 'handle_capability_activation' ),
-					'permission_callback' => array( $this, 'capability_permission_check' ),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
 					'args'                => array(
 						'identifier' => array(
 							'required'    => true,
@@ -273,10 +273,26 @@ class Fasp_Controller extends \WP_REST_Controller {
 		$version    = $request->get_param( 'version' );
 		$method     = $request->get_method();
 
-		// Verify FASP is authenticated and approved.
-		$fasp_data = $this->get_authenticated_fasp( $request );
+		// Extract keyId from request headers (signature already verified by Server::verify_signature).
+		$headers = $request->get_headers();
+		$keyid   = $this->extract_keyid_from_request( $headers );
+		if ( is_wp_error( $keyid ) ) {
+			return $keyid;
+		}
+
+		// Look up FASP registration by keyId.
+		$fasp_data = $this->get_fasp_by_keyid( $keyid );
 		if ( is_wp_error( $fasp_data ) ) {
 			return $fasp_data;
+		}
+
+		// Verify FASP is approved.
+		if ( 'approved' !== $fasp_data['status'] ) {
+			return new \WP_Error(
+				'fasp_not_approved',
+				'FASP registration is not approved',
+				array( 'status' => 403 )
+			);
 		}
 
 		// Check if capability is supported.
@@ -323,18 +339,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Permission check for capability endpoints.
-	 *
-	 * @param \WP_REST_Request $request The REST request.
-	 * @return bool|\WP_Error True if allowed, WP_Error otherwise.
-	 */
-	public function capability_permission_check( $request ) {
-		// Capability endpoints require FASP authentication.
-		$fasp_data = $this->get_authenticated_fasp( $request );
-		return ! is_wp_error( $fasp_data );
-	}
-
-	/**
 	 * Generate unique ID for FASP.
 	 *
 	 * @return string Unique ID.
@@ -361,18 +365,62 @@ class Fasp_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Get authenticated FASP from request.
+	 * Extract keyId from request headers.
 	 *
-	 * @param \WP_REST_Request $request The REST request.
+	 * @param array $headers The request headers.
+	 * @return string|\WP_Error The keyId or error.
+	 */
+	private function extract_keyid_from_request( $headers ) {
+		// Try RFC-9421 Signature-Input header first.
+		if ( isset( $headers['signature_input'][0] ) ) {
+			if ( \preg_match( '/keyid="([^"]+)"/', $headers['signature_input'][0], $matches ) ) {
+				return $matches[1];
+			}
+		}
+
+		// Try legacy Authorization/Signature header.
+		if ( isset( $headers['signature'][0] ) ) {
+			if ( \preg_match( '/keyId="([^"]+)"/', $headers['signature'][0], $matches ) ) {
+				return $matches[1];
+			}
+		}
+
+		if ( isset( $headers['authorization'][0] ) ) {
+			if ( \preg_match( '/keyId="([^"]+)"/', $headers['authorization'][0], $matches ) ) {
+				return $matches[1];
+			}
+		}
+
+		return new \WP_Error(
+			'missing_keyid',
+			'Missing keyId in signature headers',
+			array( 'status' => 401 )
+		);
+	}
+
+	/**
+	 * Look up FASP registration by keyId.
+	 *
+	 * @param string $keyid The keyId from the signature.
 	 * @return array|\WP_Error FASP data or error.
 	 */
-	private function get_authenticated_fasp( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		// This should implement proper Ed25519 signature verification.
-		// For now, return a placeholder.
+	private function get_fasp_by_keyid( $keyid ) {
+		$registrations = get_option( 'activitypub_fasp_registrations', array() );
+
+		// The keyId should match the FASP's base URL or server ID.
+		foreach ( $registrations as $fasp_id => $registration ) {
+			// Check if keyId contains the FASP's base URL or server ID.
+			if ( strpos( $keyid, $registration['base_url'] ) !== false ||
+				strpos( $keyid, $registration['server_id'] ) !== false ||
+				strpos( $keyid, $fasp_id ) !== false ) {
+				return $registration;
+			}
+		}
+
 		return new \WP_Error(
-			'authentication_required',
-			'FASP authentication not yet implemented',
-			array( 'status' => 401 )
+			'fasp_not_found',
+			'FASP not found for provided keyId',
+			array( 'status' => 404 )
 		);
 	}
 
