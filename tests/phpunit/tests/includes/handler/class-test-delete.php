@@ -84,6 +84,23 @@ class Test_Delete extends \WP_UnitTestCase {
 
 		$actor_url = 'https://example.com/users/testactor';
 
+		// Mock actor metadata.
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function () use ( $actor_url ) {
+				return array(
+					'type'              => 'Person',
+					'name'              => 'Test Actor',
+					'preferredUsername' => 'testactor',
+					'id'                => $actor_url,
+					'url'               => 'https://example.com/@testactor',
+					'inbox'             => $actor_url . '/inbox',
+				);
+			}
+		);
+
+		$actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $actor_url );
+
 		// Create test comments with ActivityPub protocol metadata.
 		$comment_ids = array();
 		for ( $i = 0; $i < 3; $i++ ) {
@@ -95,8 +112,9 @@ class Test_Delete extends \WP_UnitTestCase {
 					'comment_content'    => "Test comment $i",
 				)
 			);
-			// Add ActivityPub protocol metadata.
+			// Add ActivityPub protocol metadata and remote actor reference.
 			\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+			\add_comment_meta( $comment_id, '_activitypub_remote_actor_id', $actor->ID );
 			$comment_ids[] = $comment_id;
 		}
 
@@ -115,8 +133,8 @@ class Test_Delete extends \WP_UnitTestCase {
 		}
 		$this->assertNotNull( \get_comment( $other_comment_id ), 'Other comment should exist' );
 
-		// Trigger the delete_interactions action.
-		\do_action( 'activitypub_delete_remote_actor_interactions', $actor_url );
+		// Trigger the delete_interactions action with remote actor ID.
+		\do_action( 'activitypub_delete_remote_actor_interactions', $actor->ID );
 
 		// Verify ActivityPub comments were deleted.
 		foreach ( $comment_ids as $comment_id ) {
@@ -129,6 +147,8 @@ class Test_Delete extends \WP_UnitTestCase {
 		// Clean up.
 		\wp_delete_post( $post_id, true );
 		\wp_delete_comment( $other_comment_id, true );
+		\wp_delete_post( $actor->ID, true );
+		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
 	/**
@@ -137,19 +157,19 @@ class Test_Delete extends \WP_UnitTestCase {
 	 * @covers ::delete_interactions
 	 */
 	public function test_delete_actor_interactions_no_comments() {
-		$actor_url = 'https://example.com/users/nonexistent';
+		$nonexistent_actor_id = 999999;
 
 		// Mock the return value to capture it.
 		$result = null;
 		\add_action(
 			'activitypub_delete_remote_actor_interactions',
-			function ( $actor ) use ( &$result ) {
-				$result = Delete::delete_interactions( $actor );
+			function ( $actor_id ) use ( &$result ) {
+				$result = Delete::delete_interactions( $actor_id );
 			},
 			5
 		);
 
-		\do_action( 'activitypub_delete_remote_actor_interactions', $actor_url );
+		\do_action( 'activitypub_delete_remote_actor_interactions', $nonexistent_actor_id );
 
 		// Verify it returns false when no comments exist.
 		$this->assertFalse( $result, 'Should return false when no comments exist' );
@@ -203,8 +223,8 @@ class Test_Delete extends \WP_UnitTestCase {
 			$this->assertNotNull( \get_post( $post_id ), "Post $post_id should exist" );
 		}
 
-		// Trigger the delete_posts action.
-		\do_action( 'activitypub_delete_remote_actor_posts', $actor_url );
+		// Trigger the delete_posts action with remote actor ID.
+		\do_action( 'activitypub_delete_remote_actor_posts', $actor->ID );
 
 		// Verify posts were deleted.
 		foreach ( $post_ids as $post_id ) {
@@ -222,19 +242,19 @@ class Test_Delete extends \WP_UnitTestCase {
 	 * @covers ::delete_posts
 	 */
 	public function test_delete_actor_posts_no_posts() {
-		$actor_url = 'https://example.com/users/nonexistent';
+		$nonexistent_actor_id = 999999;
 
 		// Mock the return value to capture it.
 		$result = null;
 		\add_action(
 			'activitypub_delete_remote_actor_posts',
-			function ( $actor ) use ( &$result ) {
-				$result = Delete::delete_posts( $actor );
+			function ( $actor_id ) use ( &$result ) {
+				$result = Delete::delete_posts( $actor_id );
 			},
 			5
 		);
 
-		\do_action( 'activitypub_delete_remote_actor_posts', $actor_url );
+		\do_action( 'activitypub_delete_remote_actor_posts', $nonexistent_actor_id );
 
 		// Verify it returns false when no posts exist.
 		$this->assertFalse( $result, 'Should return false when no posts exist' );
