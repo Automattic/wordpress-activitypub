@@ -33,29 +33,13 @@ class Posts {
 	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
 	 */
 	public static function add( $activity, $recipients ) {
-		// Sanitize recipients.
-		$recipients = \array_map( 'absint', (array) $recipients );
-		$recipients = \array_unique( $recipients );
-		$recipients = \array_values( $recipients );
-
-		if ( empty( $recipients ) ) {
-			return new \WP_Error(
-				'activitypub_posts_no_recipients',
-				'No valid recipients provided',
-				array( 'status' => 400 )
-			);
-		}
-
 		$activity_object = $activity['object'];
 
-		// Check if post already exists (by GUID).
-		if ( isset( $activity_object['id'] ) ) {
-			$existing = self::get_by_guid( $activity_object['id'] );
+		$existing = self::get_by_guid( $activity_object['id'] );
 
-			// If post exists, call update instead.
-			if ( $existing instanceof \WP_Post ) {
-				return self::update( $activity, $recipients );
-			}
+		// If post exists, call update instead.
+		if ( $existing instanceof \WP_Post ) {
+			return self::update( $activity, $recipients );
 		}
 
 		// Post doesn't exist, create new post.
