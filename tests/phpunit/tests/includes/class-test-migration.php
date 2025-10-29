@@ -1234,4 +1234,138 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$this->assertEmpty( $remaining_posts, 'No inbox posts should remain after cleanup' );
 	}
+
+	/**
+	 * Test migrate_avatar_to_remote_actors.
+	 *
+	 * @covers ::migrate_avatar_to_remote_actors
+	 */
+	public function test_migrate_avatar_to_remote_actors() {
+		// Create a remote actor.
+		$actor_url  = 'https://example.com/users/testactor';
+		$avatar_url = 'https://example.com/avatar.jpg';
+		$actor_data = array(
+			'id'                => $actor_url,
+			'type'              => 'Person',
+			'preferredUsername' => 'testactor',
+			'name'              => 'Test Actor',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => $avatar_url,
+			),
+			'inbox'             => 'https://example.com/inbox',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Create a test post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'post',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create a comment with the old avatar_url meta (simulating pre-migration data).
+		$comment_data = array(
+			'comment_post_ID'    => $post_id,
+			'comment_author'     => 'Test Actor',
+			'comment_author_url' => $actor_url,
+			'comment_content'    => 'Test comment',
+			'comment_type'       => 'comment',
+			'comment_approved'   => 1,
+		);
+
+		$comment_id = self::factory()->comment->create( $comment_data );
+		$this->assertIsInt( $comment_id );
+
+		// Add the old-style meta (avatar_url and protocol).
+		add_comment_meta( $comment_id, 'avatar_url', $avatar_url );
+		add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+
+		// Verify the comment doesn't have remote_actor_id yet.
+		$this->assertEmpty( get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
+
+		// Run the migration.
+		$result = Migration::migrate_avatar_to_remote_actors( 50 );
+
+		// Verify the migration completed (no more batches needed).
+		$this->assertNull( $result );
+
+		// Verify remote_actor_id was added.
+		$stored_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+		$this->assertEquals( $remote_actor_id, $stored_actor_id );
+
+		// Verify avatar is stored on remote actor.
+		$stored_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertEquals( $avatar_url, $stored_avatar );
+	}
+
+	/**
+	 * Test migrate_avatar_to_remote_actors with batching.
+	 *
+	 * @covers ::migrate_avatar_to_remote_actors
+	 */
+	public function test_migrate_avatar_to_remote_actors_batching() {
+		// Create a remote actor.
+		$actor_url  = 'https://example.com/users/batchactor';
+		$avatar_url = 'https://example.com/batch-avatar.jpg';
+		$actor_data = array(
+			'id'                => $actor_url,
+			'type'              => 'Person',
+			'preferredUsername' => 'batchactor',
+			'name'              => 'Batch Actor',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => $avatar_url,
+			),
+			'inbox'             => 'https://example.com/batch-inbox',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
+
+		// Create a test post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'post',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create 3 comments (batch size will be 2).
+		$comment_ids = self::factory()->comment->create_many(
+			3,
+			array(
+				'comment_post_ID'    => $post_id,
+				'comment_author'     => 'Batch Actor',
+				'comment_author_url' => $actor_url,
+				'comment_approved'   => 1,
+				'comment_meta'       => array(
+					'avatar_url' => $avatar_url,
+					'protocol'   => 'activitypub',
+				),
+			)
+		);
+
+		// First batch (size 2) - should return batch_size indicating more work.
+		$result = Migration::migrate_avatar_to_remote_actors( 2 );
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'batch_size', $result );
+
+		// Verify first 2 comments were migrated.
+		$this->assertNotEmpty( get_comment_meta( $comment_ids[0], '_activitypub_remote_actor_id', true ) );
+		$this->assertNotEmpty( get_comment_meta( $comment_ids[1], '_activitypub_remote_actor_id', true ) );
+		$this->assertEmpty( get_comment_meta( $comment_ids[2], '_activitypub_remote_actor_id', true ) );
+
+		// Second batch - should process the last comment and return null.
+		$result = Migration::migrate_avatar_to_remote_actors( 2 );
+		$this->assertNull( $result );
+
+		// Verify all comments were migrated.
+		foreach ( $comment_ids as $comment_id ) {
+			$stored_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+			$this->assertEquals( $remote_actor_id, $stored_actor_id );
+		}
+	}
 }

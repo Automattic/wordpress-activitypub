@@ -221,10 +221,22 @@ class Posts {
 	 */
 	public static function get_by_remote_actor( $actor ) {
 		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
+
 		if ( \is_wp_error( $remote_actor ) ) {
 			return array();
 		}
 
+		return self::get_by_remote_actor_id( $remote_actor->ID );
+	}
+
+	/**
+	 * Get posts by remote actor ID.
+	 *
+	 * @param int $actor_id The remote actor post ID.
+	 *
+	 * @return array Array of WP_Post objects.
+	 */
+	public static function get_by_remote_actor_id( $actor_id ) {
 		$query = new \WP_Query(
 			array(
 				'post_type'      => self::POST_TYPE,
@@ -232,7 +244,7 @@ class Posts {
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_key'       => '_activitypub_remote_actor_id',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-				'meta_value'     => $remote_actor->ID,
+				'meta_value'     => $actor_id,
 			)
 		);
 
