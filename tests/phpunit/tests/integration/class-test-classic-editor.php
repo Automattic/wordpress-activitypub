@@ -108,7 +108,7 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 	 */
 	public function test_filter_attachments_media_markup_multiple_images() {
 		$image_id_1 = self::factory()->attachment->create_upload_object(
-			ACTIVITYPUB_PLUGIN_DIR . 'tests/phpunit/data/assets/sample-image.jpg',
+			AP_TESTS_DIR . '/data/assets/sample-image.jpg',
 			self::$post_id
 		);
 		$image_id_2 = self::factory()->attachment->create_upload_object(
