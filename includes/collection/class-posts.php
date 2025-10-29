@@ -274,7 +274,7 @@ class Posts {
 	 *
 	 * @param int $post_id The post ID.
 	 *
-	 * @return array Array of user IDs who are recipients.
+	 * @return int[] Array of user IDs who are recipients.
 	 */
 	public static function get_recipients( $post_id ) {
 		// Get all meta values with key '_activitypub_user_id' (single => false).
