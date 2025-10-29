@@ -77,7 +77,6 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Fasp', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Wp_Admin\Fasp_Admin', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
