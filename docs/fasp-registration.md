@@ -42,8 +42,8 @@ Handles registration requests from FASP providers.
 
 #### Capability Endpoints
 
-- `POST /wp-json/activitypub/1.0/capabilities/{identifier}/{version}/activation` - Enable capability
-- `DELETE /wp-json/activitypub/1.0/capabilities/{identifier}/{version}/activation` - Disable capability
+- `POST /wp-json/activitypub/1.0/fasp/capabilities/{identifier}/{version}/activation` - Enable capability
+- `DELETE /wp-json/activitypub/1.0/fasp/capabilities/{identifier}/{version}/activation` - Disable capability
 
 ### Admin Interface
 
