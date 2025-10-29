@@ -1131,12 +1131,7 @@ class Migration {
 			}
 
 			// Try to get the remote actor by URI.
-			$remote_actor = Remote_Actors::get_by_uri( $comment->comment_author_url );
-
-			// If not found, try to fetch it remotely.
-			if ( \is_wp_error( $remote_actor ) ) {
-				$remote_actor = Remote_Actors::fetch_by_uri( $comment->comment_author_url );
-			}
+			$remote_actor = Remote_Actors::fetch_by_uri( $comment->comment_author_url );
 
 			// If we have a valid remote actor, store the reference.
 			if ( ! \is_wp_error( $remote_actor ) ) {
