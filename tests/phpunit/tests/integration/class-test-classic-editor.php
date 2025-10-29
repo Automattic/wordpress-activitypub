@@ -168,7 +168,7 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 	public function test_filter_attached_images_with_attachments() {
 		// Create image attachments.
 		$image_id_1 = self::factory()->attachment->create_upload_object(
-			ACTIVITYPUB_PLUGIN_DIR . 'tests/phpunit/data/assets/sample-image.jpg',
+			AP_TESTS_DIR . '/data/assets/sample-image.jpg',
 			self::$post_id
 		);
 		$image_id_2 = self::factory()->attachment->create_upload_object(
