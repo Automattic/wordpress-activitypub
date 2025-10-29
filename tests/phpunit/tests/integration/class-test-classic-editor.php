@@ -134,7 +134,7 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 	 */
 	public function test_filter_attachments_media_markup_single_image() {
 		$image_id = self::factory()->attachment->create_upload_object(
-			AP_TESTS_DIR . 'tests/phpunit/data/assets/sample-image.jpg',
+			AP_TESTS_DIR . '/data/assets/sample-image.jpg',
 			self::$post_id
 		);
 
@@ -201,7 +201,7 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		$image_ids = array();
 		for ( $i = 0; $i < 5; $i++ ) {
 			$image_ids[] = self::factory()->attachment->create_upload_object(
-				AP_TESTS_DIR . 'tests/phpunit/data/assets/sample-image.jpg',
+				AP_TESTS_DIR . '/data/assets/sample-image.jpg',
 				self::$post_id
 			);
 		}
@@ -231,7 +231,7 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		$image_ids = array();
 		for ( $i = 0; $i < 3; $i++ ) {
 			$image_ids[] = self::factory()->attachment->create_upload_object(
-				AP_TESTS_DIR . 'tests/phpunit/data/assets/sample-image.jpg',
+				AP_TESTS_DIR . '/data/assets/sample-image.jpg',
 				self::$post_id
 			);
 		}
@@ -263,7 +263,7 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		$image_ids = array();
 		for ( $i = 0; $i < 3; $i++ ) {
 			$image_ids[] = self::factory()->attachment->create_upload_object(
-				AP_TESTS_DIR . 'tests/phpunit/data/assets/sample-image.jpg',
+				AP_TESTS_DIR . '/data/assets/sample-image.jpg',
 				self::$post_id
 			);
 		}
