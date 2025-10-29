@@ -8,6 +8,8 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
+use Activitypub\Fasp;
 use Activitypub\Signature\Http_Message_Signature;
 
 /**
@@ -91,7 +93,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		// Capability activation endpoints.
 		\register_rest_route(
 			$this->namespace,
-			'/' . $this->rest_base . '/capabilities/(?P<identifier>[a-zA-Z0-9_-]+)/(?P<version>[0-9]+)/activation',
+			'/' . $this->rest_base . '/capabilities/(?P<identifier>[a-zA-Z0-9_-]+)/(?P<version>[0-9]+(?:\.[0-9]+)*)/activation',
 			array(
 				array(
 					'methods'             => array( \WP_REST_Server::CREATABLE, \WP_REST_Server::DELETABLE ),
@@ -105,7 +107,8 @@ class Fasp_Controller extends \WP_REST_Controller {
 						),
 						'version'    => array(
 							'required'    => true,
-							'type'        => 'integer',
+							'type'        => 'string',
+							'pattern'     => '^\d+(?:\.\d+)*$',
 							'description' => 'The capability version.',
 						),
 					),
@@ -227,17 +230,19 @@ class Fasp_Controller extends \WP_REST_Controller {
 		// Generate unique FASP ID.
 		$fasp_id = $this->generate_unique_id();
 
+		$fasp_public_key = \sanitize_text_field( $params['publicKey'] );
+
 		// Store registration request (pending approval).
 		$registration_data = array(
-			'fasp_id'            => $fasp_id,
-			'name'               => sanitize_text_field( $params['name'] ),
-			'base_url'           => esc_url_raw( $params['baseUrl'] ),
-			'server_id'          => sanitize_text_field( $params['serverId'] ),
-			'fasp_public_key'    => sanitize_text_field( $params['publicKey'] ),
-			'server_public_key'  => $public_key,
-			'server_private_key' => $private_key,
-			'status'             => 'pending',
-			'requested_at'       => current_time( 'mysql', true ),
+			'fasp_id'                     => $fasp_id,
+			'name'                        => \sanitize_text_field( $params['name'] ),
+			'base_url'                    => \esc_url_raw( $params['baseUrl'] ),
+			'server_id'                   => \sanitize_text_field( $params['serverId'] ),
+			'fasp_public_key'             => $fasp_public_key,
+			'fasp_public_key_fingerprint' => Fasp::get_public_key_fingerprint( $fasp_public_key ),
+			'server_public_key'           => $public_key,
+			'status'                      => 'pending',
+			'requested_at'                => \current_time( 'mysql', true ),
 		);
 
 		$result = $this->store_registration_request( $registration_data );
@@ -250,7 +255,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		}
 
 		// Generate registration completion URI.
-		$completion_uri = admin_url( 'admin.php?page=activitypub-fasp-registrations&highlight=' . $fasp_id );
+		$completion_uri = \admin_url( 'admin.php?page=activitypub-fasp-registrations&highlight=' . $fasp_id );
 
 		// Return successful response with the Application user's RSA public key.
 		$response_data = array(
@@ -276,13 +281,13 @@ class Fasp_Controller extends \WP_REST_Controller {
 		// Extract keyId from request headers (signature already verified by Server::verify_signature).
 		$headers = $request->get_headers();
 		$keyid   = $this->extract_keyid_from_request( $headers );
-		if ( is_wp_error( $keyid ) ) {
+		if ( \is_wp_error( $keyid ) ) {
 			return $keyid;
 		}
 
 		// Look up FASP registration by keyId.
 		$fasp_data = $this->get_fasp_by_keyid( $keyid );
-		if ( is_wp_error( $fasp_data ) ) {
+		if ( \is_wp_error( $fasp_data ) ) {
 			return $fasp_data;
 		}
 
@@ -293,6 +298,11 @@ class Fasp_Controller extends \WP_REST_Controller {
 				'FASP registration is not approved',
 				array( 'status' => 403 )
 			);
+		}
+
+		$key_validation = $this->ensure_request_key_matches_registration( $keyid, $fasp_data );
+		if ( \is_wp_error( $key_validation ) ) {
+			return $key_validation;
 		}
 
 		// Check if capability is supported.
@@ -344,7 +354,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 * @return string Unique ID.
 	 */
 	private function generate_unique_id() {
-		return substr( md5( uniqid( wp_rand(), true ) ), 0, 12 );
+		return \substr( \md5( \uniqid( \wp_rand(), true ) ), 0, 12 );
 	}
 
 	/**
@@ -354,14 +364,63 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 * @return bool True on success, false on failure.
 	 */
 	private function store_registration_request( $data ) {
-		// Get existing registrations.
-		$registrations = get_option( 'activitypub_fasp_registrations', array() );
+		$registrations = $this->get_registration_records();
 
 		// Add new registration.
 		$registrations[ $data['fasp_id'] ] = $data;
 
-		// Store updated registrations.
-		return update_option( 'activitypub_fasp_registrations', $registrations );
+		// Store updated registrations without autoloading.
+		return \update_option( 'activitypub_fasp_registrations', $registrations, false );
+	}
+
+	/**
+	 * Get existing registration records, ensuring the option exists and is sanitized.
+	 *
+	 * @return array Registration records.
+	 */
+	private function get_registration_records() {
+		$registrations = \get_option( 'activitypub_fasp_registrations', null );
+
+		if ( null === $registrations ) {
+			\add_option( 'activitypub_fasp_registrations', array(), '', 'no' );
+			return array();
+		}
+
+		if ( ! is_array( $registrations ) ) {
+			$registrations = array();
+		}
+
+		return $this->sanitize_registration_records( $registrations );
+	}
+
+	/**
+	 * Remove sensitive data from stored registrations.
+	 *
+	 * @param array $registrations Registration records.
+	 * @return array Sanitized registration records.
+	 */
+	private function sanitize_registration_records( array $registrations ) {
+		$modified = false;
+
+		foreach ( $registrations as $fasp_id => $registration ) {
+			if ( isset( $registration['server_private_key'] ) ) {
+				unset( $registration['server_private_key'] );
+				$registrations[ $fasp_id ] = $registration;
+				$modified                  = true;
+			}
+
+			if ( isset( $registration['fasp_public_key'] ) && empty( $registration['fasp_public_key_fingerprint'] ) ) {
+				$registration['fasp_public_key_fingerprint'] = Fasp::get_public_key_fingerprint( $registration['fasp_public_key'] );
+				$registrations[ $fasp_id ]                   = $registration;
+				$modified                                    = true;
+			}
+		}
+
+		if ( $modified ) {
+			\update_option( 'activitypub_fasp_registrations', $registrations, false );
+		}
+
+		return $registrations;
 	}
 
 	/**
@@ -405,14 +464,14 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 * @return array|\WP_Error FASP data or error.
 	 */
 	private function get_fasp_by_keyid( $keyid ) {
-		$registrations = get_option( 'activitypub_fasp_registrations', array() );
+		$registrations = $this->get_registration_records();
 
 		// The keyId should match the FASP's base URL or server ID.
 		foreach ( $registrations as $fasp_id => $registration ) {
 			// Check if keyId contains the FASP's base URL or server ID.
-			if ( strpos( $keyid, $registration['base_url'] ) !== false ||
-				strpos( $keyid, $registration['server_id'] ) !== false ||
-				strpos( $keyid, $fasp_id ) !== false ) {
+			if ( \strpos( $keyid, $registration['base_url'] ) !== false ||
+				\strpos( $keyid, $registration['server_id'] ) !== false ||
+				\strpos( $keyid, $fasp_id ) !== false ) {
 				return $registration;
 			}
 		}
@@ -430,15 +489,19 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 * @return array Supported capabilities.
 	 */
 	private function get_supported_capabilities_list() {
-		// Define capabilities that this server supports.
-		$capabilities = array();
+		$capabilities = (array) \apply_filters( 'activitypub_fasp_capabilities', array() );
+		$indexed      = array();
 
-		/**
-		 * Filter supported FASP capabilities.
-		 *
-		 * @param array $capabilities Supported capabilities.
-		 */
-		return apply_filters( 'activitypub_fasp_supported_capabilities', $capabilities );
+		foreach ( $capabilities as $capability ) {
+			if ( empty( $capability['id'] ) || ! isset( $capability['version'] ) ) {
+				continue;
+			}
+
+			$key             = $capability['id'] . '_v' . $capability['version'];
+			$indexed[ $key ] = $capability;
+		}
+
+		return $indexed;
 	}
 
 	/**
@@ -451,7 +514,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 */
 	private function enable_fasp_capability( $fasp_id, $identifier, $version ) {
 		// Get existing capabilities.
-		$capabilities = get_option( 'activitypub_fasp_capabilities', array() );
+		$capabilities = $this->get_capability_records();
 
 		// Create capability key.
 		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
@@ -466,7 +529,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		);
 
 		// Store updated capabilities.
-		return update_option( 'activitypub_fasp_capabilities', $capabilities );
+		return \update_option( 'activitypub_fasp_capabilities', $capabilities, false );
 	}
 
 	/**
@@ -479,7 +542,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 */
 	private function disable_fasp_capability( $fasp_id, $identifier, $version ) {
 		// Get existing capabilities.
-		$capabilities = get_option( 'activitypub_fasp_capabilities', array() );
+		$capabilities = $this->get_capability_records();
 
 		// Create capability key.
 		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
@@ -491,7 +554,131 @@ class Fasp_Controller extends \WP_REST_Controller {
 		}
 
 		// Store updated capabilities.
-		return update_option( 'activitypub_fasp_capabilities', $capabilities );
+		return \update_option( 'activitypub_fasp_capabilities', $capabilities, false );
+	}
+
+	/**
+	 * Ensure the signing key used in the request matches the registered key.
+	 *
+	 * @param string $keyid        The keyId from the request.
+	 * @param array  $registration The stored registration data.
+	 * @return true|\WP_Error True on success, error otherwise.
+	 */
+	private function ensure_request_key_matches_registration( $keyid, $registration ) {
+		if ( empty( $registration['fasp_public_key'] ) ) {
+			return new \WP_Error(
+				'fasp_registration_missing_key',
+				'FASP registration does not include a public key.',
+				array( 'status' => 500 )
+			);
+		}
+
+		$expected_fingerprint = Fasp::get_public_key_fingerprint( $registration['fasp_public_key'] );
+		$request_fingerprint  = $this->fingerprint_from_keyid( $keyid );
+
+		if ( is_wp_error( $request_fingerprint ) ) {
+			return $request_fingerprint;
+		}
+
+		if ( empty( $request_fingerprint ) ) {
+			return new \WP_Error(
+				'fasp_key_unverified',
+				'Unable to verify signing key for this request.',
+				array( 'status' => 401 )
+			);
+		}
+
+		if ( ! \hash_equals( $expected_fingerprint, $request_fingerprint ) ) {
+			return new \WP_Error(
+				'fasp_key_mismatch',
+				'Signing key does not match registered FASP key.',
+				array( 'status' => 401 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Derive a SHA-256 fingerprint for the provided keyId.
+	 *
+	 * @param string $keyid The keyId parameter from the signature.
+	 * @return string|\WP_Error Fingerprint on success, WP_Error on failure.
+	 */
+	private function fingerprint_from_keyid( $keyid ) {
+		$data_prefixes = array(
+			'data:application/magic-public-key,',
+			'data:application/magic-public-key;base64,',
+			'data:application/magic-public-key+base64,',
+		);
+
+		foreach ( $data_prefixes as $prefix ) {
+			if ( \str_starts_with( $keyid, $prefix ) ) {
+				$encoded = \substr( $keyid, \strlen( $prefix ) );
+				$bytes   = \base64_decode( $encoded, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+
+				if ( false === $bytes ) {
+					return new \WP_Error(
+						'fasp_invalid_keyid',
+						'Malformed data URI public key.',
+						array( 'status' => 400 )
+					);
+				}
+
+				return \base64_encode( \hash( 'sha256', $bytes, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+			}
+		}
+
+		$public_key_resource = Remote_Actors::get_public_key( $keyid );
+		if ( \is_wp_error( $public_key_resource ) ) {
+			return $public_key_resource;
+		}
+
+		$details = \openssl_pkey_get_details( $public_key_resource );
+		if ( empty( $details['key'] ) ) {
+			return new \WP_Error(
+				'fasp_key_details_unavailable',
+				'Unable to read public key details.',
+				array( 'status' => 401 )
+			);
+		}
+
+		$pem = $details['key'];
+
+		// Normalize PEM to raw bytes.
+		$normalized = \preg_replace( '/-----[^-]+-----/', '', $pem );
+		$normalized = \preg_replace( '/\s+/', '', $normalized );
+		$bytes      = \base64_decode( $normalized, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+
+		if ( false === $bytes ) {
+			return new \WP_Error(
+				'fasp_key_normalization_failed',
+				'Unable to normalize public key for fingerprint comparison.',
+				array( 'status' => 401 )
+			);
+		}
+
+		return \base64_encode( \hash( 'sha256', $bytes, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+	}
+
+	/**
+	 * Retrieve stored capability assignments, ensuring the option exists and is non-autoloaded.
+	 *
+	 * @return array
+	 */
+	private function get_capability_records() {
+		$capabilities = \get_option( 'activitypub_fasp_capabilities', null );
+
+		if ( null === $capabilities ) {
+			\add_option( 'activitypub_fasp_capabilities', array(), '', 'no' );
+			return array();
+		}
+
+		if ( ! is_array( $capabilities ) ) {
+			return array();
+		}
+
+		return $capabilities;
 	}
 
 	/**

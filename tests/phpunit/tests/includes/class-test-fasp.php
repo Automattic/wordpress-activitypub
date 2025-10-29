@@ -262,6 +262,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$this->assertEquals( 'https://fasp.example.com', $stored_registration['base_url'] );
 		$this->assertEquals( 'test-server-123', $stored_registration['server_id'] );
 		$this->assertEquals( 'pending', $stored_registration['status'] );
+		$this->assertArrayHasKey( 'fasp_public_key_fingerprint', $stored_registration );
 	}
 
 	/**
@@ -296,15 +297,15 @@ class Test_Fasp extends \WP_UnitTestCase {
 	public function test_registration_management() {
 		// Create a test registration.
 		$registration_data = array(
-			'fasp_id'            => 'test-fasp-123',
-			'name'               => 'Test FASP',
-			'base_url'           => 'https://fasp.example.com',
-			'server_id'          => 'test-server-123',
-			'fasp_public_key'    => 'dGVzdC1wdWJsaWMta2V5',
-			'server_public_key'  => 'c2VydmVyLXB1YmxpYy1rZXk=',
-			'server_private_key' => 'c2VydmVyLXByaXZhdGUta2V5',
-			'status'             => 'pending',
-			'requested_at'       => current_time( 'mysql', true ),
+			'fasp_id'                     => 'test-fasp-123',
+			'name'                        => 'Test FASP',
+			'base_url'                    => 'https://fasp.example.com',
+			'server_id'                   => 'test-server-123',
+			'fasp_public_key'             => 'dGVzdC1wdWJsaWMta2V5',
+			'fasp_public_key_fingerprint' => Fasp::get_public_key_fingerprint( 'dGVzdC1wdWJsaWMta2V5' ),
+			'server_public_key'           => 'c2VydmVyLXB1YmxpYy1rZXk=',
+			'status'                      => 'pending',
+			'requested_at'                => current_time( 'mysql', true ),
 		);
 
 		$registrations = array( 'test-fasp-123' => $registration_data );
@@ -377,5 +378,100 @@ class Test_Fasp extends \WP_UnitTestCase {
 		// Different capability should not be enabled.
 		$enabled = Fasp::is_capability_enabled( 'test-fasp-123', 'search', 1 );
 		$this->assertFalse( $enabled );
+	}
+
+	/**
+	 * Test capability activation enforces registered public key.
+	 *
+	 * @covers ::handle_capability_activation
+	 */
+	public function test_capability_activation_requires_matching_key() {
+		$key_base64        = 'dGVzdC1wdWJsaWMta2V5';
+		$registration_data = array(
+			'fasp_id'                     => 'test-fasp-123',
+			'name'                        => 'Test FASP',
+			'base_url'                    => 'https://fasp.example.com',
+			'server_id'                   => 'test-server-123',
+			'fasp_public_key'             => $key_base64,
+			'fasp_public_key_fingerprint' => Fasp::get_public_key_fingerprint( $key_base64 ),
+			'server_public_key'           => 'c2VydmVyLXB1YmxpYy1rZXk=',
+			'status'                      => 'approved',
+			'requested_at'                => current_time( 'mysql', true ),
+		);
+
+		update_option( 'activitypub_fasp_registrations', array( 'test-fasp-123' => $registration_data ) );
+
+		add_filter(
+			'activitypub_fasp_capabilities',
+			function ( $capabilities ) {
+				$capabilities[] = array(
+					'id'      => 'trends',
+					'version' => '1.0',
+				);
+				return $capabilities;
+			}
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
+		$request->set_param( 'identifier', 'trends' );
+		$request->set_param( 'version', '1.0' );
+		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="data:application/magic-public-key,' . $key_base64 . '"' );
+		$request->set_header( 'Signature', 'sig=:dummy:' );
+
+		$response = $this->controller->handle_capability_activation( $request );
+
+		$this->assertInstanceOf( 'WP_REST_Response', $response );
+		$this->assertEquals( 204, $response->get_status() );
+
+		$stored_capabilities = get_option( 'activitypub_fasp_capabilities', array() );
+		$this->assertArrayHasKey( 'test-fasp-123_trends_v1.0', $stored_capabilities );
+
+		remove_all_filters( 'activitypub_fasp_capabilities' );
+	}
+
+	/**
+	 * Test capability activation rejects mismatched keys.
+	 *
+	 * @covers ::handle_capability_activation
+	 */
+	public function test_capability_activation_rejects_mismatched_key() {
+		$key_base64        = 'dGVzdC1wdWJsaWMta2V5';
+		$registration_data = array(
+			'fasp_id'                     => 'test-fasp-123',
+			'name'                        => 'Test FASP',
+			'base_url'                    => 'https://fasp.example.com',
+			'server_id'                   => 'test-server-123',
+			'fasp_public_key'             => $key_base64,
+			'fasp_public_key_fingerprint' => Fasp::get_public_key_fingerprint( $key_base64 ),
+			'server_public_key'           => 'c2VydmVyLXB1YmxpYy1rZXk=',
+			'status'                      => 'approved',
+			'requested_at'                => current_time( 'mysql', true ),
+		);
+
+		update_option( 'activitypub_fasp_registrations', array( 'test-fasp-123' => $registration_data ) );
+
+		add_filter(
+			'activitypub_fasp_capabilities',
+			function ( $capabilities ) {
+				$capabilities[] = array(
+					'id'      => 'trends',
+					'version' => '1.0',
+				);
+				return $capabilities;
+			}
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
+		$request->set_param( 'identifier', 'trends' );
+		$request->set_param( 'version', '1.0' );
+		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="data:application/magic-public-key,' . base64_encode( 'mismatch-key' ) . '"' );
+		$request->set_header( 'Signature', 'sig=:dummy:' );
+
+		$response = $this->controller->handle_capability_activation( $request );
+
+		$this->assertInstanceOf( 'WP_Error', $response );
+		$this->assertEquals( 'fasp_key_mismatch', $response->get_error_code() );
+
+		remove_all_filters( 'activitypub_fasp_capabilities' );
 	}
 }

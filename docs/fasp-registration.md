@@ -76,10 +76,10 @@ Features:
 
 ## Security Features
 
-### Ed25519 Keypairs
-- Generates Ed25519 keypairs for each registration
-- Falls back to secure random strings if sodium extension unavailable
-- Stores private keys securely in WordPress options
+### Server Keypair Reuse
+- Reuses the application actor's RSA keypair for FASP responses
+- Avoids generating per-registration key material
+- Never persists private keys inside registration records
 
 ### Public Key Fingerprints
 - SHA-256 fingerprints of public keys for verification
@@ -100,8 +100,8 @@ array(
     'base_url' => 'https://fasp.example.com',
     'server_id' => 'server-id-from-fasp',
     'fasp_public_key' => 'base64-encoded-public-key',
+    'fasp_public_key_fingerprint' => 'sha256-fingerprint-of-public-key',
     'server_public_key' => 'base64-encoded-server-public-key',
-    'server_private_key' => 'base64-encoded-server-private-key',
     'status' => 'pending|approved|rejected',
     'requested_at' => 'YYYY-MM-DD HH:MM:SS',
     'approved_at' => 'YYYY-MM-DD HH:MM:SS',

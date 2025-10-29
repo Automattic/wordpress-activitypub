@@ -29,7 +29,7 @@ class Fasp {
 	 * @return array Array of registration requests.
 	 */
 	public static function get_pending_registrations() {
-		$registrations = get_option( 'activitypub_fasp_registrations', array() );
+		$registrations = self::get_registrations_store();
 		$pending       = array();
 
 		foreach ( $registrations as $registration ) {
@@ -55,7 +55,7 @@ class Fasp {
 	 * @return array Array of approved registrations.
 	 */
 	public static function get_approved_registrations() {
-		$registrations = get_option( 'activitypub_fasp_registrations', array() );
+		$registrations = self::get_registrations_store();
 		$approved      = array();
 
 		foreach ( $registrations as $registration ) {
@@ -85,7 +85,7 @@ class Fasp {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function approve_registration( $fasp_id, $user_id ) {
-		$registrations = get_option( 'activitypub_fasp_registrations', array() );
+		$registrations = self::get_registrations_store();
 
 		if ( ! isset( $registrations[ $fasp_id ] ) ) {
 			return false;
@@ -95,7 +95,7 @@ class Fasp {
 		$registrations[ $fasp_id ]['approved_at'] = current_time( 'mysql', true );
 		$registrations[ $fasp_id ]['approved_by'] = $user_id;
 
-		return update_option( 'activitypub_fasp_registrations', $registrations );
+		return update_option( 'activitypub_fasp_registrations', $registrations, false );
 	}
 
 	/**
@@ -106,7 +106,7 @@ class Fasp {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function reject_registration( $fasp_id, $user_id ) {
-		$registrations = get_option( 'activitypub_fasp_registrations', array() );
+		$registrations = self::get_registrations_store();
 
 		if ( ! isset( $registrations[ $fasp_id ] ) ) {
 			return false;
@@ -116,7 +116,7 @@ class Fasp {
 		$registrations[ $fasp_id ]['approved_at'] = current_time( 'mysql', true );
 		$registrations[ $fasp_id ]['approved_by'] = $user_id;
 
-		return update_option( 'activitypub_fasp_registrations', $registrations );
+		return update_option( 'activitypub_fasp_registrations', $registrations, false );
 	}
 
 	/**
@@ -126,7 +126,7 @@ class Fasp {
 	 * @return array|null Registration data or null if not found.
 	 */
 	public static function get_registration( $fasp_id ) {
-		$registrations = get_option( 'activitypub_fasp_registrations', array() );
+		$registrations = self::get_registrations_store();
 
 		return isset( $registrations[ $fasp_id ] ) ? $registrations[ $fasp_id ] : null;
 	}
@@ -138,7 +138,7 @@ class Fasp {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function delete_registration( $fasp_id ) {
-		$registrations = get_option( 'activitypub_fasp_registrations', array() );
+		$registrations = self::get_registrations_store();
 
 		if ( ! isset( $registrations[ $fasp_id ] ) ) {
 			return false;
@@ -146,7 +146,7 @@ class Fasp {
 
 		unset( $registrations[ $fasp_id ] );
 
-		return update_option( 'activitypub_fasp_registrations', $registrations );
+		return update_option( 'activitypub_fasp_registrations', $registrations, false );
 	}
 
 	/**
@@ -168,7 +168,7 @@ class Fasp {
 	 * @return array Array of enabled capabilities.
 	 */
 	public static function get_enabled_capabilities( $fasp_id ) {
-		$capabilities = get_option( 'activitypub_fasp_capabilities', array() );
+		$capabilities = self::get_capabilities_store();
 		$enabled      = array();
 
 		foreach ( $capabilities as $capability ) {
@@ -189,9 +189,79 @@ class Fasp {
 	 * @return bool True if capability is enabled, false otherwise.
 	 */
 	public static function is_capability_enabled( $fasp_id, $identifier, $version ) {
-		$capabilities   = get_option( 'activitypub_fasp_capabilities', array() );
+		$capabilities   = self::get_capabilities_store();
 		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
 
 		return isset( $capabilities[ $capability_key ] ) && $capabilities[ $capability_key ]['enabled'];
+	}
+
+	/**
+	 * Retrieve registrations, ensuring the option exists, is non-autoloaded, and sanitized.
+	 *
+	 * @return array
+	 */
+	private static function get_registrations_store() {
+		$registrations = get_option( 'activitypub_fasp_registrations', null );
+
+		if ( null === $registrations ) {
+			add_option( 'activitypub_fasp_registrations', array(), '', 'no' );
+			return array();
+		}
+
+		if ( ! is_array( $registrations ) ) {
+			$registrations = array();
+		}
+
+		return self::sanitize_registration_records( $registrations );
+	}
+
+	/**
+	 * Remove sensitive data from stored registrations.
+	 *
+	 * @param array $registrations Registration data.
+	 * @return array Sanitized registrations.
+	 */
+	private static function sanitize_registration_records( array $registrations ) {
+		$modified = false;
+
+		foreach ( $registrations as $fasp_id => $registration ) {
+			if ( isset( $registration['server_private_key'] ) ) {
+				unset( $registration['server_private_key'] );
+				$registrations[ $fasp_id ] = $registration;
+				$modified                  = true;
+			}
+
+			if ( isset( $registration['fasp_public_key'] ) && empty( $registration['fasp_public_key_fingerprint'] ) ) {
+				$registration['fasp_public_key_fingerprint'] = self::get_public_key_fingerprint( $registration['fasp_public_key'] );
+				$registrations[ $fasp_id ]                   = $registration;
+				$modified                                    = true;
+			}
+		}
+
+		if ( $modified ) {
+			update_option( 'activitypub_fasp_registrations', $registrations, false );
+		}
+
+		return $registrations;
+	}
+
+	/**
+	 * Retrieve capabilities store ensuring the option exists and is non-autoloaded.
+	 *
+	 * @return array
+	 */
+	private static function get_capabilities_store() {
+		$capabilities = get_option( 'activitypub_fasp_capabilities', null );
+
+		if ( null === $capabilities ) {
+			add_option( 'activitypub_fasp_capabilities', array(), '', 'no' );
+			return array();
+		}
+
+		if ( ! is_array( $capabilities ) ) {
+			return array();
+		}
+
+		return $capabilities;
 	}
 }
