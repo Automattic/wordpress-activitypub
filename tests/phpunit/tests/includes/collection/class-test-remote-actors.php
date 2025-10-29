@@ -1161,4 +1161,139 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		return $pre;
 	}
+
+	/**
+	 * Test get_avatar_url with avatar in meta.
+	 *
+	 * @covers ::get_avatar_url
+	 */
+	public function test_get_avatar_url_from_meta() {
+		// Create a remote actor with avatar in meta.
+		$actor_data = array(
+			'id'                => 'https://example.com/users/avatar-test',
+			'type'              => 'Person',
+			'preferredUsername' => 'avatartest',
+			'name'              => 'Avatar Test',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/avatar-test.jpg',
+			),
+			'inbox'             => 'https://example.com/inbox-avatar',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Verify avatar URL is stored in meta.
+		$avatar_url = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
+		$this->assertEquals( 'https://example.com/avatar-test.jpg', $avatar_url );
+
+		// Test get_avatar_url retrieves from meta.
+		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertEquals( 'https://example.com/avatar-test.jpg', $retrieved_avatar );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
+	}
+
+	/**
+	 * Test get_avatar_url fallback to JSON when meta is empty.
+	 *
+	 * @covers ::get_avatar_url
+	 */
+	public function test_get_avatar_url_fallback_to_json() {
+		// Create a remote actor.
+		$actor_data = array(
+			'id'                => 'https://example.com/users/json-avatar',
+			'type'              => 'Person',
+			'preferredUsername' => 'jsonavatar',
+			'name'              => 'JSON Avatar',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/json-avatar.jpg',
+			),
+			'inbox'             => 'https://example.com/inbox-json',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Delete the avatar meta to simulate old data.
+		delete_post_meta( $remote_actor_id, '_activitypub_avatar_url' );
+
+		// Verify meta is empty.
+		$avatar_meta = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
+		$this->assertEmpty( $avatar_meta );
+
+		// Test get_avatar_url extracts from JSON and caches it.
+		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertEquals( 'https://example.com/json-avatar.jpg', $retrieved_avatar );
+
+		// Verify it was cached in meta.
+		$cached_avatar = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
+		$this->assertEquals( 'https://example.com/json-avatar.jpg', $cached_avatar );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
+	}
+
+	/**
+	 * Test get_avatar_url with array of URLs.
+	 *
+	 * @covers ::get_avatar_url
+	 */
+	public function test_get_avatar_url_with_array() {
+		// Create a remote actor with array of avatar URLs.
+		$actor_data = array(
+			'id'                => 'https://example.com/users/array-avatar',
+			'type'              => 'Person',
+			'preferredUsername' => 'arrayavatar',
+			'name'              => 'Array Avatar',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => array(
+					'https://example.com/avatar1.jpg',
+					'https://example.com/avatar2.jpg',
+				),
+			),
+			'inbox'             => 'https://example.com/inbox-array',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Test get_avatar_url retrieves first URL from array.
+		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertEquals( 'https://example.com/avatar1.jpg', $retrieved_avatar );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
+	}
+
+	/**
+	 * Test get_avatar_url with no avatar returns default.
+	 *
+	 * @covers ::get_avatar_url
+	 */
+	public function test_get_avatar_url_empty() {
+		// Create a remote actor without avatar.
+		$actor_data = array(
+			'id'                => 'https://example.com/users/no-avatar',
+			'type'              => 'Person',
+			'preferredUsername' => 'noavatar',
+			'name'              => 'No Avatar',
+			'inbox'             => 'https://example.com/inbox-no-avatar',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Test get_avatar_url returns default avatar URL.
+		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertNotEmpty( $retrieved_avatar );
+		$this->assertStringContainsString( 'assets/img/mp.jpg', $retrieved_avatar );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
+	}
 }
