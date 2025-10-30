@@ -57,9 +57,9 @@ class Admin {
 		\add_action( 'admin_post_delete_actor_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
 		\add_action( 'admin_action_activitypub_confirm_removal', array( self::class, 'handle_bulk_actor_delete_page' ) );
 
-		\add_action( 'admin_post_approve_fasp_registration', array( self::class, 'handle_approve_fasp_registration' ) );
-		\add_action( 'admin_post_reject_fasp_registration', array( self::class, 'handle_reject_fasp_registration' ) );
-		\add_action( 'admin_post_delete_fasp_registration', array( self::class, 'handle_delete_fasp_registration' ) );
+		\add_action( 'admin_post_approve_fasp_registration', array( self::class, 'approve_fasp_registration' ) );
+		\add_action( 'admin_post_reject_fasp_registration', array( self::class, 'reject_fasp_registration' ) );
+		\add_action( 'admin_post_delete_fasp_registration', array( self::class, 'delete_fasp_registration' ) );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -1127,7 +1127,7 @@ class Admin {
 	/**
 	 * Handle approve FASP registration action.
 	 */
-	public static function handle_approve_fasp_registration() {
+	public static function approve_fasp_registration() {
 		if ( ! \current_user_can( 'manage_options' ) ) {
 			\wp_die( \esc_html__( 'You do not have permission to perform this action.', 'activitypub' ) );
 		}
@@ -1152,7 +1152,7 @@ class Admin {
 	/**
 	 * Handle reject FASP registration action.
 	 */
-	public static function handle_reject_fasp_registration() {
+	public static function reject_fasp_registration() {
 		if ( ! \current_user_can( 'manage_options' ) ) {
 			\wp_die( \esc_html__( 'You do not have permission to perform this action.', 'activitypub' ) );
 		}
@@ -1177,7 +1177,7 @@ class Admin {
 	/**
 	 * Handle delete FASP registration action.
 	 */
-	public static function handle_delete_fasp_registration() {
+	public static function delete_fasp_registration() {
 		if ( ! \current_user_can( 'manage_options' ) ) {
 			\wp_die( \esc_html__( 'You do not have permission to perform this action.', 'activitypub' ) );
 		}

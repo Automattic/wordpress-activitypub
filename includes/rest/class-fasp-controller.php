@@ -201,31 +201,9 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 */
 	public function handle_registration( $request ) {
 		$params = $request->get_json_params();
-
-		// Validate required fields.
-		$required_fields = array( 'name', 'baseUrl', 'serverId', 'publicKey' );
-		foreach ( $required_fields as $field ) {
-			if ( empty( $params[ $field ] ) ) {
-				return new \WP_Error(
-					'missing_field',
-					sprintf( 'Missing required field: %s', $field ),
-					array( 'status' => 400 )
-				);
-			}
-		}
-
 		// Use the Application user's existing RSA keypair instead of generating new keys.
 		$blog_user_id = Actors::APPLICATION_USER_ID;
 		$public_key   = Actors::get_public_key( $blog_user_id );
-		$private_key  = Actors::get_private_key( $blog_user_id );
-
-		if ( ! $public_key || ! $private_key ) {
-			return new \WP_Error(
-				'keypair_not_available',
-				'Server keypair not available',
-				array( 'status' => 500 )
-			);
-		}
 
 		// Generate unique FASP ID.
 		$fasp_id = $this->generate_unique_id();
