@@ -7,12 +7,13 @@
 import { NavigableMenu, MenuItem, MenuGroup, Icon } from '@wordpress/components';
 import { home, people, addCard, comment } from '@wordpress/icons';
 import './style.scss';
+import { __ } from '@wordpress/i18n';
 
 const menuItems = [
-	{ id: 'dashboard', label: 'Dashboard', icon: home },
-	{ id: 'followers', label: 'Followers', icon: people },
-	{ id: 'following', label: 'Following', icon: addCard },
-	{ id: 'interactions', label: 'Interactions', icon: comment },
+	{ id: 'dashboard', label: __( 'Dashboard' ), icon: home },
+	{ id: 'followers', label: __( 'Followers' ), icon: people },
+	{ id: 'following', label: __( 'Following' ), icon: addCard },
+	{ id: 'interactions', label: __( 'Interactions' ), icon: comment },
 ];
 
 interface SidebarProps {
@@ -25,7 +26,7 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 		<div className="sidebar">
 			{ /* Header */ }
 			<div className="header">
-				<h1 className="title">ActivityPub</h1>
+				<h1 className="title">{ __( 'Social Web' ) }</h1>
 			</div>
 
 			{ /* Navigation */ }
