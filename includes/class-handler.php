@@ -13,7 +13,6 @@ use Activitypub\Handler\Collection_Sync;
 use Activitypub\Handler\Create;
 use Activitypub\Handler\Delete;
 use Activitypub\Handler\Follow;
-use Activitypub\Handler\Inbox;
 use Activitypub\Handler\Like;
 use Activitypub\Handler\Move;
 use Activitypub\Handler\Quote_Request;
@@ -42,7 +41,6 @@ class Handler {
 		Create::init();
 		Delete::init();
 		Follow::init();
-		Inbox::init();
 		Like::init();
 		Move::init();
 		Quote_Request::init();

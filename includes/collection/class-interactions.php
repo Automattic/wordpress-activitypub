@@ -203,7 +203,37 @@ class Interactions {
 			),
 		);
 
-		return get_comments( $args );
+		return \get_comments( $args );
+	}
+
+	/**
+	 * Get interaction(s) by remote actor ID.
+	 *
+	 * This is an optimized query that uses the remote actor post ID directly
+	 * instead of querying by author_url.
+	 *
+	 * @param int $remote_actor_id The remote actor post ID.
+	 *
+	 * @return array The interactions as WP_Comment objects.
+	 */
+	public static function get_by_remote_actor_id( $remote_actor_id ) {
+		$args = array(
+			'nopaging'   => true,
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key'   => 'protocol',
+					'value' => 'activitypub',
+				),
+				array(
+					'key'   => '_activitypub_remote_actor_id',
+					'value' => $remote_actor_id,
+				),
+			),
+		);
+
+		return \get_comments( $args );
 	}
 
 	/**
@@ -305,8 +335,13 @@ class Interactions {
 			),
 		);
 
-		if ( isset( $actor['icon']['url'] ) ) {
-			$comment_data['comment_meta']['avatar_url'] = \esc_url_raw( $actor['icon']['url'] );
+		// Store reference to remote actor post.
+		$actor_uri = object_to_uri( $activity['actor'] ?? null );
+		if ( $actor_uri ) {
+			$remote_actor = Remote_Actors::get_by_uri( $actor_uri );
+			if ( ! \is_wp_error( $remote_actor ) ) {
+				$comment_data['comment_meta']['_activitypub_remote_actor_id'] = $remote_actor->ID;
+			}
 		}
 
 		if ( isset( $activity['object']['url'] ) ) {

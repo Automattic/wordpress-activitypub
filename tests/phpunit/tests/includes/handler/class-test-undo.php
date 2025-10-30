@@ -332,7 +332,8 @@ class Test_Undo extends \WP_UnitTestCase {
 
 		$this->assertTrue( $action_fired );
 		$this->assertEquals( $activity, $activity_data );
-		$this->assertEquals( self::$user_id, $user_id_data );
+		$this->assertIsArray( $user_id_data, 'User ID should be an array' );
+		$this->assertContains( self::$user_id, $user_id_data, 'Array should contain user ID' );
 		// State can be false if follower removal fails, but action should still fire.
 		$this->assertTrue( isset( $state_data ) );
 	}

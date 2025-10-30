@@ -28,10 +28,10 @@ class Reject {
 	/**
 	 * Handles "Reject" requests.
 	 *
-	 * @param array $reject  The activity-object.
-	 * @param int   $user_id The id of the local blog-user.
+	 * @param array     $reject   The activity-object.
+	 * @param int|int[] $user_ids The user ID(s).
 	 */
-	public static function handle_reject( $reject, $user_id ) {
+	public static function handle_reject( $reject, $user_ids ) {
 		// Validate that there is a preceding Activity.
 		$outbox_post = Outbox::get_by_guid( $reject['object']['id'] );
 
@@ -42,7 +42,7 @@ class Reject {
 		// We currently only support reject for Follow activities. But we will support more in the future.
 		switch ( \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true ) ) {
 			case 'Follow':
-				self::reject_follow( $reject, $user_id );
+				self::reject_follow( $reject, $user_ids );
 				break;
 			default:
 				break;
@@ -52,10 +52,10 @@ class Reject {
 	/**
 	 * Reject a "Follow" request.
 	 *
-	 * @param array $reject  The activity-object.
-	 * @param int   $user_id The id of the local blog-user.
+	 * @param array     $reject   The activity-object.
+	 * @param int|int[] $user_ids The user ID(s).
 	 */
-	private static function reject_follow( $reject, $user_id ) {
+	private static function reject_follow( $reject, $user_ids ) {
 		$actor_uri  = $reject['object']['actor'] ?? '';
 		$actor_post = Remote_Actors::get_by_uri( object_to_uri( $actor_uri ) );
 
@@ -63,18 +63,19 @@ class Reject {
 			return;
 		}
 
+		$user_id = is_array( $user_ids ) ? reset( $user_ids ) : $user_ids;
 		$result  = Following::reject( $actor_post, $user_id );
 		$success = ! \is_wp_error( $result );
 
 		/**
 		 * Fires after an ActivityPub Reject activity has been handled.
 		 *
-		 * @param array              $reject  The ActivityPub activity data.
-		 * @param int                $user_id The local user ID.
-		 * @param bool               $success True on success, false otherwise.
-		 * @param \WP_Post|\WP_Error $result  Actor post on success, WP_Error on failure.
+		 * @param array              $reject   The ActivityPub activity data.
+		 * @param int[]              $user_ids The local user IDs.
+		 * @param bool               $success  True on success, false otherwise.
+		 * @param \WP_Post|\WP_Error $result   Actor post on success, WP_Error on failure.
 		 */
-		\do_action( 'activitypub_handled_reject', $reject, $user_id, $success, $result );
+		\do_action( 'activitypub_handled_reject', $reject, (array) $user_ids, $success, $result );
 	}
 
 	/**
