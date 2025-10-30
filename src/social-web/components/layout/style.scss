@@ -1,6 +1,5 @@
 /* Ensure provider wrappers (SlotFillProvider, ShortcutProvider) fill height */
-#activitypub-social-web-root > div,
-#activitypub-social-web-root > div > div {
+#activitypub-social-web-root > div {
 	height: 100%;
 }
 
