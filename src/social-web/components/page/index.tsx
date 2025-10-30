@@ -5,7 +5,7 @@
  */
 
 import { ReactNode } from 'react';
-import classNames from 'classnames';
+import clsx from 'clsx';
 import './style.scss';
 
 interface PageProps {
@@ -33,7 +33,7 @@ export function Page( {
 }: PageProps ) {
 	return (
 		<div className="page">
-			<header className={ classNames( 'header', { 'has-border': hasBorder } ) }>
+			<header className={ clsx( 'header', { 'has-border': hasBorder } ) }>
 				{ breadcrumbs && <div className="breadcrumbs">{ breadcrumbs }</div> }
 
 				<div className="title-row">
@@ -48,7 +48,7 @@ export function Page( {
 			</header>
 
 			<div
-				className={ classNames( 'content', {
+				className={ clsx( 'content', {
 					padded: hasPadding,
 					constrained: contentWidth === 'constrained',
 					full: contentWidth === 'full',

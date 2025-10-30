@@ -1,7 +1,7 @@
 /**
  * Design Tokens for ActivityPub Social Web
  *
- * Uses wpds design tokens for colors, spacing, typography, etc.
+ * Uses wpds design tokens directly for colors, spacing, typography, etc.
  * Only defines app-specific layout dimensions.
  */
 
@@ -10,20 +10,3 @@
   --sw-sidebar-width: 300px;
   --sw-inspector-width: 380px;
 }
-
-/* Border Radius - use wpds tokens */
-/* --wpds-border-radius-x-small, small, medium, large */
-
-/* Spacing - use wpds tokens */
-/* --wpds-spacing-05 through --wpds-spacing-80 */
-
-/* Colors - use wpds semantic color tokens */
-/* --wpds-color-bg-surface-neutral-* */
-/* --wpds-color-fg-* */
-/* --wpds-color-stroke-* */
-/* --wpds-color-bg-interactive-brand-* */
-
-/* Typography - use wpds tokens */
-/* --wpds-font-family-* */
-/* --wpds-font-size-* */
-/* --wpds-line-height-* */
