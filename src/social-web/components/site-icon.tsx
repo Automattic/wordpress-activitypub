@@ -1,10 +1,10 @@
 /**
  * WordPress dependencies
  */
-import React from '@wordpress/element';
+import React from 'react';
 import { Icon } from '@wordpress/components';
 import { wordpress } from '@wordpress/icons';
-import classnames from 'classnames';
+import clsx from 'clsx';
 
 /**
  * Internal dependencies
@@ -23,7 +23,7 @@ function SiteIcon( { className, siteIconUrl }: SiteIconProps ) {
 		<Icon className="edit-site-site-icon__icon" icon={ wordpress } size={ 48 } />
 	);
 
-	return <div className={ classnames( className, 'edit-site-site-icon' ) }>{ icon }</div>;
+	return <div className={ clsx( className, 'edit-site-site-icon' ) }>{ icon }</div>;
 }
 
 export default SiteIcon;

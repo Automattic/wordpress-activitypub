@@ -1,0 +1,12 @@
+/**
+ * Design Tokens for ActivityPub Social Web
+ *
+ * Uses wpds design tokens directly for colors, spacing, typography, etc.
+ * Only defines app-specific layout dimensions.
+ */
+
+:root {
+  /* Layout dimensions (app-specific) */
+  --sw-sidebar-width: 300px;
+  --sw-inspector-width: 380px;
+}

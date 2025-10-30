@@ -23,4 +23,6 @@ declare module '@wordpress/icons' {
 	export const arrowLeft: ReactElement;
 	export const cog: ReactElement;
 	export const chartBar: ReactElement;
+	export const addCard: ReactElement;
+	export const comment: ReactElement;
 }

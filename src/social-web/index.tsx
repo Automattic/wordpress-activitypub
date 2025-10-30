@@ -9,12 +9,13 @@ import { ShortcutProvider } from '@wordpress/keyboard-shortcuts';
 /**
  * Internal dependencies
  */
-import App from './app';
+import { Layout } from './components/layout';
 import type { SocialWebSettings } from './types';
-import './style.scss';
+import './store'; // Import to register the store
+import './style.scss'; // Import all styles
 
 /**
- * Initialize the Social Web editor.
+ * Initialize the Social Web application.
  *
  * @param id       The ID of the root element.
  * @param settings The editor settings.
@@ -29,7 +30,7 @@ export function initialize( id: string, settings: SocialWebSettings ): void {
 	root.render(
 		<ShortcutProvider>
 			<SlotFillProvider>
-				<App settings={ settings } />
+				<Layout />
 			</SlotFillProvider>
 		</ShortcutProvider>
 	);
