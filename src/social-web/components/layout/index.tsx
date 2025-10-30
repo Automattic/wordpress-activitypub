@@ -23,9 +23,55 @@ import FollowerInspector from '../../routes/followers/inspector';
 import FollowingInspector from '../../routes/following/inspector';
 import InteractionInspector from '../../routes/interactions/inspector';
 
+/**
+ * Parse the URL hash to extract section and item ID
+ * Format: #/section or #/section/itemId
+ */
+function parseHash(): { section: string; itemId: string | null } {
+	const hash = window.location.hash.slice( 1 ); // Remove #
+	if ( ! hash || hash === '/' ) {
+		return { section: 'dashboard', itemId: null };
+	}
+
+	const parts = hash.split( '/' ).filter( Boolean );
+	const section = parts[ 0 ] || 'dashboard';
+	const itemId = parts[ 1 ] || null;
+
+	return { section, itemId };
+}
+
+/**
+ * Update the URL hash without triggering a page reload
+ */
+function updateHash( section: string, itemId?: string | null ) {
+	const hash = itemId ? `#/${ section }/${ itemId }` : `#/${ section }`;
+	window.history.pushState( null, '', hash );
+}
+
 export function Layout() {
 	const [ activeSection, setActiveSection ] = useState( 'dashboard' );
 	const [ selectedItemId, setSelectedItemId ] = useState< string | null >( null );
+
+	// Initialize from URL hash on mount
+	useEffect( () => {
+		const { section, itemId } = parseHash();
+		setActiveSection( section );
+		setSelectedItemId( itemId );
+	}, [] );
+
+	// Listen for hash changes (back/forward navigation)
+	useEffect( () => {
+		const handleHashChange = () => {
+			const { section, itemId } = parseHash();
+			setActiveSection( section );
+			setSelectedItemId( itemId );
+		};
+
+		window.addEventListener( 'hashchange', handleHashChange );
+		return () => {
+			window.removeEventListener( 'hashchange', handleHashChange );
+		};
+	}, [] );
 
 	// Add fullscreen mode class to body
 	useEffect( () => {
@@ -37,10 +83,18 @@ export function Layout() {
 
 	const handleSelectItem = ( id: string ) => {
 		setSelectedItemId( id );
+		updateHash( activeSection, id );
 	};
 
 	const handleCloseInspector = () => {
 		setSelectedItemId( null );
+		updateHash( activeSection );
+	};
+
+	const handleNavigate = ( section: string ) => {
+		setActiveSection( section );
+		setSelectedItemId( null );
+		updateHash( section );
 	};
 
 	// Render main content (stage)
@@ -86,7 +140,7 @@ export function Layout() {
 			<div className="app-content">
 				{ /* Sidebar - 240px fixed width (no Panel wrapper, stays dark) */ }
 				<div className="sidebar-region">
-					<Sidebar activeSection={ activeSection } onNavigate={ setActiveSection } />
+					<Sidebar activeSection={ activeSection } onNavigate={ handleNavigate } />
 				</div>
 
 				{ /* Stage - main content area */ }
