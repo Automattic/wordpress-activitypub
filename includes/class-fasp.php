@@ -68,9 +68,7 @@ class Fasp {
 		usort(
 			$approved,
 			function ( $a, $b ) {
-				$approved_at_a = isset( $a['approved_at'] ) ? $a['approved_at'] : '';
-				$approved_at_b = isset( $b['approved_at'] ) ? $b['approved_at'] : '';
-				return strcmp( $approved_at_b, $approved_at_a );
+				return strcmp( $b['approved_at'] ?? '', $a['approved_at'] ?? '' );
 			}
 		);
 
