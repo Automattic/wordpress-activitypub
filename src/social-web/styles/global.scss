@@ -1,0 +1,38 @@
+/**
+ * Global styles for ActivityPub Social Web
+ */
+
+@import './design-tokens.scss';
+
+/* Override WordPress admin body styles when on this page */
+body.is-fullscreen-mode {
+	overflow: hidden;
+}
+
+body.is-fullscreen-mode #wpcontent,
+body.is-fullscreen-mode #wpfooter {
+	margin-left: 0 !important;
+}
+
+body.is-fullscreen-mode #adminmenumain,
+body.is-fullscreen-mode #wpadminbar {
+	display: none;
+}
+
+#activitypub-social-web-root {
+	bottom: 0;
+	left: 0;
+	min-height: 100vh;
+	position: fixed;
+	right: 0;
+	top: 0;
+}
+
+.activitypub-social-web-layout {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 99998;
+}

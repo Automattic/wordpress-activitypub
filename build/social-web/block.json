@@ -7,5 +7,5 @@
   "description": "Social Web admin interface",
   "textdomain": "activitypub",
   "editorScript": "file:./index.js",
-  "editorStyle": "file:./index.css"
+  "editorStyle": "file:./style.scss"
 }

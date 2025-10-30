@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import React from '@wordpress/element';
+import React from 'react';
 import { Icon } from '@wordpress/components';
 import { wordpress } from '@wordpress/icons';
 import classnames from 'classnames';

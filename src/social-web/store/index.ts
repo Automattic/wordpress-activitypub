@@ -2,8 +2,8 @@
  * WordPress dependencies
  */
 import { createReduxStore, register } from '@wordpress/data';
+import { controls as dataControls } from '@wordpress/data-controls';
 import apiFetch from '@wordpress/api-fetch';
-import { controls } from '@wordpress/data';
 
 /**
  * Internal dependencies
@@ -37,32 +37,56 @@ const DEFAULT_STATE: State = {
 	},
 };
 
+// Action Types
+type SetFollowersAction = {
+	type: 'SET_FOLLOWERS';
+	followers: Follower[];
+};
+
+type SetFollowingAction = {
+	type: 'SET_FOLLOWING';
+	following: Following[];
+};
+
+type SetInteractionsAction = {
+	type: 'SET_INTERACTIONS';
+	interactions: Interaction[];
+};
+
+type SetLoadingAction = {
+	type: 'SET_LOADING';
+	resource: keyof State[ 'isLoading' ];
+	isLoading: boolean;
+};
+
+type Action = SetFollowersAction | SetFollowingAction | SetInteractionsAction | SetLoadingAction;
+
 // Actions
 const actions = {
-	setFollowers( followers: Follower[] ) {
+	setFollowers( followers: Follower[] ): SetFollowersAction {
 		return {
-			type: 'SET_FOLLOWERS' as const,
+			type: 'SET_FOLLOWERS',
 			followers,
 		};
 	},
 
-	setFollowing( following: Following[] ) {
+	setFollowing( following: Following[] ): SetFollowingAction {
 		return {
-			type: 'SET_FOLLOWING' as const,
+			type: 'SET_FOLLOWING',
 			following,
 		};
 	},
 
-	setInteractions( interactions: Interaction[] ) {
+	setInteractions( interactions: Interaction[] ): SetInteractionsAction {
 		return {
-			type: 'SET_INTERACTIONS' as const,
+			type: 'SET_INTERACTIONS',
 			interactions,
 		};
 	},
 
-	setLoading( resource: keyof State[ 'isLoading' ], isLoading: boolean ) {
+	setLoading( resource: keyof State[ 'isLoading' ], isLoading: boolean ): SetLoadingAction {
 		return {
-			type: 'SET_LOADING' as const,
+			type: 'SET_LOADING',
 			resource,
 			isLoading,
 		};
@@ -178,8 +202,6 @@ const selectors = {
 };
 
 // Reducer
-type Action = ReturnType< ( typeof actions )[ keyof typeof actions ] >;
-
 function reducer( state = DEFAULT_STATE, action: Action ): State {
 	switch ( action.type ) {
 		case 'SET_FOLLOWERS':
@@ -219,7 +241,7 @@ export const store = createReduxStore( STORE_NAME, {
 	reducer,
 	actions,
 	selectors,
-	controls,
+	controls: dataControls,
 } );
 
 register( store );

@@ -1,0 +1,56 @@
+/* Ensure provider wrappers (SlotFillProvider, ShortcutProvider) fill height */
+#activitypub-social-web-root > div,
+#activitypub-social-web-root > div > div {
+	height: 100%;
+}
+
+.app-layout {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	background-color: #1e1e1e;
+	overflow: hidden;
+}
+
+.app-content {
+	width: 100%;
+	height: 100%;
+	flex-grow: 1;
+	display: flex;
+	background-color: #1e1e1e;
+	overflow: hidden;
+}
+
+.sidebar-region {
+	flex-shrink: 0;
+	width: 300px;
+	display: flex;
+	flex-direction: column;
+}
+
+.stage-region {
+	flex-grow: 1;
+	min-width: 400px;
+	display: flex;
+	flex-direction: column;
+}
+
+.inspector-region {
+	width: var(--sw-inspector-width);
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+// Responsive
+@media (max-width: 782px) {
+	.app-content {
+		flex-direction: column;
+	}
+
+	.sidebar-region,
+	.inspector-region {
+		width: 100%;
+	}
+}

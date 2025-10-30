@@ -36,26 +36,32 @@ interface SocialWebActions {
 }
 
 /**
- * Hook to access Social Web data and actions
+ * Hook to access Social Web data and actions (full version - internal)
  */
-export function useSocialWebData(): SocialWebData & SocialWebActions {
+function useSocialWebDataFull(): SocialWebData & SocialWebActions {
 	const data = useSelect( ( select ) => {
-		const store = select( STORE_NAME );
+		const store = select( STORE_NAME ) as any;
 		return {
-			followers: store.getFollowers(),
-			following: store.getFollowing(),
-			interactions: store.getInteractions(),
-			stats: store.getStats(),
+			followers: store.getFollowers() as Follower[],
+			following: store.getFollowing() as Following[],
+			interactions: store.getInteractions() as Interaction[],
+			stats: store.getStats() as {
+				followers: number;
+				following: number;
+				interactions: number;
+				posts: number;
+			},
 			isLoading: {
-				followers: store.isLoading( 'followers' ),
-				following: store.isLoading( 'following' ),
-				interactions: store.isLoading( 'interactions' ),
+				followers: store.isLoading( 'followers' ) as boolean,
+				following: store.isLoading( 'following' ) as boolean,
+				interactions: store.isLoading( 'interactions' ) as boolean,
 			},
 		};
 	}, [] );
 
-	const { fetchFollowers, fetchFollowing, fetchInteractions, blockFollower, removeFollower } =
-		useDispatch( STORE_NAME );
+	const { fetchFollowers, fetchFollowing, fetchInteractions, blockFollower, removeFollower } = useDispatch(
+		STORE_NAME
+	) as any;
 
 	// Fetch initial data
 	useEffect( () => {
@@ -75,13 +81,63 @@ export function useSocialWebData(): SocialWebData & SocialWebActions {
 }
 
 /**
+ * Hook to access Social Web data with optional resource filtering
+ */
+export function useSocialWebData(
+	resource?: 'followers' | 'following' | 'interactions',
+	id?: string
+): {
+	items: any;
+	isLoading: boolean;
+} {
+	const allData = useSocialWebDataFull();
+
+	if ( ! resource ) {
+		// Return all data if no resource specified
+		return {
+			items: allData,
+			isLoading: false,
+		};
+	}
+
+	if ( id ) {
+		// Return single item
+		const item = useSelect(
+			( select ) => {
+				const store = select( STORE_NAME ) as any;
+				if ( resource === 'followers' ) {
+					return store.getFollowerById( id ) as Follower | undefined;
+				} else if ( resource === 'following' ) {
+					return store.getFollowingById( id ) as Following | undefined;
+				} else if ( resource === 'interactions' ) {
+					return store.getInteractionById( id ) as Interaction | undefined;
+				}
+				return null;
+			},
+			[ resource, id ]
+		);
+
+		return {
+			items: item,
+			isLoading: allData.isLoading[ resource ],
+		};
+	}
+
+	// Return list of items for the resource
+	return {
+		items: allData[ resource ],
+		isLoading: allData.isLoading[ resource ],
+	};
+}
+
+/**
  * Hook to get a specific follower by ID
  */
 export function useFollower( id: string ): Follower | undefined {
 	return useSelect(
 		( select ) => {
-			const store = select( STORE_NAME );
-			return store.getFollowerById( id );
+			const store = select( STORE_NAME ) as any;
+			return store.getFollowerById( id ) as Follower | undefined;
 		},
 		[ id ]
 	);
@@ -93,8 +149,8 @@ export function useFollower( id: string ): Follower | undefined {
 export function useFollowing( id: string ): Following | undefined {
 	return useSelect(
 		( select ) => {
-			const store = select( STORE_NAME );
-			return store.getFollowingById( id );
+			const store = select( STORE_NAME ) as any;
+			return store.getFollowingById( id ) as Following | undefined;
 		},
 		[ id ]
 	);
@@ -106,8 +162,8 @@ export function useFollowing( id: string ): Following | undefined {
 export function useInteraction( id: string ): Interaction | undefined {
 	return useSelect(
 		( select ) => {
-			const store = select( STORE_NAME );
-			return store.getInteractionById( id );
+			const store = select( STORE_NAME ) as any;
+			return store.getInteractionById( id ) as Interaction | undefined;
 		},
 		[ id ]
 	);

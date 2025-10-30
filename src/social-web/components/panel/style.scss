@@ -1,0 +1,10 @@
+.panel {
+	background: var(--wpds-color-bg-surface-neutral-strong, #ffffff);
+	border-radius: var(--wpds-border-radius-large, 8px);
+	overflow: hidden;
+	margin: 16px 16px 16px 0;
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
