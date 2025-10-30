@@ -57,11 +57,13 @@ class Social_Web {
 				} );',
 				\wp_json_encode(
 					array(
-						'siteUrl'   => \site_url(),
-						'siteTitle' => \get_bloginfo( 'name' ),
-						'adminUrl'  => \admin_url(),
-						'restUrl'   => \rest_url(),
-						'nonce'     => \wp_create_nonce( 'wp_rest' ),
+						'siteUrl'       => \site_url(),
+						'siteTitle'     => \get_bloginfo( 'name' ),
+						'adminUrl'      => \admin_url(),
+						'restUrl'       => \rest_url(),
+						'nonce'         => \wp_create_nonce( 'wp_rest' ),
+						'namespace'     => ACTIVITYPUB_REST_NAMESPACE,
+						'defaultAvatar' => \plugins_url( 'assets/img/mp.jpg', ACTIVITYPUB_PLUGIN_FILE ),
 					)
 				)
 			)

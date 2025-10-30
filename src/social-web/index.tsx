@@ -10,6 +10,7 @@ import { ShortcutProvider } from '@wordpress/keyboard-shortcuts';
  * Internal dependencies
  */
 import { Layout } from './components/layout';
+import { SettingsProvider } from './contexts/settings-context';
 import type { SocialWebSettings } from './types';
 import './store'; // Import to register the store
 import './style.scss'; // Import all styles
@@ -28,11 +29,13 @@ export function initialize( id: string, settings: SocialWebSettings ): void {
 
 	const root = createRoot( target );
 	root.render(
-		<ShortcutProvider>
-			<SlotFillProvider>
-				<Layout />
-			</SlotFillProvider>
-		</ShortcutProvider>
+		<SettingsProvider settings={ settings }>
+			<ShortcutProvider>
+				<SlotFillProvider>
+					<Layout />
+				</SlotFillProvider>
+			</ShortcutProvider>
+		</SettingsProvider>
 	);
 }
 

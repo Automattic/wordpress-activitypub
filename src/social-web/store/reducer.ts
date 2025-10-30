@@ -9,12 +9,6 @@ import { DEFAULT_STATE } from './types';
  */
 export function reducer( state = DEFAULT_STATE, action: Action ): State {
 	switch ( action.type ) {
-		case 'SET_FOLLOWERS':
-			return {
-				...state,
-				followers: action.followers,
-			};
-
 		case 'SET_FOLLOWING':
 			return {
 				...state,

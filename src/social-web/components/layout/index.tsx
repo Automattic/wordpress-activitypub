@@ -9,6 +9,9 @@
 
 import { useState, useEffect } from '@wordpress/element';
 import { CommandMenu } from '@wordpress/commands';
+import { SnackbarList } from '@wordpress/components';
+import { useSelect, useDispatch } from '@wordpress/data';
+import { store as noticesStore } from '@wordpress/notices';
 import Sidebar from '../sidebar';
 import Panel from '../panel';
 import './style.scss';
@@ -20,7 +23,6 @@ import FollowingStage from '../../routes/following/stage';
 import InteractionsStage from '../../routes/interactions/stage';
 
 // Import inspector components.
-import FollowerInspector from '../../routes/followers/inspector';
 import FollowingInspector from '../../routes/following/inspector';
 import InteractionInspector from '../../routes/interactions/inspector';
 
@@ -52,6 +54,13 @@ function updateHash( section: string, itemId?: string | null ) {
 export function Layout() {
 	const [ activeSection, setActiveSection ] = useState( 'dashboard' );
 	const [ selectedItemId, setSelectedItemId ] = useState< string | null >( null );
+
+	// Get notices for the snackbar
+	const notices = useSelect( ( select ) => {
+		const store = select( noticesStore ) as any;
+		return store.getNotices().filter( ( notice: any ) => notice.type === 'snackbar' );
+	}, [] );
+	const { removeNotice } = useDispatch( noticesStore ) as any;
 
 	// Initialize from URL hash on mount
 	useEffect( () => {
@@ -106,7 +115,7 @@ export function Layout() {
 			case 'dashboard':
 				return <DashboardStage />;
 			case 'followers':
-				return <FollowersStage { ...props } />;
+				return <FollowersStage />;
 			case 'following':
 				return <FollowingStage { ...props } />;
 			case 'interactions':
@@ -123,8 +132,6 @@ export function Layout() {
 		const props = { id: selectedItemId, onClose: handleCloseInspector };
 
 		switch ( activeSection ) {
-			case 'followers':
-				return <FollowerInspector { ...props } />;
 			case 'following':
 				return <FollowingInspector { ...props } />;
 			case 'interactions':
@@ -157,6 +164,8 @@ export function Layout() {
 					</div>
 				) }
 			</div>
+
+			<SnackbarList notices={ notices } onRemove={ removeNotice } />
 		</div>
 	);
 }
