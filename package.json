@@ -57,7 +57,7 @@
 		"@wordpress/prettier-config": "^4.31.0",
 		"@wordpress/primitives": "^4.31.0",
 		"@wordpress/scripts": "^30.23.0",
-		"@wordpress/url": "^4.22.0",
+		"@wordpress/url": "^4.34.0",
 		"classnames": "^2.3.2",
 		"prettier": "npm:wp-prettier@^3.0.3"
 	}
