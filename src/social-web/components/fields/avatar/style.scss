@@ -1,4 +1,6 @@
-.activitypub-avatar-field__image {
-	max-height: 32px;
-	max-width: 32px;
+.dataviews-view-table { // Only in Table views.
+	.activitypub-avatar-field__image {
+		height: 32px;
+		width: 32px;
+	}
 }
