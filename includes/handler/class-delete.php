@@ -36,10 +36,10 @@ class Delete {
 	/**
 	 * Handles "Delete" requests.
 	 *
-	 * @param array $activity The delete activity.
-	 * @param int   $user_id  The local user ID.
+	 * @param array     $activity The delete activity.
+	 * @param int|int[] $user_ids The local user ID(s).
 	 */
-	public static function handle_delete( $activity, $user_id ) {
+	public static function handle_delete( $activity, $user_ids ) {
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
@@ -53,7 +53,7 @@ class Delete {
 			case 'Organization':
 			case 'Service':
 			case 'Application':
-				self::delete_remote_actor( $activity, $user_id );
+				self::delete_remote_actor( $activity, $user_ids );
 				break;
 
 			/*
@@ -68,7 +68,7 @@ class Delete {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::delete_object( $activity, $user_id );
+				self::delete_object( $activity, $user_ids );
 				break;
 
 			/*
@@ -77,7 +77,7 @@ class Delete {
 			 * @see: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone
 			 */
 			case 'Tombstone':
-				self::delete_object( $activity, $user_id );
+				self::delete_object( $activity, $user_ids );
 				break;
 
 			/*
@@ -88,9 +88,9 @@ class Delete {
 			default:
 				// Check if Object is an Actor.
 				if ( object_to_uri( $activity['object'] ) === $activity['actor'] ) {
-					self::delete_remote_actor( $activity, $user_id );
+					self::delete_remote_actor( $activity, $user_ids );
 				} else { // Assume an object otherwise.
-					self::delete_object( $activity, $user_id );
+					self::delete_object( $activity, $user_ids );
 				}
 				// Maybe handle Delete Activity for other Object Types.
 				break;
@@ -100,10 +100,10 @@ class Delete {
 	/**
 	 * Delete an Object.
 	 *
-	 * @param array $activity The Activity object.
-	 * @param int   $user_id  The user ID.
+	 * @param array     $activity The Activity object.
+	 * @param int|int[] $user_ids The user ID(s).
 	 */
-	public static function delete_object( $activity, $user_id ) {
+	public static function delete_object( $activity, $user_ids ) {
 		// Check for private and/or direct messages.
 		if ( is_activity_reply( $activity ) ) {
 			$result = self::maybe_delete_interaction( $activity );
@@ -117,22 +117,20 @@ class Delete {
 		 * Fires after an ActivityPub Delete activity has been handled.
 		 *
 		 * @param array      $activity The ActivityPub activity data.
-		 * @param int        $user_id  The local user ID.
+		 * @param int[]      $user_ids The local user IDs.
 		 * @param bool       $success  True on success, false otherwise.
 		 * @param mixed|null $result   The result of the delete operation.
 		 */
-		\do_action( 'activitypub_handled_delete', $activity, $user_id, $success, $result );
+		\do_action( 'activitypub_handled_delete', $activity, (array) $user_ids, $success, $result );
 	}
 
 	/**
 	 * Delete an Actor.
 	 *
-	 * @param array $activity The Activity object.
-	 * @param int   $user_id  The user ID.
-	 *
-	 * @return bool|\WP_Error True on success, false or WP_Error on failure.
+	 * @param array     $activity The Activity object.
+	 * @param int|int[] $user_ids The user ID(s).
 	 */
-	public static function delete_remote_actor( $activity, $user_id ) {
+	public static function delete_remote_actor( $activity, $user_ids ) {
 		$result  = self::maybe_delete_follower( $activity );
 		$success = ( $result && ! \is_wp_error( $result ) );
 
@@ -140,11 +138,11 @@ class Delete {
 		 * Fires after an ActivityPub Delete activity has been handled.
 		 *
 		 * @param array      $activity The ActivityPub activity data.
-		 * @param int        $user_id  The local user ID.
+		 * @param int[]      $user_ids The local user IDs.
 		 * @param bool       $success  True on success, false otherwise.
 		 * @param mixed|null $result   The result of the delete operation.
 		 */
-		\do_action( 'activitypub_handled_delete', $activity, $user_id, $success, $result );
+		\do_action( 'activitypub_handled_delete', $activity, (array) $user_ids, $success, $result );
 
 		return $result;
 	}

@@ -34,10 +34,13 @@ class Quote_Request {
 	/**
 	 * Handle QuoteRequest activities.
 	 *
-	 * @param array $activity The activity object.
-	 * @param int   $user_id  The user ID.
+	 * @param array     $activity The activity object.
+	 * @param int|int[] $user_ids The user ID(s).
 	 */
-	public static function handle_quote_request( $activity, $user_id ) {
+	public static function handle_quote_request( $activity, $user_ids ) {
+		// Extract the user ID (quote requests are always for a single user).
+		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
+
 		$state   = true;
 		$post_id = \url_to_postid( object_to_uri( $activity['object'] ) );
 
@@ -72,24 +75,27 @@ class Quote_Request {
 		 * Fires after an ActivityPub QuoteRequest activity has been handled.
 		 *
 		 * @param array  $activity       The ActivityPub activity data.
-		 * @param int    $user_id        The local user ID.
+		 * @param int[]  $user_ids       The local user IDs.
 		 * @param bool   $success        True on success, false otherwise.
 		 * @param string $content_policy The content policy for the quoted post.
 		 */
-		\do_action( 'activitypub_handled_quote_request', $activity, $user_id, $state, $content_policy );
+		\do_action( 'activitypub_handled_quote_request', $activity, (array) $user_ids, $state, $content_policy );
 	}
 
 	/**
 	 * ActivityPub inbox disallowed activity.
 	 *
-	 * @param array    $activity The activity array.
-	 * @param int|null $user_id  The user ID.
-	 * @param string   $type     The type of the activity.
+	 * @param array          $activity The activity array.
+	 * @param int|int[]|null $user_ids The user ID(s).
+	 * @param string         $type     The type of the activity.
 	 */
-	public static function handle_blocked_request( $activity, $user_id, $type ) {
+	public static function handle_blocked_request( $activity, $user_ids, $type ) {
 		if ( 'quoterequest' !== \strtolower( $type ) ) {
 			return;
 		}
+
+		// Extract the user ID (quote requests are always for a single user).
+		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 
 		self::queue_reject( $activity, $user_id );
 	}
