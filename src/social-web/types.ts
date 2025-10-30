@@ -98,11 +98,9 @@ export interface FeedPost {
 	comment_status: string;
 	ping_status: string;
 	actor?: {
-		id: string;
-		name: string;
-		preferredUsername: string;
-		url: string;
-		icon: string | object | null;
-		type: string;
+		ID: number;
+		post_title: string;
+		post_excerpt: string;
+		guid: string;
 	} | null;
 }
