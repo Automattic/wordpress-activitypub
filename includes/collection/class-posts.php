@@ -28,14 +28,23 @@ class Posts {
 	/**
 	 * Add an object to the collection.
 	 *
-	 * @param array $activity The activity object data.
-	 * @param int   $user_id  The local user ID.
+	 * @param array     $activity   The activity object data.
+	 * @param int|int[] $recipients The id(s) of the local blog-user(s).
 	 *
 	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
 	 */
-	public static function add( $activity, $user_id ) {
+	public static function add( $activity, $recipients ) {
+		$recipients      = (array) $recipients;
 		$activity_object = $activity['object'];
-		$actor           = Remote_Actors::fetch_by_uri( object_to_uri( $activity_object['attributedTo'] ) );
+
+		$existing = self::get_by_guid( $activity_object['id'] );
+		// If post exists, call update instead.
+		if ( ! \is_wp_error( $existing ) ) {
+			return self::update( $activity, $recipients );
+		}
+
+		// Post doesn't exist, create new post.
+		$actor = Remote_Actors::fetch_by_uri( object_to_uri( $activity_object['attributedTo'] ) );
 
 		if ( \is_wp_error( $actor ) ) {
 			return $actor;
@@ -49,7 +58,11 @@ class Posts {
 		}
 
 		\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor->ID );
-		\add_post_meta( $post_id, '_activitypub_user_id', $user_id );
+
+		// Add recipients as separate meta entries after post is created.
+		foreach ( $recipients as $user_id ) {
+			self::add_recipient( $post_id, $user_id );
+		}
 
 		self::add_taxonomies( $post_id, $activity_object );
 
@@ -104,12 +117,14 @@ class Posts {
 	/**
 	 * Update an object in the collection.
 	 *
-	 * @param array $activity The activity object data.
-	 * @param int   $user_id  The local user ID.
+	 * @param array     $activity   The activity object data.
+	 * @param int|int[] $recipients The id(s) of the local blog-user(s).
 	 *
 	 * @return \WP_Post|\WP_Error The updated object post or WP_Error on failure.
 	 */
-	public static function update( $activity, $user_id ) {
+	public static function update( $activity, $recipients ) {
+		$recipients = (array) $recipients;
+
 		$post = self::get_by_guid( $activity['object']['id'] );
 		if ( \is_wp_error( $post ) ) {
 			return $post;
@@ -123,9 +138,9 @@ class Posts {
 			return $post_id;
 		}
 
-		$post_meta = \get_post_meta( $post_id, '_activitypub_user_id', false );
-		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
-			\add_post_meta( $post_id, '_activitypub_user_id', $user_id );
+		// Add new recipients using add_recipient (handles deduplication).
+		foreach ( $recipients as $user_id ) {
+			self::add_recipient( $post_id, $user_id );
 		}
 
 		self::add_taxonomies( $post_id, $activity['object'] );
@@ -249,5 +264,90 @@ class Posts {
 		);
 
 		return $query->posts;
+	}
+
+	/**
+	 * Get all recipients for a post.
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return int[] Array of user IDs who are recipients.
+	 */
+	public static function get_recipients( $post_id ) {
+		// Get all meta values with key '_activitypub_user_id' (single => false).
+		$recipients = \get_post_meta( $post_id, '_activitypub_user_id', false );
+		$recipients = \array_map( 'intval', $recipients );
+
+		return $recipients;
+	}
+
+	/**
+	 * Check if a user is a recipient of a post.
+	 *
+	 * @param int $post_id The post ID.
+	 * @param int $user_id The user ID to check.
+	 *
+	 * @return bool True if user is a recipient, false otherwise.
+	 */
+	public static function has_recipient( $post_id, $user_id ) {
+		$recipients = self::get_recipients( $post_id );
+
+		return \in_array( (int) $user_id, $recipients, true );
+	}
+
+	/**
+	 * Add a recipient to an existing post.
+	 *
+	 * @param int $post_id The post ID.
+	 * @param int $user_id The user ID to add.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function add_recipient( $post_id, $user_id ) {
+		$user_id = (int) $user_id;
+		// Allow 0 for blog user, but reject negative values.
+		if ( $user_id < 0 ) {
+			return false;
+		}
+
+		// Check if already a recipient.
+		if ( self::has_recipient( $post_id, $user_id ) ) {
+			return true;
+		}
+
+		// Add new recipient as separate meta entry.
+		return (bool) \add_post_meta( $post_id, '_activitypub_user_id', $user_id, false );
+	}
+
+	/**
+	 * Add multiple recipients to an existing post.
+	 *
+	 * @param int   $post_id  The post ID.
+	 * @param int[] $user_ids The user ID or array of user IDs to add.
+	 */
+	public static function add_recipients( $post_id, $user_ids ) {
+		foreach ( $user_ids as $user_id ) {
+			self::add_recipient( $post_id, $user_id );
+		}
+	}
+
+	/**
+	 * Remove a recipient from a post.
+	 *
+	 * @param int $post_id The post ID.
+	 * @param int $user_id The user ID to remove.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function remove_recipient( $post_id, $user_id ) {
+		$user_id = (int) $user_id;
+
+		// Allow 0 for blog user, but reject negative values.
+		if ( $user_id < 0 ) {
+			return false;
+		}
+
+		// Delete the specific meta entry with this value.
+		return \delete_post_meta( $post_id, '_activitypub_user_id', $user_id );
 	}
 }

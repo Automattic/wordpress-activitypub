@@ -57,6 +57,16 @@ class Attachments {
 	/**
 	 * Import attachments from an ActivityPub object and attach them to a post.
 	 *
+	 * Creates full WordPress attachment posts in the media library. Each attachment
+	 * becomes a searchable, manageable attachment post that appears in the WordPress
+	 * Media Library and is part of the user's content.
+	 *
+	 * Use this when:
+	 * - Importing content that will be owned and editable by the user.
+	 * - You need WordPress attachment posts with full metadata support.
+	 * - Media should be searchable and manageable in the Media Library.
+	 * - Working with content that will be part of the user's site (e.g., importers).
+	 *
 	 * @param array $attachments Array of ActivityPub attachment objects.
 	 * @param int   $post_id     The post ID to attach files to.
 	 * @param int   $author_id   Optional. User ID to set as attachment author. Default 0.
@@ -103,7 +113,17 @@ class Attachments {
 	 * Import attachments as direct files for posts.
 	 *
 	 * Saves files directly to uploads/activitypub/ap_posts/{post_id}/ without creating
-	 * WordPress attachment posts. Used for ActivityPub inbox items.
+	 * WordPress attachment posts. This lightweight approach is ideal for federated content
+	 * that doesn't require full WordPress media management.
+	 *
+	 * Files are stored in a dedicated directory structure and automatically cleaned up
+	 * when the parent post is deleted. Media URLs point directly to the stored files
+	 * rather than going through WordPress attachment APIs.
+	 *
+	 * Use this when:
+	 * - Processing ActivityPub Create/Update activities from the inbox.
+	 * - Handling federated content that won't be owned or edited by the user.
+	 * - You want lightweight storage without Media Library overhead.
 	 *
 	 * @param array $attachments Array of ActivityPub attachment objects.
 	 * @param int   $post_id     The post ID to attach files to.

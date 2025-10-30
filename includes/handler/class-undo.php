@@ -26,10 +26,10 @@ class Undo {
 	/**
 	 * Handle "Unfollow" requests.
 	 *
-	 * @param array    $activity The JSON "Undo" Activity.
-	 * @param int|null $user_id  The ID of the user who initiated the "Undo" activity.
+	 * @param array          $activity The JSON "Undo" Activity.
+	 * @param int|int[]|null $user_ids The user ID(s).
 	 */
-	public static function handle_undo( $activity, $user_id ) {
+	public static function handle_undo( $activity, $user_ids ) {
 		$success = false;
 		$result  = Inbox_Collection::undo( object_to_uri( $activity['object'] ) );
 
@@ -41,11 +41,11 @@ class Undo {
 		 * Fires after an ActivityPub Undo activity has been handled.
 		 *
 		 * @param array              $activity The ActivityPub activity data.
-		 * @param int                $user_id  The local user ID.
+		 * @param int[]              $user_ids The local user IDs.
 		 * @param bool               $success  True on success, false on failure.
 		 * @param \WP_Comment|string $result   The target, based on the activity that is being undone.
 		 */
-		\do_action( 'activitypub_handled_undo', $activity, $user_id, $success, $result );
+		\do_action( 'activitypub_handled_undo', $activity, (array) $user_ids, $success, $result );
 	}
 
 	/**
