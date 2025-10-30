@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
+import { CommandMenu } from '@wordpress/commands';
 import Sidebar from '../sidebar';
 import Panel from '../panel';
 import './style.scss';
@@ -148,6 +149,7 @@ export function Layout() {
 
 	return (
 		<div className="app-layout">
+			<CommandMenu />
 			<div className="app-content">
 				{ /* Sidebar - 240px fixed width (no Panel wrapper, stays dark) */ }
 				<div className="sidebar-region">

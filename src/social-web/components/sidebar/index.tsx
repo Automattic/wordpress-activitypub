@@ -6,8 +6,9 @@
 
 import { NavigableMenu, MenuItem, MenuGroup, Icon } from '@wordpress/components';
 import { home, people, addCard, comment, postList } from '@wordpress/icons';
-import './style.scss';
 import { __ } from '@wordpress/i18n';
+import SiteHub from '../site-hub';
+import './style.scss';
 
 const menuItems = [
 	{ id: 'dashboard', label: __( 'Dashboard' ), icon: home },
@@ -25,10 +26,7 @@ interface SidebarProps {
 export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 	return (
 		<div className="sidebar">
-			{ /* Header */ }
-			<div className="header">
-				<h1 className="title">{ __( 'Social Web' ) }</h1>
-			</div>
+			<SiteHub />
 
 			{ /* Navigation */ }
 			<nav className="nav">

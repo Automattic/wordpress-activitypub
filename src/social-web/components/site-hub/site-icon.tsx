@@ -6,11 +6,6 @@ import { Icon } from '@wordpress/components';
 import { wordpress } from '@wordpress/icons';
 import clsx from 'clsx';
 
-/**
- * Internal dependencies
- */
-import type { SocialWebSettings } from '../types';
-
 interface SiteIconProps {
 	className?: string;
 	siteIconUrl?: string;
