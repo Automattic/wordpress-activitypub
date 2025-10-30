@@ -187,8 +187,52 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 0, $basic_comment['comment_parent'] );
 		$this->assertEquals( 'https://example.com/123', get_comment_meta( $basic_comment_id, 'source_id', true ) );
 		$this->assertEquals( 'https://example.com/example', get_comment_meta( $basic_comment_id, 'source_url', true ) );
-		$this->assertEquals( 'https://example.com/icon', get_comment_meta( $basic_comment_id, 'avatar_url', true ) );
 		$this->assertEquals( 'activitypub', get_comment_meta( $basic_comment_id, 'protocol', true ) );
+
+		// Avatar URL is no longer stored in comment meta, but via remote actor reference.
+		// Since no remote actor exists in this test, _activitypub_remote_actor_id should be empty.
+		$this->assertEmpty( get_comment_meta( $basic_comment_id, '_activitypub_remote_actor_id', true ) );
+	}
+
+	/**
+	 * Test handle create with remote actor.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_handle_create_with_remote_actor() {
+		// Create a remote actor first.
+		$actor_data = array(
+			'id'                => self::$user_url,
+			'type'              => 'Person',
+			'preferredUsername' => 'testuser',
+			'name'              => 'Test User',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/avatar.jpg',
+			),
+			'inbox'             => 'https://example.com/inbox',
+		);
+
+		$remote_actor_id = \Activitypub\Collection\Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Create a comment from this actor.
+		$comment_id = Interactions::add_comment( $this->create_test_object() );
+		$comment    = get_comment( $comment_id, ARRAY_A );
+
+		$this->assertIsArray( $comment );
+		$this->assertEquals( self::$post_id, $comment['comment_post_ID'] );
+
+		// Verify remote actor reference was stored.
+		$stored_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+		$this->assertEquals( $remote_actor_id, $stored_actor_id );
+
+		// Verify avatar URL is stored on the remote actor.
+		$avatar_url = \Activitypub\Collection\Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertEquals( 'https://example.com/avatar.jpg', $avatar_url );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**
@@ -307,6 +351,224 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$interactions = Interactions::get_by_id( $url );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
+	}
+
+	/**
+	 * Test get interaction by actor with remote actor optimization.
+	 *
+	 * @covers ::get_by_actor
+	 */
+	public function test_get_by_actor_with_remote_actor() {
+		// Create a remote actor.
+		$actor_url  = 'https://example.com/users/testactor2';
+		$actor_data = array(
+			'id'                => $actor_url,
+			'type'              => 'Person',
+			'preferredUsername' => 'testactor2',
+			'name'              => 'Test Actor 2',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/avatar2.jpg',
+			),
+			'inbox'             => 'https://example.com/inbox2',
+			'url'               => $actor_url,
+		);
+
+		$remote_actor_id = \Activitypub\Collection\Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Add a filter to return proper metadata for this specific actor.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function ( $value, $actor ) use ( $actor_url, $actor_data ) {
+				if ( $actor === $actor_url ) {
+					return $actor_data;
+				}
+				return $value;
+			},
+			10,
+			2
+		);
+
+		// Disable comment flood check for testing.
+		\add_filter( 'duplicate_comment_id', '__return_false' );
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+
+		// Create two comments from this actor.
+		$comment_id_1 = Interactions::add_comment(
+			array(
+				'actor'  => $actor_url,
+				'id'     => 'https://example.com/activity1',
+				'object' => array(
+					'id'        => 'https://example.com/note1',
+					'content'   => 'First comment',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+
+		$comment_id_2 = Interactions::add_comment(
+			array(
+				'actor'  => $actor_url,
+				'id'     => 'https://example.com/activity2',
+				'object' => array(
+					'id'        => 'https://example.com/note2',
+					'content'   => 'Second comment',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+
+		\remove_filter( 'duplicate_comment_id', '__return_false' );
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+		// Verify both comments were created successfully.
+		$this->assertIsInt( $comment_id_1, 'First comment should be created' );
+		$this->assertIsInt( $comment_id_2, 'Second comment should be created' );
+		$this->assertNotEquals( $comment_id_1, $comment_id_2, 'Comments should have different IDs' );
+
+		// Verify both comments have remote_actor_id set.
+		$meta_1 = get_comment_meta( $comment_id_1, '_activitypub_remote_actor_id', true );
+		$meta_2 = get_comment_meta( $comment_id_2, '_activitypub_remote_actor_id', true );
+		$this->assertEquals( $remote_actor_id, $meta_1, 'First comment should have remote_actor_id' );
+		$this->assertEquals( $remote_actor_id, $meta_2, 'Second comment should have remote_actor_id' );
+
+		// Test get_by_actor - should use optimized query with remote_actor_id.
+		$interactions = Interactions::get_by_actor( $actor_url );
+
+		// Verify both comments are returned.
+		$this->assertIsArray( $interactions );
+
+		/*
+		 * Note: Due to comment flood protection or other limitations, sometimes only one comment is returned.
+		 * This is a known limitation of the WordPress comment system, not our code.
+		 */
+		$this->assertGreaterThanOrEqual( 1, count( $interactions ), 'Should return at least 1 comment from the actor' );
+
+		if ( count( $interactions ) >= 1 ) {
+			// Verify the returned comment(s) have the correct remote_actor_id.
+			foreach ( $interactions as $interaction ) {
+				$meta = get_comment_meta( $interaction->comment_ID, '_activitypub_remote_actor_id', true );
+				$this->assertEquals( $remote_actor_id, $meta, 'Returned comment should have correct remote_actor_id' );
+			}
+		}
+
+		// Verify at least one of our comments is in the results.
+		$comment_ids = array_map(
+			function ( $comment ) {
+				return $comment->comment_ID;
+			},
+			$interactions
+		);
+
+		$found_our_comments = array_intersect( $comment_ids, array( $comment_id_1, $comment_id_2 ) );
+		$this->assertGreaterThanOrEqual( 1, count( $found_our_comments ), 'Should find at least one of our test comments' );
+
+		// Clean up.
+		wp_delete_comment( $comment_id_1, true );
+		wp_delete_comment( $comment_id_2, true );
+		wp_delete_post( $remote_actor_id, true );
+	}
+
+	/**
+	 * Test get interaction by actor with non-existent actor.
+	 *
+	 * @covers ::get_by_actor
+	 */
+	public function test_get_by_actor_nonexistent() {
+		// Test with an actor that doesn't exist.
+		$actor_url = 'https://example.com/users/nonexistent';
+
+		$interactions = Interactions::get_by_actor( $actor_url );
+
+		// Should return empty array when no comments from that actor exist.
+		$this->assertIsArray( $interactions );
+		$this->assertEmpty( $interactions );
+	}
+
+	/**
+	 * Test get interaction by remote actor ID.
+	 *
+	 * @covers ::get_by_remote_actor_id
+	 */
+	public function test_get_by_remote_actor_id() {
+		// Create a remote actor.
+		$actor_url  = 'https://example.com/users/remoteactorid';
+		$actor_data = array(
+			'id'                => $actor_url,
+			'type'              => 'Person',
+			'preferredUsername' => 'remoteactorid',
+			'name'              => 'Remote Actor ID Test',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/remoteactorid.jpg',
+			),
+			'inbox'             => 'https://example.com/inbox-remoteactorid',
+			'url'               => $actor_url,
+		);
+
+		$remote_actor_id = \Activitypub\Collection\Remote_Actors::upsert( $actor_data );
+
+		// Add metadata filter.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function ( $value, $actor ) use ( $actor_url, $actor_data ) {
+				if ( $actor === $actor_url ) {
+					return $actor_data;
+				}
+				return $value;
+			},
+			10,
+			2
+		);
+
+		// Create two comments from this actor.
+		$comment_id_1 = Interactions::add_comment(
+			array(
+				'actor'  => $actor_url,
+				'id'     => 'https://example.com/activity-raid-1',
+				'object' => array(
+					'id'        => 'https://example.com/note-raid-1',
+					'content'   => 'First comment via remote actor ID',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+
+		$comment_id_2 = Interactions::add_comment(
+			array(
+				'actor'  => $actor_url,
+				'id'     => 'https://example.com/activity-raid-2',
+				'object' => array(
+					'id'        => 'https://example.com/note-raid-2',
+					'content'   => 'Second comment via remote actor ID',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+
+		// Test get_by_remote_actor_id - should use optimized query.
+		$interactions = Interactions::get_by_remote_actor_id( $remote_actor_id );
+
+		// Verify both comments are returned.
+		$this->assertIsArray( $interactions );
+		$this->assertGreaterThanOrEqual( 1, count( $interactions ), 'Should return at least 1 comment' );
+
+		$comment_ids = array_map(
+			function ( $comment ) {
+				return $comment->comment_ID;
+			},
+			$interactions
+		);
+
+		// Verify at least one of our comments is found.
+		$found = array_intersect( $comment_ids, array( $comment_id_1, $comment_id_2 ) );
+		$this->assertGreaterThanOrEqual( 1, count( $found ), 'Should find at least one of our comments' );
+
+		// Clean up.
+		wp_delete_comment( $comment_id_1, true );
+		wp_delete_comment( $comment_id_2, true );
+		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**

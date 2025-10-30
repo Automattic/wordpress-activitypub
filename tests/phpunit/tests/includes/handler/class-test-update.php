@@ -25,11 +25,14 @@ class Test_Update extends \WP_UnitTestCase {
 	public function test_activitypub_inbox_create_fallback() {
 		\update_option( 'activitypub_create_posts', true );
 
+		// Initialize Update handler to register hooks.
+		Update::init();
+
 		$called     = false;
 		$test_actor = 'https://example.com/users/fallback';
 		$activity   = array(
 			'id'     => 'https://example.com/activities/12345',
-			'type'   => 'Create',
+			'type'   => 'Update',
 			'actor'  => $test_actor,
 			'object' => array(
 				'id'      => 'https://example.com/objects/12345',
@@ -50,13 +53,14 @@ class Test_Update extends \WP_UnitTestCase {
 			3
 		);
 
-		// Call the handler (simulate inbox create for unknown type).
-		\do_action( 'activitypub_inbox_update', $activity, $this->user_id, null );
+		// Call the handler via the new handled_inbox_update hook.
+		\do_action( 'activitypub_handled_inbox_update', $activity, array( $this->user_id ), null );
 
 		$this->assertTrue( $called, 'The fallback activitypub_inbox_create action should be triggered.' );
 
 		// Clean up by removing the action.
 		\remove_all_actions( 'activitypub_inbox_create' );
+		\remove_all_actions( 'activitypub_handled_inbox_update' );
 		\delete_option( 'activitypub_create_posts' );
 	}
 

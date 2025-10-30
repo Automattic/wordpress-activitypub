@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add unified attachment processor for handling ActivityPub media imports from both remote URLs and local files, with automatic media block generation and Classic Editor support.

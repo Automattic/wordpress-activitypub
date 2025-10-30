@@ -60,7 +60,7 @@ class Following {
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
 	 *
-	 * @return int|false|\WP_Post|\WP_Error The Outbox ID or false on failure, the Actor post or a WP_Error.
+	 * @return int|\WP_Error The Outbox ID on success or a WP_Error on failure.
 	 */
 	public static function follow( $post, $user_id ) {
 		$post = \get_post( $post );
@@ -73,25 +73,57 @@ class Following {
 		$following = $all_meta[ self::FOLLOWING_META_KEY ] ?? array();
 		$pending   = $all_meta[ self::PENDING_META_KEY ] ?? array();
 
-		if ( ! \in_array( (string) $user_id, $following, true ) && ! \in_array( (string) $user_id, $pending, true ) ) {
-			$actor = Actors::get_by_id( $user_id );
+		if ( \in_array( (string) $user_id, $following, true ) || \in_array( (string) $user_id, $pending, true ) ) {
+			$post_id_query = new \WP_Query(
+				array(
+					'post_type'      => Outbox::POST_TYPE,
+					'post_status'    => 'any',
+					'posts_per_page' => 1,
+					'no_found_rows'  => true,
+					'author'         => \max( $user_id, 0 ),
+					'fields'         => 'ids',
+					'order'          => 'DESC',
+					'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_object_id',
+							'value' => $post->guid,
+						),
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Follow',
+						),
+					),
+				)
+			);
 
-			if ( \is_wp_error( $actor ) ) {
-				return $actor;
+			if ( $post_id_query->posts ) {
+				return $post_id_query->posts[0];
 			}
 
-			\add_post_meta( $post->ID, self::PENDING_META_KEY, (string) $user_id );
-
-			$follow = new Activity();
-			$follow->set_type( 'Follow' );
-			$follow->set_actor( $actor->get_id() );
-			$follow->set_object( $post->guid );
-			$follow->set_to( array( $post->guid ) );
-
-			return add_to_outbox( $follow, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+			return new \WP_Error( 'activitypub_already_following', 'User is already following this actor but outbox activity not found.' );
 		}
 
-		return $post;
+		$actor = Actors::get_by_id( $user_id );
+
+		if ( \is_wp_error( $actor ) ) {
+			return $actor;
+		}
+
+		\add_post_meta( $post->ID, self::PENDING_META_KEY, (string) $user_id );
+
+		$follow = new Activity();
+		$follow->set_type( 'Follow' );
+		$follow->set_actor( $actor->get_id() );
+		$follow->set_object( $post->guid );
+		$follow->set_to( array( $post->guid ) );
+
+		$result = add_to_outbox( $follow, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+
+		if ( ! $result ) {
+			return new \WP_Error( 'activitypub_follow_failed', 'Failed to add follow activity to outbox.' );
+		}
+
+		return $result;
 	}
 
 	/**

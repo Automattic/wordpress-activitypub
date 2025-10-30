@@ -821,10 +821,6 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	public function test_inbox_persistence_with_shared_inbox() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-		\update_option( 'activitypub_persist_inbox', '1' );
-
-		// Initialize the inbox handler.
-		\Activitypub\Handler\Inbox::init();
 
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
@@ -876,7 +872,6 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		\remove_all_actions( 'activitypub_inbox' );
 		\remove_all_actions( 'activitypub_inbox_shared' );
 		\delete_option( 'activitypub_actor_mode' );
-		\delete_option( 'activitypub_persist_inbox' );
 	}
 
 	/**

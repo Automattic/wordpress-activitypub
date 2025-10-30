@@ -22,11 +22,28 @@ class Dispatcher {
 	/**
 	 * Batch size.
 	 *
-	 * @deprecated unreleased {@see Activitypub\Dispatcher::get_batch_size()}
+	 * @deprecated unreleased Use {@see Dispatcher::get_batch_size()}.
 	 *
 	 * @var int
 	 */
 	public static $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE;
+
+	/**
+	 * Initialize the class, registering WordPress hooks.
+	 */
+	public static function init() {
+		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
+
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_immediate_accept' ), 10, 2 );
+
+		// Default filters to add Inboxes to sent to.
+		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
+		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
+		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_relays' ), 10, 3 );
+
+		Scheduler::register_async_batch_callback( 'activitypub_send_activity', array( self::class, 'send_to_followers' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_retry_activity', array( self::class, 'retry_send_to_followers' ) );
+	}
 
 	/**
 	 * Get the batch size for processing outbox items.
@@ -88,23 +105,6 @@ class Dispatcher {
 		 * @param int[] $retry_error_codes The error codes. Default array( 408, 429, 500, 502, 503, 504 ).
 		 */
 		return apply_filters( 'activitypub_dispatcher_retry_error_codes', array( 408, 429, 500, 502, 503, 504 ) );
-	}
-
-	/**
-	 * Initialize the class, registering WordPress hooks.
-	 */
-	public static function init() {
-		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
-
-		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_immediate_accept' ), 10, 2 );
-
-		// Default filters to add Inboxes to sent to.
-		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
-		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
-		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_relays' ), 10, 3 );
-
-		Scheduler::register_async_batch_callback( 'activitypub_send_activity', array( self::class, 'send_to_followers' ) );
-		Scheduler::register_async_batch_callback( 'activitypub_retry_activity', array( self::class, 'retry_send_to_followers' ) );
 	}
 
 	/**
@@ -253,16 +253,21 @@ class Dispatcher {
 		\do_action( 'activitypub_pre_send_to_inboxes', $json, $inboxes, $outbox_item_id );
 
 		foreach ( $inboxes as $inbox ) {
-			$result = safe_remote_post( $inbox, $json, $outbox_item->post_author );
+			// Handle local inboxes via internal REST API, remote via HTTP.
+			if ( is_same_domain( $inbox ) ) {
+				$result = self::send_to_local_inbox( $inbox, $json );
+			} else {
+				$result = safe_remote_post( $inbox, $json, $outbox_item->post_author );
+			}
 
-			if ( is_wp_error( $result ) && in_array( $result->get_error_code(), self::get_retry_error_codes(), true ) ) {
+			if ( \is_wp_error( $result ) && in_array( $result->get_error_code(), self::get_retry_error_codes(), true ) ) {
 				$retries[] = $inbox;
 			}
 
 			/**
 			 * Fires after an Activity has been sent to an inbox.
 			 *
-			 * @param array  $result         The result of the remote post request.
+			 * @param array  $result         The result of the internal or remote post request.
 			 * @param string $inbox          The inbox URL.
 			 * @param string $json           The ActivityPub Activity JSON.
 			 * @param int    $actor_id       The actor ID.
@@ -272,6 +277,41 @@ class Dispatcher {
 		}
 
 		return $retries;
+	}
+
+	/**
+	 * Send an activity to a local inbox via internal REST API request.
+	 *
+	 * @param string $inbox_url The local inbox URL.
+	 * @param string $json      The ActivityPub Activity JSON.
+	 * @return array|\WP_Error The result in the format of a remote post response, or WP_Error on failure.
+	 */
+	private static function send_to_local_inbox( $inbox_url, $json ) {
+		// Parse the inbox URL to extract the REST route.
+		$path       = \wp_parse_url( $inbox_url, PHP_URL_PATH ) ?? '';
+		$rest_route = \preg_replace( '#^/' . preg_quote( \rest_get_url_prefix(), '#' ) . '#', '', $path );
+
+		// Create a REST request.
+		$request = new \WP_REST_Request( 'POST', $rest_route );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( $json );
+		$request->get_json_params();
+
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$response = \rest_do_request( $request );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		// Return result in format similar to remote post response.
+		if ( $response->is_error() ) {
+			return $response->as_error();
+		}
+
+		return array(
+			'response' => array(
+				'code' => $response->get_status(),
+			),
+			'body'     => \wp_json_encode( $response->get_data() ),
+		);
 	}
 
 	/**
@@ -335,13 +375,8 @@ class Dispatcher {
 
 		$audience = array_merge( $cc, $to );
 
-		// Remove "public placeholder" and "same domain" from the audience.
-		$audience = array_filter(
-			$audience,
-			function ( $actor ) {
-				return 'https://www.w3.org/ns/activitystreams#Public' !== $actor && ! is_same_domain( $actor );
-			}
-		);
+		// Remove "public placeholder" from the audience.
+		$audience = array_diff( $audience, array( 'https://www.w3.org/ns/activitystreams#Public' ) );
 
 		if ( $audience ) {
 			$mentioned_inboxes = Mention::get_inboxes( $audience );

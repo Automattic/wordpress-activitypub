@@ -331,6 +331,18 @@ class Inbox {
 	}
 
 	/**
+	 * Add multiple recipients to an existing inbox activity.
+	 *
+	 * @param int   $post_id  The inbox post ID.
+	 * @param int[] $user_ids The user ID or array of user IDs to add.
+	 */
+	public static function add_recipients( $post_id, $user_ids ) {
+		foreach ( $user_ids as $user_id ) {
+			self::add_recipient( $post_id, $user_id );
+		}
+	}
+
+	/**
 	 * Get an inbox item by GUID for a specific recipient.
 	 *
 	 * This checks both that the activity exists and that the user is a valid recipient.
@@ -357,5 +369,41 @@ class Inbox {
 		}
 
 		return $post;
+	}
+
+	/**
+	 * Deduplicate inbox items with the same GUID.
+	 *
+	 * If multiple inbox items exist with the same GUID (due to race conditions),
+	 * this merges all recipients into the first post and deletes duplicates.
+	 *
+	 * @param string $guid The activity GUID.
+	 *
+	 * @return \WP_Post|false The primary inbox post, or false if no posts found.
+	 */
+	public static function deduplicate( $guid ) {
+		$duplicates = \get_posts(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'guid'           => $guid,
+				'posts_per_page' => -1,
+				'post_status'    => 'any',
+			)
+		);
+
+		if ( empty( $duplicates ) ) {
+			return false;
+		}
+
+		// Keep the first post, all others are duplicates.
+		$primary = array_shift( $duplicates );
+
+		foreach ( $duplicates as $duplicate ) {
+			$recipients = \get_post_meta( $duplicate->ID, '_activitypub_user_id', false );
+			self::add_recipients( $primary->ID, $recipients );
+			\wp_delete_post( $duplicate->ID, true );
+		}
+
+		return $primary;
 	}
 }

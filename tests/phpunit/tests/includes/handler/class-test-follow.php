@@ -453,7 +453,8 @@ class Test_Follow extends \WP_UnitTestCase {
 		// Verify new hook fired.
 		$this->assertTrue( $hook_fired, 'New hook should fire' );
 		$this->assertEquals( $activity_object, $hook_activity );
-		$this->assertEquals( self::$user_id, $hook_user_id );
+		$this->assertIsArray( $hook_user_id, 'User ID should be an array' );
+		$this->assertContains( self::$user_id, $hook_user_id, 'Array should contain user ID' );
 		$this->assertTrue( $hook_success );
 		$this->assertInstanceOf( \WP_Post::class, $hook_remote_actor );
 

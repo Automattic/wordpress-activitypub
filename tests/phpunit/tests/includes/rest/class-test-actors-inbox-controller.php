@@ -26,6 +26,13 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	protected static $user_id;
 
 	/**
+	 * Editor user ID.
+	 *
+	 * @var int
+	 */
+	protected static $editor_id;
+
+	/**
 	 * Post ID.
 	 *
 	 * @var int
@@ -36,8 +43,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 * Create fake data before tests run.
 	 */
 	public static function set_up_before_class() {
-		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
-		self::$post_id = self::factory()->post->create(
+		self::$user_id   = self::factory()->user->create( array( 'role' => 'author' ) );
+		self::$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		self::$post_id   = self::factory()->post->create(
 			array(
 				'post_author'  => self::$user_id,
 				'post_title'   => 'Test Post',
@@ -61,6 +69,18 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 */
 	public function tear_down() {
 		\delete_option( 'permalink_structure' );
+
+		// Clean up inbox posts to prevent test pollution.
+		$inbox_posts = \get_posts(
+			array(
+				'post_type'      => Inbox_Collection::POST_TYPE,
+				'posts_per_page' => -1,
+				'post_status'    => 'any',
+			)
+		);
+		foreach ( $inbox_posts as $post ) {
+			\wp_delete_post( $post->ID, true );
+		}
 	}
 
 	/**
@@ -473,5 +493,235 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		\remove_all_actions( 'activitypub_inbox' );
+	}
+
+	/**
+	 * Test process_inbox_activity method processes deduplicated inbox items.
+	 *
+	 * @covers \Activitypub\Scheduler::process_inbox_activity
+	 */
+	public function test_process_create_item_with_deduplication() {
+		$activity_id = 'https://remote.example/@activity-deduplicate';
+
+		// Create inbox items manually to simulate batching.
+		$activity_data = array(
+			'id'     => $activity_id,
+			'type'   => 'Create',
+			'actor'  => 'https://remote.example/@test',
+			'object' => array(
+				'id'      => 'https://remote.example/post/deduplicate',
+				'type'    => 'Note',
+				'content' => 'Test deduplication',
+			),
+		);
+
+		$activity = \Activitypub\Activity\Activity::init_from_array( $activity_data );
+
+		// Create duplicate inbox posts manually to simulate race condition.
+		// Using wp_insert_post directly to bypass the duplicate detection in Inbox::add().
+		$inbox_item_data = array(
+			'post_type'    => Inbox_Collection::POST_TYPE,
+			'post_title'   => '[Create] Test deduplication',
+			'post_content' => wp_slash( $activity->to_json() ),
+			'post_author'  => 0,
+			'post_status'  => 'publish',
+			'guid'         => $activity_id,
+		);
+
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			\kses_remove_filters();
+		}
+
+		// Create first duplicate with user_id.
+		$post_id_1 = \wp_insert_post( $inbox_item_data );
+		\add_post_meta( $post_id_1, '_activitypub_user_id', self::$user_id );
+
+		// Create second duplicate with editor_id.
+		$post_id_2 = \wp_insert_post( $inbox_item_data );
+		\add_post_meta( $post_id_2, '_activitypub_user_id', self::$editor_id );
+
+		if ( $has_kses ) {
+			\kses_init_filters();
+		}
+
+		$handled_count    = 0;
+		$handled_user_ids = array();
+
+		\add_action(
+			'activitypub_handled_inbox',
+			function ( $data, $user_ids ) use ( &$handled_count, &$handled_user_ids ) {
+				++$handled_count;
+				$handled_user_ids = $user_ids;
+			},
+			10,
+			2
+		);
+
+		// Process the activity.
+		\Activitypub\Scheduler::process_inbox_activity( $activity_id );
+
+		// Should fire handled hook once with all user IDs.
+		$this->assertEquals( 1, $handled_count );
+		$this->assertCount( 2, $handled_user_ids );
+		$this->assertContains( self::$user_id, $handled_user_ids );
+		$this->assertContains( self::$editor_id, $handled_user_ids );
+
+		// Verify only one inbox item remains after deduplication.
+		$inbox_items = \get_posts(
+			array(
+				'post_type'      => Inbox_Collection::POST_TYPE,
+				'guid'           => $activity_id,
+				'posts_per_page' => -1,
+			)
+		);
+		$this->assertCount( 1, $inbox_items );
+
+		\remove_all_actions( 'activitypub_handled_inbox' );
+	}
+
+	/**
+	 * Test process_inbox_activity handles non-existent activity gracefully.
+	 *
+	 * @covers \Activitypub\Scheduler::process_inbox_activity
+	 */
+	public function test_process_create_item_with_non_existent_activity() {
+		$handled_count = 0;
+
+		\add_action(
+			'activitypub_handled_inbox',
+			function () use ( &$handled_count ) {
+				++$handled_count;
+			}
+		);
+
+		// Process non-existent activity.
+		\Activitypub\Scheduler::process_inbox_activity( 'https://remote.example/@non-existent' );
+
+		// Should not fire handled hook.
+		$this->assertEquals( 0, $handled_count );
+
+		\remove_all_actions( 'activitypub_handled_inbox' );
+	}
+
+	/**
+	 * Test process_inbox_activity fires type-specific hooks.
+	 *
+	 * @covers \Activitypub\Scheduler::process_inbox_activity
+	 */
+	public function test_process_create_item_fires_type_specific_hooks() {
+		$activity_id = 'https://remote.example/@activity-type-hook';
+
+		$activity_data = array(
+			'id'     => $activity_id,
+			'type'   => 'Like',
+			'actor'  => 'https://remote.example/@test',
+			'object' => 'https://example.org/@user/post/1',
+		);
+
+		$activity = \Activitypub\Activity\Activity::init_from_array( $activity_data );
+		Inbox_Collection::add( $activity, array( self::$user_id ) );
+
+		$generic_hook_fired = false;
+		$type_hook_fired    = false;
+
+		\add_action(
+			'activitypub_handled_inbox',
+			function () use ( &$generic_hook_fired ) {
+				$generic_hook_fired = true;
+			}
+		);
+
+		\add_action(
+			'activitypub_handled_inbox_like',
+			function () use ( &$type_hook_fired ) {
+				$type_hook_fired = true;
+			}
+		);
+
+		\Activitypub\Scheduler::process_inbox_activity( $activity_id );
+
+		$this->assertTrue( $generic_hook_fired, 'Generic handled_inbox hook should fire' );
+		$this->assertTrue( $type_hook_fired, 'Type-specific handled_inbox_like hook should fire' );
+
+		\remove_all_actions( 'activitypub_handled_inbox' );
+		\remove_all_actions( 'activitypub_handled_inbox_like' );
+	}
+
+	/**
+	 * Test inbox request schedules delayed processing.
+	 *
+	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::create_item
+	 */
+	public function test_inbox_request_schedules_processing() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$activity_id = 'https://remote.example/@activity-scheduled';
+
+		$json = array(
+			'id'     => $activity_id,
+			'type'   => 'Create',
+			'actor'  => 'https://remote.example/@test',
+			'object' => array(
+				'id'        => 'https://remote.example/post/scheduled',
+				'type'      => 'Note',
+				'content'   => 'Test scheduling',
+				'published' => '2020-01-01T00:00:00Z',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		// Verify activity was added to inbox collection.
+		$inbox_item = Inbox_Collection::get_by_guid( $activity_id );
+		$this->assertInstanceOf( \WP_Post::class, $inbox_item );
+
+		// Verify scheduled action exists.
+		$scheduled = \wp_next_scheduled( 'activitypub_inbox_create_item', array( $activity_id ) );
+		$this->assertNotFalse( $scheduled, 'Should schedule activitypub_inbox_create_item action' );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	}
+
+	/**
+	 * Test skip inbox storage filter prevents inbox persistence.
+	 *
+	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::create_item
+	 */
+	public function test_skip_inbox_storage_filter() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_skip_inbox_storage', '__return_true' );
+
+		$activity_id = 'https://remote.example/@activity-skipped';
+
+		$json = array(
+			'id'     => $activity_id,
+			'type'   => 'Delete',
+			'actor'  => 'https://remote.example/@test',
+			'object' => 'https://remote.example/post/deleted',
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		// Verify activity was NOT added to inbox collection.
+		$inbox_item = Inbox_Collection::get_by_guid( $activity_id );
+		$this->assertWPError( $inbox_item );
+
+		// Verify no scheduled action exists.
+		$scheduled = \wp_next_scheduled( 'activitypub_inbox_create_item', array( $activity_id ) );
+		$this->assertFalse( $scheduled, 'Should not schedule action when storage is skipped' );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_filter( 'activitypub_skip_inbox_storage', '__return_true' );
 	}
 }
