@@ -9,6 +9,12 @@ import { DEFAULT_STATE } from './types';
  */
 export function reducer( state = DEFAULT_STATE, action: Action ): State {
 	switch ( action.type ) {
+		case 'SET_FEED':
+			return {
+				...state,
+				feed: action.feed,
+			};
+
 		case 'SET_FOLLOWERS':
 			return {
 				...state,

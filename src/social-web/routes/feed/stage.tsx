@@ -1,43 +1,126 @@
 /**
  * Feed Stage
  *
- * Main feed list view with data table
+ * Main feed list view with DataViews
  */
 
-import { Button } from '@wordpress/components';
-import { useDispatch } from '@wordpress/data';
+import { useState } from '@wordpress/element';
+import { useEntityRecords } from '@wordpress/core-data';
+import { __ } from '@wordpress/i18n';
 import { Page } from '../../components/page';
-import { useSocialWebData } from '../../hooks/use-social-web-data';
-import { STORE_NAME } from '../../store';
+import type { FeedPost } from '../../types';
+
+// @ts-ignore - DataViews types not fully resolved with /wp path
+import { DataViews, type View } from '@wordpress/dataviews';
 
 interface FeedStageProps {
 	onSelectItem: ( id: number ) => void;
 }
 
 export default function FeedStage( { onSelectItem }: FeedStageProps ) {
-	const { items: feed, isLoading } = useSocialWebData( 'feed' );
-	const { fetchFeed } = useDispatch( STORE_NAME ) as any;
+	const [ view, setView ] = useState< View >( {
+		type: 'table',
+		perPage: 20,
+		page: 1,
+		sort: {
+			field: 'date',
+			direction: 'desc',
+		},
+		search: '',
+		fields: [ 'title.rendered', 'actor.post_title', 'date', 'status' ],
+	} );
 
-	const handleRefresh = () => {
-		fetchFeed();
+	// Use WordPress core-data hook to fetch posts
+	const query = {
+		per_page: view.perPage,
+		page: view.page,
+		orderby: view.sort.field === 'date' ? 'date' : 'modified',
+		order: view.sort.direction,
+		search: view.search,
 	};
 
-	if ( ! isLoading && ( ! feed || feed.length === 0 ) ) {
+	const { records: feed, isResolving } = useEntityRecords< FeedPost >( 'postType', 'ap_post', query );
+
+	const isLoading = isResolving;
+
+	const defaultLayouts = {
+		table: {},
+		list: {},
+		grid: {},
+	};
+
+	const fields = [
+		{
+			id: 'title.rendered',
+			label: __( 'Title', 'activitypub' ),
+			render: ( { item }: { item: FeedPost } ) => (
+				<button
+					onClick={ () => onSelectItem( item.id ) }
+					style={ {
+						background: 'none',
+						border: 'none',
+						color: 'var(--wp-admin-theme-color, #3858e9)',
+						cursor: 'pointer',
+						textAlign: 'left',
+						padding: 0,
+						font: 'inherit',
+						textDecoration: 'underline',
+					} }
+				>
+					{ item.title?.rendered || __( '(No title)', 'activitypub' ) }
+				</button>
+			),
+			enableSorting: true,
+			enableGlobalSearch: true,
+		},
+		{
+			id: 'actor.post_title',
+			label: __( 'Author', 'activitypub' ),
+			enableSorting: false,
+			enableGlobalSearch: true,
+		},
+		{
+			id: 'date',
+			label: __( 'Date', 'activitypub' ),
+			render: ( { item }: { item: FeedPost } ) => new Date( item.date ).toLocaleDateString(),
+			enableSorting: true,
+		},
+		{
+			id: 'status',
+			label: __( 'Status', 'activitypub' ),
+			enableSorting: true,
+		},
+	];
+
+	const actions = [
+		{
+			id: 'view-details',
+			label: __( 'View Details', 'activitypub' ),
+			isPrimary: true,
+			callback: ( items: FeedPost[] ) => {
+				if ( items.length === 1 ) {
+					onSelectItem( items[ 0 ].id );
+				}
+			},
+		},
+	];
+
+	// Filter out items with missing required data
+	const validFeed = ( feed || [] ).filter(
+		( item ) => item && item.id && item.title?.rendered && item.title.rendered.trim() !== '' && item.date
+	);
+
+	if ( ! isLoading && validFeed.length === 0 ) {
 		return (
 			<Page
-				title="Feed"
-				subTitle="ActivityPub posts from your network"
+				title={ __( 'Feed', 'activitypub' ) }
+				subTitle={ __( 'ActivityPub posts from your network', 'activitypub' ) }
 				hasPadding={ true }
-				actions={
-					<Button variant="primary" onClick={ handleRefresh }>
-						Refresh
-					</Button>
-				}
 			>
 				<div style={ { padding: '20px', textAlign: 'center' } }>
-					<p>No posts found in your feed.</p>
+					<p>{ __( 'No posts found in your feed.', 'activitypub' ) }</p>
 					<p style={ { color: '#666', fontSize: '14px' } }>
-						Posts from ActivityPub actors you follow will appear here.
+						{ __( 'Posts from ActivityPub actors you follow will appear here.', 'activitypub' ) }
 					</p>
 				</div>
 			</Page>
@@ -46,68 +129,24 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 
 	return (
 		<Page
-			title="Feed"
-			subTitle="ActivityPub posts from your network"
+			title={ __( 'Feed', 'activitypub' ) }
+			subTitle={ __( 'ActivityPub posts from your network', 'activitypub' ) }
 			hasPadding={ true }
-			actions={
-				<Button variant="primary" onClick={ handleRefresh }>
-					Refresh
-				</Button>
-			}
 		>
-			<table style={ { width: '100%', borderCollapse: 'collapse' } }>
-				<thead>
-					<tr style={ { borderBottom: '1px solid #ddd' } }>
-						<th style={ { textAlign: 'left', padding: '12px' } }>Title</th>
-						<th style={ { textAlign: 'left', padding: '12px' } }>Author</th>
-						<th style={ { textAlign: 'left', padding: '12px' } }>Date</th>
-						<th style={ { textAlign: 'left', padding: '12px' } }>Status</th>
-					</tr>
-				</thead>
-				<tbody>
-					{ feed?.map( ( post ) => (
-						<tr
-							key={ post.id }
-							style={ {
-								borderBottom: '1px solid #f0f0f0',
-								cursor: 'pointer',
-							} }
-							onClick={ () => onSelectItem( post.id ) }
-						>
-							<td style={ { padding: '12px' } }>
-								<button
-									onClick={ ( e ) => {
-										e.stopPropagation();
-										onSelectItem( post.id );
-									} }
-									style={ {
-										background: 'none',
-										border: 'none',
-										color: 'var(--wpds-color-bg-interactive-brand, #3858e9)',
-										cursor: 'pointer',
-										textAlign: 'left',
-										padding: 0,
-										font: 'inherit',
-									} }
-								>
-									{ post.title?.rendered || '(No title)' }
-								</button>
-							</td>
-							<td style={ { padding: '12px' } }>
-								{ post.actor ? (
-									<div style={ { display: 'flex', alignItems: 'center', gap: '8px' } }>
-										{ post.actor.post_title }
-									</div>
-								) : (
-									'Unknown'
-								) }
-							</td>
-							<td style={ { padding: '12px' } }>{ new Date( post.date ).toLocaleDateString() }</td>
-							<td style={ { padding: '12px' } }>{ post.status }</td>
-						</tr>
-					) ) }
-				</tbody>
-			</table>
+			<DataViews
+				data={ validFeed }
+				fields={ fields }
+				view={ view }
+				onChangeView={ setView }
+				defaultLayouts={ defaultLayouts }
+				actions={ actions }
+				getItemId={ ( item: FeedPost ) => item.id.toString() }
+				isLoading={ isLoading }
+				paginationInfo={ {
+					totalItems: validFeed.length,
+					totalPages: Math.ceil( validFeed.length / view.perPage ),
+				} }
+			/>
 		</Page>
 	);
 }

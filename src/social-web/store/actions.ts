@@ -6,13 +6,27 @@ import apiFetch from '@wordpress/api-fetch';
 /**
  * Internal dependencies
  */
-import type { Follower, Following, Interaction } from '../types';
-import type { SetFollowersAction, SetFollowingAction, SetInteractionsAction, SetLoadingAction, State } from './types';
+import type { Follower, Following, Interaction, FeedPost } from '../types';
+import type {
+	SetFollowersAction,
+	SetFollowingAction,
+	SetInteractionsAction,
+	SetFeedAction,
+	SetLoadingAction,
+	State,
+} from './types';
 
 /**
  * Store actions
  */
 export const actions = {
+	setFeed( feed: FeedPost[] ): SetFeedAction {
+		return {
+			type: 'SET_FEED',
+			feed,
+		};
+	},
+
 	setFollowers( followers: Follower[] ): SetFollowersAction {
 		return {
 			type: 'SET_FOLLOWERS',
@@ -81,6 +95,22 @@ export const actions = {
 			console.error( 'Failed to fetch interactions:', error );
 		} finally {
 			yield actions.setLoading( 'interactions', false );
+		}
+	},
+
+	*fetchFeed() {
+		yield actions.setLoading( 'feed', true );
+		try {
+			const feed = yield apiFetch( {
+				path: '/wp/v2/ap_post',
+			} );
+			console.log( 'fetchFeed: Received data:', feed );
+			yield actions.setFeed( Array.isArray( feed ) ? feed : [] );
+		} catch ( error ) {
+			console.error( 'Failed to fetch feed:', error );
+			yield actions.setFeed( [] );
+		} finally {
+			yield actions.setLoading( 'feed', false );
 		}
 	},
 

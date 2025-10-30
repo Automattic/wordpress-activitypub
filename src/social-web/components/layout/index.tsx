@@ -29,7 +29,7 @@ import FeedInspector from '../../routes/feed/inspector';
  * Parse the URL hash to extract section and item ID
  * Format: #/section or #/section/itemId
  */
-function parseHash(): { section: string; itemId: string | null } {
+function parseHash(): { section: string; itemId: string | number | null } {
 	const hash = window.location.hash.slice( 1 ); // Remove #
 	if ( ! hash || hash === '/' ) {
 		return { section: 'dashboard', itemId: null };
@@ -39,13 +39,18 @@ function parseHash(): { section: string; itemId: string | null } {
 	const section = parts[ 0 ] || 'dashboard';
 	const itemId = parts[ 1 ] || null;
 
+	// Convert itemId to number for feed
+	if ( section === 'feed' && itemId ) {
+		return { section, itemId: parseInt( itemId, 10 ) };
+	}
+
 	return { section, itemId };
 }
 
 /**
  * Update the URL hash without triggering a page reload
  */
-function updateHash( section: string, itemId?: string | null ) {
+function updateHash( section: string, itemId?: string | number | null ) {
 	const hash = itemId ? `#/${ section }/${ itemId }` : `#/${ section }`;
 	window.history.pushState( null, '', hash );
 }
@@ -106,14 +111,14 @@ export function Layout() {
 		switch ( activeSection ) {
 			case 'dashboard':
 				return <DashboardStage />;
+			case 'feed':
+				return <FeedStage { ...props } />;
 			case 'followers':
 				return <FollowersStage { ...props } />;
 			case 'following':
 				return <FollowingStage { ...props } />;
 			case 'interactions':
 				return <InteractionsStage { ...props } />;
-			case 'feed':
-				return <FeedStage { ...props } />;
 			default:
 				return <DashboardStage />;
 		}
@@ -126,14 +131,14 @@ export function Layout() {
 		const props = { id: selectedItemId, onClose: handleCloseInspector };
 
 		switch ( activeSection ) {
+			case 'feed':
+				return <FeedInspector { ...props } />;
 			case 'followers':
 				return <FollowerInspector { ...props } />;
 			case 'following':
 				return <FollowingInspector { ...props } />;
 			case 'interactions':
 				return <InteractionInspector { ...props } />;
-			case 'feed':
-				return <FeedInspector { ...props } />;
 			default:
 				return null;
 		}
