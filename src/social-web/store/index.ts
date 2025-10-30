@@ -5,16 +5,6 @@ import { createReduxStore, register } from '@wordpress/data';
 import { controls as dataControls } from '@wordpress/data-controls';
 
 /**
- * Custom controls for async operations
- */
-const controls = {
-	...dataControls,
-	API_FETCH( action ) {
-		return apiFetch( action.request );
-	},
-};
-
-/**
  * Internal dependencies
  */
 import { actions } from './actions';
@@ -33,7 +23,7 @@ export const store = createReduxStore( STORE_NAME, {
 	reducer,
 	actions,
 	selectors,
-	controls,
+	controls: dataControls,
 } );
 
 register( store );
