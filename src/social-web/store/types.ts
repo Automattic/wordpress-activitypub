@@ -1,17 +1,15 @@
 /**
  * Internal dependencies
  */
-import type { Follower, Following, Interaction } from '../types';
+import type { Following, Interaction } from '../types';
 
 /**
  * Store state interface
  */
 export interface State {
-	followers: Follower[];
 	following: Following[];
 	interactions: Interaction[];
 	isLoading: {
-		followers: boolean;
 		following: boolean;
 		interactions: boolean;
 	};
@@ -20,11 +18,6 @@ export interface State {
 /**
  * Action Types
  */
-export type SetFollowersAction = {
-	type: 'SET_FOLLOWERS';
-	followers: Follower[];
-};
-
 export type SetFollowingAction = {
 	type: 'SET_FOLLOWING';
 	following: Following[];
@@ -41,17 +34,15 @@ export type SetLoadingAction = {
 	isLoading: boolean;
 };
 
-export type Action = SetFollowersAction | SetFollowingAction | SetInteractionsAction | SetLoadingAction;
+export type Action = SetFollowingAction | SetInteractionsAction | SetLoadingAction;
 
 /**
  * Initial state
  */
 export const DEFAULT_STATE: State = {
-	followers: [],
 	following: [],
 	interactions: [],
 	isLoading: {
-		followers: false,
 		following: false,
 		interactions: false,
 	},

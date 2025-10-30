@@ -5,4 +5,4 @@
 /**
  * Re-export shared types for convenience
  */
-export type { Follower } from '../../types';
+export type { Follower, Actor, ActorInfo, FollowStatus } from '../../types';

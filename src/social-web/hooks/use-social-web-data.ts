@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 import { useSelect, useDispatch } from '@wordpress/data';
-import { useEffect } from '@wordpress/element';
+import { useEffect, useMemo } from '@wordpress/element';
 
 /**
  * Internal dependencies
@@ -11,72 +11,81 @@ import { STORE_NAME } from '../store';
 import type { Follower, Following, Interaction } from '../types';
 
 interface SocialWebData {
-	followers: Follower[];
 	following: Following[];
 	interactions: Interaction[];
 	stats: {
-		followers: number;
 		following: number;
 		interactions: number;
 		posts: number;
 	};
 	isLoading: {
-		followers: boolean;
 		following: boolean;
 		interactions: boolean;
 	};
 }
 
 interface SocialWebActions {
-	fetchFollowers: () => void;
 	fetchFollowing: () => void;
 	fetchInteractions: () => void;
-	blockFollower: ( id: string ) => void;
-	removeFollower: ( id: string ) => void;
 }
 
 /**
  * Hook to access Social Web data and actions (full version - internal)
  */
 function useSocialWebDataFull(): SocialWebData & SocialWebActions {
-	const data = useSelect( ( select ) => {
+	const following = useSelect( ( select ) => {
 		const store = select( STORE_NAME ) as any;
-		return {
-			followers: store.getFollowers() as Follower[],
-			following: store.getFollowing() as Following[],
-			interactions: store.getInteractions() as Interaction[],
-			stats: store.getStats() as {
-				followers: number;
-				following: number;
-				interactions: number;
-				posts: number;
-			},
-			isLoading: {
-				followers: store.isLoading( 'followers' ) as boolean,
-				following: store.isLoading( 'following' ) as boolean,
-				interactions: store.isLoading( 'interactions' ) as boolean,
-			},
+		return store.getFollowing() as Following[];
+	}, [] );
+
+	const interactions = useSelect( ( select ) => {
+		const store = select( STORE_NAME ) as any;
+		return store.getInteractions() as Interaction[];
+	}, [] );
+
+	const stats = useSelect( ( select ) => {
+		const store = select( STORE_NAME ) as any;
+		return store.getStats() as {
+			following: number;
+			interactions: number;
+			posts: number;
 		};
 	}, [] );
 
-	const { fetchFollowers, fetchFollowing, fetchInteractions, blockFollower, removeFollower } = useDispatch(
-		STORE_NAME
-	) as any;
+	const isLoadingFollowing = useSelect( ( select ) => {
+		const store = select( STORE_NAME ) as any;
+		return store.isLoading( 'following' ) as boolean;
+	}, [] );
+
+	const isLoadingInteractions = useSelect( ( select ) => {
+		const store = select( STORE_NAME ) as any;
+		return store.isLoading( 'interactions' ) as boolean;
+	}, [] );
+
+	const { fetchFollowing, fetchInteractions } = useDispatch( STORE_NAME ) as any;
 
 	// Fetch initial data
 	useEffect( () => {
-		fetchFollowers();
-		fetchFollowing();
-		fetchInteractions();
+		//	fetchFollowing();
+		//	fetchInteractions();
 	}, [] );
 
+	// Memoize the isLoading object to prevent re-renders
+	const isLoading = useMemo(
+		() => ( {
+			following: isLoadingFollowing,
+			interactions: isLoadingInteractions,
+		} ),
+		[ isLoadingFollowing, isLoadingInteractions ]
+	);
+
 	return {
-		...data,
-		fetchFollowers,
+		following,
+		interactions,
+		stats,
+		isLoading,
 		fetchFollowing,
 		fetchInteractions,
-		blockFollower,
-		removeFollower,
 	};
 }
 
@@ -84,7 +93,7 @@ function useSocialWebDataFull(): SocialWebData & SocialWebActions {
  * Hook to access Social Web data with optional resource filtering
  */
 export function useSocialWebData(
-	resource?: 'followers' | 'following' | 'interactions',
+	resource?: 'following' | 'interactions',
 	id?: string
 ): {
 	items: any;
@@ -105,9 +114,7 @@ export function useSocialWebData(
 		const item = useSelect(
 			( select ) => {
 				const store = select( STORE_NAME ) as any;
-				if ( resource === 'followers' ) {
-					return store.getFollowerById( id ) as Follower | undefined;
-				} else if ( resource === 'following' ) {
+				if ( resource === 'following' ) {
 					return store.getFollowingById( id ) as Following | undefined;
 				} else if ( resource === 'interactions' ) {
 					return store.getInteractionById( id ) as Interaction | undefined;
@@ -128,19 +135,6 @@ export function useSocialWebData(
 		items: allData[ resource ],
 		isLoading: allData.isLoading[ resource ],
 	};
-}
-
-/**
- * Hook to get a specific follower by ID
- */
-export function useFollower( id: string ): Follower | undefined {
-	return useSelect(
-		( select ) => {
-			const store = select( STORE_NAME ) as any;
-			return store.getFollowerById( id ) as Follower | undefined;
-		},
-		[ id ]
-	);
 }
 
 /**
