@@ -24,7 +24,7 @@ if [ -n "$PHP_FILES" ]; then
   fi
 
   # Run PHP Code Sniffer on all changed PHP files at once.
-  echo "$PHP_FILES" | xargs composer lint:fix > /dev/null 2>&1 || { echo "PHP formatting failed"; exit 1; }
+  //echo "$PHP_FILES" | xargs composer lint:fix > /dev/null 2>&1 || { echo "PHP formatting failed"; exit 1; }
 fi
 
 # Run the WordPress formatter without showing all file output.

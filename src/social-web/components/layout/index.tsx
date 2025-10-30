@@ -17,15 +17,17 @@ import DashboardStage from '../../routes/dashboard/stage';
 import FollowersStage from '../../routes/followers/stage';
 import FollowingStage from '../../routes/following/stage';
 import InteractionsStage from '../../routes/interactions/stage';
+import FeedStage from '../../routes/feed/stage';
 
 // Import inspector components.
 import FollowerInspector from '../../routes/followers/inspector';
 import FollowingInspector from '../../routes/following/inspector';
 import InteractionInspector from '../../routes/interactions/inspector';
+import FeedInspector from '../../routes/feed/inspector';
 
 export function Layout() {
 	const [ activeSection, setActiveSection ] = useState( 'dashboard' );
-	const [ selectedItemId, setSelectedItemId ] = useState< string | null >( null );
+	const [ selectedItemId, setSelectedItemId ] = useState< string | number | null >( null );
 
 	// Add fullscreen mode class to body
 	useEffect( () => {
@@ -35,7 +37,7 @@ export function Layout() {
 		};
 	}, [] );
 
-	const handleSelectItem = ( id: string ) => {
+	const handleSelectItem = ( id: string | number ) => {
 		setSelectedItemId( id );
 	};
 
@@ -56,6 +58,8 @@ export function Layout() {
 				return <FollowingStage { ...props } />;
 			case 'interactions':
 				return <InteractionsStage { ...props } />;
+			case 'feed':
+				return <FeedStage { ...props } />;
 			default:
 				return <DashboardStage />;
 		}
@@ -74,6 +78,8 @@ export function Layout() {
 				return <FollowingInspector { ...props } />;
 			case 'interactions':
 				return <InteractionInspector { ...props } />;
+			case 'feed':
+				return <FeedInspector { ...props } />;
 			default:
 				return null;
 		}

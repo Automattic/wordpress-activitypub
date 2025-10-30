@@ -6,9 +6,19 @@ import { controls as dataControls } from '@wordpress/data-controls';
 import apiFetch from '@wordpress/api-fetch';
 
 /**
+ * Custom controls for async operations
+ */
+const controls = {
+	...dataControls,
+	API_FETCH( action ) {
+		return apiFetch( action.request );
+	},
+};
+
+/**
  * Internal dependencies
  */
-import type { Follower, Following, Interaction } from '../types';
+import type { Follower, Following, Interaction, FeedPost } from '../types';
 
 // Store name
 export const STORE_NAME = 'activitypub/social-web';
@@ -18,10 +28,12 @@ interface State {
 	followers: Follower[];
 	following: Following[];
 	interactions: Interaction[];
+	feed: FeedPost[];
 	isLoading: {
 		followers: boolean;
 		following: boolean;
 		interactions: boolean;
+		feed: boolean;
 	};
 }
 
@@ -30,10 +42,12 @@ const DEFAULT_STATE: State = {
 	followers: [],
 	following: [],
 	interactions: [],
+	feed: [],
 	isLoading: {
 		followers: false,
 		following: false,
 		interactions: false,
+		feed: false,
 	},
 };
 
@@ -53,13 +67,18 @@ type SetInteractionsAction = {
 	interactions: Interaction[];
 };
 
+type SetFeedAction = {
+	type: 'SET_FEED';
+	feed: FeedPost[];
+};
+
 type SetLoadingAction = {
 	type: 'SET_LOADING';
 	resource: keyof State[ 'isLoading' ];
 	isLoading: boolean;
 };
 
-type Action = SetFollowersAction | SetFollowingAction | SetInteractionsAction | SetLoadingAction;
+type Action = SetFollowersAction | SetFollowingAction | SetInteractionsAction | SetFeedAction | SetLoadingAction;
 
 // Actions
 const actions = {
@@ -81,6 +100,13 @@ const actions = {
 		return {
 			type: 'SET_INTERACTIONS',
 			interactions,
+		};
+	},
+
+	setFeed( feed: FeedPost[] ): SetFeedAction {
+		return {
+			type: 'SET_FEED',
+			feed,
 		};
 	},
 
@@ -134,6 +160,24 @@ const actions = {
 		}
 	},
 
+	*fetchFeed() {
+		yield actions.setLoading( 'feed', true );
+		try {
+			const feed = yield {
+				type: 'API_FETCH',
+				request: {
+					path: '/wp/v2/ap_post',
+				},
+			};
+			yield actions.setFeed( Array.isArray( feed ) ? feed : [] );
+		} catch ( error ) {
+			console.error( 'Failed to fetch feed:', error );
+			yield actions.setFeed( [] );
+		} finally {
+			yield actions.setLoading( 'feed', false );
+		}
+	},
+
 	*blockFollower( followerId: string ) {
 		try {
 			yield apiFetch( {
@@ -164,39 +208,47 @@ const actions = {
 // Selectors
 const selectors = {
 	getFollowers( state: State ): Follower[] {
-		return state.followers;
+		return state?.followers || [];
 	},
 
 	getFollowerById( state: State, id: string ): Follower | undefined {
-		return state.followers.find( ( follower ) => follower.id === id );
+		return state?.followers?.find( ( follower ) => follower.id === id );
 	},
 
 	getFollowing( state: State ): Following[] {
-		return state.following;
+		return state?.following || [];
 	},
 
 	getFollowingById( state: State, id: string ): Following | undefined {
-		return state.following.find( ( following ) => following.id === id );
+		return state?.following?.find( ( following ) => following.id === id );
 	},
 
 	getInteractions( state: State ): Interaction[] {
-		return state.interactions;
+		return state?.interactions || [];
 	},
 
 	getInteractionById( state: State, id: string ): Interaction | undefined {
-		return state.interactions.find( ( interaction ) => interaction.id === id );
+		return state?.interactions?.find( ( interaction ) => interaction.id === id );
+	},
+
+	getFeed( state: State ): FeedPost[] {
+		return state?.feed || [];
+	},
+
+	getFeedPostById( state: State, id: number ): FeedPost | undefined {
+		return state?.feed?.find( ( post ) => post.id === id );
 	},
 
 	isLoading( state: State, resource: keyof State[ 'isLoading' ] ): boolean {
-		return state.isLoading[ resource ];
+		return state?.isLoading?.[ resource ] || false;
 	},
 
 	getStats( state: State ) {
 		return {
-			followers: state.followers.length,
-			following: state.following.length,
-			interactions: state.interactions.length,
-			posts: 0, // This would come from a different endpoint
+			followers: state?.followers?.length || 0,
+			following: state?.following?.length || 0,
+			interactions: state?.interactions?.length || 0,
+			posts: state?.feed?.length || 0,
 		};
 	},
 };
@@ -222,6 +274,12 @@ function reducer( state = DEFAULT_STATE, action: Action ): State {
 				interactions: action.interactions,
 			};
 
+		case 'SET_FEED':
+			return {
+				...state,
+				feed: action.feed,
+			};
+
 		case 'SET_LOADING':
 			return {
 				...state,
@@ -241,7 +299,7 @@ export const store = createReduxStore( STORE_NAME, {
 	reducer,
 	actions,
 	selectors,
-	controls: dataControls,
+	controls,
 } );
 
 register( store );

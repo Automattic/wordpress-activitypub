@@ -5,12 +5,13 @@
  */
 
 import { NavigableMenu, MenuItem, MenuGroup, Icon } from '@wordpress/components';
-import { home, people, addCard, comment } from '@wordpress/icons';
+import { home, people, addCard, comment, postList } from '@wordpress/icons';
 import './style.scss';
 import { __ } from '@wordpress/i18n';
 
 const menuItems = [
 	{ id: 'dashboard', label: __( 'Dashboard' ), icon: home },
+	{ id: 'feed', label: __( 'Feed' ), icon: postList },
 	{ id: 'followers', label: __( 'Followers' ), icon: people },
 	{ id: 'following', label: __( 'Following' ), icon: addCard },
 	{ id: 'interactions', label: __( 'Interactions' ), icon: comment },

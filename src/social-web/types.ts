@@ -71,3 +71,38 @@ export interface Interaction {
 	created: string;
 	object?: string;
 }
+
+export interface FeedPost {
+	id: number;
+	title: {
+		rendered: string;
+	};
+	content: {
+		rendered: string;
+	};
+	excerpt: {
+		rendered: string;
+	};
+	author: number;
+	date: string;
+	date_gmt: string;
+	modified: string;
+	modified_gmt: string;
+	slug: string;
+	status: string;
+	type: string;
+	link: string;
+	guid: {
+		rendered: string;
+	};
+	comment_status: string;
+	ping_status: string;
+	actor?: {
+		id: string;
+		name: string;
+		preferredUsername: string;
+		url: string;
+		icon: string | object | null;
+		type: string;
+	} | null;
+}

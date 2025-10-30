@@ -8,12 +8,13 @@ import { useEffect } from '@wordpress/element';
  * Internal dependencies
  */
 import { STORE_NAME } from '../store';
-import type { Follower, Following, Interaction } from '../types';
+import type { Follower, Following, Interaction, FeedPost } from '../types';
 
 interface SocialWebData {
 	followers: Follower[];
 	following: Following[];
 	interactions: Interaction[];
+	feed: FeedPost[];
 	stats: {
 		followers: number;
 		following: number;
@@ -24,6 +25,7 @@ interface SocialWebData {
 		followers: boolean;
 		following: boolean;
 		interactions: boolean;
+		feed: boolean;
 	};
 }
 
@@ -31,6 +33,7 @@ interface SocialWebActions {
 	fetchFollowers: () => void;
 	fetchFollowing: () => void;
 	fetchInteractions: () => void;
+	fetchFeed: () => void;
 	blockFollower: ( id: string ) => void;
 	removeFollower: ( id: string ) => void;
 }
@@ -45,6 +48,7 @@ function useSocialWebDataFull(): SocialWebData & SocialWebActions {
 			followers: store.getFollowers() as Follower[],
 			following: store.getFollowing() as Following[],
 			interactions: store.getInteractions() as Interaction[],
+			feed: store.getFeed() as FeedPost[],
 			stats: store.getStats() as {
 				followers: number;
 				following: number;
@@ -55,11 +59,12 @@ function useSocialWebDataFull(): SocialWebData & SocialWebActions {
 				followers: store.isLoading( 'followers' ) as boolean,
 				following: store.isLoading( 'following' ) as boolean,
 				interactions: store.isLoading( 'interactions' ) as boolean,
+				feed: store.isLoading( 'feed' ) as boolean,
 			},
 		};
 	}, [] );
 
-	const { fetchFollowers, fetchFollowing, fetchInteractions, blockFollower, removeFollower } = useDispatch(
+	const { fetchFollowers, fetchFollowing, fetchInteractions, fetchFeed, blockFollower, removeFollower } = useDispatch(
 		STORE_NAME
 	) as any;
 
@@ -68,6 +73,7 @@ function useSocialWebDataFull(): SocialWebData & SocialWebActions {
 		fetchFollowers();
 		fetchFollowing();
 		fetchInteractions();
+		fetchFeed();
 	}, [] );
 
 	return {
@@ -75,6 +81,7 @@ function useSocialWebDataFull(): SocialWebData & SocialWebActions {
 		fetchFollowers,
 		fetchFollowing,
 		fetchInteractions,
+		fetchFeed,
 		blockFollower,
 		removeFollower,
 	};
@@ -84,8 +91,8 @@ function useSocialWebDataFull(): SocialWebData & SocialWebActions {
  * Hook to access Social Web data with optional resource filtering
  */
 export function useSocialWebData(
-	resource?: 'followers' | 'following' | 'interactions',
-	id?: string
+	resource?: 'followers' | 'following' | 'interactions' | 'feed',
+	id?: string | number
 ): {
 	items: any;
 	isLoading: boolean;
@@ -100,7 +107,7 @@ export function useSocialWebData(
 		};
 	}
 
-	if ( id ) {
+	if ( id !== undefined ) {
 		// Return single item
 		const item = useSelect(
 			( select ) => {
@@ -111,6 +118,8 @@ export function useSocialWebData(
 					return store.getFollowingById( id ) as Following | undefined;
 				} else if ( resource === 'interactions' ) {
 					return store.getInteractionById( id ) as Interaction | undefined;
+				} else if ( resource === 'feed' ) {
+					return store.getFeedPostById( id ) as FeedPost | undefined;
 				}
 				return null;
 			},
@@ -119,14 +128,14 @@ export function useSocialWebData(
 
 		return {
 			items: item,
-			isLoading: allData.isLoading[ resource ],
+			isLoading: allData?.isLoading?.[ resource ] || false,
 		};
 	}
 
 	// Return list of items for the resource
 	return {
-		items: allData[ resource ],
-		isLoading: allData.isLoading[ resource ],
+		items: allData?.[ resource ] || [],
+		isLoading: allData?.isLoading?.[ resource ] || false,
 	};
 }
 
