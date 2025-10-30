@@ -39,7 +39,7 @@
 		"@types/jest": "^30.0.0",
 		"@wordpress/api-fetch": "^7.32.0",
 		"@wordpress/block-editor": "^15.5.0",
-		"@wordpress/blocks": "^15.3.0",
+		"@wordpress/blocks": "^15.7.0",
 		"@wordpress/components": "^30.6.0",
 		"@wordpress/compose": "^7.32.0",
 		"@wordpress/core-data": "^7.33.0",
