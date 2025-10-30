@@ -6,6 +6,5 @@
 	"category": "widgets",
 	"description": "Social Web admin interface",
 	"textdomain": "activitypub",
-	"editorScript": "file:./index.tsx",
-	"editorStyle": "file:./style.scss"
+	"editorScript": "file:./index.tsx"
 }

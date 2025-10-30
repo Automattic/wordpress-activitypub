@@ -1,6 +1,5 @@
 /* Ensure provider wrappers (SlotFillProvider, ShortcutProvider) fill height */
-#activitypub-social-web-root > div,
-#activitypub-social-web-root > div > div {
+#activitypub-social-web-root > div {
 	height: 100%;
 }
 
@@ -9,7 +8,7 @@
 	flex-direction: column;
 	width: 100%;
 	height: 100%;
-	background-color: #1e1e1e;
+	background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
 	overflow: hidden;
 }
 
@@ -18,7 +17,7 @@
 	height: 100%;
 	flex-grow: 1;
 	display: flex;
-	background-color: #1e1e1e;
+	background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
 	overflow: hidden;
 }
 
