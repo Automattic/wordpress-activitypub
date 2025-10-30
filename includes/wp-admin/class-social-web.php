@@ -73,7 +73,7 @@ class Social_Web {
 	 */
 	public static function render_page() {
 		?>
-		<div id="activitypub-social-web-root" class="activitypub-social-web-layout" style="background:#f1f1f1;"></div>
+		<div id="activitypub-social-web-root" class="activitypub-social-web-layout"></div>
 		<?php
 	}
 }

@@ -4,13 +4,7 @@
  */
 
 // Import global styles (design tokens, body styles, root element)
-@import './styles/global.scss';
-
-// Import component styles
-@import './components/layout/style.scss';
-@import './components/sidebar/style.scss';
-@import './components/panel/style.scss';
-@import './components/page/style.scss';
+@import './styles/design-tokens.scss';
 
 // Main layout container.
 .activitypub-social-web-layout {
@@ -19,5 +13,8 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	z-index: 99998;
+}
+
+#wpfooter {
+	display: none;
 }

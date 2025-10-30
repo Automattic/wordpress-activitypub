@@ -12,6 +12,7 @@ import { ShortcutProvider } from '@wordpress/keyboard-shortcuts';
 import { Layout } from './components/layout';
 import type { SocialWebSettings } from './types';
 import './store'; // Import to register the store
+import './style.scss'; // Import all styles
 
 /**
  * Initialize the Social Web application.
@@ -47,9 +48,7 @@ declare global {
 }
 
 // Export to window for inline script access.
-console.log( 'ActivityPub Social Web: Script loaded' );
 window.wp = window.wp || {};
 window.wp.activitypubSocialWeb = { initialize };
-console.log( 'ActivityPub Social Web: window.wp.activitypubSocialWeb set', window.wp.activitypubSocialWeb );
 
 export type { SocialWebSettings };
