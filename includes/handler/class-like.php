@@ -27,10 +27,10 @@ class Like {
 	/**
 	 * Handles "Like" requests.
 	 *
-	 * @param array $like    The Activity array.
-	 * @param int   $user_id The ID of the local blog user.
+	 * @param array     $like     The Activity array.
+	 * @param int|int[] $user_ids The user ID(s).
 	 */
-	public static function handle_like( $like, $user_id ) {
+	public static function handle_like( $like, $user_ids ) {
 		if ( ! Comment::is_comment_type_enabled( 'like' ) ) {
 			return;
 		}
@@ -57,12 +57,12 @@ class Like {
 		/**
 		 * Fires after an ActivityPub Like activity has been handled.
 		 *
-		 * @param array                                        $like    The ActivityPub activity data.
-		 * @param int                                          $user_id The local user ID.
-		 * @param bool                                         $success True on success, false otherwise.
-		 * @param array|false|int|string|\WP_Comment|\WP_Error $result  The WP_Comment object of the created like comment, or null if creation failed.
+		 * @param array                                         $like     The ActivityPub activity data.
+		 * @param int[]                                         $user_ids The local user IDs.
+		 * @param bool                                          $success  True on success, false otherwise.
+		 * @param array|false|int|string|\WP_Comment|\WP_Error $result   The WP_Comment object of the created like comment, or null if creation failed.
 		 */
-		\do_action( 'activitypub_handled_like', $like, $user_id, $success, $result );
+		\do_action( 'activitypub_handled_like', $like, (array) $user_ids, $success, $result );
 	}
 
 	/**

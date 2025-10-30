@@ -19,6 +19,7 @@ class Classic_Editor {
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_attachments_media_markup', array( self::class, 'filter_attachments_media_markup' ), 10, 2 );
+		\add_filter( 'activitypub_attachment_ids', array( self::class, 'filter_attached_media_ids' ), 10, 2 );
 		\add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
 		\add_action( 'save_post', array( self::class, 'save_meta_data' ) );
 	}
@@ -49,6 +50,51 @@ class Classic_Editor {
 
 		// Multiple attachments or images: use gallery shortcode.
 		return '[gallery ids="' . implode( ',', $attachment_ids ) . '" link="none"]';
+	}
+
+	/**
+	 * Filter to add attached media IDs from the post's media library.
+	 *
+	 * Returns additional image attachments from the post's media library,
+	 * respecting the maximum image attachment limit. Only returns new
+	 * attachments that can be added without exceeding the limit.
+	 *
+	 * @param array    $attachments The current list of attachments.
+	 * @param \WP_Post $item        The post item.
+	 *
+	 * @return array Array of new media IDs to add (as associative arrays with 'id' key).
+	 *               Returns empty array if already at or over the limit.
+	 */
+	public static function filter_attached_media_ids( $attachments, $item ) {
+		$max_media    = \get_option( 'activitypub_max_image_attachments', \ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
+		$actual_count = \max( 0, $max_media - \count( $attachments ) );
+
+		if ( $actual_count <= 0 ) {
+			return $attachments;
+		}
+
+		$query = new \WP_Query(
+			array(
+				'post_parent'    => $item->ID,
+				'post_status'    => 'inherit',
+				'post_type'      => 'attachment',
+				'post_mime_type' => 'image',
+				'order'          => 'ASC',
+				'orderby'        => 'menu_order ID',
+				'fields'         => 'ids',
+				'posts_per_page' => $actual_count,
+			)
+		);
+
+		// Transform IDs into associative arrays.
+		$media_ids = \array_map(
+			function ( $id ) {
+				return array( 'id' => $id );
+			},
+			$query->get_posts()
+		);
+
+		return \array_merge( $attachments, $media_ids );
 	}
 
 	/**

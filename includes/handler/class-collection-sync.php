@@ -39,10 +39,10 @@ class Collection_Sync {
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
 	 *
-	 * @param array $data    The activity data.
-	 * @param int   $user_id The local user ID.
+	 * @param array     $data     The activity data.
+	 * @param int|int[] $user_ids The user ID(s).
 	 */
-	public static function handle_collection_synchronization( $data, $user_id ) {
+	public static function handle_collection_synchronization( $data, $user_ids ) {
 		if ( empty( $_SERVER['HTTP_COLLECTION_SYNCHRONIZATION'] ) ) {
 			return;
 		}
@@ -87,6 +87,8 @@ class Collection_Sync {
 			return;
 		}
 
+		// Extract the user ID for cache key (collection sync is always for a single user).
+		$user_id   = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 		$cache_key = 'activitypub_collection_sync_received_' . $user_id . '_' . md5( $actor_url );
 		if ( false === \get_transient( $cache_key ) ) {
 			$frequency = self::get_frequency();
@@ -101,11 +103,11 @@ class Collection_Sync {
 		 * This allows for async processing of the reconciliation.
 		 *
 		 * @param string $collection_type The collection type (e.g., 'followers', 'following', 'liked').
-		 * @param int    $user_id         The local user ID.
+		 * @param int[]  $user_ids        The local user IDs.
 		 * @param string $actor_url       The remote actor URL.
 		 * @param array  $params          The parsed Collection-Synchronization header parameters.
 		 */
-		\do_action( 'activitypub_collection_sync', $collection_type, $user_id, $actor_url, $params );
+		\do_action( 'activitypub_collection_sync', $collection_type, (array) $user_ids, $actor_url, $params );
 	}
 
 	/**
