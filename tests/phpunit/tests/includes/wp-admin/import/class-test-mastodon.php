@@ -121,10 +121,11 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		 */
 		ob_start();
 		$result = Mastodon::import_posts();
-		ob_get_clean(); // Suppress output.
+		$output = ob_get_clean();
 
 		// If we get here without a fatal error, the bug is fixed!
 		$this->assertTrue( $result, 'import_posts should return true on success' );
+		$this->assertStringContainsString( 'Imported 2 posts', $output, 'Should output import count' );
 
 		// Verify posts were created.
 		$posts = get_posts(
@@ -200,9 +201,10 @@ class Test_Mastodon extends \WP_UnitTestCase {
 
 		ob_start();
 		$result = Mastodon::import_posts();
-		ob_get_clean(); // Suppress output.
+		$output = ob_get_clean();
 
 		$this->assertTrue( $result );
+		$this->assertStringContainsString( 'Imported 1 post', $output, 'Should output import count' );
 
 		// Should only import the public post, not the private one.
 		$posts = get_posts(
@@ -270,9 +272,10 @@ class Test_Mastodon extends \WP_UnitTestCase {
 
 		ob_start();
 		$result = Mastodon::import_posts();
-		ob_get_clean(); // Suppress output.
+		$output = ob_get_clean();
 
 		$this->assertTrue( $result );
+		$this->assertStringContainsString( 'Imported 1 post', $output, 'Should output import count' );
 
 		// Should only import the Create activity, not the Announce.
 		$posts = get_posts(
@@ -341,9 +344,10 @@ class Test_Mastodon extends \WP_UnitTestCase {
 
 		ob_start();
 		$result = Mastodon::import_posts();
-		ob_get_clean(); // Suppress output.
+		$output = ob_get_clean();
 
 		$this->assertTrue( $result );
+		$this->assertStringContainsString( 'Imported', $output, 'Should output import message' );
 
 		$posts = get_posts(
 			array(
@@ -406,9 +410,10 @@ class Test_Mastodon extends \WP_UnitTestCase {
 
 		ob_start();
 		$result = Mastodon::import_posts();
-		ob_get_clean(); // Suppress output.
+		$output = ob_get_clean();
 
 		$this->assertTrue( $result );
+		$this->assertStringContainsString( 'Imported', $output, 'Should output import message' );
 
 		$posts = get_posts(
 			array(
@@ -470,9 +475,10 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		// Should not throw an error about missing 'tag' key.
 		ob_start();
 		$result = Mastodon::import_posts();
-		ob_get_clean(); // Suppress output.
+		$output = ob_get_clean();
 
 		$this->assertTrue( $result );
+		$this->assertStringContainsString( 'Imported', $output, 'Should output import message' );
 
 		$posts = get_posts(
 			array(
@@ -531,9 +537,10 @@ class Test_Mastodon extends \WP_UnitTestCase {
 
 		ob_start();
 		$result = Mastodon::import_posts();
-		ob_get_clean(); // Suppress output.
+		$output = ob_get_clean();
 
 		$this->assertTrue( $result );
+		$this->assertStringContainsString( 'Imported', $output, 'Should output import message' );
 
 		$posts = get_posts(
 			array(
@@ -599,8 +606,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		// First import.
 		ob_start();
 		$result = Mastodon::import_posts();
-		ob_get_clean(); // Suppress output.
+		$output = ob_get_clean();
 		$this->assertTrue( $result );
+		$this->assertStringContainsString( 'Imported 1 post', $output, 'Should output import count' );
 
 		$posts_after_first = get_posts(
 			array(
@@ -616,8 +624,10 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$outbox_property->setValue( null, $outbox );
 		ob_start();
 		$result = Mastodon::import_posts();
-		ob_get_clean(); // Suppress output.
+		$output = ob_get_clean();
 		$this->assertTrue( $result );
+		$this->assertStringContainsString( 'Skipped posts', $output, 'Should output skipped message' );
+		$this->assertStringContainsString( 'Imported 0 posts', $output, 'Should output zero imports' );
 
 		$posts_after_second = get_posts(
 			array(
@@ -705,9 +715,10 @@ class Test_Mastodon extends \WP_UnitTestCase {
 
 		ob_start();
 		$result = Mastodon::import_posts();
-		ob_get_clean(); // Suppress output.
+		$output = ob_get_clean();
 
 		$this->assertTrue( $result );
+		$this->assertStringContainsString( 'Imported 3 posts', $output, 'Should output import count' );
 
 		$posts = get_posts(
 			array(
