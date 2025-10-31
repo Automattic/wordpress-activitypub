@@ -15,16 +15,16 @@ import './style.scss';
 
 // Import stage components.
 import DashboardStage from '../../routes/dashboard/stage';
+import FeedStage from '../../routes/feed/stage';
 import FollowersStage from '../../routes/followers/stage';
 import FollowingStage from '../../routes/following/stage';
 import InteractionsStage from '../../routes/interactions/stage';
-import FeedStage from '../../routes/feed/stage';
 
 // Import inspector components.
+import FeedInspector from '../../routes/feed/inspector';
 import FollowerInspector from '../../routes/followers/inspector';
 import FollowingInspector from '../../routes/following/inspector';
 import InteractionInspector from '../../routes/interactions/inspector';
-import FeedInspector from '../../routes/feed/inspector';
 
 /**
  * Parse the URL hash to extract section and item ID
