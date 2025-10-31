@@ -13,12 +13,12 @@ interface SiteIconProps {
 
 function SiteIcon( { className, siteIconUrl }: SiteIconProps ) {
 	const icon = siteIconUrl ? (
-		<img className="edit-site-site-icon__image" alt="Site Icon" src={ siteIconUrl } />
+		<img className="site-icon__image" alt="Site Icon" src={ siteIconUrl } />
 	) : (
-		<Icon className="edit-site-site-icon__icon" icon={ wordpress } size={ 48 } />
+		<Icon className="site-icon__icon" icon={ wordpress } size={ 48 } />
 	);
 
-	return <div className={ clsx( className, 'edit-site-site-icon' ) }>{ icon }</div>;
+	return <div className={ clsx( className, 'site-icon' ) }>{ icon }</div>;
 }
 
 export default SiteIcon;

@@ -4,10 +4,18 @@
  * Navigation sidebar with menu items for different sections
  */
 
-import { NavigableMenu, MenuItem, MenuGroup, Icon } from '@wordpress/components';
-import { home, people, addCard, comment } from '@wordpress/icons';
-import { __ } from '@wordpress/i18n';
+import {
+	Button,
+	Icon,
+	MenuGroup,
+	MenuItem,
+	NavigableMenu,
+	__experimentalHStack as HStack,
+	__experimentalHeading as Heading,
+} from '@wordpress/components';
+import { home, people, addCard, comment, chevronRight, chevronLeft } from '@wordpress/icons';
 import SiteHub from '../site-hub';
+import { __, isRTL } from '@wordpress/i18n';
 import './style.scss';
 
 const menuItems = [
@@ -29,6 +37,18 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 
 			{ /* Navigation */ }
 			<nav className="nav">
+				<HStack spacing={ 3 } alignment="flex-start" className="sidebar-navigation__icon-title">
+					<Button
+						className="sidebar-navigation__button"
+						size="compact"
+						icon={ isRTL() ? chevronRight : chevronLeft }
+						href="/wp-admin/"
+						label={ __( 'Go to the Dashboard', 'activitypub' ) }
+					/>
+					<Heading className="sidebar-navigation__title" level={ 1 } size={ 20 }>
+						{ __( 'Social Web', 'activitypub' ) }
+					</Heading>
+				</HStack>
 				<NavigableMenu>
 					<MenuGroup>
 						{ menuItems.map( ( item ) => (

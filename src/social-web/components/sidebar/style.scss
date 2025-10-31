@@ -6,8 +6,49 @@
 
 	.nav {
 		flex: 1;
-		padding: var(--wpds-spacing-20, 8px);
+		padding: 0 var(--wpds-spacing-30, 12px);
 		overflow-y: auto;
+	}
+
+	.sidebar-navigation__icon-title {
+		position: sticky;
+		top: 0;
+		background: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+		padding-top: var(--wpds-spacing-120, 48px);
+		margin-bottom: var(--wpds-spacing-20, 8px);
+		padding-bottom: var(--wpds-spacing-20, 8px);
+	}
+
+	.sidebar-navigation__button {
+		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+		flex-shrink: 0;
+
+		// Focus (resets default button focus and use focus-visible).
+		&:focus:not(:disabled) {
+			box-shadow: none;
+			outline: none;
+		}
+		&:focus-visible:not(:disabled) {
+			box-shadow:
+				0 0 0 var(--wpds-border-width-focus, 1.5px)
+				var(--wp-admin-theme-color);
+			outline: 3px solid transparent;
+		}
+
+		&:hover:not(:disabled,[aria-disabled="true"]),
+		&:focus-visible,
+		&:focus,
+		&:not(:disabled,[aria-disabled="true"]):active,
+		&[aria-expanded="true"] {
+			color: var(--wpds-color-private-bg-fg-fill, #f0f0f0);
+		}
+	}
+
+	.sidebar-navigation__title {
+		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+		flex-grow: 1;
+		overflow-wrap: break-word;
+		line-height: var(--wpds-spacing-80, 32px);
 	}
 
 	.menu-item {
