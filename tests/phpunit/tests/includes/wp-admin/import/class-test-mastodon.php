@@ -16,13 +16,20 @@ use ReflectionClass;
 class Test_Mastodon extends \WP_UnitTestCase {
 
 	/**
+	 * Test user ID.
+	 *
+	 * @var int
+	 */
+	protected $user_id;
+
+	/**
 	 * Set up the test.
 	 */
 	public function set_up() {
 		parent::set_up();
 
 		// Create a test user for imports.
-		$this->user_id = $this->factory->user->create(
+		$this->user_id = self::factory()->user->create(
 			array(
 				'role' => 'administrator',
 			)
@@ -44,7 +51,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	 */
 	public function test_import_posts_with_stdclass_objects() {
 		// Create a realistic Mastodon outbox.json structure.
-		$outbox_json = json_encode(
+		$outbox_json = wp_json_encode(
 			array(
 				'@context'     => 'https://www.w3.org/ns/activitystreams',
 				'id'           => 'https://mastodon.social/users/example/outbox',
@@ -87,8 +94,10 @@ class Test_Mastodon extends \WP_UnitTestCase {
 			)
 		);
 
-		// Simulate what Mastodon import does: json_decode WITH associative flag (true).
-		// This ensures all data becomes arrays, not stdClass objects.
+		/*
+		 * Simulate what Mastodon import does: json_decode WITH associative flag.
+		 * This ensures all data is arrays, not stdClass objects.
+		 */
 		$outbox = json_decode( $outbox_json, true );
 
 		// Use reflection to set the private static properties.
@@ -106,9 +115,13 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$fetch_attachments_property->setAccessible( true );
 		$fetch_attachments_property->setValue( null, false );
 
-		// Call the import_posts method.
-		// This should NOT throw a fatal error "Cannot use object of type stdClass as array".
+		/*
+		 * Call the import_posts method.
+		 * This should NOT throw a fatal error "Cannot use object of type stdClass as array".
+		 */
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 
 		// If we get here without a fatal error, the bug is fixed!
 		$this->assertTrue( $result, 'import_posts should return true on success' );
@@ -130,7 +143,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	 */
 	public function test_import_posts_skips_private_posts() {
 		// Create outbox with both public and private posts.
-		$outbox_json = json_encode(
+		$outbox_json = wp_json_encode(
 			array(
 				'orderedItems' => array(
 					// Public post.
@@ -185,7 +198,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$fetch_attachments_property->setAccessible( true );
 		$fetch_attachments_property->setValue( null, false );
 
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 
 		$this->assertTrue( $result );
 
@@ -205,7 +220,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	 * Test that Announce activities (boosts) are skipped.
 	 */
 	public function test_import_posts_skips_announce_activities() {
-		$outbox_json = json_encode(
+		$outbox_json = wp_json_encode(
 			array(
 				'orderedItems' => array(
 					// Public Create activity.
@@ -253,7 +268,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$fetch_attachments_property->setAccessible( true );
 		$fetch_attachments_property->setValue( null, false );
 
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 
 		$this->assertTrue( $result );
 
@@ -273,7 +290,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	 * Test importing posts with hashtags.
 	 */
 	public function test_import_posts_with_hashtags() {
-		$outbox_json = json_encode(
+		$outbox_json = wp_json_encode(
 			array(
 				'orderedItems' => array(
 					array(
@@ -322,7 +339,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$fetch_attachments_property->setAccessible( true );
 		$fetch_attachments_property->setValue( null, false );
 
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 
 		$this->assertTrue( $result );
 
@@ -346,7 +365,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	 * Test importing posts with summary (content warning).
 	 */
 	public function test_import_posts_with_summary() {
-		$outbox_json = json_encode(
+		$outbox_json = wp_json_encode(
 			array(
 				'orderedItems' => array(
 					array(
@@ -385,7 +404,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$fetch_attachments_property->setAccessible( true );
 		$fetch_attachments_property->setValue( null, false );
 
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 
 		$this->assertTrue( $result );
 
@@ -408,7 +429,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	 * Test importing posts without tags array.
 	 */
 	public function test_import_posts_without_tags() {
-		$outbox_json = json_encode(
+		$outbox_json = wp_json_encode(
 			array(
 				'orderedItems' => array(
 					array(
@@ -447,7 +468,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$fetch_attachments_property->setValue( null, false );
 
 		// Should not throw an error about missing 'tag' key.
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 
 		$this->assertTrue( $result );
 
@@ -468,7 +491,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	public function test_import_posts_sets_metadata() {
 		$source_id = 'https://mastodon.social/users/example/statuses/123456';
 
-		$outbox_json = json_encode(
+		$outbox_json = wp_json_encode(
 			array(
 				'orderedItems' => array(
 					array(
@@ -506,7 +529,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$fetch_attachments_property->setAccessible( true );
 		$fetch_attachments_property->setValue( null, false );
 
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 
 		$this->assertTrue( $result );
 
@@ -533,7 +558,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	 * Test that duplicate posts are skipped.
 	 */
 	public function test_import_posts_skips_duplicates() {
-		$outbox_json = json_encode(
+		$outbox_json = wp_json_encode(
 			array(
 				'orderedItems' => array(
 					array(
@@ -572,7 +597,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$fetch_attachments_property->setValue( null, false );
 
 		// First import.
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 		$this->assertTrue( $result );
 
 		$posts_after_first = get_posts(
@@ -587,7 +614,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 
 		// Second import with same data.
 		$outbox_property->setValue( null, $outbox );
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 		$this->assertTrue( $result );
 
 		$posts_after_second = get_posts(
@@ -606,7 +635,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	 * Test posts with different recipient field combinations.
 	 */
 	public function test_import_posts_with_different_recipient_fields() {
-		$outbox_json = json_encode(
+		$outbox_json = wp_json_encode(
 			array(
 				'orderedItems' => array(
 					// Post with 'to' field.
@@ -674,7 +703,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$fetch_attachments_property->setAccessible( true );
 		$fetch_attachments_property->setValue( null, false );
 
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 
 		$this->assertTrue( $result );
 
@@ -707,7 +738,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 
 		add_filter( 'activitypub_import_mastodon_post_data', $filter_callback, 10, 2 );
 
-		$outbox_json = json_encode(
+		$outbox_json = wp_json_encode(
 			array(
 				'orderedItems' => array(
 					array(
@@ -745,7 +776,9 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$fetch_attachments_property->setAccessible( true );
 		$fetch_attachments_property->setValue( null, false );
 
+		ob_start();
 		$result = Mastodon::import_posts();
+		ob_get_clean(); // Suppress output.
 
 		$this->assertTrue( $result );
 		$this->assertTrue( $filter_called, 'activitypub_import_mastodon_post_data filter should be called' );
