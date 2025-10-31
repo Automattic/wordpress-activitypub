@@ -54,7 +54,7 @@
 		"@wordpress/icons": "^11.0.0",
 		"@wordpress/interactivity": "^6.33.0",
 		"@wordpress/plugins": "^7.34.0",
-		"@wordpress/prettier-config": "^4.31.0",
+		"@wordpress/prettier-config": "^4.34.0",
 		"@wordpress/primitives": "^4.31.0",
 		"@wordpress/scripts": "^30.23.0",
 		"@wordpress/url": "^4.34.0",
