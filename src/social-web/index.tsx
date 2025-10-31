@@ -1,8 +1,7 @@
 /**
  * WordPress dependencies
  */
-import React from 'react';
-import { createRoot } from '@wordpress/element';
+import { createRoot, lazy } from '@wordpress/element';
 import { SlotFillProvider } from '@wordpress/components';
 import { ShortcutProvider } from '@wordpress/keyboard-shortcuts';
 import { privateApis as routerPrivateApis } from '@wordpress/router';
@@ -16,24 +15,42 @@ import { unlock } from './lock-unlock';
 import './store'; // Import to register the store
 import './style.scss'; // Import all styles
 
-// Import route components
-import DashboardStage from './routes/dashboard/stage';
-import FollowersStage from './routes/followers/stage';
-import FollowingStage from './routes/following/stage';
-import InteractionsStage from './routes/interactions/stage';
-import FollowerInspector from './routes/followers/inspector';
-import FollowingInspector from './routes/following/inspector';
-import InteractionInspector from './routes/interactions/inspector';
+// Lazy load route components for code splitting
+// Dashboard is loaded in layout/index.tsx where it's used
+
+const FollowersStage = lazy(
+	() => import( /* webpackChunkName: "social-web/followers" */ './routes/followers/stage' )
+);
+const FollowingStage = lazy(
+	() => import( /* webpackChunkName: "social-web/following" */ './routes/following/stage' )
+);
+const InteractionsStage = lazy(
+	() => import( /* webpackChunkName: "social-web/interactions" */ './routes/interactions/stage' )
+);
+
+// Lazy load inspector components - using same chunk names to combine with stages
+const FollowerInspector = lazy(
+	() => import( /* webpackChunkName: "social-web/followers" */ './routes/followers/inspector' )
+);
+const FollowingInspector = lazy(
+	() => import( /* webpackChunkName: "social-web/following" */ './routes/following/inspector' )
+);
+const InteractionInspector = lazy(
+	() => import( /* webpackChunkName: "social-web/interactions" */ './routes/interactions/inspector' )
+);
 
 const { RouterProvider } = unlock( routerPrivateApis );
 
-// Define routes for the router to match
-// Following Gutenberg's pattern where routes define their rendering areas
-// Note: Dashboard doesn't define areas in the route to avoid hooks issues with root path
+/*
+ * Define routes for the router to match
+ * Following Gutenberg's pattern where routes define their rendering areas
+ * Note: Dashboard doesn't define areas in the route to avoid hooks issues with root path
+ */
 const routes = [
 	{
 		name: 'dashboard',
 		path: '/',
+		// Dashboard stage is rendered in layout component to avoid hooks issues
 	},
 	{
 		name: 'followers',

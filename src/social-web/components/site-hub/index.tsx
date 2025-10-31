@@ -8,7 +8,12 @@
  * WordPress dependencies
  */
 import { useSelect, useDispatch } from '@wordpress/data';
-import { Button, __experimentalHStack as HStack, VisuallyHidden } from '@wordpress/components';
+import {
+	Button,
+	// eslint-disable-next-line @wordpress/no-unsafe-wp-apis -- HStack is widely used in core and stable in practice
+	__experimentalHStack as HStack,
+	VisuallyHidden,
+} from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { store as coreStore } from '@wordpress/core-data';
 import { decodeEntities } from '@wordpress/html-entities';

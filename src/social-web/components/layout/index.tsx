@@ -7,10 +7,11 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useEffect, useCallback } from '@wordpress/element';
+import { useEffect, useCallback, Suspense } from '@wordpress/element';
 import { privateApis as routerPrivateApis } from '@wordpress/router';
 import { addQueryArgs } from '@wordpress/url';
 import { CommandMenu } from '@wordpress/commands';
+import { Spinner } from '@wordpress/components';
 import { unlock } from '../../lock-unlock';
 import Sidebar from '../sidebar';
 import Panel from '../panel';
@@ -28,11 +29,6 @@ export function Layout() {
 
 	// Get itemId from query params
 	const selectedItemId = ( query?.itemId as string ) || null;
-
-	// Debug: Log when section changes
-	useEffect( () => {
-		console.log( 'Active section:', activeSection, 'Areas:', areas, 'Query:', query );
-	}, [ activeSection, areas, query ] );
 
 	// Add fullscreen mode class to body
 	useEffect( () => {
@@ -80,22 +76,29 @@ export function Layout() {
 
 	// Render stage component from route areas or use DashboardStage for dashboard
 	const StageComponent = areas?.stage;
-	const stageElement = StageComponent ? (
-		typeof StageComponent === 'function' ? (
-			<StageComponent onSelectItem={ handleSelectItem } />
-		) : (
-			StageComponent
-		)
-	) : activeSection === 'dashboard' ? (
-		<DashboardStage />
-	) : null;
+	let stageElement;
+	if ( StageComponent ) {
+		stageElement = (
+			<Suspense fallback={ <Spinner /> }>
+				<StageComponent onSelectItem={ handleSelectItem } />
+			</Suspense>
+		);
+	} else if ( activeSection === 'dashboard' ) {
+		stageElement = <DashboardStage />;
+	} else {
+		stageElement = null;
+	}
 
 	// Render inspector component from route areas
 	const InspectorComponent = areas?.inspector;
-	const inspectorElement =
-		selectedItemId && InspectorComponent ? (
-			<InspectorComponent id={ selectedItemId } onClose={ handleCloseInspector } />
-		) : null;
+	let inspectorElement = null;
+	if ( selectedItemId && InspectorComponent ) {
+		inspectorElement = (
+			<Suspense fallback={ <Spinner /> }>
+				<InspectorComponent id={ selectedItemId } onClose={ handleCloseInspector } />
+			</Suspense>
+		);
+	}
 
 	const showInspector = !! inspectorElement;
 

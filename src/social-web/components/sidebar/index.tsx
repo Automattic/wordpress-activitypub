@@ -10,7 +10,9 @@ import {
 	MenuGroup,
 	MenuItem,
 	NavigableMenu,
+	// eslint-disable-next-line @wordpress/no-unsafe-wp-apis -- HStack is widely used in core and stable in practice
 	__experimentalHStack as HStack,
+	// eslint-disable-next-line @wordpress/no-unsafe-wp-apis -- Heading is widely used in core and stable in practice
 	__experimentalHeading as Heading,
 } from '@wordpress/components';
 import { home, people, addCard, comment, chevronRight, chevronLeft } from '@wordpress/icons';
