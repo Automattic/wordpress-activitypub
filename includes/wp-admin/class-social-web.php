@@ -32,12 +32,22 @@ class Social_Web {
 	 * Enqueue scripts and styles for the Social Web page.
 	 */
 	public static function enqueue_scripts() {
+		$vendors_asset = include \plugin_dir_path( ACTIVITYPUB_PLUGIN_FILE ) . 'build/social-web/vendors.asset.php';
+
+		\wp_enqueue_script(
+			'activitypub-social-web-vendors',
+			\plugins_url( 'build/social-web/vendors.js', ACTIVITYPUB_PLUGIN_FILE ),
+			$vendors_asset['dependencies'],
+			$vendors_asset['version'],
+			true
+		);
+
 		$asset_file = include \plugin_dir_path( ACTIVITYPUB_PLUGIN_FILE ) . 'build/social-web/index.asset.php';
 
 		\wp_enqueue_script(
 			'activitypub-social-web',
 			\plugins_url( 'build/social-web/index.js', ACTIVITYPUB_PLUGIN_FILE ),
-			$asset_file['dependencies'],
+			array_merge( $asset_file['dependencies'], array( 'activitypub-social-web-vendors' ) ),
 			$asset_file['version'],
 			true
 		);
