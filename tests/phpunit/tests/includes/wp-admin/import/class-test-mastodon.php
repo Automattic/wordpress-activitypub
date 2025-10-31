@@ -87,8 +87,8 @@ class Test_Mastodon extends \WP_UnitTestCase {
 			)
 		);
 
-		// Simulate what Mastodon import does: json_decode WITH associative flag.
-		// This ensures all data is arrays, not stdClass objects.
+		// Simulate what Mastodon import does: json_decode WITH associative flag (true).
+		// This ensures all data becomes arrays, not stdClass objects.
 		$outbox = json_decode( $outbox_json, true );
 
 		// Use reflection to set the private static properties.
