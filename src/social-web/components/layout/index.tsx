@@ -7,72 +7,32 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useEffect, useCallback } from '@wordpress/element';
+import { privateApis as routerPrivateApis } from '@wordpress/router';
+import { addQueryArgs } from '@wordpress/url';
 import { CommandMenu } from '@wordpress/commands';
+import { unlock } from '../../lock-unlock';
 import Sidebar from '../sidebar';
 import Panel from '../panel';
 import './style.scss';
 
-// Import stage components.
+// Import dashboard separately since it's not in route areas
 import DashboardStage from '../../routes/dashboard/stage';
-import FollowersStage from '../../routes/followers/stage';
-import FollowingStage from '../../routes/following/stage';
-import InteractionsStage from '../../routes/interactions/stage';
 
-// Import inspector components.
-import FollowerInspector from '../../routes/followers/inspector';
-import FollowingInspector from '../../routes/following/inspector';
-import InteractionInspector from '../../routes/interactions/inspector';
-
-/**
- * Parse the URL hash to extract section and item ID
- * Format: #/section or #/section/itemId
- */
-function parseHash(): { section: string; itemId: string | null } {
-	const hash = window.location.hash.slice( 1 ); // Remove #
-	if ( ! hash || hash === '/' ) {
-		return { section: 'dashboard', itemId: null };
-	}
-
-	const parts = hash.split( '/' ).filter( Boolean );
-	const section = parts[ 0 ] || 'dashboard';
-	const itemId = parts[ 1 ] || null;
-
-	return { section, itemId };
-}
-
-/**
- * Update the URL hash without triggering a page reload
- */
-function updateHash( section: string, itemId?: string | null ) {
-	const hash = itemId ? `#/${ section }/${ itemId }` : `#/${ section }`;
-	window.history.pushState( null, '', hash );
-}
+const { useLocation, useHistory } = unlock( routerPrivateApis );
 
 export function Layout() {
-	const [ activeSection, setActiveSection ] = useState( 'dashboard' );
-	const [ selectedItemId, setSelectedItemId ] = useState< string | null >( null );
+	// Following Gutenberg's pattern: destructure what we need from location
+	const { query, name: activeSection = 'dashboard', areas = {} } = useLocation();
+	const history = useHistory();
 
-	// Initialize from URL hash on mount
+	// Get itemId from query params
+	const selectedItemId = ( query?.itemId as string ) || null;
+
+	// Debug: Log when section changes
 	useEffect( () => {
-		const { section, itemId } = parseHash();
-		setActiveSection( section );
-		setSelectedItemId( itemId );
-	}, [] );
-
-	// Listen for hash changes (back/forward navigation)
-	useEffect( () => {
-		const handleHashChange = () => {
-			const { section, itemId } = parseHash();
-			setActiveSection( section );
-			setSelectedItemId( itemId );
-		};
-
-		window.addEventListener( 'hashchange', handleHashChange );
-		return () => {
-			window.removeEventListener( 'hashchange', handleHashChange );
-		};
-	}, [] );
+		console.log( 'Active section:', activeSection, 'Areas:', areas, 'Query:', query );
+	}, [ activeSection, areas, query ] );
 
 	// Add fullscreen mode class to body
 	useEffect( () => {
@@ -82,62 +42,65 @@ export function Layout() {
 		};
 	}, [] );
 
-	const handleSelectItem = ( id: string ) => {
-		setSelectedItemId( id );
-		updateHash( activeSection, id );
-	};
+	const handleSelectItem = useCallback(
+		( id: string ) => {
+			// Navigate with itemId in query params
+			const queryString = addQueryArgs( '', {
+				...query,
+				itemId: id,
+			} );
+			// Map section names to paths (dashboard is '/', others are '/{section}')
+			const path = activeSection === 'dashboard' ? '/' : `/${ activeSection }`;
+			history.navigate( `${ path }${ queryString }` );
+		},
+		[ query, activeSection, history ]
+	);
 
-	const handleCloseInspector = () => {
-		setSelectedItemId( null );
-		updateHash( activeSection );
-	};
+	const handleCloseInspector = useCallback( () => {
+		// Remove itemId from query
+		const { itemId, ...restQuery } = query || {};
+		const queryString = Object.keys( restQuery ).length > 0 ? addQueryArgs( '', restQuery ) : '';
+		// Map section names to paths (dashboard is '/', others are '/{section}')
+		const path = activeSection === 'dashboard' ? '/' : `/${ activeSection }`;
+		history.navigate( `${ path }${ queryString }` );
+	}, [ query, activeSection, history ] );
 
-	const handleNavigate = ( section: string ) => {
-		setActiveSection( section );
-		setSelectedItemId( null );
-		updateHash( section );
-	};
+	const handleNavigate = useCallback(
+		( section: string ) => {
+			// Navigate to new section, preserve non-itemId query params
+			const { itemId, ...restQuery } = query || {};
+			const queryString = Object.keys( restQuery ).length > 0 ? addQueryArgs( '', restQuery ) : '';
 
-	// Render main content (stage)
-	const renderStage = () => {
-		const props = { onSelectItem: handleSelectItem };
+			// Map section names to paths (dashboard is '/', others are '/{section}')
+			const path = section === 'dashboard' ? '/' : `/${ section }`;
+			history.navigate( `${ path }${ queryString }` );
+		},
+		[ query, history ]
+	);
 
-		switch ( activeSection ) {
-			case 'dashboard':
-				return <DashboardStage />;
-			case 'followers':
-				return <FollowersStage { ...props } />;
-			case 'following':
-				return <FollowingStage { ...props } />;
-			case 'interactions':
-				return <InteractionsStage { ...props } />;
-			default:
-				return <DashboardStage />;
-		}
-	};
+	// Render stage component from route areas or use DashboardStage for dashboard
+	const StageComponent = areas?.stage;
+	const stageElement = StageComponent ? (
+		typeof StageComponent === 'function' ? (
+			<StageComponent onSelectItem={ handleSelectItem } />
+		) : (
+			StageComponent
+		)
+	) : activeSection === 'dashboard' ? (
+		<DashboardStage />
+	) : null;
 
-	// Render detail panel (inspector)
-	const renderInspector = () => {
-		if ( ! selectedItemId ) return null;
+	// Render inspector component from route areas
+	const InspectorComponent = areas?.inspector;
+	const inspectorElement =
+		selectedItemId && InspectorComponent ? (
+			<InspectorComponent id={ selectedItemId } onClose={ handleCloseInspector } />
+		) : null;
 
-		const props = { id: selectedItemId, onClose: handleCloseInspector };
-
-		switch ( activeSection ) {
-			case 'followers':
-				return <FollowerInspector { ...props } />;
-			case 'following':
-				return <FollowingInspector { ...props } />;
-			case 'interactions':
-				return <InteractionInspector { ...props } />;
-			default:
-				return null;
-		}
-	};
-
-	const showInspector = !! selectedItemId;
+	const showInspector = !! inspectorElement;
 
 	return (
-		<div className="app-layout">
+		<div className="app-layout" data-section={ activeSection }>
 			<CommandMenu />
 			<div className="app-content">
 				{ /* Sidebar - 240px fixed width (no Panel wrapper, stays dark) */ }
@@ -147,13 +110,13 @@ export function Layout() {
 
 				{ /* Stage - main content area */ }
 				<div className="stage-region">
-					<Panel>{ renderStage() }</Panel>
+					<Panel>{ stageElement }</Panel>
 				</div>
 
 				{ /* Inspector - optional 380px side panel */ }
 				{ showInspector && (
 					<div className="inspector-region">
-						<Panel>{ renderInspector() }</Panel>
+						<Panel>{ inspectorElement }</Panel>
 					</div>
 				) }
 			</div>
