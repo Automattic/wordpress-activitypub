@@ -13,7 +13,7 @@ import {
 	__experimentalHStack as HStack,
 	__experimentalHeading as Heading,
 } from '@wordpress/components';
-import { home, people, addCard, comment, chevronRight, chevronLeft } from '@wordpress/icons';
+import { home, people, addCard, comment, chevronRight, chevronLeft, postList } from '@wordpress/icons';
 import SiteHub from '../site-hub';
 import { __, isRTL } from '@wordpress/i18n';
 import './style.scss';

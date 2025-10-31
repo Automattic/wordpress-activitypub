@@ -104,3 +104,23 @@ export interface FeedPost {
 		guid: string;
 	} | null;
 }
+
+export interface Comment {
+	id: number;
+	post: number;
+	parent: number;
+	author: number;
+	author_name: string;
+	author_url: string;
+	author_avatar_urls: {
+		[ size: string ]: string;
+	};
+	date: string;
+	date_gmt: string;
+	content: {
+		rendered: string;
+	};
+	link: string;
+	status: string;
+	type: string;
+}

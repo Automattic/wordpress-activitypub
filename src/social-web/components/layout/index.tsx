@@ -148,7 +148,7 @@ export function Layout() {
 	const showInspector = !! selectedItemId;
 
 	return (
-		<div className="app-layout">
+		<div className="app-layout" data-section={ activeSection }>
 			<CommandMenu />
 			<div className="app-content">
 				{ /* Sidebar - 240px fixed width (no Panel wrapper, stays dark) */ }
