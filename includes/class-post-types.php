@@ -33,7 +33,7 @@ class Post_Types {
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_actor_rest_field' ) );
 
-		// \add_filter( 'rest_ap_post_query', array( self::class, 'filter_ap_post_by_user' ) );
+		\add_filter( 'rest_ap_post_query', array( self::class, 'filter_ap_post_by_user' ) );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
