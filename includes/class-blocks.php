@@ -297,9 +297,8 @@ class Blocks {
 		$data['post_content'] = \rtrim( \implode( PHP_EOL, $blocks ), PHP_EOL );
 
 		// Add reply block if it's a reply.
-		$in_reply_to = $post['object']['inReplyTo'] ?? null;
-		if ( null !== $in_reply_to ) {
-			$reply_block          = \sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, \esc_url( $in_reply_to ) );
+		if ( ! empty( $post['object']['inReplyTo'] ) ) {
+			$reply_block          = \sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, \esc_url( $post['object']['inReplyTo'] ) );
 			$data['post_content'] = $reply_block . $data['post_content'];
 		}
 
