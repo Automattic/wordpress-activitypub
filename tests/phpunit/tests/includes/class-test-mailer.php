@@ -743,4 +743,279 @@ class Test_Mailer extends WP_UnitTestCase {
 		delete_option( 'activitypub_blog_user_mailer_new_mention' );
 		delete_option( 'activitypub_actor_mode' );
 	}
+
+	/**
+	 * Test new follower notification with array of user IDs.
+	 *
+	 * @covers ::new_follower
+	 */
+	public function test_new_follower_with_array() {
+		$activity = array(
+			'type'   => 'Follow',
+			'actor'  => 'https://example.com/author',
+			'object' => 'https://example.com/follow/1',
+		);
+
+		// Mock remote metadata.
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Test Follower',
+					'url'               => 'https://example.com/author',
+					'preferredUsername' => 'follower',
+				);
+			}
+		);
+
+		// Capture email.
+		\add_filter(
+			'wp_mail',
+			function ( $args ) {
+				$this->assertStringContainsString( 'Test Follower', $args['subject'] );
+				$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
+				$this->assertEquals( \get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
+				return $args;
+			}
+		);
+
+		// Pass array of user IDs (follows are always for single user, but handler passes array).
+		Mailer::new_follower( $activity, array( self::$user_id ), true );
+
+		// Clean up.
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'wp_mail' );
+	}
+
+	/**
+	 * Test direct message notification with array of user IDs.
+	 *
+	 * @covers ::direct_message
+	 */
+	public function test_direct_message_with_array() {
+		$user_id = self::$user_id;
+
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'content' => 'Test direct message',
+			),
+			'to'     => array( Actors::get_by_id( $user_id )->get_id() ),
+		);
+
+		// Mock remote metadata.
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name' => 'Test Sender',
+					'url'  => 'https://example.com/author',
+				);
+			}
+		);
+
+		$mock = new \MockAction();
+		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+
+		// Capture email.
+		\add_filter(
+			'wp_mail',
+			function ( $args ) use ( $user_id ) {
+				$this->assertStringContainsString( 'Direct Message', $args['subject'] );
+				$this->assertStringContainsString( 'Test Sender', $args['subject'] );
+				$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
+				return $args;
+			}
+		);
+
+		// Pass array of user IDs.
+		Mailer::direct_message( $activity, array( $user_id ) );
+
+		$this->assertEquals( 1, $mock->get_call_count() );
+
+		// Clean up.
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'wp_mail' );
+	}
+
+	/**
+	 * Test mention notification with array of user IDs.
+	 *
+	 * @covers ::mention
+	 */
+	public function test_mention_with_array() {
+		$user_id = self::$user_id;
+
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'content' => 'Test mention',
+			),
+			'cc'     => array( Actors::get_by_id( $user_id )->get_id() ),
+		);
+
+		// Mock remote metadata.
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name' => 'Test Sender',
+					'url'  => 'https://example.com/author',
+				);
+			}
+		);
+
+		$mock = new \MockAction();
+		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+
+		// Capture email.
+		\add_filter(
+			'wp_mail',
+			function ( $args ) use ( $user_id ) {
+				$this->assertStringContainsString( 'Mention', $args['subject'] );
+				$this->assertStringContainsString( 'Test Sender', $args['subject'] );
+				$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
+				return $args;
+			}
+		);
+
+		// Pass array of user IDs.
+		Mailer::mention( $activity, array( $user_id ) );
+
+		$this->assertEquals( 1, $mock->get_call_count() );
+
+		// Clean up.
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'wp_mail' );
+	}
+
+	/**
+	 * Test direct message with multiple recipients filters correctly.
+	 *
+	 * @covers ::direct_message
+	 */
+	public function test_direct_message_filters_recipients() {
+		$user_id = self::$user_id;
+
+		// Create a second user not in the TO field.
+		$other_user_id = self::factory()->user->create(
+			array(
+				'role'       => 'author',
+				'meta_input' => array(
+					$GLOBALS['wpdb']->get_blog_prefix() . 'activitypub_mailer_new_dm' => 1,
+				),
+			)
+		);
+
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'content' => 'Test direct message',
+			),
+			// Only user_id is in TO, not other_user_id.
+			'to'     => array( Actors::get_by_id( $user_id )->get_id() ),
+		);
+
+		// Mock remote metadata.
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name' => 'Test Sender',
+					'url'  => 'https://example.com/author',
+				);
+			}
+		);
+
+		$mock = new \MockAction();
+		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+
+		// Capture email and verify only the correct user gets it.
+		\add_filter(
+			'wp_mail',
+			function ( $args ) use ( $user_id, $other_user_id ) {
+				$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
+				$this->assertNotEquals( \get_user_by( 'id', $other_user_id )->user_email, $args['to'] );
+				return $args;
+			}
+		);
+
+		// Pass array with both users, but only one should receive email.
+		Mailer::direct_message( $activity, array( $user_id, $other_user_id ) );
+
+		// Should only send 1 email (to user_id, not other_user_id).
+		$this->assertEquals( 1, $mock->get_call_count() );
+
+		// Clean up.
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'wp_mail' );
+		\wp_delete_user( $other_user_id );
+	}
+
+	/**
+	 * Test mention with multiple recipients filters correctly.
+	 *
+	 * @covers ::mention
+	 */
+	public function test_mention_filters_recipients() {
+		$user_id = self::$user_id;
+
+		// Create a second user not in the CC field.
+		$other_user_id = self::factory()->user->create(
+			array(
+				'role'       => 'author',
+				'meta_input' => array(
+					$GLOBALS['wpdb']->get_blog_prefix() . 'activitypub_mailer_new_mention' => 1,
+				),
+			)
+		);
+
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'content' => 'Test mention',
+			),
+			// Only user_id is in CC, not other_user_id.
+			'cc'     => array( Actors::get_by_id( $user_id )->get_id() ),
+		);
+
+		// Mock remote metadata.
+		\add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name' => 'Test Sender',
+					'url'  => 'https://example.com/author',
+				);
+			}
+		);
+
+		$mock = new \MockAction();
+		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+
+		// Capture email and verify only the correct user gets it.
+		\add_filter(
+			'wp_mail',
+			function ( $args ) use ( $user_id, $other_user_id ) {
+				$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
+				$this->assertNotEquals( \get_user_by( 'id', $other_user_id )->user_email, $args['to'] );
+				return $args;
+			}
+		);
+
+		// Pass array with both users, but only one should receive email.
+		Mailer::mention( $activity, array( $user_id, $other_user_id ) );
+
+		// Should only send 1 email (to user_id, not other_user_id).
+		$this->assertEquals( 1, $mock->get_call_count() );
+
+		// Clean up.
+		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_all_filters( 'wp_mail' );
+		\wp_delete_user( $other_user_id );
+	}
 }
