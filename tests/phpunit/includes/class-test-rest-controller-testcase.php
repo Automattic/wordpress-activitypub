@@ -32,7 +32,7 @@ abstract class Test_REST_Controller_Testcase extends \WP_Test_REST_TestCase {
 	 * Tear down the test.
 	 */
 	public function tear_down() {
-		\remove_filter( 'rest_url', array( $this, 'test_rest_url_for_leading_slash' ) );
+		\remove_filter( 'rest_url', array( $this, 'filter_rest_url_for_leading_slash' ) );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', array( get_called_class(), 'bypass_url_validation' ) );
 
 		global $wp_rest_server;
