@@ -23,6 +23,33 @@ if [ -n "$PHP_FILES" ]; then
     exit 1
   fi
 
+  # Check for forbidden remove_all_filters patterns in test files.
+  FORBIDDEN_PATTERN=0
+  for file in $PHP_FILES; do
+    if echo "$file" | grep -q "^tests/"; then
+      if grep -n "remove_all_filters.*['\"]pre_http_request['\"]" "$file" > /dev/null 2>&1; then
+        if [ $FORBIDDEN_PATTERN -eq 0 ]; then
+          echo "❌ Found forbidden pattern in test files:"
+          echo ""
+          FORBIDDEN_PATTERN=1
+        fi
+        echo "  $file:"
+        grep -n "remove_all_filters.*['\"]pre_http_request['\"]" "$file" | sed 's/^/    Line /'
+        echo ""
+      fi
+    fi
+  done
+
+  if [ $FORBIDDEN_PATTERN -eq 1 ]; then
+    echo "⚠️  Please use remove_filter() with specific callback variables instead of remove_all_filters()."
+    echo ""
+    echo "Example:"
+    echo "  ❌ Bad:  remove_all_filters( 'pre_http_request' );"
+    echo "  ✅ Good: remove_filter( 'pre_http_request', \$callback_variable );"
+    echo ""
+    exit 1
+  fi
+
   # Run PHP Code Sniffer on all changed PHP files at once.
   echo "$PHP_FILES" | xargs composer lint:fix > /dev/null 2>&1 || { echo "PHP formatting failed"; exit 1; }
 fi

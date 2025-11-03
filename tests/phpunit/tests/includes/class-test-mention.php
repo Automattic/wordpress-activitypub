@@ -9,6 +9,8 @@ namespace Activitypub\Tests;
 
 use Activitypub\Mention;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Test class for Activitypub Mention.
  *
@@ -36,6 +38,7 @@ class Test_Mention extends \WP_UnitTestCase {
 		parent::set_up();
 		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
 		add_filter( 'pre_http_request', array( $this, 'pre_http_request' ), 10, 3 );
+		add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'activitypub_pre_http_get_remote_object' ), 10, 2 );
 	}
 
 	/**
@@ -44,6 +47,7 @@ class Test_Mention extends \WP_UnitTestCase {
 	public function tear_down() {
 		remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
 		remove_filter( 'pre_http_request', array( $this, 'pre_http_request' ) );
+		remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'activitypub_pre_http_get_remote_object' ) );
 		parent::tear_down();
 	}
 
@@ -121,6 +125,32 @@ ENDPRE;
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Mock ActivityPub remote object requests.
+	 *
+	 * @param mixed        $pre           The pre-filtered value.
+	 * @param array|string $url_or_object The URL or object.
+	 * @return mixed
+	 */
+	public function activitypub_pre_http_get_remote_object( $pre, $url_or_object ) {
+		$url = object_to_uri( $url_or_object );
+
+		// Return parsed object data for ActivityPub actors.
+		if ( 'https://notiz.blog/author/matthias-pfefferle/' === $url ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$fixture = json_decode( file_get_contents( AP_TESTS_DIR . '/data/fixtures/notiz-blog-author-matthias-pfefferle.json' ), true );
+			return json_decode( $fixture['body'], true );
+		}
+
+		if ( 'https://lemmy.ml/u/pfefferle' === $url ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$fixture = json_decode( file_get_contents( AP_TESTS_DIR . '/data/fixtures/lemmy-ml-u-pfefferle.json' ), true );
+			return json_decode( $fixture['body'], true );
+		}
+
+		return $pre;
 	}
 
 	/**

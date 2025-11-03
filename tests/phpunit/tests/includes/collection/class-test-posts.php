@@ -11,6 +11,8 @@ use Activitypub\Attachments;
 use Activitypub\Collection\Posts;
 use Activitypub\Post_Types;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Posts Collection Test Class.
  *
@@ -30,6 +32,9 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Mock HTTP requests for Remote_Actors::fetch_by_uri.
 		add_filter( 'pre_http_request', array( $this, 'mock_http_request' ), 10, 3 );
+
+		// Also hook into the ActivityPub-specific filter to bypass URL validation.
+		add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ), 10, 2 );
 	}
 
 	/**
@@ -37,10 +42,35 @@ class Test_Posts extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		remove_filter( 'pre_http_request', array( $this, 'mock_http_request' ) );
+		remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ) );
 
 		$this->remove_added_uploads();
 
 		parent::tear_down();
+	}
+
+	/**
+	 * Mock remote object fetching to bypass URL validation.
+	 *
+	 * @param mixed  $response      The response to return.
+	 * @param string $url_or_object The URL or object being fetched.
+	 * @return mixed The mocked response or null to continue.
+	 */
+	public function mock_remote_object( $response, $url_or_object ) {
+		if ( 'https://example.com/users/testuser' === object_to_uri( $url_or_object ) ) {
+			return array(
+				'id'                => 'https://example.com/users/testuser',
+				'type'              => 'Person',
+				'name'              => 'Test Actor',
+				'preferredUsername' => 'testuser',
+				'summary'           => 'A test actor',
+				'url'               => 'https://example.com/users/testuser',
+				'inbox'             => 'https://example.com/users/testuser/inbox',
+				'outbox'            => 'https://example.com/users/testuser/outbox',
+			);
+		}
+
+		return $response;
 	}
 
 	/**

@@ -10,6 +10,8 @@ namespace Activitypub\Tests;
 use Activitypub\Blocks;
 use Activitypub\Collection\Interactions;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Test class for Blocks.
  *
@@ -98,18 +100,17 @@ class Test_Blocks extends \WP_UnitTestCase {
 			),
 		);
 
-		$pre_filter = function ( $preempt, $args, $url ) use ( $mock_activity ) {
+		$pre_filter = function ( $pre, $url_or_object ) use ( $mock_activity ) {
+			$url = object_to_uri( $url_or_object );
 			if ( false !== strpos( $url, 'mastodon.social' ) ) {
-				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => wp_json_encode( $mock_activity ),
-				);
+				return $mock_activity;
 			}
-			return $preempt;
+
+			return $pre;
 		};
 
 		// Add filter to mock the HTTP response before Http::get_remote_object is called.
-		add_filter( 'pre_http_request', $pre_filter, 10, 3 );
+		add_filter( 'activitypub_pre_http_get_remote_object', $pre_filter, 10, 2 );
 
 		$block_markup = sprintf(
 			'<!-- wp:activitypub/reply {"url":"%s","embedPost":true} /-->',
@@ -139,7 +140,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'p-name', $output );
 		$this->assertStringContainsString( 'u-url', $output );
 
-		remove_filter( 'pre_http_request', $pre_filter, 10, 3 );
+		remove_filter( 'activitypub_pre_http_get_remote_object', $pre_filter );
 	}
 
 	/**
