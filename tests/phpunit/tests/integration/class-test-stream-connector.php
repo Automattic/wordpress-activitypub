@@ -7,19 +7,19 @@
 
 namespace Activitypub\Tests\Integration;
 
-use Activitypub\Integration\Stream_Connector;
+use Activitypub\Integration\Stream\Connector;
 
 /**
  * Test Stream Connector Integration class.
  *
  * @group integration
- * @coversDefaultClass \Activitypub\Integration\Stream_Connector
+ * @coversDefaultClass \Activitypub\Integration\Stream\Connector
  */
 class Test_Stream_Connector extends \WP_UnitTestCase {
 	/**
 	 * Stream Connector instance.
 	 *
-	 * @var Stream_Connector
+	 * @var Connector
 	 */
 	protected $stream_connector;
 
@@ -95,13 +95,13 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 	 */
 	public function set_up() {
 		parent::set_up();
-		$this->stream_connector = new \Activitypub\Integration\Stream_Connector();
+		$this->stream_connector = new \Activitypub\Integration\Stream\Connector();
 	}
 
 	/**
 	 * Test the Stream connector registration hook behavior.
 	 *
-	 * @covers \Activitypub\Integration\register_stream_connector
+	 * @covers \Activitypub\Integration\Stream\Stream::register_connector
 	 */
 	public function test_stream_connector_registration() {
 		$initial_classes = array( 'existing_connector' );
@@ -123,7 +123,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 			}
 
 			$this->assertNotNull( $activitypub_connector, 'ActivityPub connector should be registered when Stream plugin is available' );
-			$this->assertInstanceOf( 'Activitypub\Integration\Stream_Connector', $activitypub_connector );
+			$this->assertInstanceOf( 'Activitypub\Integration\Stream\Connector', $activitypub_connector );
 		} else {
 			// When Stream plugin is not available, the filter should return unchanged classes.
 			$result = apply_filters( 'wp_stream_connectors', $initial_classes );
@@ -277,7 +277,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 
 		// Capture the log call.
 		$logged_data      = null;
-		$stream_connector = $this->createPartialMock( Stream_Connector::class, array( 'log' ) );
+		$stream_connector = $this->createPartialMock( Connector::class, array( 'log' ) );
 		$stream_connector->expects( $this->once() )
 			->method( 'log' )
 			->willReturnCallback(
@@ -324,7 +324,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 
 		// Capture the log call.
 		$logged_data      = null;
-		$stream_connector = $this->createPartialMock( Stream_Connector::class, array( 'log' ) );
+		$stream_connector = $this->createPartialMock( Connector::class, array( 'log' ) );
 		$stream_connector->expects( $this->once() )
 			->method( 'log' )
 			->willReturnCallback(
@@ -364,7 +364,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 
 		// Capture the log call.
 		$logged_data      = null;
-		$stream_connector = $this->createPartialMock( Stream_Connector::class, array( 'log' ) );
+		$stream_connector = $this->createPartialMock( Connector::class, array( 'log' ) );
 		$stream_connector->expects( $this->once() )
 			->method( 'log' )
 			->willReturnCallback(
@@ -420,7 +420,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 
 		// Capture the log call.
 		$logged_data      = null;
-		$stream_connector = $this->createPartialMock( Stream_Connector::class, array( 'log' ) );
+		$stream_connector = $this->createPartialMock( Connector::class, array( 'log' ) );
 		$stream_connector->expects( $this->once() )
 			->method( 'log' )
 			->willReturnCallback(
@@ -475,7 +475,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 			'post_title' => $post_title,
 		);
 
-		$reflection = new \ReflectionClass( Stream_Connector::class );
+		$reflection = new \ReflectionClass( Connector::class );
 		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
 		$method->setAccessible( true );
 
@@ -534,7 +534,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 			'post_title' => $post_url,
 		);
 
-		$reflection = new \ReflectionClass( Stream_Connector::class );
+		$reflection = new \ReflectionClass( Connector::class );
 		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
 		$method->setAccessible( true );
 
@@ -566,7 +566,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 			'post_title' => $comment_url,
 		);
 
-		$reflection = new \ReflectionClass( Stream_Connector::class );
+		$reflection = new \ReflectionClass( Connector::class );
 		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
 		$method->setAccessible( true );
 
@@ -622,7 +622,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 			'post_title' => $author_url,
 		);
 
-		$reflection = new \ReflectionClass( Stream_Connector::class );
+		$reflection = new \ReflectionClass( Connector::class );
 		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
 		$method->setAccessible( true );
 
@@ -661,7 +661,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 			'post_title' => $blog_user_url,
 		);
 
-		$reflection = new \ReflectionClass( Stream_Connector::class );
+		$reflection = new \ReflectionClass( Connector::class );
 		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
 		$method->setAccessible( true );
 
