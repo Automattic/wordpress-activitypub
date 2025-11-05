@@ -15,7 +15,6 @@ use function Activitypub\esc_hashtag;
 use function Activitypub\get_attribution_domains;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_blog_public;
-use function Activitypub\is_single_user;
 
 /**
  * Blog class.
@@ -107,11 +106,7 @@ class Blog extends Actor {
 	 * @return string The type of the object.
 	 */
 	public function get_type() {
-		if ( is_single_user() ) {
-			return 'Person';
-		} else {
-			return 'Group';
-		}
+		return 'Group';
 	}
 
 	/**
@@ -303,7 +298,7 @@ class Blog extends Actor {
 	 * @return string|null The Moderators endpoint.
 	 */
 	public function get_moderators() {
-		if ( is_single_user() || 'Group' !== $this->get_type() ) {
+		if ( 'Group' !== $this->get_type() ) {
 			return null;
 		}
 
@@ -316,7 +311,7 @@ class Blog extends Actor {
 	 * @return string|null The attributedTo value.
 	 */
 	public function get_attributed_to() {
-		if ( is_single_user() || 'Group' !== $this->get_type() ) {
+		if ( 'Group' !== $this->get_type() ) {
 			return null;
 		}
 

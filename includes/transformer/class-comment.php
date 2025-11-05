@@ -15,7 +15,6 @@ use Activitypub\Webfinger;
 
 use function Activitypub\get_comment_ancestors;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\is_single_user;
 use function Activitypub\was_comment_received;
 
 /**
@@ -207,10 +206,6 @@ class Comment extends Base {
 
 		$blog_user          = new Blog();
 		$this->actor_object = $blog_user;
-
-		if ( is_single_user() ) {
-			return $blog_user;
-		}
 
 		$user = Actors::get_by_id( $this->item->user_id );
 

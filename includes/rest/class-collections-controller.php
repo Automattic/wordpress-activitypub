@@ -13,7 +13,6 @@ use Activitypub\Transformer\Factory;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\is_single_user;
 
 /**
  * Collections_Controller class.
@@ -158,7 +157,7 @@ class Collections_Controller extends Actors_Controller {
 	public function get_featured( $request, $user_id ) {
 		$posts = array();
 
-		if ( is_single_user() || Actors::BLOG_USER_ID !== $user_id ) {
+		if ( Actors::BLOG_USER_ID !== $user_id ) {
 			$sticky_posts = \get_option( 'sticky_posts' );
 
 			if ( $sticky_posts && is_array( $sticky_posts ) ) {

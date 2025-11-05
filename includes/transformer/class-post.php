@@ -20,7 +20,6 @@ use function Activitypub\get_content_visibility;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_enclosures;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\is_single_user;
 use function Activitypub\site_supports_blocks;
 
 /**
@@ -104,10 +103,6 @@ class Post extends Base {
 
 		$blog_user          = new Blog();
 		$this->actor_object = $blog_user;
-
-		if ( is_single_user() ) {
-			return $blog_user;
-		}
 
 		$user = Actors::get_by_id( $this->item->post_author );
 

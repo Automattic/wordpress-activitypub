@@ -7,8 +7,6 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Actors;
-
 /**
  * ActivityPub Comment Class.
  *
@@ -139,11 +137,6 @@ class Comment {
 			return false;
 		}
 
-		if ( is_single_user() && \user_can( $current_user, 'publish_posts' ) ) {
-			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
-			$current_user = Actors::BLOG_USER_ID;
-		}
-
 		return user_can_activitypub( $current_user );
 	}
 
@@ -241,11 +234,6 @@ class Comment {
 		// Comments without user can't be federated.
 		if ( ! $user_id ) {
 			return false;
-		}
-
-		if ( is_single_user() && \user_can( $user_id, 'activitypub' ) ) {
-			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
-			$user_id = Actors::BLOG_USER_ID;
 		}
 
 		// User is not allowed to federate comments.

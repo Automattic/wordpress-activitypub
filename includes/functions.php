@@ -426,15 +426,12 @@ function is_user_type_disabled( $type ) {
 /**
  * Check if the blog is in single-user mode.
  *
- * @return boolean True if the blog is in single-user mode, false otherwise.
+ * @deprecated unreleased Always returns false as actor mode has been removed.
+ *
+ * @return boolean Always returns false.
  */
 function is_single_user() {
-	if (
-		false === is_user_type_disabled( 'blog' ) &&
-		true === is_user_type_disabled( 'user' )
-	) {
-		return true;
-	}
+	\_deprecated_function( __FUNCTION__, 'unreleased', '' );
 
 	return false;
 }
@@ -612,11 +609,6 @@ function get_active_users( $duration = 1 ) {
 		return 0;
 	}
 
-	// If single user mode.
-	if ( is_single_user() ) {
-		return 1;
-	}
-
 	// If blog user is disabled.
 	if ( ! user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 		return (int) $count;
@@ -632,11 +624,6 @@ function get_active_users( $duration = 1 ) {
  * @return int The total number of users.
  */
 function get_total_users() {
-	// If single user mode.
-	if ( is_single_user() ) {
-		return 1;
-	}
-
 	$users = \get_users(
 		array(
 			'capability__in' => array( 'activitypub' ),
