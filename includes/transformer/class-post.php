@@ -899,8 +899,15 @@ class Post extends Base {
 		if ( 'wordpress-post-format' === $post_format_setting ) {
 			$template = '';
 
-			// If the post is a note and not a reply, force the inclusion of the post title.
-			if ( 'Note' === $type && empty( $this->get_in_reply_to() ) ) {
+			/*
+			 *If the post is a note, not a reply, and does not have mentions
+			 * force the inclusion of the post title.
+			 */
+			if (
+				'Note' === $type
+				&& empty( $this->get_in_reply_to() )
+				&& empty( $this->get_mentions() )
+			) {
 				$template .= "[ap_title type=\"html\"]\n\n";
 			}
 
