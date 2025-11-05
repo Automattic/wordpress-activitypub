@@ -42,16 +42,6 @@ class Test_Following extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after each test.
-	 */
-	public function tear_down() {
-		parent::tear_down();
-
-		remove_all_filters( 'pre_http_request' );
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-	}
-
-	/**
 	 * Test column_username with actor having icon object using real prepare_items().
 	 *
 	 * This test uses Following::follow() to create a real following and uses

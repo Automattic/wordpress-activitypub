@@ -33,7 +33,7 @@ class Mastodon {
 	/**
 	 * Outbox file.
 	 *
-	 * @var object
+	 * @var array
 	 */
 	private static $outbox;
 
@@ -154,7 +154,7 @@ class Mastodon {
 	 */
 	public static function import_options() {
 		$author = 0;
-		if ( isset( self::$outbox->{'orderedItems'}[0] ) ) {
+		if ( isset( self::$outbox['orderedItems'][0] ) ) {
 			$users = \get_users(
 				array(
 					'fields'     => 'ID',
@@ -162,7 +162,7 @@ class Mastodon {
 					'meta_query' => array(
 						array(
 							'key'     => $GLOBALS['wpdb']->get_blog_prefix() . 'activitypub_also_known_as',
-							'value'   => self::$outbox->{'orderedItems'}[0]->actor,
+							'value'   => self::$outbox['orderedItems'][0]['actor'],
 							'compare' => 'LIKE',
 						),
 					),
@@ -233,7 +233,7 @@ class Mastodon {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		self::$outbox = \json_decode( \file_get_contents( self::$archive . '/outbox.json' ) );
+		self::$outbox = \json_decode( \file_get_contents( self::$archive . '/outbox.json' ), true );
 
 		\wp_suspend_cache_invalidation();
 		\wp_defer_term_counting( true );
@@ -278,13 +278,13 @@ class Mastodon {
 		$skipped  = array();
 		$imported = 0;
 
-		foreach ( self::$outbox->{'orderedItems'} as $post ) {
+		foreach ( self::$outbox['orderedItems'] as $post ) {
 			// Skip boosts.
-			if ( 'Announce' === $post->type ) {
+			if ( 'Announce' === $post['type'] ) {
 				continue;
 			}
 
-			if ( ! is_activity_public( \get_object_vars( $post ) ) ) {
+			if ( ! is_activity_public( $post ) ) {
 				continue;
 			}
 
@@ -292,29 +292,29 @@ class Mastodon {
 
 			$post_data = array(
 				'post_author'  => self::$author,
-				'post_date'    => $post->published,
-				'post_excerpt' => $post->object->summary ?? '',
-				'post_content' => $post->object->content,
+				'post_date'    => $post['published'],
+				'post_excerpt' => $post['object']['summary'] ?? '',
+				'post_content' => $post['object']['content'],
 				'post_status'  => 'publish',
 				'post_type'    => 'post',
-				'meta_input'   => array( '_source_id' => $post->object->id ),
+				'meta_input'   => array( '_source_id' => $post['object']['id'] ),
 				'tags_input'   => \array_map(
 					function ( $tag ) {
-						if ( 'Hashtag' === $tag->type ) {
-							return \ltrim( $tag->name, '#' );
+						if ( 'Hashtag' === $tag['type'] ) {
+							return \ltrim( $tag['name'], '#' );
 						}
 
 						return '';
 					},
-					$post->object->tag
+					$post['object']['tag'] ?? array()
 				),
 			);
 
 			/**
 			 * Filter the post data before inserting it into the database.
 			 *
-			 * @param array  $post_data The post data to be inserted.
-			 * @param object $post      The Mastodon Create activity.
+			 * @param array $post_data The post data to be inserted.
+			 * @param array $post      The Mastodon Create activity.
 			 */
 			$post_data = \apply_filters( 'activitypub_import_mastodon_post_data', $post_data, $post );
 
@@ -334,7 +334,7 @@ class Mastodon {
 			$post_exists = \apply_filters( 'wp_import_existing_post', $post_exists, $post_data );
 
 			if ( $post_exists ) {
-				$skipped[] = $post->object->id;
+				$skipped[] = $post['object']['id'];
 				continue;
 			}
 
@@ -347,15 +347,15 @@ class Mastodon {
 			\set_post_format( $post_id, 'status' );
 
 			// Process attachments if enabled.
-			if ( self::$fetch_attachments && ! empty( $post->object->attachment ) ) {
+			if ( self::$fetch_attachments && ! empty( $post['object']['attachment'] ) ) {
 				// Prepend archive path to attachment URLs for local files.
-				$attachments = array_map( array( self::class, 'prepend_archive_path' ), $post->object->attachment );
+				$attachments = array_map( array( self::class, 'prepend_archive_path' ), $post['object']['attachment'] );
 
 				Attachments::import( $attachments, $post_id, self::$author );
 			}
 
 			// phpcs:ignore
-			if ( $post_id && isset( $post->object->replies->first->next ) ) {
+			if ( $post_id && isset( $post['object']['replies']['first']['next'] ) ) {
 				// @todo: Import replies as comments.
 			}
 
@@ -423,13 +423,13 @@ class Mastodon {
 	/**
 	 * Prepend archive path to local attachment URLs.
 	 *
-	 * @param object $attachment The attachment object.
+	 * @param array $attachment The attachment array.
 	 *
-	 * @return object The attachment object with updated URL.
+	 * @return array The attachment array with updated URL.
 	 */
 	private static function prepend_archive_path( $attachment ) {
-		if ( ! empty( $attachment->url ) && ! preg_match( '#^https?://#i', $attachment->url ) ) {
-			$attachment->url = self::$archive . $attachment->url;
+		if ( ! empty( $attachment['url'] ) && ! preg_match( '#^https?://#i', $attachment['url'] ) ) {
+			$attachment['url'] = self::$archive . $attachment['url'];
 		}
 
 		return $attachment;

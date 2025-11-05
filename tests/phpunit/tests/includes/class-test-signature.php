@@ -728,30 +728,26 @@ class Test_Signature extends \WP_UnitTestCase {
 		$could_support_rfc9421->setAccessible( true );
 		$this->assertTrue( $could_support_rfc9421->invoke( null, $url ) );
 
-		\add_filter(
-			'pre_http_request',
-			function ( $response, $args, $url ) {
-				$response = array(
-					'headers'  => array(),
-					'body'     => '',
-					'response' => array(
-						'code'    => 200,
-						'message' => 'OK',
-					),
+		$mock_callback = function ( $response, $args, $url ) {
+			$response = array(
+				'headers'  => array(),
+				'body'     => '',
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+			);
+
+			if ( isset( $args['headers']['Signature-Input'] ) ) {
+				$response['response'] = array(
+					'code'    => 401,
+					'message' => 'Unauthorized',
 				);
+			}
 
-				if ( isset( $args['headers']['Signature-Input'] ) ) {
-					$response['response'] = array(
-						'code'    => 401,
-						'message' => 'Unauthorized',
-					);
-				}
-
-				return \apply_filters( 'http_response', $response, $args, $url );
-			},
-			10,
-			3
-		);
+			return \apply_filters( 'http_response', $response, $args, $url );
+		};
+		\add_filter( 'pre_http_request', $mock_callback, 10, 3 );
 
 		Http::post( $url, '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}', 1 );
 
@@ -760,6 +756,6 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		// Cleanup.
 		\delete_option( 'activitypub_rfc9421_signature' );
-		\remove_all_filters( 'pre_http_request' );
+		\remove_filter( 'pre_http_request', $mock_callback );
 	}
 }

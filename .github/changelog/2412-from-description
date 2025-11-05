@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Refactored Mastodon import handling to use consistent array-based data, improving reliability and compatibility across all import scenarios.

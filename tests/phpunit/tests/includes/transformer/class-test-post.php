@@ -1032,4 +1032,126 @@ class Test_Post extends \WP_UnitTestCase {
 			'Invalid permission should fall back to anyone (public) policy.'
 		);
 	}
+
+	/**
+	 * Test that get_post_content_template falls back to constant when option is empty.
+	 *
+	 * @covers ::get_post_content_template
+	 */
+	public function test_get_post_content_template_fallback_with_empty_option() {
+		$post = $this->create_test_post();
+
+		// Set object type to something other than wordpress-post-format.
+		\update_option( 'activitypub_object_type', 'Article' );
+
+		// Test with empty string option - should fall back to constant.
+		\update_option( 'activitypub_custom_post_content', '' );
+
+		$transformer = new Post( $post );
+		$reflection  = new \ReflectionClass( Post::class );
+		$method      = $reflection->getMethod( 'get_post_content_template' );
+		$method->setAccessible( true );
+
+		$template = $method->invoke( $transformer );
+
+		$this->assertSame( ACTIVITYPUB_CUSTOM_POST_CONTENT, $template, 'Empty option should fall back to ACTIVITYPUB_CUSTOM_POST_CONTENT constant.' );
+	}
+
+	/**
+	 * Test that get_post_content_template uses option value when set.
+	 *
+	 * @covers ::get_post_content_template
+	 */
+	public function test_get_post_content_template_uses_option_when_set() {
+		$post = $this->create_test_post();
+
+		// Set object type to something other than wordpress-post-format.
+		\update_option( 'activitypub_object_type', 'Article' );
+
+		// Test with custom template option.
+		$custom_template = '[ap_title]\n\n[ap_content]\n\n[ap_hashtags]';
+		\update_option( 'activitypub_custom_post_content', $custom_template );
+
+		$transformer = new Post( $post );
+		$reflection  = new \ReflectionClass( Post::class );
+		$method      = $reflection->getMethod( 'get_post_content_template' );
+		$method->setAccessible( true );
+
+		$template = $method->invoke( $transformer );
+
+		$this->assertSame( $custom_template, $template, 'Should use custom template option when set.' );
+	}
+
+	/**
+	 * Test that get_post_content_template falls back with null option.
+	 *
+	 * @covers ::get_post_content_template
+	 */
+	public function test_get_post_content_template_fallback_with_false_option() {
+		$post = $this->create_test_post();
+
+		// Set object type to something other than wordpress-post-format.
+		\update_option( 'activitypub_object_type', 'Article' );
+
+		// Test with false option (not set) - should fall back to constant.
+		\delete_option( 'activitypub_custom_post_content' );
+
+		$transformer = new Post( $post );
+		$reflection  = new \ReflectionClass( Post::class );
+		$method      = $reflection->getMethod( 'get_post_content_template' );
+		$method->setAccessible( true );
+
+		$template = $method->invoke( $transformer );
+
+		$this->assertSame( ACTIVITYPUB_CUSTOM_POST_CONTENT, $template, 'False option should fall back to ACTIVITYPUB_CUSTOM_POST_CONTENT constant.' );
+	}
+
+	/**
+	 * Test that get_post_content_template respects wordpress-post-format setting.
+	 *
+	 * @covers ::get_post_content_template
+	 */
+	public function test_get_post_content_template_wordpress_post_format() {
+		// Create a post with long content and title (will be Article type).
+		$article_post = self::factory()->post->create_and_get(
+			array(
+				'post_title'   => 'Test Article',
+				'post_content' => str_repeat( 'Long content. ', 100 ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set custom content template.
+		\update_option( 'activitypub_custom_post_content', '[ap_title]\n\n[ap_content]' );
+
+		// Set post format setting to wordpress-post-format.
+		\update_option( 'activitypub_object_type', 'wordpress-post-format' );
+
+		$transformer = new Post( $article_post );
+		$reflection  = new \ReflectionClass( Post::class );
+		$method      = $reflection->getMethod( 'get_post_content_template' );
+		$method->setAccessible( true );
+
+		$template = $method->invoke( $transformer );
+
+		// When wordpress-post-format is set, template should be generated based on post type.
+		// For an Article (long content with title), it should just be [ap_content].
+		$this->assertSame( '[ap_content]', $template, 'wordpress-post-format should override custom template for Article type.' );
+
+		// Test with a Note type (no title or short content).
+		$note_post = self::factory()->post->create_and_get(
+			array(
+				'post_title'   => '',
+				'post_content' => 'Short note',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$note_transformer = new Post( $note_post );
+		$note_template    = $method->invoke( $note_transformer );
+
+		// For a Note, the template should include the title.
+		$this->assertStringContainsString( '[ap_title type="html"]', $note_template, 'wordpress-post-format should add title for Note type.' );
+		$this->assertStringContainsString( '[ap_content]', $note_template, 'wordpress-post-format should include content for Note type.' );
+	}
 }
