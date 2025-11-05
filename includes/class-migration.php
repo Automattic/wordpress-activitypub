@@ -497,9 +497,7 @@ class Migration {
 			// Remove activitypub capability from all existing users.
 			$users = \get_users(
 				array(
-					'meta_key'     => 'activitypub_capability', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-					'meta_value'   => true, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-					'meta_compare' => '=',
+					'capability__in' => array( 'activitypub' ),
 				)
 			);
 
