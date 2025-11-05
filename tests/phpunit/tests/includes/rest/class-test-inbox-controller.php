@@ -197,7 +197,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	public function test_create_item_with_blog_user() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'blog' );
 
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
 
@@ -242,7 +242,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	public function test_create_item_with_multiple_recipients() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
@@ -288,7 +288,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	public function test_create_item_with_multiple_recipients_and_invalid_recipient() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
@@ -334,7 +334,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	public function test_create_item_with_multiple_recipients_and_inactive_recipient() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
@@ -357,7 +357,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 			'to'     => array( $user_actor->get_id(), $blog_actor->get_id() ),
 		);
 
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor' );
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 		$request->set_header( 'Content-Type', 'application/activity+json' );
@@ -382,7 +382,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	public function test_create_item_with_different_activity_types() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor' );
 
 		$user_actor     = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$activity_types = array( 'Update', 'Delete', 'Follow', 'Accept', 'Reject', 'Announce', 'Like' );
@@ -556,7 +556,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_get_local_recipients_public_activity() {
 		// Enable actor mode to allow user actors.
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor' );
 
 		// Create additional test users (authors have activitypub capability by default).
 		$user_id_1 = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -637,7 +637,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_get_local_recipients_public_activity_in_cc() {
 		// Enable actor mode to allow user actors.
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor' );
 
 		// Create a test user (authors have activitypub capability by default).
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -710,7 +710,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_shared_inbox_context_parameter() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
@@ -762,7 +762,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_shared_inbox_action_hook_fires() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
@@ -820,7 +820,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_inbox_persistence_with_shared_inbox() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
@@ -881,7 +881,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_regular_inbox_action_with_shared_inbox_context() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );

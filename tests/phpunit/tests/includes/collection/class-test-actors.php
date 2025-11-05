@@ -21,7 +21,6 @@ class Test_Actors extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		add_option( 'activitypub_blog_identifier', 'blog' );
 		add_user_meta( 1, 'activitypub_user_identifier', 'admin' );
 	}
@@ -39,7 +38,6 @@ class Test_Actors extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_blog_user_private_key' );
 		\delete_option( 'activitypub_application_user_public_key' );
 		\delete_option( 'activitypub_application_user_private_key' );
-		\delete_option( 'activitypub_actor_mode' );
 		\delete_user_meta( 1, 'magic_sig_public_key' );
 		\delete_user_meta( 1, 'magic_sig_private_key' );
 	}
@@ -135,20 +133,15 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test if Actor mode will be respected properly
+	 * Test that blog profile is always available.
 	 *
-	 * @covers ::get_type_by_id
+	 * @covers ::get_by_resource
 	 */
-	public function test_disabled_blog_profile() {
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-
+	public function test_blog_profile_always_available() {
 		$resource = 'http://example.org/@blog';
 
+		// Blog profile should always be available now.
 		$this->assertEquals( 'Activitypub\Model\Blog', get_class( Actors::get_by_resource( $resource ) ) );
-
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-
-		$this->assertWPError( Actors::get_by_resource( $resource ) );
 	}
 
 	/**
@@ -202,9 +195,6 @@ class Test_Actors extends \WP_UnitTestCase {
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 
 		// Check blog user.
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-		\delete_option( 'activitypub_actor_mode' );
-
 		$public_key  = 'public key ' . Actors::BLOG_USER_ID;
 		$private_key = 'private key ' . Actors::BLOG_USER_ID;
 

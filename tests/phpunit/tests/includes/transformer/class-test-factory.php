@@ -114,14 +114,14 @@ class Test_Factory extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( \WP_Error::class, $transformer );
 
-		\add_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\add_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$post        = get_post( self::$post_id );
 		$transformer = Factory::get_transformer( $post );
 
 		$this->assertInstanceOf( Post::class, $transformer );
 
-		\add_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		\add_option( 'activitypub_actor_mode', 'actor' );
 
 		$post        = get_post( self::$post_id );
 		$transformer = Factory::get_transformer( $post );

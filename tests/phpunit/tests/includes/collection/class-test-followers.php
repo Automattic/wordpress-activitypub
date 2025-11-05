@@ -541,42 +541,42 @@ class Test_Followers extends \WP_UnitTestCase {
 	public function data_maybe_add_inboxes_of_blog_user() {
 		return array(
 			'actor mode'      => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_MODE,
+				'actor_mode' => 'actor',
 				'json'       => '{"type":"Update","id":"test"}',
 				'actor_id'   => 123,
 				'expected'   => false,
 				'message'    => 'Should return false when not in blog and user mode.',
 			),
 			'blog actor'      => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+				'actor_mode' => 'actor_blog',
 				'json'       => '{"type":"Update","id":"test"}',
 				'actor_id'   => Actors::BLOG_USER_ID,
 				'expected'   => false,
 				'message'    => 'Should return false when using blog actor.',
 			),
 			'create activity' => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+				'actor_mode' => 'actor_blog',
 				'json'       => '{"type":"Create","id":"test"}',
 				'actor_id'   => 123,
 				'expected'   => false,
 				'message'    => 'Should return false for non-Update/Delete activity types.',
 			),
 			'update activity' => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+				'actor_mode' => 'actor_blog',
 				'json'       => '{"type":"Update","id":"test"}',
 				'actor_id'   => 123,
 				'expected'   => true,
 				'message'    => 'Should return true for Update activity in dual mode.',
 			),
 			'delete activity' => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+				'actor_mode' => 'actor_blog',
 				'json'       => '{"type":"Delete","id":"test"}',
 				'actor_id'   => 123,
 				'expected'   => true,
 				'message'    => 'Should return true for Delete activity in dual mode.',
 			),
 			'invalid json'    => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+				'actor_mode' => 'actor_blog',
 				'json'       => 'invalid json',
 				'actor_id'   => 123,
 				'expected'   => false,
@@ -650,7 +650,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertCount( 1, $inboxes, 'Should retrieve exactly 1 inbox with batch size 1.' );
 
 		// Test with blog user in dual mode.
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 		Followers::add( Actors::BLOG_USER_ID, self::$actors['sally@example.org']['id'] );
 
 		$inboxes = Followers::get_inboxes_for_activity(

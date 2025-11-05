@@ -30,7 +30,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @param string $json    The JSON representation of the data.
 	 */
 	public function test_add( $data, $type, $user_id, $json ) {
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$id = \Activitypub\add_to_outbox( $data, $type, $user_id );
 
@@ -203,10 +203,10 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function author_object_provider() {
 		return array(
-			array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, null, 'user' ),
-			array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, 90210, 'blog' ),
-			array( ACTIVITYPUB_BLOG_MODE, 90210, 'blog' ),
-			array( ACTIVITYPUB_ACTOR_MODE, 90210, false ),
+			array( 'actor_blog', null, 'user' ),
+			array( 'actor_blog', 90210, 'blog' ),
+			array( 'blog', 90210, 'blog' ),
+			array( 'actor', 90210, false ),
 		);
 	}
 

@@ -149,16 +149,9 @@ class Test_Replies extends \WP_UnitTestCase {
 		$context_post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
 		get_user_by( 'id', $user_id )->remove_cap( 'activitypub' );
 
-		// Author disabled, Blog user disabled.
-		$this->assertFalse( Replies::get_context_collection( $context_post_id ) );
-
-		// Enable Blog user.
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
-
+		// Author has no capability but blog actor is always available.
 		$context = Replies::get_context_collection( $context_post_id );
-
+		$this->assertNotFalse( $context, 'Blog actor should always be available' );
 		$this->assertSame( \get_author_posts_url( Actors::BLOG_USER_ID ), $context['attributedTo'] );
-
-		\delete_option( 'activitypub_actor_mode' );
 	}
 }

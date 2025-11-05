@@ -132,7 +132,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		Migration::migrate_actor_mode();
 
-		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
+		$this->assertEquals( 'actor', \get_option( 'activitypub_actor_mode', 'actor' ) );
 
 		\update_option( 'activitypub_enable_blog_user', '0' );
 		\update_option( 'activitypub_enable_users', '1' );
@@ -140,7 +140,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		Migration::migrate_actor_mode();
 
-		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
+		$this->assertEquals( 'actor', \get_option( 'activitypub_actor_mode', 'actor' ) );
 
 		\update_option( 'activitypub_enable_blog_user', '1' );
 		\update_option( 'activitypub_enable_users', '1' );
@@ -148,7 +148,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		Migration::migrate_actor_mode();
 
-		$this->assertEquals( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
+		$this->assertEquals( 'actor_blog', \get_option( 'activitypub_actor_mode', 'actor' ) );
 
 		\update_option( 'activitypub_enable_blog_user', '1' );
 		\update_option( 'activitypub_enable_users', '0' );
@@ -156,7 +156,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		Migration::migrate_actor_mode();
 
-		$this->assertEquals( ACTIVITYPUB_BLOG_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
+		$this->assertEquals( 'blog', \get_option( 'activitypub_actor_mode', 'actor' ) );
 
 		\delete_option( 'activitypub_enable_blog_user' );
 		\update_option( 'activitypub_enable_users', '0' );
@@ -164,7 +164,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		Migration::migrate_actor_mode();
 
-		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
+		$this->assertEquals( 'actor', \get_option( 'activitypub_actor_mode', 'actor' ) );
 
 		\update_option( 'activitypub_enable_blog_user', '0' );
 		\delete_option( 'activitypub_enable_users' );
@@ -172,7 +172,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		Migration::migrate_actor_mode();
 
-		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
+		$this->assertEquals( 'actor', \get_option( 'activitypub_actor_mode', 'actor' ) );
 	}
 
 	/**

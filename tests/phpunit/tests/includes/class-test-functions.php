@@ -713,16 +713,15 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertIsString( \Activitypub\get_user_id( $user->ID ) );
 
-		\add_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-
+		// User with capability should have ID.
 		$this->assertIsString( \Activitypub\get_user_id( $user->ID ) );
 
+		// Remove capability - user should fall back to blog.
 		$user->remove_cap( 'activitypub' );
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 		$this->assertIsString( \Activitypub\get_user_id( $user->ID ) );
 
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-		$this->assertFalse( \Activitypub\get_user_id( $user->ID ) );
+		// User without capability should return blog ID.
+		$this->assertIsString( \Activitypub\get_user_id( $user->ID ) );
 	}
 
 	/**

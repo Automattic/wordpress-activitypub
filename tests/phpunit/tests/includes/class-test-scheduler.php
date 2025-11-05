@@ -457,9 +457,6 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	 * @covers ::schedule_announce_activity
 	 */
 	public function test_schedule_announce_activity() {
-		// Set the actor mode to both blog and user mode.
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-
 		$activity = new Activity();
 		$activity->set_type( 'Create' );
 		$activity->set_id( 'https://example.com/test-id' );

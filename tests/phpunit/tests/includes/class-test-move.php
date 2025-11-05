@@ -118,7 +118,7 @@ class Test_Move extends \WP_UnitTestCase {
 	 */
 	public function test_account_with_blog_author_as_actor() {
 		// Change user mode to blog author.
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'blog' );
 
 		$from = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$to   = 'https://newsite.com/user/0';
@@ -194,7 +194,7 @@ class Test_Move extends \WP_UnitTestCase {
 	 */
 	public function test_change_domain_with_valid_input() {
 		// Enable blog actor.
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$old_domain = home_url();
 		$new_domain = 'http://newdomain.com';

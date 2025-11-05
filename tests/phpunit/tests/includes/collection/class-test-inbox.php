@@ -24,7 +24,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 	}
 
 	/**

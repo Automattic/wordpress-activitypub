@@ -106,7 +106,7 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function test_get_items() {
 		$actor_mode = \get_option( 'activitypub_actor_mode' );
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'blog' );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
 		$request->set_param( 'page', 1 );
@@ -141,7 +141,7 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function test_get_items_full_context() {
 		$actor_mode = \get_option( 'activitypub_actor_mode' );
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'blog' );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
 		$request->set_param( 'page', 1 );
@@ -166,7 +166,7 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function test_get_items_pagination() {
 		$actor_mode = \get_option( 'activitypub_actor_mode' );
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'blog' );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
 		$request->set_param( 'page', 2 );

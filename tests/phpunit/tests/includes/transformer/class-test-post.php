@@ -977,14 +977,14 @@ class Test_Post extends \WP_UnitTestCase {
 	 *
 	 * @covers ::get_interaction_policy
 	 */
-	public function test_get_interaction_policy_me_actor_modes() {
+	public function test_get_interaction_policy_me() {
 		$post = $this->create_test_post();
 		update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_ME );
 
 		$actor_modes = array(
-			ACTIVITYPUB_ACTOR_MODE,
-			ACTIVITYPUB_BLOG_MODE,
-			ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+			'actor',
+			'blog',
+			'actor_blog',
 		);
 
 		foreach ( $actor_modes as $mode ) {
@@ -997,7 +997,7 @@ class Test_Post extends \WP_UnitTestCase {
 			$this->assertArrayHasKey( 'automaticApproval', $policy['canQuote'] );
 
 			$auto = $policy['canQuote']['automaticApproval'];
-			if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE === $mode ) {
+			if ( 'actor_blog' === $mode ) {
 				$this->assertIsArray( $auto, 'Actor+Blog mode should return an array of IDs.' );
 				$this->assertCount( 2, $auto, 'Actor+Blog mode should supply two IDs.' );
 			} else {

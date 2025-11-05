@@ -77,18 +77,18 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 */
 	public function test_validate_user_id() {
 		$actor_mode = \get_option( 'activitypub_actor_mode' );
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		$controller = new Outbox_Controller();
 		$this->assertTrue( $controller->validate_user_id( 0 ) );
 		$this->assertTrue( $controller->validate_user_id( '1' ) );
 		$this->assertWPError( $controller->validate_user_id( 'user-1' ) );
 
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor' );
 		$this->assertWPError( $controller->validate_user_id( 0 ) );
 		$this->assertTrue( $controller->validate_user_id( 1 ) );
 
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'blog' );
 		$this->assertTrue( $controller->validate_user_id( '0' ) );
 		$this->assertWPError( $controller->validate_user_id( 1 ) );
 
@@ -500,7 +500,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_items
 	 */
 	public function test_get_items_actor_type_filtering() {
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 
 		// Create a post with blog actor type.
 		$blog_post_id = self::factory()->post->create(

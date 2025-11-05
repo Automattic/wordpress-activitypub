@@ -24,7 +24,7 @@ class Test_Blog extends \WP_UnitTestCase {
 		parent::set_up_before_class();
 
 		// Enable blog actor.
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
 	}
 
 	/**
