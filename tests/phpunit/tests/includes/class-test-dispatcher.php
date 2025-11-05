@@ -115,12 +115,10 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
 
 		// Mock safe_remote_post to simulate a failed request.
-		\add_filter(
-			'pre_http_request',
-			function () use ( $code, $message ) {
-				return new \WP_Error( $code, $message );
-			}
-		);
+		$mock_callback = function () use ( $code, $message ) {
+			return new \WP_Error( $code, $message );
+		};
+		\add_filter( 'pre_http_request', $mock_callback, 10, 3 );
 
 		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
 		$send_to_inboxes->setAccessible( true );
@@ -134,7 +132,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		$this->assertSame( $expected, $retries, 'Expected all inboxes to be scheduled for retry' );
 
-		\remove_all_filters( 'pre_http_request' );
+		\remove_filter( 'pre_http_request', $mock_callback );
 	}
 
 	/**
@@ -343,30 +341,21 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		// Create a test actor.
 		$actor_id = self::$user_id;
 
-		$callback = function ( $pre, $parsed_args, $url ) {
+		$callback = function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
 			if ( 'https://mastodon.social/@user/123456789' === $url ) {
 				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => \wp_json_encode(
-						array(
-							'type'         => 'Note',
-							'id'           => 'https://mastodon.social/@user/123456789',
-							'attributedTo' => 'https://mastodon.social/@user',
-						)
-					),
+					'type'         => 'Note',
+					'id'           => 'https://mastodon.social/@user/123456789',
+					'attributedTo' => 'https://mastodon.social/@user',
 				);
 			}
 
 			if ( 'https://mastodon.social/@user' === $url ) {
 				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => \wp_json_encode(
-						array(
-							'type'  => 'Person',
-							'id'    => 'https://mastodon.social/@user',
-							'inbox' => 'https://mastodon.social/inbox',
-						)
-					),
+					'type'  => 'Person',
+					'id'    => 'https://mastodon.social/@user',
+					'inbox' => 'https://mastodon.social/inbox',
 				);
 			}
 
@@ -374,7 +363,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		};
 
 		// Mock the HTTP response for the remote object.
-		\add_filter( 'pre_http_request', $callback, 10, 3 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $callback, 10, 2 );
 
 		// Get inboxes for the activity.
 		$inboxes = Dispatcher::add_inboxes_of_replied_urls( array(), $actor_id, $activity );
@@ -383,7 +372,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$this->assertContains( 'https://mastodon.social/inbox', $inboxes, 'Inbox should be added for different domain in_reply_to URLs' );
 
 		// Clean up.
-		\remove_filter( 'pre_http_request', $callback );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $callback );
 	}
 
 	/**
