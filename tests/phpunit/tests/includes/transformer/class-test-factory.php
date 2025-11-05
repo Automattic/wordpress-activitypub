@@ -51,7 +51,7 @@ class Test_Factory extends \WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$post_id = $factory->post->create();
@@ -232,21 +232,14 @@ class Test_Factory extends \WP_UnitTestCase {
 	 * Test successful URI transformation.
 	 */
 	public function test_successful_uri_transformation() {
-		// Mock-Daten für die HTTP-Antwort.
 		$fake_request = function () {
 			return array(
-				'response' => array( 'code' => 200 ),
-				'body'     => wp_json_encode(
-					array(
-						'id'      => 'https://example.com/activity/1',
-						'type'    => 'Note',
-						'content' => 'Test Content',
-					)
-				),
+				'id'      => 'https://example.com/activity/1',
+				'type'    => 'Note',
+				'content' => 'Test Content',
 			);
 		};
-
-		add_filter( 'pre_http_request', $fake_request, 10 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fake_request, 10, 2 );
 
 		$uri_transformer = Factory::get_transformer( 'https://example.com/activity/1' );
 		$result          = $uri_transformer->to_object();
@@ -256,24 +249,22 @@ class Test_Factory extends \WP_UnitTestCase {
 		$this->assertEquals( 'Note', $result->get_type() );
 		$this->assertEquals( 'Test Content', $result->get_content() );
 
-		remove_filter( 'pre_http_request', $fake_request, 10 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fake_request );
 	}
 
 	/**
 	 * Test URI transformation with error.
 	 */
 	public function test_uri_transformation_error() {
-		// WP_Error für fehlgeschlagene Anfrage erstellen.
 		$fake_request = function () {
 			return new \WP_Error( 'fetch_error', 'Failed to fetch remote object' );
 		};
-
-		add_filter( 'pre_http_request', $fake_request, 10 );
+		\add_filter( 'pre_http_request', $fake_request );
 
 		$uri_transformer = Factory::get_transformer( 'https://example.com/invalid' );
 
 		$this->assertWPError( $uri_transformer );
 
-		remove_filter( 'pre_http_request', $fake_request, 10 );
+		\remove_filter( 'pre_http_request', $fake_request );
 	}
 }

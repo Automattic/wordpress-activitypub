@@ -31,16 +31,6 @@ class Test_Blocked_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after each test.
-	 */
-	public function tear_down() {
-		parent::tear_down();
-
-		remove_all_filters( 'pre_http_request' );
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-	}
-
-	/**
 	 * Data provider for actor identifier normalization test cases.
 	 *
 	 * @return array Test cases with input, expected output, and label.
@@ -129,19 +119,16 @@ class Test_Blocked_Actors extends \WP_UnitTestCase {
 
 		// Mock HTTP request to fetch actor data.
 		add_filter(
-			'pre_http_request',
-			function ( $response, $parsed_args, $url ) use ( $actor_data ) {
+			'activitypub_pre_http_get_remote_object',
+			function ( $pre, $url_or_object ) use ( $actor_data ) {
+				$url = \Activitypub\object_to_uri( $url_or_object );
 				if ( $url === $actor_data['id'] ) {
-					return array(
-						'headers'  => array( 'content-type' => 'application/activity+json' ),
-						'body'     => wp_json_encode( $actor_data ),
-						'response' => array( 'code' => 200 ),
-					);
+					return $actor_data;
 				}
-				return $response;
+				return $pre;
 			},
 			10,
-			3
+			2
 		);
 
 		// Mock remote metadata for the actor.

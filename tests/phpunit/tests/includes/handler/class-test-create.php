@@ -300,31 +300,23 @@ class Test_Create extends \WP_UnitTestCase {
 	 */
 	public function test_handle_create_object_with_sanitization() {
 		// Mock HTTP request for Remote_Actors::fetch_by_uri.
-		add_filter(
-			'pre_http_request',
-			function ( $response, $parsed_args, $url ) {
-				if ( 'https://example.com/users/testuser' === $url ) {
-					return array(
-						'response' => array( 'code' => 200 ),
-						'body'     => wp_json_encode(
-							array(
-								'id'                => 'https://example.com/users/testuser',
-								'type'              => 'Person',
-								'name'              => 'Test Actor',
-								'preferredUsername' => 'testuser',
-								'summary'           => 'A test actor',
-								'url'               => 'https://example.com/users/testuser',
-								'inbox'             => 'https://example.com/users/testuser/inbox',
-								'outbox'            => 'https://example.com/users/testuser/outbox',
-							)
-						),
-					);
-				}
-				return $response;
-			},
-			10,
-			3
-		);
+		$mock_callback = function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
+			if ( 'https://example.com/users/testuser' === $url ) {
+				return array(
+					'id'                => 'https://example.com/users/testuser',
+					'type'              => 'Person',
+					'name'              => 'Test Actor',
+					'preferredUsername' => 'testuser',
+					'summary'           => 'A test actor',
+					'url'               => 'https://example.com/users/testuser',
+					'inbox'             => 'https://example.com/users/testuser/inbox',
+					'outbox'            => 'https://example.com/users/testuser/outbox',
+				);
+			}
+			return $pre;
+		};
+		add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
 
 		$activity = array(
 			'id'     => 'https://example.com/activities/create_note_sanitize',
@@ -358,7 +350,7 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'Safe content', $created_object->post_content );
 
 		// Clean up filter.
-		\remove_all_filters( 'pre_http_request' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
 		\delete_option( 'activitypub_create_posts' );
 	}
 

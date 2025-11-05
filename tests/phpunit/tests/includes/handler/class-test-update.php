@@ -98,14 +98,11 @@ class Test_Update extends \WP_UnitTestCase {
 			if ( is_wp_error( $http_response ) ) {
 				return $http_response;
 			}
-			return array(
-				'response' => array( 'code' => 200 ),
-				'body'     => wp_json_encode( $http_response ),
-			);
+			return $http_response;
 		};
 
 		// Mock HTTP request.
-		\add_filter( 'pre_http_request', $fake_request, 10 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fake_request, 10, 2 );
 
 		// Execute the update_actor method.
 		Update::update_actor( $activity_data, 1 );
@@ -129,7 +126,7 @@ class Test_Update extends \WP_UnitTestCase {
 			}
 		}
 
-		\remove_filter( 'pre_http_request', $fake_request, 10 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fake_request );
 	}
 
 	/**
