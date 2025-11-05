@@ -493,6 +493,19 @@ class Migration {
 		// If site was in blog-only mode, set flag to disable users by default.
 		if ( ACTIVITYPUB_BLOG_MODE === $actor_mode ) {
 			\update_option( 'activitypub_disable_users_by_default', true );
+
+			// Remove activitypub capability from all existing users.
+			$users = \get_users(
+				array(
+					'meta_key'     => 'activitypub_capability', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+					'meta_value'   => true, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+					'meta_compare' => '=',
+				)
+			);
+
+			foreach ( $users as $user ) {
+				$user->remove_cap( 'activitypub' );
+			}
 		}
 
 		// Clean up old actor mode option.
