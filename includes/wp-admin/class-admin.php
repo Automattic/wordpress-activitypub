@@ -16,7 +16,6 @@ use Activitypub\Scheduler\Actor;
 
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
-use function Activitypub\is_user_type_disabled;
 use function Activitypub\site_supports_blocks;
 use function Activitypub\user_can_activitypub;
 use function Activitypub\was_comment_received;
@@ -289,7 +288,6 @@ class Admin {
 				'activitypubCommandPalette',
 				array(
 					'followingEnabled' => '1' === \get_option( 'activitypub_following_ui', '0' ),
-					'actorMode'        => \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ),
 					'canManageOptions' => \current_user_can( 'manage_options' ),
 				)
 			);
@@ -810,7 +808,7 @@ class Admin {
 			);
 		}
 
-		if ( ! is_user_type_disabled( 'blog' ) && current_user_can( 'manage_options' ) ) {
+		if ( current_user_can( 'manage_options' ) ) {
 			$follower_count = sprintf(
 				// translators: %s: number of followers.
 				_n(
@@ -942,12 +940,11 @@ class Admin {
 	 */
 	public static function add_dashboard_widgets() {
 		\wp_add_dashboard_widget( 'activitypub_blog', \__( 'ActivityPub Plugin News', 'activitypub' ), array( self::class, 'blog_dashboard_widget' ) );
-		if ( user_can_activitypub( \get_current_user_id() ) && ! is_user_type_disabled( 'user' ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\wp_add_dashboard_widget( 'activitypub_profile', \__( 'ActivityPub Author profile', 'activitypub' ), array( self::class, 'profile_dashboard_widget' ) );
 		}
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			\wp_add_dashboard_widget( 'activitypub_blog_profile', \__( 'ActivityPub Blog profile', 'activitypub' ), array( self::class, 'blogprofile_dashboard_widget' ) );
-		}
+		// Blog profile is always available.
+		\wp_add_dashboard_widget( 'activitypub_blog_profile', \__( 'ActivityPub Blog profile', 'activitypub' ), array( self::class, 'blogprofile_dashboard_widget' ) );
 	}
 
 	/**

@@ -155,9 +155,18 @@ class Activitypub {
 	/**
 	 * Add the 'activitypub' capability to users who can publish posts.
 	 *
+	 * New users get the capability by default unless the site was previously in
+	 * blog-only mode (indicated by activitypub_disable_users_by_default option).
+	 *
 	 * @param int $user_id User ID.
 	 */
 	public static function user_register( $user_id ) {
+		// Check if site was previously in blog-only mode.
+		if ( \get_option( 'activitypub_disable_users_by_default' ) ) {
+			return;
+		}
+
+		// Add capability to users who can publish posts.
 		if ( \user_can( $user_id, 'publish_posts' ) ) {
 			$user = \get_user_by( 'id', $user_id );
 			$user->add_cap( 'activitypub' );

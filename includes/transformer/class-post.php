@@ -412,14 +412,9 @@ class Post extends Base {
 	 * @return string|null The audience.
 	 */
 	public function get_audience() {
-		$actor_mode = \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-
-		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE === $actor_mode ) {
-			$blog = new Blog();
-			return $blog->get_id();
-		}
-
-		return null;
+		// Blog actor is always enabled, so posts always have the blog as audience.
+		$blog = new Blog();
+		return $blog->get_id();
 	}
 
 	/**
@@ -1006,18 +1001,10 @@ class Post extends Base {
 	 * @return string|array The actor ID(s).
 	 */
 	private function get_self_interaction_policy() {
-		switch ( \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
-			case ACTIVITYPUB_BLOG_MODE:
-				return ( new Blog() )->get_id();
-
-			case ACTIVITYPUB_ACTOR_AND_BLOG_MODE:
-				return array(
-					$this->get_actor_object()->get_id(),
-					( new Blog() )->get_id(),
-				);
-
-			default:
-				return $this->get_actor_object()->get_id();
-		}
+		// Both user and blog actors are always enabled.
+		return array(
+			$this->get_actor_object()->get_id(),
+			( new Blog() )->get_id(),
+		);
 	}
 }

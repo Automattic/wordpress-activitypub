@@ -368,7 +368,7 @@ function user_can_activitypub( $user_id ) {
 			break;
 
 		case Actors::BLOG_USER_ID:
-			$enabled = ! is_user_type_disabled( 'blog' );
+			$enabled = true; // Blog user is always enabled.
 			break;
 
 		default:
@@ -377,11 +377,7 @@ function user_can_activitypub( $user_id ) {
 				break;
 			}
 
-			if ( is_user_type_disabled( 'user' ) ) {
-				$enabled = false;
-				break;
-			}
-
+			// Check only the capability.
 			$enabled = \user_can( $user_id, 'activitypub' );
 	}
 
@@ -400,63 +396,29 @@ function user_can_activitypub( $user_id ) {
  * This function is used to check if the 'blog' or 'user'
  * type is disabled for ActivityPub.
  *
+ * Note: As of version 4.6.0, blog actors are always enabled and user actors
+ * are controlled via the 'activitypub' capability. This function now always
+ * returns false but is maintained for backward compatibility and filter support.
+ *
  * @param string $type User type. 'blog' or 'user'.
  *
- * @return boolean True if the user type is disabled, false otherwise.
+ * @return boolean Always returns false (no types are globally disabled).
  */
 function is_user_type_disabled( $type ) {
-	switch ( $type ) {
-		case 'blog':
-			if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) ) {
-				if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
-					$disabled = false;
-					break;
-				}
-			}
+	$disabled = false;
 
-			if ( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) ) {
-				$disabled = ACTIVITYPUB_DISABLE_BLOG_USER;
-				break;
-			}
-
-			if ( ACTIVITYPUB_ACTOR_MODE === \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
-				$disabled = true;
-				break;
-			}
-
-			$disabled = false;
-			break;
-		case 'user':
-			if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) ) {
-				if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
-					$disabled = true;
-					break;
-				}
-			}
-
-			if ( \defined( 'ACTIVITYPUB_DISABLE_USER' ) ) {
-				$disabled = ACTIVITYPUB_DISABLE_USER;
-				break;
-			}
-
-			if ( ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
-				$disabled = true;
-				break;
-			}
-
-			$disabled = false;
-			break;
-		default:
-			$disabled = new \WP_Error(
-				'activitypub_wrong_user_type',
-				__( 'Wrong user type', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-			break;
+	if ( ! in_array( $type, array( 'blog', 'user' ), true ) ) {
+		$disabled = new \WP_Error(
+			'activitypub_wrong_user_type',
+			__( 'Wrong user type', 'activitypub' ),
+			array( 'status' => 400 )
+		);
 	}
 
 	/**
 	 * Allow plugins to disable user types for ActivityPub.
+	 *
+	 * Note: This filter is deprecated. Use capability management instead.
 	 *
 	 * @param boolean $disabled True if the user type is disabled, false otherwise.
 	 * @param string  $type     The User-Type.
@@ -1311,16 +1273,12 @@ function get_content_warning( $post_id ) {
  * @return string|false The ActivityPub ID (a URL) of the User or false if not found.
  */
 function get_user_id( $id ) {
-	$mode = \get_option( 'activitypub_actor_mode', 'default' );
+	// Try to get the user actor first.
+	$user = Actors::get_by_id( $id );
 
-	if ( ACTIVITYPUB_BLOG_MODE === $mode ) {
+	// Fallback to blog actor if user not found.
+	if ( \is_wp_error( $user ) ) {
 		$user = Actors::get_by_id( Actors::BLOG_USER_ID );
-	} else {
-		$user = Actors::get_by_id( $id );
-
-		if ( \is_wp_error( $user ) ) {
-			$user = Actors::get_by_id( Actors::BLOG_USER_ID );
-		}
 	}
 
 	if ( \is_wp_error( $user ) ) {

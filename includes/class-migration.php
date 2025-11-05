@@ -211,6 +211,7 @@ class Migration {
 		}
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::migrate_actor_mode_to_capabilities();
 			self::clean_up_inbox();
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
 		}
@@ -476,6 +477,30 @@ class Migration {
 		foreach ( $followers as $id ) {
 			clean_post_cache( $id );
 		}
+	}
+
+	/**
+	 * Migrate from actor mode settings to capability-based system.
+	 *
+	 * Blog actors are now always enabled and user actors are controlled
+	 * solely via the 'activitypub' capability. This migration handles sites that
+	 * were previously in blog-only mode by setting a flag to prevent new users
+	 * from automatically getting the activitypub capability.
+	 */
+	public static function migrate_actor_mode_to_capabilities() {
+		$actor_mode = \get_option( 'activitypub_actor_mode', 'actor' );
+
+		// If site was in blog-only mode, set flag to disable users by default.
+		if ( 'blog' === $actor_mode ) {
+			\update_option( 'activitypub_disable_users_by_default', true );
+		}
+
+		// Clean up old actor mode option.
+		\delete_option( 'activitypub_actor_mode' );
+
+		// Clean up legacy options if they still exist.
+		\delete_option( 'activitypub_enable_blog_user' );
+		\delete_option( 'activitypub_enable_users' );
 	}
 
 	/**
@@ -857,17 +882,17 @@ class Migration {
 			'1' === $blog_profile &&
 			'1' === $author_profiles
 		) {
-			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+			\update_option( 'activitypub_actor_mode', 'actor_blog' );
 		} elseif (
 			'1' === $blog_profile &&
 			'1' !== $author_profiles
 		) {
-			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+			\update_option( 'activitypub_actor_mode', 'blog' );
 		} elseif (
 			'1' !== $blog_profile &&
 			'1' === $author_profiles
 		) {
-			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+			\update_option( 'activitypub_actor_mode', 'actor' );
 		}
 	}
 

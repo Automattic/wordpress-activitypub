@@ -11,8 +11,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Sanitize;
 
-use function Activitypub\user_can_activitypub;
-
 /**
  * ActivityPub Settings Class.
  */
@@ -98,16 +96,6 @@ class Settings {
 				'description'  => \esc_html__( 'Enable ActivityPub support for post types', 'activitypub' ),
 				'show_in_rest' => true,
 				'default'      => array( 'post' ),
-			)
-		);
-
-		\register_setting(
-			'activitypub',
-			'activitypub_actor_mode',
-			array(
-				'type'        => 'integer',
-				'description' => \__( 'Choose your preferred Actor-Mode.', 'activitypub' ),
-				'default'     => ACTIVITYPUB_ACTOR_MODE,
 			)
 		);
 
@@ -395,22 +383,21 @@ class Settings {
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php',
 		);
 
-		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
-			$settings_tabs['blog-profile'] = array(
-				'label'    => __( 'Blog Profile', 'activitypub' ),
-				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php',
-			);
-			$settings_tabs['followers']    = array(
-				'label'    => __( 'Followers', 'activitypub' ),
-				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php',
-			);
+		// Blog profile and followers tabs are always available.
+		$settings_tabs['blog-profile'] = array(
+			'label'    => __( 'Blog Profile', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php',
+		);
+		$settings_tabs['followers']    = array(
+			'label'    => __( 'Followers', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php',
+		);
 
-			if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
-				$settings_tabs['following'] = array(
-					'label'    => __( 'Following', 'activitypub' ),
-					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php',
-				);
-			}
+		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
+			$settings_tabs['following'] = array(
+				'label'    => __( 'Following', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php',
+			);
 		}
 
 		/**

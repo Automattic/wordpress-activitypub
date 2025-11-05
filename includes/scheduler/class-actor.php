@@ -13,7 +13,6 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Outbox;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\is_user_type_disabled;
 
 /**
  * Post scheduler class.
@@ -23,31 +22,24 @@ class Actor {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		// Profile updates for blog options.
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			\add_action( 'update_option_site_icon', array( self::class, 'blog_user_update' ) );
-			\add_action( 'update_option_blogdescription', array( self::class, 'blog_user_update' ) );
-			\add_action( 'update_option_blogname', array( self::class, 'blog_user_update' ) );
-			\add_action( 'add_option_activitypub_header_image', array( self::class, 'blog_user_update' ) );
-			\add_action( 'update_option_activitypub_header_image', array( self::class, 'blog_user_update' ) );
-			\add_action( 'add_option_activitypub_blog_identifier', array( self::class, 'blog_user_update' ) );
-			\add_action( 'update_option_activitypub_blog_identifier', array( self::class, 'blog_user_update' ) );
-			\add_action( 'add_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
-			\add_action( 'update_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
-			\add_filter( 'pre_set_theme_mod_custom_logo', array( self::class, 'blog_user_update' ) );
-			\add_filter( 'pre_set_theme_mod_header_image', array( self::class, 'blog_user_update' ) );
-		}
+		// Profile updates for blog options (always enabled).
+		\add_action( 'update_option_site_icon', array( self::class, 'blog_user_update' ) );
+		\add_action( 'update_option_blogdescription', array( self::class, 'blog_user_update' ) );
+		\add_action( 'update_option_blogname', array( self::class, 'blog_user_update' ) );
+		\add_action( 'add_option_activitypub_header_image', array( self::class, 'blog_user_update' ) );
+		\add_action( 'update_option_activitypub_header_image', array( self::class, 'blog_user_update' ) );
+		\add_action( 'add_option_activitypub_blog_identifier', array( self::class, 'blog_user_update' ) );
+		\add_action( 'update_option_activitypub_blog_identifier', array( self::class, 'blog_user_update' ) );
+		\add_action( 'add_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
+		\add_action( 'update_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
+		\add_filter( 'pre_set_theme_mod_custom_logo', array( self::class, 'blog_user_update' ) );
+		\add_filter( 'pre_set_theme_mod_header_image', array( self::class, 'blog_user_update' ) );
 
-		// Profile updates for user options.
-		if ( ! is_user_type_disabled( 'user' ) ) {
-			\add_action( 'profile_update', array( self::class, 'user_update' ) );
-			\add_action( 'added_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
-			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
-			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
-		}
-
-		\add_action( 'add_option_activitypub_actor_mode', array( self::class, 'blog_user_update' ) );
-		\add_action( 'update_option_activitypub_actor_mode', array( self::class, 'blog_user_update' ) );
+		// Profile updates for user options (always enabled).
+		\add_action( 'profile_update', array( self::class, 'user_update' ) );
+		\add_action( 'added_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
+		\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
+		// @todo figure out a feasible way of updating the header image since it's not unique to any user.
 
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
 

@@ -8,7 +8,6 @@
 namespace Activitypub\WP_Admin\Import;
 
 use function Activitypub\follow;
-use function Activitypub\is_user_type_disabled;
 use function Activitypub\object_to_uri;
 
 /**
@@ -304,10 +303,7 @@ class Starter_Kit {
 	 * Setup blog user filter for dropdown.
 	 */
 	private static function setup_blog_user_filter() {
-		if ( is_user_type_disabled( 'blog' ) ) {
-			return;
-		}
-
+		// Blog user is always available.
 		self::$blog_user_filter_callback = function ( $users ) {
 			return \preg_replace(
 				'/<\/select>/',

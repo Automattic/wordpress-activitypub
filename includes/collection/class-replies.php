@@ -15,7 +15,6 @@ use Activitypub\Transformer\Post as Post_Transformer;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_local_comment;
 use function Activitypub\is_post_disabled;
-use function Activitypub\is_user_type_disabled;
 
 /**
  * Class containing code for getting replies Collections and CollectionPages of posts and comments.
@@ -171,10 +170,7 @@ class Replies {
 
 		$author = Actors::get_by_id( $post->post_author );
 		if ( is_wp_error( $author ) ) {
-			if ( is_user_type_disabled( 'blog' ) ) {
-				return false;
-			}
-
+			// Fallback to blog actor (always enabled).
 			$author = new Blog();
 		}
 

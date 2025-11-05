@@ -12,7 +12,6 @@ use Activitypub\Model\Application;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
 
-use function Activitypub\is_user_type_disabled;
 use function Activitypub\normalize_host;
 use function Activitypub\normalize_url;
 use function Activitypub\object_to_uri;
@@ -104,19 +103,11 @@ class Actors {
 	 * @return int|\WP_Error Actor id or WP_Error if not found.
 	 */
 	public static function get_id_by_username( $username ) {
-		// Check for blog user.
+		// Check for blog user (always enabled).
 		if (
 			Blog::get_default_username() === $username ||
 			\get_option( 'activitypub_blog_identifier' ) === $username
 		) {
-			if ( is_user_type_disabled( 'blog' ) ) {
-				return new \WP_Error(
-					'activitypub_user_not_found',
-					\__( 'Actor not found', 'activitypub' ),
-					array( 'status' => 404 )
-				);
-			}
-
 			return self::BLOG_USER_ID;
 		}
 
@@ -342,10 +333,6 @@ class Actors {
 	 * @return Actor[] Array of User actor objects.
 	 */
 	public static function get_collection() {
-		if ( is_user_type_disabled( 'user' ) ) {
-			return array();
-		}
-
 		$users = \get_users(
 			array(
 				'capability__in' => array( 'activitypub' ),
@@ -373,21 +360,16 @@ class Actors {
 	 * @return int[] Array of User and Blog actor IDs.
 	 */
 	public static function get_all_ids() {
-		$user_ids = array();
+		// Get all users with activitypub capability.
+		$user_ids = \get_users(
+			array(
+				'fields'         => 'ID',
+				'capability__in' => array( 'activitypub' ),
+			)
+		);
 
-		if ( ! is_user_type_disabled( 'user' ) ) {
-			$user_ids = \get_users(
-				array(
-					'fields'         => 'ID',
-					'capability__in' => array( 'activitypub' ),
-				)
-			);
-		}
-
-		// Also include the blog actor if active.
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			$user_ids[] = self::BLOG_USER_ID;
-		}
+		// Always include the blog actor (always enabled).
+		$user_ids[] = self::BLOG_USER_ID;
 
 		return array_map( 'intval', $user_ids );
 	}

@@ -16,7 +16,6 @@ class Options {
 	 * Initialize the options.
 	 */
 	public static function init() {
-		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_option_activitypub_actor_mode' ) );
 		\add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
 		\add_filter( 'pre_option_activitypub_vary_header', array( self::class, 'pre_option_activitypub_vary_header' ) );
 
@@ -37,29 +36,6 @@ class Options {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->query( "DELETE FROM $wpdb->options WHERE option_name LIKE 'activitypub_%'" );
-	}
-
-	/**
-	 * Pre-get option filter for the Actor-Mode.
-	 *
-	 * @param string|false $pre The pre-get option value.
-	 *
-	 * @return string|false The actor mode or false if it should not be filtered.
-	 */
-	public static function pre_option_activitypub_actor_mode( $pre ) {
-		if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) && ACTIVITYPUB_SINGLE_USER_MODE ) {
-			return ACTIVITYPUB_BLOG_MODE;
-		}
-
-		if ( \defined( 'ACTIVITYPUB_DISABLE_USER' ) && ACTIVITYPUB_DISABLE_USER ) {
-			return ACTIVITYPUB_BLOG_MODE;
-		}
-
-		if ( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) && ACTIVITYPUB_DISABLE_BLOG_USER ) {
-			return ACTIVITYPUB_ACTOR_MODE;
-		}
-
-		return $pre;
 	}
 
 	/**

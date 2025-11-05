@@ -353,14 +353,10 @@ class Welcome_Fields {
 						<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
 						</a>
-					<?php elseif ( ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ) : ?>
+					<?php else : ?>
 						<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
 						</a>
-					<?php else : ?>
-						<button class="button <?php echo \esc_attr( $button_class ); ?>" disabled>
-							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
-						</button>
 					<?php endif; ?>
 				</div>
 			</div>

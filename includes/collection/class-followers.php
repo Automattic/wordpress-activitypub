@@ -426,10 +426,6 @@ class Followers {
 	public static function maybe_add_inboxes_of_blog_user( $json, $actor_id ) {
 		\_deprecated_function( __METHOD__, '7.3.0' );
 
-		// Only if we're in both Blog and User modes.
-		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
-			return false;
-		}
 		// Only if this isn't the Blog Actor.
 		if ( Actors::BLOG_USER_ID === $actor_id ) {
 			return false;
