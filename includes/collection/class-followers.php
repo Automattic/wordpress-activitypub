@@ -414,23 +414,6 @@ class Followers {
 	}
 
 	/**
-	 * Maybe add Inboxes of the Blog User.
-	 *
-	 * @deprecated 7.3.0 Actor mode removed, this function always returns false.
-	 *
-	 * @param string $json     The ActivityPub Activity JSON.
-	 * @param int    $actor_id The WordPress Actor ID.
-	 *
-	 * @return bool Always returns false (actor mode removed).
-	 */
-	public static function maybe_add_inboxes_of_blog_user( $json, $actor_id ) {
-		\_deprecated_function( __METHOD__, '7.3.0' );
-
-		// Actor mode removed - this function is no longer needed.
-		return false;
-	}
-
-	/**
 	 * Get all Followers.
 	 *
 	 * @deprecated 7.1.0 Use {@see Actors::get_all()}.

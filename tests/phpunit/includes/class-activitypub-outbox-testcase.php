@@ -72,6 +72,7 @@ class ActivityPub_Outbox_TestCase extends \WP_UnitTestCase {
 		);
 
 		if ( ! empty( $activity_type ) ) {
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			$args['meta_query'] = array(
 				array(
 					'key'   => '_activitypub_activity_type',
