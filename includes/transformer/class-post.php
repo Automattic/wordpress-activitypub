@@ -894,11 +894,12 @@ class Post extends Base {
 		$template = $content ?: ACTIVITYPUB_CUSTOM_POST_CONTENT; // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 
 		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+		$type                = $this->get_type();
 
 		if ( 'wordpress-post-format' === $post_format_setting ) {
 			$template = '';
 
-			if ( 'Note' === $this->get_type() ) {
+			if ( 'Note' === $type ) {
 				$template .= "[ap_title type=\"html\"]\n\n";
 			}
 
@@ -915,8 +916,9 @@ class Post extends Base {
 		 *
 		 * @param string   $template  The template string containing shortcodes.
 		 * @param \WP_Post $item The WordPress post object being transformed.
+		 * @param string   $type ActivityStreams 2.0 Object-Type for the post.
 		 */
-		return apply_filters( 'activitypub_object_content_template', $template, $this->item );
+		return apply_filters( 'activitypub_object_content_template', $template, $this->item, $type );
 	}
 
 	/**
