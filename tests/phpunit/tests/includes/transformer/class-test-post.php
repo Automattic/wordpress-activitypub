@@ -1059,6 +1059,21 @@ class Test_Post extends \WP_UnitTestCase {
 			\update_option( 'activitypub_custom_post_content', $custom_post_content );
 		}
 
+		// Mock mentions extraction if the post content contains mention patterns.
+		$content         = $post_data['post_content'] ?? '';
+		$mentions_filter = null;
+		if ( \preg_match( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $content ) ) {
+			$mentions_filter = function ( $mentions, $post_content ) {
+				// Extract all mention patterns from content.
+				\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $post_content, $all_matches );
+				foreach ( $all_matches[0] as $match ) {
+					$mentions[ $match ] = 'https://example.com/' . \ltrim( $match, '@' );
+				}
+				return $mentions;
+			};
+			\add_filter( 'activitypub_extract_mentions', $mentions_filter, 10, 2 );
+		}
+
 		$post = self::factory()->post->create_and_get( $post_data );
 
 		$transformer = new Post( $post );
@@ -1067,6 +1082,11 @@ class Test_Post extends \WP_UnitTestCase {
 		$method->setAccessible( true );
 
 		$template = $method->invoke( $transformer );
+
+		// Clean up mentions filter if it was added.
+		if ( $mentions_filter ) {
+			\remove_filter( 'activitypub_extract_mentions', $mentions_filter, 10 );
+		}
 
 		// All wordpress-post-format templates should contain [ap_content].
 		if ( 'wordpress-post-format' === $object_type ) {
@@ -1121,6 +1141,17 @@ class Test_Post extends \WP_UnitTestCase {
 				'wordpress-post-format',
 				'[ap_title]\n\n[ap_content]',
 				'wordpress-post-format should not add title for Note type when it is a reply.',
+			),
+			'Note type with mentions'     => array(
+				array(
+					'post_title'   => '',
+					'post_content' => 'Short note mentioning @activitypub.blog@activitypub.blog',
+					'post_status'  => 'publish',
+				),
+				'[ap_content]',
+				'wordpress-post-format',
+				null,
+				'wordpress-post-format should not add title for Note type when it has mentions.',
 			),
 			'fallback_with_false_option'  => array(
 				array(
