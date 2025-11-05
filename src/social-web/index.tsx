@@ -3,7 +3,6 @@
  */
 import { createRoot, StrictMode } from '@wordpress/element';
 import { SlotFillProvider } from '@wordpress/components';
-import { ShortcutProvider } from '@wordpress/keyboard-shortcuts';
 
 /**
  * Internal dependencies
@@ -27,11 +26,9 @@ export function initialize( id: string ): void {
 	const root = createRoot( target );
 	root.render(
 		<StrictMode>
-			<ShortcutProvider>
-				<SlotFillProvider>
-					<Router />
-				</SlotFillProvider>
-			</ShortcutProvider>
+			<SlotFillProvider>
+				<Router />
+			</SlotFillProvider>
 		</StrictMode>
 	);
 }
