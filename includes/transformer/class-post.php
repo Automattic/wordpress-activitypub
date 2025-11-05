@@ -900,9 +900,7 @@ class Post extends Base {
 			$template = '';
 
 			// If the post is a note and not a reply, force the inclusion of the post title.
-			$is_reply = null !== $this->get_in_reply_to();
-
-			if ( 'Note' === $type && ! $is_reply ) {
+			if ( 'Note' === $type && empty( $this->get_in_reply_to() ) ) {
 				$template .= "[ap_title type=\"html\"]\n\n";
 			}
 
