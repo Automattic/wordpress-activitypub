@@ -415,7 +415,7 @@ function is_user_type_disabled( $type ) {
 	/**
 	 * Allow plugins to disable user types for ActivityPub.
 	 *
-	 * Note: This filter is deprecated. Use capability management instead.
+	 * @deprecated unreleased Use capability management instead.
 	 *
 	 * @param boolean $disabled True if the user type is disabled, false otherwise.
 	 * @param string  $type     The User-Type.
