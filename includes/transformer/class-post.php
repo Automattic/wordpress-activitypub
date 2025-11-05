@@ -917,6 +917,8 @@ class Post extends Base {
 		 * shortcodes like [ap_title] and [ap_content] that are processed during content
 		 * generation.
 		 *
+		 * @since 7.6.0 Added the $type parameter.
+		 *
 		 * @param string   $template  The template string containing shortcodes.
 		 * @param \WP_Post $item The WordPress post object being transformed.
 		 * @param string   $type ActivityStreams 2.0 Object-Type for the post.
