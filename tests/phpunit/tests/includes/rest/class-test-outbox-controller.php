@@ -72,14 +72,14 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 	/**
 	 * Test user ID validation.
-	 * With actor mode removal, both blog and user actors are always available.
+	 * With actor mode removal, both blog and user actors are available.
 	 *
 	 * @covers ::validate_user_id
 	 */
 	public function test_validate_user_id() {
 		$controller = new Outbox_Controller();
 
-		// Blog actor (ID 0) should always be valid.
+		// Blog actor (ID 0) should be valid.
 		$this->assertTrue( $controller->validate_user_id( 0 ) );
 		$this->assertTrue( $controller->validate_user_id( '0' ) );
 

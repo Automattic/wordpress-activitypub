@@ -412,7 +412,7 @@ class Post extends Base {
 	 * @return string|null The audience.
 	 */
 	public function get_audience() {
-		// Blog actor is always enabled, so posts always have the blog as audience.
+		// Posts have the blog as audience.
 		$blog = new Blog();
 		return $blog->get_id();
 	}
@@ -1001,7 +1001,7 @@ class Post extends Base {
 	 * @return string|array The actor ID(s).
 	 */
 	private function get_self_interaction_policy() {
-		// Both user and blog actors are always enabled.
+		// Return both user and blog actor IDs.
 		return array(
 			$this->get_actor_object()->get_id(),
 			( new Blog() )->get_id(),

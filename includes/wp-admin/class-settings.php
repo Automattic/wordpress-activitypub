@@ -383,7 +383,7 @@ class Settings {
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php',
 		);
 
-		// Blog profile and followers tabs are always available.
+		// Blog profile and followers tabs.
 		$settings_tabs['blog-profile'] = array(
 			'label'    => __( 'Blog Profile', 'activitypub' ),
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php',

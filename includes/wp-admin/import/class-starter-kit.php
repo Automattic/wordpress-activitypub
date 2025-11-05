@@ -303,7 +303,7 @@ class Starter_Kit {
 	 * Setup blog user filter for dropdown.
 	 */
 	private static function setup_blog_user_filter() {
-		// Blog user is always available.
+		// Add blog user to dropdown.
 		self::$blog_user_filter_callback = function ( $users ) {
 			return \preg_replace(
 				'/<\/select>/',

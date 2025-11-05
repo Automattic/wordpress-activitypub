@@ -170,7 +170,7 @@ class Replies {
 
 		$author = Actors::get_by_id( $post->post_author );
 		if ( is_wp_error( $author ) ) {
-			// Fallback to blog actor (always enabled).
+			// Fallback to blog actor.
 			$author = new Blog();
 		}
 

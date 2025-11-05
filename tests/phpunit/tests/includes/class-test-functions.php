@@ -706,7 +706,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * @covers \Activitypub\get_user_id
 	 */
 	public function test_get_user_id() {
-		// Invalid user ID should fall back to blog actor (always available).
+		// Invalid user ID should fall back to blog actor.
 		$this->assertIsString( \Activitypub\get_user_id( 90210 ) );
 
 		$user = self::factory()->user->create_and_get();

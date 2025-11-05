@@ -149,9 +149,9 @@ class Test_Replies extends \WP_UnitTestCase {
 		$context_post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
 		get_user_by( 'id', $user_id )->remove_cap( 'activitypub' );
 
-		// Author has no capability but blog actor is always available.
+		// Author has no capability, should fall back to blog actor.
 		$context = Replies::get_context_collection( $context_post_id );
-		$this->assertNotFalse( $context, 'Blog actor should always be available' );
+		$this->assertNotFalse( $context, 'Should fall back to blog actor' );
 		$this->assertSame( \get_author_posts_url( Actors::BLOG_USER_ID ), $context['attributedTo'] );
 	}
 }

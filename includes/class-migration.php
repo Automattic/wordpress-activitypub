@@ -482,10 +482,10 @@ class Migration {
 	/**
 	 * Migrate from actor mode settings to capability-based system.
 	 *
-	 * Blog actors are now always enabled and user actors are controlled
-	 * solely via the 'activitypub' capability. This migration handles sites that
-	 * were previously in blog-only mode by setting a flag to prevent new users
-	 * from automatically getting the activitypub capability.
+	 * User actors are controlled solely via the 'activitypub' capability.
+	 * This migration handles sites that were previously in blog-only mode
+	 * by setting a flag to prevent new users from automatically getting
+	 * the activitypub capability.
 	 */
 	public static function migrate_actor_mode_to_capabilities() {
 		$actor_mode = \get_option( 'activitypub_actor_mode', 'actor' );

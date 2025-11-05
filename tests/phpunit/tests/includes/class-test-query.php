@@ -523,7 +523,6 @@ class Test_Query extends \WP_UnitTestCase {
 
 	/**
 	 * Test get_activitypub_object method for home page.
-	 * Blog actor is now always available.
 	 *
 	 * @covers ::get_activitypub_object
 	 */
@@ -551,7 +550,7 @@ class Test_Query extends \WP_UnitTestCase {
 			$message .= ' Found queries: ' . wp_json_encode( $actor_queries );
 		}
 
-		$this->assertInstanceOf( 'Activitypub\Model\Blog', $object, 'Home page should return Blog actor (always available).' );
+		$this->assertInstanceOf( 'Activitypub\Model\Blog', $object, 'Home page should return Blog actor.' );
 		$this->assertEmpty( $actor_queries, $message );
 
 		\delete_option( 'activitypub_actor_mode' );

@@ -943,7 +943,7 @@ class Admin {
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\wp_add_dashboard_widget( 'activitypub_profile', \__( 'ActivityPub Author profile', 'activitypub' ), array( self::class, 'profile_dashboard_widget' ) );
 		}
-		// Blog profile is always available.
+		// Add blog profile dashboard widget.
 		\wp_add_dashboard_widget( 'activitypub_blog_profile', \__( 'ActivityPub Blog profile', 'activitypub' ), array( self::class, 'blogprofile_dashboard_widget' ) );
 	}
 

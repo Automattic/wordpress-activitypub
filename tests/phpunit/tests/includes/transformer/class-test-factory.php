@@ -105,7 +105,7 @@ class Test_Factory extends \WP_UnitTestCase {
 
 	/**
 	 * Test get_transformer with post.
-	 * With actor mode removal, posts always have an actor (user or blog).
+	 * With actor mode removal, posts have an actor (user or blog).
 	 *
 	 * @covers ::get_transformer
 	 */
@@ -113,7 +113,7 @@ class Test_Factory extends \WP_UnitTestCase {
 		$post        = get_post( self::$post_id );
 		$transformer = Factory::get_transformer( $post );
 
-		// Should always return a Post transformer now (blog actor fallback available).
+		// Should return a Post transformer (blog actor fallback available).
 		$this->assertInstanceOf( Post::class, $transformer );
 	}
 

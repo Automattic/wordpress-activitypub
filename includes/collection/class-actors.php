@@ -368,7 +368,7 @@ class Actors {
 			)
 		);
 
-		// Always include the blog actor (always enabled).
+		// Include the blog actor.
 		$user_ids[] = self::BLOG_USER_ID;
 
 		return array_map( 'intval', $user_ids );

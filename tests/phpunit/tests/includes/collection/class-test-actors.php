@@ -133,14 +133,14 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that blog profile is always available.
+	 * Test that blog profile is available.
 	 *
 	 * @covers ::get_by_resource
 	 */
-	public function test_blog_profile_always_available() {
+	public function test_blog_profile_available() {
 		$resource = 'http://example.org/@blog';
 
-		// Blog profile should always be available now.
+		// Blog profile should be available.
 		$this->assertEquals( 'Activitypub\Model\Blog', get_class( Actors::get_by_resource( $resource ) ) );
 	}
 
