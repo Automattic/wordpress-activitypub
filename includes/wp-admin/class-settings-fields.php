@@ -28,13 +28,6 @@ class Settings_Fields {
 	public static function register_settings_fields() {
 		// Add settings sections.
 		add_settings_section(
-			'activitypub_profiles',
-			__( 'Profiles', 'activitypub' ),
-			'__return_empty_string',
-			'activitypub_settings'
-		);
-
-		add_settings_section(
 			'activitypub_activities',
 			__( 'Activities', 'activitypub' ),
 			'__return_empty_string',
