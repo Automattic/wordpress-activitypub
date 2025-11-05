@@ -641,7 +641,6 @@ class Comment {
 				'class'          => 'p-repost',
 				'type'           => 'repost',
 				'collection'     => 'reposts',
-				'display_style'  => 'facepile',
 				'activity_types' => array( 'announce' ),
 				'excerpt'        => html_entity_decode( \__( '&hellip; reposted this!', 'activitypub' ) ),
 				/* translators: %d: Number of reposts */
@@ -661,7 +660,6 @@ class Comment {
 				'class'          => 'p-like',
 				'type'           => 'like',
 				'collection'     => 'likes',
-				'display_style'  => 'facepile',
 				'activity_types' => array( 'like' ),
 				'excerpt'        => html_entity_decode( \__( '&hellip; liked this!', 'activitypub' ) ),
 				/* translators: %d: Number of likes */
@@ -681,7 +679,6 @@ class Comment {
 				'class'          => 'p-quote',
 				'type'           => 'quote',
 				'collection'     => 'quotes',
-				'display_style'  => 'comment',
 				'activity_types' => array( 'quote' ),
 				'excerpt'        => html_entity_decode( \__( '&hellip; quoted this!', 'activitypub' ) ),
 				/* translators: %d: Number of quotes */
@@ -836,51 +833,5 @@ class Comment {
 	 */
 	public static function is_comment_type_enabled( $comment_type ) {
 		return '1' === get_option( "activitypub_allow_{$comment_type}s", '1' );
-	}
-
-	/**
-	 * Check if a comment type should be displayed as a facepile.
-	 *
-	 * Facepile display shows just avatars and counts (like likes and reposts),
-	 * while comment display shows the full comment content (like quotes and regular comments).
-	 *
-	 * @param string $comment_type The comment type slug.
-	 * @return bool True if the comment type should be displayed as a facepile.
-	 */
-	public static function is_facepile_type( $comment_type ) {
-		$type_data = self::get_comment_type( $comment_type );
-
-		if ( empty( $type_data ) ) {
-			return false;
-		}
-
-		$display_style = $type_data['display_style'] ?? 'comment';
-
-		/**
-		 * Filters whether a comment type should be displayed as a facepile.
-		 *
-		 * @param bool   $is_facepile  True if the comment type should be displayed as a facepile.
-		 * @param string $comment_type The comment type slug.
-		 * @param array  $type_data    The comment type data.
-		 */
-		return apply_filters( 'activitypub_is_facepile_type', 'facepile' === $display_style, $comment_type, $type_data );
-	}
-
-	/**
-	 * Get comment types that should be displayed as facepile.
-	 *
-	 * @return array Array of comment type slugs that should be displayed as facepile.
-	 */
-	public static function get_facepile_types() {
-		$comment_types  = self::get_comment_types();
-		$facepile_types = array();
-
-		foreach ( $comment_types as $slug => $type_data ) {
-			if ( self::is_facepile_type( $slug ) ) {
-				$facepile_types[] = $slug;
-			}
-		}
-
-		return $facepile_types;
 	}
 }
