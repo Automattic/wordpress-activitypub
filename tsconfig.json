@@ -1,7 +1,8 @@
 {
 	"extends": "./node_modules/@wordpress/scripts/config/tsconfig.json",
 	"compilerOptions": {
-		"jsx": "react",
+		"jsx": "react-jsx",
+		"jsxImportSource": "react",
 		"esModuleInterop": true,
 		"typeRoots": [ "./node_modules/@types", "./src" ],
 		"types": [ "jest" ],

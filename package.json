@@ -72,6 +72,8 @@
 		"prettier": "npm:wp-prettier@^3.0.3"
 	},
 	"dependencies": {
+		"@tanstack/history": "^1.133.28",
+		"@tanstack/react-router": "^1.120.5",
 		"clsx": "^2.1.1"
 	}
 }
