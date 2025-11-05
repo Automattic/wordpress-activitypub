@@ -431,7 +431,7 @@ function is_user_type_disabled( $type ) {
  * @return boolean Always returns false.
  */
 function is_single_user() {
-	\_deprecated_function( __FUNCTION__, 'unreleased', '' );
+	\_deprecated_function( __FUNCTION__, 'unreleased' );
 
 	return false;
 }
