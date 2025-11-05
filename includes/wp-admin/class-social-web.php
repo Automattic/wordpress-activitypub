@@ -34,10 +34,18 @@ class Social_Web {
 	public static function enqueue_scripts() {
 		$asset_file = include \plugin_dir_path( ACTIVITYPUB_PLUGIN_FILE ) . 'build/social-web/index.asset.php';
 
+		// Filter out dependencies that aren't registered (like wp-theme in core WP).
+		$dependencies = array_filter(
+			$asset_file['dependencies'],
+			function ( $dependency ) {
+				return \wp_script_is( $dependency, 'registered' );
+			}
+		);
+
 		\wp_enqueue_script(
 			'activitypub-social-web',
 			\plugins_url( 'build/social-web/index.js', ACTIVITYPUB_PLUGIN_FILE ),
-			$asset_file['dependencies'],
+			$dependencies,
 			$asset_file['version'],
 			true
 		);
@@ -51,20 +59,9 @@ class Social_Web {
 
 		\wp_add_inline_script(
 			'activitypub-social-web',
-			sprintf(
-				'wp.domReady( function() {
-					wp.activitypubSocialWeb.initialize( "activitypub-social-web-root", %s );
-				} );',
-				\wp_json_encode(
-					array(
-						'siteUrl'   => \site_url(),
-						'siteTitle' => \get_bloginfo( 'name' ),
-						'adminUrl'  => \admin_url(),
-						'restUrl'   => \rest_url(),
-						'nonce'     => \wp_create_nonce( 'wp_rest' ),
-					)
-				)
-			)
+			'wp.domReady( function() {
+				wp.activitypubSocialWeb.initialize( "activitypub-social-web-root" );
+			} );'
 		);
 	}
 

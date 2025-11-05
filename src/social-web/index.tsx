@@ -1,15 +1,14 @@
 /**
  * WordPress dependencies
  */
-import React from 'react';
-import { createRoot } from '@wordpress/element';
+import { createRoot, StrictMode } from '@wordpress/element';
 import { SlotFillProvider } from '@wordpress/components';
 import { ShortcutProvider } from '@wordpress/keyboard-shortcuts';
 
 /**
  * Internal dependencies
  */
-import { Layout } from './components/layout';
+import Router from './router';
 import type { SocialWebSettings } from './types';
 import './store'; // Import to register the store
 import './style.scss'; // Import all styles
@@ -17,10 +16,9 @@ import './style.scss'; // Import all styles
 /**
  * Initialize the Social Web application.
  *
- * @param id       The ID of the root element.
- * @param settings The editor settings.
+ * @param id The ID of the root element.
  */
-export function initialize( id: string, settings: SocialWebSettings ): void {
+export function initialize( id: string ): void {
 	const target = document.getElementById( id );
 	if ( ! target ) {
 		return;
@@ -28,11 +26,13 @@ export function initialize( id: string, settings: SocialWebSettings ): void {
 
 	const root = createRoot( target );
 	root.render(
-		<ShortcutProvider>
-			<SlotFillProvider>
-				<Layout />
-			</SlotFillProvider>
-		</ShortcutProvider>
+		<StrictMode>
+			<ShortcutProvider>
+				<SlotFillProvider>
+					<Router />
+				</SlotFillProvider>
+			</ShortcutProvider>
+		</StrictMode>
 	);
 }
 

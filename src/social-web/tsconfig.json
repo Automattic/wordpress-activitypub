@@ -10,6 +10,7 @@
 		"skipLibCheck": true,
 		"allowSyntheticDefaultImports": true,
 		"strict": false,
+		"strictNullChecks": true,
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
 		"noEmit": true,

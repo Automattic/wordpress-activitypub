@@ -1,1 +1,2 @@
-// Main boot package styles
+@use "../theme/prebuilt/css/design-tokens.css" as *;
+@use "@wordpress/admin-ui/build-style/style.css" as *;
