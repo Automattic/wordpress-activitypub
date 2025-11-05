@@ -22,7 +22,7 @@ class Actor {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		// Profile updates for blog options (always enabled).
+		// Profile updates for blog options.
 		\add_action( 'update_option_site_icon', array( self::class, 'blog_user_update' ) );
 		\add_action( 'update_option_blogdescription', array( self::class, 'blog_user_update' ) );
 		\add_action( 'update_option_blogname', array( self::class, 'blog_user_update' ) );
@@ -35,7 +35,7 @@ class Actor {
 		\add_filter( 'pre_set_theme_mod_custom_logo', array( self::class, 'blog_user_update' ) );
 		\add_filter( 'pre_set_theme_mod_header_image', array( self::class, 'blog_user_update' ) );
 
-		// Profile updates for user options (always enabled).
+		// Profile updates for user options.
 		\add_action( 'profile_update', array( self::class, 'user_update' ) );
 		\add_action( 'added_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
 		\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );

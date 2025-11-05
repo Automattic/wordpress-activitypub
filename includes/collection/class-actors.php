@@ -103,7 +103,7 @@ class Actors {
 	 * @return int|\WP_Error Actor id or WP_Error if not found.
 	 */
 	public static function get_id_by_username( $username ) {
-		// Check for blog user (always enabled).
+		// Check for blog user.
 		if (
 			Blog::get_default_username() === $username ||
 			\get_option( 'activitypub_blog_identifier' ) === $username

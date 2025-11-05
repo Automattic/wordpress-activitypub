@@ -396,9 +396,9 @@ function user_can_activitypub( $user_id ) {
  * This function is used to check if the 'blog' or 'user'
  * type is disabled for ActivityPub.
  *
- * Note: As of version 4.6.0, user actors are controlled via the 'activitypub'
- * capability. This function now always returns false but is maintained for
- * backward compatibility and filter support.
+ * @since unreleased User actors are controlled via the 'activitypub'
+ *                   capability. This function now always returns false but is maintained for
+ *                   backward compatibility and filter support.
  *
  * @param string $type User type. 'blog' or 'user'.
  *
