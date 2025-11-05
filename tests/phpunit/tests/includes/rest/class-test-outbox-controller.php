@@ -72,27 +72,25 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 	/**
 	 * Test user ID validation.
+	 * With actor mode removal, both blog and user actors are always available.
 	 *
 	 * @covers ::validate_user_id
 	 */
 	public function test_validate_user_id() {
-		$actor_mode = \get_option( 'activitypub_actor_mode' );
-		\update_option( 'activitypub_actor_mode', 'actor_blog' );
-
 		$controller = new Outbox_Controller();
+
+		// Blog actor (ID 0) should always be valid.
 		$this->assertTrue( $controller->validate_user_id( 0 ) );
+		$this->assertTrue( $controller->validate_user_id( '0' ) );
+
+		// User actor (ID 1) should be valid if user exists.
 		$this->assertTrue( $controller->validate_user_id( '1' ) );
+
+		// Invalid format should return WP_Error.
 		$this->assertWPError( $controller->validate_user_id( 'user-1' ) );
 
-		\update_option( 'activitypub_actor_mode', 'actor' );
-		$this->assertWPError( $controller->validate_user_id( 0 ) );
-		$this->assertTrue( $controller->validate_user_id( 1 ) );
-
-		\update_option( 'activitypub_actor_mode', 'blog' );
-		$this->assertTrue( $controller->validate_user_id( '0' ) );
-		$this->assertWPError( $controller->validate_user_id( 1 ) );
-
-		\update_option( 'activitypub_actor_mode', $actor_mode );
+		// Non-existent user ID should return WP_Error.
+		$this->assertWPError( $controller->validate_user_id( 99999 ) );
 	}
 
 	/**

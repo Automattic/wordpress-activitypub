@@ -31,12 +31,12 @@ class Post {
 	/**
 	 * Handle post updates and determine the appropriate Activity type.
 	 *
-	 * @param int      $post_id     Post ID.
-	 * @param \WP_Post $post        Post object.
-	 * @param bool     $update      Whether this is an existing post being updated.
-	 * @param \WP_Post $post_before Post object before the update.
+	 * @param int           $post_id     Post ID.
+	 * @param \WP_Post      $post        Post object.
+	 * @param bool          $update      Whether this is an existing post being updated.
+	 * @param \WP_Post|null $post_before Post object before the update.
 	 */
-	public static function schedule_post_activity( $post_id, $post, $update, $post_before ) {
+	public static function schedule_post_activity( $post_id, $post, $update, $post_before = null ) {
 		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}

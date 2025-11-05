@@ -413,15 +413,25 @@ class Test_Post extends \WP_UnitTestCase {
 		$method     = $reflection->getMethod( 'get_attachment' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( $transformer );
+		// Track filter count before and after to detect if filter was called.
+		$filter_count_before = \did_filter( 'activitypub_attachment_ids' );
+		$result              = $method->invoke( $transformer );
+		$filter_count_after  = \did_filter( 'activitypub_attachment_ids' );
 
 		$this->assertEmpty( $result );
-		$this->assertFalse( (bool) \did_filter( 'activitypub_attachment_ids' ) );
+		$this->assertEquals( $filter_count_before, $filter_count_after, 'Filter should not be called when max_media is 0' );
 
 		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
 
-		$result = $method->invoke( $transformer );
-		$this->assertTrue( (bool) \did_filter( 'activitypub_attachment_ids' ) );
+		// Need to recreate transformer to pick up new meta value.
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$filter_count_before = \did_filter( 'activitypub_attachment_ids' );
+		$result              = $method->invoke( $transformer );
+		$filter_count_after  = \did_filter( 'activitypub_attachment_ids' );
+
+		$this->assertGreaterThan( $filter_count_before, $filter_count_after, 'Filter should be called when max_media is default' );
 
 		\wp_delete_post( $post_id );
 	}
@@ -991,8 +1001,6 @@ class Test_Post extends \WP_UnitTestCase {
 		$auto = $policy['canQuote']['automaticApproval'];
 		$this->assertIsArray( $auto, 'Should return an array of IDs (both user and blog).' );
 		$this->assertCount( 2, $auto, 'Should supply two IDs (user and blog).' );
-
-		$this->delete_test_post( $post->ID );
 	}
 	/**
 	 * Ensure invalid permission values fall back to 'anyone' policy.

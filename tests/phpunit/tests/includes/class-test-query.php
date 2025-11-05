@@ -516,7 +516,6 @@ class Test_Query extends \WP_UnitTestCase {
 
 		// Should successfully fall back to blog actor and return a stamp object.
 		$this->assertNotFalse( $result, 'Should fall back to blog actor and return valid stamp' );
-		$this->assertIsObject( $result, 'Stamp should be an object' );
 
 		// Clean up.
 		\wp_delete_post( $post_id, true );

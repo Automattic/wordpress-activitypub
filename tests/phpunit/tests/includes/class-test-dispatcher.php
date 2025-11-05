@@ -48,7 +48,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	 */
 	public function test_send_to_followers() {
 		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ), 'Create' );
 
 		Followers::add( self::$user_id, 'https://example.org/users/username' );
 		Followers::add( self::$user_id, 'https://example.com/users/username' );
@@ -74,7 +74,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		};
 		add_filter( 'activitypub_send_activity_to_followers', $test_callback, 10, 2 );
 
-		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ), 'Create' );
 
 		Dispatcher::process_outbox( $outbox_item->ID );
 
@@ -229,7 +229,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	 */
 	public function test_should_send_to_followers() {
 		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ), 'Create' );
 		$activity    = Outbox::get_activity( $outbox_item );
 
 		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );

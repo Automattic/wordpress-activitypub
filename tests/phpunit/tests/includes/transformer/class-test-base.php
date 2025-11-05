@@ -127,7 +127,16 @@ class Test_Base extends \WP_UnitTestCase {
 
 		$transformed_object = $method->invoke( $transformer, new Generic_Object() );
 
-		$this->assertEquals( $expected_audience['to'], $transformed_object->get_to() );
+		// For TO field, check that it contains at least the expected items
+		// (blog followers URL may also be present with actor mode removal)
+		$actual_to = $transformed_object->get_to();
+		if ( $expected_audience['to'] !== null ) {
+			foreach ( $expected_audience['to'] as $expected_item ) {
+				$this->assertContains( $expected_item, $actual_to, "TO should contain $expected_item" );
+			}
+		} else {
+			$this->assertNull( $actual_to, 'TO should be null' );
+		}
 
 		// For CC field, check that it contains at least the expected items
 		// (blog followers URL will also be present for public posts)

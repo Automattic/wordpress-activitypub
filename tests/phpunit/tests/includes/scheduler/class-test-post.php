@@ -28,7 +28,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Create.
 		$post_id        = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
-		$outbox_item    = $this->get_latest_outbox_item( $activitypub_id );
+		$outbox_item    = $this->get_latest_outbox_item( $activitypub_id, 'Create' );
 
 		$this->assertNotNull( $outbox_item );
 		$this->assertSame( 'Create', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
@@ -36,13 +36,13 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Update.
 		self::factory()->attachment->update_object( $post_id, array( 'post_title' => 'Updated title' ) );
 
-		$outbox_item = $this->get_latest_outbox_item( $activitypub_id );
+		$outbox_item = $this->get_latest_outbox_item( $activitypub_id, 'Update' );
 		$this->assertSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		// Delete.
 		\wp_delete_attachment( $post_id, true );
 
-		$outbox_item = $this->get_latest_outbox_item( $activitypub_id );
+		$outbox_item = $this->get_latest_outbox_item( $activitypub_id, 'Delete' );
 		$this->assertSame( 'Delete', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		remove_post_type_support( 'attachment', 'activitypub' );
@@ -100,7 +100,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		\wp_publish_post( $post_id );
 
-		$post = $this->get_latest_outbox_item( $activitypub_id );
+		$post = $this->get_latest_outbox_item( $activitypub_id, 'Create' );
 		$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
 		$this->assertSame( 'Create', $type );
 

@@ -416,28 +416,18 @@ class Followers {
 	/**
 	 * Maybe add Inboxes of the Blog User.
 	 *
-	 * @deprecated 7.3.0
+	 * @deprecated 7.3.0 Actor mode removed, this function always returns false.
 	 *
 	 * @param string $json     The ActivityPub Activity JSON.
 	 * @param int    $actor_id The WordPress Actor ID.
 	 *
-	 * @return bool True if the Inboxes of the Blog User should be added, false otherwise.
+	 * @return bool Always returns false (actor mode removed).
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $json, $actor_id ) {
 		\_deprecated_function( __METHOD__, '7.3.0' );
 
-		// Only if this isn't the Blog Actor.
-		if ( Actors::BLOG_USER_ID === $actor_id ) {
-			return false;
-		}
-
-		$activity = \json_decode( $json, true );
-		// Only if this is an Update or Delete. Create handles its own "Announce" in dual user mode.
-		if ( ! \in_array( $activity['type'] ?? null, array( 'Update', 'Delete' ), true ) ) {
-			return false;
-		}
-
-		return true;
+		// Actor mode removed - this function is no longer needed.
+		return false;
 	}
 
 	/**

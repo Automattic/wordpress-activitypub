@@ -57,20 +57,30 @@ class ActivityPub_Outbox_TestCase extends \WP_UnitTestCase {
 	/**
 	 * Retrieve the latest Outbox item to compare against.
 	 *
-	 * @param string $title Title of the Outbox item.
+	 * @param string $title         Title of the Outbox item.
+	 * @param string $activity_type Optional activity type to filter by (e.g., 'Create', 'Update').
 	 * @return int|\WP_Post|null
 	 */
-	protected function get_latest_outbox_item( $title = '' ) {
-		$outbox = \get_posts(
-			array(
-				'post_type'      => Outbox::POST_TYPE,
-				'posts_per_page' => 1,
-				'post_status'    => 'pending',
-				'post_title'     => $title,
-				'orderby'        => 'date',
-				'order'          => 'DESC',
-			)
+	protected function get_latest_outbox_item( $title = '', $activity_type = '' ) {
+		$args = array(
+			'post_type'      => Outbox::POST_TYPE,
+			'posts_per_page' => 1,
+			'post_status'    => 'pending',
+			'post_title'     => $title,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
 		);
+
+		if ( ! empty( $activity_type ) ) {
+			$args['meta_query'] = array(
+				array(
+					'key'   => '_activitypub_activity_type',
+					'value' => $activity_type,
+				),
+			);
+		}
+
+		$outbox = \get_posts( $args );
 
 		return $outbox ? $outbox[0] : null;
 	}
