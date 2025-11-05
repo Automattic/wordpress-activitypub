@@ -485,16 +485,17 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test maybe_get_stamp with invalid post author.
+	 * Test maybe_get_stamp with author fallback to blog actor.
+	 * With actor mode removal, all posts have an actor (user or blog).
 	 *
 	 * @covers ::maybe_get_stamp
 	 */
-	public function test_maybe_get_stamp_invalid_author() {
-		// Create a post with invalid author.
+	public function test_maybe_get_stamp_with_blog_actor_fallback() {
+		// Create a post with an invalid author that will fall back to blog actor.
 		$post_id = self::factory()->post->create(
 			array(
 				'post_author'  => 999999, // Non-existent user ID.
-				'post_title'   => 'Test Post Invalid Author',
+				'post_title'   => 'Test Post with Blog Fallback',
 				'post_content' => 'Test Content',
 				'post_status'  => 'publish',
 			)
@@ -513,20 +514,21 @@ class Test_Query extends \WP_UnitTestCase {
 		$query  = Query::get_instance();
 		$result = $method->invoke( $query );
 
-		$this->assertFalse( $result, 'Should return false for invalid post author' );
+		// Should successfully fall back to blog actor and return a stamp object.
+		$this->assertNotFalse( $result, 'Should fall back to blog actor and return valid stamp' );
+		$this->assertIsObject( $result, 'Stamp should be an object' );
 
 		// Clean up.
 		\wp_delete_post( $post_id, true );
 	}
 
 	/**
-	 * Test get_activitypub_object method for home page in Actor mode.
+	 * Test get_activitypub_object method for home page.
+	 * Blog actor is now always available.
 	 *
 	 * @covers ::get_activitypub_object
 	 */
-	public function test_home_page_actor_mode() {
-		\update_option( 'activitypub_actor_mode', 'actor' );
-
+	public function test_home_page_blog_actor() {
 		$actor_queries = array();
 
 		// Track database queries using the 'query' filter.
@@ -550,7 +552,7 @@ class Test_Query extends \WP_UnitTestCase {
 			$message .= ' Found queries: ' . wp_json_encode( $actor_queries );
 		}
 
-		$this->assertNull( $object, 'Home page should return null, because the Blog user is disabled.' );
+		$this->assertInstanceOf( 'Activitypub\Model\Blog', $object, 'Home page should return Blog actor (always available).' );
 		$this->assertEmpty( $actor_queries, $message );
 
 		\delete_option( 'activitypub_actor_mode' );

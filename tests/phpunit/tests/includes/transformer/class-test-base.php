@@ -128,7 +128,17 @@ class Test_Base extends \WP_UnitTestCase {
 		$transformed_object = $method->invoke( $transformer, new Generic_Object() );
 
 		$this->assertEquals( $expected_audience['to'], $transformed_object->get_to() );
-		$this->assertEquals( $expected_audience['cc'], $transformed_object->get_cc() );
+
+		// For CC field, check that it contains at least the expected items
+		// (blog followers URL will also be present for public posts)
+		$actual_cc = $transformed_object->get_cc();
+		if ( $expected_audience['cc'] !== null ) {
+			foreach ( $expected_audience['cc'] as $expected_item ) {
+				$this->assertContains( $expected_item, $actual_cc, "CC should contain $expected_item" );
+			}
+		} else {
+			$this->assertNull( $actual_cc, 'CC should be null' );
+		}
 
 		\wp_delete_post( $post_id );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $function );

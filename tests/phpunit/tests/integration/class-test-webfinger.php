@@ -136,6 +136,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 
 	/**
 	 * Test add_user_discovery with invalid user.
+	 * With actor mode removal, invalid users fall back to blog actor.
 	 *
 	 * @covers ::add_user_discovery
 	 */
@@ -153,8 +154,10 @@ class Test_Webfinger extends \WP_UnitTestCase {
 
 		$result = Webfinger::add_user_discovery( $initial_jrd, 'acct:invalid@example.com', $user );
 
-		// Should return original jrd unchanged.
-		$this->assertEquals( $initial_jrd, $result );
+		// Should fall back to blog actor instead of returning unchanged.
+		$this->assertNotEquals( $initial_jrd, $result, 'Should add blog actor info for invalid user' );
+		$this->assertStringContainsString( 'localhost', $result['subject'], 'Subject should be blog actor' );
+		$this->assertNotEmpty( $result['aliases'], 'Should have aliases for blog actor' );
 	}
 
 	/**

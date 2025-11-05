@@ -555,9 +555,6 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 * @covers ::get_local_recipients
 	 */
 	public function test_get_local_recipients_public_activity() {
-		// Enable actor mode to allow user actors.
-		\update_option( 'activitypub_actor_mode', 'actor' );
-
 		// Create additional test users (authors have activitypub capability by default).
 		$user_id_1 = self::factory()->user->create( array( 'role' => 'author' ) );
 		$user_id_2 = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -617,16 +614,15 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertContains( $user_id_3, $result, 'Should contain user 3' );
 
 		// Verify it returns exactly the followers we added.
-		// Note: May include blog user (0) if blog mode is enabled.
+		// Note: Blog user (0) is now always included.
 		$this->assertGreaterThanOrEqual( 4, count( $result ), 'Should return at least 4 followers' );
-		$this->assertLessThanOrEqual( 5, count( $result ), 'Should return at most 5 followers (4 users + optional blog)' );
+		$this->assertLessThanOrEqual( 6, count( $result ), 'Should return at most 6 followers (4 users + blog + application)' );
 
 		// Clean up.
 		\wp_delete_post( $remote_actor->ID, true );
 		\wp_delete_user( $user_id_1 );
 		\wp_delete_user( $user_id_2 );
 		\wp_delete_user( $user_id_3 );
-		\delete_option( 'activitypub_actor_mode' );
 		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
@@ -636,9 +632,6 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 * @covers ::get_local_recipients
 	 */
 	public function test_get_local_recipients_public_activity_in_cc() {
-		// Enable actor mode to allow user actors.
-		\update_option( 'activitypub_actor_mode', 'actor' );
-
 		// Create a test user (authors have activitypub capability by default).
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 
@@ -692,14 +685,13 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertContains( $user_id, $result, 'Should contain new test user' );
 
 		// Verify it returns exactly the followers we added.
-		// Note: May include blog user (0) if blog mode is enabled.
+		// Note: Blog user (0) is now always included.
 		$this->assertGreaterThanOrEqual( 2, count( $result ), 'Should return at least 2 followers' );
-		$this->assertLessThanOrEqual( 3, count( $result ), 'Should return at most 3 followers (2 users + optional blog)' );
+		$this->assertLessThanOrEqual( 4, count( $result ), 'Should return at most 4 followers (2 users + blog + application)' );
 
 		// Clean up.
 		\wp_delete_post( $remote_actor->ID, true );
 		\wp_delete_user( $user_id );
-		\delete_option( 'activitypub_actor_mode' );
 		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 

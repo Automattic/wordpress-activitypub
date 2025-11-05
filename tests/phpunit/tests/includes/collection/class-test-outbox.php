@@ -173,17 +173,15 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
 	 * Test add an item to the outbox with a user.
+	 * With actor mode removal, invalid users always fall back to blog.
 	 *
 	 * @covers ::add
 	 * @dataProvider author_object_provider
 	 *
-	 * @param string $mode           The actor mode.
 	 * @param int    $user_id        The user ID.
 	 * @param string $expected_actor The expected actor.
 	 */
-	public function test_author_fallbacks( $mode, $user_id, $expected_actor ) {
-		\update_option( 'activitypub_actor_mode', $mode );
-
+	public function test_author_fallbacks( $user_id, $expected_actor ) {
 		$user_id = $user_id ?? self::$user_id;
 		$data    = array(
 			'@context' => 'https://www.w3.org/ns/activitystreams',
@@ -203,10 +201,8 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function author_object_provider() {
 		return array(
-			array( 'actor_blog', null, 'user' ),
-			array( 'actor_blog', 90210, 'blog' ),
-			array( 'blog', 90210, 'blog' ),
-			array( 'actor', 90210, false ),
+			array( null, 'user' ),
+			array( 90210, 'blog' ), // Invalid user falls back to blog.
 		);
 	}
 

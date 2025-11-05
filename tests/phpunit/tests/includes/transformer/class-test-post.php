@@ -981,34 +981,19 @@ class Test_Post extends \WP_UnitTestCase {
 		$post = $this->create_test_post();
 		update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_ME );
 
-		$actor_modes = array(
-			'actor',
-			'blog',
-			'actor_blog',
-		);
+		$transformer = new Post( get_post( $post->ID ) );
+		$policy      = $transformer->get_interaction_policy();
 
-		foreach ( $actor_modes as $mode ) {
-			update_option( 'activitypub_actor_mode', $mode );
-			$transformer = new Post( get_post( $post->ID ) ); // fresh instance.
-			$policy      = $transformer->get_interaction_policy();
+		$this->assertIsArray( $policy, 'Policy should be array' );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertArrayHasKey( 'automaticApproval', $policy['canQuote'] );
 
-			$this->assertIsArray( $policy, 'Policy should be array for mode ' . $mode );
-			$this->assertArrayHasKey( 'canQuote', $policy );
-			$this->assertArrayHasKey( 'automaticApproval', $policy['canQuote'] );
+		$auto = $policy['canQuote']['automaticApproval'];
+		$this->assertIsArray( $auto, 'Should return an array of IDs (both user and blog).' );
+		$this->assertCount( 2, $auto, 'Should supply two IDs (user and blog).' );
 
-			$auto = $policy['canQuote']['automaticApproval'];
-			if ( 'actor_blog' === $mode ) {
-				$this->assertIsArray( $auto, 'Actor+Blog mode should return an array of IDs.' );
-				$this->assertCount( 2, $auto, 'Actor+Blog mode should supply two IDs.' );
-			} else {
-				$this->assertIsString( $auto, 'Single mode should return a single ID string.' );
-			}
-		}
-
-		// Cleanup.
-		delete_option( 'activitypub_actor_mode' );
+		$this->delete_test_post( $post->ID );
 	}
-
 	/**
 	 * Ensure invalid permission values fall back to 'anyone' policy.
 	 *

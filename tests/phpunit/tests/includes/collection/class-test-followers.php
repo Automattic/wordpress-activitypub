@@ -540,47 +540,41 @@ class Test_Followers extends \WP_UnitTestCase {
 	 */
 	public function data_maybe_add_inboxes_of_blog_user() {
 		return array(
-			'actor mode'      => array(
-				'actor_mode' => 'actor',
-				'json'       => '{"type":"Update","id":"test"}',
-				'actor_id'   => 123,
-				'expected'   => false,
-				'message'    => 'Should return false when not in blog and user mode.',
+			'regular user'    => array(
+				'json'     => '{"type":"Update","id":"test"}',
+				'actor_id' => 123,
+				'expected' => false,
+				'message'  => 'Should always return false (deprecated function).',
 			),
 			'blog actor'      => array(
-				'actor_mode' => 'actor_blog',
-				'json'       => '{"type":"Update","id":"test"}',
-				'actor_id'   => Actors::BLOG_USER_ID,
-				'expected'   => false,
-				'message'    => 'Should return false when using blog actor.',
+				'json'     => '{"type":"Update","id":"test"}',
+				'actor_id' => Actors::BLOG_USER_ID,
+				'expected' => false,
+				'message'  => 'Should return false when using blog actor.',
 			),
 			'create activity' => array(
-				'actor_mode' => 'actor_blog',
-				'json'       => '{"type":"Create","id":"test"}',
-				'actor_id'   => 123,
-				'expected'   => false,
-				'message'    => 'Should return false for non-Update/Delete activity types.',
+				'json'     => '{"type":"Create","id":"test"}',
+				'actor_id' => 123,
+				'expected' => false,
+				'message'  => 'Should return false for non-Update/Delete activity types.',
 			),
 			'update activity' => array(
-				'actor_mode' => 'actor_blog',
-				'json'       => '{"type":"Update","id":"test"}',
-				'actor_id'   => 123,
-				'expected'   => true,
-				'message'    => 'Should return true for Update activity in dual mode.',
+				'json'     => '{"type":"Update","id":"test"}',
+				'actor_id' => 123,
+				'expected' => false,
+				'message'  => 'Should return false (deprecated function, actor mode removed).',
 			),
 			'delete activity' => array(
-				'actor_mode' => 'actor_blog',
-				'json'       => '{"type":"Delete","id":"test"}',
-				'actor_id'   => 123,
-				'expected'   => true,
-				'message'    => 'Should return true for Delete activity in dual mode.',
+				'json'     => '{"type":"Delete","id":"test"}',
+				'actor_id' => 123,
+				'expected' => false,
+				'message'  => 'Should return false (deprecated function, actor mode removed).',
 			),
 			'invalid json'    => array(
-				'actor_mode' => 'actor_blog',
-				'json'       => 'invalid json',
-				'actor_id'   => 123,
-				'expected'   => false,
-				'message'    => 'Should return false for invalid JSON.',
+				'json'     => 'invalid json',
+				'actor_id' => 123,
+				'expected' => false,
+				'message'  => 'Should return false for invalid JSON.',
 			),
 		);
 	}
@@ -593,14 +587,12 @@ class Test_Followers extends \WP_UnitTestCase {
 	 *
 	 * @expectedDeprecated Activitypub\Collection\Followers::maybe_add_inboxes_of_blog_user
 	 *
-	 * @param string  $actor_mode The actor mode to test with.
-	 * @param string  $json       The JSON to test with.
-	 * @param int     $actor_id   The actor ID to test with.
-	 * @param boolean $expected   The expected result.
-	 * @param string  $message    The assertion message.
+	 * @param string  $json     The JSON to test with.
+	 * @param int     $actor_id The actor ID to test with.
+	 * @param boolean $expected The expected result.
+	 * @param string  $message  The assertion message.
 	 */
-	public function test_maybe_add_inboxes_of_blog_user( $actor_mode, $json, $actor_id, $expected, $message ) {
-		update_option( 'activitypub_actor_mode', $actor_mode );
+	public function test_maybe_add_inboxes_of_blog_user( $json, $actor_id, $expected, $message ) {
 		$this->assertSame(
 			$expected,
 			Followers::maybe_add_inboxes_of_blog_user( $json, $actor_id ),

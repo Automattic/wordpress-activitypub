@@ -706,7 +706,8 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * @covers \Activitypub\get_user_id
 	 */
 	public function test_get_user_id() {
-		$this->assertFalse( \Activitypub\get_user_id( 90210 ) );
+		// Invalid user ID should fall back to blog actor (always available).
+		$this->assertIsString( \Activitypub\get_user_id( 90210 ) );
 
 		$user = self::factory()->user->create_and_get();
 		$user->add_cap( 'activitypub' );
@@ -718,10 +719,9 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		// Remove capability - user should fall back to blog.
 		$user->remove_cap( 'activitypub' );
-		$this->assertIsString( \Activitypub\get_user_id( $user->ID ) );
-
-		// User without capability should return blog ID.
-		$this->assertIsString( \Activitypub\get_user_id( $user->ID ) );
+		$blog_id = \Activitypub\get_user_id( $user->ID );
+		$this->assertIsString( $blog_id );
+		$this->assertStringContainsString( 'author=0', $blog_id, 'Should return blog actor ID' );
 	}
 
 	/**
