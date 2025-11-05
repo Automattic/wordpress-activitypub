@@ -14,6 +14,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Scheduler\Actor;
+use Activitypub\Scheduler\Collection_Sync;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Scheduler\Post;
 
@@ -32,6 +33,20 @@ class Scheduler {
 	private static $batch_callbacks = array();
 
 	/**
+	 * Get the pause between async batches (in seconds).
+	 *
+	 * @return int The pause in seconds.
+	 */
+	public static function get_retry_delay() {
+		/**
+		 * Filters the pause between async batches (in seconds).
+		 *
+		 * @param int $async_batch_pause The pause in seconds. Default 30.
+		 */
+		return apply_filters( 'activitypub_scheduler_async_batch_pause', 30 );
+	}
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
@@ -46,6 +61,7 @@ class Scheduler {
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 		\add_action( 'activitypub_inbox_purge', array( self::class, 'purge_inbox' ) );
+		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_inbox_activity' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
@@ -60,6 +76,7 @@ class Scheduler {
 	public static function register_schedulers() {
 		Post::init();
 		Actor::init();
+		Collection_Sync::init();
 		Comment::init();
 
 		/**
@@ -138,7 +155,7 @@ class Scheduler {
 	public static function unschedule_events_for_item( $outbox_item_id ) {
 		$event_args = array(
 			$outbox_item_id,
-			Dispatcher::$batch_size,
+			Dispatcher::get_batch_size(),
 			\get_post_meta( $outbox_item_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
 		);
 
@@ -274,7 +291,7 @@ class Scheduler {
 		foreach ( $ids as $id ) {
 			// Bail if there is a pending batch.
 			$offset = \get_post_meta( $id, '_activitypub_outbox_offset', true ) ?: 0; // phpcs:ignore
-			if ( \wp_next_scheduled( 'activitypub_send_activity', array( $id, ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset ) ) ) {
+			if ( \wp_next_scheduled( 'activitypub_send_activity', array( $id, Dispatcher::get_batch_size(), $offset ) ) ) {
 				return;
 			}
 
@@ -360,6 +377,53 @@ class Scheduler {
 	}
 
 	/**
+	 * Process cached inbox activity.
+	 *
+	 * Retrieves all collected user IDs for an activity and processes them together.
+	 *
+	 * @param string $activity_id The activity ID.
+	 */
+	public static function process_inbox_activity( $activity_id ) {
+		// Deduplicate if multiple inbox items were created due to race condition.
+		$inbox_item = Inbox::deduplicate( $activity_id );
+		if ( ! $inbox_item ) {
+			return;
+		}
+
+		$data = \json_decode( $inbox_item->post_content, true );
+		// Reconstruct activity from inbox post.
+		$activity = Activity::init_from_array( $data );
+		$type     = \Activitypub\camel_to_snake_case( $activity->get_type() );
+		$context  = Inbox::CONTEXT_INBOX;
+		$user_ids = Inbox::get_recipients( $inbox_item->ID );
+
+		/**
+		 * Fires after any ActivityPub Inbox activity has been handled, regardless of activity type.
+		 *
+		 * This hook is triggered for all activity types processed by the inbox handler.
+		 *
+		 * @param array    $data     The data array.
+		 * @param array    $user_ids The user IDs.
+		 * @param string   $type     The type of the activity.
+		 * @param Activity $activity The Activity object.
+		 * @param int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param string   $context  The context of the request ('inbox' or 'shared_inbox').
+		 */
+		\do_action( 'activitypub_handled_inbox', $data, $user_ids, $type, $activity, $inbox_item->ID, $context );
+
+		/**
+		 * Fires after an ActivityPub Inbox activity has been handled.
+		 *
+		 * @param array    $data     The data array.
+		 * @param array    $user_ids The user IDs.
+		 * @param Activity $activity The Activity object.
+		 * @param int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param string   $context  The context of the request ('inbox' or 'shared_inbox').
+		 */
+		\do_action( 'activitypub_handled_inbox_' . $type, $data, $user_ids, $activity, $inbox_item->ID, $context );
+	}
+
+	/**
 	 * Update schedules when outbox purge days settings change.
 	 *
 	 * @param int $old_value The old value.
@@ -422,7 +486,7 @@ class Scheduler {
 
 		if ( ! empty( $next ) ) {
 			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event( \time() + 30, \current_action(), \array_values( $next ) );
+			\wp_schedule_single_event( \time() + self::get_retry_delay(), \current_action(), \array_values( $next ) );
 		}
 	}
 
@@ -519,6 +583,7 @@ class Scheduler {
 		$announce->set_type( 'Announce' );
 		$announce->set_actor( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id() );
 		$announce->set_object( $activity );
+		$announce->add_cc( object_to_uri( $activity->get_actor() ) );
 
 		$outbox_activity_id = Outbox::add( $announce, Actors::BLOG_USER_ID );
 

@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Reorganize integration loader and move Stream integration into dedicated folder structure.

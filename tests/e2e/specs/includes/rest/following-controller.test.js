@@ -10,7 +10,7 @@ test.describe( 'ActivityPub Following Collection REST API', () => {
 	test.beforeAll( async ( { requestUtils } ) => {
 		// Use the default test user
 		testUserId = 1;
-		followingEndpoint = `/activitypub/1.0/users/${ testUserId }/following`;
+		followingEndpoint = `/activitypub/1.0/actors/${ testUserId }/following`;
 	} );
 
 	test( 'should return 200 status code for following endpoint', async ( { requestUtils } ) => {

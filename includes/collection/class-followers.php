@@ -7,9 +7,11 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Signature;
 use Activitypub\Tombstone;
 
 use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\get_rest_url_by_path;
 
 /**
  * ActivityPub Followers Collection.
@@ -566,5 +568,109 @@ class Followers {
 		}
 
 		self::remove( $actor_id, $user_id );
+	}
+
+	/**
+	 * Compute the partial follower collection digest for a specific instance.
+	 *
+	 * Implements FEP-8fcf: Followers collection synchronization.
+	 * This is a convenience wrapper that filters followers by authority and then
+	 * computes the digest using the standard FEP-8fcf algorithm.
+	 *
+	 * The digest is created by XORing together the individual SHA256 digests
+	 * of each follower's ID.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md
+	 * @see Signature::get_collection_digest() for the core digest algorithm
+	 *
+	 * @param int    $user_id   The user ID whose followers to compute.
+	 * @param string $authority The URI authority (scheme + host) to filter by.
+	 *
+	 * @return string|false The hex-encoded digest, or false if no followers.
+	 */
+	public static function compute_partial_digest( $user_id, $authority ) {
+		// Get followers filtered by authority.
+		$followers    = self::get_by_authority( $user_id, $authority );
+		$follower_ids = \wp_list_pluck( $followers, 'guid' );
+
+		// Delegate to the core digest computation algorithm.
+		return Signature::get_collection_digest( $follower_ids );
+	}
+
+	/**
+	 * Get partial followers collection for a specific instance.
+	 *
+	 * Returns only followers whose ID shares the specified URI authority.
+	 * Used for FEP-8fcf synchronization.
+	 *
+	 * @param int    $user_id   The user ID whose followers to get.
+	 * @param string $authority The URI authority (scheme + host) to filter by.
+	 *
+	 * @return \WP_Post[] Array of WP_Post objects.
+	 */
+	public static function get_by_authority( $user_id, $authority ) {
+		$posts = new \WP_Query(
+			array(
+				'post_type'      => Remote_Actors::POST_TYPE,
+				'posts_per_page' => -1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'   => self::FOLLOWER_META_KEY,
+						'value' => $user_id,
+					),
+					array(
+						'key'     => '_activitypub_inbox',
+						'compare' => 'LIKE',
+						'value'   => $authority,
+					),
+				),
+			)
+		);
+
+		return $posts->posts ?? array();
+	}
+
+	/**
+	 * Generate the Collection-Synchronization header value for FEP-8fcf.
+	 *
+	 * @param int    $user_id   The user ID whose followers collection to sync.
+	 * @param string $authority The authority of the receiving instance.
+	 *
+	 * @return string|false The header value, or false if cannot generate.
+	 */
+	public static function generate_sync_header( $user_id, $authority ) {
+		$followers = self::get_by_authority( $user_id, $authority );
+		$followers = \wp_list_pluck( $followers, 'guid' );
+
+		// Compute the digest for this specific authority.
+		$digest = Signature::get_collection_digest( $followers );
+
+		if ( ! $digest ) {
+			return false;
+		}
+
+		// Build the collection ID (followers collection URL).
+		$collection_id = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user_id ) );
+
+		// Build the partial followers URL.
+		$url = get_rest_url_by_path(
+			sprintf(
+				'actors/%d/followers/sync?authority=%s',
+				$user_id,
+				rawurlencode( $authority )
+			)
+		);
+
+		// Format as per FEP-8fcf (similar to HTTP Signatures format).
+		return sprintf(
+			'collectionId="%s", url="%s", digest="%s"',
+			$collection_id,
+			$url,
+			$digest
+		);
 	}
 }

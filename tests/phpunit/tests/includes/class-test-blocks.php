@@ -185,8 +185,8 @@ class Test_Blocks extends \WP_UnitTestCase {
 			'post_content' => '<p>First paragraph</p><p>Second paragraph</p>',
 		);
 
-		$post = (object) array(
-			'object' => (object) array(
+		$post = array(
+			'object' => array(
 				'inReplyTo' => null,
 			),
 		);
@@ -207,8 +207,8 @@ class Test_Blocks extends \WP_UnitTestCase {
 		);
 
 		$reply_url = 'https://mastodon.social/@user/123456';
-		$post      = (object) array(
-			'object' => (object) array(
+		$post      = array(
+			'object' => array(
 				'inReplyTo' => $reply_url,
 			),
 		);
@@ -217,6 +217,194 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( '<!-- wp:activitypub/reply {"url":"https://mastodon.social/@user/123456","embedPost":true} /-->', $result['post_content'] );
 		$this->assertStringContainsString( "<!-- wp:paragraph -->\n<p>This is a reply</p>\n<!-- /wp:paragraph -->", $result['post_content'] );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data without inReplyTo field.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_without_inreplyto() {
+		$data = array(
+			'post_content' => '<p>Regular post without reply</p>',
+		);
+
+		$post = array(
+			'object' => array(
+				// No inReplyTo field.
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		$this->assertStringNotContainsString( 'wp:activitypub/reply', $result['post_content'], 'Should not add reply block when no inReplyTo' );
+		$this->assertStringContainsString( "<!-- wp:paragraph -->\n<p>Regular post without reply</p>\n<!-- /wp:paragraph -->", $result['post_content'] );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data with multiple paragraphs and a reply.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_multiple_paragraphs_and_reply() {
+		$data = array(
+			'post_content' => '<p>First paragraph</p><p>Second paragraph</p><p>Third paragraph</p>',
+		);
+
+		$reply_url = 'https://mastodon.social/@alice/789';
+		$post      = array(
+			'object' => array(
+				'inReplyTo' => $reply_url,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should have reply block at the start.
+		$this->assertStringStartsWith( '<!-- wp:activitypub/reply', $result['post_content'], 'Reply block should be at the start' );
+
+		// Should have all three paragraphs as blocks.
+		$this->assertStringContainsString( '<!-- wp:paragraph -->', $result['post_content'] );
+		$this->assertSame( 3, substr_count( $result['post_content'], '<!-- wp:paragraph -->' ), 'Should have 3 paragraph blocks' );
+		$this->assertSame( 3, substr_count( $result['post_content'], '<!-- /wp:paragraph -->' ), 'Should close 3 paragraph blocks' );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data with empty content.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_empty_content() {
+		$data = array(
+			'post_content' => '',
+		);
+
+		$post = array(
+			'object' => array(
+				'inReplyTo' => null,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should handle empty content gracefully.
+		$this->assertSame( '', $result['post_content'], 'Should return empty string for empty content' );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data with content but no paragraph tags.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_non_paragraph_content() {
+		$data = array(
+			'post_content' => 'Plain text without paragraph tags',
+		);
+
+		$post = array(
+			'object' => array(
+				'inReplyTo' => null,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should handle content without <p> tags.
+		$this->assertSame( '', $result['post_content'], 'Should return empty string when no paragraphs found' );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data preserves data keys.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_preserves_other_data() {
+		$data = array(
+			'post_content' => '<p>Test content</p>',
+			'post_author'  => 123,
+			'post_date'    => '2024-01-15T10:30:00Z',
+			'post_excerpt' => 'Test excerpt',
+			'meta_input'   => array( '_source_id' => 'test-id' ),
+		);
+
+		$post = array(
+			'object' => array(
+				'inReplyTo' => null,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should preserve all other data keys.
+		$this->assertArrayHasKey( 'post_author', $result, 'Should preserve post_author' );
+		$this->assertSame( 123, $result['post_author'], 'Should preserve post_author value' );
+		$this->assertArrayHasKey( 'post_date', $result, 'Should preserve post_date' );
+		$this->assertSame( '2024-01-15T10:30:00Z', $result['post_date'], 'Should preserve post_date value' );
+		$this->assertArrayHasKey( 'post_excerpt', $result, 'Should preserve post_excerpt' );
+		$this->assertArrayHasKey( 'meta_input', $result, 'Should preserve meta_input' );
+
+		// Should only modify post_content.
+		$this->assertNotSame( '<p>Test content</p>', $result['post_content'], 'Should modify post_content' );
+		$this->assertStringContainsString( '<!-- wp:paragraph -->', $result['post_content'], 'Should add block markup' );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data with nested HTML in paragraphs.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_nested_html() {
+		$data = array(
+			'post_content' => '<p>Text with <a href="https://example.com">a link</a> and <strong>bold text</strong></p>',
+		);
+
+		$post = array(
+			'object' => array(
+				'inReplyTo' => null,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should preserve nested HTML.
+		$this->assertStringContainsString( '<a href="https://example.com">a link</a>', $result['post_content'], 'Should preserve links' );
+		$this->assertStringContainsString( '<strong>bold text</strong>', $result['post_content'], 'Should preserve strong tags' );
+		$this->assertStringContainsString( '<!-- wp:paragraph -->', $result['post_content'], 'Should add block markup' );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data integration with array-based post data.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_complete_activity() {
+		$data = array(
+			'post_content' => '<p>Complete test</p>',
+		);
+
+		// Realistic Mastodon activity structure.
+		$post = array(
+			'id'        => 'https://mastodon.social/users/example/statuses/123/activity',
+			'type'      => 'Create',
+			'actor'     => 'https://mastodon.social/users/example',
+			'published' => '2024-01-15T10:30:00Z',
+			'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object'    => array(
+				'id'        => 'https://mastodon.social/users/example/statuses/123',
+				'type'      => 'Note',
+				'content'   => '<p>Complete test</p>',
+				'published' => '2024-01-15T10:30:00Z',
+				'inReplyTo' => 'https://mastodon.social/@other/456',
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should work with complete activity structure.
+		$this->assertIsArray( $result, 'Should return array' );
+		$this->assertArrayHasKey( 'post_content', $result, 'Should have post_content key' );
+		$this->assertStringContainsString( 'wp:activitypub/reply', $result['post_content'], 'Should add reply block' );
+		$this->assertStringContainsString( '<!-- wp:paragraph -->', $result['post_content'], 'Should add paragraph block' );
 	}
 
 	/**

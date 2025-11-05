@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add LiteSpeed Cache integration to prevent ActivityPub JSON responses from being cached incorrectly. Includes automatic .htaccess rules and Site Health check to ensure proper configuration.

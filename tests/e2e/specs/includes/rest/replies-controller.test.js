@@ -12,7 +12,7 @@ test.describe( 'ActivityPub Replies Collection REST API', () => {
 		// Use the default test user and a sample post
 		testUserId = 1;
 		testPostId = 1; // Assuming a post exists
-		repliesEndpoint = `/activitypub/1.0/users/${ testUserId }/posts/${ testPostId }/replies`;
+		repliesEndpoint = `/activitypub/1.0/actors/${ testUserId }/posts/${ testPostId }/replies`;
 	} );
 
 	test( 'should return 200 status code for replies endpoint', async ( { requestUtils } ) => {

@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Mention;
 
 /**
  * Class Test_Remote_Actors
@@ -674,7 +675,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 -----END PUBLIC KEY-----
 ';
 
-		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ), 10, 2 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'pre_http_get_remote_object' ), 10, 2 );
 
 		// X.509 key should remain unchanged.
 		$result       = Remote_Actors::get_public_key( 'https://example.com/author/x509' );
@@ -702,7 +703,12 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$result = Remote_Actors::get_public_key( 'https://example.com/author/invalid' );
 		$this->assertWPError( $result );
 
-		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
+		// Test GoToSocial-style /main-key path suffix is stripped correctly.
+		$result       = Remote_Actors::get_public_key( 'https://example.com/author/x509/main-key' );
+		$key_resource = \openssl_pkey_get_details( $result );
+		$this->assertSame( $this->x509_key, $key_resource['key'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'pre_http_get_remote_object' ) );
 	}
 
 	/**
@@ -869,6 +875,199 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Test that saving a remote actor with a self-mention doesn't cause infinite recursion.
+	 *
+	 * @covers ::create
+	 * @covers ::prepare_custom_post_type
+	 */
+	public function test_create_actor_with_self_mention_no_recursion() {
+		// Ensure the Mention filter is active to test for recursion.
+		Mention::init();
+
+		// Create an actor with a self-mention in their summary.
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/self-mention',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/self-mention',
+			'inbox'             => 'https://remote.example.com/actor/self-mention/inbox',
+			'name'              => 'Self Mention User',
+			'preferredUsername' => 'selfmention',
+			'summary'           => 'Hello, I am @selfmention@remote.example.com and I like to mention myself!',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		// Mock webfinger to resolve the mention.
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => wp_json_encode(
+						array(
+							'subject' => 'acct:selfmention@remote.example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => 'https://remote.example.com/actor/self-mention',
+								),
+							),
+						)
+					),
+				);
+			}
+
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
+
+		// Mock remote actor fetch to return the same actor (creating potential recursion).
+		$actor_fetch_callback = function ( $pre, $url_or_object ) use ( $actor ) {
+			if ( $url_or_object === $actor['id'] ) {
+				return $actor;
+			}
+
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $actor_fetch_callback, 10, 2 );
+
+		// This should not cause infinite recursion.
+		$post_id = Remote_Actors::create( $actor );
+
+		$this->assertIsInt( $post_id );
+		$this->assertGreaterThan( 0, $post_id );
+
+		$post = \get_post( $post_id );
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertEquals( 'https://remote.example.com/actor/self-mention', $post->guid );
+
+		// Verify the summary was stored correctly (without being processed for mentions).
+		$this->assertStringContainsString( '@selfmention@remote.example.com', $post->post_excerpt );
+
+		// Clean up - remove only the specific filters we added.
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $actor_fetch_callback );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test that saving a remote actor with mentions of other actors doesn't cause recursion.
+	 *
+	 * @covers ::create
+	 * @covers ::prepare_custom_post_type
+	 */
+	public function test_create_actor_with_cross_mentions_no_recursion() {
+		// Ensure the Mention filter is active to test for recursion.
+		Mention::init();
+
+		// Create two actors that mention each other in their bios.
+		$actor_a = array(
+			'id'                => 'https://remote.example.com/actor/alice-cross',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/alice-cross',
+			'inbox'             => 'https://remote.example.com/actor/alice-cross/inbox',
+			'name'              => 'Alice',
+			'preferredUsername' => 'alice',
+			'summary'           => 'Best friends with @bob@remote.example.com',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		$actor_b = array(
+			'id'                => 'https://remote.example.com/actor/bob-cross',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/bob-cross',
+			'inbox'             => 'https://remote.example.com/actor/bob-cross/inbox',
+			'name'              => 'Bob',
+			'preferredUsername' => 'bob',
+			'summary'           => 'Best friends with @alice@remote.example.com',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		// Mock webfinger to resolve the mentions.
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				if ( strpos( $url, 'bob@remote.example.com' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:bob@remote.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://remote.example.com/actor/bob-cross',
+									),
+								),
+							)
+						),
+					);
+				} elseif ( strpos( $url, 'alice@remote.example.com' ) !== false ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => wp_json_encode(
+							array(
+								'subject' => 'acct:alice@remote.example.com',
+								'links'   => array(
+									array(
+										'rel'  => 'self',
+										'type' => 'application/activity+json',
+										'href' => 'https://remote.example.com/actor/alice-cross',
+									),
+								),
+							)
+						),
+					);
+				}
+			}
+
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
+
+		// Mock the remote fetch to return the cross-mentioned actors.
+		$actor_fetch_callback = function ( $pre, $url_or_object ) use ( $actor_a, $actor_b ) {
+			if ( $url_or_object === $actor_a['id'] ) {
+				return $actor_a;
+			}
+			if ( $url_or_object === $actor_b['id'] ) {
+				return $actor_b;
+			}
+
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $actor_fetch_callback, 10, 2 );
+
+		// This should not cause infinite recursion when creating both actors.
+		$post_id_a = Remote_Actors::create( $actor_a );
+		$this->assertIsInt( $post_id_a );
+
+		$post_id_b = Remote_Actors::create( $actor_b );
+		$this->assertIsInt( $post_id_b );
+
+		// Verify both were created successfully.
+		$this->assertGreaterThan( 0, $post_id_a );
+		$this->assertGreaterThan( 0, $post_id_b );
+
+		// Clean up - remove only the specific filters we added.
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $actor_fetch_callback );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+		\wp_delete_post( $post_id_a, true );
+		\wp_delete_post( $post_id_b, true );
+	}
+
+	/**
 	 * Pre get remote metadata by actor.
 	 *
 	 * @param mixed  $value The value.
@@ -876,54 +1075,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 * @return array|\WP_Error
 	 */
 	public function pre_get_remote_metadata_by_actor( $value, $url ) {
-		if ( 'https://example.com/author/x509' === $url ) {
-			return array(
-				'name'      => 'Test Actor',
-				'url'       => 'https://example.com/author/x509',
-				'publicKey' => array(
-					'id'           => 'https://example.com/author#main-key',
-					'owner'        => 'https://example.com/author',
-					'publicKeyPem' => $this->x509_key,
-				),
-			);
-		}
-
-		if ( 'https://example.com/author/pkcs1' === $url ) {
-			return array(
-				'name'      => 'Test Actor',
-				'url'       => 'https://example.com/author/pkcs1',
-				'publicKey' => array(
-					'id'           => 'https://example.com/author#main-key',
-					'owner'        => 'https://example.com/author',
-					'publicKeyPem' => $this->pkcs1_key,
-				),
-			);
-		}
-
-		if ( 'https://example.com/author/ec' === $url ) {
-			return array(
-				'name'      => 'Test Actor',
-				'url'       => 'https://example.com/author/ec',
-				'publicKey' => array(
-					'id'           => 'https://example.com/author#main-key',
-					'owner'        => 'https://example.com/author',
-					'publicKeyPem' => $this->ec_key,
-				),
-			);
-		}
-
-		if ( 'https://example.com/author/pkcs8' === $url ) {
-			return array(
-				'name'      => 'Test Actor',
-				'url'       => 'https://example.com/author/pkcs8',
-				'publicKey' => array(
-					'id'           => 'https://example.com/author#main-key',
-					'owner'        => 'https://example.com/author',
-					'publicKeyPem' => $this->pkcs8_key,
-				),
-			);
-		}
-
 		if ( 'https://example.com/author/invalid' === $url ) {
 			return array(
 				'name'      => 'Test Actor',
@@ -937,5 +1088,212 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		}
 
 		return new \WP_Error( 'invalid_url', $url );
+	}
+
+	/**
+	 * Pre http get remote object.
+	 *
+	 * @param mixed  $pre           The preempted value.
+	 * @param string $url_or_object The URL or object.
+	 * @return array|\WP_Error
+	 */
+	public function pre_http_get_remote_object( $pre, $url_or_object ) {
+
+		if ( 'https://example.com/author/x509' === $url_or_object ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/x509',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->x509_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/pkcs1' === $url_or_object ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/pkcs1',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->pkcs1_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/ec' === $url_or_object ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/ec',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->ec_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/pkcs8' === $url_or_object ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/pkcs8',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->pkcs8_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/x509/main-key' === $url_or_object ) {
+			return array(
+				'id'        => 'https://example.com/author/x509',
+				'type'      => 'Person',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->x509_key,
+				),
+			);
+		}
+
+		return $pre;
+	}
+
+	/**
+	 * Test get_avatar_url with avatar in meta.
+	 *
+	 * @covers ::get_avatar_url
+	 */
+	public function test_get_avatar_url_from_meta() {
+		// Create a remote actor with avatar in meta.
+		$actor_data = array(
+			'id'                => 'https://example.com/users/avatar-test',
+			'type'              => 'Person',
+			'preferredUsername' => 'avatartest',
+			'name'              => 'Avatar Test',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/avatar-test.jpg',
+			),
+			'inbox'             => 'https://example.com/inbox-avatar',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Verify avatar URL is stored in meta.
+		$avatar_url = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
+		$this->assertEquals( 'https://example.com/avatar-test.jpg', $avatar_url );
+
+		// Test get_avatar_url retrieves from meta.
+		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertEquals( 'https://example.com/avatar-test.jpg', $retrieved_avatar );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
+	}
+
+	/**
+	 * Test get_avatar_url fallback to JSON when meta is empty.
+	 *
+	 * @covers ::get_avatar_url
+	 */
+	public function test_get_avatar_url_fallback_to_json() {
+		// Create a remote actor.
+		$actor_data = array(
+			'id'                => 'https://example.com/users/json-avatar',
+			'type'              => 'Person',
+			'preferredUsername' => 'jsonavatar',
+			'name'              => 'JSON Avatar',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/json-avatar.jpg',
+			),
+			'inbox'             => 'https://example.com/inbox-json',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Delete the avatar meta to simulate old data.
+		delete_post_meta( $remote_actor_id, '_activitypub_avatar_url' );
+
+		// Verify meta is empty.
+		$avatar_meta = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
+		$this->assertEmpty( $avatar_meta );
+
+		// Test get_avatar_url extracts from JSON and caches it.
+		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertEquals( 'https://example.com/json-avatar.jpg', $retrieved_avatar );
+
+		// Verify it was cached in meta.
+		$cached_avatar = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
+		$this->assertEquals( 'https://example.com/json-avatar.jpg', $cached_avatar );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
+	}
+
+	/**
+	 * Test get_avatar_url with array of URLs.
+	 *
+	 * @covers ::get_avatar_url
+	 */
+	public function test_get_avatar_url_with_array() {
+		// Create a remote actor with array of avatar URLs.
+		$actor_data = array(
+			'id'                => 'https://example.com/users/array-avatar',
+			'type'              => 'Person',
+			'preferredUsername' => 'arrayavatar',
+			'name'              => 'Array Avatar',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => array(
+					'https://example.com/avatar1.jpg',
+					'https://example.com/avatar2.jpg',
+				),
+			),
+			'inbox'             => 'https://example.com/inbox-array',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Test get_avatar_url retrieves first URL from array.
+		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertEquals( 'https://example.com/avatar1.jpg', $retrieved_avatar );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
+	}
+
+	/**
+	 * Test get_avatar_url with no avatar returns default.
+	 *
+	 * @covers ::get_avatar_url
+	 */
+	public function test_get_avatar_url_empty() {
+		// Create a remote actor without avatar.
+		$actor_data = array(
+			'id'                => 'https://example.com/users/no-avatar',
+			'type'              => 'Person',
+			'preferredUsername' => 'noavatar',
+			'name'              => 'No Avatar',
+			'inbox'             => 'https://example.com/inbox-no-avatar',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $remote_actor_id );
+
+		// Test get_avatar_url returns default avatar URL.
+		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
+		$this->assertNotEmpty( $retrieved_avatar );
+		$this->assertStringContainsString( 'assets/img/mp.jpg', $retrieved_avatar );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
 	}
 }

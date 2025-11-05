@@ -7,6 +7,8 @@
 
 namespace Activitypub\Integration;
 
+use function Activitypub\site_supports_blocks;
+
 \Activitypub\Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
 /**
@@ -14,24 +16,27 @@ namespace Activitypub\Integration;
  */
 function plugin_init() {
 	/**
-	 * Adds WebFinger (plugin) support.
+	 * Adds Akismet support.
 	 *
-	 * This class handles the compatibility with the WebFinger plugin
-	 * and coordinates the internal WebFinger implementation.
+	 * This class handles the compatibility with the Akismet plugin.
 	 *
-	 * @see https://wordpress.org/plugins/webfinger/
+	 * @see https://wordpress.org/plugins/akismet/
 	 */
-	Webfinger::init();
+	if ( \defined( 'AKISMET_VERSION' ) ) {
+		Akismet::init();
+	}
 
 	/**
-	 * Adds NodeInfo (plugin) support.
+	 * Adds Classic Editor support.
 	 *
-	 * This class handles the compatibility with the NodeInfo plugin
-	 * and coordinates the internal NodeInfo implementation.
+	 * This class handles the compatibility with the Classic Editor plugin
+	 * and sites without block editor support.
 	 *
-	 * @see https://wordpress.org/plugins/nodeinfo/
+	 * @see https://wordpress.org/plugins/classic-editor/
 	 */
-	Nodeinfo::init();
+	if ( class_exists( '\Classic_Editor' ) || ! site_supports_blocks() ) {
+		Classic_Editor::init();
+	}
 
 	/**
 	 * Adds Enable Mastodon Apps support.
@@ -42,17 +47,6 @@ function plugin_init() {
 	 */
 	if ( \defined( 'ENABLE_MASTODON_APPS_VERSION' ) ) {
 		Enable_Mastodon_Apps::init();
-	}
-
-	/**
-	 * Adds OpenGraph support.
-	 *
-	 * This class handles the compatibility with the OpenGraph plugin.
-	 *
-	 * @see https://wordpress.org/plugins/opengraph/
-	 */
-	if ( '1' === \get_option( 'activitypub_use_opengraph', '1' ) ) {
-		Opengraph::init();
 	}
 
 	/**
@@ -67,15 +61,13 @@ function plugin_init() {
 	}
 
 	/**
-	 * Adds Akismet support.
+	 * Adds LiteSpeed Cache support.
 	 *
-	 * This class handles the compatibility with the Akismet plugin.
+	 * The check for whether LiteSpeed Cache is loaded and initialized happens inside Litespeed_Cache::init().
 	 *
-	 * @see https://wordpress.org/plugins/akismet/
+	 * @see https://wordpress.org/plugins/litespeed-cache/
 	 */
-	if ( \defined( 'AKISMET_VERSION' ) ) {
-		Akismet::init();
-	}
+	Litespeed_Cache::init();
 
 	/**
 	 * Adds Multisite Language Switcher support.
@@ -86,6 +78,27 @@ function plugin_init() {
 	 */
 	if ( \defined( 'MSLS_PLUGIN_VERSION' ) ) {
 		Multisite_Language_Switcher::init();
+	}
+
+	/**
+	 * Adds NodeInfo (plugin) support.
+	 *
+	 * This class handles the compatibility with the NodeInfo plugin
+	 * and coordinates the internal NodeInfo implementation.
+	 *
+	 * @see https://wordpress.org/plugins/nodeinfo/
+	 */
+	Nodeinfo::init();
+
+	/**
+	 * Adds OpenGraph support.
+	 *
+	 * This class handles the compatibility with the OpenGraph plugin.
+	 *
+	 * @see https://wordpress.org/plugins/opengraph/
+	 */
+	if ( '1' === \get_option( 'activitypub_use_opengraph', '1' ) ) {
+		Opengraph::init();
 	}
 
 	/**
@@ -113,6 +126,45 @@ function plugin_init() {
 	}
 
 	/**
+	 * Adds Stream support.
+	 *
+	 * This class handles the compatibility with the Stream plugin.
+	 *
+	 * @see https://wordpress.org/plugins/stream/
+	 */
+	Stream\Stream::init();
+
+	/**
+	 * Adds Surge support.
+	 *
+	 * Only load code that needs Surge to run once Surge is loaded and initialized.
+	 *
+	 * @see https://wordpress.org/plugins/surge/
+	 */
+	Surge::init();
+
+	/**
+	 * Adds WebFinger (plugin) support.
+	 *
+	 * This class handles the compatibility with the WebFinger plugin
+	 * and coordinates the internal WebFinger implementation.
+	 *
+	 * @see https://wordpress.org/plugins/webfinger/
+	 */
+	Webfinger::init();
+
+	/**
+	 * Adds WP REST Cache support.
+	 *
+	 * This class handles the compatibility with the WP REST Cache plugin.
+	 *
+	 * @see https://wordpress.org/plugins/wp-rest-cache/
+	 */
+	if ( \class_exists( 'WP_Rest_Cache_Plugin\Includes\Plugin' ) ) {
+		WP_Rest_Cache::init();
+	}
+
+	/**
 	 * Adds WPML Multilingual CMS (plugin) support.
 	 *
 	 * This class handles the compatibility with the WPML plugin.
@@ -121,10 +173,6 @@ function plugin_init() {
 	 */
 	if ( \defined( 'ICL_SITEPRESS_VERSION' ) ) {
 		WPML::init();
-	}
-
-	if ( \class_exists( 'WP_Rest_Cache_Plugin\Includes\Plugin' ) ) {
-		WP_Rest_Cache::init();
 	}
 
 	/**
@@ -137,15 +185,6 @@ function plugin_init() {
 	if ( \defined( 'WPSEO_VERSION' ) ) {
 		Yoast_Seo::init();
 	}
-
-	/**
-	 * Load the Surge integration.
-	 *
-	 * Only load code that needs Surge to run once Surge is loaded and initialized.
-	 *
-	 * @see https://wordpress.org/plugins/surge/
-	 */
-	Surge::init();
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
@@ -153,36 +192,9 @@ function plugin_init() {
 \register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'add_cache_config' ) );
 \register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'remove_cache_config' ) );
 
-/**
- * Register the Stream Connector for ActivityPub.
- *
- * @param array $classes The Stream connectors.
- *
- * @return array The Stream connectors with the ActivityPub connector.
- */
-function register_stream_connector( $classes ) {
-	$class = new Stream_Connector();
-
-	if ( method_exists( $class, 'is_dependency_satisfied' ) && $class->is_dependency_satisfied() ) {
-		$classes[] = $class;
-	}
-
-	return $classes;
-}
-add_filter( 'wp_stream_connectors', __NAMESPACE__ . '\register_stream_connector' );
-
-// Excluded ActivityPub post types from the Stream.
-add_filter(
-	'wp_stream_posts_exclude_post_types',
-	function ( $post_types ) {
-		$post_types[] = 'ap_actor';
-		// @todo remove in one of the next versions
-		$post_types[] = 'ap_follower';
-		$post_types[] = 'ap_extrafield';
-		$post_types[] = 'ap_extrafield_blog';
-		return $post_types;
-	}
-);
+// Register activation and deactivation hooks for LiteSpeed Cache integration.
+\register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\LiteSpeed_Cache', 'add_htaccess_rules' ) );
+\register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\LiteSpeed_Cache', 'remove_htaccess_rules' ) );
 
 /**
  * Load the BuddyPress integration.
@@ -191,4 +203,4 @@ add_filter(
  *
  * @see https://buddypress.org/
  */
-add_action( 'bp_include', array( __NAMESPACE__ . '\Buddypress', 'init' ), 0 );
+\add_action( 'bp_include', array( __NAMESPACE__ . '\Buddypress', 'init' ), 0 );

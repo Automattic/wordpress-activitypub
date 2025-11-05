@@ -1611,7 +1611,7 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
  * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
  * @param int        $user_id      The ID of the WordPress User.
  *
- * @return int|false|\WP_Post|\WP_Error The Outbox ID or false on failure, the Actor post or a WP_Error.
+ * @return int|\WP_Error The Outbox ID on success or a WP_Error on failure.
  */
 function follow( $remote_actor, $user_id ) {
 	if ( \is_numeric( $remote_actor ) ) {
@@ -1823,4 +1823,41 @@ function extract_name_from_uri( $uri ) {
 	}
 
 	return $name;
+}
+
+/**
+ * Get the authority (scheme + host) from a URL.
+ *
+ * @param string $url The URL to parse.
+ *
+ * @return string|false The authority, or false on failure.
+ */
+function get_url_authority( $url ) {
+	$parsed = wp_parse_url( $url );
+
+	if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+		return false;
+	}
+
+	return $parsed['scheme'] . '://' . $parsed['host'];
+}
+
+/**
+ * Check if a plugin is active, loading plugin.php if necessary.
+ *
+ * This is a wrapper around the core is_plugin_active() function that ensures
+ * the function is available by loading wp-admin/includes/plugin.php if needed.
+ * This is useful when checking plugin status outside of the admin context.
+ *
+ * @param string $plugin Plugin basename (e.g., 'plugin-folder/plugin-file.php').
+ *
+ * @return bool True if the plugin is active, false otherwise.
+ */
+function is_plugin_active( $plugin ) {
+	// Include plugin.php if not already loaded (needed for core is_plugin_active).
+	if ( ! \function_exists( 'is_plugin_active' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	}
+
+	return \is_plugin_active( $plugin );
 }

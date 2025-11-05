@@ -31,7 +31,6 @@ async function globalSetup( config ) {
 
 	// Reset the test environment before running the tests.
 	await Promise.all( [
-		requestUtils.activateTheme( 'twentytwentyfour' ),
 		requestUtils.deleteAllPosts(),
 		requestUtils.deleteAllBlocks(),
 		requestUtils.resetPreferences(),

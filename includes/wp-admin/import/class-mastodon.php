@@ -7,8 +7,9 @@
 
 namespace Activitypub\WP_Admin\Import;
 
+use Activitypub\Attachments;
+
 use function Activitypub\is_activity_public;
-use function Activitypub\site_supports_blocks;
 
 /**
  * Mastodon importer class.
@@ -32,7 +33,7 @@ class Mastodon {
 	/**
 	 * Outbox file.
 	 *
-	 * @var object
+	 * @var array
 	 */
 	private static $outbox;
 
@@ -153,7 +154,7 @@ class Mastodon {
 	 */
 	public static function import_options() {
 		$author = 0;
-		if ( isset( self::$outbox->{'orderedItems'}[0] ) ) {
+		if ( isset( self::$outbox['orderedItems'][0] ) ) {
 			$users = \get_users(
 				array(
 					'fields'     => 'ID',
@@ -161,7 +162,7 @@ class Mastodon {
 					'meta_query' => array(
 						array(
 							'key'     => $GLOBALS['wpdb']->get_blog_prefix() . 'activitypub_also_known_as',
-							'value'   => self::$outbox->{'orderedItems'}[0]->actor,
+							'value'   => self::$outbox['orderedItems'][0]['actor'],
 							'compare' => 'LIKE',
 						),
 					),
@@ -232,7 +233,7 @@ class Mastodon {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		self::$outbox = \json_decode( \file_get_contents( self::$archive . '/outbox.json' ) );
+		self::$outbox = \json_decode( \file_get_contents( self::$archive . '/outbox.json' ), true );
 
 		\wp_suspend_cache_invalidation();
 		\wp_defer_term_counting( true );
@@ -277,13 +278,13 @@ class Mastodon {
 		$skipped  = array();
 		$imported = 0;
 
-		foreach ( self::$outbox->{'orderedItems'} as $post ) {
+		foreach ( self::$outbox['orderedItems'] as $post ) {
 			// Skip boosts.
-			if ( 'Announce' === $post->type ) {
+			if ( 'Announce' === $post['type'] ) {
 				continue;
 			}
 
-			if ( ! is_activity_public( \get_object_vars( $post ) ) ) {
+			if ( ! is_activity_public( $post ) ) {
 				continue;
 			}
 
@@ -291,29 +292,29 @@ class Mastodon {
 
 			$post_data = array(
 				'post_author'  => self::$author,
-				'post_date'    => $post->published,
-				'post_excerpt' => $post->object->summary ?? '',
-				'post_content' => $post->object->content,
+				'post_date'    => $post['published'],
+				'post_excerpt' => $post['object']['summary'] ?? '',
+				'post_content' => $post['object']['content'],
 				'post_status'  => 'publish',
 				'post_type'    => 'post',
-				'meta_input'   => array( '_source_id' => $post->object->id ),
+				'meta_input'   => array( '_source_id' => $post['object']['id'] ),
 				'tags_input'   => \array_map(
 					function ( $tag ) {
-						if ( 'Hashtag' === $tag->type ) {
-							return \ltrim( $tag->name, '#' );
+						if ( 'Hashtag' === $tag['type'] ) {
+							return \ltrim( $tag['name'], '#' );
 						}
 
 						return '';
 					},
-					$post->object->tag
+					$post['object']['tag'] ?? array()
 				),
 			);
 
 			/**
 			 * Filter the post data before inserting it into the database.
 			 *
-			 * @param array  $post_data The post data to be inserted.
-			 * @param object $post      The Mastodon Create activity.
+			 * @param array $post_data The post data to be inserted.
+			 * @param array $post      The Mastodon Create activity.
 			 */
 			$post_data = \apply_filters( 'activitypub_import_mastodon_post_data', $post_data, $post );
 
@@ -333,7 +334,7 @@ class Mastodon {
 			$post_exists = \apply_filters( 'wp_import_existing_post', $post_exists, $post_data );
 
 			if ( $post_exists ) {
-				$skipped[] = $post->object->id;
+				$skipped[] = $post['object']['id'];
 				continue;
 			}
 
@@ -346,88 +347,15 @@ class Mastodon {
 			\set_post_format( $post_id, 'status' );
 
 			// Process attachments if enabled.
-			$attachment_ids = array();
-			if ( self::$fetch_attachments && ! empty( $post->object->attachment ) ) {
-				global $wp_filesystem;
+			if ( self::$fetch_attachments && ! empty( $post['object']['attachment'] ) ) {
+				// Prepend archive path to attachment URLs for local files.
+				$attachments = array_map( array( self::class, 'prepend_archive_path' ), $post['object']['attachment'] );
 
-				require_once ABSPATH . 'wp-admin/includes/media.php';
-				require_once ABSPATH . 'wp-admin/includes/file.php';
-				require_once ABSPATH . 'wp-admin/includes/image.php';
-
-				foreach ( $post->object->attachment as $attachment ) {
-					if ( ! isset( $attachment->url ) || ! isset( $attachment->{'mediaType'} ) ) {
-						continue;
-					}
-
-					$file_path = self::$archive . $attachment->url;
-					if ( ! $wp_filesystem->exists( $file_path ) ) {
-						continue;
-					}
-
-					$file_array = array(
-						'name'     => \basename( $file_path ),
-						'tmp_name' => $file_path,
-					);
-
-					$meta = array();
-					if ( 'image' === strtok( $attachment->{'mediaType'}, '/' ) && ! empty( $attachment->name ) ) {
-						$meta = array( '_wp_attachment_image_alt' => $attachment->name );
-					}
-
-					$attachment_data = array(
-						'post_mime_type' => $attachment->{'mediaType'},
-						'post_title'     => $attachment->name ?? '',
-						'post_content'   => $attachment->name ?? '',
-						'post_status'    => 'inherit',
-						'post_author'    => self::$author,
-						'meta_input'     => $meta,
-					);
-
-					$attachment_id = \media_handle_sideload( $file_array, $post_id, '', $attachment_data );
-
-					if ( \is_wp_error( $attachment_id ) ) {
-						continue;
-					}
-
-					$attachment_ids[] = $attachment_id;
-				}
-
-				// If we have attachments, add them to the post content.
-				if ( ! empty( $attachment_ids ) ) {
-					$type = strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
-
-					if ( site_supports_blocks() ) {
-						if ( 1 === \count( $attachment_ids ) && ( 'video' === $type || 'audio' === $type ) ) {
-							$media = sprintf(
-								'<!-- wp:%1$s {"id":"%2$s"} --><figure class="wp-block-%1$s"><%1$s controls src="%3$s"></%1$s></figure><!-- /wp:%1$s -->',
-								\esc_attr( $type ),
-								\esc_attr( $attachment_ids[0] ),
-								\esc_url( \wp_get_attachment_url( $attachment_ids[0] ) )
-							);
-						} else {
-							$media = self::get_gallery_block( $attachment_ids );
-						}
-					} else { // phpcs:ignore Universal.ControlStructures.DisallowLonelyIf.Found
-						// Classic editor: Use shortcodes.
-						if ( 1 === \count( $attachment_ids ) && ( 'video' === $type || 'audio' === $type ) ) {
-							// Block editor: Use video block.
-							$media = sprintf( '[%1$s src="%2$s"]', \esc_attr( $type ), \esc_url( \wp_get_attachment_url( $attachment_ids[0] ) ) );
-						} else {
-							$media = '[gallery ids="' . \implode( ',', $attachment_ids ) . '" link="none"]';
-						}
-					}
-
-					\wp_update_post(
-						array(
-							'ID'           => $post_id,
-							'post_content' => $post_data['post_content'] . "\n\n" . $media,
-						)
-					);
-				}
+				Attachments::import( $attachments, $post_id, self::$author );
 			}
 
 			// phpcs:ignore
-			if ( $post_id && isset( $post->object->replies->first->next ) ) {
+			if ( $post_id && isset( $post['object']['replies']['first']['next'] ) ) {
 				// @todo: Import replies as comments.
 			}
 
@@ -493,33 +421,17 @@ class Mastodon {
 	}
 
 	/**
-	 * Get gallery block.
+	 * Prepend archive path to local attachment URLs.
 	 *
-	 * @param array $attachment_ids The attachment IDs to use.
-	 * @return string The gallery block markup.
+	 * @param array $attachment The attachment array.
+	 *
+	 * @return array The attachment array with updated URL.
 	 */
-	private static function get_gallery_block( $attachment_ids ) {
-		// Block editor: Use gallery block.
-		$gallery  = '<!-- wp:gallery {"ids":[' . \implode( ',', $attachment_ids ) . '],"linkTo":"none"} -->' . "\n";
-		$gallery .= '<figure class="wp-block-gallery has-nested-images columns-default is-cropped">';
-
-		foreach ( $attachment_ids as $id ) {
-			$image_src = \wp_get_attachment_image_src( $id, 'large' );
-			if ( ! $image_src ) {
-				continue;
-			}
-
-			$caption  = \get_post_field( 'post_content', $id );
-			$gallery .= "\n<!-- wp:image {\"id\":{$id},\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n";
-			$gallery .= '<figure class="wp-block-image size-large">';
-			$gallery .= '<img src="' . \esc_url( $image_src[0] ) . '" alt="' . \esc_attr( $caption ) . '" class="' . \esc_attr( 'wp-image-' . $id ) . '"/>';
-			$gallery .= '</figure>';
-			$gallery .= "\n<!-- /wp:image -->\n";
+	private static function prepend_archive_path( $attachment ) {
+		if ( ! empty( $attachment['url'] ) && ! preg_match( '#^https?://#i', $attachment['url'] ) ) {
+			$attachment['url'] = self::$archive . $attachment['url'];
 		}
 
-		$gallery .= "</figure>\n";
-		$gallery .= '<!-- /wp:gallery -->';
-
-		return $gallery;
+		return $attachment;
 	}
 }

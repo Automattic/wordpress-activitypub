@@ -75,6 +75,54 @@ class Followers_Controller extends Actors_Controller {
 				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
+
+		// FEP-8fcf: Partial followers collection for synchronization.
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/followers/sync',
+			array(
+				'args' => array(
+					'user_id' => array(
+						'description'       => 'The ID of the actor.',
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => array( $this, 'validate_user_id' ),
+					),
+				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_partial_followers' ),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'args'                => array(
+						'authority' => array(
+							'description' => 'The host to filter followers by.',
+							'type'        => 'string',
+							'format'      => 'uri',
+							'pattern'     => '^https?://[^/]+$',
+							'required'    => true,
+						),
+						'page'      => array(
+							'description' => 'Current page of the collection.',
+							'type'        => 'integer',
+							'minimum'     => 1,
+							// No default so we can differentiate between Collection and CollectionPage requests.
+						),
+						'per_page'  => array(
+							'description' => 'Maximum number of items to be returned in result set.',
+							'type'        => 'integer',
+							'default'     => 20,
+							'minimum'     => 1,
+						),
+						'order'     => array(
+							'description' => 'Order sort attribute ascending or descending.',
+							'type'        => 'string',
+							'default'     => 'desc',
+							'enum'        => array( 'asc', 'desc' ),
+						),
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -129,6 +177,47 @@ class Followers_Controller extends Actors_Controller {
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );
+		if ( \is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = \rest_ensure_response( $response );
+		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
+
+		return $response;
+	}
+
+	/**
+	 * Retrieves partial followers list for FEP-8fcf synchronization.
+	 *
+	 * Returns only followers whose ID shares the specified URI authority.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
+	 */
+	public function get_partial_followers( $request ) {
+		$user_id   = $request->get_param( 'user_id' );
+		$authority = $request->get_param( 'authority' );
+
+		// Get partial followers filtered by authority.
+		$followers = Followers::get_by_authority( $user_id, $authority );
+		$followers = \wp_list_pluck( $followers, 'guid' );
+
+		$response = array(
+			'id'           => get_rest_url_by_path(
+				\sprintf(
+					'actors/%d/followers/sync?authority=%s',
+					$user_id,
+					rawurlencode( $authority )
+				)
+			),
+			'type'         => 'OrderedCollection',
+			'totalItems'   => count( $followers ),
+			'orderedItems' => $followers,
+		);
+
+		$response = $this->prepare_collection_response( $response, $request );
+
 		if ( \is_wp_error( $response ) ) {
 			return $response;
 		}
