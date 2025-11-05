@@ -48,6 +48,20 @@ class Blog extends Actor {
 	);
 
 	/**
+	 * The type of the Blog-Actor.
+	 *
+	 * @var string
+	 */
+	protected $type = 'Group';
+
+	/**
+	 * Posting is restricted to moderators.
+	 *
+	 * @var bool|null True if posting is restricted to moderators, null if not applicable.
+	 */
+	protected $posting_restricted_to_mods = true;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -96,15 +110,6 @@ class Blog extends Actor {
 		}
 
 		return \add_query_arg( 'author', $this->_id, \home_url( '/' ) );
-	}
-
-	/**
-	 * Get the type of the object.
-	 *
-	 * @return string The type of the object.
-	 */
-	public function get_type() {
-		return 'Group';
 	}
 
 	/**
@@ -296,10 +301,6 @@ class Blog extends Actor {
 	 * @return string|null The Moderators endpoint.
 	 */
 	public function get_moderators() {
-		if ( 'Group' !== $this->get_type() ) {
-			return null;
-		}
-
 		return get_rest_url_by_path( 'collections/moderators' );
 	}
 
@@ -309,10 +310,6 @@ class Blog extends Actor {
 	 * @return string|null The attributedTo value.
 	 */
 	public function get_attributed_to() {
-		if ( 'Group' !== $this->get_type() ) {
-			return null;
-		}
-
 		return get_rest_url_by_path( 'collections/moderators' );
 	}
 
@@ -327,19 +324,6 @@ class Blog extends Actor {
 			'owner'        => $this->get_id(),
 			'publicKeyPem' => Actors::get_public_key( $this->get__id() ),
 		);
-	}
-
-	/**
-	 * Returns whether posting is restricted to mods.
-	 *
-	 * @return bool|null True if posting is restricted to mods, null if not applicable.
-	 */
-	public function get_posting_restricted_to_mods() {
-		if ( 'Group' === $this->get_type() ) {
-			return true;
-		}
-
-		return null;
 	}
 
 	/**
