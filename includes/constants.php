@@ -74,7 +74,11 @@ define( 'ACTIVITYPUB_INTERACTION_POLICY_ANYONE', 'anyone' );
 define( 'ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS', 'followers' );
 define( 'ACTIVITYPUB_INTERACTION_POLICY_ME', 'me' );
 
-// Actor mode constants (deprecated but kept for backward compatibility).
+/*
+ * Actor mode constants.
+ *
+ * @deprecated unreleased The Actor Mode is no longer supported.
+ */
 define( 'ACTIVITYPUB_ACTOR_MODE', 'actor' );
 define( 'ACTIVITYPUB_BLOG_MODE', 'blog' );
 define( 'ACTIVITYPUB_ACTOR_AND_BLOG_MODE', 'actor_blog' );

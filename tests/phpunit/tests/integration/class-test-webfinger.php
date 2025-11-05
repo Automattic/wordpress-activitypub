@@ -156,7 +156,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 
 		// Should fall back to blog actor instead of returning unchanged.
 		$this->assertNotEquals( $initial_jrd, $result, 'Should add blog actor info for invalid user' );
-		$this->assertStringContainsString( 'localhost', $result['subject'], 'Subject should be blog actor' );
+		$this->assertStringContainsString( wp_parse_url( home_url(), PHP_URL_HOST ), $result['subject'], 'Subject should be blog actor' );
 		$this->assertNotEmpty( $result['aliases'], 'Should have aliases for blog actor' );
 	}
 
