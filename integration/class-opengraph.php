@@ -8,9 +8,7 @@
 namespace Activitypub\Integration;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Model\Blog;
 
-use function Activitypub\is_single_user;
 use function Activitypub\is_user_type_disabled;
 
 /**
@@ -54,16 +52,6 @@ class Opengraph {
 	 * @return array the updated metadata.
 	 */
 	public static function add_metadata( $metadata ) {
-		// Always show Blog-User if the Blog is in single user mode.
-		if ( is_single_user() ) {
-			$user = new Blog();
-
-			// Add WebFinger resource.
-			$metadata['fediverse:creator'] = $user->get_webfinger();
-
-			return $metadata;
-		}
-
 		if ( \is_author() ) {
 			// Use the Author of the Archive-Page.
 			$user_id = \get_queried_object_id();
