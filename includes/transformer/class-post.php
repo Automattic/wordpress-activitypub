@@ -900,7 +900,7 @@ class Post extends Base {
 			$template = '';
 
 			/*
-			 *If the post is a note, not a reply, and does not have mentions
+			 * If the post is a note, not a reply, and does not have mentions
 			 * force the inclusion of the post title.
 			 */
 			if (
