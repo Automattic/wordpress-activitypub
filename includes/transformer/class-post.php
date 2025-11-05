@@ -412,9 +412,8 @@ class Post extends Base {
 	 * @return string|null The audience.
 	 */
 	public function get_audience() {
-		// Posts have the blog as audience.
-		$blog = new Blog();
-		return $blog->get_id();
+		// Posts always have the blog as audience.
+		return ( new Blog() )->get_id();
 	}
 
 	/**

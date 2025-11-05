@@ -364,11 +364,8 @@ function user_can_activitypub( $user_id ) {
 
 	switch ( $user_id ) {
 		case Actors::APPLICATION_USER_ID:
-			$enabled = true; // Application user is always enabled.
-			break;
-
 		case Actors::BLOG_USER_ID:
-			$enabled = true; // Blog user is always enabled.
+			$enabled = true; // Application and Blog user is always enabled.
 			break;
 
 		default:

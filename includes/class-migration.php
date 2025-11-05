@@ -488,10 +488,10 @@ class Migration {
 	 * the activitypub capability.
 	 */
 	public static function migrate_actor_mode_to_capabilities() {
-		$actor_mode = \get_option( 'activitypub_actor_mode', 'actor' );
+		$actor_mode = \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 
 		// If site was in blog-only mode, set flag to disable users by default.
-		if ( 'blog' === $actor_mode ) {
+		if ( ACTIVITYPUB_BLOG_MODE === $actor_mode ) {
 			\update_option( 'activitypub_disable_users_by_default', true );
 		}
 
@@ -882,17 +882,17 @@ class Migration {
 			'1' === $blog_profile &&
 			'1' === $author_profiles
 		) {
-			\update_option( 'activitypub_actor_mode', 'actor_blog' );
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		} elseif (
 			'1' === $blog_profile &&
 			'1' !== $author_profiles
 		) {
-			\update_option( 'activitypub_actor_mode', 'blog' );
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 		} elseif (
 			'1' !== $blog_profile &&
 			'1' === $author_profiles
 		) {
-			\update_option( 'activitypub_actor_mode', 'actor' );
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		}
 	}
 

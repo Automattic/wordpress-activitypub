@@ -74,6 +74,11 @@ define( 'ACTIVITYPUB_INTERACTION_POLICY_ANYONE', 'anyone' );
 define( 'ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS', 'followers' );
 define( 'ACTIVITYPUB_INTERACTION_POLICY_ME', 'me' );
 
+// Actor mode constants (deprecated but kept for backward compatibility).
+define( 'ACTIVITYPUB_ACTOR_MODE', 'actor' );
+define( 'ACTIVITYPUB_BLOG_MODE', 'blog' );
+define( 'ACTIVITYPUB_ACTOR_AND_BLOG_MODE', 'actor_blog' );
+
 // Identifiers that mark an Activity as Public.
 define(
 	'ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS',
