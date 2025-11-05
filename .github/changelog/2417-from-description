@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed an issue with post content templates to ensure the correct fallback is always applied.
