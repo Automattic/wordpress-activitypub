@@ -363,9 +363,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.5.0 =
+= 7.6.0 =
 
-You can now choose who’s allowed to quote your posts on Mastodon—everyone, only your followers, or just you. Set it in the Block Editor sidebar, and your choice will be applied automatically.
+New for WordPress 6.9: Use the Command Palette (Ctrl+K or ⌘+K on Mac) to quickly access ActivityPub pages and settings.
 
 == Installation ==
 
