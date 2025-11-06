@@ -7,22 +7,36 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, lazy, Suspense } from '@wordpress/element';
 import { CommandMenu } from '@wordpress/commands';
+import { SnackbarList, Spinner } from '@wordpress/components';
+import { useSelect, useDispatch } from '@wordpress/data';
+import { store as noticesStore } from '@wordpress/notices';
 import Sidebar from '../sidebar';
 import Panel from '../panel';
 import './style.scss';
 
-// Import stage components.
+// Import dashboard directly since it's the default route
 import DashboardStage from '../../routes/dashboard/stage';
-import FollowersStage from '../../routes/followers/stage';
-import FollowingStage from '../../routes/following/stage';
-import InteractionsStage from '../../routes/interactions/stage';
 
-// Import inspector components.
-import FollowerInspector from '../../routes/followers/inspector';
-import FollowingInspector from '../../routes/following/inspector';
-import InteractionInspector from '../../routes/interactions/inspector';
+// Lazy load other stage components for code splitting
+const FollowersStage = lazy(
+	() => import( /* webpackChunkName: "social-web/followers" */ '../../routes/followers/stage' )
+);
+const FollowingStage = lazy(
+	() => import( /* webpackChunkName: "social-web/following" */ '../../routes/following/stage' )
+);
+const InteractionsStage = lazy(
+	() => import( /* webpackChunkName: "social-web/interactions" */ '../../routes/interactions/stage' )
+);
+
+// Lazy load inspector components - using same chunk names to combine with stages
+const FollowingInspector = lazy(
+	() => import( /* webpackChunkName: "social-web/following" */ '../../routes/following/inspector' )
+);
+const InteractionInspector = lazy(
+	() => import( /* webpackChunkName: "social-web/interactions" */ '../../routes/interactions/inspector' )
+);
 
 /**
  * Parse the URL hash to extract section and item ID
@@ -52,6 +66,13 @@ function updateHash( section: string, itemId?: string | null ) {
 export function Layout() {
 	const [ activeSection, setActiveSection ] = useState( 'dashboard' );
 	const [ selectedItemId, setSelectedItemId ] = useState< string | null >( null );
+
+	// Get notices for the snackbar
+	const notices = useSelect( ( select ) => {
+		const store = select( noticesStore ) as any;
+		return store.getNotices().filter( ( notice: any ) => notice.type === 'snackbar' );
+	}, [] );
+	const { removeNotice } = useDispatch( noticesStore ) as any;
 
 	// Initialize from URL hash on mount
 	useEffect( () => {
@@ -102,18 +123,30 @@ export function Layout() {
 	const renderStage = () => {
 		const props = { onSelectItem: handleSelectItem };
 
-		switch ( activeSection ) {
-			case 'dashboard':
-				return <DashboardStage />;
-			case 'followers':
-				return <FollowersStage { ...props } />;
-			case 'following':
-				return <FollowingStage { ...props } />;
-			case 'interactions':
-				return <InteractionsStage { ...props } />;
-			default:
-				return <DashboardStage />;
+		// Dashboard is not lazy-loaded since it's the default route
+		if ( activeSection === 'dashboard' ) {
+			return <DashboardStage />;
 		}
+
+		// Other routes are lazy-loaded
+		const StageComponent = () => {
+			switch ( activeSection ) {
+				case 'followers':
+					return <FollowersStage />;
+				case 'following':
+					return <FollowingStage { ...props } />;
+				case 'interactions':
+					return <InteractionsStage { ...props } />;
+				default:
+					return <DashboardStage />;
+			}
+		};
+
+		return (
+			<Suspense fallback={ <Spinner /> }>
+				<StageComponent />
+			</Suspense>
+		);
 	};
 
 	// Render detail panel (inspector)
@@ -122,16 +155,22 @@ export function Layout() {
 
 		const props = { id: selectedItemId, onClose: handleCloseInspector };
 
-		switch ( activeSection ) {
-			case 'followers':
-				return <FollowerInspector { ...props } />;
-			case 'following':
-				return <FollowingInspector { ...props } />;
-			case 'interactions':
-				return <InteractionInspector { ...props } />;
-			default:
-				return null;
-		}
+		const InspectorComponent = () => {
+			switch ( activeSection ) {
+				case 'following':
+					return <FollowingInspector { ...props } />;
+				case 'interactions':
+					return <InteractionInspector { ...props } />;
+				default:
+					return null;
+			}
+		};
+
+		return (
+			<Suspense fallback={ <Spinner /> }>
+				<InspectorComponent />
+			</Suspense>
+		);
 	};
 
 	const showInspector = !! selectedItemId;
@@ -157,6 +196,8 @@ export function Layout() {
 					</div>
 				) }
 			</div>
+
+			<SnackbarList notices={ notices } onRemove={ removeNotice } />
 		</div>
 	);
 }

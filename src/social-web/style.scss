@@ -4,7 +4,7 @@
  */
 
 // Import global styles (design tokens, body styles, root element)
-@import './styles/design-tokens.scss';
+@use './styles/design-tokens.scss';
 
 // Main layout container.
 .activitypub-social-web-layout {

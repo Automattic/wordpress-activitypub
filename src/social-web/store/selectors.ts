@@ -8,14 +8,6 @@ import type { State } from './types';
  * Store selectors
  */
 export const selectors = {
-	getFollowers( state: State ): Follower[] {
-		return state.followers;
-	},
-
-	getFollowerById( state: State, id: string ): Follower | undefined {
-		return state.followers.find( ( follower ) => follower.id === id );
-	},
-
 	getFollowing( state: State ): Following[] {
 		return state.following;
 	},
@@ -38,7 +30,6 @@ export const selectors = {
 
 	getStats( state: State ) {
 		return {
-			followers: state.followers.length,
 			following: state.following.length,
 			interactions: state.interactions.length,
 			posts: 0, // This would come from a different endpoint
