@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix infinite recursion when storing remote actors with mentions in their bios

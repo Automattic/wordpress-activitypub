@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Refactored avatar handling into a new system that stores and manages avatars per remote actor, improving reliability and preparing for future caching support.

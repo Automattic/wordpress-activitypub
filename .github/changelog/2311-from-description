@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Added a new ap_object post type and taxonomies for storing and managing incoming ActivityPub objects, with updated handlers

@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix public key retrieval for GoToSocial profiles with path-based key URLs.
