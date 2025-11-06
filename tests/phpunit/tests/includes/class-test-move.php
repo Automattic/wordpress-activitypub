@@ -74,14 +74,14 @@ class Test_Move extends \WP_UnitTestCase {
 		$filter = function () {
 			return new \WP_Error( 'http_request_failed', 'Invalid URL' );
 		};
-		\add_filter( 'pre_http_request', $filter );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
 
 		$result = Move::externally( $from, $to );
 
 		$this->assertWPError( $result );
 		$this->assertEquals( 'http_request_failed', $result->get_error_code() );
 
-		\remove_filter( 'pre_http_request', $filter );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
 
 	/**
