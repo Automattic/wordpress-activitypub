@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-namespace Activitypub\Integration;
+namespace Activitypub\Integration\Stream;
 
 use Activitypub\Collection\Actors;
 
@@ -19,7 +19,7 @@ use function Activitypub\url_to_commentid;
  *
  * @see https://wordpress.org/plugins/stream/
  */
-class Stream_Connector extends \WP_Stream\Connector {
+class Connector extends \WP_Stream\Connector {
 	/**
 	 * Connector slug.
 	 *
@@ -45,7 +45,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 * @return string
 	 */
 	public function get_label() {
-		return __( 'ActivityPub', 'activitypub' );
+		return \__( 'ActivityPub', 'activitypub' );
 	}
 
 	/**
@@ -64,7 +64,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 */
 	public function get_action_labels() {
 		return array(
-			'processed' => __( 'Processed', 'activitypub' ),
+			'processed' => \__( 'Processed', 'activitypub' ),
 		);
 	}
 
@@ -80,25 +80,25 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 */
 	public function action_links( $links, $record ) {
 		if ( 'processed' === $record->action ) {
-			$error = json_decode( $record->get_meta( 'error', true ), true );
+			$error = \json_decode( $record->get_meta( 'error', true ), true );
 
 			if ( $error ) {
-				$message = sprintf(
+				$message = \sprintf(
 					'<details><summary>%1$s</summary><pre>%2$s</pre></details>',
-					__( 'Inbox Error', 'activitypub' ),
-					wp_json_encode( $error )
+					\__( 'Inbox Error', 'activitypub' ),
+					\wp_json_encode( $error )
 				);
 
 				$links[ $message ] = '';
 			}
 
-			$debug = json_decode( $record->get_meta( 'debug', true ), true );
+			$debug = \json_decode( $record->get_meta( 'debug', true ), true );
 
 			if ( $debug ) {
-				$message = sprintf(
+				$message = \sprintf(
 					'<details><summary>%1$s</summary><pre>%2$s</pre></details>',
-					__( 'Debug', 'activitypub' ),
-					wp_json_encode( $debug )
+					\__( 'Debug', 'activitypub' ),
+					\wp_json_encode( $debug )
 				);
 
 				$links[ $message ] = '';
@@ -149,13 +149,13 @@ class Stream_Connector extends \WP_Stream\Connector {
 		$outbox_data = $this->prepare_outbox_data_for_response( $outbox_item );
 
 		$this->log(
-			sprintf(
+			\sprintf(
 				// translators: %s is a URL.
-				__( 'Outbox processing complete: %s', 'activitypub' ),
+				\__( 'Outbox processing complete: %s', 'activitypub' ),
 				$outbox_data['title']
 			),
 			array(
-				'debug' => wp_json_encode(
+				'debug' => \wp_json_encode(
 					array(
 						'actor_id'       => $actor_id,
 						'outbox_item_id' => $outbox_item_id,
@@ -183,13 +183,10 @@ class Stream_Connector extends \WP_Stream\Connector {
 		$outbox_data = $this->prepare_outbox_data_for_response( $outbox_item );
 
 		$this->log(
-			sprintf(
-				// translators: %s is a URL.
-				__( 'Outbox processing batch complete: %s', 'activitypub' ),
-				$outbox_data['title']
-			),
+			// translators: %s is a URL.
+			\sprintf( \__( 'Outbox processing batch complete: %s', 'activitypub' ), $outbox_data['title'] ),
 			array(
-				'debug' => wp_json_encode(
+				'debug' => \wp_json_encode(
 					array(
 						'actor_id'       => $actor_id,
 						'outbox_item_id' => $outbox_item_id,
@@ -216,9 +213,9 @@ class Stream_Connector extends \WP_Stream\Connector {
 		$object_type  = $outbox_item->post_type;
 		$object_title = $outbox_item->post_title;
 
-		$post_id = url_to_postid( $outbox_item->post_title );
+		$post_id = \url_to_postid( $outbox_item->post_title );
 		if ( $post_id ) {
-			$post = get_post( $post_id );
+			$post = \get_post( $post_id );
 
 			$object_id    = $post_id;
 			$object_type  = $post->post_type;
@@ -226,7 +223,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 		} else {
 			$comment_id = url_to_commentid( $outbox_item->post_title );
 			if ( $comment_id ) {
-				$comment = get_comment( $comment_id );
+				$comment = \get_comment( $comment_id );
 
 				$object_id    = $comment_id;
 				$object_type  = 'comments';
@@ -238,11 +235,11 @@ class Stream_Connector extends \WP_Stream\Connector {
 					$object_type = 'profiles';
 
 					if ( $author_id ) {
-						$object_title = get_userdata( $author_id )->display_name;
+						$object_title = \get_userdata( $author_id )->display_name;
 					} elseif ( Actors::BLOG_USER_ID === $author_id ) {
-						$object_title = __( 'Blog User', 'activitypub' );
+						$object_title = \__( 'Blog User', 'activitypub' );
 					} elseif ( Actors::APPLICATION_USER_ID === $author_id ) {
-						$object_title = __( 'Application User', 'activitypub' );
+						$object_title = \__( 'Application User', 'activitypub' );
 					}
 				}
 			}

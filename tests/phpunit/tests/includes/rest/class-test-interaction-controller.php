@@ -59,18 +59,15 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 */
 	public function test_get_item() {
 		\add_filter(
-			'pre_http_request',
+			'activitypub_pre_http_get_remote_object',
 			function () {
 				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => wp_json_encode(
-						array(
-							'type' => 'Note',
-							'url'  => 'https://example.org/note',
-						)
-					),
+					'type' => 'Note',
+					'url'  => 'https://example.org/note',
 				);
-			}
+			},
+			10,
+			2
 		);
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
@@ -89,25 +86,22 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 */
 	public function test_get_item_custom_follow_url() {
 		\add_filter(
-			'pre_http_request',
+			'activitypub_pre_http_get_remote_object',
 			function () {
 				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => wp_json_encode(
+					'type'  => 'Person',
+					'url'   => 'https://example.org/person',
+					'links' => array(
 						array(
-							'type'  => 'Person',
-							'url'   => 'https://example.org/person',
-							'links' => array(
-								array(
-									'rel'  => 'self',
-									'type' => 'application/activity+json',
-									'href' => 'https://example.org/user/person',
-								),
-							),
-						)
+							'rel'  => 'self',
+							'type' => 'application/activity+json',
+							'href' => 'https://example.org/user/person',
+						),
 					),
 				);
-			}
+			},
+			10,
+			2
 		);
 
 		\add_filter( 'activitypub_interactions_follow_url', array( $this, 'follow_or_reply_url' ) );
@@ -138,18 +132,15 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 */
 	public function test_get_item_custom_reply_url() {
 		\add_filter(
-			'pre_http_request',
+			'activitypub_pre_http_get_remote_object',
 			function () {
 				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => wp_json_encode(
-						array(
-							'type' => 'Note',
-							'url'  => 'https://example.org/note',
-						)
-					),
+					'type' => 'Note',
+					'url'  => 'https://example.org/note',
 				);
-			}
+			},
+			10,
+			2
 		);
 
 		\add_filter( 'activitypub_interactions_reply_url', array( $this, 'follow_or_reply_url' ) );

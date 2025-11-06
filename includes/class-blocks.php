@@ -279,8 +279,8 @@ class Blocks {
 	/**
 	 * Converts content to blocks before saving to the database.
 	 *
-	 * @param array  $data The post data to be inserted.
-	 * @param object $post The Mastodon Create activity.
+	 * @param array $data The post data to be inserted.
+	 * @param array $post The Mastodon Create activity.
 	 *
 	 * @return array
 	 */
@@ -297,8 +297,8 @@ class Blocks {
 		$data['post_content'] = \rtrim( \implode( PHP_EOL, $blocks ), PHP_EOL );
 
 		// Add reply block if it's a reply.
-		if ( null !== $post->object->inReplyTo ) {
-			$reply_block          = \sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, \esc_url( $post->object->inReplyTo ) );
+		if ( ! empty( $post['object']['inReplyTo'] ) ) {
+			$reply_block          = \sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, \esc_url( $post['object']['inReplyTo'] ) );
 			$data['post_content'] = $reply_block . $data['post_content'];
 		}
 

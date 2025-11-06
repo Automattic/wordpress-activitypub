@@ -8,7 +8,7 @@ Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
 
-The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
+Connect your site to the Open Social Web and let millions of users follow, share, and interact with your content from Mastodon, Pixelfed, and more.
 
 == Description ==
 
