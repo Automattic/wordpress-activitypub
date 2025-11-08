@@ -277,7 +277,7 @@ class Test_Factory extends \WP_UnitTestCase {
 		$wp_error = new \WP_Error( 'test_error', 'Test error message' );
 		$result   = Factory::get_transformer( $wp_error );
 
-		// Should return the same WP_Error object
+		// Should return the same WP_Error object.
 		$this->assertWPError( $result );
 		$this->assertEquals( 'test_error', $result->get_error_code() );
 		$this->assertEquals( 'Test error message', $result->get_error_message() );
