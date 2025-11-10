@@ -18,7 +18,7 @@ namespace Activitypub\Development;
  * bypassing certain production checks and enabling debugging tools. This should only be enabled for local development.
  */
 if ( ! defined( 'JETPACK_DEV_DEBUG' ) ) {
-    define( 'JETPACK_DEV_DEBUG', true );
+	define( 'JETPACK_DEV_DEBUG', true );
 }
 
 // Load development WP-CLI commands.
