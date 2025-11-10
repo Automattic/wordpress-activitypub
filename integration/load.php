@@ -57,7 +57,7 @@ function plugin_init() {
 	 * @see https://jetpack.com/
 	 */
 	if ( \defined( 'JETPACK__VERSION' ) ) {
-		Jetpack::init();
+		\add_action( 'init', array( Jetpack::class, 'init' ) );
 	}
 
 	/**

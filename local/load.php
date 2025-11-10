@@ -10,6 +10,7 @@ namespace Activitypub\Development;
 \Activitypub\Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
 // Initialize local development tools below.
+define( 'JETPACK_DEV_DEBUG', true );
 
 // Load development WP-CLI commands.
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
