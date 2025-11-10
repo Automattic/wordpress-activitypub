@@ -636,7 +636,7 @@ class Comment {
 			array(
 				'label'          => __( 'Reposts', 'activitypub' ),
 				'singular'       => __( 'Repost', 'activitypub' ),
-				'description'    => __( 'A repost (or Announce) is when a post appears in the timeline because someone else shared it, while still showing the original author as the source.', 'activitypub' ),
+				'description'    => 'A repost (or Announce) is when a post appears in the timeline because someone else shared it, while still showing the original author as the source.',
 				'icon'           => '♻️',
 				'class'          => 'p-repost',
 				'type'           => 'repost',
@@ -655,7 +655,7 @@ class Comment {
 			array(
 				'label'          => __( 'Likes', 'activitypub' ),
 				'singular'       => __( 'Like', 'activitypub' ),
-				'description'    => __( 'A like is a small positive reaction that shows appreciation for a post without sharing it further.', 'activitypub' ),
+				'description'    => 'A like is a small positive reaction that shows appreciation for a post without sharing it further.',
 				'icon'           => '👍',
 				'class'          => 'p-like',
 				'type'           => 'like',
@@ -674,7 +674,7 @@ class Comment {
 			array(
 				'label'          => __( 'Quotes', 'activitypub' ),
 				'singular'       => __( 'Quote', 'activitypub' ),
-				'description'    => __( 'A quote is when a post is shared along with an added comment, so the original post appears together with the sharer&#8217;s own words.', 'activitypub' ),
+				'description'    => 'A quote is when a post is shared along with an added comment, so the original post appears together with the sharer&#8217;s own words.',
 				'icon'           => '❞',
 				'class'          => 'p-quote',
 				'type'           => 'quote',
