@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed fatal error when transformer Factory receives WP_Error objects.
