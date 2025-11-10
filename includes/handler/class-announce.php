@@ -7,12 +7,14 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
 use Activitypub\Http;
 
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
+use function Activitypub\is_same_domain;
 use function Activitypub\object_to_uri;
 
 /**
@@ -37,6 +39,12 @@ class Announce {
 		// Check if Activity is public or not.
 		if ( ! is_activity_public( $announcement ) ) {
 			// @todo maybe send email
+			return;
+		}
+
+		$actor_id = object_to_uri( $announcement['actor'] );
+		// Ignore announces from the blog actor.
+		if ( is_same_domain( $actor_id ) && Actors::BLOG_USER_ID === Actors::get_id_by_resource( $actor_id ) ) {
 			return;
 		}
 
