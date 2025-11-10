@@ -44,7 +44,8 @@ class Announce {
 
 		$actor_id = object_to_uri( $announcement['actor'] );
 		// Ignore announces from the blog actor.
-		if ( is_same_domain( $actor_id ) && Actors::BLOG_USER_ID === Actors::get_id_by_resource( $actor_id ) ) {
+		$actor_resource_id = Actors::get_id_by_resource( $actor_id );
+		if ( is_same_domain( $actor_id ) && ! is_wp_error( $actor_resource_id ) && Actors::BLOG_USER_ID === $actor_resource_id ) {
 			return;
 		}
 
