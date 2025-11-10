@@ -618,20 +618,23 @@ function is_activity_public( $data ) {
  * @return boolean True if a reply, false if not.
  */
 function is_activity_reply( $data ) {
-	if ( ! empty( $data['object']['inReplyTo'] ) ) {
-		return true;
-	}
+	return ! empty( $data['object']['inReplyTo'] );
+}
 
-	if ( empty( $data['object']['content'] ) ) {
-		return false;
-	}
-
-	// Very simple check for quote content.
-	if ( \preg_match( '/^<p class="quote-inline">.*?<\/p>/i', $data['object']['content'] ) ) {
-		return true;
-	}
-
-	return false;
+/**
+ * Check if passed Activity is a quote.
+ *
+ * Checks for quote properties: quote, quoteUrl, quoteUri, or _misskey_quote.
+ *
+ * @param array $data The Activity object as array.
+ *
+ * @return boolean True if a quote, false if not.
+ */
+function is_activity_quote( $data ) {
+	return ! empty( $data['object']['quote'] ) ||
+		! empty( $data['object']['quoteUrl'] ) ||
+		! empty( $data['object']['quoteUri'] ) ||
+		! empty( $data['object']['_misskey_quote'] );
 }
 
 /**

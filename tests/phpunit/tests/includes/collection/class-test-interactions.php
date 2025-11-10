@@ -886,78 +886,21 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test extract_quote_link method extracts quote from activity.
-	 *
-	 * @covers ::extract_quote_link
-	 */
-	public function test_extract_quote_link() {
-		$activity = array(
-			'type'   => 'Create',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => '<p class="quote-inline">RE: <a href="https://example.com/posts/123">Example Post</a></p><p>My comment</p>',
-			),
-		);
-
-		$result = Interactions::extract_quote_link( $activity );
-
-		$this->assertEquals( 'https://example.com/posts/123', $result['object']['inReplyTo'] );
-		$this->assertStringNotContainsString( 'quote-inline', $result['object']['content'] );
-	}
-
-	/**
-	 * Test extract_quote_link with no quote pattern.
-	 *
-	 * @covers ::extract_quote_link
-	 */
-	public function test_extract_quote_link_no_match() {
-		$activity = array(
-			'type'   => 'Create',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => '<p>Just a regular post</p>',
-			),
-		);
-
-		$result = Interactions::extract_quote_link( $activity );
-
-		$this->assertArrayNotHasKey( 'inReplyTo', $result['object'] );
-		$this->assertEquals( '<p>Just a regular post</p>', $result['object']['content'] );
-	}
-
-	/**
-	 * Test extract_quote_link with case insensitive pattern.
-	 *
-	 * @covers ::extract_quote_link
-	 */
-	public function test_extract_quote_link_case_insensitive() {
-		$activity = array(
-			'type'   => 'Create',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => '<P CLASS="quote-inline">re: <A HREF="https://example.com/post">Post</A></P>',
-			),
-		);
-
-		$result = Interactions::extract_quote_link( $activity );
-
-		$this->assertEquals( 'https://example.com/post', $result['object']['inReplyTo'] );
-	}
-
-	/**
-	 * Test add_comment with quote-inline fallback.
+	 * Test add_comment with quote property.
 	 *
 	 * @covers ::add_comment
-	 * @covers ::extract_quote_link
+	 * @covers ::get_quote_url
 	 */
-	public function test_add_comment_with_quote_link() {
+	public function test_add_comment_with_quote_property() {
 		$activity = array(
 			'type'   => 'Create',
 			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
-				'type'    => 'Note',
-				'id'      => 'https://example.com/note/456',
-				'content' => '<p class="quote-inline">RE: <a href="' . self::$post_permalink . '">Post</a></p><p>Great post!</p>',
+				'type'     => 'Note',
+				'id'       => 'https://example.com/note/456',
+				'content'  => '<p class="quote-inline">RE: <a href="' . self::$post_permalink . '">Post</a></p><p>Great post!</p>',
+				'quote'    => self::$post_permalink,
+				'quoteUri' => self::$post_permalink,
 			),
 		);
 
@@ -971,6 +914,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$comment = \get_comment( $comment_id );
 		$this->assertEquals( self::$post_id, $comment->comment_post_ID );
 		$this->assertStringContainsString( 'Great post!', $comment->comment_content );
+		$this->assertStringNotContainsString( 'quote-inline', $comment->comment_content );
 		$this->assertEquals( 'quote', $comment->comment_type, 'Comment type should be set to quote' );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );

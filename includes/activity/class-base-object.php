@@ -553,6 +553,43 @@ class Base_Object extends Generic_Object {
 	protected $interaction_policy;
 
 	/**
+	 * Fediverse Enhancement Proposal 044f: Quote Property
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md
+	 * @see https://w3id.org/fep/044f#quote
+	 *
+	 * @var string|null
+	 */
+	protected $quote;
+
+	/**
+	 * ActivityStreams quoteUrl property.
+	 *
+	 * @see https://www.w3.org/ns/activitystreams#quoteUrl
+	 *
+	 * @var string|null
+	 */
+	protected $quote_url;
+
+	/**
+	 * Fedibird-specific quoteUri property.
+	 *
+	 * @see https://fedibird.com/ns#quoteUri
+	 *
+	 * @var mixed
+	 */
+	protected $quote_uri;
+
+	/**
+	 * Misskey-specific quote property.
+	 *
+	 * @see https://misskey-hub.net/ns/#_misskey_quote
+	 *
+	 * @var mixed
+	 */
+	protected $_misskey_quote; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
+
+	/**
 	 * Generic getter.
 	 *
 	 * @param string $key The key to get.

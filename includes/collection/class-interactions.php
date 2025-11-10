@@ -38,23 +38,38 @@ class Interactions {
 			return false;
 		}
 
-		if ( empty( $activity['object']['inReplyTo'] ) ) {
-			$activity = self::extract_quote_link( $activity );
-			if ( ! empty( $activity['object']['inReplyTo'] ) ) {
-				$comment_data['comment_type'] = 'quote';
-			} else {
+		// Determine target URL from reply or quote.
+		$parent_comment_id = 0;
+
+		if ( ! empty( $activity['object']['inReplyTo'] ) ) {
+			// Regular reply.
+			$target_url        = object_to_uri( $activity['object']['inReplyTo'] );
+			$parent_comment_id = url_to_commentid( $target_url );
+		} else {
+			// Check for quote.
+			$target_url = self::get_quote_url( $activity );
+
+			if ( ! $target_url ) {
 				return false;
+			}
+
+			// Mark as quote and clean content.
+			$comment_data['comment_type'] = 'quote';
+
+			if ( ! empty( $activity['object']['content'] ) ) {
+				$pattern                         = '/<p[^>]*class=["\']quote-inline["\'][^>]*>.*?<\/p>/is';
+				$cleaned_content                 = \preg_replace( $pattern, '', $activity['object']['content'], 1 );
+				$comment_data['comment_content'] = \wp_kses_post( $cleaned_content );
 			}
 		}
 
-		$in_reply_to       = object_to_uri( $activity['object']['inReplyTo'] );
-		$in_reply_to       = \esc_url_raw( $in_reply_to );
-		$comment_post_id   = \url_to_postid( $in_reply_to );
-		$parent_comment_id = url_to_commentid( $in_reply_to );
+		// Get post ID from target URL.
+		$target_url      = \esc_url_raw( $target_url );
+		$comment_post_id = \url_to_postid( $target_url );
 
-		// Save only replies and reactions.
+		// Handle nested replies (replies to comments).
 		if ( ! $comment_post_id && $parent_comment_id ) {
-			$parent_comment  = get_comment( $parent_comment_id );
+			$parent_comment  = \get_comment( $parent_comment_id );
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 
@@ -422,31 +437,31 @@ class Interactions {
 	}
 
 	/**
-	 * Extract quote link from HTML content.
+	 * Get the quote URL from an activity.
 	 *
-	 * Detects quote/reply links in the format used by Mastodon and other Fediverse platforms.
-	 * Pattern: <p class="quote-inline">RE: <a href="...">...</a></p>.
+	 * Checks for quote properties in priority order: quote -> quoteUrl -> quoteUri -> _misskey_quote.
 	 *
-	 * @param array $activity The activity array to search.
+	 * @param array $activity The activity array.
 	 *
-	 * @return array The extracted quote link or an empty array if not found.
+	 * @return string|false The quote URL or false if not found.
 	 */
-	public static function extract_quote_link( $activity ) {
-		$content = $activity['object']['content'] ?? '';
-
-		// Pattern to match the entire quote-inline paragraph.
-		$full_pattern = '/<p[^>]*class=["\']quote-inline["\'][^>]*>.*?<\/p>/is';
-
-		if ( \preg_match( $full_pattern, $content, $full_match ) ) {
-			// Extract the URL from the href attribute within the matched content.
-			$url_pattern = '/href=["\'](https?:\/\/[^"\']+)["\']/i';
-			if ( \preg_match( $url_pattern, $full_match[0], $url_matches ) ) {
-				$activity['object']['inReplyTo'] = \esc_url_raw( $url_matches[1] );
-				// Remove the entire quote-inline paragraph from content.
-				$activity['object']['content'] = \preg_replace( $full_pattern, '', $content, 1 );
-			}
+	public static function get_quote_url( $activity ) {
+		if ( ! empty( $activity['object']['quote'] ) ) {
+			return object_to_uri( $activity['object']['quote'] );
 		}
 
-		return $activity;
+		if ( ! empty( $activity['object']['quoteUrl'] ) ) {
+			return object_to_uri( $activity['object']['quoteUrl'] );
+		}
+
+		if ( ! empty( $activity['object']['quoteUri'] ) ) {
+			return object_to_uri( $activity['object']['quoteUri'] );
+		}
+
+		if ( ! empty( $activity['object']['_misskey_quote'] ) ) {
+			return object_to_uri( $activity['object']['_misskey_quote'] );
+		}
+
+		return false;
 	}
 }

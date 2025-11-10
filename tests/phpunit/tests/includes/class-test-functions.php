@@ -1544,40 +1544,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Test is_activity_reply function with quote-inline pattern.
-	 *
-	 * @covers \Activitypub\is_activity_reply
-	 */
-	public function test_is_activity_reply_with_quote_inline() {
-		$activity = array(
-			'type'   => 'Create',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => '<p class="quote-inline">RE: <a href="https://example.com/post">Post</a></p><p>My comment</p>',
-			),
-		);
-
-		$this->assertTrue( \Activitypub\is_activity_reply( $activity ) );
-	}
-
-	/**
-	 * Test is_activity_reply function with quote-inline (case insensitive).
-	 *
-	 * @covers \Activitypub\is_activity_reply
-	 */
-	public function test_is_activity_reply_with_quote_inline_case_insensitive() {
-		$activity = array(
-			'type'   => 'Create',
-			'object' => array(
-				'type'    => 'Note',
-				'content' => '<P CLASS="QUOTE-INLINE">re: <A HREF="https://example.com/post">Post</A></P>',
-			),
-		);
-
-		$this->assertTrue( \Activitypub\is_activity_reply( $activity ) );
-	}
-
-	/**
 	 * Test is_activity_reply returns false for non-reply.
 	 *
 	 * @covers \Activitypub\is_activity_reply
@@ -1595,36 +1561,91 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Test is_activity_reply returns false when content is missing.
+	 * Test is_activity_quote function with quote property.
 	 *
-	 * @covers \Activitypub\is_activity_reply
+	 * @covers \Activitypub\is_activity_quote
 	 */
-	public function test_is_activity_reply_returns_false_without_content() {
-		$activity = array(
-			'type'   => 'Create',
-			'object' => array(
-				'type' => 'Note',
-			),
-		);
-
-		$this->assertFalse( \Activitypub\is_activity_reply( $activity ) );
-	}
-
-	/**
-	 * Test is_activity_reply with quote-inline not at start.
-	 *
-	 * @covers \Activitypub\is_activity_reply
-	 */
-	public function test_is_activity_reply_quote_inline_not_at_start() {
+	public function test_is_activity_quote_with_quote() {
 		$activity = array(
 			'type'   => 'Create',
 			'object' => array(
 				'type'    => 'Note',
-				'content' => '<p>Some intro text</p><p class="quote-inline">RE: <a href="https://example.com/post">Post</a></p>',
+				'content' => '<p class="quote-inline">RE: <a href="https://example.com/post">Post</a></p><p>My comment</p>',
+				'quote'   => 'https://example.com/post',
 			),
 		);
 
-		// Should return false because quote-inline is not at the start.
-		$this->assertFalse( \Activitypub\is_activity_reply( $activity ) );
+		$this->assertTrue( \Activitypub\is_activity_quote( $activity ) );
+	}
+
+	/**
+	 * Test is_activity_quote function with quoteUrl property.
+	 *
+	 * @covers \Activitypub\is_activity_quote
+	 */
+	public function test_is_activity_quote_with_quote_url() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'     => 'Note',
+				'content'  => '<p>My comment</p>',
+				'quoteUrl' => 'https://example.com/post',
+			),
+		);
+
+		$this->assertTrue( \Activitypub\is_activity_quote( $activity ) );
+	}
+
+	/**
+	 * Test is_activity_quote function with quoteUri property.
+	 *
+	 * @covers \Activitypub\is_activity_quote
+	 */
+	public function test_is_activity_quote_with_quote_uri() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'     => 'Note',
+				'content'  => '<p>My comment</p>',
+				'quoteUri' => 'https://example.com/post',
+			),
+		);
+
+		$this->assertTrue( \Activitypub\is_activity_quote( $activity ) );
+	}
+
+	/**
+	 * Test is_activity_quote function with _misskey_quote property.
+	 *
+	 * @covers \Activitypub\is_activity_quote
+	 */
+	public function test_is_activity_quote_with_misskey_quote() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'           => 'Note',
+				'content'        => '<p>My comment</p>',
+				'_misskey_quote' => 'https://example.com/post',
+			),
+		);
+
+		$this->assertTrue( \Activitypub\is_activity_quote( $activity ) );
+	}
+
+	/**
+	 * Test is_activity_quote returns false for non-quote.
+	 *
+	 * @covers \Activitypub\is_activity_quote
+	 */
+	public function test_is_activity_quote_returns_false_for_non_quote() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Just a regular post',
+			),
+		);
+
+		$this->assertFalse( \Activitypub\is_activity_quote( $activity ) );
 	}
 }
