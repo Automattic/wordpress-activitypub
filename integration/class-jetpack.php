@@ -39,8 +39,6 @@ class Jetpack {
 			\add_filter( 'activitypub_following_row_actions', array( self::class, 'add_reader_link' ), 10, 2 );
 			\add_filter( 'pre_option_activitypub_following_ui', array( self::class, 'pre_option_activitypub_following_ui' ) );
 		}
-
-		\add_action( 'load-post-new.php', array( self::class, 'adapt_post_share' ) );
 	}
 
 	/**
