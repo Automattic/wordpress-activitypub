@@ -42,10 +42,10 @@ class Announce {
 			return;
 		}
 
-		$actor_id = object_to_uri( $announcement['actor'] );
 		// Ignore announces from the blog actor.
-		$actor_resource_id = Actors::get_id_by_resource( $actor_id );
-		if ( is_same_domain( $actor_id ) && ! is_wp_error( $actor_resource_id ) && Actors::BLOG_USER_ID === $actor_resource_id ) {
+		$actor_id = object_to_uri( $announcement['actor'] );
+		$user_id  = Actors::get_id_by_resource( $actor_id );
+		if ( is_same_domain( $actor_id ) && ! \is_wp_error( $user_id ) && Actors::BLOG_USER_ID === $user_id ) {
 			return;
 		}
 
