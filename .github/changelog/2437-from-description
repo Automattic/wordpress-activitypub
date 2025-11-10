@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Prevented self-announcing by ignoring announces from the blog actor, while still processing announces from user and external actors.
