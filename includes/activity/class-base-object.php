@@ -576,7 +576,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://fedibird.com/ns#quoteUri
 	 *
-	 * @var mixed
+	 * @var string|null
 	 */
 	protected $quote_uri;
 
