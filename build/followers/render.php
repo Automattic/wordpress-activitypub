@@ -64,8 +64,10 @@ $followers = array_map(
 		return array(
 			'handle' => '@' . $username,
 			'icon'   => $actor->get_icon(),
-			'name'   => $actor->get_name() ?? $username,
-			'url'    => object_to_uri( $actor->get_url() ) ?? $actor->get_id(),
+			// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'name'   => $actor->get_name() ?: $username,
+			// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'url'    => object_to_uri( $actor->get_url() ) ?: $actor->get_id(),
 		);
 	},
 	$follower_data['followers']

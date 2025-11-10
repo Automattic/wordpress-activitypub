@@ -527,7 +527,8 @@ class Remote_Actors {
 
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
-			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?? $actor->get_preferred_username() ) ),
+			// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?: $actor->get_preferred_username() ) ),
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,
 			'post_content' => \wp_slash( $actor_json ),
