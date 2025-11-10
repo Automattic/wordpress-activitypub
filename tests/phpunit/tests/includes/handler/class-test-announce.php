@@ -241,7 +241,7 @@ class Test_Announce extends \WP_UnitTestCase {
 			'object' => $this->post_permalink,
 		);
 
-		// Set up mock action to verify the announce is handled.
+		// Set up mock action to track whether the announce is handled (should be ignored).
 		$handled_action = new \MockAction();
 		\add_action( 'activitypub_handled_announce', array( $handled_action, 'action' ) );
 
