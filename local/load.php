@@ -10,6 +10,11 @@ namespace Activitypub\Development;
 \Activitypub\Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
 // Initialize local development tools below.
+/**
+ * Enables Jetpack development/debug mode.
+ * Setting JETPACK_DEV_DEBUG to true allows Jetpack features to run in a local development environment,
+ * bypassing certain production checks and enabling debugging tools. This should only be enabled for local development.
+ */
 define( 'JETPACK_DEV_DEBUG', true );
 
 // Load development WP-CLI commands.
