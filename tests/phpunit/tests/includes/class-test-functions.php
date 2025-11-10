@@ -13,6 +13,7 @@ use Activitypub\Collection\Outbox;
 use function Activitypub\add_to_outbox;
 use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\extract_recipients_from_activity_property;
+use function Activitypub\get_activity_visibility;
 
 /**
  * Test class for Functions.
