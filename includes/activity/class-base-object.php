@@ -585,7 +585,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://misskey-hub.net/ns/#_misskey_quote
 	 *
-	 * @var mixed
+	 * @var string|null
 	 */
 	protected $_misskey_quote; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
