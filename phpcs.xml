@@ -32,7 +32,6 @@
 		</properties>
 	</rule>
 
-	<!-- Allow short ternary operators (Elvis operator) -->
 	<rule ref="WordPress">
 		<exclude name="Universal.Operators.DisallowShortTernary" />
 	</rule>
