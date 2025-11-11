@@ -205,7 +205,7 @@ class Generic_Object {
 		foreach ( $data as $key => $value ) {
 			if ( null !== $value ) {
 				// Convert camelCase to snake_case if not prefixed with '_'.
-				if ( \str_starts_with( $key, '_' ) ) {
+				if ( ! \str_starts_with( $key, '_' ) ) {
 					$key = camel_to_snake_case( $key );
 				}
 
