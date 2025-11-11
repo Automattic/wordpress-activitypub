@@ -1562,11 +1562,11 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Test is_activity_quote function with quote property.
+	 * Test is_quote_activity function with quote property.
 	 *
-	 * @covers \Activitypub\is_activity_quote
+	 * @covers \Activitypub\is_quote_activity
 	 */
-	public function test_is_activity_quote_with_quote() {
+	public function test_is_quote_activity_with_quote() {
 		$activity = array(
 			'type'   => 'Create',
 			'object' => array(
@@ -1576,15 +1576,15 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			),
 		);
 
-		$this->assertTrue( \Activitypub\is_activity_quote( $activity ) );
+		$this->assertTrue( \Activitypub\is_quote_activity( $activity ) );
 	}
 
 	/**
-	 * Test is_activity_quote function with quoteUrl property.
+	 * Test is_quote_activity function with quoteUrl property.
 	 *
-	 * @covers \Activitypub\is_activity_quote
+	 * @covers \Activitypub\is_quote_activity
 	 */
-	public function test_is_activity_quote_with_quote_url() {
+	public function test_is_quote_activity_with_quote_url() {
 		$activity = array(
 			'type'   => 'Create',
 			'object' => array(
@@ -1594,15 +1594,15 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			),
 		);
 
-		$this->assertTrue( \Activitypub\is_activity_quote( $activity ) );
+		$this->assertTrue( \Activitypub\is_quote_activity( $activity ) );
 	}
 
 	/**
-	 * Test is_activity_quote function with quoteUri property.
+	 * Test is_quote_activity function with quoteUri property.
 	 *
-	 * @covers \Activitypub\is_activity_quote
+	 * @covers \Activitypub\is_quote_activity
 	 */
-	public function test_is_activity_quote_with_quote_uri() {
+	public function test_is_quote_activity_with_quote_uri() {
 		$activity = array(
 			'type'   => 'Create',
 			'object' => array(
@@ -1612,15 +1612,15 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			),
 		);
 
-		$this->assertTrue( \Activitypub\is_activity_quote( $activity ) );
+		$this->assertTrue( \Activitypub\is_quote_activity( $activity ) );
 	}
 
 	/**
-	 * Test is_activity_quote function with _misskey_quote property.
+	 * Test is_quote_activity function with _misskey_quote property.
 	 *
-	 * @covers \Activitypub\is_activity_quote
+	 * @covers \Activitypub\is_quote_activity
 	 */
-	public function test_is_activity_quote_with_misskey_quote() {
+	public function test_is_quote_activity_with_misskey_quote() {
 		$activity = array(
 			'type'   => 'Create',
 			'object' => array(
@@ -1630,15 +1630,15 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			),
 		);
 
-		$this->assertTrue( \Activitypub\is_activity_quote( $activity ) );
+		$this->assertTrue( \Activitypub\is_quote_activity( $activity ) );
 	}
 
 	/**
-	 * Test is_activity_quote returns false for non-quote.
+	 * Test is_quote_activity returns false for non-quote.
 	 *
-	 * @covers \Activitypub\is_activity_quote
+	 * @covers \Activitypub\is_quote_activity
 	 */
-	public function test_is_activity_quote_returns_false_for_non_quote() {
+	public function test_is_quote_activity_returns_false_for_non_quote() {
 		$activity = array(
 			'type'   => 'Create',
 			'object' => array(
@@ -1647,6 +1647,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			),
 		);
 
-		$this->assertFalse( \Activitypub\is_activity_quote( $activity ) );
+		$this->assertFalse( \Activitypub\is_quote_activity( $activity ) );
 	}
 }

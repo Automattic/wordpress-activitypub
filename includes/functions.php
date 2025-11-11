@@ -630,7 +630,7 @@ function is_activity_reply( $data ) {
  *
  * @return boolean True if a quote, false if not.
  */
-function is_activity_quote( $data ) {
+function is_quote_activity( $data ) {
 	return ! empty( $data['object']['quote'] ) ||
 		! empty( $data['object']['quoteUrl'] ) ||
 		! empty( $data['object']['quoteUri'] ) ||
