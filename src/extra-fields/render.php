@@ -8,13 +8,15 @@
 use Activitypub\Blocks;
 use Activitypub\Collection\Extra_Fields;
 
-/* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
 
-/* @var WP_Block $block Block instance. */
-
-// Get user ID from selectedUser attribute.
-$user_id = Blocks::get_user_id( $attributes['selectedUser'] ?? 'blog', $block->context );
+/**
+ * Render callback for the Extra Fields block.
+ *
+ * @var array    $attributes Block attributes.
+ * @var WP_Block $block      Block instance.
+ */
+$user_id = Blocks::get_user_id( $attributes['selectedUser'] ?? 'blog', $block->context ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable
 
 // If user ID couldn't be determined, return empty.
 if ( null === $user_id ) {
