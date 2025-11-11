@@ -216,7 +216,11 @@ export default function Edit( { attributes, setAttributes, context } ) {
 			<div { ...blockProps }>
 				<dl className="activitypub-extra-fields">
 					{ displayFields.map( ( field, index ) => (
-						<div key={ `${field.name}-${field.value}` } className="activitypub-extra-field" style={ cardStyle }>
+						<div
+							key={ `${ field.name }-${ field.value }` }
+							className="activitypub-extra-field"
+							style={ cardStyle }
+						>
 							<dt>{ field.name }</dt>
 							<dd
 								dangerouslySetInnerHTML={ {

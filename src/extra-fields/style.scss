@@ -58,7 +58,6 @@
 .is-style-compact {
 	.activitypub-extra-fields {
 		display: table;
-		width: auto;
 		table-layout: fixed;
 	}
 
@@ -73,7 +72,6 @@
 			padding-right: 10px;
 			white-space: nowrap;
 			vertical-align: baseline;
-			width: auto;
 			text-overflow: ellipsis;
 
 			&::after {
