@@ -57,8 +57,7 @@ function plugin_init() {
 	 * @see https://jetpack.com/
 	 */
 	if ( \defined( 'JETPACK__VERSION' ) ) {
-		\add_action( 'init', array( Jetpack::class, 'init' ) );
-		\add_action( 'load-post-new.php', array( Jetpack::class, 'adapt_post_share' ) );
+		Jetpack::init();
 	}
 
 	/**
