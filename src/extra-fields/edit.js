@@ -24,6 +24,7 @@ import { useUserOptions } from '../shared/use-user-options';
  */
 export default function Edit( { attributes, setAttributes, context } ) {
 	const { selectedUser, maxFields } = attributes;
+	const { postId: contextPostId, postType: contextPostType } = context ?? {};
 	const [ fields, setFields ] = useState( [] );
 	const [ isLoading, setIsLoading ] = useState( false );
 	const [ error, setError ] = useState( null );
@@ -32,14 +33,33 @@ export default function Edit( { attributes, setAttributes, context } ) {
 		className: 'activitypub-extra-fields-block-wrapper',
 	} );
 
-	// Get author ID from context
-	const authorId = useSelect( ( select ) => {
-		const editor = select( 'core/editor' );
-		if ( ! editor ) {
+	// Get author ID from context or current post depending on editor.
+	const authorId = useSelect(
+		( select ) => {
+			const editorStore = select( 'core/editor' );
+			const coreStore = select( 'core' );
+
+			if ( contextPostId && contextPostType && coreStore ) {
+				const editedRecord =
+					coreStore.getEditedEntityRecord?.( 'postType', contextPostType, contextPostId ) ?? null;
+				if ( editedRecord?.author ) {
+					return editedRecord.author;
+				}
+
+				const record = coreStore.getEntityRecord?.( 'postType', contextPostType, contextPostId ) ?? null;
+				if ( record?.author ) {
+					return record.author;
+				}
+			}
+
+			if ( editorStore && editorStore.getCurrentPostAttribute ) {
+				return editorStore.getCurrentPostAttribute( 'author' );
+			}
+
 			return null;
-		}
-		return editor.getCurrentPostAttribute( 'author' );
-	}, [] );
+		},
+		[ contextPostId, contextPostType ]
+	);
 
 	// Get user options for dropdown
 	const userOptions = useUserOptions( {
@@ -122,19 +142,43 @@ export default function Edit( { attributes, setAttributes, context } ) {
 
 	const cardStyle = getCardStyle();
 
-	// Render placeholder if inherit mode but no author
+	const settingsPanel = (
+		<InspectorControls>
+			<PanelBody title={ __( 'Settings', 'activitypub' ) } initialOpen={ true }>
+				<SelectControl
+					label={ __( 'User', 'activitypub' ) }
+					value={ selectedUser }
+					options={ userOptions }
+					onChange={ ( value ) => setAttributes( { selectedUser: value } ) }
+				/>
+				<RangeControl
+					label={ __( 'Maximum Fields', 'activitypub' ) }
+					value={ maxFields }
+					onChange={ ( value ) => setAttributes( { maxFields: value } ) }
+					min={ 0 }
+					max={ 20 }
+					help={ __( 'Limit the number of fields displayed. 0 = show all.', 'activitypub' ) }
+				/>
+			</PanelBody>
+		</InspectorControls>
+	);
+
+	// Render placeholder if inherit mode but no author. Keep controls mounted for recovery.
 	if ( selectedUser === 'inherit' && ! authorId ) {
 		return (
-			<div { ...blockProps }>
-				<Placeholder label={ __( 'Fediverse Profile Fields', 'activitypub' ) } icon="list-view">
-					<p>
-						{ __(
-							'This block will display extra fields based on the post author when published.',
-							'activitypub'
-						) }
-					</p>
-				</Placeholder>
-			</div>
+			<>
+				{ settingsPanel }
+				<div { ...blockProps }>
+					<Placeholder label={ __( 'Fediverse Profile Fields', 'activitypub' ) } icon="list-view">
+						<p>
+							{ __(
+								'This block will display extra fields based on the post author when published.',
+								'activitypub'
+							) }
+						</p>
+					</Placeholder>
+				</div>
+			</>
 		);
 	}
 
@@ -166,24 +210,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	if ( displayFields.length === 0 ) {
 		return (
 			<>
-				<InspectorControls>
-					<PanelBody title={ __( 'Settings', 'activitypub' ) } initialOpen={ true }>
-						<SelectControl
-							label={ __( 'User', 'activitypub' ) }
-							value={ selectedUser }
-							options={ userOptions }
-							onChange={ ( value ) => setAttributes( { selectedUser: value } ) }
-						/>
-						<RangeControl
-							label={ __( 'Maximum Fields', 'activitypub' ) }
-							value={ maxFields }
-							onChange={ ( value ) => setAttributes( { maxFields: value } ) }
-							min={ 0 }
-							max={ 20 }
-							help={ __( 'Limit the number of fields displayed. 0 = show all.', 'activitypub' ) }
-						/>
-					</PanelBody>
-				</InspectorControls>
+				{ settingsPanel }
 				<div { ...blockProps }>
 					<Placeholder label={ __( 'Fediverse Profile Fields', 'activitypub' ) } icon="list-view">
 						<p>{ __( 'No extra fields found. Add fields in your profile settings.', 'activitypub' ) }</p>
@@ -195,24 +222,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 
 	return (
 		<>
-			<InspectorControls>
-				<PanelBody title={ __( 'Settings', 'activitypub' ) } initialOpen={ true }>
-					<SelectControl
-						label={ __( 'User', 'activitypub' ) }
-						value={ selectedUser }
-						options={ userOptions }
-						onChange={ ( value ) => setAttributes( { selectedUser: value } ) }
-					/>
-					<RangeControl
-						label={ __( 'Maximum Fields', 'activitypub' ) }
-						value={ maxFields }
-						onChange={ ( value ) => setAttributes( { maxFields: value } ) }
-						min={ 0 }
-						max={ 20 }
-						help={ __( 'Limit the number of fields displayed. 0 = show all.', 'activitypub' ) }
-					/>
-				</PanelBody>
-			</InspectorControls>
+			{ settingsPanel }
 			<div { ...blockProps }>
 				<dl className="activitypub-extra-fields">
 					{ displayFields.map( ( field, index ) => (

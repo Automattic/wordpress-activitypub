@@ -8,6 +8,12 @@
 use Activitypub\Blocks;
 use Activitypub\Collection\Extra_Fields;
 
+use function Activitypub\is_activitypub_request;
+
+if ( is_activitypub_request() || is_feed() ) {
+	return '';
+}
+
 /**
  * Render callback for the Extra Fields block.
  *

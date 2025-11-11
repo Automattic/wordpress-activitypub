@@ -74,6 +74,9 @@ jest.mock( '../../shared/use-user-options', () => ( {
 const originalError = console.error;
 
 describe( 'Extra Fields Edit Component', () => {
+	let mockEditorStore;
+	let mockCoreStore;
+
 	beforeAll( () => {
 		console.error = jest.fn();
 	} );
@@ -83,11 +86,31 @@ describe( 'Extra Fields Edit Component', () => {
 	} );
 
 	beforeEach( () => {
-		// Reset mocks before each test
+		// Reset mocks before each test.
 		jest.clearAllMocks();
 
-		// Default mock for useSelect
-		useSelect.mockReturnValue( 1 ); // Default authorId
+		mockEditorStore = {
+			getCurrentPostAttribute: jest.fn().mockReturnValue( 1 ),
+		};
+
+		mockCoreStore = {
+			getEditedEntityRecord: jest.fn().mockReturnValue( null ),
+			getEntityRecord: jest.fn().mockReturnValue( null ),
+		};
+
+		useSelect.mockImplementation( ( callback ) =>
+			callback( ( storeName ) => {
+				if ( 'core/editor' === storeName ) {
+					return mockEditorStore;
+				}
+
+				if ( 'core' === storeName ) {
+					return mockCoreStore;
+				}
+
+				return null;
+			} )
+		);
 
 		// Default mock for apiFetch
 		apiFetch.mockResolvedValue( {
@@ -152,7 +175,7 @@ describe( 'Extra Fields Edit Component', () => {
 	} );
 
 	test( 'shows placeholder when inherit mode but no author', () => {
-		useSelect.mockReturnValue( null ); // No author
+		mockEditorStore.getCurrentPostAttribute.mockReturnValue( null );
 
 		const setAttributes = jest.fn();
 		const attributes = {
@@ -163,6 +186,7 @@ describe( 'Extra Fields Edit Component', () => {
 		render( <Edit attributes={ attributes } setAttributes={ setAttributes } context={ {} } /> );
 
 		expect( screen.getByTestId( 'placeholder' ) ).toBeTruthy();
+		expect( screen.getByTestId( 'inspector-controls' ) ).toBeTruthy();
 		expect(
 			screen.getByText( 'This block will display extra fields based on the post author when published.' )
 		).toBeTruthy();
@@ -241,7 +265,7 @@ describe( 'Extra Fields Edit Component', () => {
 	} );
 
 	test( 'fetches author fields when selectedUser is inherit', async () => {
-		useSelect.mockReturnValue( 5 ); // authorId = 5
+		mockEditorStore.getCurrentPostAttribute.mockReturnValue( 5 ); // authorId = 5
 
 		const setAttributes = jest.fn();
 		const attributes = {
@@ -254,6 +278,34 @@ describe( 'Extra Fields Edit Component', () => {
 		await waitFor( () => {
 			expect( apiFetch ).toHaveBeenCalledWith( {
 				path: '/activitypub/1.0/actors/5',
+				headers: { Accept: 'application/activity+json' },
+			} );
+		} );
+	} );
+
+	test( 'uses context author when inherit mode is inside Query Loop', async () => {
+		mockEditorStore.getCurrentPostAttribute.mockReturnValue( null );
+		mockCoreStore.getEditedEntityRecord.mockReturnValue( {
+			author: 9,
+		} );
+
+		const setAttributes = jest.fn();
+		const attributes = {
+			selectedUser: 'inherit',
+			maxFields: 0,
+		};
+
+		render(
+			<Edit
+				attributes={ attributes }
+				setAttributes={ setAttributes }
+				context={ { postId: 123, postType: 'post' } }
+			/>
+		);
+
+		await waitFor( () => {
+			expect( apiFetch ).toHaveBeenCalledWith( {
+				path: '/activitypub/1.0/actors/9',
 				headers: { Accept: 'application/activity+json' },
 			} );
 		} );
@@ -449,7 +501,7 @@ describe( 'Extra Fields Edit Component', () => {
 	} );
 
 	test( 'does not fetch when userId is null', () => {
-		useSelect.mockReturnValue( null );
+		mockEditorStore.getCurrentPostAttribute.mockReturnValue( null );
 
 		const setAttributes = jest.fn();
 		const attributes = {
