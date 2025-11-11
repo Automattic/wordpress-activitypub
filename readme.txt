@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 7.5.0
+Stable tag: 7.6.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,65 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.6.0 - 2025-11-11
+#### Added
+- Add bidirectional transforms between reply and embed blocks for improved user experience.
+- Add Command Palette integration for quick navigation to ActivityPub admin pages
+- Added a new ap_object post type and taxonomies for storing and managing incoming ActivityPub objects, with updated handlers
+- Added a privacy option to hide followers and following lists from profiles while keeping follow relationships intact.
+- Added a scheduled task and setting to automatically purge old inbox items, helping maintain site performance and storage control.
+- Added fallback to trigger create handling when updates fail for missing posts or comments, ensuring objects are properly created.
+- Added immediate dispatch for Accept activities to speed up quoted posts while keeping scheduled processing for compatibility with other instances.
+- Added new configuration options to better manage traffic spikes when federating posts, allowing finer control over retry limits, delays, and batch pauses.
+- Added support for FEP-8fcf follower synchronization, improving data consistency across servers with new sync headers, digest checks, and reconciliation tasks.
+- Add LiteSpeed Cache integration to prevent ActivityPub JSON responses from being cached incorrectly. Includes automatic .htaccess rules and Site Health check to ensure proper configuration.
+- Add quote visibility setting for Classic Editor users.
+- Add unified attachment processor for handling ActivityPub media imports from both remote URLs and local files, with automatic media block generation and Classic Editor support.
+- Integrate Federated Reply block with WP.com Reader's post share functionality, allowing users to reply to ActivityPub posts directly from the Reader.
+
+#### Changed
+- Added support for FEP-3b86 Activity Intents, extending WebFinger and REST interactions with new Create and Follow intent links.
+- Added support for the latest NodeInfo (FEP-0151), with improved federation details, staff info, and software metadata for better ActivityPub compliance.
+- Extended inbox support for undoing Like, Create, and Announce activities, with refactored undo logic and improved activity persistence.
+- Improved Classic Editor integration by adding better media handling and full test coverage for attachments, permissions, and metadata.
+- Improved delivery of public and follower activities by expanding local recipient handling to include all ActivityPub-capable users and follower collections.
+- Improved inbox performance by batching and deduplicating activities, reducing redundant processing and improving handling during high activity periods.
+- Improved REST API responses with smarter context handling.
+- Improved REST collection pagination by using explicit total item counts for more accurate results.
+- Moved default visibility handling from the server to the editor UI, ensuring consistent and flexible ActivityPub visibility settings across both block and classic editors.
+- Prevented self-announcing by ignoring announces from the blog actor, while still processing announces from user and external actors.
+- Refactored activity handling to support multiple recipients per activity, allowing posts and interactions to be linked to several local users at once.
+- Refactored avatar handling into a new system that stores and manages avatars per remote actor, improving reliability and preparing for future caching support.
+- Refactored the inbox system to use a shared inbox, storing activities once with multiple recipients for improved efficiency and reduced duplication.
+- Reorganize integration loader and move Stream integration into dedicated folder structure.
+- Reply posts: do not display post title before @mentions in posts that are replies to somebody else
+- Simplified configuration by always enabling the shared inbox and removing its separate setting, UI field, and related logic.
+- Simplified inbox storage settings, allowing certain activities (like deletes) to be skipped to reduce unnecessary database use.
+- Simplify follow() API return types to int|WP_Error for better predictability.
+- Updated inbox handling to support multiple users receiving the same activity and improve overall data consistency.
+- Updated mailer hooks to send notifications only when activities are successfully handled, preventing emails for failed events.
+- Update plugin short description to be more user-friendly.
+
+#### Fixed
+- Added a safeguard to ensure the plugin works correctly even when no post types are selected.
+- Added a safety check to prevent errors when resolving comment author hostnames without a valid IP address.
+- Fixed activity processing to handle QuoteRequest and other edge cases more reliably.
+- Fixed an issue with post content templates to ensure the correct fallback is always applied.
+- Fixed fatal error when transformer Factory receives WP_Error objects.
+- Fixed HTML entity encoding in extra field names when displayed on ActivityPub platforms
+- Fixed typo in example, improve quoting description.
+- Fix Following table error message to display user input instead of empty string when webfinger lookup fails.
+- Fix infinite recursion when storing remote actors with mentions in their bios
+- Fix local inbox delivery to use internal REST API instead of HTTP, enabling local follows and proper boost counting.
+- Fix logic errors in Move handler: remove redundant assignment and fix variable name collision.
+- Fix public key retrieval for GoToSocial profiles with path-based key URLs.
+- Improved actor resolution by prioritizing blog actor detection before remote actor checks and refining home page URL handling.
+- Improved handling of empty fields for better compatibility with Pixelfed and more consistent fallback behavior across actor names, URLs, and related data.
+- Improved hashtag encoding for consistent formatting.
+- Improved Jetpack integration by initializing it during the WordPress startup process.
+- Refactored Mastodon import handling to use consistent array-based data, improving reliability and compatibility across all import scenarios.
+- Reply block now properly validates ActivityPub URLs before setting inReplyTo field
 
 ### 7.5.0 - 2025-10-01
 #### Added
@@ -309,9 +368,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.5.0 =
+= 7.6.0 =
 
-You can now choose who’s allowed to quote your posts on Mastodon—everyone, only your followers, or just you. Set it in the Block Editor sidebar, and your choice will be applied automatically.
+New for WordPress 6.9: Use the Command Palette (Ctrl+K or ⌘+K on Mac) to quickly access ActivityPub pages and settings.
 
 == Installation ==
 

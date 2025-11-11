@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Improved delivery of public and follower activities by expanding local recipient handling to include all ActivityPub-capable users and follower collections.
