@@ -14,7 +14,7 @@ $attributes = wp_parse_args( $attributes );
 /* @var WP_Block $block Block instance. */
 
 // Get user ID from selectedUser attribute.
-$user_id = Blocks::get_user_id( $attributes['selectedUser'] ?? 'blog', $block->context );
+$user_id = Blocks::get_user_id( $attributes['selectedUser'] ?? 'blog' );
 
 // If user ID couldn't be determined, return empty.
 if ( null === $user_id ) {
