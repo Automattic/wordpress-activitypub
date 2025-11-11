@@ -105,11 +105,11 @@
 	}
 
 	.activitypub-extra-field {
-		border: 1px solid #ddd;
+		border: 1px solid var(--wp--preset--color--contrast-2, #ddd);
 		border-radius: 8px;
 		padding: 1em;
 		margin-bottom: 1em;
-		background: #fff;
+		background: var(--wp--preset--color--base, #fff);
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 
 		&:last-child {
