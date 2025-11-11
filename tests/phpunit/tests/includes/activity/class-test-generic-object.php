@@ -126,7 +126,7 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	 * Tests that the quote property can be set from array.
 	 * Uses Base_Object which has the quote property defined.
 	 *
-	 * @covers Generic_Object::init_from_array
+	 * @covers Activitypub\Activity\Generic_Object::init_from_array
 	 */
 	public function test_init_from_array_quote_property() {
 		$test_data = array(
@@ -146,7 +146,7 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	 *
 	 * Uses Base_Object which has the _misskey_quote property defined.
 	 *
-	 * @covers Generic_Object::init_from_array
+	 * @covers Activitypub\Activity\Generic_Object::init_from_array
 	 */
 	public function test_init_from_array_underscore_properties() {
 		$test_data = array(
@@ -166,7 +166,7 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	 *
 	 * Uses Base_Object to verify quote properties can be set and retrieved.
 	 *
-	 * @covers Generic_Object::__call
+	 * @covers Activitypub\Activity\Generic_Object::__call
 	 */
 	public function test_quote_properties_set_and_get() {
 		$object = new Base_Object();
@@ -185,7 +185,7 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	 *
 	 * Uses Base_Object to verify _misskey_quote property can be set and retrieved.
 	 *
-	 * @covers Generic_Object::__call
+	 * @covers Activitypub\Activity\Generic_Object::__call
 	 */
 	public function test_underscore_properties_set_and_get() {
 		$object = new Base_Object();
