@@ -78,7 +78,7 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author']  = \esc_attr( $meta['name'] ?? $meta['preferredUsername'] );
+		$comment_data['comment_author']  = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 		$comment_data['comment_content'] = \addslashes( $activity['object']['content'] );
 
 		return self::persist( $comment_data, self::UPDATE );
