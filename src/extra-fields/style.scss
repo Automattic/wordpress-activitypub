@@ -40,6 +40,15 @@
 		margin-bottom: 0;
 		color: inherit;
 
+		p {
+			margin-top: 0;
+			margin-bottom: 0.5em;
+
+			&:last-child {
+				margin-bottom: 0;
+			}
+		}
+
 		a {
 			color: inherit;
 			text-decoration: underline;
