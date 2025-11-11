@@ -14,7 +14,6 @@ use Activitypub\Http;
 
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
-use function Activitypub\is_same_domain;
 use function Activitypub\object_to_uri;
 
 /**
