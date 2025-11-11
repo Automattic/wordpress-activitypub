@@ -1,0 +1,131 @@
+/**
+ * Styles for the Extra Fields block.
+ */
+
+.activitypub-extra-fields-block-wrapper {
+	// Add padding to content when background or border is set (default and compact styles)
+	&.has-background .activitypub-extra-fields,
+	&.has-border .activitypub-extra-fields {
+		padding: 1rem;
+	}
+
+	// Remove default padding for cards style
+	&.is-style-cards.has-background .activitypub-extra-fields,
+	&.is-style-cards.has-border .activitypub-extra-fields {
+		padding: 0;
+	}
+}
+
+.activitypub-extra-fields {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.activitypub-extra-field {
+	margin-bottom: 1em;
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+
+	dt {
+		font-weight: 600;
+		margin-bottom: 0.25em;
+		color: inherit;
+	}
+
+	dd {
+		margin-left: 0;
+		margin-bottom: 0;
+		color: inherit;
+
+		a {
+			color: inherit;
+			text-decoration: underline;
+
+			&:hover {
+				text-decoration: none;
+			}
+		}
+	}
+}
+
+/**
+ * Compact Style
+ * Displays fields in a table-like format with aligned labels and values.
+ */
+.is-style-compact {
+	.activitypub-extra-fields {
+		display: table;
+		width: auto;
+		table-layout: fixed;
+	}
+
+	.activitypub-extra-field {
+		display: table-row;
+		margin-bottom: 0;
+
+		dt {
+			display: table-cell;
+			padding-bottom: 0.5em;
+			margin-bottom: 0;
+			padding-right: 10px;
+			white-space: nowrap;
+			vertical-align: baseline;
+			width: auto;
+			text-overflow: ellipsis;
+
+			&::after {
+				content: ':';
+			}
+		}
+
+		dd {
+			display: table-cell;
+			padding-bottom: 0.5em;
+			vertical-align: baseline;
+			word-break: break-word;
+		}
+	}
+}
+
+/**
+ * Cards Style
+ * Displays each field in its own bordered card with padding.
+ */
+.is-style-cards {
+	// Remove wrapper background for cards style - background goes on individual cards only
+	&.has-background {
+		background: transparent !important;
+
+		.activitypub-extra-fields {
+			padding: 1rem;
+		}
+	}
+
+	.activitypub-extra-field {
+		border: 1px solid #ddd;
+		border-radius: 8px;
+		padding: 1em;
+		margin-bottom: 1em;
+		background: #fff;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+
+		dt {
+			font-size: 0.9em;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			color: currentColor;
+			margin-bottom: 0.5em;
+		}
+
+		dd {
+			font-size: 1em;
+		}
+	}
+}
