@@ -58,7 +58,7 @@ class Embed {
 			$author = Http::get_remote_object( $author_url );
 			if ( ! is_wp_error( $author ) ) {
 				$avatar_url  = $author['icon']['url'] ?? '';
-				$author_name = $author['name'] ?? $author_name;
+				$author_name = empty( $author['name'] ) ? $author_name : $author['name'];
 			}
 		}
 
