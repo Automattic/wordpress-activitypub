@@ -44,7 +44,6 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	// Get user options for dropdown
 	const userOptions = useUserOptions( {
 		withInherit: true,
-		authorId,
 	} );
 
 	// Determine which user ID to fetch
