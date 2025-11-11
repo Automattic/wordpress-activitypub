@@ -7,6 +7,7 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
 use Activitypub\Http;
@@ -37,6 +38,11 @@ class Announce {
 		// Check if Activity is public or not.
 		if ( ! is_activity_public( $announcement ) ) {
 			// @todo maybe send email
+			return;
+		}
+
+		// Ignore announces from the blog actor.
+		if ( Actors::BLOG_USER_ID === Actors::get_id_by_resource( $announcement['actor'] ) ) {
 			return;
 		}
 
