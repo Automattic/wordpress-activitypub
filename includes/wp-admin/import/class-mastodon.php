@@ -229,37 +229,11 @@ class Mastodon {
 			$wp_filesystem->delete( self::$archive, true );
 		}
 
-		// Determine file type and extract accordingly.
-		$file_extension = \strtolower( \pathinfo( $file, PATHINFO_EXTENSION ) );
-		$is_tar_gz      = false;
-
-		// Check if it's a tar.gz or tgz file.
-		if ( 'gz' === $file_extension && \str_ends_with( \strtolower( $basename ), '.tar.gz' ) ) {
-			$is_tar_gz = true;
-		} elseif ( 'tgz' === $file_extension ) {
-			$is_tar_gz = true;
-		}
-
-		if ( 'zip' === $file_extension ) {
-			// Use WordPress built-in unzip function.
-			$unzip_result = \unzip_file( $file, self::$archive );
-			if ( \is_wp_error( $unzip_result ) ) {
-				echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
-				echo \esc_html( $unzip_result->get_error_message() ) . '</p>';
-				return;
-			}
-		} elseif ( $is_tar_gz ) {
-			// Extract tar.gz file.
-			$extract_result = self::extract_tar_gz( $file );
-			if ( \is_wp_error( $extract_result ) ) {
-				echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
-				echo \esc_html( $extract_result->get_error_message() ) . '</p>';
-				return;
-			}
-		} else {
+		// Extract the archive.
+		$extract_result = self::extract_archive( $file, $basename );
+		if ( \is_wp_error( $extract_result ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
-			\esc_html_e( 'The uploaded file must be a ZIP or TAR.GZ archive. Please try again with the correct file format.', 'activitypub' );
-			echo '</p>';
+			echo \esc_html( $extract_result->get_error_message() ) . '</p>';
 			return;
 		}
 
@@ -471,6 +445,41 @@ class Mastodon {
 		}
 
 		return $attachment;
+	}
+
+	/**
+	 * Extract an archive file (ZIP or TAR.GZ).
+	 *
+	 * Determines the archive type and uses the appropriate extraction method.
+	 *
+	 * @param string $file     Path to the archive file.
+	 * @param string $basename Base name of the archive file.
+	 *
+	 * @return true|\WP_Error True if extraction succeeded, WP_Error on failure.
+	 */
+	private static function extract_archive( $file, $basename ) {
+		$file_extension = \strtolower( \pathinfo( $file, PATHINFO_EXTENSION ) );
+		$is_tar_gz      = false;
+
+		// Check if it's a tar.gz or tgz file.
+		if ( 'gz' === $file_extension && \str_ends_with( \strtolower( $basename ), '.tar.gz' ) ) {
+			$is_tar_gz = true;
+		} elseif ( 'tgz' === $file_extension ) {
+			$is_tar_gz = true;
+		}
+
+		if ( 'zip' === $file_extension ) {
+			// Use WordPress built-in unzip function.
+			return \unzip_file( $file, self::$archive );
+		} elseif ( $is_tar_gz ) {
+			// Extract tar.gz file.
+			return self::extract_tar_gz( $file );
+		} else {
+			return new \WP_Error(
+				'unsupported_archive_format',
+				\__( 'The uploaded file must be a ZIP or TAR.GZ archive. Please try again with the correct file format.', 'activitypub' )
+			);
+		}
 	}
 
 	/**
