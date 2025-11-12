@@ -318,12 +318,7 @@ class Test_Follow extends \WP_UnitTestCase {
 
 		// Verify follower was added.
 		$followers       = Followers::get_many( self::$user_id );
-		$follower_actors = array_map(
-			function ( $follower ) {
-				return $follower->guid;  // guid stores the actor URL
-			},
-			$followers
-		);
+		$follower_actors = wp_list_pluck( $followers, 'guid' );
 		$this->assertContains( $actor_url, $follower_actors, 'Follower should be added' );
 
 		// Second follow request with a different activity ID (simulating a retry).
