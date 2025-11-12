@@ -39,7 +39,7 @@ class Interactions {
 		}
 
 		$in_reply_to       = object_to_uri( $activity['object']['inReplyTo'] );
-		$in_reply_to       = \esc_url_raw( $in_reply_to );
+		$in_reply_to       = \untrailingslashit( \esc_url_raw( $in_reply_to ) );
 		$comment_post_id   = \url_to_postid( $in_reply_to );
 		$parent_comment_id = url_to_commentid( $in_reply_to );
 
@@ -93,6 +93,7 @@ class Interactions {
 	 */
 	public static function add_reaction( $activity ) {
 		$url               = object_to_uri( $activity['object'] );
+		$url               = \untrailingslashit( $url );
 		$comment_post_id   = \url_to_postid( $url );
 		$parent_comment_id = url_to_commentid( $url );
 
