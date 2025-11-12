@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 7.6.0
+Stable tag: 7.6.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,12 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.6.1 - 2025-11-12
+#### Fixed
+- Fixed compatibility with Pixelfed and similar platforms by treating activities without recipients as public, ensuring boosts and reposts work correctly.
+- Improved delete handling for remote replies by streamlining tombstone detection and simplifying object deletion for more reliable and consistent behavior.
+- Made inbox cleanup more reliable and ensuring deduplication only affects the specific activity being removed.
 
 ### 7.6.0 - 2025-11-11
 #### Added

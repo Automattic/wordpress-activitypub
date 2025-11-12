@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.6.1] - 2025-11-12
+### Fixed
+- Fixed compatibility with Pixelfed and similar platforms by treating activities without recipients as public, ensuring boosts and reposts work correctly. [#2448]
+- Improved delete handling for remote replies by streamlining tombstone detection and simplifying object deletion for more reliable and consistent behavior. [#2446]
+- Made inbox cleanup more reliable and ensuring deduplication only affects the specific activity being removed. [#2447]
+
 ## [7.6.0] - 2025-11-11
 ### Added
 - Add bidirectional transforms between reply and embed blocks for improved user experience. [#2244]
@@ -1523,6 +1529,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.6.0...7.6.1
 [7.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.5.0...7.6.0
 [7.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.4.0...7.5.0
 [7.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.3.0...7.4.0

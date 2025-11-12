@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Improved delete handling for remote replies by streamlining tombstone detection and simplifying object deletion for more reliable and consistent behavior.
