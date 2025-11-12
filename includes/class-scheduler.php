@@ -323,7 +323,7 @@ class Scheduler {
 				'numberposts' => -1,
 				'date_query'  => array(
 					array(
-						'before' => \gmdate( 'Y-m-d', time() - ( $days * DAY_IN_SECONDS ) ),
+						'before' => gmdate( 'Y-m-d', time() - ( $days * DAY_IN_SECONDS ) ),
 					),
 				),
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -360,7 +360,7 @@ class Scheduler {
 				'numberposts' => -1,
 				'date_query'  => array(
 					array(
-						'before' => \gmdate( 'Y-m-d', time() - ( $days * DAY_IN_SECONDS ) ),
+						'before' => gmdate( 'Y-m-d', time() - ( $days * DAY_IN_SECONDS ) ),
 					),
 				),
 			)
