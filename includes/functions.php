@@ -588,6 +588,12 @@ function get_activity_visibility( $activity ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
 	}
 
+	// Activities with no recipients are treated as public.
+	$recipients = extract_recipients_from_activity( $activity );
+	if ( empty( $recipients ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+	}
+
 	return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 }
 
@@ -606,6 +612,10 @@ function is_activity_public( $data ) {
 	}
 
 	$recipients = extract_recipients_from_activity( $data );
+
+	if ( empty( $recipients ) ) {
+		return true;
+	}
 
 	return ! empty( array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
 }
