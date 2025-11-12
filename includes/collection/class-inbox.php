@@ -385,8 +385,7 @@ class Inbox {
 		global $wpdb;
 
 		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$post_ids = $wpdb->get_col(
+		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT ID FROM {$wpdb->posts} WHERE guid=%s AND post_type=%s ORDER BY ID ASC",
 				\esc_url( $guid ),
