@@ -384,7 +384,7 @@ class Inbox {
 	public static function deduplicate( $guid ) {
 		global $wpdb;
 
-		// Query for all posts with this GUID directly (get_posts doesn't support guid parameter).
+		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_ids = $wpdb->get_col(
 			$wpdb->prepare(
