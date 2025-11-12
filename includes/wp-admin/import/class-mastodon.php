@@ -109,10 +109,15 @@ class Mastodon {
 			return false;
 		}
 
-		$file_info = \wp_check_filetype( sanitize_file_name( $_FILES['import']['name'] ), array( 'zip' => 'application/zip' ) );
-		if ( 'application/zip' !== $file_info['type'] ) {
+		$allowed_types = array(
+			'zip'    => 'application/zip',
+			'tar.gz' => 'application/x-gzip',
+			'tgz'    => 'application/x-gzip',
+		);
+		$file_info     = \wp_check_filetype( sanitize_file_name( $_FILES['import']['name'] ), $allowed_types );
+		if ( ! in_array( $file_info['type'], $allowed_types, true ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
-			\esc_html_e( 'The uploaded file must be a ZIP archive. Please try again with the correct file format.', 'activitypub' );
+			\esc_html_e( 'The uploaded file must be a ZIP or TAR.GZ archive. Please try again with the correct file format.', 'activitypub' );
 			echo '</p>';
 			return false;
 		}
@@ -211,20 +216,53 @@ class Mastodon {
 	public static function import() {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
 		$file          = \get_attached_file( self::$import_id );
+		$basename      = \basename( $file );
 
 		\WP_Filesystem();
 
 		global $wp_filesystem;
 		$import_folder = $wp_filesystem->wp_content_dir() . 'import/';
-		self::$archive = $import_folder . \basename( \basename( $file, '.txt' ), '.zip' );
+		self::$archive = $import_folder . \preg_replace( '/\.(zip|tar\.gz|tgz)$/i', '', $basename );
 
 		// Clean up working directory.
 		if ( $wp_filesystem->is_dir( self::$archive ) ) {
 			$wp_filesystem->delete( self::$archive, true );
 		}
 
-		// Unzip package to working directory.
-		\unzip_file( $file, self::$archive );
+		// Determine file type and extract accordingly.
+		$file_extension = \strtolower( \pathinfo( $file, PATHINFO_EXTENSION ) );
+		$is_tar_gz      = false;
+
+		// Check if it's a tar.gz or tgz file.
+		if ( 'gz' === $file_extension && \str_ends_with( \strtolower( $basename ), '.tar.gz' ) ) {
+			$is_tar_gz = true;
+		} elseif ( 'tgz' === $file_extension ) {
+			$is_tar_gz = true;
+		}
+
+		if ( 'zip' === $file_extension ) {
+			// Use WordPress built-in unzip function.
+			$unzip_result = \unzip_file( $file, self::$archive );
+			if ( \is_wp_error( $unzip_result ) ) {
+				echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+				echo \esc_html( $unzip_result->get_error_message() ) . '</p>';
+				return;
+			}
+		} elseif ( $is_tar_gz ) {
+			// Extract tar.gz file.
+			$extract_result = self::extract_tar_gz( $file );
+			if ( \is_wp_error( $extract_result ) ) {
+				echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+				echo \esc_html( $extract_result->get_error_message() ) . '</p>';
+				return;
+			}
+		} else {
+			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+			\esc_html_e( 'The uploaded file must be a ZIP or TAR.GZ archive. Please try again with the correct file format.', 'activitypub' );
+			echo '</p>';
+			return;
+		}
+
 		$files = $wp_filesystem->dirlist( self::$archive );
 
 		if ( ! isset( $files['outbox.json'] ) ) {
@@ -412,7 +450,7 @@ class Mastodon {
 		echo '<ol>';
 		echo '<li>' . \wp_kses( \__( 'Log in to your Mastodon account and go to <strong>Preferences > Import and Export</strong>.', 'activitypub' ), array( 'strong' => array() ) ) . '</li>';
 		echo '<li>' . \esc_html__( 'Request a new archive of your data and wait for the email notification.', 'activitypub' ) . '</li>';
-		echo '<li>' . \wp_kses( \__( 'Download the archive file (it will be a <code>.zip</code> file).', 'activitypub' ), array( 'code' => array() ) ) . '</li>';
+		echo '<li>' . \wp_kses( \__( 'Download the archive file (it will be a <code>.zip</code> or <code>.tar.gz</code> file).', 'activitypub' ), array( 'code' => array() ) ) . '</li>';
 		echo '<li>' . \esc_html__( 'Upload that file below to begin the import process.', 'activitypub' ) . '</li>';
 		echo '</ol>';
 
@@ -433,5 +471,75 @@ class Mastodon {
 		}
 
 		return $attachment;
+	}
+
+	/**
+	 * Extract a tar.gz file.
+	 *
+	 * WordPress doesn't have built-in tar.gz support, so we try multiple methods:
+	 * 1. PHP's PharData extension (most reliable)
+	 * 2. System tar command (if exec is available)
+	 * 3. Return WP_Error with helpful error message
+	 *
+	 * @param string $file Path to the tar.gz file.
+	 *
+	 * @return true|\WP_Error True if extraction succeeded, WP_Error on failure.
+	 */
+	private static function extract_tar_gz( $file ) {
+		global $wp_filesystem;
+		$last_error = '';
+
+		// Method 1: Try using PHP's PharData if available (PHP 5.3+).
+		if ( class_exists( 'PharData' ) ) {
+			try {
+				$phar = new \PharData( $file );
+				$phar->extractTo( self::$archive );
+				return true;
+			} catch ( \Exception $e ) {
+				// PharData extraction failed, try next method.
+				$last_error = $e->getMessage();
+			}
+		}
+
+		// Method 2: Try using system tar command if available.
+		if ( function_exists( 'exec' ) ) {
+			// Create the extraction directory first.
+			if ( ! $wp_filesystem->mkdir( self::$archive ) ) {
+				return new \WP_Error(
+					'extract_tar_gz_mkdir_failed',
+					\__( 'Failed to create extraction directory.', 'activitypub' )
+				);
+			}
+
+			$command    = sprintf(
+				'tar -xzf %s -C %s 2>&1',
+				\escapeshellarg( $file ),
+				\escapeshellarg( self::$archive )
+			);
+			$output     = array();
+			$return_var = 0;
+			exec( $command, $output, $return_var );
+
+			if ( 0 === $return_var ) {
+				return true;
+			}
+
+			$last_error = implode( ' ', $output );
+		}
+
+		// If extraction failed, return appropriate error.
+		if ( ! class_exists( 'PharData' ) && ! function_exists( 'exec' ) ) {
+			return new \WP_Error(
+				'extract_tar_gz_not_supported',
+				\__( 'Your server does not support tar.gz extraction. Please use a ZIP file instead, or ask your host to enable PharData or exec functions.', 'activitypub' )
+			);
+		}
+
+		// Both methods were available but failed.
+		return new \WP_Error(
+			'extract_tar_gz_failed',
+			\__( 'Unable to extract tar.gz archive. The file may be corrupted. Please try again with a new archive or use a ZIP file instead.', 'activitypub' ),
+			$last_error
+		);
 	}
 }
