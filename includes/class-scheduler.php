@@ -125,12 +125,12 @@ class Scheduler {
 			\wp_schedule_event( time(), 'hourly', 'activitypub_reprocess_outbox' );
 		}
 
-		if ( ! wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
-			wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
+		if ( ! \wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
+			\wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
 		}
 
-		if ( ! wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
-			wp_schedule_event( time(), 'daily', 'activitypub_inbox_purge' );
+		if ( ! \wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
+			\wp_schedule_event( time(), 'daily', 'activitypub_inbox_purge' );
 		}
 	}
 
@@ -357,6 +357,11 @@ class Scheduler {
 		}
 
 		$days     = (int) get_option( 'activitypub_inbox_purge_days', 180 );
+		$timezone = new \DateTimeZone( 'UTC' );
+		$date     = new \DateTime( 'now', $timezone );
+
+		$date->sub( \DateInterval::createFromDateString( "$days days" ) );
+
 		$post_ids = \get_posts(
 			array(
 				'post_type'   => Inbox::POST_TYPE,
@@ -365,7 +370,7 @@ class Scheduler {
 				'numberposts' => -1,
 				'date_query'  => array(
 					array(
-						'before' => gmdate( 'Y-m-d', time() - ( $days * DAY_IN_SECONDS ) ),
+						'before' => $date->format( 'Y-m-d' ),
 					),
 				),
 			)
