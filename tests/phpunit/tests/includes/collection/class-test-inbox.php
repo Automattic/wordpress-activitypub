@@ -75,9 +75,9 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
 		$this->assertEquals( 'https://remote.example.com/users/testuser', $remote_actor_meta );
 
-		// Test activitypub_content_visibility meta.
+		// Activities with no recipients are treated as public.
 		$visibility_meta = \get_post_meta( $inbox_id, 'activitypub_content_visibility', true );
-		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility_meta );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $visibility_meta );
 	}
 
 	/**
@@ -722,5 +722,61 @@ class Test_Inbox extends \WP_UnitTestCase {
 	public function test_deduplicate_non_existent() {
 		$result = Inbox::deduplicate( 'https://remote.example.com/activities/non-existent' );
 		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test adding Like activity with trailing slash in object URL.
+	 *
+	 * This test verifies that Like activities from Pixelfed and other platforms
+	 * that include trailing slashes in object URLs are stored correctly in the inbox.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_like_activity_with_trailing_slash() {
+		// Create a post to be liked.
+		$post_id        = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Like',
+				'post_content' => 'Test content',
+				'post_status'  => 'publish',
+			)
+		);
+		$post_permalink = \get_permalink( $post_id );
+
+		// Create a Like activity with trailing slash in object URL (as Pixelfed sends).
+		$activity = new Activity();
+		$activity->set_id( 'https://pixelfed.social/users/pfefferle#likes/30434186' );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://pixelfed.social/users/pfefferle' );
+		$activity->set_object( $post_permalink . '/' ); // Add trailing slash.
+
+		$user_id = 1;
+
+		// Add activity to inbox.
+		$inbox_id = Inbox::add( $activity, $user_id );
+
+		$this->assertIsInt( $inbox_id );
+		$this->assertGreaterThan( 0, $inbox_id );
+
+		// Verify the post was created.
+		$post = \get_post( $inbox_id );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( Inbox::POST_TYPE, $post->post_type );
+
+		// Test _activitypub_object_id meta - should preserve the trailing slash as-is.
+		$object_id_meta = \get_post_meta( $inbox_id, '_activitypub_object_id', true );
+		$this->assertEquals( $post_permalink . '/', $object_id_meta );
+
+		// Test _activitypub_activity_type meta.
+		$activity_type_meta = \get_post_meta( $inbox_id, '_activitypub_activity_type', true );
+		$this->assertEquals( 'Like', $activity_type_meta );
+
+		// Test _activitypub_user_id meta.
+		$user_id_meta = \get_post_meta( $inbox_id, '_activitypub_user_id', true );
+		$this->assertEquals( $user_id, $user_id_meta );
+
+		// Test _activitypub_activity_remote_actor meta.
+		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
+		$this->assertEquals( 'https://pixelfed.social/users/pfefferle', $remote_actor_meta );
 	}
 }

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed compatibility with Pixelfed and similar platforms by treating activities without recipients as public, ensuring boosts and reposts work correctly.
