@@ -1003,7 +1003,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 						'monkey' => 'https://www.w3.org/ns/activitystreams#Public',
 					),
 				),
-				false,
+				true,
 			),
 			array(
 				array(
