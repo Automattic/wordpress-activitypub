@@ -55,7 +55,7 @@ namespace Activitypub\Activity;
  * @method string[]|null        get_summary_map()        Gets the summary map property of the object.
  * @method array[]|null         get_tag()                Gets the tag property of the object.
  * @method string[]|string|null get_to()                 Gets the primary recipients of the object.
- * @method string[]|string      get_type()               Gets the type of the object.
+ * @method string               get_type()               Gets the type of the object.
  * @method string|null          get_updated()            Gets the date and time the object was updated in ISO 8601 format.
  * @method string|null          get_url()                Gets the URL of the object.
  *
