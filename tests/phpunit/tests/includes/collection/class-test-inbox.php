@@ -75,7 +75,6 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
 		$this->assertEquals( 'https://remote.example.com/users/testuser', $remote_actor_meta );
 
-		// Test activitypub_content_visibility meta.
 		// Activities with no recipients are treated as public.
 		$visibility_meta = \get_post_meta( $inbox_id, 'activitypub_content_visibility', true );
 		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $visibility_meta );
