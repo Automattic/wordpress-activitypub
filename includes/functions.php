@@ -588,6 +588,12 @@ function get_activity_visibility( $activity ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
 	}
 
+	// Activities with no recipients are treated as public.
+	$recipients = extract_recipients_from_activity( $activity );
+	if ( empty( $recipients ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+	}
+
 	return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 }
 
