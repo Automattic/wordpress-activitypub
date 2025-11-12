@@ -856,9 +856,9 @@ class Test_Inbox extends \WP_UnitTestCase {
 			)
 		);
 		$this->assertEquals( 2, $count_second, 'Should still have two posts with second-activity GUID (not deduplicated)' );
-  }
-  
-  /**
+	}
+
+	/**
 	 * Test adding Like activity with trailing slash in object URL.
 	 *
 	 * This test verifies that Like activities from Pixelfed and other platforms
