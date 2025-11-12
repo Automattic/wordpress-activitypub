@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Interactions;
+use Activitypub\Comment;
 
 /**
  * Test class for Activitypub Interactions.
@@ -883,5 +884,109 @@ class Test_Interactions extends \WP_UnitTestCase {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Test that announcements (boosts) of local comments are filtered out.
+	 *
+	 * @covers ::add_reaction
+	 */
+	public function test_add_reaction_filters_local_comment_announcement() {
+		// Create a local comment on a post.
+		$local_comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'      => self::$post_id,
+				'comment_author'       => 'Local User',
+				'comment_author_email' => 'local@example.com',
+				'comment_content'      => 'This is a local comment',
+				'comment_type'         => 'comment',
+				'comment_approved'     => 1,
+			)
+		);
+		$this->assertIsInt( $local_comment_id, 'Local comment should be created' );
+
+		// Get the comment URL with the 'c' parameter that url_to_commentid expects.
+		$comment_url = add_query_arg( 'c', $local_comment_id, self::$post_permalink );
+
+		// Create an announcement (boost) activity for this local comment.
+		$activity = array(
+			'type'   => 'Announce',
+			'actor'  => 'https://example.com/users/remote-user',
+			'object' => $comment_url,
+			'id'     => 'https://example.com/activities/announce/local-comment',
+		);
+
+		// Mock actor metadata for the remote user.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Remote User',
+					'preferredUsername' => 'remote',
+					'id'                => 'https://example.com/users/remote-user',
+					'url'               => 'https://example.com/@remote',
+				);
+			}
+		);
+
+		// Try to add the announcement as a reaction.
+		$result = Interactions::add_reaction( $activity );
+
+		// The result should be false because we're filtering out announcements of local comments.
+		$this->assertFalse( $result, 'Announcement of local comment should be filtered out' );
+
+		// Verify that no repost comment was created.
+		$args    = array(
+			'post_id' => self::$post_id,
+			'type'    => 'repost',
+			'status'  => 'all',
+		);
+		$reposts = get_comments( $args );
+
+		// Filter out any reposts that might be from other tests.
+		$reposts = array_filter(
+			$reposts,
+			function ( $comment ) use ( $activity ) {
+				$source_id = get_comment_meta( $comment->comment_ID, 'source_id', true );
+				return $source_id === $activity['id'];
+			}
+		);
+
+		$this->assertEmpty( $reposts, 'No repost comment should be created for local comment announcement' );
+
+		// Now test that remote comment announcements still work.
+		// Create an announcement for a remote comment URL.
+		$remote_activity = array(
+			'type'   => 'Announce',
+			'actor'  => 'https://example.com/users/remote-user',
+			'object' => 'https://remote.example.com/comments/123',
+			'id'     => 'https://example.com/activities/announce/remote-comment',
+		);
+
+		// This should return false because it's not a local post/comment.
+		$remote_result = Interactions::add_reaction( $remote_activity );
+		$this->assertFalse( $remote_result, 'Announcement of non-existent remote comment should return false' );
+
+		// Test announcement of a local post (should work).
+		$post_activity = array(
+			'type'   => 'Announce',
+			'actor'  => 'https://example.com/users/remote-user',
+			'object' => self::$post_permalink,
+			'id'     => 'https://example.com/activities/announce/post',
+		);
+
+		// Enable reposts for this test.
+		\update_option( 'activitypub_allow_reposts', true );
+
+		$post_result = Interactions::add_reaction( $post_activity );
+		$this->assertNotFalse( $post_result, 'Announcement of local post should be allowed' );
+
+		// Clean up.
+		\delete_option( 'activitypub_allow_reposts' );
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		wp_delete_comment( $local_comment_id, true );
+		if ( $post_result && ! is_wp_error( $post_result ) ) {
+			wp_delete_comment( $post_result, true );
+		}
 	}
 }
