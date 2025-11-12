@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Improved date handling in the scheduler for greater consistency and reliability, aligning inbox purge logic with the existing outbox purge implementation.
+Made inbox cleanup more reliable and ensuring deduplication only affects the specific activity being removed.
