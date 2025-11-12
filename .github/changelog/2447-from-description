@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Made inbox cleanup more reliable and ensuring deduplication only affects the specific activity being removed.
