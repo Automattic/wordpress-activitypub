@@ -96,6 +96,15 @@ class Interactions {
 		$comment_post_id   = \url_to_postid( $url );
 		$parent_comment_id = url_to_commentid( $url );
 
+		// Skip reactions to local comments since we don't support reactions on comments yet.
+		if ( $parent_comment_id ) {
+			$comment = \get_comment( $parent_comment_id );
+			if ( $comment && Comment::is_local( $comment ) ) {
+				// This is a reaction to a local comment, skip processing.
+				return false;
+			}
+		}
+
 		if ( ! $comment_post_id && $parent_comment_id ) {
 			$parent_comment  = \get_comment( $parent_comment_id );
 			$comment_post_id = $parent_comment->comment_post_ID;
