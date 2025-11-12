@@ -334,7 +334,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		$this->assertCount( count( $followers ), $followers_after, 'Follower count should not change on duplicate follow' );
 
 		// Clean up.
-		_delete_all_posts();
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_callback );
 		\remove_action( 'activitypub_handled_follow', $test_callback, 10 );
 	}
