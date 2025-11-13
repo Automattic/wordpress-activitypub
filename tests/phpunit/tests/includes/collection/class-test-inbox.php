@@ -936,7 +936,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$create_activity->set_id( 'https://remote.example.com/activities/private-create' );
 		$create_activity->set_type( 'Create' );
 		$create_activity->set_actor( 'https://remote.example.com/users/testuser' );
-		$create_activity->set_to( array( 'https://example.com/users/1' ) ); // Private (not public).
+		$create_activity->set_to( array( 'https://example.com/users/1' ) ); // Private.
 
 		$object = new Base_Object();
 		$object->set_id( 'https://remote.example.com/objects/private-create' );
@@ -953,7 +953,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$update_activity->set_id( 'https://remote.example.com/activities/private-update' );
 		$update_activity->set_type( 'Update' );
 		$update_activity->set_actor( 'https://remote.example.com/users/testuser' );
-		$update_activity->set_to( array( 'https://example.com/users/1' ) ); // Private (not public).
+		$update_activity->set_to( array( 'https://example.com/users/1' ) ); // Private.
 
 		$object2 = new Base_Object();
 		$object2->set_id( 'https://remote.example.com/objects/private-update' );
