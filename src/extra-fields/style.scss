@@ -3,9 +3,11 @@
  */
 
 .activitypub-extra-fields-block-wrapper {
-	// Add padding to content when background or border is set (default and compact styles)
+	// Add padding to content when background or border is set (stacked and compact styles)
 	&.has-background .activitypub-extra-fields,
-	&.has-border .activitypub-extra-fields {
+	&.has-border .activitypub-extra-fields,
+	&.is-style-stacked.has-background .activitypub-extra-fields,
+	&.is-style-stacked.has-border .activitypub-extra-fields {
 		padding: 1rem;
 	}
 
@@ -22,6 +24,10 @@
 	list-style: none;
 }
 
+/**
+ * Stacked Style (also default fallback)
+ * Displays fields in a stacked format with label on top and value below.
+ */
 .activitypub-extra-field {
 	margin-bottom: 1em;
 

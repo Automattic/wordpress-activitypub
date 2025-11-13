@@ -39,13 +39,13 @@
   },
   "styles": [
     {
-      "name": "default",
-      "label": "Default",
+      "name": "compact",
+      "label": "Compact",
       "isDefault": true
     },
     {
-      "name": "compact",
-      "label": "Compact"
+      "name": "stacked",
+      "label": "Stacked"
     },
     {
       "name": "cards",
