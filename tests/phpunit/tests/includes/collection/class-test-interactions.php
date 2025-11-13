@@ -8,7 +8,9 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Interactions;
-use Activitypub\Comment;
+use Activitypub\Collection\Remote_Actors;
+
+use function Activitypub\object_id_to_comment;
 
 /**
  * Test class for Activitypub Interactions.
@@ -55,7 +57,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create(
@@ -164,7 +166,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 				'id'        => $id,
 				'url'       => 'https://example.com/example',
 				'inReplyTo' => self::$post_permalink,
-				'content'   => 'Hello<br />example<p>example</p><img src="https://example.com/image.jpg" />',
+				'content'   => 'Hello<br />example<p>example</p><img src="https://example.com/image.jpg" alt="" />',
 			),
 		);
 	}
@@ -214,7 +216,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 			'inbox'             => 'https://example.com/inbox',
 		);
 
-		$remote_actor_id = \Activitypub\Collection\Remote_Actors::upsert( $actor_data );
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
 		// Create a comment from this actor.
@@ -229,7 +231,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( $remote_actor_id, $stored_actor_id );
 
 		// Verify avatar URL is stored on the remote actor.
-		$avatar_url = \Activitypub\Collection\Remote_Actors::get_avatar_url( $remote_actor_id );
+		$avatar_url = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/avatar.jpg', $avatar_url );
 
 		// Clean up.
@@ -282,7 +284,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$object = $this->create_test_object( 'https://example.com/test_convert_object_to_comment_already_exists_rejected' );
 		Interactions::add_comment( $object );
 		$converted = Interactions::add_comment( $object );
-		$this->assertEquals( $converted->get_error_code(), 'comment_duplicate' );
+		$this->assertEquals( 'comment_duplicate', $converted->get_error_code() );
 	}
 
 	/**
@@ -294,7 +296,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$id     = 'https://example.com/test_convert_object_to_comment_reply_to_comment';
 		$object = $this->create_test_object( $id );
 		Interactions::add_comment( $object );
-		$comment = \Activitypub\object_id_to_comment( $id );
+		$comment = object_id_to_comment( $id );
 
 		$object['object']['inReplyTo'] = $id;
 		$object['object']['id']        = 'https://example.com/234';
@@ -327,7 +329,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$id     = 'https://example.com/test_handle_create_basic';
 		$object = $this->create_test_object( $id );
 		Interactions::add_comment( $object );
-		$comment = \Activitypub\object_id_to_comment( $id );
+		$comment = object_id_to_comment( $id );
 		$this->assertInstanceOf( \WP_Comment::class, $comment );
 	}
 
@@ -343,12 +345,12 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$object['object']['url'] = $url;
 
 		Interactions::add_comment( $object );
-		$comment      = \Activitypub\object_id_to_comment( $id );
+		$comment      = object_id_to_comment( $id );
 		$interactions = Interactions::get_by_id( $id );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
 
-		$comment      = \Activitypub\object_id_to_comment( $id );
+		$comment      = object_id_to_comment( $id );
 		$interactions = Interactions::get_by_id( $url );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
@@ -375,7 +377,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 			'url'               => $actor_url,
 		);
 
-		$remote_actor_id = \Activitypub\Collection\Remote_Actors::upsert( $actor_data );
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
 		// Add a filter to return proper metadata for this specific actor.
@@ -508,7 +510,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 			'url'               => $actor_url,
 		);
 
-		$remote_actor_id = \Activitypub\Collection\Remote_Actors::upsert( $actor_data );
+		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 
 		// Add metadata filter.
 		add_filter(
