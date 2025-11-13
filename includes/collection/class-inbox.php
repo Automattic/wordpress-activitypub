@@ -83,6 +83,17 @@ class Inbox {
 		$title      = self::get_object_title( $activity->get_object() );
 		$visibility = is_activity_public( $activity ) ? ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC : ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 
+		/*
+		 * For activities with an 'instrument' property (e.g., QuoteRequest), we store
+		 * the instrument URL as the object_id. This allows efficient querying by instrument.
+		 * For all other activities, we store the object URL as before.
+		 */
+		if ( $activity->has( 'instrument' ) && $activity->get_instrument() ) {
+			$object_id = object_to_uri( $activity->get_instrument() );
+		} else {
+			$object_id = object_to_uri( $activity->get_object() );
+		}
+
 		$inbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
@@ -96,7 +107,7 @@ class Inbox {
 			'post_status'  => 'publish',
 			'guid'         => $activity->get_id(),
 			'meta_input'   => array(
-				'_activitypub_object_id'             => object_to_uri( $activity->get_object() ),
+				'_activitypub_object_id'             => $object_id,
 				'_activitypub_activity_type'         => $activity->get_type(),
 				'_activitypub_activity_remote_actor' => object_to_uri( $activity->get_actor() ),
 				'activitypub_content_visibility'     => $visibility,
@@ -369,6 +380,50 @@ class Inbox {
 		}
 
 		return $post;
+	}
+
+	/**
+	 * Get an inbox item by activity type and object ID.
+	 *
+	 * This is useful for finding specific activity types (like QuoteRequest)
+	 * by their object identifier. For QuoteRequest activities, the object_id
+	 * is the instrument URL (the quote post).
+	 *
+	 * @param string $activity_type The activity type (e.g., 'QuoteRequest').
+	 * @param string $object_id     The object identifier to search for.
+	 *
+	 * @return \WP_Post|\WP_Error The inbox item or WP_Error if not found.
+	 */
+	public static function get_by_type_and_object( $activity_type, $object_id ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT p.ID
+				FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} pm1 ON p.ID = pm1.post_id AND pm1.meta_key = '_activitypub_activity_type'
+				INNER JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_activitypub_object_id'
+				WHERE p.post_type = %s
+				AND pm1.meta_value = %s
+				AND pm2.meta_value = %s
+				ORDER BY p.ID DESC
+				LIMIT 1",
+				self::POST_TYPE,
+				$activity_type,
+				$object_id
+			)
+		);
+
+		if ( ! $post_id ) {
+			return new \WP_Error(
+				'activitypub_inbox_item_not_found',
+				\__( 'Inbox item not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return \get_post( $post_id );
 	}
 
 	/**
