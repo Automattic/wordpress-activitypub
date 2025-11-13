@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Moved default visibility handling from the server to the editor UI, ensuring consistent and flexible ActivityPub visibility settings across both block and classic editors.

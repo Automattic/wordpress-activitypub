@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Improved inbox performance by batching and deduplicating activities, reducing redundant processing and improving handling during high activity periods.

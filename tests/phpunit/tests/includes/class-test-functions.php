@@ -1003,7 +1003,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 						'monkey' => 'https://www.w3.org/ns/activitystreams#Public',
 					),
 				),
-				false,
+				true,
 			),
 			array(
 				array(
@@ -1334,13 +1334,13 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
 				'description' => 'Public visibility via as:Public identifier',
 			),
-			// Empty activity.
+			// Empty activity - no recipients means public.
 			array(
 				'activity'    => array(
 					'type' => 'Create',
 				),
-				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
-				'description' => 'Empty activity defaults to private',
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				'description' => 'Empty activity (no recipients) is treated as public',
 			),
 		);
 	}

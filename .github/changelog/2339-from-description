@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Added a safeguard to ensure the plugin works correctly even when no post types are selected.

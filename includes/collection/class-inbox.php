@@ -382,26 +382,30 @@ class Inbox {
 	 * @return \WP_Post|false The primary inbox post, or false if no posts found.
 	 */
 	public static function deduplicate( $guid ) {
-		$duplicates = \get_posts(
-			array(
-				'post_type'      => self::POST_TYPE,
-				'guid'           => $guid,
-				'posts_per_page' => -1,
-				'post_status'    => 'any',
+		global $wpdb;
+
+		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
+		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE guid=%s AND post_type=%s ORDER BY ID ASC",
+				\esc_url( $guid ),
+				self::POST_TYPE
 			)
 		);
 
-		if ( empty( $duplicates ) ) {
+		if ( empty( $post_ids ) ) {
 			return false;
 		}
 
-		// Keep the first post, all others are duplicates.
-		$primary = array_shift( $duplicates );
+		// Keep the first (oldest) post as primary.
+		$primary_id = array_shift( $post_ids );
+		$primary    = \get_post( $primary_id );
 
-		foreach ( $duplicates as $duplicate ) {
-			$recipients = \get_post_meta( $duplicate->ID, '_activitypub_user_id', false );
-			self::add_recipients( $primary->ID, $recipients );
-			\wp_delete_post( $duplicate->ID, true );
+		// Merge recipients from duplicates into primary and delete duplicates.
+		foreach ( $post_ids as $duplicate_id ) {
+			$recipients = \get_post_meta( $duplicate_id, '_activitypub_user_id', false );
+			self::add_recipients( $primary_id, $recipients );
+			\wp_delete_post( $duplicate_id, true );
 		}
 
 		return $primary;

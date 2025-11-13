@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Refactored activity handling to support multiple recipients per activity, allowing posts and interactions to be linked to several local users at once.
