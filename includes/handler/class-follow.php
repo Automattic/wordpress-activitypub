@@ -43,19 +43,21 @@ class Follow {
 
 		// Check if the actor already follows the user.
 		$already_following = false;
-		$existing_actor    = Remote_Actors::get_by_uri( $activity['actor'] );
-		if ( ! \is_wp_error( $existing_actor ) ) {
-			$already_following = Followers::follows( $existing_actor->ID, $user_id );
+		$remote_actor      = Remote_Actors::get_by_uri( $activity['actor'] );
+		if ( ! \is_wp_error( $remote_actor ) ) {
+			$already_following = Followers::follows( $remote_actor->ID, $user_id );
 		}
 
-		// Save follower.
-		$remote_actor = Followers::add( $user_id, $activity['actor'] );
+		// Save follower if not already following.
+		if ( $already_following ) {
+			$success = false;
+		} else {
+			$remote_actor = Followers::add( $user_id, $activity['actor'] );
+			$success      = ! \is_wp_error( $remote_actor );
 
-		// Set success to false if they were already following (to prevent duplicate notifications).
-		$success = ! \is_wp_error( $remote_actor ) && ! $already_following;
-
-		if ( ! \is_wp_error( $remote_actor ) ) {
-			$remote_actor = \get_post( $remote_actor );
+			if ( $success ) {
+				$remote_actor = \get_post( $remote_actor );
+			}
 		}
 
 		/**
