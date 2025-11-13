@@ -75,9 +75,9 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
 		$this->assertEquals( 'https://remote.example.com/users/testuser', $remote_actor_meta );
 
-		// Test activitypub_content_visibility meta.
+		// Activities with no recipients are treated as public.
 		$visibility_meta = \get_post_meta( $inbox_id, 'activitypub_content_visibility', true );
-		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility_meta );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $visibility_meta );
 	}
 
 	/**
@@ -722,5 +722,195 @@ class Test_Inbox extends \WP_UnitTestCase {
 	public function test_deduplicate_non_existent() {
 		$result = Inbox::deduplicate( 'https://remote.example.com/activities/non-existent' );
 		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test that deduplicate only processes posts with matching GUID.
+	 *
+	 * This test verifies that deduplicate() properly filters by GUID and doesn't
+	 * accidentally process all inbox posts.
+	 *
+	 * @covers ::deduplicate
+	 */
+	public function test_deduplicate_only_matches_specific_guid() {
+		$activity1 = new Activity();
+		$activity1->set_id( 'https://remote.example.com/activities/first-activity' );
+		$activity1->set_type( 'Create' );
+		$activity1->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object1 = new Base_Object();
+		$object1->set_id( 'https://remote.example.com/objects/first' );
+		$object1->set_type( 'Note' );
+		$activity1->set_object( $object1 );
+
+		$activity2 = new Activity();
+		$activity2->set_id( 'https://remote.example.com/activities/second-activity' );
+		$activity2->set_type( 'Like' );
+		$activity2->set_actor( 'https://remote.example.com/users/testuser' );
+		$activity2->set_object( 'https://example.com/post/123' );
+
+		// Create multiple posts with GUID 'first-activity' (duplicates).
+		$inbox_id_1a = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity1->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/first-activity',
+			)
+		);
+		\add_post_meta( $inbox_id_1a, '_activitypub_user_id', 1 );
+
+		$inbox_id_1b = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity1->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/first-activity',
+			)
+		);
+		\add_post_meta( $inbox_id_1b, '_activitypub_user_id', 2 );
+
+		$inbox_id_1c = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity1->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/first-activity',
+			)
+		);
+		\add_post_meta( $inbox_id_1c, '_activitypub_user_id', 3 );
+
+		// Create posts with DIFFERENT GUID 'second-activity' (should NOT be touched).
+		$inbox_id_2a = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity2->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/second-activity',
+			)
+		);
+		\add_post_meta( $inbox_id_2a, '_activitypub_user_id', 4 );
+
+		$inbox_id_2b = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity2->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/second-activity',
+			)
+		);
+		\add_post_meta( $inbox_id_2b, '_activitypub_user_id', 5 );
+
+		// Run deduplication for first-activity only.
+		$result = Inbox::deduplicate( 'https://remote.example.com/activities/first-activity' );
+
+		// Verify correct post was returned.
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( $inbox_id_1a, $result->ID, 'Should return the first (oldest) post with matching GUID' );
+
+		// Verify recipients were merged from duplicates.
+		$recipients = Inbox::get_recipients( $inbox_id_1a );
+		$this->assertCount( 3, $recipients, 'Should have all recipients from first-activity duplicates' );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+		$this->assertContains( 3, $recipients );
+
+		// Verify duplicates of first-activity were deleted.
+		$this->assertNull( \get_post( $inbox_id_1b ), 'Duplicate 1b should be deleted' );
+		$this->assertNull( \get_post( $inbox_id_1c ), 'Duplicate 1c should be deleted' );
+
+		// CRITICAL: Verify second-activity posts were NOT touched.
+		$post_2a = \get_post( $inbox_id_2a );
+		$post_2b = \get_post( $inbox_id_2b );
+		$this->assertInstanceOf( 'WP_Post', $post_2a, 'second-activity post 2a should still exist' );
+		$this->assertInstanceOf( 'WP_Post', $post_2b, 'second-activity post 2b should still exist' );
+
+		// Verify second-activity posts still have only their original recipients.
+		$recipients_2a = Inbox::get_recipients( $inbox_id_2a );
+		$recipients_2b = Inbox::get_recipients( $inbox_id_2b );
+		$this->assertCount( 1, $recipients_2a, 'second-activity 2a should have only its original recipient' );
+		$this->assertCount( 1, $recipients_2b, 'second-activity 2b should have only its original recipient' );
+		$this->assertContains( 4, $recipients_2a );
+		$this->assertContains( 5, $recipients_2b );
+
+		// Verify only one post exists with first-activity GUID.
+		// Note: get_posts() doesn't support 'guid' parameter, so we use direct SQL query.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count_first = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				\esc_url( 'https://remote.example.com/activities/first-activity' ),
+				Inbox::POST_TYPE
+			)
+		);
+		$this->assertEquals( 1, $count_first, 'Should have exactly one post with first-activity GUID' );
+
+		// Verify two posts still exist with second-activity GUID.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count_second = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				\esc_url( 'https://remote.example.com/activities/second-activity' ),
+				Inbox::POST_TYPE
+			)
+		);
+		$this->assertEquals( 2, $count_second, 'Should still have two posts with second-activity GUID (not deduplicated)' );
+	}
+
+	/**
+	 * Test adding Like activity with trailing slash in object URL.
+	 *
+	 * This test verifies that Like activities from Pixelfed and other platforms
+	 * that include trailing slashes in object URLs are stored correctly in the inbox.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_like_activity_with_trailing_slash() {
+		// Create a post to be liked.
+		$post_id        = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Like',
+				'post_content' => 'Test content',
+				'post_status'  => 'publish',
+			)
+		);
+		$post_permalink = \get_permalink( $post_id );
+
+		// Create a Like activity with trailing slash in object URL (as Pixelfed sends).
+		$activity = new Activity();
+		$activity->set_id( 'https://pixelfed.social/users/pfefferle#likes/30434186' );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://pixelfed.social/users/pfefferle' );
+		$activity->set_object( $post_permalink . '/' ); // Add trailing slash.
+
+		$user_id = 1;
+
+		// Add activity to inbox.
+		$inbox_id = Inbox::add( $activity, $user_id );
+
+		$this->assertIsInt( $inbox_id );
+		$this->assertGreaterThan( 0, $inbox_id );
+
+		// Verify the post was created.
+		$post = \get_post( $inbox_id );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( Inbox::POST_TYPE, $post->post_type );
+
+		// Test _activitypub_object_id meta - should preserve the trailing slash as-is.
+		$object_id_meta = \get_post_meta( $inbox_id, '_activitypub_object_id', true );
+		$this->assertEquals( $post_permalink . '/', $object_id_meta );
+
+		// Test _activitypub_activity_type meta.
+		$activity_type_meta = \get_post_meta( $inbox_id, '_activitypub_activity_type', true );
+		$this->assertEquals( 'Like', $activity_type_meta );
+
+		// Test _activitypub_user_id meta.
+		$user_id_meta = \get_post_meta( $inbox_id, '_activitypub_user_id', true );
+		$this->assertEquals( $user_id, $user_id_meta );
+
+		// Test _activitypub_activity_remote_actor meta.
+		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
+		$this->assertEquals( 'https://pixelfed.social/users/pfefferle', $remote_actor_meta );
 	}
 }

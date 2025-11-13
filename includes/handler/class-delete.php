@@ -12,7 +12,6 @@ use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Tombstone;
 
-use function Activitypub\is_activity_reply;
 use function Activitypub\object_to_uri;
 
 /**
@@ -104,10 +103,9 @@ class Delete {
 	 * @param int|int[] $user_ids The user ID(s).
 	 */
 	public static function delete_object( $activity, $user_ids ) {
-		// Check for private and/or direct messages.
-		if ( is_activity_reply( $activity ) ) {
-			$result = self::maybe_delete_interaction( $activity );
-		} else {
+		$result = self::maybe_delete_interaction( $activity );
+
+		if ( ! $result ) {
 			$result = self::maybe_delete_post( $activity );
 		}
 
@@ -248,12 +246,7 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_interaction( $activity ) {
-		if ( is_array( $activity['object'] ) ) {
-			$id = $activity['object']['id'];
-		} else {
-			$id = $activity['object'];
-		}
-
+		$id       = object_to_uri( $activity['object'] );
 		$comments = Interactions::get_by_id( $id );
 
 		if ( $comments && Tombstone::exists( $id ) ) {

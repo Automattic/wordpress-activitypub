@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Added support for the latest NodeInfo (FEP-0151), with improved federation details, staff info, and software metadata for better ActivityPub compliance.

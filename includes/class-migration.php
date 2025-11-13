@@ -210,7 +210,7 @@ class Migration {
 			self::sync_jetpack_following_meta();
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '7.6.0', '<' ) ) {
 			self::clean_up_inbox();
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
 		}

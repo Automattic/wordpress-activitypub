@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Improved Classic Editor integration by adding better media handling and full test coverage for attachments, permissions, and metadata.

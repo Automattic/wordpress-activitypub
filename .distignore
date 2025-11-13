@@ -46,5 +46,6 @@ README.md
 readme.md
 SECURITY.md
 src
+tsconfig.json
 tests
 vendor

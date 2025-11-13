@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Improved actor resolution by prioritizing blog actor detection before remote actor checks and refining home page URL handling.
