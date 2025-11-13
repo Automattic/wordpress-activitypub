@@ -3,9 +3,9 @@
 	"name": "activitypub/extra-fields",
 	"apiVersion": 3,
 	"version": "1.0.0",
-	"title": "Fediverse Profile Fields",
+	"title": "Fediverse Extra Fields",
 	"category": "widgets",
-	"description": "Display extra profile fields from ActivityPub user profiles",
+	"description": "Display extra fields from ActivityPub user profiles",
 	"textdomain": "activitypub",
 	"icon": "list-view",
 	"supports": {

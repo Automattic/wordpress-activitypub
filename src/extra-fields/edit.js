@@ -16,10 +16,10 @@ import { useUserOptions } from '../shared/use-user-options';
 /**
  * Editor component for Extra Fields block.
  *
- * @param {Object} props               Component props.
- * @param {Object} props.attributes    Block attributes.
+ * @param {Object}   props              Component props.
+ * @param {Object}   props.attributes   Block attributes.
  * @param {Function} props.setAttributes Function to set attributes.
- * @param {Object} props.context       Block context.
+ * @param {Object}   props.context      Block context.
  * @return {Element} Component element.
  */
 export default function Edit( { attributes, setAttributes, context } ) {
@@ -28,10 +28,6 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	const [ fields, setFields ] = useState( [] );
 	const [ isLoading, setIsLoading ] = useState( false );
 	const [ error, setError ] = useState( null );
-
-	const blockProps = useBlockProps( {
-		className: 'activitypub-extra-fields-block-wrapper',
-	} );
 
 	// Get author ID from context or current post depending on editor.
 	const authorId = useSelect(
@@ -61,11 +57,6 @@ export default function Edit( { attributes, setAttributes, context } ) {
 		[ contextPostId, contextPostType ]
 	);
 
-	// Get user options for dropdown
-	const userOptions = useUserOptions( {
-		withInherit: true,
-	} );
-
 	// Determine which user ID to fetch
 	const getUserId = () => {
 		if ( selectedUser === 'blog' ) {
@@ -83,6 +74,15 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	};
 
 	const userId = getUserId();
+
+	const blockProps = useBlockProps( {
+		className: 'activitypub-extra-fields-block-wrapper',
+	} );
+
+	// Get user options for dropdown
+	const userOptions = useUserOptions( {
+		withInherit: true,
+	} );
 
 	// Fetch extra fields
 	useEffect( () => {
@@ -169,7 +169,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 			<>
 				{ settingsPanel }
 				<div { ...blockProps }>
-					<Placeholder label={ __( 'Fediverse Profile Fields', 'activitypub' ) } icon="list-view">
+					<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) } icon="list-view">
 						<p>
 							{ __(
 								'This block will display extra fields based on the post author when published.',
@@ -186,7 +186,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	if ( isLoading ) {
 		return (
 			<div { ...blockProps }>
-				<Placeholder label={ __( 'Fediverse Profile Fields', 'activitypub' ) } icon="list-view">
+				<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) } icon="list-view">
 					<Spinner />
 				</Placeholder>
 			</div>
@@ -197,7 +197,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	if ( error ) {
 		return (
 			<div { ...blockProps }>
-				<Placeholder label={ __( 'Fediverse Profile Fields', 'activitypub' ) } icon="list-view">
+				<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) } icon="list-view">
 					<p>
 						{ __( 'Error loading extra fields:', 'activitypub' ) } { error }
 					</p>
@@ -212,7 +212,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 			<>
 				{ settingsPanel }
 				<div { ...blockProps }>
-					<Placeholder label={ __( 'Fediverse Profile Fields', 'activitypub' ) } icon="list-view">
+					<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) } icon="list-view">
 						<p>{ __( 'No extra fields found. Add fields in your profile settings.', 'activitypub' ) }</p>
 					</Placeholder>
 				</div>
@@ -225,7 +225,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 			{ settingsPanel }
 			<div { ...blockProps }>
 				<dl className="activitypub-extra-fields">
-					{ displayFields.map( ( field, index ) => (
+					{ displayFields.map( ( field ) => (
 						<div
 							key={ `${ field.name }-${ field.value }` }
 							className="activitypub-extra-field"
