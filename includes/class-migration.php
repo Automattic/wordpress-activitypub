@@ -11,6 +11,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory;
@@ -213,6 +214,10 @@ class Migration {
 		if ( \version_compare( $version_from_db, '7.6.0', '<' ) ) {
 			self::clean_up_inbox();
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
+		}
+
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::update_inbox_post_status();
 		}
 
 		// Ensure all required cron schedules are registered.
@@ -1154,5 +1159,41 @@ class Migration {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Update ap_inbox post_status for private Create and Update activities.
+	 *
+	 * Sets post_status to 'private' for existing Create and Update activities that have private visibility
+	 * to prevent them from being publicly accessible via the REST API.
+	 */
+	private static function update_inbox_post_status() {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery
+		$inbox_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT p.ID
+				FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} pm1 ON p.ID = pm1.post_id AND pm1.meta_key = '_activitypub_activity_type'
+				INNER JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = 'activitypub_content_visibility'
+				WHERE p.post_type = %s
+				AND p.post_status = 'publish'
+				AND pm1.meta_value IN ('Create', 'Update')
+				AND pm2.meta_value = 'private'",
+				Inbox::POST_TYPE
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery
+
+		// Update each matching post to have 'private' status.
+		foreach ( $inbox_ids as $post_id ) {
+			\wp_update_post(
+				array(
+					'ID'          => $post_id,
+					'post_status' => 'private',
+				)
+			);
+		}
 	}
 }

@@ -106,9 +106,16 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertIsInt( $inbox_id );
 
+		// Verify the post was created.
+		$post = \get_post( $inbox_id );
+		$this->assertInstanceOf( 'WP_Post', $post );
+
 		// Test visibility is set to private.
 		$visibility_meta = \get_post_meta( $inbox_id, 'activitypub_content_visibility', true );
 		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility_meta );
+
+		// Test post status is set to private for Create activities.
+		$this->assertEquals( 'private', $post->post_status );
 	}
 
 	/**
@@ -912,5 +919,117 @@ class Test_Inbox extends \WP_UnitTestCase {
 		// Test _activitypub_activity_remote_actor meta.
 		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
 		$this->assertEquals( 'https://pixelfed.social/users/pfefferle', $remote_actor_meta );
+	}
+
+	/**
+	 * Test post_status for private Create and Update activities.
+	 *
+	 * Verifies that private Create and Update activities get 'private' post_status
+	 * to prevent them from being publicly accessible via REST API, while other
+	 * activity types remain 'publish' regardless of visibility.
+	 *
+	 * @covers ::add
+	 */
+	public function test_post_status_for_private_activities() {
+		// Test private Create activity - should have 'private' post_status.
+		$create_activity = new Activity();
+		$create_activity->set_id( 'https://remote.example.com/activities/private-create' );
+		$create_activity->set_type( 'Create' );
+		$create_activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$create_activity->set_to( array( 'https://example.com/users/1' ) ); // Private (not public).
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/private-create' );
+		$object->set_type( 'Note' );
+		$object->set_content( 'Private create content' );
+		$create_activity->set_object( $object );
+
+		$create_id   = Inbox::add( $create_activity, 1 );
+		$create_post = \get_post( $create_id );
+		$this->assertEquals( 'private', $create_post->post_status, 'Private Create activity should have private post_status' );
+
+		// Test private Update activity - should have 'private' post_status.
+		$update_activity = new Activity();
+		$update_activity->set_id( 'https://remote.example.com/activities/private-update' );
+		$update_activity->set_type( 'Update' );
+		$update_activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$update_activity->set_to( array( 'https://example.com/users/1' ) ); // Private (not public).
+
+		$object2 = new Base_Object();
+		$object2->set_id( 'https://remote.example.com/objects/private-update' );
+		$object2->set_type( 'Note' );
+		$object2->set_content( 'Private update content' );
+		$update_activity->set_object( $object2 );
+
+		$update_id   = Inbox::add( $update_activity, 1 );
+		$update_post = \get_post( $update_id );
+		$this->assertEquals( 'private', $update_post->post_status, 'Private Update activity should have private post_status' );
+
+		// Test private Follow activity - should remain 'publish' (not Create/Update).
+		$follow_activity = new Activity();
+		$follow_activity->set_id( 'https://remote.example.com/activities/private-follow' );
+		$follow_activity->set_type( 'Follow' );
+		$follow_activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$follow_activity->set_to( array( 'https://example.com/users/1' ) ); // Private.
+		$follow_activity->set_object( 'https://example.com/users/1' );
+
+		$follow_id   = Inbox::add( $follow_activity, 1 );
+		$follow_post = \get_post( $follow_id );
+		$this->assertEquals( 'publish', $follow_post->post_status, 'Private Follow activity should remain publish' );
+
+		// Test private Like activity - should remain 'publish' (not Create/Update).
+		$like_activity = new Activity();
+		$like_activity->set_id( 'https://remote.example.com/activities/private-like' );
+		$like_activity->set_type( 'Like' );
+		$like_activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$like_activity->set_to( array( 'https://example.com/users/1' ) ); // Private.
+		$like_activity->set_object( 'https://example.com/post/123' );
+
+		$like_id   = Inbox::add( $like_activity, 1 );
+		$like_post = \get_post( $like_id );
+		$this->assertEquals( 'publish', $like_post->post_status, 'Private Like activity should remain publish' );
+	}
+
+	/**
+	 * Test post_status for public Create and Update activities.
+	 *
+	 * Verifies that public Create and Update activities get 'publish' post_status.
+	 *
+	 * @covers ::add
+	 */
+	public function test_post_status_for_public_activities() {
+		// Test public Create activity - should have 'publish' post_status.
+		$create_activity = new Activity();
+		$create_activity->set_id( 'https://remote.example.com/activities/public-create' );
+		$create_activity->set_type( 'Create' );
+		$create_activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$create_activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) ); // Public.
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/public-create' );
+		$object->set_type( 'Note' );
+		$object->set_content( 'Public create content' );
+		$create_activity->set_object( $object );
+
+		$create_id   = Inbox::add( $create_activity, 1 );
+		$create_post = \get_post( $create_id );
+		$this->assertEquals( 'publish', $create_post->post_status, 'Public Create activity should have publish post_status' );
+
+		// Test public Update activity - should have 'publish' post_status.
+		$update_activity = new Activity();
+		$update_activity->set_id( 'https://remote.example.com/activities/public-update' );
+		$update_activity->set_type( 'Update' );
+		$update_activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$update_activity->set_cc( array( 'https://www.w3.org/ns/activitystreams#Public' ) ); // Quiet public.
+
+		$object2 = new Base_Object();
+		$object2->set_id( 'https://remote.example.com/objects/public-update' );
+		$object2->set_type( 'Note' );
+		$object2->set_content( 'Public update content' );
+		$update_activity->set_object( $object2 );
+
+		$update_id   = Inbox::add( $update_activity, 1 );
+		$update_post = \get_post( $update_id );
+		$this->assertEquals( 'publish', $update_post->post_status, 'Quiet public Update activity should have publish post_status' );
 	}
 }

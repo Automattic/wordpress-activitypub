@@ -83,21 +83,33 @@ class Inbox {
 		$title      = self::get_object_title( $activity->get_object() );
 		$visibility = is_activity_public( $activity ) ? ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC : ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 
+		/*
+		 * Determine post status based on activity type and visibility.
+		 *
+		 * For Create and Update activities, use 'private' status for private activities to prevent them from being
+		 * publicly accessible via REST API. All other activities use 'publish' status regardless of visibility.
+		 */
+		$activity_type = $activity->get_type();
+		$post_status   = 'publish';
+		if ( \in_array( $activity_type, array( 'Create', 'Update' ), true ) && ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ) {
+			$post_status = 'private';
+		}
+
 		$inbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
 				\__( '[%1$s] %2$s', 'activitypub' ),
-				$activity->get_type(),
+				$activity_type,
 				\wp_trim_words( $title, 5 )
 			),
 			'post_content' => wp_slash( $activity->to_json() ),
 			'post_author'  => 0, // No specific author, recipients stored in meta.
-			'post_status'  => 'publish',
+			'post_status'  => $post_status,
 			'guid'         => $activity->get_id(),
 			'meta_input'   => array(
 				'_activitypub_object_id'             => object_to_uri( $activity->get_object() ),
-				'_activitypub_activity_type'         => $activity->get_type(),
+				'_activitypub_activity_type'         => $activity_type,
 				'_activitypub_activity_remote_actor' => object_to_uri( $activity->get_actor() ),
 				'activitypub_content_visibility'     => $visibility,
 			),
