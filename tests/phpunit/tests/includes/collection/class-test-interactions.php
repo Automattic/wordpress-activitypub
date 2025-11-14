@@ -884,4 +884,59 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		return $response;
 	}
+
+	/**
+	 * Test add_comment with quote property.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::get_quote_url
+	 */
+	public function test_add_comment_with_quote_property() {
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'type'     => 'Note',
+				'id'       => 'https://example.com/note/456',
+				'content'  => '<p class="quote-inline">RE: <a href="' . self::$post_permalink . '">Post</a></p><p>Great post!</p>',
+				'quote'    => self::$post_permalink,
+				'quoteUri' => self::$post_permalink,
+			),
+		);
+
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10, 2 );
+
+		$comment_id = Interactions::add_comment( $activity );
+
+		$this->assertNotFalse( $comment_id );
+		$this->assertIsInt( $comment_id );
+
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( self::$post_id, $comment->comment_post_ID );
+		$this->assertStringContainsString( 'Great post!', $comment->comment_content );
+		$this->assertStringNotContainsString( 'quote-inline', $comment->comment_content );
+		$this->assertEquals( 'quote', $comment->comment_type, 'Comment type should be set to quote' );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+	}
+
+	/**
+	 * Mock actor metadata for testing.
+	 *
+	 * @param bool   $response The value to return.
+	 * @param string $url      The actor URL.
+	 *
+	 * @return array Actor metadata.
+	 */
+	public function mock_actor_metadata( $response, $url ) {
+		if ( 'https://example.com/users/testuser' === $url ) {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'testuser',
+				'id'                => 'https://example.com/users/testuser',
+				'url'               => 'https://example.com/@testuser',
+			);
+		}
+		return $response;
+	}
 }
