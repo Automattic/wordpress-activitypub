@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Simplified reply links by removing special handling for federated comments, making replies work the same for all comments where replying is allowed.
