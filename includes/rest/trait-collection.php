@@ -32,20 +32,14 @@ trait Collection {
 	 *
 	 * @param array            $response The collection response array.
 	 * @param \WP_REST_Request $request  The request object.
-	 * @param bool             $paged    Whether the collection is paged or not.
 	 *
 	 * @return array|\WP_Error The response array with navigation links or WP_Error on invalid page.
 	 */
-	public function prepare_collection_response( $response, $request, $paged = true ) {
+	public function prepare_collection_response( $response, $request ) {
 		// Set the JSON-LD context if not already set.
 		if ( empty( $response['@context'] ) ) {
 			// Ensure the context is the first element in the response.
 			$response = array( '@context' => $this->json_ld_context ) + $response;
-		}
-
-		// If this is not a paged collection, return early.
-		if ( ! $paged ) {
-			return $response;
 		}
 
 		$page      = $request->get_param( 'page' );
