@@ -1,9 +1,9 @@
 /**
  * WordPress dependencies
  */
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, SelectControl, RangeControl, Placeholder, Spinner } from '@wordpress/components';
+import { PanelBody, SelectControl, RangeControl, Placeholder, Spinner, Button } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { useState, useEffect } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
@@ -76,8 +76,11 @@ export default function Edit( { attributes, setAttributes, context } ) {
 
 	const userId = getUserId();
 
-	// Get ActivityPub options including namespace
-	const { namespace = 'activitypub/1.0' } = useOptions();
+	// Get ActivityPub options
+	const { namespace = 'activitypub/1.0', profileUrls = {} } = useOptions();
+
+	// Select profile settings URL based on user type
+	const profileUrl = selectedUser === 'blog' ? profileUrls.blog : profileUrls.user;
 
 	const blockProps = useBlockProps( {
 		className: 'activitypub-extra-fields-block-wrapper',
@@ -173,7 +176,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 			<>
 				{ settingsPanel }
 				<div { ...blockProps }>
-					<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) } icon="list-view">
+					<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) }>
 						<p>
 							{ __(
 								'This block will display extra fields based on the post author when published.',
@@ -190,7 +193,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	if ( isLoading ) {
 		return (
 			<div { ...blockProps }>
-				<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) } icon="list-view">
+				<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) }>
 					<Spinner />
 				</Placeholder>
 			</div>
@@ -201,9 +204,13 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	if ( error ) {
 		return (
 			<div { ...blockProps }>
-				<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) } icon="list-view">
+				<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) }>
 					<p>
-						{ __( 'Error loading extra fields:', 'activitypub' ) } { error }
+						{ sprintf(
+							/* translators: %s: Error message */
+							__( 'Error loading extra fields: %s', 'activitypub' ),
+							error
+						) }
 					</p>
 				</Placeholder>
 			</div>
@@ -216,8 +223,20 @@ export default function Edit( { attributes, setAttributes, context } ) {
 			<>
 				{ settingsPanel }
 				<div { ...blockProps }>
-					<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) } icon="list-view">
-						<p>{ __( 'No extra fields found. Add fields in your profile settings.', 'activitypub' ) }</p>
+					<Placeholder label={ __( 'Fediverse Extra Fields', 'activitypub' ) }>
+						<p>
+							{ __( 'No extra fields found.', 'activitypub' ) }{ ' ' }
+							{ profileUrl && (
+								<Button
+									variant="link"
+									onClick={ () => {
+										window.location.href = profileUrl;
+									} }
+								>
+									{ __( 'Add fields in your profile settings', 'activitypub' ) }
+								</Button>
+							) }
+						</p>
 					</Placeholder>
 				</div>
 			</>

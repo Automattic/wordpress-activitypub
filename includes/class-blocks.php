@@ -42,6 +42,10 @@ class Blocks {
 				'blog'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
+			'profileUrls'      => array(
+				'user' => \admin_url( 'profile.php#activitypub' ),
+				'blog' => \admin_url( 'options-general.php?page=activitypub&tab=blog-profile' ),
+			),
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
