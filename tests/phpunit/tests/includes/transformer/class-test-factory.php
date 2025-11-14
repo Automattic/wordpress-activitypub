@@ -267,4 +267,19 @@ class Test_Factory extends \WP_UnitTestCase {
 
 		\remove_filter( 'pre_http_request', $fake_request );
 	}
+
+	/**
+	 * Test get_transformer with WP_Error input.
+	 *
+	 * @covers ::get_transformer
+	 */
+	public function test_get_transformer_with_wp_error() {
+		$wp_error = new \WP_Error( 'test_error', 'Test error message' );
+		$result   = Factory::get_transformer( $wp_error );
+
+		// Should return the same WP_Error object.
+		$this->assertWPError( $result );
+		$this->assertEquals( 'test_error', $result->get_error_code() );
+		$this->assertEquals( 'Test error message', $result->get_error_message() );
+	}
 }

@@ -123,6 +123,36 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_activitypub_object_id doesn't fatal when queried object filter returns WP_Error.
+	 *
+	 * @covers ::get_activitypub_object_id
+	 */
+	public function test_get_activitypub_object_id_with_wp_error_from_queried_object_filter() {
+		// Mock a scenario where activitypub_queried_object filter returns WP_Error.
+		$filter_callback = function ( $queried_object ) {
+			// Return WP_Error to simulate an error condition.
+			if ( $queried_object instanceof \WP_Post ) {
+				return new \WP_Error( 'queried_object_error', 'Failed to process queried object' );
+			}
+			return $queried_object;
+		};
+		\add_filter( 'activitypub_queried_object', $filter_callback, 10, 1 );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( \get_permalink( self::$post_id ) );
+		$query = Query::get_instance();
+
+		// This should not cause a fatal error.
+		$result = $query->get_activitypub_object_id();
+
+		// Result should be null when queried object is error.
+		$this->assertNull( $result );
+
+		// Clean up filter.
+		\remove_filter( 'activitypub_queried_object', $filter_callback );
+	}
+
+	/**
 	 * Test get_queried_object method.
 	 *
 	 * @covers ::get_queried_object

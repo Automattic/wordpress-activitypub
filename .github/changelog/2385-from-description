@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix Following table error message to display user input instead of empty string when webfinger lookup fails.

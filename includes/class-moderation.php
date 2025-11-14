@@ -116,7 +116,7 @@ class Moderation {
 
 			case self::TYPE_DOMAIN:
 			case self::TYPE_KEYWORD:
-				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array();
 
 				if ( ! \in_array( $value, $blocks, true ) ) {
 					/**
@@ -152,7 +152,7 @@ class Moderation {
 
 			case self::TYPE_DOMAIN:
 			case self::TYPE_KEYWORD:
-				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array();
 				$key    = \array_search( $value, $blocks, true );
 
 				if ( false !== $key ) {
@@ -183,8 +183,8 @@ class Moderation {
 	public static function get_user_blocks( $user_id ) {
 		return array(
 			'actors'   => \wp_list_pluck( Blocked_Actors::get_many( $user_id ), 'guid' ),
-			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_DOMAIN ], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_KEYWORD ], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_DOMAIN ], true ) ?: array(),
+			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_KEYWORD ], true ) ?: array(),
 		);
 	}
 

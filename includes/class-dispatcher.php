@@ -22,7 +22,7 @@ class Dispatcher {
 	/**
 	 * Batch size.
 	 *
-	 * @deprecated unreleased Use {@see Dispatcher::get_batch_size()}.
+	 * @deprecated 7.6.0 Use {@see Dispatcher::get_batch_size()}.
 	 *
 	 * @var int
 	 */

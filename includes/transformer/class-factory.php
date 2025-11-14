@@ -27,6 +27,11 @@ class Factory {
 	 * @return Base|\WP_Error The transformer to use, or an error.
 	 */
 	public static function get_transformer( $data ) {
+		// Early return for WP_Error objects.
+		if ( \is_wp_error( $data ) ) {
+			return $data;
+		}
+
 		if ( \is_string( $data ) && \filter_var( $data, FILTER_VALIDATE_URL ) ) {
 			$response = Http::get_remote_object( $data );
 
