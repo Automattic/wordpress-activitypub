@@ -16,6 +16,13 @@ jest.mock( '@wordpress/api-fetch' );
 
 jest.mock( '@wordpress/i18n', () => ( {
 	__: ( text ) => text,
+	sprintf: ( format, ...args ) => {
+		let formatted = format;
+		args.forEach( ( arg, index ) => {
+			formatted = formatted.replace( /%s/, arg );
+		} );
+		return formatted;
+	},
 } ) );
 
 jest.mock( '@wordpress/block-editor', () => ( {
@@ -60,6 +67,11 @@ jest.mock( '@wordpress/components', () => ( {
 		</div>
 	),
 	Spinner: () => <div data-testid="spinner">Loading...</div>,
+	Button: ( { children, onClick, variant } ) => (
+		<button onClick={ onClick } data-variant={ variant }>
+			{ children }
+		</button>
+	),
 } ) );
 
 jest.mock( '../../shared/use-user-options', () => ( {
@@ -68,6 +80,16 @@ jest.mock( '../../shared/use-user-options', () => ( {
 		{ value: 'inherit', label: 'Inherit from post author' },
 		{ value: '1', label: 'Admin' },
 	] ),
+} ) );
+
+jest.mock( '../../shared/use-options', () => ( {
+	useOptions: jest.fn( () => ( {
+		namespace: 'activitypub/1.0',
+		profileUrls: {
+			user: '/wp-admin/profile.php#activitypub',
+			blog: '/wp-admin/options-general.php?page=activitypub&tab=blog-profile',
+		},
+	} ) ),
 } ) );
 
 // Suppress console warnings for testing
@@ -227,7 +249,8 @@ describe( 'Extra Fields Edit Component', () => {
 			expect( screen.getByTestId( 'placeholder' ) ).toBeTruthy();
 		} );
 
-		expect( screen.getByText( 'No extra fields found. Add fields in your profile settings.' ) ).toBeTruthy();
+		expect( screen.getByText( 'No extra fields found.' ) ).toBeTruthy();
+		expect( screen.getByText( 'Add fields in your profile settings' ) ).toBeTruthy();
 	} );
 
 	test( 'limits displayed fields when maxFields is set', async () => {
@@ -497,7 +520,8 @@ describe( 'Extra Fields Edit Component', () => {
 			expect( screen.getByTestId( 'placeholder' ) ).toBeTruthy();
 		} );
 
-		expect( screen.getByText( 'No extra fields found. Add fields in your profile settings.' ) ).toBeTruthy();
+		expect( screen.getByText( 'No extra fields found.' ) ).toBeTruthy();
+		expect( screen.getByText( 'Add fields in your profile settings' ) ).toBeTruthy();
 	} );
 
 	test( 'does not fetch when userId is null', () => {
