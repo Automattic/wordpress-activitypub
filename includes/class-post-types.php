@@ -351,11 +351,11 @@ class Post_Types {
 					'singular_name' => \_x( 'Post', 'post_type single name', 'activitypub' ),
 				),
 				'capabilities'        => array(
-					'create_posts' => false,
+					'activitypub' => true,
 				),
 				'map_meta_cap'        => true,
 				'public'              => false,
-				'show_in_rest'        => false,
+				'show_in_rest'        => true,
 				'rewrite'             => false,
 				'query_var'           => false,
 				'supports'            => array( 'title', 'editor', 'author', 'custom-fields', 'excerpt', 'comments' ),
