@@ -231,10 +231,8 @@ class Blocked_Actors extends \WP_List_Table {
 			$this->items[] = array(
 				'id'         => $blocked_actor_post->ID,
 				'icon'       => object_to_uri( $actor->get_icon() ?? ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg' ),
-				// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 				'post_title' => $actor->get_name() ?: $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
-				// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 				'url'        => object_to_uri( $actor->get_url() ?: $actor->get_id() ),
 				'webfinger'  => Remote_Actors::get_acct( $blocked_actor_post->ID ),
 				'identifier' => $actor->get_id(),

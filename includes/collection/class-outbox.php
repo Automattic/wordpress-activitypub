@@ -385,11 +385,9 @@ class Outbox {
 			return $post_id ? get_the_title( $post_id ) : '';
 		}
 
-		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		$title = $activity_object->get_name() ?: $activity_object->get_content();
 
 		if ( ! $title && $activity_object->get_object() instanceof Base_Object ) {
-			// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 			$title = $activity_object->get_object()->get_name() ?: $activity_object->get_object()->get_content();
 		}
 
