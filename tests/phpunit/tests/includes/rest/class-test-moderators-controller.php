@@ -65,7 +65,7 @@ class Test_Moderators_Controller extends \Activitypub\Tests\Test_REST_Controller
 		$this->assertEquals( array( 'https://www.w3.org/ns/activitystreams' ), $data['@context'] );
 		$this->assertArrayHasKey( 'id', $data );
 		$this->assertArrayHasKey( 'type', $data );
-		$this->assertEquals( 'OrderedCollection', $data['type'] ); // Moderators collection is not paged.
+		$this->assertEquals( 'OrderedCollection', $data['type'] );
 		$this->assertArrayHasKey( 'orderedItems', $data );
 		$this->assertIsArray( $data['orderedItems'] );
 
