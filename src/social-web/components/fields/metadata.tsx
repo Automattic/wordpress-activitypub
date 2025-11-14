@@ -1,8 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import type { Field } from '@wordpress/dataviews';
 import type { FeedPost } from '../../types';
-import { avatarFeedField } from './avatar-feed';
-import { nameFeedField } from './name-feed';
 
 export const metadataField: Field< FeedPost > = {
 	id: 'metadata',
@@ -15,6 +13,8 @@ export const metadataField: Field< FeedPost > = {
 		return `${ author } · ${ date }`;
 	},
 	render: ( { item }: { item: FeedPost } ) => {
+		const name = item.actor_info?.name || __( 'Unknown author', 'activitypub' );
+		const avatarUrl = item.actor_info?.icon || '';
 		const date = item.date
 			? new Date( item.date ).toLocaleDateString( undefined, {
 					year: 'numeric',
@@ -25,8 +25,8 @@ export const metadataField: Field< FeedPost > = {
 
 		return (
 			<div className="activitypub-feed-post-meta">
-				{ avatarFeedField.render?.( { item } ) }
-				{ nameFeedField.render?.( { item } ) }
+				<img src={ avatarUrl } alt={ name } className="activitypub-feed-avatar" />
+				<span className="author">{ name }</span>
 				{ date && (
 					<>
 						<span className="separator">·</span>
