@@ -1,0 +1,178 @@
+/**
+ * Styles for the Extra Fields block.
+ */
+
+.activitypub-extra-fields-block-wrapper {
+	// Add padding to content when background or border is set (stacked and compact styles)
+	&.has-background .activitypub-extra-fields,
+	&.has-border .activitypub-extra-fields,
+	&.is-style-stacked.has-background .activitypub-extra-fields,
+	&.is-style-stacked.has-border .activitypub-extra-fields {
+		padding: 1rem;
+	}
+
+	// Remove default padding for cards style
+	&.is-style-cards.has-background .activitypub-extra-fields,
+	&.is-style-cards.has-border .activitypub-extra-fields {
+		padding: 0;
+	}
+}
+
+.activitypub-extra-fields {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/**
+ * Default Compact Style
+ * Displays fields in a table-like format with aligned labels and values.
+ * This is the default style, so it applies without a style class.
+ */
+.activitypub-extra-fields {
+	display: table;
+	table-layout: fixed;
+}
+
+.activitypub-extra-field {
+	display: table-row;
+	margin-bottom: 0;
+
+	dt {
+		display: table-cell;
+		padding-bottom: 0.5em;
+		margin-bottom: 0;
+		padding-right: 10px;
+		white-space: nowrap;
+		vertical-align: baseline;
+		text-overflow: ellipsis;
+		font-weight: 600;
+		color: inherit;
+
+		&::after {
+			content: ':';
+		}
+	}
+
+	dd {
+		display: table-cell;
+		padding-bottom: 0.5em;
+		vertical-align: baseline;
+		word-break: break-word;
+		margin-left: 0;
+		margin-bottom: 0;
+		color: inherit;
+
+		p {
+			margin-top: 0;
+			margin-bottom: 0.5em;
+
+			&:last-child {
+				margin-bottom: 0;
+			}
+		}
+
+		a {
+			color: inherit;
+			text-decoration: underline;
+
+			&:hover {
+				text-decoration: none;
+			}
+		}
+	}
+}
+
+/**
+ * Stacked Style
+ * Displays fields in a stacked format with label on top and value below.
+ */
+.is-style-stacked {
+	.activitypub-extra-fields {
+		display: block;
+		table-layout: auto;
+	}
+
+	.activitypub-extra-field {
+		display: block;
+		margin-bottom: 1em;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+
+		dt {
+			display: block;
+			padding-bottom: 0;
+			padding-right: 0;
+			margin-bottom: 0.25em;
+			white-space: normal;
+			text-overflow: clip;
+
+			&::after {
+				content: none;
+			}
+		}
+
+		dd {
+			display: block;
+			padding-bottom: 0;
+		}
+	}
+}
+
+/**
+ * Cards Style
+ * Displays each field in its own bordered card with padding.
+ */
+.is-style-cards {
+	// Remove wrapper background for cards style - background goes on individual cards only
+	&.has-background {
+		background: transparent !important;
+
+		.activitypub-extra-fields {
+			padding: 1rem;
+		}
+	}
+
+	.activitypub-extra-fields {
+		display: block;
+		table-layout: auto;
+	}
+
+	.activitypub-extra-field {
+		display: block;
+		border: 1px solid var(--wp--preset--color--contrast-2, #ddd);
+		border-radius: 8px;
+		padding: 1em;
+		margin-bottom: 1em;
+		background: var(--wp--preset--color--base, #fff);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+
+		dt {
+			display: block;
+			font-size: 0.9em;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			color: currentColor;
+			margin-bottom: 0.5em;
+			padding-bottom: 0;
+			padding-right: 0;
+			white-space: normal;
+
+			&::after {
+				content: none;
+			}
+		}
+
+		dd {
+			display: block;
+			font-size: 1em;
+			padding-bottom: 0;
+		}
+	}
+}

@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Blocks;
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Interactions;
 
 use function Activitypub\object_to_uri;
@@ -18,6 +19,75 @@ use function Activitypub\object_to_uri;
  * @coversDefaultClass \Activitypub\Blocks
  */
 class Test_Blocks extends \WP_UnitTestCase {
+
+	/**
+	 * User ID for Extra Fields block tests.
+	 *
+	 * @var int
+	 */
+	private static $extra_fields_user_id;
+
+	/**
+	 * Set up before class.
+	 *
+	 * @param \WP_UnitTest_Factory $factory Factory instance.
+	 */
+	public static function wpSetUpBeforeClass( $factory ) {
+		// Create test user for Extra Fields block tests.
+		self::$extra_fields_user_id = $factory->user->create(
+			array(
+				'user_login' => 'extrafieldsuser',
+				'user_email' => 'extrafields@example.com',
+			)
+		);
+
+		// Create some extra fields for the user.
+		$factory->post->create(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_title'   => 'Website',
+				'post_content' => '<!-- wp:paragraph --><p><a href="https://example.com" rel="me">example.com</a></p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_author'  => self::$extra_fields_user_id,
+				'menu_order'   => 10,
+			)
+		);
+
+		$factory->post->create(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_title'   => 'Location',
+				'post_content' => '<!-- wp:paragraph --><p>San Francisco, CA</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_author'  => self::$extra_fields_user_id,
+				'menu_order'   => 20,
+			)
+		);
+
+		$factory->post->create(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_title'   => 'Pronouns',
+				'post_content' => '<!-- wp:paragraph --><p>they/them</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_author'  => self::$extra_fields_user_id,
+				'menu_order'   => 30,
+			)
+		);
+
+		// Create extra fields for blog.
+		$factory->post->create(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_title'   => 'Blog Website',
+				'post_content' => '<!-- wp:paragraph --><p><a href="https://blog.example.com" rel="me">blog.example.com</a></p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_author'  => self::$extra_fields_user_id,
+				'menu_order'   => 10,
+			)
+		);
+	}
+
 	/**
 	 * Test register_post_meta.
 	 *
@@ -497,5 +567,151 @@ class Test_Blocks extends \WP_UnitTestCase {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Test Extra Fields block rendering with blog user.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 * @covers \Activitypub\Collection\Extra_Fields::get_formatted_content
+	 */
+	public function test_render_extra_fields_block_with_blog_user() {
+		$block_markup = '<!-- wp:activitypub/extra-fields {"selectedUser":"blog"} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'activitypub-extra-fields-block-wrapper', $output );
+		$this->assertStringContainsString( 'Blog Website', $output );
+		$this->assertStringContainsString( 'blog.example.com', $output );
+	}
+
+	/**
+	 * Test Extra Fields block rendering with specific user ID.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 * @covers \Activitypub\Collection\Extra_Fields::get_formatted_content
+	 */
+	public function test_render_extra_fields_block_with_specific_user() {
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d"} /-->',
+			self::$extra_fields_user_id
+		);
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'Website', $output );
+		$this->assertStringContainsString( 'example.com', $output );
+		$this->assertStringContainsString( 'Location', $output );
+		$this->assertStringContainsString( 'San Francisco, CA', $output );
+		$this->assertStringContainsString( 'Pronouns', $output );
+		$this->assertStringContainsString( 'they/them', $output );
+	}
+
+	/**
+	 * Test Extra Fields block maxFields attribute limits output.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 */
+	public function test_render_extra_fields_block_with_max_fields() {
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d","maxFields":2} /-->',
+			self::$extra_fields_user_id
+		);
+		$output       = do_blocks( $block_markup );
+
+		// Should contain first two fields.
+		$this->assertStringContainsString( 'Website', $output );
+		$this->assertStringContainsString( 'Location', $output );
+
+		// Should not contain third field.
+		$this->assertStringNotContainsString( 'Pronouns', $output );
+		$this->assertStringNotContainsString( 'they/them', $output );
+	}
+
+	/**
+	 * Test Extra Fields block with no extra fields returns empty.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 */
+	public function test_render_extra_fields_block_with_no_fields() {
+		$user_id = self::factory()->user->create(
+			array(
+				'user_login' => 'emptyuser',
+				'user_email' => 'empty@example.com',
+			)
+		);
+
+		// Prevent default extra fields from being created.
+		add_filter(
+			'activitypub_get_actor_extra_fields',
+			function ( $fields, $uid ) use ( $user_id ) {
+				if ( $uid === $user_id ) {
+					return array();
+				}
+				return $fields;
+			},
+			10,
+			2
+		);
+
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d"} /-->',
+			$user_id
+		);
+		$output       = do_blocks( $block_markup );
+
+		$this->assertEmpty( $output );
+
+		remove_all_filters( 'activitypub_get_actor_extra_fields' );
+	}
+
+	/**
+	 * Test Extra Fields block with cards style and background color.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 */
+	public function test_render_extra_fields_block_with_cards_style() {
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d","className":"is-style-cards","backgroundColor":"primary"} /-->',
+			self::$extra_fields_user_id
+		);
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-cards', $output );
+		$this->assertStringContainsString( 'var(--wp--preset--color--primary)', $output );
+	}
+
+	/**
+	 * Test Extra Fields block preserves HTML in field content.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 * @covers \Activitypub\Collection\Extra_Fields::get_formatted_content
+	 */
+	public function test_render_extra_fields_block_preserves_html() {
+		$field_id = self::factory()->post->create(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_title'   => 'Rich Content',
+				'post_content' => '<!-- wp:paragraph --><p>Visit <strong>my site</strong> at <a href="https://test.com">test.com</a></p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_author'  => self::$extra_fields_user_id,
+				'menu_order'   => 40,
+			)
+		);
+
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d"} /-->',
+			self::$extra_fields_user_id
+		);
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( '<strong>my site</strong>', $output );
+		$this->assertStringContainsString( '<a href="https://test.com"', $output );
+
+		wp_delete_post( $field_id, true );
 	}
 }
