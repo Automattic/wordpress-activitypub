@@ -11,15 +11,16 @@ import apiFetch from '@wordpress/api-fetch';
 /**
  * Internal dependencies
  */
+import { useOptions } from '../shared/use-options';
 import { useUserOptions } from '../shared/use-user-options';
 
 /**
  * Editor component for Extra Fields block.
  *
- * @param {Object}   props              Component props.
- * @param {Object}   props.attributes   Block attributes.
+ * @param {Object}   props               Component props.
+ * @param {Object}   props.attributes    Block attributes.
  * @param {Function} props.setAttributes Function to set attributes.
- * @param {Object}   props.context      Block context.
+ * @param {Object}   props.context       Block context.
  * @return {Element} Component element.
  */
 export default function Edit( { attributes, setAttributes, context } ) {
@@ -75,6 +76,9 @@ export default function Edit( { attributes, setAttributes, context } ) {
 
 	const userId = getUserId();
 
+	// Get ActivityPub options including namespace
+	const { namespace = 'activitypub/1.0' } = useOptions();
+
 	const blockProps = useBlockProps( {
 		className: 'activitypub-extra-fields-block-wrapper',
 	} );
@@ -95,7 +99,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 		setError( null );
 
 		apiFetch( {
-			path: `/activitypub/1.0/actors/${ userId }`,
+			path: `/${ namespace }/actors/${ userId }`,
 			headers: { Accept: 'application/activity+json' },
 		} )
 			.then( ( actor ) => {
@@ -110,7 +114,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 				setError( err.message );
 				setIsLoading( false );
 			} );
-	}, [ userId ] );
+	}, [ userId, namespace ] );
 
 	// Apply max fields limit for preview
 	const displayFields = maxFields > 0 ? fields.slice( 0, maxFields ) : fields;

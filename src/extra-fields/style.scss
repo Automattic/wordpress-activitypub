@@ -25,23 +25,40 @@
 }
 
 /**
- * Stacked Style (also default fallback)
- * Displays fields in a stacked format with label on top and value below.
+ * Default Compact Style
+ * Displays fields in a table-like format with aligned labels and values.
+ * This is the default style, so it applies without a style class.
  */
-.activitypub-extra-field {
-	margin-bottom: 1em;
+.activitypub-extra-fields {
+	display: table;
+	table-layout: fixed;
+}
 
-	&:last-child {
-		margin-bottom: 0;
-	}
+.activitypub-extra-field {
+	display: table-row;
+	margin-bottom: 0;
 
 	dt {
+		display: table-cell;
+		padding-bottom: 0.5em;
+		margin-bottom: 0;
+		padding-right: 10px;
+		white-space: nowrap;
+		vertical-align: baseline;
+		text-overflow: ellipsis;
 		font-weight: 600;
-		margin-bottom: 0.25em;
 		color: inherit;
+
+		&::after {
+			content: ':';
+		}
 	}
 
 	dd {
+		display: table-cell;
+		padding-bottom: 0.5em;
+		vertical-align: baseline;
+		word-break: break-word;
 		margin-left: 0;
 		margin-bottom: 0;
 		color: inherit;
@@ -67,38 +84,39 @@
 }
 
 /**
- * Compact Style
- * Displays fields in a table-like format with aligned labels and values.
+ * Stacked Style
+ * Displays fields in a stacked format with label on top and value below.
  */
-.is-style-compact {
+.is-style-stacked {
 	.activitypub-extra-fields {
-		display: table;
-		table-layout: fixed;
+		display: block;
+		table-layout: auto;
 	}
 
 	.activitypub-extra-field {
-		display: table-row;
-		margin-bottom: 0;
+		display: block;
+		margin-bottom: 1em;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
 
 		dt {
-			display: table-cell;
-			padding-bottom: 0.5em;
-			margin-bottom: 0;
-			padding-right: 10px;
-			white-space: nowrap;
-			vertical-align: baseline;
-			text-overflow: ellipsis;
+			display: block;
+			padding-bottom: 0;
+			padding-right: 0;
+			margin-bottom: 0.25em;
+			white-space: normal;
+			text-overflow: clip;
 
 			&::after {
-				content: ':';
+				content: none;
 			}
 		}
 
 		dd {
-			display: table-cell;
-			padding-bottom: 0.5em;
-			vertical-align: baseline;
-			word-break: break-word;
+			display: block;
+			padding-bottom: 0;
 		}
 	}
 }
@@ -117,7 +135,13 @@
 		}
 	}
 
+	.activitypub-extra-fields {
+		display: block;
+		table-layout: auto;
+	}
+
 	.activitypub-extra-field {
+		display: block;
 		border: 1px solid var(--wp--preset--color--contrast-2, #ddd);
 		border-radius: 8px;
 		padding: 1em;
@@ -130,15 +154,25 @@
 		}
 
 		dt {
+			display: block;
 			font-size: 0.9em;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
 			color: currentColor;
 			margin-bottom: 0.5em;
+			padding-bottom: 0;
+			padding-right: 0;
+			white-space: normal;
+
+			&::after {
+				content: none;
+			}
 		}
 
 		dd {
+			display: block;
 			font-size: 1em;
+			padding-bottom: 0;
 		}
 	}
 }
