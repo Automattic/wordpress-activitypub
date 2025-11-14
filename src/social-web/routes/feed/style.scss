@@ -8,6 +8,17 @@
 	width: 50%;
 }
 
+// List view item stacking
+.dataviews-view-list {
+	.dataviews-view-list__item {
+		cursor: pointer;
+	}
+
+	.dataviews-view-list__field {
+		width: 100%;
+	}
+}
+
 // Post wrapper with clear separation
 .activitypub-feed-post {
 	border-bottom: 1px solid #dcdcde;
@@ -61,6 +72,18 @@
 	> * {
 		margin: 0;
 	}
+}
+
+// Post excerpt styling
+.activitypub-feed-excerpt {
+	color: #50575e;
+	font-size: 13px;
+	line-height: 1.6;
+	margin-top: 6px;
+	max-width: 800px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 // Prominent headline in list view only

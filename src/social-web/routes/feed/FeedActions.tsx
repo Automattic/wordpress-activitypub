@@ -7,11 +7,9 @@ export function getFeedActions( onSelectItem: ( id: number ) => void ): Action< 
 		{
 			id: 'view-details',
 			label: __( 'View Details', 'activitypub' ),
-			isPrimary: false,
+			isPrimary: true,
 			callback: ( items: FeedPost[] ) => {
 				if ( items.length === 1 ) {
-					// eslint-disable-next-line no-console
-					console.log( 'View Details clicked, item ID:', items[ 0 ].id );
 					onSelectItem( items[ 0 ].id );
 				}
 			},

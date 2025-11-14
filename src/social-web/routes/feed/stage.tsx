@@ -5,8 +5,7 @@
  */
 
 import './style.scss';
-import './post-card-style.scss';
-import { useMemo } from '@wordpress/element';
+import { useMemo, useCallback, useState, useEffect } from '@wordpress/element';
 import { DataViews } from '@wordpress/dataviews';
 import { useView } from '@wordpress/views';
 import type { View, Field } from '@wordpress/dataviews';
@@ -14,13 +13,12 @@ import { __ } from '@wordpress/i18n';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import {
-	createTitleField,
+	titleField,
 	dateField,
 	statusField,
 	excerptField,
 	metadataField,
 	createContentField,
-	createPostCardField,
 } from '../../components/fields';
 import { getFeedActions } from './FeedActions';
 import type { FeedPost } from '../../types';
@@ -36,6 +34,7 @@ const DEFAULT_VIEW: View = {
 	search: '',
 	filters: [],
 	fields: [ 'metadata', 'title.rendered', 'excerpt.rendered' ],
+	layout: {},
 };
 
 const defaultLayouts = {
@@ -43,8 +42,8 @@ const defaultLayouts = {
 		fields: [ 'title.rendered', 'metadata', 'excerpt.rendered' ],
 	},
 	list: {
-		primaryField: 'post_card',
-		fields: [ 'post_card' ],
+		primaryField: 'metadata',
+		fields: [ 'metadata', 'title.rendered', 'excerpt.rendered' ],
 		mediaField: undefined,
 	},
 };
@@ -71,20 +70,44 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [
-			createPostCardField( onSelectItem ),
-			createContentField(),
-			createTitleField( onSelectItem ),
-			metadataField,
-			excerptField,
-			dateField,
-			statusField,
-		],
-		[ onSelectItem ]
+		() => [ metadataField, titleField, excerptField, createContentField(), dateField, statusField ],
+		[]
 	);
 
-	// Hide actions for now
-	const actions = useMemo( () => [], [ onSelectItem ] );
+	// Actions for feed items
+	const actions = useMemo( () => getFeedActions( onSelectItem ), [ onSelectItem ] );
+
+	const [ selection, setSelection ] = useState< string[] >( [] );
+
+	useEffect( () => {
+		if ( selection.length === 0 ) {
+			return;
+		}
+
+		const selectedId = selection[ 0 ];
+		const exists = feed.some( ( item ) => item.id.toString() === selectedId );
+		if ( ! exists ) {
+			setSelection( [] );
+		}
+	}, [ feed, selection ] );
+
+	const handleChangeSelection = useCallback(
+		( nextSelection: string[] ) => {
+			setSelection( nextSelection );
+
+			if ( nextSelection.length === 0 ) {
+				return;
+			}
+
+			const selectedId = nextSelection[ 0 ];
+			const selectedItem = feed.find( ( item ) => item.id.toString() === selectedId );
+
+			if ( selectedItem ) {
+				onSelectItem( selectedItem.id );
+			}
+		},
+		[ feed, onSelectItem ]
+	);
 
 	return (
 		<Page
@@ -99,7 +122,11 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 				onChangeView={ updateView }
 				actions={ actions }
 				isLoading={ isResolving }
+				onClickItem={ ( item ) => onSelectItem( item.id ) }
+				isItemClickable={ () => true }
 				getItemId={ ( item ) => item.id.toString() }
+				selection={ selection }
+				onChangeSelection={ handleChangeSelection }
 				empty={
 					<p>
 						{ view.search

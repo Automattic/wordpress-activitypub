@@ -32,21 +32,6 @@ export const excerptField: Field< FeedPost > = {
 			return null;
 		}
 
-		return (
-			<div
-				style={ {
-					color: '#50575e',
-					fontSize: '13px',
-					lineHeight: '1.6',
-					marginTop: '6px',
-					maxWidth: '800px',
-					overflow: 'hidden',
-					textOverflow: 'ellipsis',
-					whiteSpace: 'nowrap',
-				} }
-			>
-				{ truncated }
-			</div>
-		);
+		return <div className="activitypub-feed-excerpt">{ truncated }</div>;
 	},
 };
