@@ -1,4 +1,5 @@
 import { __ } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 import type { Field } from '@wordpress/dataviews';
 import type { FeedPost } from '../../types';
 
@@ -13,7 +14,7 @@ export const metadataField: Field< FeedPost > = {
 		return `${ author } · ${ date }`;
 	},
 	render: ( { item }: { item: FeedPost } ) => {
-		const name = item.actor_info?.name || __( 'Unknown author', 'activitypub' );
+		const name = decodeEntities( item.actor_info?.name || __( 'Unknown author', 'activitypub' ) );
 		const avatarUrl = item.actor_info?.icon || '';
 		const date = item.date
 			? new Date( item.date ).toLocaleDateString( undefined, {

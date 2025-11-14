@@ -140,3 +140,126 @@
 		clear: both;
 	}
 }
+
+// Inspector view styles - modern and flat
+.activitypub-inspector-loading {
+	padding: 20px;
+	text-align: center;
+}
+
+// Override Card component styling to remove boxes and rounded corners
+.activitypub-inspector-card {
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	background: transparent !important;
+	padding: 0 !important;
+	margin-bottom: 24px !important;
+
+	.components-card__header {
+		border: none !important;
+		border-radius: 0 !important;
+		padding: 0 0 16px !important;
+		border-bottom: 1px solid #dcdcde !important;
+	}
+
+	.components-card__body {
+		padding: 16px 0 0 !important;
+	}
+}
+
+.activitypub-inspector-comments-card {
+	margin-top: 24px !important;
+	padding-top: 24px !important;
+	border-top: 1px solid #dcdcde !important;
+
+	.components-card__header {
+		border-bottom: none !important;
+		padding-bottom: 12px !important;
+		font-size: 16px;
+		font-weight: 600;
+	}
+}
+
+.activitypub-inspector-header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.activitypub-inspector-avatar {
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	object-fit: cover;
+	background-color: #f0f0f1;
+	flex-shrink: 0;
+}
+
+.activitypub-inspector-author {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+
+	strong {
+		font-size: 14px;
+		color: #1d2327;
+	}
+}
+
+.activitypub-inspector-date {
+	font-size: 13px;
+	color: #646970;
+}
+
+.activitypub-inspector-card .components-card__body {
+	h2 {
+		margin: 0 0 16px;
+		font-size: 20px;
+		font-weight: 600;
+		line-height: 1.4;
+		color: #1d2327;
+	}
+
+	> div {
+		line-height: 1.6;
+		color: #2c3338;
+		margin-bottom: 16px;
+
+		img {
+			max-width: 100%;
+			height: auto;
+		}
+	}
+}
+
+.activitypub-inspector-link {
+	margin-top: 16px;
+}
+
+.activitypub-inspector-comment {
+	margin-bottom: 20px;
+	padding-bottom: 20px;
+	border-bottom: 1px solid #f0f0f1;
+
+	&:last-child {
+		border-bottom: none;
+		margin-bottom: 0;
+		padding-bottom: 0;
+	}
+}
+
+.activitypub-inspector-comment-meta {
+	margin-bottom: 8px;
+
+	strong {
+		font-size: 14px;
+		color: #1d2327;
+	}
+}
+
+.activitypub-inspector-comment-date {
+	margin-left: 8px;
+	font-size: 13px;
+	color: #646970;
+}

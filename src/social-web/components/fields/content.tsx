@@ -1,4 +1,5 @@
 import { __ } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 import type { Field } from '@wordpress/dataviews';
 import type { FeedPost } from '../../types';
 
@@ -14,11 +15,14 @@ export const createContentField = (): Field< FeedPost > => ( {
 	getValue: ( { item }: { item: FeedPost } ) => {
 		// Strip HTML tags for plain text value (used for search/sort)
 		const text = item.excerpt?.rendered || item.content?.rendered || '';
-		return text.replace( /<[^>]*>/g, '' ).replace( /&[^;]+;/g, '' );
+		const stripped = text.replace( /<[^>]*>/g, '' );
+		return decodeEntities( stripped );
 	},
 	render: ( { item }: { item: FeedPost } ) => {
-		// Use full content
-		const content = item.content?.rendered || '';
+		// Remove backslash escapes and decode entities
+		const raw = item.content?.rendered || '';
+		const unescaped = raw.replace( /\\(.)/g, '$1' );
+		const content = decodeEntities( unescaped );
 
 		// Check if content is actually empty (not just whitespace)
 		const hasRealContent =

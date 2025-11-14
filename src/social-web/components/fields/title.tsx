@@ -1,4 +1,5 @@
 import { __ } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 import type { Field } from '@wordpress/dataviews';
 import type { FeedPost } from '../../types';
 
@@ -8,14 +9,14 @@ export const titleField: Field< FeedPost > = {
 	enableHiding: true,
 	enableSorting: true,
 	enableGlobalSearch: true,
-	getValue: ( { item }: { item: FeedPost } ) => item.title?.rendered || '',
+	getValue: ( { item }: { item: FeedPost } ) => decodeEntities( item.title?.rendered || '' ),
 	render: ( { item }: { item: FeedPost } ) => {
 		if ( ! item.title?.rendered ) {
 			return null;
 		}
 
-		return (
-			<div className="activitypub-feed-post-title" dangerouslySetInnerHTML={ { __html: item.title.rendered } } />
-		);
+		// Remove backslash escapes and decode entities
+		const unescaped = item.title.rendered.replace( /\\(.)/g, '$1' );
+		return <div className="activitypub-feed-post-title">{ decodeEntities( unescaped ) }</div>;
 	},
 };

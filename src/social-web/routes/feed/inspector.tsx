@@ -6,7 +6,8 @@
 
 import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/components';
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
-import { __ } from '@wordpress/i18n';
+import { __, _x } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 import { Page } from '../../components/page';
 import type { Comment, FeedPost } from '../../types';
 
@@ -14,6 +15,14 @@ interface FeedInspectorProps {
 	id: number;
 	onClose: () => void;
 }
+
+// Helper to render HTML content with proper entity decoding and unescape
+const RenderHTML = ( { html }: { html: string } ) => {
+	// Remove backslash escapes (e.g., \! becomes !)
+	const unescaped = html.replace( /\\(.)/g, '$1' );
+	const decoded = decodeEntities( unescaped );
+	return <div dangerouslySetInnerHTML={ { __html: decoded } } />;
+};
 
 export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id );
@@ -26,28 +35,23 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 
 	if ( isLoading ) {
 		return (
-			<div style={ { padding: '20px', textAlign: 'center' } }>
+			<div className="activitypub-inspector-loading">
 				<Spinner />
 			</div>
 		);
 	}
 
 	if ( ! post ) {
-		return <div style={ { padding: '20px', textAlign: 'center' } }>{ __( 'Post not found', 'activitypub' ) }</div>;
+		return <div className="activitypub-inspector-loading">{ __( 'Post not found', 'activitypub' ) }</div>;
 	}
 
 	const actor = post.actor_info;
-	const author = actor?.name || __( 'Unknown author', 'activitypub' );
+	const author = decodeEntities( actor?.name || __( 'Unknown author', 'activitypub' ) );
 	const postDate = post.date ? new Date( post.date ).toLocaleString() : '';
-	const content = post.content?.rendered || post.excerpt?.rendered || '';
-	// Default avatar SVG (person icon)
-	const defaultAvatar =
-		'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23999"%3E%3Cpath d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/%3E%3C/svg%3E';
-	const avatarUrl = actor?.icon || defaultAvatar;
+	const avatarUrl = actor?.icon || '';
 
 	return (
 		<Page
-			title={ __( 'Post Details', 'activitypub' ) }
 			hasPadding={ true }
 			actions={
 				<Button variant="tertiary" size="small" onClick={ onClose }>
@@ -55,36 +59,32 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 				</Button>
 			}
 		>
-			<Card>
+			<Card className="activitypub-inspector-card">
 				<CardHeader>
-					<div style={ { display: 'flex', alignItems: 'center', gap: '8px' } }>
-						<img
-							src={ avatarUrl }
-							alt={ author }
-							style={ {
-								width: '32px',
-								height: '32px',
-								borderRadius: '50%',
-								objectFit: 'cover',
-								backgroundColor: '#f0f0f1',
-							} }
-						/>
-						<div>
+					<div className="activitypub-inspector-header">
+						<img src={ avatarUrl } alt={ author } className="activitypub-inspector-avatar" />
+						<div className="activitypub-inspector-author">
 							<strong>{ author }</strong>
-							{ postDate && <span style={ { marginLeft: '8px', color: '#757575' } }>{ postDate }</span> }
+							{ postDate && <span className="activitypub-inspector-date">{ postDate }</span> }
 						</div>
 					</div>
 				</CardHeader>
 				<CardBody>
-					{ post.title?.rendered && <h2 dangerouslySetInnerHTML={ { __html: post.title.rendered } } /> }
-					{ content && <div dangerouslySetInnerHTML={ { __html: content } } /> }
+					{ post.title?.rendered && (
+						<h2>
+							<RenderHTML html={ post.title.rendered } />
+						</h2>
+					) }
+					{ ( post.content?.rendered || post.excerpt?.rendered ) && (
+						<RenderHTML html={ post.content?.rendered || post.excerpt?.rendered || '' } />
+					) }
 					{ post.link && (
 						<Button
 							variant="secondary"
 							href={ post.link }
 							target="_blank"
 							rel="noopener noreferrer"
-							style={ { marginTop: '16px' } }
+							className="activitypub-inspector-link"
 						>
 							{ __( 'View Original Post', 'activitypub' ) }
 						</Button>
@@ -93,7 +93,7 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 			</Card>
 
 			{ ( isLoadingComments || ( comments && comments.length > 0 ) ) && (
-				<Card style={ { marginTop: '16px' } }>
+				<Card className="activitypub-inspector-card activitypub-inspector-comments-card">
 					<CardHeader>
 						{ __( 'Comments', 'activitypub' ) }
 						{ comments && comments.length > 0 && ` (${ comments.length })` }
@@ -103,21 +103,14 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 						{ ! isLoadingComments && comments && comments.length > 0 && (
 							<div>
 								{ comments.map( ( comment ) => (
-									<div
-										key={ comment.id }
-										style={ {
-											marginBottom: '16px',
-											paddingBottom: '16px',
-											borderBottom: '1px solid #ddd',
-										} }
-									>
-										<div style={ { marginBottom: '8px' } }>
-											<strong>{ comment.author_name }</strong>
-											<span style={ { marginLeft: '8px', color: '#757575', fontSize: '0.9em' } }>
+									<div key={ comment.id } className="activitypub-inspector-comment">
+										<div className="activitypub-inspector-comment-meta">
+											<strong>{ decodeEntities( comment.author_name ) }</strong>
+											<span className="activitypub-inspector-comment-date">
 												{ new Date( comment.date ).toLocaleString() }
 											</span>
 										</div>
-										<div dangerouslySetInnerHTML={ { __html: comment.content.rendered } } />
+										<RenderHTML html={ comment.content.rendered } />
 									</div>
 								) ) }
 							</div>
