@@ -1,0 +1,72 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "name": "activitypub/extra-fields",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "title": "Fediverse Extra Fields",
+  "category": "widgets",
+  "description": "Display extra fields from ActivityPub user profiles",
+  "textdomain": "activitypub",
+  "icon": "list-view",
+  "supports": {
+    "html": false,
+    "align": [
+      "wide",
+      "full"
+    ],
+    "color": {
+      "gradients": true,
+      "link": true,
+      "__experimentalDefaultControls": {
+        "background": true,
+        "text": true,
+        "link": true
+      }
+    },
+    "__experimentalBorder": {
+      "radius": true,
+      "width": true,
+      "color": true,
+      "style": true
+    },
+    "shadow": true,
+    "typography": {
+      "fontSize": true,
+      "__experimentalDefaultControls": {
+        "fontSize": true
+      }
+    }
+  },
+  "styles": [
+    {
+      "name": "compact",
+      "label": "Compact",
+      "isDefault": true
+    },
+    {
+      "name": "stacked",
+      "label": "Stacked"
+    },
+    {
+      "name": "cards",
+      "label": "Cards"
+    }
+  ],
+  "attributes": {
+    "selectedUser": {
+      "type": "string",
+      "default": "blog"
+    },
+    "maxFields": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "usesContext": [
+    "postType",
+    "postId"
+  ],
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css",
+  "render": "file:./render.php"
+}
