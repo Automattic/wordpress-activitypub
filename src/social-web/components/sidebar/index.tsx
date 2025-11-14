@@ -21,7 +21,6 @@ import './style.scss';
 const menuItems = [
 	{ id: 'dashboard', label: __( 'Dashboard' ), icon: home },
 	{ id: 'feed', label: __( 'Feed' ), icon: postList },
-	{ id: 'followers', label: __( 'Followers' ), icon: people },
 	{ id: 'following', label: __( 'Following' ), icon: addCard },
 	{ id: 'interactions', label: __( 'Interactions' ), icon: comment },
 ];

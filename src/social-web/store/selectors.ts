@@ -1,7 +1,7 @@
 /**
  * Internal dependencies
  */
-import type { Follower, Following, Interaction, FeedPost } from '../types';
+import type { Following, Interaction, FeedPost } from '../types';
 import type { State } from './types';
 
 /**
@@ -14,14 +14,6 @@ export const selectors = {
 
 	getFeedPostById( state: State, id: number ): FeedPost | undefined {
 		return state.feed.find( ( post ) => post.id === id );
-	},
-
-	getFollowers( state: State ): Follower[] {
-		return state.followers;
-	},
-
-	getFollowerById( state: State, id: string ): Follower | undefined {
-		return state.followers.find( ( follower ) => follower.id === id );
 	},
 
 	getFollowing( state: State ): Following[] {

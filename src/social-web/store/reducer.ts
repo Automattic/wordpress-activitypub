@@ -15,12 +15,6 @@ export function reducer( state = DEFAULT_STATE, action: Action ): State {
 				feed: action.feed,
 			};
 
-		case 'SET_FOLLOWERS':
-			return {
-				...state,
-				followers: action.followers,
-			};
-
 		case 'SET_FOLLOWING':
 			return {
 				...state,

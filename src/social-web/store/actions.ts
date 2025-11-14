@@ -6,15 +6,8 @@ import apiFetch from '@wordpress/api-fetch';
 /**
  * Internal dependencies
  */
-import type { Follower, Following, Interaction, FeedPost } from '../types';
-import type {
-	SetFollowersAction,
-	SetFollowingAction,
-	SetInteractionsAction,
-	SetFeedAction,
-	SetLoadingAction,
-	State,
-} from './types';
+import type { Following, Interaction, FeedPost } from '../types';
+import type { SetFollowingAction, SetInteractionsAction, SetFeedAction, SetLoadingAction, State } from './types';
 
 /**
  * Store actions
@@ -24,13 +17,6 @@ export const actions = {
 		return {
 			type: 'SET_FEED',
 			feed,
-		};
-	},
-
-	setFollowers( followers: Follower[] ): SetFollowersAction {
-		return {
-			type: 'SET_FOLLOWERS',
-			followers,
 		};
 	},
 
@@ -97,32 +83,6 @@ export const actions = {
 			yield actions.setFeed( [] );
 		} finally {
 			yield actions.setLoading( 'feed', false );
-		}
-	},
-
-	*blockFollower( followerId: string ) {
-		try {
-			yield apiFetch( {
-				path: `/activitypub/v1/followers/${ followerId }/block`,
-				method: 'POST',
-			} );
-			// Refresh followers list
-			yield actions.fetchFollowers();
-		} catch ( error ) {
-			console.error( 'Failed to block follower:', error );
-		}
-	},
-
-	*removeFollower( followerId: string ) {
-		try {
-			yield apiFetch( {
-				path: `/activitypub/v1/followers/${ followerId }`,
-				method: 'DELETE',
-			} );
-			// Refresh followers list
-			yield actions.fetchFollowers();
-		} catch ( error ) {
-			console.error( 'Failed to remove follower:', error );
 		}
 	},
 };

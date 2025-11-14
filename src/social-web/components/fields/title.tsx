@@ -30,7 +30,13 @@ export const createTitleField = ( onSelectItem: ( id: number ) => void ): Field<
 				onMouseOver={ ( e ) => {
 					e.currentTarget.style.color = 'var(--wp-admin-theme-color, #3858e9)';
 				} }
+				onFocus={ ( e ) => {
+					e.currentTarget.style.color = 'var(--wp-admin-theme-color, #3858e9)';
+				} }
 				onMouseOut={ ( e ) => {
+					e.currentTarget.style.color = '#1e1e1e';
+				} }
+				onBlur={ ( e ) => {
 					e.currentTarget.style.color = '#1e1e1e';
 				} }
 			>

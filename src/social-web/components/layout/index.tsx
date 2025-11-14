@@ -7,9 +7,9 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useState, useEffect, lazy, Suspense } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { CommandMenu } from '@wordpress/commands';
-import { SnackbarList, Spinner } from '@wordpress/components';
+import { SnackbarList } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import Sidebar from '../sidebar';
@@ -19,13 +19,11 @@ import './style.scss';
 // Import dashboard directly since it's the default route
 import DashboardStage from '../../routes/dashboard/stage';
 import FeedStage from '../../routes/feed/stage';
-import FollowersStage from '../../routes/followers/stage';
 import FollowingStage from '../../routes/following/stage';
 import InteractionsStage from '../../routes/interactions/stage';
 
 // Import inspector components.
 import FeedInspector from '../../routes/feed/inspector';
-import FollowerInspector from '../../routes/followers/inspector';
 import FollowingInspector from '../../routes/following/inspector';
 import InteractionInspector from '../../routes/interactions/inspector';
 
@@ -53,6 +51,9 @@ function parseHash(): { section: string; itemId: string | number | null } {
 
 /**
  * Update the URL hash without triggering a page reload
+ *
+ * @param {string}              section Section name
+ * @param {string|number|null} itemId  Optional item ID
  */
 function updateHash( section: string, itemId?: string | number | null ) {
 	const hash = itemId ? `#/${ section }/${ itemId }` : `#/${ section }`;
@@ -124,8 +125,6 @@ export function Layout() {
 				return <DashboardStage />;
 			case 'feed':
 				return <FeedStage { ...props } />;
-			case 'followers':
-				return <FollowersStage { ...props } />;
 			case 'following':
 				return <FollowingStage { ...props } />;
 			case 'interactions':
@@ -133,39 +132,19 @@ export function Layout() {
 			default:
 				return <DashboardStage />;
 		}
-
-		// Other routes are lazy-loaded
-		const StageComponent = () => {
-			switch ( activeSection ) {
-				case 'followers':
-					return <FollowersStage />;
-				case 'following':
-					return <FollowingStage { ...props } />;
-				case 'interactions':
-					return <InteractionsStage { ...props } />;
-				default:
-					return <DashboardStage />;
-			}
-		};
-
-		return (
-			<Suspense fallback={ <Spinner /> }>
-				<StageComponent />
-			</Suspense>
-		);
 	};
 
 	// Render detail panel (inspector)
 	const renderInspector = () => {
-		if ( ! selectedItemId ) return null;
+		if ( ! selectedItemId ) {
+			return null;
+		}
 
 		const props = { id: selectedItemId, onClose: handleCloseInspector };
 
 		switch ( activeSection ) {
 			case 'feed':
 				return <FeedInspector { ...props } />;
-			case 'followers':
-				return <FollowerInspector { ...props } />;
 			case 'following':
 				return <FollowingInspector { ...props } />;
 			case 'interactions':

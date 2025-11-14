@@ -2,13 +2,13 @@
  * WordPress dependencies
  */
 import { useSelect, useDispatch } from '@wordpress/data';
-import { useEffect, useMemo } from '@wordpress/element';
+import { useEffect } from '@wordpress/element';
 
 /**
  * Internal dependencies
  */
 import { STORE_NAME } from '../store';
-import type { Follower, Following, Interaction, FeedPost } from '../types';
+import type { Following, Interaction, FeedPost } from '../types';
 
 interface SocialWebData {
 	following: Following[];
@@ -30,29 +30,24 @@ interface SocialWebActions {
 	fetchFollowing: () => void;
 	fetchInteractions: () => void;
 	fetchFeed: () => void;
-	blockFollower: ( id: string ) => void;
-	removeFollower: ( id: string ) => void;
 }
 
 /**
  * Hook to access Social Web data and actions (full version - internal)
  */
 function useSocialWebDataFull(): SocialWebData & SocialWebActions {
-	const following = useSelect( ( select ) => {
+	const data = useSelect( ( select ) => {
 		const store = select( STORE_NAME ) as any;
 		return {
-			followers: store.getFollowers() as Follower[],
 			following: store.getFollowing() as Following[],
 			interactions: store.getInteractions() as Interaction[],
 			feed: store.getFeed() as FeedPost[],
 			stats: store.getStats() as {
-				followers: number;
 				following: number;
 				interactions: number;
 				posts: number;
 			},
 			isLoading: {
-				followers: store.isLoading( 'followers' ) as boolean,
 				following: store.isLoading( 'following' ) as boolean,
 				interactions: store.isLoading( 'interactions' ) as boolean,
 				feed: store.isLoading( 'feed' ) as boolean,
@@ -60,42 +55,29 @@ function useSocialWebDataFull(): SocialWebData & SocialWebActions {
 		};
 	}, [] );
 
-	const { fetchFollowers, fetchFollowing, fetchInteractions, fetchFeed, blockFollower, removeFollower } = useDispatch(
-		STORE_NAME
-	) as any;
+	const { fetchFollowing, fetchInteractions, fetchFeed } = useDispatch( STORE_NAME ) as any;
 
 	// Fetch initial data
 	useEffect( () => {
-		fetchFollowers();
 		fetchFollowing();
 		fetchInteractions();
 		fetchFeed();
-	}, [] );
-
-	// Memoize the isLoading object to prevent re-renders
-	const isLoading = useMemo(
-		() => ( {
-			following: isLoadingFollowing,
-			interactions: isLoadingInteractions,
-		} ),
-		[ isLoadingFollowing, isLoadingInteractions ]
-	);
+	}, [ fetchFollowing, fetchInteractions, fetchFeed ] );
 
 	return {
-		following,
-		interactions,
-		stats,
-		isLoading,
+		...data,
 		fetchFollowing,
 		fetchInteractions,
 		fetchFeed,
-		blockFollower,
-		removeFollower,
 	};
 }
 
 /**
  * Hook to access Social Web data with optional resource filtering
+ *
+ * @param {string}        resource Resource type (followers, following, interactions, or feed)
+ * @param {string|number} id       Optional item ID
+ * @return {Object} Items and loading state
  */
 export function useSocialWebData(
 	resource?: 'followers' | 'following' | 'interactions' | 'feed',
@@ -105,6 +87,25 @@ export function useSocialWebData(
 	isLoading: boolean;
 } {
 	const allData = useSocialWebDataFull();
+
+	// Always call useSelect (Hooks must be called unconditionally)
+	const item = useSelect(
+		( select ) => {
+			if ( ! resource || id === undefined ) {
+				return null;
+			}
+			const store = select( STORE_NAME ) as any;
+			if ( resource === 'following' ) {
+				return store.getFollowingById( id ) as Following | undefined;
+			} else if ( resource === 'interactions' ) {
+				return store.getInteractionById( id ) as Interaction | undefined;
+			} else if ( resource === 'feed' ) {
+				return store.getFeedPostById( id ) as FeedPost | undefined;
+			}
+			return null;
+		},
+		[ resource, id ]
+	);
 
 	if ( ! resource ) {
 		// Return all data if no resource specified
@@ -116,21 +117,6 @@ export function useSocialWebData(
 
 	if ( id !== undefined ) {
 		// Return single item
-		const item = useSelect(
-			( select ) => {
-				const store = select( STORE_NAME ) as any;
-				if ( resource === 'following' ) {
-					return store.getFollowingById( id ) as Following | undefined;
-				} else if ( resource === 'interactions' ) {
-					return store.getInteractionById( id ) as Interaction | undefined;
-				} else if ( resource === 'feed' ) {
-					return store.getFeedPostById( id ) as FeedPost | undefined;
-				}
-				return null;
-			},
-			[ resource, id ]
-		);
-
 		return {
 			items: item,
 			isLoading: allData?.isLoading?.[ resource ] || false,
