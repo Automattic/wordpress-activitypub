@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "activitypub/posts-entity",
+  "title": "ActivityPub Posts Entity",
+  "category": "widgets",
+  "description": "Registers ActivityPub posts as a WordPress Core Data entity.",
+  "textdomain": "activitypub",
+  "editorScript": "file:./index.js"
+}

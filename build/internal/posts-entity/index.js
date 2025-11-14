@@ -1,0 +1,1 @@
+(()=>{"use strict";const t=window.wp.data,s=window.wp.coreData;(()=>{const{registerEntityType:i}=(0,t.dispatch)(s.store);i({kind:"activitypub/1.0",name:"post",label:"Post",plural:"Posts",baseURL:"/wp-json/activitypub/1.0/internal/posts",key:"wp_id",transientEdits:{id:!0,type:!0,name:!0,content:!0,summary:!0,published:!0,wp_status:!0},supportsPagination:!1})})()})();

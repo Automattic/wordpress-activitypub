@@ -59,6 +59,20 @@ class Blocks {
 			);
 		}
 
+		// Register the posts entity with WordPress Core Data API.
+		$posts_entity_asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/internal/posts-entity/index.asset.php';
+		if ( file_exists( $posts_entity_asset_file ) ) {
+			$posts_entity_asset_data = include $posts_entity_asset_file;
+			$posts_entity_url        = plugins_url( 'build/internal/posts-entity/index.js', ACTIVITYPUB_PLUGIN_FILE );
+			wp_enqueue_script(
+				'activitypub-posts-entity',
+				$posts_entity_url,
+				$posts_entity_asset_data['dependencies'],
+				$posts_entity_asset_data['version'],
+				true
+			);
+		}
+
 		// Check for our supported post types.
 		$current_screen = \get_current_screen();
 		$ap_post_types  = \get_post_types_by_support( 'activitypub' );
