@@ -475,7 +475,9 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$method->setAccessible( true );
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
-		$this->assertEmpty( $result, 'Should return empty array when no recipients' );
+		// Activities with no recipients are treated as public and delivered to all local actors.
+		$this->assertNotEmpty( $result, 'Should return all local actors when no recipients (treated as public)' );
+		$this->assertEquals( Actors::get_all_ids(), $result, 'Should match all local actor IDs' );
 	}
 
 	/**

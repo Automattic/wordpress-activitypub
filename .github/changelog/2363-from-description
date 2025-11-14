@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Simplified inbox storage settings, allowing certain activities (like deletes) to be skipped to reduce unnecessary database use.

@@ -164,14 +164,14 @@ class Interactions {
 	/**
 	 * Get interaction(s) for a given URL/ID.
 	 *
-	 * @deprecated unreleased Use {@see Interactions::get_by_id()}.
+	 * @deprecated 7.6.0 Use {@see Interactions::get_by_id()}.
 	 *
 	 * @param string $url The URL/ID to get interactions for.
 	 *
 	 * @return array The interactions as WP_Comment objects.
 	 */
 	public static function get_interaction_by_id( $url ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Interactions::get_by_id' );
+		\_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Interactions::get_by_id' );
 
 		return self::get_by_id( $url );
 	}
@@ -239,14 +239,14 @@ class Interactions {
 	/**
 	 * Get interaction(s) for a given actor.
 	 *
-	 * @deprecated unreleased Use {@see Interactions::get_by_actor()}.
+	 * @deprecated 7.6.0 Use {@see Interactions::get_by_actor()}.
 	 *
 	 * @param string $actor The Actor-URL.
 	 *
 	 * @return array The interactions as WP_Comment objects.
 	 */
 	public static function get_interactions_by_actor( $actor ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Interactions::get_by_actor' );
+		\_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Interactions::get_by_actor' );
 
 		return self::get_by_actor( $actor );
 	}

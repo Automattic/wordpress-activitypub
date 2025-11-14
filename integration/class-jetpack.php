@@ -9,7 +9,6 @@ namespace Activitypub\Integration;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
-use Activitypub\Comment;
 use Activitypub\Http;
 use Automattic\Jetpack\Connection\Manager;
 
@@ -74,15 +73,14 @@ class Jetpack {
 	 * Add custom comment types to the list of comment types.
 	 *
 	 * @param array $comment_types Default comment types.
-	 * @return array
+	 *
+	 * @return array The comment types with ActivityPub types added.
 	 */
 	public static function add_comment_types( $comment_types ) {
-		// jetpack_sync_whitelisted_comment_types runs on plugins_loaded, before comment types are registered.
-		if ( 'jetpack_sync_whitelisted_comment_types' === current_filter() ) {
-			Comment::register_comment_types();
-		}
+		$comment_types[] = 'repost';
+		$comment_types[] = 'like';
 
-		return array_unique( \array_merge( $comment_types, Comment::get_comment_type_slugs() ) );
+		return array_unique( $comment_types );
 	}
 
 	/**

@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Refactored the inbox system to use a shared inbox, storing activities once with multiple recipients for improved efficiency and reduced duplication.

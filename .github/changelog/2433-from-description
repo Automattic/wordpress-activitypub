@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Improved handling of empty fields for better compatibility with Pixelfed and more consistent fallback behavior across actor names, URLs, and related data.
