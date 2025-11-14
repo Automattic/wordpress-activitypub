@@ -10,6 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\add_to_outbox;
 
@@ -40,16 +41,23 @@ class Follow {
 			return;
 		}
 
-		// Save follower.
-		$remote_actor = Followers::add(
-			$user_id,
-			$activity['actor']
-		);
-
-		$success = ! \is_wp_error( $remote_actor );
-
+		// Check if the actor already follows the user.
+		$already_following = false;
+		$remote_actor      = Remote_Actors::get_by_uri( $activity['actor'] );
 		if ( ! \is_wp_error( $remote_actor ) ) {
-			$remote_actor = \get_post( $remote_actor );
+			$already_following = Followers::follows( $remote_actor->ID, $user_id );
+		}
+
+		// Save follower if not already following.
+		if ( $already_following ) {
+			$success = false;
+		} else {
+			$remote_actor = Followers::add( $user_id, $activity['actor'] );
+			$success      = ! \is_wp_error( $remote_actor );
+
+			if ( $success ) {
+				$remote_actor = \get_post( $remote_actor );
+			}
 		}
 
 		/**

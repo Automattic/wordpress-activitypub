@@ -10,6 +10,7 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Posts;
@@ -64,7 +65,7 @@ class Post_Types {
 				'query_var'        => false,
 				'delete_with_user' => false,
 				'can_export'       => true,
-				'supports'         => array(),
+				'supports'         => array( 'custom-fields' ),
 			)
 		);
 
@@ -95,6 +96,7 @@ class Post_Types {
 			array(
 				'type'              => 'string',
 				'single'            => false,
+				'show_in_rest'      => true,
 				'sanitize_callback' => 'sanitize_text_field',
 			)
 		);
@@ -575,6 +577,81 @@ class Post_Types {
 				),
 			)
 		);
+
+		// Add formatted actor data field.
+		\register_rest_field(
+			Remote_Actors::POST_TYPE,
+			'actor_info',
+			array(
+				'get_callback' => function ( $response ) {
+					$actor = Remote_Actors::get_actor( $response['id'] );
+					if ( \is_wp_error( $actor ) ) {
+						return null;
+					}
+					return array(
+						'username'   => $actor->get_preferred_username(),
+						'name'       => $actor->get_name() ?? $actor->get_preferred_username(),
+						'icon'       => object_to_uri( $actor->get_icon() ),
+						'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
+						'webfinger'  => Remote_Actors::get_acct( $response['id'] ),
+						'identifier' => $actor->get_id(),
+					);
+				},
+				'schema'       => array(
+					'description' => 'Parsed ActivityPub actor information',
+					'type'        => 'object',
+					'context'     => array( 'view', 'edit' ),
+				),
+			)
+		);
+
+		// Add follow status field.
+		\register_rest_field(
+			Remote_Actors::POST_TYPE,
+			'follow_status',
+			array(
+				'get_callback' => function ( $response ) {
+					$current_user_id = \get_current_user_id();
+					if ( ! $current_user_id ) {
+						return array( 'follows_back' => false );
+					}
+					return array(
+						'follows_back' => Following::check_status( $current_user_id, $response['id'] ),
+					);
+				},
+				'schema'       => array(
+					'description' => 'Follow relationship status',
+					'type'        => 'object',
+					'context'     => array( 'view', 'edit' ),
+				),
+			)
+		);
+
+		// Add custom query parameter for filtering by follower relationships.
+		\add_filter( 'rest_ap_actor_query', array( self::class, 'filter_ap_actor_query_by_follower' ), 10, 2 );
+	}
+
+	/**
+	 * Filter WP_Query args to support follower_of parameter.
+	 *
+	 * @param array            $args    Array of arguments for WP_Query.
+	 * @param \WP_REST_Request $request The REST API request.
+	 * @return array Modified query arguments.
+	 */
+	public static function filter_ap_actor_query_by_follower( $args, $request ) {
+		if ( ! empty( $request['follower_of'] ) ) {
+			// Add meta_query to filter by _activitypub_following.
+			if ( ! isset( $args['meta_query'] ) ) {
+				$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			}
+
+			$args['meta_query'][] = array(
+				'key'   => Followers::FOLLOWER_META_KEY,
+				'value' => $request['follower_of'],
+			);
+		}
+
+		return $args;
 	}
 
 	/**

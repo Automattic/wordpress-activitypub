@@ -54,12 +54,10 @@ export type Action = SetFollowersAction | SetFollowingAction | SetInteractionsAc
  * Initial state
  */
 export const DEFAULT_STATE: State = {
-	followers: [],
 	following: [],
 	interactions: [],
 	feed: [],
 	isLoading: {
-		followers: false,
 		following: false,
 		interactions: false,
 		feed: false,

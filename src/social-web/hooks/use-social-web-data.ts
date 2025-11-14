@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 import { useSelect, useDispatch } from '@wordpress/data';
-import { useEffect } from '@wordpress/element';
+import { useEffect, useMemo } from '@wordpress/element';
 
 /**
  * Internal dependencies
@@ -11,18 +11,15 @@ import { STORE_NAME } from '../store';
 import type { Follower, Following, Interaction, FeedPost } from '../types';
 
 interface SocialWebData {
-	followers: Follower[];
 	following: Following[];
 	interactions: Interaction[];
 	feed: FeedPost[];
 	stats: {
-		followers: number;
 		following: number;
 		interactions: number;
 		posts: number;
 	};
 	isLoading: {
-		followers: boolean;
 		following: boolean;
 		interactions: boolean;
 		feed: boolean;
@@ -30,7 +27,6 @@ interface SocialWebData {
 }
 
 interface SocialWebActions {
-	fetchFollowers: () => void;
 	fetchFollowing: () => void;
 	fetchInteractions: () => void;
 	fetchFeed: () => void;
@@ -42,7 +38,7 @@ interface SocialWebActions {
  * Hook to access Social Web data and actions (full version - internal)
  */
 function useSocialWebDataFull(): SocialWebData & SocialWebActions {
-	const data = useSelect( ( select ) => {
+	const following = useSelect( ( select ) => {
 		const store = select( STORE_NAME ) as any;
 		return {
 			followers: store.getFollowers() as Follower[],
@@ -76,9 +72,20 @@ function useSocialWebDataFull(): SocialWebData & SocialWebActions {
 		fetchFeed();
 	}, [] );
 
+	// Memoize the isLoading object to prevent re-renders
+	const isLoading = useMemo(
+		() => ( {
+			following: isLoadingFollowing,
+			interactions: isLoadingInteractions,
+		} ),
+		[ isLoadingFollowing, isLoadingInteractions ]
+	);
+
 	return {
-		...data,
-		fetchFollowers,
+		following,
+		interactions,
+		stats,
+		isLoading,
 		fetchFollowing,
 		fetchInteractions,
 		fetchFeed,
@@ -112,9 +119,7 @@ export function useSocialWebData(
 		const item = useSelect(
 			( select ) => {
 				const store = select( STORE_NAME ) as any;
-				if ( resource === 'followers' ) {
-					return store.getFollowerById( id ) as Follower | undefined;
-				} else if ( resource === 'following' ) {
+				if ( resource === 'following' ) {
 					return store.getFollowingById( id ) as Following | undefined;
 				} else if ( resource === 'interactions' ) {
 					return store.getInteractionById( id ) as Interaction | undefined;
@@ -137,19 +142,6 @@ export function useSocialWebData(
 		items: allData?.[ resource ] || [],
 		isLoading: allData?.isLoading?.[ resource ] || false,
 	};
-}
-
-/**
- * Hook to get a specific follower by ID
- */
-export function useFollower( id: string ): Follower | undefined {
-	return useSelect(
-		( select ) => {
-			const store = select( STORE_NAME ) as any;
-			return store.getFollowerById( id ) as Follower | undefined;
-		},
-		[ id ]
-	);
 }
 
 /**

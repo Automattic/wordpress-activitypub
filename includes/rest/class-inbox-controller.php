@@ -176,7 +176,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 					/**
 					 * ActivityPub inbox action.
 					 *
-					 * @deprecated unreleased Support activitypub_inbox_shared instead to avoid duplicate processing.
+					 * @deprecated 7.6.0 Support activitypub_inbox_shared instead to avoid duplicate processing.
 					 *
 					 * @param array              $data     The data array.
 					 * @param int                $user_id  The user ID.
@@ -189,7 +189,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 					/**
 					 * ActivityPub inbox action for specific activity types.
 					 *
-					 * @deprecated unreleased Support activitypub_inbox_shared_{type} instead to avoid duplicate processing.
+					 * @deprecated 7.6.0 Support activitypub_inbox_shared_{type} instead to avoid duplicate processing.
 					 *
 					 * @param array              $data     The data array.
 					 * @param int                $user_id  The user ID.
@@ -206,7 +206,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 * This hook fires once per activity with all recipients.
 			 * Preferred for new implementations to avoid duplication.
 			 *
-			 * @since unreleased
+			 * @since 7.6.0
 			 *
 			 * @param array              $data       The data array.
 			 * @param array              $recipients Array of user IDs.
@@ -222,7 +222,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 * This hook fires once per activity with all recipients.
 			 * Preferred for new implementations to avoid duplication.
 			 *
-			 * @since unreleased
+			 * @since 7.6.0
 			 *
 			 * @param array              $data       The data array.
 			 * @param array              $recipients Array of user IDs.

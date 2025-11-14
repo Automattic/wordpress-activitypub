@@ -3,36 +3,12 @@
  */
 
 export interface SocialWebSettings {
-	siteUrl: string;
-	siteTitle: string;
 	adminUrl: string;
-	restUrl: string;
+	defaultAvatar: string;
 	nonce: string;
-}
-
-export interface Route {
-	name: string;
-	path: string;
-	label: string;
-	parent?: string;
-}
-
-export interface Location {
-	path: string;
-	params: {
-		section?: string;
-		id?: string;
-		[ key: string ]: string | undefined;
-	};
-	query: Record< string, string >;
-}
-
-export interface NavigationItem {
-	name: string;
-	label: string;
-	icon: any;
-	withChevron?: boolean;
-	path: string;
+	restUrl: string;
+	siteTitle: string;
+	siteUrl: string;
 }
 
 export interface Follower {
@@ -47,6 +23,42 @@ export interface Follower {
 	errors?: number;
 	inbox?: string;
 	shared_inbox?: string;
+}
+
+// New types for entity records implementation
+export interface ActorInfo {
+	username: string;
+	name: string;
+	icon: string;
+	url: string;
+	webfinger: string;
+	identifier: string;
+}
+
+export interface FollowStatus {
+	follows_back: boolean;
+}
+
+export interface Actor {
+	id: number;
+	date: string;
+	date_gmt: string;
+	guid: { rendered: string };
+	modified: string;
+	modified_gmt: string;
+	slug: string;
+	status: string;
+	type: string;
+	link: string;
+	title: { rendered: string };
+	content: { rendered: string; protected: boolean };
+	meta: {
+		_activitypub_following: string[];
+		[ key: string ]: any;
+	};
+	actor_info?: ActorInfo;
+	follow_status?: FollowStatus;
+	activitypub_json?: string;
 }
 
 export interface Following {

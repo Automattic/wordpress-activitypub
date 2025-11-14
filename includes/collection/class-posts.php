@@ -65,11 +65,7 @@ class Posts {
 		}
 
 		self::add_taxonomies( $post_id, $activity_object );
-
-		// Process attachments if present.
-		if ( ! empty( $activity_object['attachment'] ) ) {
-			Attachments::import_post_files( $activity_object['attachment'], $post_id );
-		}
+		self::maybe_import_attachments( $activity_object, $post_id );
 
 		return \get_post( $post_id );
 	}
@@ -145,11 +141,9 @@ class Posts {
 
 		self::add_taxonomies( $post_id, $activity['object'] );
 
-		// Process attachments if present.
-		if ( ! empty( $activity['object']['attachment'] ) ) {
-			Attachments::delete_ap_posts_directory( $post_id );
-			Attachments::import_post_files( $activity['object']['attachment'], $post_id );
-		}
+		// Always delete existing attachments on update in case filter value changed.
+		Attachments::delete_ap_posts_directory( $post_id );
+		self::maybe_import_attachments( $activity['object'], $post_id );
 
 		return \get_post( $post_id );
 	}
@@ -225,6 +219,38 @@ class Posts {
 		}
 
 		\wp_set_post_terms( $post_id, $tags, 'ap_tag' );
+	}
+
+	/**
+	 * Maybe import attachments for an activity object.
+	 *
+	 * Checks if attachments should be stored locally via filter and imports them if enabled.
+	 *
+	 * @param array $activity_object The activity object data.
+	 * @param int   $post_id         The post ID.
+	 */
+	private static function maybe_import_attachments( $activity_object, $post_id ) {
+		// Process attachments if present.
+		if ( empty( $activity_object['attachment'] ) ) {
+			return;
+		}
+
+		/**
+		 * Filters whether to store attachments locally for incoming ActivityPub posts.
+		 *
+		 * Allows plugins or users to disable local storage of attachments from
+		 * incoming ActivityPub posts. When disabled, attachments won't be downloaded
+		 * and stored locally, which can be useful for users with limited webspace.
+		 *
+		 * @param bool  $store_locally   Whether to store attachments locally. Default true.
+		 * @param array $activity_object The ActivityPub activity object.
+		 * @param int   $post_id         The post ID.
+		 */
+		$store_locally = \apply_filters( 'activitypub_store_attachments_locally', true, $activity_object, $post_id );
+
+		if ( $store_locally ) {
+			Attachments::import_post_files( $activity_object['attachment'], $post_id );
+		}
 	}
 
 	/**

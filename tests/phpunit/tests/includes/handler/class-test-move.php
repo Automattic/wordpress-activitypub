@@ -12,6 +12,8 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Move;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Test class for the Move handler.
  *
@@ -84,29 +86,20 @@ class Test_Move extends \WP_UnitTestCase {
 		// Add the user ID meta value.
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
-		$filter = function ( $preempt, $args, $url ) use ( $target, $target_object, $origin, $origin_object ) {
+		$filter = function ( $pre, $url_or_object ) use ( $target, $target_object, $origin, $origin_object ) {
+			$url = object_to_uri( $url_or_object );
 			if ( $url === $target ) {
-				return array(
-					'body'     => wp_json_encode( $target_object ),
-					'response' => array( 'code' => 200 ),
-				);
+				return $target_object;
 			}
 			if ( $url === $origin ) {
-				return array(
-					'body'     => wp_json_encode( $origin_object ),
-					'response' => array( 'code' => 200 ),
-				);
+				return $origin_object;
 			}
-			return $preempt;
+
+			return $pre;
 		};
 
 		// Mock the HTTP request.
-		add_filter(
-			'pre_http_request',
-			$filter,
-			10,
-			3
-		);
+		add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
 
 		$activity = array(
 			'type'   => 'Move',
@@ -125,7 +118,7 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\wp_delete_post( $updated_follower->ID );
 
-		\remove_filter( 'pre_http_request', $filter );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
 
 	/**
@@ -151,18 +144,13 @@ class Test_Move extends \WP_UnitTestCase {
 		// Add the user ID meta value.
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
+		// Mock HTTP request to return invalid data.
 		$filter = function () {
 			return array(
-				'body'     => wp_json_encode( array( 'type' => 'Invalid' ) ),
-				'response' => array( 'code' => 200 ),
+				'type' => 'Invalid',
 			);
 		};
-
-		// Mock HTTP request to return invalid data.
-		add_filter(
-			'pre_http_request',
-			$filter
-		);
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
 
 		$activity = array(
 			'type'   => 'Move',
@@ -183,7 +171,7 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Cleanup.
 		\wp_delete_post( $id );
-		\remove_filter( 'pre_http_request', $filter );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
 
 	/**
@@ -342,44 +330,38 @@ class Test_Move extends \WP_UnitTestCase {
 		\wp_cache_delete( $origin_id, 'posts' );
 		\wp_cache_delete( $target_id, 'posts' );
 
-		$filter = function ( $preempt, $args, $url ) use ( $target, $origin ) {
+		$filter = function ( $pre, $url_or_object ) use ( $target, $origin ) {
+			$url = object_to_uri( $url_or_object );
+
 			if ( $url === $target ) {
 				return array(
-					'body'     => wp_json_encode(
-						array(
-							'type'          => 'Person',
-							'id'            => $target,
-							'url'           => $target,
-							'name'          => 'New Profile',
-							'inbox'         => 'https://example.com/new-profile/inbox',
-							'also_known_as' => array(
-								$origin,
-							),
-						)
+					'type'          => 'Person',
+					'id'            => $target,
+					'url'           => $target,
+					'name'          => 'New Profile',
+					'inbox'         => 'https://example.com/new-profile/inbox',
+					'also_known_as' => array(
+						$origin,
 					),
-					'response' => array( 'code' => 200 ),
 				);
 			}
+
 			if ( $url === $origin ) {
 				return array(
-					'body'     => wp_json_encode(
-						array(
-							'type'    => 'Person',
-							'id'      => $origin,
-							'url'     => $origin,
-							'name'    => 'Old Profile',
-							'inbox'   => 'https://example.com/old-profile/inbox',
-							'movedTo' => $target,
-						)
-					),
-					'response' => array( 'code' => 200 ),
+					'type'    => 'Person',
+					'id'      => $origin,
+					'url'     => $origin,
+					'name'    => 'Old Profile',
+					'inbox'   => 'https://example.com/old-profile/inbox',
+					'movedTo' => $target,
 				);
 			}
-			return $preempt;
+
+			return $pre;
 		};
 
 		// Mock the HTTP request.
-		add_filter( 'pre_http_request', $filter, 10, 3 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
 
 		$activity = array(
 			'type'   => 'Move',
@@ -398,6 +380,6 @@ class Test_Move extends \WP_UnitTestCase {
 		// Check if the origin follower was deleted.
 		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
 
-		remove_filter( 'pre_http_request', $filter );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
 }

@@ -263,6 +263,254 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test delete_object with Tombstone type object having only an id.
+	 *
+	 * This tests the scenario where a Delete activity contains a Tombstone object
+	 * with only an 'id' field, which is common in ActivityPub implementations.
+	 *
+	 * @covers ::delete_object
+	 * @covers ::maybe_delete_interaction
+	 * @covers ::maybe_delete_post
+	 */
+	public function test_delete_object_with_tombstone_id_only() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+			)
+		);
+
+		$actor_url  = 'https://example.com/users/testactor';
+		$object_url = 'https://example.com/objects/123';
+
+		// Create a comment (interaction) that will be deleted.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => $post_id,
+				'comment_type'       => 'like',
+				'comment_author'     => 'Test Actor',
+				'comment_author_url' => $actor_url,
+				'comment_meta'       => array(
+					'protocol'  => 'activitypub',
+					'source_id' => $object_url,
+				),
+			)
+		);
+
+		// Create a Delete activity with Tombstone type and only an id.
+		$activity = array(
+			'type'   => 'Delete',
+			'actor'  => $actor_url,
+			'object' => array(
+				'type' => 'Tombstone',
+				'id'   => $object_url,
+			),
+		);
+
+		// Mock HTTP request to return 410 Gone for the tombstone check.
+		$filter = function ( $preempt, $args, $url ) use ( $object_url ) {
+			if ( $url === $object_url ) {
+				return array(
+					'body'     => '',
+					'response' => array( 'code' => 410 ),
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		// Verify comment exists before delete.
+		$this->assertInstanceOf( 'WP_Comment', \get_comment( $comment_id ), 'Comment should exist before delete' );
+
+		// Call delete_object.
+		Delete::delete_object( $activity, array( self::$user_id ) );
+
+		// Verify comment was deleted.
+		$this->assertNull( \get_comment( $comment_id ), 'Comment should be deleted after delete_object' );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test delete_object with Tombstone type for post deletion.
+	 *
+	 * Tests deleting a post from the Posts collection using a Tombstone object.
+	 *
+	 * @covers ::delete_object
+	 * @covers ::maybe_delete_post
+	 */
+	public function test_delete_object_tombstone_deletes_post() {
+		$object_url = 'https://example.com/notes/456';
+		$actor_url  = 'https://example.com/users/testactor';
+
+		// Create a post in the Posts collection.
+		$post_id = \wp_insert_post(
+			array(
+				'post_type'    => \Activitypub\Collection\Posts::POST_TYPE,
+				'post_title'   => 'Test Note',
+				'post_content' => 'Test content',
+				'post_status'  => 'publish',
+				'guid'         => $object_url,
+			)
+		);
+
+		// Create Delete activity with Tombstone.
+		$activity = array(
+			'type'   => 'Delete',
+			'actor'  => $actor_url,
+			'object' => array(
+				'type' => 'Tombstone',
+				'id'   => $object_url,
+			),
+		);
+
+		// Mock HTTP request to return 410 Gone for the tombstone check.
+		$filter = function ( $preempt, $args, $url ) use ( $object_url ) {
+			if ( $url === $object_url ) {
+				return array(
+					'body'     => '',
+					'response' => array( 'code' => 410 ),
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		// Verify post exists before delete.
+		$this->assertInstanceOf( 'WP_Post', \get_post( $post_id ), 'Post should exist before delete' );
+
+		// Call delete_object.
+		Delete::delete_object( $activity, array( self::$user_id ) );
+
+		// Verify post was deleted.
+		$this->assertNull( \get_post( $post_id ), 'Post should be deleted after delete_object' );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test delete_object with Tombstone but no matching content.
+	 *
+	 * Verifies that delete_object handles gracefully when there's nothing to delete.
+	 *
+	 * @covers ::delete_object
+	 * @covers ::maybe_delete_interaction
+	 * @covers ::maybe_delete_post
+	 */
+	public function test_delete_object_tombstone_no_matching_content() {
+		$object_url = 'https://example.com/nonexistent/789';
+		$actor_url  = 'https://example.com/users/testactor';
+
+		// Create Delete activity with Tombstone for non-existent content.
+		$activity = array(
+			'type'   => 'Delete',
+			'actor'  => $actor_url,
+			'object' => array(
+				'type' => 'Tombstone',
+				'id'   => $object_url,
+			),
+		);
+
+		// Mock HTTP request to return 410 Gone for the tombstone check.
+		$filter = function ( $preempt, $args, $url ) use ( $object_url ) {
+			if ( $url === $object_url ) {
+				return array(
+					'body'     => '',
+					'response' => array( 'code' => 410 ),
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		// Track if the action was fired.
+		$action_fired   = false;
+		$action_success = null;
+
+		\add_action(
+			'activitypub_handled_delete',
+			function ( $act, $users, $success ) use ( &$action_fired, &$action_success ) {
+				$action_fired   = true;
+				$action_success = $success;
+			},
+			10,
+			3
+		);
+
+		// Call delete_object - should not throw errors.
+		Delete::delete_object( $activity, array( self::$user_id ) );
+
+		// Verify action was fired but success is false (nothing to delete).
+		$this->assertTrue( $action_fired, 'activitypub_handled_delete action should fire' );
+		$this->assertFalse( $action_success, 'Success should be false when nothing was deleted' );
+
+		\remove_filter( 'pre_http_request', $filter );
+		\remove_all_actions( 'activitypub_handled_delete' );
+	}
+
+	/**
+	 * Test delete_object with Tombstone as string ID.
+	 *
+	 * Tests the case where the object is just a string URL (without type field).
+	 *
+	 * @covers ::delete_object
+	 * @covers ::maybe_delete_interaction
+	 */
+	public function test_delete_object_with_tombstone_string_id() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+			)
+		);
+
+		$actor_url  = 'https://example.com/users/testactor';
+		$object_url = 'https://example.com/objects/string-test';
+
+		// Create a comment.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => $post_id,
+				'comment_type'       => 'announce',
+				'comment_author'     => 'Test Actor',
+				'comment_author_url' => $actor_url,
+				'comment_meta'       => array(
+					'protocol'  => 'activitypub',
+					'source_id' => $object_url,
+				),
+			)
+		);
+
+		// Create Delete activity with object as string (common pattern).
+		$activity = array(
+			'type'   => 'Delete',
+			'actor'  => $actor_url,
+			'object' => $object_url,
+		);
+
+		// Mock HTTP request to return 404 Not Found for the tombstone check.
+		$filter = function ( $preempt, $args, $url ) use ( $object_url ) {
+			if ( $url === $object_url ) {
+				return array(
+					'body'     => '',
+					'response' => array( 'code' => 404 ),
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		// Verify comment exists.
+		$this->assertInstanceOf( 'WP_Comment', \get_comment( $comment_id ), 'Comment should exist before delete' );
+
+		// Call delete_object.
+		Delete::delete_object( $activity, array( self::$user_id ) );
+
+		// Verify comment was deleted.
+		$this->assertNull( \get_comment( $comment_id ), 'Comment should be deleted when object is string URL' );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
 	 * Get remote metadata by actor.
 	 *
 	 * @param string $value Value.

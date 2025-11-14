@@ -43,7 +43,7 @@ class Avatars {
 		 * @param array $allowed_comment_types Array of allowed comment types.
 		 */
 		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment' ) );
-		if ( ! \in_array( $id_or_email->comment_type ?: 'comment', $allowed_comment_types, true ) ) { // phpcs:ignore Universal.Operators.DisallowShortTernary
+		if ( ! \in_array( $id_or_email->comment_type ?: 'comment', $allowed_comment_types, true ) ) {
 			return $args;
 		}
 

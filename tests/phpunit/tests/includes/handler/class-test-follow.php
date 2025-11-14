@@ -270,6 +270,75 @@ class Test_Follow extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that duplicate follow requests don't trigger notifications.
+	 *
+	 * @covers ::handle_follow
+	 */
+	public function test_duplicate_follow_no_notification() {
+		$actor_url = 'https://example.com/duplicate-actor';
+
+		// Mock HTTP requests for actor metadata.
+		$mock_actor_callback = function () use ( $actor_url ) {
+			return array(
+				'id'                => $actor_url,
+				'actor'             => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'duplicateactor',
+				'inbox'             => str_replace( '/actor', '/inbox', $actor_url ),
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_callback );
+
+		$local_actor     = Actors::get_by_id( self::$user_id );
+		$activity_object = array(
+			'id'     => $actor_url . '/activity/follow-1',
+			'type'   => 'Follow',
+			'actor'  => $actor_url,
+			'object' => $local_actor->get_id(),
+		);
+
+		// Track calls to the handled_follow action.
+		$handled_follow_calls = array();
+		$test_callback        = function ( $activity, $user_ids, $success, $remote_actor ) use ( &$handled_follow_calls ) {
+			$handled_follow_calls[] = array(
+				'activity'     => $activity,
+				'user_ids'     => $user_ids,
+				'success'      => $success,
+				'remote_actor' => $remote_actor,
+			);
+		};
+		\add_action( 'activitypub_handled_follow', $test_callback, 10, 4 );
+
+		// First follow request - should succeed.
+		Follow::handle_follow( $activity_object, self::$user_id );
+
+		// Verify first follow was successful.
+		$this->assertCount( 1, $handled_follow_calls, 'First follow should trigger the action' );
+		$this->assertTrue( $handled_follow_calls[0]['success'], 'First follow should be successful' );
+
+		// Verify follower was added.
+		$followers       = Followers::get_many( self::$user_id );
+		$follower_actors = wp_list_pluck( $followers, 'guid' );
+		$this->assertContains( $actor_url, $follower_actors, 'Follower should be added' );
+
+		// Second follow request with a different activity ID (simulating a retry).
+		$activity_object['id'] = $actor_url . '/activity/follow-2';
+		Follow::handle_follow( $activity_object, self::$user_id );
+
+		// Verify second follow was not successful (to prevent duplicate notification).
+		$this->assertCount( 2, $handled_follow_calls, 'Second follow should also trigger the action' );
+		$this->assertFalse( $handled_follow_calls[1]['success'], 'Second follow should NOT be successful to prevent duplicate notification' );
+
+		// Verify follower count didn't change.
+		$followers_after = Followers::get_many( self::$user_id );
+		$this->assertCount( count( $followers ), $followers_after, 'Follower count should not change on duplicate follow' );
+
+		// Clean up.
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_callback );
+		\remove_action( 'activitypub_handled_follow', $test_callback, 10 );
+	}
+
+	/**
 	 * Test queue_reject method.
 	 *
 	 * @covers ::queue_reject

@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Added support for FEP-3b86 Activity Intents, extending WebFinger and REST interactions with new Create and Follow intent links.

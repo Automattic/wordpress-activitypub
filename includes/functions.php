@@ -22,10 +22,10 @@ use Activitypub\Transformer\Factory as Transformer_Factory;
  *
  * @return array The activitypub context.
  *
- * @deprecated unreleased Use the respective context function instead.
+ * @deprecated 7.6.0 Use the respective context function instead.
  */
 function get_context() {
-	\_deprecated_function( __FUNCTION__, 'unreleased', 'Use the respective context function instead.' );
+	\_deprecated_function( __FUNCTION__, '7.6.0', 'Use the respective context function instead.' );
 
 	$context = Activity::JSON_LD_CONTEXT;
 
@@ -588,6 +588,12 @@ function get_activity_visibility( $activity ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
 	}
 
+	// Activities with no recipients are treated as public.
+	$recipients = extract_recipients_from_activity( $activity );
+	if ( empty( $recipients ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+	}
+
 	return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 }
 
@@ -607,6 +613,10 @@ function is_activity_public( $data ) {
 
 	$recipients = extract_recipients_from_activity( $data );
 
+	if ( empty( $recipients ) ) {
+		return true;
+	}
+
 	return ! empty( array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
 }
 
@@ -619,6 +629,22 @@ function is_activity_public( $data ) {
  */
 function is_activity_reply( $data ) {
 	return ! empty( $data['object']['inReplyTo'] );
+}
+
+/**
+ * Check if passed Activity is a quote.
+ *
+ * Checks for quote properties: quote, quoteUrl, quoteUri, or _misskey_quote.
+ *
+ * @param array $data The Activity object as array.
+ *
+ * @return boolean True if a quote, false if not.
+ */
+function is_quote_activity( $data ) {
+	return ! empty( $data['object']['quote'] ) ||
+		! empty( $data['object']['quoteUrl'] ) ||
+		! empty( $data['object']['quoteUri'] ) ||
+		! empty( $data['object']['_misskey_quote'] );
 }
 
 /**

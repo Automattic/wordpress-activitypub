@@ -126,7 +126,7 @@ class WP_Rest_Cache {
 		$comment_types   = Comment::get_comment_type_slugs();
 		$comment_types[] = 'comment';
 
-		if ( ! \in_array( $comment->comment_type ?: 'comment', $comment_types, true ) ) { // phpcs:ignore Universal.Operators.DisallowShortTernary
+		if ( ! \in_array( $comment->comment_type ?: 'comment', $comment_types, true ) ) {
 			return;
 		}
 

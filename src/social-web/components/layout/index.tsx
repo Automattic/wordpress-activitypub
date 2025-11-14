@@ -7,13 +7,16 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, lazy, Suspense } from '@wordpress/element';
 import { CommandMenu } from '@wordpress/commands';
+import { SnackbarList, Spinner } from '@wordpress/components';
+import { useSelect, useDispatch } from '@wordpress/data';
+import { store as noticesStore } from '@wordpress/notices';
 import Sidebar from '../sidebar';
 import Panel from '../panel';
 import './style.scss';
 
-// Import stage components.
+// Import dashboard directly since it's the default route
 import DashboardStage from '../../routes/dashboard/stage';
 import FeedStage from '../../routes/feed/stage';
 import FollowersStage from '../../routes/followers/stage';
@@ -59,6 +62,13 @@ function updateHash( section: string, itemId?: string | number | null ) {
 export function Layout() {
 	const [ activeSection, setActiveSection ] = useState( 'dashboard' );
 	const [ selectedItemId, setSelectedItemId ] = useState< string | number | null >( null );
+
+	// Get notices for the snackbar
+	const notices = useSelect( ( select ) => {
+		const store = select( noticesStore ) as any;
+		return store.getNotices().filter( ( notice: any ) => notice.type === 'snackbar' );
+	}, [] );
+	const { removeNotice } = useDispatch( noticesStore ) as any;
 
 	// Initialize from URL hash on mount
 	useEffect( () => {
@@ -123,6 +133,26 @@ export function Layout() {
 			default:
 				return <DashboardStage />;
 		}
+
+		// Other routes are lazy-loaded
+		const StageComponent = () => {
+			switch ( activeSection ) {
+				case 'followers':
+					return <FollowersStage />;
+				case 'following':
+					return <FollowingStage { ...props } />;
+				case 'interactions':
+					return <InteractionsStage { ...props } />;
+				default:
+					return <DashboardStage />;
+			}
+		};
+
+		return (
+			<Suspense fallback={ <Spinner /> }>
+				<StageComponent />
+			</Suspense>
+		);
 	};
 
 	// Render detail panel (inspector)
@@ -168,6 +198,8 @@ export function Layout() {
 					</div>
 				) }
 			</div>
+
+			<SnackbarList notices={ notices } onRemove={ removeNotice } />
 		</div>
 	);
 }

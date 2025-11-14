@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Added a safety check to prevent errors when resolving comment author hostnames without a valid IP address.

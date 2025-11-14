@@ -34,18 +34,42 @@ class Interactions {
 	public static function add_comment( $activity ) {
 		$comment_data = self::activity_to_comment( $activity );
 
-		if ( ! $comment_data || ! isset( $activity['object']['inReplyTo'] ) ) {
+		if ( ! $comment_data ) {
 			return false;
 		}
 
-		$in_reply_to       = object_to_uri( $activity['object']['inReplyTo'] );
-		$in_reply_to       = \esc_url_raw( $in_reply_to );
-		$comment_post_id   = \url_to_postid( $in_reply_to );
-		$parent_comment_id = url_to_commentid( $in_reply_to );
+		// Determine target URL from reply or quote.
+		$parent_comment_id = 0;
 
-		// Save only replies and reactions.
+		if ( ! empty( $activity['object']['inReplyTo'] ) ) {
+			// Regular reply.
+			$target_url        = object_to_uri( $activity['object']['inReplyTo'] );
+			$parent_comment_id = url_to_commentid( $target_url );
+		} else {
+			// Check for quote.
+			$target_url = self::get_quote_url( $activity );
+
+			if ( ! $target_url ) {
+				return false;
+			}
+
+			// Mark as quote and clean content.
+			$comment_data['comment_type'] = 'quote';
+
+			if ( ! empty( $activity['object']['content'] ) ) {
+				$pattern                         = '/<p[^>]*class=["\']quote-inline["\'][^>]*>.*?<\/p>/is';
+				$cleaned_content                 = \preg_replace( $pattern, '', $activity['object']['content'], 1 );
+				$comment_data['comment_content'] = \wp_kses_post( $cleaned_content );
+			}
+		}
+
+		// Get post ID from target URL.
+		$target_url      = \esc_url_raw( $target_url );
+		$comment_post_id = \url_to_postid( $target_url );
+
+		// Handle nested replies (replies to comments).
 		if ( ! $comment_post_id && $parent_comment_id ) {
-			$parent_comment  = get_comment( $parent_comment_id );
+			$parent_comment  = \get_comment( $parent_comment_id );
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 
@@ -78,7 +102,7 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author']  = \esc_attr( $meta['name'] ?? $meta['preferredUsername'] );
+		$comment_data['comment_author']  = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 		$comment_data['comment_content'] = \addslashes( $activity['object']['content'] );
 
 		return self::persist( $comment_data, self::UPDATE );
@@ -164,14 +188,14 @@ class Interactions {
 	/**
 	 * Get interaction(s) for a given URL/ID.
 	 *
-	 * @deprecated unreleased Use {@see Interactions::get_by_id()}.
+	 * @deprecated 7.6.0 Use {@see Interactions::get_by_id()}.
 	 *
 	 * @param string $url The URL/ID to get interactions for.
 	 *
 	 * @return array The interactions as WP_Comment objects.
 	 */
 	public static function get_interaction_by_id( $url ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Interactions::get_by_id' );
+		\_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Interactions::get_by_id' );
 
 		return self::get_by_id( $url );
 	}
@@ -239,14 +263,14 @@ class Interactions {
 	/**
 	 * Get interaction(s) for a given actor.
 	 *
-	 * @deprecated unreleased Use {@see Interactions::get_by_actor()}.
+	 * @deprecated 7.6.0 Use {@see Interactions::get_by_actor()}.
 	 *
 	 * @param string $actor The Actor-URL.
 	 *
 	 * @return array The interactions as WP_Comment objects.
 	 */
 	public static function get_interactions_by_actor( $actor ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Collection\Interactions::get_by_actor' );
+		\_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Interactions::get_by_actor' );
 
 		return self::get_by_actor( $actor );
 	}
@@ -410,5 +434,34 @@ class Interactions {
 				'fields'  => 'ids',
 			)
 		);
+	}
+
+	/**
+	 * Get the quote URL from an activity.
+	 *
+	 * Checks for quote properties in priority order: quote -> quoteUrl -> quoteUri -> _misskey_quote.
+	 *
+	 * @param array $activity The activity array.
+	 *
+	 * @return string|false The quote URL or false if not found.
+	 */
+	public static function get_quote_url( $activity ) {
+		if ( ! empty( $activity['object']['quote'] ) ) {
+			return object_to_uri( $activity['object']['quote'] );
+		}
+
+		if ( ! empty( $activity['object']['quoteUrl'] ) ) {
+			return object_to_uri( $activity['object']['quoteUrl'] );
+		}
+
+		if ( ! empty( $activity['object']['quoteUri'] ) ) {
+			return object_to_uri( $activity['object']['quoteUri'] );
+		}
+
+		if ( ! empty( $activity['object']['_misskey_quote'] ) ) {
+			return object_to_uri( $activity['object']['_misskey_quote'] );
+		}
+
+		return false;
 	}
 }

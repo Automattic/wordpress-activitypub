@@ -46,7 +46,6 @@ export const selectors = {
 
 	getStats( state: State ) {
 		return {
-			followers: state.followers.length,
 			following: state.following.length,
 			interactions: state.interactions.length,
 			posts: state.feed.length,

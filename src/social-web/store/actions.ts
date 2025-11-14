@@ -56,20 +56,6 @@ export const actions = {
 		};
 	},
 
-	*fetchFollowers() {
-		yield actions.setLoading( 'followers', true );
-		try {
-			const followers = yield apiFetch( {
-				path: '/activitypub/v1/followers',
-			} );
-			yield actions.setFollowers( followers as Follower[] );
-		} catch ( error ) {
-			console.error( 'Failed to fetch followers:', error );
-		} finally {
-			yield actions.setLoading( 'followers', false );
-		}
-	},
-
 	*fetchFollowing() {
 		yield actions.setLoading( 'following', true );
 		try {
