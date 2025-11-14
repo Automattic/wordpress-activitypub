@@ -96,7 +96,7 @@ class Moderators_Controller extends \WP_REST_Controller {
 			'orderedItems' => $actors,
 		);
 
-		$response = $this->prepare_collection_response( $response, $request );
+		$response = $this->prepare_collection_response( $response, $request, false );
 
 		if ( \is_wp_error( $response ) ) {
 			return $response;
@@ -137,7 +137,7 @@ class Moderators_Controller extends \WP_REST_Controller {
 				),
 				'type'         => array(
 					'type'     => 'string',
-					'enum'     => array( 'OrderedCollection' ),
+					'enum'     => array( 'OrderedCollection', 'OrderedCollectionPage' ),
 					'required' => true,
 				),
 				'orderedItems' => array(
