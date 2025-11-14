@@ -17,16 +17,8 @@ export const createContentField = (): Field< FeedPost > => ( {
 		return text.replace( /<[^>]*>/g, '' ).replace( /&[^;]+;/g, '' );
 	},
 	render: ( { item }: { item: FeedPost } ) => {
-		// Prefer excerpt, fall back to content
-		const content = item.excerpt?.rendered || item.content?.rendered || '';
-		const author = ( item as any ).actor?.post_title || __( 'Unknown author', 'activitypub' );
-		const date = item.date
-			? new Date( item.date ).toLocaleDateString( undefined, {
-					year: 'numeric',
-					month: 'short',
-					day: 'numeric',
-			  } )
-			: '';
+		// Use full content
+		const content = item.content?.rendered || '';
 
 		// Check if content is actually empty (not just whitespace)
 		const hasRealContent =
@@ -36,52 +28,13 @@ export const createContentField = (): Field< FeedPost > => ( {
 				.replace( /&nbsp;/g, '' )
 				.trim().length > 0;
 
-		if ( ! hasRealContent && ! item.title?.rendered ) {
-			return (
-				<div style={ { padding: '12px 0', color: '#757575' } }>
-					{ __( 'No content available', 'activitypub' ) }
-				</div>
-			);
+		if ( ! hasRealContent ) {
+			return null;
 		}
 
 		return (
 			<div className="activitypub-feed-post">
-				{ /* Author and date metadata */ }
-				<div className="activitypub-feed-post-meta">
-					<span className="author">{ author }</span>
-					{ date && (
-						<>
-							<span className="separator">·</span>
-							<span className="date">{ date }</span>
-						</>
-					) }
-				</div>
-
-				{ /* Title if available */ }
-				{ item.title?.rendered && (
-					<div
-						className="activitypub-feed-post-title"
-						dangerouslySetInnerHTML={ { __html: item.title.rendered } }
-					/>
-				) }
-
-				{ /* Content with HTML rendering */ }
-				{ hasRealContent ? (
-					<div className="activitypub-feed-content" dangerouslySetInnerHTML={ { __html: content } } />
-				) : (
-					<div className="activitypub-feed-no-content">
-						{ __( 'No excerpt or content available', 'activitypub' ) }
-					</div>
-				) }
-
-				{ /* Link to original post */ }
-				{ item.link && (
-					<div className="activitypub-feed-view-original">
-						<a href={ item.link } target="_blank" rel="noopener noreferrer">
-							{ __( 'View original', 'activitypub' ) }
-						</a>
-					</div>
-				) }
+				<div className="activitypub-feed-content" dangerouslySetInnerHTML={ { __html: content } } />
 			</div>
 		);
 	},

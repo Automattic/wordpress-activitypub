@@ -660,7 +660,7 @@ class Post_Types {
 	public static function register_ap_post_actor_rest_field() {
 		\register_rest_field(
 			Posts::POST_TYPE,
-			'actor',
+			'actor_info',
 			array(
 				/**
 				 * Get the remote actor data for an ap_post.
@@ -670,13 +670,19 @@ class Post_Types {
 				 */
 				'get_callback' => function ( $response ) {
 					$id    = \get_post_meta( $response['id'], '_activitypub_remote_actor_id', true );
-					$actor = Remote_Actors::get( $id );
+					$actor = Remote_Actors::get_actor( $id );
 
 					if ( \is_wp_error( $actor ) ) {
 						return null;
 					}
 
-					return $actor;
+					return array(
+						'username'   => $actor->get_preferred_username(),
+						'name'       => $actor->get_name() ?? $actor->get_preferred_username(),
+						'icon'       => object_to_uri( $actor->get_icon() ),
+						'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
+						'identifier' => $actor->get_id(),
+					);
 				},
 				'schema'       => array(
 					'description' => 'Remote actor data',

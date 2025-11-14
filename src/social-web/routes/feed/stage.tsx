@@ -5,20 +5,22 @@
  */
 
 import './style.scss';
-import { useMemo, useState } from '@wordpress/element';
+import './post-card-style.scss';
+import { useMemo } from '@wordpress/element';
 import { DataViews } from '@wordpress/dataviews';
+import { useView } from '@wordpress/views';
 import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import {
 	createTitleField,
-	authorField,
 	dateField,
 	statusField,
 	excerptField,
 	metadataField,
 	createContentField,
+	createPostCardField,
 } from '../../components/fields';
 import { getFeedActions } from './FeedActions';
 import type { FeedPost } from '../../types';
@@ -33,16 +35,17 @@ const DEFAULT_VIEW: View = {
 	},
 	search: '',
 	filters: [],
-	fields: [ 'content' ],
+	fields: [ 'metadata', 'title.rendered', 'excerpt.rendered' ],
 };
 
 const defaultLayouts = {
 	table: {
-		fields: [ 'title.rendered', 'author', 'date', 'status' ],
+		fields: [ 'title.rendered', 'metadata', 'excerpt.rendered' ],
 	},
 	list: {
-		primaryField: 'content',
-		fields: [ 'content' ],
+		primaryField: 'post_card',
+		fields: [ 'post_card' ],
+		mediaField: undefined,
 	},
 };
 
@@ -51,14 +54,13 @@ interface FeedStageProps {
 }
 
 export default function FeedStage( { onSelectItem }: FeedStageProps ) {
-	// TODO: Switch to useView from @wordpress/views when package is installed
-	// const { view, updateView } = useView( {
-	// 	kind: 'postType',
-	// 	name: 'ap_post',
-	// 	slug: 'feed',
-	// 	defaultView: DEFAULT_VIEW,
-	// } );
-	const [ view, setView ] = useState< View >( DEFAULT_VIEW );
+	// Use the views hook to persist user preferences
+	const { view, updateView } = useView( {
+		kind: 'postType',
+		name: 'ap_post',
+		slug: 'feed',
+		defaultView: DEFAULT_VIEW,
+	} );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
@@ -70,18 +72,19 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 
 	const fields: Field< FeedPost >[] = useMemo(
 		() => [
+			createPostCardField( onSelectItem ),
 			createContentField(),
 			createTitleField( onSelectItem ),
 			metadataField,
 			excerptField,
-			authorField,
 			dateField,
 			statusField,
 		],
 		[ onSelectItem ]
 	);
 
-	const actions = useMemo( () => getFeedActions( onSelectItem ), [ onSelectItem ] );
+	// Hide actions for now
+	const actions = useMemo( () => [], [ onSelectItem ] );
 
 	return (
 		<Page
@@ -93,7 +96,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 				data={ feed }
 				fields={ fields }
 				view={ view }
-				onChangeView={ setView }
+				onChangeView={ updateView }
 				actions={ actions }
 				isLoading={ isResolving }
 				getItemId={ ( item ) => item.id.toString() }

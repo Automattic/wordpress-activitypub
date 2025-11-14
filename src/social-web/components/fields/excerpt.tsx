@@ -40,6 +40,9 @@ export const excerptField: Field< FeedPost > = {
 					lineHeight: '1.6',
 					marginTop: '6px',
 					maxWidth: '800px',
+					overflow: 'hidden',
+					textOverflow: 'ellipsis',
+					whiteSpace: 'nowrap',
 				} }
 			>
 				{ truncated }

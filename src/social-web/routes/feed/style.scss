@@ -1,105 +1,19 @@
 /**
  * Feed view styles
- * Reader-style layout for ActivityPub posts
+ * Minimal styling - relies on WordPress/DataViews defaults
  */
-
-// Feed post wrapper
-.activitypub-feed-post {
-	width: 100%;
-	display: block;
-}
-
-// No content message styling
-.activitypub-feed-no-content {
-	padding: 8px 0;
-	color: #999;
-	font-size: 13px;
-	font-style: italic;
-}
 
 // Override inspector width for feed section
 .app-layout[data-section='feed'] .inspector-region {
 	width: 50%;
 }
 
-// Feed content styles for reader view
-.activitypub-feed-content {
-	// Reset some WordPress admin styles that may interfere
-	p {
-		margin: 0.8em 0;
-		line-height: 1.6;
+// Post wrapper with clear separation
+.activitypub-feed-post {
+	border-bottom: 1px solid #dcdcde;
 
-		&:first-child {
-			margin-top: 0;
-		}
-
-		&:last-child {
-			margin-bottom: 0;
-		}
-	}
-
-	a {
-		color: #2271b1;
-		text-decoration: none;
-
-		&:hover {
-			text-decoration: underline;
-		}
-	}
-
-	img {
-		max-width: 100%;
-		height: auto;
-		border-radius: 4px;
-		margin: 12px 0;
-		display: block;
-	}
-
-	blockquote {
-		margin: 12px 0;
-		padding: 8px 16px;
-		border-left: 3px solid #dcdcde;
-		background: #f6f7f7;
-		font-style: italic;
-	}
-
-	pre,
-	code {
-		background: #f0f0f1;
-		padding: 2px 6px;
-		border-radius: 3px;
-		font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-		font-size: 0.9em;
-	}
-
-	pre {
-		padding: 12px;
-		overflow-x: auto;
-
-		code {
-			padding: 0;
-			background: transparent;
-		}
-	}
-
-	ul,
-	ol {
-		margin: 0.8em 0;
-		padding-left: 2em;
-	}
-
-	h1,
-	h2,
-	h3,
-	h4,
-	h5,
-	h6 {
-		margin: 1em 0 0.5em;
-		line-height: 1.3;
-
-		&:first-child {
-			margin-top: 0;
-		}
+	&:last-child {
+		border-bottom: none;
 	}
 }
 
@@ -108,56 +22,98 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	margin-bottom: 12px;
 	font-size: 13px;
-	color: #757575;
-	margin-bottom: 8px;
+	color: #646970;
+
+	.activitypub-feed-avatar {
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		object-fit: cover;
+		background-color: #f0f0f1;
+		flex-shrink: 0;
+	}
 
 	.author {
 		font-weight: 500;
-		color: #1e1e1e;
+		color: #1d2327;
 	}
 
 	.separator {
 		color: #c3c4c7;
+	}
+
+	.date {
+		color: #646970;
 	}
 }
 
 // Post title styling
 .activitypub-feed-post-title {
 	margin: 0 0 12px;
-	font-size: 18px;
-	font-weight: 600;
+	font-size: inherit;
+	font-weight: normal;
 	line-height: 1.4;
-	color: #1e1e1e;
+	color: #1d2327;
 
-	a {
-		color: inherit;
-		text-decoration: none;
-
-		&:hover {
-			color: #2271b1;
-		}
+	// Remove extra margins from nested elements
+	> * {
+		margin: 0;
 	}
 }
 
-// View original link
-.activitypub-feed-view-original {
-	margin-top: 12px;
-	font-size: 13px;
+// Prominent headline in list view only
+.dataviews-view-list .activitypub-feed-post-title {
+	font-size: 1.3em;
+	font-weight: 600;
+}
 
-	a {
-		color: #2271b1;
-		text-decoration: none;
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
+// Content wrapper - optimize readability
+.activitypub-feed-content {
+	line-height: 1.6;
+	color: #2c3338;
 
-		&:hover {
-			text-decoration: underline;
-		}
+	// Ensure proper spacing
+	> *:first-child {
+		margin-top: 0;
+	}
 
-		&::after {
-			content: '→';
-		}
+	> *:last-child {
+		margin-bottom: 0;
+	}
+
+	// Optimize images
+	img {
+		max-width: 100%;
+		height: auto;
+		border-radius: 4px;
+		margin: 12px 0;
+	}
+
+	// Float images if they have alignment classes
+	img.alignleft {
+		float: left;
+		margin: 0 16px 12px 0;
+		max-width: 50%;
+	}
+
+	img.alignright {
+		float: right;
+		margin: 0 0 12px 16px;
+		max-width: 50%;
+	}
+
+	img.aligncenter {
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	// Clear floats
+	&::after {
+		content: '';
+		display: table;
+		clear: both;
 	}
 }

@@ -5,7 +5,7 @@ import type { FeedPost } from '../../types';
 export const statusField: Field< FeedPost > = {
 	id: 'status',
 	label: __( 'Status', 'activitypub' ),
-	enableHiding: false,
+	enableHiding: true,
 	enableSorting: true,
 	getValue: ( { item }: { item: FeedPost } ) => item.status || '',
 };

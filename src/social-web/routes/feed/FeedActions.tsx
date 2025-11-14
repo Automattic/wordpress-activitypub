@@ -7,7 +7,7 @@ export function getFeedActions( onSelectItem: ( id: number ) => void ): Action< 
 		{
 			id: 'view-details',
 			label: __( 'View Details', 'activitypub' ),
-			isPrimary: true,
+			isPrimary: false,
 			callback: ( items: FeedPost[] ) => {
 				if ( items.length === 1 ) {
 					// eslint-disable-next-line no-console

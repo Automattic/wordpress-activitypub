@@ -109,12 +109,7 @@ export interface FeedPost {
 	};
 	comment_status: string;
 	ping_status: string;
-	actor?: {
-		ID: number;
-		post_title: string;
-		post_excerpt: string;
-		guid: string;
-	} | null;
+	actor_info?: ActorInfo;
 }
 
 export interface Comment {

@@ -36,9 +36,14 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 		return <div style={ { padding: '20px', textAlign: 'center' } }>{ __( 'Post not found', 'activitypub' ) }</div>;
 	}
 
-	const author = post.actor?.post_title || __( 'Unknown author', 'activitypub' );
+	const actor = post.actor;
+	const author = actor?.name || __( 'Unknown author', 'activitypub' );
 	const postDate = post.date ? new Date( post.date ).toLocaleString() : '';
 	const content = post.content?.rendered || post.excerpt?.rendered || '';
+	// Default avatar SVG (person icon)
+	const defaultAvatar =
+		'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23999"%3E%3Cpath d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/%3E%3C/svg%3E';
+	const avatarUrl = actor?.icon?.url || defaultAvatar;
 
 	return (
 		<Page
@@ -52,8 +57,23 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 		>
 			<Card>
 				<CardHeader>
-					<strong>{ author }</strong>
-					{ postDate && <span style={ { marginLeft: '8px', color: '#757575' } }>{ postDate }</span> }
+					<div style={ { display: 'flex', alignItems: 'center', gap: '8px' } }>
+						<img
+							src={ avatarUrl }
+							alt={ author }
+							style={ {
+								width: '32px',
+								height: '32px',
+								borderRadius: '50%',
+								objectFit: 'cover',
+								backgroundColor: '#f0f0f1',
+							} }
+						/>
+						<div>
+							<strong>{ author }</strong>
+							{ postDate && <span style={ { marginLeft: '8px', color: '#757575' } }>{ postDate }</span> }
+						</div>
+					</div>
 				</CardHeader>
 				<CardBody>
 					{ post.title?.rendered && <h2 dangerouslySetInnerHTML={ { __html: post.title.rendered } } /> }

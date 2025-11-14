@@ -25,7 +25,7 @@ export function useFeed( {
 	orderBy = 'date',
 	order = 'desc',
 	search = '',
-	fields = [ 'id', 'date', 'modified', 'title', 'excerpt', 'content', 'actor', 'status', 'link' ],
+	fields = [ 'id', 'date', 'modified', 'title', 'excerpt', 'content', 'actor_info', 'status', 'link' ],
 }: UseFeedParams = {} ): UseFeedReturn {
 	const queryArgs = useMemo(
 		() => ( {
