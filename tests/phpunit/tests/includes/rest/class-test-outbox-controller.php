@@ -349,6 +349,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		\wp_set_current_user( 0 );
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
 		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
+		$request->set_param( 'per_page', 10 ); // Need per_page for pagination calculation.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -461,6 +462,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		\wp_set_current_user( 0 );
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
 		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
+		$request->set_param( 'per_page', 10 ); // Need per_page for pagination calculation.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
