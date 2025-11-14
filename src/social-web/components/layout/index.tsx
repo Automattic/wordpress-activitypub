@@ -16,8 +16,7 @@ import Sidebar from '../sidebar';
 import Panel from '../panel';
 import './style.scss';
 
-// Import dashboard directly since it's the default route
-import DashboardStage from '../../routes/dashboard/stage';
+// Import route stages
 import FeedStage from '../../routes/feed/stage';
 import FollowingStage from '../../routes/following/stage';
 import InteractionsStage from '../../routes/interactions/stage';
@@ -34,11 +33,11 @@ import InteractionInspector from '../../routes/interactions/inspector';
 function parseHash(): { section: string; itemId: string | number | null } {
 	const hash = window.location.hash.slice( 1 ); // Remove #
 	if ( ! hash || hash === '/' ) {
-		return { section: 'dashboard', itemId: null };
+		return { section: 'feed', itemId: null };
 	}
 
 	const parts = hash.split( '/' ).filter( Boolean );
-	const section = parts[ 0 ] || 'dashboard';
+	const section = parts[ 0 ] || 'feed';
 	const itemId = parts[ 1 ] || null;
 
 	// Convert itemId to number for feed
@@ -61,7 +60,7 @@ function updateHash( section: string, itemId?: string | number | null ) {
 }
 
 export function Layout() {
-	const [ activeSection, setActiveSection ] = useState( 'dashboard' );
+	const [ activeSection, setActiveSection ] = useState( 'feed' );
 	const [ selectedItemId, setSelectedItemId ] = useState< string | number | null >( null );
 
 	// Get notices for the snackbar
@@ -121,8 +120,6 @@ export function Layout() {
 		const props = { onSelectItem: handleSelectItem };
 
 		switch ( activeSection ) {
-			case 'dashboard':
-				return <DashboardStage />;
 			case 'feed':
 				return <FeedStage { ...props } />;
 			case 'following':
@@ -130,7 +127,7 @@ export function Layout() {
 			case 'interactions':
 				return <InteractionsStage { ...props } />;
 			default:
-				return <DashboardStage />;
+				return <FeedStage { ...props } />;
 		}
 	};
 
