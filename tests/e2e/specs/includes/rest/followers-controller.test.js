@@ -99,7 +99,7 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 	test( 'should handle page parameter', async ( { requestUtils } ) => {
 		try {
 			const data = await requestUtils.rest( {
-				path: `${ followersEndpoint }?page=1`,
+				path: `${ followersEndpoint }?page=1&per_page=10`,
 			} );
 
 			// If successful, verify the response structure

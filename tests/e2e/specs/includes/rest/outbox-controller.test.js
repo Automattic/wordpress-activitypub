@@ -98,7 +98,7 @@ test.describe( 'ActivityPub Outbox REST API', () => {
 	test( 'should handle page parameter', async ( { requestUtils } ) => {
 		try {
 			const data = await requestUtils.rest( {
-				path: `${ outboxEndpoint }?page=1`,
+				path: `${ outboxEndpoint }?page=1&per_page=10`,
 			} );
 
 			// If successful, verify the response structure

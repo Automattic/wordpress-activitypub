@@ -94,7 +94,7 @@ test.describe( 'ActivityPub Following Collection REST API', () => {
 	test( 'should handle page parameter', async ( { requestUtils } ) => {
 		try {
 			const data = await requestUtils.rest( {
-				path: `${ followingEndpoint }?page=1`,
+				path: `${ followingEndpoint }?page=1&per_page=10`,
 			} );
 
 			// If successful, verify the response structure
