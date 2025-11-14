@@ -1,0 +1,8 @@
+{
+  "name": "actors-entity",
+  "title": "Actors Entity: Registers actors as WordPress Core Data entities",
+  "category": "widgets",
+  "icon": "admin-users",
+  "keywords": [],
+  "editorScript": "file:./index.js"
+}

@@ -45,6 +45,20 @@ class Blocks {
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
+		// Register the actors entity with WordPress Core Data API.
+		$entity_asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/internal/actors-entity/index.asset.php';
+		if ( file_exists( $entity_asset_file ) ) {
+			$entity_asset_data = include $entity_asset_file;
+			$entity_url        = plugins_url( 'build/internal/actors-entity/index.js', ACTIVITYPUB_PLUGIN_FILE );
+			wp_enqueue_script(
+				'activitypub-actors-entity',
+				$entity_url,
+				$entity_asset_data['dependencies'],
+				$entity_asset_data['version'],
+				true
+			);
+		}
+
 		// Check for our supported post types.
 		$current_screen = \get_current_screen();
 		$ap_post_types  = \get_post_types_by_support( 'activitypub' );

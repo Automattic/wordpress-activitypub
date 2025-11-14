@@ -51,6 +51,7 @@ function rest_init() {
 	( new Rest\Following_Controller() )->register_routes();
 	( new Rest\Inbox_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
+	( new Rest\Internal\Actors_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
