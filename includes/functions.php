@@ -760,6 +760,11 @@ function object_to_uri( $data ) {
 		return $data;
 	}
 
+	// Return scalar values as-is (bool, int, float).
+	if ( is_bool( $data ) || is_int( $data ) || is_float( $data ) ) {
+		return $data;
+	}
+
 	if ( is_object( $data ) ) {
 		$data = $data->to_array();
 	}
@@ -792,7 +797,7 @@ function object_to_uri( $data ) {
 			$data = $data['href'];
 			break;
 		default:
-			$data = $data['id'];
+			$data = $data['id'] ?? null;
 			break;
 	}
 

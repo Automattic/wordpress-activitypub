@@ -28,7 +28,7 @@ class Actors_Controller extends WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $namespace = 'activitypub/v1';
+	protected $namespace = 'activitypub/1.0';
 
 	/**
 	 * The base of this controller's route.
@@ -243,32 +243,25 @@ class Actors_Controller extends WP_REST_Controller {
 	 * @return WP_REST_Response Response object.
 	 */
 	public function prepare_item_for_response( $actor, $request ) {
-		$actor_id   = $actor->get_user_id();
-		$actor_type = Actor_Collection::get_type_by_id( $actor_id );
+		$actor_array = $actor->to_array();
 
-		$data = array(
-			'id'                 => $actor_id,
-			'type'               => $actor_type,
-			'name'               => $actor->get_name(),
-			'preferred_username' => $actor->get_preferred_username(),
-			'url'                => $actor->get_url(),
-			'icon'               => $actor->get_icon(),
-			'summary'            => $actor->get_summary(),
-			'activitypub_id'     => $actor->get_id(),
-		);
+		// Remove context.
+		unset( $actor_array['@context'] );
+
+		// Map all values through object_to_uri and filter out empty ones.
+		$data = array_filter( array_map( '\Activitypub\object_to_uri', $actor_array ) );
 
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
 		$data    = $this->add_additional_fields_to_object( $data, $request );
 		$data    = $this->filter_response_by_context( $data, $context );
 
 		$response = \rest_ensure_response( $data );
-		$response->add_links( $this->prepare_links( $actor ) );
 
 		/**
 		 * Filters the actor data for a REST API response.
 		 *
 		 * @param WP_REST_Response $response The response object.
-		 * @param object           $actor    Actor object.
+		 * @param object|array     $actor    Actor object or array.
 		 * @param WP_REST_Request  $request  Request object.
 		 */
 		return \apply_filters( 'activitypub_rest_prepare_actor', $response, $actor, $request );
@@ -303,22 +296,18 @@ class Actors_Controller extends WP_REST_Controller {
 	 * @return WP_REST_Response Response object.
 	 */
 	protected function prepare_remote_actor_for_response( $post, $request ) {
-		$actor_data = \get_post_meta( $post->ID, '_activitypub_actor_json', true );
+		// Get actor data from post content or meta.
+		$actor_data = \json_decode( $post->post_content, true );
 
 		if ( empty( $actor_data ) || ! is_array( $actor_data ) ) {
 			$actor_data = array();
 		}
 
-		$data = array(
-			'id'                 => $post->ID,
-			'type'               => 'remote',
-			'name'               => $actor_data['name'] ?? $post->post_title,
-			'preferred_username' => $actor_data['preferredUsername'] ?? '',
-			'url'                => \get_post_meta( $post->ID, '_activitypub_actor_url', true ) ?: $post->guid,
-			'icon'               => $actor_data['icon'] ?? null,
-			'summary'            => $actor_data['summary'] ?? '',
-			'activitypub_id'     => $post->guid,
-		);
+		// Remove context.
+		unset( $actor_data['@context'] );
+
+		// Map all values through object_to_uri and filter out empty ones.
+		$data = array_filter( array_map( '\Activitypub\object_to_uri', $actor_data ) );
 
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
 		$data    = $this->add_additional_fields_to_object( $data, $request );

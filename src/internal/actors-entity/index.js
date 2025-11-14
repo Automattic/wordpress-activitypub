@@ -8,8 +8,8 @@ import { store as coreDataStore } from '@wordpress/core-data';
  * Register the ActivityPub actors entity with WordPress Core Data API.
  *
  * This allows components to interact with actors using hooks like:
- * - useEntityRecords( 'activitypub/v1', 'actor' )
- * - useEntityRecord( 'activitypub/v1', 'actor', id )
+ * - useEntityRecords( 'activitypub/1.0', 'actor' )
+ * - useEntityRecord( 'activitypub/1.0', 'actor', id )
  */
 const registerActorEntity = () => {
 	const { registerEntityType } = dispatch( coreDataStore );
@@ -17,7 +17,7 @@ const registerActorEntity = () => {
 	// Register the actor entity
 	registerEntityType( {
 		// The kind is typically the namespace of your REST endpoint
-		kind: 'activitypub/v1',
+		kind: 'activitypub/1.0',
 
 		// The name is the entity type name
 		name: 'actor',
@@ -29,7 +29,7 @@ const registerActorEntity = () => {
 		plural: 'Actors',
 
 		// The base URL for the REST API endpoint
-		baseURL: '/wp-json/activitypub/v1/internal/actors',
+		baseURL: '/wp-json/activitypub/1.0/internal/actors',
 
 		// The key to use as the unique identifier
 		key: 'id',
