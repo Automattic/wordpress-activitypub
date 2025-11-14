@@ -55,11 +55,13 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 
 		$result = $this->instance->prepare_collection_response( $response, $request );
 
-		$this->assertEquals( $response, $result );
-		$this->assertArrayNotHasKey( 'first', $result );
-		$this->assertArrayNotHasKey( 'last', $result );
-		$this->assertArrayNotHasKey( 'next', $result );
-		$this->assertArrayNotHasKey( 'prev', $result );
+		// After the change, single-page collections now include pagination links.
+		$this->assertArrayHasKey( 'first', $result );
+		$this->assertArrayHasKey( 'last', $result );
+		$this->assertArrayNotHasKey( 'items', $result, 'Collection (not page) should not have items' );
+		$this->assertEquals( 'https://example.org/collection?per_page=10', $result['id'] );
+		$this->assertEquals( 'https://example.org/collection?per_page=10&page=1', $result['first'] );
+		$this->assertEquals( 'https://example.org/collection?per_page=10&page=1', $result['last'] );
 	}
 
 	/**

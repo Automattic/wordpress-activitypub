@@ -140,14 +140,14 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertStringContainsString( 'page=1', $data['prev'] );
 		$this->assertStringContainsString( 'page=3', $data['next'] );
 
-		// Empty collection.
+		// Empty collection - with the new behavior, even empty collections have pagination links.
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
 		$request->set_param( 'per_page', 3 );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
-		$this->assertArrayNotHasKey( 'first', $data );
-		$this->assertArrayNotHasKey( 'last', $data );
+		$this->assertArrayHasKey( 'first', $data );
+		$this->assertArrayHasKey( 'last', $data );
 	}
 
 	/**
@@ -164,9 +164,11 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertArrayHasKey( 'id', $data );
 		$this->assertArrayHasKey( 'type', $data );
 		$this->assertArrayHasKey( 'totalItems', $data );
-		$this->assertArrayHasKey( 'orderedItems', $data );
+		// Collection (without page param) should not have orderedItems, only links to pages.
+		$this->assertArrayNotHasKey( 'orderedItems', $data );
+		$this->assertArrayHasKey( 'first', $data );
+		$this->assertArrayHasKey( 'last', $data );
 		$this->assertEquals( 'OrderedCollection', $data['type'] );
-		$this->assertIsArray( $data['orderedItems'] );
 
 		$headers = $response->get_headers();
 		$this->assertEquals( 'application/activity+json; charset=' . \get_option( 'blog_charset' ), $headers['Content-Type'] );
@@ -345,7 +347,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		// Test as logged-out user.
 		\wp_set_current_user( 0 );
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -456,7 +459,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		// Test as logged-out user.
 		\wp_set_current_user( 0 );
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -531,7 +535,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		);
 
 		// Test user outbox only returns user actor type.
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -539,7 +544,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertCount( 10, $data['orderedItems'] );
 
 		// Test blog outbox only returns blog actor type.
-		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
+		$request = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -583,7 +589,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		// Test as non-privileged user.
 		wp_set_current_user( $viewer_id );
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
