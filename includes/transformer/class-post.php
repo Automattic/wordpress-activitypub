@@ -891,7 +891,7 @@ class Post extends Base {
 	 */
 	protected function get_post_content_template() {
 		$content  = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
-		$template = $content ?: ACTIVITYPUB_CUSTOM_POST_CONTENT; // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+		$template = $content ?: ACTIVITYPUB_CUSTOM_POST_CONTENT;
 
 		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 		$type                = $this->get_type();

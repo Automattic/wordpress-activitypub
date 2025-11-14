@@ -131,7 +131,7 @@ class Classic_Editor {
 		$content_warning       = \get_post_meta( $post->ID, 'activitypub_content_warning', true );
 		$max_image_attachments = \get_post_meta( $post->ID, 'activitypub_max_image_attachments', true );
 		$content_visibility    = self::get_default_visibility( $post );
-		$quote_interaction     = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true ) ?: ACTIVITYPUB_INTERACTION_POLICY_ANYONE; // phpcs:ignore Universal.Operators.DisallowShortTernary
+		$quote_interaction     = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true ) ?: ACTIVITYPUB_INTERACTION_POLICY_ANYONE;
 
 		?>
 		<p>

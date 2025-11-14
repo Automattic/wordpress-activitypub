@@ -14,14 +14,14 @@
 	<arg name="colors"/>
 	<arg name="parallel" value="50"/>
 
-	<rule ref="PHPCompatibility"/>
 	<config name="testVersion" value="7.2-"/>
-	<rule ref="PHPCompatibilityWP"/>
 	<config name="minimum_supported_wp_version" value="6.5"/>
-
 	<config name="text_domain" value="activitypub,default"/>
 
-	<rule ref="WordPress"/>
+	<rule ref="PHPCompatibilityWP"/>
+	<rule ref="WordPress">
+		<exclude name="Universal.Operators.DisallowShortTernary" />
+	</rule>
 	<rule ref="VariableAnalysis"/>
 
 	<rule ref="WordPress.WP.Capabilities">
