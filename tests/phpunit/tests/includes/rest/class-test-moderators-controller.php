@@ -52,9 +52,7 @@ class Test_Moderators_Controller extends \Activitypub\Tests\Test_REST_Controller
 	 * Test moderators endpoint response structure.
 	 */
 	public function test_get_items() {
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/collections/moderators' );
-		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
-		$request->set_param( 'per_page', 10 ); // Need per_page for pagination calculation.
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/collections/moderators' );
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
@@ -67,7 +65,7 @@ class Test_Moderators_Controller extends \Activitypub\Tests\Test_REST_Controller
 		$this->assertEquals( array( 'https://www.w3.org/ns/activitystreams' ), $data['@context'] );
 		$this->assertArrayHasKey( 'id', $data );
 		$this->assertArrayHasKey( 'type', $data );
-		$this->assertEquals( 'OrderedCollectionPage', $data['type'] ); // With page param, type is OrderedCollectionPage.
+		$this->assertEquals( 'OrderedCollection', $data['type'] ); // Moderators collection is not paged.
 		$this->assertArrayHasKey( 'orderedItems', $data );
 		$this->assertIsArray( $data['orderedItems'] );
 
@@ -87,9 +85,7 @@ class Test_Moderators_Controller extends \Activitypub\Tests\Test_REST_Controller
 	 * @covers ::get_item_schema
 	 */
 	public function test_response_matches_schema() {
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/collections/moderators' );
-		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems for schema validation.
-		$request->set_param( 'per_page', 10 ); // Need per_page for pagination calculation.
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/collections/moderators' );
 		$response = rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 		$schema   = ( new \Activitypub\Rest\Moderators_Controller() )->get_item_schema();
