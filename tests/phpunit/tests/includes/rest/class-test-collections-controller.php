@@ -92,12 +92,14 @@ class Test_Collections_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 * @covers ::get_tags
 	 */
 	public function test_get_tags() {
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/collections/tags' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/collections/tags' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get items.
+		$request->set_param( 'per_page', 10 ); // Need per_page for pagination calculation.
 		$response = rest_get_server()->dispatch( $request )->get_data();
 
 		$this->assertIsArray( $response );
 		$this->assertEquals( Base_Object::JSON_LD_CONTEXT, $response['@context'] );
-		$this->assertEquals( 'Collection', $response['type'] );
+		$this->assertEquals( 'CollectionPage', $response['type'] );
 		$this->assertIsArray( $response['items'] );
 	}
 
@@ -109,12 +111,14 @@ class Test_Collections_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	public function test_get_featured() {
 		stick_post( self::$post_id );
 
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/collections/featured' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/collections/featured' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
+		$request->set_param( 'per_page', 10 ); // Need per_page for pagination calculation.
 		$response = rest_get_server()->dispatch( $request )->get_data();
 
 		$this->assertIsArray( $response );
 		$this->assertEquals( Base_Object::JSON_LD_CONTEXT, $response['@context'] );
-		$this->assertEquals( 'OrderedCollection', $response['type'] );
+		$this->assertEquals( 'OrderedCollectionPage', $response['type'] );
 		$this->assertIsArray( $response['orderedItems'] );
 		$this->assertEquals( 1, $response['totalItems'] );
 	}

@@ -96,7 +96,11 @@ class Moderators_Controller extends \WP_REST_Controller {
 			'orderedItems' => $actors,
 		);
 
-		$response = $this->prepare_collection_response( $response, $request );
+		// Set the JSON-LD context if not already set.
+		if ( empty( $response['@context'] ) ) {
+			// Ensure the context is the first element in the response.
+			$response = array( '@context' => $this->json_ld_context ) + $response;
+		}
 
 		if ( \is_wp_error( $response ) ) {
 			return $response;

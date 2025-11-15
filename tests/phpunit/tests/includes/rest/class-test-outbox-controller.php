@@ -140,14 +140,14 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertStringContainsString( 'page=1', $data['prev'] );
 		$this->assertStringContainsString( 'page=3', $data['next'] );
 
-		// Empty collection.
+		// Empty collection - with the new behavior, even empty collections have pagination links.
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
 		$request->set_param( 'per_page', 3 );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
-		$this->assertArrayNotHasKey( 'first', $data );
-		$this->assertArrayNotHasKey( 'last', $data );
+		$this->assertArrayHasKey( 'first', $data );
+		$this->assertArrayHasKey( 'last', $data );
 	}
 
 	/**
@@ -164,9 +164,11 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertArrayHasKey( 'id', $data );
 		$this->assertArrayHasKey( 'type', $data );
 		$this->assertArrayHasKey( 'totalItems', $data );
-		$this->assertArrayHasKey( 'orderedItems', $data );
+		// Collection (without page param) should not have orderedItems, only links to pages.
+		$this->assertArrayNotHasKey( 'orderedItems', $data );
+		$this->assertArrayHasKey( 'first', $data );
+		$this->assertArrayHasKey( 'last', $data );
 		$this->assertEquals( 'OrderedCollection', $data['type'] );
-		$this->assertIsArray( $data['orderedItems'] );
 
 		$headers = $response->get_headers();
 		$this->assertEquals( 'application/activity+json; charset=' . \get_option( 'blog_charset' ), $headers['Content-Type'] );
@@ -345,24 +347,34 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		// Test as logged-out user.
 		\wp_set_current_user( 0 );
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
-		$response = \rest_get_server()->dispatch( $request );
-		$data     = $response->get_data();
-
-		$this->assertEquals( 200, $response->get_status() );
-		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
 
 		if ( $allowed ) {
+			// For allowed activities, request a page to verify they appear in orderedItems.
+			$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
+			$request->set_param( 'per_page', 10 ); // Need per_page for pagination calculation.
+			$response = \rest_get_server()->dispatch( $request );
+			$data     = $response->get_data();
+
+			$this->assertEquals( 200, $response->get_status() );
+			$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
 			$this->assertContains( $type, $activity_types, sprintf( 'Activity type "%s" should be visible to logged-out users.', $type ) );
 		} else {
-			$this->assertNotContains( $type, $activity_types, sprintf( 'Activity type "%s" should not be visible to logged-out users.', $type ) );
+			// For disallowed activities, check the collection without pagination to verify totalItems is 0.
+			$response = \rest_get_server()->dispatch( $request );
+			$data     = $response->get_data();
+
+			$this->assertEquals( 200, $response->get_status() );
+			$this->assertEquals( 0, $data['totalItems'], sprintf( 'Activity type "%s" should not be visible to logged-out users (totalItems should be 0).', $type ) );
 		}
 
 		// Test as logged-in user with activitypub capability.
 		\wp_set_current_user( $user_id );
 		$this->assertTrue( \current_user_can( 'activitypub' ) );
 
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
+		$request->set_param( 'per_page', 10 ); // Need per_page for pagination calculation.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -456,26 +468,47 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		// Test as logged-out user.
 		\wp_set_current_user( 0 );
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
-		$response = \rest_get_server()->dispatch( $request );
-		$data     = $response->get_data();
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
 
-		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame(
-			(int) $public_visible,
-			(int) \count( $data['orderedItems'] ),
-			sprintf(
-				'Content with visibility "%s" should%s be visible to logged-out users.',
-				$visibility ?? 'none',
-				$public_visible ? '' : ' not'
-			)
-		);
+		if ( $public_visible ) {
+			// For publicly visible content, request a page to verify it appears in orderedItems.
+			$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
+			$request->set_param( 'per_page', 10 ); // Need per_page for pagination calculation.
+			$response = \rest_get_server()->dispatch( $request );
+			$data     = $response->get_data();
+
+			$this->assertEquals( 200, $response->get_status() );
+			$this->assertSame(
+				1,
+				(int) \count( $data['orderedItems'] ),
+				sprintf(
+					'Content with visibility "%s" should be visible to logged-out users.',
+					$visibility ?? 'none'
+				)
+			);
+		} else {
+			// For non-public content, check the collection without pagination to verify totalItems is 0.
+			$response = \rest_get_server()->dispatch( $request );
+			$data     = $response->get_data();
+
+			$this->assertEquals( 200, $response->get_status() );
+			$this->assertEquals(
+				0,
+				$data['totalItems'],
+				sprintf(
+					'Content with visibility "%s" should not be visible to logged-out users (totalItems should be 0).',
+					$visibility ?? 'none'
+				)
+			);
+		}
 
 		// Test as logged-in user with activitypub capability.
 		\wp_set_current_user( $user_id );
 		$this->assertTrue( \current_user_can( 'activitypub' ) );
 
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
+		$request->set_param( 'per_page', 10 ); // Need per_page for pagination calculation.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -531,7 +564,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		);
 
 		// Test user outbox only returns user actor type.
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -539,7 +573,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertCount( 10, $data['orderedItems'] );
 
 		// Test blog outbox only returns blog actor type.
-		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
+		$request = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -583,7 +618,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		// Test as non-privileged user.
 		wp_set_current_user( $viewer_id );
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -593,7 +629,9 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		// Test as privileged user.
 		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $admin_id );
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
+		$request->set_param( 'per_page', 20 ); // Need per_page for pagination calculation.
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
