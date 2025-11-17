@@ -113,7 +113,7 @@ class Post_Types {
 				),
 				'map_meta_cap'        => true,
 				'public'              => false,
-				'show_in_rest'        => true,
+				'show_in_rest'        => false,
 				'rewrite'             => false,
 				'query_var'           => false,
 				'supports'            => array( 'title', 'editor', 'author', 'custom-fields' ),
@@ -144,7 +144,6 @@ class Post_Types {
 				'single'            => true,
 				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
-					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => Activity::TYPES,
@@ -223,7 +222,7 @@ class Post_Types {
 				),
 				'map_meta_cap'        => true,
 				'public'              => false,
-				'show_in_rest'        => true,
+				'show_in_rest'        => false,
 				'rewrite'             => false,
 				'query_var'           => false,
 				'supports'            => array( 'title', 'editor', 'author', 'custom-fields' ),
@@ -248,7 +247,6 @@ class Post_Types {
 				'single'            => true,
 				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
-					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => Activity::TYPES,
@@ -350,7 +348,7 @@ class Post_Types {
 				),
 				'map_meta_cap'        => true,
 				'public'              => false,
-				'show_in_rest'        => true,
+				'show_in_rest'        => false,
 				'rewrite'             => false,
 				'query_var'           => false,
 				'supports'            => array( 'title', 'editor', 'author', 'custom-fields', 'excerpt', 'comments' ),

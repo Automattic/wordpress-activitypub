@@ -223,11 +223,11 @@
 	padding: 15px;
 }
 
-.profile-field {
+.extra-field {
 	margin-bottom: 15px;
 }
 
-.profile-field label {
+.extra-field label {
 	display: block;
 	margin-bottom: 5px;
 	font-weight: 500;
@@ -235,7 +235,7 @@
 	color: #646970;
 }
 
-.profile-field input {
+.extra-field input {
 	width: 100%;
 	padding: 8px;
 	font-size: 13px;

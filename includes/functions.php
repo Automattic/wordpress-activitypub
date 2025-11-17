@@ -632,6 +632,22 @@ function is_activity_reply( $data ) {
 }
 
 /**
+ * Check if passed Activity is a quote.
+ *
+ * Checks for quote properties: quote, quoteUrl, quoteUri, or _misskey_quote.
+ *
+ * @param array $data The Activity object as array.
+ *
+ * @return boolean True if a quote, false if not.
+ */
+function is_quote_activity( $data ) {
+	return ! empty( $data['object']['quote'] ) ||
+		! empty( $data['object']['quoteUrl'] ) ||
+		! empty( $data['object']['quoteUri'] ) ||
+		! empty( $data['object']['_misskey_quote'] );
+}
+
+/**
  * Get active users based on a given duration.
  *
  * @param int $duration Optional. The duration to check in month(s). Default 1.

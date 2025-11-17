@@ -231,7 +231,6 @@ class Settings_Fields {
 	public static function render_custom_post_content_field() {
 		$value = get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 		?>
-		<p><strong><?php esc_html_e( 'These settings only apply if you use the "Note" Object-Type setting above.', 'activitypub' ); ?></strong></p>
 		<p>
 			<textarea id="activitypub_custom_post_content" name="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo esc_attr( ACTIVITYPUB_CUSTOM_POST_CONTENT ); ?>"><?php echo esc_textarea( wp_kses( $value, 'post' ) ); ?></textarea>
 			<details>

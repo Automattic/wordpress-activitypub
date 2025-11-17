@@ -12,6 +12,7 @@ use Activitypub\Collection\Posts;
 
 use function Activitypub\get_activity_visibility;
 use function Activitypub\is_activity_reply;
+use function Activitypub\is_quote_activity;
 use function Activitypub\is_self_ping;
 use function Activitypub\object_id_to_comment;
 
@@ -38,7 +39,7 @@ class Create {
 		// Check for private and/or direct messages.
 		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
 			$result = false;
-		} elseif ( is_activity_reply( $activity ) ) { // Check for replies.
+		} elseif ( is_activity_reply( $activity ) || is_quote_activity( $activity ) ) { // Check for replies and quotes.
 			$result = self::create_interaction( $activity, $user_ids, $activity_object );
 		} elseif ( \get_option( 'activitypub_create_posts', false ) ) { // Handle non-interaction objects.
 			$result = self::create_post( $activity, $user_ids, $activity_object );

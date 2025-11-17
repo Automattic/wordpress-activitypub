@@ -475,4 +475,256 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 
 		parent::tear_down();
 	}
+
+	/**
+	 * Test that deleting a quote comment sends a Reject activity.
+	 *
+	 * @covers ::handle_quote_delete
+	 */
+	public function test_delete_quote_comment_sends_reject() {
+		$actor_url      = 'https://mastodon.example/users/alice';
+		$instrument_url = 'https://mastodon.example/users/alice/statuses/123';
+
+		// Create a quote comment (simulating an accepted QuoteRequest).
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_author'     => 'Alice',
+				'comment_author_url' => $actor_url,
+				'comment_content'    => 'Quote comment content',
+				'comment_type'       => 'quote',
+				'comment_approved'   => 1,
+				'user_id'            => 0,
+			)
+		);
+
+		$this->assertIsInt( $comment_id, 'Quote comment should be created' );
+
+		// Add metadata that would be set when quote is accepted.
+		\add_comment_meta( $comment_id, 'source_url', $instrument_url );
+		\add_comment_meta( $comment_id, 'source_id', $instrument_url );
+		\add_post_meta( self::$post_id, '_activitypub_quoted_by', $instrument_url );
+
+		// Verify metadata is set.
+		$quoted_by_meta = \get_post_meta( self::$post_id, '_activitypub_quoted_by', false );
+		$this->assertContains( $instrument_url, $quoted_by_meta, 'Instrument URL should be in quoted_by meta' );
+
+		// Track outbox activities.
+		$outbox_activities = array();
+		\add_action(
+			'post_activitypub_add_to_outbox',
+			function ( $outbox_id, $activity, $user_id, $visibility ) use ( &$outbox_activities ) {
+				$outbox_activities[] = array(
+					'outbox_id'  => $outbox_id,
+					'activity'   => $activity,
+					'user_id'    => $user_id,
+					'visibility' => $visibility,
+				);
+			},
+			10,
+			4
+		);
+
+		// Delete the quote comment.
+		wp_delete_comment( $comment_id, true );
+
+		// Verify Reject activity was queued.
+		$this->assertNotEmpty( $outbox_activities, 'A Reject activity should be queued' );
+
+		$reject_activity = null;
+		foreach ( $outbox_activities as $item ) {
+			if ( isset( $item['activity'] ) && $item['activity'] instanceof \Activitypub\Activity\Activity ) {
+				$activity_array = $item['activity']->to_array();
+				if ( 'Reject' === $activity_array['type'] ) {
+					$reject_activity = $activity_array;
+					break;
+				}
+			}
+		}
+
+		$this->assertNotNull( $reject_activity, 'A Reject activity should be created' );
+
+		// Verify the Reject activity has correct structure.
+		$this->assertEquals( 'Reject', $reject_activity['type'] );
+		$this->assertIsArray( $reject_activity['object'] );
+		$this->assertEquals( 'QuoteRequest', $reject_activity['object']['type'] );
+		$this->assertEquals( $actor_url, $reject_activity['object']['actor'] );
+		$this->assertEquals( $instrument_url, $reject_activity['object']['instrument'] );
+
+		// Verify metadata was removed.
+		$quoted_by_after = \get_post_meta( self::$post_id, '_activitypub_quoted_by', false );
+		$this->assertNotContains( $instrument_url, $quoted_by_after, 'Instrument URL should be removed from quoted_by meta' );
+	}
+
+	/**
+	 * Test that deleting a non-quote comment doesn't send Reject.
+	 *
+	 * @covers ::handle_quote_delete
+	 */
+	public function test_delete_regular_comment_no_reject() {
+		// Create a regular comment.
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_author'     => 'Bob',
+				'comment_author_url' => 'https://example.com/users/bob',
+				'comment_content'    => 'Regular comment',
+				'comment_type'       => 'comment',
+				'comment_approved'   => 1,
+			)
+		);
+
+		// Track outbox activities.
+		$reject_sent = false;
+		\add_action(
+			'post_activitypub_add_to_outbox',
+			function ( $outbox_id, $activity ) use ( &$reject_sent ) {
+				if ( $activity instanceof \Activitypub\Activity\Activity ) {
+					$activity_array = $activity->to_array();
+					if ( 'Reject' === $activity_array['type'] ) {
+						$reject_sent = true;
+					}
+				}
+			},
+			10,
+			2
+		);
+
+		// Delete the regular comment.
+		wp_delete_comment( $comment_id, true );
+
+		// Verify no Reject activity was sent.
+		$this->assertFalse( $reject_sent, 'Reject should not be sent for non-quote comments' );
+	}
+
+	/**
+	 * Test that deleting quote comment without metadata handles gracefully.
+	 *
+	 * @covers ::handle_quote_delete
+	 */
+	public function test_delete_quote_comment_without_metadata() {
+		// Create a quote comment without metadata.
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'  => self::$post_id,
+				'comment_author'   => 'Carol',
+				'comment_content'  => 'Quote without metadata',
+				'comment_type'     => 'quote',
+				'comment_approved' => 1,
+			)
+		);
+
+		// This should not throw an error or send Reject.
+		$exception_thrown = false;
+		try {
+			wp_delete_comment( $comment_id, true );
+		} catch ( \Exception $e ) {
+			$exception_thrown = true;
+		}
+
+		$this->assertFalse( $exception_thrown, 'Deleting quote without metadata should not throw exception' );
+	}
+
+	/**
+	 * Test that deletion retrieves original QuoteRequest from inbox.
+	 *
+	 * @covers ::handle_quote_delete
+	 */
+	public function test_delete_uses_inbox_item() {
+		$actor_url        = 'https://mastodon.example/users/dave';
+		$instrument_url   = 'https://mastodon.example/users/dave/statuses/456';
+		$quote_request_id = 'https://mastodon.example/users/dave/activities/789';
+
+		// Create a full QuoteRequest activity and store it in inbox.
+		$quote_request_activity = array(
+			'@context'   => 'https://www.w3.org/ns/activitystreams',
+			'id'         => $quote_request_id,
+			'type'       => 'QuoteRequest',
+			'actor'      => $actor_url,
+			'object'     => \get_permalink( self::$post_id ),
+			'instrument' => $instrument_url,
+			'published'  => gmdate( 'Y-m-d\TH:i:s\Z' ),
+		);
+
+		// Create Activity object and set properties.
+		$activity = new \Activitypub\Activity\Activity();
+		$activity->from_array( $quote_request_activity );
+		// Ensure the ID is explicitly set.
+		$activity->set_id( $quote_request_id );
+
+		// Store the activity in the inbox.
+		$inbox_id = \Activitypub\Collection\Inbox::add( $activity, array( self::$user_id ) );
+		$this->assertIsInt( $inbox_id, 'QuoteRequest should be stored in inbox' );
+
+		// Verify the QuoteRequest was stored correctly in the inbox.
+		$stored_object_id = \get_post_meta( $inbox_id, '_activitypub_object_id', true );
+		$this->assertEquals( $instrument_url, $stored_object_id, 'Inbox should store instrument URL as object_id for QuoteRequest' );
+
+		// Simulate accepting the quote request (what queue_accept does).
+		\add_post_meta( self::$post_id, '_activitypub_quoted_by', $instrument_url );
+
+		// Create the quote comment.
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_author'     => 'Dave',
+				'comment_author_url' => $actor_url,
+				'comment_content'    => 'Quote comment',
+				'comment_type'       => 'quote',
+				'comment_approved'   => 1,
+			)
+		);
+		\add_comment_meta( $comment_id, 'source_url', $instrument_url );
+
+		// Track outbox activities.
+		$outbox_activities = array();
+		\add_action(
+			'post_activitypub_add_to_outbox',
+			function ( $outbox_id, $activity, $user_id, $visibility ) use ( &$outbox_activities ) {
+				$outbox_activities[] = array(
+					'outbox_id'  => $outbox_id,
+					'activity'   => $activity,
+					'user_id'    => $user_id,
+					'visibility' => $visibility,
+				);
+			},
+			10,
+			4
+		);
+
+		// Delete the quote comment.
+		wp_delete_comment( $comment_id, true );
+
+		// Verify Reject activity uses original QuoteRequest data.
+		$this->assertNotEmpty( $outbox_activities, 'A Reject activity should be queued' );
+
+		$reject_activity = null;
+		foreach ( $outbox_activities as $item ) {
+			if ( isset( $item['activity'] ) && $item['activity'] instanceof \Activitypub\Activity\Activity ) {
+				$activity_array = $item['activity']->to_array();
+				if ( 'Reject' === $activity_array['type'] ) {
+					$reject_activity = $activity_array;
+					break;
+				}
+			}
+		}
+
+		$this->assertNotNull( $reject_activity, 'A Reject activity should be created' );
+
+		// Verify the Reject uses the original activity data (proof it came from inbox).
+		$this->assertArrayHasKey( 'object', $reject_activity );
+
+		// The key test: verify the reject object is a QuoteRequest with proper structure.
+		$this->assertEquals( 'QuoteRequest', $reject_activity['object']['type'], 'Should have QuoteRequest type' );
+
+		// Verify it has an ID field. If it was reconstructed via fallback, it wouldn't have an 'id' at all.
+		// The ID value should be the exact value from the original QuoteRequest activity stored in the inbox ($quote_request_id), not auto-generated.
+		$this->assertArrayHasKey( 'id', $reject_activity['object'], 'Should have ID from inbox (fallback reconstruction has no ID)' );
+		$this->assertEquals( $quote_request_id, $reject_activity['object']['id'], 'ID should match the original QuoteRequest activity from inbox' );
+
+		// Verify the minimal required fields are present.
+		$this->assertEquals( $actor_url, $reject_activity['object']['actor'] );
+		$this->assertEquals( \get_permalink( self::$post_id ), $reject_activity['object']['object'] );
+		$this->assertEquals( $instrument_url, $reject_activity['object']['instrument'] );
+	}
 }

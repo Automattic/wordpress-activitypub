@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Prevented duplicate email notifications when ActivityPub instances re-send Follow activities for already-following actors.

@@ -15,7 +15,7 @@ jobs:
       contents: write # Required to push to wiki repository
     steps:
       - uses: actions/checkout@v5
-      - uses: akirk/extract-wp-hooks@1.2.0
+      - uses: akirk/extract-wp-hooks@1.3.0
         with:
           namespace: 'Activitypub'
           wiki-directory: '../activitypub.wiki'

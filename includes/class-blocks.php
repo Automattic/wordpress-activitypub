@@ -42,6 +42,10 @@ class Blocks {
 				'blog'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
+			'profileUrls'      => array(
+				'user' => \admin_url( 'profile.php#activitypub' ),
+				'blog' => \admin_url( 'options-general.php?page=activitypub&tab=blog-profile' ),
+			),
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -76,6 +80,7 @@ class Blocks {
 	 * Register the blocks.
 	 */
 	public static function register_blocks() {
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );

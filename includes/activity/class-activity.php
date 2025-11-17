@@ -206,14 +206,14 @@ class Activity extends Base_Object {
 	public function pre_fill_activity_from_object() {
 		$object = $this->get_object();
 
-		// Check if `$data` is a URL and use it to generate an ID then.
+		// Check if `$object` is a URL and use it to generate an ID then.
 		if ( is_string( $object ) && filter_var( $object, FILTER_VALIDATE_URL ) && ! $this->get_id() ) {
 			$this->set( 'id', $object . '#activity-' . strtolower( $this->get_type() ) . '-' . time() );
 
 			return;
 		}
 
-		// Check if `$data` is an object and copy some properties otherwise do nothing.
+		// Check if `$object` is an object and copy some properties otherwise do nothing.
 		if ( ! is_object( $object ) ) {
 			return;
 		}
