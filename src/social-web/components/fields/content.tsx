@@ -7,7 +7,7 @@ import type { FeedPost } from '../../types';
  * Content field for reader-style view
  * Displays rich content with HTML formatting
  */
-export const createContentField = (): Field< FeedPost > => ( {
+export const contentField: Field< FeedPost > = {
 	id: 'content',
 	label: __( 'Content', 'activitypub' ),
 	enableHiding: true,
@@ -42,4 +42,4 @@ export const createContentField = (): Field< FeedPost > => ( {
 			</div>
 		);
 	},
-} );
+};

@@ -8,28 +8,24 @@ import { useEffect } from '@wordpress/element';
  * Internal dependencies
  */
 import { STORE_NAME } from '../store';
-import type { Following, Interaction, FeedPost } from '../types';
+import type { Following, Interaction } from '../types';
 
 interface SocialWebData {
 	following: Following[];
 	interactions: Interaction[];
-	feed: FeedPost[];
 	stats: {
 		following: number;
 		interactions: number;
-		posts: number;
 	};
 	isLoading: {
 		following: boolean;
 		interactions: boolean;
-		feed: boolean;
 	};
 }
 
 interface SocialWebActions {
 	fetchFollowing: () => void;
 	fetchInteractions: () => void;
-	fetchFeed: () => void;
 }
 
 /**
@@ -41,46 +37,41 @@ function useSocialWebDataFull(): SocialWebData & SocialWebActions {
 		return {
 			following: store.getFollowing() as Following[],
 			interactions: store.getInteractions() as Interaction[],
-			feed: store.getFeed() as FeedPost[],
 			stats: store.getStats() as {
 				following: number;
 				interactions: number;
-				posts: number;
 			},
 			isLoading: {
 				following: store.isLoading( 'following' ) as boolean,
 				interactions: store.isLoading( 'interactions' ) as boolean,
-				feed: store.isLoading( 'feed' ) as boolean,
 			},
 		};
 	}, [] );
 
-	const { fetchFollowing, fetchInteractions, fetchFeed } = useDispatch( STORE_NAME ) as any;
+	const { fetchFollowing, fetchInteractions } = useDispatch( STORE_NAME ) as any;
 
 	// Fetch initial data
 	useEffect( () => {
 		fetchFollowing();
 		fetchInteractions();
-		fetchFeed();
-	}, [ fetchFollowing, fetchInteractions, fetchFeed ] );
+	}, [ fetchFollowing, fetchInteractions ] );
 
 	return {
 		...data,
 		fetchFollowing,
 		fetchInteractions,
-		fetchFeed,
 	};
 }
 
 /**
  * Hook to access Social Web data with optional resource filtering
  *
- * @param {string}        resource Resource type (followers, following, interactions, or feed)
+ * @param {string}        resource Resource type (followers, following, or interactions)
  * @param {string|number} id       Optional item ID
  * @return {Object} Items and loading state
  */
 export function useSocialWebData(
-	resource?: 'followers' | 'following' | 'interactions' | 'feed',
+	resource?: 'followers' | 'following' | 'interactions',
 	id?: string | number
 ): {
 	items: any;
@@ -99,8 +90,6 @@ export function useSocialWebData(
 				return store.getFollowingById( id ) as Following | undefined;
 			} else if ( resource === 'interactions' ) {
 				return store.getInteractionById( id ) as Interaction | undefined;
-			} else if ( resource === 'feed' ) {
-				return store.getFeedPostById( id ) as FeedPost | undefined;
 			}
 			return null;
 		},
