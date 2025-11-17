@@ -179,7 +179,8 @@ For complete, working examples, refer to these files in the codebase:
 
 **Core Classes:**
 - `includes/class-activitypub.php` - Main plugin class with initialization
-- `includes/class-scheduler.php` - Singleton pattern, WP-Cron integration
+- `includes/class-query.php` - Singleton pattern example
+- `includes/class-scheduler.php` - WP-Cron integration
 - `includes/class-dispatcher.php` - Activity dispatching
 
 **Transformers:**
