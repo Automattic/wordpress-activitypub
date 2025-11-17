@@ -78,7 +78,7 @@ public function method_name( $param_one, $param_two = array() ) {
 
 ## Coding Standards
 
-See [coding-standards.md](coding-standards.md) for comprehensive standards.
+See [PHP Coding Standards](../../../docs/php-coding-standards.md) for comprehensive standards.
 
 ### WordPress Coding Standards
 
@@ -109,7 +109,7 @@ $email = sanitize_email( $_POST['email'] );
 
 ## Directory Organization
 
-See [class-structure.md](class-structure.md) for detailed organization.
+See [PHP Class Structure](../../../docs/php-class-structure.md) for detailed organization.
 
 ```
 includes/

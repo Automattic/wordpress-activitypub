@@ -6,7 +6,7 @@
 - [ ] Branch created from latest `trunk`
 - [ ] Branch follows naming convention (`add/`, `update/`, `fix/`, `try/`)
 - [ ] Changes are focused and single-purpose
-- [ ] Code follows [WordPress coding standards](../activitypub-php-conventions/coding-standards.md)
+- [ ] Code follows [WordPress coding standards](../../../docs/php-coding-standards.md)
 - [ ] No debug code or console.logs left
 
 ### Testing
