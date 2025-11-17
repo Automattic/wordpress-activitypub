@@ -7,4 +7,4 @@ export { dateField } from './date';
 export { statusField } from './status';
 export { excerptField } from './excerpt';
 export { metadataField } from './metadata';
-export { createContentField } from './content';
+export { contentField } from './content';

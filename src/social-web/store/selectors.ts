@@ -1,21 +1,13 @@
 /**
  * Internal dependencies
  */
-import type { Following, Interaction, FeedPost } from '../types';
+import type { Following, Interaction } from '../types';
 import type { State } from './types';
 
 /**
  * Store selectors
  */
 export const selectors = {
-	getFeed( state: State ): FeedPost[] {
-		return state.feed;
-	},
-
-	getFeedPostById( state: State, id: number ): FeedPost | undefined {
-		return state.feed.find( ( post ) => post.id === id );
-	},
-
 	getFollowing( state: State ): Following[] {
 		return state.following;
 	},
@@ -40,7 +32,6 @@ export const selectors = {
 		return {
 			following: state.following.length,
 			interactions: state.interactions.length,
-			posts: state.feed.length,
 		};
 	},
 };

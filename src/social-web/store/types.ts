@@ -1,17 +1,15 @@
 /**
  * Internal dependencies
  */
-import type { Following, Interaction, FeedPost } from '../types';
+import type { Following, Interaction } from '../types';
 
 /**
  * Store state interface
  */
 export interface State {
-	feed: FeedPost[];
 	following: Following[];
 	interactions: Interaction[];
 	isLoading: {
-		feed: boolean;
 		following: boolean;
 		interactions: boolean;
 	};
@@ -20,11 +18,6 @@ export interface State {
 /**
  * Action Types
  */
-export type SetFeedAction = {
-	type: 'SET_FEED';
-	feed: FeedPost[];
-};
-
 export type SetFollowingAction = {
 	type: 'SET_FOLLOWING';
 	following: Following[];
@@ -41,17 +34,15 @@ export type SetLoadingAction = {
 	isLoading: boolean;
 };
 
-export type Action = SetFollowingAction | SetInteractionsAction | SetFeedAction | SetLoadingAction;
+export type Action = SetFollowingAction | SetInteractionsAction | SetLoadingAction;
 
 /**
  * Initial state
  */
 export const DEFAULT_STATE: State = {
-	feed: [],
 	following: [],
 	interactions: [],
 	isLoading: {
-		feed: false,
 		following: false,
 		interactions: false,
 	},

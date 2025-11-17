@@ -12,15 +12,8 @@ import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
-import {
-	titleField,
-	dateField,
-	statusField,
-	excerptField,
-	metadataField,
-	createContentField,
-} from '../../components/fields';
-import { getFeedActions } from './FeedActions';
+import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
+import { getFeedActions } from './feed-actions';
 import type { FeedPost } from '../../types';
 
 const DEFAULT_VIEW: View = {
@@ -38,9 +31,6 @@ const DEFAULT_VIEW: View = {
 };
 
 const defaultLayouts = {
-	table: {
-		fields: [ 'title.rendered', 'metadata', 'excerpt.rendered' ],
-	},
 	list: {
 		primaryField: 'metadata',
 		fields: [ 'metadata', 'title.rendered', 'excerpt.rendered' ],
@@ -70,7 +60,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, excerptField, createContentField(), dateField, statusField ],
+		() => [ metadataField, titleField, excerptField, contentField, dateField ],
 		[]
 	);
 
