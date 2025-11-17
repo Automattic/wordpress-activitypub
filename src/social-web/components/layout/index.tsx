@@ -74,7 +74,7 @@ export function Layout() {
 		setSelectedItemId( itemId );
 	}, [] );
 
-	// Listen for hash changes (back/forward navigation)
+	// Listen for hash changes (back/forward navigation).
 	useEffect( () => {
 		const syncUrlToState = () => {
 			const { section, itemId } = parseHash();
