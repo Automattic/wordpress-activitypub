@@ -84,11 +84,15 @@ class Inbox {
 		$visibility = is_activity_public( $activity ) ? ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC : ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 
 		/*
-		 * For activities with an 'instrument' property (e.g., QuoteRequest), we store
-		 * the instrument URL as the object_id. This allows efficient querying by instrument.
+		 * For QuoteRequest activities, we store the instrument URL as the object_id.
+		 * This allows efficient querying by instrument (the quote post URL).
 		 * For all other activities, we store the object URL as before.
 		 */
-		$object_id = object_to_uri( $activity->get_instrument() ?: $activity->get_object() );
+		if ( 'QuoteRequest' === $activity->get_type() && $activity->get_instrument() ) {
+			$object_id = object_to_uri( $activity->get_instrument() );
+		} else {
+			$object_id = object_to_uri( $activity->get_object() );
+		}
 
 		$inbox_item = array(
 			'post_type'    => self::POST_TYPE,
