@@ -149,6 +149,9 @@ class Quote_Request {
 
 		if ( ! \is_wp_error( $inbox_item ) && $inbox_item instanceof \WP_Post ) {
 			$activity_object = \json_decode( $inbox_item->post_content, true );
+			if ( JSON_ERROR_NONE !== \json_last_error() ) {
+				$activity_object = null;
+			}
 		}
 
 		// Fallback: If inbox item not found, reconstruct from available data.
