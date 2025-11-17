@@ -1,7 +1,7 @@
 /**
  * Internal dependencies
  */
-import type { Follower, Following, Interaction } from '../types';
+import type { Following, Interaction } from '../types';
 import type { State } from './types';
 
 /**
@@ -32,7 +32,6 @@ export const selectors = {
 		return {
 			following: state.following.length,
 			interactions: state.interactions.length,
-			posts: 0, // This would come from a different endpoint
 		};
 	},
 };

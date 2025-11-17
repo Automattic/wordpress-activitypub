@@ -83,3 +83,51 @@ export interface Interaction {
 	created: string;
 	object?: string;
 }
+
+export interface FeedPost {
+	id: number;
+	title: {
+		rendered: string;
+	};
+	content: {
+		rendered: string;
+	};
+	excerpt: {
+		rendered: string;
+	};
+	author: number;
+	date: string;
+	date_gmt: string;
+	modified: string;
+	modified_gmt: string;
+	slug: string;
+	status: string;
+	type: string;
+	link: string;
+	guid: {
+		rendered: string;
+	};
+	comment_status: string;
+	ping_status: string;
+	actor_info?: ActorInfo;
+}
+
+export interface Comment {
+	id: number;
+	post: number;
+	parent: number;
+	author: number;
+	author_name: string;
+	author_url: string;
+	author_avatar_urls: {
+		[ size: string ]: string;
+	};
+	date: string;
+	date_gmt: string;
+	content: {
+		rendered: string;
+	};
+	link: string;
+	status: string;
+	type: string;
+}

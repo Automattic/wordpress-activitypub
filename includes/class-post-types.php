@@ -32,6 +32,9 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
 
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
+		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_actor_rest_field' ) );
+
+		\add_filter( 'rest_ap_post_query', array( self::class, 'filter_ap_post_by_user' ) );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
@@ -348,11 +351,11 @@ class Post_Types {
 					'singular_name' => \_x( 'Post', 'post_type single name', 'activitypub' ),
 				),
 				'capabilities'        => array(
-					'create_posts' => false,
+					'activitypub' => true,
 				),
 				'map_meta_cap'        => true,
 				'public'              => false,
-				'show_in_rest'        => false,
+				'show_in_rest'        => true,
 				'rewrite'             => false,
 				'query_var'           => false,
 				'supports'            => array( 'title', 'editor', 'author', 'custom-fields', 'excerpt', 'comments' ),
@@ -647,6 +650,75 @@ class Post_Types {
 				'value' => $request['follower_of'],
 			);
 		}
+
+		return $args;
+	}
+
+	/**
+	 * Register a REST field for the ap_post post type to embed remote actor data.
+	 */
+	public static function register_ap_post_actor_rest_field() {
+		\register_rest_field(
+			Posts::POST_TYPE,
+			'actor_info',
+			array(
+				/**
+				 * Get the remote actor data for an ap_post.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return array|null The actor data or null if not found.
+				 */
+				'get_callback' => function ( $response ) {
+					$id    = \get_post_meta( $response['id'], '_activitypub_remote_actor_id', true );
+					$actor = Remote_Actors::get_actor( $id );
+
+					if ( \is_wp_error( $actor ) ) {
+						return null;
+					}
+
+					return array(
+						'username'   => $actor->get_preferred_username(),
+						'name'       => $actor->get_name() ?? $actor->get_preferred_username(),
+						'icon'       => object_to_uri( $actor->get_icon() ),
+						'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
+						'identifier' => $actor->get_id(),
+					);
+				},
+				'schema'       => array(
+					'description' => 'Remote actor data',
+					'type'        => 'object',
+					'context'     => array( 'view', 'edit' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Filter ap_post REST query to only show posts for the current user.
+	 *
+	 * @param array $args Query arguments.
+	 *
+	 * @return array Modified query arguments.
+	 */
+	public static function filter_ap_post_by_user( $args ) {
+		$user_id = \get_current_user_id();
+
+		if ( ! $user_id ) {
+			// If no user is logged in, return empty results.
+			$args['post__in'] = array( 0 );
+			return $args;
+		}
+
+		// Add meta query to filter by _activitypub_user_id.
+		if ( ! isset( $args['meta_query'] ) ) {
+			$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		}
+
+		$args['meta_query'][] = array(
+			'key'     => '_activitypub_user_id',
+			'value'   => $user_id,
+			'compare' => '=',
+		);
 
 		return $args;
 	}

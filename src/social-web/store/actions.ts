@@ -6,8 +6,8 @@ import apiFetch from '@wordpress/api-fetch';
 /**
  * Internal dependencies
  */
-import type { Follower, Following, Interaction } from '../types';
-import type { SetFollowersAction, SetFollowingAction, SetInteractionsAction, SetLoadingAction, State } from './types';
+import type { Following, Interaction } from '../types';
+import type { SetFollowingAction, SetInteractionsAction, SetLoadingAction, State } from './types';
 
 /**
  * Store actions
