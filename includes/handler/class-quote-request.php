@@ -156,17 +156,6 @@ class Quote_Request {
 
 		// Fallback: If inbox item not found, reconstruct from available data.
 		if ( ! $activity_object ) {
-			/**
-			 * Fires when a QuoteRequest inbox item is not found and fallback reconstruction is used.
-			 *
-			 * This can occur due to race conditions, manual database cleanup, or if the inbox
-			 * item was never created. Useful for monitoring and debugging quote tracking.
-			 *
-			 * @param string $instrument_url The URL of the quoting post.
-			 * @param int    $post_id        The ID of the quoted post.
-			 */
-			\do_action( 'activitypub_quote_request_inbox_not_found', $instrument_url, $post_id );
-
 			$activity_object = array(
 				'type'       => 'QuoteRequest',
 				'actor'      => $comment->comment_author_url,
