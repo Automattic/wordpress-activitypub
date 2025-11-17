@@ -1,10 +1,11 @@
-/**
- * Field components for DataViews
- */
-
-export { titleField } from './title';
-export { dateField } from './date';
-export { statusField } from './status';
-export { excerptField } from './excerpt';
-export { metadataField } from './metadata';
-export { contentField } from './content';
+export * from './avatar';
+export * from './content';
+export * from './date';
+export * from './excerpt';
+export * from './follow-status';
+export * from './metadata';
+export * from './modified';
+export * from './name';
+export * from './status';
+export * from './title';
+export * from './webfinger';
