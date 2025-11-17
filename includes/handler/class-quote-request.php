@@ -144,6 +144,7 @@ class Quote_Request {
 		 * For QuoteRequest activities, the inbox stores the instrument URL
 		 * in _activitypub_object_id, so we can query by that.
 		 */
+		$activity_object = null;
 		$inbox_item      = Inbox::get_by_type_and_object( 'QuoteRequest', $instrument_url );
 
 		if ( $inbox_item instanceof \WP_Post ) {

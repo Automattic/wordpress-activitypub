@@ -88,11 +88,7 @@ class Inbox {
 		 * the instrument URL as the object_id. This allows efficient querying by instrument.
 		 * For all other activities, we store the object URL as before.
 		 */
-		if ( $activity->has( 'instrument' ) && $activity->get_instrument() ) {
-			$object_id = object_to_uri( $activity->get_instrument() );
-		} else {
-			$object_id = object_to_uri( $activity->get_object() );
-		}
+		$object_id = object_to_uri( $activity->get_instrument() ?: $activity->get_object() );
 
 		$inbox_item = array(
 			'post_type'    => self::POST_TYPE,
@@ -393,27 +389,27 @@ class Inbox {
 	 * @return \WP_Post|\WP_Error The inbox item or WP_Error if not found.
 	 */
 	public static function get_by_type_and_object( $activity_type, $object_id ) {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT p.ID
-				FROM {$wpdb->posts} p
-				INNER JOIN {$wpdb->postmeta} pm1 ON p.ID = pm1.post_id AND pm1.meta_key = '_activitypub_activity_type'
-				INNER JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_activitypub_object_id'
-				WHERE p.post_type = %s
-				AND pm1.meta_value = %s
-				AND pm2.meta_value = %s
-				ORDER BY p.ID DESC
-				LIMIT 1",
-				self::POST_TYPE,
-				$activity_type,
-				$object_id
+		$posts = \get_posts(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'posts_per_page' => 1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => $activity_type,
+					),
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $object_id,
+					),
+				),
 			)
 		);
 
-		if ( ! $post_id ) {
+		if ( empty( $posts ) ) {
 			return new \WP_Error(
 				'activitypub_inbox_item_not_found',
 				\__( 'Inbox item not found', 'activitypub' ),
@@ -421,7 +417,7 @@ class Inbox {
 			);
 		}
 
-		return \get_post( $post_id );
+		return $posts[0];
 	}
 
 	/**
