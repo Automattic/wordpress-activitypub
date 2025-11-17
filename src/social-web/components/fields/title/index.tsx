@@ -7,7 +7,7 @@ export const titleField: Field< FeedPost > = {
 	id: 'title.rendered',
 	label: __( 'Title', 'activitypub' ),
 	enableHiding: true,
-	enableSorting: true,
+	enableSorting: false,
 	enableGlobalSearch: true,
 	getValue: ( { item }: { item: FeedPost } ) => decodeEntities( item.title?.rendered || '' ),
 	render: ( { item }: { item: FeedPost } ) => {
