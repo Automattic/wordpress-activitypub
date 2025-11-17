@@ -127,7 +127,7 @@ open coverage/index.html  # View report (macOS)
 
 ## Code Quality Standards
 
-See [Linting and Code Quality](../../../docs/linting.md) for detailed linting configuration.
+See [Code Linting and Quality](../../../docs/code-linting.md) for detailed linting configuration.
 
 ### PHP Standards
 

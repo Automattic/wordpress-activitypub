@@ -497,5 +497,5 @@ if ( file_exists( '.env.local' ) ) {
 Once your environment is set up:
 
 - Review the [Testing Reference](../tests/README.md) for testing guidance
-- Check out [Linting and Code Quality](linting.md) for code standards
+- Check out [Code Linting and Quality](code-linting.md) for code standards
 - Read [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines
