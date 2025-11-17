@@ -76,29 +76,29 @@ export function Layout() {
 
 	// Listen for hash changes (back/forward navigation)
 	useEffect( () => {
-		const handleHashChange = () => {
+		const syncUrlToState = () => {
 			const { section, itemId } = parseHash();
 			setActiveSection( section );
 			setSelectedItemId( itemId );
 		};
 
-		window.addEventListener( 'hashchange', handleHashChange );
+		window.addEventListener( 'hashchange', syncUrlToState );
 		return () => {
-			window.removeEventListener( 'hashchange', handleHashChange );
+			window.removeEventListener( 'hashchange', syncUrlToState );
 		};
 	}, [] );
 
-	const handleSelectItem = ( id: string | number ) => {
+	const selectItem = ( id: string | number ) => {
 		setSelectedItemId( id );
 		updateHash( activeSection, id );
 	};
 
-	const handleCloseInspector = () => {
+	const closeInspector = () => {
 		setSelectedItemId( null );
 		updateHash( activeSection );
 	};
 
-	const handleNavigate = ( section: string ) => {
+	const navigate = ( section: string ) => {
 		setActiveSection( section );
 		setSelectedItemId( null );
 		updateHash( section );
@@ -106,7 +106,7 @@ export function Layout() {
 
 	// Render main content (stage) with Suspense for lazy loading
 	const renderStage = () => {
-		const props = { onSelectItem: handleSelectItem };
+		const props = { onSelectItem: selectItem };
 
 		let StageComponent;
 		switch ( activeSection ) {
@@ -145,7 +145,7 @@ export function Layout() {
 					return null;
 				}
 				InspectorComponent = FeedInspector;
-				props = { id: selectedItemId, onClose: handleCloseInspector };
+				props = { id: selectedItemId, onClose: closeInspector };
 		}
 
 		return (
@@ -169,7 +169,7 @@ export function Layout() {
 			<div className="app-content">
 				{ /* Sidebar - 240px fixed width (no Panel wrapper, stays dark) */ }
 				<div className="sidebar-region">
-					<Sidebar activeSection={ activeSection } onNavigate={ handleNavigate } />
+					<Sidebar activeSection={ activeSection } onNavigate={ navigate } />
 				</div>
 
 				{ /* Stage - main content area */ }

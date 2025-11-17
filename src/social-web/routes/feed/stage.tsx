@@ -81,7 +81,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		}
 	}, [ feed, selection ] );
 
-	const handleChangeSelection = useCallback(
+	const changeSelection = useCallback(
 		( nextSelection: string[] ) => {
 			setSelection( nextSelection );
 
@@ -116,7 +116,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 				isItemClickable={ () => true }
 				getItemId={ ( item ) => item.id.toString() }
 				selection={ selection }
-				onChangeSelection={ handleChangeSelection }
+				onChangeSelection={ changeSelection }
 				empty={
 					<p>
 						{ view.search
