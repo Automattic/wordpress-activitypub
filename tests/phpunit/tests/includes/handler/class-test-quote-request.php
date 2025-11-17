@@ -718,9 +718,9 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		$this->assertEquals( 'QuoteRequest', $reject_activity['object']['type'], 'Should have QuoteRequest type' );
 
 		// Verify it has an ID field. If it was reconstructed via fallback, it wouldn't have an 'id' at all.
-		// The actual ID value may be auto-generated, but having an 'id' field proves it came from inbox.
+		// The ID value should be the exact value from the original QuoteRequest activity stored in the inbox ($quote_request_id), not auto-generated.
 		$this->assertArrayHasKey( 'id', $reject_activity['object'], 'Should have ID from inbox (fallback reconstruction has no ID)' );
-		$this->assertNotEmpty( $reject_activity['object']['id'], 'ID should not be empty' );
+		$this->assertEquals( $quote_request_id, $reject_activity['object']['id'], 'ID should match the original QuoteRequest activity from inbox' );
 
 		// Verify the minimal required fields are present.
 		$this->assertEquals( $actor_url, $reject_activity['object']['actor'] );
