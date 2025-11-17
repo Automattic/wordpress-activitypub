@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Removed a redundant instruction from the custom post content settings to simplify the UI.

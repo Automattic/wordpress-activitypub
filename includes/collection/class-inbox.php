@@ -83,6 +83,17 @@ class Inbox {
 		$title      = self::get_object_title( $activity->get_object() );
 		$visibility = is_activity_public( $activity ) ? ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC : ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 
+		/*
+		 * For QuoteRequest activities, we store the instrument URL as the object_id.
+		 * This allows efficient querying by instrument (the quote post URL).
+		 * For all other activities, we store the object URL as before.
+		 */
+		if ( 'QuoteRequest' === $activity->get_type() && $activity->get_instrument() ) {
+			$object_id = object_to_uri( $activity->get_instrument() );
+		} else {
+			$object_id = object_to_uri( $activity->get_object() );
+		}
+
 		$inbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
@@ -96,7 +107,7 @@ class Inbox {
 			'post_status'  => 'publish',
 			'guid'         => $activity->get_id(),
 			'meta_input'   => array(
-				'_activitypub_object_id'             => object_to_uri( $activity->get_object() ),
+				'_activitypub_object_id'             => $object_id,
 				'_activitypub_activity_type'         => $activity->get_type(),
 				'_activitypub_activity_remote_actor' => object_to_uri( $activity->get_actor() ),
 				'activitypub_content_visibility'     => $visibility,
@@ -367,6 +378,51 @@ class Inbox {
 		}
 
 		return $post;
+	}
+
+	/**
+	 * Get an inbox item by activity type and object ID.
+	 *
+	 * This is useful for finding specific activity types (like QuoteRequest)
+	 * by their object identifier. For QuoteRequest activities, the object_id
+	 * is the instrument URL (the quote post).
+	 *
+	 * @param string $activity_type The activity type (e.g., 'QuoteRequest').
+	 * @param string $object_id     The object identifier to search for.
+	 *
+	 * @return \WP_Post|\WP_Error The inbox item or WP_Error if not found.
+	 */
+	public static function get_by_type_and_object( $activity_type, $object_id ) {
+		$posts = \get_posts(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'posts_per_page' => 1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Necessary for querying by activity type and object ID.
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => $activity_type,
+					),
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $object_id,
+					),
+				),
+			)
+		);
+
+		if ( empty( $posts ) ) {
+			return new \WP_Error(
+				'activitypub_inbox_item_not_found',
+				\__( 'Inbox item not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return $posts[0];
 	}
 
 	/**

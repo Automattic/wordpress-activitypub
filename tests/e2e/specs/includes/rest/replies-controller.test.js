@@ -121,7 +121,7 @@ test.describe( 'ActivityPub Replies Collection REST API', () => {
 	test( 'should handle page parameter', async ( { requestUtils } ) => {
 		try {
 			const data = await requestUtils.rest( {
-				path: `${ repliesEndpoint }?page=1`,
+				path: `${ repliesEndpoint }?page=1&per_page=10`,
 			} );
 
 			// If successful, verify the response structure

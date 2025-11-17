@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added a new Fediverse Extra Fields block to display ActivityPub extra fields, featuring compact, stacked, and card layouts with flexible user selection options.

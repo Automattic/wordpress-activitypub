@@ -149,7 +149,6 @@ class Post_Types {
 				'single'            => true,
 				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
-					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => Activity::TYPES,
@@ -253,7 +252,6 @@ class Post_Types {
 				'single'            => true,
 				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
-					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => Activity::TYPES,

@@ -48,7 +48,8 @@ test.describe( 'ActivityPub Following Collection REST API', () => {
 
 		// For a new user, following should be 0
 		if ( data.totalItems === 0 ) {
-			expect( data.orderedItems ).toEqual( [] );
+			// Without a page parameter, orderedItems should not be present
+			expect( data.orderedItems ).toBeUndefined();
 		}
 	} );
 
@@ -94,7 +95,7 @@ test.describe( 'ActivityPub Following Collection REST API', () => {
 	test( 'should handle page parameter', async ( { requestUtils } ) => {
 		try {
 			const data = await requestUtils.rest( {
-				path: `${ followingEndpoint }?page=1`,
+				path: `${ followingEndpoint }?page=1&per_page=10`,
 			} );
 
 			// If successful, verify the response structure
