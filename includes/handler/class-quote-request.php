@@ -146,7 +146,7 @@ class Quote_Request {
 		 */
 		$inbox_item      = Inbox::get_by_type_and_object( 'QuoteRequest', $instrument_url );
 
-		if ( ! \is_wp_error( $inbox_item ) && $inbox_item instanceof \WP_Post ) {
+		if ( $inbox_item instanceof \WP_Post ) {
 			$activity_object = \json_decode( $inbox_item->post_content, true );
 			if ( JSON_ERROR_NONE !== \json_last_error() ) {
 				$activity_object = null;
@@ -155,7 +155,15 @@ class Quote_Request {
 
 		// Fallback: If inbox item not found, reconstruct from available data.
 		if ( ! $activity_object ) {
-			// Log when fallback is used for monitoring/debugging.
+			/**
+			 * Fires when a QuoteRequest inbox item is not found and fallback reconstruction is used.
+			 *
+			 * This can occur due to race conditions, manual database cleanup, or if the inbox
+			 * item was never created. Useful for monitoring and debugging quote tracking.
+			 *
+			 * @param string $instrument_url The URL of the quoting post.
+			 * @param int    $post_id        The ID of the quoted post.
+			 */
 			\do_action( 'activitypub_quote_request_inbox_not_found', $instrument_url, $post_id );
 
 			$activity_object = array(
@@ -163,6 +171,7 @@ class Quote_Request {
 				'actor'      => $comment->comment_author_url,
 				'object'     => \get_permalink( $post_id ),
 				'instrument' => $instrument_url,
+				'published'  => \gmdate( 'c' ),
 			);
 		}
 
