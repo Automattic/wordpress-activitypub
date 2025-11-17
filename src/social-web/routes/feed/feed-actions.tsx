@@ -5,12 +5,12 @@ import type { FeedPost } from '../../types';
 export function getFeedActions( onSelectItem: ( id: number ) => void ): Action< FeedPost >[] {
 	return [
 		{
-			id: 'view-details',
-			label: __( 'View Details', 'activitypub' ),
-			isPrimary: true,
+			id: 'open-original',
+			label: __( 'Open Original', 'activitypub' ),
+			isEligible: ( item: FeedPost ) => !! item.link,
 			callback: ( items: FeedPost[] ) => {
-				if ( items.length === 1 ) {
-					onSelectItem( items[ 0 ].id );
+				if ( items.length === 1 && items[ 0 ].link ) {
+					window.open( items[ 0 ].link, '_blank' );
 				}
 			},
 		},
@@ -51,15 +51,6 @@ export function getFeedActions( onSelectItem: ( id: number ) => void ): Action< 
 					if ( items[ 0 ].link ) {
 						window.open( items[ 0 ].link, '_blank' );
 					}
-				}
-			},
-		},
-		{
-			id: 'open-original',
-			label: __( 'Open Original', 'activitypub' ),
-			callback: ( items: FeedPost[] ) => {
-				if ( items.length === 1 && items[ 0 ].link ) {
-					window.open( items[ 0 ].link, '_blank' );
 				}
 			},
 		},
