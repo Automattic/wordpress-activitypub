@@ -61,29 +61,6 @@ export interface Actor {
 	activitypub_json?: string;
 }
 
-export interface Following {
-	id: string;
-	actor: string;
-	name: string;
-	username: string;
-	avatar: string;
-	url: string;
-	created: string;
-	modified: string;
-}
-
-export interface Interaction {
-	id: string;
-	type: 'mention' | 'reply' | 'like' | 'announce';
-	actor: string;
-	actorName: string;
-	actorAvatar: string;
-	content: string;
-	url: string;
-	created: string;
-	object?: string;
-}
-
 export interface FeedPost {
 	id: number;
 	title: {

@@ -13,16 +13,12 @@ import {
 	__experimentalHStack as HStack,
 	__experimentalHeading as Heading,
 } from '@wordpress/components';
-import { addCard, comment, chevronRight, chevronLeft, postList } from '@wordpress/icons';
+import { chevronRight, chevronLeft, cog, postList } from '@wordpress/icons';
 import SiteHub from '../site-hub';
 import { __, isRTL } from '@wordpress/i18n';
 import './style.scss';
 
-const menuItems = [
-	{ id: 'feed', label: __( 'Feed' ), icon: postList },
-	{ id: 'following', label: __( 'Following' ), icon: addCard },
-	{ id: 'interactions', label: __( 'Interactions' ), icon: comment },
-];
+const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ), icon: postList } ];
 
 interface SidebarProps {
 	activeSection: string;
@@ -68,8 +64,9 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 			{ /* Footer */ }
 			<div className="footer">
 				<MenuGroup>
-					<MenuItem onClick={ () => window.open( '/docs', '_blank' ) }>Documentation</MenuItem>
-					<MenuItem onClick={ () => onNavigate( 'settings' ) }>Settings</MenuItem>
+					<MenuItem onClick={ () => window.open( '/wp-admin/admin.php?page=activitypub', '_blank' ) }>
+						<Icon icon={ cog } size={ 20 } />
+					</MenuItem>
 				</MenuGroup>
 			</div>
 		</div>
