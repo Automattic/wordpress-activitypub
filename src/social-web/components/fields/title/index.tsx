@@ -1,7 +1,7 @@
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import type { Field } from '@wordpress/dataviews';
-import type { FeedPost } from '../../types';
+import type { FeedPost } from '../../../types';
 
 export const titleField: Field< FeedPost > = {
 	id: 'title.rendered',
