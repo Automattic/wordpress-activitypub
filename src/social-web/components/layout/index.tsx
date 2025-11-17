@@ -7,24 +7,31 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, lazy, Suspense } from '@wordpress/element';
 import { CommandMenu } from '@wordpress/commands';
-import { SnackbarList } from '@wordpress/components';
+import { SnackbarList, Spinner } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import Sidebar from '../sidebar';
 import Panel from '../panel';
 import './style.scss';
 
-// Import route stages
-import FeedStage from '../../routes/feed/stage';
-import FollowingStage from '../../routes/following/stage';
-import InteractionsStage from '../../routes/interactions/stage';
+// Lazy load route stages for better performance
+// Use magic comments to give chunks proper names
+const FeedStage = lazy( () => import( /* webpackChunkName: "feed-stage" */ '../../routes/feed/stage' ) );
+const FollowingStage = lazy( () => import( /* webpackChunkName: "following-stage" */ '../../routes/following/stage' ) );
+const InteractionsStage = lazy(
+	() => import( /* webpackChunkName: "interactions-stage" */ '../../routes/interactions/stage' )
+);
 
-// Import inspector components.
-import FeedInspector from '../../routes/feed/inspector';
-import FollowingInspector from '../../routes/following/inspector';
-import InteractionInspector from '../../routes/interactions/inspector';
+// Lazy load inspector components
+const FeedInspector = lazy( () => import( /* webpackChunkName: "feed-inspector" */ '../../routes/feed/inspector' ) );
+const FollowingInspector = lazy(
+	() => import( /* webpackChunkName: "following-inspector" */ '../../routes/following/inspector' )
+);
+const InteractionInspector = lazy(
+	() => import( /* webpackChunkName: "interaction-inspector" */ '../../routes/interactions/inspector' )
+);
 
 /**
  * Parse the URL hash to extract section and item ID
@@ -115,23 +122,39 @@ export function Layout() {
 		updateHash( section );
 	};
 
-	// Render main content (stage)
+	// Render main content (stage) with Suspense for lazy loading
 	const renderStage = () => {
 		const props = { onSelectItem: handleSelectItem };
 
+		let StageComponent;
 		switch ( activeSection ) {
 			case 'feed':
-				return <FeedStage { ...props } />;
+				StageComponent = FeedStage;
+				break;
 			case 'following':
-				return <FollowingStage { ...props } />;
+				StageComponent = FollowingStage;
+				break;
 			case 'interactions':
-				return <InteractionsStage { ...props } />;
+				StageComponent = InteractionsStage;
+				break;
 			default:
-				return <FeedStage { ...props } />;
+				StageComponent = FeedStage;
 		}
+
+		return (
+			<Suspense
+				fallback={
+					<div style={ { padding: '20px', textAlign: 'center' } }>
+						<Spinner />
+					</div>
+				}
+			>
+				<StageComponent { ...props } />
+			</Suspense>
+		);
 	};
 
-	// Render detail panel (inspector)
+	// Render detail panel (inspector) with Suspense for lazy loading
 	const renderInspector = () => {
 		if ( ! selectedItemId ) {
 			return null;
@@ -139,16 +162,32 @@ export function Layout() {
 
 		const props = { id: selectedItemId, onClose: handleCloseInspector };
 
+		let InspectorComponent;
 		switch ( activeSection ) {
 			case 'feed':
-				return <FeedInspector { ...props } />;
+				InspectorComponent = FeedInspector;
+				break;
 			case 'following':
-				return <FollowingInspector { ...props } />;
+				InspectorComponent = FollowingInspector;
+				break;
 			case 'interactions':
-				return <InteractionInspector { ...props } />;
+				InspectorComponent = InteractionInspector;
+				break;
 			default:
 				return null;
 		}
+
+		return (
+			<Suspense
+				fallback={
+					<div style={ { padding: '20px', textAlign: 'center' } }>
+						<Spinner />
+					</div>
+				}
+			>
+				<InspectorComponent { ...props } />
+			</Suspense>
+		);
 	};
 
 	const showInspector = !! selectedItemId;
