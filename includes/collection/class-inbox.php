@@ -96,7 +96,7 @@ class Inbox {
 			'post_status'  => 'publish',
 			'guid'         => $activity->get_id(),
 			'meta_input'   => array(
-				'_activitypub_object_id'             => object_to_uri( $activity->get_instrument() ?: $activity->get_object() ),
+				'_activitypub_object_id'             => object_to_uri( $activity->get_object() ),
 				'_activitypub_activity_type'         => $activity->get_type(),
 				'_activitypub_activity_remote_actor' => object_to_uri( $activity->get_actor() ),
 				'activitypub_content_visibility'     => $visibility,
@@ -380,33 +380,16 @@ class Inbox {
 	 * @return \WP_Post|false The primary inbox post, or false if no posts found.
 	 */
 	public static function deduplicate( $guid ) {
-		// Create a filter callback for GUID filtering.
-		$guid_filter = function ( $where ) use ( $guid ) {
-			global $wpdb;
-			$where .= $wpdb->prepare( ' AND guid = %s', \esc_url( $guid ) );
-			return $where;
-		};
+		global $wpdb;
 
-		// Add filter before query.
-		\add_filter( 'posts_where', $guid_filter );
-
-		// Query for all posts with this GUID using WP_Query for better caching.
-		$query = new \WP_Query(
-			array(
-				'post_type'        => self::POST_TYPE,
-				'posts_per_page'   => -1,
-				'fields'           => 'ids',
-				'orderby'          => 'ID',
-				'order'            => 'ASC',
-				'no_found_rows'    => true,
-				'suppress_filters' => false,
+		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
+		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE guid=%s AND post_type=%s ORDER BY ID ASC",
+				\esc_url( $guid ),
+				self::POST_TYPE
 			)
 		);
-
-		$post_ids = $query->posts;
-
-		// Remove the specific filter after query.
-		\remove_filter( 'posts_where', $guid_filter );
 
 		if ( empty( $post_ids ) ) {
 			return false;
