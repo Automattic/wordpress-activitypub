@@ -77,11 +77,11 @@ npm run dev           # Start development watch mode
    ```
    WordPress will be available at http://localhost:8888
 
-For detailed setup instructions, see [environment-setup.md](environment-setup.md).
+For detailed setup instructions, see [Development Environment Setup](../../../docs/development-environment.md).
 
 ## Testing Workflows
 
-See [testing.md](testing.md) for comprehensive testing guidance.
+See [Testing Reference](../../../tests/README.md) for comprehensive testing guidance.
 
 ### Running Tests
 
@@ -127,7 +127,7 @@ open coverage/index.html  # View report (macOS)
 
 ## Code Quality Standards
 
-See [linting.md](linting.md) for detailed linting configuration.
+See [Code Linting and Quality](../../../docs/code-linting.md) for detailed linting configuration.
 
 ### PHP Standards
 

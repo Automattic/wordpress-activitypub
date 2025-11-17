@@ -50,7 +50,7 @@ For complete PHP coding standards including:
 - Naming conventions
 - Spacing and indentation
 
-See [PHP Conventions - Coding Standards](../activitypub-php-conventions/coding-standards.md).
+See [PHP Coding Standards](php-coding-standards.md).
 
 **Important:** All DocBlock descriptions must end with proper punctuation (periods).
 

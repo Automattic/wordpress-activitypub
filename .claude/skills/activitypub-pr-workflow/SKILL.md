@@ -58,7 +58,7 @@ git checkout -b add/custom-emoji-support
 
 ## Development Workflow
 
-See [checklist.md](checklist.md) for complete PR checklist.
+See [Pull Request Guide](../../../docs/pull-request.md) for complete PR workflow and checklist.
 
 ### 1. Break Down Features
 

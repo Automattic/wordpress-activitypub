@@ -78,7 +78,7 @@ public function method_name( $param_one, $param_two = array() ) {
 
 ## Coding Standards
 
-See [coding-standards.md](coding-standards.md) for comprehensive standards.
+See [PHP Coding Standards](../../../docs/php-coding-standards.md) for comprehensive standards.
 
 ### WordPress Coding Standards
 
@@ -109,7 +109,7 @@ $email = sanitize_email( $_POST['email'] );
 
 ## Directory Organization
 
-See [class-structure.md](class-structure.md) for detailed organization.
+See [PHP Class Structure](../../../docs/php-class-structure.md) for detailed organization.
 
 ```
 includes/
@@ -173,7 +173,35 @@ $activity = \apply_filters( 'activitypub_activity_object', $activity, $post );
 
 ## Class Patterns
 
-See [examples.md](examples.md) for complete examples.
+### Real Codebase Examples
+
+For complete, working examples, refer to these files in the codebase:
+
+**Core Classes:**
+- `includes/class-activitypub.php` - Main plugin class with initialization
+- `includes/class-query.php` - Singleton pattern example
+- `includes/class-scheduler.php` - WP-Cron integration
+- `includes/class-dispatcher.php` - Activity dispatching
+
+**Transformers:**
+- `includes/transformer/class-base.php` - Base transformer pattern
+- `includes/transformer/class-post.php` - Post to ActivityPub transformation
+- `includes/transformer/class-event.php` - Event-specific transformation
+
+**Handlers:**
+- `includes/handler/class-accept.php` - Accept activity handling
+- `includes/handler/class-like.php` - Like activity handling
+- `includes/handler/class-follow.php` - Follow activity handling
+
+**REST Endpoints:**
+- `includes/rest/class-actors-controller.php` - Actor endpoint
+- `includes/rest/class-inbox-controller.php` - Inbox endpoint
+- `includes/rest/class-followers-controller.php` - Followers collection
+
+**Integrations:**
+- `integration/class-woocommerce.php` - WooCommerce integration
+- `integration/class-jetpack.php` - Jetpack integration
+- `integration/class-buddypress.php` - BuddyPress integration
 
 ### Singleton Pattern
 ```php
