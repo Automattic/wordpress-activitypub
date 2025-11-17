@@ -59,7 +59,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 
 	// Listen for URL changes (browser back/forward).
 	useEffect( () => {
-		const handleUrlChange = () => {
+		const updateQueryParams = () => {
 			const args = getQueryArgs( window.location.href ) as {
 				paged?: string;
 				search?: string;
@@ -70,12 +70,12 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			} );
 		};
 
-		window.addEventListener( 'popstate', handleUrlChange );
-		window.addEventListener( 'hashchange', handleUrlChange );
+		window.addEventListener( 'popstate', updateQueryParams );
+		window.addEventListener( 'hashchange', updateQueryParams );
 
 		return () => {
-			window.removeEventListener( 'popstate', handleUrlChange );
-			window.removeEventListener( 'hashchange', handleUrlChange );
+			window.removeEventListener( 'popstate', updateQueryParams );
+			window.removeEventListener( 'hashchange', updateQueryParams );
 		};
 	}, [] );
 
