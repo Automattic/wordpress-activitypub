@@ -2,39 +2,56 @@
  * Custom webpack configuration extending WordPress Scripts
  *
  * This configuration:
- * - Properly names and places vendor chunks in the social-web directory
+ * - Places JS chunks in their source directory structure (src/foo/ → build/foo/)
+ * - Handles social-web vendor chunks separately
  */
 
 const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
 
-// WordPress Scripts might return different configs for different commands
-// We need to handle both single config and array of configs
 const processConfig = ( config ) => {
 	return {
 		...config,
+		output: {
+			...config.output,
+			// Place JS chunks in their source directory
+			chunkFilename: ( pathData ) => {
+				const chunk = pathData.chunk;
+
+				if ( chunk && chunk.getModules ) {
+					for ( const module of chunk.getModules() ) {
+						const modulePath = module.resource || module.context || '';
+						const srcMatch = modulePath.match( /\/src\/([^/]+)\// );
+						if ( srcMatch ) {
+							return `${ srcMatch[ 1 ] }/[name].js`;
+						}
+					}
+				}
+
+				return '[name].js';
+			},
+		},
 		optimization: {
 			...config.optimization,
 			splitChunks: {
 				...( config.optimization?.splitChunks || {} ),
 				cacheGroups: {
 					...( config.optimization?.splitChunks?.cacheGroups || {} ),
-					// Vendor chunk for social-web modules
+					// Social-web vendor chunk
 					socialWebVendors: {
 						test: /[\\/]node_modules[\\/]/,
 						name: 'social-web/vendors',
-						chunks( chunk ) {
-							// Only include in this vendor bundle if the chunk is from social-web
-							return chunk.name && chunk.name.startsWith( 'social-web/' );
-						},
-						priority: 20, // Higher priority to override default
+						chunks: ( chunk ) => chunk.name && chunk.name.startsWith( 'social-web/' ),
+						priority: 20,
 						reuseExistingChunk: true,
-						enforce: true, // Force this configuration
+						enforce: true,
 					},
+					// Disable default vendors to avoid unused files
+					default: false,
+					defaultVendors: false,
 				},
 			},
 		},
 	};
 };
 
-// Handle both single config object and array of configs
 module.exports = Array.isArray( defaultConfig ) ? defaultConfig.map( processConfig ) : processConfig( defaultConfig );

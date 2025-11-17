@@ -19,19 +19,9 @@ import './style.scss';
 // Lazy load route stages for better performance
 // Use magic comments to give chunks proper names
 const FeedStage = lazy( () => import( /* webpackChunkName: "feed-stage" */ '../../routes/feed/stage' ) );
-const FollowingStage = lazy( () => import( /* webpackChunkName: "following-stage" */ '../../routes/following/stage' ) );
-const InteractionsStage = lazy(
-	() => import( /* webpackChunkName: "interactions-stage" */ '../../routes/interactions/stage' )
-);
 
 // Lazy load inspector components
 const FeedInspector = lazy( () => import( /* webpackChunkName: "feed-inspector" */ '../../routes/feed/inspector' ) );
-const FollowingInspector = lazy(
-	() => import( /* webpackChunkName: "following-inspector" */ '../../routes/following/inspector' )
-);
-const InteractionInspector = lazy(
-	() => import( /* webpackChunkName: "interaction-inspector" */ '../../routes/interactions/inspector' )
-);
 
 /**
  * Parse the URL hash to extract section and item ID
@@ -98,14 +88,6 @@ export function Layout() {
 		};
 	}, [] );
 
-	// Add fullscreen mode class to body
-	useEffect( () => {
-		document.body.classList.add( 'is-fullscreen-mode' );
-		return () => {
-			document.body.classList.remove( 'is-fullscreen-mode' );
-		};
-	}, [] );
-
 	const handleSelectItem = ( id: string | number ) => {
 		setSelectedItemId( id );
 		updateHash( activeSection, id );
@@ -129,14 +111,6 @@ export function Layout() {
 		let StageComponent;
 		switch ( activeSection ) {
 			case 'feed':
-				StageComponent = FeedStage;
-				break;
-			case 'following':
-				StageComponent = FollowingStage;
-				break;
-			case 'interactions':
-				StageComponent = InteractionsStage;
-				break;
 			default:
 				StageComponent = FeedStage;
 		}
@@ -160,21 +134,18 @@ export function Layout() {
 			return null;
 		}
 
-		const props = { id: selectedItemId, onClose: handleCloseInspector };
-
 		let InspectorComponent;
+		let props;
+
 		switch ( activeSection ) {
 			case 'feed':
-				InspectorComponent = FeedInspector;
-				break;
-			case 'following':
-				InspectorComponent = FollowingInspector;
-				break;
-			case 'interactions':
-				InspectorComponent = InteractionInspector;
-				break;
 			default:
-				return null;
+				// Feed inspector expects number type
+				if ( typeof selectedItemId !== 'number' ) {
+					return null;
+				}
+				InspectorComponent = FeedInspector;
+				props = { id: selectedItemId, onClose: handleCloseInspector };
 		}
 
 		return (
