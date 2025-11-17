@@ -1,6 +1,6 @@
 # Testing Reference
 
-This file provides detailed testing patterns and examples. For basic test commands, see the main [SKILL.md](SKILL.md#testing-workflows).
+This file provides detailed testing patterns and examples. For basic test commands, see the main [Development Cycle skill](../.claude/skills/activitypub-dev-cycle/SKILL.md#testing-workflows).
 
 ## Table of Contents
 - [Test Organization](#test-organization)

@@ -81,7 +81,7 @@ For detailed setup instructions, see [environment-setup.md](environment-setup.md
 
 ## Testing Workflows
 
-See [testing.md](testing.md) for comprehensive testing guidance.
+See [Testing Reference](../../../tests/README.md) for comprehensive testing guidance.
 
 ### Running Tests
 
