@@ -399,6 +399,7 @@ class Inbox {
 				'posts_per_page' => 1,
 				'orderby'        => 'ID',
 				'order'          => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Necessary for querying by activity type and object ID.
 				'meta_query'     => array(
 					'relation' => 'AND',
 					array(
