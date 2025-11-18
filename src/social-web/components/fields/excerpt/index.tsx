@@ -21,13 +21,10 @@ export const excerptField: Field< FeedPost > = {
 	render: ( { item }: { item: FeedPost } ) => {
 		const plainText = getPlainTextExcerpt( item ).trim();
 
-		// Show more text for better context (300 chars instead of 200)
-		const truncated = plainText.length > 300 ? plainText.substring( 0, 300 ) + '…' : plainText;
-
-		if ( ! truncated ) {
+		if ( ! plainText ) {
 			return null;
 		}
 
-		return <div className="activitypub-feed-excerpt">{ truncated }</div>;
+		return <div className="activitypub-feed-excerpt">{ plainText }</div>;
 	},
 };
