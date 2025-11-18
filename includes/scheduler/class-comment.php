@@ -51,6 +51,24 @@ class Comment {
 			return;
 		}
 
+		/*
+		 * Check with supported comment types.
+		 * Only federate registered ActivityPub comment types and standard WordPress comments.
+		 */
+		$allowed_types = Comment_Utils::get_comment_type_slugs();
+		if ( ! is_array( $allowed_types ) ) {
+			$allowed_types = array();
+		}
+
+		// Add core WordPress comment types.
+		$allowed_types[] = ''; // Empty string is default WordPress comment type.
+		$allowed_types[] = 'comment'; // Some plugins/themes use 'comment'.
+
+		// Check if comment type is in allowed list.
+		if ( ! in_array( $comment->comment_type, $allowed_types, true ) ) {
+			return;
+		}
+
 		$type = false;
 
 		if (
