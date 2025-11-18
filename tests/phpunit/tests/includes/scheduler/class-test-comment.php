@@ -105,6 +105,14 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 					),
 				),
 			),
+			'unsupported_comment_type_note'      => array(
+				array(
+					'comment_post_ID'  => self::$comment_post_ID,
+					'user_id'          => self::$user_id,
+					'comment_approved' => 1,
+					'comment_type'     => 'note',
+				),
+			),
 			'unsupported_comment_type_pingback'  => array(
 				array(
 					'comment_post_ID'  => self::$comment_post_ID,
