@@ -1,64 +1,230 @@
-# Setting up your environment
+# Development Environment Setup
 
 ## Overview
 
-In order to start developing the ActivityPub plugin you want to have access to a WordPress installation where you can install the plugin and work on it.
+This guide will help you set up a local development environment for the ActivityPub WordPress plugin. You'll learn how to clone the repository, install dependencies, and run a local WordPress instance for development and testing.
 
-To do that you need to set up a WordPress site and give it the ability to run your local build of the ActivityPub plugin code repository.
+## Table of Contents
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+- [wp-env Configuration](#wp-env-configuration)
+- [Docker Management](#docker-management)
+- [Running Tests](#running-tests)
+- [Troubleshooting](#troubleshooting)
 
-There are several ways to achieve this, listed in the next section.
+## Prerequisites
 
-## Get started with development
+### Required Software
 
-### Clone the repository
+1. **Node.js** (v18 or later)
+   ```bash
+   node --version  # Check version
+   ```
 
-Before you get started, we recommend that you set up a public SSH key setup with GitHub, which is more secure than saving your GitHub credentials in your keychain. There are more details about [setting up a public key on GitHub.com](https://help.github.com/en/articles/adding-a-new-ssh-key-to-your-github-account).
+2. **npm** (comes with Node.js)
+   ```bash
+   npm --version  # Check version
+   ```
 
-Fork this repository to your own GitHub account and clone it to your local machine.
+3. **Docker Desktop**
+   - [Download Docker Desktop](https://www.docker.com/products/docker-desktop)
+   - Ensure Docker is running before using npm run env commands
 
-### Local development
+4. **Composer** (for PHP dependencies)
+   ```bash
+   # Install via Homebrew (macOS)
+   brew install composer
 
-To run the ActivityPub plugin in a local WordPress environment, you can use `wp-env` or Docker.
+   # Or download directly
+   curl -sS https://getcomposer.org/installer | php
+   ```
 
-### wp-env
+5. **Git** with SSH key setup
+   - We recommend setting up a public SSH key with GitHub for more secure authentication.
+   - See [GitHub's SSH key guide](https://help.github.com/en/articles/adding-a-new-ssh-key-to-your-github-account)
+   ```bash
+   # Check SSH key
+   ssh -T git@github.com
+   ```
 
-`wp-env` lets you easily set up a local WordPress environment for building and testing plugins and themes. It’s simple to install and requires no configuration.
+## Getting Started
 
-To get started, install `wp-env` by running the following command in the root of the ActivityPub plugin directory:
+### Clone the Repository
+
+Fork the repository to your own GitHub account and clone it to your local machine:
 
 ```bash
-npm install
+git clone git@github.com:YOUR-USERNAME/wordpress-activitypub.git
+cd wordpress-activitypub
 ```
 
-Then, start the local environment by running:
+### Install Dependencies
+
+1. **Install JavaScript dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Install PHP dependencies:**
+   ```bash
+   composer install
+   ```
+
+### Start Development Environment
+
+Start the local WordPress environment using wp-env:
 
 ```bash
 npm run env-start
 ```
 
-This will start a local WordPress environment with the ActivityPub plugin installed and activated. You can open the WordPress site in your browser by visiting `http://localhost`.
+This will start a local WordPress environment with the ActivityPub plugin installed and activated.
 
-To stop the environment, run:
+### Access WordPress
+
+Once the environment is running:
+- **Frontend:** http://localhost:8888
+- **Admin:** http://localhost:8888/wp-admin
+- **Username:** `admin`
+- **Password:** `password`
+
+### Stop the Environment
+
+When you're done developing:
 
 ```bash
 npm run env-stop
 ```
 
-### Composer
+## wp-env Configuration
 
-Composer is used to install development dependencies for the ActivityPub plugin, to run unit tests, and to manage changelog entries.
+### Default Configuration
 
-To install Composer, follow the instructions on the [Composer website](https://getcomposer.org/).
+wp-env uses `.wp-env.json` for configuration. The default setup includes:
 
-Once Composer is available on your machin, you can install dependencies for the project like so:
+```json
+{
+  "phpVersion": "8.0",
+  "plugins": [ "." ],
+  "config": {
+    "WP_DEBUG": true,
+    "WP_DEBUG_LOG": true,
+    "WP_DEBUG_DISPLAY": true,
+    "SCRIPT_DEBUG": true
+  }
+}
+```
+
+### Common Environment Commands
+
+Available npm scripts:
+- `npm run env-start` → Start environment
+- `npm run env-stop` → Stop environment
+- `npm run env-test` → Run PHPUnit tests
+- `npm run env -- <command>` → Pass any wp-env command
 
 ```bash
-composer install
+# Start environment
+npm run env-start
+
+# Stop environment
+npm run env-stop
+
+# Restart environment
+npm run env-stop
+npm run env-start
+
+# Run PHPUnit tests
+npm run env-test
+
+# Run WP-CLI commands
+npm run env -- run cli wp user list
+npm run env -- run cli wp plugin list
+
+# Access MySQL
+npm run env -- run cli wp db cli
+
+# View logs
+npm run env -- logs
+```
+
+### Passing Additional Parameters to wp-env
+
+Use `npm run env --` to pass any wp-env command and its parameters:
+
+```bash
+# Run WP-CLI with additional arguments
+npm run env -- run cli wp user create testuser test@example.com --role=editor
+
+# View logs with follow flag
+npm run env -- logs --follow
+
+# Any wp-env command can be passed through
+npm run env -- <wp-env-command> [options]
+```
+
+### Multiple WordPress Versions
+
+Test with different WordPress versions by updating `.wp-env.json`:
+
+```json
+{
+  "core": "WordPress/WordPress#6.4"
+}
+```
+
+### Multiple PHP Versions
+
+Change PHP version in `.wp-env.json`:
+
+```json
+{
+  "phpVersion": "7.4"
+}
+```
+
+## Docker Management
+
+### Container Information
+
+```bash
+# List running containers
+docker ps
+
+# View container logs
+docker logs $(docker ps -q --filter name=wordpress)
+
+# Access container shell
+docker exec -it $(docker ps -q --filter name=wordpress) bash
+```
+
+### Resource Management
+
+```bash
+# Check Docker resource usage
+docker system df
+
+# Clean up unused resources
+docker system prune -a
+```
+
+### Port Management
+
+Default ports:
+- WordPress: 8888
+- MySQL: (mapped to random external port)
+
+Change ports in `.wp-env.json`:
+```json
+{
+  "port": 8080,
+  "testsPort": 8081
+}
 ```
 
 ## Running Tests
 
-You can now run the test suite using either npm or composer:
+You can run the test suite using either npm or composer:
 
 ```bash
 # Using npm
@@ -92,34 +258,239 @@ composer run test:wp-env -- --filter=test_migrate_to_4_1_0
 ```
 
 Common PHPUnit arguments:
-- `--filter`: Run tests matching a pattern
-- `--group`: Run tests with a specific @group annotation
-- `--exclude-group`: Exclude tests with a specific @group annotation
-- `--verbose`: Output more verbose information
-- `--debug`: Display debugging information
+- `--filter` - Run tests matching a pattern
+- `--group` - Run tests with a specific @group annotation
+- `--exclude-group` - Exclude tests with a specific @group annotation
+- `--verbose` - Output more verbose information
+- `--debug` - Display debugging information
+
+For comprehensive testing guidance, see [Testing Reference](../tests/README.md).
 
 ### Code Coverage Reports
 
 The coverage configuration is already set up in `phpunit.xml.dist` to analyze the code in the `includes` directory. To generate code coverage reports, you'll need to start wp-env with Xdebug enabled for coverage:
 
 ```bash
-# Start the environment with Xdebug enabled.
+# Start the environment with Xdebug enabled
 npm run env-start -- --xdebug=coverage
 ```
+
 ```bash
-# Run tests with code coverage.
+# Run tests with code coverage
 npm run env-test -- --coverage-text
 ```
 
 The above will display a text-based coverage report in your terminal. For a more detailed HTML report:
 
 ```bash
-# Generate HTML coverage report in Docker.
+# Generate HTML coverage report in Docker
 npm run env-test -- --coverage-html ./coverage
 ```
+
 ```bash
-# Open the coverage report in your default browser (macOS).
+# Open the coverage report in your default browser (macOS)
 open coverage/index.html
 ```
 
 The HTML report will be generated directly in the `coverage` directory in your local filesystem. The `index.html` file can then be opened in a browser, showing a detailed analysis of which lines of code are covered by tests.
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### Docker Not Running
+
+**Error:** "Docker is not running"
+
+**Solution:**
+```bash
+# Start Docker Desktop application
+open -a Docker  # macOS
+
+# Wait for Docker to start, then retry
+npm run env-start
+```
+
+#### Port Already in Use
+
+**Error:** "Port 8888 is already in use"
+
+**Solution:**
+```bash
+# Find process using port
+lsof -i :8888  # macOS/Linux
+
+# Kill the process
+kill -9 <PID>
+
+# Or use different port
+npm run env-start -- --port=8889
+```
+
+#### Permission Denied
+
+**Error:** "Permission denied" errors
+
+**Solution:**
+```bash
+# Ensure Docker has permissions
+sudo usermod -aG docker $USER  # Linux
+
+# Restart terminal and retry
+```
+
+#### Slow Performance
+
+**Issue:** wp-env runs slowly
+
+**Solutions:**
+1. Increase Docker resources:
+   - Docker Desktop → Preferences → Resources
+   - Increase CPUs and Memory
+
+2. Use mutagen for file sync (macOS):
+   ```bash
+   brew install mutagen-io/mutagen/mutagen
+   ```
+
+3. Exclude node_modules from sync
+
+#### Database Connection Errors
+
+**Error:** "Error establishing database connection"
+
+**Solution:**
+```bash
+# Restart containers
+npm run env-stop
+npm run env-start
+```
+
+#### Plugin Not Activated
+
+**Issue:** ActivityPub plugin not active
+
+**Solution:**
+```bash
+# Manually activate
+npm run env -- run cli wp plugin activate activitypub
+
+# Check activation
+npm run env -- run cli wp plugin list --status=active
+```
+
+### Debugging wp-env
+
+#### Enable Verbose Output
+
+```bash
+# Set debug environment variable
+DEBUG=wp-env:* npm run env-start
+```
+
+### Advanced Configuration
+
+#### Custom WordPress Configuration
+
+Create `wp-config.php` additions in `.wp-env.json`:
+
+```json
+{
+  "config": {
+    "WP_DEBUG": true,
+    "WP_DEBUG_LOG": true,
+    "WP_DEBUG_DISPLAY": false,
+    "SCRIPT_DEBUG": true,
+    "WP_ENVIRONMENT_TYPE": "local",
+    "WP_MEMORY_LIMIT": "256M"
+  }
+}
+```
+
+#### Mount Additional Directories
+
+```json
+{
+  "mappings": {
+    "wp-content/mu-plugins": "./mu-plugins",
+    "wp-content/themes/custom": "./custom-theme"
+  }
+}
+```
+
+#### Multiple Test Sites
+
+Run multiple instances:
+
+```bash
+# Start on different ports
+WP_ENV_PORT=8888 npm run env-start  # Instance 1
+WP_ENV_PORT=9999 npm run env-start  # Instance 2
+```
+
+### Performance Optimization
+
+#### File Sync Optimization
+
+For better performance on macOS:
+
+1. **Use Docker Desktop's VirtioFS:**
+   - Docker Desktop → Settings → General
+   - Enable "Use the new Virtualization framework"
+   - Enable "VirtioFS accelerated directory sharing"
+
+2. **Limit watched files:**
+   ```json
+   {
+     "excludePaths": [
+       "node_modules",
+       "vendor",
+       ".git"
+     ]
+   }
+   ```
+
+#### Database Optimization
+
+```bash
+# Optimize database tables
+npm run env -- run cli wp db optimize
+
+# Clear transients
+npm run env -- run cli wp transient delete --all
+```
+
+## Environment Variables
+
+### Available Variables
+
+- `WP_ENV_HOME` - wp-env home directory
+- `WP_ENV_PORT` - WordPress port
+- `WP_ENV_TESTS_PORT` - Tests port
+- `WP_ENV_LIFECYCLE_SCRIPT` - Lifecycle script path
+
+### Custom Environment Setup
+
+Create `.env.local` for custom variables:
+
+```bash
+# .env.local
+AP_TEST_TIMEOUT=10000
+AP_DEBUG_MODE=true
+```
+
+Load in tests:
+```php
+if ( file_exists( '.env.local' ) ) {
+    $dotenv = Dotenv\Dotenv::createImmutable( __DIR__ );
+    $dotenv->load();
+}
+```
+
+## Next Steps
+
+Once your environment is set up:
+
+- Review the [Testing Reference](../tests/README.md) for testing guidance
+- Check out [Code Linting and Quality](code-linting.md) for code standards
+- Read [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines
