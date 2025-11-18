@@ -18,10 +18,12 @@ import './style.scss';
 
 // Lazy load route stages for better performance
 // Use magic comments to give chunks proper names
-const FeedStage = lazy( () => import( /* webpackChunkName: "feed-stage" */ '../../routes/feed/stage' ) );
+const FeedStage = lazy( () => import( /* webpackChunkName: "social-web/feed-stage" */ '../../routes/feed/stage' ) );
 
 // Lazy load inspector components
-const FeedInspector = lazy( () => import( /* webpackChunkName: "feed-inspector" */ '../../routes/feed/inspector' ) );
+const FeedInspector = lazy(
+	() => import( /* webpackChunkName: "social-web/feed-inspector" */ '../../routes/feed/inspector' )
+);
 
 /**
  * Parse the URL hash to extract section and item ID
