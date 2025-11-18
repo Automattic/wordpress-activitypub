@@ -82,20 +82,20 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function no_activity_comment_provider() {
 		return array(
-			'unapproved_comment'              => array(
+			'unapproved_comment'                 => array(
 				array(
 					'comment_post_ID'  => self::$comment_post_ID,
 					'user_id'          => self::$user_id,
 					'comment_approved' => 0,
 				),
 			),
-			'non_registered_user'             => array(
+			'non_registered_user'                => array(
 				array(
 					'comment_post_ID'  => self::$comment_post_ID,
 					'comment_approved' => 1,
 				),
 			),
-			'federation_disabled'             => array(
+			'federation_disabled'                => array(
 				array(
 					'comment_post_ID'  => self::$comment_post_ID,
 					'user_id'          => self::$user_id,
@@ -105,20 +105,20 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 					),
 				),
 			),
-			'unsupported_comment_type_note'   => array(
+			'unsupported_comment_type_pingback'  => array(
 				array(
 					'comment_post_ID'  => self::$comment_post_ID,
 					'user_id'          => self::$user_id,
 					'comment_approved' => 1,
-					'comment_type'     => 'note',
+					'comment_type'     => 'pingback',
 				),
 			),
-			'unsupported_comment_type_custom' => array(
+			'unsupported_comment_type_trackback' => array(
 				array(
 					'comment_post_ID'  => self::$comment_post_ID,
 					'user_id'          => self::$user_id,
 					'comment_approved' => 1,
-					'comment_type'     => 'custom_unsupported_type',
+					'comment_type'     => 'trackback',
 				),
 			),
 		);
