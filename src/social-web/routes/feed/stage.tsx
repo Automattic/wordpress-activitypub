@@ -63,6 +63,28 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		[]
 	);
 
+	// Normalize view.fields to maintain the canonical order defined in fields array
+	const normalizedView = useMemo( () => {
+		if ( ! view.fields ) {
+			return view;
+		}
+
+		// Create a map of field IDs to their canonical order
+		const fieldOrder = new Map( fields.map( ( field, index ) => [ field.id, index ] ) );
+
+		// Sort view.fields according to the canonical order
+		const sortedFields = [ ...view.fields ].sort( ( a, b ) => {
+			const orderA = fieldOrder.get( a ) ?? Infinity;
+			const orderB = fieldOrder.get( b ) ?? Infinity;
+			return orderA - orderB;
+		} );
+
+		return {
+			...view,
+			fields: sortedFields,
+		};
+	}, [ view, fields ] );
+
 	const [ selection, setSelection ] = useState< string[] >( [] );
 
 	useEffect( () => {
@@ -104,7 +126,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			<DataViews
 				data={ feed }
 				fields={ fields }
-				view={ view }
+				view={ normalizedView }
 				onChangeView={ updateView }
 				isLoading={ isResolving }
 				onClickItem={ ( item ) => onSelectItem( item.id ) }
@@ -114,7 +136,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 				onChangeSelection={ handleChangeSelection }
 				empty={
 					<p>
-						{ view.search
+						{ normalizedView.search
 							? __( 'No posts found.', 'activitypub' )
 							: __(
 									'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
