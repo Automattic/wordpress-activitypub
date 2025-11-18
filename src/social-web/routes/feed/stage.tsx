@@ -14,6 +14,7 @@ import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
+import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
 import type { FeedPost } from '../../types';
 
 const DEFAULT_VIEW: View = {
@@ -102,6 +103,18 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		},
 	} );
 
+	// Wrap updateView to enforce mutual exclusion between excerpt and content fields
+	const updateFeedView = useCallback(
+		( updatedView: View ) => {
+			const oldFields = view.fields || [];
+			const newFields = updatedView.fields || [];
+			const fields = enforceContentExcerptMutualExclusion( oldFields, newFields );
+
+			updateView( { ...updatedView, fields } );
+		},
+		[ view.fields, updateView ]
+	);
+
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
 		page: view.page || 1,
@@ -116,26 +129,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	);
 
 	// Normalize view.fields to maintain the canonical order defined in fields array
-	const normalizedView = useMemo( () => {
-		if ( ! view.fields ) {
-			return view;
-		}
-
-		// Create a map of field IDs to their canonical order
-		const fieldOrder = new Map( fields.map( ( field, index ) => [ field.id, index ] ) );
-
-		// Sort view.fields according to the canonical order
-		const sortedFields = [ ...view.fields ].sort( ( a, b ) => {
-			const orderA = fieldOrder.get( a ) ?? Infinity;
-			const orderB = fieldOrder.get( b ) ?? Infinity;
-			return orderA - orderB;
-		} );
-
-		return {
-			...view,
-			fields: sortedFields,
-		};
-	}, [ view, fields ] );
+	const normalizedView = useMemo( () => normalizeFieldOrder( view, fields ), [ view, fields ] );
 
 	const [ selection, setSelection ] = useState< string[] >( [] );
 
@@ -179,7 +173,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 				data={ feed }
 				fields={ fields }
 				view={ normalizedView }
-				onChangeView={ updateView }
+				onChangeView={ updateFeedView }
 				isLoading={ isResolving }
 				onClickItem={ ( item ) => onSelectItem( item.id ) }
 				isItemClickable={ () => true }
