@@ -234,7 +234,6 @@ and uses it for verification.
 Fixes #456.
 ```
 
-**Important:** Never mention AI tools, coding assistants, or automation tools in commit messages, PR descriptions, code comments, or anywhere in the repository.
 
 ## Resources
 
