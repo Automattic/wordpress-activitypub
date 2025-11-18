@@ -29,7 +29,7 @@ tests/phpunit/
 
 ### Test Groups
 
-Use `@group` annotations to organize tests. Run with: `npm run env-test -- --group=groupname`
+Use `@group` annotations to organize tests. Run with: `npm run env-test -- --group=groupname`.
 
 Common groups: `migration`, `rest`, `integration`
 
