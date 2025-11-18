@@ -83,7 +83,7 @@ This will start a local WordPress environment with the ActivityPub plugin instal
 ### Access WordPress
 
 Once the environment is running:
-- **Frontend:** http://localhost:8888 (or http://localhost if port 8888 is taken)
+- **Frontend:** http://localhost:8888
 - **Admin:** http://localhost:8888/wp-admin
 - **Username:** `admin`
 - **Password:** `password`
