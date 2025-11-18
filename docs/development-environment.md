@@ -40,7 +40,7 @@ This guide will help you set up a local development environment for the Activity
    ```
 
 5. **Git** with SSH key setup
-   - We recommend setting up a public SSH key with GitHub for more secure authentication
+   - We recommend setting up a public SSH key with GitHub for more secure authentication.
    - See [GitHub's SSH key guide](https://help.github.com/en/articles/adding-a-new-ssh-key-to-your-github-account)
    ```bash
    # Check SSH key
@@ -70,11 +70,6 @@ cd wordpress-activitypub
    composer install
    ```
 
-3. **Set up Git hooks:**
-   ```bash
-   npm run prepare
-   ```
-
 ### Start Development Environment
 
 Start the local WordPress environment using wp-env:
@@ -88,7 +83,7 @@ This will start a local WordPress environment with the ActivityPub plugin instal
 ### Access WordPress
 
 Once the environment is running:
-- **Frontend:** http://localhost:8888 (or http://localhost if port 8888 is taken)
+- **Frontend:** http://localhost:8888
 - **Admin:** http://localhost:8888/wp-admin
 - **Username:** `admin`
 - **Password:** `password`

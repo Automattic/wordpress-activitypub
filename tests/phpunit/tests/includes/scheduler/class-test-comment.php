@@ -82,20 +82,20 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function no_activity_comment_provider() {
 		return array(
-			'unapproved_comment'  => array(
+			'unapproved_comment'                 => array(
 				array(
 					'comment_post_ID'  => self::$comment_post_ID,
 					'user_id'          => self::$user_id,
 					'comment_approved' => 0,
 				),
 			),
-			'non_registered_user' => array(
+			'non_registered_user'                => array(
 				array(
 					'comment_post_ID'  => self::$comment_post_ID,
 					'comment_approved' => 1,
 				),
 			),
-			'federation_disabled' => array(
+			'federation_disabled'                => array(
 				array(
 					'comment_post_ID'  => self::$comment_post_ID,
 					'user_id'          => self::$user_id,
@@ -103,6 +103,30 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 					'comment_meta'     => array(
 						'protocol' => 'activitypub',
 					),
+				),
+			),
+			'unsupported_comment_type_note'      => array(
+				array(
+					'comment_post_ID'  => self::$comment_post_ID,
+					'user_id'          => self::$user_id,
+					'comment_approved' => 1,
+					'comment_type'     => 'note',
+				),
+			),
+			'unsupported_comment_type_pingback'  => array(
+				array(
+					'comment_post_ID'  => self::$comment_post_ID,
+					'user_id'          => self::$user_id,
+					'comment_approved' => 1,
+					'comment_type'     => 'pingback',
+				),
+			),
+			'unsupported_comment_type_trackback' => array(
+				array(
+					'comment_post_ID'  => self::$comment_post_ID,
+					'user_id'          => self::$user_id,
+					'comment_approved' => 1,
+					'comment_type'     => 'trackback',
 				),
 			),
 		);
@@ -125,7 +149,22 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$comment_id    = self::factory()->comment->create( $comment_data );
 		$activitpub_id = Comment::generate_id( $comment_id );
 
-		$this->assertNull( $this->get_latest_outbox_item( $activitpub_id ) );
+		// Check that no outbox item was created for this specific comment.
+		$outbox_posts = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
+				'numberposts' => -1,
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitpub_id,
+					),
+				),
+			)
+		);
+
+		$this->assertEmpty( $outbox_posts, 'No outbox item should be created for this comment' );
 
 		\wp_delete_comment( $comment_id, true );
 	}

@@ -99,7 +99,7 @@ As you open your Pull Request, make sure you check the following:
 
 ### GitHub Settings
 - [ ] Self-assigned as assignee
-- [ ] pfefferle added as reviewer
+- [ ] Automattic/fediverse added as reviewer
 - [ ] Appropriate labels added
 - [ ] Milestone set (if applicable)
 
@@ -141,46 +141,15 @@ As you open your Pull Request, make sure you check the following:
 
 ## PR Description Template
 
-Use this template when creating your pull request:
+When creating a pull request, GitHub will automatically populate the description field with the [pull request template](../.github/PULL_REQUEST_TEMPLATE.md).
 
-```markdown
-## Summary
-<!-- Brief description of what this PR does -->
+This template includes:
+- **Issue reference**: Link to the issue being fixed
+- **Proposed changes**: What functional changes are included
+- **Testing instructions**: Step-by-step guide for reviewers
+- **Changelog entry**: Option to auto-generate changelog from PR details
 
-## Why?
-<!-- Explain the motivation for this change -->
-
-## Changes
-<!-- List the specific changes made -->
--
--
--
-
-## Testing Instructions
-<!-- Step-by-step instructions to test -->
-1.
-2.
-3.
-
-## Screenshots
-<!-- If applicable, add before/after screenshots -->
-### Before
-![Before]()
-
-### After
-![After]()
-
-## Checklist
-- [ ] Changelog entry added
-- [ ] Tests added/updated
-- [ ] Documentation updated
-- [ ] Follows coding standards
-
-## Related Issues
-<!-- Link to related issues -->
-Fixes #
-Related to #
-```
+The template helps ensure consistency and provides reviewers with all necessary context.
 
 ## Special Situations
 
@@ -240,7 +209,7 @@ Type: Brief description
 Longer explanation if needed.
 Multiple paragraphs are fine.
 
-Fixes #123
+Fixes #123.
 ```
 
 ### Types
@@ -262,10 +231,9 @@ because the actor URL was not being properly extracted.
 This commit extracts the actor from the activity object
 and uses it for verification.
 
-Fixes #456
+Fixes #456.
 ```
 
-**Important:** Never mention AI tools, coding assistants, or automation tools in commit messages, PR descriptions, code comments, or anywhere in the repository.
 
 ## Resources
 

@@ -1,3 +1,5 @@
+@use "sass:color";
+
 button {
 	border: none;
 }
@@ -238,7 +240,7 @@ button {
 		margin-bottom: 8px;
 
 		&:hover, &:focus {
-			border-color: darken(#e0e0e0, 10%);
+			border-color: color.adjust(#e0e0e0, $lightness: -10%);
 		}
 	}
 

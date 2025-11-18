@@ -1,6 +1,6 @@
 # Testing Reference
 
-This file provides detailed testing patterns and examples. For basic test commands, see the main [Development Cycle skill](../.claude/skills/activitypub-dev-cycle/SKILL.md#testing-workflows).
+This file provides detailed testing patterns and examples. For basic test commands, see the [Development Environment documentation](../docs/development-environment.md#testing-workflows).
 
 ## Table of Contents
 - [Test Organization](#test-organization)
@@ -29,9 +29,9 @@ tests/phpunit/
 
 ### Test Groups
 
-Use `@group` annotations to organize tests. Run with: `npm run env-test -- --group=groupname`
+Use `@group` annotations to organize tests. Run with: `npm run env-test -- --group=groupname`.
 
-Common groups: `migration`, `rest`, `integration`
+Common groups: `migration`, `rest`, `integration`.
 
 ### Test Naming Conventions
 
