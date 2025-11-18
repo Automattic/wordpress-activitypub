@@ -262,7 +262,7 @@ because the actor URL was not being properly extracted.
 This commit extracts the actor from the activity object
 and uses it for verification.
 
-Fixes #456
+Fixes #456.
 ```
 
 **Important:** Never mention AI tools, coding assistants, or automation tools in commit messages, PR descriptions, code comments, or anywhere in the repository.
