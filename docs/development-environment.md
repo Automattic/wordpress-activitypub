@@ -40,7 +40,7 @@ This guide will help you set up a local development environment for the Activity
    ```
 
 5. **Git** with SSH key setup
-   - We recommend setting up a public SSH key with GitHub for more secure authentication
+   - We recommend setting up a public SSH key with GitHub for more secure authentication.
    - See [GitHub's SSH key guide](https://help.github.com/en/articles/adding-a-new-ssh-key-to-your-github-account)
    ```bash
    # Check SSH key
