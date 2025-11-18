@@ -52,7 +52,7 @@ class Comment {
 		}
 
 		/*
-		 * Check with supported comment types.
+		 * Check against supported comment types.
 		 * Only federate registered ActivityPub comment types and standard WordPress comments.
 		 */
 		$allowed_types = Comment_Utils::get_comment_type_slugs();
