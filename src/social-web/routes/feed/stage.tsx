@@ -14,7 +14,6 @@ import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
-import { getFeedActions } from './feed-actions';
 import type { FeedPost } from '../../types';
 
 const DEFAULT_VIEW: View = {
@@ -116,8 +115,27 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		[]
 	);
 
-	// Actions for feed items
-	const actions = useMemo( () => getFeedActions( onSelectItem ), [ onSelectItem ] );
+	// Normalize view.fields to maintain the canonical order defined in fields array
+	const normalizedView = useMemo( () => {
+		if ( ! view.fields ) {
+			return view;
+		}
+
+		// Create a map of field IDs to their canonical order
+		const fieldOrder = new Map( fields.map( ( field, index ) => [ field.id, index ] ) );
+
+		// Sort view.fields according to the canonical order
+		const sortedFields = [ ...view.fields ].sort( ( a, b ) => {
+			const orderA = fieldOrder.get( a ) ?? Infinity;
+			const orderB = fieldOrder.get( b ) ?? Infinity;
+			return orderA - orderB;
+		} );
+
+		return {
+			...view,
+			fields: sortedFields,
+		};
+	}, [ view, fields ] );
 
 	const [ selection, setSelection ] = useState< string[] >( [] );
 
@@ -160,9 +178,8 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			<DataViews
 				data={ feed }
 				fields={ fields }
-				view={ view }
+				view={ normalizedView }
 				onChangeView={ updateView }
-				actions={ actions }
 				isLoading={ isResolving }
 				onClickItem={ ( item ) => onSelectItem( item.id ) }
 				isItemClickable={ () => true }
@@ -171,7 +188,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 				onChangeSelection={ handleChangeSelection }
 				empty={
 					<p>
-						{ view.search
+						{ normalizedView.search
 							? __( 'No posts found.', 'activitypub' )
 							: __(
 									'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
