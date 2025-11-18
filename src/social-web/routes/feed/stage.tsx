@@ -10,6 +10,7 @@ import { DataViews } from '@wordpress/dataviews';
 import { useView } from '@wordpress/views';
 import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
+import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
@@ -26,7 +27,6 @@ const DEFAULT_VIEW: View = {
 	search: '',
 	filters: [],
 	fields: [ 'metadata', 'title.rendered', 'excerpt.rendered' ],
-	layout: {},
 };
 
 const defaultLayouts = {
@@ -42,12 +42,64 @@ interface FeedStageProps {
 }
 
 export default function FeedStage( { onSelectItem }: FeedStageProps ) {
+	// Track URL query parameters as state for reactivity
+	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
+		const args = getQueryArgs( window.location.href ) as {
+			// Using 'paged' instead of 'page' to avoid conflict with WP admin menu 'page' parameter.
+			paged?: string;
+			search?: string;
+		};
+
+		return {
+			page: args.paged ? Number( args.paged ) : undefined,
+			search: args.search || undefined,
+		};
+	} );
+
+	// Listen for URL changes (browser back/forward).
+	useEffect( () => {
+		const updateQueryParams = () => {
+			const args = getQueryArgs( window.location.href ) as {
+				paged?: string;
+				search?: string;
+			};
+			setUrlQueryParams( {
+				page: args.paged ? Number( args.paged ) : undefined,
+				search: args.search || undefined,
+			} );
+		};
+
+		window.addEventListener( 'popstate', updateQueryParams );
+		window.addEventListener( 'hashchange', updateQueryParams );
+
+		return () => {
+			window.removeEventListener( 'popstate', updateQueryParams );
+			window.removeEventListener( 'hashchange', updateQueryParams );
+		};
+	}, [] );
+
 	// Use the views hook to persist user preferences
 	const { view, updateView } = useView( {
 		kind: 'postType',
 		name: 'ap_post',
 		slug: 'feed',
 		defaultView: DEFAULT_VIEW,
+		queryParams: urlQueryParams,
+		onChangeQueryParams: ( params ) => {
+			const currentUrl = window.location.href;
+			const currentArgs = getQueryArgs( currentUrl );
+			const newUrl = addQueryArgs( currentUrl, {
+				...currentArgs,
+				paged: params.page || undefined,
+				search: params.search || undefined,
+			} );
+			window.history.pushState( null, '', newUrl );
+
+			setUrlQueryParams( {
+				page: params.page,
+				search: params.search,
+			} );
+		},
 	} );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
