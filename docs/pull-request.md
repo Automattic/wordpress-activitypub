@@ -99,7 +99,7 @@ As you open your Pull Request, make sure you check the following:
 
 ### GitHub Settings
 - [ ] Self-assigned as assignee
-- [ ] pfefferle added as reviewer
+- [ ] Automattic/fediverse added as reviewer
 - [ ] Appropriate labels added
 - [ ] Milestone set (if applicable)
 
