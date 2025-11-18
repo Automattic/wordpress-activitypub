@@ -61,7 +61,6 @@ class Comment {
 		}
 
 		// Add core WordPress comment types.
-		$allowed_types[] = ''; // Empty string is default WordPress comment type.
 		$allowed_types[] = 'comment'; // Some plugins/themes use 'comment'.
 
 		// Check if comment type is in allowed list.
