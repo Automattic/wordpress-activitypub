@@ -70,11 +70,6 @@ cd wordpress-activitypub
    composer install
    ```
 
-3. **Set up Git hooks:**
-   ```bash
-   npm run prepare
-   ```
-
 ### Start Development Environment
 
 Start the local WordPress environment using wp-env:
