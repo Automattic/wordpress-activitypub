@@ -10,6 +10,7 @@ namespace Activitypub\Collection;
 use Activitypub\Attachments;
 use Activitypub\Sanitize;
 
+use function Activitypub\generate_post_summary;
 use function Activitypub\object_to_uri;
 
 /**
@@ -190,7 +191,7 @@ class Posts {
 		return array(
 			'post_title'   => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
 			'post_content' => isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '',
-			'post_excerpt' => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : '',
+			'post_excerpt' => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : generate_post_summary( $activity['content'] ),
 			'post_status'  => 'publish',
 			'post_type'    => self::POST_TYPE,
 			'guid'         => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
