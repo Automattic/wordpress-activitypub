@@ -16,9 +16,10 @@ const processConfig = ( config ) => {
 			// Place JS chunks in their source directory
 			chunkFilename: ( pathData ) => {
 				const chunk = pathData.chunk;
+				const chunkGraph = pathData.webpack?.chunkGraph;
 
-				if ( chunk && chunk.getModules ) {
-					for ( const module of chunk.getModules() ) {
+				if ( chunk && chunkGraph ) {
+					for ( const module of chunkGraph.getChunkModules( chunk ) ) {
 						const modulePath = module.resource || module.context || '';
 						const srcMatch = modulePath.match( /\/src\/([^/]+)\// );
 						if ( srcMatch ) {
