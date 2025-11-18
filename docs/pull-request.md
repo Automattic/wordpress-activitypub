@@ -240,7 +240,7 @@ Type: Brief description
 Longer explanation if needed.
 Multiple paragraphs are fine.
 
-Fixes #123
+Fixes #123.
 ```
 
 ### Types
