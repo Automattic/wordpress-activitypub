@@ -13,7 +13,6 @@ import { __ } from '@wordpress/i18n';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
-import { getFeedActions } from './feed-actions';
 import type { FeedPost } from '../../types';
 
 const DEFAULT_VIEW: View = {
@@ -64,9 +63,6 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		[]
 	);
 
-	// Actions for feed items
-	const actions = useMemo( () => getFeedActions( onSelectItem ), [ onSelectItem ] );
-
 	const [ selection, setSelection ] = useState< string[] >( [] );
 
 	useEffect( () => {
@@ -110,7 +106,6 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 				fields={ fields }
 				view={ view }
 				onChangeView={ updateView }
-				actions={ actions }
 				isLoading={ isResolving }
 				onClickItem={ ( item ) => onSelectItem( item.id ) }
 				isItemClickable={ () => true }
