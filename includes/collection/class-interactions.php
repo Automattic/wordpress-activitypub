@@ -343,7 +343,8 @@ class Interactions {
 			$webfinger = str_replace( 'acct:', '', $webfinger );
 		}
 
-		$date = $activity['object']['published'] ?? 'now';
+		$published = $activity['object']['published'] ?? $activity['published'] ?? 'now';
+		$gm_date   = \gmdate( 'Y-m-d H:i:s', \strtotime( $published ) );
 
 		$comment_data = array(
 			'comment_author'       => $comment_author ?? __( 'Anonymous', 'activitypub' ),
@@ -351,8 +352,8 @@ class Interactions {
 			'comment_content'      => $comment_content,
 			'comment_type'         => 'comment',
 			'comment_author_email' => $webfinger,
-			'comment_date'         => \get_date_from_gmt( \gmdate( 'Y-m-d H:i:s', \strtotime( $date ) ) ),
-			'comment_date_gmt'     => \gmdate( 'Y-m-d H:i:s', \strtotime( $date ) ),
+			'comment_date'         => \get_date_from_gmt( $gm_date ),
+			'comment_date_gmt'     => $gm_date,
 			'comment_meta'         => array(
 				'source_id' => \esc_url_raw( object_to_uri( $activity['object'] ) ),
 				'protocol'  => 'activitypub',

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Undefined array key warning in Scheduler::async_batch when called without arguments.
