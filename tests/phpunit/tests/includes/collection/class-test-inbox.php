@@ -901,6 +901,48 @@ class Test_Inbox extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test adding Flag activity with array of URLs as object.
+	 *
+	 * This test verifies that the inbox can handle Flag activities (used for
+	 * reporting content) where the object is an array of URLs, which is a
+	 * real-world scenario from Mastodon moderation reports.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_flag_activity_with_url_array() {
+		// Create a Flag activity based on real-world Mastodon moderation report.
+		$activity = new Activity();
+		$activity->set_id( 'https://mastodon.social/c35aa724-e6b6-4266-b85f-f27d84b166f9' );
+		$activity->set_type( 'Flag' );
+		$activity->set_actor( 'https://mastodon.social/actor' );
+		$activity->set_content( '' ); // Flag activities often have empty content.
+
+		// Set object as an array of URLs (actor being reported + content being reported).
+		$activity->set_object(
+			array(
+				'https://skydancingblog.com/@skydancingblog.com',
+				'https://skydancingblog.com/?p=211771',
+			)
+		);
+
+		$user_id = 1;
+
+		// Add activity to inbox - should not throw an error despite array object.
+		$inbox_id = Inbox::add( $activity, $user_id );
+
+		$this->assertIsInt( $inbox_id );
+		$this->assertGreaterThan( 0, $inbox_id );
+
+		// Verify the post was created.
+		$post = \get_post( $inbox_id );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( Inbox::POST_TYPE, $post->post_type );
+
+		// Post title should be "[Flag] " (activity type with no object title from array).
+		$this->assertStringStartsWith( '[Flag]', $post->post_title );
+	}
+
+	/**
 	 * Test adding activity when object is null.
 	 *
 	 * @covers ::add
