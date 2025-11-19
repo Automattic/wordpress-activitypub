@@ -704,6 +704,7 @@ class Post_Types {
 					'type'              => 'integer',
 					'sanitize_callback' => 'absint',
 				);
+
 				return $params;
 			}
 		);
@@ -719,11 +720,9 @@ class Post_Types {
 	 */
 	public static function filter_ap_post_by_user( $args, $request ) {
 		// Check if a specific user_id is requested via query parameter.
-		$user_id = null;
+		$user_id = \get_current_user_id();
 		if ( isset( $request['user_id'] ) ) {
 			$user_id = (int) $request['user_id'];
-		} else {
-			$user_id = \get_current_user_id();
 		}
 
 		if ( ! $user_id && 0 !== $user_id ) {
