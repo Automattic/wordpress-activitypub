@@ -191,6 +191,7 @@ class Sanitize {
 	 * @return string The converted content.
 	 */
 	public static function content( $content ) {
+		$content = \make_clickable( $content );
 		$content = \wpautop( $content );
 		$content = \wp_kses_post( $content );
 
