@@ -227,11 +227,11 @@ class Cli extends \WP_CLI_Command {
 		if ( isset( $activity_data['object'] ) && is_array( $activity_data['object'] ) && isset( $activity_data['object']['id'] ) ) {
 			$object_id = $activity_data['object']['id'];
 
-			$comment = Comment::object_id_to_comment( $object_id );
-			if ( $comment ) {
-				\wp_delete_comment( $comment->comment_ID, true );
+			$object_comment = Comment::object_id_to_comment( $object_id );
+			if ( $object_comment ) {
+				\wp_delete_comment( $object_comment->comment_ID, true );
 				++$deleted_comments;
-				\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: object ID)', $comment->comment_ID ) );
+				\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: object ID)', $object_comment->comment_ID ) );
 			}
 
 			// Delete ap_post with GUID matching the object ID.
