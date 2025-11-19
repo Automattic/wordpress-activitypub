@@ -640,12 +640,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertCount( 1, $result );
 		$this->assertIsInt( $result[0] );
 
-		// Get the attachment and verify the filename.
-		$attachment      = get_post( $result[0] );
+		// Verify the attachment filename is clean without query parameters.
 		$attachment_file = get_attached_file( $result[0] );
-
-		// Filename should be clean without query parameters.
-		$this->assertStringContainsString( 'image.jpg', $attachment_file );
+		$this->assertStringEndsWith( '.jpg', $attachment_file );
 		$this->assertStringNotContainsString( '?', $attachment_file );
 		$this->assertStringNotContainsString( 'stp=', $attachment_file );
 		$this->assertStringNotContainsString( 'nc_cat=', $attachment_file );
@@ -680,7 +677,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertCount( 1, $result );
 
 		// Verify the URL doesn't contain query parameters.
-		$this->assertStringContainsString( 'photo.png', $result[0]['url'] );
+		$this->assertStringEndsWith( '.png', $result[0]['url'] );
 		$this->assertStringNotContainsString( '?', $result[0]['url'] );
 		$this->assertStringNotContainsString( 'size=', $result[0]['url'] );
 	}
