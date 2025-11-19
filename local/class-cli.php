@@ -8,7 +8,10 @@
 namespace Activitypub\Development;
 
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Posts;
 use Activitypub\Comment;
+use Activitypub\Rest\Actors_Inbox_Controller;
 
 use function WP_CLI\Utils\get_flag_value;
 use function WP_CLI\Utils\make_progress_bar;
@@ -167,5 +170,88 @@ class Cli extends \WP_CLI_Command {
 		if ( 'progress' === $format ) {
 			$notify->finish();
 		}
+	}
+
+	/**
+	 * Reprocess an inbox item.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <post_id>
+	 * : The post ID of the ap_inbox item to reprocess.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Reprocess inbox item with ID 123
+	 *     $ wp activitypub reprocess_inbox 123
+	 *     Success: Inbox item 123 has been reprocessed.
+	 *
+	 * @param array $args The arguments.
+	 */
+	public function reprocess_inbox( $args ) {
+		$post_id = absint( $args[0] );
+
+		if ( ! $post_id ) {
+			\WP_CLI::error( 'Invalid post ID provided.' );
+		}
+
+		$post = Inbox::get( $post_id );
+
+		if ( ! $post ) {
+			\WP_CLI::error( sprintf( 'Post with ID %d not found.', $post_id ) );
+		}
+
+		\WP_CLI::log( sprintf( 'Reprocessing inbox item %d...', $post_id ) );
+
+		// Get the activity ID (GUID) and activity data.
+		$activity_id   = $post->guid;
+		$activity_data = json_decode( $post->post_content, true );
+
+		if ( ! $activity_data ) {
+			\WP_CLI::error( 'Failed to decode activity data.' );
+		}
+
+		// Delete existing comments created from this activity.
+		$deleted_comments = 0;
+		$deleted_posts    = 0;
+
+		// Delete comments with source_id matching the activity ID.
+		$comment = Comment::object_id_to_comment( $activity_id );
+		if ( $comment ) {
+			\wp_delete_comment( $comment->comment_ID, true );
+			++$deleted_comments;
+			\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: activity ID)', $comment->comment_ID ) );
+		}
+
+		// Delete comments and posts with source_id/GUID matching the activity object ID.
+		if ( isset( $activity_data['object'] ) && is_array( $activity_data['object'] ) && isset( $activity_data['object']['id'] ) ) {
+			$object_id = $activity_data['object']['id'];
+
+			$comment = Comment::object_id_to_comment( $object_id );
+			if ( $comment ) {
+				\wp_delete_comment( $comment->comment_ID, true );
+				++$deleted_comments;
+				\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: object ID)', $comment->comment_ID ) );
+			}
+
+			// Delete ap_post with GUID matching the object ID.
+			$ap_post = Posts::get_by_guid( $object_id );
+			if ( ! \is_wp_error( $ap_post ) ) {
+				\wp_delete_post( $ap_post->ID, true );
+				++$deleted_posts;
+				\WP_CLI::log( sprintf( 'Deleted ap_post %d (GUID: object ID)', $ap_post->ID ) );
+			}
+		}
+
+		if ( $deleted_comments > 0 || $deleted_posts > 0 ) {
+			\WP_CLI::log( sprintf( 'Deleted %d comment(s) and %d post(s).', $deleted_comments, $deleted_posts ) );
+		} else {
+			\WP_CLI::log( 'No existing comments or posts found to delete.' );
+		}
+
+		// Call the process_create_item method to reprocess.
+		Actors_Inbox_Controller::process_create_item( $activity_id );
+
+		\WP_CLI::success( sprintf( 'Inbox item %d has been reprocessed.', $post_id ) );
 	}
 }
