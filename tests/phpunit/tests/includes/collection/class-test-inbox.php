@@ -910,18 +910,18 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * @covers ::add
 	 */
 	public function test_add_flag_activity_with_url_array() {
-		// Create a Flag activity based on real-world Mastodon moderation report.
+		// Create a Flag activity similar to moderation reports.
 		$activity = new Activity();
-		$activity->set_id( 'https://mastodon.social/c35aa724-e6b6-4266-b85f-f27d84b166f9' );
+		$activity->set_id( 'https://remote.example.com/activities/flag-report' );
 		$activity->set_type( 'Flag' );
-		$activity->set_actor( 'https://mastodon.social/actor' );
+		$activity->set_actor( 'https://remote.example.com/users/reporter' );
 		$activity->set_content( '' ); // Flag activities often have empty content.
 
 		// Set object as an array of URLs (actor being reported + content being reported).
 		$activity->set_object(
 			array(
-				'https://skydancingblog.com/@skydancingblog.com',
-				'https://skydancingblog.com/?p=211771',
+				'https://example.org/users/reported-user',
+				'https://example.org/posts/12345',
 			)
 		);
 
