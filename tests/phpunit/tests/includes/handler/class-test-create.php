@@ -405,7 +405,12 @@ class Test_Create extends \WP_UnitTestCase {
 		$malformed_activity = array(
 			'type'   => 'Create',
 			'actor'  => 'https://example.com/users/testuser',
-			'object' => 'not_an_array', // Invalid object format.
+			'object' => array(
+				'id'           => 'https://example.com/objects/malformed',
+				'type'         => 'Note',
+				'content'      => 'Test content',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
 		);
 
 		// Count objects before.
