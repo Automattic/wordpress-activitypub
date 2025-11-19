@@ -3,7 +3,7 @@ import { decodeEntities } from '@wordpress/html-entities';
 import type { Field } from '@wordpress/dataviews';
 import { useSettings } from '../../../contexts/settings-context';
 import type { FeedPost } from '../../../types';
-import { getRelativeTimeShort } from '../../../utils';
+import { getRelativeTime } from '../../../utils';
 
 export const metadataField: Field< FeedPost > = {
 	id: 'metadata',
@@ -12,17 +12,15 @@ export const metadataField: Field< FeedPost > = {
 	enableSorting: false,
 	getValue: ( { item }: { item: FeedPost } ) => {
 		const author = item.actor_info?.name || '';
-		const dateToUse = item.date_gmt || item.date;
-		const relativeTime = dateToUse ? getRelativeTimeShort( dateToUse ) : '';
+		const relativeTime = item.date ? getRelativeTime( item.date ) : '';
+
 		return `${ author } · ${ relativeTime }`;
 	},
 	render: ( { item }: { item: FeedPost } ) => {
 		const { defaultAvatar } = useSettings();
 		const name = decodeEntities( item.actor_info?.name || __( 'Unknown author', 'activitypub' ) );
 		const avatarUrl = item.actor_info?.icon || '';
-		// Use date_gmt for accurate time calculations, fallback to date
-		const dateToUse = item.date_gmt || item.date;
-		const relativeTime = dateToUse ? getRelativeTimeShort( dateToUse ) : '';
+		const relativeTime = item.date ? getRelativeTime( item.date ) : '';
 
 		return (
 			<div className="activitypub-feed-post-meta">

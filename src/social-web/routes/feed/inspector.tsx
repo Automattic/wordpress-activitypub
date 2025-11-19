@@ -11,7 +11,7 @@ import { decodeEntities } from '@wordpress/html-entities';
 import { close } from '@wordpress/icons';
 import { useSettings } from '../../contexts/settings-context';
 import type { Comment, FeedPost } from '../../types';
-import { getRelativeTimeShort } from '../../utils';
+import { getRelativeTime } from '../../utils';
 
 interface FeedInspectorProps {
 	id: number;
@@ -54,8 +54,7 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 	const profileUrl = actor?.url || '';
 	const avatarUrl = actor?.icon || '';
 	const postLink = post.link || '';
-	const dateToUse = post.date_gmt || post.date;
-	const relativeTime = dateToUse ? getRelativeTimeShort( dateToUse ) : '';
+	const relativeTime = post.date ? getRelativeTime( post.date ) : '';
 
 	return (
 		<div className="activitypub-inspector">
