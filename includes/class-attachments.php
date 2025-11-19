@@ -446,7 +446,7 @@ class Attachments {
 
 		// Prepare file array for WordPress.
 		$file_array = array(
-			'name'     => \basename( $attachment_data['url'] ),
+			'name'     => \basename( \strtok( $attachment_data['url'], '?' ) ),
 			'tmp_name' => $tmp_file,
 		);
 
@@ -514,7 +514,8 @@ class Attachments {
 		\wp_mkdir_p( $paths['basedir'] );
 
 		// Generate unique file name.
-		$file_name = \sanitize_file_name( \basename( $attachment_data['url'] ) );
+		$url_path  = \strtok( $attachment_data['url'], '?' );
+		$file_name = \sanitize_file_name( \basename( $url_path ) );
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
 		// Initialize filesystem if needed.
