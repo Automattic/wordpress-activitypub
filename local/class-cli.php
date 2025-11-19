@@ -210,42 +210,48 @@ class Cli extends \WP_CLI_Command {
 			\WP_CLI::error( 'Failed to decode activity data.' );
 		}
 
-		// Delete existing comments created from this activity.
+		// Only delete existing artifacts for activity types that create new ones.
+		$should_delete = isset( $activity_data['type'] ) && in_array( $activity_data['type'], array( 'Create', 'Like', 'Announce' ), true );
+
 		$deleted_comments = 0;
 		$deleted_posts    = 0;
 
-		// Delete comments with source_id matching the activity ID.
-		$comment = Comment::object_id_to_comment( $activity_id );
-		if ( $comment ) {
-			\wp_delete_comment( $comment->comment_ID, true );
-			++$deleted_comments;
-			\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: activity ID)', $comment->comment_ID ) );
-		}
-
-		// Delete comments and posts with source_id/GUID matching the activity object ID.
-		if ( isset( $activity_data['object'] ) && is_array( $activity_data['object'] ) && isset( $activity_data['object']['id'] ) ) {
-			$object_id = $activity_data['object']['id'];
-
-			$object_comment = Comment::object_id_to_comment( $object_id );
-			if ( $object_comment ) {
-				\wp_delete_comment( $object_comment->comment_ID, true );
+		if ( $should_delete ) {
+			// Delete comments with source_id matching the activity ID.
+			$comment = Comment::object_id_to_comment( $activity_id );
+			if ( $comment ) {
+				\wp_delete_comment( $comment->comment_ID, true );
 				++$deleted_comments;
-				\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: object ID)', $object_comment->comment_ID ) );
+				\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: activity ID)', $comment->comment_ID ) );
 			}
 
-			// Delete ap_post with GUID matching the object ID.
-			$ap_post = Posts::get_by_guid( $object_id );
-			if ( ! \is_wp_error( $ap_post ) ) {
-				\wp_delete_post( $ap_post->ID, true );
-				++$deleted_posts;
-				\WP_CLI::log( sprintf( 'Deleted ap_post %d (GUID: object ID)', $ap_post->ID ) );
-			}
-		}
+			// Delete comments and posts with source_id/GUID matching the activity object ID.
+			if ( isset( $activity_data['object']['id'] ) && is_array( $activity_data['object'] ) ) {
+				$object_id = $activity_data['object']['id'];
 
-		if ( $deleted_comments > 0 || $deleted_posts > 0 ) {
-			\WP_CLI::log( sprintf( 'Deleted %d comment(s) and %d post(s).', $deleted_comments, $deleted_posts ) );
+				$object_comment = Comment::object_id_to_comment( $object_id );
+				if ( $object_comment ) {
+					\wp_delete_comment( $object_comment->comment_ID, true );
+					++$deleted_comments;
+					\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: object ID)', $object_comment->comment_ID ) );
+				}
+
+				// Delete ap_post with GUID matching the object ID.
+				$ap_post = Posts::get_by_guid( $object_id );
+				if ( ! \is_wp_error( $ap_post ) ) {
+					\wp_delete_post( $ap_post->ID, true );
+					++$deleted_posts;
+					\WP_CLI::log( sprintf( 'Deleted ap_post %d (GUID: object ID)', $ap_post->ID ) );
+				}
+			}
+
+			if ( $deleted_comments > 0 || $deleted_posts > 0 ) {
+				\WP_CLI::log( sprintf( 'Deleted %d comment(s) and %d post(s).', $deleted_comments, $deleted_posts ) );
+			} else {
+				\WP_CLI::log( 'No existing comments or posts found to delete.' );
+			}
 		} else {
-			\WP_CLI::log( 'No existing comments or posts found to delete.' );
+			\WP_CLI::log( sprintf( 'Skipping deletion for %s activity type.', $activity_data['type'] ) );
 		}
 
 		// Bypass signature verification for internal reprocessing.
@@ -261,16 +267,12 @@ class Cli extends \WP_CLI_Command {
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
-		if ( \is_wp_error( $response ) ) {
-			\WP_CLI::error( sprintf( 'Failed to reprocess: %s', $response->get_error_message() ) );
-		}
-
 		$status = $response->get_status();
 		if ( $status >= 200 && $status < 300 ) {
 			\WP_CLI::success( sprintf( 'Inbox item %d has been reprocessed as %s activity.', $post_id, $activity_data['type'] ) );
 		} else {
 			$data          = $response->get_data();
-			$error_message = isset( $data['message'] ) ? $data['message'] : 'Unknown error';
+			$error_message = $data['message'] ?? 'Unknown error';
 			\WP_CLI::error( sprintf( 'Failed to reprocess (HTTP %d): %s', $status, $error_message ) );
 		}
 	}
