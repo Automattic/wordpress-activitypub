@@ -11,7 +11,6 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Posts;
 use Activitypub\Comment;
-use Activitypub\Rest\Actors_Inbox_Controller;
 
 use function WP_CLI\Utils\get_flag_value;
 use function WP_CLI\Utils\make_progress_bar;
@@ -249,9 +248,30 @@ class Cli extends \WP_CLI_Command {
 			\WP_CLI::log( 'No existing comments or posts found to delete.' );
 		}
 
-		// Call the process_create_item method to reprocess.
-		Actors_Inbox_Controller::process_create_item( $activity_id );
+		// Bypass signature verification for internal reprocessing.
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
-		\WP_CLI::success( sprintf( 'Inbox item %d has been reprocessed.', $post_id ) );
+		// Create internal REST request to the shared inbox endpoint.
+		$request = new \WP_REST_Request( 'POST', '/' . \ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $activity_data ) );
+
+		// Dispatch the request through the REST API.
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		if ( \is_wp_error( $response ) ) {
+			\WP_CLI::error( sprintf( 'Failed to reprocess: %s', $response->get_error_message() ) );
+		}
+
+		$status = $response->get_status();
+		if ( $status >= 200 && $status < 300 ) {
+			\WP_CLI::success( sprintf( 'Inbox item %d has been reprocessed as %s activity.', $post_id, $activity_data['type'] ) );
+		} else {
+			$data          = $response->get_data();
+			$error_message = isset( $data['message'] ) ? $data['message'] : 'Unknown error';
+			\WP_CLI::error( sprintf( 'Failed to reprocess (HTTP %d): %s', $status, $error_message ) );
+		}
 	}
 }
