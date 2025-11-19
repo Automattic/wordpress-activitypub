@@ -614,4 +614,71 @@ class Test_Attachments extends \WP_UnitTestCase {
 		// Clean up.
 		\wp_delete_post( $post_id, true );
 	}
+
+	/**
+	 * Test that query parameters are stripped from attachment filenames.
+	 *
+	 * This prevents "Filename too long" errors when downloading from CDN URLs
+	 * (like Instagram) that include long query strings.
+	 *
+	 * @covers ::save_attachment
+	 */
+	public function test_attachment_filename_strips_query_parameters() {
+		// Instagram-style URL with very long query parameters.
+		$attachments = array(
+			array(
+				'url'       => 'https://example.com/image.jpg?stp=dst-jpg_e35&nc_cat=101&ccb7-5&_nc_sid=18de74&nc_ohc=example&nc_oc=example',
+				'mediaType' => 'image/jpeg',
+				'name'      => 'Test Image',
+				'type'      => 'Image',
+			),
+		);
+
+		$result = Attachments::import( $attachments, self::$post_id, self::$author_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+		$this->assertIsInt( $result[0] );
+
+		// Verify the attachment filename is clean without query parameters.
+		$attachment_file = get_attached_file( $result[0] );
+		$this->assertStringEndsWith( '.jpg', $attachment_file );
+		$this->assertStringNotContainsString( '?', $attachment_file );
+		$this->assertStringNotContainsString( 'stp=', $attachment_file );
+		$this->assertStringNotContainsString( 'nc_cat=', $attachment_file );
+	}
+
+	/**
+	 * Test that query parameters are stripped from direct file storage filenames.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_file_storage_filename_strips_query_parameters() {
+		// Create a test post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_post',
+			)
+		);
+
+		// URL with query parameters.
+		$attachments = array(
+			array(
+				'url'       => 'https://example.com/photo.png?size=large&quality=high&cache=12345',
+				'mediaType' => 'image/png',
+				'name'      => 'Test Photo',
+				'type'      => 'Image',
+			),
+		);
+
+		$result = Attachments::import_post_files( $attachments, $post_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+
+		// Verify the URL doesn't contain query parameters.
+		$this->assertStringEndsWith( '.png', $result[0]['url'] );
+		$this->assertStringNotContainsString( '?', $result[0]['url'] );
+		$this->assertStringNotContainsString( 'size=', $result[0]['url'] );
+	}
 }
