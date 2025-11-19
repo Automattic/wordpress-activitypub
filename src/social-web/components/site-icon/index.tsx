@@ -35,14 +35,12 @@ function SiteIcon( { className }: SiteIconProps ) {
 
 	let icon = null;
 
-	if ( isRequestingSite && ! siteIconUrl ) {
+	if ( isRequestingSite ) {
 		icon = <div className="site-icon__image" />;
+	} else if ( siteIconUrl ) {
+		icon = <img className="site-icon__image" alt={ __( 'Site Icon', 'activitypub' ) } src={ siteIconUrl } />;
 	} else {
-		icon = siteIconUrl ? (
-			<img className="site-icon__image" alt={ __( 'Site Icon', 'activitypub' ) } src={ siteIconUrl } />
-		) : (
-			<Icon className="site-icon__icon" icon={ wordpress } size={ 48 } />
-		);
+		icon = <Icon className="site-icon__icon" icon={ wordpress } size={ 48 } />;
 	}
 
 	return <div className={ clsx( className, 'site-icon' ) }>{ icon }</div>;

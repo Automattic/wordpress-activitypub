@@ -7,7 +7,7 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useState, useEffect, lazy, Suspense } from '@wordpress/element';
+import { useState, useEffect, useRef, lazy, Suspense } from '@wordpress/element';
 import { CommandMenu } from '@wordpress/commands';
 import { SnackbarList, Spinner } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
@@ -70,6 +70,9 @@ export function Layout() {
 		[]
 	);
 
+	// Track previous actor ID to detect changes
+	const prevActiveActorId = useRef( activeActorId );
+
 	// Get notices for the snackbar
 	const notices = useSelect( ( select ) => {
 		const store = select( noticesStore ) as any;
@@ -86,11 +89,12 @@ export function Layout() {
 
 	// Close inspector when actor changes
 	useEffect( () => {
-		if ( selectedItemId ) {
+		if ( prevActiveActorId.current !== activeActorId && selectedItemId ) {
 			setSelectedItemId( null );
 			updateHash( activeSection );
 		}
-	}, [ activeActorId ] );
+		prevActiveActorId.current = activeActorId;
+	}, [ activeActorId, selectedItemId, activeSection ] );
 
 	// Listen for hash changes (back/forward navigation).
 	useEffect( () => {
