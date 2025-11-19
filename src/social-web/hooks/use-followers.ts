@@ -36,6 +36,9 @@ export function useFollowers( {
 	userId,
 	fields = [ 'id', 'date', 'modified', 'slug', 'title', 'meta', 'actor_info', 'follow_status' ],
 }: UseFollowersParams = {} ): UseFollowersReturn {
+	// Don't fetch if userId is not set
+	const enabled = userId !== null && userId !== undefined;
+
 	const queryArgs = useMemo( () => {
 		const args: any = {
 			per_page: perPage,
@@ -46,25 +49,25 @@ export function useFollowers( {
 			_fields: fields,
 		};
 
-		// Only add follower_of if userId is provided
-		if ( userId ) {
+		// Only add follower_of if we have a valid userId
+		if ( enabled ) {
 			args.follower_of = userId;
 		}
 
 		return args;
-	}, [ perPage, page, orderBy, order, search, userId, fields ] );
+	}, [ perPage, page, orderBy, order, search, userId, fields, enabled ] );
 
 	const { records, hasResolved, isResolving, totalItems, totalPages } = useEntityRecords< Actor >(
 		'postType',
 		'ap_actor',
-		queryArgs
+		enabled ? queryArgs : undefined
 	);
 
 	return {
-		followers: records || [],
+		followers: enabled ? records || [] : [],
 		hasResolved,
 		isResolving,
-		totalItems,
-		totalPages,
+		totalItems: enabled ? totalItems : null,
+		totalPages: enabled ? totalPages : null,
 	};
 }

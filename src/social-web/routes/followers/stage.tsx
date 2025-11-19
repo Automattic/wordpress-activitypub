@@ -13,7 +13,6 @@ import { useView } from '@wordpress/views';
 import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
-import { store as coreStore } from '@wordpress/core-data';
 
 /**
  * Internal dependencies
@@ -23,6 +22,8 @@ import { useFollowers } from '../../hooks/use-followers';
 import { avatarField, nameField, webfingerField, modifiedField, followStatusField } from '../../components/fields';
 import { getFollowerActions } from './FollowerActions';
 import type { Actor } from '../../types';
+import { STORE_NAME } from '../../store';
+import type { SocialWebSelectors } from '../../store';
 import './style.scss';
 
 // Default view configuration
@@ -63,12 +64,11 @@ export default function FollowersStage() {
 		defaultView: DEFAULT_VIEW,
 	} );
 
-	// Get current user ID from WordPress core
-	const currentUserId = useSelect( ( select ) => {
-		const { getCurrentUser } = select( coreStore );
-		const currentUser = getCurrentUser();
-		return currentUser?.id;
-	}, [] );
+	// Get active actor ID from store
+	const activeActorId = useSelect(
+		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
+		[]
+	);
 
 	// Fetch followers using entity records
 	const { followers, isResolving, totalItems, totalPages } = useFollowers( {
@@ -77,7 +77,7 @@ export default function FollowersStage() {
 		orderBy: view.sort?.field || 'modified',
 		order: view.sort?.direction || 'desc',
 		search: view.search || '',
-		userId: currentUserId,
+		userId: activeActorId,
 	} );
 
 	// Define fields configuration

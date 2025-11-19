@@ -14,8 +14,10 @@ import {
 	__experimentalHeading as Heading,
 } from '@wordpress/components';
 import { chevronRight, chevronLeft, cog, postList } from '@wordpress/icons';
-import SiteHub from '../site-hub';
 import { __, isRTL } from '@wordpress/i18n';
+import { useSettings } from '../../contexts/settings-context';
+import SiteHub from '../site-hub';
+import ActorSwitcher from '../actor-switcher';
 import './style.scss';
 
 const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ), icon: postList } ];
@@ -26,6 +28,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
+	const { adminUrl } = useSettings();
+
 	return (
 		<div className="sidebar">
 			<SiteHub />
@@ -63,11 +67,18 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 
 			{ /* Footer */ }
 			<div className="footer">
-				<MenuGroup>
-					<MenuItem onClick={ () => window.open( '/wp-admin/admin.php?page=activitypub', '_blank' ) }>
-						<Icon icon={ cog } size={ 20 } />
-					</MenuItem>
-				</MenuGroup>
+				<HStack justify="space-between" alignment="center">
+					<ActorSwitcher />
+					<Button
+						icon={ cog }
+						iconSize={ 20 }
+						size="compact"
+						href={ `${ adminUrl }admin.php?page=activitypub` }
+						target="_blank"
+						label={ __( 'Settings', 'activitypub' ) }
+						className="footer-settings-button"
+					/>
+				</HStack>
 			</div>
 		</div>
 	);

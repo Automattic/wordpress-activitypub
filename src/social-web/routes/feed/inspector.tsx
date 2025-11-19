@@ -6,7 +6,7 @@
 
 import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/components';
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
-import { __, _x } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { Page } from '../../components/page';
 import type { Comment, FeedPost } from '../../types';

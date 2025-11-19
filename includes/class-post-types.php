@@ -33,8 +33,9 @@ class Post_Types {
 
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_actor_rest_field' ) );
+		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_rest_params' ) );
 
-		\add_filter( 'rest_ap_post_query', array( self::class, 'filter_ap_post_by_user' ) );
+		\add_filter( 'rest_ap_post_query', array( self::class, 'filter_ap_post_by_user' ), 10, 2 );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
@@ -692,16 +693,40 @@ class Post_Types {
 	}
 
 	/**
+	 * Register custom REST API parameters for ap_post endpoint.
+	 */
+	public static function register_ap_post_rest_params() {
+		\add_filter(
+			'rest_' . Posts::POST_TYPE . '_collection_params',
+			function ( $params ) {
+				$params['user_id'] = array(
+					'description'       => __( 'Filter posts by user ID (0 for site/blog actor).', 'activitypub' ),
+					'type'              => 'integer',
+					'sanitize_callback' => 'absint',
+				);
+				return $params;
+			}
+		);
+	}
+
+	/**
 	 * Filter ap_post REST query to only show posts for the current user.
 	 *
-	 * @param array $args Query arguments.
+	 * @param array            $args    Query arguments.
+	 * @param \WP_REST_Request $request The REST API request.
 	 *
 	 * @return array Modified query arguments.
 	 */
-	public static function filter_ap_post_by_user( $args ) {
-		$user_id = \get_current_user_id();
+	public static function filter_ap_post_by_user( $args, $request ) {
+		// Check if a specific user_id is requested via query parameter.
+		$user_id = null;
+		if ( isset( $request['user_id'] ) ) {
+			$user_id = (int) $request['user_id'];
+		} else {
+			$user_id = \get_current_user_id();
+		}
 
-		if ( ! $user_id ) {
+		if ( ! $user_id && 0 !== $user_id ) {
 			// If no user is logged in, return empty results.
 			$args['post__in'] = array( 0 );
 			return $args;

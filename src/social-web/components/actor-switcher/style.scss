@@ -1,0 +1,41 @@
+.actor-switcher {
+	display: flex;
+	align-items: center;
+	text-decoration: none;
+	color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+	transition: color 0.2s ease;
+	min-width: 0; // Allow text truncation
+	padding-left: 2px;
+
+	&:hover:not(:disabled) {
+		color: var(--wpds-color-fg-inverted-primary, #ffffff);
+	}
+}
+
+.actor-switcher__avatar {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	flex-shrink: 0;
+
+	// For SiteIcon component
+	&.site-icon {
+		.site-icon__image {
+			width: 100%;
+			height: 100%;
+			border-radius: 50%;
+			object-fit: cover;
+		}
+
+		.site-icon__icon {
+			width: 100%;
+			height: 100%;
+		}
+	}
+}
+
+.actor-switcher__name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
