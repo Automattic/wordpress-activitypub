@@ -22,6 +22,8 @@
 // Post wrapper with clear separation
 .activitypub-feed-post {
 	border-bottom: 1px solid #dcdcde;
+	min-width: 0;
+	max-width: 100%;
 
 	&:last-child {
 		border-bottom: none;
@@ -57,6 +59,12 @@
 
 	.date {
 		color: #646970;
+		text-decoration: none;
+
+		&:hover {
+			color: #135e96;
+			text-decoration: underline;
+		}
 	}
 }
 
@@ -67,6 +75,9 @@
 	font-weight: normal;
 	line-height: 1.4;
 	color: #1d2327;
+	max-width: 100%;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
 
 	// Remove extra margins from nested elements
 	> * {
@@ -80,6 +91,9 @@
 	font-size: 13px;
 	line-height: 1.6;
 	margin-top: 6px;
+	max-width: 100%;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
 }
 
 // Prominent headline in list view only
@@ -92,6 +106,10 @@
 .activitypub-feed-content {
 	line-height: 1.6;
 	color: #2c3338;
+	min-width: 0;
+	max-width: 100%;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
 
 	// Ensure proper spacing
 	> *:first-child {
@@ -138,6 +156,11 @@
 }
 
 // Inspector view styles - modern and flat
+.activitypub-inspector {
+	height: 100%;
+	overflow: auto;
+}
+
 .activitypub-inspector-loading {
 	padding: 20px;
 	text-align: center;
@@ -155,12 +178,12 @@
 	.components-card__header {
 		border: none !important;
 		border-radius: 0 !important;
-		padding: 0 0 16px !important;
+		padding: 24px 24px 16px !important;
 		border-bottom: 1px solid #dcdcde !important;
 	}
 
 	.components-card__body {
-		padding: 16px 0 0 !important;
+		padding: 16px 24px 0 !important;
 	}
 }
 
@@ -181,6 +204,12 @@
 	display: flex;
 	align-items: center;
 	gap: 12px;
+	width: 100%;
+}
+
+.activitypub-inspector-close {
+	margin-left: auto;
+	flex-shrink: 0;
 }
 
 .activitypub-inspector-avatar {
@@ -196,14 +225,21 @@
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
+}
 
-	strong {
-		font-size: 14px;
-		color: #1d2327;
+.activitypub-inspector-author-name {
+	font-size: 14px;
+	font-weight: 600;
+	color: #1d2327;
+	text-decoration: none;
+
+	&:hover {
+		color: #135e96;
+		text-decoration: underline;
 	}
 }
 
-.activitypub-inspector-date {
+.activitypub-inspector-webfinger {
 	font-size: 13px;
 	color: #646970;
 }
@@ -225,6 +261,27 @@
 		img {
 			max-width: 100%;
 			height: auto;
+		}
+
+		// Link styling for links in content
+		a {
+			color: #135e96;
+			text-decoration: none;
+			word-wrap: break-word;
+			overflow-wrap: break-word;
+
+			&:hover {
+				text-decoration: underline;
+			}
+
+			// Mastodon-style link formatting
+			.invisible {
+				display: none;
+			}
+
+			.ellipsis::after {
+				content: "…";
+			}
 		}
 	}
 }
