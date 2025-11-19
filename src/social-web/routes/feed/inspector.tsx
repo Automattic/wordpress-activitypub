@@ -11,6 +11,7 @@ import { decodeEntities } from '@wordpress/html-entities';
 import { close } from '@wordpress/icons';
 import { useSettings } from '../../contexts/settings-context';
 import type { Comment, FeedPost } from '../../types';
+import { getRelativeTimeShort } from '../../utils';
 
 interface FeedInspectorProps {
 	id: number;
@@ -53,6 +54,8 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 	const profileUrl = actor?.url || '';
 	const avatarUrl = actor?.icon || '';
 	const postLink = post.link || '';
+	const dateToUse = post.date_gmt || post.date;
+	const relativeTime = dateToUse ? getRelativeTimeShort( dateToUse ) : '';
 
 	return (
 		<div className="activitypub-inspector">
@@ -76,7 +79,22 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 							>
 								{ author }
 							</a>
-							{ webfinger && <span className="activitypub-inspector-webfinger">{ webfinger }</span> }
+							<div className="activitypub-inspector-meta">
+								{ webfinger && <span className="activitypub-inspector-webfinger">{ webfinger }</span> }
+								{ relativeTime && postLink && (
+									<>
+										<span className="activitypub-inspector-separator">·</span>
+										<a
+											href={ postLink }
+											target="_blank"
+											rel="noopener noreferrer"
+											className="activitypub-inspector-timestamp"
+										>
+											{ relativeTime }
+										</a>
+									</>
+								) }
+							</div>
 						</div>
 						<Button
 							icon={ close }

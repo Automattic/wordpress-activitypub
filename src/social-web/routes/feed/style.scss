@@ -59,12 +59,6 @@
 
 	.date {
 		color: #646970;
-		text-decoration: none;
-
-		&:hover {
-			color: #135e96;
-			text-decoration: underline;
-		}
 	}
 }
 
@@ -239,9 +233,29 @@
 	}
 }
 
-.activitypub-inspector-webfinger {
+.activitypub-inspector-meta {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 	font-size: 13px;
+}
+
+.activitypub-inspector-webfinger {
 	color: #646970;
+}
+
+.activitypub-inspector-separator {
+	color: #c3c4c7;
+}
+
+.activitypub-inspector-timestamp {
+	color: #646970;
+	text-decoration: none;
+
+	&:hover {
+		color: #135e96;
+		text-decoration: underline;
+	}
 }
 
 .activitypub-inspector-card .components-card__body {
