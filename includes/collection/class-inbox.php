@@ -139,12 +139,12 @@ class Inbox {
 	/**
 	 * Get the title of an activity recursively.
 	 *
-	 * @param Activity|Base_Object $activity_object The activity object.
+	 * @param Activity|Base_Object|array $activity_object The activity object.
 	 *
 	 * @return string The title.
 	 */
 	private static function get_object_title( $activity_object ) {
-		if ( ! $activity_object ) {
+		if ( ! $activity_object || is_array( $activity_object ) ) {
 			return '';
 		}
 

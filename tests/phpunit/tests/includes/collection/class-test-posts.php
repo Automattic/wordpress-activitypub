@@ -326,6 +326,60 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that published timestamp is preserved when creating posts.
+	 *
+	 * @covers ::activity_to_post
+	 * @covers ::add
+	 */
+	public function test_preserves_published_timestamp() {
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/timestamp-test',
+				'type'         => 'Note',
+				'name'         => 'Timestamp Test',
+				'content'      => '<p>Test content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'published'    => '2023-06-15T14:30:00Z',
+			),
+		);
+
+		$result = Posts::add( $activity, 1 );
+
+		$this->assertInstanceOf( '\WP_Post', $result );
+		$this->assertEquals( '2023-06-15 14:30:00', $result->post_date_gmt );
+		$this->assertEquals( get_date_from_gmt( '2023-06-15 14:30:00' ), $result->post_date );
+	}
+
+	/**
+	 * Test that activity_to_post handles missing content gracefully.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_missing_content() {
+		$activity = array(
+			'type'    => 'Note',
+			'name'    => 'Title Only',
+			'summary' => 'Summary text',
+		);
+
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'activity_to_post' );
+		$method->setAccessible( true );
+
+		try {
+			$result = $method->invoke( null, $activity );
+		} catch ( \Exception $exception ) {
+			$result = $exception;
+		}
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'Title Only', $result['post_title'] );
+		$this->assertEquals( '', $result['post_content'] );
+		$this->assertEquals( 'Summary text', $result['post_excerpt'] );
+	}
+
+	/**
 	 * Test adding an object with multiple recipients.
 	 *
 	 * @covers ::add
