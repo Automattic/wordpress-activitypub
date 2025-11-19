@@ -271,8 +271,6 @@ class Cli extends \WP_CLI_Command {
 		}
 
 		// Trigger both sets of action hooks that handlers may be registered on.
-		// Some handlers use activitypub_inbox_{type} (Like, Announce, Delete, Undo)
-		// Others use activitypub_handled_inbox_{type} (Create, Update)
 		\do_action( 'activitypub_inbox', $activity_data, $user_ids, $type, $activity, Inbox::CONTEXT_INBOX );
 		\do_action( 'activitypub_inbox_' . $type, $activity_data, $user_ids, $activity, Inbox::CONTEXT_INBOX );
 		\do_action( 'activitypub_handled_inbox', $activity_data, $user_ids, $type, $activity, $post_id, Inbox::CONTEXT_INBOX );
