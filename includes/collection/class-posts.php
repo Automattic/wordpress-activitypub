@@ -10,6 +10,7 @@ namespace Activitypub\Collection;
 use Activitypub\Attachments;
 use Activitypub\Sanitize;
 
+use function Activitypub\generate_post_summary;
 use function Activitypub\object_to_uri;
 
 /**
@@ -187,13 +188,17 @@ class Posts {
 			return new \WP_Error( 'invalid_activity', __( 'Invalid activity format', 'activitypub' ) );
 		}
 
+		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
+
 		return array(
-			'post_title'   => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
-			'post_content' => isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '',
-			'post_excerpt' => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : '',
-			'post_status'  => 'publish',
-			'post_type'    => self::POST_TYPE,
-			'guid'         => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
+			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
+			'post_content'  => isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '',
+			'post_excerpt'  => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : generate_post_summary( $activity['content'] ?? '' ),
+			'post_status'   => 'publish',
+			'post_type'     => self::POST_TYPE,
+			'post_date_gmt' => $gm_date,
+			'post_date'     => \get_date_from_gmt( $gm_date ),
+			'guid'          => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
 		);
 	}
 
