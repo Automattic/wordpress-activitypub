@@ -7,11 +7,13 @@
 
 namespace Activitypub\Development;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Posts;
 use Activitypub\Comment;
 
+use function Activitypub\camel_to_snake_case;
 use function WP_CLI\Utils\get_flag_value;
 use function WP_CLI\Utils\make_progress_bar;
 
@@ -202,78 +204,80 @@ class Cli extends \WP_CLI_Command {
 
 		\WP_CLI::log( sprintf( 'Reprocessing inbox item %d...', $post_id ) );
 
-		// Get the activity ID (GUID) and activity data.
-		$activity_id   = $post->guid;
+		// Get the activity data from the inbox post.
 		$activity_data = json_decode( $post->post_content, true );
 
 		if ( ! $activity_data ) {
 			\WP_CLI::error( 'Failed to decode activity data.' );
 		}
 
-		// Only delete existing artifacts for activity types that create new ones.
-		$should_delete = isset( $activity_data['type'] ) && in_array( $activity_data['type'], array( 'Create', 'Like', 'Announce' ), true );
+		// Get the activity type.
+		if ( ! isset( $activity_data['type'] ) ) {
+			\WP_CLI::error( 'Activity data does not contain a type field.' );
+		}
 
+		$type = camel_to_snake_case( $activity_data['type'] );
+
+		// Get recipients from post meta.
+		$user_ids = Inbox::get_recipients( $post_id );
+
+		if ( empty( $user_ids ) ) {
+			\WP_CLI::error( 'No recipients found for this inbox item.' );
+		}
+
+		// Delete existing artifacts before reprocessing.
+		// Activity handlers check for duplicates and skip creation if they exist.
+		$activity_id      = $post->guid;
 		$deleted_comments = 0;
 		$deleted_posts    = 0;
 
-		if ( $should_delete ) {
-			// Delete comments with source_id matching the activity ID.
-			$comment = Comment::object_id_to_comment( $activity_id );
-			if ( $comment ) {
-				\wp_delete_comment( $comment->comment_ID, true );
+		// Delete comments with source_id matching the activity ID.
+		$comment = Comment::object_id_to_comment( $activity_id );
+		if ( $comment ) {
+			\wp_delete_comment( $comment->comment_ID, true );
+			++$deleted_comments;
+			\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: activity ID)', $comment->comment_ID ) );
+		}
+
+		// Delete comments and posts with source_id/GUID matching the activity object ID.
+		if ( isset( $activity_data['object']['id'] ) && is_array( $activity_data['object'] ) ) {
+			$object_id = $activity_data['object']['id'];
+
+			$object_comment = Comment::object_id_to_comment( $object_id );
+			if ( $object_comment ) {
+				\wp_delete_comment( $object_comment->comment_ID, true );
 				++$deleted_comments;
-				\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: activity ID)', $comment->comment_ID ) );
+				\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: object ID)', $object_comment->comment_ID ) );
 			}
 
-			// Delete comments and posts with source_id/GUID matching the activity object ID.
-			if ( isset( $activity_data['object']['id'] ) && is_array( $activity_data['object'] ) ) {
-				$object_id = $activity_data['object']['id'];
-
-				$object_comment = Comment::object_id_to_comment( $object_id );
-				if ( $object_comment ) {
-					\wp_delete_comment( $object_comment->comment_ID, true );
-					++$deleted_comments;
-					\WP_CLI::log( sprintf( 'Deleted comment %d (source_id: object ID)', $object_comment->comment_ID ) );
-				}
-
-				// Delete ap_post with GUID matching the object ID.
-				$ap_post = Posts::get_by_guid( $object_id );
-				if ( ! \is_wp_error( $ap_post ) ) {
-					\wp_delete_post( $ap_post->ID, true );
-					++$deleted_posts;
-					\WP_CLI::log( sprintf( 'Deleted ap_post %d (GUID: object ID)', $ap_post->ID ) );
-				}
+			// Delete ap_post with GUID matching the object ID.
+			$ap_post = Posts::get_by_guid( $object_id );
+			if ( ! \is_wp_error( $ap_post ) ) {
+				\wp_delete_post( $ap_post->ID, true );
+				++$deleted_posts;
+				\WP_CLI::log( sprintf( 'Deleted ap_post %d (GUID: object ID)', $ap_post->ID ) );
 			}
-
-			if ( $deleted_comments > 0 || $deleted_posts > 0 ) {
-				\WP_CLI::log( sprintf( 'Deleted %d comment(s) and %d post(s).', $deleted_comments, $deleted_posts ) );
-			} else {
-				\WP_CLI::log( 'No existing comments or posts found to delete.' );
-			}
-		} else {
-			\WP_CLI::log( sprintf( 'Skipping deletion for %s activity type.', $activity_data['type'] ) );
 		}
 
-		// Bypass signature verification for internal reprocessing.
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
-
-		// Create internal REST request to the shared inbox endpoint.
-		$request = new \WP_REST_Request( 'POST', '/' . \ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$request->set_header( 'Content-Type', 'application/activity+json' );
-		$request->set_body( \wp_json_encode( $activity_data ) );
-
-		// Dispatch the request through the REST API.
-		$response = \rest_do_request( $request );
-
-		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-
-		$status = $response->get_status();
-		if ( $status >= 200 && $status < 300 ) {
-			\WP_CLI::success( sprintf( 'Inbox item %d has been reprocessed as %s activity.', $post_id, $activity_data['type'] ) );
-		} else {
-			$data          = $response->get_data();
-			$error_message = $data['message'] ?? 'Unknown error';
-			\WP_CLI::error( sprintf( 'Failed to reprocess (HTTP %d): %s', $status, $error_message ) );
+		if ( $deleted_comments > 0 || $deleted_posts > 0 ) {
+			\WP_CLI::log( sprintf( 'Deleted %d comment(s) and %d post(s).', $deleted_comments, $deleted_posts ) );
 		}
+
+		// Create Activity object from the activity data.
+		$activity = Activity::init_from_array( $activity_data );
+
+		if ( \is_wp_error( $activity ) ) {
+			\WP_CLI::error( sprintf( 'Failed to initialize activity: %s', $activity->get_error_message() ) );
+		}
+
+		// Trigger both sets of action hooks that handlers may be registered on.
+		// Some handlers use activitypub_inbox_{type} (Like, Announce, Delete, Undo)
+		// Others use activitypub_handled_inbox_{type} (Create, Update)
+		\do_action( 'activitypub_inbox', $activity_data, $user_ids, $type, $activity, Inbox::CONTEXT_INBOX );
+		\do_action( 'activitypub_inbox_' . $type, $activity_data, $user_ids, $activity, Inbox::CONTEXT_INBOX );
+		\do_action( 'activitypub_handled_inbox', $activity_data, $user_ids, $type, $activity, $post_id, Inbox::CONTEXT_INBOX );
+		\do_action( 'activitypub_handled_inbox_' . $type, $activity_data, $user_ids, $activity, $post_id, Inbox::CONTEXT_INBOX );
+
+		\WP_CLI::success( sprintf( 'Inbox item %d has been reprocessed as %s activity.', $post_id, $activity_data['type'] ) );
 	}
 }
