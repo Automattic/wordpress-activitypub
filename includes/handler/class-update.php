@@ -104,15 +104,7 @@ class Update {
 
 		// There is no object to update, try to trigger create instead.
 		if ( ! $updated ) {
-			/**
-			 * Fires when a Create activity is received for an existing object.
-			 *
-			 * @param array                          $activity        The activity-object.
-			 * @param int[]                          $user_ids        The ids of the local blog-users.
-			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
-			 */
-			\do_action( 'activitypub_inbox_create', $activity, $user_ids, $activity_object );
-			return false;
+			return Create::handle_create( $activity, $user_ids, $activity_object );
 		}
 
 		$success = ( $result && ! \is_wp_error( $result ) );

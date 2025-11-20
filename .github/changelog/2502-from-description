@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Improved handling of unusual activity data to avoid errors when activities contain unexpected formats.

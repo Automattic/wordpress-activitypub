@@ -472,7 +472,7 @@ class Scheduler {
 
 		self::lock( $key );
 
-		if ( \is_callable( $args[0] ) ) {
+		if ( \is_callable( $args[0] ?? null ) ) {
 			$callback = \array_shift( $args ); // Remove $callback from arguments.
 		}
 		$next = \call_user_func_array( $callback, $args );

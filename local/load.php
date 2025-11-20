@@ -34,3 +34,5 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
 // Defer signature verification on local development to better test API requests.
 \add_filter( 'activitypub_defer_signature_verification', '__return_true', 20 );
+
+\add_filter( 'option_activitypub_create_posts', '__return_true' );

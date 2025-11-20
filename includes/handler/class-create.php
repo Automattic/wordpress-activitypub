@@ -78,15 +78,7 @@ class Create {
 
 		// If comment exists, call update action.
 		if ( $check_dupe ) {
-			/**
-			 * Fires when a Create activity is received for an existing comment.
-			 *
-			 * @param array                          $activity        The activity-object.
-			 * @param int[]                          $user_ids        The ids of the local blog-users.
-			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
-			 */
-			\do_action( 'activitypub_inbox_update', $activity, (array) $user_ids, $activity_object );
-			return false;
+			return Update::handle_update( $activity, (array) $user_ids, $activity_object );
 		}
 
 		if ( is_self_ping( $activity['object']['id'] ) ) {
@@ -116,15 +108,7 @@ class Create {
 
 		// If comment exists, call update action.
 		if ( ! \is_wp_error( $check_dupe ) ) {
-			/**
-			 * Fires when a Create activity is received for an existing object.
-			 *
-			 * @param array                          $activity        The activity-object.
-			 * @param int[]                          $user_ids        The id of the local blog-user.
-			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
-			 */
-			\do_action( 'activitypub_inbox_update', $activity, (array) $user_ids, $activity_object );
-			return false;
+			return Update::handle_update( $activity, (array) $user_ids, $activity_object );
 		}
 
 		return Posts::add( $activity, $user_ids );
