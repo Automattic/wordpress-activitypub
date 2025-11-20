@@ -751,7 +751,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	/**
 	 * Test that ap_post comments are NOT excluded from frontend queries.
 	 *
-	 * @covers ::exclude_ap_post_comments_in_admin
+	 * @covers ::comment_query
 	 */
 	public function test_ap_post_comments_shown_on_frontend() {
 		// Create an ap_post.
@@ -791,7 +791,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	/**
 	 * Test that ap_post comments are shown when querying for specific post.
 	 *
-	 * @covers ::exclude_ap_post_comments_in_admin
+	 * @covers ::comment_query
 	 */
 	public function test_ap_post_comments_shown_when_querying_specific_post() {
 		// Create an ap_post.
