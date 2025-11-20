@@ -189,14 +189,15 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 				shouldOpenFilters = true;
 			}
 
-			// Open filters when adding a new tag filter
+			// Reset to page 1 and open filters when adding a new tag filter
 			updateView( {
 				...view,
 				filters: newFilters,
+				page: 1,
 				openFilters: shouldOpenFilters ? true : view.openFilters,
 			} );
 		},
-		[ view, updateView ]
+		[ view.filters, view.openFilters, updateView ]
 	);
 
 	// Extract ap_object_type filter from view.filters
@@ -206,13 +207,11 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 	}, [ view.filters ] );
 
 	// Register tag click handler with Layout
-	// Only register once and when selectedTagId changes, not when handleTagClick changes
 	useEffect( () => {
 		if ( registerTagHandler ) {
 			registerTagHandler( handleTagClick, selectedTagId );
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ registerTagHandler, selectedTagId ] );
+	}, [ registerTagHandler, handleTagClick, selectedTagId ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
