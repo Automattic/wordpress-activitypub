@@ -655,6 +655,7 @@ class Migration {
 			array(
 				'number'     => $batch_size,
 				'offset'     => $offset,
+				'orderby'    => 'comment_ID',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
 					array(
