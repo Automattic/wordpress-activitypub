@@ -144,7 +144,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		order: view.sort?.direction || 'desc',
 		search: view.search || '',
 		userId: activeActorId,
-		apObjectType: apObjectTypeFilter,
+		filters: view.filters,
 	} );
 
 	// Create ap_object_type filter field
