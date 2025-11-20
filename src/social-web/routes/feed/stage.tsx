@@ -146,6 +146,8 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 			const tagFilterIndex = currentFilters.findIndex( ( f ) => f.field === 'ap_tag' );
 
 			let newFilters;
+			let shouldOpenFilters = false;
+
 			if ( tagFilterIndex !== -1 ) {
 				// Tag filter exists - toggle it
 				const currentValue = currentFilters[ tagFilterIndex ].value as number[];
@@ -159,13 +161,20 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 						{ field: 'ap_tag', operator: 'isAny', value: [ tagId ] },
 						...currentFilters.slice( tagFilterIndex + 1 ),
 					];
+					shouldOpenFilters = true;
 				}
 			} else {
 				// No tag filter exists - add one
 				newFilters = [ ...currentFilters, { field: 'ap_tag', operator: 'isAny', value: [ tagId ] } ];
+				shouldOpenFilters = true;
 			}
 
-			updateView( { ...view, filters: newFilters } );
+			// Open filters when adding a new tag filter
+			updateView( {
+				...view,
+				filters: newFilters,
+				openFilters: shouldOpenFilters ? true : view.openFilters,
+			} );
 		},
 		[ view, updateView ]
 	);
