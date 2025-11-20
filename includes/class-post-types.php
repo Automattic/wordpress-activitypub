@@ -707,7 +707,7 @@ class Post_Types {
 				);
 
 				$params['ap_object_type'] = array(
-					'description'       => __( 'Filter posts by ActivityPub object type.', 'activitypub' ),
+					'description'       => 'Filter posts by ActivityPub object type.',
 					'type'              => 'array',
 					'items'             => array(
 						'type' => 'integer',
