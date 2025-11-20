@@ -160,7 +160,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 					label: term.name,
 				} ) ) || [],
 			filterBy: {
-				operators: [ 'isAny' ],
+				operators: [ 'is' ],
 			},
 		} ),
 		[ apObjectTypes ]
