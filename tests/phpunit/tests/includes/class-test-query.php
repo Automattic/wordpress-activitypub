@@ -34,7 +34,7 @@ class Test_Query extends \WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create(
@@ -51,14 +51,6 @@ class Test_Query extends \WP_UnitTestCase {
 				'post_status'  => 'publish',
 			)
 		);
-	}
-
-	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_post( self::$post_id, true );
-		wp_delete_user( self::$user_id );
 	}
 
 	/**
@@ -314,8 +306,6 @@ class Test_Query extends \WP_UnitTestCase {
 
 		$this->go_to( $at_url );
 		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
-
-		\wp_delete_user( $user_id );
 	}
 
 	/**
@@ -394,8 +384,6 @@ class Test_Query extends \WP_UnitTestCase {
 		Query::get_instance()->__destruct();
 		$this->go_to( get_permalink( $outbox_item->ID ) );
 		$this->assertNull( Query::get_instance()->get_activitypub_object() );
-
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -544,9 +532,6 @@ class Test_Query extends \WP_UnitTestCase {
 		$result = $method->invoke( $query );
 
 		$this->assertFalse( $result, 'Should return false for invalid post author' );
-
-		// Clean up.
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**

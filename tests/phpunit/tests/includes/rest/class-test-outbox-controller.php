@@ -382,9 +382,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
 
 		$this->assertContains( $type, $activity_types, sprintf( 'Activity type "%s" should be visible to users with activitypub capability.', $type ) );
-
-		\wp_delete_post( $post_id, true );
-		\wp_delete_user( $user_id );
 	}
 
 	/**
@@ -522,9 +519,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 				$private_visible ? '' : ' not'
 			)
 		);
-
-		\wp_delete_post( $post_id, true );
-		\wp_delete_user( $user_id );
 	}
 
 	/**
@@ -580,7 +574,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		$this->assertEquals( 200, $response->get_status() );
 
-		\wp_delete_post( $blog_post_id, true );
 		\delete_option( 'activitypub_actor_mode' );
 	}
 
@@ -637,10 +630,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertCount( 11, $data['orderedItems'] );
-
-		\wp_delete_post( $private_post_id, true );
-		\wp_delete_user( $viewer_id );
-		\wp_delete_user( $admin_id );
 	}
 
 	/**

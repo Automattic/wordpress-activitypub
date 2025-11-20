@@ -711,7 +711,5 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( '<strong>my site</strong>', $output );
 		$this->assertStringContainsString( '<a href="https://test.com"', $output );
-
-		wp_delete_post( $field_id, true );
 	}
 }

@@ -206,11 +206,6 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		} else {
 			$this->assertEmpty( $outbox_posts, "No {$expected_type} activity should be queued" );
 		}
-
-		// Clean up follower if created.
-		if ( $remote_actor_id ) {
-			wp_delete_post( $remote_actor_id, true );
-		}
 	}
 
 	/**

@@ -59,14 +59,6 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_post( self::$post_id, true );
-		wp_delete_user( self::$user_id );
-	}
-
-	/**
 	 * Test comment notification subject for ActivityPub comments.
 	 *
 	 * @covers ::comment_notification_subject
@@ -107,10 +99,6 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		$subject = Mailer::comment_notification_subject( 'Default Subject', $regular_comment_id );
 		$this->assertEquals( 'Default Subject', $subject );
-
-		// Clean up.
-		wp_delete_comment( $comment_id, true );
-		wp_delete_comment( $regular_comment_id, true );
 	}
 
 	/**
@@ -154,10 +142,6 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		$text = Mailer::comment_notification_text( 'Default Message', $regular_comment_id );
 		$this->assertEquals( 'Default Message', $text );
-
-		// Clean up.
-		wp_delete_comment( $comment_id, true );
-		wp_delete_comment( $regular_comment_id, true );
 	}
 
 	/**
@@ -423,7 +407,6 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		remove_all_filters( 'wp_mail' );
-		wp_delete_user( $user_id );
 	}
 
 	/**
@@ -542,7 +525,6 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		remove_all_filters( 'wp_mail' );
-		wp_delete_user( $user_id );
 	}
 
 	/**
@@ -952,7 +934,6 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Clean up.
 		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		\remove_all_filters( 'wp_mail' );
-		\wp_delete_user( $other_user_id );
 	}
 
 	/**
@@ -1016,6 +997,5 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Clean up.
 		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		\remove_all_filters( 'wp_mail' );
-		\wp_delete_user( $other_user_id );
 	}
 }

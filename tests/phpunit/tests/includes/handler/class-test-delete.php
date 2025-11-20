@@ -145,9 +145,6 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertNotNull( \get_comment( $other_comment_id ), 'Other comment should not be deleted' );
 
 		// Clean up.
-		\wp_delete_post( $post_id, true );
-		\wp_delete_comment( $other_comment_id, true );
-		\wp_delete_post( $actor->ID, true );
 		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 
@@ -232,7 +229,6 @@ class Test_Delete extends \WP_UnitTestCase {
 		}
 
 		// Clean up.
-		\wp_delete_post( $actor->ID, true );
 		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
 

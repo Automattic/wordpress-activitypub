@@ -568,11 +568,6 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Get the comment with the same source_id.
 		$comment_3 = Comment::object_id_to_comment( $source_id );
 		$this->assertEquals( $id_1, $comment_3->comment_ID );
-
-		// Delete the comments.
-		wp_delete_comment( $id_1, true );
-		wp_delete_comment( $id_2, true );
-		wp_delete_comment( $id_3, true );
 	}
 
 	/**
@@ -603,9 +598,6 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$comment_id = \wp_new_comment( $comment_data );
 		$this->assertEquals( 0, \get_comment( $comment_id, 'ARRAY_A' )['comment_approved'] );
-
-		\wp_delete_comment( $comment_id, true );
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -674,7 +666,6 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertEqualSets( $core_comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
 
 		// Clean up.
-		\wp_delete_post( $post_id, true );
 		\set_query_var( 'type', null );
 	}
 
@@ -741,10 +732,6 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Clean up.
 		\set_current_screen( 'front' );
-		wp_delete_comment( $regular_comment_id, true );
-		wp_delete_comment( $ap_comment_id, true );
-		wp_delete_post( $regular_post_id, true );
-		wp_delete_post( $ap_post_id, true );
 		\delete_option( 'activitypub_create_posts' );
 	}
 
@@ -782,10 +769,6 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
 		$this->assertContains( (string) $ap_comment_id, $comment_ids, 'AP post comment should be shown on frontend' );
-
-		// Clean up.
-		wp_delete_comment( $ap_comment_id, true );
-		wp_delete_post( $ap_post_id, true );
 	}
 
 	/**
@@ -829,8 +812,6 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Clean up.
 		\set_current_screen( 'front' );
-		wp_delete_comment( $ap_comment_id, true );
-		wp_delete_post( $ap_post_id, true );
 	}
 
 	/**
@@ -931,12 +912,6 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Clean up.
 		\set_current_screen( 'front' );
-		foreach ( array_merge( $regular_comment_ids, $ap_comment_ids ) as $comment_id ) {
-			wp_delete_comment( $comment_id, true );
-		}
-		foreach ( array( $regular_post_1, $regular_post_2, $ap_post_1, $ap_post_2 ) as $post_id ) {
-			wp_delete_post( $post_id, true );
-		}
 		\delete_option( 'activitypub_create_posts' );
 	}
 }

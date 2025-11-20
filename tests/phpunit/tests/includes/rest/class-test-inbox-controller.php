@@ -48,13 +48,6 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
-	 * Delete fake data after tests run.
-	 */
-	public static function tear_down_after_class() {
-		\wp_delete_user( self::$user_id );
-	}
-
-	/**
 	 * Test follow request global inbox.
 	 *
 	 * @covers ::get_items
@@ -624,10 +617,6 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertLessThanOrEqual( 5, count( $result ), 'Should return at most 5 followers (4 users + optional blog)' );
 
 		// Clean up.
-		\wp_delete_post( $remote_actor->ID, true );
-		\wp_delete_user( $user_id_1 );
-		\wp_delete_user( $user_id_2 );
-		\wp_delete_user( $user_id_3 );
 		\delete_option( 'activitypub_actor_mode' );
 		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}
@@ -699,8 +688,6 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertLessThanOrEqual( 3, count( $result ), 'Should return at most 3 followers (2 users + optional blog)' );
 
 		// Clean up.
-		\wp_delete_post( $remote_actor->ID, true );
-		\wp_delete_user( $user_id );
 		\delete_option( 'activitypub_actor_mode' );
 		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
 	}

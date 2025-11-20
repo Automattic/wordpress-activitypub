@@ -83,16 +83,6 @@ class Test_Factory extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_post( self::$post_id, true );
-		wp_delete_post( self::$attachment_id, true );
-		wp_delete_comment( self::$comment_id, true );
-		wp_delete_user( self::$user_id, true );
-	}
-
-	/**
 	 * Test get_transformer with invalid input.
 	 *
 	 * @covers ::get_transformer

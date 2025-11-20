@@ -57,13 +57,6 @@ class Test_Follow extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_user( self::$user_id );
-	}
-
-	/**
 	 * Test handle_follow method with different scenarios.
 	 *
 	 * @dataProvider handle_follow_provider
@@ -264,8 +257,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		$this->assertEquals( $local_actor->get_id(), $activity_json['actor'] );
 
 		// Clean up.
-		wp_delete_post( $outbox_post->ID, true );
-		wp_delete_post( $remote_actor->ID, true );
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
 
@@ -383,9 +374,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		$this->assertEquals( 'Follow', $activity_json['object']['type'] );
 		$this->assertEquals( array( $actor_url ), $activity_json['to'] );
 		$this->assertEquals( $actor_url, $activity_json['object']['actor'] );
-
-		// Clean up.
-		wp_delete_post( $outbox_post->ID, true );
 	}
 
 	/**
@@ -456,16 +444,10 @@ class Test_Follow extends \WP_UnitTestCase {
 				'post_status' => 'any',
 			)
 		);
-		foreach ( $outbox_posts as $post ) {
-			wp_delete_post( $post->ID, true );
-		}
 
 		// Clean up hooks and filters.
 		\remove_all_actions( 'activitypub_followers_post_follow' );
 		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		if ( $hook_remote_actor instanceof \WP_Post ) {
-			wp_delete_post( $hook_remote_actor->ID, true );
-		}
 	}
 
 	/**
@@ -535,15 +517,9 @@ class Test_Follow extends \WP_UnitTestCase {
 				'post_status' => 'any',
 			)
 		);
-		foreach ( $outbox_posts as $post ) {
-			wp_delete_post( $post->ID, true );
-		}
 
 		// Clean up hooks and filters.
 		\remove_all_actions( 'activitypub_handled_follow' );
 		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		if ( $hook_remote_actor instanceof \WP_Post ) {
-			wp_delete_post( $hook_remote_actor->ID, true );
-		}
 	}
 }

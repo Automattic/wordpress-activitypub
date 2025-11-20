@@ -40,7 +40,5 @@ class Test_Post_Types extends \WP_UnitTestCase {
 		\update_post_meta( $post_id, 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS + 3 );
 		$this->assertEquals( ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS + 3, \get_post_meta( $post_id, 'activitypub_max_image_attachments', true ) );
 		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
-
-		\wp_delete_post( $post_id, true );
 	}
 }

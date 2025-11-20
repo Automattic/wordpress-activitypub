@@ -21,14 +21,6 @@ use function Activitypub\follow;
 class Test_Following extends \WP_UnitTestCase {
 
 	/**
-	 * Set up the test environment.
-	 */
-	public function set_up() {
-		parent::set_up();
-		_delete_all_posts();
-	}
-
-	/**
 	 * Test the accept() method with a valid follow request.
 	 *
 	 * @covers ::accept
@@ -68,8 +60,6 @@ class Test_Following extends \WP_UnitTestCase {
 		// Verify the user is removed from pending list.
 		$pending_followers = \get_post_meta( $post_id, Following::PENDING_META_KEY, false );
 		$this->assertNotContains( (string) $user_id, $pending_followers );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -111,8 +101,6 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertEquals( 'activitypub_following_not_found', $result->get_error_code() );
 		$this->assertEquals( 'Follow request not found', $result->get_error_message() );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -141,8 +129,6 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertEquals( 'activitypub_following_not_found', $result->get_error_code() );
 		$this->assertEquals( 'Follow request not found', $result->get_error_message() );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -176,8 +162,6 @@ class Test_Following extends \WP_UnitTestCase {
 		// Verify the original pending request is still there.
 		$pending_followers = \get_post_meta( $post_id, Following::PENDING_META_KEY, false );
 		$this->assertContains( (string) $pending_user_id, $pending_followers );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -211,8 +195,6 @@ class Test_Following extends \WP_UnitTestCase {
 		// Verify the user is now in the following list.
 		$following = \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false );
 		$this->assertContains( (string) $user_id, $following );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -253,8 +235,6 @@ class Test_Following extends \WP_UnitTestCase {
 
 		// Verify user 2 is still in pending list.
 		$this->assertContains( (string) $user_id_2, $pending_followers );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -283,8 +263,6 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertEquals( 'activitypub_following_not_found', $result->get_error_code() );
 		$this->assertEquals( 'Follow request not found', $result->get_error_message() );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -377,8 +355,6 @@ class Test_Following extends \WP_UnitTestCase {
 
 		$this->assertNotContains( (string) $user_id, $following );
 		$this->assertNotContains( (string) $user_id, $pending );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -528,7 +504,6 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertIsArray( $user_ids );
 		$this->assertEmpty( $user_ids );
 
-		\wp_delete_post( $remote_actor->ID );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_actor' ) );
 	}
 

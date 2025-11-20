@@ -179,8 +179,6 @@ class Test_Sanitize extends \WP_UnitTestCase {
 
 		$this->assertEquals( \Activitypub\Model\Blog::get_default_username(), $result );
 		$this->assertNotEmpty( get_settings_errors( 'activitypub_blog_identifier' ) );
-
-		\wp_delete_user( $user_id );
 	}
 
 	/**

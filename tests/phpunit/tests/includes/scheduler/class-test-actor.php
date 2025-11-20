@@ -77,9 +77,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	public function test_user_option_update() {
 		$actor = Actors::get_by_id( self::$user_id );
 		$post  = $this->get_latest_outbox_item( $actor->get_id() );
-		if ( $post ) {
-			\wp_delete_post( $post->ID, true );
-		}
 
 		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
 
@@ -90,8 +87,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $actor->get_id(), $id );
 
-		\wp_delete_post( $post->ID, true );
-
 		// Update activitypub_icon.
 		$actor->update_icon( $attachment_id );
 
@@ -99,17 +94,12 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $actor->get_id(), $id );
 
-		\wp_delete_post( $post->ID, true );
-
 		// Update activitypub_header_image.
 		$actor->update_header( $attachment_id );
 
 		$post = $this->get_latest_outbox_item( $actor->get_id() );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $actor->get_id(), $id );
-
-		\wp_delete_post( $post->ID, true );
-		\wp_delete_attachment( $attachment_id, true );
 	}
 
 	/**
@@ -277,8 +267,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post = $this->get_latest_outbox_item( $activitpub_id );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
-
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -294,9 +282,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post = $this->get_latest_outbox_item( $activitpub_id );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
-
-		// Clean up.
-		\wp_delete_post( $blog_post_id, true );
 	}
 
 	/**
@@ -346,9 +331,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$this->assertNotEquals( $last_item_stick->ID, $last_item_unstick->ID );
 		$this->assertEquals( $last_item_stick->post_author, $last_item_unstick->post_author );
-
-		\wp_delete_post( $post_id );
-		\wp_delete_user( $user_id );
 	}
 
 	/**
@@ -389,9 +371,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertEquals( 'Delete', $activity['type'], 'Activity type in content should be Delete' );
 		$this->assertEquals( $actor->get_id(), $activity['actor'], 'Actor should match' );
 		$this->assertEquals( $actor->get_id(), $activity['object'], 'Object should be the actor being deleted' );
-
-		// Clean up.
-		\wp_delete_user( $user_id );
 	}
 
 	/**
@@ -415,9 +394,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Check that no Delete activity was added.
 		$total_after = \wp_count_posts( 'ap_outbox' )->publish;
 		$this->assertEquals( $total_before, $total_after, 'No Delete activity should be added for non-ActivityPub users' );
-
-		// Clean up.
-		\wp_delete_user( $user_id );
 	}
 
 	/**
