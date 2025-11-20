@@ -7,13 +7,15 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useState, useEffect, lazy, Suspense } from '@wordpress/element';
+import { useState, useEffect, useRef, lazy, Suspense } from '@wordpress/element';
 import { CommandMenu } from '@wordpress/commands';
 import { SnackbarList, Spinner } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import Sidebar from '../sidebar';
 import Panel from '../panel';
+import { STORE_NAME } from '../../store';
+import type { SocialWebSelectors } from '../../store';
 import './style.scss';
 
 // Lazy load route stages for better performance
@@ -62,6 +64,15 @@ export function Layout() {
 	const [ activeSection, setActiveSection ] = useState( 'feed' );
 	const [ selectedItemId, setSelectedItemId ] = useState< string | number | null >( null );
 
+	// Get active actor ID
+	const activeActorId = useSelect(
+		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
+		[]
+	);
+
+	// Track previous actor ID to detect changes
+	const prevActiveActorId = useRef( activeActorId );
+
 	// Get notices for the snackbar
 	const notices = useSelect( ( select ) => {
 		const store = select( noticesStore ) as any;
@@ -75,6 +86,15 @@ export function Layout() {
 		setActiveSection( section );
 		setSelectedItemId( itemId );
 	}, [] );
+
+	// Close inspector when actor changes
+	useEffect( () => {
+		if ( prevActiveActorId.current !== activeActorId && selectedItemId ) {
+			setSelectedItemId( null );
+			updateHash( activeSection );
+		}
+		prevActiveActorId.current = activeActorId;
+	}, [ activeActorId, selectedItemId, activeSection ] );
 
 	// Listen for hash changes (back/forward navigation).
 	useEffect( () => {

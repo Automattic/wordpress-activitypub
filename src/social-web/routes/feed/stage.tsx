@@ -11,11 +11,14 @@ import { useView } from '@wordpress/views';
 import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
+import { useSelect } from '@wordpress/data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
 import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
 import type { FeedPost } from '../../types';
+import { STORE_NAME } from '../../store';
+import type { SocialWebSelectors } from '../../store';
 
 const DEFAULT_VIEW: View = {
 	type: 'list',
@@ -43,6 +46,12 @@ interface FeedStageProps {
 }
 
 export default function FeedStage( { onSelectItem }: FeedStageProps ) {
+	// Get active actor ID from store
+	const activeActorId = useSelect(
+		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
+		[]
+	);
+
 	// Track URL query parameters as state for reactivity
 	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
 		const args = getQueryArgs( window.location.href ) as {
@@ -121,6 +130,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		orderBy: view.sort?.field || 'date',
 		order: view.sort?.direction || 'desc',
 		search: view.search || '',
+		userId: activeActorId,
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(

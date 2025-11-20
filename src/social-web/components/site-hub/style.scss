@@ -70,17 +70,13 @@
 	}
 
 	.site-icon {
-		display: flex;
 		height: var(--wpds-spacing-160, 64px);
 		width: var(--wpds-spacing-160, 64px);
-		justify-content: center;
-		align-items: center;
 	}
 
 	.site-icon__icon {
-		fill: currentColor;
 		height: 100%;
-		width: 100%
+		width: 100%;
 	}
 }
 

@@ -21,7 +21,7 @@ import type { UnstableBase } from '@wordpress/core-data';
 /**
  * Internal dependencies
  */
-import SiteIcon from './site-icon';
+import SiteIcon from '../site-icon';
 import './style.scss';
 
 function SiteHub() {

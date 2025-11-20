@@ -1,0 +1,17 @@
+/**
+ * Site Icon Component Styles
+ */
+
+.site-icon {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.site-icon__image {
+	object-fit: cover;
+}
+
+.site-icon__icon {
+	fill: currentColor;
+}

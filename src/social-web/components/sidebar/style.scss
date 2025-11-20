@@ -75,5 +75,18 @@
 	.footer {
 		padding: var(--wpds-spacing-40, 16px);
 		border-top: 1px solid var(--wpds-color-stroke-inverted, rgba(255, 255, 255, 0.1));
+
+		> .components-h-stack {
+			padding: 2px 0;
+		}
+
+		.footer-settings-button {
+			color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+			flex-shrink: 0;
+
+			&:hover:not(:disabled) {
+				color: var(--wpds-color-fg-inverted-primary, #ffffff);
+			}
+		}
 	}
 }
