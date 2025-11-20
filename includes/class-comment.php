@@ -738,9 +738,14 @@ class Comment {
 		}
 
 		// Exclude comments on ap_post.
-		$ap_post_type      = \Activitypub\Collection\Posts::POST_TYPE;
-		$clauses['join']  .= " LEFT JOIN {$wpdb->posts} ON {$wpdb->comments}.comment_post_ID = {$wpdb->posts}.ID";
-		$clauses['where'] .= $wpdb->prepare( " AND ({$wpdb->posts}.post_type IS NULL OR {$wpdb->posts}.post_type != %s)", $ap_post_type );
+		$ap_post_type = \Activitypub\Collection\Posts::POST_TYPE;
+
+		// Check if join already exists to avoid duplicate joins.
+		if ( ! str_contains( $clauses['join'], "{$wpdb->posts}" ) ) {
+			$clauses['join'] .= " INNER JOIN {$wpdb->posts} ON {$wpdb->comments}.comment_post_ID = {$wpdb->posts}.ID";
+		}
+
+		$clauses['where'] .= $wpdb->prepare( " AND {$wpdb->posts}.post_type != %s", $ap_post_type );
 
 		return $clauses;
 	}
