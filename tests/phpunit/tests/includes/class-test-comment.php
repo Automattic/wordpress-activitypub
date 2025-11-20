@@ -677,4 +677,70 @@ class Test_Comment extends \WP_UnitTestCase {
 		\wp_delete_post( $post_id, true );
 		\set_query_var( 'type', null );
 	}
+
+	/**
+	 * Test that comments on ap_post are excluded from admin comment queries.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_excludes_ap_post_in_admin() {
+		// Create a regular post.
+		$regular_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'post',
+				'post_title'   => 'Regular Post',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'AP Post',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Create comments on both posts.
+		$regular_comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => $regular_post_id,
+				'comment_content' => 'Comment on regular post',
+				'comment_author'  => 'Test User',
+			)
+		);
+
+		$ap_comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => $ap_post_id,
+				'comment_content' => 'Comment on ap_post',
+				'comment_author'  => 'Test User',
+				'comment_meta'    => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// Simulate admin context.
+		\set_current_screen( 'edit-comments' );
+
+		// Query comments in admin context.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array() );
+
+		// Check that ap_post comment is excluded.
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+		$this->assertContains( (string) $regular_comment_id, $comment_ids, 'Regular post comment should be included' );
+		$this->assertNotContains( (string) $ap_comment_id, $comment_ids, 'AP post comment should be excluded from admin' );
+
+		// Clean up.
+		\set_current_screen( 'front' );
+		wp_delete_comment( $regular_comment_id, true );
+		wp_delete_comment( $ap_comment_id, true );
+		wp_delete_post( $regular_post_id, true );
+		wp_delete_post( $ap_post_id, true );
+	}
 }
