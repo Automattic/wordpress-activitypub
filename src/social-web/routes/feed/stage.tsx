@@ -17,7 +17,6 @@ import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
 import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
-import { TypeFilter } from '../../components/type-filter';
 import type { FeedPost } from '../../types';
 import { STORE_NAME } from '../../store';
 import type { SocialWebSelectors } from '../../store';
@@ -54,25 +53,10 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		[]
 	);
 
-	// Fetch ap_object_type taxonomy terms
+	// Fetch ap_object_type taxonomy terms for filter
 	const { records: apObjectTypes } = useEntityRecords( 'taxonomy', 'ap_object_type', {
 		per_page: 100,
 	} );
-
-	// Track selected type filter with localStorage persistence
-	const [ selectedType, setSelectedType ] = useState< number | null >( () => {
-		const stored = localStorage.getItem( 'activitypub_feed_type_filter' );
-		return stored ? parseInt( stored, 10 ) : null;
-	} );
-
-	// Persist selected type to localStorage when it changes
-	useEffect( () => {
-		if ( selectedType !== null ) {
-			localStorage.setItem( 'activitypub_feed_type_filter', selectedType.toString() );
-		} else {
-			localStorage.removeItem( 'activitypub_feed_type_filter' );
-		}
-	}, [ selectedType ] );
 
 	// Track URL query parameters as state for reactivity
 	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
@@ -146,10 +130,11 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		[ view.fields, updateView ]
 	);
 
-	// Use selected type instead of view filters
+	// Extract ap_object_type filter from view.filters
 	const apObjectTypeFilter = useMemo( () => {
-		return selectedType !== null ? [ selectedType ] : undefined;
-	}, [ selectedType ] );
+		const typeFilter = view.filters?.find( ( f ) => f.field === 'ap_object_type' );
+		return typeFilter?.value as number[] | undefined;
+	}, [ view.filters ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
@@ -161,9 +146,28 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		apObjectType: apObjectTypeFilter,
 	} );
 
+	// Create ap_object_type filter field
+	const apObjectTypeField: Field< FeedPost > = useMemo(
+		() => ( {
+			id: 'ap_object_type',
+			label: __( 'Type', 'activitypub' ),
+			enableHiding: false,
+			enableSorting: false,
+			elements:
+				apObjectTypes?.map( ( term: any ) => ( {
+					value: term.id,
+					label: term.name,
+				} ) ) || [],
+			filterBy: {
+				operators: [ 'isAny' ],
+			},
+		} ),
+		[ apObjectTypes ]
+	);
+
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, excerptField, contentField, dateField ],
-		[]
+		() => [ metadataField, titleField, excerptField, contentField, dateField, apObjectTypeField ],
+		[ apObjectTypeField ]
 	);
 
 	// Normalize view.fields to maintain the canonical order defined in fields array
@@ -208,19 +212,6 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			hasPadding={ false }
 		>
 			<DataViews
-				header={
-					apObjectTypes && apObjectTypes.length > 0 ? (
-						<TypeFilter
-							value={ selectedType }
-							onChange={ setSelectedType }
-							types={ apObjectTypes.map( ( term: any ) => ( {
-								id: term.id,
-								name: term.name,
-								count: term.count,
-							} ) ) }
-						/>
-					) : undefined
-				}
 				data={ feed }
 				fields={ fields }
 				view={ normalizedView }
