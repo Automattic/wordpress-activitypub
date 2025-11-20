@@ -125,17 +125,23 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 						{ isLoadingComments && <Spinner /> }
 						{ ! isLoadingComments && comments && comments.length > 0 && (
 							<div>
-								{ comments.map( ( comment ) => (
-									<div key={ comment.id } className="activitypub-inspector-comment">
-										<div className="activitypub-inspector-comment-meta">
-											<strong>{ decodeEntities( comment.author_name ) }</strong>
-											<span className="activitypub-inspector-comment-date">
-												{ new Date( comment.date ).toLocaleString() }
-											</span>
+								{ comments.map( ( comment ) => {
+									// Use date_gmt for reliable UTC parsing
+									const commentDate = comment.date_gmt ? getRelativeTime( comment.date_gmt ) : '';
+									return (
+										<div key={ comment.id } className="activitypub-inspector-comment">
+											<div className="activitypub-inspector-comment-meta">
+												<strong>{ decodeEntities( comment.author_name ) }</strong>
+												{ commentDate && (
+													<span className="activitypub-inspector-comment-date">
+														{ commentDate }
+													</span>
+												) }
+											</div>
+											<RenderHTML html={ comment.content.rendered } />
 										</div>
-										<RenderHTML html={ comment.content.rendered } />
-									</div>
-								) ) }
+									);
+								} ) }
 							</div>
 						) }
 						{ ! isLoadingComments && ( ! comments || comments.length === 0 ) && (
