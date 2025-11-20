@@ -235,5 +235,5 @@ Ensure Docker is running and you have proper permissions.
 - `package.json` - npm scripts and dependencies
 - `composer.json` - PHP dependencies and scripts
 - `.wp-env.json` - wp-env configuration
-- `.phpcs.xml.dist` - PHP coding standards
+- `phpcs.xml` - PHP coding standards
 - `.githooks/pre-commit` - Git hook configuration
