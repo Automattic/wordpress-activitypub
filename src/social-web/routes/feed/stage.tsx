@@ -12,7 +12,7 @@ import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
-import { useEntityRecords } from '@wordpress/core-data';
+import { useEntityRecords, useEntityRecord } from '@wordpress/core-data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
@@ -127,6 +127,26 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 		},
 	} );
 
+	// Extract ap_tag filter from view.filters to get selected tag
+	const apTagFilter = useMemo( () => {
+		return view.filters?.find( ( f ) => f.field === 'ap_tag' )?.value as number[] | undefined;
+	}, [ view.filters ] );
+
+	const selectedTagId = useMemo( () => {
+		return apTagFilter && apTagFilter.length > 0 ? apTagFilter[ 0 ] : undefined;
+	}, [ apTagFilter ] );
+
+	const selectedTagInTrending = useMemo( () => {
+		return selectedTagId && apTags ? ( apTags as any[] ).some( ( tag: any ) => tag.id === selectedTagId ) : true;
+	}, [ selectedTagId, apTags ] );
+
+	// Fetch the selected tag if it's not in trending tags
+	const { record: selectedTagRecord } = useEntityRecord(
+		'taxonomy',
+		'ap_tag',
+		selectedTagId && ! selectedTagInTrending ? selectedTagId : 0
+	);
+
 	// Wrap updateView to enforce mutual exclusion between excerpt and content fields
 	const updateFeedView = useCallback(
 		( updatedView: View ) => {
@@ -185,17 +205,6 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 		return typeFilter?.value as number[] | undefined;
 	}, [ view.filters ] );
 
-	// Extract ap_tag filter from view.filters
-	const apTagFilter = useMemo( () => {
-		const tagFilter = view.filters?.find( ( f ) => f.field === 'ap_tag' );
-		return tagFilter?.value as number[] | undefined;
-	}, [ view.filters ] );
-
-	// Get selected tag ID (first tag in filter if any)
-	const selectedTagId = useMemo( () => {
-		return apTagFilter && apTagFilter.length > 0 ? apTagFilter[ 0 ] : undefined;
-	}, [ apTagFilter ] );
-
 	// Register tag click handler with Layout
 	useEffect( () => {
 		if ( registerTagHandler ) {
@@ -234,23 +243,36 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 	);
 
 	// Create ap_tag filter field
-	const apTagField: Field< FeedPost > = useMemo(
-		() => ( {
+	const apTagField: Field< FeedPost > = useMemo( () => {
+		const trendingElements =
+			apTags?.map( ( term: any ) => ( {
+				value: term.id,
+				label: term.name,
+			} ) ) || [];
+
+		// Add selected tag to elements if it's not in trending tags
+		let elements = trendingElements;
+		if ( selectedTagRecord && selectedTagId && ! selectedTagInTrending ) {
+			elements = [
+				{
+					value: selectedTagRecord.id,
+					label: selectedTagRecord.name,
+				},
+				...trendingElements,
+			];
+		}
+
+		return {
 			id: 'ap_tag',
 			label: __( 'Tag', 'activitypub' ),
 			enableHiding: false,
 			enableSorting: false,
-			elements:
-				apTags?.map( ( term: any ) => ( {
-					value: term.id,
-					label: term.name,
-				} ) ) || [],
+			elements,
 			filterBy: {
 				operators: [ 'isAny' ],
 			},
-		} ),
-		[ apTags ]
-	);
+		};
+	}, [ apTags, selectedTagRecord, selectedTagId, selectedTagInTrending ] );
 
 	const fields: Field< FeedPost >[] = useMemo(
 		() => [ metadataField, titleField, excerptField, contentField, dateField, apObjectTypeField, apTagField ],
