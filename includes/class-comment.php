@@ -28,7 +28,6 @@ class Comment {
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
-		\add_filter( 'comments_clauses', array( static::class, 'comments_clauses' ), 10, 2 );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
@@ -714,40 +713,6 @@ class Comment {
 
 		// Exclude likes and reposts by the ActivityPub plugin.
 		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
-	}
-
-	/**
-	 * Exclude comments on ap_post from admin comment queries.
-	 *
-	 * @param array             $clauses  SQL clauses.
-	 * @param \WP_Comment_Query $query    Comment query object.
-	 *
-	 * @return array Modified SQL clauses.
-	 */
-	public static function comments_clauses( $clauses, $query ) {
-		global $wpdb;
-
-		// Only apply in admin context.
-		if ( ! is_admin() ) {
-			return $clauses;
-		}
-
-		// Don't apply if we're querying for a specific post.
-		if ( ! empty( $query->query_vars['post_id'] ) ) {
-			return $clauses;
-		}
-
-		// Exclude comments on ap_post.
-		$ap_post_type = \Activitypub\Collection\Posts::POST_TYPE;
-
-		// Check if join already exists to avoid duplicate joins.
-		if ( ! str_contains( $clauses['join'], "{$wpdb->posts}" ) ) {
-			$clauses['join'] .= " INNER JOIN {$wpdb->posts} ON {$wpdb->comments}.comment_post_ID = {$wpdb->posts}.ID";
-		}
-
-		$clauses['where'] .= $wpdb->prepare( " AND {$wpdb->posts}.post_type != %s", $ap_post_type );
-
-		return $clauses;
 	}
 
 	/**
