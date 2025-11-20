@@ -178,7 +178,11 @@ export function Layout() {
 					return null;
 				}
 				InspectorComponent = FeedInspector;
-				props = { id: selectedItemId, onClose: closeInspector };
+				props = {
+					id: selectedItemId,
+					onClose: closeInspector,
+					onTagClick: tagClickHandler || undefined,
+				};
 		}
 
 		return (

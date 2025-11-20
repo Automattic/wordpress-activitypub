@@ -16,6 +16,7 @@ import { getRelativeTime } from '../../utils';
 interface FeedInspectorProps {
 	id: number;
 	onClose: () => void;
+	onTagClick?: ( tagId: number ) => void;
 }
 
 // Helper to render HTML content with proper entity decoding and unescape
@@ -26,7 +27,7 @@ const RenderHTML = ( { html }: { html: string } ) => {
 	return <div dangerouslySetInnerHTML={ { __html: decoded } } />;
 };
 
-export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
+export default function FeedInspector( { id, onClose, onTagClick }: FeedInspectorProps ) {
 	const { defaultAvatar } = useSettings();
 	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id );
 	const { records: comments, isResolving: isLoadingComments } = useEntityRecords< Comment >( 'root', 'comment', {
@@ -34,6 +35,13 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 		per_page: 100,
 		order: 'asc',
 		orderby: 'date',
+	} );
+
+	// Fetch tag terms if the post has tags
+	const tagIds = post?.ap_tag || [];
+	const { records: tags } = useEntityRecords( 'taxonomy', 'ap_tag', {
+		include: tagIds,
+		per_page: 100,
 	} );
 
 	if ( isLoading ) {
@@ -111,6 +119,24 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 					) }
 					{ ( post.content?.rendered || post.excerpt?.rendered ) && (
 						<RenderHTML html={ post.content?.rendered || post.excerpt?.rendered || '' } />
+					) }
+					{ tags && tags.length > 0 && onTagClick && (
+						<div className="activitypub-inspector-tags">
+							{ tags.map( ( tag: any ) => (
+								<Button
+									key={ tag.id }
+									variant="secondary"
+									size="compact"
+									onClick={ () => {
+										onTagClick( tag.id );
+										onClose();
+									} }
+									className="activitypub-inspector-tag"
+								>
+									#{ tag.name }
+								</Button>
+							) ) }
+						</div>
 					) }
 				</CardBody>
 			</Card>
