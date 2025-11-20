@@ -256,7 +256,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::schedule_post_activity
 	 */
 	public function test_schedule_post_activity_extra_fields() {
-		$post_id       = self::factory()->post->create(
+		self::factory()->post->create(
 			array(
 				'post_author' => self::$user_id,
 				'post_type'   => Extra_Fields::USER_POST_TYPE,
@@ -276,7 +276,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function test_schedule_post_activity_extra_field_blog() {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-		$blog_post_id  = self::factory()->post->create( array( 'post_type' => Extra_Fields::BLOG_POST_TYPE ) );
+		self::factory()->post->create( array( 'post_type' => Extra_Fields::BLOG_POST_TYPE ) );
 		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 
 		$post = $this->get_latest_outbox_item( $activitpub_id );

@@ -162,7 +162,7 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 			AP_TESTS_DIR . '/data/assets/sample-image.jpg',
 			self::$post_id
 		);
-		$image_id_2 = self::factory()->attachment->create_upload_object(
+		self::factory()->attachment->create_upload_object(
 			AP_TESTS_DIR . '/data/assets/sample-image.jpg',
 			self::$post_id
 		);

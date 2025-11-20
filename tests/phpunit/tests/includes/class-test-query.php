@@ -354,7 +354,7 @@ class Test_Query extends \WP_UnitTestCase {
 	 * @covers ::get_activitypub_object
 	 */
 	public function test_outbox_item_visibility() {
-		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$outbox_item = \current(
 			\get_posts(
 				array(

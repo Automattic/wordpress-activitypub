@@ -372,12 +372,12 @@ class Test_Migration extends \WP_UnitTestCase {
 		Comment::register_comment_types();
 
 		// Create test comments.
-		$post_id    = self::factory()->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_author' => 1,
 			)
 		);
-		$comment_id = self::factory()->comment->create(
+		self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => $post_id,
 				'comment_approved' => '1',
@@ -398,7 +398,7 @@ class Test_Migration extends \WP_UnitTestCase {
 	 */
 	public function test_create_outbox_items() {
 		// Create additional post that should not be included in outbox.
-		$post_id = self::factory()->post->create( array( 'post_author' => 90210 ) );
+		self::factory()->post->create( array( 'post_author' => 90210 ) );
 
 		// Run migration.
 		add_filter( 'pre_schedule_event', '__return_false' );

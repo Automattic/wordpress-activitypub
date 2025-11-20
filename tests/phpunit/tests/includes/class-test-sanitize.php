@@ -160,7 +160,7 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	 * @covers ::blog_identifier
 	 */
 	public function test_blog_identifier_with_existing_user() {
-		$user_id = self::factory()->user->create(
+		self::factory()->user->create(
 			array(
 				'user_login'    => 'existing-user',
 				'user_nicename' => 'test-nicename',
