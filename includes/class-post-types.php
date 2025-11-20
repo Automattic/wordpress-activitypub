@@ -406,6 +406,17 @@ class Post_Types {
 				'sanitize_callback' => 'absint',
 			)
 		);
+
+		\register_post_meta(
+			Posts::POST_TYPE,
+			'_activitypub_featured_image_url',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'URL of the featured image from ActivityPub attachments.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
 	}
 
 	/**
@@ -687,6 +698,27 @@ class Post_Types {
 				'schema'       => array(
 					'description' => 'Remote actor data',
 					'type'        => 'object',
+					'context'     => array( 'view', 'edit' ),
+				),
+			)
+		);
+
+		\register_rest_field(
+			Posts::POST_TYPE,
+			'featured_image',
+			array(
+				/**
+				 * Get the featured image for an ap_post.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return string|null The image URL or null if not found.
+				 */
+				'get_callback' => function ( $response ) {
+					return \get_post_meta( $response['id'], '_activitypub_featured_image_url', true ) ?: null;
+				},
+				'schema'       => array(
+					'description' => 'Featured image URL from ActivityPub attachments',
+					'type'        => 'string',
 					'context'     => array( 'view', 'edit' ),
 				),
 			)

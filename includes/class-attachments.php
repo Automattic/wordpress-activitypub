@@ -182,6 +182,14 @@ class Attachments {
 			self::append_files_to_content( $object_id, $files, $object_type );
 		}
 
+		// Add inline mappings to the returned files.
+		foreach ( $inline_mappings as $old_url => $new_url ) {
+			$files[] = array(
+				'url'       => $new_url,
+				'mime_type' => 'image/*',
+			);
+		}
+
 		return $files;
 	}
 

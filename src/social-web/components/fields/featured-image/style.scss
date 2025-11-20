@@ -1,0 +1,18 @@
+// Target the featured image field wrapper in the list view
+.dataviews-view-list__fields .dataviews-view-list__field:has(.activitypub-featured-image) {
+	order: 999; // Push to the end (right side)
+	margin-left: auto; // Align to the right
+}
+
+.activitypub-featured-image {
+	max-width: 120px;
+
+	img {
+		width: 100%;
+		height: auto;
+		display: block;
+		border-radius: 4px;
+		object-fit: cover;
+		max-height: 120px;
+	}
+}

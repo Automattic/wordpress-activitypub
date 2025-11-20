@@ -27,7 +27,18 @@ export function useFeed( {
 	order = 'desc',
 	search = '',
 	userId,
-	fields = [ 'id', 'date', 'modified', 'title', 'excerpt', 'content', 'actor_info', 'status', 'link' ],
+	fields = [
+		'id',
+		'date',
+		'modified',
+		'title',
+		'excerpt',
+		'content',
+		'actor_info',
+		'status',
+		'link',
+		'featured_image',
+	],
 }: UseFeedParams = {} ): UseFeedReturn {
 	// Don't fetch if userId is not set
 	const enabled = userId !== null && userId !== undefined;

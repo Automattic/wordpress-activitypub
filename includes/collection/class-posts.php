@@ -143,6 +143,7 @@ class Posts {
 		self::add_taxonomies( $post_id, $activity['object'] );
 
 		// Always delete existing attachments on update in case filter value changed.
+		\delete_post_meta( $post_id, '_activitypub_featured_image_url' );
 		Attachments::delete_ap_posts_directory( $post_id );
 		self::maybe_import_attachments( $activity['object'], $post_id );
 
@@ -254,7 +255,22 @@ class Posts {
 		$store_locally = \apply_filters( 'activitypub_store_attachments_locally', true, $activity_object, $post_id );
 
 		if ( $store_locally ) {
-			Attachments::import_post_files( $activity_object['attachment'], $post_id );
+			$files = Attachments::import_post_files( $activity_object['attachment'], $post_id );
+
+			// Save the featured image URL as post meta for efficient retrieval.
+			if ( ! empty( $files ) ) {
+				foreach ( $files as $file ) {
+					// Check if this is an image file.
+					if ( isset( $file['mime_type'] ) && 0 === strpos( $file['mime_type'], 'image/' ) ) {
+						\update_post_meta(
+							$post_id,
+							'_activitypub_featured_image_url',
+							$file['url']
+						);
+						break; // Only save the first image.
+					}
+				}
+			}
 		}
 	}
 
