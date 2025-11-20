@@ -8,6 +8,12 @@
 	width: 50%;
 }
 
+// Remove residual styles from footer when empty (infinite scroll enabled)
+.dataviews-footer:empty {
+	border: 0;
+	padding: 0;
+}
+
 // List view item stacking
 .dataviews-view-list {
 	.dataviews-view-list__item {
