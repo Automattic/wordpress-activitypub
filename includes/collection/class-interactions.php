@@ -68,10 +68,12 @@ class Interactions {
 		$target_url      = \esc_url_raw( $target_url );
 		$comment_post_id = \url_to_postid( $target_url );
 
-		// Check for `ap_post`.
-		$comment_post = Posts::get_by_guid( $target_url );
-		if ( $comment_post instanceof \WP_Post ) {
-			$comment_post_id = $comment_post->ID;
+		if ( ! $comment_post_id ) {
+			// Check for `ap_post`.
+			$comment_post = Posts::get_by_guid( $target_url );
+			if ( $comment_post instanceof \WP_Post ) {
+				$comment_post_id = $comment_post->ID;
+			}
 		}
 
 		// Handle nested replies (replies to comments).
@@ -123,10 +125,12 @@ class Interactions {
 		$comment_post_id   = \url_to_postid( $url );
 		$parent_comment_id = url_to_commentid( $url );
 
-		// Check for `ap_post`.
-		$comment_post = Posts::get_by_guid( $url );
-		if ( $comment_post instanceof \WP_Post ) {
-			$comment_post_id = $comment_post->ID;
+		if ( ! $comment_post_id ) {
+			// Check for `ap_post`.
+			$comment_post = Posts::get_by_guid( $url );
+			if ( $comment_post instanceof \WP_Post ) {
+				$comment_post_id = $comment_post->ID;
+			}
 		}
 
 		if ( ! $comment_post_id && $parent_comment_id ) {
