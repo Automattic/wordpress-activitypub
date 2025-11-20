@@ -12,10 +12,12 @@ import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
+import { useEntityRecords } from '@wordpress/core-data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
 import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
+import { TypeFilter } from '../../components/type-filter';
 import type { FeedPost } from '../../types';
 import { STORE_NAME } from '../../store';
 import type { SocialWebSelectors } from '../../store';
@@ -51,6 +53,26 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
 		[]
 	);
+
+	// Fetch ap_object_type taxonomy terms
+	const { records: apObjectTypes } = useEntityRecords( 'taxonomy', 'ap_object_type', {
+		per_page: 100,
+	} );
+
+	// Track selected type filter with localStorage persistence
+	const [ selectedType, setSelectedType ] = useState< number | null >( () => {
+		const stored = localStorage.getItem( 'activitypub_feed_type_filter' );
+		return stored ? parseInt( stored, 10 ) : null;
+	} );
+
+	// Persist selected type to localStorage when it changes
+	useEffect( () => {
+		if ( selectedType !== null ) {
+			localStorage.setItem( 'activitypub_feed_type_filter', selectedType.toString() );
+		} else {
+			localStorage.removeItem( 'activitypub_feed_type_filter' );
+		}
+	}, [ selectedType ] );
 
 	// Track URL query parameters as state for reactivity
 	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
@@ -124,6 +146,11 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		[ view.fields, updateView ]
 	);
 
+	// Use selected type instead of view filters
+	const apObjectTypeFilter = useMemo( () => {
+		return selectedType !== null ? [ selectedType ] : undefined;
+	}, [ selectedType ] );
+
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
 		page: view.page || 1,
@@ -131,6 +158,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		order: view.sort?.direction || 'desc',
 		search: view.search || '',
 		userId: activeActorId,
+		apObjectType: apObjectTypeFilter,
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
@@ -180,6 +208,19 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			hasPadding={ false }
 		>
 			<DataViews
+				header={
+					apObjectTypes && apObjectTypes.length > 0 ? (
+						<TypeFilter
+							value={ selectedType }
+							onChange={ setSelectedType }
+							types={ apObjectTypes.map( ( term: any ) => ( {
+								id: term.id,
+								name: term.name,
+								count: term.count,
+							} ) ) }
+						/>
+					) : undefined
+				}
 				data={ feed }
 				fields={ fields }
 				view={ normalizedView }

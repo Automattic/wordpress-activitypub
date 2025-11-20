@@ -10,6 +10,7 @@ interface UseFeedParams {
 	search?: string;
 	userId?: number;
 	fields?: string[];
+	apObjectType?: number[];
 }
 
 interface UseFeedReturn {
@@ -27,7 +28,19 @@ export function useFeed( {
 	order = 'desc',
 	search = '',
 	userId,
-	fields = [ 'id', 'date', 'modified', 'title', 'excerpt', 'content', 'actor_info', 'status', 'link' ],
+	fields = [
+		'id',
+		'date',
+		'modified',
+		'title',
+		'excerpt',
+		'content',
+		'actor_info',
+		'status',
+		'link',
+		'ap_object_type',
+	],
+	apObjectType,
 }: UseFeedParams = {} ): UseFeedReturn {
 	// Don't fetch if userId is not set
 	const enabled = userId !== null && userId !== undefined;
@@ -47,8 +60,13 @@ export function useFeed( {
 			args.user_id = userId;
 		}
 
+		// Add taxonomy filter if provided
+		if ( apObjectType && apObjectType.length > 0 ) {
+			args.ap_object_type = apObjectType;
+		}
+
 		return args;
-	}, [ perPage, page, orderBy, order, search, userId, fields, enabled ] );
+	}, [ perPage, page, orderBy, order, search, userId, fields, enabled, apObjectType ] );
 
 	const { records, hasResolved, isResolving, totalItems, totalPages } = useEntityRecords< FeedPost >(
 		'postType',
