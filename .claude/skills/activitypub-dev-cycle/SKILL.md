@@ -220,11 +220,11 @@ wp-env automatically sets up WordPress with:
 ## Troubleshooting
 
 ### Port Conflicts
-If port 80 is in use:
+If port 8888 is in use:
 ```bash
 wp-env stop
 # Then check what's using the port
-lsof -i :80  # macOS/Linux
+lsof -i :8888  # macOS/Linux
 ```
 
 ### Permission Issues
