@@ -68,7 +68,7 @@ export function useFeed( {
 
 		// Extract ap_object_type filter from filters array
 		const apObjectTypeFilter = filters.find( ( f ) => f.field === 'ap_object_type' );
-		if ( apObjectTypeFilter && apObjectTypeFilter.value && apObjectTypeFilter.value.length > 0 ) {
+		if ( apObjectTypeFilter?.value !== undefined ) {
 			args.ap_object_type = apObjectTypeFilter.value;
 		}
 

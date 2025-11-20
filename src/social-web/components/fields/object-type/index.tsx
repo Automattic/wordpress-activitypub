@@ -1,32 +1,27 @@
 import { __ } from '@wordpress/i18n';
+import { resolveSelect } from '@wordpress/data';
+import { store as coreDataStore } from '@wordpress/core-data';
 import type { Field } from '@wordpress/dataviews';
 import type { FeedPost } from '../../../types';
 
-/**
- * Object type filter field
- *
- * @param apObjectTypes - Array of taxonomy terms from ap_object_type
- * @return Field configuration for object type filtering
- */
-export function objectTypeField( apObjectTypes?: any[] ): Field< FeedPost > {
-	return {
-		id: 'ap_object_type',
-		label: __( 'Type', 'activitypub' ),
-		enableHiding: false,
-		enableSorting: false,
-		elements:
-			apObjectTypes?.map( ( term ) => ( {
+export const objectTypeField: Field< FeedPost > = {
+	id: 'ap_object_type',
+	type: 'integer',
+	label: __( 'Type', 'activitypub' ),
+	enableHiding: false,
+	enableSorting: false,
+	getValue: ( { item } ) => item.ap_object_type?.[ 0 ] ?? item.ap_object_type,
+	getElements: async () => {
+		const records = await resolveSelect( coreDataStore ).getEntityRecords( 'taxonomy', 'ap_object_type' );
+		return (
+			records?.map( ( term: any ) => ( {
 				value: term.id,
 				label: term.name,
-			} ) ) || [],
-		getValue: ( { item } ) => item.ap_object_type?.[ 0 ],
-		render: ( { item } ) => {
-			const termId = item.ap_object_type?.[ 0 ];
-			const term = apObjectTypes?.find( ( t ) => t.id === termId );
-			return <span>{ term?.name || '—' }</span>;
-		},
-		filterBy: {
-			operators: [ 'isAny' ],
-		},
-	};
-}
+			} ) ) || []
+		);
+	},
+	render: () => null,
+	filterBy: {
+		operators: [ 'is' ],
+	},
+};

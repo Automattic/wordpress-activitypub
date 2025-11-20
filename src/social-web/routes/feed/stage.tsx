@@ -12,7 +12,6 @@ import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
-import { useEntityRecords } from '@wordpress/core-data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import {
@@ -60,9 +59,6 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
 		[]
 	);
-
-	// Fetch ap_object_type taxonomy terms for filter
-	const { records: apObjectTypes } = useEntityRecords( 'taxonomy', 'ap_object_type' );
 
 	// Track URL query parameters as state for reactivity
 	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
@@ -163,12 +159,9 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		filters: view.filters,
 	} );
 
-	// Create ap_object_type filter field
-	const apObjectTypeField = useMemo( () => objectTypeField( apObjectTypes ), [ apObjectTypes ] );
-
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, excerptField, contentField, dateField, apObjectTypeField ],
-		[ apObjectTypeField ]
+		() => [ metadataField, titleField, excerptField, contentField, dateField, objectTypeField ],
+		[]
 	);
 
 	// Normalize view.fields to maintain the canonical order defined in fields array
