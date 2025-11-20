@@ -703,15 +703,15 @@ class Comment {
 		}
 
 		// Do only exclude interactions of `ap_post` post type.
-		if ( is_admin() ) {
-			if ( get_option( 'activitypub_create_posts' ) ) {
+		if ( \is_admin() ) {
+			if ( \get_option( 'activitypub_create_posts', false ) ) {
 				$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), array( Posts::POST_TYPE ) );
 			}
 			return;
 		}
 
 		// Do not exclude likes and reposts on non-singular pages.
-		if ( ! is_singular() ) {
+		if ( ! \is_singular() ) {
 			return;
 		}
 
