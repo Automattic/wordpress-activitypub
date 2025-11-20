@@ -15,7 +15,14 @@ import { useSelect } from '@wordpress/data';
 import { useEntityRecords } from '@wordpress/core-data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
-import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
+import {
+	titleField,
+	dateField,
+	excerptField,
+	metadataField,
+	contentField,
+	objectTypeField,
+} from '../../components/fields';
 import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
 import type { FeedPost } from '../../types';
 import { STORE_NAME } from '../../store';
@@ -124,16 +131,14 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			const newFields = updatedView.fields || [];
 			const fields = enforceContentExcerptMutualExclusion( oldFields, newFields );
 
-			updateView( { ...updatedView, fields } );
-		},
-		[ view.fields, updateView ]
-	);
+			// Reset to page 1 when filters change
+			const filtersChanged = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
+			const page = filtersChanged ? 1 : updatedView.page;
 
-	// Extract ap_object_type filter from view.filters
-	const apObjectTypeFilter = useMemo( () => {
-		const typeFilter = view.filters?.find( ( f ) => f.field === 'ap_object_type' );
-		return typeFilter?.value as number[] | undefined;
-	}, [ view.filters ] );
+			updateView( { ...updatedView, fields, page } );
+		},
+		[ view.fields, view.filters, updateView ]
+	);
 
 	// Reset view to default state when actor switches
 	const prevActiveActorId = useRef( activeActorId );
@@ -159,24 +164,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	} );
 
 	// Create ap_object_type filter field
-	const apObjectTypeField: Field< FeedPost > = useMemo(
-		() => ( {
-			id: 'ap_object_type',
-			label: __( 'Type', 'activitypub' ),
-			enableHiding: false,
-			enableSorting: false,
-			elements:
-				apObjectTypes?.map( ( term: any ) => ( {
-					value: term.id,
-					label: term.name,
-				} ) ) || [],
-			filterBy: {
-				operators: [ 'is' ],
-				render: () => null,
-			},
-		} ),
-		[ apObjectTypes ]
-	);
+	const apObjectTypeField = useMemo( () => objectTypeField( apObjectTypes ), [ apObjectTypes ] );
 
 	const fields: Field< FeedPost >[] = useMemo(
 		() => [ metadataField, titleField, excerptField, contentField, dateField, apObjectTypeField ],
@@ -269,7 +257,13 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			lastProcessedPage.current = currentPage;
 			setIsLoadingMore( false );
 		}
-	}, [ feed, normalizedView.page, normalizedView.search, normalizedView.infiniteScrollEnabled ] );
+	}, [
+		feed,
+		normalizedView.page,
+		normalizedView.search,
+		normalizedView.infiniteScrollEnabled,
+		normalizedView.filters,
+	] );
 
 	return (
 		<Page

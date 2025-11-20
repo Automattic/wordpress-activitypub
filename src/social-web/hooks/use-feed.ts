@@ -2,6 +2,12 @@ import { useEntityRecords } from '@wordpress/core-data';
 import { useMemo } from '@wordpress/element';
 import type { FeedPost } from '../types';
 
+interface Filter {
+	field: string;
+	operator: string;
+	value: any;
+}
+
 interface UseFeedParams {
 	perPage?: number;
 	page?: number;
@@ -10,7 +16,7 @@ interface UseFeedParams {
 	search?: string;
 	userId?: number;
 	fields?: string[];
-	apObjectType?: number[];
+	filters?: Filter[];
 }
 
 interface UseFeedReturn {
@@ -40,7 +46,7 @@ export function useFeed( {
 		'link',
 		'ap_object_type',
 	],
-	apObjectType,
+	filters = [],
 }: UseFeedParams = {} ): UseFeedReturn {
 	// Don't fetch if userId is not set
 	const enabled = userId !== null && userId !== undefined;
@@ -60,13 +66,14 @@ export function useFeed( {
 			args.user_id = userId;
 		}
 
-		// Add taxonomy filter if provided
-		if ( apObjectType && apObjectType.length > 0 ) {
-			args.ap_object_type = apObjectType;
+		// Extract ap_object_type filter from filters array
+		const apObjectTypeFilter = filters.find( ( f ) => f.field === 'ap_object_type' );
+		if ( apObjectTypeFilter && apObjectTypeFilter.value && apObjectTypeFilter.value.length > 0 ) {
+			args.ap_object_type = apObjectTypeFilter.value;
 		}
 
 		return args;
-	}, [ perPage, page, orderBy, order, search, userId, fields, enabled, apObjectType ] );
+	}, [ perPage, page, orderBy, order, search, userId, fields, enabled, filters ] );
 
 	const { records, hasResolved, isResolving, totalItems, totalPages } = useEntityRecords< FeedPost >(
 		'postType',
