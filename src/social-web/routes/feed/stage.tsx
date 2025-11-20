@@ -136,7 +136,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			} );
 			prevActiveActorId.current = activeActorId;
 		}
-	}, [ activeActorId, updateView, view.fields ] );
+	}, [ activeActorId, updateView ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
