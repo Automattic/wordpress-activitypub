@@ -17,7 +17,7 @@ This skill provides guidance for common development workflows in the WordPress A
 
 ### Environment Management
 ```bash
-npm run env-start    # Start WordPress at http://localhost
+npm run env-start    # Start WordPress at http://localhost:8888
 npm run env-stop     # Stop WordPress environment
 ```
 
