@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Store comments and reactions from followed actors on reader posts, and keep them separate from your site's comments in wp-admin.
