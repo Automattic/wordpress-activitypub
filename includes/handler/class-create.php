@@ -71,14 +71,16 @@ class Create {
 	 * @param int[]                          $user_ids        The ids of the local blog-users.
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 *
-	 * @return \WP_Comment|\WP_Error|false The created comment, WP_Error on failure, false if not processed.
+	 * @return \WP_Comment|\WP_Error|false The created comment, WP_Error on failure, false if already exists or not processed.
 	 */
 	public static function create_interaction( $activity, $user_ids, $activity_object = null ) {
-		$check_dupe = object_id_to_comment( $activity['object']['id'] );
+		$existing_comment = object_id_to_comment( $activity['object']['id'] );
 
 		// If comment exists, call update action.
-		if ( $check_dupe ) {
-			return Update::handle_update( $activity, (array) $user_ids, $activity_object );
+		if ( $existing_comment ) {
+			Update::handle_update( $activity, (array) $user_ids, $activity_object );
+
+			return false;
 		}
 
 		if ( is_self_ping( $activity['object']['id'] ) ) {
@@ -101,14 +103,16 @@ class Create {
 	 * @param int[]                          $user_ids        The ids of the local blog-users.
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 *
-	 * @return \WP_Post|\WP_Error|false The post on success or WP_Error on failure.
+	 * @return \WP_Post|\WP_Error|false The post on success, WP_Error on failure, false if already exists.
 	 */
 	public static function create_post( $activity, $user_ids, $activity_object = null ) {
-		$check_dupe = Posts::get_by_guid( $activity['object']['id'] );
+		$existing_post = Posts::get_by_guid( $activity['object']['id'] );
 
-		// If comment exists, call update action.
-		if ( ! \is_wp_error( $check_dupe ) ) {
-			return Update::handle_update( $activity, (array) $user_ids, $activity_object );
+		// If post exists, call update action.
+		if ( $existing_post instanceof \WP_Post ) {
+			Update::handle_update( $activity, (array) $user_ids, $activity_object );
+
+			return false;
 		}
 
 		return Posts::add( $activity, $user_ids );
