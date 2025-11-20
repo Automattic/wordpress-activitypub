@@ -161,6 +161,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 				} ) ) || [],
 			filterBy: {
 				operators: [ 'is' ],
+				render: () => null,
 			},
 		} ),
 		[ apObjectTypes ]
