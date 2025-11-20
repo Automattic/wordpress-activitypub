@@ -8,6 +8,7 @@ import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/componen
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
+import { useSettings } from '../../contexts/settings-context';
 import { Page } from '../../components/page';
 import type { Comment, FeedPost } from '../../types';
 
@@ -25,6 +26,7 @@ const RenderHTML = ( { html }: { html: string } ) => {
 };
 
 export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
+	const { defaultAvatar } = useSettings();
 	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id );
 	const { records: comments, isResolving: isLoadingComments } = useEntityRecords< Comment >( 'root', 'comment', {
 		post: id,
@@ -48,7 +50,7 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 	const actor = post.actor_info;
 	const author = decodeEntities( actor?.name || __( 'Unknown author', 'activitypub' ) );
 	const postDate = post.date ? new Date( post.date ).toLocaleString() : '';
-	const avatarUrl = actor?.icon || '';
+	const avatarUrl = actor?.icon || defaultAvatar;
 
 	return (
 		<Page
@@ -62,7 +64,14 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 			<Card className="activitypub-inspector-card">
 				<CardHeader>
 					<div className="activitypub-inspector-header">
-						<img src={ avatarUrl } alt={ author } className="activitypub-inspector-avatar" />
+						<img
+							src={ avatarUrl }
+							alt={ author }
+							className="activitypub-inspector-avatar"
+							onError={ ( e ) => {
+								( e.target as HTMLImageElement ).src = defaultAvatar;
+							} }
+						/>
 						<div className="activitypub-inspector-author">
 							<strong>{ author }</strong>
 							{ postDate && <span className="activitypub-inspector-date">{ postDate }</span> }
