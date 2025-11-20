@@ -720,8 +720,6 @@ class Comment {
 	/**
 	 * Exclude comments on ap_post from admin comment queries.
 	 *
-	 * Uses a subquery to avoid JOIN conflicts with WordPress core.
-	 *
 	 * @param array             $clauses SQL clauses.
 	 * @param \WP_Comment_Query $query   Comment query object.
 	 *
@@ -745,11 +743,12 @@ class Comment {
 			return $clauses;
 		}
 
-		// Exclude comments on ap_post using a subquery.
+		// Join with posts table to check post type.
+		$clauses['join'] .= " LEFT JOIN {$wpdb->posts} AS ap_posts ON {$wpdb->comments}.comment_post_ID = ap_posts.ID";
+
+		// Exclude comments where post type is ap_post.
 		$clauses['where'] .= $wpdb->prepare(
-			" AND {$wpdb->comments}.comment_post_ID NOT IN (
-				SELECT ID FROM {$wpdb->posts} WHERE post_type = %s
-			)",
+			' AND (ap_posts.post_type IS NULL OR ap_posts.post_type != %s)',
 			Posts::POST_TYPE
 		);
 
