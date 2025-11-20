@@ -5,7 +5,7 @@
  */
 
 import './style.scss';
-import { useMemo, useCallback, useState, useEffect } from '@wordpress/element';
+import { useMemo, useCallback, useState, useEffect, useRef } from '@wordpress/element';
 import { DataViews } from '@wordpress/dataviews';
 import { useView } from '@wordpress/views';
 import type { View, Field } from '@wordpress/dataviews';
@@ -32,6 +32,7 @@ const DEFAULT_VIEW: View = {
 	search: '',
 	filters: [],
 	fields: [ 'metadata', 'title.rendered', 'excerpt.rendered' ],
+	infiniteScrollEnabled: true,
 };
 
 const defaultLayouts = {
@@ -252,6 +253,11 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 
 	const [ selection, setSelection ] = useState< string[] >( [] );
 
+	// State for infinite scroll
+	const [ allLoadedRecords, setAllLoadedRecords ] = useState< FeedPost[] >( [] );
+	const [ isLoadingMore, setIsLoadingMore ] = useState( false );
+	const lastProcessedPage = useRef< number >( 0 );
+
 	useEffect( () => {
 		if ( selection.length === 0 ) {
 			return;
@@ -282,6 +288,54 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 		[ feed, onSelectItem ]
 	);
 
+	// Infinite scroll handler
+	const infiniteScrollHandler = useCallback( () => {
+		const currentPage = view.page || 1;
+
+		// Prevent concurrent requests or loading beyond available pages
+		if ( isLoadingMore || currentPage >= ( totalPages || 1 ) ) {
+			return;
+		}
+
+		setIsLoadingMore( true );
+		updateFeedView( {
+			...view,
+			page: currentPage + 1,
+		} );
+	}, [ isLoadingMore, view, totalPages, updateFeedView ] );
+
+	// Accumulate data across pages for infinite scroll
+	useEffect( () => {
+		const currentPage = normalizedView.page || 1;
+		const infiniteScrollEnabled = normalizedView.infiniteScrollEnabled;
+
+		// Don't process until feed data is available
+		if ( feed.length === 0 ) {
+			return;
+		}
+
+		// Skip if we've already processed this page (but always process page 1 for search/initial load)
+		if ( currentPage > 1 && lastProcessedPage.current === currentPage ) {
+			return;
+		}
+
+		// Reset to new data on first page or when infinite scroll is disabled
+		if ( currentPage === 1 || ! infiniteScrollEnabled ) {
+			setAllLoadedRecords( feed );
+			lastProcessedPage.current = currentPage;
+			setIsLoadingMore( false );
+		} else {
+			// Append new records while avoiding duplicates
+			setAllLoadedRecords( ( prev ) => {
+				const existingIds = new Set( prev.map( ( item ) => item.id ) );
+				const newRecords = feed.filter( ( record ) => ! existingIds.has( record.id ) );
+				return newRecords.length > 0 ? [ ...prev, ...newRecords ] : prev;
+			} );
+			lastProcessedPage.current = currentPage;
+			setIsLoadingMore( false );
+		}
+	}, [ feed, normalizedView.page, normalizedView.search, normalizedView.infiniteScrollEnabled ] );
+
 	return (
 		<Page
 			title={ __( 'Feed', 'activitypub' ) }
@@ -289,11 +343,11 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 			hasPadding={ false }
 		>
 			<DataViews
-				data={ feed }
+				data={ allLoadedRecords }
 				fields={ fields }
 				view={ normalizedView }
 				onChangeView={ updateFeedView }
-				isLoading={ isResolving }
+				isLoading={ isResolving || isLoadingMore }
 				onClickItem={ ( item ) => onSelectItem( item.id ) }
 				isItemClickable={ () => true }
 				getItemId={ ( item ) => item.id.toString() }
@@ -309,7 +363,11 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 							  ) }
 					</p>
 				}
-				paginationInfo={ { totalItems, totalPages } }
+				paginationInfo={ {
+					totalItems,
+					totalPages,
+					infiniteScrollHandler,
+				} }
 				defaultLayouts={ defaultLayouts }
 			/>
 		</Page>
