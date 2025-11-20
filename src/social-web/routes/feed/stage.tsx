@@ -55,9 +55,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	);
 
 	// Fetch ap_object_type taxonomy terms for filter
-	const { records: apObjectTypes } = useEntityRecords( 'taxonomy', 'ap_object_type', {
-		per_page: 100,
-	} );
+	const { records: apObjectTypes } = useEntityRecords( 'taxonomy', 'ap_object_type' );
 
 	// Track URL query parameters as state for reactivity
 	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
