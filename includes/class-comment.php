@@ -29,7 +29,6 @@ class Comment {
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
-		\add_filter( 'comments_clauses', array( static::class, 'exclude_ap_post_comments_in_admin' ), 10, 2 );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
@@ -703,8 +702,16 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts on admin pages or on non-singular pages.
-		if ( is_admin() || ! is_singular() ) {
+		// Do only exclude interactions of `ap_post` post type.
+		if ( is_admin() ) {
+			if ( get_option( 'activitypub_create_posts' ) ) {
+				$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), array( Posts::POST_TYPE ) );
+			}
+			return;
+		}
+
+		// Do not exclude likes and reposts on non-singular pages.
+		if ( ! is_singular() ) {
 			return;
 		}
 
@@ -715,44 +722,6 @@ class Comment {
 
 		// Exclude likes and reposts by the ActivityPub plugin.
 		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
-	}
-
-	/**
-	 * Exclude comments on ap_post from admin comment queries.
-	 *
-	 * @param array             $clauses SQL clauses.
-	 * @param \WP_Comment_Query $query   Comment query object.
-	 *
-	 * @return array Modified SQL clauses.
-	 */
-	public static function exclude_ap_post_comments_in_admin( $clauses, $query ) {
-		global $wpdb;
-
-		// Only apply in admin context.
-		if ( ! is_admin() ) {
-			return $clauses;
-		}
-
-		// Don't apply on REST API requests.
-		if ( \wp_is_serving_rest_request() ) {
-			return $clauses;
-		}
-
-		// Don't apply if we're querying for a specific post.
-		if ( ! empty( $query->query_vars['post_id'] ) ) {
-			return $clauses;
-		}
-
-		// Join with posts table to check post type.
-		$clauses['join'] .= " LEFT JOIN {$wpdb->posts} AS ap_posts ON {$wpdb->comments}.comment_post_ID = ap_posts.ID";
-
-		// Exclude comments where post type is ap_post.
-		$clauses['where'] .= $wpdb->prepare(
-			' AND (ap_posts.post_type IS NULL OR ap_posts.post_type != %s)',
-			Posts::POST_TYPE
-		);
-
-		return $clauses;
 	}
 
 	/**
