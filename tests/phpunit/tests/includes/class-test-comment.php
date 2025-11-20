@@ -681,9 +681,12 @@ class Test_Comment extends \WP_UnitTestCase {
 	/**
 	 * Test that comments on ap_post are excluded from admin comment queries.
 	 *
-	 * @covers ::exclude_ap_post_comments_in_admin
+	 * @covers ::comment_query
 	 */
 	public function test_exclude_ap_post_comments_in_admin() {
+		// Enable the option that activates ap_post comment filtering.
+		\update_option( 'activitypub_create_posts', true );
+
 		// Create a regular post.
 		$regular_post_id = wp_insert_post(
 			array(
@@ -742,6 +745,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		wp_delete_comment( $ap_comment_id, true );
 		wp_delete_post( $regular_post_id, true );
 		wp_delete_post( $ap_post_id, true );
+		\delete_option( 'activitypub_create_posts' );
 	}
 
 	/**
@@ -832,9 +836,12 @@ class Test_Comment extends \WP_UnitTestCase {
 	/**
 	 * Test that multiple ap_post comments are excluded while regular comments remain.
 	 *
-	 * @covers ::exclude_ap_post_comments_in_admin
+	 * @covers ::comment_query
 	 */
 	public function test_multiple_ap_post_comments_excluded() {
+		// Enable the option that activates ap_post comment filtering.
+		\update_option( 'activitypub_create_posts', true );
+
 		// Create regular posts.
 		$regular_post_1 = wp_insert_post(
 			array(
@@ -930,5 +937,6 @@ class Test_Comment extends \WP_UnitTestCase {
 		foreach ( array( $regular_post_1, $regular_post_2, $ap_post_1, $ap_post_2 ) as $post_id ) {
 			wp_delete_post( $post_id, true );
 		}
+		\delete_option( 'activitypub_create_posts' );
 	}
 }
