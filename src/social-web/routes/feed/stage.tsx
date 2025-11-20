@@ -44,9 +44,10 @@ const defaultLayouts = {
 
 interface FeedStageProps {
 	onSelectItem: ( id: number ) => void;
+	registerTagHandler?: ( handler: ( tagId: number ) => void, selectedTagId?: number ) => void;
 }
 
-export default function FeedStage( { onSelectItem }: FeedStageProps ) {
+export default function FeedStage( { onSelectItem, registerTagHandler }: FeedStageProps ) {
 	// Get active actor ID from store
 	const activeActorId = useSelect(
 		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
@@ -56,6 +57,13 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	// Fetch ap_object_type taxonomy terms for filter
 	const { records: apObjectTypes } = useEntityRecords( 'taxonomy', 'ap_object_type', {
 		per_page: 100,
+	} );
+
+	// Fetch ap_tag taxonomy terms for filter (top 5 trending)
+	const { records: apTags } = useEntityRecords( 'taxonomy', 'ap_tag', {
+		per_page: 5,
+		orderby: 'count',
+		order: 'desc',
 	} );
 
 	// Track URL query parameters as state for reactivity
@@ -130,11 +138,60 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		[ view.fields, updateView ]
 	);
 
+	// Handle tag click from sidebar tag cloud
+	const handleTagClick = useCallback(
+		( tagId: number ) => {
+			const currentFilters = view.filters || [];
+			const tagFilterIndex = currentFilters.findIndex( ( f ) => f.field === 'ap_tag' );
+
+			let newFilters;
+			if ( tagFilterIndex !== -1 ) {
+				// Tag filter exists - toggle it
+				const currentValue = currentFilters[ tagFilterIndex ].value as number[];
+				if ( currentValue.includes( tagId ) ) {
+					// Remove the tag filter if it's the same tag
+					newFilters = currentFilters.filter( ( f ) => f.field !== 'ap_tag' );
+				} else {
+					// Replace with new tag
+					newFilters = [
+						...currentFilters.slice( 0, tagFilterIndex ),
+						{ field: 'ap_tag', operator: 'isAny', value: [ tagId ] },
+						...currentFilters.slice( tagFilterIndex + 1 ),
+					];
+				}
+			} else {
+				// No tag filter exists - add one
+				newFilters = [ ...currentFilters, { field: 'ap_tag', operator: 'isAny', value: [ tagId ] } ];
+			}
+
+			updateView( { ...view, filters: newFilters } );
+		},
+		[ view, updateView ]
+	);
+
 	// Extract ap_object_type filter from view.filters
 	const apObjectTypeFilter = useMemo( () => {
 		const typeFilter = view.filters?.find( ( f ) => f.field === 'ap_object_type' );
 		return typeFilter?.value as number[] | undefined;
 	}, [ view.filters ] );
+
+	// Extract ap_tag filter from view.filters
+	const apTagFilter = useMemo( () => {
+		const tagFilter = view.filters?.find( ( f ) => f.field === 'ap_tag' );
+		return tagFilter?.value as number[] | undefined;
+	}, [ view.filters ] );
+
+	// Get selected tag ID (first tag in filter if any)
+	const selectedTagId = useMemo( () => {
+		return apTagFilter && apTagFilter.length > 0 ? apTagFilter[ 0 ] : undefined;
+	}, [ apTagFilter ] );
+
+	// Register tag click handler with Layout
+	useEffect( () => {
+		if ( registerTagHandler ) {
+			registerTagHandler( handleTagClick, selectedTagId );
+		}
+	}, [ registerTagHandler, handleTagClick, selectedTagId ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
@@ -144,6 +201,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		search: view.search || '',
 		userId: activeActorId,
 		apObjectType: apObjectTypeFilter,
+		apTag: apTagFilter,
 	} );
 
 	// Create ap_object_type filter field
@@ -165,9 +223,28 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		[ apObjectTypes ]
 	);
 
+	// Create ap_tag filter field
+	const apTagField: Field< FeedPost > = useMemo(
+		() => ( {
+			id: 'ap_tag',
+			label: __( 'Tag', 'activitypub' ),
+			enableHiding: false,
+			enableSorting: false,
+			elements:
+				apTags?.map( ( term: any ) => ( {
+					value: term.id,
+					label: term.name,
+				} ) ) || [],
+			filterBy: {
+				operators: [ 'isAny' ],
+			},
+		} ),
+		[ apTags ]
+	);
+
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, excerptField, contentField, dateField, apObjectTypeField ],
-		[ apObjectTypeField ]
+		() => [ metadataField, titleField, excerptField, contentField, dateField, apObjectTypeField, apTagField ],
+		[ apObjectTypeField, apTagField ]
 	);
 
 	// Normalize view.fields to maintain the canonical order defined in fields array

@@ -18,6 +18,7 @@ import { __, isRTL } from '@wordpress/i18n';
 import { useSettings } from '../../contexts/settings-context';
 import SiteHub from '../site-hub';
 import ActorSwitcher from '../actor-switcher';
+import { TagCloud } from '../tag-cloud';
 import './style.scss';
 
 const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ) } ];
@@ -25,9 +26,11 @@ const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ) } ];
 interface SidebarProps {
 	activeSection: string;
 	onNavigate: ( section: string ) => void;
+	onTagClick?: ( tagId: number ) => void;
+	selectedTagId?: number;
 }
 
-export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
+export default function Sidebar( { activeSection, onNavigate, onTagClick, selectedTagId }: SidebarProps ) {
 	const { adminUrl } = useSettings();
 
 	return (
@@ -64,6 +67,11 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 					</MenuGroup>
 				</NavigableMenu>
 			</nav>
+
+			{ /* Tag Cloud - Only show on feed section */ }
+			{ activeSection === 'feed' && onTagClick && (
+				<TagCloud onTagClick={ onTagClick } selectedTagId={ selectedTagId } />
+			) }
 
 			{ /* Footer */ }
 			<div className="footer">

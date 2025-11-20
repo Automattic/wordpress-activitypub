@@ -11,6 +11,7 @@ interface UseFeedParams {
 	userId?: number;
 	fields?: string[];
 	apObjectType?: number[];
+	apTag?: number[];
 }
 
 interface UseFeedReturn {
@@ -39,8 +40,10 @@ export function useFeed( {
 		'status',
 		'link',
 		'ap_object_type',
+		'ap_tag',
 	],
 	apObjectType,
+	apTag,
 }: UseFeedParams = {} ): UseFeedReturn {
 	// Don't fetch if userId is not set
 	const enabled = userId !== null && userId !== undefined;
@@ -65,8 +68,13 @@ export function useFeed( {
 			args.ap_object_type = apObjectType;
 		}
 
+		// Add tag filter if provided
+		if ( apTag && apTag.length > 0 ) {
+			args.ap_tag = apTag;
+		}
+
 		return args;
-	}, [ perPage, page, orderBy, order, search, userId, fields, enabled, apObjectType ] );
+	}, [ perPage, page, orderBy, order, search, userId, fields, enabled, apObjectType, apTag ] );
 
 	const { records, hasResolved, isResolving, totalItems, totalPages } = useEntityRecords< FeedPost >(
 		'postType',

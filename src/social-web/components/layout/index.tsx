@@ -7,7 +7,7 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useState, useEffect, useRef, lazy, Suspense } from '@wordpress/element';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from '@wordpress/element';
 import { CommandMenu } from '@wordpress/commands';
 import { SnackbarList, Spinner } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
@@ -63,6 +63,8 @@ function updateHash( section: string, itemId?: string | number | null ) {
 export function Layout() {
 	const [ activeSection, setActiveSection ] = useState( 'feed' );
 	const [ selectedItemId, setSelectedItemId ] = useState< string | number | null >( null );
+	const [ tagClickHandler, setTagClickHandler ] = useState< ( ( tagId: number ) => void ) | null >( null );
+	const [ selectedTagId, setSelectedTagId ] = useState< number | undefined >( undefined );
 
 	// Get active actor ID
 	const activeActorId = useSelect(
@@ -126,9 +128,18 @@ export function Layout() {
 		updateHash( section );
 	};
 
+	// Register tag click handler and selected tag from FeedStage
+	const registerTagHandler = useCallback( ( handler: ( tagId: number ) => void, tagId?: number ) => {
+		setTagClickHandler( () => handler );
+		setSelectedTagId( tagId );
+	}, [] );
+
 	// Render main content (stage) with Suspense for lazy loading
 	const renderStage = () => {
-		const props = { onSelectItem: selectItem };
+		const props = {
+			onSelectItem: selectItem,
+			registerTagHandler: activeSection === 'feed' ? registerTagHandler : undefined,
+		};
 
 		let StageComponent;
 		switch ( activeSection ) {
@@ -191,7 +202,12 @@ export function Layout() {
 			<div className="app-content">
 				{ /* Sidebar - 240px fixed width (no Panel wrapper, stays dark) */ }
 				<div className="sidebar-region">
-					<Sidebar activeSection={ activeSection } onNavigate={ navigate } />
+					<Sidebar
+						activeSection={ activeSection }
+						onNavigate={ navigate }
+						onTagClick={ tagClickHandler || undefined }
+						selectedTagId={ selectedTagId }
+					/>
 				</div>
 
 				{ /* Stage - main content area */ }
