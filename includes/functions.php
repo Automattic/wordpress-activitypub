@@ -366,9 +366,7 @@ function is_ap_post( $post ) {
 	}
 
 	// Check for ap_post post type.
-	$ap_post = ( Posts::POST_TYPE === $post->post_type );
-
-	return (bool) $ap_post;
+	return Posts::POST_TYPE === $post->post_type;
 }
 
 /**
