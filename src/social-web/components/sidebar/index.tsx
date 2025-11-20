@@ -13,14 +13,14 @@ import {
 	__experimentalHStack as HStack,
 	__experimentalHeading as Heading,
 } from '@wordpress/components';
-import { chevronRight, chevronLeft, cog, postList } from '@wordpress/icons';
+import { chevronRight, chevronLeft, cog } from '@wordpress/icons';
 import { __, isRTL } from '@wordpress/i18n';
 import { useSettings } from '../../contexts/settings-context';
 import SiteHub from '../site-hub';
 import ActorSwitcher from '../actor-switcher';
 import './style.scss';
 
-const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ), icon: postList } ];
+const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ) } ];
 
 interface SidebarProps {
 	activeSection: string;

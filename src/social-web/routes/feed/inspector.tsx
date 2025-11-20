@@ -8,9 +8,10 @@ import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/componen
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
+import { close } from '@wordpress/icons';
 import { useSettings } from '../../contexts/settings-context';
-import { Page } from '../../components/page';
 import type { Comment, FeedPost } from '../../types';
+import { getRelativeTime } from '../../utils';
 
 interface FeedInspectorProps {
 	id: number;
@@ -49,18 +50,14 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 
 	const actor = post.actor_info;
 	const author = decodeEntities( actor?.name || __( 'Unknown author', 'activitypub' ) );
-	const postDate = post.date ? new Date( post.date ).toLocaleString() : '';
-	const avatarUrl = actor?.icon || defaultAvatar;
+	const webfinger = actor?.webfinger || '';
+	const profileUrl = actor?.url || '';
+	const avatarUrl = actor?.icon || '';
+	const postLink = post.link || '';
+	const relativeTime = post.date ? getRelativeTime( post.date ) : '';
 
 	return (
-		<Page
-			hasPadding={ true }
-			actions={
-				<Button variant="tertiary" size="small" onClick={ onClose }>
-					{ __( 'Close', 'activitypub' ) }
-				</Button>
-			}
-		>
+		<div className="activitypub-inspector">
 			<Card className="activitypub-inspector-card">
 				<CardHeader>
 					<div className="activitypub-inspector-header">
@@ -73,9 +70,37 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 							} }
 						/>
 						<div className="activitypub-inspector-author">
-							<strong>{ author }</strong>
-							{ postDate && <span className="activitypub-inspector-date">{ postDate }</span> }
+							<a
+								href={ profileUrl }
+								target="_blank"
+								rel="noopener noreferrer"
+								className="activitypub-inspector-author-name"
+							>
+								{ author }
+							</a>
+							<div className="activitypub-inspector-meta">
+								{ webfinger && <span className="activitypub-inspector-webfinger">{ webfinger }</span> }
+								{ relativeTime && postLink && (
+									<>
+										<span className="activitypub-inspector-separator">·</span>
+										<a
+											href={ postLink }
+											target="_blank"
+											rel="noopener noreferrer"
+											className="activitypub-inspector-timestamp"
+										>
+											{ relativeTime }
+										</a>
+									</>
+								) }
+							</div>
 						</div>
+						<Button
+							icon={ close }
+							label={ __( 'Close', 'activitypub' ) }
+							onClick={ onClose }
+							className="activitypub-inspector-close"
+						/>
 					</div>
 				</CardHeader>
 				<CardBody>
@@ -86,17 +111,6 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 					) }
 					{ ( post.content?.rendered || post.excerpt?.rendered ) && (
 						<RenderHTML html={ post.content?.rendered || post.excerpt?.rendered || '' } />
-					) }
-					{ post.link && (
-						<Button
-							variant="secondary"
-							href={ post.link }
-							target="_blank"
-							rel="noopener noreferrer"
-							className="activitypub-inspector-link"
-						>
-							{ __( 'View Original Post', 'activitypub' ) }
-						</Button>
 					) }
 				</CardBody>
 			</Card>
@@ -130,6 +144,6 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 					</CardBody>
 				</Card>
 			) }
-		</Page>
+		</div>
 	);
 }

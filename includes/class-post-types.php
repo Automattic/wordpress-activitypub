@@ -680,6 +680,7 @@ class Post_Types {
 						'name'       => $actor->get_name() ?? $actor->get_preferred_username(),
 						'icon'       => object_to_uri( $actor->get_icon() ),
 						'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
+						'webfinger'  => Remote_Actors::get_acct( $id ),
 						'identifier' => $actor->get_id(),
 					);
 				},

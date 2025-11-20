@@ -2,7 +2,8 @@ import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import type { Field } from '@wordpress/dataviews';
 import { useSettings } from '../../../contexts/settings-context';
-import type { FeedPost } from '../../types';
+import type { FeedPost } from '../../../types';
+import { getRelativeTime } from '../../../utils';
 
 export const metadataField: Field< FeedPost > = {
 	id: 'metadata',
@@ -11,20 +12,15 @@ export const metadataField: Field< FeedPost > = {
 	enableSorting: false,
 	getValue: ( { item }: { item: FeedPost } ) => {
 		const author = item.actor_info?.name || '';
-		const date = item.date ? new Date( item.date ).toLocaleDateString() : '';
-		return `${ author } · ${ date }`;
+		const relativeTime = item.date ? getRelativeTime( item.date ) : '';
+
+		return `${ author } · ${ relativeTime }`;
 	},
 	render: ( { item }: { item: FeedPost } ) => {
 		const { defaultAvatar } = useSettings();
 		const name = decodeEntities( item.actor_info?.name || __( 'Unknown author', 'activitypub' ) );
-		const avatarUrl = item.actor_info?.icon || defaultAvatar;
-		const date = item.date
-			? new Date( item.date ).toLocaleDateString( undefined, {
-					year: 'numeric',
-					month: 'short',
-					day: 'numeric',
-			  } )
-			: '';
+		const avatarUrl = item.actor_info?.icon || '';
+		const relativeTime = item.date ? getRelativeTime( item.date ) : '';
 
 		return (
 			<div className="activitypub-feed-post-meta">
@@ -37,10 +33,10 @@ export const metadataField: Field< FeedPost > = {
 					} }
 				/>
 				<span className="author">{ name }</span>
-				{ date && (
+				{ relativeTime && (
 					<>
 						<span className="separator">·</span>
-						<span className="date">{ date }</span>
+						<span className="date">{ relativeTime }</span>
 					</>
 				) }
 			</div>
