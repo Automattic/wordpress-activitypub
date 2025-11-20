@@ -206,11 +206,13 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 	}, [ view.filters ] );
 
 	// Register tag click handler with Layout
+	// Only register once and when selectedTagId changes, not when handleTagClick changes
 	useEffect( () => {
 		if ( registerTagHandler ) {
 			registerTagHandler( handleTagClick, selectedTagId );
 		}
-	}, [ registerTagHandler, handleTagClick, selectedTagId ] );
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ registerTagHandler, selectedTagId ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
