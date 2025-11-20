@@ -137,6 +137,19 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		return typeFilter?.value as number[] | undefined;
 	}, [ view.filters ] );
 
+	// Reset view to default state when actor switches
+	const prevActiveActorId = useRef( activeActorId );
+	useEffect( () => {
+		if ( prevActiveActorId.current !== activeActorId ) {
+			// Actor changed - reset to default view, preserving only field visibility
+			updateView( {
+				...DEFAULT_VIEW,
+				fields: view.fields,
+			} );
+			prevActiveActorId.current = activeActorId;
+		}
+	}, [ activeActorId, updateView ] );
+
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
 		page: view.page || 1,
