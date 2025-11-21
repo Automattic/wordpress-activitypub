@@ -295,7 +295,7 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 			lastProcessedPage.current = currentPage;
 			setIsLoadingMore( false );
 		}
-	}, [ feed, normalizedView.page, normalizedView.search, normalizedView.infiniteScrollEnabled ] );
+	}, [ feed, normalizedView.page, normalizedView.search, normalizedView.infiniteScrollEnabled, normalizedView.filters ] );
 
 	return (
 		<Page
