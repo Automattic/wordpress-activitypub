@@ -7,7 +7,9 @@ description: ActivityPub protocol specification and federation concepts. Use whe
 
 This skill provides understanding of the ActivityPub protocol specification and how federation works.
 
-**For implementation details** (transformers, handlers, PHP code), see [PHP Conventions](../activitypub-php-conventions/SKILL.md).
+**For supported features and compatibility:** See [FEDERATION.md](../../../FEDERATION.md) for the complete list of implemented FEPs, supported standards, and federation compatibility details.
+
+**For implementation details:** See [PHP Conventions](../activitypub-php-conventions/SKILL.md) for transformers, handlers, and PHP code patterns.
 
 ## Core Concepts
 
@@ -244,20 +246,22 @@ For public posts with many recipients on same server:
 
 ### Supported Standards
 
-See `FEDERATION.md` for complete list, including:
-- WebFinger - Actor discovery
-- HTTP Signatures - Request authentication
-- NodeInfo - Server metadata
-- Various FEPs (Fediverse Enhancement Proposals)
+See [FEDERATION.md](../../../FEDERATION.md) for the complete list of implemented standards and FEPs, including:
+- WebFinger - Actor discovery.
+- HTTP Signatures - Request authentication.
+- NodeInfo - Server metadata.
+- Various FEPs (Fediverse Enhancement Proposals).
 
-### FEPs Overview
+### FEPs (Fediverse Enhancement Proposals)
 
-FEPs extend ActivityPub with additional features:
-- Long-form text support
-- Quote posts
-- Activity intents
-- Follower synchronization
-- Actor metadata extensions
+FEPs extend ActivityPub with additional features. Common FEP categories include:
+- Long-form text support.
+- Quote posts.
+- Activity intents.
+- Follower synchronization.
+- Actor metadata extensions.
+
+**For supported FEPs in this plugin:** See [FEDERATION.md](../../../FEDERATION.md) for the authoritative list of implemented FEPs.
 
 ## Implementation Notes
 

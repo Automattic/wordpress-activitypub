@@ -5,147 +5,115 @@ description: Version management and release processes using Jetpack Changelogger
 
 # ActivityPub Release Process
 
-This skill provides guidance on managing releases and changelogs for the WordPress ActivityPub plugin.
+Quick reference for managing releases and changelogs for the WordPress ActivityPub plugin.
 
 ## Quick Reference
 
-### Changelog Commands
+### Release Commands
 ```bash
-# Create release PR
-npm run release
+npm run release              # Create major/minor release PR.
 ```
 
-### Version Locations
-- `activitypub.php` - Plugin header
-- `readme.txt` - WordPress.org readme
-- `package.json` - npm version
-- `CHANGELOG.md` - Changelog file
+### Version File Locations
+When updating versions manually, change these files:
+- `activitypub.php` - Plugin header (`Version: X.Y.Z`).
+- `readme.txt` - WordPress.org readme (`Stable tag: X.Y.Z`).
+- `package.json` - npm version (`"version": "X.Y.Z"`).
+- `CHANGELOG.md` - Changelog file (auto-updated by release script).
 
-## Major/Minor Releases
+## Comprehensive Release Guide
 
-### Process Overview
-1. Generate version bump PR with `npm run release`
-2. Review and merge PR
-3. Create GitHub release from trunk
+See [Release Process](../../../docs/release-process.md) for complete release workflow and detailed steps.
 
-### Using Release Script
+## Release Workflow
 
+### Major/Minor Releases
+
+**Quick workflow:**
 ```bash
-# Run from plugin root
+# 1. Run release script from plugin root.
 npm run release
 
-# Script will:
-# - Determine version from changelogs
-# - Update version numbers
-# - Update CHANGELOG.md
-# - Create PR
+# Script automatically:
+# - Determines version from changelog entries.
+# - Updates version numbers in all files.
+# - Updates CHANGELOG.md.
+# - Creates PR for review.
+
+# 2. Review and merge the release PR.
+
+# 3. Create GitHub release from trunk using the new tag.
 ```
 
-## Patch Releases
+See [Release Process - Major/Minor](../../../docs/release-process.md) for detailed steps.
 
-### Process Overview
-1. Create branch from the release tag to patch
-2. Cherry-pick fixes
-3. Update changelog manually
-4. Create release from branch
+### Patch Releases
 
-### Cherry-picking Fixes
-
+**Quick workflow:**
 ```bash
-# Create branch from the tag of the release to patch
+# 1. Create branch from the tag to patch.
 git fetch --tags
-git checkout -b release/5.3.1 5.3.0  # Create 5.3.1 branch from 5.3.0 tag
+git checkout -b tags/5.3.1 5.3.0  # Patch 5.3.0 -> 5.3.1
 
-# Cherry-pick merge commits from trunk
+# 2. Cherry-pick merge commits from trunk (note -m 1 flag).
 git cherry-pick -m 1 <commit-hash>
 
-# Update changelog
+# 3. Update changelog and versions.
 composer changelog:write
 
 # Manually update versions in:
 # - activitypub.php
 # - readme.txt
+# - package.json
 
-# Push the branch
-git push -u origin release/5.3.1
+# 4. Push branch and create GitHub release.
+git push -u origin tags/5.3.1
 ```
+
+**Important:** Use `-m 1` flag when cherry-picking merge commits to select the mainline parent.
+
+See [Release Process - Patch Releases](../../../docs/release-process.md#patch-releases) for detailed steps.
 
 ## Changelog Management
 
-### How Changelog Works
+### How It Works
 
-Changelogs are managed automatically through the PR process:
+Changelogs are managed automatically through the PR workflow:
 
 1. **PR Template** (`.github/PULL_REQUEST_TEMPLATE.md`):
-   - Check "Automatically create a changelog entry" checkbox
-   - Select significance level (Patch/Minor/Major)
-   - Select change type (Added/Fixed/Changed/Deprecated/Removed/Security)
-   - Write clear message ending with punctuation
+   - Check "Automatically create a changelog entry" checkbox.
+   - Select significance: Patch/Minor/Major.
+   - Select type: Added/Fixed/Changed/Deprecated/Removed/Security.
+   - Write message **ending with punctuation!**
 
 2. **GitHub Action** (`.github/workflows/changelog.yml`):
-   - Automatically creates changelog file from PR description
-   - Validates message has proper punctuation
-   - Creates file in `.github/changelog/` directory
+   - Creates changelog file from PR description.
+   - Validates proper punctuation.
+   - Saves to `.github/changelog/` directory.
 
 3. **Release Process**:
-   - `npm run release` aggregates all changelog entries
-   - Updates `CHANGELOG.md` and `readme.txt` automatically
+   - `npm run release` aggregates all entries.
+   - Updates `CHANGELOG.md` and `readme.txt` automatically.
 
-**Requirements:**
-- **Always end messages with punctuation!**
-- Never mention AI tools or coding assistants
-- Focus on user impact
-- Be clear and concise
+### Critical Requirements
 
-### Changelog Format
-
-```markdown
-## [1.0.0] - 2024-01-15
-### Added
-- New feature description.
-
-### Fixed
-- Bug fix description.
-
-### Changed
-- Updated feature description.
+**Always end changelog messages with punctuation:**
 ```
+✅ Add support for custom post types.
+✅ Fix signature verification bug.
+❌ Add support for custom post types
+❌ Fix signature verification bug
+```
+
+**Never mention AI tools or coding assistants in changelog messages.**
+
+See [PR Workflow - Changelog](../activitypub-pr-workflow/SKILL.md#changelog-management) for complete changelog requirements.
 
 ## Version Numbering
 
-### Semantic Versioning
-- **Major (X.0.0)** - Breaking changes
-- **Minor (0.X.0)** - New features
-- **Patch (0.0.X)** - Bug fixes only
+**Semantic versioning:**
+- **Major (X.0.0)** - Breaking changes.
+- **Minor (0.X.0)** - New features, backward compatible.
+- **Patch (0.0.X)** - Bug fixes only.
 
-### Version Update Locations
-
-1. **activitypub.php:**
-```php
-/**
- * Plugin Name: ActivityPub
- * Version: 1.0.0
- */
-```
-
-2. **readme.txt:**
-```
-Stable tag: 1.0.0
-```
-
-3. **package.json:**
-```json
-{
-  "version": "1.0.0"
-}
-```
-
-## Creating GitHub Release
-
-1. Go to repository releases page
-2. Click "Draft a new release"
-3. Create new tag with version number
-4. Select target branch (trunk or release branch)
-5. Generate release notes
-6. Publish release
-
+The release script determines version automatically from changelog entry significance levels.

@@ -5,235 +5,135 @@ description: Development workflows for WordPress ActivityPub plugin including wp
 
 # ActivityPub Development Cycle
 
-This skill provides guidance for common development workflows in the WordPress ActivityPub plugin.
-
-**This is the authoritative source for:**
-- Environment setup and wp-env management
-- Testing commands and workflows
-- Linting and code quality tools
-- Build processes
+Quick reference for common development workflows in the WordPress ActivityPub plugin.
 
 ## Quick Reference
 
 ### Environment Management
 ```bash
-npm run env-start    # Start WordPress at http://localhost:8888
-npm run env-stop     # Stop WordPress environment
+npm run env-start    # Start WordPress at http://localhost:8888.
+npm run env-stop     # Stop WordPress environment.
 ```
 
 ### Testing Commands
 ```bash
-# Run all PHP tests
-npm run env-test
-
-# Run specific test
-npm run env-test -- --filter=test_name
-
-# Run tests from specific file
-npm run env-test -- tests/phpunit/tests/path/to/test.php
-
-# Run tests by group
-npm run env-test -- --group=migration
+npm run env-test                      # Run all PHP tests.
+npm run env-test -- --filter=pattern  # Run tests matching pattern.
+npm run env-test -- path/to/test.php  # Run specific test file.
+npm run env-test -- --group=name      # Run tests with @group annotation.
+npm run test:e2e                      # Run Playwright E2E tests.
+npm run test:e2e:debug                # Debug E2E tests.
 ```
 
 ### Code Quality
 ```bash
-# PHP linting
-composer lint         # Check PHP coding standards
-composer lint:fix     # Auto-fix PHP issues
-
-# JavaScript linting
-npm run lint:js       # Check JavaScript
-npm run lint:css      # Check CSS styles
-
-# Format all code
-npm run format        # Runs wp-scripts format
+composer lint         # Check PHP coding standards.
+composer lint:fix     # Auto-fix PHP issues.
+npm run lint:js       # Check JavaScript.
+npm run lint:css      # Check CSS styles.
+npm run format        # Format all code (wp-scripts).
 ```
 
 ### Building Assets
 ```bash
-npm run build         # Format and build for production
-npm run dev           # Start development watch mode
-```
-
-## Initial Setup
-
-1. **Clone and install dependencies:**
-   ```bash
-   git clone git@github.com:Automattic/wordpress-activitypub.git
-   cd wordpress-activitypub
-   npm install
-   composer install
-   ```
-
-2. **Configure git hooks:**
-   ```bash
-   npm run prepare  # Sets up pre-commit hooks
-   ```
-
-3. **Start development environment:**
-   ```bash
-   npm run env-start
-   ```
-   WordPress will be available at http://localhost:8888
-
-For detailed setup instructions, see [Development Environment Setup](../../../docs/development-environment.md).
-
-## Testing Workflows
-
-See [Testing Reference](../../../tests/README.md) for comprehensive testing guidance.
-
-### Running Tests
-
-**Basic test execution:**
-```bash
-npm run env-test
-```
-
-**Common PHPUnit arguments:**
-- `--filter=pattern` - Run tests matching pattern
-- `--group=name` - Run tests with specific @group
-- `--exclude-group=name` - Skip tests with @group
-- `--verbose` - Show detailed output
-- `--debug` - Display debugging information
-
-**Examples:**
-```bash
-# Test specific functionality
-npm run env-test -- --filter=Notification
-
-# Test specific file
-npm run env-test -- tests/phpunit/tests/includes/class-test-notification.php
-
-# Run migration tests only
-npm run env-test -- --group=migration
+npm run build         # Build for production (formatted and minified).
+npm run dev           # Start development watch mode.
 ```
 
 ### Code Coverage
-
-Generate coverage reports with Xdebug:
-
 ```bash
-# Start environment with coverage support
-npm run env-start -- --xdebug=coverage
-
-# Generate text coverage report
-npm run env-test -- --coverage-text
-
-# Generate HTML coverage report
-npm run env-test -- --coverage-html ./coverage
-open coverage/index.html  # View report (macOS)
+npm run env-start -- --xdebug=coverage    # Start with coverage support.
+npm run env-test -- --coverage-text       # Generate text coverage report.
+npm run env-test -- --coverage-html ./coverage  # Generate HTML report.
 ```
 
-## Code Quality Standards
+## Comprehensive Documentation
 
-See [Code Linting and Quality](../../../docs/code-linting.md) for detailed linting configuration.
+See [Development Environment Setup](../../../docs/development-environment.md) for detailed setup instructions.
 
-### PHP Standards
+See [Testing Reference](../../../tests/README.md) for comprehensive testing guidance.
 
-The project uses WordPress Coding Standards with custom rules:
-- Run `composer lint` to check standards
-- Run `composer lint:fix` to auto-fix issues
-- Configuration in `.phpcs.xml.dist`
-
-### JavaScript Standards
-
-Uses `@wordpress/scripts` for linting:
-- Run `npm run lint:js` for JavaScript
-- Run `npm run lint:css` for stylesheets
-- Configuration extends WordPress standards
+See [Code Linting](../../../docs/code-linting.md) for linting configuration and standards.
 
 ## Pre-commit Hooks
 
-The repository uses automated pre-commit hooks (`.githooks/pre-commit`) that:
+The repository uses automated pre-commit hooks (`.githooks/pre-commit`) that run automatically on `git commit`:
 
-1. **Sort PHP imports** - Automatically organizes use statements
-2. **Check unused imports** - Prevents unused use statements
-3. **Validate test patterns** - Blocks `remove_all_filters('pre_http_request')`
-4. **Run PHPCS auto-fix** - Applies coding standards
-5. **Format JavaScript** - Runs wp-scripts formatter
+1. **Sort PHP imports** - Automatically organizes use statements.
+2. **Check unused imports** - Prevents unused use statements.
+3. **Validate test patterns** - Blocks `remove_all_filters('pre_http_request')`.
+4. **Run PHPCS auto-fix** - Applies coding standards automatically.
+5. **Format JavaScript** - Runs wp-scripts formatter.
 
-**Important:** Hooks modify files automatically. Always review changes before committing.
+**IMPORTANT:** Hooks modify staged files automatically. Always review changes before committing. If hooks make changes, you'll need to stage them and commit again.
 
-## Build Process
+**Setup:** Hooks are installed by `npm run prepare` (runs automatically after `npm install`).
 
-### Development Build
+## Common Development Workflows
+
+### Initial Setup
 ```bash
-npm run dev  # Starts watch mode with source maps
+git clone git@github.com:Automattic/wordpress-activitypub.git
+cd wordpress-activitypub
+npm install           # Also runs 'npm run prepare' to install hooks.
+composer install
+npm run env-start     # WordPress at http://localhost:8888.
 ```
 
-### Production Build
+### Making Changes Workflow
 ```bash
-npm run build  # Formats and minifies for production
+# 1. Make code changes.
+
+# 2. Run relevant tests.
+npm run env-test -- --filter=FeatureName
+
+# 3. Check code quality (optional - pre-commit hook does this).
+composer lint
+npm run lint:js
+
+# 4. Commit (pre-commit hook runs automatically).
+git add .
+git commit -m "Description"
+# Hook may modify files - review and stage again if needed.
 ```
 
-The build process:
-1. Runs `wp-scripts format` on JavaScript files
-2. Builds with experimental modules support
-3. Outputs to `build/` directory
-
-## Common Development Tasks
-
-### Start Fresh Environment
+### Before Creating PR
 ```bash
-npm run env-stop
-npm run env-start
-```
+# Run full test suite.
+npm run env-test
 
-### Run Tests After Code Changes
-```bash
-npm run env-test -- --filter=ChangedFeature
-```
+# Build assets.
+npm run build
 
-### Check Code Before Committing
-```bash
+# Final lint check.
 composer lint
 npm run lint:js
 ```
 
-### Debug Failing Tests
+### Debugging Failing Tests
 ```bash
-# Run with verbose output
-npm run env-test -- --verbose --filter=failing_test
+# Run with verbose output.
+npm run env-test -- --verbose --filter=test_name
 
-# Check test groups
+# Run single test file to isolate issue.
+npm run env-test -- tests/phpunit/tests/path/to/test.php
+
+# Check test groups.
+npm run env-test -- --list-groups
 npm run env-test -- --group=specific_group
 ```
 
-### E2E Testing
+### Fresh Environment
 ```bash
-# Run Playwright E2E tests
-npm run test:e2e
-
-# Debug mode
-npm run test:e2e:debug
+npm run env-stop
+npm run env-start
+# wp-env automatically sets up WordPress with debug mode and test users.
 ```
-
-## Environment Variables
-
-wp-env automatically sets up WordPress with:
-- WordPress latest version
-- Debug mode enabled
-- ActivityPub plugin activated
-- Test user accounts created
-
-## Troubleshooting
-
-### Port Conflicts
-If port 8888 is in use:
-```bash
-wp-env stop
-# Then check what's using the port
-lsof -i :8888  # macOS/Linux
-```
-
-### Permission Issues
-Ensure Docker is running and you have proper permissions.
 
 ## Key Files
 
-- `package.json` - npm scripts and dependencies
-- `composer.json` - PHP dependencies and scripts
-- `.wp-env.json` - wp-env configuration
-- `phpcs.xml` - PHP coding standards
-- `.githooks/pre-commit` - Git hook configuration
+- `package.json` - npm scripts and dependencies.
+- `composer.json` - PHP dependencies and lint scripts.
+- `.wp-env.json` - wp-env configuration.
+- `phpcs.xml` - PHP coding standards (custom WordPress rules).
+- `.githooks/pre-commit` - Pre-commit automation.
