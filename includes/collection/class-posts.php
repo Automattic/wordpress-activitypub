@@ -181,9 +181,9 @@ class Posts {
 	 *
 	 * @param array $tags Array of ActivityPub tags.
 	 *
-	 * @return array Array of hashtag names (without # prefix).
+	 * @return array Array of normalized hashtag names (without # prefix, trimmed, sanitized).
 	 */
-	private static function extract_hashtags_from_activity_tags( $tags ) {
+	public static function extract_hashtags_from_activity_tags( $tags ) {
 		$hashtags = array();
 
 		if ( empty( $tags ) || ! \is_array( $tags ) ) {
@@ -192,12 +192,76 @@ class Posts {
 
 		foreach ( $tags as $tag ) {
 			if ( isset( $tag['type'] ) && 'Hashtag' === $tag['type'] && isset( $tag['name'] ) ) {
-				// Always strip # prefix and sanitize.
-				$hashtags[] = \wp_strip_all_tags( \ltrim( $tag['name'], '#' ) );
+				// Strip # prefix, trim whitespace, and sanitize.
+				$normalized = \trim( \ltrim( $tag['name'], '#' ) );
+				$normalized = \wp_strip_all_tags( $normalized );
+
+				if ( ! empty( $normalized ) ) {
+					$hashtags[] = $normalized;
+				}
 			}
 		}
 
 		return $hashtags;
+	}
+
+	/**
+	 * Remove hashtags from content.
+	 *
+	 * Removes hashtags that appear at the end of the content.
+	 * Handles both plain text and HTML content, including hashtags within anchor tags.
+	 *
+	 * Note: For best performance, pass normalized hashtags (without # prefix) from
+	 * extract_hashtags_from_activity_tags(). The function still accepts hashtags
+	 * with # prefix for backwards compatibility.
+	 *
+	 * @param string $content  The content to process.
+	 * @param array  $hashtags Array of hashtag strings (with or without # prefix).
+	 *
+	 * @return string The content with trailing hashtags removed.
+	 */
+	public static function remove_hashtags( $content, $hashtags ) {
+		if ( empty( $content ) || empty( $hashtags ) || ! \is_array( $hashtags ) ) {
+			return $content;
+		}
+
+		// Normalize hashtags: remove # prefix and trim whitespace (for backwards compatibility).
+		$normalized_tags = \array_map(
+			function ( $tag ) {
+				return \trim( \ltrim( $tag, '#' ) );
+			},
+			$hashtags
+		);
+
+		// Remove empty tags.
+		$normalized_tags = \array_filter( $normalized_tags );
+
+		if ( empty( $normalized_tags ) ) {
+			return $content;
+		}
+
+		// Build pattern to match trailing hashtags (at end of content or before closing tags).
+		$tag_patterns = array();
+		foreach ( $normalized_tags as $tag ) {
+			$escaped_tag    = \preg_quote( $tag, '/' );
+			$tag_patterns[] = '(?:<a[^>]*>\s*)?#' . $escaped_tag . '(?=\s|<|$)(?:\s*<\/a>)?';
+		}
+
+		/*
+		 * Pattern explanation:
+		 * Match one or more hashtags (plain or in anchor tags) at the end of content.
+		 * The pattern matches trailing hashtags before closing HTML tags or at end of string.
+		 */
+		$pattern = '/(?:\s+(?:' . \implode( '|', $tag_patterns ) . '))+(?=\s*(?:<\/[^>]+>)*\s*$)/i';
+		$content = \preg_replace( $pattern, '', $content );
+
+		// Clean up any extra whitespace at end of paragraphs.
+		$content = \preg_replace( '/<p>\s*<\/p>/', '', $content );
+		$content = \preg_replace( '/\s+<\/p>/', '</p>', $content );
+		$content = \preg_replace( '/\s+<\/strong>/', '</strong>', $content );
+		$content = \trim( $content );
+
+		return $content;
 	}
 
 	/**
@@ -219,7 +283,7 @@ class Posts {
 
 		// Sanitize content and remove hashtags.
 		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
-		$content = Sanitize::remove_hashtags( $content, $hashtags );
+		$content = self::remove_hashtags( $content, $hashtags );
 
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',

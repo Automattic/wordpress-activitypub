@@ -955,12 +955,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		// Use reflection to access the private method.
-		$reflection = new \ReflectionClass( Posts::class );
-		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
-		$method->setAccessible( true );
-
-		$result = $method->invoke( null, $tags );
+		$result = Posts::extract_hashtags_from_activity_tags( $tags );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 2, $result );
@@ -987,12 +982,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		// Use reflection to access the private method.
-		$reflection = new \ReflectionClass( Posts::class );
-		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
-		$method->setAccessible( true );
-
-		$result = $method->invoke( null, $tags );
+		$result = Posts::extract_hashtags_from_activity_tags( $tags );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 2, $result );
@@ -1006,12 +996,7 @@ class Test_Posts extends \WP_UnitTestCase {
 	 * @covers ::extract_hashtags_from_activity_tags
 	 */
 	public function test_extract_hashtags_from_empty_array() {
-		// Use reflection to access the private method.
-		$reflection = new \ReflectionClass( Posts::class );
-		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
-		$method->setAccessible( true );
-
-		$result = $method->invoke( null, array() );
+		$result = Posts::extract_hashtags_from_activity_tags( array() );
 
 		$this->assertIsArray( $result );
 		$this->assertEmpty( $result );
@@ -1023,12 +1008,7 @@ class Test_Posts extends \WP_UnitTestCase {
 	 * @covers ::extract_hashtags_from_activity_tags
 	 */
 	public function test_extract_hashtags_from_null() {
-		// Use reflection to access the private method.
-		$reflection = new \ReflectionClass( Posts::class );
-		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
-		$method->setAccessible( true );
-
-		$result = $method->invoke( null, null );
+		$result = Posts::extract_hashtags_from_activity_tags( null );
 
 		$this->assertIsArray( $result );
 		$this->assertEmpty( $result );
@@ -1050,12 +1030,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		// Use reflection to access the private method.
-		$reflection = new \ReflectionClass( Posts::class );
-		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
-		$method->setAccessible( true );
-
-		$result = $method->invoke( null, $tags );
+		$result = Posts::extract_hashtags_from_activity_tags( $tags );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $result );
@@ -1078,12 +1053,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		// Use reflection to access the private method.
-		$reflection = new \ReflectionClass( Posts::class );
-		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
-		$method->setAccessible( true );
-
-		$result = $method->invoke( null, $tags );
+		$result = Posts::extract_hashtags_from_activity_tags( $tags );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $result );
@@ -1127,5 +1097,125 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( '#test', $result['post_content'] );
 		$this->assertStringNotContainsString( '#WordPress', $result['post_content'] );
 		$this->assertStringContainsString( 'This is a test', $result['post_content'] );
+	}
+
+	/**
+	 * Data provider for remove_hashtags tests.
+	 *
+	 * @return array Test data.
+	 */
+	public function remove_hashtags_provider() {
+		return array(
+			'simple_hashtag_removal'          => array(
+				'<p>This is a test #wordpress #activitypub</p>',
+				array( '#wordpress', '#activitypub' ),
+				'<p>This is a test</p>',
+			),
+			'hashtags_without_hash_prefix'    => array(
+				'<p>Testing content #php #javascript</p>',
+				array( 'php', 'javascript' ),
+				'<p>Testing content</p>',
+			),
+			'hashtags_in_anchor_tags'         => array(
+				'<p>Check out this post <a href="https://example.com/tag/wordpress">#wordpress</a> <a href="https://example.com/tag/php">#php</a></p>',
+				array( '#wordpress', '#php' ),
+				'<p>Check out this post</p>',
+			),
+			'mixed_hashtags'                  => array(
+				'<p>Post about coding <a href="https://example.com/tag/php">#php</a> #javascript</p>',
+				array( 'php', 'javascript' ),
+				'<p>Post about coding</p>',
+			),
+			'inline_hashtags_not_removed'     => array(
+				'<p>Testing #wordpress in the middle and more text</p>',
+				array( 'wordpress' ),
+				'<p>Testing #wordpress in the middle and more text</p>',
+			),
+			'partial_match_should_not_remove' => array(
+				'<p>Testing #wordpressdevelopment in content #wordpress</p>',
+				array( 'wordpress' ),
+				'<p>Testing #wordpressdevelopment in content</p>',
+			),
+			'empty_hashtags_array'            => array(
+				'<p>Testing #wordpress #php</p>',
+				array(),
+				'<p>Testing #wordpress #php</p>',
+			),
+			'empty_content'                   => array(
+				'',
+				array( 'wordpress' ),
+				'',
+			),
+			'no_matching_hashtags'            => array(
+				'<p>Testing #wordpress #php</p>',
+				array( 'javascript', 'python' ),
+				'<p>Testing #wordpress #php</p>',
+			),
+			'case_insensitive_removal'        => array(
+				'<p>Testing content #WordPress #PHP</p>',
+				array( 'wordpress', 'php' ),
+				'<p>Testing content</p>',
+			),
+			'trailing_hashtags_only'          => array(
+				'<p>Testing #wordpress in middle #php #activitypub</p>',
+				array( 'wordpress', 'php', 'activitypub' ),
+				'<p>Testing #wordpress in middle</p>',
+			),
+			'special_characters_in_hashtags'  => array(
+				'<p>Testing content #c++ #.net</p>',
+				array( 'c++', '.net' ),
+				'<p>Testing content</p>',
+			),
+			'multiple_spaces_cleanup'         => array(
+				'<p>Testing content #tag1    #tag2    #tag3</p>',
+				array( 'tag1', 'tag2', 'tag3' ),
+				'<p>Testing content</p>',
+			),
+		);
+	}
+
+	/**
+	 * Test remove_hashtags with various inputs.
+	 *
+	 * @dataProvider remove_hashtags_provider
+	 * @covers ::remove_hashtags
+	 *
+	 * @param string $content  Input content.
+	 * @param array  $hashtags Hashtags to remove.
+	 * @param string $expected Expected output.
+	 */
+	public function test_remove_hashtags( $content, $hashtags, $expected ) {
+		$result = Posts::remove_hashtags( $content, $hashtags );
+		$this->assertEquals( $expected, $result );
+	}
+
+	/**
+	 * Test remove_hashtags with non-array hashtags parameter.
+	 *
+	 * @covers ::remove_hashtags
+	 */
+	public function test_remove_hashtags_with_invalid_hashtags() {
+		$content = '<p>Testing #WordPress #php</p>';
+
+		// Should return original content when hashtags is not an array.
+		$this->assertEquals( $content, Posts::remove_hashtags( $content, 'not-an-array' ) );
+		$this->assertEquals( $content, Posts::remove_hashtags( $content, null ) );
+		$this->assertEquals( $content, Posts::remove_hashtags( $content, 123 ) );
+	}
+
+	/**
+	 * Test remove_hashtags preserves content structure.
+	 *
+	 * @covers ::remove_hashtags
+	 */
+	public function test_remove_hashtags_preserves_structure() {
+		$content = '<p>First paragraph content</p><p>Second paragraph with <strong>bold text</strong> #php #test</p>';
+		$result  = Posts::remove_hashtags( $content, array( 'test', 'php' ) );
+
+		// Should preserve HTML structure and remove trailing hashtags only.
+		$this->assertStringContainsString( '<p>First paragraph content</p>', $result );
+		$this->assertStringContainsString( '<strong>bold text</strong>', $result );
+		$this->assertStringNotContainsString( '#test', $result );
+		$this->assertStringNotContainsString( '#php', $result );
 	}
 }
