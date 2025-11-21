@@ -14,18 +14,24 @@ export const objectTypeField: Field< FeedPost > = {
 	getValue: ( { item }: { item: FeedPost } ): number => item.ap_object_type?.[ 0 ],
 	getElements: async (): Promise< { value: number; label: string }[] > => {
 		const translations: Record< string, string > = {
-			Note: __( 'Short form', 'activitypub' ),
-			Article: __( 'Long form', 'activitypub' ),
+			// @see Base_Object::TYPES
+			Article: __( 'Articles', 'activitypub' ),
+			Audio: __( 'Music & Podcasts', 'activitypub' ),
+			Document: __( 'Documents & Files', 'activitypub' ),
+			Event: __( 'Events & Meetups', 'activitypub' ),
+			Image: __( 'Photos & Images', 'activitypub' ),
+			Note: __( 'Notes & Updates', 'activitypub' ),
+			Page: __( 'Pages', 'activitypub' ),
+			Place: __( 'Places & Locations', 'activitypub' ),
+			Video: __( 'Videos', 'activitypub' ),
 		};
-		const records: Term[] = await resolveSelect( coreDataStore )
-			.getEntityRecords( 'taxonomy', 'ap_object_type' )
-			.then(
-				// Filter to only Note and Article
-				( terms: Term[] ): Term[] =>
-					terms?.filter( ( term: Term ) => term.name === 'Note' || term.name === 'Article' ) || []
-			);
+		const records: Term[] = await resolveSelect( coreDataStore ).getEntityRecords( 'taxonomy', 'ap_object_type' );
 
-		// Map with user-friendly translations
+		if ( ! records ) {
+			return [];
+		}
+
+		// Map all terms with translations for known types
 		return records.map( ( term: Term ): { value: number; label: string } => ( {
 			value: term.id,
 			label: translations[ term.name ] || term.name,
