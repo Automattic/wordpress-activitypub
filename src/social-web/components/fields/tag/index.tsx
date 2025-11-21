@@ -8,7 +8,7 @@ import type { FeedPost } from '../../../types';
 export const tagField: Field< FeedPost > = {
 	id: 'ap_tag',
 	type: 'integer',
-	label: __( 'Popular Tags', 'activitypub' ),
+	label: __( 'Tag', 'activitypub' ),
 	enableHiding: false,
 	enableSorting: false,
 	getValue: ( { item }: { item: FeedPost } ): number => item.ap_tag?.[ 0 ],
@@ -23,7 +23,7 @@ export const tagField: Field< FeedPost > = {
 			return [];
 		}
 
-		// Map popular tags
+		// Map popular tags with # prefix
 		return records.map( ( term: Term ): { value: number; label: string } => ( {
 			value: term.id,
 			label: `#${ term.name }`,
