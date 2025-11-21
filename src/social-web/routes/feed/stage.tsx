@@ -138,9 +138,13 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 			const newFields = updatedView.fields || [];
 			const fields = enforceContentExcerptMutualExclusion( oldFields, newFields );
 
-			updateView( { ...updatedView, fields } );
+			// Reset to page 1 when filters change
+			const filtersChanged = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
+			const page = filtersChanged ? 1 : updatedView.page;
+
+			updateView( { ...updatedView, fields, page } );
 		},
-		[ view.fields, updateView ]
+		[ view.fields, view.filters, updateView ]
 	);
 
 	// Handle tag click from sidebar tag cloud
@@ -173,15 +177,14 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 				shouldOpenFilters = true;
 			}
 
-			// Reset to page 1 and open filters when adding a new tag filter
-			updateView( {
+			// Open filters when adding a new tag filter (page reset handled by updateFeedView)
+			updateFeedView( {
 				...view,
 				filters: newFilters,
-				page: 1,
 				openFilters: shouldOpenFilters ? true : view.openFilters,
 			} );
 		},
-		[ view.filters, view.openFilters, updateView ]
+		[ view, updateFeedView ]
 	);
 
 	// Register tag click handler with Layout
