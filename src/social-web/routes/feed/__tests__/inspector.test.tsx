@@ -86,6 +86,27 @@ jest.mock( '@wordpress/core-data', () => ( {
 	useEntityRecords: ( ...args: any[] ) => mockUseEntityRecords( ...args ),
 } ) );
 
+// Mock @wordpress/views
+jest.mock( '@wordpress/views', () => ( {
+	useView: () => ( {
+		view: { filters: [], page: 1, openFilters: false },
+		updateView: jest.fn(),
+	} ),
+} ) );
+
+// Mock @wordpress/data
+jest.mock( '@wordpress/data', () => ( {
+	useSelect: () => null,
+	useDispatch: () => ( {
+		setSelectedTag: jest.fn(),
+	} ),
+} ) );
+
+// Mock the store to avoid loading @wordpress/preferences
+jest.mock( '../../../store', () => ( {
+	STORE_NAME: 'activitypub/social-web',
+} ) );
+
 describe( 'FeedInspector', () => {
 	const mockOnClose = jest.fn();
 
