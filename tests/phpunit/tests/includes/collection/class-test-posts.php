@@ -966,7 +966,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertCount( 2, $result );
 		// Helper always strips # prefix.
 		$this->assertContains( 'test', $result );
-		$this->assertContains( 'WordPress', $result );
+		$this->assertContains( 'wordpress', $result );
 		$this->assertNotContains( '@user', $result );
 	}
 
@@ -997,7 +997,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertIsArray( $result );
 		$this->assertCount( 2, $result );
 		$this->assertContains( 'test', $result );
-		$this->assertContains( 'WordPress', $result );
+		$this->assertContains( 'wordpress', $result );
 	}
 
 	/**
