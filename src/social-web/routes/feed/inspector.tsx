@@ -38,7 +38,7 @@ export default function FeedInspector( { id, onClose, onTagClick }: FeedInspecto
 
 	// Fetch tag terms if the post has tags
 	const tagIds = post?.ap_tag || [];
-	const { records: tags } = useEntityRecords( 'taxonomy', 'ap_tag', {
+	const { records: Term[] } = useEntityRecords( 'taxonomy', 'ap_tag', {
 		include: tagIds,
 	} );
 
