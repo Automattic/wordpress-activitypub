@@ -1649,4 +1649,90 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertFalse( \Activitypub\is_quote_activity( $activity ) );
 	}
+
+	/**
+	 * Test is_ap_post function with ap_post post type.
+	 *
+	 * @covers \Activitypub\is_ap_post
+	 */
+	public function test_is_ap_post_with_ap_post_type() {
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$this->assertTrue( \Activitypub\is_ap_post( $ap_post_id ), 'Should return true for ap_post post type' );
+		$this->assertTrue( \Activitypub\is_ap_post( get_post( $ap_post_id ) ), 'Should return true when passed WP_Post object' );
+
+		wp_delete_post( $ap_post_id, true );
+	}
+
+	/**
+	 * Test is_ap_post function with regular post type.
+	 *
+	 * @covers \Activitypub\is_ap_post
+	 */
+	public function test_is_ap_post_with_regular_post() {
+		$post_id = wp_insert_post(
+			array(
+				'post_type'    => 'post',
+				'post_title'   => 'Test Regular Post',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$this->assertFalse( \Activitypub\is_ap_post( $post_id ), 'Should return false for regular post' );
+		$this->assertFalse( \Activitypub\is_ap_post( get_post( $post_id ) ), 'Should return false when passed WP_Post object' );
+
+		wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test is_ap_post function with invalid post.
+	 *
+	 * @covers \Activitypub\is_ap_post
+	 */
+	public function test_is_ap_post_with_invalid_post() {
+		$this->assertFalse( \Activitypub\is_ap_post( 999999 ), 'Should return false for non-existent post ID' );
+		$this->assertFalse( \Activitypub\is_ap_post( null ), 'Should return false for null' );
+		$this->assertFalse( \Activitypub\is_ap_post( false ), 'Should return false for false' );
+	}
+
+	/**
+	 * Test is_ap_post function with different post types.
+	 *
+	 * @covers \Activitypub\is_ap_post
+	 */
+	public function test_is_ap_post_with_various_post_types() {
+		// Test with page.
+		$page_id = wp_insert_post(
+			array(
+				'post_type'    => 'page',
+				'post_title'   => 'Test Page',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+			)
+		);
+		$this->assertFalse( \Activitypub\is_ap_post( $page_id ), 'Should return false for page post type' );
+
+		// Test with custom post type.
+		register_post_type( 'custom_test_type' );
+		$custom_id = wp_insert_post(
+			array(
+				'post_type'    => 'custom_test_type',
+				'post_title'   => 'Test Custom',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+			)
+		);
+		$this->assertFalse( \Activitypub\is_ap_post( $custom_id ), 'Should return false for custom post type' );
+
+		wp_delete_post( $page_id, true );
+		wp_delete_post( $custom_id, true );
+	}
 }
