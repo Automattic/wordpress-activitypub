@@ -120,7 +120,7 @@ export default function FeedInspector( { id, onClose, onTagClick }: FeedInspecto
 					) }
 					{ tags && tags.length > 0 && onTagClick && (
 						<div className="activitypub-inspector-tags">
-							{ tags.map( ( tag: any ) => (
+							{ tags.map( ( tag: Term ) => (
 								<Button
 									key={ tag.id }
 									variant="secondary"
