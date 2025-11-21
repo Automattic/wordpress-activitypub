@@ -32,7 +32,6 @@ export default function FeedInspector( { id, onClose, onTagClick }: FeedInspecto
 	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id );
 	const { records: comments, isResolving: isLoadingComments } = useEntityRecords< Comment >( 'root', 'comment', {
 		post: id,
-		per_page: 100,
 		order: 'asc',
 		orderby: 'date',
 	} );
@@ -41,7 +40,6 @@ export default function FeedInspector( { id, onClose, onTagClick }: FeedInspecto
 	const tagIds = post?.ap_tag || [];
 	const { records: tags } = useEntityRecords( 'taxonomy', 'ap_tag', {
 		include: tagIds,
-		per_page: 100,
 	} );
 
 	if ( isLoading ) {
