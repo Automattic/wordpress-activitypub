@@ -183,7 +183,7 @@ class Posts {
 	 *
 	 * @return array Array of normalized hashtag names (without # prefix, trimmed, sanitized).
 	 */
-	public static function extract_hashtags_from_activity_tags( $tags ) {
+	public static function extract_hashtags( $tags ) {
 		$hashtags = array();
 
 		if ( empty( $tags ) || ! \is_array( $tags ) ) {
@@ -212,7 +212,7 @@ class Posts {
 	 * Handles both plain text and HTML content, including hashtags within anchor tags.
 	 *
 	 * Note: For best performance, pass normalized hashtags (without # prefix) from
-	 * extract_hashtags_from_activity_tags(). The function still accepts hashtags
+	 * extract_hashtags(). The function still accepts hashtags
 	 * with # prefix for backwards compatibility.
 	 *
 	 * @param string $content  The content to process.
@@ -279,7 +279,7 @@ class Posts {
 		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
 
 		// Extract hashtag names from activity tags.
-		$hashtags = self::extract_hashtags_from_activity_tags( $activity['tag'] ?? array() );
+		$hashtags = self::extract_hashtags( $activity['tag'] ?? array() );
 
 		// Sanitize content and remove hashtags.
 		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
@@ -308,7 +308,7 @@ class Posts {
 		\wp_set_post_terms( $post_id, array( $activity_object['type'] ), 'ap_object_type' );
 
 		// Save the Hashtags as Taxonomy items.
-		$tags = self::extract_hashtags_from_activity_tags( $activity_object['tag'] ?? array() );
+		$tags = self::extract_hashtags( $activity_object['tag'] ?? array() );
 
 		\wp_set_post_terms( $post_id, $tags, 'ap_tag' );
 	}

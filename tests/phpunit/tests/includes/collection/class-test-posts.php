@@ -937,9 +937,9 @@ class Test_Posts extends \WP_UnitTestCase {
 	/**
 	 * Test extracting hashtags from activity tags.
 	 *
-	 * @covers ::extract_hashtags_from_activity_tags
+	 * @covers ::extract_hashtags
 	 */
-	public function test_extract_hashtags_from_activity_tags() {
+	public function test_extract_hashtags() {
 		$tags = array(
 			array(
 				'type' => 'Hashtag',
@@ -955,7 +955,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Posts::extract_hashtags_from_activity_tags( $tags );
+		$result = Posts::extract_hashtags( $tags );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 2, $result );
@@ -968,7 +968,7 @@ class Test_Posts extends \WP_UnitTestCase {
 	/**
 	 * Test extracting hashtags without # prefix in source.
 	 *
-	 * @covers ::extract_hashtags_from_activity_tags
+	 * @covers ::extract_hashtags
 	 */
 	public function test_extract_hashtags_without_prefix() {
 		$tags = array(
@@ -982,7 +982,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Posts::extract_hashtags_from_activity_tags( $tags );
+		$result = Posts::extract_hashtags( $tags );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 2, $result );
@@ -993,10 +993,10 @@ class Test_Posts extends \WP_UnitTestCase {
 	/**
 	 * Test extracting hashtags from empty array.
 	 *
-	 * @covers ::extract_hashtags_from_activity_tags
+	 * @covers ::extract_hashtags
 	 */
 	public function test_extract_hashtags_from_empty_array() {
-		$result = Posts::extract_hashtags_from_activity_tags( array() );
+		$result = Posts::extract_hashtags( array() );
 
 		$this->assertIsArray( $result );
 		$this->assertEmpty( $result );
@@ -1005,10 +1005,10 @@ class Test_Posts extends \WP_UnitTestCase {
 	/**
 	 * Test extracting hashtags from null value.
 	 *
-	 * @covers ::extract_hashtags_from_activity_tags
+	 * @covers ::extract_hashtags
 	 */
 	public function test_extract_hashtags_from_null() {
-		$result = Posts::extract_hashtags_from_activity_tags( null );
+		$result = Posts::extract_hashtags( null );
 
 		$this->assertIsArray( $result );
 		$this->assertEmpty( $result );
@@ -1017,7 +1017,7 @@ class Test_Posts extends \WP_UnitTestCase {
 	/**
 	 * Test extracting hashtags when tags have no name field.
 	 *
-	 * @covers ::extract_hashtags_from_activity_tags
+	 * @covers ::extract_hashtags
 	 */
 	public function test_extract_hashtags_missing_name_field() {
 		$tags = array(
@@ -1030,7 +1030,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Posts::extract_hashtags_from_activity_tags( $tags );
+		$result = Posts::extract_hashtags( $tags );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $result );
@@ -1040,7 +1040,7 @@ class Test_Posts extends \WP_UnitTestCase {
 	/**
 	 * Test extracting hashtags when tags have no type field.
 	 *
-	 * @covers ::extract_hashtags_from_activity_tags
+	 * @covers ::extract_hashtags
 	 */
 	public function test_extract_hashtags_missing_type_field() {
 		$tags = array(
@@ -1053,7 +1053,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Posts::extract_hashtags_from_activity_tags( $tags );
+		$result = Posts::extract_hashtags( $tags );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $result );
