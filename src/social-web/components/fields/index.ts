@@ -2,7 +2,6 @@ export * from './avatar';
 export * from './content';
 export * from './date';
 export * from './excerpt';
-export * from './featured-image';
 export * from './follow-status';
 export * from './metadata';
 export * from './modified';

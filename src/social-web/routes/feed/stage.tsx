@@ -20,7 +20,6 @@ import {
 	excerptField,
 	metadataField,
 	contentField,
-	featuredImageField,
 	objectTypeField,
 } from '../../components/fields';
 import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
@@ -160,7 +159,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ featuredImageField, metadataField, titleField, excerptField, contentField, dateField, objectTypeField ],
+		() => [ metadataField, titleField, excerptField, contentField, dateField, objectTypeField ],
 		[]
 	);
 
