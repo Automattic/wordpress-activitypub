@@ -6,6 +6,8 @@ export * from './follow-status';
 export * from './metadata';
 export * from './modified';
 export * from './name';
+export * from './object-type';
 export * from './status';
+export * from './tag';
 export * from './title';
 export * from './webfinger';

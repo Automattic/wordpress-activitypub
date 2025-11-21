@@ -12,10 +12,17 @@ import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
-import { useEntityRecords, useEntityRecord } from '@wordpress/core-data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
-import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
+import {
+	titleField,
+	dateField,
+	excerptField,
+	metadataField,
+	contentField,
+	objectTypeField,
+	tagField,
+} from '../../components/fields';
 import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
 import type { FeedPost } from '../../types';
 import { STORE_NAME } from '../../store';
@@ -54,18 +61,6 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
 		[]
 	);
-
-	// Fetch ap_object_type taxonomy terms for filter
-	const { records: apObjectTypes } = useEntityRecords( 'taxonomy', 'ap_object_type', {
-		per_page: 100,
-	} );
-
-	// Fetch ap_tag taxonomy terms for filter (top 5 trending)
-	const { records: apTags } = useEntityRecords( 'taxonomy', 'ap_tag', {
-		per_page: 5,
-		orderby: 'count',
-		order: 'desc',
-	} );
 
 	// Track URL query parameters as state for reactivity
 	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
@@ -135,17 +130,6 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 	const selectedTagId = useMemo( () => {
 		return apTagFilter && apTagFilter.length > 0 ? apTagFilter[ 0 ] : undefined;
 	}, [ apTagFilter ] );
-
-	const selectedTagInTrending = useMemo( () => {
-		return selectedTagId && apTags ? ( apTags as any[] ).some( ( tag: any ) => tag.id === selectedTagId ) : true;
-	}, [ selectedTagId, apTags ] );
-
-	// Fetch the selected tag if it's not in trending tags
-	const { record: selectedTagRecord } = useEntityRecord(
-		'taxonomy',
-		'ap_tag',
-		selectedTagId && ! selectedTagInTrending ? selectedTagId : 0
-	);
 
 	// Wrap updateView to enforce mutual exclusion between excerpt and content fields
 	const updateFeedView = useCallback(
@@ -224,60 +208,9 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 		apTag: apTagFilter,
 	} );
 
-	// Create ap_object_type filter field
-	const apObjectTypeField: Field< FeedPost > = useMemo(
-		() => ( {
-			id: 'ap_object_type',
-			label: __( 'Type', 'activitypub' ),
-			enableHiding: false,
-			enableSorting: false,
-			elements:
-				apObjectTypes?.map( ( term: any ) => ( {
-					value: term.id,
-					label: term.name,
-				} ) ) || [],
-			filterBy: {
-				operators: [ 'isAny' ],
-			},
-		} ),
-		[ apObjectTypes ]
-	);
-
-	// Create ap_tag filter field
-	const apTagField: Field< FeedPost > = useMemo( () => {
-		const trendingElements =
-			apTags?.map( ( term: any ) => ( {
-				value: term.id,
-				label: term.name,
-			} ) ) || [];
-
-		// Add selected tag to elements if it's not in trending tags
-		let elements = trendingElements;
-		if ( selectedTagRecord && selectedTagId && ! selectedTagInTrending ) {
-			elements = [
-				{
-					value: selectedTagRecord.id,
-					label: selectedTagRecord.name,
-				},
-				...trendingElements,
-			];
-		}
-
-		return {
-			id: 'ap_tag',
-			label: __( 'Tag', 'activitypub' ),
-			enableHiding: false,
-			enableSorting: false,
-			elements,
-			filterBy: {
-				operators: [ 'isAny' ],
-			},
-		};
-	}, [ apTags, selectedTagRecord, selectedTagId, selectedTagInTrending ] );
-
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, excerptField, contentField, dateField, apObjectTypeField, apTagField ],
-		[ apObjectTypeField, apTagField ]
+		() => [ metadataField, titleField, excerptField, contentField, dateField, objectTypeField, tagField ],
+		[]
 	);
 
 	// Normalize view.fields to maintain the canonical order defined in fields array
