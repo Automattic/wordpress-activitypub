@@ -939,4 +939,240 @@ class Test_Interactions extends \WP_UnitTestCase {
 		}
 		return $response;
 	}
+
+	/**
+	 * Test add_comment with ap_post post type.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_to_ap_post() {
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/123',
+			)
+		);
+
+		$this->assertIsInt( $ap_post_id );
+
+		$activity = array(
+			'actor'  => 'https://example.com/users/commenter',
+			'id'     => 'https://example.com/activities/comment/999',
+			'object' => array(
+				'id'        => 'https://example.com/notes/999',
+				'content'   => 'Comment on remote post',
+				'inReplyTo' => 'https://remote.example.com/users/remoteuser/statuses/123',
+			),
+		);
+
+		// Mock actor metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Remote Commenter',
+					'preferredUsername' => 'commenter',
+					'id'                => 'https://example.com/users/commenter',
+					'url'               => 'https://example.com/@commenter',
+				);
+			}
+		);
+
+		// Add comment to ap_post.
+		$comment_id = Interactions::add_comment( $activity );
+
+		$this->assertNotFalse( $comment_id );
+		$this->assertIsInt( $comment_id );
+
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( $ap_post_id, $comment->comment_post_ID, 'Comment should be attached to ap_post' );
+		$this->assertEquals( 'Comment on remote post', $comment->comment_content );
+		$this->assertEquals( 'Remote Commenter', $comment->comment_author );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		wp_delete_comment( $comment_id, true );
+		wp_delete_post( $ap_post_id, true );
+	}
+
+	/**
+	 * Test add_reaction with ap_post post type.
+	 *
+	 * @covers ::add_reaction
+	 */
+	public function test_add_reaction_to_ap_post() {
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post for Reaction',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/456',
+			)
+		);
+
+		$this->assertIsInt( $ap_post_id );
+
+		$activity = array(
+			'type'   => 'Like',
+			'actor'  => 'https://example.com/users/liker',
+			'object' => 'https://remote.example.com/users/remoteuser/statuses/456',
+			'id'     => 'https://example.com/activities/like/789',
+		);
+
+		// Mock actor metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Remote Liker',
+					'preferredUsername' => 'liker',
+					'id'                => 'https://example.com/users/liker',
+					'url'               => 'https://example.com/@liker',
+				);
+			}
+		);
+
+		// Add reaction to ap_post.
+		$comment_id = Interactions::add_reaction( $activity );
+
+		$this->assertNotFalse( $comment_id );
+		$this->assertIsInt( $comment_id );
+
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( $ap_post_id, $comment->comment_post_ID, 'Reaction should be attached to ap_post' );
+		$this->assertEquals( 'like', $comment->comment_type );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		wp_delete_comment( $comment_id, true );
+		wp_delete_post( $ap_post_id, true );
+	}
+
+	/**
+	 * Test add_comment to disabled post type does not work for ap_post.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_to_ap_post_when_disabled() {
+		// Create an ap_post with local visibility (disabled for federation).
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Disabled AP Post',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/disabled',
+			)
+		);
+		add_post_meta( $ap_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		$activity = array(
+			'actor'  => 'https://example.com/users/commenter',
+			'id'     => 'https://example.com/activities/comment/disabled',
+			'object' => array(
+				'id'        => 'https://example.com/notes/disabled',
+				'content'   => 'Comment on disabled post',
+				'inReplyTo' => 'https://remote.example.com/users/remoteuser/statuses/disabled',
+			),
+		);
+
+		// Mock actor metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Remote Commenter',
+					'preferredUsername' => 'commenter',
+					'id'                => 'https://example.com/users/commenter',
+					'url'               => 'https://example.com/@commenter',
+				);
+			}
+		);
+
+		// Try to add comment - should succeed because ap_post bypasses disabled check.
+		$comment_id = Interactions::add_comment( $activity );
+
+		$this->assertNotFalse( $comment_id, 'Comment should be added to ap_post even when disabled' );
+		$this->assertIsInt( $comment_id );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		wp_delete_comment( $comment_id, true );
+		wp_delete_post( $ap_post_id, true );
+	}
+
+	/**
+	 * Test that nested replies work with ap_post.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_nested_reply_to_ap_post() {
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post for Nested Reply',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/nested',
+			)
+		);
+
+		// Mock actor metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name'              => 'Remote Commenter',
+					'preferredUsername' => 'commenter',
+					'id'                => 'https://example.com/users/commenter',
+					'url'               => 'https://example.com/@commenter',
+				);
+			}
+		);
+
+		// Add first comment.
+		$activity1 = array(
+			'actor'  => 'https://example.com/users/commenter',
+			'id'     => 'https://example.com/activities/comment/parent',
+			'object' => array(
+				'id'        => 'https://example.com/notes/parent',
+				'content'   => 'Parent comment',
+				'inReplyTo' => 'https://remote.example.com/users/remoteuser/statuses/nested',
+			),
+		);
+
+		$parent_comment_id = Interactions::add_comment( $activity1 );
+		$this->assertIsInt( $parent_comment_id );
+
+		// Add nested reply.
+		$activity2 = array(
+			'actor'  => 'https://example.com/users/commenter',
+			'id'     => 'https://example.com/activities/comment/child',
+			'object' => array(
+				'id'        => 'https://example.com/notes/child',
+				'content'   => 'Child comment',
+				'inReplyTo' => 'https://example.com/notes/parent',
+			),
+		);
+
+		$child_comment_id = Interactions::add_comment( $activity2 );
+		$this->assertIsInt( $child_comment_id );
+
+		$child_comment = \get_comment( $child_comment_id );
+		$this->assertEquals( $ap_post_id, $child_comment->comment_post_ID, 'Nested reply should be attached to same ap_post' );
+		$this->assertEquals( $parent_comment_id, $child_comment->comment_parent, 'Child should have parent comment ID' );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		wp_delete_comment( $child_comment_id, true );
+		wp_delete_comment( $parent_comment_id, true );
+		wp_delete_post( $ap_post_id, true );
+	}
 }

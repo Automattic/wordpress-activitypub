@@ -677,4 +677,266 @@ class Test_Comment extends \WP_UnitTestCase {
 		\wp_delete_post( $post_id, true );
 		\set_query_var( 'type', null );
 	}
+
+	/**
+	 * Test that comments on ap_post are excluded from admin comment queries.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_exclude_ap_post_comments_in_admin() {
+		// Enable the option that activates ap_post comment filtering.
+		\update_option( 'activitypub_create_posts', true );
+
+		// Create a regular post.
+		$regular_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'post',
+				'post_title'   => 'Regular Post',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'AP Post',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Create comments on both posts.
+		$regular_comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => $regular_post_id,
+				'comment_content' => 'Comment on regular post',
+				'comment_author'  => 'Test User',
+			)
+		);
+
+		$ap_comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => $ap_post_id,
+				'comment_content' => 'Comment on ap_post',
+				'comment_author'  => 'Test User',
+				'comment_meta'    => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// Simulate admin context.
+		\set_current_screen( 'edit-comments' );
+
+		// Query comments in admin context.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array() );
+
+		// Check that ap_post comment is excluded.
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+		$this->assertContains( (string) $regular_comment_id, $comment_ids, 'Regular post comment should be included' );
+		$this->assertNotContains( (string) $ap_comment_id, $comment_ids, 'AP post comment should be excluded from admin' );
+
+		// Clean up.
+		\set_current_screen( 'front' );
+		wp_delete_comment( $regular_comment_id, true );
+		wp_delete_comment( $ap_comment_id, true );
+		wp_delete_post( $regular_post_id, true );
+		wp_delete_post( $ap_post_id, true );
+		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * Test that ap_post comments are NOT excluded from frontend queries.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_ap_post_comments_shown_on_frontend() {
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'AP Post',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Create comment on ap_post.
+		$ap_comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => $ap_post_id,
+				'comment_content' => 'Comment on ap_post',
+				'comment_author'  => 'Test User',
+			)
+		);
+
+		// Ensure we're in frontend context (not admin).
+		\set_current_screen( 'front' );
+
+		// Query comments - should include ap_post comments on frontend.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array() );
+
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+		$this->assertContains( (string) $ap_comment_id, $comment_ids, 'AP post comment should be shown on frontend' );
+
+		// Clean up.
+		wp_delete_comment( $ap_comment_id, true );
+		wp_delete_post( $ap_post_id, true );
+	}
+
+	/**
+	 * Test that ap_post comments are shown when querying for specific post.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_ap_post_comments_shown_when_querying_specific_post() {
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'AP Post',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Create comment on ap_post.
+		$ap_comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => $ap_post_id,
+				'comment_content' => 'Comment on ap_post',
+				'comment_author'  => 'Test User',
+			)
+		);
+
+		// Simulate admin context.
+		\set_current_screen( 'edit-comments' );
+
+		// Query comments for specific post - should include ap_post comments.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query(
+			array(
+				'post_id' => $ap_post_id,
+			)
+		);
+
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+		$this->assertContains( (string) $ap_comment_id, $comment_ids, 'AP post comment should be shown when querying specific post' );
+
+		// Clean up.
+		\set_current_screen( 'front' );
+		wp_delete_comment( $ap_comment_id, true );
+		wp_delete_post( $ap_post_id, true );
+	}
+
+	/**
+	 * Test that multiple ap_post comments are excluded while regular comments remain.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_multiple_ap_post_comments_excluded() {
+		// Enable the option that activates ap_post comment filtering.
+		\update_option( 'activitypub_create_posts', true );
+
+		// Create regular posts.
+		$regular_post_1 = wp_insert_post(
+			array(
+				'post_type'   => 'post',
+				'post_title'  => 'Regular Post 1',
+				'post_status' => 'publish',
+			)
+		);
+
+		$regular_post_2 = wp_insert_post(
+			array(
+				'post_type'   => 'post',
+				'post_title'  => 'Regular Post 2',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create ap_posts.
+		$ap_post_1 = wp_insert_post(
+			array(
+				'post_type'   => 'ap_post',
+				'post_title'  => 'AP Post 1',
+				'post_status' => 'publish',
+			)
+		);
+
+		$ap_post_2 = wp_insert_post(
+			array(
+				'post_type'   => 'ap_post',
+				'post_title'  => 'AP Post 2',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create comments on regular posts.
+		$regular_comment_ids   = array();
+		$regular_comment_ids[] = wp_insert_comment(
+			array(
+				'comment_post_ID' => $regular_post_1,
+				'comment_content' => 'Comment 1',
+				'comment_author'  => 'User 1',
+			)
+		);
+		$regular_comment_ids[] = wp_insert_comment(
+			array(
+				'comment_post_ID' => $regular_post_2,
+				'comment_content' => 'Comment 2',
+				'comment_author'  => 'User 2',
+			)
+		);
+
+		// Create comments on ap_posts.
+		$ap_comment_ids   = array();
+		$ap_comment_ids[] = wp_insert_comment(
+			array(
+				'comment_post_ID' => $ap_post_1,
+				'comment_content' => 'AP Comment 1',
+				'comment_author'  => 'AP User 1',
+			)
+		);
+		$ap_comment_ids[] = wp_insert_comment(
+			array(
+				'comment_post_ID' => $ap_post_2,
+				'comment_content' => 'AP Comment 2',
+				'comment_author'  => 'AP User 2',
+			)
+		);
+
+		// Simulate admin context.
+		\set_current_screen( 'edit-comments' );
+
+		// Query all comments.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array() );
+
+		$found_comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+
+		// Assert all regular comments are found.
+		foreach ( $regular_comment_ids as $comment_id ) {
+			$this->assertContains( (string) $comment_id, $found_comment_ids, 'Regular comment should be included' );
+		}
+
+		// Assert all ap_post comments are NOT found.
+		foreach ( $ap_comment_ids as $comment_id ) {
+			$this->assertNotContains( (string) $comment_id, $found_comment_ids, 'AP post comment should be excluded' );
+		}
+
+		// Clean up.
+		\set_current_screen( 'front' );
+		foreach ( array_merge( $regular_comment_ids, $ap_comment_ids ) as $comment_id ) {
+			wp_delete_comment( $comment_id, true );
+		}
+		foreach ( array( $regular_post_1, $regular_post_2, $ap_post_1, $ap_post_2 ) as $post_id ) {
+			wp_delete_post( $post_id, true );
+		}
+		\delete_option( 'activitypub_create_posts' );
+	}
 }
