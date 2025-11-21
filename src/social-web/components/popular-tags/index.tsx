@@ -7,6 +7,7 @@
 import './style.scss';
 import { useEntityRecords } from '@wordpress/core-data';
 import { __ } from '@wordpress/i18n';
+import clsx from 'clsx';
 
 interface PopularTagsProps {
 	onTagClick: ( tagId: number ) => void;
@@ -49,7 +50,9 @@ export function PopularTags( { onTagClick, selectedTagId }: PopularTagsProps ) {
 					<li key={ tag.id } className="popular-tags__item">
 						<button
 							onClick={ () => onTagClick( tag.id ) }
-							className={ `popular-tags__tag${ selectedTagId === tag.id ? ' is-selected' : '' }` }
+							className={ clsx( 'popular-tags__tag', {
+								'is-selected': selectedTagId === tag.id,
+							} ) }
 						>
 							#{ tag.name }
 						</button>
