@@ -12,6 +12,7 @@ use Activitypub\Webfinger;
 use WP_Comment_Query;
 
 use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\is_ap_post;
 use function Activitypub\is_post_disabled;
 use function Activitypub\object_id_to_comment;
 use function Activitypub\object_to_uri;
@@ -67,14 +68,18 @@ class Interactions {
 		$target_url      = \esc_url_raw( $target_url );
 		$comment_post_id = \url_to_postid( $target_url );
 
+		if ( ! $comment_post_id ) {
+			// Check for `ap_post`.
+			$comment_post = Posts::get_by_guid( $target_url );
+			if ( $comment_post instanceof \WP_Post ) {
+				$comment_post_id = $comment_post->ID;
+			}
+		}
+
 		// Handle nested replies (replies to comments).
 		if ( ! $comment_post_id && $parent_comment_id ) {
 			$parent_comment  = \get_comment( $parent_comment_id );
 			$comment_post_id = $parent_comment->comment_post_ID;
-		}
-
-		if ( is_post_disabled( $comment_post_id ) ) {
-			return false;
 		}
 
 		$comment_data['comment_post_ID'] = $comment_post_id;
@@ -120,12 +125,20 @@ class Interactions {
 		$comment_post_id   = \url_to_postid( $url );
 		$parent_comment_id = url_to_commentid( $url );
 
+		if ( ! $comment_post_id ) {
+			// Check for `ap_post`.
+			$comment_post = Posts::get_by_guid( $url );
+			if ( $comment_post instanceof \WP_Post ) {
+				$comment_post_id = $comment_post->ID;
+			}
+		}
+
 		if ( ! $comment_post_id && $parent_comment_id ) {
 			$parent_comment  = \get_comment( $parent_comment_id );
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 
-		if ( ! $comment_post_id || is_post_disabled( $comment_post_id ) ) {
+		if ( ! $comment_post_id ) {
 			// Not a reply to a post or comment.
 			return false;
 		}
@@ -385,6 +398,13 @@ class Interactions {
 	 * @return array|string|int|\WP_Error|false The comment data or false on failure
 	 */
 	public static function persist( $comment_data, $action = self::INSERT ) {
+		if (
+			is_post_disabled( $comment_data['comment_post_ID'] ) &&
+			! is_ap_post( $comment_data['comment_post_ID'] )
+		) {
+			return false;
+		}
+
 		// Disable flood control.
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
 		// Do not require email for AP entries.

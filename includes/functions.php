@@ -14,6 +14,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory as Transformer_Factory;
 
@@ -348,6 +349,24 @@ function is_post_disabled( $post ) {
 	 * @param \WP_Post $post     The post object.
 	 */
 	return \apply_filters( 'activitypub_is_post_disabled', $disabled, $post );
+}
+
+/**
+ * Check if a post is an ActivityPub post.
+ *
+ * @param mixed $post The post object or ID.
+ *
+ * @return boolean True if the post is an ActivityPub post, false otherwise.
+ */
+function is_ap_post( $post ) {
+	$post = \get_post( $post );
+
+	if ( ! $post ) {
+		return false;
+	}
+
+	// Check for ap_post post type.
+	return Posts::POST_TYPE === $post->post_type;
 }
 
 /**
