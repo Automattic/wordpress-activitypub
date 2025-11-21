@@ -1,4 +1,4 @@
-Significance: patch
-Type: fixed
+Significance: minor
+Type: changed
 
 Remove trailing hashtags from incoming posts to prevent duplication with taxonomy tags.
