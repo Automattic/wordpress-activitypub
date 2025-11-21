@@ -933,4 +933,199 @@ class Test_Posts extends \WP_UnitTestCase {
 		$new_files = glob( $file_dir . '/*' );
 		$this->assertCount( 1, $new_files, 'File should still exist after update' );
 	}
+
+	/**
+	 * Test extracting hashtags from activity tags.
+	 *
+	 * @covers ::extract_hashtags_from_activity_tags
+	 */
+	public function test_extract_hashtags_from_activity_tags() {
+		$tags = array(
+			array(
+				'type' => 'Hashtag',
+				'name' => '#test',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => '#wordpress',
+			),
+			array(
+				'type' => 'Mention',
+				'name' => '@user',
+			),
+		);
+
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 2, $result );
+		// Helper always strips # prefix.
+		$this->assertContains( 'test', $result );
+		$this->assertContains( 'WordPress', $result );
+		$this->assertNotContains( '@user', $result );
+	}
+
+	/**
+	 * Test extracting hashtags without # prefix in source.
+	 *
+	 * @covers ::extract_hashtags_from_activity_tags
+	 */
+	public function test_extract_hashtags_without_prefix() {
+		$tags = array(
+			array(
+				'type' => 'Hashtag',
+				'name' => 'test',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => 'wordpress',
+			),
+		);
+
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 2, $result );
+		$this->assertContains( 'test', $result );
+		$this->assertContains( 'WordPress', $result );
+	}
+
+	/**
+	 * Test extracting hashtags from empty array.
+	 *
+	 * @covers ::extract_hashtags_from_activity_tags
+	 */
+	public function test_extract_hashtags_from_empty_array() {
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, array() );
+
+		$this->assertIsArray( $result );
+		$this->assertEmpty( $result );
+	}
+
+	/**
+	 * Test extracting hashtags from null value.
+	 *
+	 * @covers ::extract_hashtags_from_activity_tags
+	 */
+	public function test_extract_hashtags_from_null() {
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, null );
+
+		$this->assertIsArray( $result );
+		$this->assertEmpty( $result );
+	}
+
+	/**
+	 * Test extracting hashtags when tags have no name field.
+	 *
+	 * @covers ::extract_hashtags_from_activity_tags
+	 */
+	public function test_extract_hashtags_missing_name_field() {
+		$tags = array(
+			array(
+				'type' => 'Hashtag',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => '#valid',
+			),
+		);
+
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+		$this->assertContains( 'valid', $result );
+	}
+
+	/**
+	 * Test extracting hashtags when tags have no type field.
+	 *
+	 * @covers ::extract_hashtags_from_activity_tags
+	 */
+	public function test_extract_hashtags_missing_type_field() {
+		$tags = array(
+			array(
+				'name' => '#invalid',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => '#valid',
+			),
+		);
+
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'extract_hashtags_from_activity_tags' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+		$this->assertContains( 'valid', $result );
+		$this->assertNotContains( 'invalid', $result );
+	}
+
+	/**
+	 * Test that hashtag removal works in activity_to_post.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_removes_hashtags() {
+		$activity = array(
+			'id'        => 'https://example.com/objects/hashtag-test',
+			'type'      => 'Note',
+			'name'      => 'Hashtag Test',
+			'content'   => '<p>This is a test #test #wordpress</p>',
+			'published' => '2023-01-01T12:00:00Z',
+			'tag'       => array(
+				array(
+					'type' => 'Hashtag',
+					'name' => '#test',
+				),
+				array(
+					'type' => 'Hashtag',
+					'name' => '#wordpress',
+				),
+			),
+		);
+
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'activity_to_post' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, $activity );
+
+		$this->assertIsArray( $result );
+		// Content should have hashtags removed.
+		$this->assertStringNotContainsString( '#test', $result['post_content'] );
+		$this->assertStringNotContainsString( '#WordPress', $result['post_content'] );
+		$this->assertStringContainsString( 'This is a test', $result['post_content'] );
+	}
 }

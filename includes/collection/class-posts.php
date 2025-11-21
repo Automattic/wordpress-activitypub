@@ -177,6 +177,30 @@ class Posts {
 	}
 
 	/**
+	 * Extract hashtag names from ActivityPub tag array.
+	 *
+	 * @param array $tags Array of ActivityPub tags.
+	 *
+	 * @return array Array of hashtag names (without # prefix).
+	 */
+	private static function extract_hashtags_from_activity_tags( $tags ) {
+		$hashtags = array();
+
+		if ( empty( $tags ) || ! \is_array( $tags ) ) {
+			return $hashtags;
+		}
+
+		foreach ( $tags as $tag ) {
+			if ( isset( $tag['type'] ) && 'Hashtag' === $tag['type'] && isset( $tag['name'] ) ) {
+				// Always strip # prefix and sanitize.
+				$hashtags[] = \wp_strip_all_tags( \ltrim( $tag['name'], '#' ) );
+			}
+		}
+
+		return $hashtags;
+	}
+
+	/**
 	 * Convert an activity to a post array.
 	 *
 	 * @param array $activity The activity array.
@@ -190,9 +214,16 @@ class Posts {
 
 		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
 
+		// Extract hashtag names from activity tags.
+		$hashtags = self::extract_hashtags_from_activity_tags( $activity['tag'] ?? array() );
+
+		// Sanitize content and remove hashtags.
+		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
+		$content = Sanitize::remove_hashtags( $content, $hashtags );
+
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
-			'post_content'  => isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '',
+			'post_content'  => $content,
 			'post_excerpt'  => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : generate_post_summary( $activity['content'] ?? '' ),
 			'post_status'   => 'publish',
 			'post_type'     => self::POST_TYPE,
@@ -212,16 +243,8 @@ class Posts {
 		// Save Object Type as Taxonomy item.
 		\wp_set_post_terms( $post_id, array( $activity_object['type'] ), 'ap_object_type' );
 
-		$tags = array();
-
 		// Save the Hashtags as Taxonomy items.
-		if ( ! empty( $activity_object['tag'] ) && \is_array( $activity_object['tag'] ) ) {
-			foreach ( $activity_object['tag'] as $tag ) {
-				if ( isset( $tag['type'] ) && 'Hashtag' === $tag['type'] && isset( $tag['name'] ) ) {
-					$tags[] = \wp_strip_all_tags( ltrim( $tag['name'], '#' ) );
-				}
-			}
-		}
+		$tags = self::extract_hashtags_from_activity_tags( $activity_object['tag'] ?? array() );
 
 		\wp_set_post_terms( $post_id, $tags, 'ap_tag' );
 	}
