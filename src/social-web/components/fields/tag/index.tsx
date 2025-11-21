@@ -31,6 +31,6 @@ export const tagField: Field< FeedPost > = {
 	},
 	render: (): null => null,
 	filterBy: {
-		operators: [ 'is' ],
+		operators: [ 'isAny' ],
 	},
 };

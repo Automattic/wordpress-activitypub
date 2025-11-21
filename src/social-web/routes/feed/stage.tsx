@@ -184,12 +184,6 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 		[ view.filters, view.openFilters, updateView ]
 	);
 
-	// Extract ap_object_type filter from view.filters
-	const apObjectTypeFilter = useMemo( () => {
-		const typeFilter = view.filters?.find( ( f ) => f.field === 'ap_object_type' );
-		return typeFilter?.value as number[] | undefined;
-	}, [ view.filters ] );
-
 	// Register tag click handler with Layout
 	useEffect( () => {
 		if ( registerTagHandler ) {
@@ -204,8 +198,7 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 		order: view.sort?.direction || 'desc',
 		search: view.search || '',
 		userId: activeActorId,
-		apObjectType: apObjectTypeFilter,
-		apTag: apTagFilter,
+		filters: view.filters || [],
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
