@@ -31,26 +31,18 @@
 		margin: 0;
 	}
 
-	&__tag {
+	&__link {
 		display: block;
 		width: 100%;
 		padding: var(--wpds-spacing-20, 8px);
-		font-size: 13px;
-		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
-		background: none;
-		border: none;
-		border-radius: 2px;
-		text-align: left;
-		cursor: pointer;
-		transition: all 0.1s ease;
+		color: var(--wpds-color-fg-inverted-tertiary, #999999);
+		text-decoration: none;
 
 		&:hover {
-			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1));
-			color: var(--wpds-color-fg-inverted-primary, #ffffff);
+			color: var(--wpds-color-fg-inverted-secondary, #cccccc);
 		}
 
 		&.is-selected {
-			background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15));
 			color: var(--wpds-color-fg-inverted-primary, #ffffff);
 		}
 	}

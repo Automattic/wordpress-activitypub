@@ -6,6 +6,7 @@
 
 import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/components';
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
+import type { Term } from '@wordpress/core-data';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { close } from '@wordpress/icons';
@@ -38,7 +39,7 @@ export default function FeedInspector( { id, onClose, onTagClick }: FeedInspecto
 
 	// Fetch tag terms if the post has tags
 	const tagIds = post?.ap_tag || [];
-	const { records: Term[] } = useEntityRecords( 'taxonomy', 'ap_tag', {
+	const { records: terms } = useEntityRecords< Term[] >( 'taxonomy', 'ap_tag', {
 		include: tagIds,
 	} );
 
@@ -118,19 +119,19 @@ export default function FeedInspector( { id, onClose, onTagClick }: FeedInspecto
 					{ ( post.content?.rendered || post.excerpt?.rendered ) && (
 						<RenderHTML html={ post.content?.rendered || post.excerpt?.rendered || '' } />
 					) }
-					{ tags && tags.length > 0 && onTagClick && (
+					{ terms && terms.length > 0 && onTagClick && (
 						<div className="activitypub-inspector-tags">
-							{ tags.map( ( tag: Term ) => (
+							{ terms.map( ( term: Term ) => (
 								<Button
-									key={ tag.id }
+									key={ term.id }
 									size="small"
+									variant="secondary"
 									onClick={ () => {
-										onTagClick( tag.id );
+										onTagClick( term.id );
 										onClose();
 									} }
-									className="activitypub-inspector-tag"
 								>
-									#{ tag.name }
+									#{ term.name }
 								</Button>
 							) ) }
 						</div>

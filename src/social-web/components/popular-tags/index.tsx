@@ -48,16 +48,20 @@ export function PopularTags( { onTagClick, selectedTagId }: PopularTagsProps ) {
 			<ul className="popular-tags__list">
 				{ typedTags.map( ( tag ) => (
 					<li key={ tag.id } className="popular-tags__item">
-						<button
-							onClick={ () => onTagClick( tag.id ) }
-							className={ clsx( 'popular-tags__tag', {
+						<a
+							href="#"
+							onClick={ ( e ) => {
+								e.preventDefault();
+								onTagClick( tag.id );
+							} }
+							className={ clsx( 'popular-tags__link', {
 								'is-selected': selectedTagId === tag.id,
 							} ) }
 							aria-label={ __( 'Filter by tag: %s', 'activitypub' ).replace( '%s', tag.name ) }
-							aria-pressed={ selectedTagId === tag.id }
+							aria-current={ selectedTagId === tag.id ? 'true' : undefined }
 						>
 							#{ tag.name }
-						</button>
+						</a>
 					</li>
 				) ) }
 			</ul>
