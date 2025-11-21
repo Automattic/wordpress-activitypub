@@ -1,0 +1,23 @@
+.activitypub-feed-content {
+	border-bottom: var(--wpds-border-width-control, 1px) solid var(--wpds-color-stroke-neutral-weak, #dcdcde);
+	min-width: 0;
+	max-width: 100%;
+
+	line-height: 1.6;
+	color: var(--wpds-color-fg-primary, #2c3338);
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+
+	&:last-child {
+		border-bottom: none;
+	}
+
+	// Ensure proper spacing
+	> *:first-child {
+		margin-top: 0;
+	}
+
+	> *:last-child {
+		margin-bottom: 0;
+	}
+}
