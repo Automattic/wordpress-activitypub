@@ -66,7 +66,7 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		// Remove filters that may have been added during tests.
-		remove_filter( 'nodeinfo_data', array( Nodeinfo::class, 'add_nodeinfo_data' ), 10 );
+		remove_filter( 'nodeinfo_data', array( Nodeinfo::class, 'add_nodeinfo_data' ) );
 		remove_filter( 'nodeinfo2_data', array( Nodeinfo::class, 'add_nodeinfo2_data' ) );
 		remove_filter( 'wellknown_nodeinfo_data', array( Nodeinfo::class, 'add_wellknown_nodeinfo_data' ) );
 
