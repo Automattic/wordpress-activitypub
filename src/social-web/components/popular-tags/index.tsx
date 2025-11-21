@@ -53,6 +53,8 @@ export function PopularTags( { onTagClick, selectedTagId }: PopularTagsProps ) {
 							className={ clsx( 'popular-tags__tag', {
 								'is-selected': selectedTagId === tag.id,
 							} ) }
+							aria-label={ __( 'Filter by tag: %s', 'activitypub' ).replace( '%s', tag.name ) }
+							aria-pressed={ selectedTagId === tag.id }
 						>
 							#{ tag.name }
 						</button>
