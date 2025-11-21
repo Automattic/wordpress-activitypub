@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
 use Activitypub\Rest\Outbox_Controller;
+use Activitypub\Tests\Test_REST_Controller_Testcase;
 
 /**
  * Tests for Outbox REST API endpoint.
@@ -16,7 +17,7 @@ use Activitypub\Rest\Outbox_Controller;
  * @group rest
  * @coversDefaultClass \Activitypub\Rest\Outbox_Controller
  */
-class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
+class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 
 	/**
 	 * Test user ID.
@@ -322,7 +323,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 */
 	public function test_get_items_activity_type( $type, $activity, $allowed ) {
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
-		$post_id = self::factory()->post->create(
+		self::factory()->post->create(
 			array(
 				'post_author'  => $user_id,
 				'post_type'    => Outbox::POST_TYPE,
@@ -440,7 +441,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			$meta_input['activitypub_content_visibility'] = $visibility;
 		}
 
-		$post_id = self::factory()->post->create(
+		self::factory()->post->create(
 			array(
 				'post_author'  => $user_id,
 				'post_type'    => Outbox::POST_TYPE,
@@ -530,7 +531,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		// Create a post with blog actor type.
-		$blog_post_id = self::factory()->post->create(
+		self::factory()->post->create(
 			array(
 				'post_author'  => 0,
 				'post_type'    => Outbox::POST_TYPE,
@@ -570,7 +571,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$request = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
 		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
-		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
 
@@ -586,7 +586,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$viewer_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 
 		// Create a private post.
-		$private_post_id = self::factory()->post->create(
+		self::factory()->post->create(
 			array(
 				'post_author'  => self::$user_id,
 				'post_type'    => Outbox::POST_TYPE,

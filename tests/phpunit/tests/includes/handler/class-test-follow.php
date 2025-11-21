@@ -82,7 +82,7 @@ class Test_Follow extends \WP_UnitTestCase {
 						'id'                => $actor_url,
 						'actor'             => $actor_url,
 						'type'              => 'Person',
-						'preferredUsername' => 'testactor',
+						'preferredUsername' => 'test_actor',
 						'inbox'             => str_replace( '/actor', '/inbox', $actor_url ),
 					);
 				}
@@ -104,13 +104,11 @@ class Test_Follow extends \WP_UnitTestCase {
 		Follow::handle_follow( $activity_object, $target_user_id );
 
 		// Check if follower was added.
+		$followers_after       = Followers::get_many( $target_user_id );
+		$followers_count_after = count( $followers_after );
 		if ( $should_add_follower ) {
-			$followers_after       = Followers::get_many( $target_user_id );
-			$followers_count_after = count( $followers_after );
 			$this->assertEquals( $followers_count_before + 1, $followers_count_after, $description . ' - Follower should be added' );
 		} else {
-			$followers_after       = Followers::get_many( $target_user_id );
-			$followers_count_after = count( $followers_after );
 			$this->assertEquals( $followers_count_before, $followers_count_after, $description . ' - Follower should not be added' );
 		}
 
@@ -210,7 +208,7 @@ class Test_Follow extends \WP_UnitTestCase {
 					'id'                => $actor,
 					'actor'             => $actor,
 					'type'              => 'Person',
-					'preferredUsername' => 'testactor',
+					'preferredUsername' => 'test_actor',
 					'inbox'             => 'https://example.com/inbox',
 				);
 			}
@@ -222,7 +220,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		);
 		$remote_actor = \get_post( $remote_actor );
 
-		Follow::queue_accept( $activity_object, self::$user_id, $remote_actor, $remote_actor );
+		Follow::queue_accept( $activity_object, self::$user_id, $remote_actor instanceof \WP_Post, $remote_actor );
 
 		$outbox_posts = \get_posts(
 			array(
@@ -274,7 +272,7 @@ class Test_Follow extends \WP_UnitTestCase {
 				'id'                => $actor_url,
 				'actor'             => $actor_url,
 				'type'              => 'Person',
-				'preferredUsername' => 'duplicateactor',
+				'preferredUsername' => 'duplicate_actor',
 				'inbox'             => str_replace( '/actor', '/inbox', $actor_url ),
 			);
 		};
@@ -326,7 +324,7 @@ class Test_Follow extends \WP_UnitTestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_callback );
-		\remove_action( 'activitypub_handled_follow', $test_callback, 10 );
+		\remove_action( 'activitypub_handled_follow', $test_callback );
 	}
 
 	/**
@@ -414,7 +412,7 @@ class Test_Follow extends \WP_UnitTestCase {
 					'id'                => $actor_url,
 					'actor'             => $actor_url,
 					'type'              => 'Person',
-					'preferredUsername' => 'testactor',
+					'preferredUsername' => 'test_actor',
 					'inbox'             => str_replace( '/deprecated-test-actor', '/inbox', $actor_url ),
 				);
 			}
@@ -435,15 +433,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		$this->assertEquals( $activity_object, $hook_activity );
 		$this->assertEquals( self::$user_id, $hook_user_id );
 		$this->assertInstanceOf( \WP_Post::class, $hook_remote_actor );
-
-		// Clean up outbox posts.
-		$outbox_posts = \get_posts(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'author'      => self::$user_id,
-				'post_status' => 'any',
-			)
-		);
 
 		// Clean up hooks and filters.
 		\remove_all_actions( 'activitypub_followers_post_follow' );
@@ -486,7 +475,7 @@ class Test_Follow extends \WP_UnitTestCase {
 					'id'                => $actor_url,
 					'actor'             => $actor_url,
 					'type'              => 'Person',
-					'preferredUsername' => 'testactor',
+					'preferredUsername' => 'test_actor',
 					'inbox'             => str_replace( '/new-hook-test-actor', '/inbox', $actor_url ),
 				);
 			}
@@ -508,15 +497,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		$this->assertContains( self::$user_id, $hook_user_id, 'Array should contain user ID' );
 		$this->assertTrue( $hook_success );
 		$this->assertInstanceOf( \WP_Post::class, $hook_remote_actor );
-
-		// Clean up outbox posts.
-		$outbox_posts = \get_posts(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'author'      => self::$user_id,
-				'post_status' => 'any',
-			)
-		);
 
 		// Clean up hooks and filters.
 		\remove_all_actions( 'activitypub_handled_follow' );
