@@ -14,8 +14,16 @@ export const objectTypeField: Field< FeedPost > = {
 	getValue: ( { item }: { item: FeedPost } ): number => item.ap_object_type?.[ 0 ],
 	getElements: async (): Promise< { value: number; label: string }[] > => {
 		const translations: Record< string, string > = {
-			Note: __( 'Note', 'activitypub' ),
-			Article: __( 'Article', 'activitypub' ),
+			// @see Base_Object::TYPES
+			Article: __( 'Articles', 'activitypub' ),
+			Audio: __( 'Music & Podcasts', 'activitypub' ),
+			Document: __( 'Documents & Files', 'activitypub' ),
+			Event: __( 'Events & Meetups', 'activitypub' ),
+			Image: __( 'Photos & Images', 'activitypub' ),
+			Note: __( 'Notes & Updates', 'activitypub' ),
+			Page: __( 'Pages', 'activitypub' ),
+			Place: __( 'Places & Locations', 'activitypub' ),
+			Video: __( 'Videos', 'activitypub' ),
 		};
 		const records: Term[] = await resolveSelect( coreDataStore ).getEntityRecords( 'taxonomy', 'ap_object_type' );
 

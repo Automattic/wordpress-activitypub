@@ -120,6 +120,8 @@ class Test_Migration extends \WP_UnitTestCase {
 		foreach ( $outbox_items as $item_id ) {
 			\wp_delete_post( $item_id, true );
 		}
+
+		parent::tear_down();
 	}
 
 	/**
@@ -594,20 +596,16 @@ class Test_Migration extends \WP_UnitTestCase {
 	 */
 	public function test_update_comment_author_emails_batching() {
 		// Create multiple comments.
-		$comment_ids = array();
-		for ( $i = 0; $i < 3; $i++ ) {
-			$comment_ids[] = self::factory()->comment->create(
-				array(
-					'comment_post_ID'      => self::$fixtures['posts'][0],
-					'comment_author'       => "Test User $i",
-					'comment_author_url'   => "https://example.com/users/test$i",
-					'comment_author_email' => '',
-					'comment_content'      => "Test comment $i",
-					'comment_type'         => 'comment',
-					'comment_meta'         => array( 'protocol' => 'activitypub' ),
-				)
-			);
-		}
+		// Note: We rely on comment_ID ordering (added to migration function) for deterministic batching.
+		$comment_ids = self::factory()->comment->create_many(
+			3,
+			array(
+				'comment_post_ID'      => self::$fixtures['posts'][0],
+				'comment_author_email' => '',
+				'comment_type'         => 'comment',
+				'comment_meta'         => array( 'protocol' => 'activitypub' ),
+			)
+		);
 
 		// Mock the HTTP request.
 		\add_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
@@ -630,11 +628,8 @@ class Test_Migration extends \WP_UnitTestCase {
 		foreach ( $comment_ids as $comment_id ) {
 			$comment = \get_comment( $comment_id );
 			$this->assertEquals( 'test@example.com', $comment->comment_author_email );
-
-			wp_delete_comment( $comment_id, true );
 		}
 
-		_delete_all_data();
 		\remove_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
 	}
 

@@ -706,6 +706,15 @@ class Post_Types {
 					'sanitize_callback' => 'absint',
 				);
 
+				$params['ap_object_type'] = array(
+					'description' => 'Filter posts by ActivityPub object type.',
+					'type'        => 'array',
+					'items'       => array(
+						'type'    => 'integer',
+						'minimum' => 0,
+					),
+				);
+
 				return $params;
 			}
 		);
@@ -742,6 +751,19 @@ class Post_Types {
 			'value'   => $user_id,
 			'compare' => '=',
 		);
+
+		// Filter by object type if provided.
+		if ( ! empty( $request['ap_object_type'] ) ) {
+			if ( ! isset( $args['tax_query'] ) ) {
+				$args['tax_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+			}
+
+			$args['tax_query'][] = array(
+				'taxonomy' => 'ap_object_type',
+				'field'    => 'term_id',
+				'terms'    => $request['ap_object_type'],
+			);
+		}
 
 		return $args;
 	}
