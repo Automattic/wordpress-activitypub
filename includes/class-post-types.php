@@ -707,14 +707,12 @@ class Post_Types {
 				);
 
 				$params['ap_object_type'] = array(
-					'description'       => 'Filter posts by ActivityPub object type.',
-					'type'              => 'array',
-					'items'             => array(
-						'type' => 'integer',
+					'description' => 'Filter posts by ActivityPub object type.',
+					'type'        => 'array',
+					'items'       => array(
+						'type'    => 'integer',
+						'minimum' => 0,
 					),
-					'sanitize_callback' => function ( $value ) {
-						return array_map( 'absint', (array) $value );
-					},
 				);
 
 				return $params;
