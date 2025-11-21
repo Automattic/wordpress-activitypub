@@ -1,6 +1,9 @@
 .popular-tags {
 	padding: var(--wpds-spacing-30, 12px);
+	background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+	border: none;
 	border-top: 1px solid var(--wpds-color-stroke-inverted, rgba(255, 255, 255, 0.1));
+	box-shadow: none;
 
 	&__title {
 		font-size: 11px;
