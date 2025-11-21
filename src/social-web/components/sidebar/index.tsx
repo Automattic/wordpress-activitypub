@@ -18,7 +18,7 @@ import { __, isRTL } from '@wordpress/i18n';
 import { useSettings } from '../../contexts/settings-context';
 import SiteHub from '../site-hub';
 import ActorSwitcher from '../actor-switcher';
-import { TrendingTags } from '../trending-tags';
+import { PopularTags } from '../popular-tags';
 import './style.scss';
 
 const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ) } ];
@@ -68,9 +68,9 @@ export default function Sidebar( { activeSection, onNavigate, onTagClick, select
 				</NavigableMenu>
 			</nav>
 
-			{ /* Trending Tags - Only show on feed section */ }
+			{ /* Popular Tags - Only show on feed section */ }
 			{ activeSection === 'feed' && onTagClick && (
-				<TrendingTags onTagClick={ onTagClick } selectedTagId={ selectedTagId } />
+				<PopularTags onTagClick={ onTagClick } selectedTagId={ selectedTagId } />
 			) }
 
 			{ /* Footer */ }

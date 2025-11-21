@@ -1,14 +1,14 @@
 /**
- * Trending Tags Component
+ * Popular Tags Component
  *
- * Displays ap_tag taxonomy terms as a clickable list of trending tags
+ * Displays ap_tag taxonomy terms as a clickable list of popular tags
  */
 
 import './style.scss';
 import { useEntityRecords } from '@wordpress/core-data';
 import { __ } from '@wordpress/i18n';
 
-interface TrendingTagsProps {
+interface PopularTagsProps {
 	onTagClick: ( tagId: number ) => void;
 	selectedTagId?: number;
 }
@@ -19,7 +19,7 @@ interface Tag {
 	count: number;
 }
 
-export function TrendingTags( { onTagClick, selectedTagId }: TrendingTagsProps ) {
+export function PopularTags( { onTagClick, selectedTagId }: PopularTagsProps ) {
 	const { records: tags, isResolving } = useEntityRecords( 'taxonomy', 'ap_tag', {
 		per_page: 5,
 		orderby: 'count',
@@ -28,9 +28,9 @@ export function TrendingTags( { onTagClick, selectedTagId }: TrendingTagsProps )
 
 	if ( isResolving ) {
 		return (
-			<div className="trending-tags">
-				<h3 className="trending-tags__title">{ __( 'Trending Tags', 'activitypub' ) }</h3>
-				<div className="trending-tags__loading">{ __( 'Loading tags…', 'activitypub' ) }</div>
+			<div className="popular-tags">
+				<h3 className="popular-tags__title">{ __( 'Popular Tags', 'activitypub' ) }</h3>
+				<div className="popular-tags__loading">{ __( 'Loading tags…', 'activitypub' ) }</div>
 			</div>
 		);
 	}
@@ -42,14 +42,14 @@ export function TrendingTags( { onTagClick, selectedTagId }: TrendingTagsProps )
 	const typedTags = tags as Tag[];
 
 	return (
-		<div className="trending-tags">
-			<h3 className="trending-tags__title">{ __( 'Trending Tags', 'activitypub' ) }</h3>
-			<ul className="trending-tags__list">
+		<div className="popular-tags">
+			<h3 className="popular-tags__title">{ __( 'Popular Tags', 'activitypub' ) }</h3>
+			<ul className="popular-tags__list">
 				{ typedTags.map( ( tag ) => (
-					<li key={ tag.id } className="trending-tags__item">
+					<li key={ tag.id } className="popular-tags__item">
 						<button
 							onClick={ () => onTagClick( tag.id ) }
-							className={ `trending-tags__tag${ selectedTagId === tag.id ? ' is-selected' : '' }` }
+							className={ `popular-tags__tag${ selectedTagId === tag.id ? ' is-selected' : '' }` }
 						>
 							#{ tag.name }
 						</button>
