@@ -123,8 +123,7 @@ export default function FeedInspector( { id, onClose, onTagClick }: FeedInspecto
 							{ tags.map( ( tag: Term ) => (
 								<Button
 									key={ tag.id }
-									variant="secondary"
-									size="compact"
+									size="small"
 									onClick={ () => {
 										onTagClick( tag.id );
 										onClose();
