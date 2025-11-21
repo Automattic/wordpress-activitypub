@@ -6,13 +6,13 @@
 
 import './style.scss';
 import { useEntityRecords } from '@wordpress/core-data';
+import { useSelect, useDispatch } from '@wordpress/data';
+import { useView } from '@wordpress/views';
+import { MenuItem, MenuGroup } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import clsx from 'clsx';
+import { STORE_NAME } from '../../store';
 
-interface PopularTagsProps {
-	onTagClick: ( tagId: number ) => void;
-	selectedTagId?: number;
-}
+interface PopularTagsProps {}
 
 interface Tag {
 	id: number;
@@ -20,11 +20,21 @@ interface Tag {
 	count: number;
 }
 
-export function PopularTags( { onTagClick, selectedTagId }: PopularTagsProps ) {
+export function PopularTags( {}: PopularTagsProps ) {
 	const { records: tags, isResolving } = useEntityRecords( 'taxonomy', 'ap_tag', {
 		per_page: 5,
 		orderby: 'count',
 		order: 'desc',
+	} );
+
+	const selectedTagId = useSelect( ( select ) => select( STORE_NAME ).getSelectedTagId(), [] );
+	const { setSelectedTag } = useDispatch( STORE_NAME );
+
+	// Get the view to update filters
+	const { view, updateView } = useView( {
+		kind: 'postType',
+		name: 'ap_post',
+		slug: 'feed',
 	} );
 
 	if ( isResolving ) {
@@ -42,29 +52,62 @@ export function PopularTags( { onTagClick, selectedTagId }: PopularTagsProps ) {
 
 	const typedTags = tags as Tag[];
 
+	const handleTagClick = ( tagId: number ) => {
+		const currentFilters = view.filters || [];
+		const tagFilterIndex = currentFilters.findIndex( ( f ) => f.field === 'ap_tag' );
+
+		let newFilters;
+		let shouldOpenFilters = false;
+
+		if ( tagFilterIndex !== -1 ) {
+			// Tag filter exists - toggle it
+			const currentValue = currentFilters[ tagFilterIndex ].value as number[];
+			if ( currentValue.includes( tagId ) ) {
+				// Remove the tag filter if it's the same tag
+				newFilters = currentFilters.filter( ( f ) => f.field !== 'ap_tag' );
+			} else {
+				// Replace with new tag
+				newFilters = [
+					...currentFilters.slice( 0, tagFilterIndex ),
+					{ field: 'ap_tag', operator: 'isAny', value: [ tagId ] },
+					...currentFilters.slice( tagFilterIndex + 1 ),
+				];
+				shouldOpenFilters = true;
+			}
+		} else {
+			// No tag filter exists - add one
+			newFilters = [ ...currentFilters, { field: 'ap_tag', operator: 'isAny', value: [ tagId ] } ];
+			shouldOpenFilters = true;
+		}
+
+		// Update the view with new filters
+		updateView( {
+			...view,
+			filters: newFilters,
+			page: 1, // Reset to first page
+			openFilters: shouldOpenFilters ? true : view.openFilters,
+		} );
+
+		// Also update the store for inspector synchronization
+		setSelectedTag( selectedTagId === tagId ? null : tagId );
+	};
+
 	return (
 		<div className="popular-tags">
 			<h3 className="popular-tags__title">{ __( 'Popular Tags', 'activitypub' ) }</h3>
-			<ul className="popular-tags__list">
+			<MenuGroup>
 				{ typedTags.map( ( tag ) => (
-					<li key={ tag.id } className="popular-tags__item">
-						<a
-							href="#"
-							onClick={ ( e ) => {
-								e.preventDefault();
-								onTagClick( tag.id );
-							} }
-							className={ clsx( 'popular-tags__link', {
-								'is-selected': selectedTagId === tag.id,
-							} ) }
-							aria-label={ __( 'Filter by tag: %s', 'activitypub' ).replace( '%s', tag.name ) }
-							aria-current={ selectedTagId === tag.id ? 'true' : undefined }
-						>
-							#{ tag.name }
-						</a>
-					</li>
+					<MenuItem
+						key={ tag.id }
+						onClick={ () => handleTagClick( tag.id ) }
+						className="menu-item"
+						isSelected={ selectedTagId === tag.id }
+						aria-label={ __( 'Filter by tag: %s', 'activitypub' ).replace( '%s', tag.name ) }
+					>
+						<span>#{ tag.name }</span>
+					</MenuItem>
 				) ) }
-			</ul>
+			</MenuGroup>
 		</div>
 	);
 }

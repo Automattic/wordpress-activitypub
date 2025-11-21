@@ -11,7 +11,7 @@ import { useView } from '@wordpress/views';
 import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
-import { useSelect } from '@wordpress/data';
+import { useSelect, useDispatch } from '@wordpress/data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import {
@@ -52,10 +52,9 @@ const defaultLayouts = {
 
 interface FeedStageProps {
 	onSelectItem: ( id: number ) => void;
-	registerTagHandler?: ( handler: ( tagId: number ) => void, selectedTagId?: number ) => void;
 }
 
-export default function FeedStage( { onSelectItem, registerTagHandler }: FeedStageProps ) {
+export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	// Get active actor ID from store
 	const activeActorId = useSelect(
 		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
@@ -122,6 +121,9 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 		},
 	} );
 
+	// Get dispatch for store updates
+	const { setSelectedTag } = useDispatch( STORE_NAME );
+
 	// Extract ap_tag filter from view.filters to get selected tag
 	const apTagFilter = useMemo( () => {
 		return view.filters?.find( ( f ) => f.field === 'ap_tag' )?.value as number[] | undefined;
@@ -130,6 +132,11 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 	const selectedTagId = useMemo( () => {
 		return apTagFilter && apTagFilter.length > 0 ? apTagFilter[ 0 ] : undefined;
 	}, [ apTagFilter ] );
+
+	// Sync selectedTagId from view.filters to store
+	useEffect( () => {
+		setSelectedTag( selectedTagId ?? null );
+	}, [ selectedTagId, setSelectedTag ] );
 
 	// Wrap updateView to enforce mutual exclusion between excerpt and content fields
 	const updateFeedView = useCallback(
@@ -186,13 +193,6 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 		},
 		[ view, updateFeedView ]
 	);
-
-	// Register tag click handler with Layout
-	useEffect( () => {
-		if ( registerTagHandler ) {
-			registerTagHandler( updateTagFilter, selectedTagId );
-		}
-	}, [ registerTagHandler, updateTagFilter, selectedTagId ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,

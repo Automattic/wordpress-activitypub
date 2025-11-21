@@ -26,11 +26,9 @@ const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ) } ];
 interface SidebarProps {
 	activeSection: string;
 	onNavigate: ( section: string ) => void;
-	onTagClick?: ( tagId: number ) => void;
-	selectedTagId?: number;
 }
 
-export default function Sidebar( { activeSection, onNavigate, onTagClick, selectedTagId }: SidebarProps ) {
+export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 	const { adminUrl } = useSettings();
 
 	return (
@@ -69,9 +67,7 @@ export default function Sidebar( { activeSection, onNavigate, onTagClick, select
 			</nav>
 
 			{ /* Popular Tags - Only show on feed section */ }
-			{ activeSection === 'feed' && onTagClick && (
-				<PopularTags onTagClick={ onTagClick } selectedTagId={ selectedTagId } />
-			) }
+			{ activeSection === 'feed' && <PopularTags /> }
 
 			{ /* Footer */ }
 			<div className="footer">

@@ -7,17 +7,19 @@
 import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/components';
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
+import { useView } from '@wordpress/views';
+import { useSelect, useDispatch } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { close } from '@wordpress/icons';
 import { useSettings } from '../../contexts/settings-context';
 import type { Comment, FeedPost } from '../../types';
 import { getRelativeTime } from '../../utils';
+import { STORE_NAME } from '../../store';
 
 interface FeedInspectorProps {
 	id: number;
 	onClose: () => void;
-	onTagClick?: ( tagId: number ) => void;
 }
 
 // Helper to render HTML content with proper entity decoding and unescape
@@ -28,7 +30,7 @@ const RenderHTML = ( { html }: { html: string } ) => {
 	return <div dangerouslySetInnerHTML={ { __html: decoded } } />;
 };
 
-export default function FeedInspector( { id, onClose, onTagClick }: FeedInspectorProps ) {
+export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 	const { defaultAvatar } = useSettings();
 	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id );
 	const { records: comments, isResolving: isLoadingComments } = useEntityRecords< Comment >( 'root', 'comment', {
@@ -42,6 +44,59 @@ export default function FeedInspector( { id, onClose, onTagClick }: FeedInspecto
 	const { records: terms } = useEntityRecords< Term[] >( 'taxonomy', 'ap_tag', {
 		include: tagIds,
 	} );
+
+	// Get the view to update filters
+	const { view, updateView } = useView( {
+		kind: 'postType',
+		name: 'ap_post',
+		slug: 'feed',
+	} );
+
+	const selectedTagId = useSelect( ( select ) => select( STORE_NAME ).getSelectedTagId(), [] );
+	const { setSelectedTag } = useDispatch( STORE_NAME );
+
+	const handleTagClick = ( tagId: number ) => {
+		const currentFilters = view.filters || [];
+		const tagFilterIndex = currentFilters.findIndex( ( f ) => f.field === 'ap_tag' );
+
+		let newFilters;
+		let shouldOpenFilters = false;
+
+		if ( tagFilterIndex !== -1 ) {
+			// Tag filter exists - toggle it
+			const currentValue = currentFilters[ tagFilterIndex ].value as number[];
+			if ( currentValue.includes( tagId ) ) {
+				// Remove the tag filter if it's the same tag
+				newFilters = currentFilters.filter( ( f ) => f.field !== 'ap_tag' );
+			} else {
+				// Replace with new tag
+				newFilters = [
+					...currentFilters.slice( 0, tagFilterIndex ),
+					{ field: 'ap_tag', operator: 'isAny', value: [ tagId ] },
+					...currentFilters.slice( tagFilterIndex + 1 ),
+				];
+				shouldOpenFilters = true;
+			}
+		} else {
+			// No tag filter exists - add one
+			newFilters = [ ...currentFilters, { field: 'ap_tag', operator: 'isAny', value: [ tagId ] } ];
+			shouldOpenFilters = true;
+		}
+
+		// Update the view with new filters
+		updateView( {
+			...view,
+			filters: newFilters,
+			page: 1, // Reset to first page
+			openFilters: shouldOpenFilters ? true : view.openFilters,
+		} );
+
+		// Also update the store for synchronization
+		setSelectedTag( selectedTagId === tagId ? null : tagId );
+
+		// Close the inspector
+		onClose();
+	};
 
 	if ( isLoading ) {
 		return (
@@ -119,17 +174,14 @@ export default function FeedInspector( { id, onClose, onTagClick }: FeedInspecto
 					{ ( post.content?.rendered || post.excerpt?.rendered ) && (
 						<RenderHTML html={ post.content?.rendered || post.excerpt?.rendered || '' } />
 					) }
-					{ terms && terms.length > 0 && onTagClick && (
+					{ terms && terms.length > 0 && (
 						<div className="activitypub-inspector-tags">
 							{ terms.map( ( term: Term ) => (
 								<Button
 									key={ term.id }
 									size="small"
 									variant="secondary"
-									onClick={ () => {
-										onTagClick( term.id );
-										onClose();
-									} }
+									onClick={ () => handleTagClick( term.id ) }
 								>
 									#{ term.name }
 								</Button>
