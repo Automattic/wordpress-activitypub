@@ -259,9 +259,8 @@ class Posts {
 		$content = \preg_replace( '/<p>\s*<\/p>/', '', $content );
 		$content = \preg_replace( '/\s+<\/p>/', '</p>', $content );
 		$content = \preg_replace( '/\s+<\/strong>/', '</strong>', $content );
-		$content = \trim( $content );
 
-		return $content;
+		return \trim( $content );
 	}
 
 	/**
