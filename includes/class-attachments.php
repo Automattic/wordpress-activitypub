@@ -183,6 +183,7 @@ class Attachments {
 		}
 
 		// Add inline mappings to the returned files.
+		// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- We only need the new URL, not the old one.
 		foreach ( $inline_mappings as $old_url => $new_url ) {
 			$files[] = array(
 				'url'       => $new_url,
