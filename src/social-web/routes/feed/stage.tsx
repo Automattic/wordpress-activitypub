@@ -14,7 +14,14 @@ import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
-import { titleField, dateField, excerptField, metadataField, contentField } from '../../components/fields';
+import {
+	titleField,
+	dateField,
+	excerptField,
+	metadataField,
+	contentField,
+	objectTypeField,
+} from '../../components/fields';
 import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
 import type { FeedPost } from '../../types';
 import { STORE_NAME } from '../../store';
@@ -120,9 +127,13 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			const newFields = updatedView.fields || [];
 			const fields = enforceContentExcerptMutualExclusion( oldFields, newFields );
 
-			updateView( { ...updatedView, fields } );
+			// Reset to page 1 when filters change
+			const filtersChanged = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
+			const page = filtersChanged ? 1 : updatedView.page;
+
+			updateView( { ...updatedView, fields, page } );
 		},
-		[ view.fields, updateView ]
+		[ view.fields, view.filters, updateView ]
 	);
 
 	// Reset view to default state when actor switches
@@ -145,10 +156,11 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		order: view.sort?.direction || 'desc',
 		search: view.search || '',
 		userId: activeActorId,
+		filters: view.filters,
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, excerptField, contentField, dateField ],
+		() => [ metadataField, titleField, excerptField, contentField, dateField, objectTypeField ],
 		[]
 	);
 
@@ -238,7 +250,13 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			lastProcessedPage.current = currentPage;
 			setIsLoadingMore( false );
 		}
-	}, [ feed, normalizedView.page, normalizedView.search, normalizedView.infiniteScrollEnabled ] );
+	}, [
+		feed,
+		normalizedView.page,
+		normalizedView.search,
+		normalizedView.infiniteScrollEnabled,
+		normalizedView.filters,
+	] );
 
 	return (
 		<Page
