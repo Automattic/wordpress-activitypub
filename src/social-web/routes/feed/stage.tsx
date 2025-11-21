@@ -144,7 +144,7 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 	);
 
 	// Handle tag click from sidebar tag cloud
-	const handleTagClick = useCallback(
+	const updateTagFilter = useCallback(
 		( tagId: number ) => {
 			const currentFilters = view.filters || [];
 			const tagFilterIndex = currentFilters.findIndex( ( f ) => f.field === 'ap_tag' );
@@ -187,9 +187,9 @@ export default function FeedStage( { onSelectItem, registerTagHandler }: FeedSta
 	// Register tag click handler with Layout
 	useEffect( () => {
 		if ( registerTagHandler ) {
-			registerTagHandler( handleTagClick, selectedTagId );
+			registerTagHandler( updateTagFilter, selectedTagId );
 		}
-	}, [ registerTagHandler, handleTagClick, selectedTagId ] );
+	}, [ registerTagHandler, updateTagFilter, selectedTagId ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
