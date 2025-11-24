@@ -11,7 +11,7 @@ export const tagField: Field< FeedPost > = {
 	label: __( 'Tag', 'activitypub' ),
 	enableHiding: false,
 	enableSorting: false,
-	getValue: ( { item }: { item: FeedPost } ): number => item.ap_tag?.[ 0 ],
+	getValue: ( { item }: { item: FeedPost } ): number[] => item.ap_tag ?? [],
 	getElements: async (): Promise< { value: number; label: string }[] > => {
 		const records: Term[] = await resolveSelect( coreDataStore ).getEntityRecords( 'taxonomy', 'ap_tag', {
 			per_page: 10,
