@@ -349,8 +349,13 @@ class Mailer {
 			}
 
 			$actor_id = $actor->get_id();
-			if ( \in_array( $actor_id, (array) $activity['cc'], true ) ) {
-				$recipients[ $user_id ] = $actor_id;
+			if ( \in_array( $actor_id, (array) $activity['cc'], true ) && isset( $activity['object']['tag'] ) ) {
+				foreach ( (array) $activity['object']['tag'] as $tag ) {
+					if ( object_to_uri( $tag ) === $actor_id ) {
+						$recipients[ $user_id ] = $actor_id;
+						break;
+					}
+				}
 			}
 		}
 

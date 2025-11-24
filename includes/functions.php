@@ -808,6 +808,7 @@ function object_to_uri( $data ) {
 			$data = object_to_uri( $data['url'] );
 			break;
 		case 'Link':
+		case 'Mention':
 			$data = $data['href'];
 			break;
 		default:
