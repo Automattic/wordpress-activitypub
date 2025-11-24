@@ -768,7 +768,7 @@ class Comment {
 		}
 
 		// Auto approve reactions to an `ap_post`.
-		if ( '1' === get_option( 'activitypub_create_posts', false ) ) {
+		if ( '1' === \get_option( 'activitypub_create_posts', false ) ) {
 			$post_id = $comment_data['comment_post_ID'];
 			$post    = \get_post( $post_id );
 
