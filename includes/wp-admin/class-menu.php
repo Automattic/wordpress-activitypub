@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
+use function Activitypub\site_supports_blocks;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -35,16 +36,19 @@ class Menu {
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$capability = ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ? 'manage_options' : 'activitypub';
 
-			$social_web_hook = \add_dashboard_page(
-				\__( 'Social Web', 'activitypub' ),
-				\__( 'Social Web', 'activitypub' ),
-				$capability,
-				'activitypub-social-web',
-				array( Social_Web::class, 'render_page' )
-			);
+			// Check for block support and WP version.
+			if ( site_supports_blocks() && \version_compare( \get_bloginfo( 'version' ), '6.9', '>=' ) ) {
+				$app_hook = \add_dashboard_page(
+					\__( 'Social Web', 'activitypub' ),
+					\__( 'Social Web', 'activitypub' ),
+					$capability,
+					'activitypub-social-web',
+					array( Social_Web::class, 'render_page' )
+				);
 
-			\add_action( 'load-' . $social_web_hook, array( Social_Web::class, 'remove_admin_notices' ) );
-			\add_action( 'admin_print_scripts-' . $social_web_hook, array( Social_Web::class, 'enqueue_scripts' ) );
+				\add_action( 'load-' . $app_hook, array( Social_Web::class, 'remove_admin_notices' ) );
+				\add_action( 'admin_print_scripts-' . $app_hook, array( Social_Web::class, 'enqueue_scripts' ) );
+			}
 
 			$followers_list_page = \add_users_page(
 				\__( 'Followers ⁂', 'activitypub' ),
