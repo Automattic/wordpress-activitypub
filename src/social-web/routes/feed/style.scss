@@ -282,3 +282,71 @@
 		}
 	}
 }
+
+// Mobile optimizations
+@media (max-width: 782px) {
+	// Make inspector full-width on mobile
+	.app-layout[data-section='feed'] .inspector-region {
+		width: 100%;
+	}
+
+	// Optimize feed item spacing for mobile
+	.dataviews-view-list__item {
+		padding: var(--wpds-spacing-40, 16px) var(--wpds-spacing-30, 12px);
+	}
+
+	// Reduce font sizes slightly on mobile
+	.activitypub-feed-post-title {
+		font-size: 1.1em;
+		line-height: 1.3;
+	}
+
+	.dataviews-view-list .activitypub-feed-post-title {
+		font-size: 1.2em;
+	}
+
+	// Optimize metadata layout for smaller screens
+	.activitypub-feed-post-meta {
+		flex-wrap: wrap;
+		gap: var(--wpds-spacing-15, 6px);
+		font-size: var(--wpds-font-size-xsmall, 12px);
+	}
+
+	// Reduce inspector card padding on mobile
+	.activitypub-inspector-card {
+		.components-card__header {
+			padding: var(--wpds-spacing-40, 16px) var(--wpds-spacing-30, 12px) var(--wpds-spacing-20, 8px) !important;
+		}
+
+		.components-card__body {
+			padding: var(--wpds-spacing-30, 12px) !important;
+		}
+	}
+
+	// Make inspector header more compact on mobile
+	.activitypub-inspector-header {
+		gap: var(--wpds-spacing-20, 8px);
+	}
+
+	.activitypub-inspector-avatar {
+		width: var(--wpds-spacing-80, 32px);
+		height: var(--wpds-spacing-80, 32px);
+	}
+
+	// Optimize image sizing in content
+	.activitypub-feed-content,
+	.activitypub-inspector-card .components-card__body {
+		img {
+			max-width: 100%;
+			height: auto;
+		}
+	}
+
+	// Better text wrapping on mobile
+	.activitypub-feed-excerpt,
+	.activitypub-feed-content {
+		word-break: break-word;
+		-webkit-hyphens: auto;
+		hyphens: auto;
+	}
+}

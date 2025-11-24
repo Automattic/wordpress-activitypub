@@ -90,3 +90,30 @@
 		}
 	}
 }
+
+// Mobile optimizations
+@media (max-width: 782px) {
+	.sidebar {
+		.sidebar-navigation__icon-title {
+			padding-top: var(--wpds-spacing-40, 16px);
+			padding-bottom: var(--wpds-spacing-15, 6px);
+		}
+
+		.sidebar-navigation__title {
+			font-size: var(--wpds-font-size-medium, 15px);
+		}
+
+		.nav {
+			padding: 0 var(--wpds-spacing-20, 8px);
+		}
+
+		.menu-item {
+			padding: var(--wpds-spacing-30, 12px) var(--wpds-spacing-20, 8px);
+			font-size: var(--wpds-font-size-small, 14px);
+		}
+
+		.footer {
+			padding: var(--wpds-spacing-30, 12px);
+		}
+	}
+}

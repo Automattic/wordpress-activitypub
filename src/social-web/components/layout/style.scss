@@ -51,15 +51,47 @@
 	z-index: 100000; // High z-index to ensure it appears above other content
 }
 
-// Responsive
+// Responsive - Mobile/Tablet optimization
 @media (max-width: 782px) {
 	.app-content {
 		flex-direction: column;
 	}
 
-	.sidebar-region,
+	// Hide sidebar on mobile when inspector is open
+	.app-layout:has(.inspector-region) .sidebar-region {
+		display: none;
+	}
+
+	// Hide stage on mobile when inspector is open
+	.app-layout:has(.inspector-region) .stage-region {
+		display: none;
+	}
+
+	// Make inspector full-screen on mobile
 	.inspector-region {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		width: 100% !important;
+		height: 100%;
+		z-index: 10000;
+		background-color: var(--wpds-color-bg-surface-primary, #ffffff);
+	}
+
+	// Mobile: stack layout vertically when no inspector
+	.sidebar-region {
 		width: 100%;
+		height: auto;
+		max-height: 30vh;
+		overflow-y: auto;
+	}
+
+	.stage-region {
+		width: 100%;
+		height: auto;
+		flex-grow: 1;
 	}
 
 	// Adjust snackbar position on mobile
