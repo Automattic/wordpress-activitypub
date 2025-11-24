@@ -154,37 +154,40 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		[ view.fields, view.filters, updateView ]
 	);
 
-	// Handle tag click from sidebar tag cloud
-	const updateTagFilter = useCallback(
-		( tagId: number ) => {
+	// Generalized filter update function for any field (tags, types, etc.)
+	const updateFilter = useCallback(
+		( fieldId: string, value: number | null, openFiltersPanel: boolean = false ) => {
 			const currentFilters = view.filters || [];
-			const tagFilterIndex = currentFilters.findIndex( ( f ) => f.field === 'ap_tag' );
+			const filterIndex = currentFilters.findIndex( ( f ) => f.field === fieldId );
 
 			let newFilters;
-			let shouldOpenFilters = false;
+			let shouldOpenFilters = openFiltersPanel;
 
-			if ( tagFilterIndex !== -1 ) {
-				// Tag filter exists - toggle it
-				const currentValue = currentFilters[ tagFilterIndex ].value as number[];
-				if ( currentValue.includes( tagId ) ) {
-					// Remove the tag filter if it's the same tag
-					newFilters = currentFilters.filter( ( f ) => f.field !== 'ap_tag' );
+			if ( value === null ) {
+				// Remove filter entirely
+				newFilters = currentFilters.filter( ( f ) => f.field !== fieldId );
+				shouldOpenFilters = false;
+			} else if ( filterIndex !== -1 ) {
+				// Filter exists - toggle or replace
+				const currentValue = currentFilters[ filterIndex ].value as number[];
+				if ( currentValue.includes( value ) ) {
+					// Same value clicked - remove the filter
+					newFilters = currentFilters.filter( ( f ) => f.field !== fieldId );
+					shouldOpenFilters = false;
 				} else {
-					// Replace with new tag
+					// Replace with new value
 					newFilters = [
-						...currentFilters.slice( 0, tagFilterIndex ),
-						{ field: 'ap_tag', operator: 'isAny', value: [ tagId ] },
-						...currentFilters.slice( tagFilterIndex + 1 ),
+						...currentFilters.slice( 0, filterIndex ),
+						{ field: fieldId, operator: 'isAny', value: [ value ] },
+						...currentFilters.slice( filterIndex + 1 ),
 					];
-					shouldOpenFilters = true;
 				}
 			} else {
-				// No tag filter exists - add one
-				newFilters = [ ...currentFilters, { field: 'ap_tag', operator: 'isAny', value: [ tagId ] } ];
-				shouldOpenFilters = true;
+				// No filter exists - add one
+				newFilters = [ ...currentFilters, { field: fieldId, operator: 'isAny', value: [ value ] } ];
 			}
 
-			// Open filters when adding a new tag filter (page reset handled by updateFeedView)
+			// Update view with new filters (page reset handled by updateFeedView)
 			updateFeedView( {
 				...view,
 				filters: newFilters,
@@ -192,6 +195,14 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			} );
 		},
 		[ view, updateFeedView ]
+	);
+
+	// Handle tag click from sidebar tag cloud
+	const updateTagFilter = useCallback(
+		( tagId: number ) => {
+			updateFilter( 'ap_tag', tagId, true );
+		},
+		[ updateFilter ]
 	);
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
