@@ -4,14 +4,13 @@
  * Main feed list view with DataViews
  */
 
-import './style.scss';
 import { useMemo, useCallback, useState, useEffect, useRef } from '@wordpress/element';
-import { DataViews } from '@wordpress/dataviews';
+import { DataViews, Filter } from '@wordpress/dataviews';
 import { useView } from '@wordpress/views';
 import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
-import { useSelect, useDispatch } from '@wordpress/data';
+import { useSelect } from '@wordpress/data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import {
@@ -26,7 +25,7 @@ import {
 import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
 import type { FeedPost } from '../../types';
 import { STORE_NAME } from '../../store';
-import type { SocialWebSelectors } from '../../store';
+import './style.scss';
 
 const DEFAULT_VIEW: View = {
 	type: 'list',
@@ -56,10 +55,7 @@ interface FeedStageProps {
 
 export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	// Get active actor ID from store
-	const activeActorId = useSelect(
-		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
-		[]
-	);
+	const activeActorId = useSelect( ( select ) => ( select( STORE_NAME ) as any ).getActiveActorId(), [] );
 
 	// Track URL query parameters as state for reactivity
 	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
@@ -121,23 +117,6 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		},
 	} );
 
-	// Get dispatch for store updates
-	const { setSelectedTag } = useDispatch( STORE_NAME );
-
-	// Extract ap_tag filter from view.filters to get selected tag
-	const apTagFilter = useMemo( () => {
-		return view.filters?.find( ( f ) => f.field === 'ap_tag' )?.value as number[] | undefined;
-	}, [ view.filters ] );
-
-	const selectedTagId = useMemo( () => {
-		return apTagFilter && apTagFilter.length > 0 ? apTagFilter[ 0 ] : undefined;
-	}, [ apTagFilter ] );
-
-	// Sync selectedTagId from view.filters to store
-	useEffect( () => {
-		setSelectedTag( selectedTagId ?? null );
-	}, [ selectedTagId, setSelectedTag ] );
-
 	// Wrap updateView to enforce mutual exclusion between excerpt and content fields
 	const updateFeedView = useCallback(
 		( updatedView: View ) => {
@@ -195,14 +174,6 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			} );
 		},
 		[ view, updateFeedView ]
-	);
-
-	// Handle tag click from sidebar tag cloud
-	const updateTagFilter = useCallback(
-		( tagId: number ) => {
-			updateFilter( 'ap_tag', tagId, true );
-		},
-		[ updateFilter ]
 	);
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {

@@ -10,8 +10,4 @@ export const selectors = {
 	getActiveActorId( state: State ): number | null {
 		return state.activeActorId;
 	},
-
-	getSelectedTagId( state: State ): number | null {
-		return state.selectedTagId;
-	},
 };

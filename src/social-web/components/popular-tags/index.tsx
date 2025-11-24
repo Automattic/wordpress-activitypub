@@ -4,12 +4,12 @@
  * Displays ap_tag taxonomy terms as a clickable list of popular tags
  */
 
-import './style.scss';
 import { useEntityRecords } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
 import { MenuItem, MenuGroup } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
 import { useTagFilter } from '../../hooks/use-tag-filter';
+import './style.scss';
 
 export function PopularTags() {
 	const { records: tags, isResolving } = useEntityRecords< Term >( 'taxonomy', 'ap_tag', {
@@ -21,11 +21,8 @@ export function PopularTags() {
 
 	const { selectedTagId, updateTagFilter } = useTagFilter();
 
-	const updateFilter = ( tagId: number ): void => {
-		// Toggle: if clicking the same tag, clear the filter
-		const newTagId: number = selectedTagId === tagId ? null : tagId;
-		updateTagFilter( newTagId );
-	};
+	// Toggle: if clicking the same tag, clear the filter
+	const updateFilter = ( tagId: number ): void => updateTagFilter( selectedTagId === tagId ? null : tagId );
 
 	if ( isResolving ) {
 		return (

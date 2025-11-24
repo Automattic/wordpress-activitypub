@@ -68,13 +68,13 @@ export function useFeed( {
 		}
 
 		// Extract ap_object_type filter from filters array
-		const apObjectTypeFilter = filters.find( ( f ) => f.field === 'ap_object_type' );
+		const apObjectTypeFilter: Filter = filters.find( ( f: Filter ): boolean => f.field === 'ap_object_type' );
 		if ( apObjectTypeFilter?.value !== undefined ) {
 			args.ap_object_type = apObjectTypeFilter.value;
 		}
 
 		// Extract ap_tag filter from filters array
-		const apTagFilter = filters.find( ( f ) => f.field === 'ap_tag' );
+		const apTagFilter: Filter = filters.find( ( f: Filter ): boolean => f.field === 'ap_tag' );
 		if ( apTagFilter?.value !== undefined ) {
 			args.ap_tag = apTagFilter.value;
 		}

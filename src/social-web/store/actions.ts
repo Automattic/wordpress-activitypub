@@ -7,8 +7,8 @@ import { store as preferencesStore } from '@wordpress/preferences';
 /**
  * Internal dependencies
  */
-import type { SetActiveActorAction, SetSelectedTagAction } from './types';
-import { SET_ACTIVE_ACTOR, SET_SELECTED_TAG } from './types';
+import type { SetActiveActorAction } from './types';
+import { SET_ACTIVE_ACTOR } from './types';
 
 /**
  * Store actions
@@ -23,12 +23,5 @@ export const actions = {
 			type: SET_ACTIVE_ACTOR,
 			actorId,
 		} as SetActiveActorAction;
-	},
-
-	setSelectedTag( tagId: number | null ): SetSelectedTagAction {
-		return {
-			type: SET_SELECTED_TAG,
-			tagId,
-		};
 	},
 };
