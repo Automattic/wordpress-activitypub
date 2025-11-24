@@ -123,7 +123,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	 */
 	public function test_pre_comment_approved() {
 		// Disable flood control.
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
 
 		$post_id = \wp_insert_post(
 			array(
@@ -172,7 +172,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$comment_autoapproved = \get_comment( $comment_id_autoapproved );
 		$this->assertEquals( '1', $comment_autoapproved->comment_approved );
 
-		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ), 10 );
+		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ) );
 
 		$comment_id_unapproved = \wp_new_comment(
 			array(

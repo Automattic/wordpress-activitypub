@@ -7,16 +7,19 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Quote_Request;
+use Activitypub\Tests\ActivityPub_Outbox_TestCase;
 
 /**
  * Test class for Quote Request Handler.
  *
  * @coversDefaultClass \Activitypub\Handler\Quote_Request
  */
-class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
+class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	/**
 	 * Test post ID.
 	 *
@@ -147,17 +150,15 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		$actor_url = $activity['actor'];
 
 		// Mock HTTP requests for actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () use ( $actor_url ) {
-				return array(
-					'id'    => $actor_url,
-					'actor' => $actor_url,
-					'type'  => 'Person',
-					'inbox' => str_replace( '/users/', '/inbox/', $actor_url ),
-				);
-			}
-		);
+		$pre_get_remote_metadata_callback = function () use ( $actor_url ) {
+			return array(
+				'id'    => $actor_url,
+				'actor' => $actor_url,
+				'type'  => 'Person',
+				'inbox' => str_replace( '/users/', '/inbox/', $actor_url ),
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_callback );
 
 		$remote_actor_id = false;
 
@@ -167,13 +168,11 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 			$this->assertNotFalse( $remote_actor_id, 'Should successfully add follower' );
 		} elseif ( 'mock_actor_error' === $setup_callback ) {
 			// Override the actor metadata filter to return an error.
-			remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-			add_filter(
-				'pre_get_remote_metadata_by_actor',
-				function () {
-					return new \WP_Error( 'not_found', 'Actor not found' );
-				}
-			);
+			remove_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_callback );
+			$pre_get_remote_metadata_error_callback = function () {
+				return new \WP_Error( 'not_found', 'Actor not found' );
+			};
+			add_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_error_callback );
 		}
 
 		// Handle the quote request.
@@ -210,6 +209,12 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		// Clean up follower if created.
 		if ( $remote_actor_id ) {
 			wp_delete_post( $remote_actor_id, true );
+		}
+
+		// Clean up filters.
+		remove_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_callback );
+		if ( isset( $pre_get_remote_metadata_error_callback ) ) {
+			remove_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_error_callback );
 		}
 	}
 
@@ -452,11 +457,6 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	 * @covers ::init
 	 */
 	public function test_init_registers_hooks() {
-		// Remove existing hooks first.
-		remove_all_actions( 'activitypub_inbox_quote_request' );
-		remove_all_actions( 'activitypub_rest_inbox_disallowed' );
-		remove_all_filters( 'activitypub_validate_object' );
-
 		// Call init.
 		Quote_Request::init();
 
@@ -464,16 +464,6 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		$this->assertTrue( has_action( 'activitypub_inbox_quote_request' ) );
 		$this->assertTrue( has_action( 'activitypub_rest_inbox_disallowed' ) );
 		$this->assertTrue( has_filter( 'activitypub_validate_object' ) );
-	}
-
-	/**
-	 * Clean up filters after each test.
-	 */
-	public function tear_down() {
-		// Remove all the filters we added during tests.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-
-		parent::tear_down();
 	}
 
 	/**
@@ -510,20 +500,16 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		$this->assertContains( $instrument_url, $quoted_by_meta, 'Instrument URL should be in quoted_by meta' );
 
 		// Track outbox activities.
-		$outbox_activities = array();
-		\add_action(
-			'post_activitypub_add_to_outbox',
-			function ( $outbox_id, $activity, $user_id, $visibility ) use ( &$outbox_activities ) {
-				$outbox_activities[] = array(
-					'outbox_id'  => $outbox_id,
-					'activity'   => $activity,
-					'user_id'    => $user_id,
-					'visibility' => $visibility,
-				);
-			},
-			10,
-			4
-		);
+		$outbox_activities     = array();
+		$track_outbox_callback = function ( $outbox_id, $activity, $user_id, $visibility ) use ( &$outbox_activities ) {
+			$outbox_activities[] = array(
+				'outbox_id'  => $outbox_id,
+				'activity'   => $activity,
+				'user_id'    => $user_id,
+				'visibility' => $visibility,
+			);
+		};
+		\add_action( 'post_activitypub_add_to_outbox', $track_outbox_callback, 10, 4 );
 
 		// Delete the quote comment.
 		wp_delete_comment( $comment_id, true );
@@ -533,7 +519,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 
 		$reject_activity = null;
 		foreach ( $outbox_activities as $item ) {
-			if ( isset( $item['activity'] ) && $item['activity'] instanceof \Activitypub\Activity\Activity ) {
+			if ( isset( $item['activity'] ) && $item['activity'] instanceof Activity ) {
 				$activity_array = $item['activity']->to_array();
 				if ( 'Reject' === $activity_array['type'] ) {
 					$reject_activity = $activity_array;
@@ -554,6 +540,9 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		// Verify metadata was removed.
 		$quoted_by_after = \get_post_meta( self::$post_id, '_activitypub_quoted_by', false );
 		$this->assertNotContains( $instrument_url, $quoted_by_after, 'Instrument URL should be removed from quoted_by meta' );
+
+		// Clean up action.
+		\remove_action( 'post_activitypub_add_to_outbox', $track_outbox_callback );
 	}
 
 	/**
@@ -575,26 +564,25 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		);
 
 		// Track outbox activities.
-		$reject_sent = false;
-		\add_action(
-			'post_activitypub_add_to_outbox',
-			function ( $outbox_id, $activity ) use ( &$reject_sent ) {
-				if ( $activity instanceof \Activitypub\Activity\Activity ) {
-					$activity_array = $activity->to_array();
-					if ( 'Reject' === $activity_array['type'] ) {
-						$reject_sent = true;
-					}
+		$reject_sent           = false;
+		$track_reject_callback = function ( $outbox_id, $activity ) use ( &$reject_sent ) {
+			if ( $activity instanceof Activity ) {
+				$activity_array = $activity->to_array();
+				if ( 'Reject' === $activity_array['type'] ) {
+					$reject_sent = true;
 				}
-			},
-			10,
-			2
-		);
+			}
+		};
+		\add_action( 'post_activitypub_add_to_outbox', $track_reject_callback, 10, 2 );
 
 		// Delete the regular comment.
 		wp_delete_comment( $comment_id, true );
 
 		// Verify no Reject activity was sent.
 		$this->assertFalse( $reject_sent, 'Reject should not be sent for non-quote comments' );
+
+		// Clean up action.
+		\remove_action( 'post_activitypub_add_to_outbox', $track_reject_callback );
 	}
 
 	/**
@@ -647,13 +635,13 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		);
 
 		// Create Activity object and set properties.
-		$activity = new \Activitypub\Activity\Activity();
+		$activity = new Activity();
 		$activity->from_array( $quote_request_activity );
 		// Ensure the ID is explicitly set.
 		$activity->set_id( $quote_request_id );
 
 		// Store the activity in the inbox.
-		$inbox_id = \Activitypub\Collection\Inbox::add( $activity, array( self::$user_id ) );
+		$inbox_id = Inbox::add( $activity, array( self::$user_id ) );
 		$this->assertIsInt( $inbox_id, 'QuoteRequest should be stored in inbox' );
 
 		// Verify the QuoteRequest was stored correctly in the inbox.
@@ -677,20 +665,16 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		\add_comment_meta( $comment_id, 'source_url', $instrument_url );
 
 		// Track outbox activities.
-		$outbox_activities = array();
-		\add_action(
-			'post_activitypub_add_to_outbox',
-			function ( $outbox_id, $activity, $user_id, $visibility ) use ( &$outbox_activities ) {
-				$outbox_activities[] = array(
-					'outbox_id'  => $outbox_id,
-					'activity'   => $activity,
-					'user_id'    => $user_id,
-					'visibility' => $visibility,
-				);
-			},
-			10,
-			4
-		);
+		$outbox_activities               = array();
+		$track_outbox_for_inbox_callback = function ( $outbox_id, $activity, $user_id, $visibility ) use ( &$outbox_activities ) {
+			$outbox_activities[] = array(
+				'outbox_id'  => $outbox_id,
+				'activity'   => $activity,
+				'user_id'    => $user_id,
+				'visibility' => $visibility,
+			);
+		};
+		\add_action( 'post_activitypub_add_to_outbox', $track_outbox_for_inbox_callback, 10, 4 );
 
 		// Delete the quote comment.
 		wp_delete_comment( $comment_id, true );
@@ -700,7 +684,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 
 		$reject_activity = null;
 		foreach ( $outbox_activities as $item ) {
-			if ( isset( $item['activity'] ) && $item['activity'] instanceof \Activitypub\Activity\Activity ) {
+			if ( isset( $item['activity'] ) && $item['activity'] instanceof Activity ) {
 				$activity_array = $item['activity']->to_array();
 				if ( 'Reject' === $activity_array['type'] ) {
 					$reject_activity = $activity_array;
@@ -726,5 +710,8 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		$this->assertEquals( $actor_url, $reject_activity['object']['actor'] );
 		$this->assertEquals( \get_permalink( self::$post_id ), $reject_activity['object']['object'] );
 		$this->assertEquals( $instrument_url, $reject_activity['object']['instrument'] );
+
+		// Clean up action.
+		\remove_action( 'post_activitypub_add_to_outbox', $track_outbox_for_inbox_callback );
 	}
 }

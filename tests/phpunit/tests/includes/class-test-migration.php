@@ -1137,7 +1137,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertContains( $meta_value, array( '123', '456', '789' ), 'Meta value should be one of the test values' );
 
 		// Clean up.
-		\remove_action( 'added_post_meta', $capture_action, 10 );
+		\remove_action( 'added_post_meta', $capture_action );
 		foreach ( $posts as $post ) {
 			\wp_delete_post( $post, true );
 		}
@@ -1166,7 +1166,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEmpty( $following_actions, 'No following-specific actions should be triggered when no following meta exists' );
 
 		// Clean up.
-		\remove_action( 'added_post_meta', $capture_action, 10 );
+		\remove_action( 'added_post_meta', $capture_action );
 	}
 
 	/**

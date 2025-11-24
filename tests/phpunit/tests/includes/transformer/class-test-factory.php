@@ -185,25 +185,21 @@ class Test_Factory extends \WP_UnitTestCase {
 	 * @covers ::get_transformer
 	 */
 	public function test_get_transformer_filter() {
-		add_filter(
-			'activitypub_transformer',
-			// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.classFound
-			function ( $transformer, $data, $class ) {
-				if ( 'WP_Post' === $class && 'post' === $data->post_type ) {
-					return new Activity_Object( $data );
-				}
-				return $transformer;
-			},
-			10,
-			3
-		);
+		// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.classFound
+		$transformer_filter_callback = function ( $transformer, $data, $class ) {
+			if ( 'WP_Post' === $class && 'post' === $data->post_type ) {
+				return new Activity_Object( $data );
+			}
+			return $transformer;
+		};
+		add_filter( 'activitypub_transformer', $transformer_filter_callback, 10, 3 );
 
 		$post        = get_post( self::$post_id );
 		$transformer = Factory::get_transformer( $post );
 
 		$this->assertInstanceOf( Activity_Object::class, $transformer );
 
-		remove_all_filters( 'activitypub_transformer' );
+		remove_filter( 'activitypub_transformer', $transformer_filter_callback );
 	}
 
 	/**
@@ -212,12 +208,10 @@ class Test_Factory extends \WP_UnitTestCase {
 	 * @covers ::get_transformer
 	 */
 	public function test_get_transformer_invalid_filter() {
-		add_filter(
-			'activitypub_transformer',
-			function () {
-				return 'invalid';
-			}
-		);
+		$invalid_transformer_callback = function () {
+			return 'invalid';
+		};
+		add_filter( 'activitypub_transformer', $invalid_transformer_callback );
 
 		$post   = get_post( self::$post_id );
 		$result = Factory::get_transformer( $post );
@@ -225,7 +219,7 @@ class Test_Factory extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertEquals( 'invalid_transformer', $result->get_error_code() );
 
-		remove_all_filters( 'activitypub_transformer' );
+		remove_filter( 'activitypub_transformer', $invalid_transformer_callback );
 	}
 
 	/**
@@ -239,7 +233,7 @@ class Test_Factory extends \WP_UnitTestCase {
 				'content' => 'Test Content',
 			);
 		};
-		\add_filter( 'activitypub_pre_http_get_remote_object', $fake_request, 10, 2 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fake_request );
 
 		$uri_transformer = Factory::get_transformer( 'https://example.com/activity/1' );
 		$result          = $uri_transformer->to_object();
@@ -256,16 +250,16 @@ class Test_Factory extends \WP_UnitTestCase {
 	 * Test URI transformation with error.
 	 */
 	public function test_uri_transformation_error() {
-		$fake_request = function () {
+		$fake_error_request = function () {
 			return new \WP_Error( 'fetch_error', 'Failed to fetch remote object' );
 		};
-		\add_filter( 'pre_http_request', $fake_request );
+		\add_filter( 'pre_http_request', $fake_error_request );
 
 		$uri_transformer = Factory::get_transformer( 'https://example.com/invalid' );
 
 		$this->assertWPError( $uri_transformer );
 
-		\remove_filter( 'pre_http_request', $fake_request );
+		\remove_filter( 'pre_http_request', $fake_error_request );
 	}
 
 	/**
