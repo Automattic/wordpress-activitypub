@@ -7,7 +7,7 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from '@wordpress/element';
+import { useState, useEffect, useRef, lazy, Suspense } from '@wordpress/element';
 import { CommandMenu } from '@wordpress/commands';
 import { SnackbarList, Spinner } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
@@ -64,16 +64,11 @@ export function Layout() {
 	const [ activeSection, setActiveSection ] = useState( 'feed' );
 	const [ selectedItemId, setSelectedItemId ] = useState< string | number | null >( null );
 
-	// Get active actor ID and selected tag ID from store
+	// Get active actor ID
 	const activeActorId = useSelect(
 		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
 		[]
 	);
-	const selectedTagId = useSelect(
-		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getSelectedTagId(),
-		[]
-	);
-	const { setSelectedTag } = useDispatch( STORE_NAME );
 
 	// Track previous actor ID to detect changes
 	const prevActiveActorId = useRef( activeActorId );
@@ -133,9 +128,7 @@ export function Layout() {
 
 	// Render main content (stage) with Suspense for lazy loading
 	const renderStage = () => {
-		const props = {
-			onSelectItem: selectItem,
-		};
+		const props = { onSelectItem: selectItem };
 
 		let StageComponent;
 		switch ( activeSection ) {
@@ -174,10 +167,7 @@ export function Layout() {
 					return null;
 				}
 				InspectorComponent = FeedInspector;
-				props = {
-					id: selectedItemId,
-					onClose: closeInspector,
-				};
+				props = { id: selectedItemId, onClose: closeInspector };
 		}
 
 		return (
