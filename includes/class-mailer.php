@@ -24,6 +24,9 @@ class Mailer {
 
 		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );  /** After @see \Activitypub\Handler\Create::handle_create() */
+
+		\add_filter( 'notify_post_author', array( self::class, 'prevent_ap_post_comment_notifications' ), 10, 2 );
+		\add_filter( 'notify_moderator', array( self::class, 'prevent_ap_post_comment_notifications' ), 10, 2 );
 	}
 
 	/**
@@ -442,5 +445,45 @@ class Mailer {
 		}
 
 		return $actor;
+	}
+
+	/**
+	 * Prevent email notifications for comments on ap_post.
+	 *
+	 * This filter prevents both post author and moderator notifications
+	 * for comments on ap_post custom post type.
+	 *
+	 * @param bool $maybe_notify Whether to send the notification.
+	 * @param int  $comment_id   The comment ID.
+	 *
+	 * @return bool False if comment is on ap_post, original value otherwise.
+	 */
+	public static function prevent_ap_post_comment_notifications( $maybe_notify, $comment_id ) {
+		// If already disabled, respect that.
+		if ( ! $maybe_notify ) {
+			return $maybe_notify;
+		}
+
+		// Only prevent if the create_posts option is enabled.
+		if ( '1' !== get_option( 'activitypub_create_posts', false ) ) {
+			return $maybe_notify;
+		}
+
+		$comment = \get_comment( $comment_id );
+		if ( ! $comment ) {
+			return $maybe_notify;
+		}
+
+		$post = \get_post( $comment->comment_post_ID );
+		if ( ! $post ) {
+			return $maybe_notify;
+		}
+
+		// Prevent notifications for comments on ap_post.
+		if ( Collection\Posts::POST_TYPE === $post->post_type ) {
+			return false;
+		}
+
+		return $maybe_notify;
 	}
 }

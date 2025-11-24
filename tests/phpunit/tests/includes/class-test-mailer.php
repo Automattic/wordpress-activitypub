@@ -1018,4 +1018,147 @@ class Test_Mailer extends WP_UnitTestCase {
 		\remove_all_filters( 'wp_mail' );
 		\wp_delete_user( $other_user_id );
 	}
+
+	/**
+	 * Test that email notifications are prevented for comments on ap_post.
+	 *
+	 * @covers ::prevent_ap_post_comment_notifications
+	 */
+	public function test_prevent_email_notifications_for_ap_post_comments() {
+		// Enable the create_posts option.
+		\update_option( 'activitypub_create_posts', '1' );
+
+		// Create an ap_post.
+		$ap_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'ap_post',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create a comment on the ap_post.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $ap_post_id,
+				'comment_approved' => '1',
+			)
+		);
+
+		// Test notify_post_author filter.
+		$notify_author = \apply_filters( 'notify_post_author', true, $comment_id );
+		$this->assertFalse( $notify_author, 'Email notifications to post author should be prevented for ap_post comments' );
+
+		// Test notify_moderator filter.
+		$notify_moderator = \apply_filters( 'notify_moderator', true, $comment_id );
+		$this->assertFalse( $notify_moderator, 'Email notifications to moderator should be prevented for ap_post comments' );
+
+		// Clean up.
+		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * Test that email notifications are NOT prevented for comments on regular posts.
+	 *
+	 * @covers ::prevent_ap_post_comment_notifications
+	 */
+	public function test_allow_email_notifications_for_regular_post_comments() {
+		// Enable the create_posts option.
+		\update_option( 'activitypub_create_posts', '1' );
+
+		// Create a regular post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => 1,
+			)
+		);
+
+		// Create a comment on the regular post.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+			)
+		);
+
+		// Test notify_post_author filter.
+		$notify_author = \apply_filters( 'notify_post_author', true, $comment_id );
+		$this->assertTrue( $notify_author, 'Email notifications to post author should be allowed for regular post comments' );
+
+		// Test notify_moderator filter.
+		$notify_moderator = \apply_filters( 'notify_moderator', true, $comment_id );
+		$this->assertTrue( $notify_moderator, 'Email notifications to moderator should be allowed for regular post comments' );
+
+		// Clean up.
+		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * Test that email notifications are allowed for ap_post when option is disabled.
+	 *
+	 * @covers ::prevent_ap_post_comment_notifications
+	 */
+	public function test_allow_email_notifications_when_option_disabled() {
+		// Ensure the create_posts option is disabled.
+		\delete_option( 'activitypub_create_posts' );
+
+		// Create an ap_post.
+		$ap_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'ap_post',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create a comment on the ap_post.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $ap_post_id,
+				'comment_approved' => '1',
+			)
+		);
+
+		// Test notify_post_author filter.
+		$notify_author = \apply_filters( 'notify_post_author', true, $comment_id );
+		$this->assertTrue( $notify_author, 'Email notifications should be allowed when option is disabled' );
+
+		// Test notify_moderator filter.
+		$notify_moderator = \apply_filters( 'notify_moderator', true, $comment_id );
+		$this->assertTrue( $notify_moderator, 'Email notifications should be allowed when option is disabled' );
+	}
+
+	/**
+	 * Test that email notifications respect existing false values.
+	 *
+	 * @covers ::prevent_ap_post_comment_notifications
+	 */
+	public function test_respect_existing_notification_settings() {
+		// Enable the create_posts option.
+		\update_option( 'activitypub_create_posts', '1' );
+
+		// Create an ap_post.
+		$ap_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'ap_post',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create a comment on the ap_post.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $ap_post_id,
+				'comment_approved' => '1',
+			)
+		);
+
+		// Test that if notifications are already disabled, they stay disabled.
+		$notify_author = \apply_filters( 'notify_post_author', false, $comment_id );
+		$this->assertFalse( $notify_author, 'Should respect already disabled notifications' );
+
+		$notify_moderator = \apply_filters( 'notify_moderator', false, $comment_id );
+		$this->assertFalse( $notify_moderator, 'Should respect already disabled notifications' );
+
+		// Clean up.
+		\delete_option( 'activitypub_create_posts' );
+	}
 }
