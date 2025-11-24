@@ -34,9 +34,12 @@ export function useTagFilter(): UseTagFilterReturn {
 	} );
 
 	// Derive selected tag from view.filters
-	const selectedTagId: number = useMemo( (): number => {
+	const selectedTagId: number | null = useMemo( (): number | null => {
 		const tagFilter: Filter = view.filters?.find( ( f: Filter ): boolean => f.field === 'ap_tag' );
-		return tagFilter?.value?.[ 0 ] ?? null;
+		const value: number[] = tagFilter?.value ?? [];
+
+		// Only highlight when exactly one tag is selected
+		return value.length === 1 ? value[ 0 ] : null;
 	}, [ view.filters ] );
 
 	// Update tag filter with toggle support
@@ -52,7 +55,7 @@ export function useTagFilter(): UseTagFilterReturn {
 				newFilters = currentFilters.filter( ( f: Filter ): boolean => f.field !== 'ap_tag' );
 			} else if ( tagFilterIndex !== -1 ) {
 				// Tag filter exists - toggle it
-				const currentValue: number = currentFilters[ tagFilterIndex ].value;
+				const currentValue: number[] = currentFilters[ tagFilterIndex ].value;
 				if ( Array.isArray( currentValue ) && currentValue.includes( tagId ) ) {
 					// Remove the tag filter if it's the same tag
 					newFilters = currentFilters.filter( ( f: Filter ): boolean => f.field !== 'ap_tag' );
