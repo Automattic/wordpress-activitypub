@@ -78,6 +78,11 @@
 		height: 100%;
 		width: 100%;
 	}
+
+	.site-icon__image {
+		height: var(--wpds-spacing-80, 32px);
+		width: var(--wpds-spacing-80, 32px);
+	}
 }
 
 .site-hub__title .components-button {
