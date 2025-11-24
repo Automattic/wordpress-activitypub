@@ -87,23 +87,21 @@ class Test_Signature extends \WP_UnitTestCase {
 		);
 
 		// Mock the remote key retrieval for this curve.
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $public_key ) {
-				return array(
-					'name'      => 'Test User',
-					'url'       => 'https://example.com/users/test',
-					'publicKey' => array(
-						'id'           => 'https://example.com/users/test#main-key',
-						'owner'        => 'https://example.com/users/test',
-						'publicKeyPem' => $public_key,
-					),
-				);
-			}
-		);
+		$mock_remote_key_retrieval = function () use ( $public_key ) {
+			return array(
+				'name'      => 'Test User',
+				'url'       => 'https://example.com/users/test',
+				'publicKey' => array(
+					'id'           => 'https://example.com/users/test#main-key',
+					'owner'        => 'https://example.com/users/test',
+					'publicKeyPem' => $public_key,
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 
 		$this->assertTrue( Signature::verify_http_signature( $request ), "Valid hs2019 signature for curve {$curve} should verify" );
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
 	/**
@@ -131,22 +129,20 @@ class Test_Signature extends \WP_UnitTestCase {
 			),
 		);
 
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $public_key ) {
-				return array(
-					'name'      => 'Test User',
-					'url'       => 'https://example.com/users/test',
-					'publicKey' => array(
-						'id'           => 'https://example.com/users/test#main-key',
-						'owner'        => 'https://example.com/users/test',
-						'publicKeyPem' => $public_key,
-					),
-				);
-			}
-		);
+		$mock_remote_key_retrieval = function () use ( $public_key ) {
+			return array(
+				'name'      => 'Test User',
+				'url'       => 'https://example.com/users/test',
+				'publicKey' => array(
+					'id'           => 'https://example.com/users/test#main-key',
+					'owner'        => 'https://example.com/users/test',
+					'publicKeyPem' => $public_key,
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 		$this->assertWPError( Signature::verify_http_signature( $request ), 'Invalid hs2019 signature for curve prime256v1 should fail' );
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
 	/**
@@ -190,22 +186,20 @@ class Test_Signature extends \WP_UnitTestCase {
 			),
 		);
 
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $public_key ) {
-				return array(
-					'name'      => 'Test User',
-					'url'       => 'https://example.com/users/test',
-					'publicKey' => array(
-						'id'           => 'https://example.com/users/test#main-key',
-						'owner'        => 'https://example.com/users/test',
-						'publicKeyPem' => $public_key,
-					),
-				);
-			}
-		);
+		$mock_remote_key_retrieval = function () use ( $public_key ) {
+			return array(
+				'name'      => 'Test User',
+				'url'       => 'https://example.com/users/test',
+				'publicKey' => array(
+					'id'           => 'https://example.com/users/test#main-key',
+					'owner'        => 'https://example.com/users/test',
+					'publicKeyPem' => $public_key,
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 		$this->assertTrue( Signature::verify_http_signature( $request ), "Valid hs2019 signature for RSA {$bits} bits should verify" );
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
 	/**
@@ -233,22 +227,20 @@ class Test_Signature extends \WP_UnitTestCase {
 			),
 		);
 
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $public_key ) {
-				return array(
-					'name'      => 'Test User',
-					'url'       => 'https://example.com/users/test',
-					'publicKey' => array(
-						'id'           => 'https://example.com/users/test#main-key',
-						'owner'        => 'https://example.com/users/test',
-						'publicKeyPem' => $public_key,
-					),
-				);
-			}
-		);
+		$mock_remote_key_retrieval = function () use ( $public_key ) {
+			return array(
+				'name'      => 'Test User',
+				'url'       => 'https://example.com/users/test',
+				'publicKey' => array(
+					'id'           => 'https://example.com/users/test#main-key',
+					'owner'        => 'https://example.com/users/test',
+					'publicKeyPem' => $public_key,
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 		$this->assertWPError( Signature::verify_http_signature( $request ), 'Invalid hs2019 signature for RSA 2048 bits should fail' );
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
 	/**
@@ -275,22 +267,23 @@ class Test_Signature extends \WP_UnitTestCase {
 				\base64_encode( $signature )
 			),
 		);
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $public_key ) {
-				return array(
-					'name'      => 'Test User',
-					'url'       => 'https://example.com/users/test',
-					'publicKey' => array(
-						'id'           => 'https://example.com/users/test#main-key',
-						'owner'        => 'https://example.com/users/test',
-						'publicKeyPem' => $public_key,
-					),
-				);
-			}
-		);
+
+		$mock_remote_key_retrieval = function () use ( $public_key ) {
+			return array(
+				'name'      => 'Test User',
+				'url'       => 'https://example.com/users/test',
+				'publicKey' => array(
+					'id'           => 'https://example.com/users/test#main-key',
+					'owner'        => 'https://example.com/users/test',
+					'publicKeyPem' => $public_key,
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
 		$this->assertWPError( Signature::verify_http_signature( $request ), 'Unsupported EC curve secp256k1 should fail' );
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
 	/**
@@ -302,20 +295,18 @@ class Test_Signature extends \WP_UnitTestCase {
 		// Create a user and get their keypair.
 		$keys = Actors::get_keypair( 1 );
 
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $keys ) {
-				return array(
-					'name'      => 'Admin',
-					'url'       => 'https://example.org/author/admin',
-					'publicKey' => array(
-						'id'           => 'https://example.org/author/admin#main-key',
-						'owner'        => 'https://example.org/author/admin',
-						'publicKeyPem' => $keys['public_key'],
-					),
-				);
-			}
-		);
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 
 		$args = \apply_filters(
 			'http_request_args',
@@ -360,7 +351,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
 	/**
@@ -377,20 +368,18 @@ class Test_Signature extends \WP_UnitTestCase {
 		\update_option( 'activitypub_rfc9421_signature', '1' );
 		$keys = self::$test_keys['rsa']['4096'];
 
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $keys ) {
-				return array(
-					'name'      => 'Admin',
-					'url'       => 'https://example.org/author/admin',
-					'publicKey' => array(
-						'id'           => 'https://example.org/author/admin#main-key',
-						'owner'        => 'https://example.org/author/admin',
-						'publicKeyPem' => $keys['public_key'],
-					),
-				);
-			}
-		);
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 
 		$args = \apply_filters(
 			'http_request_args',
@@ -443,7 +432,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		// The verification should succeed.
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 		\delete_option( 'activitypub_rfc9421_signature' );
 	}
 
@@ -497,20 +486,18 @@ class Test_Signature extends \WP_UnitTestCase {
 	public function test_verify_http_signature_rfc9421_get_request() {
 		$keys = self::$test_keys['rsa']['2048'];
 
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $keys ) {
-				return array(
-					'name'      => 'Admin',
-					'url'       => 'https://example.org/author/admin',
-					'publicKey' => array(
-						'id'           => 'https://example.org/author/admin#main-key',
-						'owner'        => 'https://example.org/author/admin',
-						'publicKeyPem' => $keys['public_key'],
-					),
-				);
-			}
-		);
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 
 		// Create a date for the request.
 		$date = \gmdate( 'D, d M Y H:i:s T' );
@@ -560,7 +547,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		// The verification should succeed.
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
 	/**
@@ -593,20 +580,18 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * @param string $algorithm The signature algorithm to use.
 	 */
 	private function verify_rfc9421_signature_with_keys( $keys, $algorithm ) {
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $keys ) {
-				return array(
-					'name'      => 'Admin',
-					'url'       => 'https://example.org/author/admin',
-					'publicKey' => array(
-						'id'           => 'https://example.org/author/admin#main-key',
-						'owner'        => 'https://example.org/author/admin',
-						'publicKeyPem' => $keys['public_key'],
-					),
-				);
-			}
-		);
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 
 		// Create a request body.
 		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
@@ -667,7 +652,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		// The verification should succeed.
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
 	/**

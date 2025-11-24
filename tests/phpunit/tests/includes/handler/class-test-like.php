@@ -277,18 +277,14 @@ class Test_Like extends \WP_UnitTestCase {
 		$hook_success  = null;
 		$hook_result   = null;
 
-		\add_action(
-			'activitypub_handled_like',
-			function ( $activity, $user_id, $success, $result ) use ( &$hook_fired, &$hook_activity, &$hook_user_id, &$hook_success, &$hook_result ) {
-				$hook_fired    = true;
-				$hook_activity = $activity;
-				$hook_user_id  = $user_id;
-				$hook_success  = $success;
-				$hook_result   = $result;
-			},
-			10,
-			4
-		);
+		$handled_like_callback = function ( $activity, $user_id, $success, $result ) use ( &$hook_fired, &$hook_activity, &$hook_user_id, &$hook_success, &$hook_result ) {
+			$hook_fired    = true;
+			$hook_activity = $activity;
+			$hook_user_id  = $user_id;
+			$hook_success  = $success;
+			$hook_result   = $result;
+		};
+		\add_action( 'activitypub_handled_like', $handled_like_callback, 10, 4 );
 
 		$activity = $this->create_test_object();
 		Like::handle_like( $activity, $this->user_id );
@@ -302,7 +298,7 @@ class Test_Like extends \WP_UnitTestCase {
 		$this->assertInstanceOf( 'WP_Comment', $hook_result, 'Result should be WP_Comment' );
 
 		// Clean up.
-		\remove_all_actions( 'activitypub_handled_like' );
+		\remove_action( 'activitypub_handled_like', $handled_like_callback );
 	}
 
 	/**

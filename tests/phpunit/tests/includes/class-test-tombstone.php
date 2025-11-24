@@ -33,7 +33,7 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		add_filter( 'pre_http_request', $fake_request, 10, 3 );
 		$response = Tombstone::exists_remote( 'https://fake.test/object/123' );
 		$this->assertEquals( $result, $response );
-		remove_filter( 'pre_http_request', $fake_request, 10 );
+		remove_filter( 'pre_http_request', $fake_request );
 	}
 
 	/**

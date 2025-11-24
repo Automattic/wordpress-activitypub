@@ -173,33 +173,30 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Mock remote metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test Follower',
-					'url'               => 'https://example.com/author',
-					'preferredUsername' => 'follower',
-				);
-			}
-		);
+		$remote_metadata_callback = function () {
+			return array(
+				'name'              => 'Test Follower',
+				'url'               => 'https://example.com/author',
+				'preferredUsername' => 'follower',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 
 		// Capture email.
-		add_filter(
-			'wp_mail',
-			function ( $args ) {
-				$this->assertStringContainsString( 'Test Follower', $args['subject'] );
-				$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
-				$this->assertEquals( get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
-				return $args;
-			}
-		);
+		$wp_mail_callback = function ( $args ) {
+			$this->assertStringContainsString( 'Test Follower', $args['subject'] );
+			$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
+			$this->assertEquals( get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
+
+			return $args;
+		};
+		add_filter( 'wp_mail', $wp_mail_callback );
 
 		Mailer::new_follower( $activity, self::$user_id, true );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		remove_all_filters( 'wp_mail' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		remove_filter( 'wp_mail', $wp_mail_callback );
 	}
 
 	/**
@@ -215,32 +212,29 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Mock remote metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'id'                => 'https://example.com/author',
-					'preferredUsername' => 'follower',
-				);
-			}
-		);
+		$remote_metadata_callback = function () {
+			return array(
+				'id'                => 'https://example.com/author',
+				'preferredUsername' => 'follower',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 
 		// Capture email.
-		add_filter(
-			'wp_mail',
-			function ( $args ) {
-				$this->assertStringContainsString( 'follower', $args['subject'] );
-				$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
-				$this->assertEquals( get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
-				return $args;
-			}
-		);
+		$wp_mail_callback = function ( $args ) {
+			$this->assertStringContainsString( 'follower', $args['subject'] );
+			$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
+			$this->assertEquals( get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
+
+			return $args;
+		};
+		add_filter( 'wp_mail', $wp_mail_callback );
 
 		Mailer::new_follower( $activity, self::$user_id, true );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		remove_all_filters( 'wp_mail' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		remove_filter( 'wp_mail', $wp_mail_callback );
 	}
 
 	/**
@@ -382,38 +376,32 @@ class Test_Mailer extends WP_UnitTestCase {
 		}
 
 		// Mock remote metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name' => 'Test Sender',
-					'url'  => 'https://example.com/author',
-				);
-			}
-		);
+		$remote_metadata_callback = function () {
+			return array(
+				'name' => 'Test Sender',
+				'url'  => 'https://example.com/author',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
 		if ( $send_email ) {
 			// Capture email.
-			add_filter(
-				'wp_mail',
-				function ( $args ) use ( $user_id, $activity ) {
-					$this->assertStringContainsString( 'Direct Message', $args['subject'] );
-					$this->assertStringContainsString( 'Test Sender', $args['subject'] );
-					$this->assertStringContainsString( $activity['object']['content'], $args['message'] );
-					$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
-					$this->assertEquals( get_user_by( 'id', $user_id )->user_email, $args['to'] );
-					return $args;
-				}
-			);
-		} else {
-			add_filter(
-				'wp_mail',
-				function () {
-					$this->fail( 'Email should not be sent for public activity' );
-				}
-			);
+			$wp_mail_send_callback = function ( $args ) use ( $user_id, $activity ) {
+				$this->assertStringContainsString( 'Direct Message', $args['subject'] );
+				$this->assertStringContainsString( 'Test Sender', $args['subject'] );
+				$this->assertStringContainsString( $activity['object']['content'], $args['message'] );
+				$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
+				$this->assertEquals( get_user_by( 'id', $user_id )->user_email, $args['to'] );
 
+				return $args;
+			};
+			add_filter( 'wp_mail', $wp_mail_send_callback );
+		} else {
+			$wp_mail_fail_callback = function () {
+				$this->fail( 'Email should not be sent for public activity' );
+			};
+			add_filter( 'wp_mail', $wp_mail_fail_callback );
 		}
 
 		Mailer::direct_message( $activity, $user_id );
@@ -421,8 +409,13 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( $send_email ? 1 : 0, $mock->get_call_count() );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		remove_all_filters( 'wp_mail' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+		if ( $send_email ) {
+			remove_filter( 'wp_mail', $wp_mail_send_callback );
+		} else {
+			remove_filter( 'wp_mail', $wp_mail_fail_callback );
+		}
 		wp_delete_user( $user_id );
 	}
 
@@ -442,38 +435,34 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Mock remote metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name' => 'Test Sender',
-					'url'  => array(
-						'https://fed.brid.gy/r/https://example.com/author',
-						'acct:author@example.com',
-					),
-				);
-			}
-		);
+		$remote_metadata_callback = function () {
+			return array(
+				'name' => 'Test Sender',
+				'url'  => array(
+					'https://fed.brid.gy/r/https://example.com/author',
+					'acct:author@example.com',
+				),
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 
 		// Capture email.
-		add_filter(
-			'wp_mail',
-			function ( $args ) {
-				$this->assertStringContainsString(
-					'<a href="https://fed.brid.gy/r/https://example.com/author">@Test Sender@fed.brid.gy</a>',
-					$args['message']
-				);
-				return $args;
-			}
-		);
+		$wp_mail_callback = function ( $args ) {
+			$this->assertStringContainsString(
+				'<a href="https://fed.brid.gy/r/https://example.com/author">@Test Sender@fed.brid.gy</a>',
+				$args['message']
+			);
+
+			return $args;
+		};
+		add_filter( 'wp_mail', $wp_mail_callback );
 
 		// Call the method.
 		Mailer::direct_message( $activity, self::$user_id );
 
 		// Clean up.
-		remove_all_filters( 'wp_before_load_template' );
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		remove_all_filters( 'wp_mail' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		remove_filter( 'wp_mail', $wp_mail_callback );
 	}
 
 	/**
@@ -517,31 +506,28 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Mock remote metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name' => 'Test Sender',
-					'url'  => 'https://example.com/author',
-				);
-			}
-		);
+		$remote_metadata_callback = function () {
+			return array(
+				'name' => 'Test Sender',
+				'url'  => 'https://example.com/author',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 
 		// Capture email.
-		add_filter(
-			'wp_mail',
-			function ( $args ) use ( $expected, $user_id ) {
-				$this->assertStringContainsString( $expected, $args['message'] );
-				$this->assertEquals( get_user_by( 'id', $user_id )->user_email, $args['to'] );
-				return $args;
-			}
-		);
+		$wp_mail_callback = function ( $args ) use ( $expected, $user_id ) {
+			$this->assertStringContainsString( $expected, $args['message'] );
+			$this->assertEquals( get_user_by( 'id', $user_id )->user_email, $args['to'] );
+
+			return $args;
+		};
+		add_filter( 'wp_mail', $wp_mail_callback );
 
 		Mailer::direct_message( $activity, $user_id );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		remove_all_filters( 'wp_mail' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		remove_filter( 'wp_mail', $wp_mail_callback );
 		wp_delete_user( $user_id );
 	}
 
@@ -571,8 +557,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 0, $mock->get_call_count() );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		remove_all_filters( 'wp_mail' );
+		remove_action( 'wp_before_load_template', array( $mock, 'action' ) );
 		delete_user_option( self::$user_id, 'activitypub_mailer_new_follower' );
 	}
 
@@ -605,7 +590,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 0, $mock->get_call_count() );
 
 		// Clean up.
-		remove_all_filters( 'wp_before_load_template' );
+		remove_action( 'wp_before_load_template', array( $mock, 'action' ) );
 		delete_user_option( self::$user_id, 'activitypub_mailer_new_dm' );
 	}
 
@@ -638,7 +623,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 0, $mock->get_call_count() );
 
 		// Clean up.
-		remove_all_filters( 'wp_before_load_template' );
+		remove_action( 'wp_before_load_template', array( $mock, 'action' ) );
 		delete_user_option( self::$user_id, 'activitypub_mailer_new_mention' );
 	}
 
@@ -669,7 +654,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 0, $mock->get_call_count() );
 
 		// Clean up.
-		remove_all_filters( 'wp_before_load_template' );
+		remove_action( 'wp_before_load_template', array( $mock, 'action' ) );
 		delete_option( 'activitypub_blog_user_mailer_new_follower' );
 		delete_option( 'activitypub_actor_mode' );
 	}
@@ -704,7 +689,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 0, $mock->get_call_count() );
 
 		// Clean up.
-		remove_all_filters( 'wp_before_load_template' );
+		remove_action( 'wp_before_load_template', array( $mock, 'action' ) );
 		delete_option( 'activitypub_blog_user_mailer_new_dm' );
 		delete_option( 'activitypub_actor_mode' );
 	}
@@ -739,7 +724,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 0, $mock->get_call_count() );
 
 		// Clean up.
-		remove_all_filters( 'wp_before_load_template' );
+		remove_action( 'wp_before_load_template', array( $mock, 'action' ) );
 		delete_option( 'activitypub_blog_user_mailer_new_mention' );
 		delete_option( 'activitypub_actor_mode' );
 	}
@@ -757,34 +742,31 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Mock remote metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test Follower',
-					'url'               => 'https://example.com/author',
-					'preferredUsername' => 'follower',
-				);
-			}
-		);
+		$remote_metadata_callback = function () {
+			return array(
+				'name'              => 'Test Follower',
+				'url'               => 'https://example.com/author',
+				'preferredUsername' => 'follower',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 
 		// Capture email.
-		\add_filter(
-			'wp_mail',
-			function ( $args ) {
-				$this->assertStringContainsString( 'Test Follower', $args['subject'] );
-				$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
-				$this->assertEquals( \get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
-				return $args;
-			}
-		);
+		$wp_mail_callback = function ( $args ) {
+			$this->assertStringContainsString( 'Test Follower', $args['subject'] );
+			$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
+			$this->assertEquals( \get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
+
+			return $args;
+		};
+		\add_filter( 'wp_mail', $wp_mail_callback );
 
 		// Pass array of user IDs (follows are always for single user, but handler passes array).
 		Mailer::new_follower( $activity, array( self::$user_id ), true );
 
 		// Clean up.
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		\remove_all_filters( 'wp_mail' );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		\remove_filter( 'wp_mail', $wp_mail_callback );
 	}
 
 	/**
@@ -805,29 +787,26 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Mock remote metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name' => 'Test Sender',
-					'url'  => 'https://example.com/author',
-				);
-			}
-		);
+		$remote_metadata_callback = function () {
+			return array(
+				'name' => 'Test Sender',
+				'url'  => 'https://example.com/author',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 
 		$mock = new \MockAction();
 		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
 		// Capture email.
-		\add_filter(
-			'wp_mail',
-			function ( $args ) use ( $user_id ) {
-				$this->assertStringContainsString( 'Direct Message', $args['subject'] );
-				$this->assertStringContainsString( 'Test Sender', $args['subject'] );
-				$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
-				return $args;
-			}
-		);
+		$wp_mail_callback = function ( $args ) use ( $user_id ) {
+			$this->assertStringContainsString( 'Direct Message', $args['subject'] );
+			$this->assertStringContainsString( 'Test Sender', $args['subject'] );
+			$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
+
+			return $args;
+		};
+		\add_filter( 'wp_mail', $wp_mail_callback );
 
 		// Pass array of user IDs.
 		Mailer::direct_message( $activity, array( $user_id ) );
@@ -835,8 +814,9 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 1, $mock->get_call_count() );
 
 		// Clean up.
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		\remove_all_filters( 'wp_mail' );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		\remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+		\remove_filter( 'wp_mail', $wp_mail_callback );
 	}
 
 	/**
@@ -857,29 +837,26 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Mock remote metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name' => 'Test Sender',
-					'url'  => 'https://example.com/author',
-				);
-			}
-		);
+		$remote_metadata_callback = function () {
+			return array(
+				'name' => 'Test Sender',
+				'url'  => 'https://example.com/author',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 
 		$mock = new \MockAction();
 		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
 		// Capture email.
-		\add_filter(
-			'wp_mail',
-			function ( $args ) use ( $user_id ) {
-				$this->assertStringContainsString( 'Mention', $args['subject'] );
-				$this->assertStringContainsString( 'Test Sender', $args['subject'] );
-				$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
-				return $args;
-			}
-		);
+		$wp_mail_callback = function ( $args ) use ( $user_id ) {
+			$this->assertStringContainsString( 'Mention', $args['subject'] );
+			$this->assertStringContainsString( 'Test Sender', $args['subject'] );
+			$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
+
+			return $args;
+		};
+		\add_filter( 'wp_mail', $wp_mail_callback );
 
 		// Pass array of user IDs.
 		Mailer::mention( $activity, array( $user_id ) );
@@ -887,8 +864,9 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 1, $mock->get_call_count() );
 
 		// Clean up.
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		\remove_all_filters( 'wp_mail' );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		\remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+		\remove_filter( 'wp_mail', $wp_mail_callback );
 	}
 
 	/**
@@ -920,28 +898,25 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Mock remote metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name' => 'Test Sender',
-					'url'  => 'https://example.com/author',
-				);
-			}
-		);
+		$remote_metadata_callback = function () {
+			return array(
+				'name' => 'Test Sender',
+				'url'  => 'https://example.com/author',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 
 		$mock = new \MockAction();
 		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
 		// Capture email and verify only the correct user gets it.
-		\add_filter(
-			'wp_mail',
-			function ( $args ) use ( $user_id, $other_user_id ) {
-				$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
-				$this->assertNotEquals( \get_user_by( 'id', $other_user_id )->user_email, $args['to'] );
-				return $args;
-			}
-		);
+		$wp_mail_callback = function ( $args ) use ( $user_id, $other_user_id ) {
+			$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
+			$this->assertNotEquals( \get_user_by( 'id', $other_user_id )->user_email, $args['to'] );
+
+			return $args;
+		};
+		\add_filter( 'wp_mail', $wp_mail_callback );
 
 		// Pass array with both users, but only one should receive email.
 		Mailer::direct_message( $activity, array( $user_id, $other_user_id ) );
@@ -950,8 +925,9 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 1, $mock->get_call_count() );
 
 		// Clean up.
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		\remove_all_filters( 'wp_mail' );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		\remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+		\remove_filter( 'wp_mail', $wp_mail_callback );
 		\wp_delete_user( $other_user_id );
 	}
 
@@ -984,28 +960,25 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		// Mock remote metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name' => 'Test Sender',
-					'url'  => 'https://example.com/author',
-				);
-			}
-		);
+		$remote_metadata_callback = function () {
+			return array(
+				'name' => 'Test Sender',
+				'url'  => 'https://example.com/author',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 
 		$mock = new \MockAction();
 		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
 		// Capture email and verify only the correct user gets it.
-		\add_filter(
-			'wp_mail',
-			function ( $args ) use ( $user_id, $other_user_id ) {
-				$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
-				$this->assertNotEquals( \get_user_by( 'id', $other_user_id )->user_email, $args['to'] );
-				return $args;
-			}
-		);
+		$wp_mail_callback = function ( $args ) use ( $user_id, $other_user_id ) {
+			$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
+			$this->assertNotEquals( \get_user_by( 'id', $other_user_id )->user_email, $args['to'] );
+
+			return $args;
+		};
+		\add_filter( 'wp_mail', $wp_mail_callback );
 
 		// Pass array with both users, but only one should receive email.
 		Mailer::mention( $activity, array( $user_id, $other_user_id ) );
@@ -1014,8 +987,9 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 1, $mock->get_call_count() );
 
 		// Clean up.
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		\remove_all_filters( 'wp_mail' );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		\remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+		\remove_filter( 'wp_mail', $wp_mail_callback );
 		\wp_delete_user( $other_user_id );
 	}
 
