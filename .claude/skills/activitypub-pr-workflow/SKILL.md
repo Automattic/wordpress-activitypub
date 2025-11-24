@@ -66,6 +66,13 @@ This is a hard requirement for all PRs.
 - **Always add Fediverse** as reviewer.
 - Add other relevant reviewers if needed.
 
+### Branch Management
+
+**CRITICAL:** Never switch branches unless explicitly instructed by the user.
+- Always work on the current branch.
+- Only run `git checkout` when the user specifically asks.
+- If uncertain which branch to use, ask first.
+
 ## Changelog Management
 
 The repository uses Jetpack Changelogger for automated changelog generation.
