@@ -37,7 +37,7 @@ class Menu {
 			$capability = ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ? 'manage_options' : 'activitypub';
 
 			// Check for block support and WP version.
-			if ( site_supports_blocks() && \version_compare( \get_bloginfo( 'version' ), '6.9', '>=' ) ) {
+			if ( site_supports_blocks() && \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
 				$app_hook = \add_dashboard_page(
 					\__( 'Social Web', 'activitypub' ),
 					\__( 'Social Web', 'activitypub' ),
