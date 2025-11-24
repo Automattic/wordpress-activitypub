@@ -7,15 +7,13 @@
 import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/components';
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
-import { useView } from '@wordpress/views';
-import { useSelect, useDispatch } from '@wordpress/data';
-import { __ } from '@wordpress/i18n';
+import { sprintf, __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { close } from '@wordpress/icons';
 import { useSettings } from '../../contexts/settings-context';
 import type { Comment, FeedPost } from '../../types';
 import { getRelativeTime } from '../../utils';
-import { STORE_NAME } from '../../store';
+import { useTagFilter } from '../../hooks/use-tag-filter';
 
 interface FeedInspectorProps {
 	id: number;
@@ -41,61 +39,16 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 
 	// Fetch tag terms if the post has tags
 	const tagIds = post?.ap_tag || [];
-	const { records: terms } = useEntityRecords< Term[] >( 'taxonomy', 'ap_tag', {
+	const { records: terms } = useEntityRecords< Term >( 'taxonomy', 'ap_tag', {
 		include: tagIds,
 	} );
 
-	// Get the view to update filters
-	const { view, updateView } = useView( {
-		kind: 'postType',
-		name: 'ap_post',
-		slug: 'feed',
-	} );
-
-	const selectedTagId = useSelect( ( select ) => select( STORE_NAME ).getSelectedTagId(), [] );
-	const { setSelectedTag } = useDispatch( STORE_NAME );
+	// Use the shared tag filter hook
+	const { selectedTagId, updateTagFilter } = useTagFilter();
 
 	const handleTagClick = ( tagId: number ) => {
-		const currentFilters = view.filters || [];
-		const tagFilterIndex = currentFilters.findIndex( ( f ) => f.field === 'ap_tag' );
-
-		let newFilters;
-		let shouldOpenFilters = false;
-
-		if ( tagFilterIndex !== -1 ) {
-			// Tag filter exists - toggle it
-			const currentValue = currentFilters[ tagFilterIndex ].value as number[];
-			if ( currentValue.includes( tagId ) ) {
-				// Remove the tag filter if it's the same tag
-				newFilters = currentFilters.filter( ( f ) => f.field !== 'ap_tag' );
-			} else {
-				// Replace with new tag
-				newFilters = [
-					...currentFilters.slice( 0, tagFilterIndex ),
-					{ field: 'ap_tag', operator: 'isAny', value: [ tagId ] },
-					...currentFilters.slice( tagFilterIndex + 1 ),
-				];
-				shouldOpenFilters = true;
-			}
-		} else {
-			// No tag filter exists - add one
-			newFilters = [ ...currentFilters, { field: 'ap_tag', operator: 'isAny', value: [ tagId ] } ];
-			shouldOpenFilters = true;
-		}
-
-		// Update the view with new filters
-		updateView( {
-			...view,
-			filters: newFilters,
-			page: 1, // Reset to first page
-			openFilters: shouldOpenFilters ? true : view.openFilters,
-		} );
-
-		// Also update the store for synchronization
-		setSelectedTag( selectedTagId === tagId ? null : tagId );
-
-		// Close the inspector
-		onClose();
+		// Apply filter and close inspector
+		updateTagFilter( tagId, { onComplete: onClose } );
 	};
 
 	if ( isLoading ) {
@@ -182,6 +135,11 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 									size="small"
 									variant="secondary"
 									onClick={ () => handleTagClick( term.id ) }
+									aria-pressed={ selectedTagId === term.id }
+									aria-label={
+										/* translators: %s: tag name */
+										sprintf( __( 'Filter by tag: %s', 'activitypub' ) as string, term.name as any )
+									}
 								>
 									#{ term.name }
 								</Button>

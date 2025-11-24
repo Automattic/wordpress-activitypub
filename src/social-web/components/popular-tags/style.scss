@@ -43,7 +43,7 @@
 			color: var(--wpds-color-fg-inverted-primary, #ffffff);
 		}
 
-		&.is-selected {
+		&.is-pressed {
 			background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15));
 			color: var(--wpds-color-fg-inverted-primary, #ffffff);
 		}
