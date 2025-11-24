@@ -232,6 +232,20 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test content sanitization preserves existing links with Mastodon-style spans.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_preserves_existing_links() {
+		$content = '<p><a href="https://www.example.com/path/to/article?param=value&amp;utm_source=mastodon" target="_blank" rel="nofollow noopener" translate="no"><span class="invisible">https://www.</span><span class="ellipsis">example.com/path/to/art</span><span class="invisible">icle?param=value&amp;utm_source=mastodon</span></a></p>';
+		$result  = Sanitize::content( $content );
+
+		// Should preserve existing link structure without double-linking.
+		$this->assertSame( 1, \substr_count( $result, '<a ' ), 'Should have exactly one anchor tag' );
+		$this->assertStringContainsString( 'href="https://www.example.com/path/', $result );
+	}
+
+	/**
 	 * Test content sanitization with empty content.
 	 *
 	 * @covers ::content
