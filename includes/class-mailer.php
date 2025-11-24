@@ -449,15 +449,15 @@ class Mailer {
 	}
 
 	/**
-	 * Prevent email notifications for comments on ap_post.
+	 * Maybe prevent email notifications for comments.
 	 *
-	 * This filter prevents both post author and moderator notifications
-	 * for comments on ap_post custom post type.
+	 * This filter can prevent both post author and moderator notifications
+	 * for comments on specific post types, such as ActivityPub custom post types.
 	 *
 	 * @param bool $maybe_notify Whether to send the notification.
 	 * @param int  $comment_id   The comment ID.
 	 *
-	 * @return bool False if comment is on ap_post, original value otherwise.
+	 * @return bool False to prevent notification, original value otherwise.
 	 */
 	public static function maybe_prevent_comment_notification( $maybe_notify, $comment_id ) {
 		// If already disabled, respect that.
