@@ -770,7 +770,7 @@ class Attachments {
 				$alt = \get_post_field( 'post_excerpt', $id );
 			}
 
-			$gallery .= "\n" . '<!-- wp:image {"id":' . esc_attr( $id ) . ',"sizeSlug":"large","linkDestination":"none"} -->' . "\n";
+			$gallery .= "\n" . '<!-- wp:image {"id":' . \esc_attr( $id ) . ',"sizeSlug":"large","linkDestination":"none"} -->' . "\n";
 			$gallery .= '<figure class="wp-block-image size-large">';
 			$gallery .= '<img src="' . \esc_url( $image_src[0] ) . '" alt="' . \esc_attr( $alt ) . '" class="' . \esc_attr( 'wp-image-' . $id ) . '"/>';
 			$gallery .= '</figure>';
