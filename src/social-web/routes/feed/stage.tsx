@@ -5,7 +5,7 @@
  */
 
 import { useMemo, useCallback, useState, useEffect, useRef } from '@wordpress/element';
-import { DataViews, Filter } from '@wordpress/dataviews';
+import { DataViews } from '@wordpress/dataviews';
 import { useView } from '@wordpress/views';
 import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
@@ -23,8 +23,9 @@ import {
 	tagField,
 } from '../../components/fields';
 import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
-import type { FeedPost } from '../../types';
 import { STORE_NAME } from '../../store';
+import type { SocialWebSelectors } from '../../store';
+import type { FeedPost } from '../../types';
 import './style.scss';
 
 const DEFAULT_VIEW: View = {
@@ -55,7 +56,10 @@ interface FeedStageProps {
 
 export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	// Get active actor ID from store
-	const activeActorId = useSelect( ( select ) => ( select( STORE_NAME ) as any ).getActiveActorId(), [] );
+	const activeActorId = useSelect(
+		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
+		[]
+	);
 
 	// Track URL query parameters as state for reactivity
 	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
@@ -132,6 +136,19 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		},
 		[ view.fields, view.filters, updateView ]
 	);
+
+	// Reset view to default state when actor switches
+	const prevActiveActorId = useRef( activeActorId );
+	useEffect( () => {
+		if ( prevActiveActorId.current !== activeActorId ) {
+			// Actor changed - reset to default view, preserving only field visibility
+			updateView( {
+				...DEFAULT_VIEW,
+				fields: view.fields,
+			} );
+			prevActiveActorId.current = activeActorId;
+		}
+	}, [ activeActorId, updateView ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,

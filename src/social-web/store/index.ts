@@ -46,12 +46,10 @@ export type { State } from './types';
  */
 export interface SocialWebSelectors {
 	getActiveActorId(): number | null;
-	getSelectedTagId(): number | null;
 }
 
 export interface SocialWebActions {
 	setActiveActor( actorId: number ): void;
-	setSelectedTag( tagId: number | null ): void;
 }
 
 /**
