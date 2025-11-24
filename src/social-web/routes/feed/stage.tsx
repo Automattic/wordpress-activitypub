@@ -133,49 +133,6 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		[ view.fields, view.filters, updateView ]
 	);
 
-	// Generalized filter update function for any field (tags, types, etc.)
-	const updateFilter = useCallback(
-		( fieldId: string, value: number | null, openFiltersPanel: boolean = false ) => {
-			const currentFilters = view.filters || [];
-			const filterIndex = currentFilters.findIndex( ( f ) => f.field === fieldId );
-
-			let newFilters;
-			let shouldOpenFilters = openFiltersPanel;
-
-			if ( value === null ) {
-				// Remove filter entirely
-				newFilters = currentFilters.filter( ( f ) => f.field !== fieldId );
-				shouldOpenFilters = false;
-			} else if ( filterIndex !== -1 ) {
-				// Filter exists - toggle or replace
-				const currentValue = currentFilters[ filterIndex ].value as number[];
-				if ( currentValue.includes( value ) ) {
-					// Same value clicked - remove the filter
-					newFilters = currentFilters.filter( ( f ) => f.field !== fieldId );
-					shouldOpenFilters = false;
-				} else {
-					// Replace with new value
-					newFilters = [
-						...currentFilters.slice( 0, filterIndex ),
-						{ field: fieldId, operator: 'isAny', value: [ value ] },
-						...currentFilters.slice( filterIndex + 1 ),
-					];
-				}
-			} else {
-				// No filter exists - add one
-				newFilters = [ ...currentFilters, { field: fieldId, operator: 'isAny', value: [ value ] } ];
-			}
-
-			// Update view with new filters (page reset handled by updateFeedView)
-			updateFeedView( {
-				...view,
-				filters: newFilters,
-				openFilters: shouldOpenFilters ? true : view.openFilters,
-			} );
-		},
-		[ view, updateFeedView ]
-	);
-
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
 		page: view.page || 1,
