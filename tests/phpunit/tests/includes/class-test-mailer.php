@@ -1022,7 +1022,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test that email notifications are prevented for comments on ap_post.
 	 *
-	 * @covers ::prevent_ap_post_comment_notifications
+	 * @covers ::maybe_prevent_comment_notification
 	 */
 	public function test_prevent_email_notifications_for_ap_post_comments() {
 		// Enable the create_posts option.
@@ -1059,7 +1059,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test that email notifications are NOT prevented for comments on regular posts.
 	 *
-	 * @covers ::prevent_ap_post_comment_notifications
+	 * @covers ::maybe_prevent_comment_notification
 	 */
 	public function test_allow_email_notifications_for_regular_post_comments() {
 		// Enable the create_posts option.
@@ -1095,7 +1095,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test that email notifications are allowed for ap_post when option is disabled.
 	 *
-	 * @covers ::prevent_ap_post_comment_notifications
+	 * @covers ::maybe_prevent_comment_notification
 	 */
 	public function test_allow_email_notifications_when_option_disabled() {
 		// Ensure the create_posts option is disabled.
@@ -1129,7 +1129,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test that email notifications respect existing false values.
 	 *
-	 * @covers ::prevent_ap_post_comment_notifications
+	 * @covers ::maybe_prevent_comment_notification
 	 */
 	public function test_respect_existing_notification_settings() {
 		// Enable the create_posts option.

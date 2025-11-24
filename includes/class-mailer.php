@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Posts;
 
 /**
  * Mailer Class.
@@ -25,8 +26,8 @@ class Mailer {
 		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );  /** After @see \Activitypub\Handler\Create::handle_create() */
 
-		\add_filter( 'notify_post_author', array( self::class, 'prevent_ap_post_comment_notifications' ), 10, 2 );
-		\add_filter( 'notify_moderator', array( self::class, 'prevent_ap_post_comment_notifications' ), 10, 2 );
+		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
+		\add_filter( 'notify_moderator', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
 	}
 
 	/**
@@ -458,7 +459,7 @@ class Mailer {
 	 *
 	 * @return bool False if comment is on ap_post, original value otherwise.
 	 */
-	public static function prevent_ap_post_comment_notifications( $maybe_notify, $comment_id ) {
+	public static function maybe_prevent_comment_notification( $maybe_notify, $comment_id ) {
 		// If already disabled, respect that.
 		if ( ! $maybe_notify ) {
 			return $maybe_notify;
@@ -480,7 +481,7 @@ class Mailer {
 		}
 
 		// Prevent notifications for comments on ap_post.
-		if ( Collection\Posts::POST_TYPE === $post->post_type ) {
+		if ( Posts::POST_TYPE === $post->post_type ) {
 			return false;
 		}
 
