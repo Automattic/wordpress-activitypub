@@ -334,12 +334,9 @@
 	}
 
 	// Optimize image sizing in content
-	.activitypub-feed-content,
-	.activitypub-inspector-card .components-card__body {
-		img {
-			max-width: 100%;
-			height: auto;
-		}
+	.activitypub-feed-content img {
+		max-width: 100%;
+		height: auto;
 	}
 
 	// Better text wrapping on mobile
