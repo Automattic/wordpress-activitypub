@@ -25,15 +25,11 @@
 	}
 }
 
-// Post wrapper with clear separation
-.activitypub-feed-post {
-	border-bottom: var(--wpds-border-width-control, 1px) solid var(--wpds-color-stroke-neutral-weak, #dcdcde);
-	min-width: 0;
-	max-width: 100%;
-
-	&:last-child {
-		border-bottom: none;
-	}
+// Gallery block layout styles (normally applied by WordPress's block supports).
+.wp-block-gallery.has-nested-images {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--wp--style--gallery-gap-default, var(--gallery-block--gutter-size, var(--wp--style--block-gap, 0.5em)));
 }
 
 // Post metadata styling
@@ -100,59 +96,6 @@
 .dataviews-view-list .activitypub-feed-post-title {
 	font-size: 1.3em;
 	font-weight: var(--wpds-font-weight-semibold, 600);
-}
-
-// Content wrapper - optimize readability
-.activitypub-feed-content {
-	line-height: 1.6;
-	color: var(--wpds-color-fg-primary, #2c3338);
-	min-width: 0;
-	max-width: 100%;
-	overflow-wrap: break-word;
-	word-wrap: break-word;
-
-	// Ensure proper spacing
-	> *:first-child {
-		margin-top: 0;
-	}
-
-	> *:last-child {
-		margin-bottom: 0;
-	}
-
-	// Optimize images
-	img {
-		max-width: 100%;
-		height: auto;
-		border-radius: var(--wpds-border-radius-small, 4px);
-		margin: var(--wpds-spacing-30, 12px) 0;
-	}
-
-	// Float images if they have alignment classes
-	img.alignleft {
-		float: left;
-		margin: 0 var(--wpds-spacing-40, 16px) var(--wpds-spacing-30, 12px) 0;
-		max-width: 50%;
-	}
-
-	img.alignright {
-		float: right;
-		margin: 0 0 var(--wpds-spacing-30, 12px) var(--wpds-spacing-40, 16px);
-		max-width: 50%;
-	}
-
-	img.aligncenter {
-		display: block;
-		margin-left: auto;
-		margin-right: auto;
-	}
-
-	// Clear floats
-	&::after {
-		content: '';
-		display: table;
-		clear: both;
-	}
 }
 
 // Inspector view styles - modern and flat
@@ -282,27 +225,6 @@
 			max-width: 100%;
 			height: auto;
 		}
-
-		// Link styling for links in content
-		a {
-			color: var(--wpds-color-fg-brand, #135e96);
-			text-decoration: none;
-			word-wrap: break-word;
-			overflow-wrap: break-word;
-
-			&:hover {
-				text-decoration: underline;
-			}
-
-			// Mastodon-style link formatting
-			.invisible {
-				display: none;
-			}
-
-			.ellipsis::after {
-				content: "…";
-			}
-		}
 	}
 }
 
@@ -335,4 +257,28 @@
 	margin-left: var(--wpds-spacing-20, 8px);
 	font-size: var(--wpds-font-size-small, 13px);
 	color: var(--wpds-color-fg-secondary, #646970);
+}
+
+// Link styling for links in content
+.activitypub-feed-content,
+.activitypub-inspector-card .components-card__body {
+	a {
+		color: var(--wpds-color-fg-brand, #135e96);
+		text-decoration: none;
+		word-wrap: break-word;
+		overflow-wrap: break-word;
+
+		&:hover {
+			text-decoration: underline;
+		}
+
+		// Mastodon-style link formatting
+		.invisible {
+			display: none;
+		}
+
+		.ellipsis::after {
+			content: "…";
+		}
+	}
 }
