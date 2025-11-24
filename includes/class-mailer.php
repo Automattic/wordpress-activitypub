@@ -466,7 +466,7 @@ class Mailer {
 		}
 
 		// Only prevent if the create_posts option is enabled.
-		if ( '1' !== get_option( 'activitypub_create_posts', false ) ) {
+		if ( '1' !== \get_option( 'activitypub_create_posts', false ) ) {
 			return $maybe_notify;
 		}
 
