@@ -12,6 +12,13 @@ import type { FeedPost, Comment } from '../../../types';
 jest.mock( '@wordpress/i18n', () => ( {
 	__: ( text: string ) => text,
 	_x: ( text: string ) => text,
+	sprintf: ( format: string, ...args: any[] ) => {
+		let result = format;
+		args.forEach( ( arg ) => {
+			result = result.replace( /%s/, String( arg ) );
+		} );
+		return result;
+	},
 } ) );
 
 jest.mock( '@wordpress/html-entities', () => ( {
@@ -97,9 +104,7 @@ jest.mock( '@wordpress/views', () => ( {
 // Mock @wordpress/data
 jest.mock( '@wordpress/data', () => ( {
 	useSelect: () => null,
-	useDispatch: () => ( {
-		setSelectedTag: jest.fn(),
-	} ),
+	useDispatch: () => ( {} ),
 } ) );
 
 // Mock the store to avoid loading @wordpress/preferences
