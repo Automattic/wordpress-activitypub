@@ -3,6 +3,7 @@ import { decodeEntities } from '@wordpress/html-entities';
 import { __unstableStripHTML as stripHTML, safeHTML } from '@wordpress/dom';
 import type { Field } from '@wordpress/dataviews';
 import type { FeedPost } from '../../../types';
+import './style.scss';
 
 /**
  * Content field for reader-style view
