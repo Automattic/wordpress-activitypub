@@ -17,6 +17,7 @@ export const tagField: Field< FeedPost > = {
 			per_page: 10,
 			orderby: 'count',
 			order: 'desc',
+			hide_empty: true,
 		} );
 
 		if ( ! records ) {
