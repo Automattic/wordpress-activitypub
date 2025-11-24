@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Prevent email notifications for comments on ActivityPub custom post types
