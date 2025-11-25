@@ -87,6 +87,7 @@ export interface FeedPost {
 	comment_status: string;
 	ping_status: string;
 	ap_object_type?: number[];
+	ap_tag?: number[];
 	actor_info?: ActorInfo;
 }
 

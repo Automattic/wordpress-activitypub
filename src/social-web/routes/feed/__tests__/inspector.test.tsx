@@ -12,6 +12,13 @@ import type { FeedPost, Comment } from '../../../types';
 jest.mock( '@wordpress/i18n', () => ( {
 	__: ( text: string ) => text,
 	_x: ( text: string ) => text,
+	sprintf: ( format: string, ...args: any[] ) => {
+		let result = format;
+		args.forEach( ( arg ) => {
+			result = result.replace( /%s/, String( arg ) );
+		} );
+		return result;
+	},
 } ) );
 
 jest.mock( '@wordpress/html-entities', () => ( {
@@ -84,6 +91,25 @@ const mockUseEntityRecords = jest.fn();
 jest.mock( '@wordpress/core-data', () => ( {
 	useEntityRecord: ( ...args: any[] ) => mockUseEntityRecord( ...args ),
 	useEntityRecords: ( ...args: any[] ) => mockUseEntityRecords( ...args ),
+} ) );
+
+// Mock @wordpress/views
+jest.mock( '@wordpress/views', () => ( {
+	useView: () => ( {
+		view: { filters: [], page: 1, openFilters: false },
+		updateView: jest.fn(),
+	} ),
+} ) );
+
+// Mock @wordpress/data
+jest.mock( '@wordpress/data', () => ( {
+	useSelect: () => null,
+	useDispatch: () => ( {} ),
+} ) );
+
+// Mock the store to avoid loading @wordpress/preferences
+jest.mock( '../../../store', () => ( {
+	STORE_NAME: 'activitypub/social-web',
 } ) );
 
 describe( 'FeedInspector', () => {
