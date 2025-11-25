@@ -643,7 +643,12 @@ class Attachments {
 			);
 		}
 
-		// Multiple attachments or images: use gallery block.
+		// Single image: use standalone image block.
+		if ( 1 === \count( $attachment_ids ) && 'image' === $type ) {
+			return self::get_image_block( $attachment_ids[0] );
+		}
+
+		// Multiple attachments: use gallery block.
 		return self::get_gallery_block( $attachment_ids );
 	}
 
@@ -693,8 +698,63 @@ class Attachments {
 			);
 		}
 
-		// Multiple attachments or images: use gallery block.
+		// Single image: use standalone image block.
+		if ( 1 === \count( $files ) && 'image' === $type ) {
+			return self::get_files_image_block( $files[0] );
+		}
+
+		// Multiple attachments: use gallery block.
 		return self::get_files_gallery_block( $files );
+	}
+
+	/**
+	 * Get standalone image block markup for file-based attachments.
+	 *
+	 * @param array $file {
+	 *     File data array.
+	 *
+	 *     @type string $url       Full URL to the file.
+	 *     @type string $mime_type MIME type of the file.
+	 *     @type string $alt       Alt text for the file.
+	 * }
+	 *
+	 * @return string The image block markup.
+	 */
+	private static function get_files_image_block( $file ) {
+		$block  = '<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->' . "\n";
+		$block .= '<figure class="wp-block-image size-large">';
+		$block .= '<img src="' . \esc_url( $file['url'] ) . '" alt="' . \esc_attr( $file['alt'] ) . '"/>';
+		$block .= '</figure>' . "\n";
+		$block .= '<!-- /wp:image -->';
+
+		return $block;
+	}
+
+	/**
+	 * Get standalone image block markup.
+	 *
+	 * @param int $attachment_id The attachment ID.
+	 *
+	 * @return string The image block markup.
+	 */
+	private static function get_image_block( $attachment_id ) {
+		$image_src = \wp_get_attachment_image_src( $attachment_id, 'large' );
+		if ( ! $image_src ) {
+			return '';
+		}
+
+		$alt = \get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+		if ( ! $alt ) {
+			$alt = \get_post_field( 'post_excerpt', $attachment_id );
+		}
+
+		$block  = '<!-- wp:image {"id":' . \esc_attr( $attachment_id ) . ',"sizeSlug":"large","linkDestination":"none"} -->' . "\n";
+		$block .= '<figure class="wp-block-image size-large">';
+		$block .= '<img src="' . \esc_url( $image_src[0] ) . '" alt="' . \esc_attr( $alt ) . '" class="' . \esc_attr( 'wp-image-' . $attachment_id ) . '"/>';
+		$block .= '</figure>' . "\n";
+		$block .= '<!-- /wp:image -->';
+
+		return $block;
 	}
 
 	/**
@@ -705,8 +765,8 @@ class Attachments {
 	 * @return string The gallery block markup.
 	 */
 	private static function get_gallery_block( $attachment_ids ) {
-		$gallery  = '<!-- wp:gallery {"ids":[' . \implode( ',', $attachment_ids ) . '],"linkTo":"none"} -->' . "\n";
-		$gallery .= '<figure class="wp-block-gallery has-nested-images columns-default is-cropped">';
+		$gallery  = '<!-- wp:gallery {"columns":2,"linkTo":"none","sizeSlug":"large","imageCrop":true} -->' . "\n";
+		$gallery .= '<figure class="wp-block-gallery has-nested-images columns-2 is-cropped">';
 
 		foreach ( $attachment_ids as $id ) {
 			$image_src = \wp_get_attachment_image_src( $id, 'large' );
@@ -714,10 +774,14 @@ class Attachments {
 				continue;
 			}
 
-			$caption  = \get_post_field( 'post_content', $id );
-			$gallery .= "\n<!-- wp:image {\"id\":{$id},\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n";
+			$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+			if ( ! $alt ) {
+				$alt = \get_post_field( 'post_excerpt', $id );
+			}
+
+			$gallery .= "\n" . '<!-- wp:image {"id":' . \esc_attr( $id ) . ',"sizeSlug":"large","linkDestination":"none"} -->' . "\n";
 			$gallery .= '<figure class="wp-block-image size-large">';
-			$gallery .= '<img src="' . \esc_url( $image_src[0] ) . '" alt="' . \esc_attr( $caption ) . '" class="' . \esc_attr( 'wp-image-' . $id ) . '"/>';
+			$gallery .= '<img src="' . \esc_url( $image_src[0] ) . '" alt="' . \esc_attr( $alt ) . '" class="' . \esc_attr( 'wp-image-' . $id ) . '"/>';
 			$gallery .= '</figure>';
 			$gallery .= "\n<!-- /wp:image -->\n";
 		}
@@ -742,8 +806,8 @@ class Attachments {
 	 * @return string The gallery block markup.
 	 */
 	private static function get_files_gallery_block( $files ) {
-		$gallery  = '<!-- wp:gallery {"linkTo":"none"} -->' . "\n";
-		$gallery .= '<figure class="wp-block-gallery has-nested-images columns-default is-cropped">';
+		$gallery  = '<!-- wp:gallery {"columns":2,"linkTo":"none","imageCrop":true} -->' . "\n";
+		$gallery .= '<figure class="wp-block-gallery has-nested-images columns-2 is-cropped">';
 
 		foreach ( $files as $file ) {
 			$gallery .= "\n<!-- wp:image {\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n";

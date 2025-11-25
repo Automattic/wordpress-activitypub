@@ -422,8 +422,6 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$result = $method->invoke( $transformer );
 		$this->assertTrue( (bool) \did_filter( 'activitypub_attachment_ids' ) );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -561,10 +559,6 @@ class Test_Post extends \WP_UnitTestCase {
 		set_post_thumbnail( $post_id, 99999 );
 		$icon = $method->invoke( $transformer );
 		$this->assertNull( $icon );
-
-		// Cleanup.
-		wp_delete_post( $post_id, true );
-		wp_delete_attachment( $attachment_id, true );
 	}
 
 	/**
@@ -1085,7 +1079,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Clean up mentions filter if it was added.
 		if ( $mentions_filter ) {
-			\remove_filter( 'activitypub_extract_mentions', $mentions_filter, 10 );
+			\remove_filter( 'activitypub_extract_mentions', $mentions_filter );
 		}
 
 		// All wordpress-post-format templates should contain [ap_content].

@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Improve gallery and image block markup for ap_posts with better alt text and optimized layouts.

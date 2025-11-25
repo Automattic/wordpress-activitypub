@@ -43,16 +43,12 @@ class Test_Update extends \WP_UnitTestCase {
 		);
 
 		// Add a fallback handler for the action.
-		\add_action(
-			'activitypub_handled_create',
-			function ( $activity_data ) use ( &$called, $test_actor ) {
-				if ( isset( $activity_data['actor'] ) && $activity_data['actor'] === $test_actor ) {
-					$called = true;
-				}
-			},
-			10,
-			4
-		);
+		$create_fallback_callback = function ( $activity_data ) use ( &$called, $test_actor ) {
+			if ( isset( $activity_data['actor'] ) && $activity_data['actor'] === $test_actor ) {
+				$called = true;
+			}
+		};
+		\add_action( 'activitypub_handled_create', $create_fallback_callback, 10, 4 );
 
 		// Call the handler via the handled_inbox_update hook.
 		\do_action( 'activitypub_handled_inbox_update', $activity, array( $this->user_id ), null );
@@ -60,8 +56,7 @@ class Test_Update extends \WP_UnitTestCase {
 		$this->assertTrue( $called, 'The fallback activitypub_handled_create action should be triggered.' );
 
 		// Clean up by removing the action.
-		\remove_all_actions( 'activitypub_handled_create' );
-		\remove_all_actions( 'activitypub_handled_inbox_update' );
+		\remove_action( 'activitypub_handled_create', $create_fallback_callback );
 		\delete_option( 'activitypub_create_posts' );
 	}
 

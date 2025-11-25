@@ -218,8 +218,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		\remove_filter( 'pre_http_request', $fake_request );
 
 		\delete_option( 'activitypub_relays' );
-		\wp_delete_post( $post_id );
-		\wp_delete_post( $outbox_item->ID );
 	}
 
 	/**
@@ -428,7 +426,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $fake_request );
-		\wp_delete_post( $outbox_id, true );
 	}
 
 	/**
@@ -462,9 +459,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Verify that no activity was sent.
 		$this->assertSame( 0, did_action( 'activitypub_sent_to_inbox' ), 'Non-Accept activities should not be sent immediately' );
-
-		// Clean up.
-		\wp_delete_post( $outbox_id, true );
 	}
 
 	/**
@@ -545,10 +539,8 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$this->assertTrue( $http_called, 'HTTP should be called for remote inbox' );
 
 		// Clean up.
-		\remove_filter( 'pre_http_request', $http_callback, 10 );
-		\remove_action( 'activitypub_sent_to_inbox', $inbox_callback, 10 );
-		\wp_delete_post( $post_id );
-		\wp_delete_post( $outbox_item->ID );
+		\remove_filter( 'pre_http_request', $http_callback );
+		\remove_action( 'activitypub_sent_to_inbox', $inbox_callback );
 	}
 
 	/**
@@ -592,8 +584,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $http_callback );
-		\wp_delete_post( $post_id );
-		\wp_delete_post( $outbox_item->ID );
 	}
 
 	/**
@@ -637,8 +627,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $http_callback );
-		\wp_delete_post( $post_id );
-		\wp_delete_post( $outbox_item->ID );
 	}
 
 	/**
@@ -695,6 +683,5 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $fake_request );
-		\wp_delete_post( $outbox_id, true );
 	}
 }

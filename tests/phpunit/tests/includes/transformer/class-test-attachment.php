@@ -26,7 +26,7 @@ class Test_Attachment extends WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		// Create test attachment.
@@ -38,13 +38,6 @@ class Test_Attachment extends WP_UnitTestCase {
 				'post_content'   => 'Test Image Description',
 			)
 		);
-	}
-
-	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_post( self::$attachment_id, true );
 	}
 
 	/**
@@ -85,8 +78,6 @@ class Test_Attachment extends WP_UnitTestCase {
 		$this->assertEquals( $expected_type, $result['type'] );
 		$this->assertEquals( $mime_type, $result['mediaType'] );
 		$this->assertArrayHasKey( 'url', $result );
-
-		wp_delete_post( $attachment_id, true );
 	}
 
 	/**

@@ -89,9 +89,9 @@ class Inbox {
 		 * For all other activities, we store the object URL as before.
 		 */
 		if ( 'QuoteRequest' === $activity->get_type() && $activity->get_instrument() ) {
-			$object_id = object_to_uri( $activity->get_instrument() );
+			$object_id = object_to_uri( $activity->get_instrument() ?? '' );
 		} else {
-			$object_id = object_to_uri( $activity->get_object() );
+			$object_id = object_to_uri( $activity->get_object() ?? '' );
 		}
 
 		$inbox_item = array(

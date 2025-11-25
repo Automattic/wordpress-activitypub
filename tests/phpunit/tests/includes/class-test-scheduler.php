@@ -47,13 +47,6 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_user( self::$user_id );
-	}
-
-	/**
 	 * Test unschedule events for item.
 	 *
 	 * @covers ::unschedule_events_for_item
@@ -75,16 +68,14 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$create_item_id = add_to_outbox( $activity, null, self::$user_id );
 
 		// Track scheduled events.
-		$scheduled_events = array();
-		\add_filter(
-			'schedule_event',
-			function ( $event ) use ( &$scheduled_events ) {
-				if ( 'activitypub_retry_activity' === $event->hook ) {
-					$scheduled_events[] = $event->args[1];
-				}
-				return $event;
+		$scheduled_events        = array();
+		$schedule_event_callback = function ( $event ) use ( &$scheduled_events ) {
+			if ( 'activitypub_retry_activity' === $event->hook ) {
+				$scheduled_events[] = $event->args[1];
 			}
-		);
+			return $event;
+		};
+		\add_filter( 'schedule_event', $schedule_event_callback );
 
 		$schedule_retry = new \ReflectionMethod( Dispatcher::class, 'schedule_retry' );
 		$schedule_retry->setAccessible( true );
@@ -96,25 +87,21 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertContains( $create_item_id, $scheduled_events, "Activity $create_item_id should be scheduled" );
 
 		// Track unscheduled events.
-		\add_filter(
-			'pre_unschedule_event',
-			function ( $pre, $timestamp, $hook, $args ) use ( &$scheduled_events ) {
-				if ( 'activitypub_retry_activity' === $hook ) {
-					$scheduled_events = \array_diff( $scheduled_events, array( $args[1] ) );
-				}
-				return $pre;
-			},
-			10,
-			4
-		);
+		$pre_unschedule_event_callback = function ( $pre, $timestamp, $hook, $args ) use ( &$scheduled_events ) {
+			if ( 'activitypub_retry_activity' === $hook ) {
+				$scheduled_events = \array_diff( $scheduled_events, array( $args[1] ) );
+			}
+			return $pre;
+		};
+		\add_filter( 'pre_unschedule_event', $pre_unschedule_event_callback, 10, 4 );
 
 		Scheduler::unschedule_events_for_item( $create_item_id );
 
 		$this->assertCount( 0, $scheduled_events, 'Should have no retry events.' );
 		$this->assertNotContains( $create_item_id, $scheduled_events, "Activity $create_item_id should no longer be scheduled" );
 
-		\remove_all_filters( 'schedule_event' );
-		\remove_all_filters( 'pre_unschedule_event' );
+		\remove_filter( 'schedule_event', $schedule_event_callback );
+		\remove_filter( 'pre_unschedule_event', $pre_unschedule_event_callback );
 	}
 
 	/**
@@ -145,16 +132,14 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$pending_ids[] = Outbox::add( $activity, self::$user_id );
 
 		// Track scheduled events.
-		$scheduled_events = array();
-		add_filter(
-			'schedule_event',
-			function ( $event ) use ( &$scheduled_events ) {
-				if ( 'activitypub_process_outbox' === $event->hook ) {
-					$scheduled_events[] = $event->args[0];
-				}
-				return $event;
+		$scheduled_events        = array();
+		$schedule_event_callback = function ( $event ) use ( &$scheduled_events ) {
+			if ( 'activitypub_process_outbox' === $event->hook ) {
+				$scheduled_events[] = $event->args[0];
 			}
-		);
+			return $event;
+		};
+		add_filter( 'schedule_event', $schedule_event_callback );
 
 		// Run reprocess_outbox.
 		Scheduler::reprocess_outbox();
@@ -183,11 +168,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertNotContains( $published_id, $scheduled_events, 'Published activity should not be scheduled' );
 
 		// Clean up.
-		foreach ( $pending_ids as $id ) {
-			wp_delete_post( $id, true );
-		}
-		wp_delete_post( $published_id, true );
-		remove_all_filters( 'schedule_event' );
+		remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
 	/**
@@ -196,16 +177,14 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	 * @covers ::reprocess_outbox
 	 */
 	public function test_reprocess_outbox_no_pending() {
-		$scheduled_events = array();
-		add_filter(
-			'schedule_event',
-			function ( $event ) use ( &$scheduled_events ) {
-				if ( 'activitypub_process_outbox' === $event->hook ) {
-					$scheduled_events[] = $event->args[0];
-				}
-				return $event;
+		$scheduled_events        = array();
+		$schedule_event_callback = function ( $event ) use ( &$scheduled_events ) {
+			if ( 'activitypub_process_outbox' === $event->hook ) {
+				$scheduled_events[] = $event->args[0];
 			}
-		);
+			return $event;
+		};
+		add_filter( 'schedule_event', $schedule_event_callback );
 
 		// Run reprocess_outbox with no pending activities.
 		Scheduler::reprocess_outbox();
@@ -213,7 +192,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		// Verify no events were scheduled.
 		$this->assertEmpty( $scheduled_events, 'No events should be scheduled when there are no pending activities' );
 
-		remove_all_filters( 'schedule_event' );
+		remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
 	/**
@@ -237,16 +216,14 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$pending_id = Outbox::add( $activity, self::$user_id );
 
 		// Track scheduled events and their timing.
-		$scheduled_time = 0;
-		add_filter(
-			'schedule_event',
-			function ( $event ) use ( &$scheduled_time ) {
-				if ( 'activitypub_process_outbox' === $event->hook ) {
-					$scheduled_time = $event->timestamp;
-				}
-				return $event;
+		$scheduled_time          = 0;
+		$schedule_event_callback = function ( $event ) use ( &$scheduled_time ) {
+			if ( 'activitypub_process_outbox' === $event->hook ) {
+				$scheduled_time = $event->timestamp;
 			}
-		);
+			return $event;
+		};
+		add_filter( 'schedule_event', $schedule_event_callback );
 
 		// Run reprocess_outbox.
 		Scheduler::reprocess_outbox();
@@ -255,8 +232,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertSame( $scheduled_time, wp_next_scheduled( 'activitypub_process_outbox', array( $pending_id ) ) );
 
 		// Clean up.
-		wp_delete_post( $pending_id, true );
-		remove_all_filters( 'schedule_event' );
+		remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
 	/**
@@ -473,16 +449,14 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		$outbox_activity_id = Outbox::add( $activity, self::$user_id );
 
-		$scheduled_events = array();
-		add_filter(
-			'schedule_event',
-			function ( $event ) use ( &$scheduled_events ) {
-				if ( 'activitypub_process_outbox' === $event->hook ) {
-					$scheduled_events[] = $event->args[0];
-				}
-				return $event;
+		$scheduled_events        = array();
+		$schedule_event_callback = function ( $event ) use ( &$scheduled_events ) {
+			if ( 'activitypub_process_outbox' === $event->hook ) {
+				$scheduled_events[] = $event->args[0];
 			}
-		);
+			return $event;
+		};
+		add_filter( 'schedule_event', $schedule_event_callback );
 
 		Scheduler::schedule_announce_activity( $outbox_activity_id, $activity, self::$user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 
@@ -515,9 +489,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertContains( $original_author_url, $announce_activity['cc'], 'Original author should be in cc field' );
 
 		// Clean up.
-		wp_delete_post( $outbox_activity_id, true );
-		wp_delete_post( $announce_outbox_id, true );
-		remove_all_filters( 'schedule_event' );
+		remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
 	/**
@@ -551,17 +523,13 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		);
 
 		// Mock the count to exceed the 200-post threshold.
-		add_filter(
-			'wp_count_posts',
-			function ( $counts, $type ) {
-				if ( Inbox::POST_TYPE === $type ) {
-					$counts->publish = 225;
-				}
-				return $counts;
-			},
-			10,
-			2
-		);
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Inbox::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		Scheduler::purge_inbox();
 		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
@@ -578,7 +546,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertEquals( 20, count( $actual_count ) );
 
 		// Clean up filter.
-		remove_all_filters( 'wp_count_posts' );
+		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 	}
 
 	/**
@@ -624,24 +592,20 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		);
 
 		// Mock the count to exceed the 200-post threshold.
-		add_filter(
-			'wp_count_posts',
-			function ( $counts, $type ) {
-				if ( Inbox::POST_TYPE === $type ) {
-					$counts->publish = 225;
-				}
-				return $counts;
-			},
-			10,
-			2
-		);
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Inbox::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		// Run purge_inbox with default days (180).
 		Scheduler::purge_inbox();
 		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
-		remove_all_filters( 'wp_count_posts' );
+		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Verify posts are not deleted (2 months < 180 days).
 		$this->assertEquals( 25, wp_count_posts( Inbox::POST_TYPE )->publish );
@@ -650,24 +614,14 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		update_option( 'activitypub_inbox_purge_days', 30 );
 
 		// Re-add the mock filter for the second purge run.
-		add_filter(
-			'wp_count_posts',
-			function ( $counts, $type ) {
-				if ( Inbox::POST_TYPE === $type ) {
-					$counts->publish = 225;
-				}
-				return $counts;
-			},
-			10,
-			2
-		);
+		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		// Run purge_inbox with changed days.
 		Scheduler::purge_inbox();
 		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
-		remove_all_filters( 'wp_count_posts' );
+		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Verify posts are deleted (2 months > 30 days).
 		$this->assertEquals( 0, wp_count_posts( Inbox::POST_TYPE )->publish );
@@ -680,19 +634,17 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	 */
 	public function test_cleanup_remote_actors() {
 		// Mock actor metadata.
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () {
-				return array(
-					'type'              => 'Person',
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-					'inbox'             => 'https://example.com/users/test/inbox',
-				);
-			}
-		);
+		$activitypub_pre_http_get_remote_object_callback = function () {
+			return array(
+				'type'              => 'Person',
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+				'inbox'             => 'https://example.com/users/test/inbox',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $activitypub_pre_http_get_remote_object_callback );
 
 		$actor = Remote_Actors::fetch_by_uri( 'https://example.com/users/test' );
 
@@ -701,26 +653,22 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		}
 
 		// Track scheduled events.
-		$scheduled_events = array();
-		\add_filter(
-			'schedule_event',
-			function ( $event ) use ( &$scheduled_events ) {
-				if ( 'activitypub_delete_remote_actor_interactions' === $event->hook ) {
-					$scheduled_events[] = array(
-						'hook' => $event->hook,
-						'args' => $event->args,
-						'time' => $event->timestamp,
-					);
-				}
-				return $event;
+		$scheduled_events        = array();
+		$schedule_event_callback = function ( $event ) use ( &$scheduled_events ) {
+			if ( 'activitypub_delete_remote_actor_interactions' === $event->hook ) {
+				$scheduled_events[] = array(
+					'hook' => $event->hook,
+					'args' => $event->args,
+					'time' => $event->timestamp,
+				);
 			}
-		);
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return new \WP_Error( 'no_actor', 'No actor found' );
-			}
-		);
+			return $event;
+		};
+		\add_filter( 'schedule_event', $schedule_event_callback );
+		$pre_get_remote_metadata_by_actor_callback = function () {
+			return new \WP_Error( 'no_actor', 'No actor found' );
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_by_actor_callback );
 
 		// Run the cleanup function.
 		Scheduler::cleanup_remote_actors();
@@ -735,8 +683,8 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertNull( \get_post( $actor->ID ), 'Actor should be deleted' );
 
 		// Clean up.
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		\remove_all_filters( 'schedule_event' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $activitypub_pre_http_get_remote_object_callback );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_by_actor_callback );
+		\remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 }

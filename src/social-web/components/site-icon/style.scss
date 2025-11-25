@@ -9,7 +9,11 @@
 }
 
 .site-icon__image {
+	aspect-ratio: 1 / 1;
+	background: #333;
+	height: 100%;
 	object-fit: cover;
+	width: 100%;
 }
 
 .site-icon__icon {

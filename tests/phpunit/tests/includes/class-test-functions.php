@@ -450,12 +450,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		add_filter( 'activitypub_is_post_disabled', '__return_true' );
 		$this->assertTrue( \Activitypub\is_post_disabled( $public_post_id ) );
 		remove_filter( 'activitypub_is_post_disabled', '__return_true' );
-
-		// Clean up.
-		wp_delete_post( $public_post_id, true );
-		wp_delete_post( $local_post_id, true );
-		wp_delete_post( $private_post_id, true );
-		wp_delete_post( $password_post_id, true );
 	}
 
 	/**
@@ -469,14 +463,10 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		add_post_meta( $visible_private_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 		$this->assertTrue( \Activitypub\is_post_disabled( $visible_private_post_id ) );
 
-		wp_delete_post( $visible_private_post_id, true );
-
 		$visible_local_post_id = self::factory()->post->create();
 
 		add_post_meta( $visible_local_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 		$this->assertTrue( \Activitypub\is_post_disabled( $visible_local_post_id ) );
-
-		wp_delete_post( $visible_local_post_id, true );
 	}
 
 	/**
@@ -592,7 +582,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			$desc
 		);
 
-		\wp_delete_post( $post_id, true );
 		\remove_shortcode( 'activitypub_test_shortcode' );
 	}
 
@@ -816,9 +805,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertEquals( 'Follow', $activity->get_type() );
 		$this->assertEquals( 'https://example.org/?author=1', get_post_meta( $id, '_activitypub_object_id', true ) );
-
-		// Delete the Outbox item.
-		wp_delete_post( $id );
 	}
 
 	/**
@@ -1491,7 +1477,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		$result = \Activitypub\esc_hashtag( 'custom' );
 		$this->assertSame( '#CustomTag', $result );
 
-		\remove_filter( 'activitypub_esc_hashtag', $filter_callback, 10 );
+		\remove_filter( 'activitypub_esc_hashtag', $filter_callback );
 	}
 
 	/**
@@ -1667,8 +1653,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertTrue( \Activitypub\is_ap_post( $ap_post_id ), 'Should return true for ap_post post type' );
 		$this->assertTrue( \Activitypub\is_ap_post( get_post( $ap_post_id ) ), 'Should return true when passed WP_Post object' );
-
-		wp_delete_post( $ap_post_id, true );
 	}
 
 	/**
@@ -1688,8 +1672,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertFalse( \Activitypub\is_ap_post( $post_id ), 'Should return false for regular post' );
 		$this->assertFalse( \Activitypub\is_ap_post( get_post( $post_id ) ), 'Should return false when passed WP_Post object' );
-
-		wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -1731,8 +1713,5 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 		$this->assertFalse( \Activitypub\is_ap_post( $custom_id ), 'Should return false for custom post type' );
-
-		wp_delete_post( $page_id, true );
-		wp_delete_post( $custom_id, true );
 	}
 }
