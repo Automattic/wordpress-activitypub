@@ -54,6 +54,16 @@ class Test_Attachments extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Clean up after class.
+	 */
+	public static function tear_down_after_class() {
+		\wp_delete_post( self::$post_id, true );
+		\wp_delete_user( self::$author_id );
+
+		parent::tear_down_after_class();
+	}
+
+	/**
 	 * Set up each test.
 	 */
 	public function set_up() {
@@ -290,7 +300,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		// Verify content includes gallery block.
 		$post = get_post( self::$post_id );
-		$this->assertStringContainsString( 'wp:gallery', $post->post_content );
+		$this->assertStringContainsString( '<!-- wp:gallery', $post->post_content );
 	}
 
 	/**
@@ -424,6 +434,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 		// Verify attachments were created.
 		$attachments = \get_attached_media( '', $post_id );
 		$this->assertCount( 2, $attachments );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -473,8 +486,11 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$attachments = \get_attached_media( '', $post_id );
 		$this->assertCount( 3, $attachments ); // shared.jpg, inline-only.jpg, attachment-only.jpg.
 
-		// Verify gallery was added for attachment-only.jpg.
-		$this->assertStringContainsString( '<!-- wp:gallery', $post->post_content );
+		// Verify image block was added for attachment-only.jpg (single images use standalone blocks).
+		$this->assertStringContainsString( '<!-- wp:image', $post->post_content );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -525,6 +541,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		// Verify gallery was added for the attachment images.
 		$this->assertStringContainsString( '<!-- wp:gallery', $post->post_content );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -557,6 +576,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 		preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches );
 		$this->assertCount( 2, $matches[1] );
 		$this->assertEquals( $matches[1][0], $matches[1][1] ); // Both should have same URL.
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -588,6 +610,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 		// Only one attachment should be created.
 		$attachments = \get_attached_media( '', $post_id );
 		$this->assertCount( 1, $attachments );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
 	}
 
 	/**

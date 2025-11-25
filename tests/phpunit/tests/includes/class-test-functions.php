@@ -1477,7 +1477,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		$result = \Activitypub\esc_hashtag( 'custom' );
 		$this->assertSame( '#CustomTag', $result );
 
-		\remove_filter( 'activitypub_esc_hashtag', $filter_callback, 10 );
+		\remove_filter( 'activitypub_esc_hashtag', $filter_callback );
 	}
 
 	/**

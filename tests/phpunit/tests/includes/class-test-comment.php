@@ -123,7 +123,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	 */
 	public function test_pre_comment_approved() {
 		// Disable flood control.
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
 
 		$post_id = \wp_insert_post(
 			array(
@@ -172,7 +172,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$comment_autoapproved = \get_comment( $comment_id_autoapproved );
 		$this->assertEquals( '1', $comment_autoapproved->comment_approved );
 
-		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ), 10 );
+		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ) );
 
 		$comment_id_unapproved = \wp_new_comment(
 			array(
@@ -812,6 +812,184 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Clean up.
 		\set_current_screen( 'front' );
+	}
+
+	/**
+	 * Test auto-approving comments on ap_post when option is enabled.
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_auto_approve_comments_on_ap_post_when_enabled() {
+		// Disable flood control.
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+		// Enable the create_posts option.
+		\update_option( 'activitypub_create_posts', '1' );
+
+		// Create an ap_post.
+		$ap_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'ap_post',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create a comment on the ap_post with activitypub protocol.
+		$comment_id = \wp_new_comment(
+			array(
+				'comment_type'         => 'comment',
+				'comment_content'      => 'This is a comment on ap_post.',
+				'comment_author'       => 'Test User',
+				'comment_author_url'   => 'https://example.com/@testuser',
+				'comment_post_ID'      => $ap_post_id,
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// The comment should be auto-approved.
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( '1', $comment->comment_approved, 'Comment on ap_post should be auto-approved when option is enabled' );
+
+		// Clean up.
+		\delete_option( 'activitypub_create_posts' );
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Test not auto-approving comments on ap_post when option is disabled.
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_no_auto_approve_comments_on_ap_post_when_disabled() {
+		// Disable flood control.
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+		// Ensure the create_posts option is disabled.
+		\delete_option( 'activitypub_create_posts' );
+
+		// Create an ap_post.
+		$ap_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'ap_post',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create a comment on the ap_post with activitypub protocol.
+		$comment_id = \wp_new_comment(
+			array(
+				'comment_type'         => 'comment',
+				'comment_content'      => 'This is a comment on ap_post.',
+				'comment_author'       => 'Test User',
+				'comment_author_url'   => 'https://example.com/@testuser',
+				'comment_post_ID'      => $ap_post_id,
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// The comment should NOT be auto-approved.
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( '0', $comment->comment_approved, 'Comment on ap_post should not be auto-approved when option is disabled' );
+
+		// Clean up.
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Test not auto-approving comments on regular posts (even with option enabled).
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_no_auto_approve_comments_on_regular_posts() {
+		// Disable flood control.
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+		// Enable the create_posts option.
+		\update_option( 'activitypub_create_posts', '1' );
+
+		// Create a regular post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => 1,
+			)
+		);
+
+		// Create a comment on the regular post with activitypub protocol.
+		$comment_id = \wp_new_comment(
+			array(
+				'comment_type'         => 'comment',
+				'comment_content'      => 'This is a comment on regular post.',
+				'comment_author'       => 'Test User',
+				'comment_author_url'   => 'https://example.com/@testuser',
+				'comment_post_ID'      => $post_id,
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// The comment should NOT be auto-approved (regular posts are not affected).
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( '0', $comment->comment_approved, 'Comment on regular post should not be auto-approved' );
+
+		// Clean up.
+		\delete_option( 'activitypub_create_posts' );
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Test auto-approving different comment types on ap_post.
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_auto_approve_different_comment_types_on_ap_post() {
+		// Disable flood control.
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+		// Enable the create_posts option.
+		\update_option( 'activitypub_create_posts', '1' );
+
+		// Create an ap_post.
+		$ap_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'ap_post',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Test different comment types.
+		$comment_types = array( 'comment', 'like', 'repost' );
+
+		foreach ( $comment_types as $comment_type ) {
+			$comment_id = \wp_new_comment(
+				array(
+					'comment_type'         => $comment_type,
+					'comment_content'      => "This is a {$comment_type} on ap_post.",
+					'comment_author'       => 'Test User',
+					'comment_author_url'   => 'https://example.com/@testuser',
+					'comment_post_ID'      => $ap_post_id,
+					'comment_author_email' => '',
+					'comment_meta'         => array(
+						'protocol' => 'activitypub',
+					),
+				)
+			);
+
+			// All comment types should be auto-approved on ap_post.
+			$comment = \get_comment( $comment_id );
+			$this->assertEquals( '1', $comment->comment_approved, "Comment type '{$comment_type}' on ap_post should be auto-approved" );
+		}
+
+		// Clean up.
+		\delete_option( 'activitypub_create_posts' );
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 	}
 
 	/**

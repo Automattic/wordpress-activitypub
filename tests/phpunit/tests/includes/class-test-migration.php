@@ -107,6 +107,20 @@ class Test_Migration extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_custom_post_content' );
 		\delete_option( 'activitypub_post_content_type' );
 
+		// Clean up outbox items.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'posts_per_page' => -1,
+				'post_status'    => 'any',
+				'fields'         => 'ids',
+			)
+		);
+
+		foreach ( $outbox_items as $item_id ) {
+			\wp_delete_post( $item_id, true );
+		}
+
 		parent::tear_down();
 	}
 
@@ -267,6 +281,9 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$this->assertEquals( $custom, $template );
 		$this->assertFalse( $content_type );
+
+		\wp_delete_post( $post1, true );
+		\wp_delete_post( $post2, true );
 	}
 
 	/**
@@ -372,12 +389,12 @@ class Test_Migration extends \WP_UnitTestCase {
 		Comment::register_comment_types();
 
 		// Create test comments.
-		$post_id = self::factory()->post->create(
+		$post_id    = self::factory()->post->create(
 			array(
 				'post_author' => 1,
 			)
 		);
-		self::factory()->comment->create(
+		$comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => $post_id,
 				'comment_approved' => '1',
@@ -389,6 +406,10 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		// Verify lock was cleaned up.
 		$this->assertFalse( get_option( 'activitypub_migration_lock' ) );
+
+		// Clean up.
+		wp_delete_comment( $comment_id, true );
+		wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -398,7 +419,7 @@ class Test_Migration extends \WP_UnitTestCase {
 	 */
 	public function test_create_outbox_items() {
 		// Create additional post that should not be included in outbox.
-		self::factory()->post->create( array( 'post_author' => 90210 ) );
+		$post_id = self::factory()->post->create( array( 'post_author' => 90210 ) );
 
 		// Run migration.
 		add_filter( 'pre_schedule_event', '__return_false' );
@@ -415,6 +436,8 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		// Should now have 5 outbox items total, 4 post Create, 1 post Update.
 		$this->assertEquals( 5, count( $outbox_items ) );
+
+		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -563,6 +586,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
+		\wp_delete_comment( $comment_id, true );
 	}
 
 	/**
@@ -738,6 +762,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		\delete_user_option( $user_id1, 'activitypub_mailer_new_dm' );
 		\delete_user_option( $user_id1, 'activitypub_mailer_new_follower' );
 		\delete_user_option( $user_id1, 'activitypub_mailer_new_mention' );
+		\wp_delete_user( $user_id1 );
 	}
 
 	/**
@@ -760,6 +785,8 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$this->assertEquals( Remote_Actors::POST_TYPE, \get_post_type( $follower ) );
 		$this->assertEquals( '5', \get_post_meta( $follower, Followers::FOLLOWER_META_KEY, true ) );
+
+		\wp_delete_post( $follower );
 	}
 
 	/**
@@ -829,6 +856,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( '<p>HTML content</p>', $actor->get_summary() );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_actor );
+		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -887,6 +915,8 @@ class Test_Migration extends \WP_UnitTestCase {
 		$actor = Actor::init_from_json( $post->post_content );
 
 		$this->assertEquals( '<p>HTML content</p>', $actor->get_summary() );
+
+		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -955,6 +985,11 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Verify other meta keys are unaffected.
 		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
 		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post2, 'some_other_meta', true ), 'Other meta keys should not be affected' );
+
+		// Clean up.
+		\wp_delete_post( $post1, true );
+		\wp_delete_post( $post2, true );
+		\wp_delete_post( $post3, true );
 	}
 
 	/**
@@ -1004,6 +1039,10 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( '456', \get_post_meta( $post2, '_activitypub_following', true ), '_activitypub_following with different value should remain' );
 		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
 		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post2, 'different_meta', true ), 'Other meta keys should not be affected' );
+
+		// Clean up.
+		\wp_delete_post( $post1, true );
+		\wp_delete_post( $post2, true );
 	}
 
 	/**
@@ -1055,6 +1094,9 @@ class Test_Migration extends \WP_UnitTestCase {
 		);
 		$this->assertEquals( 1, $remaining_other_count, 'One _activitypub_following entry should remain' );
 		$this->assertEquals( '789', \get_post_meta( $post_id, '_activitypub_following', true ), 'Non-APPLICATION_USER_ID entry should remain' );
+
+		// Clean up.
+		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -1095,7 +1137,10 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertContains( $meta_value, array( '123', '456', '789' ), 'Meta value should be one of the test values' );
 
 		// Clean up.
-		\remove_action( 'added_post_meta', $capture_action, 10 );
+		\remove_action( 'added_post_meta', $capture_action );
+		foreach ( $posts as $post ) {
+			\wp_delete_post( $post, true );
+		}
 	}
 
 	/**
@@ -1121,7 +1166,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEmpty( $following_actions, 'No following-specific actions should be triggered when no following meta exists' );
 
 		// Clean up.
-		\remove_action( 'added_post_meta', $capture_action, 10 );
+		\remove_action( 'added_post_meta', $capture_action );
 	}
 
 	/**

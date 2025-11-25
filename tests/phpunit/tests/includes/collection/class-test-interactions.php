@@ -54,7 +54,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create(
@@ -98,6 +98,14 @@ class Test_Interactions extends \WP_UnitTestCase {
 		parent::set_up();
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( __CLASS__, 'get_remote_metadata_by_actor' ), 0, 2 );
+	}
+
+	/**
+	 * Clean up after tests.
+	 */
+	public static function wpTearDownAfterClass() {
+		wp_delete_post( self::$outbox_id, true );
+		wp_delete_user( self::$user_id );
 	}
 
 	/**
@@ -222,6 +230,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 		// Verify avatar URL is stored on the remote actor.
 		$avatar_url = \Activitypub\Collection\Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/avatar.jpg', $avatar_url );
+
+		// Clean up.
+		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**
@@ -452,6 +463,11 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		$found_our_comments = array_intersect( $comment_ids, array( $comment_id_1, $comment_id_2 ) );
 		$this->assertGreaterThanOrEqual( 1, count( $found_our_comments ), 'Should find at least one of our test comments' );
+
+		// Clean up.
+		wp_delete_comment( $comment_id_1, true );
+		wp_delete_comment( $comment_id_2, true );
+		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**
@@ -548,6 +564,11 @@ class Test_Interactions extends \WP_UnitTestCase {
 		// Verify at least one of our comments is found.
 		$found = array_intersect( $comment_ids, array( $comment_id_1, $comment_id_2 ) );
 		$this->assertGreaterThanOrEqual( 1, count( $found ), 'Should find at least one of our comments' );
+
+		// Clean up.
+		wp_delete_comment( $comment_id_1, true );
+		wp_delete_comment( $comment_id_2, true );
+		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**
@@ -577,24 +598,23 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-				);
-			}
-		);
+		$mock_actor_metadata_filter = function () {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
 
 		// Try to add comment.
 		$result = Interactions::add_comment( $activity );
 		$this->assertFalse( $result, 'Comment should not be added to disabled post' );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
+		wp_delete_post( $disabled_post_id, true );
 	}
 
 	/**
@@ -614,23 +634,21 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-				);
-			}
-		);
+		$mock_actor_metadata_filter = function () {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
 
 		// Try to add comment.
 		$result = Interactions::add_comment( $activity );
 		$this->assertFalse( $result, 'Comment should not be added to disabled post' );
 
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
 	}
 
 	/**
@@ -657,24 +675,23 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-				);
-			}
-		);
+		$mock_actor_metadata_filter = function () {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
 
 		// Try to add reaction.
 		$result = Interactions::add_reaction( $activity );
 		$this->assertFalse( $result, 'Reaction should not be added to disabled post' );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
+		wp_delete_post( $disabled_post_id, true );
 	}
 
 	/**
@@ -691,23 +708,21 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-				);
-			}
-		);
+		$mock_actor_metadata_filter = function () {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
 
 		// Try to add reaction.
 		$result = Interactions::add_reaction( $activity );
 		$this->assertFalse( $result, 'Reaction should not be added to disabled post' );
 
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
 	}
 
 	/**
@@ -894,7 +909,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'quote-inline', $comment->comment_content );
 		$this->assertEquals( 'quote', $comment->comment_type, 'Comment type should be set to quote' );
 
-		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ) );
 	}
 
 	/**
@@ -947,17 +962,15 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Remote Commenter',
-					'preferredUsername' => 'commenter',
-					'id'                => 'https://example.com/users/commenter',
-					'url'               => 'https://example.com/@commenter',
-				);
-			}
-		);
+		$mock_actor_metadata_filter = function () {
+			return array(
+				'name'              => 'Remote Commenter',
+				'preferredUsername' => 'commenter',
+				'id'                => 'https://example.com/users/commenter',
+				'url'               => 'https://example.com/@commenter',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
 
 		// Add comment to ap_post.
 		$comment_id = Interactions::add_comment( $activity );
@@ -971,7 +984,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'Remote Commenter', $comment->comment_author );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
+		wp_delete_comment( $comment_id, true );
+		wp_delete_post( $ap_post_id, true );
 	}
 
 	/**
@@ -1001,17 +1016,15 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Remote Liker',
-					'preferredUsername' => 'liker',
-					'id'                => 'https://example.com/users/liker',
-					'url'               => 'https://example.com/@liker',
-				);
-			}
-		);
+		$mock_actor_metadata_filter = function () {
+			return array(
+				'name'              => 'Remote Liker',
+				'preferredUsername' => 'liker',
+				'id'                => 'https://example.com/users/liker',
+				'url'               => 'https://example.com/@liker',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
 
 		// Add reaction to ap_post.
 		$comment_id = Interactions::add_reaction( $activity );
@@ -1024,7 +1037,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'like', $comment->comment_type );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
+		wp_delete_comment( $comment_id, true );
+		wp_delete_post( $ap_post_id, true );
 	}
 
 	/**
@@ -1056,17 +1071,15 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Remote Commenter',
-					'preferredUsername' => 'commenter',
-					'id'                => 'https://example.com/users/commenter',
-					'url'               => 'https://example.com/@commenter',
-				);
-			}
-		);
+		$mock_actor_metadata_filter = function () {
+			return array(
+				'name'              => 'Remote Commenter',
+				'preferredUsername' => 'commenter',
+				'id'                => 'https://example.com/users/commenter',
+				'url'               => 'https://example.com/@commenter',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
 
 		// Try to add comment - should succeed because ap_post bypasses disabled check.
 		$comment_id = Interactions::add_comment( $activity );
@@ -1075,7 +1088,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertIsInt( $comment_id );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
+		wp_delete_comment( $comment_id, true );
+		wp_delete_post( $ap_post_id, true );
 	}
 
 	/**
@@ -1096,17 +1111,15 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Remote Commenter',
-					'preferredUsername' => 'commenter',
-					'id'                => 'https://example.com/users/commenter',
-					'url'               => 'https://example.com/@commenter',
-				);
-			}
-		);
+		$mock_actor_metadata_filter = function () {
+			return array(
+				'name'              => 'Remote Commenter',
+				'preferredUsername' => 'commenter',
+				'id'                => 'https://example.com/users/commenter',
+				'url'               => 'https://example.com/@commenter',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
 
 		// Add first comment.
 		$activity1 = array(
@@ -1141,6 +1154,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( $parent_comment_id, $child_comment->comment_parent, 'Child should have parent comment ID' );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata_filter );
+		wp_delete_comment( $child_comment_id, true );
+		wp_delete_comment( $parent_comment_id, true );
+		wp_delete_post( $ap_post_id, true );
 	}
 }

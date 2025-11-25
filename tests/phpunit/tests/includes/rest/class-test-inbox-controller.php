@@ -562,24 +562,20 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$remote_actor_url = 'https://example.com/actor/1';
 
 		// Mock the remote actor fetch.
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $pre, $url ) use ( $remote_actor_url ) {
-				if ( $url === $remote_actor_url ) {
-					return array(
-						'@context'          => 'https://www.w3.org/ns/activitystreams',
-						'id'                => $remote_actor_url,
-						'type'              => 'Person',
-						'preferredUsername' => 'testactor',
-						'name'              => 'Test Actor',
-						'inbox'             => 'https://example.com/actor/1/inbox',
-					);
-				}
-				return $pre;
-			},
-			10,
-			2
-		);
+		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url ) {
+			if ( $url === $remote_actor_url ) {
+				return array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => $remote_actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'testactor',
+					'name'              => 'Test Actor',
+					'inbox'             => 'https://example.com/actor/1/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
 
 		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
 
@@ -618,7 +614,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		// Clean up.
 		\delete_option( 'activitypub_actor_mode' );
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 	}
 
 	/**
@@ -637,24 +633,20 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$remote_actor_url = 'https://example.com/actor/1';
 
 		// Mock the remote actor fetch.
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $pre, $url ) use ( $remote_actor_url ) {
-				if ( $url === $remote_actor_url ) {
-					return array(
-						'@context'          => 'https://www.w3.org/ns/activitystreams',
-						'id'                => $remote_actor_url,
-						'type'              => 'Person',
-						'preferredUsername' => 'testactor',
-						'name'              => 'Test Actor',
-						'inbox'             => 'https://example.com/actor/1/inbox',
-					);
-				}
-				return $pre;
-			},
-			10,
-			2
-		);
+		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url ) {
+			if ( $url === $remote_actor_url ) {
+				return array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => $remote_actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'testactor',
+					'name'              => 'Test Actor',
+					'inbox'             => 'https://example.com/actor/1/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
 
 		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
 
@@ -689,7 +681,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		// Clean up.
 		\delete_option( 'activitypub_actor_mode' );
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 	}
 
 	/**
@@ -706,14 +698,10 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		$captured_context = null;
 
-		\add_action(
-			'activitypub_inbox_shared',
-			function ( $data, $user_ids, $type, $activity, $context ) use ( &$captured_context ) {
-				$captured_context = $context;
-			},
-			10,
-			5
-		);
+		$inbox_shared_action = function ( $data, $user_ids, $type, $activity, $context ) use ( &$captured_context ) {
+			$captured_context = $context;
+		};
+		\add_action( 'activitypub_inbox_shared', $inbox_shared_action, 10, 5 );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id-context',
@@ -740,7 +728,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertEquals( Inbox_Collection::CONTEXT_SHARED_INBOX, $captured_context );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\remove_all_actions( 'activitypub_inbox_shared' );
+		\remove_action( 'activitypub_inbox_shared', $inbox_shared_action );
 		\delete_option( 'activitypub_actor_mode' );
 	}
 
@@ -759,15 +747,11 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$shared_inbox_fired  = false;
 		$captured_recipients = null;
 
-		\add_action(
-			'activitypub_inbox_shared',
-			function ( $data, $user_ids ) use ( &$shared_inbox_fired, &$captured_recipients ) {
-				$shared_inbox_fired  = true;
-				$captured_recipients = $user_ids;
-			},
-			10,
-			2
-		);
+		$inbox_shared_action = function ( $data, $user_ids ) use ( &$shared_inbox_fired, &$captured_recipients ) {
+			$shared_inbox_fired  = true;
+			$captured_recipients = $user_ids;
+		};
+		\add_action( 'activitypub_inbox_shared', $inbox_shared_action, 10, 2 );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id-shared',
@@ -798,7 +782,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertContains( Actors::BLOG_USER_ID, $captured_recipients );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\remove_all_actions( 'activitypub_inbox_shared' );
+		\remove_action( 'activitypub_inbox_shared', $inbox_shared_action );
 		\delete_option( 'activitypub_actor_mode' );
 	}
 
@@ -816,14 +800,10 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		$inbox_id = null;
 
-		\add_action(
-			'activitypub_handled_inbox',
-			function ( $data, $user_ids, $type, $activity, $item_id ) use ( &$inbox_id ) {
-				$inbox_id = $item_id;
-			},
-			10,
-			5
-		);
+		$handled_inbox_action = function ( $data, $user_ids, $type, $activity, $item_id ) use ( &$inbox_id ) {
+			$inbox_id = $item_id;
+		};
+		\add_action( 'activitypub_handled_inbox', $handled_inbox_action, 10, 5 );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id-persist',
@@ -857,9 +837,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertContains( Actors::BLOG_USER_ID, $recipients );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\remove_all_actions( 'activitypub_handled_inbox' );
-		\remove_all_actions( 'activitypub_inbox' );
-		\remove_all_actions( 'activitypub_inbox_shared' );
+		\remove_action( 'activitypub_handled_inbox', $handled_inbox_action );
 		\delete_option( 'activitypub_actor_mode' );
 	}
 
@@ -877,14 +855,10 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		$inbox_contexts = array();
 
-		\add_action(
-			'activitypub_inbox',
-			function ( $data, $user_id, $type, $activity, $context ) use ( &$inbox_contexts ) {
-				$inbox_contexts[] = $context;
-			},
-			10,
-			5
-		);
+		$inbox_action = function ( $data, $user_id, $type, $activity, $context ) use ( &$inbox_contexts ) {
+			$inbox_contexts[] = $context;
+		};
+		\add_action( 'activitypub_inbox', $inbox_action, 10, 5 );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id-fallback',
@@ -914,8 +888,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		}
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\remove_all_actions( 'activitypub_inbox' );
-		\remove_all_actions( 'activitypub_inbox_shared' );
+		\remove_action( 'activitypub_inbox', $inbox_action );
 		\delete_option( 'activitypub_actor_mode' );
 	}
 }

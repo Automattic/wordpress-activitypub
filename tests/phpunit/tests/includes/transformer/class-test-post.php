@@ -1079,7 +1079,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Clean up mentions filter if it was added.
 		if ( $mentions_filter ) {
-			\remove_filter( 'activitypub_extract_mentions', $mentions_filter, 10 );
+			\remove_filter( 'activitypub_extract_mentions', $mentions_filter );
 		}
 
 		// All wordpress-post-format templates should contain [ap_content].

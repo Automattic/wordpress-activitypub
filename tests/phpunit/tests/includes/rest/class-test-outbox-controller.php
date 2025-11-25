@@ -199,27 +199,21 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$pre_called    = false;
 		$post_called   = false;
 
-		\add_filter(
-			'activitypub_rest_outbox_array',
-			function ( $response ) use ( &$filter_called ) {
-				$filter_called = true;
-				return $response;
-			}
-		);
+		$outbox_array_filter = function ( $response ) use ( &$filter_called ) {
+			$filter_called = true;
+			return $response;
+		};
+		\add_filter( 'activitypub_rest_outbox_array', $outbox_array_filter );
 
-		\add_action(
-			'activitypub_rest_outbox_pre',
-			function () use ( &$pre_called ) {
-				$pre_called = true;
-			}
-		);
+		$outbox_pre_action = function () use ( &$pre_called ) {
+			$pre_called = true;
+		};
+		\add_action( 'activitypub_rest_outbox_pre', $outbox_pre_action );
 
-		\add_action(
-			'activitypub_rest_outbox_post',
-			function () use ( &$post_called ) {
-				$post_called = true;
-			}
-		);
+		$outbox_post_action = function () use ( &$post_called ) {
+			$post_called = true;
+		};
+		\add_action( 'activitypub_rest_outbox_post', $outbox_post_action );
 
 		$request = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/%s/outbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
 		\rest_get_server()->dispatch( $request );
@@ -228,10 +222,9 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertTrue( $pre_called, 'activitypub_rest_outbox_pre action was not called.' );
 		$this->assertTrue( $post_called, 'activitypub_outbox_post action was not called.' );
 
-		\remove_all_filters( 'activitypub_rest_outbox_array' );
-		\remove_all_actions( 'activitypub_rest_outbox_pre' );
-		\remove_all_actions( 'activitypub_rest_outbox_post' );
-		\remove_all_actions( 'activitypub_outbox_post' );
+		\remove_filter( 'activitypub_rest_outbox_array', $outbox_array_filter );
+		\remove_action( 'activitypub_rest_outbox_pre', $outbox_pre_action );
+		\remove_action( 'activitypub_rest_outbox_post', $outbox_post_action );
 	}
 
 	/**
