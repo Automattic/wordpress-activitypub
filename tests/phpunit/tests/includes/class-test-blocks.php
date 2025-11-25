@@ -36,7 +36,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 		// Create test user for Extra Fields block tests.
 		self::$extra_fields_user_id = $factory->user->create(
 			array(
-				'user_login' => 'extrafieldsuser',
+				'user_login' => 'extra_fields_user',
 				'user_email' => 'extrafields@example.com',
 			)
 		);
@@ -295,7 +295,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 *
 	 * @covers ::filter_import_mastodon_post_data
 	 */
-	public function test_filter_import_mastodon_post_data_without_inreplyto() {
+	public function test_filter_import_mastodon_post_data_without_in_reply_to() {
 		$data = array(
 			'post_content' => '<p>Regular post without reply</p>',
 		);
@@ -634,7 +634,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 	public function test_render_extra_fields_block_with_no_fields() {
 		$user_id = self::factory()->user->create(
 			array(
-				'user_login' => 'emptyuser',
+				'user_login' => 'empty_user',
 				'user_email' => 'empty@example.com',
 			)
 		);
@@ -684,7 +684,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Collection\Extra_Fields::get_formatted_content
 	 */
 	public function test_render_extra_fields_block_preserves_html() {
-		$field_id = self::factory()->post->create(
+		self::factory()->post->create(
 			array(
 				'post_type'    => Extra_Fields::USER_POST_TYPE,
 				'post_title'   => 'Rich Content',
@@ -703,7 +703,5 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( '<strong>my site</strong>', $output );
 		$this->assertStringContainsString( '<a href="https://test.com"', $output );
-
-		wp_delete_post( $field_id, true );
 	}
 }

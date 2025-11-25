@@ -13,16 +13,18 @@ import {
 	__experimentalHStack as HStack,
 	__experimentalHeading as Heading,
 } from '@wordpress/components';
-import { chevronRight, chevronLeft, cog } from '@wordpress/icons';
+import { chevronRight, chevronLeft, cog, postList } from '@wordpress/icons';
 import { __, isRTL } from '@wordpress/i18n';
 import { useSettings } from '../../contexts/settings-context';
+import { useFeedFilters } from '../../hooks/use-feed-filters';
 import SiteHub from '../site-hub';
 import SidebarDescription from '../sidebar-description';
 import ActorSwitcher from '../actor-switcher';
+import { ObjectTypes } from '../object-types';
 import { PopularTags } from '../popular-tags';
 import './style.scss';
 
-const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ) } ];
+const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ), icon: postList } ];
 
 interface SidebarProps {
 	activeSection: string;
@@ -31,6 +33,16 @@ interface SidebarProps {
 
 export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 	const { adminUrl } = useSettings();
+	const { hasActiveFilters, clearAllFilters } = useFeedFilters();
+
+	// Feed should be selected when on feed section and no filters are active
+	const isFeedSelected = activeSection === 'feed' && ! hasActiveFilters;
+
+	// Handle Feed click: navigate to feed and clear all filters
+	const handleFeedClick = () => {
+		onNavigate( 'feed' );
+		clearAllFilters();
+	};
 
 	return (
 		<div className="sidebar">
@@ -56,16 +68,19 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 						{ menuItems.map( ( item ) => (
 							<MenuItem
 								key={ item.id }
-								isSelected={ activeSection === item.id }
-								onClick={ () => onNavigate( item.id ) }
+								isSelected={ item.id === 'feed' ? isFeedSelected : activeSection === item.id }
+								onClick={ item.id === 'feed' ? handleFeedClick : () => onNavigate( item.id ) }
 								className="menu-item"
 							>
-								{ item.icon && <Icon icon={ item.icon } size={ 20 } /> }
+								{ item.icon && <Icon icon={ item.icon } size={ 24 } /> }
 								<span>{ item.label }</span>
 							</MenuItem>
 						) ) }
 					</MenuGroup>
 				</NavigableMenu>
+
+				{ /* Object Types Filter - shown only on Feed */ }
+				{ activeSection === 'feed' && <ObjectTypes /> }
 			</nav>
 
 			{ /* Popular Tags - Only show on feed section */ }

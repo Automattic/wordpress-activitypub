@@ -38,7 +38,6 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * Clean up after tests.
 	 */
 	public static function wpTearDownAfterClass() {
-		wp_delete_post( self::$post_id, true );
 		remove_filter( 'pre_http_request', array( self::class, 'pre_http_request' ) );
 	}
 
@@ -90,11 +89,6 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Test that reply context is added.
 		$this->assertSame( '<p><a rel="mention" class="u-url mention" href="https://example.net/@remote" title="@remote@example.net">@remote</a> <a rel="mention" class="u-url mention" href="https://remote.example/@author" title="@author@remote.example">@author</a> This is a comment</p>', $content );
-
-		// Clean up.
-		wp_delete_comment( $reply_comment_id, true );
-		wp_delete_comment( $parent_comment_id, true );
-		wp_delete_comment( $test_comment_id, true );
 	}
 
 	/**
@@ -181,10 +175,6 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertEquals( 'Image', $attachment['type'] );
 		$this->assertNotEmpty( $attachment['url'] );
 		$this->assertEquals( 'Test image', $attachment['name'] );
-
-		// Clean up.
-		\wp_delete_comment( $comment_id );
-		\wp_delete_attachment( $attachment_id );
 	}
 
 	/**
@@ -212,9 +202,6 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$this->assertIsArray( $attachments, 'Attachments should be an array' );
 		$this->assertEmpty( $attachments, 'Comment should have no attachments when no images are present' );
-
-		// Clean up.
-		\wp_delete_comment( $comment_id );
 	}
 
 	/**
@@ -242,9 +229,6 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$this->assertIsArray( $attachments, 'Attachments should be an array' );
 		$this->assertEmpty( $attachments, 'Comment should ignore external images' );
-
-		// Clean up.
-		\wp_delete_comment( $comment_id );
 	}
 
 	/**

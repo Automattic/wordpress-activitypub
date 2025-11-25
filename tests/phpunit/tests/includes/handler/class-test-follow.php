@@ -39,23 +39,6 @@ class Test_Follow extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after each test.
-	 */
-	public function tear_down() {
-		// Clean up any outbox posts.
-		_delete_all_posts();
-
-		parent::tear_down();
-	}
-
-	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_user( self::$user_id );
-	}
-
-	/**
 	 * Test handle_follow method with different scenarios.
 	 *
 	 * @dataProvider handle_follow_provider
@@ -101,13 +84,11 @@ class Test_Follow extends \WP_UnitTestCase {
 		Follow::handle_follow( $activity_object, $target_user_id );
 
 		// Check if follower was added.
+		$followers_after       = Followers::get_many( $target_user_id );
+		$followers_count_after = count( $followers_after );
 		if ( $should_add_follower ) {
-			$followers_after       = Followers::get_many( $target_user_id );
-			$followers_count_after = count( $followers_after );
 			$this->assertEquals( $followers_count_before + 1, $followers_count_after, $description . ' - Follower should be added' );
 		} else {
-			$followers_after       = Followers::get_many( $target_user_id );
-			$followers_count_after = count( $followers_after );
 			$this->assertEquals( $followers_count_before, $followers_count_after, $description . ' - Follower should not be added' );
 		}
 
@@ -133,7 +114,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		if ( $should_add_follower ) {
 			\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 		}
-		_delete_all_posts();
 	}
 
 	/**
@@ -219,7 +199,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		);
 		$remote_actor = \get_post( $remote_actor );
 
-		Follow::queue_accept( $activity_object, self::$user_id, $remote_actor, $remote_actor );
+		Follow::queue_accept( $activity_object, self::$user_id, $remote_actor instanceof \WP_Post, $remote_actor );
 
 		$outbox_posts = \get_posts(
 			array(
@@ -254,8 +234,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		$this->assertEquals( $local_actor->get_id(), $activity_json['actor'] );
 
 		// Clean up.
-		wp_delete_post( $outbox_post->ID, true );
-		wp_delete_post( $remote_actor->ID, true );
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 	}
 
@@ -273,7 +251,7 @@ class Test_Follow extends \WP_UnitTestCase {
 				'id'                => $actor_url,
 				'actor'             => $actor_url,
 				'type'              => 'Person',
-				'preferredUsername' => 'duplicateactor',
+				'preferredUsername' => 'duplicate_actor',
 				'inbox'             => str_replace( '/actor', '/inbox', $actor_url ),
 			);
 		};
@@ -292,7 +270,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		$test_callback        = function ( $activity, $user_ids, $success, $remote_actor ) use ( &$handled_follow_calls ) {
 			$handled_follow_calls[] = array(
 				'activity'     => $activity,
-				'user_ids'     => $success,
+				'user_ids'     => $user_ids,
 				'success'      => $success,
 				'remote_actor' => $remote_actor,
 			);
@@ -373,9 +351,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		$this->assertEquals( 'Follow', $activity_json['object']['type'] );
 		$this->assertEquals( array( $actor_url ), $activity_json['to'] );
 		$this->assertEquals( $actor_url, $activity_json['object']['actor'] );
-
-		// Clean up.
-		wp_delete_post( $outbox_post->ID, true );
 	}
 
 	/**
@@ -431,22 +406,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		$this->assertEquals( $activity_object, $hook_activity );
 		$this->assertEquals( self::$user_id, $hook_user_id );
 		$this->assertInstanceOf( \WP_Post::class, $hook_remote_actor );
-
-		// Clean up outbox posts.
-		$outbox_posts = \get_posts(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'author'      => self::$user_id,
-				'post_status' => 'any',
-			)
-		);
-		foreach ( $outbox_posts as $post ) {
-			wp_delete_post( $post->ID, true );
-		}
-
-		if ( $hook_remote_actor instanceof \WP_Post ) {
-			wp_delete_post( $hook_remote_actor->ID, true );
-		}
 
 		// Clean up filters.
 		\remove_action( 'activitypub_followers_post_follow', $deprecated_callback );
@@ -505,23 +464,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		$this->assertContains( self::$user_id, $hook_user_id, 'Array should contain user ID' );
 		$this->assertTrue( $hook_success );
 		$this->assertInstanceOf( \WP_Post::class, $hook_remote_actor );
-
-		// Clean up outbox posts.
-		$outbox_posts = \get_posts(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'author'      => self::$user_id,
-				'post_status' => 'any',
-			)
-		);
-		foreach ( $outbox_posts as $post ) {
-			wp_delete_post( $post->ID, true );
-		}
-
-		// Clean up follower.
-		if ( $hook_remote_actor instanceof \WP_Post ) {
-			wp_delete_post( $hook_remote_actor->ID, true );
-		}
 
 		// Clean up filters.
 		\remove_action( 'activitypub_handled_follow', $new_hook_callback );

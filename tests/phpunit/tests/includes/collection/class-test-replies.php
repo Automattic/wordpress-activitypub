@@ -131,12 +131,6 @@ class Test_Replies extends \WP_UnitTestCase {
 
 		// Check that the ActivityPub comment is contained.
 		$this->assertContains( 'https://example.com/comment/1', $context['items'], 'Should contain ActivityPub comment ID' );
-
-		// Clean up.
-		wp_delete_post( $context_post_id, true );
-		foreach ( $comments as $comment_id ) {
-			wp_delete_comment( $comment_id, true );
-		}
 	}
 
 	/**

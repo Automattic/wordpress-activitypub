@@ -13,16 +13,8 @@ import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
-import {
-	titleField,
-	dateField,
-	excerptField,
-	metadataField,
-	contentField,
-	objectTypeField,
-	tagField,
-} from '../../components/fields';
-import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
+import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
+import { normalizeFieldOrder } from './utils';
 import { STORE_NAME } from '../../store';
 import type { SocialWebSelectors } from '../../store';
 import type { FeedPost } from '../../types';
@@ -38,14 +30,14 @@ const DEFAULT_VIEW: View = {
 	},
 	search: '',
 	filters: [],
-	fields: [ 'metadata', 'title.rendered', 'excerpt.rendered' ],
+	fields: [ 'metadata', 'title.rendered', 'content' ],
 	infiniteScrollEnabled: true,
 };
 
 const defaultLayouts = {
 	list: {
 		primaryField: 'metadata',
-		fields: [ 'metadata', 'title.rendered', 'excerpt.rendered' ],
+		fields: [ 'metadata', 'title.rendered', 'content' ],
 		mediaField: undefined,
 	},
 };
@@ -121,20 +113,16 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		},
 	} );
 
-	// Wrap updateView to enforce mutual exclusion between excerpt and content fields
+	// Wrap updateView to reset page when filters change
 	const updateFeedView = useCallback(
 		( updatedView: View ) => {
-			const oldFields = view.fields || [];
-			const newFields = updatedView.fields || [];
-			const fields = enforceContentExcerptMutualExclusion( oldFields, newFields );
-
 			// Reset to page 1 when filters change
 			const filtersChanged = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
 			const page = filtersChanged ? 1 : updatedView.page;
 
-			updateView( { ...updatedView, fields, page } );
+			updateView( { ...updatedView, page } );
 		},
-		[ view.fields, view.filters, updateView ]
+		[ view.filters, updateView ]
 	);
 
 	// Reset view to default state when actor switches
@@ -161,7 +149,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, excerptField, contentField, dateField, objectTypeField, tagField ],
+		() => [ metadataField, titleField, contentField, dateField, objectTypeField, tagField ],
 		[]
 	);
 

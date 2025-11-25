@@ -47,7 +47,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create(
@@ -70,15 +70,6 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 				'comment_content' => 'Test comment for Stream Connector',
 			)
 		);
-	}
-
-	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_comment( self::$comment_id, true );
-		wp_delete_post( self::$post_id, true );
-		wp_delete_user( self::$user_id );
 	}
 
 	/**
@@ -390,9 +381,6 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'Outbox processing complete:', $logged_data['message'] );
 		$this->assertEquals( 'processed', $logged_data['action'] );
 		$this->assertArrayHasKey( 'debug', $logged_data['meta'] );
-
-		// Clean up.
-		wp_delete_post( $outbox_post_id, true );
 	}
 
 	/**
@@ -452,9 +440,6 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 		$debug_data = json_decode( $logged_data['meta']['debug'], true );
 		$this->assertEquals( $batch_size, $debug_data['batch_size'] );
 		$this->assertEquals( $offset, $debug_data['offset'] );
-
-		// Clean up.
-		wp_delete_post( $outbox_post_id, true );
 	}
 
 	/**
