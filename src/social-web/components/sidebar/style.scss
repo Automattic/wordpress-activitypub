@@ -60,7 +60,8 @@
 			color: var(--wpds-color-fg-inverted-primary, #ffffff);
 		}
 
-		&.is-selected {
+		&.is-selected,
+		&[aria-pressed="true"] {
 			background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15));
 			color: var(--wpds-color-fg-inverted-primary, #ffffff);
 		}
@@ -73,6 +74,16 @@
 	// Object types menu spacing
 	.object-types-menu {
 		margin-top: var(--wpds-spacing-10, 4px);
+	}
+
+	// Object types loading state
+	.object-types {
+		padding: var(--wpds-spacing-20, 8px) var(--wpds-spacing-30, 12px);
+
+		&__loading {
+			color: var(--wpds-color-fg-inverted-secondary, #cccccc);
+			font-size: 13px;
+		}
 	}
 
 	.footer {

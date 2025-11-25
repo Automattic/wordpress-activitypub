@@ -55,7 +55,15 @@ export function ObjectTypes() {
 	const updateFilter = ( objectTypeId: number ): void =>
 		updateObjectTypeFilter( selectedObjectTypeId === objectTypeId ? null : objectTypeId );
 
-	if ( isResolving || ! objectTypes || objectTypes.length === 0 ) {
+	if ( isResolving ) {
+		return (
+			<div className="object-types">
+				<div className="object-types__loading">{ __( 'Loading…', 'activitypub' ) }</div>
+			</div>
+		);
+	}
+
+	if ( ! objectTypes || objectTypes.length === 0 ) {
 		return null;
 	}
 
@@ -64,13 +72,12 @@ export function ObjectTypes() {
 			{ objectTypes.map( ( objectType: Term ) => {
 				const translatedName = translations[ objectType.name ] || objectType.name;
 				const icon = icons[ objectType.name ] || defaultIcon;
-				const isSelected = selectedObjectTypeId === objectType.id;
 				return (
 					<MenuItem
 						key={ objectType.id }
-						isSelected={ isSelected }
 						onClick={ () => updateFilter( objectType.id ) }
-						className={ `menu-item${ isSelected ? ' is-selected' : '' }` }
+						className="menu-item"
+						aria-pressed={ selectedObjectTypeId === objectType.id }
 						aria-label={
 							/* translators: %s: object type name */
 							sprintf( __( 'Filter by type: %s', 'activitypub' ) as string, translatedName as any )
