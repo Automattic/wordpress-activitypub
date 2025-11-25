@@ -55,21 +55,24 @@
 	.menu-item {
 		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
 
+		// Disable all transitions to prevent glow/blinking effects
+		transition: none !important;
+
 		// Remove default focus styles to prevent blue glow
 		&:focus {
-			box-shadow: none;
-			outline: none;
+			box-shadow: none !important;
+			outline: none !important;
 		}
 
 		// Only show focus outline for keyboard navigation
 		&:focus-visible {
-			box-shadow: 0 0 0 var(--wpds-border-width-focus, 1.5px) var(--wp-admin-theme-color);
-			outline: 3px solid transparent;
+			box-shadow: 0 0 0 var(--wpds-border-width-focus, 1.5px) var(--wp-admin-theme-color) !important;
+			outline: 3px solid transparent !important;
 		}
 
 		&:hover {
 			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
-			color: var(--wpds-color-fg-inverted-primary, #ffffff);
+			color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
 		}
 
 		&:active {
@@ -79,7 +82,7 @@
 		&.is-selected,
 		&[aria-pressed="true"] {
 			background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
-			color: var(--wpds-color-fg-inverted-primary, #ffffff);
+			color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
 
 			&:hover {
 				background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
