@@ -1108,32 +1108,78 @@ class Test_Posts extends \WP_UnitTestCase {
 		return array(
 			'simple_hashtag_removal'          => array(
 				'<p>This is a test #wordpress #activitypub</p>',
-				array( '#wordpress', '#activitypub' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => '#wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => '#activitypub',
+					),
+				),
 				'<p>This is a test</p>',
 			),
 			'hashtags_without_hash_prefix'    => array(
 				'<p>Testing content #php #javascript</p>',
-				array( 'php', 'javascript' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'javascript',
+					),
+				),
 				'<p>Testing content</p>',
 			),
 			'hashtags_in_anchor_tags'         => array(
 				'<p>Check out this post <a href="https://example.com/tag/wordpress">#wordpress</a> <a href="https://example.com/tag/php">#php</a></p>',
-				array( '#wordpress', '#php' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => '#wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => '#php',
+					),
+				),
 				'<p>Check out this post</p>',
 			),
 			'mixed_hashtags'                  => array(
 				'<p>Post about coding <a href="https://example.com/tag/php">#php</a> #javascript</p>',
-				array( 'php', 'javascript' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'javascript',
+					),
+				),
 				'<p>Post about coding</p>',
 			),
 			'inline_hashtags_not_removed'     => array(
 				'<p>Testing #wordpress in the middle and more text</p>',
-				array( 'wordpress' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+				),
 				'<p>Testing #wordpress in the middle and more text</p>',
 			),
 			'partial_match_should_not_remove' => array(
 				'<p>Testing #wordpressdevelopment in content #wordpress</p>',
-				array( 'wordpress' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+				),
 				'<p>Testing #wordpressdevelopment in content</p>',
 			),
 			'empty_hashtags_array'            => array(
@@ -1143,32 +1189,90 @@ class Test_Posts extends \WP_UnitTestCase {
 			),
 			'empty_content'                   => array(
 				'',
-				array( 'wordpress' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+				),
 				'',
 			),
 			'no_matching_hashtags'            => array(
 				'<p>Testing #wordpress #php</p>',
-				array( 'javascript', 'python' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'javascript',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'python',
+					),
+				),
 				'<p>Testing #wordpress #php</p>',
 			),
 			'case_insensitive_removal'        => array(
 				'<p>Testing content #WordPress #PHP</p>',
-				array( 'wordpress', 'php' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+				),
 				'<p>Testing content</p>',
 			),
 			'trailing_hashtags_only'          => array(
 				'<p>Testing #wordpress in middle #php #activitypub</p>',
-				array( 'wordpress', 'php', 'activitypub' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'activitypub',
+					),
+				),
 				'<p>Testing #wordpress in middle</p>',
 			),
 			'special_characters_in_hashtags'  => array(
 				'<p>Testing content #c++ #.net</p>',
-				array( 'c++', '.net' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'c++',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => '.net',
+					),
+				),
 				'<p>Testing content</p>',
 			),
 			'multiple_spaces_cleanup'         => array(
 				'<p>Testing content #tag1    #tag2    #tag3</p>',
-				array( 'tag1', 'tag2', 'tag3' ),
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'tag1',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'tag2',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'tag3',
+					),
+				),
 				'<p>Testing content</p>',
 			),
 		);
@@ -1210,7 +1314,17 @@ class Test_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_remove_hashtags_preserves_structure() {
 		$content = '<p>First paragraph content</p><p>Second paragraph with <strong>bold text</strong> #php #test</p>';
-		$result  = Posts::remove_hashtags( $content, array( 'test', 'php' ) );
+		$tags    = array(
+			array(
+				'type' => 'Hashtag',
+				'name' => 'test',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => 'php',
+			),
+		);
+		$result  = Posts::remove_hashtags( $content, $tags );
 
 		// Should preserve HTML structure and remove trailing hashtags only.
 		$this->assertStringContainsString( '<p>First paragraph content</p>', $result );
