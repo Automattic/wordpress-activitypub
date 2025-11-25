@@ -51,7 +51,8 @@ export function ObjectTypes() {
 	// Filter to only show known object types (those with config)
 	const knownObjectTypes = objectTypes.filter( ( objectType: Term ) => objectTypeConfig[ objectType.name ] );
 
-	if ( knownObjectTypes.length === 0 ) {
+	// Don't show the filter if there are no object types or only one type
+	if ( knownObjectTypes.length <= 1 ) {
 		return null;
 	}
 
