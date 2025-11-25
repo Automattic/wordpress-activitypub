@@ -36,10 +36,8 @@ export function useObjectTypeFilter(): UseObjectTypeFilterReturn {
 	// Derive selected object type from view.filters
 	const selectedObjectTypeId: number | null = useMemo( (): number | null => {
 		const objectTypeFilter: Filter = view.filters?.find( ( f: Filter ): boolean => f.field === 'ap_object_type' );
-		const value: number[] = objectTypeFilter?.value ?? [];
-
-		// Only highlight when exactly one object type is selected
-		return value.length === 1 ? value[ 0 ] : null;
+		// With 'is' operator, value is a single number, not an array
+		return objectTypeFilter?.value ?? null;
 	}, [ view.filters ] );
 
 	// Update object type filter with toggle support
@@ -57,24 +55,21 @@ export function useObjectTypeFilter(): UseObjectTypeFilterReturn {
 				newFilters = currentFilters.filter( ( f: Filter ): boolean => f.field !== 'ap_object_type' );
 			} else if ( objectTypeFilterIndex !== -1 ) {
 				// Object type filter exists - toggle it
-				const currentValue: number[] = currentFilters[ objectTypeFilterIndex ].value;
-				if ( Array.isArray( currentValue ) && currentValue.includes( objectTypeId ) ) {
+				const currentValue: number = currentFilters[ objectTypeFilterIndex ].value;
+				if ( currentValue === objectTypeId ) {
 					// Remove the object type filter if it's the same object type
 					newFilters = currentFilters.filter( ( f: Filter ): boolean => f.field !== 'ap_object_type' );
 				} else {
 					// Replace with new object type
 					newFilters = [
 						...currentFilters.slice( 0, objectTypeFilterIndex ),
-						{ field: 'ap_object_type', operator: 'isAny', value: [ objectTypeId ] },
+						{ field: 'ap_object_type', operator: 'is', value: objectTypeId },
 						...currentFilters.slice( objectTypeFilterIndex + 1 ),
 					];
 				}
 			} else {
 				// No object type filter exists - add one
-				newFilters = [
-					...currentFilters,
-					{ field: 'ap_object_type', operator: 'isAny', value: [ objectTypeId ] },
-				];
+				newFilters = [ ...currentFilters, { field: 'ap_object_type', operator: 'is', value: objectTypeId } ];
 			}
 
 			// Update the view with new filters

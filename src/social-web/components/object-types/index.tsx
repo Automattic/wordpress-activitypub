@@ -76,7 +76,7 @@ export function ObjectTypes() {
 							sprintf( __( 'Filter by type: %s', 'activitypub' ) as string, translatedName as any )
 						}
 					>
-						<Icon icon={ icon } size={ 20 } />
+						<Icon icon={ icon } size={ 24 } />
 						<span>{ translatedName }</span>
 					</MenuItem>
 				);

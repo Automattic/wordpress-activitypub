@@ -58,7 +58,7 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 								onClick={ () => onNavigate( item.id ) }
 								className="menu-item"
 							>
-								{ item.icon && <Icon icon={ item.icon } size={ 20 } /> }
+								{ item.icon && <Icon icon={ item.icon } size={ 24 } /> }
 								<span>{ item.label }</span>
 							</MenuItem>
 						) ) }
