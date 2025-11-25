@@ -52,9 +52,6 @@
 	}
 
 	.menu-item {
-		display: flex;
-		align-items: center;
-		gap: var(--wpds-spacing-20, 8px);
 		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
 
 		&:hover {
@@ -68,8 +65,13 @@
 		}
 
 		svg {
-			flex-shrink: 0;
+			margin-right: var(--wpds-spacing-10, 8px);
 		}
+	}
+
+	// Object types menu spacing
+	.object-types-menu {
+		margin-top: var(--wpds-spacing-10, 4px);
 	}
 
 	.footer {
