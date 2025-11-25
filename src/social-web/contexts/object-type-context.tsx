@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo } from '@wordpress/element';
+import { createContext, useContext, useMemo, useCallback } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { store as coreDataStore } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
@@ -30,19 +30,22 @@ export function ObjectTypeProvider( { children }: { children: React.ReactNode } 
 		return new Map( terms.map( ( term ) => [ term.id, term.name ] ) );
 	}, [ terms ] );
 
-	const getObjectTypeName = ( id: number | undefined ): string | null => {
-		if ( ! id ) {
-			return null;
-		}
-		return termMap.get( id ) || null;
-	};
+	const getObjectTypeName = useCallback(
+		( id: number | undefined ): string | null => {
+			if ( ! id ) {
+				return null;
+			}
+			return termMap.get( id ) || null;
+		},
+		[ termMap ]
+	);
 
 	const value = useMemo(
 		() => ( {
 			getObjectTypeName,
 			isLoading: isResolving,
 		} ),
-		[ termMap, isResolving ]
+		[ getObjectTypeName, isResolving ]
 	);
 
 	return <ObjectTypeContext.Provider value={ value }>{ children }</ObjectTypeContext.Provider>;
