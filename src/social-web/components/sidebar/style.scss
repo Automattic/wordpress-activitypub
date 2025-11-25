@@ -53,23 +53,63 @@
 	}
 
 	.menu-item {
-		display: flex;
-		align-items: center;
-		gap: var(--wpds-spacing-20, 8px);
 		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
 
-		&:hover {
-			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1));
-			color: var(--wpds-color-fg-inverted-primary, #ffffff);
+		// Disable all transitions to prevent glow/blinking effects
+		transition: none !important;
+
+		// Remove default focus styles to prevent blue glow
+		&:focus {
+			box-shadow: none !important;
+			outline: none !important;
 		}
 
-		&.is-selected {
-			background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15));
-			color: var(--wpds-color-fg-inverted-primary, #ffffff);
+		// Only show focus outline for keyboard navigation
+		&:focus-visible {
+			box-shadow: 0 0 0 var(--wpds-border-width-focus, 1.5px) var(--wp-admin-theme-color) !important;
+			outline: 3px solid transparent !important;
+		}
+
+		&:hover {
+			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
+			color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
+		}
+
+		&:active {
+			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
+		}
+
+		&.is-selected,
+		&[aria-pressed="true"] {
+			background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+			color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
+
+			&:hover {
+				background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+			}
+
+			&:active {
+				background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+			}
 		}
 
 		svg {
-			flex-shrink: 0;
+			margin-right: var(--wpds-spacing-10, 8px);
+		}
+	}
+
+	// Object types menu spacing
+	.object-types-menu {
+		margin-top: var(--wpds-spacing-10, 4px);
+	}
+
+	// Object types loading state
+	.object-types {
+		padding: var(--wpds-spacing-20, 8px) var(--wpds-spacing-30, 12px);
+
+		&__loading {
+			color: var(--wpds-color-fg-inverted-secondary, #cccccc);
+			font-size: 13px;
 		}
 	}
 
