@@ -933,4 +933,403 @@ class Test_Posts extends \WP_UnitTestCase {
 		$new_files = glob( $file_dir . '/*' );
 		$this->assertCount( 1, $new_files, 'File should still exist after update' );
 	}
+
+	/**
+	 * Test extracting hashtags from activity tags.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags() {
+		$tags = array(
+			array(
+				'type' => 'Hashtag',
+				'name' => '#test',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => '#wordpress',
+			),
+			array(
+				'type' => 'Mention',
+				'name' => '@user',
+			),
+		);
+
+		$result = Posts::extract_hashtags( $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 2, $result );
+		// Helper always strips # prefix.
+		$this->assertContains( 'test', $result );
+		$this->assertContains( 'wordpress', $result ); // phpcs:ignore WordPress.WP.CapitalPDangit.MisspelledInText
+		$this->assertNotContains( '@user', $result );
+	}
+
+	/**
+	 * Test extracting hashtags without # prefix in source.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags_without_prefix() {
+		$tags = array(
+			array(
+				'type' => 'Hashtag',
+				'name' => 'test',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => 'wordpress',
+			),
+		);
+
+		$result = Posts::extract_hashtags( $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 2, $result );
+		$this->assertContains( 'test', $result );
+		$this->assertContains( 'wordpress', $result ); // phpcs:ignore WordPress.WP.CapitalPDangit.MisspelledInText
+	}
+
+	/**
+	 * Test extracting hashtags from empty array.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags_from_empty_array() {
+		$result = Posts::extract_hashtags( array() );
+
+		$this->assertIsArray( $result );
+		$this->assertEmpty( $result );
+	}
+
+	/**
+	 * Test extracting hashtags from null value.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags_from_null() {
+		$result = Posts::extract_hashtags( null );
+
+		$this->assertIsArray( $result );
+		$this->assertEmpty( $result );
+	}
+
+	/**
+	 * Test extracting hashtags when tags have no name field.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags_missing_name_field() {
+		$tags = array(
+			array(
+				'type' => 'Hashtag',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => '#valid',
+			),
+		);
+
+		$result = Posts::extract_hashtags( $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+		$this->assertContains( 'valid', $result );
+	}
+
+	/**
+	 * Test extracting hashtags when tags have no type field.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags_missing_type_field() {
+		$tags = array(
+			array(
+				'name' => '#invalid',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => '#valid',
+			),
+		);
+
+		$result = Posts::extract_hashtags( $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+		$this->assertContains( 'valid', $result );
+		$this->assertNotContains( 'invalid', $result );
+	}
+
+	/**
+	 * Test that hashtag removal works in activity_to_post.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_removes_hashtags() {
+		$activity = array(
+			'id'        => 'https://example.com/objects/hashtag-test',
+			'type'      => 'Note',
+			'name'      => 'Hashtag Test',
+			'content'   => '<p>This is a test #test #wordpress</p>',
+			'published' => '2023-01-01T12:00:00Z',
+			'tag'       => array(
+				array(
+					'type' => 'Hashtag',
+					'name' => '#test',
+				),
+				array(
+					'type' => 'Hashtag',
+					'name' => '#wordpress',
+				),
+			),
+		);
+
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'activity_to_post' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, $activity );
+
+		$this->assertIsArray( $result );
+		// Content should have hashtags removed.
+		$this->assertStringNotContainsString( '#test', $result['post_content'] );
+		$this->assertStringNotContainsString( '#WordPress', $result['post_content'] );
+		$this->assertStringContainsString( 'This is a test', $result['post_content'] );
+	}
+
+	/**
+	 * Data provider for remove_hashtags tests.
+	 *
+	 * @return array Test data.
+	 */
+	public function remove_hashtags_provider() {
+		return array(
+			'simple_hashtag_removal'          => array(
+				'<p>This is a test #wordpress #activitypub</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => '#wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => '#activitypub',
+					),
+				),
+				'<p>This is a test</p>',
+			),
+			'hashtags_without_hash_prefix'    => array(
+				'<p>Testing content #php #javascript</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'javascript',
+					),
+				),
+				'<p>Testing content</p>',
+			),
+			'hashtags_in_anchor_tags'         => array(
+				'<p>Check out this post <a href="https://example.com/tag/wordpress">#wordpress</a> <a href="https://example.com/tag/php">#php</a></p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => '#wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => '#php',
+					),
+				),
+				'<p>Check out this post</p>',
+			),
+			'mixed_hashtags'                  => array(
+				'<p>Post about coding <a href="https://example.com/tag/php">#php</a> #javascript</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'javascript',
+					),
+				),
+				'<p>Post about coding</p>',
+			),
+			'inline_hashtags_not_removed'     => array(
+				'<p>Testing #wordpress in the middle and more text</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+				),
+				'<p>Testing #wordpress in the middle and more text</p>',
+			),
+			'partial_match_should_not_remove' => array(
+				'<p>Testing #wordpressdevelopment in content #wordpress</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+				),
+				'<p>Testing #wordpressdevelopment in content</p>',
+			),
+			'empty_hashtags_array'            => array(
+				'<p>Testing #wordpress #php</p>',
+				array(),
+				'<p>Testing #wordpress #php</p>',
+			),
+			'empty_content'                   => array(
+				'',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+				),
+				'',
+			),
+			'no_matching_hashtags'            => array(
+				'<p>Testing #wordpress #php</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'javascript',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'python',
+					),
+				),
+				'<p>Testing #wordpress #php</p>',
+			),
+			'case_insensitive_removal'        => array(
+				'<p>Testing content #WordPress #PHP</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+				),
+				'<p>Testing content</p>',
+			),
+			'trailing_hashtags_only'          => array(
+				'<p>Testing #wordpress in middle #php #activitypub</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'activitypub',
+					),
+				),
+				'<p>Testing #wordpress in middle</p>',
+			),
+			'special_characters_in_hashtags'  => array(
+				'<p>Testing content #c++ #.net</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'c++',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => '.net',
+					),
+				),
+				'<p>Testing content</p>',
+			),
+			'multiple_spaces_cleanup'         => array(
+				'<p>Testing content #tag1    #tag2    #tag3</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'tag1',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'tag2',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'tag3',
+					),
+				),
+				'<p>Testing content</p>',
+			),
+		);
+	}
+
+	/**
+	 * Test remove_hashtags with various inputs.
+	 *
+	 * @dataProvider remove_hashtags_provider
+	 * @covers ::remove_hashtags
+	 *
+	 * @param string $content  Input content.
+	 * @param array  $hashtags Hashtags to remove.
+	 * @param string $expected Expected output.
+	 */
+	public function test_remove_hashtags( $content, $hashtags, $expected ) {
+		$result = Posts::remove_hashtags( $content, $hashtags );
+		$this->assertEquals( $expected, $result );
+	}
+
+	/**
+	 * Test remove_hashtags with non-array hashtags parameter.
+	 *
+	 * @covers ::remove_hashtags
+	 */
+	public function test_remove_hashtags_with_invalid_hashtags() {
+		$content = '<p>Testing #WordPress #php</p>';
+
+		// Should return original content when hashtags is not an array.
+		$this->assertEquals( $content, Posts::remove_hashtags( $content, 'not-an-array' ) );
+		$this->assertEquals( $content, Posts::remove_hashtags( $content, null ) );
+		$this->assertEquals( $content, Posts::remove_hashtags( $content, 123 ) );
+	}
+
+	/**
+	 * Test remove_hashtags preserves content structure.
+	 *
+	 * @covers ::remove_hashtags
+	 */
+	public function test_remove_hashtags_preserves_structure() {
+		$content = '<p>First paragraph content</p><p>Second paragraph with <strong>bold text</strong> #php #test</p>';
+		$tags    = array(
+			array(
+				'type' => 'Hashtag',
+				'name' => 'test',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => 'php',
+			),
+		);
+		$result  = Posts::remove_hashtags( $content, $tags );
+
+		// Should preserve HTML structure and remove trailing hashtags only.
+		$this->assertStringContainsString( '<p>First paragraph content</p>', $result );
+		$this->assertStringContainsString( '<strong>bold text</strong>', $result );
+		$this->assertStringNotContainsString( '#test', $result );
+		$this->assertStringNotContainsString( '#php', $result );
+	}
 }
