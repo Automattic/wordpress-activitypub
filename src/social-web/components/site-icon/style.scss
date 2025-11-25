@@ -9,10 +9,11 @@
 }
 
 .site-icon__image {
-	object-fit: cover;
-	height: var(--wpds-spacing-80, 32px);
-	width: var(--wpds-spacing-80, 32px);
 	aspect-ratio: 1 / 1;
+	background: #333;
+	height: 100%;
+	object-fit: cover;
+	width: 100%;
 }
 
 .site-icon__icon {

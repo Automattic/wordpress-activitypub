@@ -46,6 +46,7 @@ function SiteHub() {
 						label={ __( 'Go to the Dashboard', 'activitypub' ) }
 						className="site-hub__icon-button"
 						style={ {
+							transform: 'scale(0.5333) translateX(-4px)', // Offset to position the icon 12px from viewport edge
 							borderRadius: 4,
 						} }
 					>
