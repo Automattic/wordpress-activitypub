@@ -9,20 +9,20 @@ import type { Term } from '@wordpress/core-data';
 import { Icon, MenuItem, MenuGroup } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
 import { useObjectTypeFilter } from '../../hooks/use-object-type-filter';
-import { postContent, audio, file, calendar, image, comment, page, pin, video, help } from '@wordpress/icons';
+import { postContent, audio, file, calendar, image, comment, page, pin, video } from '@wordpress/icons';
 
 // Translations for object type names - matches object-type field definitions
 const translations: Record< string, string > = {
 	// @see Base_Object::TYPES
 	Article: __( 'Articles', 'activitypub' ),
+	Note: __( 'Notes & Updates', 'activitypub' ),
+	Image: __( 'Photos & Images', 'activitypub' ),
+	Event: __( 'Events & Meetups', 'activitypub' ),
+	Video: __( 'Videos', 'activitypub' ),
 	Audio: __( 'Music & Podcasts', 'activitypub' ),
 	Document: __( 'Documents & Files', 'activitypub' ),
-	Event: __( 'Events & Meetups', 'activitypub' ),
-	Image: __( 'Photos & Images', 'activitypub' ),
-	Note: __( 'Notes & Updates', 'activitypub' ),
 	Page: __( 'Pages', 'activitypub' ),
 	Place: __( 'Places & Locations', 'activitypub' ),
-	Video: __( 'Videos', 'activitypub' ),
 };
 
 // Icon mapping for object types
@@ -38,15 +38,9 @@ const icons: Record< string, any > = {
 	Video: video,
 };
 
-// Default icon for unmapped types
-const defaultIcon = help;
-
 export function ObjectTypes() {
 	const { records: objectTypes, isResolving } = useEntityRecords< Term >( 'taxonomy', 'ap_object_type', {
 		per_page: -1,
-		orderby: 'count',
-		order: 'desc',
-		hide_empty: true,
 	} );
 
 	const { selectedObjectTypeId, updateObjectTypeFilter } = useObjectTypeFilter();
@@ -74,9 +68,17 @@ export function ObjectTypes() {
 		return null;
 	}
 
+	// Sort by the order in translations object
+	const translationOrder = Object.keys( translations );
+	const sortedObjectTypes = knownObjectTypes.sort( ( a: Term, b: Term ) => {
+		const indexA = translationOrder.indexOf( a.name );
+		const indexB = translationOrder.indexOf( b.name );
+		return indexA - indexB;
+	} );
+
 	return (
 		<MenuGroup className="object-types-menu">
-			{ knownObjectTypes.map( ( objectType: Term ) => {
+			{ sortedObjectTypes.map( ( objectType: Term ) => {
 				const translatedName = translations[ objectType.name ];
 				const icon = icons[ objectType.name ];
 				return (
