@@ -1,0 +1,4 @@
+Significance: minor
+Type: fixed
+
+Automatically approves reactions on ActivityPub posts in the Reader view for a smoother, more seamless interaction experience.

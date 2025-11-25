@@ -281,25 +281,21 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 * @covers ::create_item
 	 */
 	public function test_user_inbox_post_verification() {
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $json, $actor ) {
-				$public_key = Actors::get_public_key( self::$user_id );
+		$remote_object_filter = function ( $json, $actor ) {
+			$public_key = Actors::get_public_key( self::$user_id );
 
-				// Return ActivityPub Profile with signature.
-				return array(
-					'id'        => $actor,
-					'type'      => 'Person',
-					'publicKey' => array(
-						'id'           => $actor . '#main-key',
-						'owner'        => $actor,
-						'publicKeyPem' => $public_key,
-					),
-				);
-			},
-			10,
-			2
-		);
+			// Return ActivityPub Profile with signature.
+			return array(
+				'id'        => $actor,
+				'type'      => 'Person',
+				'publicKey' => array(
+					'id'           => $actor . '#main-key',
+					'owner'        => $actor,
+					'publicKeyPem' => $public_key,
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
 
 		// Get the post object.
 		$post = get_post( self::$post_id );
@@ -351,7 +347,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 202, $response->get_status() );
 
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 	}
 
 	/**
@@ -460,14 +456,10 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 
 		$captured_context = null;
 
-		\add_action(
-			'activitypub_inbox',
-			function ( $data, $user_id, $type, $activity, $context ) use ( &$captured_context ) {
-				$captured_context = $context;
-			},
-			10,
-			5
-		);
+		$inbox_action = function ( $data, $user_id, $type, $activity, $context ) use ( &$captured_context ) {
+			$captured_context = $context;
+		};
+		\add_action( 'activitypub_inbox', $inbox_action, 10, 5 );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id-context',
@@ -492,7 +484,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$this->assertEquals( Inbox_Collection::CONTEXT_INBOX, $captured_context );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\remove_all_actions( 'activitypub_inbox' );
+		\remove_action( 'activitypub_inbox', $inbox_action );
 	}
 
 	/**
@@ -549,15 +541,11 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$handled_count    = 0;
 		$handled_user_ids = array();
 
-		\add_action(
-			'activitypub_handled_inbox',
-			function ( $data, $user_ids ) use ( &$handled_count, &$handled_user_ids ) {
-				++$handled_count;
-				$handled_user_ids = $user_ids;
-			},
-			10,
-			2
-		);
+		$handled_inbox_action = function ( $data, $user_ids ) use ( &$handled_count, &$handled_user_ids ) {
+			++$handled_count;
+			$handled_user_ids = $user_ids;
+		};
+		\add_action( 'activitypub_handled_inbox', $handled_inbox_action, 10, 2 );
 
 		// Process the activity.
 		\Activitypub\Scheduler::process_inbox_activity( $activity_id );
@@ -578,7 +566,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		);
 		$this->assertCount( 1, $inbox_items );
 
-		\remove_all_actions( 'activitypub_handled_inbox' );
+		\remove_action( 'activitypub_handled_inbox', $handled_inbox_action );
 	}
 
 	/**
@@ -589,12 +577,10 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	public function test_process_create_item_with_non_existent_activity() {
 		$handled_count = 0;
 
-		\add_action(
-			'activitypub_handled_inbox',
-			function () use ( &$handled_count ) {
-				++$handled_count;
-			}
-		);
+		$handled_inbox_action = function () use ( &$handled_count ) {
+			++$handled_count;
+		};
+		\add_action( 'activitypub_handled_inbox', $handled_inbox_action );
 
 		// Process non-existent activity.
 		\Activitypub\Scheduler::process_inbox_activity( 'https://remote.example/@non-existent' );
@@ -602,7 +588,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		// Should not fire handled hook.
 		$this->assertEquals( 0, $handled_count );
 
-		\remove_all_actions( 'activitypub_handled_inbox' );
+		\remove_action( 'activitypub_handled_inbox', $handled_inbox_action );
 	}
 
 	/**
@@ -626,27 +612,23 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$generic_hook_fired = false;
 		$type_hook_fired    = false;
 
-		\add_action(
-			'activitypub_handled_inbox',
-			function () use ( &$generic_hook_fired ) {
-				$generic_hook_fired = true;
-			}
-		);
+		$generic_hook_action = function () use ( &$generic_hook_fired ) {
+			$generic_hook_fired = true;
+		};
+		\add_action( 'activitypub_handled_inbox', $generic_hook_action );
 
-		\add_action(
-			'activitypub_handled_inbox_like',
-			function () use ( &$type_hook_fired ) {
-				$type_hook_fired = true;
-			}
-		);
+		$type_hook_action = function () use ( &$type_hook_fired ) {
+			$type_hook_fired = true;
+		};
+		\add_action( 'activitypub_handled_inbox_like', $type_hook_action );
 
 		\Activitypub\Scheduler::process_inbox_activity( $activity_id );
 
 		$this->assertTrue( $generic_hook_fired, 'Generic handled_inbox hook should fire' );
 		$this->assertTrue( $type_hook_fired, 'Type-specific handled_inbox_like hook should fire' );
 
-		\remove_all_actions( 'activitypub_handled_inbox' );
-		\remove_all_actions( 'activitypub_handled_inbox_like' );
+		\remove_action( 'activitypub_handled_inbox', $generic_hook_action );
+		\remove_action( 'activitypub_handled_inbox_like', $type_hook_action );
 	}
 
 	/**
