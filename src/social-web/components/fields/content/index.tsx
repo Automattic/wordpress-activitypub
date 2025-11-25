@@ -1,10 +1,9 @@
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { __unstableStripHTML as stripHTML, safeHTML } from '@wordpress/dom';
-import { useSelect } from '@wordpress/data';
-import { store as coreDataStore } from '@wordpress/core-data';
 import type { Field } from '@wordpress/dataviews';
 import type { FeedPost } from '../../../types';
+import { useObjectType } from '../../../contexts/object-type-context';
 import './style.scss';
 
 /**
@@ -24,20 +23,14 @@ export const contentField: Field< FeedPost > = {
 		return decodeEntities( stripHTML( text ) );
 	},
 	render: ( { item }: { item: FeedPost } ) => {
-		// Get the taxonomy term to check the object type name
-		const objectTypeId = item.ap_object_type?.[ 0 ];
-		const objectTypeTerm = useSelect(
-			( select ) => {
-				if ( ! objectTypeId ) {
-					return null;
-				}
-				return select( coreDataStore ).getEntityRecord( 'taxonomy', 'ap_object_type', objectTypeId );
-			},
-			[ objectTypeId ]
-		);
+		const { getObjectTypeName } = useObjectType();
 
-		// Check if this is a Note type by checking the term name
-		const isNote = objectTypeTerm?.name === 'Note';
+		// Get the object type name from the cached map
+		const objectTypeId = item.ap_object_type?.[ 0 ];
+		const objectTypeName = getObjectTypeName( objectTypeId );
+
+		// Check if this is a Note type
+		const isNote = objectTypeName === 'Note';
 
 		if ( isNote ) {
 			// Show full content for Notes (HTML)
