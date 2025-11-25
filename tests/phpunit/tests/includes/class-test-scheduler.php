@@ -47,13 +47,6 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_user( self::$user_id );
-	}
-
-	/**
 	 * Test unschedule events for item.
 	 *
 	 * @covers ::unschedule_events_for_item
@@ -175,10 +168,6 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertNotContains( $published_id, $scheduled_events, 'Published activity should not be scheduled' );
 
 		// Clean up.
-		foreach ( $pending_ids as $id ) {
-			wp_delete_post( $id, true );
-		}
-		wp_delete_post( $published_id, true );
 		remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
@@ -243,7 +232,6 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertSame( $scheduled_time, wp_next_scheduled( 'activitypub_process_outbox', array( $pending_id ) ) );
 
 		// Clean up.
-		wp_delete_post( $pending_id, true );
 		remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
@@ -501,8 +489,6 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertContains( $original_author_url, $announce_activity['cc'], 'Original author should be in cc field' );
 
 		// Clean up.
-		wp_delete_post( $outbox_activity_id, true );
-		wp_delete_post( $announce_outbox_id, true );
 		remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
