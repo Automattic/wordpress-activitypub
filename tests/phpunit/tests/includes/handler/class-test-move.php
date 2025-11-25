@@ -44,15 +44,6 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tear down the test.
-	 */
-	public function tearDown(): void {
-		parent::tearDown();
-		wp_delete_user( $this->user_id );
-		wp_delete_user( $this->user_id_2 );
-	}
-
-	/**
 	 * Test the handle_move method with a target and origin.
 	 */
 	public function test_handle_move_with_target_and_origin() {
@@ -116,8 +107,6 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertNotNull( $updated_follower );
 		$this->assertEquals( $target, $updated_follower->guid );
 
-		\wp_delete_post( $updated_follower->ID );
-
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
 
@@ -170,7 +159,6 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertWPError( $target_follower );
 
 		// Cleanup.
-		\wp_delete_post( $id );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
 
@@ -295,7 +283,6 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
 
 		// Cleanup.
-		\wp_delete_post( $target_id );
 		\remove_filter( 'pre_http_request', $filter );
 	}
 

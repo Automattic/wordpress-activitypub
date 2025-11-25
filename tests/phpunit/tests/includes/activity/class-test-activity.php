@@ -226,8 +226,5 @@ class Test_Activity extends \WP_UnitTestCase {
 		$activity->set_object( $activity_object );
 
 		$this->assertContains( 'https://example.com/author/456', $activity->get_to() );
-
-		// Delete user.
-		\wp_delete_user( $user_id );
 	}
 }
