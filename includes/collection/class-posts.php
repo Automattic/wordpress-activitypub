@@ -211,10 +211,6 @@ class Posts {
 	 * Removes hashtags that appear at the end of the content.
 	 * Handles both plain text and HTML content, including hashtags within anchor tags.
 	 *
-	 * Note: For best performance, pass normalized hashtags (without # prefix) from
-	 * extract_hashtags(). The function still accepts hashtags
-	 * with # prefix for backwards compatibility.
-	 *
 	 * @param string $content  The content to process.
 	 * @param array  $hashtags Array of hashtag strings (with or without # prefix).
 	 *
@@ -225,7 +221,6 @@ class Posts {
 			return $content;
 		}
 
-		// Normalize hashtags: remove # prefix and trim whitespace (for backwards compatibility).
 		$normalized_tags = \array_map(
 			function ( $tag ) {
 				return \trim( \ltrim( $tag, '#' ) );
