@@ -1,13 +1,18 @@
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { __unstableStripHTML as stripHTML, safeHTML } from '@wordpress/dom';
+import { useSelect } from '@wordpress/data';
+import { store as coreDataStore } from '@wordpress/core-data';
 import type { Field } from '@wordpress/dataviews';
 import type { FeedPost } from '../../../types';
 import './style.scss';
 
 /**
- * Content field for reader-style view
- * Displays rich content with HTML formatting
+ * Smart content field that automatically chooses between excerpt and content
+ * based on the post's ActivityPub object type.
+ *
+ * - Notes: Show full content (HTML)
+ * - All other types (Articles, etc.): Show excerpt (plain text)
  */
 export const contentField: Field< FeedPost > = {
 	id: 'content',
@@ -15,29 +20,42 @@ export const contentField: Field< FeedPost > = {
 	enableHiding: true,
 	enableSorting: false,
 	getValue: ( { item }: { item: FeedPost } ) => {
-		// Strip HTML tags for plain text value (used for search/sort)
 		const text = item.excerpt?.rendered || item.content?.rendered || '';
 		return decodeEntities( stripHTML( text ) );
 	},
 	render: ( { item }: { item: FeedPost } ) => {
-		const content = safeHTML( decodeEntities( item.content?.rendered || '' ) );
+		// Get the taxonomy term to check the object type name
+		const objectTypeId = item.ap_object_type?.[ 0 ];
+		const objectTypeTerm = useSelect(
+			( select ) => {
+				if ( ! objectTypeId ) {
+					return null;
+				}
+				return select( coreDataStore ).getEntityRecord( 'taxonomy', 'ap_object_type', objectTypeId );
+			},
+			[ objectTypeId ]
+		);
 
-		// Check if content is actually empty (not just whitespace)
-		const hasRealContent =
-			content
-				.trim()
-				.replace( /<\/?p>/g, '' )
-				.replace( /&nbsp;/g, '' )
-				.trim().length > 0;
+		// Check if this is a Note type by checking the term name
+		const isNote = objectTypeTerm?.name === 'Note';
 
-		if ( ! hasRealContent ) {
-			return null;
+		if ( isNote ) {
+			// Show full content for Notes (HTML)
+			const content = safeHTML( decodeEntities( item.content?.rendered || '' ) );
+
+			return (
+				<div className="activitypub-feed-post">
+					<div
+						className="activitypub-feed-content"
+						dangerouslySetInnerHTML={ { __html: content || '<p>\u00A0</p>' } }
+					/>
+				</div>
+			);
 		}
 
-		return (
-			<div className="activitypub-feed-post">
-				<div className="activitypub-feed-content" dangerouslySetInnerHTML={ { __html: content } } />
-			</div>
-		);
+		// Show excerpt for Articles and other types (plain text)
+		const plainText = decodeEntities( stripHTML( item.excerpt?.rendered || '' ) ).trim();
+
+		return <div className="activitypub-feed-excerpt">{ plainText || '\u00A0' }</div>;
 	},
 };

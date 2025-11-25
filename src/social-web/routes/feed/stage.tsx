@@ -14,7 +14,7 @@ import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
-import { titleField, dateField, metadataField, smartContentField, objectTypeField } from '../../components/fields';
+import { titleField, dateField, metadataField, contentField, objectTypeField } from '../../components/fields';
 import { normalizeFieldOrder } from './utils';
 import type { FeedPost } from '../../types';
 import { STORE_NAME } from '../../store';
@@ -30,14 +30,14 @@ const DEFAULT_VIEW: View = {
 	},
 	search: '',
 	filters: [],
-	fields: [ 'metadata', 'title.rendered', 'smart-content' ],
+	fields: [ 'metadata', 'title.rendered', 'content' ],
 	infiniteScrollEnabled: true,
 };
 
 const defaultLayouts = {
 	list: {
 		primaryField: 'metadata',
-		fields: [ 'metadata', 'title.rendered', 'smart-content' ],
+		fields: [ 'metadata', 'title.rendered', 'content' ],
 		mediaField: undefined,
 	},
 };
@@ -149,7 +149,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, smartContentField, dateField, objectTypeField ],
+		() => [ metadataField, titleField, contentField, dateField, objectTypeField ],
 		[]
 	);
 
