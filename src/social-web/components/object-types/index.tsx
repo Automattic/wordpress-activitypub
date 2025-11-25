@@ -11,31 +11,18 @@ import { sprintf, __ } from '@wordpress/i18n';
 import { useObjectTypeFilter } from '../../hooks/use-object-type-filter';
 import { postContent, audio, file, calendar, image, comment, page, pin, video } from '@wordpress/icons';
 
-// Translations for object type names - matches object-type field definitions
-const translations: Record< string, string > = {
+// Object type configuration with translations and icons - matches object-type field definitions
+export const objectTypeConfig: Record< string, { label: string; icon: any } > = {
 	// @see Base_Object::TYPES
-	Article: __( 'Articles', 'activitypub' ),
-	Note: __( 'Notes & Updates', 'activitypub' ),
-	Image: __( 'Photos & Images', 'activitypub' ),
-	Event: __( 'Events & Meetups', 'activitypub' ),
-	Video: __( 'Videos', 'activitypub' ),
-	Audio: __( 'Music & Podcasts', 'activitypub' ),
-	Document: __( 'Documents & Files', 'activitypub' ),
-	Page: __( 'Pages', 'activitypub' ),
-	Place: __( 'Places & Locations', 'activitypub' ),
-};
-
-// Icon mapping for object types
-const icons: Record< string, any > = {
-	Article: postContent,
-	Audio: audio,
-	Document: file,
-	Event: calendar,
-	Image: image,
-	Note: comment,
-	Page: page,
-	Place: pin,
-	Video: video,
+	Article: { label: __( 'Articles', 'activitypub' ), icon: postContent },
+	Note: { label: __( 'Notes & Updates', 'activitypub' ), icon: comment },
+	Image: { label: __( 'Photos & Images', 'activitypub' ), icon: image },
+	Event: { label: __( 'Events & Meetups', 'activitypub' ), icon: calendar },
+	Video: { label: __( 'Videos', 'activitypub' ), icon: video },
+	Audio: { label: __( 'Music & Podcasts', 'activitypub' ), icon: audio },
+	Document: { label: __( 'Documents & Files', 'activitypub' ), icon: file },
+	Page: { label: __( 'Pages', 'activitypub' ), icon: page },
+	Place: { label: __( 'Places & Locations', 'activitypub' ), icon: pin },
 };
 
 export function ObjectTypes() {
@@ -61,26 +48,25 @@ export function ObjectTypes() {
 		return null;
 	}
 
-	// Filter to only show known object types (those with translations)
-	const knownObjectTypes = objectTypes.filter( ( objectType: Term ) => translations[ objectType.name ] );
+	// Filter to only show known object types (those with config)
+	const knownObjectTypes = objectTypes.filter( ( objectType: Term ) => objectTypeConfig[ objectType.name ] );
 
 	if ( knownObjectTypes.length === 0 ) {
 		return null;
 	}
 
-	// Sort by the order in translations object
-	const translationOrder = Object.keys( translations );
-	const sortedObjectTypes = knownObjectTypes.sort( ( a: Term, b: Term ) => {
-		const indexA = translationOrder.indexOf( a.name );
-		const indexB = translationOrder.indexOf( b.name );
+	// Sort by the order in objectTypeConfig object
+	const configOrder = Object.keys( objectTypeConfig );
+	const sortedObjectTypes = [ ...knownObjectTypes ].sort( ( a: Term, b: Term ) => {
+		const indexA = configOrder.indexOf( a.name );
+		const indexB = configOrder.indexOf( b.name );
 		return indexA - indexB;
 	} );
 
 	return (
 		<MenuGroup className="object-types-menu">
 			{ sortedObjectTypes.map( ( objectType: Term ) => {
-				const translatedName = translations[ objectType.name ];
-				const icon = icons[ objectType.name ];
+				const config = objectTypeConfig[ objectType.name ];
 				return (
 					<MenuItem
 						key={ objectType.id }
@@ -89,11 +75,11 @@ export function ObjectTypes() {
 						aria-pressed={ selectedObjectTypeId === objectType.id }
 						aria-label={
 							/* translators: %s: object type name */
-							sprintf( __( 'Filter by type: %s', 'activitypub' ) as string, translatedName as any )
+							sprintf( __( 'Filter by type: %s', 'activitypub' ) as string, config.label as any )
 						}
 					>
-						<Icon icon={ icon } size={ 24 } />
-						<span>{ translatedName }</span>
+						<Icon icon={ config.icon } size={ 24 } />
+						<span>{ config.label }</span>
 					</MenuItem>
 				);
 			} ) }
