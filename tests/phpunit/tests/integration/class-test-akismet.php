@@ -27,17 +27,10 @@ class Test_Akismet extends WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$post_id = $factory->post->create();
-	}
-
-	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_post( self::$post_id, true );
 	}
 
 	/**
@@ -78,10 +71,6 @@ class Test_Akismet extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'history', $filtered_actions, 'History action should be removed for ActivityPub comments' );
 		$this->assertArrayHasKey( 'approve', $filtered_actions, 'Other actions should remain untouched' );
 		$this->assertArrayHasKey( 'spam', $filtered_actions, 'Other actions should remain untouched' );
-
-		// Clean up.
-		wp_delete_comment( $normal_comment_id, true );
-		wp_delete_comment( $ap_comment_id, true );
 	}
 
 	/**
