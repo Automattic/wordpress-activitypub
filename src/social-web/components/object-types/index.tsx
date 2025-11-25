@@ -9,7 +9,7 @@ import type { Term } from '@wordpress/core-data';
 import { Icon, MenuItem, MenuGroup } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
 import { useObjectTypeFilter } from '../../hooks/use-object-type-filter';
-import { postContent, audio, media, calendar, image, comment, page, pin, video, post } from '@wordpress/icons';
+import { postContent, audio, file, calendar, image, comment, page, pin, video, post } from '@wordpress/icons';
 
 // Translations for object type names - matches object-type field definitions
 const translations: Record< string, string > = {
@@ -29,7 +29,7 @@ const translations: Record< string, string > = {
 const icons: Record< string, any > = {
 	Article: postContent,
 	Audio: audio,
-	Document: media,
+	Document: file,
 	Event: calendar,
 	Image: image,
 	Note: comment,
