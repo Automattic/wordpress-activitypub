@@ -4,7 +4,6 @@
  * Main feed list view with DataViews
  */
 
-import './style.scss';
 import { useMemo, useCallback, useState, useEffect, useRef } from '@wordpress/element';
 import { DataViews } from '@wordpress/dataviews';
 import { useView } from '@wordpress/views';
@@ -14,11 +13,20 @@ import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
-import { titleField, dateField, metadataField, contentField, objectTypeField } from '../../components/fields';
-import { normalizeFieldOrder } from './utils';
-import type { FeedPost } from '../../types';
+import {
+	titleField,
+	dateField,
+	excerptField,
+	metadataField,
+	contentField,
+	objectTypeField,
+	tagField,
+} from '../../components/fields';
+import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
 import { STORE_NAME } from '../../store';
 import type { SocialWebSelectors } from '../../store';
+import type { FeedPost } from '../../types';
+import './style.scss';
 
 const DEFAULT_VIEW: View = {
 	type: 'list',
@@ -145,11 +153,11 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		order: view.sort?.direction || 'desc',
 		search: view.search || '',
 		userId: activeActorId,
-		filters: view.filters,
+		filters: view.filters || [],
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, contentField, dateField, objectTypeField ],
+		() => [ metadataField, titleField, excerptField, contentField, dateField, objectTypeField, tagField ],
 		[]
 	);
 
