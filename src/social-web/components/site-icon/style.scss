@@ -10,6 +10,9 @@
 
 .site-icon__image {
 	object-fit: cover;
+	height: var(--wpds-spacing-80, 32px);
+	width: var(--wpds-spacing-80, 32px);
+	aspect-ratio: 1 / 1;
 }
 
 .site-icon__icon {
