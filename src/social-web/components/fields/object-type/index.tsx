@@ -25,7 +25,12 @@ export const objectTypeField: Field< FeedPost > = {
 			Place: __( 'Places & Locations', 'activitypub' ),
 			Video: __( 'Videos', 'activitypub' ),
 		};
-		const records: Term[] = await resolveSelect( coreDataStore ).getEntityRecords( 'taxonomy', 'ap_object_type' );
+		const records: Term[] = await resolveSelect( coreDataStore ).getEntityRecords( 'taxonomy', 'ap_object_type', {
+			per_page: -1,
+			orderby: 'count',
+			order: 'desc',
+			hide_empty: true,
+		} );
 
 		if ( ! records ) {
 			return [];
