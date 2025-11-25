@@ -16,7 +16,7 @@ import './style.scss';
 export const contentField: Field< FeedPost > = {
 	id: 'content',
 	label: __( 'Content', 'activitypub' ),
-	enableHiding: true,
+	enableHiding: false,
 	enableSorting: false,
 	getValue: ( { item }: { item: FeedPost } ) => {
 		const text = item.excerpt?.rendered || item.content?.rendered || '';
