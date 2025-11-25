@@ -459,8 +459,5 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post             = get_post( $id );
 		$expected_updated = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_modified ) );
 		$this->assertEquals( $expected_updated, $activity->get_updated() );
-
-		// Delete the Outbox item.
-		wp_delete_post( $id );
 	}
 }

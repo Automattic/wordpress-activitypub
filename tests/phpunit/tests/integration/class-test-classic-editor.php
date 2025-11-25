@@ -78,8 +78,6 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( '[video src=', $result );
 		$this->assertStringContainsString( wp_get_attachment_url( $video_id ), $result );
-
-		\wp_delete_attachment( $video_id, true );
 	}
 
 	/**
@@ -97,8 +95,6 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( '[audio src=', $result );
 		$this->assertStringContainsString( wp_get_attachment_url( $audio_id ), $result );
-
-		\wp_delete_attachment( $audio_id, true );
 	}
 
 	/**
@@ -122,9 +118,6 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		$this->assertStringContainsString( (string) $image_id_1, $result );
 		$this->assertStringContainsString( (string) $image_id_2, $result );
 		$this->assertStringContainsString( 'link="none"', $result );
-
-		\wp_delete_attachment( $image_id_1, true );
-		\wp_delete_attachment( $image_id_2, true );
 	}
 
 	/**
@@ -143,8 +136,6 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		// Single image should use gallery shortcode.
 		$this->assertStringContainsString( '[gallery ids="', $result );
 		$this->assertStringContainsString( (string) $image_id, $result );
-
-		\wp_delete_attachment( $image_id, true );
 	}
 
 	/**
@@ -171,7 +162,7 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 			AP_TESTS_DIR . '/data/assets/sample-image.jpg',
 			self::$post_id
 		);
-		$image_id_2 = self::factory()->attachment->create_upload_object(
+		self::factory()->attachment->create_upload_object(
 			AP_TESTS_DIR . '/data/assets/sample-image.jpg',
 			self::$post_id
 		);
@@ -187,8 +178,6 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_post_thumbnail( self::$post_id );
-		\wp_delete_attachment( $image_id_1, true );
-		\wp_delete_attachment( $image_id_2, true );
 	}
 
 	/**
@@ -216,9 +205,6 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_option( 'activitypub_max_image_attachments' );
-		foreach ( $image_ids as $image_id ) {
-			\wp_delete_attachment( $image_id, true );
-		}
 	}
 
 	/**
@@ -248,9 +234,6 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_option( 'activitypub_max_image_attachments' );
-		foreach ( $image_ids as $image_id ) {
-			\wp_delete_attachment( $image_id, true );
-		}
 	}
 
 	/**
@@ -280,9 +263,6 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_option( 'activitypub_max_image_attachments' );
-		foreach ( $image_ids as $image_id ) {
-			\wp_delete_attachment( $image_id, true );
-		}
 	}
 
 	/**
@@ -441,7 +421,6 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		$this->assertEmpty( \get_post_meta( self::$post_id, 'activitypub_content_warning', true ) );
 
 		// Clean up.
-		\wp_delete_user( $subscriber_id );
 		unset( $_POST['activitypub_meta_box_nonce'], $_POST['activitypub_content_warning'] );
 	}
 
