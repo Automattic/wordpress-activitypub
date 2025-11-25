@@ -67,11 +67,18 @@ export function ObjectTypes() {
 		return null;
 	}
 
+	// Filter to only show known object types (those with translations)
+	const knownObjectTypes = objectTypes.filter( ( objectType: Term ) => translations[ objectType.name ] );
+
+	if ( knownObjectTypes.length === 0 ) {
+		return null;
+	}
+
 	return (
 		<MenuGroup className="object-types-menu">
-			{ objectTypes.map( ( objectType: Term ) => {
-				const translatedName = translations[ objectType.name ] || objectType.name;
-				const icon = icons[ objectType.name ] || defaultIcon;
+			{ knownObjectTypes.map( ( objectType: Term ) => {
+				const translatedName = translations[ objectType.name ];
+				const icon = icons[ objectType.name ];
 				return (
 					<MenuItem
 						key={ objectType.id }
