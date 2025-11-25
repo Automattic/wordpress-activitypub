@@ -6,12 +6,14 @@
 
 import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/components';
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
-import { __ } from '@wordpress/i18n';
+import type { Term } from '@wordpress/core-data';
+import { sprintf, __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { close } from '@wordpress/icons';
 import { useSettings } from '../../contexts/settings-context';
 import type { Comment, FeedPost } from '../../types';
 import { getRelativeTime } from '../../utils';
+import { useTagFilter } from '../../hooks/use-tag-filter';
 
 interface FeedInspectorProps {
 	id: number;
@@ -31,10 +33,23 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id );
 	const { records: comments, isResolving: isLoadingComments } = useEntityRecords< Comment >( 'root', 'comment', {
 		post: id,
-		per_page: 100,
 		order: 'asc',
 		orderby: 'date',
 	} );
+
+	// Fetch tag terms if the post has tags
+	const tagIds = post?.ap_tag || [];
+	const { records: terms } = useEntityRecords< Term >( 'taxonomy', 'ap_tag', {
+		include: tagIds,
+	} );
+
+	// Use the shared tag filter hook
+	const { selectedTagId, updateTagFilter } = useTagFilter();
+
+	const handleTagClick = ( tagId: number ) => {
+		// Apply filter and close inspector
+		updateTagFilter( tagId, { onComplete: onClose } );
+	};
 
 	if ( isLoading ) {
 		return (
@@ -111,6 +126,25 @@ export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 					) }
 					{ ( post.content?.rendered || post.excerpt?.rendered ) && (
 						<RenderHTML html={ post.content?.rendered || post.excerpt?.rendered || '' } />
+					) }
+					{ terms && terms.length > 0 && (
+						<div className="activitypub-inspector-tags">
+							{ terms.map( ( term: Term ) => (
+								<Button
+									key={ term.id }
+									size="small"
+									variant="secondary"
+									onClick={ () => handleTagClick( term.id ) }
+									aria-pressed={ selectedTagId === term.id }
+									aria-label={
+										/* translators: %s: tag name */
+										sprintf( __( 'Filter by tag: %s', 'activitypub' ) as string, term.name as any )
+									}
+								>
+									#{ term.name }
+								</Button>
+							) ) }
+						</div>
 					) }
 				</CardBody>
 			</Card>
