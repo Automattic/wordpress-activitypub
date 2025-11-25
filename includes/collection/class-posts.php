@@ -211,25 +211,18 @@ class Posts {
 	 * Removes hashtags that appear at the end of the content.
 	 * Handles both plain text and HTML content, including hashtags within anchor tags.
 	 *
-	 * @param string $content  The content to process.
-	 * @param array  $hashtags Array of hashtag strings (with or without # prefix).
+	 * @param string $content The content to process.
+	 * @param array  $tags    Array of tag objects from activity (with 'type' and 'name' keys).
 	 *
 	 * @return string The content with trailing hashtags removed.
 	 */
-	public static function remove_hashtags( $content, $hashtags ) {
-		if ( empty( $content ) || empty( $hashtags ) || ! \is_array( $hashtags ) ) {
+	public static function remove_hashtags( $content, $tags ) {
+		if ( empty( $content ) || empty( $tags ) || ! \is_array( $tags ) ) {
 			return $content;
 		}
 
-		$normalized_tags = \array_map(
-			function ( $tag ) {
-				return \trim( \ltrim( $tag, '#' ) );
-			},
-			$hashtags
-		);
-
-		// Remove empty tags.
-		$normalized_tags = \array_filter( $normalized_tags );
+		// Extract and normalize hashtags from tag objects.
+		$normalized_tags = self::extract_hashtags( $tags );
 
 		if ( empty( $normalized_tags ) ) {
 			return $content;
@@ -272,12 +265,9 @@ class Posts {
 
 		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
 
-		// Extract hashtag names from activity tags.
-		$hashtags = self::extract_hashtags( $activity['tag'] ?? array() );
-
 		// Sanitize content and remove hashtags.
 		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
-		$content = self::remove_hashtags( $content, $hashtags );
+		$content = self::remove_hashtags( $content, $activity['tag'] ?? array() );
 
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
