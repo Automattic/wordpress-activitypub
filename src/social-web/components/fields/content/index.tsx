@@ -36,6 +36,7 @@ export const contentField: Field< FeedPost > = {
 
 		// Check if this is a Note type
 		const isNote = objectTypeName === 'Note';
+		const hasFeaturedImage = !! item.featured_image;
 
 		if ( isNote ) {
 			// Show full content for Notes (HTML)
@@ -47,6 +48,14 @@ export const contentField: Field< FeedPost > = {
 						className="activitypub-feed-content"
 						dangerouslySetInnerHTML={ { __html: content || '<p>\u00A0</p>' } }
 					/>
+					{ hasFeaturedImage && (
+						<img
+							src={ item.featured_image }
+							alt={ decodeEntities( item.title?.rendered || __( 'Post image', 'activitypub' ) ) }
+							className="activitypub-feed-content__image"
+							loading="lazy"
+						/>
+					) }
 				</div>
 			);
 		}
@@ -54,6 +63,22 @@ export const contentField: Field< FeedPost > = {
 		// Show excerpt for Articles and other types (plain text)
 		const plainText = contentField.getValue( { item } ).trim();
 
-		return <div className="activitypub-feed-excerpt">{ plainText || '\u00A0' }</div>;
+		if ( ! plainText && ! hasFeaturedImage ) {
+			return <div className="activitypub-feed-excerpt">{ '\u00A0' }</div>;
+		}
+
+		return (
+			<div className="activitypub-feed-excerpt">
+				{ plainText && <div className="activitypub-feed-excerpt__text">{ plainText }</div> }
+				{ hasFeaturedImage && (
+					<img
+						src={ item.featured_image }
+						alt={ decodeEntities( item.title?.rendered || __( 'Post image', 'activitypub' ) ) }
+						className="activitypub-feed-excerpt__image"
+						loading="lazy"
+					/>
+				) }
+			</div>
+		);
 	},
 };

@@ -20,4 +20,26 @@
 	> *:last-child {
 		margin-bottom: 0;
 	}
+
+	&__image {
+		display: block;
+		width: auto;
+		max-width: 300px;
+		max-height: 300px;
+		height: auto;
+		margin-top: 1em;
+		border-radius: 4px;
+	}
+}
+
+.activitypub-feed-excerpt {
+	&__image {
+		display: block;
+		width: auto;
+		max-width: 300px;
+		max-height: 300px;
+		height: auto;
+		margin-top: 1em;
+		border-radius: 4px;
+	}
 }
