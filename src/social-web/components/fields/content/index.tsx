@@ -23,11 +23,16 @@ export const contentField: Field< FeedPost > = {
 		return decodeEntities( stripHTML( text ) );
 	},
 	render: ( { item }: { item: FeedPost } ) => {
-		const { getObjectTypeName } = useObjectType();
+		const { getObjectTypeName, isLoading } = useObjectType();
 
 		// Get the object type name from the cached map
 		const objectTypeId = item.ap_object_type?.[ 0 ];
 		const objectTypeName = getObjectTypeName( objectTypeId );
+
+		// While loading, show a placeholder to prevent flicker
+		if ( isLoading && ! objectTypeName ) {
+			return <div className="activitypub-feed-excerpt">{ '\u00A0' }</div>;
+		}
 
 		// Check if this is a Note type
 		const isNote = objectTypeName === 'Note';
