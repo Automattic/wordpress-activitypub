@@ -13,16 +13,8 @@ import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
 import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
-import {
-	titleField,
-	dateField,
-	excerptField,
-	metadataField,
-	contentField,
-	objectTypeField,
-	tagField,
-} from '../../components/fields';
-import { enforceContentExcerptMutualExclusion, normalizeFieldOrder } from './utils';
+import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
+import { normalizeFieldOrder } from './utils';
 import { STORE_NAME } from '../../store';
 import type { SocialWebSelectors } from '../../store';
 import type { FeedPost } from '../../types';
@@ -157,7 +149,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, excerptField, contentField, dateField, objectTypeField, tagField ],
+		() => [ metadataField, titleField, contentField, dateField, objectTypeField, tagField ],
 		[]
 	);
 
