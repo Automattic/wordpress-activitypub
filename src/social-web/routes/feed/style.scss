@@ -314,12 +314,12 @@
 
 	// Reduce inspector card padding on mobile
 	.activitypub-inspector-card {
-		.components-card__header {
-			padding: var(--wpds-spacing-40, 16px) var(--wpds-spacing-30, 12px) var(--wpds-spacing-20, 8px) !important;
+		.activitypub-inspector-card .components-card__header {
+			padding: var(--wpds-spacing-40, 16px) var(--wpds-spacing-30, 12px) var(--wpds-spacing-20, 8px);
 		}
 
-		.components-card__body {
-			padding: var(--wpds-spacing-30, 12px) !important;
+		.activitypub-inspector-card .components-card__body {
+			padding: var(--wpds-spacing-30, 12px);
 		}
 	}
 
