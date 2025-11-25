@@ -513,30 +513,26 @@ class Test_Blocks extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-				);
-			}
-		);
+		$mock_actor_metadata = function () {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
 
-		\add_filter(
-			'pre_comment_approved',
-			function () {
-				return '1';
-			}
-		);
+		$approve_comment = function () {
+			return '1';
+		};
+		\add_filter( 'pre_comment_approved', $approve_comment );
 
 		Interactions::add_reaction( $activity );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		remove_all_filters( 'pre_comment_approved' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
+		remove_filter( 'pre_comment_approved', $approve_comment );
 
 		return $post_id;
 	}
@@ -644,17 +640,13 @@ class Test_Blocks extends \WP_UnitTestCase {
 		);
 
 		// Prevent default extra fields from being created.
-		add_filter(
-			'activitypub_get_actor_extra_fields',
-			function ( $fields, $uid ) use ( $user_id ) {
-				if ( $uid === $user_id ) {
-					return array();
-				}
-				return $fields;
-			},
-			10,
-			2
-		);
+		$prevent_extra_fields = function ( $fields, $uid ) use ( $user_id ) {
+			if ( $uid === $user_id ) {
+				return array();
+			}
+			return $fields;
+		};
+		add_filter( 'activitypub_get_actor_extra_fields', $prevent_extra_fields, 10, 2 );
 
 		$block_markup = sprintf(
 			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d"} /-->',
@@ -664,7 +656,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertEmpty( $output );
 
-		remove_all_filters( 'activitypub_get_actor_extra_fields' );
+		remove_filter( 'activitypub_get_actor_extra_fields', $prevent_extra_fields );
 	}
 
 	/**

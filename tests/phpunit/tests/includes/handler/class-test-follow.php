@@ -45,14 +45,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		// Clean up any outbox posts.
 		_delete_all_posts();
 
-		// Remove any HTTP mocking filters.
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
-
-		// Remove action hooks.
-		\remove_all_actions( 'activitypub_followers_post_follow' );
-		\remove_all_actions( 'activitypub_handled_follow' );
-
 		parent::tear_down();
 	}
 
@@ -82,18 +74,16 @@ class Test_Follow extends \WP_UnitTestCase {
 		}
 		// Mock HTTP requests for actor metadata if needed.
 		if ( $should_add_follower ) {
-			\add_filter(
-				'pre_get_remote_metadata_by_actor',
-				function () use ( $actor_url ) {
-					return array(
-						'id'                => $actor_url,
-						'actor'             => $actor_url,
-						'type'              => 'Person',
-						'preferredUsername' => 'testactor',
-						'inbox'             => str_replace( '/actor', '/inbox', $actor_url ),
-					);
-				}
-			);
+			$mock_metadata_callback = function () use ( $actor_url ) {
+				return array(
+					'id'                => $actor_url,
+					'actor'             => $actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'testactor',
+					'inbox'             => str_replace( '/actor', '/inbox', $actor_url ),
+				);
+			};
+			\add_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 		}
 
 		$local_actor     = Actors::get_by_id( $target_user_id );
@@ -140,8 +130,10 @@ class Test_Follow extends \WP_UnitTestCase {
 		}
 
 		// Clean up.
+		if ( $should_add_follower ) {
+			\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+		}
 		_delete_all_posts();
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
 
 	/**
@@ -210,18 +202,16 @@ class Test_Follow extends \WP_UnitTestCase {
 		);
 		$this->assertEmpty( $outbox_posts, 'No outbox entry should be created for WP_Error follower' );
 
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () use ( $actor ) {
-				return array(
-					'id'                => $actor,
-					'actor'             => $actor,
-					'type'              => 'Person',
-					'preferredUsername' => 'testactor',
-					'inbox'             => 'https://example.com/inbox',
-				);
-			}
-		);
+		$mock_metadata_callback = function () use ( $actor ) {
+			return array(
+				'id'                => $actor,
+				'actor'             => $actor,
+				'type'              => 'Person',
+				'preferredUsername' => 'testactor',
+				'inbox'             => 'https://example.com/inbox',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 
 		$remote_actor = Followers::add(
 			self::$user_id,
@@ -266,7 +256,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		// Clean up.
 		wp_delete_post( $outbox_post->ID, true );
 		wp_delete_post( $remote_actor->ID, true );
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 	}
 
 	/**
@@ -302,7 +292,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		$test_callback        = function ( $activity, $user_ids, $success, $remote_actor ) use ( &$handled_follow_calls ) {
 			$handled_follow_calls[] = array(
 				'activity'     => $activity,
-				'user_ids'     => $user_ids,
+				'user_ids'     => $success,
 				'success'      => $success,
 				'remote_actor' => $remote_actor,
 			);
@@ -335,7 +325,7 @@ class Test_Follow extends \WP_UnitTestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_callback );
-		\remove_action( 'activitypub_handled_follow', $test_callback, 10 );
+		\remove_action( 'activitypub_handled_follow', $test_callback );
 	}
 
 	/**
@@ -403,34 +393,28 @@ class Test_Follow extends \WP_UnitTestCase {
 		$hook_remote_actor = null;
 
 		// Hook into the deprecated action.
-		\add_action(
-			'activitypub_followers_post_follow',
-			function ( $actor, $activity, $user_id, $remote_actor ) use ( &$hook_fired, &$hook_actor, &$hook_activity, &$hook_user_id, &$hook_remote_actor ) {
-				$hook_fired        = true;
-				$hook_actor        = $actor;
-				$hook_activity     = $activity;
-				$hook_user_id      = $user_id;
-				$hook_remote_actor = $remote_actor;
-			},
-			10,
-			4
-		);
+		$deprecated_callback = function ( $actor, $activity, $user_id, $remote_actor ) use ( &$hook_fired, &$hook_actor, &$hook_activity, &$hook_user_id, &$hook_remote_actor ) {
+			$hook_fired        = true;
+			$hook_actor        = $actor;
+			$hook_activity     = $activity;
+			$hook_user_id      = $user_id;
+			$hook_remote_actor = $remote_actor;
+		};
+		\add_action( 'activitypub_followers_post_follow', $deprecated_callback, 10, 4 );
 
 		$actor_url = 'https://example.com/deprecated-test-actor';
 
 		// Mock HTTP requests for actor metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () use ( $actor_url ) {
-				return array(
-					'id'                => $actor_url,
-					'actor'             => $actor_url,
-					'type'              => 'Person',
-					'preferredUsername' => 'testactor',
-					'inbox'             => str_replace( '/deprecated-test-actor', '/inbox', $actor_url ),
-				);
-			}
-		);
+		$mock_metadata_callback = function () use ( $actor_url ) {
+			return array(
+				'id'                => $actor_url,
+				'actor'             => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'testactor',
+				'inbox'             => str_replace( '/deprecated-test-actor', '/inbox', $actor_url ),
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 
 		$activity_object = array(
 			'id'     => $actor_url . '/activity/deprecated',
@@ -460,12 +444,13 @@ class Test_Follow extends \WP_UnitTestCase {
 			wp_delete_post( $post->ID, true );
 		}
 
-		// Clean up hooks and filters.
-		\remove_all_actions( 'activitypub_followers_post_follow' );
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		if ( $hook_remote_actor instanceof \WP_Post ) {
 			wp_delete_post( $hook_remote_actor->ID, true );
 		}
+
+		// Clean up filters.
+		\remove_action( 'activitypub_followers_post_follow', $deprecated_callback );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 	}
 
 	/**
@@ -481,34 +466,28 @@ class Test_Follow extends \WP_UnitTestCase {
 		$hook_remote_actor = null;
 
 		// Hook into the new action.
-		\add_action(
-			'activitypub_handled_follow',
-			function ( $activity, $user_id, $success, $remote_actor ) use ( &$hook_fired, &$hook_activity, &$hook_user_id, &$hook_success, &$hook_remote_actor ) {
-				$hook_fired        = true;
-				$hook_activity     = $activity;
-				$hook_user_id      = $user_id;
-				$hook_success      = $success;
-				$hook_remote_actor = $remote_actor;
-			},
-			10,
-			4
-		);
+		$new_hook_callback = function ( $activity, $user_id, $success, $remote_actor ) use ( &$hook_fired, &$hook_activity, &$hook_user_id, &$hook_success, &$hook_remote_actor ) {
+			$hook_fired        = true;
+			$hook_activity     = $activity;
+			$hook_user_id      = $user_id;
+			$hook_success      = $success;
+			$hook_remote_actor = $remote_actor;
+		};
+		\add_action( 'activitypub_handled_follow', $new_hook_callback, 10, 4 );
 
 		$actor_url = 'https://example.com/new-hook-test-actor';
 
 		// Mock HTTP requests for actor metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () use ( $actor_url ) {
-				return array(
-					'id'                => $actor_url,
-					'actor'             => $actor_url,
-					'type'              => 'Person',
-					'preferredUsername' => 'testactor',
-					'inbox'             => str_replace( '/new-hook-test-actor', '/inbox', $actor_url ),
-				);
-			}
-		);
+		$mock_metadata_callback = function () use ( $actor_url ) {
+			return array(
+				'id'                => $actor_url,
+				'actor'             => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'testactor',
+				'inbox'             => str_replace( '/new-hook-test-actor', '/inbox', $actor_url ),
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 
 		$activity_object = array(
 			'id'     => $actor_url . '/activity/new-hook',
@@ -539,11 +518,13 @@ class Test_Follow extends \WP_UnitTestCase {
 			wp_delete_post( $post->ID, true );
 		}
 
-		// Clean up hooks and filters.
-		\remove_all_actions( 'activitypub_handled_follow' );
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		// Clean up follower.
 		if ( $hook_remote_actor instanceof \WP_Post ) {
 			wp_delete_post( $hook_remote_actor->ID, true );
 		}
+
+		// Clean up filters.
+		\remove_action( 'activitypub_handled_follow', $new_hook_callback );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 	}
 }

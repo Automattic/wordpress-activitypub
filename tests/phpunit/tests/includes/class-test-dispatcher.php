@@ -545,8 +545,8 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$this->assertTrue( $http_called, 'HTTP should be called for remote inbox' );
 
 		// Clean up.
-		\remove_filter( 'pre_http_request', $http_callback, 10 );
-		\remove_action( 'activitypub_sent_to_inbox', $inbox_callback, 10 );
+		\remove_filter( 'pre_http_request', $http_callback );
+		\remove_action( 'activitypub_sent_to_inbox', $inbox_callback );
 		\wp_delete_post( $post_id );
 		\wp_delete_post( $outbox_item->ID );
 	}

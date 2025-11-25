@@ -300,7 +300,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		// Verify content includes gallery block.
 		$post = get_post( self::$post_id );
-		$this->assertStringContainsString( 'wp:gallery', $post->post_content );
+		$this->assertStringContainsString( '<!-- wp:gallery', $post->post_content );
 	}
 
 	/**
@@ -486,8 +486,8 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$attachments = \get_attached_media( '', $post_id );
 		$this->assertCount( 3, $attachments ); // shared.jpg, inline-only.jpg, attachment-only.jpg.
 
-		// Verify gallery was added for attachment-only.jpg.
-		$this->assertStringContainsString( '<!-- wp:gallery', $post->post_content );
+		// Verify image block was added for attachment-only.jpg (single images use standalone blocks).
+		$this->assertStringContainsString( '<!-- wp:image', $post->post_content );
 
 		// Clean up.
 		\wp_delete_post( $post_id, true );

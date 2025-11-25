@@ -70,10 +70,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 */
 	public function test_check_for_captcha_plugins_none_found() {
 		// Mock empty active plugins.
-		add_filter(
-			'option_active_plugins',
-			array( $this, 'mock_active_plugins_no_captcha' )
-		);
+		add_filter( 'option_active_plugins', array( $this, 'mock_active_plugins_no_captcha' ) );
 
 		$result = Health_Check::test_check_for_captcha_plugins();
 
@@ -82,7 +79,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertEquals( 'green', $result['badge']['color'] );
 		$this->assertStringContainsString( 'No Captcha plugins were found', $result['description'] );
 
-		remove_all_filters( 'option_active_plugins' );
+		remove_filter( 'option_active_plugins', array( $this, 'mock_active_plugins_no_captcha' ) );
 	}
 
 	/**
@@ -91,10 +88,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 */
 	public function test_check_for_captcha_plugins_found() {
 		// Mock active plugins with captcha plugins.
-		add_filter(
-			'option_active_plugins',
-			array( $this, 'mock_active_plugins_with_captcha' )
-		);
+		add_filter( 'option_active_plugins', array( $this, 'mock_active_plugins_with_captcha' ) );
 
 		$result = Health_Check::test_check_for_captcha_plugins();
 
@@ -107,7 +101,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Plugin Page', $result['actions'] );
 
 		// Clean up.
-		remove_all_filters( 'option_active_plugins' );
+		remove_filter( 'option_active_plugins', array( $this, 'mock_active_plugins_with_captcha' ) );
 	}
 
 	/**
@@ -116,10 +110,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 */
 	public function test_check_for_captcha_plugins_case_insensitive() {
 		// Mock active plugins with mixed case captcha plugins.
-		add_filter(
-			'option_active_plugins',
-			array( $this, 'mock_active_plugins_mixed_case' )
-		);
+		add_filter( 'option_active_plugins', array( $this, 'mock_active_plugins_mixed_case' ) );
 
 		$result = Health_Check::test_check_for_captcha_plugins();
 
@@ -128,7 +119,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertEquals( 'Captcha plugins detected', $result['label'] );
 		$this->assertEquals( 'orange', $result['badge']['color'] );
 
-		remove_all_filters( 'option_active_plugins' );
+		remove_filter( 'option_active_plugins', array( $this, 'mock_active_plugins_mixed_case' ) );
 	}
 
 	/**
@@ -159,10 +150,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 */
 	public function test_captcha_plugins_actions_link() {
 		// Mock active plugins with captcha plugin.
-		add_filter(
-			'option_active_plugins',
-			array( $this, 'mock_active_plugins_with_captcha' )
-		);
+		add_filter( 'option_active_plugins', array( $this, 'mock_active_plugins_with_captcha' ) );
 
 		$result = Health_Check::test_check_for_captcha_plugins();
 
@@ -171,7 +159,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'plugins.php?s=captcha&#038;plugin_status=all', $result['actions'] );
 		$this->assertStringContainsString( 'Plugin Page', $result['actions'] );
 
-		remove_all_filters( 'option_active_plugins' );
+		remove_filter( 'option_active_plugins', array( $this, 'mock_active_plugins_with_captcha' ) );
 	}
 
 	/**

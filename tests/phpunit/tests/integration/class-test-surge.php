@@ -31,9 +31,6 @@ class Test_Surge extends \WP_UnitTestCase {
 	private $config_contents;
 
 	/**
-	 * Original cache config.
-	 *
-	 * @var string
 	 * Set up the test.
 	 */
 	public function set_up() {
@@ -73,7 +70,7 @@ class Test_Surge extends \WP_UnitTestCase {
 			\wp_delete_file( $this->test_file );
 		}
 
-		\remove_all_filters( 'activitypub_surge_cache_config_file' );
+		\remove_filter( 'activitypub_surge_cache_config_file', array( $this, 'get_test_file' ) );
 	}
 
 	/**
@@ -92,7 +89,7 @@ class Test_Surge extends \WP_UnitTestCase {
 		$this->assertStringContainsString( "/* That's all, stop editing! */", $file, 'Comment should be present' );
 		$this->assertStringContainsString( Surge::get_cache_config(), $file, 'Config line should be present' );
 
-		\remove_all_filters( 'pre_option_active_plugins' );
+		\remove_filter( 'pre_option_active_plugins', array( $this, 'get_active_plugins' ) );
 	}
 
 	/**
@@ -135,7 +132,7 @@ class Test_Surge extends \WP_UnitTestCase {
 		$after = \file_get_contents( Surge::get_config_file_path() );
 		$this->assertStringContainsString( Surge::get_cache_config(), $after );
 
-		\remove_all_filters( 'pre_option_active_plugins' );
+		\remove_filter( 'pre_option_active_plugins', array( $this, 'get_active_plugins' ) );
 	}
 
 	/**
@@ -168,7 +165,7 @@ class Test_Surge extends \WP_UnitTestCase {
 		$after = \file_get_contents( Surge::get_config_file_path() );
 		$this->assertStringNotContainsString( Surge::get_cache_config(), $after );
 
-		\remove_all_filters( 'pre_option_active_plugins' );
+		\remove_filter( 'pre_option_active_plugins', array( $this, 'get_inactive_plugins' ) );
 	}
 
 	/**
@@ -209,7 +206,7 @@ class Test_Surge extends \WP_UnitTestCase {
 
 		$this->assertArrayHasKey( 'activitypub_test_surge_integration', $result['direct'] );
 
-		\remove_all_filters( 'pre_option_active_plugins' );
+		\remove_filter( 'pre_option_active_plugins', array( $this, 'get_active_plugins' ) );
 	}
 
 	/**
