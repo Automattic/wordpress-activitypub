@@ -164,17 +164,13 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 		);
 
 		// Mock Http::get_remote_object to return an error.
-		add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $preempt, $url_or_object ) {
-				if ( 'https://example.com/invalid' === $url_or_object ) {
-					return new \WP_Error( 'http_request_failed', 'Request failed' );
-				}
-				return $preempt;
-			},
-			10,
-			2
-		);
+		$mock_invalid_response = function ( $preempt, $url_or_object ) {
+			if ( 'https://example.com/invalid' === $url_or_object ) {
+				return new \WP_Error( 'http_request_failed', 'Request failed' );
+			}
+			return $preempt;
+		};
+		add_filter( 'activitypub_pre_http_get_remote_object', $mock_invalid_response, 10, 2 );
 
 		// Should return early without errors.
 		Collection_Sync::reconcile_followers( self::$user_id, 'https://example.com/users/test', $params );
@@ -183,7 +179,7 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 		$this->assertTrue( true );
 
 		// Clean up.
-		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		remove_filter( 'activitypub_pre_http_get_remote_object', $mock_invalid_response );
 	}
 
 	/**
@@ -211,22 +207,18 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 			'url' => 'https://example.com/users/test/followers/sync',
 		);
 
-		add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $preempt, $url_or_object ) {
-				if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
-					return array(
-						'type'         => 'OrderedCollection',
-						'orderedItems' => array(
-							self::$remote_actors[0], // Only Alice.
-						),
-					);
-				}
-				return $preempt;
-			},
-			10,
-			2
-		);
+		$mock_alice_only = function ( $preempt, $url_or_object ) {
+			if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
+				return array(
+					'type'         => 'OrderedCollection',
+					'orderedItems' => array(
+						self::$remote_actors[0], // Only Alice.
+					),
+				);
+			}
+			return $preempt;
+		};
+		add_filter( 'activitypub_pre_http_get_remote_object', $mock_alice_only, 10, 2 );
 
 		// Run reconciliation.
 		Collection_Sync::reconcile_followers( self::$user_id, 'https://example.com/users/test', $params );
@@ -237,7 +229,7 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 		$this->assertEquals( self::$remote_actors[0], $accepted[0]->guid, 'Only Alice should remain' );
 
 		// Clean up.
-		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		remove_filter( 'activitypub_pre_http_get_remote_object', $mock_alice_only );
 	}
 
 	/**
@@ -263,22 +255,18 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 			'url' => 'https://example.com/users/test/followers/sync',
 		);
 
-		add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $preempt, $url_or_object ) {
-				if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
-					return array(
-						'type'         => 'OrderedCollection',
-						'orderedItems' => array(
-							self::$remote_actors[2], // Charlie.
-						),
-					);
-				}
-				return $preempt;
-			},
-			10,
-			2
-		);
+		$mock_charlie_accepted = function ( $preempt, $url_or_object ) {
+			if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
+				return array(
+					'type'         => 'OrderedCollection',
+					'orderedItems' => array(
+						self::$remote_actors[2], // Charlie.
+					),
+				);
+			}
+			return $preempt;
+		};
+		add_filter( 'activitypub_pre_http_get_remote_object', $mock_charlie_accepted, 10, 2 );
 
 		// Run reconciliation.
 		Collection_Sync::reconcile_followers( self::$user_id, 'https://example.com/users/test', $params );
@@ -293,7 +281,7 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 		$this->assertCount( 0, $pending, 'Charlie should not be pending' );
 
 		// Clean up.
-		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		remove_filter( 'activitypub_pre_http_get_remote_object', $mock_charlie_accepted );
 	}
 
 	/**
@@ -313,20 +301,16 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 			'url' => 'https://example.com/users/test/followers/sync',
 		);
 
-		add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $preempt, $url_or_object ) {
-				if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
-					return array(
-						'type'         => 'OrderedCollection',
-						'orderedItems' => array(), // Empty.
-					);
-				}
-				return $preempt;
-			},
-			10,
-			2
-		);
+		$mock_empty_response = function ( $preempt, $url_or_object ) {
+			if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
+				return array(
+					'type'         => 'OrderedCollection',
+					'orderedItems' => array(), // Empty.
+				);
+			}
+			return $preempt;
+		};
+		add_filter( 'activitypub_pre_http_get_remote_object', $mock_empty_response, 10, 2 );
 
 		// Run reconciliation.
 		Collection_Sync::reconcile_followers( self::$user_id, 'https://example.com/users/test', $params );
@@ -340,7 +324,7 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 		$this->assertCount( 0, $pending, 'Dave should not be pending' );
 
 		// Clean up.
-		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		remove_filter( 'activitypub_pre_http_get_remote_object', $mock_empty_response );
 	}
 
 	/**
@@ -370,23 +354,19 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 			'url' => 'https://example.com/users/test/followers/sync',
 		);
 
-		add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $preempt, $url_or_object ) {
-				if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
-					return array(
-						'type'         => 'OrderedCollection',
-						'orderedItems' => array(
-							self::$remote_actors[0], // Alice.
-							self::$remote_actors[2], // Charlie.
-						),
-					);
-				}
-				return $preempt;
-			},
-			10,
-			2
-		);
+		$mock_alice_and_charlie = function ( $preempt, $url_or_object ) {
+			if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
+				return array(
+					'type'         => 'OrderedCollection',
+					'orderedItems' => array(
+						self::$remote_actors[0], // Alice.
+						self::$remote_actors[2], // Charlie.
+					),
+				);
+			}
+			return $preempt;
+		};
+		add_filter( 'activitypub_pre_http_get_remote_object', $mock_alice_and_charlie, 10, 2 );
 
 		// Run reconciliation.
 		Collection_Sync::reconcile_followers( self::$user_id, 'https://example.com/users/test', $params );
@@ -413,7 +393,7 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 		$this->assertCount( 0, $pending, 'No pending follows should remain' );
 
 		// Clean up.
-		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		remove_filter( 'activitypub_pre_http_get_remote_object', $mock_alice_and_charlie );
 	}
 
 	/**
@@ -426,35 +406,27 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 		$hook_user_id = null;
 		$hook_actor   = null;
 
-		add_action(
-			'activitypub_followers_sync_reconciled',
-			function ( $user_id, $actor_url ) use ( &$action_fired, &$hook_user_id, &$hook_actor ) {
-				$action_fired = true;
-				$hook_user_id = $user_id;
-				$hook_actor   = $actor_url;
-			},
-			10,
-			2
-		);
+		$verify_action_fired = function ( $user_id, $actor_url ) use ( &$action_fired, &$hook_user_id, &$hook_actor ) {
+			$action_fired = true;
+			$hook_user_id = $user_id;
+			$hook_actor   = $actor_url;
+		};
+		add_action( 'activitypub_followers_sync_reconciled', $verify_action_fired, 10, 2 );
 
 		$params = array(
 			'url' => 'https://example.com/users/test/followers/sync',
 		);
 
-		add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $preempt, $url_or_object ) {
-				if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
-					return array(
-						'type'         => 'OrderedCollection',
-						'orderedItems' => array(),
-					);
-				}
-				return $preempt;
-			},
-			10,
-			2
-		);
+		$mock_empty_collection = function ( $preempt, $url_or_object ) {
+			if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
+				return array(
+					'type'         => 'OrderedCollection',
+					'orderedItems' => array(),
+				);
+			}
+			return $preempt;
+		};
+		add_filter( 'activitypub_pre_http_get_remote_object', $mock_empty_collection, 10, 2 );
 
 		// Run reconciliation.
 		Collection_Sync::reconcile_followers( self::$user_id, 'https://example.com/users/test', $params );
@@ -465,8 +437,8 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 		$this->assertEquals( 'https://example.com/users/test', $hook_actor );
 
 		// Clean up.
-		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
-		remove_all_actions( 'activitypub_followers_sync_reconciled' );
+		remove_filter( 'activitypub_pre_http_get_remote_object', $mock_empty_collection );
+		remove_action( 'activitypub_followers_sync_reconciled', $verify_action_fired );
 	}
 
 	/**
@@ -501,20 +473,16 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 			'url' => 'https://example.com/users/test/followers/sync',
 		);
 
-		add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function ( $preempt, $url_or_object ) {
-				if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
-					return array(
-						'type'         => 'OrderedCollection',
-						'orderedItems' => array(),
-					);
-				}
-				return $preempt;
-			},
-			10,
-			2
-		);
+		$mock_empty_for_authority = function ( $preempt, $url_or_object ) {
+			if ( 'https://example.com/users/test/followers/sync' === $url_or_object ) {
+				return array(
+					'type'         => 'OrderedCollection',
+					'orderedItems' => array(),
+				);
+			}
+			return $preempt;
+		};
+		add_filter( 'activitypub_pre_http_get_remote_object', $mock_empty_for_authority, 10, 2 );
 
 		// Run reconciliation.
 		Collection_Sync::reconcile_followers( self::$user_id, 'https://example.com/users/test', $params );
@@ -529,6 +497,6 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 		$this->assertCount( 1, $mastodon_accepted, 'Other authority followers should not be affected' );
 
 		// Clean up.
-		remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		remove_filter( 'activitypub_pre_http_get_remote_object', $mock_empty_for_authority );
 	}
 }

@@ -70,6 +70,8 @@ cd wordpress-activitypub
    composer install
    ```
 
+**Note:** `npm install` automatically runs `npm run prepare`, which sets up pre-commit hooks in `.githooks/pre-commit`. These hooks automatically format code and check standards before commits.
+
 ### Start Development Environment
 
 Start the local WordPress environment using wp-env:
