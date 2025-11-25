@@ -63,8 +63,6 @@ class Test_Activitypub extends \WP_UnitTestCase {
 			)
 		);
 		$this->assertEquals( $expected, \get_post_meta( $post_id, $meta_key, true ) );
-
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**

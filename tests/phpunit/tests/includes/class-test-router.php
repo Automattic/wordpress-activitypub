@@ -172,8 +172,6 @@ class Test_Router extends \WP_UnitTestCase {
 		$template = Router::render_activitypub_template( 'index.php' );
 		$this->assertStringContainsString( 'index.php', $template );
 		$this->assertStringContainsString( '406', $status );
-
-		wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -236,6 +234,5 @@ class Test_Router extends \WP_UnitTestCase {
 
 		// Clean up.
 		unset( $_SERVER['HTTP_ACCEPT'] );
-		wp_delete_post( $post_id, true );
 	}
 }

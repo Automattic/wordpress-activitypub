@@ -97,8 +97,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$post = \get_post( $post_id );
 		$this->assertInstanceOf( '\WP_Post', $post );
 		$this->assertEquals( 'https://remote.example.com/actor/jane-create', $post->guid );
-		// Clean up.
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -128,8 +126,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertInstanceOf( '\WP_Post', $updated_post );
 		$actor_obj = Remote_Actors::get_actor( $updated_post );
 		$this->assertEquals( 'Jane Doe', $actor_obj->get_name() );
-		// Clean up.
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -201,7 +197,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertEquals( 'https://remote.example.com/actor/bob', $post->guid );
 
 		remove_filter( 'activitypub_pre_http_get_remote_object', $actor_callback_test2 );
-		\wp_delete_post( $post->ID );
 
 		// Test 3: Should return WP_Error for empty URI.
 		$empty_uri = Remote_Actors::fetch_by_uri( '' );
@@ -529,9 +524,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Should return WP_Error for empty URI.
 		$empty = Remote_Actors::get_by_uri( '' );
 		$this->assertWPError( $empty );
-
-		// Clean up.
-		\wp_delete_post( $id );
 	}
 
 	/**
@@ -570,8 +562,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Verify errors were cleared.
 		$errors = \get_post_meta( $id, '_activitypub_errors', false );
 		$this->assertEmpty( $errors );
-
-		\wp_delete_post( $id );
 	}
 
 	/**
@@ -685,9 +675,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		$result = Remote_Actors::get_acct( $post_id );
 		$this->assertEquals( 'cached@example.com', $result );
-
-		// Clean up.
-		\wp_delete_post( $post_id, true );
 
 		// Test 2: Return empty string for non-existent post.
 		$result = Remote_Actors::get_acct( 99999 );
@@ -812,7 +799,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertEquals( 'acctprefix@remote.example.com', $cached_acct );
 
 		\remove_filter( 'pre_http_request', $webfinger_callback_test5 );
-		\wp_delete_post( $post_id4, true );
 	}
 
 	/**
@@ -892,7 +878,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
 		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
 		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -1004,8 +989,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
 		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
 		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
-		\wp_delete_post( $post_id_a, true );
-		\wp_delete_post( $post_id_b, true );
 	}
 
 	/**
@@ -1134,7 +1117,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertEquals( 'https://example.com/avatar-test.jpg', $retrieved_avatar );
 
 		// Clean up.
-		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**
@@ -1175,7 +1157,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertEquals( 'https://example.com/json-avatar.jpg', $cached_avatar );
 
 		// Clean up.
-		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**
@@ -1208,7 +1189,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertEquals( 'https://example.com/avatar1.jpg', $retrieved_avatar );
 
 		// Clean up.
-		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**
@@ -1235,6 +1215,5 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertStringContainsString( 'assets/img/mp.jpg', $retrieved_avatar );
 
 		// Clean up.
-		wp_delete_post( $remote_actor_id, true );
 	}
 }

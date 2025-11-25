@@ -38,14 +38,14 @@ const DEFAULT_VIEW: View = {
 	},
 	search: '',
 	filters: [],
-	fields: [ 'metadata', 'title.rendered', 'excerpt.rendered' ],
+	fields: [ 'metadata', 'title.rendered', 'content' ],
 	infiniteScrollEnabled: true,
 };
 
 const defaultLayouts = {
 	list: {
 		primaryField: 'metadata',
-		fields: [ 'metadata', 'title.rendered', 'excerpt.rendered' ],
+		fields: [ 'metadata', 'title.rendered', 'content' ],
 		mediaField: undefined,
 	},
 };
@@ -121,20 +121,16 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		},
 	} );
 
-	// Wrap updateView to enforce mutual exclusion between excerpt and content fields
+	// Wrap updateView to reset page when filters change
 	const updateFeedView = useCallback(
 		( updatedView: View ) => {
-			const oldFields = view.fields || [];
-			const newFields = updatedView.fields || [];
-			const fields = enforceContentExcerptMutualExclusion( oldFields, newFields );
-
 			// Reset to page 1 when filters change
 			const filtersChanged = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
 			const page = filtersChanged ? 1 : updatedView.page;
 
-			updateView( { ...updatedView, fields, page } );
+			updateView( { ...updatedView, page } );
 		},
-		[ view.fields, view.filters, updateView ]
+		[ view.filters, updateView ]
 	);
 
 	// Reset view to default state when actor switches

@@ -38,8 +38,6 @@ class Test_Search extends \WP_UnitTestCase {
 		$this->assertTrue( $query->have_posts() );
 		$this->assertEquals( 1, $query->found_posts );
 		$this->assertEquals( $post_id, $query->posts[0]->ID );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**

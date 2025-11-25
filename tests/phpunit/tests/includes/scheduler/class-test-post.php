@@ -60,8 +60,6 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post = $this->get_latest_outbox_item( $activitypub_id );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitypub_id, $id );
-
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -79,8 +77,6 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		\wp_delete_post( $post_id );
 
 		$this->assertNull( $this->get_latest_outbox_item( $activitypub_id ) );
-
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -103,8 +99,6 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post = $this->get_latest_outbox_item( $activitypub_id );
 		$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
 		$this->assertSame( 'Create', $type );
-
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -163,7 +157,6 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		unset( $_REQUEST['bulk_edit'], $_REQUEST['post_author'], $_REQUEST['_status'], $_REQUEST['post'] );
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -201,7 +194,5 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
 		$this->assertNull( $this->get_latest_outbox_item( $activitypub_id ) );
-
-		\wp_delete_post( $post_id, true );
 	}
 }
