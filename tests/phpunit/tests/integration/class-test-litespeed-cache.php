@@ -52,7 +52,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 		if ( \file_exists( $this->htaccess_file ) ) {
 			\wp_delete_file( $this->htaccess_file );
 		}
-		\remove_all_filters( 'activitypub_litespeed_cache_htaccess_file' );
+		\remove_filter( 'activitypub_litespeed_cache_htaccess_file', array( $this, 'get_htaccess_file_path' ) );
 	}
 
 	/**
@@ -203,17 +203,13 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ) );
 
 		// Mock that LiteSpeed is NOT active.
-		\add_filter(
-			'activitypub_is_plugin_active',
-			function ( $is_active, $plugin ) {
-				if ( Litespeed_Cache::$plugin_slug === $plugin ) {
-					return false;
-				}
-				return $is_active;
-			},
-			10,
-			2
-		);
+		$plugin_active_filter = function ( $is_active, $plugin ) {
+			if ( Litespeed_Cache::$plugin_slug === $plugin ) {
+				return false;
+			}
+			return $is_active;
+		};
+		\add_filter( 'activitypub_is_plugin_active', $plugin_active_filter, 10, 2 );
 
 		// Run init (should detect LiteSpeed is deactivated and clean up).
 		Litespeed_Cache::init();
@@ -225,7 +221,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 		$contents = \file_get_contents( $this->htaccess_file );
 		$this->assertStringNotContainsString( Litespeed_Cache::$rules, $contents, 'Rules should be removed when LiteSpeed is deactivated' );
 
-		\remove_all_filters( 'activitypub_is_plugin_active' );
+		\remove_filter( 'activitypub_is_plugin_active', $plugin_active_filter );
 	}
 
 	/**

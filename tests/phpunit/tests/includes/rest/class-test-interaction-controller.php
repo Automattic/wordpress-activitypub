@@ -7,23 +7,15 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Tests\Test_REST_Controller_Testcase;
+
 /**
  * Tests for Interaction REST API endpoint.
  *
  * @group rest
  * @coversDefaultClass \Activitypub\Rest\Interaction_Controller
  */
-class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
-
-	/**
-	 * Tear down.
-	 */
-	public function tear_down() {
-		\remove_all_filters( 'activitypub_interactions_follow_url' );
-		\remove_all_filters( 'activitypub_interactions_reply_url' );
-
-		parent::tear_down();
-	}
+class Test_Interaction_Controller extends Test_REST_Controller_Testcase {
 
 	/**
 	 * Test route registration.
@@ -58,17 +50,13 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 * @covers ::get_item
 	 */
 	public function test_get_item() {
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () {
-				return array(
-					'type' => 'Note',
-					'url'  => 'https://example.org/note',
-				);
-			},
-			10,
-			2
-		);
+		$remote_object_filter = function () {
+			return array(
+				'type' => 'Note',
+				'url'  => 'https://example.org/note',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
 		$request->set_param( 'uri', 'https://example.org/note' );
@@ -77,6 +65,8 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		$this->assertEquals( 302, $response->get_status() );
 		$this->assertArrayHasKey( 'Location', $response->get_headers() );
 		$this->assertStringContainsString( 'post-new.php?in_reply_to=', $response->get_headers()['Location'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 	}
 
 	/**
@@ -85,24 +75,20 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 * @covers ::get_item
 	 */
 	public function test_get_item_custom_follow_url() {
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () {
-				return array(
-					'type'  => 'Person',
-					'url'   => 'https://example.org/person',
-					'links' => array(
-						array(
-							'rel'  => 'self',
-							'type' => 'application/activity+json',
-							'href' => 'https://example.org/user/person',
-						),
+		$remote_object_filter = function () {
+			return array(
+				'type'  => 'Person',
+				'url'   => 'https://example.org/person',
+				'links' => array(
+					array(
+						'rel'  => 'self',
+						'type' => 'application/activity+json',
+						'href' => 'https://example.org/user/person',
 					),
-				);
-			},
-			10,
-			2
-		);
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
 
 		\add_filter( 'activitypub_interactions_follow_url', array( $this, 'follow_or_reply_url' ) );
 
@@ -123,6 +109,8 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		$this->expectExceptionMessage( 'This Interaction type is not supported yet!' );
 
 		rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 	}
 
 	/**
@@ -131,17 +119,13 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 * @covers ::get_item
 	 */
 	public function test_get_item_custom_reply_url() {
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () {
-				return array(
-					'type' => 'Note',
-					'url'  => 'https://example.org/note',
-				);
-			},
-			10,
-			2
-		);
+		$remote_object_filter = function () {
+			return array(
+				'type' => 'Note',
+				'url'  => 'https://example.org/note',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
 
 		\add_filter( 'activitypub_interactions_reply_url', array( $this, 'follow_or_reply_url' ) );
 
@@ -152,6 +136,9 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		$this->assertEquals( 302, $response->get_status() );
 		$this->assertArrayHasKey( 'Location', $response->get_headers() );
 		$this->assertEquals( $this->follow_or_reply_url(), $response->get_headers()['Location'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+		\remove_filter( 'activitypub_interactions_reply_url', array( $this, 'follow_or_reply_url' ) );
 	}
 
 	/**
@@ -162,12 +149,10 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	public function test_get_item_wp_error() {
 		$this->expectException( \WPDieException::class );
 
-		\add_filter(
-			'pre_http_request',
-			function () {
-				return new \WP_Error( 'http_request_failed', 'Connection failed.' );
-			}
-		);
+		$http_request_filter = function () {
+			return new \WP_Error( 'http_request_failed', 'Connection failed.' );
+		};
+		\add_filter( 'pre_http_request', $http_request_filter );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
 		$request->set_param( 'uri', 'https://example.org/person' );
@@ -177,6 +162,8 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		$data = $response->get_data();
 		$this->assertEquals( 'activitypub_invalid_object', $data['code'] );
 		$this->assertEquals( 'The URL is not supported!', $data['message'] );
+
+		\remove_filter( 'pre_http_request', $http_request_filter );
 	}
 
 	/**
@@ -187,19 +174,17 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	public function test_get_item_invalid_object() {
 		$this->expectException( \WPDieException::class );
 
-		\add_filter(
-			'pre_http_request',
-			function () {
-				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => wp_json_encode(
-						array(
-							'url' => 'https://example.org/invalid',
-						)
-					),
-				);
-			}
-		);
+		$http_request_filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => wp_json_encode(
+					array(
+						'url' => 'https://example.org/invalid',
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $http_request_filter );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
 		$request->set_param( 'uri', 'https://example.org/invalid' );
@@ -209,6 +194,8 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		$data = $response->get_data();
 		$this->assertEquals( 'activitypub_invalid_object', $data['code'] );
 		$this->assertEquals( 'The URL is not supported!', $data['message'] );
+
+		\remove_filter( 'pre_http_request', $http_request_filter );
 	}
 
 	/**
