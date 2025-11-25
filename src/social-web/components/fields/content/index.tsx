@@ -52,7 +52,7 @@ export const contentField: Field< FeedPost > = {
 		}
 
 		// Show excerpt for Articles and other types (plain text)
-		const plainText = decodeEntities( stripHTML( item.excerpt?.rendered || '' ) ).trim();
+		const plainText = contentField.getValue( { item } ).trim();
 
 		return <div className="activitypub-feed-excerpt">{ plainText || '\u00A0' }</div>;
 	},
