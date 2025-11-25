@@ -8,9 +8,11 @@
 	width: 50%;
 }
 
-// Keep content width consistent when inspector is closed
-.app-layout[data-section='feed'] .app-content:not(:has(.inspector-region)) .dataviews-view-list__item-wrapper {
-	max-width: 50%;
+.dataviews__view-actions,
+.dataviews-view-list {
+	width: 100%;
+	max-width: 600px;
+	align-self: center;
 }
 
 // Remove residual styles from footer when empty (infinite scroll enabled)

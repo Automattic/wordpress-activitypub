@@ -17,6 +17,7 @@ import { chevronRight, chevronLeft, cog } from '@wordpress/icons';
 import { __, isRTL } from '@wordpress/i18n';
 import { useSettings } from '../../contexts/settings-context';
 import SiteHub from '../site-hub';
+import SidebarDescription from '../sidebar-description';
 import ActorSwitcher from '../actor-switcher';
 import { PopularTags } from '../popular-tags';
 import './style.scss';
@@ -50,6 +51,7 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 					</Heading>
 				</HStack>
 				<NavigableMenu>
+					<SidebarDescription />
 					<MenuGroup>
 						{ menuItems.map( ( item ) => (
 							<MenuItem
