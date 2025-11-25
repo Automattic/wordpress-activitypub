@@ -144,8 +144,6 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 		);
 
 		$this->assertNull( Enable_Mastodon_Apps::api_status( null, $post_id ) );
-
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**

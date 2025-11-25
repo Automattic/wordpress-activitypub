@@ -29,7 +29,7 @@ class Test_Reject extends \WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create(
@@ -37,13 +37,6 @@ class Test_Reject extends \WP_UnitTestCase {
 				'role' => 'author',
 			)
 		);
-	}
-
-	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		\wp_delete_user( self::$user_id );
 	}
 
 	/**
