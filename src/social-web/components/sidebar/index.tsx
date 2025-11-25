@@ -68,10 +68,10 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 
 				{ /* Object Types Filter - shown only on Feed */ }
 				{ activeSection === 'feed' && <ObjectTypes /> }
-
-				{ /* Popular Tags - Only show on feed section */ }
-				{ activeSection === 'feed' && <PopularTags /> }
 			</nav>
+
+			{ /* Popular Tags - Only show on feed section */ }
+			{ activeSection === 'feed' && <PopularTags /> }
 
 			{ /* Footer */ }
 			<div className="footer">
