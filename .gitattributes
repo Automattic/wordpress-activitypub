@@ -1,0 +1,3 @@
+build/** linguist-generated
+docs/** linguist-documentation
+package-lock.json linguist-generated
