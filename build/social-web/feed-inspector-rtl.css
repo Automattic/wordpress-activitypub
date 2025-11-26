@@ -10,6 +10,7 @@
 }
 .navigation-widget .menu-item {
   color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+  padding: 0.5rem 0.75rem;
   transition: none !important;
 }
 .navigation-widget .menu-item:focus {
@@ -51,6 +52,7 @@
 }
 .trending-widget .popular-tags .menu-item {
   color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+  padding: 0.5rem 0.75rem;
   transition: none !important;
 }
 .trending-widget .popular-tags .menu-item:focus {

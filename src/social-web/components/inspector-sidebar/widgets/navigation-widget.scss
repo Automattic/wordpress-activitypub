@@ -10,6 +10,7 @@
 
 	.menu-item {
 		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+		padding: 0.5rem 0.75rem;
 
 		// Disable all transitions to prevent glow/blinking effects
 		transition: none !important;
