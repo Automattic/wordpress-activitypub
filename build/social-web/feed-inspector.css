@@ -9,17 +9,26 @@
   margin: 0;
 }
 .navigation-widget .menu-item {
-  color: var(--wpds-color-fg-primary, #f0f0f0);
-  padding: 0.5rem 0.75rem;
-  transition: background-color 0.15s ease;
-  justify-content: flex-start;
-  text-align: left;
+  color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+  transition: none !important;
+}
+.navigation-widget .menu-item:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+.navigation-widget .menu-item:focus-visible {
+  box-shadow: 0 0 0 var(--wpds-border-width-focus, 1.5px) var(--wp-admin-theme-color) !important;
+  outline: 3px solid transparent !important;
 }
 .navigation-widget .menu-item:hover {
-  background: var(--wpds-color-bg-surface-neutral-hover, #3c3c3c);
+  background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
+  color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
 }
-.navigation-widget .menu-item span {
-  font-size: 0.875rem;
+.navigation-widget .menu-item:active {
+  background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
+}
+.navigation-widget .menu-item svg {
+  margin-right: var(--wpds-spacing-10, 8px);
 }
 /*!*************************************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./src/social-web/components/inspector-sidebar/widgets/trending-widget.scss ***!
@@ -41,21 +50,36 @@
   margin: 0;
 }
 .trending-widget .popular-tags .menu-item {
-  color: var(--wpds-color-fg-primary, #f0f0f0);
-  padding: 0.5rem 0.75rem;
-  transition: background-color 0.15s ease;
-  justify-content: flex-start;
-  text-align: left;
+  color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+  transition: none !important;
+}
+.trending-widget .popular-tags .menu-item:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+.trending-widget .popular-tags .menu-item:focus-visible {
+  box-shadow: 0 0 0 var(--wpds-border-width-focus, 1.5px) var(--wp-admin-theme-color) !important;
+  outline: 3px solid transparent !important;
 }
 .trending-widget .popular-tags .menu-item:hover {
-  background: var(--wpds-color-bg-surface-neutral-hover, #3c3c3c);
+  background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
+  color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
 }
-.trending-widget .popular-tags .menu-item[aria-pressed=true] {
-  background: var(--wpds-color-bg-surface-neutral-hover, #3c3c3c);
-  color: var(--wpds-color-fg-on-accent, #fff);
+.trending-widget .popular-tags .menu-item:active {
+  background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
 }
-.trending-widget .popular-tags .menu-item span {
-  font-size: 0.875rem;
+.trending-widget .popular-tags .menu-item.is-selected, .trending-widget .popular-tags .menu-item[aria-pressed=true] {
+  background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
+}
+.trending-widget .popular-tags .menu-item.is-selected:hover, .trending-widget .popular-tags .menu-item[aria-pressed=true]:hover {
+  background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+}
+.trending-widget .popular-tags .menu-item.is-selected:active, .trending-widget .popular-tags .menu-item[aria-pressed=true]:active {
+  background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+}
+.trending-widget .popular-tags .menu-item svg {
+  margin-right: var(--wpds-spacing-10, 8px);
 }
 
 /*# sourceMappingURL=feed-inspector.css.map*/
