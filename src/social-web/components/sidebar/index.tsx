@@ -20,7 +20,6 @@ import { useFeedFilters } from '../../hooks/use-feed-filters';
 import SiteHub from '../site-hub';
 import ActorSwitcher from '../actor-switcher';
 import { ObjectTypes } from '../object-types';
-import { PopularTags } from '../popular-tags';
 import './style.scss';
 
 const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ), icon: postList } ];
@@ -80,9 +79,6 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 				{ /* Object Types Filter - shown only on Feed */ }
 				{ activeSection === 'feed' && <ObjectTypes /> }
 			</nav>
-
-			{ /* Popular Tags - Only show on feed section */ }
-			{ activeSection === 'feed' && <PopularTags /> }
 
 			{ /* Footer */ }
 			<div className="footer">
