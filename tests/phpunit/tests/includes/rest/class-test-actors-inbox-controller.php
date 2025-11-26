@@ -59,6 +59,8 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 * Set up the test.
 	 */
 	public function set_up() {
+		parent::set_up();
+
 		\add_option( 'permalink_structure', '/%postname%/' );
 
 		Server::init();
@@ -70,17 +72,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	public function tear_down() {
 		\delete_option( 'permalink_structure' );
 
-		// Clean up inbox posts to prevent test pollution.
-		$inbox_posts = \get_posts(
-			array(
-				'post_type'      => Inbox_Collection::POST_TYPE,
-				'posts_per_page' => -1,
-				'post_status'    => 'any',
-			)
-		);
-		foreach ( $inbox_posts as $post ) {
-			\wp_delete_post( $post->ID, true );
-		}
+		parent::tear_down();
 	}
 
 	/**

@@ -51,8 +51,6 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post = $this->get_latest_outbox_item( $activitpub_id );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
-
-		\wp_delete_comment( $comment_id, true );
 	}
 
 	/**
@@ -71,8 +69,6 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post = $this->get_latest_outbox_item( $activitpub_id );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
-
-		\wp_delete_comment( $comment_id, true );
 	}
 
 	/**
@@ -165,8 +161,6 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		);
 
 		$this->assertEmpty( $outbox_posts, 'No outbox item should be created for this comment' );
-
-		\wp_delete_comment( $comment_id, true );
 	}
 
 	/**
