@@ -1,3 +1,131 @@
-.trending-widget .popular-tags{background:transparent;margin:0;padding:0}.trending-widget .popular-tags .menu-item.is-selected,.trending-widget .popular-tags .menu-item[aria-pressed=true]{background-color:var(--wpds-color-bg-interactive-neutral-active,hsla(0,0%,100%,.15))!important;color:var(--wpds-color-fg-inverted-primary,#fff)!important}.trending-widget .popular-tags .menu-item.is-selected:active,.trending-widget .popular-tags .menu-item.is-selected:hover,.trending-widget .popular-tags .menu-item[aria-pressed=true]:active,.trending-widget .popular-tags .menu-item[aria-pressed=true]:hover{background-color:var(--wpds-color-bg-interactive-neutral-active,hsla(0,0%,100%,.15))!important}
-.popular-tags{border:none!important;box-shadow:none!important;padding:0 var(--wpds-spacing-30,12px) var(--wpds-spacing-30,12px)}.popular-tags__loading{color:var(--wpds-color-fg-inverted-secondary,#ccc);font-size:13px;padding:var(--wpds-spacing-20,8px)}.popular-tags .components-menu-group{background:transparent!important;border:none!important;box-shadow:none!important;margin:0;padding:0}.popular-tags .menu-item{align-items:center;color:var(--wpds-color-fg-inverted-secondary,#e0e0e0);display:flex;gap:var(--wpds-spacing-20,8px)}.popular-tags .menu-item:hover{background-color:var(--wpds-color-bg-interactive-neutral-hover,hsla(0,0%,100%,.1));color:var(--wpds-color-fg-inverted-primary,#fff)}.popular-tags .menu-item.is-pressed{background-color:var(--wpds-color-bg-interactive-neutral-active,hsla(0,0%,100%,.15));color:var(--wpds-color-fg-inverted-primary,#fff)}.popular-tags .menu-item svg{flex-shrink:0}
-.inspector-sidebar{background:var(--wpds-color-bg-surface-neutral-weak,#1e1e1e);border-color:var(--wpds-color-bg-surface-neutral-weak,#1e1e1e);border-radius:0;display:flex;flex-direction:column;gap:2rem;height:100%;overflow-y:auto;padding:1.5rem}.inspector-widget{display:flex;flex-direction:column;gap:.75rem;max-width:400px}.inspector-widget__title{color:var(--wpds-color-fg-primary,#f0f0f0);font-size:1.125rem;font-weight:600;margin:0;padding:0 .75rem}.inspector-widget__content{display:flex;flex-direction:column}.inspector-widget .components-menu-group{border:none!important;margin:0}.inspector-widget .menu-item{border-bottom:none!important;color:var(--wpds-color-fg-inverted-secondary,#e0e0e0);padding:.5rem .75rem;transition:none!important}.inspector-widget .menu-item:focus{box-shadow:none!important;outline:none!important}.inspector-widget .menu-item:focus-visible{box-shadow:0 0 0 var(--wpds-border-width-focus,1.5px) var(--wp-admin-theme-color)!important;outline:3px solid transparent!important}.inspector-widget .menu-item:hover{color:var(--wpds-color-fg-inverted-primary,#fff)!important}.inspector-widget .menu-item:active,.inspector-widget .menu-item:hover{background-color:var(--wpds-color-bg-interactive-neutral-hover,hsla(0,0%,100%,.1))!important}.inspector-widget .menu-item svg{margin-right:var(--wpds-spacing-10,8px)}
+/*!***************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./src/social-web/components/inspector-sidebar/widgets/style.scss ***!
+  \***************************************************************************************************************************************************************************************************************************************************************************************/
+/**
+ * Inspector Sidebar Widgets Styles
+ *
+ * Widget-specific styles for the inspector sidebar
+ */
+.trending-widget .popular-tags {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+.trending-widget .popular-tags .menu-item.is-selected, .trending-widget .popular-tags .menu-item[aria-pressed=true] {
+  background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
+}
+.trending-widget .popular-tags .menu-item.is-selected:hover, .trending-widget .popular-tags .menu-item[aria-pressed=true]:hover {
+  background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+}
+.trending-widget .popular-tags .menu-item.is-selected:active, .trending-widget .popular-tags .menu-item[aria-pressed=true]:active {
+  background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+}
+/*!**************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./src/social-web/components/popular-tags/style.scss ***!
+  \**************************************************************************************************************************************************************************************************************************************************************************/
+.popular-tags {
+  padding: 0 var(--wpds-spacing-30, 12px) var(--wpds-spacing-30, 12px);
+  border: none !important;
+  box-shadow: none !important;
+}
+.popular-tags__loading {
+  font-size: 13px;
+  padding: var(--wpds-spacing-20, 8px);
+  color: var(--wpds-color-fg-inverted-secondary, #cccccc);
+}
+.popular-tags .components-menu-group {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  margin: 0;
+  padding: 0;
+}
+.popular-tags .menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--wpds-spacing-20, 8px);
+  color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+}
+.popular-tags .menu-item:hover {
+  background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1));
+  color: var(--wpds-color-fg-inverted-primary, #ffffff);
+}
+.popular-tags .menu-item.is-pressed {
+  background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15));
+  color: var(--wpds-color-fg-inverted-primary, #ffffff);
+}
+.popular-tags .menu-item svg {
+  flex-shrink: 0;
+}
+/*!*******************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./src/social-web/components/inspector-sidebar/style.scss ***!
+  \*******************************************************************************************************************************************************************************************************************************************************************************/
+/**
+ * Inspector Sidebar Styles
+ *
+ * Dark-themed persistent sidebar for contextual information
+ */
+.inspector-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  height: 100%;
+  background: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+  border-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+  border-radius: 0;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+/**
+ * Base widget styles
+ * Individual widgets can override these in their own stylesheets
+ */
+.inspector-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 400px;
+}
+.inspector-widget__title {
+  margin: 0;
+  padding: 0 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--wpds-color-fg-primary, #f0f0f0);
+}
+.inspector-widget__content {
+  display: flex;
+  flex-direction: column;
+}
+.inspector-widget .components-menu-group {
+  border: none !important;
+  border-bottom: none !important;
+  margin: 0;
+}
+.inspector-widget .menu-item {
+  color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+  padding: 0.5rem 0.75rem;
+  border-bottom: none !important;
+  transition: none !important;
+}
+.inspector-widget .menu-item:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+.inspector-widget .menu-item:focus-visible {
+  box-shadow: 0 0 0 var(--wpds-border-width-focus, 1.5px) var(--wp-admin-theme-color) !important;
+  outline: 3px solid transparent !important;
+}
+.inspector-widget .menu-item:hover {
+  background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
+  color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
+}
+.inspector-widget .menu-item:active {
+  background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
+}
+.inspector-widget .menu-item svg {
+  margin-right: var(--wpds-spacing-10, 8px);
+}
+
+/*# sourceMappingURL=style-feed-inspector.css.map*/
