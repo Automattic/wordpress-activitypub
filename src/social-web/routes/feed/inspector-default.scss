@@ -1,0 +1,81 @@
+/**
+ * Inspector Default View Styles
+ *
+ * Dark-themed persistent sidebar matching the left sidebar appearance
+ */
+
+.activitypub-inspector-default {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	height: 100%;
+	background: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+	padding: 1rem;
+	overflow-y: auto;
+
+	&-card {
+		background: var(--wpds-color-bg-surface-neutral, #2c2c2c);
+		border: 1px solid var(--wpds-color-stroke-neutral-weak, #3c3c3c);
+		border-radius: 4px;
+		box-shadow: none;
+
+		.components-card__header {
+			padding: 1rem;
+			border-bottom: 1px solid var(--wpds-color-stroke-neutral-weak, #3c3c3c);
+		}
+
+		.components-card__body {
+			padding: 1rem;
+			color: var(--wpds-color-fg-primary, #f0f0f0);
+		}
+	}
+
+	&-title {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--wpds-color-fg-primary, #f0f0f0);
+	}
+
+	&-description {
+		margin: 0;
+		font-size: 0.875rem;
+		line-height: 1.5;
+		color: var(--wpds-color-fg-secondary, #b4b4b4);
+	}
+
+	// Style the PopularTags component when used in this context
+	.popular-tags {
+		margin: 0;
+		background: transparent;
+
+		&__title {
+			display: none; // Hide duplicate title since we have card header
+		}
+
+		.components-menu-group {
+			border: none;
+			margin: 0;
+		}
+
+		.menu-item {
+			color: var(--wpds-color-fg-primary, #f0f0f0);
+			padding: 0.5rem 0.75rem;
+			border-radius: 4px;
+			transition: background-color 0.15s ease;
+
+			&:hover {
+				background: var(--wpds-color-bg-surface-neutral-hover, #3c3c3c);
+			}
+
+			&[aria-pressed="true"] {
+				background: var(--wpds-color-bg-accent-primary, #0073aa);
+				color: var(--wpds-color-fg-on-accent, #fff);
+			}
+
+			span {
+				font-size: 0.875rem;
+			}
+		}
+	}
+}

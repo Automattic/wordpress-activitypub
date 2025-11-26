@@ -14,9 +14,10 @@ import { useSettings } from '../../contexts/settings-context';
 import type { Comment, FeedPost } from '../../types';
 import { getRelativeTime } from '../../utils';
 import { useTagFilter } from '../../hooks/use-tag-filter';
+import InspectorDefault from './inspector-default';
 
 interface FeedInspectorProps {
-	id: number;
+	id: number | null;
 	onClose: () => void;
 }
 
@@ -29,6 +30,11 @@ const RenderHTML = ( { html }: { html: string } ) => {
 };
 
 export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
+	// Show default view when no post is selected
+	if ( ! id ) {
+		return <InspectorDefault />;
+	}
+
 	const { defaultAvatar } = useSettings();
 	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id );
 	const { records: comments, isResolving: isLoadingComments } = useEntityRecords< Comment >( 'root', 'comment', {

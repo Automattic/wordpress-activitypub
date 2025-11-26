@@ -151,23 +151,18 @@ export function Layout() {
 	};
 
 	// Render detail panel (inspector) with Suspense for lazy loading
+	// Always render inspector - it shows default view when no item is selected
 	const renderInspector = () => {
-		if ( ! selectedItemId ) {
-			return null;
-		}
-
 		let InspectorComponent;
 		let props;
 
 		switch ( activeSection ) {
 			case 'feed':
 			default:
-				// Feed inspector expects number type
-				if ( typeof selectedItemId !== 'number' ) {
-					return null;
-				}
 				InspectorComponent = FeedInspector;
-				props = { id: selectedItemId, onClose: closeInspector };
+				// Pass null if no item selected or if it's not a number
+				const feedId = typeof selectedItemId === 'number' ? selectedItemId : null;
+				props = { id: feedId, onClose: closeInspector };
 		}
 
 		return (
@@ -183,8 +178,6 @@ export function Layout() {
 		);
 	};
 
-	const showInspector = !! selectedItemId;
-
 	return (
 		<div className="app-layout" data-section={ activeSection }>
 			<CommandMenu />
@@ -199,12 +192,10 @@ export function Layout() {
 					<Panel>{ renderStage() }</Panel>
 				</div>
 
-				{ /* Inspector - optional 380px side panel */ }
-				{ showInspector && (
-					<div className="inspector-region">
-						<Panel>{ renderInspector() }</Panel>
-					</div>
-				) }
+				{ /* Inspector - persistent 380px side panel */ }
+				<div className="inspector-region">
+					<Panel>{ renderInspector() }</Panel>
+				</div>
 			</div>
 
 			<SnackbarList notices={ notices } onRemove={ removeNotice } />
