@@ -5,7 +5,7 @@
  */
 
 import { __ } from '@wordpress/i18n';
-import { Button } from '@wordpress/components';
+import { Icon, MenuGroup, MenuItem } from '@wordpress/components';
 import { cog, people, addCard, plus } from '@wordpress/icons';
 import { useSettings } from '../../../contexts/settings-context';
 import './navigation-widget.scss';
@@ -44,20 +44,14 @@ export default function NavigationWidget() {
 		<div className="inspector-widget navigation-widget">
 			<h2 className="inspector-widget__title">{ __( 'Quick Actions', 'activitypub' ) }</h2>
 			<div className="inspector-widget__content">
-				<div className="navigation-widget__actions">
+				<MenuGroup>
 					{ navigationItems.map( ( item ) => (
-						<Button
-							key={ item.id }
-							href={ item.href }
-							icon={ item.icon }
-							iconSize={ 20 }
-							className="navigation-widget__action"
-							variant="secondary"
-						>
-							{ item.label }
-						</Button>
+						<MenuItem key={ item.id } href={ item.href } className="menu-item">
+							<Icon icon={ item.icon } size={ 20 } />
+							<span>{ item.label }</span>
+						</MenuItem>
 					) ) }
-				</div>
+				</MenuGroup>
 			</div>
 		</div>
 	);

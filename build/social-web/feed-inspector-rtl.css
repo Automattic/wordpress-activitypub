@@ -4,26 +4,22 @@
 /**
  * Navigation Widget Styles
  */
-.navigation-widget__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.navigation-widget .components-menu-group {
+  border: none;
+  margin: 0;
 }
-.navigation-widget__action {
-  justify-content: flex-start;
-  padding: 0.75rem;
-  width: 100%;
-  border: 1px solid var(--wpds-color-border-subtle, #3c3c3c);
-  background: var(--wpds-color-bg-surface-neutral, #2c2c2c);
+.navigation-widget .menu-item {
   color: var(--wpds-color-fg-primary, #f0f0f0);
-  transition: all 0.15s ease;
+  padding: 0.5rem 0.75rem;
+  transition: background-color 0.15s ease;
+  justify-content: flex-start;
+  text-align: right;
 }
-.navigation-widget__action:hover {
+.navigation-widget .menu-item:hover {
   background: var(--wpds-color-bg-surface-neutral-hover, #3c3c3c);
-  border-color: var(--wpds-color-border-default, #555);
 }
-.navigation-widget__action svg {
-  margin-left: 0.5rem;
+.navigation-widget .menu-item span {
+  font-size: 0.875rem;
 }
 /*!*************************************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./src/social-web/components/inspector-sidebar/widgets/trending-widget.scss ***!

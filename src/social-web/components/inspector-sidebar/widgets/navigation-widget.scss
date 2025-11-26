@@ -3,29 +3,24 @@
  */
 
 .navigation-widget {
-	&__actions {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
+	.components-menu-group {
+		border: none;
+		margin: 0;
 	}
 
-	&__action {
-		justify-content: flex-start;
-		padding: 0.75rem;
-		width: 100%;
-		border: 1px solid var(--wpds-color-border-subtle, #3c3c3c);
-		background: var(--wpds-color-bg-surface-neutral, #2c2c2c);
+	.menu-item {
 		color: var(--wpds-color-fg-primary, #f0f0f0);
-		transition: all 0.15s ease;
+		padding: 0.5rem 0.75rem;
+		transition: background-color 0.15s ease;
+		justify-content: flex-start;
+		text-align: left;
 
 		&:hover {
 			background: var(--wpds-color-bg-surface-neutral-hover, #3c3c3c);
-			border-color: var(--wpds-color-border-default, #555);
 		}
 
-		// Icon alignment
-		svg {
-			margin-right: 0.5rem;
+		span {
+			font-size: 0.875rem;
 		}
 	}
 }
