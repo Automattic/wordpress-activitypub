@@ -52,6 +52,8 @@
 			padding: 0.5rem 0.75rem;
 			border-radius: 4px;
 			transition: background-color 0.15s ease;
+			justify-content: flex-start;
+			text-align: left;
 
 			&:hover {
 				background: var(--wpds-color-bg-surface-neutral-hover, #3c3c3c);
@@ -66,5 +68,14 @@
 				font-size: 0.875rem;
 			}
 		}
+	}
+
+	// Style the sidebar description in inspector context
+	.sidebar-description {
+		color: var(--wpds-color-fg-secondary, #b4b4b4);
+		font-size: 0.875rem;
+		line-height: 1.5;
+		margin: 0;
+		padding: 0;
 	}
 }

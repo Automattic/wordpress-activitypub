@@ -7,6 +7,7 @@
 
 import { __ } from '@wordpress/i18n';
 import { PopularTags } from '../../components/popular-tags';
+import SidebarDescription from '../../components/sidebar-description';
 import './inspector-default.scss';
 
 export default function InspectorDefault() {
@@ -14,9 +15,7 @@ export default function InspectorDefault() {
 		<div className="activitypub-inspector-default">
 			<div className="activitypub-inspector-default-section">
 				<h2 className="activitypub-inspector-default-title">{ __( 'Welcome to your Feed', 'activitypub' ) }</h2>
-				<p className="activitypub-inspector-default-description">
-					{ __( 'Select a post from your feed to view details, comments, and more.', 'activitypub' ) }
-				</p>
+				<SidebarDescription />
 			</div>
 
 			<div className="activitypub-inspector-default-section">
