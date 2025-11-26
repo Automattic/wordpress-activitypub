@@ -36,15 +36,7 @@ export function ObjectTypes() {
 	const updateFilter = ( objectTypeId: number ): void =>
 		updateObjectTypeFilter( selectedObjectTypeId === objectTypeId ? null : objectTypeId );
 
-	if ( isResolving ) {
-		return (
-			<div className="object-types">
-				<div className="object-types__loading">{ __( 'Loading…', 'activitypub' ) }</div>
-			</div>
-		);
-	}
-
-	if ( ! objectTypes || objectTypes.length === 0 ) {
+	if ( isResolving || ! objectTypes || objectTypes.length === 0 ) {
 		return null;
 	}
 
