@@ -5,7 +5,7 @@
  * Displays contextual widgets like trending tags
  */
 
-import { TrendingWidget } from './widgets';
+import { NavigationWidget, TrendingWidget } from './widgets';
 import './style.scss';
 
 /**
@@ -13,6 +13,7 @@ import './style.scss';
  * Add new widgets here to make them available
  */
 const WIDGETS = [
+	NavigationWidget,
 	TrendingWidget,
 	// Add more widgets here as they're created
 	// Example: WhoToFollowWidget, SuggestedPostsWidget, etc.

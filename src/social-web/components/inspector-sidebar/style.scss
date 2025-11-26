@@ -10,7 +10,8 @@
 	gap: 2rem;
 	height: 100%;
 	background: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
-	border: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+	border-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+	border-radius: 0;
 	padding: 1.5rem;
 	overflow-y: auto;
 }
