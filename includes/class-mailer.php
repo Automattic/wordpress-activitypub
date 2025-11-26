@@ -339,7 +339,7 @@ class Mailer {
 
 		$recipients = array();
 		$mentions   = wp_list_filter( (array) $activity['object']['tag'], array( 'type' => 'Mention' ) );
-		$mentions   = array_map( __NAMESPACE__ . '\object_to_uri', $mentions );
+		$mentions   = array_map( '\Activitypub\object_to_uri', $mentions );
 		foreach ( (array) $user_ids as $user_id ) {
 			$actor = Actors::get_by_id( $user_id );
 			if ( \is_wp_error( $actor ) ) {

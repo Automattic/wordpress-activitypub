@@ -807,10 +807,12 @@ function object_to_uri( $data ) {
 			// See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
 			$data = object_to_uri( $data['url'] );
 			break;
+
 		case 'Link':
 		case 'Mention':
 			$data = $data['href'];
 			break;
+
 		default:
 			$data = $data['id'];
 			break;
