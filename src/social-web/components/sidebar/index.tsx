@@ -18,6 +18,7 @@ import { __, isRTL } from '@wordpress/i18n';
 import { useSettings } from '../../contexts/settings-context';
 import { useFeedFilters } from '../../hooks/use-feed-filters';
 import SiteHub from '../site-hub';
+import SidebarDescription from '../sidebar-description';
 import ActorSwitcher from '../actor-switcher';
 import { ObjectTypes } from '../object-types';
 import './style.scss';
@@ -75,6 +76,9 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 						) ) }
 					</MenuGroup>
 				</NavigableMenu>
+
+				{ /* Sidebar Description - shown only on Feed */ }
+				{ activeSection === 'feed' && <SidebarDescription /> }
 
 				{ /* Object Types Filter - shown only on Feed */ }
 				{ activeSection === 'feed' && <ObjectTypes /> }

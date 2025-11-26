@@ -17,6 +17,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
+		max-width: 400px;
 	}
 
 	&-title {
@@ -49,8 +50,7 @@
 
 		.menu-item {
 			color: var(--wpds-color-fg-primary, #f0f0f0);
-			padding: 0.5rem 0.75rem;
-			border-radius: 4px;
+			padding: 0.5rem 0;
 			transition: background-color 0.15s ease;
 			justify-content: flex-start;
 			text-align: left;
@@ -68,14 +68,5 @@
 				font-size: 0.875rem;
 			}
 		}
-	}
-
-	// Style the sidebar description in inspector context
-	.sidebar-description {
-		color: var(--wpds-color-fg-secondary, #b4b4b4);
-		font-size: 0.875rem;
-		line-height: 1.5;
-		margin: 0;
-		padding: 0;
 	}
 }
