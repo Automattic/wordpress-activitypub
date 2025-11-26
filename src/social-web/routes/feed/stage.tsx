@@ -11,6 +11,7 @@ import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
+import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
 import { normalizeFieldOrder } from './utils';
@@ -213,6 +214,14 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		const currentPage = normalizedView.page || 1;
 		const infiniteScrollEnabled = normalizedView.infiniteScrollEnabled;
 
+		// Clear records when on first page with no results (handles filter/search changes)
+		if ( feed.length === 0 && currentPage === 1 ) {
+			setAllLoadedRecords( [] );
+			lastProcessedPage.current = currentPage;
+			setIsLoadingMore( false );
+			return;
+		}
+
 		// Don't process until feed data is available
 		if ( feed.length === 0 ) {
 			return;
@@ -247,33 +256,39 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	] );
 
 	return (
-		<DataViews
-			data={ allLoadedRecords }
-			fields={ fields }
-			view={ normalizedView }
-			onChangeView={ updateFeedView }
-			isLoading={ isResolving || isLoadingMore }
-			onClickItem={ ( item ) => onSelectItem( item.id ) }
-			isItemClickable={ () => true }
-			getItemId={ ( item ) => item.id.toString() }
-			selection={ selection }
-			onChangeSelection={ changeSelection }
-			empty={
-				<p>
-					{ normalizedView.search || ( normalizedView.filters && normalizedView.filters.length > 0 )
-						? __( 'No posts found.', 'activitypub' )
-						: __(
-								'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
-								'activitypub'
-						  ) }
-				</p>
-			}
-			paginationInfo={ {
-				totalItems,
-				totalPages,
-				infiniteScrollHandler,
-			} }
-			defaultLayouts={ defaultLayouts }
-		/>
+		<Page
+			title={ __( 'Feed', 'activitypub' ) }
+			subTitle={ __( 'ActivityPub posts from your network', 'activitypub' ) }
+			hasPadding={ false }
+		>
+			<DataViews
+				data={ allLoadedRecords }
+				fields={ fields }
+				view={ normalizedView }
+				onChangeView={ updateFeedView }
+				isLoading={ isResolving || isLoadingMore }
+				onClickItem={ ( item ) => onSelectItem( item.id ) }
+				isItemClickable={ () => true }
+				getItemId={ ( item ) => item.id.toString() }
+				selection={ selection }
+				onChangeSelection={ changeSelection }
+				empty={
+					<p>
+						{ normalizedView.search || ( normalizedView.filters && normalizedView.filters.length > 0 )
+							? __( 'No posts found.', 'activitypub' )
+							: __(
+									'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
+									'activitypub'
+							  ) }
+					</p>
+				}
+				paginationInfo={ {
+					totalItems,
+					totalPages,
+					infiniteScrollHandler,
+				} }
+				defaultLayouts={ defaultLayouts }
+			/>
+		</Page>
 	);
 }

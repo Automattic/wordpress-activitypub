@@ -24,15 +24,7 @@ export function PopularTags() {
 	// Toggle: if clicking the same tag, clear the filter
 	const updateFilter = ( tagId: number ): void => updateTagFilter( selectedTagId === tagId ? null : tagId );
 
-	if ( isResolving ) {
-		return (
-			<div className="popular-tags">
-				<div className="popular-tags__loading">{ __( 'Loading tags…', 'activitypub' ) }</div>
-			</div>
-		);
-	}
-
-	if ( ! tags || tags.length === 0 ) {
+	if ( isResolving || ! tags || tags.length === 0 ) {
 		return null;
 	}
 
