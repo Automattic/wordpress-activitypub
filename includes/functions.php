@@ -803,13 +803,15 @@ function object_to_uri( $data ) {
 
 	// Return part of Object that makes most sense.
 	switch ( $type ) {
-		case 'Image':
-			// See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
+		case 'Audio':    // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-audio.
+		case 'Document': // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-document.
+		case 'Image':    // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
+		case 'Video':    // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-video.
 			$data = object_to_uri( $data['url'] );
 			break;
 
-		case 'Link':
-		case 'Mention':
+		case 'Link':     // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-link.
+		case 'Mention':  // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-mention.
 			$data = $data['href'];
 			break;
 

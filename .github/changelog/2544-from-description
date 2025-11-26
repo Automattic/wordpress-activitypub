@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Improve support for media attachments by handling Audio, Document, and Video object types in addition to Images.

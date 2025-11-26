@@ -53,15 +53,6 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		foreach ( self::$user_ids as $user_id ) {
-			wp_delete_user( $user_id );
-		}
-	}
-
-	/**
 	 * Clean up after each test.
 	 */
 	public function tear_down() {

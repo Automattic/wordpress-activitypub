@@ -177,6 +177,81 @@ class Posts {
 	}
 
 	/**
+	 * Extract hashtag names from ActivityPub tag array.
+	 *
+	 * @param array $tags Array of ActivityPub tags.
+	 *
+	 * @return array Array of normalized hashtag names (without # prefix, trimmed, sanitized).
+	 */
+	public static function extract_hashtags( $tags ) {
+		$hashtags = array();
+
+		if ( empty( $tags ) || ! \is_array( $tags ) ) {
+			return $hashtags;
+		}
+
+		foreach ( $tags as $tag ) {
+			if ( isset( $tag['type'] ) && 'Hashtag' === $tag['type'] && isset( $tag['name'] ) ) {
+				// Strip # prefix, trim whitespace, and sanitize.
+				$normalized = \trim( \ltrim( $tag['name'], '#' ) );
+				$normalized = \wp_strip_all_tags( $normalized );
+
+				if ( ! empty( $normalized ) ) {
+					$hashtags[] = $normalized;
+				}
+			}
+		}
+
+		return $hashtags;
+	}
+
+	/**
+	 * Remove hashtags from content.
+	 *
+	 * Removes hashtags that appear at the end of the content.
+	 * Handles both plain text and HTML content, including hashtags within anchor tags.
+	 *
+	 * @param string $content The content to process.
+	 * @param array  $tags    Array of tag objects from activity (with 'type' and 'name' keys).
+	 *
+	 * @return string The content with trailing hashtags removed.
+	 */
+	public static function remove_hashtags( $content, $tags ) {
+		if ( empty( $content ) || empty( $tags ) || ! \is_array( $tags ) ) {
+			return $content;
+		}
+
+		// Extract and normalize hashtags from tag objects.
+		$normalized_tags = self::extract_hashtags( $tags );
+
+		if ( empty( $normalized_tags ) ) {
+			return $content;
+		}
+
+		// Build pattern to match trailing hashtags (at end of content or before closing tags).
+		$tag_patterns = array();
+		foreach ( $normalized_tags as $tag ) {
+			$escaped_tag    = \preg_quote( $tag, '/' );
+			$tag_patterns[] = '(?:<a[^>]*>\s*)?#' . $escaped_tag . '(?=\s|<|$)(?:\s*<\/a>)?';
+		}
+
+		/*
+		 * Pattern explanation:
+		 * Match one or more hashtags (plain or in anchor tags) at the end of content.
+		 * The pattern matches trailing hashtags before closing HTML tags or at end of string.
+		 */
+		$pattern = '/(?:\s+(?:' . \implode( '|', $tag_patterns ) . '))+(?=\s*(?:<\/[^>]+>)*\s*$)/i';
+		$content = \preg_replace( $pattern, '', $content );
+
+		// Clean up any extra whitespace at end of paragraphs.
+		$content = \preg_replace( '/<p>\s*<\/p>/', '', $content );
+		$content = \preg_replace( '/\s+<\/p>/', '</p>', $content );
+		$content = \preg_replace( '/\s+<\/strong>/', '</strong>', $content );
+
+		return \trim( $content );
+	}
+
+	/**
 	 * Convert an activity to a post array.
 	 *
 	 * @param array $activity The activity array.
@@ -190,9 +265,13 @@ class Posts {
 
 		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
 
+		// Sanitize content and remove hashtags.
+		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
+		$content = self::remove_hashtags( $content, $activity['tag'] ?? array() );
+
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
-			'post_content'  => isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '',
+			'post_content'  => $content,
 			'post_excerpt'  => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : generate_post_summary( $activity['content'] ?? '' ),
 			'post_status'   => 'publish',
 			'post_type'     => self::POST_TYPE,
@@ -212,16 +291,8 @@ class Posts {
 		// Save Object Type as Taxonomy item.
 		\wp_set_post_terms( $post_id, array( $activity_object['type'] ), 'ap_object_type' );
 
-		$tags = array();
-
 		// Save the Hashtags as Taxonomy items.
-		if ( ! empty( $activity_object['tag'] ) && \is_array( $activity_object['tag'] ) ) {
-			foreach ( $activity_object['tag'] as $tag ) {
-				if ( isset( $tag['type'] ) && 'Hashtag' === $tag['type'] && isset( $tag['name'] ) ) {
-					$tags[] = \wp_strip_all_tags( ltrim( $tag['name'], '#' ) );
-				}
-			}
-		}
+		$tags = self::extract_hashtags( $activity_object['tag'] ?? array() );
 
 		\wp_set_post_terms( $post_id, $tags, 'ap_tag' );
 	}

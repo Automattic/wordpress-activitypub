@@ -231,6 +231,213 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				),
 				'https://example.com',
 			),
+			// Test Audio with simple string URL.
+			array(
+				array(
+					'type' => 'Audio',
+					'url'  => 'https://example.com/audio.mp3',
+				),
+				'https://example.com/audio.mp3',
+			),
+			// Test Audio with Link object.
+			array(
+				array(
+					'type' => 'Audio',
+					'url'  => array(
+						'type' => 'Link',
+						'href' => 'https://example.com/audio.mp3',
+					),
+				),
+				'https://example.com/audio.mp3',
+			),
+			// Test Audio with array of Link objects.
+			array(
+				array(
+					'type' => 'Audio',
+					'url'  => array(
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/audio.mp3',
+							'mediaType' => 'audio/mpeg',
+						),
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/audio.ogg',
+							'mediaType' => 'audio/ogg',
+						),
+					),
+				),
+				'https://example.com/audio.mp3',
+			),
+			// Test Document with simple string URL.
+			array(
+				array(
+					'type' => 'Document',
+					'url'  => 'https://example.com/document.pdf',
+				),
+				'https://example.com/document.pdf',
+			),
+			// Test Document with Link object.
+			array(
+				array(
+					'type' => 'Document',
+					'url'  => array(
+						'type' => 'Link',
+						'href' => 'https://example.com/document.pdf',
+					),
+				),
+				'https://example.com/document.pdf',
+			),
+			// Test Document with array of Link objects.
+			array(
+				array(
+					'type' => 'Document',
+					'url'  => array(
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/document.pdf',
+							'mediaType' => 'application/pdf',
+						),
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/document.docx',
+							'mediaType' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+						),
+					),
+				),
+				'https://example.com/document.pdf',
+			),
+			// Test Video with simple string URL.
+			array(
+				array(
+					'type' => 'Video',
+					'url'  => 'https://example.com/video.mp4',
+				),
+				'https://example.com/video.mp4',
+			),
+			// Test Video with Link object.
+			array(
+				array(
+					'type' => 'Video',
+					'url'  => array(
+						'type' => 'Link',
+						'href' => 'https://example.com/video.mp4',
+					),
+				),
+				'https://example.com/video.mp4',
+			),
+			// Test Video with array of Link objects.
+			array(
+				array(
+					'type' => 'Video',
+					'url'  => array(
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/video.mp4',
+							'mediaType' => 'video/mp4',
+						),
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/video.webm',
+							'mediaType' => 'video/webm',
+						),
+					),
+				),
+				'https://example.com/video.mp4',
+			),
+			// Test complex Image with array of Link objects (user's example).
+			array(
+				array(
+					'@context' => 'https://www.w3.org/ns/activitystreams',
+					'type'     => 'Image',
+					'name'     => 'Cat Jumping on Wagon',
+					'url'      => array(
+						array(
+							'type'      => 'Link',
+							'href'      => 'http://example.org/image.jpeg',
+							'mediaType' => 'image/jpeg',
+						),
+						array(
+							'type'      => 'Link',
+							'href'      => 'http://example.org/image.png',
+							'mediaType' => 'image/png',
+						),
+					),
+				),
+				'http://example.org/image.jpeg',
+			),
+			// Test complex Audio with full metadata and array of Link objects.
+			array(
+				array(
+					'@context'     => 'https://www.w3.org/ns/activitystreams',
+					'type'         => 'Audio',
+					'name'         => 'Podcast Episode',
+					'duration'     => 'PT1H30M',
+					'attributedTo' => 'https://example.com/users/podcaster',
+					'url'          => array(
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/podcast.mp3',
+							'mediaType' => 'audio/mpeg',
+						),
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/podcast.ogg',
+							'mediaType' => 'audio/ogg',
+						),
+					),
+				),
+				'https://example.com/podcast.mp3',
+			),
+			// Test complex Document with full metadata and array of Link objects.
+			array(
+				array(
+					'@context'     => 'https://www.w3.org/ns/activitystreams',
+					'type'         => 'Document',
+					'name'         => 'Annual Report',
+					'attributedTo' => 'https://example.com/users/author',
+					'url'          => array(
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/report.pdf',
+							'mediaType' => 'application/pdf',
+						),
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/report.docx',
+							'mediaType' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+						),
+					),
+				),
+				'https://example.com/report.pdf',
+			),
+			// Test complex Video with full metadata and array of Link objects.
+			array(
+				array(
+					'@context'     => 'https://www.w3.org/ns/activitystreams',
+					'type'         => 'Video',
+					'name'         => 'Conference Talk',
+					'duration'     => 'PT45M',
+					'attributedTo' => 'https://example.com/users/speaker',
+					'url'          => array(
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/talk.mp4',
+							'mediaType' => 'video/mp4',
+							'width'     => 1920,
+							'height'    => 1080,
+						),
+						array(
+							'type'      => 'Link',
+							'href'      => 'https://example.com/talk.webm',
+							'mediaType' => 'video/webm',
+							'width'     => 1920,
+							'height'    => 1080,
+						),
+					),
+				),
+				'https://example.com/talk.mp4',
+			),
 		);
 	}
 
@@ -450,12 +657,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		add_filter( 'activitypub_is_post_disabled', '__return_true' );
 		$this->assertTrue( \Activitypub\is_post_disabled( $public_post_id ) );
 		remove_filter( 'activitypub_is_post_disabled', '__return_true' );
-
-		// Clean up.
-		wp_delete_post( $public_post_id, true );
-		wp_delete_post( $local_post_id, true );
-		wp_delete_post( $private_post_id, true );
-		wp_delete_post( $password_post_id, true );
 	}
 
 	/**
@@ -469,14 +670,10 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		add_post_meta( $visible_private_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 		$this->assertTrue( \Activitypub\is_post_disabled( $visible_private_post_id ) );
 
-		wp_delete_post( $visible_private_post_id, true );
-
 		$visible_local_post_id = self::factory()->post->create();
 
 		add_post_meta( $visible_local_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 		$this->assertTrue( \Activitypub\is_post_disabled( $visible_local_post_id ) );
-
-		wp_delete_post( $visible_local_post_id, true );
 	}
 
 	/**
@@ -592,7 +789,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			$desc
 		);
 
-		\wp_delete_post( $post_id, true );
 		\remove_shortcode( 'activitypub_test_shortcode' );
 	}
 
@@ -816,9 +1012,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertEquals( 'Follow', $activity->get_type() );
 		$this->assertEquals( 'https://example.org/?author=1', get_post_meta( $id, '_activitypub_object_id', true ) );
-
-		// Delete the Outbox item.
-		wp_delete_post( $id );
 	}
 
 	/**
@@ -1667,8 +1860,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertTrue( \Activitypub\is_ap_post( $ap_post_id ), 'Should return true for ap_post post type' );
 		$this->assertTrue( \Activitypub\is_ap_post( get_post( $ap_post_id ) ), 'Should return true when passed WP_Post object' );
-
-		wp_delete_post( $ap_post_id, true );
 	}
 
 	/**
@@ -1688,8 +1879,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertFalse( \Activitypub\is_ap_post( $post_id ), 'Should return false for regular post' );
 		$this->assertFalse( \Activitypub\is_ap_post( get_post( $post_id ) ), 'Should return false when passed WP_Post object' );
-
-		wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -1731,8 +1920,5 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 		$this->assertFalse( \Activitypub\is_ap_post( $custom_id ), 'Should return false for custom post type' );
-
-		wp_delete_post( $page_id, true );
-		wp_delete_post( $custom_id, true );
 	}
 }

@@ -130,7 +130,6 @@ class Test_Base extends \WP_UnitTestCase {
 		$this->assertEquals( $expected_audience['to'], $transformed_object->get_to() );
 		$this->assertEquals( $expected_audience['cc'], $transformed_object->get_cc() );
 
-		\wp_delete_post( $post_id );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $function );
 	}
 
