@@ -1,0 +1,38 @@
+/**
+ * Inspector Sidebar Styles
+ *
+ * Dark-themed persistent sidebar for contextual information
+ */
+
+.inspector-sidebar {
+	display: flex;
+	flex-direction: column;
+	gap: 2rem;
+	height: 100%;
+	background: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+	padding: 1.5rem;
+	overflow-y: auto;
+}
+
+/**
+ * Base widget styles
+ * Individual widgets can override these in their own stylesheets
+ */
+.inspector-widget {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	max-width: 400px;
+
+	&__title {
+		margin: 0;
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: var(--wpds-color-fg-primary, #f0f0f0);
+	}
+
+	&__content {
+		display: flex;
+		flex-direction: column;
+	}
+}

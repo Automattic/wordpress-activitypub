@@ -1,0 +1,41 @@
+/**
+ * Trending Widget Styles
+ */
+
+.trending-widget {
+	// Popular tags specific styling
+	.popular-tags {
+		margin: 0;
+		background: transparent;
+
+		&__title {
+			display: none; // Hide duplicate title (widget has its own)
+		}
+
+		.components-menu-group {
+			border: none;
+			margin: 0;
+		}
+
+		.menu-item {
+			color: var(--wpds-color-fg-primary, #f0f0f0);
+			padding: 0.5rem 0;
+			transition: background-color 0.15s ease;
+			justify-content: flex-start;
+			text-align: left;
+
+			&:hover {
+				background: var(--wpds-color-bg-surface-neutral-hover, #3c3c3c);
+			}
+
+			&[aria-pressed="true"] {
+				background: var(--wpds-color-bg-accent-primary, #0073aa);
+				color: var(--wpds-color-fg-on-accent, #fff);
+			}
+
+			span {
+				font-size: 0.875rem;
+			}
+		}
+	}
+}

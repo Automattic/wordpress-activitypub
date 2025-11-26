@@ -14,7 +14,7 @@ import { useSettings } from '../../contexts/settings-context';
 import type { Comment, FeedPost } from '../../types';
 import { getRelativeTime } from '../../utils';
 import { useTagFilter } from '../../hooks/use-tag-filter';
-import InspectorDefault from './inspector-default';
+import InspectorSidebar from '../../components/inspector-sidebar';
 
 interface FeedInspectorProps {
 	id: number | null;
@@ -30,9 +30,9 @@ const RenderHTML = ( { html }: { html: string } ) => {
 };
 
 export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
-	// Show default view when no post is selected
+	// Show sidebar when no post is selected
 	if ( ! id ) {
-		return <InspectorDefault />;
+		return <InspectorSidebar />;
 	}
 
 	const { defaultAvatar } = useSettings();

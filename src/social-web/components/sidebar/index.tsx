@@ -62,6 +62,7 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 					</Heading>
 				</HStack>
 				<NavigableMenu>
+					<SidebarDescription />
 					<MenuGroup>
 						{ menuItems.map( ( item ) => (
 							<MenuItem
@@ -76,9 +77,6 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 						) ) }
 					</MenuGroup>
 				</NavigableMenu>
-
-				{ /* Sidebar Description - shown only on Feed */ }
-				{ activeSection === 'feed' && <SidebarDescription /> }
 
 				{ /* Object Types Filter - shown only on Feed */ }
 				{ activeSection === 'feed' && <ObjectTypes /> }
