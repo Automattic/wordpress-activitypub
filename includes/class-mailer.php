@@ -327,8 +327,8 @@ class Mailer {
 	 * @param int|int[] $user_ids The id(s) of the local blog-user(s).
 	 */
 	public static function mention( $activity, $user_ids ) {
-		// Early return if activity has no cc recipients.
-		if ( empty( $activity['cc'] ) ) {
+		// Early return if activity has no mentions.
+		if ( empty( $activity['object']['tag'] ) ) {
 			return;
 		}
 
@@ -337,25 +337,18 @@ class Mailer {
 			return;
 		}
 
-		// Normalize to array.
-		$user_ids = (array) $user_ids;
-
-		// Build a map of user_id => actor_id and filter to only users in the "cc" field.
 		$recipients = array();
-		foreach ( $user_ids as $user_id ) {
+		$mentions   = wp_list_filter( (array) $activity['object']['tag'], array( 'type' => 'Mention' ) );
+		$mentions   = array_map( __NAMESPACE__ . '\object_to_uri', $mentions );
+		foreach ( (array) $user_ids as $user_id ) {
 			$actor = Actors::get_by_id( $user_id );
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
 
 			$actor_id = $actor->get_id();
-			if ( \in_array( $actor_id, (array) $activity['cc'], true ) && isset( $activity['object']['tag'] ) ) {
-				foreach ( (array) $activity['object']['tag'] as $tag ) {
-					if ( object_to_uri( $tag ) === $actor_id ) {
-						$recipients[ $user_id ] = $actor_id;
-						break;
-					}
-				}
+			if ( \in_array( $actor_id, $mentions, true ) ) {
+				$recipients[ $user_id ] = $actor_id;
 			}
 		}
 
