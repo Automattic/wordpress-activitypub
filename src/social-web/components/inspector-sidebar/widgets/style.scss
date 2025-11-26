@@ -11,10 +11,6 @@
 		padding: 0;
 		background: transparent;
 
-		&__title {
-			display: none; // Hide duplicate title (widget has its own)
-		}
-
 		// Selected state for trending tags
 		.menu-item {
 			&.is-selected,

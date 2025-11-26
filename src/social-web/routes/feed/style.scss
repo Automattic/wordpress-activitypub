@@ -3,11 +3,6 @@
  * Minimal styling - relies on WordPress/DataViews defaults
  */
 
-// Override inspector width for feed section
-.app-layout[data-section='feed'] .inspector-region {
-	width: 50%;
-}
-
 // Remove residual styles from footer when empty (infinite scroll enabled)
 .dataviews-footer:empty {
 	border: 0;

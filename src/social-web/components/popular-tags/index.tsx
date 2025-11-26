@@ -27,7 +27,6 @@ export function PopularTags() {
 	if ( isResolving ) {
 		return (
 			<div className="popular-tags">
-				<h3 className="popular-tags__title">{ __( 'Popular Tags', 'activitypub' ) }</h3>
 				<div className="popular-tags__loading">{ __( 'Loading tags…', 'activitypub' ) }</div>
 			</div>
 		);

@@ -1,21 +1,7 @@
 .popular-tags {
 	padding: 0 var(--wpds-spacing-30, 12px) var(--wpds-spacing-30, 12px);
-	border-top: 1px solid var(--wpds-color-stroke-inverted, rgba(255, 255, 255, 0.1));
-	background: transparent !important;
-	border-bottom: none !important;
-	border-left: none !important;
-	border-right: none !important;
+	border: none !important;
 	box-shadow: none !important;
-
-	&__title {
-		font-size: 11px;
-		font-weight: 500;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		margin: var(--wpds-spacing-30, 12px) 0 var(--wpds-spacing-20, 8px) 0;
-		padding: 0 var(--wpds-spacing-20, 8px);
-		color: var(--wpds-color-fg-inverted-tertiary, #999999);
-	}
 
 	&__loading {
 		font-size: 13px;
