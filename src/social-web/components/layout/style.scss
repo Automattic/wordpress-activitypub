@@ -29,19 +29,29 @@
 }
 
 .stage-region {
-	flex-grow: 1;
+	width: var(--sw-stage-width);
+	flex-shrink: 0;
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+
+	.components-panel {
+		padding: 1.5rem;
+	}
 }
 
 .inspector-region {
-	flex-grow: 1;
+	width: var(--sw-inspector-width);
+	flex-shrink: 0;
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+
+	.components-panel {
+		padding: 1.5rem;
+	}
 }
 
 // Position the SnackbarList at the bottom left of the viewport

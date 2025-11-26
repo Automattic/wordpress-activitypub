@@ -8,4 +8,6 @@
 :root {
   /* Layout dimensions (app-specific) */
   --sw-sidebar-width: 300px;
+  --sw-stage-width: calc((100% - var(--sw-sidebar-width)) / 2);
+  --sw-inspector-width: calc((100% - var(--sw-sidebar-width)) / 2);
 }

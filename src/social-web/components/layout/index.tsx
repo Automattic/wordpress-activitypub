@@ -192,7 +192,7 @@ export function Layout() {
 					<Panel>{ renderStage() }</Panel>
 				</div>
 
-				{ /* Inspector - persistent 380px side panel */ }
+				{ /* Inspector - persistent side panel */ }
 				<div className="inspector-region">
 					<Panel>{ renderInspector() }</Panel>
 				</div>

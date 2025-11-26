@@ -38,7 +38,6 @@ export function PopularTags() {
 
 	return (
 		<div className="popular-tags">
-			<h3 className="popular-tags__title">{ __( 'Popular Tags', 'activitypub' ) }</h3>
 			<MenuGroup>
 				{ tags.map( ( tag: Term ) => (
 					<MenuItem
