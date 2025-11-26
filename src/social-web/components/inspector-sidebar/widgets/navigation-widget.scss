@@ -1,43 +1,11 @@
 /**
  * Navigation Widget Styles
+ *
+ * Widget-specific styles are defined here.
+ * Common menu item styles are inherited from inspector-sidebar/style.scss
  */
 
 .navigation-widget {
-	.components-menu-group {
-		border: none;
-		margin: 0;
-	}
-
-	.menu-item {
-		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
-		padding: 0.5rem 0.75rem;
-
-		// Disable all transitions to prevent glow/blinking effects
-		transition: none !important;
-
-		// Remove default focus styles to prevent blue glow
-		&:focus {
-			box-shadow: none !important;
-			outline: none !important;
-		}
-
-		// Only show focus outline for keyboard navigation
-		&:focus-visible {
-			box-shadow: 0 0 0 var(--wpds-border-width-focus, 1.5px) var(--wp-admin-theme-color) !important;
-			outline: 3px solid transparent !important;
-		}
-
-		&:hover {
-			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
-			color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
-		}
-
-		&:active {
-			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
-		}
-
-		svg {
-			margin-right: var(--wpds-spacing-10, 8px);
-		}
-	}
+	// No widget-specific overrides needed
+	// All styles are inherited from .inspector-widget
 }
