@@ -1,12 +1,11 @@
 /**
- * Trending Widget Styles
+ * Inspector Sidebar Widgets Styles
  *
- * Widget-specific styles are defined here.
- * Common menu item styles are inherited from inspector-sidebar/style.scss
+ * Widget-specific styles for the inspector sidebar
  */
 
+// Trending widget
 .trending-widget {
-	// Popular tags specific styling
 	.popular-tags {
 		margin: 0;
 		padding: 0;
@@ -16,7 +15,7 @@
 			display: none; // Hide duplicate title (widget has its own)
 		}
 
-		// Widget-specific: selected state for trending tags
+		// Selected state for trending tags
 		.menu-item {
 			&.is-selected,
 			&[aria-pressed="true"] {

@@ -6,9 +6,8 @@
 
 import { __ } from '@wordpress/i18n';
 import { Icon, MenuGroup, MenuItem } from '@wordpress/components';
-import { cog, people, addCard, plus } from '@wordpress/icons';
+import { cog, people, plus } from '@wordpress/icons';
 import { useSettings } from '../../../contexts/settings-context';
-import './navigation-widget.scss';
 
 export default function NavigationWidget() {
 	const { adminUrl } = useSettings();
@@ -24,13 +23,13 @@ export default function NavigationWidget() {
 			id: 'followers',
 			label: __( 'Followers', 'activitypub' ),
 			icon: people,
-			href: '#/followers',
+			href: `${ adminUrl }users.php?page=activitypub-followers-list`,
 		},
 		{
 			id: 'following',
 			label: __( 'Following', 'activitypub' ),
-			icon: addCard,
-			href: `${ adminUrl }admin.php?page=activitypub&tab=followers`,
+			icon: people,
+			href: `${ adminUrl }users.php?page=activitypub-following-list`,
 		},
 		{
 			id: 'settings',

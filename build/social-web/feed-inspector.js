@@ -63,11 +63,12 @@ __webpack_require__.r(__webpack_exports__);
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   NavigationWidget: () => (/* reexport safe */ _navigation_widget__WEBPACK_IMPORTED_MODULE_0__["default"]),
-/* harmony export */   TrendingWidget: () => (/* reexport safe */ _trending_widget__WEBPACK_IMPORTED_MODULE_1__["default"])
+/* harmony export */   NavigationWidget: () => (/* reexport safe */ _navigation_widget__WEBPACK_IMPORTED_MODULE_1__["default"]),
+/* harmony export */   TrendingWidget: () => (/* reexport safe */ _trending_widget__WEBPACK_IMPORTED_MODULE_2__["default"])
 /* harmony export */ });
-/* harmony import */ var _navigation_widget__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./navigation-widget */ "./src/social-web/components/inspector-sidebar/widgets/navigation-widget.tsx");
-/* harmony import */ var _trending_widget__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./trending-widget */ "./src/social-web/components/inspector-sidebar/widgets/trending-widget.tsx");
+/* harmony import */ var _style_scss__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./style.scss */ "./src/social-web/components/inspector-sidebar/widgets/style.scss");
+/* harmony import */ var _navigation_widget__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./navigation-widget */ "./src/social-web/components/inspector-sidebar/widgets/navigation-widget.tsx");
+/* harmony import */ var _trending_widget__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./trending-widget */ "./src/social-web/components/inspector-sidebar/widgets/trending-widget.tsx");
 /**
  * Inspector Sidebar Widgets
  *
@@ -76,17 +77,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
-/***/ }),
-
-/***/ "./src/social-web/components/inspector-sidebar/widgets/navigation-widget.scss":
-/*!************************************************************************************!*\
-  !*** ./src/social-web/components/inspector-sidebar/widgets/navigation-widget.scss ***!
-  \************************************************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-// extracted by mini-css-extract-plugin
 
 
 /***/ }),
@@ -105,14 +95,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _wordpress_components__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @wordpress/components */ "@wordpress/components");
 /* harmony import */ var _wordpress_components__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_wordpress_components__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _wordpress_icons__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @wordpress/icons */ "./node_modules/@wordpress/icons/build-module/library/add-card.js");
-/* harmony import */ var _wordpress_icons__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @wordpress/icons */ "./node_modules/@wordpress/icons/build-module/library/cog.js");
-/* harmony import */ var _wordpress_icons__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @wordpress/icons */ "./node_modules/@wordpress/icons/build-module/library/people.js");
-/* harmony import */ var _wordpress_icons__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @wordpress/icons */ "./node_modules/@wordpress/icons/build-module/library/plus.js");
-/* harmony import */ var _contexts_settings_context__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../contexts/settings-context */ "./src/social-web/contexts/settings-context.tsx");
-/* harmony import */ var _navigation_widget_scss__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./navigation-widget.scss */ "./src/social-web/components/inspector-sidebar/widgets/navigation-widget.scss");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react/jsx-runtime */ "react/jsx-runtime");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__);
+/* harmony import */ var _wordpress_icons__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @wordpress/icons */ "./node_modules/@wordpress/icons/build-module/library/cog.js");
+/* harmony import */ var _wordpress_icons__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @wordpress/icons */ "./node_modules/@wordpress/icons/build-module/library/people.js");
+/* harmony import */ var _wordpress_icons__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @wordpress/icons */ "./node_modules/@wordpress/icons/build-module/library/plus.js");
+/* harmony import */ var _contexts_settings_context__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../contexts/settings-context */ "./src/social-web/contexts/settings-context.tsx");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! react/jsx-runtime */ "react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6__);
 /**
  * Navigation Widget Component
  *
@@ -124,47 +112,46 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 function NavigationWidget() {
   const {
     adminUrl
-  } = (0,_contexts_settings_context__WEBPACK_IMPORTED_MODULE_6__.useSettings)();
+  } = (0,_contexts_settings_context__WEBPACK_IMPORTED_MODULE_5__.useSettings)();
   const navigationItems = [{
     id: 'new-post',
     label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('New Post', 'activitypub'),
-    icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_5__["default"],
+    icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_4__["default"],
     href: `${adminUrl}post-new.php`
   }, {
     id: 'followers',
     label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Followers', 'activitypub'),
-    icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_4__["default"],
-    href: '#/followers'
+    icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_3__["default"],
+    href: `${adminUrl}users.php?page=activitypub-followers-list`
   }, {
     id: 'following',
     label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Following', 'activitypub'),
-    icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_2__["default"],
-    href: `${adminUrl}admin.php?page=activitypub&tab=followers`
+    icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_3__["default"],
+    href: `${adminUrl}users.php?page=activitypub-following-list`
   }, {
     id: 'settings',
     label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Settings', 'activitypub'),
-    icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_3__["default"],
+    icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_2__["default"],
     href: `${adminUrl}admin.php?page=activitypub`
   }];
-  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)("div", {
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6__.jsxs)("div", {
     className: "inspector-widget navigation-widget",
-    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)("h2", {
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6__.jsx)("h2", {
       className: "inspector-widget__title",
       children: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Quick Actions', 'activitypub')
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)("div", {
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6__.jsx)("div", {
       className: "inspector-widget__content",
-      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_1__.MenuGroup, {
-        children: navigationItems.map(item => /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_wordpress_components__WEBPACK_IMPORTED_MODULE_1__.MenuItem, {
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_1__.MenuGroup, {
+        children: navigationItems.map(item => /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6__.jsxs)(_wordpress_components__WEBPACK_IMPORTED_MODULE_1__.MenuItem, {
           href: item.href,
           className: "menu-item",
-          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_1__.Icon, {
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_1__.Icon, {
             icon: item.icon,
             size: 20
-          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)("span", {
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6__.jsx)("span", {
             children: item.label
           })]
         }, item.id))
@@ -175,10 +162,10 @@ function NavigationWidget() {
 
 /***/ }),
 
-/***/ "./src/social-web/components/inspector-sidebar/widgets/trending-widget.scss":
-/*!**********************************************************************************!*\
-  !*** ./src/social-web/components/inspector-sidebar/widgets/trending-widget.scss ***!
-  \**********************************************************************************/
+/***/ "./src/social-web/components/inspector-sidebar/widgets/style.scss":
+/*!************************************************************************!*\
+  !*** ./src/social-web/components/inspector-sidebar/widgets/style.scss ***!
+  \************************************************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 __webpack_require__.r(__webpack_exports__);
@@ -200,9 +187,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @wordpress/i18n */ "@wordpress/i18n");
 /* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _popular_tags__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../popular-tags */ "./src/social-web/components/popular-tags/index.tsx");
-/* harmony import */ var _trending_widget_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./trending-widget.scss */ "./src/social-web/components/inspector-sidebar/widgets/trending-widget.scss");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! react/jsx-runtime */ "react/jsx-runtime");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! react/jsx-runtime */ "react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_2__);
 /**
  * Trending Widget Component
  *
@@ -212,16 +198,15 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 function TrendingWidget() {
-  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsxs)("div", {
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_2__.jsxs)("div", {
     className: "inspector-widget trending-widget",
-    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)("h2", {
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_2__.jsx)("h2", {
       className: "inspector-widget__title",
       children: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Trending', 'activitypub')
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)("div", {
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_2__.jsx)("div", {
       className: "inspector-widget__content",
-      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_popular_tags__WEBPACK_IMPORTED_MODULE_1__.PopularTags, {})
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_2__.jsx)(_popular_tags__WEBPACK_IMPORTED_MODULE_1__.PopularTags, {})
     })]
   });
 }

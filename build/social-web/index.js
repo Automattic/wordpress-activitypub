@@ -2213,7 +2213,7 @@ module.exports = window["ReactJSXRuntime"];
 /******/ 		};
 /******/ 		
 /******/ 		__webpack_require__.f.miniCss = (chunkId, promises) => {
-/******/ 			var cssChunks = {"social-web/style-feed-stage":1,"social-web/style-feed-inspector":1,"social-web/feed-inspector":1};
+/******/ 			var cssChunks = {"social-web/style-feed-stage":1,"social-web/style-feed-inspector":1};
 /******/ 			if(installedCssChunks[chunkId]) promises.push(installedCssChunks[chunkId]);
 /******/ 			else if(installedCssChunks[chunkId] !== 0 && cssChunks[chunkId]) {
 /******/ 				promises.push(installedCssChunks[chunkId] = loadStylesheet(chunkId).then(() => {

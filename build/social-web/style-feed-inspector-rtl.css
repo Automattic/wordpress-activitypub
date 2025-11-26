@@ -1,3 +1,29 @@
+/*!***************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./src/social-web/components/inspector-sidebar/widgets/style.scss ***!
+  \***************************************************************************************************************************************************************************************************************************************************************************************/
+/**
+ * Inspector Sidebar Widgets Styles
+ *
+ * Widget-specific styles for the inspector sidebar
+ */
+.trending-widget .popular-tags {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+.trending-widget .popular-tags__title {
+  display: none;
+}
+.trending-widget .popular-tags .menu-item.is-selected, .trending-widget .popular-tags .menu-item[aria-pressed=true] {
+  background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--wpds-color-fg-inverted-primary, #ffffff) !important;
+}
+.trending-widget .popular-tags .menu-item.is-selected:hover, .trending-widget .popular-tags .menu-item[aria-pressed=true]:hover {
+  background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+}
+.trending-widget .popular-tags .menu-item.is-selected:active, .trending-widget .popular-tags .menu-item[aria-pressed=true]:active {
+  background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+}
 /*!**************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./src/social-web/components/popular-tags/style.scss ***!
   \**************************************************************************************************************************************************************************************************************************************************************************/

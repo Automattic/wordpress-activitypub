@@ -6,7 +6,6 @@
 
 import { __ } from '@wordpress/i18n';
 import { PopularTags } from '../../popular-tags';
-import './trending-widget.scss';
 
 export default function TrendingWidget() {
 	return (
