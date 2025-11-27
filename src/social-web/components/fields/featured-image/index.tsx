@@ -20,7 +20,7 @@ export const featuredImageField: Field< FeedPost > = {
 			return null;
 		}
 
-		const altText = item.title?.rendered || __( 'Post image', 'activitypub' );
+		const altText = item.title?.rendered || __( 'Post Thumbnail', 'activitypub' );
 
 		return (
 			<div className="activitypub-featured-image">
