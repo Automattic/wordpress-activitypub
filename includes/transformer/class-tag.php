@@ -1,6 +1,6 @@
 <?php
 /**
- * User Transformer Class file.
+ * Tag Transformer Class file.
  *
  * @package Activitypub
  */
