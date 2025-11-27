@@ -10,6 +10,11 @@
 	height: 100%;
 	background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
 	overflow: hidden;
+
+	// Hide SiteHub on desktop (only shown on mobile)
+	> .site-hub {
+		display: none;
+	}
 }
 
 .app-content {
@@ -74,9 +79,22 @@
 		overflow: auto;
 	}
 
+	// Show SiteHub on mobile - positioned at top of visible region
+	.app-layout > .site-hub {
+		display: block;
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 10; // Above all regions
+	}
+
 	// Mobile View: Sidebar (default)
-	// Show only sidebar, hide stage
+	// Show only sidebar, hide stage and SiteHub
 	.app-layout[data-mobile-view="sidebar"] {
+		> .site-hub {
+			display: none; // No header in sidebar view
+		}
 		.sidebar-region {
 			display: flex;
 			z-index: 1;
@@ -87,7 +105,7 @@
 	}
 
 	// Mobile View: Stage
-	// Show only stage, hide sidebar
+	// Show only stage with SiteHub header, hide sidebar
 	.app-layout[data-mobile-view="stage"] {
 		.sidebar-region {
 			display: none;
@@ -100,7 +118,7 @@
 	}
 
 	// Mobile View: Inspector
-	// Show only inspector, hide sidebar and stage
+	// Show only inspector with SiteHub header, hide sidebar and stage
 	.app-layout[data-mobile-view="inspector"] {
 		.sidebar-region,
 		.stage-region {

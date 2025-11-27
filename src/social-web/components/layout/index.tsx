@@ -219,6 +219,9 @@ export function Layout() {
 
 	return (
 		<div className="app-layout" data-section={ activeSection } data-mobile-view={ mobileView }>
+			{ /* Single SiteHub instance - positioned via CSS based on mobile view */ }
+			<SiteHub onNavigateBack={ navigateBack } selectedItemId={ selectedItemId } />
+
 			<div className="app-content">
 				{ /* Sidebar - 240px fixed width (no Panel wrapper, stays dark) */ }
 				<div className="sidebar-region">
@@ -232,16 +235,12 @@ export function Layout() {
 
 				{ /* Stage - main content area */ }
 				<div className="stage-region">
-					{ /* Mobile header - only shown on mobile, hidden on desktop */ }
-					<SiteHub onNavigateBack={ navigateBack } selectedItemId={ selectedItemId } />
 					<Panel>{ renderStage() }</Panel>
 				</div>
 
 				{ /* Inspector - optional 380px side panel */ }
 				{ showInspector && (
 					<div className="inspector-region">
-						{ /* Mobile header - only shown on mobile, hidden on desktop */ }
-						<SiteHub onNavigateBack={ navigateBack } selectedItemId={ selectedItemId } />
 						<Panel>{ renderInspector() }</Panel>
 					</div>
 				) }
