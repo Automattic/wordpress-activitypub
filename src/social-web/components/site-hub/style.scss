@@ -149,17 +149,14 @@
 	}
 }
 
-// Mobile header mode - when site-hub is used in stage/inspector regions
-.stage-region > .site-hub,
-.inspector-region > .site-hub {
-	display: none; // Hidden on desktop
-	flex-shrink: 0;
-	background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
-	color: var(--wpds-color-fg-inverted-secondary, #cccccc);
-	margin-right: 0; // Remove right margin for mobile header
-	padding-right: var(--wpds-spacing-50, 12px);
-
-	@media (max-width: 782px) {
-		display: flex; // Show on mobile
+// Mobile header mode - when site-hub is shown in stage/inspector views
+@media (max-width: 782px) {
+	.app-layout[data-mobile-view="stage"] > .site-hub,
+	.app-layout[data-mobile-view="inspector"] > .site-hub {
+		flex-shrink: 0;
+		background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+		color: var(--wpds-color-fg-inverted-secondary, #cccccc);
+		margin-right: 0; // Remove right margin for mobile header
+		padding-right: var(--wpds-spacing-50, 12px);
 	}
 }

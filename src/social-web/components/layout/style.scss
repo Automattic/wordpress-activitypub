@@ -86,7 +86,6 @@
 		top: 0;
 		left: 0;
 		right: 0;
-		z-index: 10; // Above all regions
 	}
 
 	// Mobile View: Sidebar (default)
@@ -114,6 +113,7 @@
 			display: flex;
 			z-index: 2;
 			background-color: var(--wpds-color-bg-surface-primary, #ffffff);
+			padding-top: var(--wpds-spacing-160, 64px); // Space for SiteHub
 		}
 	}
 
@@ -128,6 +128,7 @@
 			display: flex;
 			z-index: 3;
 			background-color: var(--wpds-color-bg-surface-primary, #ffffff);
+			padding-top: var(--wpds-spacing-160, 64px); // Space for SiteHub
 		}
 	}
 
