@@ -73,7 +73,7 @@ export const contentField: Field< FeedPost > = {
 				{ hasFeaturedImage && (
 					<img
 						src={ item.featured_image }
-						alt={ decodeEntities( item.title?.rendered || __( 'Post image', 'activitypub' ) ) }
+						alt={ decodeEntities( item.title?.rendered || __( 'Post Thumbnail', 'activitypub' ) ) }
 						className="activitypub-feed-excerpt__image"
 						loading="lazy"
 					/>
