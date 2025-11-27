@@ -28,9 +28,11 @@ const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ), icon: post
 interface SidebarProps {
 	activeSection: string;
 	onNavigate: ( section: string ) => void;
+	onNavigateBack: () => void;
+	selectedItemId: string | number | null;
 }
 
-export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
+export default function Sidebar( { activeSection, onNavigate, onNavigateBack, selectedItemId }: SidebarProps ) {
 	const { adminUrl } = useSettings();
 	const { hasActiveFilters, clearAllFilters } = useFeedFilters();
 
@@ -45,7 +47,7 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 
 	return (
 		<div className="sidebar">
-			<SiteHub />
+			<SiteHub onNavigateBack={ onNavigateBack } selectedItemId={ selectedItemId } />
 
 			{ /* Navigation */ }
 			<nav className="nav">

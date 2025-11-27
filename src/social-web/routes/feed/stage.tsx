@@ -44,9 +44,11 @@ const defaultLayouts = {
 
 interface FeedStageProps {
 	onSelectItem: ( id: number ) => void;
+	onNavigateBack?: () => void;
+	selectedItemId?: string | number | null;
 }
 
-export default function FeedStage( { onSelectItem }: FeedStageProps ) {
+export default function FeedStage( { onSelectItem, onNavigateBack, selectedItemId }: FeedStageProps ) {
 	// Get active actor ID from store
 	const activeActorId = useSelect(
 		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
@@ -260,6 +262,8 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			title={ __( 'Feed', 'activitypub' ) }
 			subTitle={ __( 'ActivityPub posts from your network', 'activitypub' ) }
 			hasPadding={ false }
+			onNavigateBack={ onNavigateBack }
+			selectedItemId={ selectedItemId }
 		>
 			<DataViews
 				data={ allLoadedRecords }

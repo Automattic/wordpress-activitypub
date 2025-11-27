@@ -126,9 +126,28 @@ export function Layout() {
 		updateHash( section );
 	};
 
+	// Mobile-specific back navigation
+	// Inspector → Stage → Sidebar
+	const navigateBack = () => {
+		const isAtRootNow =
+			window.location.hash === '' || window.location.hash === '#' || window.location.hash === '#/';
+
+		if ( selectedItemId ) {
+			// If inspector is open, close it and return to stage
+			closeInspector();
+		} else if ( ! isAtRootNow ) {
+			// If stage is showing, return to sidebar view (root)
+			window.location.hash = '#/';
+		}
+	};
+
 	// Render main content (stage) with Suspense for lazy loading
 	const renderStage = () => {
-		const props = { onSelectItem: selectItem };
+		const props = {
+			onSelectItem: selectItem,
+			onNavigateBack: navigateBack,
+			selectedItemId,
+		};
 
 		let StageComponent;
 		switch ( activeSection ) {
@@ -167,7 +186,12 @@ export function Layout() {
 					return null;
 				}
 				InspectorComponent = FeedInspector;
-				props = { id: selectedItemId, onClose: closeInspector };
+				props = {
+					id: selectedItemId,
+					onClose: closeInspector,
+					onNavigateBack: navigateBack,
+					selectedItemId,
+				};
 		}
 
 		return (
@@ -185,13 +209,25 @@ export function Layout() {
 
 	const showInspector = !! selectedItemId;
 
+	// Determine mobile view state for CSS classes
+	// Root: showing sidebar only (no section navigated to yet)
+	// Stage: showing stage (section selected, no item)
+	// Inspector: showing inspector (item selected)
+	const isAtRoot = window.location.hash === '' || window.location.hash === '#' || window.location.hash === '#/';
+	const mobileView = showInspector ? 'inspector' : ! isAtRoot ? 'stage' : 'sidebar';
+
 	return (
-		<div className="app-layout" data-section={ activeSection }>
+		<div className="app-layout" data-section={ activeSection } data-mobile-view={ mobileView }>
 			<CommandMenu />
 			<div className="app-content">
 				{ /* Sidebar - 240px fixed width (no Panel wrapper, stays dark) */ }
 				<div className="sidebar-region">
-					<Sidebar activeSection={ activeSection } onNavigate={ navigate } />
+					<Sidebar
+						activeSection={ activeSection }
+						onNavigate={ navigate }
+						onNavigateBack={ navigateBack }
+						selectedItemId={ selectedItemId }
+					/>
 				</div>
 
 				{ /* Stage - main content area */ }

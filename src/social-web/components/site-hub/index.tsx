@@ -24,7 +24,12 @@ import type { UnstableBase } from '@wordpress/core-data';
 import SiteIcon from '../site-icon';
 import './style.scss';
 
-function SiteHub() {
+interface SiteHubProps {
+	onNavigateBack?: () => void;
+	selectedItemId?: string | number | null;
+}
+
+function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
 	const { homeUrl, siteTitle } = useSelect( ( select ) => {
 		const { getEntityRecord } = select( coreStore );
 		const _base = getEntityRecord< UnstableBase >( 'root', '__unstableBase' );
@@ -36,14 +41,29 @@ function SiteHub() {
 
 	const { open: openCommandCenter } = useDispatch( commandsStore );
 
+	// On mobile, when inspector or stage is showing, clicking site icon navigates back
+	const isMobileBackEnabled = onNavigateBack && ( selectedItemId || window.location.hash !== '#/' );
+
+	const handleIconClick = ( e: React.MouseEvent ) => {
+		if ( isMobileBackEnabled ) {
+			e.preventDefault();
+			onNavigateBack?.();
+		}
+	};
+
 	return (
 		<div className="site-hub">
 			<HStack justify="flex-start" spacing="0">
 				<div className="site-hub__icon-container">
 					<Button
 						__next40pxDefaultSize
-						href="/wp-admin/"
-						label={ __( 'Go to the Dashboard', 'activitypub' ) }
+						href={ isMobileBackEnabled ? undefined : '/wp-admin/' }
+						onClick={ isMobileBackEnabled ? handleIconClick : undefined }
+						label={
+							isMobileBackEnabled
+								? __( 'Navigate back', 'activitypub' )
+								: __( 'Go to the Dashboard', 'activitypub' )
+						}
 						className="site-hub__icon-button"
 						style={ {
 							transform: 'scale(0.5333) translateX(-4px)', // Offset to position the icon 12px from viewport edge

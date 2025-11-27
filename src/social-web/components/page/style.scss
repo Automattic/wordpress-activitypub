@@ -5,6 +5,16 @@
 	min-width: 0;
 }
 
+.page-mobile-header {
+	display: none; // Hidden on desktop
+	flex-shrink: 0;
+	border-bottom: var(--wpds-border-width-focus, 1px) solid var(--wpds-color-stroke-surface-neutral, #ddd);
+
+	@media (max-width: 782px) {
+		display: block; // Show on mobile
+	}
+}
+
 .header {
 	padding: var(--wpds-spacing-60, 24px);
 	flex-shrink: 0;
