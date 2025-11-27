@@ -28,9 +28,9 @@ class Tag extends Base {
 	}
 
 	/**
-	 * Get the Actor ID.
+	 * Get the OrderedCollection ID (term link).
 	 *
-	 * @return string The Actor ID.
+	 * @return string The OrderedCollection ID (term link).
 	 */
 	public function to_id() {
 		return \get_term_link( $this->item );
