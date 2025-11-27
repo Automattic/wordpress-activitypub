@@ -4,18 +4,17 @@ import { store as coreDataStore } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
 import type { Field } from '@wordpress/dataviews';
 import type { FeedPost } from '../../../types';
-import { objectTypeConfig } from '../../object-types';
 
-export const objectTypeField: Field< FeedPost > = {
-	id: 'ap_object_type',
+export const tagField: Field< FeedPost > = {
+	id: 'ap_tag',
 	type: 'integer',
-	label: __( 'Type', 'activitypub' ),
+	label: __( 'Tag', 'activitypub' ),
 	enableHiding: false,
 	enableSorting: false,
-	getValue: ( { item }: { item: FeedPost } ): number => item.ap_object_type?.[ 0 ],
+	getValue: ( { item }: { item: FeedPost } ): number[] => item.ap_tag ?? [],
 	getElements: async (): Promise< { value: number; label: string }[] > => {
-		const records: Term[] = await resolveSelect( coreDataStore ).getEntityRecords( 'taxonomy', 'ap_object_type', {
-			per_page: -1,
+		const records: Term[] = await resolveSelect( coreDataStore ).getEntityRecords( 'taxonomy', 'ap_tag', {
+			per_page: 10,
 			orderby: 'count',
 			order: 'desc',
 			hide_empty: true,
@@ -25,14 +24,14 @@ export const objectTypeField: Field< FeedPost > = {
 			return [];
 		}
 
-		// Map terms with translations from objectTypeConfig
+		// Map popular tags with # prefix
 		return records.map( ( term: Term ): { value: number; label: string } => ( {
 			value: term.id,
-			label: objectTypeConfig[ term.name ]?.label || term.name,
+			label: `#${ term.name }`,
 		} ) );
 	},
 	render: (): null => null,
 	filterBy: {
-		operators: [ 'is' ],
+		operators: [ 'isAny' ],
 	},
 };

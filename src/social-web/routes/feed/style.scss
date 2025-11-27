@@ -259,6 +259,27 @@
 	color: var(--wpds-color-fg-secondary, #646970);
 }
 
+// Hashtag buttons in inspector
+.activitypub-inspector-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--wpds-spacing-20, 8px);
+	margin-top: var(--wpds-spacing-40, 16px);
+	padding-top: var(--wpds-spacing-40, 16px);
+	border-top: var(--wpds-border-width-control, 1px) solid var(--wpds-color-stroke-neutral-weak, #dcdcde);
+}
+
+.activitypub-inspector-tag {
+	font-size: var(--wpds-font-size-small, 13px);
+	min-height: 0;
+	padding: var(--wpds-spacing-10, 4px) var(--wpds-spacing-20, 8px);
+
+	&:hover {
+		background-color: var(--wpds-color-bg-interactive-hover, #f0f0f1);
+		color: var(--wpds-color-fg-interactive-hover, #2c3338);
+	}
+}
+
 // Link styling for links in content
 .activitypub-feed-content,
 .activitypub-inspector-card .components-card__body {

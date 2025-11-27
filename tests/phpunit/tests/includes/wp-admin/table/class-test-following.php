@@ -112,9 +112,6 @@ class Test_Following extends \WP_UnitTestCase {
 
 		// Verify that the icon was processed correctly: from object to URL.
 		$this->assertEquals( 'https://secure.gravatar.com/avatar/example?s=120&d=mm&r=g', $item['icon'] );
-
-		// Clean up.
-		wp_delete_post( $actor_post_id, true );
 	}
 
 	/**
@@ -179,9 +176,6 @@ class Test_Following extends \WP_UnitTestCase {
 
 		// Verify that the icon array was processed correctly: from array to first URL.
 		$this->assertEquals( 'https://example.com/storage/profile.webp', $this->following_table->items[0]['icon'] );
-
-		// Clean up.
-		wp_delete_post( $actor_post_id, true );
 	}
 
 	/**
@@ -313,7 +307,6 @@ class Test_Following extends \WP_UnitTestCase {
 
 		// Clean up.
 		Following_Collection::unfollow( $actor_post_id, get_current_user_id() );
-		wp_delete_post( $actor_post_id, true );
 	}
 
 	/**

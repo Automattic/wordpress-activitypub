@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Remove trailing hashtags from incoming posts to prevent duplication with taxonomy tags.

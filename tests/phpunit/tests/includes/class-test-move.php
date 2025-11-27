@@ -223,6 +223,5 @@ class Test_Move extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_actor_mode' );
 		\update_option( 'home', $old_domain );
 		\add_filter( 'option_home', '_config_wp_home' );
-		\delete_user_option( self::$user_id, 'activitypub_old_host_data' );
 	}
 }
