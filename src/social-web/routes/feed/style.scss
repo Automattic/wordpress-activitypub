@@ -333,17 +333,6 @@
 		font-size: var(--wpds-font-size-xsmall, 12px);
 	}
 
-	// Reduce inspector card padding on mobile
-	.activitypub-inspector-card {
-		.activitypub-inspector-card .components-card__header {
-			padding: var(--wpds-spacing-40, 16px) var(--wpds-spacing-30, 12px) var(--wpds-spacing-20, 8px);
-		}
-
-		.activitypub-inspector-card .components-card__body {
-			padding: var(--wpds-spacing-30, 12px);
-		}
-	}
-
 	// Make inspector header more compact on mobile
 	.activitypub-inspector-header {
 		gap: var(--wpds-spacing-20, 8px);
@@ -363,8 +352,7 @@
 	// Better text wrapping on mobile
 	.activitypub-feed-excerpt,
 	.activitypub-feed-content {
-		word-break: break-word;
-		-webkit-hyphens: auto;
+		overflow-wrap: break-word;
 		hyphens: auto;
 	}
 }
