@@ -29,16 +29,19 @@ const FeedInspector = lazy(
 
 /**
  * Parse the URL hash to extract section and item ID
- * Format: #/section or #/section/itemId
+ * Format: #/ (root/sidebar), #/section or #/section/itemId
  */
 function parseHash(): { section: string; itemId: string | number | null } {
 	const hash = window.location.hash.slice( 1 ); // Remove #
+
+	// Empty hash or just "/" means we're at the root (sidebar view on mobile)
+	// Default to 'feed' section but distinguish from #/feed for mobile navigation
 	if ( ! hash || hash === '/' ) {
-		return { section: 'feed', itemId: null };
+		return { section: '', itemId: null };
 	}
 
 	const parts = hash.split( '/' ).filter( Boolean );
-	const section = parts[ 0 ] || 'feed';
+	const section = parts[ 0 ] || '';
 	const itemId = parts[ 1 ] || null;
 
 	// Convert itemId to number for feed
@@ -62,8 +65,10 @@ function updateHash( section: string, itemId?: string | number | null ) {
 }
 
 export function Layout() {
-	const [ activeSection, setActiveSection ] = useState( 'feed' );
-	const [ selectedItemId, setSelectedItemId ] = useState< string | number | null >( null );
+	// Parse initial hash on mount
+	const initialHash = parseHash();
+	const [ activeSection, setActiveSection ] = useState( initialHash.section );
+	const [ selectedItemId, setSelectedItemId ] = useState< string | number | null >( initialHash.itemId );
 
 	// Get active actor ID
 	const activeActorId = useSelect(
@@ -101,6 +106,7 @@ export function Layout() {
 	useEffect( () => {
 		const syncUrlToState = () => {
 			const { section, itemId } = parseHash();
+			// Keep section empty when at root - mobile view relies on this!
 			setActiveSection( section );
 			setSelectedItemId( itemId );
 		};

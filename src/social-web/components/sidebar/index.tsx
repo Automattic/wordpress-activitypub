@@ -36,8 +36,8 @@ export default function Sidebar( { activeSection, onNavigate, onNavigateBack, se
 	const { adminUrl } = useSettings();
 	const { hasActiveFilters, clearAllFilters } = useFeedFilters();
 
-	// Feed should be selected when on feed section and no filters are active
-	const isFeedSelected = activeSection === 'feed' && ! hasActiveFilters;
+	// Feed should be selected when on feed section (or at root with no section) and no filters are active
+	const isFeedSelected = ( activeSection === 'feed' || activeSection === '' ) && ! hasActiveFilters;
 
 	// Handle Feed click: navigate to feed and clear all filters
 	const handleFeedClick = () => {
@@ -79,12 +79,12 @@ export default function Sidebar( { activeSection, onNavigate, onNavigateBack, se
 					</MenuGroup>
 				</NavigableMenu>
 
-				{ /* Object Types Filter - shown only on Feed */ }
-				{ activeSection === 'feed' && <ObjectTypes /> }
+				{ /* Object Types Filter - shown only on Feed (includes root) */ }
+				{ ( activeSection === 'feed' || activeSection === '' ) && <ObjectTypes /> }
 			</nav>
 
-			{ /* Popular Tags - Only show on feed section */ }
-			{ activeSection === 'feed' && <PopularTags /> }
+			{ /* Popular Tags - Only show on feed section (includes root) */ }
+			{ ( activeSection === 'feed' || activeSection === '' ) && <PopularTags /> }
 
 			{ /* Footer */ }
 			<div className="footer">

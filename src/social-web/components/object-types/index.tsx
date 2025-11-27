@@ -33,8 +33,19 @@ export function ObjectTypes() {
 	const { selectedObjectTypeId, updateObjectTypeFilter } = useObjectTypeFilter();
 
 	// Toggle: if clicking the same object type, clear the filter
-	const updateFilter = ( objectTypeId: number ): void =>
-		updateObjectTypeFilter( selectedObjectTypeId === objectTypeId ? null : objectTypeId );
+	// On mobile, also navigate to feed stage after updating filter
+	const updateFilter = ( objectTypeId: number ): void => {
+		const isAtRoot = ! window.location.hash || window.location.hash === '#' || window.location.hash === '#/';
+
+		updateObjectTypeFilter( selectedObjectTypeId === objectTypeId ? null : objectTypeId, {
+			onComplete: () => {
+				// Navigate to feed stage on mobile if currently at sidebar
+				if ( isAtRoot ) {
+					window.location.hash = '#/feed';
+				}
+			},
+		} );
+	};
 
 	if ( isResolving || ! objectTypes || objectTypes.length === 0 ) {
 		return null;

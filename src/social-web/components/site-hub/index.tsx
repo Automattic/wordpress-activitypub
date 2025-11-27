@@ -15,6 +15,7 @@ import { decodeEntities } from '@wordpress/html-entities';
 import { search } from '@wordpress/icons';
 import { filterURLForDisplay } from '@wordpress/url';
 import type { UnstableBase } from '@wordpress/core-data';
+import { useState, useEffect } from '@wordpress/element';
 
 /**
  * Internal dependencies
@@ -37,13 +38,29 @@ function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
 		};
 	}, [] );
 
-	// On mobile, when inspector or stage is showing, clicking site icon navigates back
-	const isMobileBackEnabled = onNavigateBack && ( selectedItemId || window.location.hash !== '#/' );
+	// Track hash changes to trigger re-renders
+	const [ currentHash, setCurrentHash ] = useState( window.location.hash );
+
+	useEffect( () => {
+		const handleHashChange = () => {
+			setCurrentHash( window.location.hash );
+		};
+
+		window.addEventListener( 'hashchange', handleHashChange );
+		return () => {
+			window.removeEventListener( 'hashchange', handleHashChange );
+		};
+	}, [] );
+
+	// On mobile, determine if we should show back functionality
+	// Similar to WordPress Site Editor's approach: check if we're at the "root" view
+	const isAtRoot = ! currentHash || currentHash === '#' || currentHash === '#/';
+	const shouldEnableBack = onNavigateBack && ! isAtRoot;
 
 	const handleIconClick = ( e: React.MouseEvent ) => {
-		if ( isMobileBackEnabled ) {
+		if ( shouldEnableBack ) {
 			e.preventDefault();
-			onNavigateBack?.();
+			onNavigateBack();
 		}
 	};
 
@@ -53,10 +70,10 @@ function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
 				<div className="site-hub__icon-container">
 					<Button
 						__next40pxDefaultSize
-						href={ isMobileBackEnabled ? undefined : '/wp-admin/' }
-						onClick={ isMobileBackEnabled ? handleIconClick : undefined }
+						href={ shouldEnableBack ? undefined : '/wp-admin/' }
+						onClick={ shouldEnableBack ? handleIconClick : undefined }
 						label={
-							isMobileBackEnabled
+							shouldEnableBack
 								? __( 'Navigate back', 'activitypub' )
 								: __( 'Go to the Dashboard', 'activitypub' )
 						}

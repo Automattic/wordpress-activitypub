@@ -22,7 +22,19 @@ export function PopularTags() {
 	const { selectedTagId, updateTagFilter } = useTagFilter();
 
 	// Toggle: if clicking the same tag, clear the filter
-	const updateFilter = ( tagId: number ): void => updateTagFilter( selectedTagId === tagId ? null : tagId );
+	// On mobile, also navigate to feed stage after updating filter
+	const updateFilter = ( tagId: number ): void => {
+		const isAtRoot = ! window.location.hash || window.location.hash === '#' || window.location.hash === '#/';
+
+		updateTagFilter( selectedTagId === tagId ? null : tagId, {
+			onComplete: () => {
+				// Navigate to feed stage on mobile if currently at sidebar
+				if ( isAtRoot ) {
+					window.location.hash = '#/feed';
+				}
+			},
+		} );
+	};
 
 	if ( isResolving || ! tags || tags.length === 0 ) {
 		return null;
