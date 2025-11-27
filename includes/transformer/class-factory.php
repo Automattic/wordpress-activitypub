@@ -110,6 +110,8 @@ class Factory {
 					return new User( $data );
 				}
 				break;
+			case 'WP_Term':
+				return new Tag( $data );
 			case 'json':
 				return new Json( $data );
 		}
