@@ -9,6 +9,7 @@ import type { Term } from '@wordpress/core-data';
 import { Icon, MenuItem, MenuGroup } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
 import { useObjectTypeFilter } from '../../hooks/use-object-type-filter';
+import { isAtRoot } from '../../utils';
 import { postContent, audio, file, calendar, image, comment, page, pin, video } from '@wordpress/icons';
 
 // Object type configuration with translations and icons - matches object-type field definitions
@@ -35,12 +36,12 @@ export function ObjectTypes() {
 	// Toggle: if clicking the same object type, clear the filter
 	// On mobile, also navigate to feed stage after updating filter
 	const updateFilter = ( objectTypeId: number ): void => {
-		const isAtRoot = ! window.location.hash || window.location.hash === '#' || window.location.hash === '#/';
+		const atRoot = isAtRoot();
 
 		updateObjectTypeFilter( selectedObjectTypeId === objectTypeId ? null : objectTypeId, {
 			onComplete: () => {
 				// Navigate to feed stage on mobile if currently at sidebar
-				if ( isAtRoot ) {
+				if ( atRoot ) {
 					window.location.hash = '#/feed';
 				}
 			},

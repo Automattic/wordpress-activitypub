@@ -16,6 +16,7 @@ import Panel from '../panel';
 import SiteHub from '../site-hub';
 import { STORE_NAME } from '../../store';
 import type { SocialWebSelectors } from '../../store';
+import { isAtRoot as checkIsAtRoot } from '../../utils';
 import './style.scss';
 
 // Lazy load route stages for better performance
@@ -136,13 +137,10 @@ export function Layout() {
 	// Mobile-specific back navigation
 	// Inspector → Stage → Sidebar
 	const navigateBack = () => {
-		const isAtRootNow =
-			window.location.hash === '' || window.location.hash === '#' || window.location.hash === '#/';
-
 		if ( selectedItemId ) {
 			// If inspector is open, close it and return to stage
 			closeInspector();
-		} else if ( ! isAtRootNow ) {
+		} else if ( ! checkIsAtRoot() ) {
 			// If stage is showing, return to sidebar view (root)
 			window.location.hash = '#/';
 		}
@@ -216,7 +214,7 @@ export function Layout() {
 	// Root: showing sidebar only (no section navigated to yet)
 	// Stage: showing stage (section selected, no item)
 	// Inspector: showing inspector (item selected)
-	const isAtRoot = window.location.hash === '' || window.location.hash === '#' || window.location.hash === '#/';
+	const isAtRoot = checkIsAtRoot();
 	const mobileView = showInspector ? 'inspector' : ! isAtRoot ? 'stage' : 'sidebar';
 
 	return (

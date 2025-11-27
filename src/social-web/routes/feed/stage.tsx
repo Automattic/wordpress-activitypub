@@ -173,8 +173,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		if ( ! exists ) {
 			setSelection( [] );
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ feed, selection ] );
+	}, [ feed, selection, setSelection ] );
 
 	const changeSelection = useCallback(
 		( nextSelection: string[] ) => {
