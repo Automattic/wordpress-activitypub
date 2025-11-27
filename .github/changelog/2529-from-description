@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Optimize Social Web reader for mobile devices with WordPress Site Editor-style navigation: progressive one-region-at-a-time view (Sidebar → Stage → Inspector) with hash-based routing and back button navigation.
