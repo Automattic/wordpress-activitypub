@@ -214,6 +214,14 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 		const currentPage = normalizedView.page || 1;
 		const infiniteScrollEnabled = normalizedView.infiniteScrollEnabled;
 
+		// Clear records when on first page with no results (handles filter/search changes)
+		if ( feed.length === 0 && currentPage === 1 ) {
+			setAllLoadedRecords( [] );
+			lastProcessedPage.current = currentPage;
+			setIsLoadingMore( false );
+			return;
+		}
+
 		// Don't process until feed data is available
 		if ( feed.length === 0 ) {
 			return;
@@ -266,7 +274,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 				onChangeSelection={ changeSelection }
 				empty={
 					<p>
-						{ normalizedView.search
+						{ normalizedView.search || ( normalizedView.filters && normalizedView.filters.length > 0 )
 							? __( 'No posts found.', 'activitypub' )
 							: __(
 									'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
