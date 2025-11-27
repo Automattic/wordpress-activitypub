@@ -458,36 +458,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 * @covers ::get_local_recipients
 	 */
 	public function test_get_local_recipients_no_recipients() {
-		// Enable actor mode to allow user actors.
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-
-		// Create a remote actor and make a user follow them.
-		$remote_actor_url = 'https://example.com/actor/no-recipients';
-
-		// Mock the remote actor fetch.
-		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url ) {
-			if ( $url === $remote_actor_url ) {
-				return array(
-					'@context'          => 'https://www.w3.org/ns/activitystreams',
-					'id'                => $remote_actor_url,
-					'type'              => 'Person',
-					'preferredUsername' => 'testactor',
-					'name'              => 'Test Actor',
-					'inbox'             => 'https://example.com/actor/1/inbox',
-				);
-			}
-			return $pre;
-		};
-		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
-
-		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
-
-		// Make test user follow the remote actor.
-		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', self::$user_id );
-
 		$activity = array(
-			'type'  => 'Create',
-			'actor' => $remote_actor_url,
+			'type' => 'Create',
 		);
 
 		// Use reflection to test the private method.
@@ -496,13 +468,9 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$method->setAccessible( true );
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
-		// Activities with no recipients are treated as public and delivered to followers only.
-		$this->assertNotEmpty( $result, 'Should return followers when no recipients (treated as public)' );
-		$this->assertContains( self::$user_id, $result, 'Should contain the follower' );
-
-		// Clean up.
-		\delete_option( 'activitypub_actor_mode' );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+		// Activities with no recipients are treated as public and delivered to all local actors.
+		$this->assertNotEmpty( $result, 'Should return all local actors when no recipients (treated as public)' );
+		$this->assertEquals( Actors::get_all_ids(), $result, 'Should match all local actor IDs' );
 	}
 
 	/**
@@ -612,10 +580,10 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
 
 		// Make users follow the remote actor.
-		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', self::$user_id );
-		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $user_id_1 );
-		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $user_id_2 );
-		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $user_id_3 );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', self::$user_id );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id_1 );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id_2 );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id_3 );
 
 		// Public activity with "to" containing the public collection.
 		$activity = array(
@@ -683,8 +651,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
 
 		// Make users follow the remote actor.
-		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', self::$user_id );
-		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $user_id );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', self::$user_id );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id );
 
 		// Public activity with "cc" containing the public collection.
 		$activity = array(
