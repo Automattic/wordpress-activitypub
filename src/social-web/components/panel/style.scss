@@ -5,10 +5,3 @@
 	display: flex;
 	flex-direction: column;
 }
-
-// Mobile optimizations
-@media (max-width: 782px) {
-	.panel {
-		margin: var(--wpds-spacing-20, 8px);
-	}
-}

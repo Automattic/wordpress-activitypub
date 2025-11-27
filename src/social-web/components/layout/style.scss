@@ -65,6 +65,20 @@
 		flex-direction: column;
 	}
 
+	// All regions are absolutely positioned and full-screen on mobile
+	.sidebar-region,
+	.stage-region,
+	.inspector-region {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		width: 100%;
+		height: 100%;
+		overflow: auto;
+	}
+
 	// Show SiteHub on mobile - positioned at top of visible region
 	.app-layout > .site-hub {
 		display: block;
