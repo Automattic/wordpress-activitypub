@@ -6,7 +6,6 @@
 
 import { ReactNode } from 'react';
 import clsx from 'clsx';
-import SiteHub from '../site-hub';
 import './style.scss';
 
 interface PageProps {
@@ -19,9 +18,6 @@ interface PageProps {
 	hasBorder?: boolean;
 	contentWidth?: 'default' | 'full' | 'constrained';
 	children: ReactNode;
-	// Mobile navigation props
-	onNavigateBack?: () => void;
-	selectedItemId?: string | number | null;
 }
 
 export function Page( {
@@ -34,18 +30,9 @@ export function Page( {
 	hasBorder = false,
 	contentWidth = 'default',
 	children,
-	onNavigateBack,
-	selectedItemId,
 }: PageProps ) {
 	return (
 		<div className="page">
-			{ /* Mobile header - only shown on mobile, hidden on desktop */ }
-			{ onNavigateBack && (
-				<div className="page-mobile-header">
-					<SiteHub onNavigateBack={ onNavigateBack } selectedItemId={ selectedItemId } />
-				</div>
-			) }
-
 			<header className={ clsx( 'header', { 'has-border': hasBorder } ) }>
 				{ breadcrumbs && <div className="breadcrumbs">{ breadcrumbs }</div> }
 

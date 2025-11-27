@@ -44,11 +44,9 @@ const defaultLayouts = {
 
 interface FeedStageProps {
 	onSelectItem: ( id: number ) => void;
-	onNavigateBack?: () => void;
-	selectedItemId?: string | number | null;
 }
 
-export default function FeedStage( { onSelectItem, onNavigateBack, selectedItemId }: FeedStageProps ) {
+export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 	// Get active actor ID from store
 	const activeActorId = useSelect(
 		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
@@ -175,7 +173,8 @@ export default function FeedStage( { onSelectItem, onNavigateBack, selectedItemI
 		if ( ! exists ) {
 			setSelection( [] );
 		}
-	}, [ feed, selection ] );
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ feed ] );
 
 	const changeSelection = useCallback(
 		( nextSelection: string[] ) => {
@@ -262,8 +261,6 @@ export default function FeedStage( { onSelectItem, onNavigateBack, selectedItemI
 			title={ __( 'Feed', 'activitypub' ) }
 			subTitle={ __( 'ActivityPub posts from your network', 'activitypub' ) }
 			hasPadding={ false }
-			onNavigateBack={ onNavigateBack }
-			selectedItemId={ selectedItemId }
 		>
 			<DataViews
 				data={ allLoadedRecords }

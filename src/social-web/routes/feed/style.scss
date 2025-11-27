@@ -104,16 +104,6 @@
 	overflow: auto;
 }
 
-.activitypub-inspector-mobile-header {
-	display: none; // Hidden on desktop
-	flex-shrink: 0;
-	border-bottom: var(--wpds-border-width-focus, 1px) solid var(--wpds-color-stroke-surface-neutral, #ddd);
-
-	@media (max-width: 782px) {
-		display: block; // Show on mobile
-	}
-}
-
 .activitypub-inspector-loading {
 	padding: var(--wpds-spacing-50, 20px);
 	text-align: center;

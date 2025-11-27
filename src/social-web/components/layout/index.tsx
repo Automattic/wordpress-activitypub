@@ -8,12 +8,12 @@
  */
 
 import { useState, useEffect, useRef, lazy, Suspense } from '@wordpress/element';
-import { CommandMenu } from '@wordpress/commands';
 import { SnackbarList, Spinner } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import Sidebar from '../sidebar';
 import Panel from '../panel';
+import SiteHub from '../site-hub';
 import { STORE_NAME } from '../../store';
 import type { SocialWebSelectors } from '../../store';
 import './style.scss';
@@ -50,14 +50,15 @@ function parseHash(): { section: string; itemId: string | number | null } {
 }
 
 /**
- * Update the URL hash without triggering a page reload
+ * Update the URL hash and trigger hashchange event
  *
  * @param {string}              section Section name
  * @param {string|number|null} itemId  Optional item ID
  */
 function updateHash( section: string, itemId?: string | number | null ) {
 	const hash = itemId ? `#/${ section }/${ itemId }` : `#/${ section }`;
-	window.history.pushState( null, '', hash );
+	// Use location.hash assignment to trigger hashchange event for mobile view updates
+	window.location.hash = hash;
 }
 
 export function Layout() {
@@ -145,8 +146,6 @@ export function Layout() {
 	const renderStage = () => {
 		const props = {
 			onSelectItem: selectItem,
-			onNavigateBack: navigateBack,
-			selectedItemId,
 		};
 
 		let StageComponent;
@@ -189,8 +188,6 @@ export function Layout() {
 				props = {
 					id: selectedItemId,
 					onClose: closeInspector,
-					onNavigateBack: navigateBack,
-					selectedItemId,
 				};
 		}
 
@@ -218,7 +215,6 @@ export function Layout() {
 
 	return (
 		<div className="app-layout" data-section={ activeSection } data-mobile-view={ mobileView }>
-			<CommandMenu />
 			<div className="app-content">
 				{ /* Sidebar - 240px fixed width (no Panel wrapper, stays dark) */ }
 				<div className="sidebar-region">
@@ -232,12 +228,16 @@ export function Layout() {
 
 				{ /* Stage - main content area */ }
 				<div className="stage-region">
+					{ /* Mobile header - only shown on mobile, hidden on desktop */ }
+					<SiteHub onNavigateBack={ navigateBack } selectedItemId={ selectedItemId } />
 					<Panel>{ renderStage() }</Panel>
 				</div>
 
 				{ /* Inspector - optional 380px side panel */ }
 				{ showInspector && (
 					<div className="inspector-region">
+						{ /* Mobile header - only shown on mobile, hidden on desktop */ }
+						<SiteHub onNavigateBack={ navigateBack } selectedItemId={ selectedItemId } />
 						<Panel>{ renderInspector() }</Panel>
 					</div>
 				) }

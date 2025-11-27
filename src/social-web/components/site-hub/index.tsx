@@ -7,14 +7,12 @@
 /**
  * WordPress dependencies
  */
-import { useSelect, useDispatch } from '@wordpress/data';
+import { useSelect } from '@wordpress/data';
 import { Button, __experimentalHStack as HStack, VisuallyHidden } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { store as coreStore } from '@wordpress/core-data';
 import { decodeEntities } from '@wordpress/html-entities';
 import { search } from '@wordpress/icons';
-import { store as commandsStore } from '@wordpress/commands';
-import { displayShortcut } from '@wordpress/keycodes';
 import { filterURLForDisplay } from '@wordpress/url';
 import type { UnstableBase } from '@wordpress/core-data';
 
@@ -38,8 +36,6 @@ function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
 			siteTitle: ! _base?.name && !! _base?.url ? filterURLForDisplay( _base?.url ) : _base?.name,
 		};
 	}, [] );
-
-	const { open: openCommandCenter } = useDispatch( commandsStore );
 
 	// On mobile, when inspector or stage is showing, clicking site icon navigates back
 	const isMobileBackEnabled = onNavigateBack && ( selectedItemId || window.location.hash !== '#/' );
@@ -91,9 +87,7 @@ function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
 							size="compact"
 							className="site-hub__command-button"
 							icon={ search }
-							onClick={ () => openCommandCenter() }
 							label={ __( 'Open command palette', 'activitypub' ) }
-							shortcut={ displayShortcut.primary( 'k' ) }
 						/>
 					</HStack>
 				</HStack>

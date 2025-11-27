@@ -148,3 +148,18 @@
 		}
 	}
 }
+
+// Mobile header mode - when site-hub is used in stage/inspector regions
+.stage-region > .site-hub,
+.inspector-region > .site-hub {
+	display: none; // Hidden on desktop
+	flex-shrink: 0;
+	background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+	color: var(--wpds-color-fg-inverted-secondary, #cccccc);
+	margin-right: 0; // Remove right margin for mobile header
+	padding: 0 var(--wpds-spacing-40, 16px) 0 var(--wpds-spacing-50, 20px); // Add padding (extra 4px on left to compensate for icon translateX)
+
+	@media (max-width: 782px) {
+		display: flex; // Show on mobile
+	}
+}

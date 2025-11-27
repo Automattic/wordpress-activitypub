@@ -11,7 +11,6 @@ import { sprintf, __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { close } from '@wordpress/icons';
 import { useSettings } from '../../contexts/settings-context';
-import SiteHub from '../../components/site-hub';
 import type { Comment, FeedPost } from '../../types';
 import { getRelativeTime } from '../../utils';
 import { useTagFilter } from '../../hooks/use-tag-filter';
@@ -19,8 +18,6 @@ import { useTagFilter } from '../../hooks/use-tag-filter';
 interface FeedInspectorProps {
 	id: number;
 	onClose: () => void;
-	onNavigateBack?: () => void;
-	selectedItemId?: string | number | null;
 }
 
 // Helper to render HTML content with proper entity decoding and unescape
@@ -31,7 +28,7 @@ const RenderHTML = ( { html }: { html: string } ) => {
 	return <div dangerouslySetInnerHTML={ { __html: decoded } } />;
 };
 
-export default function FeedInspector( { id, onClose, onNavigateBack, selectedItemId }: FeedInspectorProps ) {
+export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
 	const { defaultAvatar } = useSettings();
 	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id );
 	const { records: comments, isResolving: isLoadingComments } = useEntityRecords< Comment >( 'root', 'comment', {
@@ -76,13 +73,6 @@ export default function FeedInspector( { id, onClose, onNavigateBack, selectedIt
 
 	return (
 		<div className="activitypub-inspector">
-			{ /* Mobile header - only shown on mobile, hidden on desktop */ }
-			{ onNavigateBack && (
-				<div className="activitypub-inspector-mobile-header">
-					<SiteHub onNavigateBack={ onNavigateBack } selectedItemId={ selectedItemId } />
-				</div>
-			) }
-
 			<Card className="activitypub-inspector-card">
 				<CardHeader>
 					<div className="activitypub-inspector-header">
