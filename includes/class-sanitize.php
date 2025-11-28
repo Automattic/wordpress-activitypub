@@ -112,11 +112,6 @@ class Sanitize {
 	 * @return string The sanitized blog identifier.
 	 */
 	public static function blog_identifier( $value ) {
-		// When relay mode is enabled, always use 'relay' as the identifier.
-		if ( \get_option( 'activitypub_relay_mode', false ) ) {
-			return 'relay';
-		}
-
 		// Hack to allow dots in the username.
 		$parts     = \explode( '.', (string) $value );
 		$sanitized = \array_map( 'sanitize_title', $parts );

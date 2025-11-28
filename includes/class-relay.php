@@ -27,6 +27,7 @@ class Relay {
 		\add_action( 'activitypub_handled_update', array( self::class, 'handle_activity' ), 10, 3 );
 		\add_action( 'activitypub_handled_delete', array( self::class, 'handle_activity' ), 10, 3 );
 		\add_action( 'activitypub_handled_announce', array( self::class, 'handle_activity' ), 10, 3 );
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'unhook_settings_fields' ), 11 );
 	}
 
 	/**
@@ -56,5 +57,34 @@ class Relay {
 
 		// Add to outbox for distribution. The outbox will generate the ID.
 		Outbox::add( $announce, Actors::BLOG_USER_ID );
+	}
+
+	/**
+	 * Unhook settings fields when relay mode is enabled.
+	 *
+	 * Removes all settings sections except moderation when relay mode is active.
+	 */
+	public static function unhook_settings_fields() {
+		global $wp_settings_sections, $wp_settings_fields;
+
+		if ( ! isset( $wp_settings_sections['activitypub_settings'] ) ) {
+			return;
+		}
+
+		// Keep only the moderation section.
+		foreach ( $wp_settings_sections['activitypub_settings'] as $section_id => $section ) {
+			if ( 'activitypub_moderation' !== $section_id ) {
+				unset( $wp_settings_sections['activitypub_settings'][ $section_id ] );
+			}
+		}
+
+		// Remove all fields except those in the moderation section.
+		if ( isset( $wp_settings_fields['activitypub_settings'] ) ) {
+			foreach ( $wp_settings_fields['activitypub_settings'] as $section_id => $fields ) {
+				if ( 'activitypub_moderation' !== $section_id ) {
+					unset( $wp_settings_fields['activitypub_settings'][ $section_id ] );
+				}
+			}
+		}
 	}
 }
