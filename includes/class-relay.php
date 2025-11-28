@@ -65,7 +65,7 @@ class Relay {
 	 * Removes all settings sections except moderation when relay mode is active.
 	 */
 	public static function unhook_settings_fields() {
-		global $wp_settings_sections, $wp_settings_fields;
+		global $wp_settings_sections;
 
 		if ( ! isset( $wp_settings_sections['activitypub_settings'] ) ) {
 			return;
@@ -75,15 +75,6 @@ class Relay {
 		foreach ( $wp_settings_sections['activitypub_settings'] as $section_id => $section ) {
 			if ( 'activitypub_moderation' !== $section_id ) {
 				unset( $wp_settings_sections['activitypub_settings'][ $section_id ] );
-			}
-		}
-
-		// Remove all fields except those in the moderation section.
-		if ( isset( $wp_settings_fields['activitypub_settings'] ) ) {
-			foreach ( $wp_settings_fields['activitypub_settings'] as $section_id => $fields ) {
-				if ( 'activitypub_moderation' !== $section_id ) {
-					unset( $wp_settings_fields['activitypub_settings'][ $section_id ] );
-				}
 			}
 		}
 	}
