@@ -76,7 +76,6 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Relay', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mailer', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
@@ -91,6 +90,11 @@ function plugin_init() {
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
+	}
+
+	// Only load relay if relay mode is enabled.
+	if ( \get_option( 'activitypub_relay_mode', false ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\Relay', 'init' ) );
 	}
 
 	// Load development tools.

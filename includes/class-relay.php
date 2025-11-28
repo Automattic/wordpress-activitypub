@@ -23,13 +23,10 @@ class Relay {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		// Only add hooks if relay mode is enabled.
-		if ( \get_option( 'activitypub_relay_mode', false ) ) {
-			\add_action( 'activitypub_handled_create', array( self::class, 'handle_activity' ), 10, 3 );
-			\add_action( 'activitypub_handled_update', array( self::class, 'handle_activity' ), 10, 3 );
-			\add_action( 'activitypub_handled_delete', array( self::class, 'handle_activity' ), 10, 3 );
-			\add_action( 'activitypub_handled_announce', array( self::class, 'handle_activity' ), 10, 3 );
-		}
+		\add_action( 'activitypub_handled_create', array( self::class, 'handle_activity' ), 10, 3 );
+		\add_action( 'activitypub_handled_update', array( self::class, 'handle_activity' ), 10, 3 );
+		\add_action( 'activitypub_handled_delete', array( self::class, 'handle_activity' ), 10, 3 );
+		\add_action( 'activitypub_handled_announce', array( self::class, 'handle_activity' ), 10, 3 );
 	}
 
 	/**
