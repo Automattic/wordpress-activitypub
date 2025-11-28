@@ -64,7 +64,7 @@ class Test_Options extends \WP_UnitTestCase {
 	/**
 	 * Test enabling relay mode changes settings.
 	 *
-	 * @covers Options::relay_mode_changed
+	 * @covers \Activitypub\Options::relay_mode_changed
 	 */
 	public function test_enabling_relay_mode() {
 		// Set initial values.
@@ -89,7 +89,7 @@ class Test_Options extends \WP_UnitTestCase {
 	/**
 	 * Test disabling relay mode restores settings.
 	 *
-	 * @covers Options::relay_mode_changed
+	 * @covers \Activitypub\Options::relay_mode_changed
 	 */
 	public function test_disabling_relay_mode() {
 		// Enable relay mode first.
