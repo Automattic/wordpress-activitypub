@@ -360,12 +360,13 @@ class Settings {
 		);
 
 		\register_setting(
-			'activitypub',
+			'activitypub_advanced',
 			'activitypub_relay_mode',
 			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Enable relay mode to forward public activities to all followers.', 'activitypub' ),
-				'default'     => false,
+				'type'              => 'integer',
+				'description'       => 'Enable relay mode to forward public activities to all followers.',
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
 			)
 		);
 	}
