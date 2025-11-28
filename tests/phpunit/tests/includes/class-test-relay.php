@@ -214,10 +214,11 @@ class Test_Relay extends \WP_UnitTestCase {
 	public function test_forward_activity_properties() {
 		\update_option( 'activitypub_relay_mode', true );
 
-		$activity = new Activity();
-		$activity->set_type( 'Create' );
-		$activity->set_id( 'https://example.com/activity/456' );
-		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity = array(
+			'type' => 'Create',
+			'id'   => 'https://example.com/activity/456',
+			'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
 
 		// Track outbox additions.
 		$announce = null;
@@ -235,11 +236,11 @@ class Test_Relay extends \WP_UnitTestCase {
 		$this->assertEquals( 'Announce', $announce->get_type() );
 		$this->assertEquals( array( 'https://www.w3.org/ns/activitystreams#Public' ), $announce->get_to() );
 		$this->assertNotEmpty( $announce->get_published() );
-		$this->assertNotEmpty( $announce->get_id() );
 
-		// Verify announce ID contains relay identifier.
-		$announce_id = $announce->get_id();
-		$this->assertStringContainsString( 'p=relay', $announce_id );
-		$this->assertStringContainsString( rawurlencode( 'https://example.com/activity/456' ), $announce_id );
+		// Verify the object is the original activity array.
+		$object = $announce->get_object();
+		$this->assertIsArray( $object );
+		$this->assertEquals( 'Create', $object['type'] );
+		$this->assertEquals( 'https://example.com/activity/456', $object['id'] );
 	}
 }

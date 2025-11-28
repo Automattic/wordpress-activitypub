@@ -23,6 +23,11 @@ class Relay {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		// Only add hooks if relay mode is enabled.
+		if ( ! \get_option( 'activitypub_relay_mode', false ) ) {
+			return;
+		}
+
 		\add_action( 'activitypub_handled_create', array( self::class, 'handle_activity' ), 10, 4 );
 		\add_action( 'activitypub_handled_update', array( self::class, 'handle_activity' ), 10, 4 );
 		\add_action( 'activitypub_handled_delete', array( self::class, 'handle_activity' ), 10, 4 );
@@ -43,11 +48,6 @@ class Relay {
 			return;
 		}
 
-		// Check if relay mode is enabled.
-		if ( ! \get_option( 'activitypub_relay_mode', false ) ) {
-			return;
-		}
-
 		// Check if Blog actor is recipient.
 		if ( ! in_array( Actors::BLOG_USER_ID, (array) $user_ids, true ) ) {
 			return;
@@ -58,9 +58,7 @@ class Relay {
 			return;
 		}
 
-		// Create Activity object for forwarding.
-		$activity_object = Activity::init_from_array( $activity );
-		self::forward_activity( $activity_object );
+		self::forward_activity( $activity );
 	}
 
 	/**
@@ -68,7 +66,7 @@ class Relay {
 	 *
 	 * Wraps the activity in an Announce and sends it to all Blog actor followers.
 	 *
-	 * @param Activity $activity The activity to forward.
+	 * @param array $activity The activity data array.
 	 */
 	public static function forward_activity( $activity ) {
 		$blog_actor = Actors::get_by_id( Actors::BLOG_USER_ID );
@@ -81,23 +79,11 @@ class Relay {
 		$announce = new Activity();
 		$announce->set_type( 'Announce' );
 		$announce->set_actor( $blog_actor->get_id() );
-		$announce->set_object( $activity->to_array() );
+		$announce->set_object( $activity );
 		$announce->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
 		$announce->set_published( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
 
-		// Generate unique ID for the Announce.
-		$announce->set_id(
-			add_query_arg(
-				array(
-					'p'      => 'relay',
-					'time'   => time(),
-					'object' => rawurlencode( $activity->get_id() ),
-				),
-				home_url( '/' )
-			)
-		);
-
-		// Add to outbox for distribution.
+		// Add to outbox for distribution. The outbox will generate the ID.
 		Outbox::add( $announce, Actors::BLOG_USER_ID );
 	}
 }
