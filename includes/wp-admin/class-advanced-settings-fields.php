@@ -87,6 +87,15 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings',
 			array( 'label_for' => 'activitypub_object_type' )
 		);
+
+		\add_settings_field(
+			'activitypub_relay_mode',
+			\__( 'Relay Mode', 'activitypub' ),
+			array( self::class, 'render_relay_mode_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_relay_mode' )
+		);
 	}
 
 	/**
@@ -218,6 +227,34 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( 'This is mainly for backwards compatibility. It is not recommended to use the Template Tags, because it might not be supported in future versions.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render Relay Mode field.
+	 */
+	public static function render_relay_mode_field() {
+		$value = \get_option( 'activitypub_relay_mode', false );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_relay_mode" name="activitypub_relay_mode" value="1" <?php \checked( true, $value ); ?> />
+				<?php \esc_html_e( 'Enable relay mode to forward public activities to all followers.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( '⚠ When enabled, this site will act as an ActivityPub relay, automatically forwarding all public activities it receives to all followers. This will:', 'activitypub' ); ?>
+		</p>
+		<ul class="description" style="list-style-type: disc; margin-left: 2em;">
+			<li><?php \esc_html_e( 'Switch to blog-only mode (individual author federation will be disabled)', 'activitypub' ); ?></li>
+			<li><?php \esc_html_e( 'Change the blog username to "relay"', 'activitypub' ); ?></li>
+			<li><?php \esc_html_e( 'Change the blog actor type to "Service"', 'activitypub' ); ?></li>
+			<li><?php \esc_html_e( 'Significantly increase server resources usage', 'activitypub' ); ?></li>
+			<li><?php \esc_html_e( 'Forward all public activities received from followers to all other followers', 'activitypub' ); ?></li>
+		</ul>
+		<p class="description">
+			<?php \esc_html_e( 'Domain blocklist and other moderation settings will still apply. Only enable this if you understand the implications and have adequate server resources.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

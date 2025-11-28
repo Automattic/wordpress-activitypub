@@ -73,4 +73,24 @@ class Test_Blog extends \WP_UnitTestCase {
 		\update_option( 'home', $old_domain );
 		\add_filter( 'option_home', '_config_wp_home' );
 	}
+
+	/**
+	 * Test blog actor type changes to Service in relay mode.
+	 *
+	 * @covers ::get_type
+	 */
+	public function test_blog_actor_type_in_relay_mode() {
+		$blog = new Blog();
+
+		// Test without relay mode.
+		\update_option( 'activitypub_relay_mode', false );
+		$this->assertEquals( 'Group', $blog->get_type() );
+
+		// Test with relay mode.
+		\update_option( 'activitypub_relay_mode', true );
+		$this->assertEquals( 'Service', $blog->get_type() );
+
+		// Clean up.
+		\update_option( 'activitypub_relay_mode', false );
+	}
 }

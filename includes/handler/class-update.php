@@ -33,6 +33,11 @@ class Update {
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
 	public static function handle_update( $activity, $user_ids, $activity_object ) {
+		// Check if this should be relayed.
+		if ( $activity_object && \Activitypub\Relay::should_relay( $activity_object, $user_ids ) ) {
+			\Activitypub\Relay::forward_activity( $activity_object );
+		}
+
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {

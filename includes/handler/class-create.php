@@ -36,6 +36,11 @@ class Create {
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 */
 	public static function handle_create( $activity, $user_ids, $activity_object = null ) {
+		// Check if this should be relayed.
+		if ( $activity_object && \Activitypub\Relay::should_relay( $activity_object, $user_ids ) ) {
+			\Activitypub\Relay::forward_activity( $activity_object );
+		}
+
 		// Check for private and/or direct messages.
 		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
 			$result = false;
