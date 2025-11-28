@@ -235,11 +235,11 @@ class Advanced_Settings_Fields {
 	 * Render Relay Mode field.
 	 */
 	public static function render_relay_mode_field() {
-		$value = \get_option( 'activitypub_relay_mode', false );
+		$value = \get_option( 'activitypub_relay_mode', '0' );
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_relay_mode" name="activitypub_relay_mode" value="1" <?php \checked( true, $value ); ?> />
+				<input type="checkbox" id="activitypub_relay_mode" name="activitypub_relay_mode" value="1" <?php \checked( '1', $value ); ?> />
 				<?php \esc_html_e( 'Enable relay mode to forward public activities to all followers.', 'activitypub' ); ?>
 			</label>
 		</p>
