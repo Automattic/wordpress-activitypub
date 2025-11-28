@@ -39,11 +39,6 @@ class Delete {
 	 * @param int|int[] $user_ids The local user ID(s).
 	 */
 	public static function handle_delete( $activity, $user_ids ) {
-		// Check if this should be relayed.
-		if ( \Activitypub\Relay::should_relay( $activity, $user_ids ) ) {
-			\Activitypub\Relay::forward_activity( $activity );
-		}
-
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {

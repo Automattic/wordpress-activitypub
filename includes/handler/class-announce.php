@@ -35,11 +35,6 @@ class Announce {
 	 * @param \Activitypub\Activity\Activity $activity     The activity object.
 	 */
 	public static function handle_announce( $announcement, $user_ids, $activity = null ) {
-		// Check if this should be relayed.
-		if ( $activity && \Activitypub\Relay::should_relay( $activity, $user_ids ) ) {
-			\Activitypub\Relay::forward_activity( $activity );
-		}
-
 		// Check if Activity is public or not.
 		if ( ! is_activity_public( $announcement ) ) {
 			// @todo maybe send email
