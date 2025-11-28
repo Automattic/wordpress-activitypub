@@ -42,92 +42,137 @@ class Test_Relay extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test should_relay returns false when relay mode is disabled.
+	 * Test handle_activity does not relay when relay mode is disabled.
 	 *
-	 * @covers ::should_relay
+	 * @covers ::handle_activity
 	 */
-	public function test_should_relay_disabled() {
+	public function test_handle_activity_relay_mode_disabled() {
 		\update_option( 'activitypub_relay_mode', false );
 
-		$activity = new Activity();
-		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity = array(
+			'type' => 'Create',
+			'id'   => 'https://example.com/activity/123',
+			'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
 
-		$this->assertFalse( Relay::should_relay( $activity, array( Actors::BLOG_USER_ID ) ) );
+		// Track outbox additions.
+		$outbox_added = array();
+		\add_action(
+			'activitypub_outbox_pre',
+			function ( $activity_obj ) use ( &$outbox_added ) {
+				$outbox_added[] = $activity_obj;
+			}
+		);
+
+		Relay::handle_activity( $activity, array( Actors::BLOG_USER_ID ), true, null );
+
+		// Verify nothing was added to outbox.
+		$this->assertEmpty( $outbox_added );
 	}
 
 	/**
-	 * Test should_relay returns false when blog user is not recipient.
+	 * Test handle_activity does not relay when activity failed.
 	 *
-	 * @covers ::should_relay
+	 * @covers ::handle_activity
 	 */
-	public function test_should_relay_not_blog_user() {
+	public function test_handle_activity_not_successful() {
 		\update_option( 'activitypub_relay_mode', true );
 
-		$activity = new Activity();
-		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity = array(
+			'type' => 'Create',
+			'id'   => 'https://example.com/activity/123',
+			'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
+
+		// Track outbox additions.
+		$outbox_added = array();
+		\add_action(
+			'activitypub_outbox_pre',
+			function ( $activity_obj ) use ( &$outbox_added ) {
+				$outbox_added[] = $activity_obj;
+			}
+		);
+
+		Relay::handle_activity( $activity, array( Actors::BLOG_USER_ID ), false, null );
+
+		// Verify nothing was added to outbox.
+		$this->assertEmpty( $outbox_added );
+	}
+
+	/**
+	 * Test handle_activity does not relay when blog user is not recipient.
+	 *
+	 * @covers ::handle_activity
+	 */
+	public function test_handle_activity_not_blog_user() {
+		\update_option( 'activitypub_relay_mode', true );
+
+		$activity = array(
+			'type' => 'Create',
+			'id'   => 'https://example.com/activity/123',
+			'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
+
+		// Track outbox additions.
+		$outbox_added = array();
+		\add_action(
+			'activitypub_outbox_pre',
+			function ( $activity_obj ) use ( &$outbox_added ) {
+				$outbox_added[] = $activity_obj;
+			}
+		);
 
 		// Test with different user ID.
-		$this->assertFalse( Relay::should_relay( $activity, array( 1 ) ) );
+		Relay::handle_activity( $activity, array( 1 ), true, null );
+
+		// Verify nothing was added to outbox.
+		$this->assertEmpty( $outbox_added );
 	}
 
 	/**
-	 * Test should_relay returns false when activity is not public.
+	 * Test handle_activity does not relay when activity is not public.
 	 *
-	 * @covers ::should_relay
+	 * @covers ::handle_activity
 	 */
-	public function test_should_relay_not_public() {
+	public function test_handle_activity_not_public() {
 		\update_option( 'activitypub_relay_mode', true );
 
-		$activity = new Activity();
-		$activity->set_to( array( 'https://example.com/followers' ) );
-		$activity->set_cc( array() );
+		$activity = array(
+			'type' => 'Create',
+			'id'   => 'https://example.com/activity/123',
+			'to'   => array( 'https://example.com/followers' ),
+		);
 
-		$this->assertFalse( Relay::should_relay( $activity, array( Actors::BLOG_USER_ID ) ) );
+		// Track outbox additions.
+		$outbox_added = array();
+		\add_action(
+			'activitypub_outbox_pre',
+			function ( $activity_obj ) use ( &$outbox_added ) {
+				$outbox_added[] = $activity_obj;
+			}
+		);
+
+		Relay::handle_activity( $activity, array( Actors::BLOG_USER_ID ), true, null );
+
+		// Verify nothing was added to outbox.
+		$this->assertEmpty( $outbox_added );
 	}
 
 	/**
-	 * Test should_relay returns true for public activity to blog user.
+	 * Test handle_activity relays public activity to blog user.
 	 *
-	 * @covers ::should_relay
-	 */
-	public function test_should_relay_public_to_blog() {
-		\update_option( 'activitypub_relay_mode', true );
-
-		$activity = new Activity();
-		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
-
-		$this->assertTrue( Relay::should_relay( $activity, array( Actors::BLOG_USER_ID ) ) );
-	}
-
-	/**
-	 * Test should_relay returns true when public is in CC.
-	 *
-	 * @covers ::should_relay
-	 */
-	public function test_should_relay_public_in_cc() {
-		\update_option( 'activitypub_relay_mode', true );
-
-		$activity = new Activity();
-		$activity->set_to( array( 'https://example.com/followers' ) );
-		$activity->set_cc( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
-
-		$this->assertTrue( Relay::should_relay( $activity, array( Actors::BLOG_USER_ID ) ) );
-	}
-
-	/**
-	 * Test forward_activity creates an Announce and adds to outbox.
-	 *
+	 * @covers ::handle_activity
 	 * @covers ::forward_activity
 	 */
-	public function test_forward_activity() {
+	public function test_handle_activity_relays_public() {
 		\update_option( 'activitypub_relay_mode', true );
 
-		// Create a test activity.
-		$activity = new Activity();
-		$activity->set_type( 'Create' );
-		$activity->set_id( 'https://example.com/activity/123' );
-		$activity->set_actor( 'https://example.com/users/test' );
-		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity = array(
+			'type'  => 'Create',
+			'id'    => 'https://example.com/activity/123',
+			'actor' => 'https://example.com/users/test',
+			'to'    => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
 
 		// Track outbox additions.
 		$outbox_added = array();
@@ -143,8 +188,7 @@ class Test_Relay extends \WP_UnitTestCase {
 			2
 		);
 
-		// Forward the activity.
-		Relay::forward_activity( $activity );
+		Relay::handle_activity( $activity, array( Actors::BLOG_USER_ID ), true, null );
 
 		// Verify an activity was added to outbox.
 		$this->assertCount( 1, $outbox_added );

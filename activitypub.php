@@ -76,6 +76,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Relay', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mailer', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );

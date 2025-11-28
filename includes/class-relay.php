@@ -20,34 +20,47 @@ use Activitypub\Collection\Outbox;
  */
 class Relay {
 	/**
-	 * Check if an activity should be relayed.
-	 *
-	 * @param Activity $activity  The activity to check.
-	 * @param array    $user_ids  The user IDs that are recipients.
-	 *
-	 * @return bool True if should relay, false otherwise.
+	 * Initialize the class, registering WordPress hooks.
 	 */
-	public static function should_relay( $activity, $user_ids ) {
-		// Check relay mode enabled.
-		if ( ! get_option( 'activitypub_relay_mode', false ) ) {
-			return false;
+	public static function init() {
+		\add_action( 'activitypub_handled_create', array( self::class, 'handle_activity' ), 10, 4 );
+		\add_action( 'activitypub_handled_update', array( self::class, 'handle_activity' ), 10, 4 );
+		\add_action( 'activitypub_handled_delete', array( self::class, 'handle_activity' ), 10, 4 );
+		\add_action( 'activitypub_handled_announce', array( self::class, 'handle_activity' ), 10, 4 );
+	}
+
+	/**
+	 * Handle incoming activity and relay if needed.
+	 *
+	 * @param array $activity The activity data.
+	 * @param array $user_ids The user IDs that are recipients.
+	 * @param bool  $success  Whether the activity was handled successfully.
+	 * @param mixed $result   The result of the activity handling.
+	 */
+	public static function handle_activity( $activity, $user_ids, $success, $result ) {
+		// Only relay successfully handled activities.
+		if ( ! $success ) {
+			return;
 		}
 
-		// Check Blog actor is recipient.
+		// Check if relay mode is enabled.
+		if ( ! \get_option( 'activitypub_relay_mode', false ) ) {
+			return;
+		}
+
+		// Check if Blog actor is recipient.
 		if ( ! in_array( Actors::BLOG_USER_ID, (array) $user_ids, true ) ) {
-			return false;
+			return;
 		}
 
-		// Check activity is public.
-		$to       = $activity->get_to();
-		$cc       = $activity->get_cc();
-		$audience = array_merge( (array) $to, (array) $cc );
-
-		if ( ! in_array( 'https://www.w3.org/ns/activitystreams#Public', $audience, true ) ) {
-			return false;
+		// Check if activity is public.
+		if ( ! \Activitypub\is_activity_public( $activity ) ) {
+			return;
 		}
 
-		return true;
+		// Create Activity object for forwarding.
+		$activity_object = Activity::init_from_array( $activity );
+		self::forward_activity( $activity_object );
 	}
 
 	/**
@@ -85,11 +98,6 @@ class Relay {
 		);
 
 		// Add to outbox for distribution.
-		// The existing dispatcher will handle:
-		// - Batching
-		// - Domain blocklist filtering
-		// - Delivery to follower inboxes
-		// - Retry logic
 		Outbox::add( $announce, Actors::BLOG_USER_ID );
 	}
 }
