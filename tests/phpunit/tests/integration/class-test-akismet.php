@@ -40,7 +40,7 @@ class Test_Akismet extends WP_UnitTestCase {
 	 */
 	public function test_comment_row_actions() {
 		// Create a normal comment.
-		$normal_comment_id = $this->factory->comment->create(
+		$normal_comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID' => self::$post_id,
 				'comment_content' => 'Normal comment',
@@ -48,7 +48,7 @@ class Test_Akismet extends WP_UnitTestCase {
 		);
 
 		// Create an ActivityPub comment.
-		$ap_comment_id = $this->factory->comment->create(
+		$ap_comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID' => self::$post_id,
 				'comment_content' => 'ActivityPub comment',

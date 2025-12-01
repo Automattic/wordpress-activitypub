@@ -175,7 +175,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
 
 		// Create a test post.
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_author' => self::$user_id,
 				'post_title'  => 'Test Post for ' . $description,
