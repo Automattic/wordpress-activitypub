@@ -343,7 +343,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 		}
 
 		// Create a mock outbox post.
-		$outbox_post_id = $this->factory->post->create(
+		$outbox_post_id = self::factory()->post->create(
 			array(
 				'post_type'  => 'ap_outbox',
 				'post_title' => get_permalink( self::$post_id ),
@@ -394,7 +394,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 		}
 
 		// Create a mock outbox post.
-		$outbox_post_id = $this->factory->post->create(
+		$outbox_post_id = self::factory()->post->create(
 			array(
 				'post_type'  => 'ap_outbox',
 				'post_title' => get_permalink( self::$post_id ),
