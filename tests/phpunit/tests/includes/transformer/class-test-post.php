@@ -55,7 +55,7 @@ class Test_Post extends \WP_UnitTestCase {
 	public function test_get_type_returns_configured_type_when_option_set() {
 		update_option( 'activitypub_object_type', 'Article' );
 
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => 'Test content that is longer than the note length limit',
@@ -81,7 +81,7 @@ class Test_Post extends \WP_UnitTestCase {
 	 * @param string $description    Description of the test case.
 	 */
 	public function test_get_type( $post_data, $post_format, $expected_type, $description ) {
-		$post_id = $this->factory->post->create( $post_data );
+		$post_id = self::factory()->post->create( $post_data );
 
 		if ( $post_format ) {
 			set_post_format( $post_id, $post_format );
@@ -180,7 +180,7 @@ class Test_Post extends \WP_UnitTestCase {
 			)
 		);
 
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => str_repeat( 'Long content. ', 100 ),
@@ -213,7 +213,7 @@ class Test_Post extends \WP_UnitTestCase {
 			)
 		);
 
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => str_repeat( 'Long content. ', 100 ),
@@ -496,7 +496,7 @@ class Test_Post extends \WP_UnitTestCase {
 	 * @covers ::get_icon
 	 */
 	public function test_get_icon() {
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => 'Test content',
@@ -620,7 +620,7 @@ class Test_Post extends \WP_UnitTestCase {
 	 */
 	public function test_preview_property() {
 		// Create a test post of type "Article".
-		$post = $this->factory->post->create_and_get(
+		$post = self::factory()->post->create_and_get(
 			array(
 				'post_title'   => 'Test Article',
 				'post_content' => str_repeat( 'Long content. ', 100 ),
@@ -638,7 +638,7 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertNotEmpty( $preview['content'] );
 
 		// Create a test post of type "Note" (short content).
-		$note_post = $this->factory->post->create_and_get(
+		$note_post = self::factory()->post->create_and_get(
 			array(
 				'post_title'   => '',
 				'post_content' => 'Short note content',
