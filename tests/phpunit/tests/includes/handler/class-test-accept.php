@@ -122,7 +122,7 @@ class Test_Accept extends \WP_UnitTestCase {
 		$object_guid = 'https://example.com/actor/123';
 		$outbox_guid = 'https://example.com/outbox/123';
 
-		$outbox_post_id = $this->factory->post->create(
+		$outbox_post_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'ap_outbox',
 				'post_status' => 'publish',
@@ -133,7 +133,7 @@ class Test_Accept extends \WP_UnitTestCase {
 		\add_post_meta( $outbox_post_id, '_activitypub_activity_type', 'Follow' );
 
 		// Create remote actor post.
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_type'   => Remote_Actors::POST_TYPE,
 				'post_status' => 'publish',

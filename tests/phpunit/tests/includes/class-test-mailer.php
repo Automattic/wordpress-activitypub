@@ -814,6 +814,13 @@ class Test_Mailer extends WP_UnitTestCase {
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
 				'content' => 'Test mention',
+				'tag'     => array(
+					array(
+						'type' => 'Mention',
+						'href' => Actors::get_by_id( $user_id )->get_id(),
+						'name' => '@test',
+					),
+				),
 			),
 			'cc'     => array( Actors::get_by_id( $user_id )->get_id() ),
 		);
@@ -935,6 +942,13 @@ class Test_Mailer extends WP_UnitTestCase {
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
 				'content' => 'Test mention',
+				'tag'     => array(
+					array(
+						'type' => 'Mention',
+						'href' => Actors::get_by_id( $user_id )->get_id(),
+						'name' => '@test',
+					),
+				),
 			),
 			// Only user_id is in CC, not other_user_id.
 			'cc'     => array( Actors::get_by_id( $user_id )->get_id() ),
@@ -1114,5 +1128,123 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Clean up.
 		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * Test that users in CC without actual mention tags do not receive mention notifications.
+	 *
+	 * This tests the bug fix where users added to CC (e.g., because they follow the actor)
+	 * were incorrectly receiving mention notifications even when not actually mentioned.
+	 *
+	 * @covers ::mention
+	 */
+	public function test_mention_requires_tag_not_just_cc() {
+		$user_id = self::$user_id;
+
+		// Activity with user in CC but NOT mentioned in tags.
+		$activity = array(
+			'actor'  => 'https://example.com/sports-account',
+			'object' => array(
+				'id'      => 'https://example.com/sports-account/posts/123',
+				'type'    => 'Note',
+				'content' => '<p>Join @user1 and @user2 on our stream...</p>',
+				'tag'     => array(
+					// Other users mentioned, but NOT the local user.
+					array(
+						'type' => 'Mention',
+						'href' => 'https://example.com/user1',
+						'name' => 'user1@example.com',
+					),
+					array(
+						'type' => 'Mention',
+						'href' => 'https://example.com/user2',
+						'name' => 'user2@example.com',
+					),
+				),
+			),
+			// User is in CC (e.g., because they follow the actor).
+			'cc'     => array( Actors::get_by_id( $user_id )->get_id() ),
+		);
+
+		// Mock remote metadata.
+		$metadata_filter = function () {
+			return array(
+				'name' => 'Sports Account',
+				'url'  => 'https://example.com/sports-account',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		$mock = new \MockAction();
+		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+
+		// Trigger mention notification.
+		Mailer::mention( $activity, $user_id );
+
+		// Should NOT send any email because user is not actually mentioned in tags.
+		$this->assertEquals( 0, $mock->get_call_count(), 'User in CC without mention tag should not receive notification' );
+
+		// Clean up.
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+		\remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+	}
+
+	/**
+	 * Test that users with actual mention tags DO receive mention notifications.
+	 *
+	 * @covers ::mention
+	 */
+	public function test_mention_with_tag_sends_notification() {
+		$user_id = self::$user_id;
+
+		// Activity with user properly mentioned in both CC and tags.
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'type'    => 'Note',
+				'content' => '<p>Hello @testuser, how are you?</p>',
+				'tag'     => array(
+					array(
+						'type' => 'Mention',
+						'href' => Actors::get_by_id( $user_id )->get_id(),
+						'name' => '@testuser',
+					),
+				),
+			),
+			'cc'     => array( Actors::get_by_id( $user_id )->get_id() ),
+		);
+
+		// Mock remote metadata.
+		$metadata_filter = function () {
+			return array(
+				'name' => 'Test Author',
+				'url'  => 'https://example.com/author',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		$mock = new \MockAction();
+		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+
+		// Capture email.
+		$mail_filter = function ( $args ) use ( $user_id ) {
+			$this->assertStringContainsString( 'Mention', $args['subject'] );
+			$this->assertStringContainsString( 'Test Author', $args['subject'] );
+			$this->assertEquals( \get_user_by( 'id', $user_id )->user_email, $args['to'] );
+			return $args;
+		};
+		\add_filter( 'wp_mail', $mail_filter );
+
+		// Trigger mention notification.
+		Mailer::mention( $activity, $user_id );
+
+		// Should send 1 email because user is properly mentioned.
+		$this->assertEquals( 1, $mock->get_call_count(), 'User properly mentioned in tags should receive notification' );
+
+		// Clean up.
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+		\remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+		\remove_filter( 'wp_mail', $mail_filter );
 	}
 }

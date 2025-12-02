@@ -18,7 +18,7 @@ class Test_Search extends \WP_UnitTestCase {
 	 */
 	public function test_regular_search_unchanged() {
 		// Create a test post.
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post About Cats',
 				'post_content' => 'This is a test post about cats and dogs.',

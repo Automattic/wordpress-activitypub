@@ -84,7 +84,7 @@ class Test_Base extends \WP_UnitTestCase {
 	 * @param array  $expected_audience  The expected audience.
 	 */
 	public function test_set_audience( $content_visibility, $object_attributes, $expected_audience ) {
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => 'Test content that is longer than the note length limit',
