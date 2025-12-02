@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Use tag name instead of slug for hashtag display.
