@@ -954,7 +954,25 @@ class Enable_Mastodon_Apps {
 					$acct = $actor->get_id();
 				}
 
-				$avatar = $actor->get_icon_url() ?: $default_avatar;
+				$icon   = $actor->get_icon();
+				$avatar = $default_avatar;
+				if ( $icon ) {
+					if ( \is_array( $icon ) && isset( $icon['url'] ) ) {
+						$avatar = $icon['url'];
+					} elseif ( \is_string( $icon ) ) {
+						$avatar = $icon;
+					}
+				}
+
+				$image  = $actor->get_image();
+				$header = '';
+				if ( $image ) {
+					if ( \is_array( $image ) && isset( $image['url'] ) ) {
+						$header = $image['url'];
+					} elseif ( \is_string( $image ) ) {
+						$header = $image;
+					}
+				}
 
 				$account->id            = \strval( $remote_actor_id );
 				$account->username      = $actor->get_preferred_username();
@@ -964,8 +982,8 @@ class Enable_Mastodon_Apps {
 				$account->avatar        = $avatar;
 				$account->avatar_static = $avatar;
 				$account->note          = $actor->get_summary() ?: '';
-				$account->header        = $actor->get_image_url() ?: '';
-				$account->header_static = $actor->get_image_url() ?: '';
+				$account->header        = $header;
+				$account->header_static = $header;
 				$account->created_at    = new \DateTime( $actor->get_published() ?? 'now' );
 
 				return $account;
