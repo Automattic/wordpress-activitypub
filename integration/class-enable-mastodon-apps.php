@@ -17,6 +17,7 @@ use Activitypub\Transformer\Factory;
 use Activitypub\Webfinger as Webfinger_Util;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
+use Enable_Mastodon_Apps\Entity\Notification;
 use Enable_Mastodon_Apps\Entity\Status;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -30,6 +31,13 @@ use function Activitypub\is_user_type_disabled;
  * @see https://github.com/akirk/enable-mastodon-apps
  */
 class Enable_Mastodon_Apps {
+	/**
+	 * Default limit for notifications.
+	 *
+	 * @var int
+	 */
+	const DEFAULT_NOTIFICATION_LIMIT = 15;
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -825,9 +833,9 @@ class Enable_Mastodon_Apps {
 			return $notifications;
 		}
 
-		$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
+		$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : self::DEFAULT_NOTIFICATION_LIMIT;
 
-		if ( ! \class_exists( 'Enable_Mastodon_Apps\Entity\Notification' ) ) {
+		if ( ! \class_exists( Notification::class ) ) {
 			return $notifications;
 		}
 
@@ -867,7 +875,7 @@ class Enable_Mastodon_Apps {
 					continue;
 				}
 
-				$notification             = new \Enable_Mastodon_Apps\Entity\Notification();
+				$notification             = new Notification();
 				$notification->id         = \strval( $comment->comment_ID );
 				$notification->type       = $type;
 				$notification->created_at = \mysql2date( 'Y-m-d\TH:i:s.000P', $comment->comment_date, false );
@@ -929,7 +937,7 @@ class Enable_Mastodon_Apps {
 				continue;
 			}
 
-			$notification             = new \Enable_Mastodon_Apps\Entity\Notification();
+			$notification             = new Notification();
 			$notification->id         = \strval( $follower->ID );
 			$notification->type       = 'follow';
 			$notification->created_at = \mysql2date( 'Y-m-d\TH:i:s.000P', $follower->post_date, false );
