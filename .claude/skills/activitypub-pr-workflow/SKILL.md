@@ -74,6 +74,8 @@ The repository uses Jetpack Changelogger for automated changelog generation.
 
 Every PR template (`.github/PULL_REQUEST_TEMPLATE.md`) includes changelog fields:
 
+**CRITICAL:** You must use the exact template markup from `.github/PULL_REQUEST_TEMPLATE.md`. Do not create custom formatting - use the actual checkboxes `- [x]` and `<details>` sections exactly as shown in the template.
+
 1. **Check "Automatically create a changelog entry" checkbox**
 2. **Select Significance:** Patch/Minor/Major
 3. **Select Type:** Added/Changed/Deprecated/Removed/Fixed/Security
