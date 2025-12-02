@@ -1,6 +1,6 @@
 <?php
 /**
- * Tag Transformer Class file.
+ * Term Transformer Class file.
  *
  * @package Activitypub
  */
@@ -8,9 +8,9 @@
 namespace Activitypub\Transformer;
 
 /**
- * Tag Transformer Class.
+ * Term Transformer Class.
  */
-class Tag extends Base {
+class Term extends Base {
 	/**
 	 * Transforms the WP_Term object to an OrderedCollection.
 	 *

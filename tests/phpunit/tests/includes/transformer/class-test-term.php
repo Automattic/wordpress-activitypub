@@ -1,6 +1,6 @@
 <?php
 /**
- * Test file for Tag Transformer.
+ * Test file for Term Transformer.
  *
  * @package Activitypub
  */
@@ -8,14 +8,14 @@
 namespace Activitypub\Tests\Transformer;
 
 use Activitypub\Transformer\Factory;
-use Activitypub\Transformer\Tag;
+use Activitypub\Transformer\Term;
 
 /**
- * Test class for Tag Transformer.
+ * Test class for Term Transformer.
  *
- * @coversDefaultClass \Activitypub\Transformer\Tag
+ * @coversDefaultClass \Activitypub\Transformer\Term
  */
-class Test_Tag extends \WP_UnitTestCase {
+class Test_Term extends \WP_UnitTestCase {
 	/**
 	 * Test term ID.
 	 *
@@ -33,7 +33,7 @@ class Test_Tag extends \WP_UnitTestCase {
 		$term          = $factory->term->create_and_get(
 			array(
 				'taxonomy' => 'post_tag',
-				'name'     => 'Test Tag',
+				'name'     => 'Test Term',
 				'slug'     => 'test-tag',
 			)
 		);
@@ -49,7 +49,7 @@ class Test_Tag extends \WP_UnitTestCase {
 		$term        = get_term( self::$term_id );
 		$transformer = Factory::get_transformer( $term );
 
-		$this->assertInstanceOf( Tag::class, $transformer );
+		$this->assertInstanceOf( Term::class, $transformer );
 	}
 
 	/**
@@ -59,7 +59,7 @@ class Test_Tag extends \WP_UnitTestCase {
 	 */
 	public function test_to_object() {
 		$term        = get_term( self::$term_id );
-		$transformer = new Tag( $term );
+		$transformer = new Term( $term );
 		$object      = $transformer->to_object();
 
 		// Should return a Base_Object.
@@ -83,7 +83,7 @@ class Test_Tag extends \WP_UnitTestCase {
 	 */
 	public function test_to_id() {
 		$term        = get_term( self::$term_id );
-		$transformer = new Tag( $term );
+		$transformer = new Term( $term );
 		$id          = $transformer->to_id();
 
 		// Should return the term link.
@@ -103,7 +103,7 @@ class Test_Tag extends \WP_UnitTestCase {
 			)
 		);
 
-		$transformer = new Tag( $category );
+		$transformer = new Term( $category );
 		$object      = $transformer->to_object();
 
 		$this->assertEquals( 'OrderedCollection', $object->get_type() );

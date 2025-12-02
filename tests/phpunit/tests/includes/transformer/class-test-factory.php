@@ -13,7 +13,7 @@ use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Factory;
 use Activitypub\Transformer\Json;
 use Activitypub\Transformer\Post;
-use Activitypub\Transformer\Tag;
+use Activitypub\Transformer\Term;
 
 /**
  * Test class for Transformer Factory.
@@ -294,6 +294,6 @@ class Test_Factory extends \WP_UnitTestCase {
 		$term        = get_term( self::$term_id );
 		$transformer = Factory::get_transformer( $term );
 
-		$this->assertInstanceOf( Tag::class, $transformer );
+		$this->assertInstanceOf( Term::class, $transformer );
 	}
 }

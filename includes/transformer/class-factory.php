@@ -111,7 +111,7 @@ class Factory {
 				}
 				break;
 			case 'WP_Term':
-				return new Tag( $data );
+				return new Term( $data );
 			case 'json':
 				return new Json( $data );
 		}
