@@ -12,11 +12,11 @@ namespace Activitypub\Transformer;
  */
 class Tag extends Base {
 	/**
-	 * Transforms the WP_Term object to an Actor.
+	 * Transforms the WP_Term object to an OrderedCollection.
 	 *
-	 * @see \Activitypub\Activity\Actor
+	 * @see \Activitypub\Activity\Base_Object
 	 *
-	 * @return \Activitypub\Activity\Base_Object|\WP_Error The Actor or WP_Error on failure.
+	 * @return \Activitypub\Activity\Base_Object|\WP_Error The OrderedCollection or WP_Error on failure.
 	 */
 	public function to_object() {
 		$base_object               = new \Activitypub\Activity\Base_Object();
