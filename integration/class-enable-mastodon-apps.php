@@ -455,17 +455,18 @@ class Enable_Mastodon_Apps {
 		$account->url          = $actor->get_url();
 		$account->created_at   = new \DateTime( 'now' );
 
-		$icon = $actor->get_icon();
+		$icon   = $actor->get_icon();
+		$avatar = null;
 		if ( $icon ) {
 			if ( \is_array( $icon ) && isset( $icon['url'] ) ) {
 				$avatar = $icon['url'];
 			} elseif ( \is_string( $icon ) ) {
 				$avatar = $icon;
 			}
-			if ( ! empty( $avatar ) ) {
-				$account->avatar        = $avatar;
-				$account->avatar_static = $avatar;
-			}
+		}
+		if ( $avatar ) {
+			$account->avatar        = $avatar;
+			$account->avatar_static = $avatar;
 		}
 
 		$summary = $actor->get_summary();
@@ -473,17 +474,18 @@ class Enable_Mastodon_Apps {
 			$account->note = $summary;
 		}
 
-		$image = $actor->get_image();
+		$image  = $actor->get_image();
+		$header = null;
 		if ( $image ) {
 			if ( \is_array( $image ) && isset( $image['url'] ) ) {
 				$header = $image['url'];
 			} elseif ( \is_string( $image ) ) {
 				$header = $image;
 			}
-			if ( ! empty( $header ) ) {
-				$account->header        = $header;
-				$account->header_static = $header;
-			}
+		}
+		if ( $header ) {
+			$account->header        = $header;
+			$account->header_static = $header;
 		}
 
 		$published = $actor->get_published();
@@ -939,7 +941,6 @@ class Enable_Mastodon_Apps {
 	 * @return Account|null The account.
 	 */
 	private static function get_account_for_comment( $comment ) {
-		$account        = new Account();
 		$default_avatar = \get_avatar_url( $comment->comment_author_email ?: '', array( 'size' => 96 ) );
 
 		// Try to get cached remote actor data.
@@ -947,44 +948,16 @@ class Enable_Mastodon_Apps {
 		if ( $remote_actor_id ) {
 			$actor = Remote_Actors::get_actor( $remote_actor_id );
 			if ( $actor && ! \is_wp_error( $actor ) ) {
-				$acct = Webfinger_Util::uri_to_acct( $actor->get_id() );
-				if ( $acct && ! \is_wp_error( $acct ) ) {
-					$acct = \str_replace( 'acct:', '', $acct );
-				} else {
-					$acct = $actor->get_id();
-				}
+				$account = self::actor_to_account( $actor );
 
-				$icon   = $actor->get_icon();
-				$avatar = $default_avatar;
-				if ( $icon ) {
-					if ( \is_array( $icon ) && isset( $icon['url'] ) ) {
-						$avatar = $icon['url'];
-					} elseif ( \is_string( $icon ) ) {
-						$avatar = $icon;
-					}
-				}
+				// Use remote actor post ID as account ID.
+				$account->id = \strval( $remote_actor_id );
 
-				$image  = $actor->get_image();
-				$header = '';
-				if ( $image ) {
-					if ( \is_array( $image ) && isset( $image['url'] ) ) {
-						$header = $image['url'];
-					} elseif ( \is_string( $image ) ) {
-						$header = $image;
-					}
+				// Use default avatar if actor has none.
+				if ( empty( $account->avatar ) ) {
+					$account->avatar        = $default_avatar;
+					$account->avatar_static = $default_avatar;
 				}
-
-				$account->id            = \strval( $remote_actor_id );
-				$account->username      = $actor->get_preferred_username();
-				$account->acct          = $acct;
-				$account->display_name  = $actor->get_name();
-				$account->url           = $actor->get_url();
-				$account->avatar        = $avatar;
-				$account->avatar_static = $avatar;
-				$account->note          = $actor->get_summary() ?: '';
-				$account->header        = $header;
-				$account->header_static = $header;
-				$account->created_at    = new \DateTime( $actor->get_published() ?? 'now' );
 
 				return $account;
 			}
@@ -995,6 +968,7 @@ class Enable_Mastodon_Apps {
 			return null;
 		}
 
+		$account                = new Account();
 		$account->id            = $comment->comment_author_url;
 		$account->username      = $comment->comment_author;
 		$account->acct          = $comment->comment_author_email ?: $comment->comment_author;
