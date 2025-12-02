@@ -604,7 +604,7 @@ class Enable_Mastodon_Apps {
 			$object = $item;
 		}
 
-		if ( ! isset( $object['type'] ) || ! in_array( $object['type'], array( 'Article', 'Note' ) ) || ! $account ) {
+		if ( ! isset( $object['type'] ) || ! in_array( $object['type'], array( 'Article', 'Note' ), true ) || ! $account ) {
 			return null;
 		}
 
@@ -908,7 +908,15 @@ class Enable_Mastodon_Apps {
 	private static function add_follow_notifications( $notifications, $user_id, $limit ) {
 		$user_id = self::maybe_map_user_to_blog( $user_id );
 
-		$followers = Followers::get_many( $user_id, $limit, null, array( 'orderby' => 'post_date', 'order' => 'DESC' ) );
+		$followers = Followers::get_many(
+			$user_id,
+			$limit,
+			null,
+			array(
+				'orderby' => 'post_date',
+				'order'   => 'DESC',
+			)
+		);
 
 		foreach ( $followers as $follower ) {
 			$actor = Remote_Actors::get_actor( $follower );
