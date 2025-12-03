@@ -1406,22 +1406,23 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
-	 * Test that actor object webfinger is used when available.
+	 * Test that webfinger acct is stored when provided in actor data.
 	 *
 	 * @covers ::add_or_update_actor
 	 */
-	public function test_webfinger_from_actor_object() {
-		// Create an actor object with webfinger set.
-		$actor_obj = new \Activitypub\Model\Remote_Actor();
-		$actor_obj->set_id( 'https://example.com/users/actor-obj-wf' );
-		$actor_obj->set_type( 'Person' );
-		$actor_obj->set_url( 'https://example.com/users/actor-obj-wf' );
-		$actor_obj->set_inbox( 'https://example.com/users/actor-obj-wf/inbox' );
-		$actor_obj->set_name( 'Actor Object Webfinger' );
-		$actor_obj->set_preferred_username( 'actorobjwf' );
-		$actor_obj->set_webfinger( 'custom@example.org' );
+	public function test_webfinger_from_actor_data() {
+		// Create an actor with webfinger in the data.
+		$actor = array(
+			'id'                => 'https://example.com/users/actor-data-wf',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/actor-data-wf',
+			'inbox'             => 'https://example.com/users/actor-data-wf/inbox',
+			'name'              => 'Actor Data Webfinger',
+			'preferredUsername' => 'actordatawf',
+			'webfinger'         => 'custom@example.org',
+		);
 
-		$post_id = Remote_Actors::add_or_update_actor( $actor_obj );
+		$post_id = Remote_Actors::create( $actor );
 		$this->assertIsInt( $post_id );
 
 		// Verify custom webfinger was stored.
