@@ -452,7 +452,7 @@ class Remote_Actors {
 		}
 
 		if ( ! $actor->get_webfinger() ) {
-			$actor->set_webfinger( Webfinger::get_acct( $post->ID ) );
+			$actor->set_webfinger( self::get_acct( $post->ID ) );
 		}
 
 		return $actor;
