@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Store and retrieve webfinger acct for remote actors to improve identification and reduce lookups

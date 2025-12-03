@@ -401,13 +401,6 @@ class Enable_Mastodon_Apps {
 	private static function actor_to_account( $actor ) {
 		$account = new Account();
 
-		$acct = Webfinger_Util::uri_to_acct( $actor->get_id() );
-		if ( $acct && ! \is_wp_error( $acct ) ) {
-			$acct = \str_replace( 'acct:', '', $acct );
-		} else {
-			$acct = $actor->get_id();
-		}
-
 		$actor_id = $actor->get__id();
 		if ( ! $actor_id ) {
 			$actor_id = $actor->get_id();
@@ -415,7 +408,7 @@ class Enable_Mastodon_Apps {
 
 		$account->id           = \strval( $actor_id );
 		$account->username     = $actor->get_preferred_username();
-		$account->acct         = $acct;
+		$account->acct         = $actor->get_webfinger();
 		$account->display_name = $actor->get_name();
 		$account->url          = $actor->get_url();
 		$account->created_at   = new \DateTime( 'now' );
