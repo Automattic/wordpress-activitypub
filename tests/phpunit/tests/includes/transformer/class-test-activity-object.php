@@ -200,7 +200,9 @@ class Test_Activity_Object extends WP_UnitTestCase {
 	protected function get_protected_method( $obj, $method_name, $parameters = array() ) {
 		$reflection = new \ReflectionClass( get_class( $obj ) );
 		$method     = $reflection->getMethod( $method_name );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		return $method->invokeArgs( $obj, $parameters );
 	}

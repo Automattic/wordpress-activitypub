@@ -26,17 +26,23 @@ class Test_Autoloader extends \WP_UnitTestCase {
 
 		$prefix = new \ReflectionProperty( '\Activitypub\Autoloader', 'prefix' );
 		$this->assertTrue( $prefix->isProtected() );
-		$prefix->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$prefix->setAccessible( true );
+		}
 		$this->assertSame( $prefix->getValue( $autoloader ), 'Activitypub' );
 
 		$prefix_length = new \ReflectionProperty( '\Activitypub\Autoloader', 'prefix_length' );
 		$this->assertTrue( $prefix_length->isProtected() );
-		$prefix_length->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$prefix_length->setAccessible( true );
+		}
 		$this->assertSame( $prefix_length->getValue( $autoloader ), strlen( 'Activitypub' ) );
 
 		$path = new \ReflectionProperty( '\Activitypub\Autoloader', 'path' );
 		$this->assertTrue( $path->isProtected() );
-		$path->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$path->setAccessible( true );
+		}
 		$this->assertSame( $path->getValue( $autoloader ), rtrim( __DIR__ . '/' ) );
 	}
 
@@ -51,7 +57,9 @@ class Test_Autoloader extends \WP_UnitTestCase {
 		foreach ( spl_autoload_functions() as $function ) {
 			if ( is_array( $function ) && $function[0] instanceof Autoloader ) {
 				$path = new \ReflectionProperty( '\Activitypub\Autoloader', 'path' );
-				$path->setAccessible( true );
+				if ( \PHP_VERSION_ID < 80100 ) {
+					$path->setAccessible( true );
+				}
 
 				if ( $path->getValue( $function[0] ) === rtrim( __DIR__ . '/' ) ) {
 					$this->assertTrue( true );
