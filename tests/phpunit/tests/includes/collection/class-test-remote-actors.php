@@ -1289,8 +1289,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		\update_post_meta( $post_id, '_activitypub_acct', 'webfingerload@example.com' );
 
 		// Load the actor.
-		$post      = \get_post( $post_id );
-		$actor_obj = Remote_Actors::get_actor( $post );
+		$actor_obj = Remote_Actors::get_actor( $post_id );
 
 		// Verify webfinger was populated.
 		$this->assertEquals( 'webfingerload@example.com', $actor_obj->get_webfinger() );
