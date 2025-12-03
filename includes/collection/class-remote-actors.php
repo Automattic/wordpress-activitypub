@@ -497,10 +497,10 @@ class Remote_Actors {
 		}
 
 		if ( $actor->get_webfinger() ) {
-			$acct = Sanitize::webfinger( $actor->get_webfinger() );
+			$webfinger = Sanitize::webfinger( $actor->get_webfinger() );
 		} else {
-			$acct = Webfinger::uri_to_acct( $actor->get_id() );
-			$acct = \is_wp_error( $acct ) ? Webfinger::guess( $actor->get_url() ) : Sanitize::webfinger( $acct );
+			$webfinger = Webfinger::uri_to_acct( $actor->get_id() );
+			$webfinger = \is_wp_error( $webfinger ) ? Webfinger::guess( $actor->get_url() ) : Sanitize::webfinger( $webfinger );
 		}
 
 		/*
@@ -538,7 +538,7 @@ class Remote_Actors {
 
 		$meta_input = array(
 			'_activitypub_inbox' => $inbox,
-			'_activitypub_acct'  => $acct,
+			'_activitypub_acct'  => $webfinger,
 		);
 
 		// Store avatar URL if available.
