@@ -1422,7 +1422,5 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Verify custom webfinger was stored.
 		$stored_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
 		$this->assertEquals( 'custom@example.org', $stored_acct );
-
-		\wp_delete_post( $post_id, true );
 	}
 }
