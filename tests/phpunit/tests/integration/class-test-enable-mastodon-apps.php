@@ -27,6 +27,7 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 	 */
 	public static $users = array(
 		'username@example.org' => array(
+			'type'              => 'Person',
 			'id'                => 'https://example.org/users/username',
 			'url'               => 'https://example.org/users/username',
 			'inbox'             => 'https://example.org/users/username/inbox',
@@ -35,6 +36,7 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			'published'         => '2024-01-01T00:00:00+00:00',
 		),
 		'jon@example.com'      => array(
+			'type'              => 'Person',
 			'id'                => 'https://example.com/author/jon',
 			'url'               => 'https://example.com/author/jon',
 			'inbox'             => 'https://example.com/author/jon/inbox',
@@ -42,6 +44,7 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			'preferredUsername' => 'jon',
 		),
 		'doe@example.org'      => array(
+			'type'              => 'Person',
 			'id'                => 'https://example.org/author/doe',
 			'url'               => 'https://example.org/author/doe',
 			'inbox'             => 'https://example.org/author/doe/inbox',
@@ -49,6 +52,7 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			'preferredUsername' => 'doe',
 		),
 		'sally@example.org'    => array(
+			'type'              => 'Person',
 			'id'                => 'http://sally.example.org',
 			'url'               => 'http://sally.example.org',
 			'inbox'             => 'http://sally.example.org/inbox',
@@ -56,6 +60,7 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			'preferredUsername' => 'jon',
 		),
 		'12345@example.com'    => array(
+			'type'              => 'Person',
 			'id'                => 'https://12345.example.com',
 			'url'               => 'https://12345.example.com',
 			'inbox'             => 'https://12345.example.com/inbox',
@@ -63,6 +68,7 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			'preferredUsername' => '12345',
 		),
 		'user2@example.com'    => array(
+			'type'              => 'Person',
 			'id'                => 'https://user2.example.com',
 			'url'               => 'https://user2.example.com',
 			'inbox'             => 'https://user2.example.com/inbox',
@@ -70,6 +76,7 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			'preferredUsername' => 'user2',
 		),
 		'error@example.com'    => array(
+			'type'              => 'Person',
 			'url'               => 'https://error.example.com',
 			'name'              => 'error',
 			'preferredUsername' => 'error',

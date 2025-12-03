@@ -7,6 +7,7 @@
 
 namespace Activitypub\Integration;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -362,13 +363,13 @@ class Enable_Mastodon_Apps {
 	/**
 	 * Get account for actor.
 	 *
-	 * @param string|\Activitypub\Activity\Actor $actor_or_uri The Actor object or URI.
+	 * @param string|Actor $actor_or_uri The Actor object or URI.
 	 *
 	 * @return Account|null The account.
 	 */
 	private static function get_account_for_actor( $actor_or_uri ) {
 		// If it's already an Actor object, use it directly.
-		if ( $actor_or_uri instanceof \Activitypub\Activity\Actor ) {
+		if ( $actor_or_uri instanceof Actor ) {
 			return self::actor_to_account( $actor_or_uri );
 		}
 
@@ -376,68 +377,24 @@ class Enable_Mastodon_Apps {
 			return null;
 		}
 
-		// Try to get cached actor first.
-		$actor = Remote_Actors::get_by_uri( $actor_or_uri );
-		if ( $actor && ! \is_wp_error( $actor ) ) {
-			$actor_object = Remote_Actors::get_actor( $actor );
-			if ( $actor_object && ! \is_wp_error( $actor_object ) ) {
-				return self::actor_to_account( $actor_object );
-			}
-		}
-
-		// Fall back to fetching remote metadata.
-		$data = get_remote_metadata_by_actor( $actor_or_uri );
-
-		if ( ! $data || \is_wp_error( $data ) ) {
+		// Fetch actor from cache or remote.
+		$actor_post = Remote_Actors::fetch_by_uri( $actor_or_uri );
+		if ( ! $actor_post || \is_wp_error( $actor_post ) ) {
 			return null;
 		}
 
-		$account = new Account();
-
-		$acct = Webfinger_Util::uri_to_acct( $actor_or_uri );
-		if ( ! $acct || \is_wp_error( $acct ) ) {
+		$actor = Remote_Actors::get_actor( $actor_post );
+		if ( ! $actor || \is_wp_error( $actor ) ) {
 			return null;
 		}
 
-		if ( \str_starts_with( $acct, 'acct:' ) ) {
-			$acct = \substr( $acct, 5 );
-		}
-
-		$account->id           = $acct;
-		$account->username     = $acct;
-		$account->acct         = $acct;
-		$account->display_name = $data['name'] ?? '';
-		$account->url          = $actor_or_uri;
-
-		if ( ! empty( $data['summary'] ) ) {
-			$account->note = $data['summary'];
-		}
-
-		if (
-			isset( $data['icon']['type'] ) &&
-			isset( $data['icon']['url'] ) &&
-			'Image' === $data['icon']['type']
-		) {
-			$account->avatar        = $data['icon']['url'];
-			$account->avatar_static = $data['icon']['url'];
-		}
-
-		if ( isset( $data['image'] ) ) {
-			$account->header        = $data['image']['url'];
-			$account->header_static = $data['image']['url'];
-		}
-		if ( ! isset( $data['published'] ) ) {
-			$data['published'] = 'now';
-		}
-		$account->created_at = new \DateTime( $data['published'] );
-
-		return $account;
+		return self::actor_to_account( $actor );
 	}
 
 	/**
 	 * Convert an Actor object to an Account.
 	 *
-	 * @param \Activitypub\Activity\Actor $actor The actor object.
+	 * @param Actor $actor The actor object.
 	 *
 	 * @return Account The account.
 	 */
