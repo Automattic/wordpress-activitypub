@@ -452,7 +452,17 @@ class Remote_Actors {
 		}
 
 		if ( ! $actor->get_webfinger() ) {
-			$actor->set_webfinger( self::get_acct( $post->ID ) );
+			$webfinger = \get_post_meta( $post->ID, '_activitypub_acct', true );
+
+			if ( ! $webfinger ) {
+				$acct = Webfinger::uri_to_acct( $actor->get_id() );
+				if ( \is_wp_error( $acct ) ) {
+					$acct = Webfinger::guess( $actor );
+				}
+				$webfinger = Sanitize::webfinger( $acct );
+			}
+
+			$actor->set_webfinger( $webfinger );
 		}
 
 		return $actor;
