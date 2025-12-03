@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-False mention email notifications for users in CC field without actual mention tags.
