@@ -1138,7 +1138,7 @@ class Test_Mastodon extends \WP_UnitTestCase {
 
 		ob_start();
 		$result = Mastodon::import_posts();
-		$output = ob_get_clean();
+		ob_get_clean();
 
 		$this->assertTrue( $result );
 
