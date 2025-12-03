@@ -412,9 +412,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.6.0 =
+= 7.7.0 =
 
-New for WordPress 6.9: Use the Command Palette (Ctrl+K or ⌘+K on Mac) to quickly access ActivityPub pages and settings.
+Continue building your author profile page with the new Extra Fields block!
 
 == Installation ==
 
