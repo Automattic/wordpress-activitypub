@@ -230,6 +230,7 @@ class Mastodon {
 		if ( ! $wp_filesystem->exists( self::$archive . '/outbox.json' ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
 			echo \esc_html__( 'The archive does not contain an Outbox file, please try again.', 'activitypub' ) . '</p>';
+			return;
 		}
 
 		self::$outbox = \json_decode( $wp_filesystem->get_contents( self::$archive . '/outbox.json' ), true );
