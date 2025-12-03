@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Fix Mastodon import for archives with nested root folder.
+Mastodon importer now unpacks nested archives instead of getting confused by the extra folder.
