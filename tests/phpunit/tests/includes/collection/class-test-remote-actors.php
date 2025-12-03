@@ -1295,8 +1295,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		// Verify webfinger was populated.
 		$this->assertEquals( 'webfingerload@example.com', $actor_obj->get_webfinger() );
-
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
