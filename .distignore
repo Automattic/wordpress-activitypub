@@ -5,6 +5,7 @@
 .DS_Store
 .editorconfig
 .git
+.gitattributes
 .github
 .gitignore
 .githooks
