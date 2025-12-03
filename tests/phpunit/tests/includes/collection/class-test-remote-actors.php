@@ -1220,7 +1220,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	/**
 	 * Test that webfinger acct is stored when creating an actor.
 	 *
-	 * @covers ::add_or_update_actor
+	 * @covers ::create
 	 */
 	public function test_webfinger_acct_stored_on_create() {
 		// Create an actor with webfinger.
@@ -1270,7 +1270,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	/**
 	 * Test that webfinger is populated when loading an actor from database.
 	 *
-	 * @covers ::get_actor_by_post
+	 * @covers ::get_actor
 	 */
 	public function test_webfinger_populated_on_load() {
 		// Create an actor.
@@ -1302,7 +1302,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	/**
 	 * Test that webfinger is generated from actor URL when not available.
 	 *
-	 * @covers ::get_actor_by_post
+	 * @covers ::get_actor
 	 */
 	public function test_webfinger_generated_from_url() {
 		// Create an actor without stored webfinger.
@@ -1348,7 +1348,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	/**
 	 * Test that webfinger acct is updated when actor is updated.
 	 *
-	 * @covers ::add_or_update_actor
+	 * @covers ::update
 	 */
 	public function test_webfinger_acct_updated_on_update() {
 		// Create an actor.
@@ -1408,7 +1408,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	/**
 	 * Test that webfinger acct is stored when provided in actor data.
 	 *
-	 * @covers ::add_or_update_actor
+	 * @covers ::create
 	 */
 	public function test_webfinger_from_actor_data() {
 		// Create an actor with webfinger in the data.
