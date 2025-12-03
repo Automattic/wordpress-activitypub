@@ -457,7 +457,7 @@ class Remote_Actors {
 			if ( ! $webfinger ) {
 				$acct = Webfinger::uri_to_acct( $actor->get_id() );
 				if ( \is_wp_error( $acct ) ) {
-					$acct = Webfinger::guess( $actor->get_url() );
+					$acct = Webfinger::guess( object_to_uri( $actor->get_url() ?? $actor->get_id() ) );
 				}
 				$webfinger = Sanitize::webfinger( $acct );
 			}
@@ -500,7 +500,7 @@ class Remote_Actors {
 			$webfinger = Sanitize::webfinger( $actor->get_webfinger() );
 		} else {
 			$webfinger = Webfinger::uri_to_acct( $actor->get_id() );
-			$webfinger = \is_wp_error( $webfinger ) ? Webfinger::guess( $actor->get_url() ) : Sanitize::webfinger( $webfinger );
+			$webfinger = \is_wp_error( $webfinger ) ? Webfinger::guess( object_to_uri( $actor->get_url() ?? $actor->get_id() ) ) : Sanitize::webfinger( $webfinger );
 		}
 
 		/*
