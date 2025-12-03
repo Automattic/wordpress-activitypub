@@ -117,7 +117,9 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		// Use reflection to access the private method.
 		$reflection = new \ReflectionClass( Tombstone::class );
 		$method     = $reflection->getMethod( 'check_array' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$response = $method->invokeArgs( null, array( array( 'type' => 'Tombstone' ) ) );
 		$this->assertTrue( $response );
@@ -135,7 +137,9 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		// Use reflection to access the private method.
 		$reflection = new \ReflectionClass( Tombstone::class );
 		$method     = $reflection->getMethod( 'check_object' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$response = $method->invokeArgs( null, array( (object) array( 'type' => 'Tombstone' ) ) );
 		$this->assertTrue( $response );

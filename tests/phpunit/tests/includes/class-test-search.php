@@ -92,7 +92,9 @@ class Test_Search extends \WP_UnitTestCase {
 	private function try_import_activitypub_object_accessible( $url ) {
 		$reflection = new \ReflectionClass( 'Activitypub\Search' );
 		$method     = $reflection->getMethod( 'try_import_activitypub_object' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		return $method->invoke( null, $url );
 	}

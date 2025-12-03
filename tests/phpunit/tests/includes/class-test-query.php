@@ -223,7 +223,9 @@ class Test_Query extends \WP_UnitTestCase {
 	public function test_maybe_get_virtual_object() {
 		$reflection = new \ReflectionClass( Query::class );
 		$method     = $reflection->getMethod( 'maybe_get_virtual_object' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$query = Query::get_instance();
 
@@ -494,7 +496,9 @@ class Test_Query extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Query::class );
 		$method     = $reflection->getMethod( 'maybe_get_stamp' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$query  = Query::get_instance();
 		$result = $method->invoke( $query );
@@ -526,7 +530,9 @@ class Test_Query extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Query::class );
 		$method     = $reflection->getMethod( 'maybe_get_stamp' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$query  = Query::get_instance();
 		$result = $method->invoke( $query );

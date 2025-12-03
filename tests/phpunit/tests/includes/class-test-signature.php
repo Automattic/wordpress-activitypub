@@ -710,7 +710,9 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		// Test domain is not unsupported.
 		$could_support_rfc9421 = new \ReflectionMethod( Signature::class, 'could_support_rfc9421' );
-		$could_support_rfc9421->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$could_support_rfc9421->setAccessible( true );
+		}
 		$this->assertTrue( $could_support_rfc9421->invoke( null, $url ) );
 
 		$mock_callback = function ( $response, $args, $url ) {

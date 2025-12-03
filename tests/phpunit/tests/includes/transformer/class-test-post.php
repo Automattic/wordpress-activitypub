@@ -34,7 +34,9 @@ class Test_Post extends \WP_UnitTestCase {
 		// Set up reflection method.
 		$reflection              = new \ReflectionClass( Post::class );
 		$this->reflection_method = $reflection->getMethod( 'get_type' );
-		$this->reflection_method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$this->reflection_method->setAccessible( true );
+		}
 	}
 
 	/**
@@ -383,7 +385,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_media_from_blocks' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$blocks = parse_blocks( $post->post_content );
 		$result = $method->invoke( $transformer, $blocks, $media );
@@ -411,7 +415,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_attachment' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $transformer );
 
@@ -446,7 +452,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_media_from_blocks' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$blocks = parse_blocks( $post->post_content );
 		$result = $method->invoke( $transformer, $blocks, $media );
@@ -478,7 +486,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_media_from_blocks' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$blocks = parse_blocks( $post->post_content );
 		$result = $method->invoke( $transformer, $blocks, $media );
@@ -510,7 +520,9 @@ class Test_Post extends \WP_UnitTestCase {
 		// Set up reflection method.
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_icon' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Test with featured image.
 		set_post_thumbnail( $post_id, $attachment_id );
@@ -734,7 +746,9 @@ class Test_Post extends \WP_UnitTestCase {
 		$object      = new Base_Object();
 		$get_content = new \ReflectionMethod( Post::class, 'transform_object_properties' );
 
-		$get_content->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$get_content->setAccessible( true );
+		}
 
 		$object = $get_content->invoke( new Post( $post ), $object );
 
@@ -1073,7 +1087,9 @@ class Test_Post extends \WP_UnitTestCase {
 		$transformer = new Post( $post );
 		$reflection  = new \ReflectionClass( Post::class );
 		$method      = $reflection->getMethod( 'get_post_content_template' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$template = $method->invoke( $transformer );
 
