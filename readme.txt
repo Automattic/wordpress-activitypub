@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 7.6.1
+Stable tag: 7.7.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,44 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.7.0 - 2025-12-03
+#### Added
+- Add documentation guide for using ActivityPub blocks in classic themes with Block Template Parts
+- Added a new Fediverse Extra Fields block to display ActivityPub extra fields, featuring compact, stacked, and card layouts with flexible user selection options.
+- Added support for quote comments, improving detection and handling of quoted replies and links in post interactions.
+- Add notifications for boosts, likes, and new followers in Mastodon apps via the Enable Mastodon Apps plugin
+- Adds support for turning tags, categories, and custom taxonomies into federated collections in the Reader view so you can browse and follow topics more seamlessly.
+- Prevent email notifications for comments on ActivityPub custom post types.
+- Send a Reject activity when a quote comment is deleted, revoking previous quote permissions and ensuring consistent inbox handling.
+- Store and retrieve webfinger acct for remote actors to improve identification and reduce lookups
+
+#### Changed
+- Improve gallery and image block markup for ap_posts with better alt text and optimized layouts.
+- Improve support for media attachments by handling Audio, Document, and Video object types in addition to Images.
+- Maintain consistent return values in Create handler.
+- Remove trailing hashtags from incoming posts to prevent duplication with taxonomy tags.
+- Store comments and reactions from followed actors on reader posts, and keep them separate from your site's comments in wp-admin.
+- Update compatibility testing for PHP 8.5 and WordPress 6.9
+- Use tag name instead of slug for hashtag display.
+
+#### Fixed
+- Always includes id, first, and last links in collection responses, ensuring followers and following lists display correctly in Mastodon.
+- Automatically approves reactions on ActivityPub posts in the Reader view for a smoother, more seamless interaction experience.
+- Deliver public activities to followers only.
+- Disable REST API endpoints for internal post types.
+- False mention email notifications for users in CC field without actual mention tags.
+- Fix "Filename too long" errors when downloading attachments from URLs with query parameters (e.g., Instagram CDN URLs).
+- Fix make_clickable corrupting existing anchor tags in ActivityPub content
+- Fix PHP 8.5 deprecation warnings for ReflectionProperty::setAccessible() and ReflectionMethod::setAccessible()
+- Improved handling of unusual activity data to avoid errors when activities contain unexpected formats.
+- Preserve original ActivityPub activity timestamps when creating posts and comments instead of using current time.
+- Prevented duplicate email notifications when ActivityPub instances re-send Follow activities for already-following actors.
+- Prevents unwanted comment types—like pingbacks, trackbacks, notes and custom system comments, from being federated, ensuring only real user comments are shared with the fediverse.
+- Removed a redundant instruction from the custom post content settings to simplify the UI.
+- Reply block now shows fallback link when oEmbed fails instead of empty div.
+- Simplified reply links by removing special handling for federated comments, making replies work the same for all comments where replying is allowed.
+- Undefined array key warning in Scheduler::async_batch when called without arguments.
 
 ### 7.6.1 - 2025-11-12
 #### Fixed
@@ -374,9 +412,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.6.0 =
+= 7.7.0 =
 
-New for WordPress 6.9: Use the Command Palette (Ctrl+K or ⌘+K on Mac) to quickly access ActivityPub pages and settings.
+Continue building your author profile page with the new Extra Fields block!
 
 == Installation ==
 

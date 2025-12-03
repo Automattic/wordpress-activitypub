@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Always includes id, first, and last links in collection responses, ensuring followers and following lists display correctly in Mastodon.

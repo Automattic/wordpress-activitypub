@@ -1216,4 +1216,210 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		// Clean up.
 	}
+
+	/**
+	 * Test that webfinger acct is stored when creating an actor.
+	 *
+	 * @covers ::create
+	 */
+	public function test_webfinger_acct_stored_on_create() {
+		// Create an actor with webfinger.
+		$actor = array(
+			'id'                => 'https://example.com/users/webfinger-store',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/webfinger-store',
+			'inbox'             => 'https://example.com/users/webfinger-store/inbox',
+			'name'              => 'Webfinger Store',
+			'preferredUsername' => 'webfinger',
+		);
+
+		// Mock webfinger resolution.
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => wp_json_encode(
+						array(
+							'subject' => 'acct:webfinger@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => 'https://example.com/users/webfinger-store',
+								),
+							),
+						)
+					),
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Verify acct was stored.
+		$stored_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
+		$this->assertEquals( 'webfinger@example.com', $stored_acct );
+
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+	}
+
+	/**
+	 * Test that webfinger is populated when loading an actor from database.
+	 *
+	 * @covers ::get_actor
+	 */
+	public function test_webfinger_populated_on_load() {
+		// Create an actor.
+		$actor = array(
+			'id'                => 'https://example.com/users/webfinger-load',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/webfinger-load',
+			'inbox'             => 'https://example.com/users/webfinger-load/inbox',
+			'name'              => 'Webfinger Load',
+			'preferredUsername' => 'webfingerload',
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Store acct manually.
+		\update_post_meta( $post_id, '_activitypub_acct', 'webfingerload@example.com' );
+
+		// Load the actor.
+		$actor_obj = Remote_Actors::get_actor( $post_id );
+
+		// Verify webfinger was populated.
+		$this->assertEquals( 'webfingerload@example.com', $actor_obj->get_webfinger() );
+	}
+
+	/**
+	 * Test that webfinger is generated from actor URL when not available.
+	 *
+	 * @covers ::get_actor
+	 */
+	public function test_webfinger_generated_from_url() {
+		// Create an actor without stored webfinger.
+		$actor = array(
+			'id'                => 'https://example.com/users/generate-webfinger',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/generate-webfinger',
+			'inbox'             => 'https://example.com/users/generate-webfinger/inbox',
+			'name'              => 'Generate Webfinger',
+			'preferredUsername' => 'generatewf',
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Don't store acct meta.
+		\delete_post_meta( $post_id, '_activitypub_acct' );
+
+		// Mock webfinger resolution failure (will fall back to guess).
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 404 ),
+					'body'     => 'Not Found',
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
+
+		// Load the actor.
+		$actor_obj = Remote_Actors::get_actor( $post_id );
+
+		// Verify webfinger was guessed from URL.
+		$expected = 'generatewf@example.com';
+		$this->assertEquals( $expected, $actor_obj->get_webfinger() );
+
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+	}
+
+	/**
+	 * Test that webfinger acct is updated when actor is updated.
+	 *
+	 * @covers ::update
+	 */
+	public function test_webfinger_acct_updated_on_update() {
+		// Create an actor.
+		$actor = array(
+			'id'                => 'https://example.com/users/webfinger-update',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/webfinger-update',
+			'inbox'             => 'https://example.com/users/webfinger-update/inbox',
+			'name'              => 'Webfinger Update',
+			'preferredUsername' => 'webfingerupdate',
+		);
+
+		// Mock webfinger resolution.
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => wp_json_encode(
+						array(
+							'subject' => 'acct:webfingerupdate@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => 'https://example.com/users/webfinger-update',
+								),
+							),
+						)
+					),
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Verify initial acct.
+		$stored_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
+		$this->assertEquals( 'webfingerupdate@example.com', $stored_acct );
+
+		// Update the actor with modified name.
+		$updated_actor         = $actor;
+		$updated_actor['name'] = 'Webfinger Updated Name';
+
+		Remote_Actors::update( $post_id, $updated_actor );
+
+		// Verify acct is still stored correctly after update.
+		$updated_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
+		$this->assertEquals( 'webfingerupdate@example.com', $updated_acct );
+
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+	}
+
+	/**
+	 * Test that webfinger acct is stored when provided in actor data.
+	 *
+	 * @covers ::create
+	 */
+	public function test_webfinger_from_actor_data() {
+		// Create an actor with webfinger in the data.
+		$actor = array(
+			'id'                => 'https://example.com/users/actor-data-wf',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/actor-data-wf',
+			'inbox'             => 'https://example.com/users/actor-data-wf/inbox',
+			'name'              => 'Actor Data Webfinger',
+			'preferredUsername' => 'actordatawf',
+			'webfinger'         => 'custom@example.org',
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Verify custom webfinger was stored.
+		$stored_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
+		$this->assertEquals( 'custom@example.org', $stored_acct );
+	}
 }
