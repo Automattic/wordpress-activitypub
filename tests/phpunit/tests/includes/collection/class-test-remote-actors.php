@@ -1330,8 +1330,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
 
 		// Load the actor.
-		$post      = \get_post( $post_id );
-		$actor_obj = Remote_Actors::get_actor( $post );
+		$actor_obj = Remote_Actors::get_actor( $post_id );
 
 		// Verify webfinger was guessed from URL.
 		$expected = 'generatewf@example.com';
