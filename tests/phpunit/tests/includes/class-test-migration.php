@@ -633,7 +633,9 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Run the private method over Reflection.
 		$reflection = new \ReflectionClass( Migration::class );
 		$method     = $reflection->getMethod( 'add_default_extra_field' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$method->invoke( null );
 
 		// Check the extra field for the user.
@@ -675,7 +677,9 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Run the private method over Reflection.
 		$reflection = new \ReflectionClass( Migration::class );
 		$method     = $reflection->getMethod( 'add_default_extra_field' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$method->invoke( null );
 
 		// Check that the user without ActivityPub permission has no extra field.
@@ -1160,7 +1164,9 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Run the cleanup migration using reflection to access private method.
 		$reflection = new \ReflectionClass( \Activitypub\Migration::class );
 		$method     = $reflection->getMethod( 'clean_up_inbox' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$method->invoke( null );
 
 		// Verify all inbox items are deleted.

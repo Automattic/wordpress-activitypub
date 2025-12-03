@@ -2,7 +2,7 @@
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
-Tested up to: 6.8
+Tested up to: 6.9
 Stable tag: 7.6.1
 Requires PHP: 7.2
 License: MIT

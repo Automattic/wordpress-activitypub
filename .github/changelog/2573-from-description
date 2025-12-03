@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Update compatibility testing for PHP 8.5 and WordPress 6.9
