@@ -32,7 +32,9 @@ class Test_Welcome_Fields extends \WP_UnitTestCase {
 	 */
 	public function test_get_completed_steps_count() {
 		$get_completed_steps_count = new \ReflectionMethod( Welcome_Fields::class, 'get_completed_steps_count' );
-		$get_completed_steps_count->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$get_completed_steps_count->setAccessible( true );
+		}
 
 		$completed = 1; // Plugin is already installed.
 
@@ -60,7 +62,9 @@ class Test_Welcome_Fields extends \WP_UnitTestCase {
 	 */
 	public function test_get_total_steps_count() {
 		$get_total_steps_count = new \ReflectionMethod( Welcome_Fields::class, 'get_total_steps_count' );
-		$get_total_steps_count->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$get_total_steps_count->setAccessible( true );
+		}
 
 		$steps = 6;
 
@@ -83,7 +87,9 @@ class Test_Welcome_Fields extends \WP_UnitTestCase {
 	 */
 	public function test_get_next_incomplete_step() {
 		$get_next_incomplete_step = new \ReflectionMethod( Welcome_Fields::class, 'get_next_incomplete_step' );
-		$get_next_incomplete_step->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$get_next_incomplete_step->setAccessible( true );
+		}
 
 		$this->assertSame( 'site_health', $get_next_incomplete_step->invoke( null ) ); // Null for static methods.
 
