@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix make_clickable corrupting existing anchor tags in ActivityPub content

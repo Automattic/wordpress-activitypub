@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix PHP 8.5 deprecation warnings for ReflectionProperty::setAccessible() and ReflectionMethod::setAccessible()

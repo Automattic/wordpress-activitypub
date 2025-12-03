@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Reply block now shows fallback link when oEmbed fails instead of empty div.
