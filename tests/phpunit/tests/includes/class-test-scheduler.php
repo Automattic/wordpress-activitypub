@@ -78,7 +78,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		\add_filter( 'schedule_event', $schedule_event_callback );
 
 		$schedule_retry = new \ReflectionMethod( Dispatcher::class, 'schedule_retry' );
-		$schedule_retry->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$schedule_retry->setAccessible( true );
+		}
 
 		// Invoke the method.
 		$schedule_retry->invoke( null, array( 'https://example.com/inbox' ), $create_item_id ); // null for static methods.
