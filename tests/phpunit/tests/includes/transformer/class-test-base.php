@@ -123,7 +123,9 @@ class Test_Base extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionObject( $transformer );
 		$method     = $reflection->getMethod( 'set_audience' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$transformed_object = $method->invoke( $transformer, new Generic_Object() );
 

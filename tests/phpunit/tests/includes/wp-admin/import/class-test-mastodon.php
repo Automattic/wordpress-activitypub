@@ -104,15 +104,21 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$reflection = new ReflectionClass( Mastodon::class );
 
 		$outbox_property = $reflection->getProperty( 'outbox' );
-		$outbox_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
 		$outbox_property->setValue( null, $outbox );
 
 		$author_property = $reflection->getProperty( 'author' );
-		$author_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
 		$author_property->setValue( null, $this->user_id );
 
 		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
-		$fetch_attachments_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
 		$fetch_attachments_property->setValue( null, false );
 
 		/*
@@ -188,15 +194,21 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$reflection = new ReflectionClass( Mastodon::class );
 
 		$outbox_property = $reflection->getProperty( 'outbox' );
-		$outbox_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
 		$outbox_property->setValue( null, $outbox );
 
 		$author_property = $reflection->getProperty( 'author' );
-		$author_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
 		$author_property->setValue( null, $this->user_id );
 
 		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
-		$fetch_attachments_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
 		$fetch_attachments_property->setValue( null, false );
 
 		ob_start();
@@ -259,15 +271,21 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$reflection = new ReflectionClass( Mastodon::class );
 
 		$outbox_property = $reflection->getProperty( 'outbox' );
-		$outbox_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
 		$outbox_property->setValue( null, $outbox );
 
 		$author_property = $reflection->getProperty( 'author' );
-		$author_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
 		$author_property->setValue( null, $this->user_id );
 
 		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
-		$fetch_attachments_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
 		$fetch_attachments_property->setValue( null, false );
 
 		ob_start();
@@ -331,15 +349,21 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$reflection = new ReflectionClass( Mastodon::class );
 
 		$outbox_property = $reflection->getProperty( 'outbox' );
-		$outbox_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
 		$outbox_property->setValue( null, $outbox );
 
 		$author_property = $reflection->getProperty( 'author' );
-		$author_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
 		$author_property->setValue( null, $this->user_id );
 
 		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
-		$fetch_attachments_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
 		$fetch_attachments_property->setValue( null, false );
 
 		ob_start();
@@ -397,15 +421,21 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$reflection = new ReflectionClass( Mastodon::class );
 
 		$outbox_property = $reflection->getProperty( 'outbox' );
-		$outbox_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
 		$outbox_property->setValue( null, $outbox );
 
 		$author_property = $reflection->getProperty( 'author' );
-		$author_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
 		$author_property->setValue( null, $this->user_id );
 
 		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
-		$fetch_attachments_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
 		$fetch_attachments_property->setValue( null, false );
 
 		ob_start();
@@ -461,15 +491,21 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$reflection = new ReflectionClass( Mastodon::class );
 
 		$outbox_property = $reflection->getProperty( 'outbox' );
-		$outbox_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
 		$outbox_property->setValue( null, $outbox );
 
 		$author_property = $reflection->getProperty( 'author' );
-		$author_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
 		$author_property->setValue( null, $this->user_id );
 
 		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
-		$fetch_attachments_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
 		$fetch_attachments_property->setValue( null, false );
 
 		// Should not throw an error about missing 'tag' key.
@@ -524,15 +560,21 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$reflection = new ReflectionClass( Mastodon::class );
 
 		$outbox_property = $reflection->getProperty( 'outbox' );
-		$outbox_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
 		$outbox_property->setValue( null, $outbox );
 
 		$author_property = $reflection->getProperty( 'author' );
-		$author_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
 		$author_property->setValue( null, $this->user_id );
 
 		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
-		$fetch_attachments_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
 		$fetch_attachments_property->setValue( null, false );
 
 		ob_start();
@@ -592,15 +634,21 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$reflection = new ReflectionClass( Mastodon::class );
 
 		$outbox_property = $reflection->getProperty( 'outbox' );
-		$outbox_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
 		$outbox_property->setValue( null, $outbox );
 
 		$author_property = $reflection->getProperty( 'author' );
-		$author_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
 		$author_property->setValue( null, $this->user_id );
 
 		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
-		$fetch_attachments_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
 		$fetch_attachments_property->setValue( null, false );
 
 		// First import.
@@ -702,15 +750,21 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$reflection = new ReflectionClass( Mastodon::class );
 
 		$outbox_property = $reflection->getProperty( 'outbox' );
-		$outbox_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
 		$outbox_property->setValue( null, $outbox );
 
 		$author_property = $reflection->getProperty( 'author' );
-		$author_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
 		$author_property->setValue( null, $this->user_id );
 
 		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
-		$fetch_attachments_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
 		$fetch_attachments_property->setValue( null, false );
 
 		ob_start();
@@ -1203,15 +1257,21 @@ class Test_Mastodon extends \WP_UnitTestCase {
 		$reflection = new ReflectionClass( Mastodon::class );
 
 		$outbox_property = $reflection->getProperty( 'outbox' );
-		$outbox_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
 		$outbox_property->setValue( null, $outbox );
 
 		$author_property = $reflection->getProperty( 'author' );
-		$author_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
 		$author_property->setValue( null, $this->user_id );
 
 		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
-		$fetch_attachments_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
 		$fetch_attachments_property->setValue( null, false );
 
 		ob_start();
