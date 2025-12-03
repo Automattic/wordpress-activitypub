@@ -1396,7 +1396,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertEquals( 'webfingerupdate@example.com', $updated_acct );
 
 		\remove_filter( 'pre_http_request', $webfinger_callback );
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
