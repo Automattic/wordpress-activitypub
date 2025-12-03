@@ -452,17 +452,7 @@ class Remote_Actors {
 		}
 
 		if ( ! $actor->get_webfinger() ) {
-			$webfinger = \get_post_meta( $post->ID, '_activitypub_acct', true );
-
-			if ( ! $webfinger ) {
-				$acct = Webfinger::uri_to_acct( $actor->get_id() );
-				if ( \is_wp_error( $acct ) ) {
-					$acct = Webfinger::guess( $actor );
-				}
-				$webfinger = Sanitize::webfinger( $acct );
-			}
-
-			$actor->set_webfinger( $webfinger );
+			$actor->set_webfinger( self::get_acct( $post->ID ) );
 		}
 
 		return $actor;
@@ -645,8 +635,12 @@ class Remote_Actors {
 		$acct = Webfinger::uri_to_acct( $post->guid );
 
 		if ( \is_wp_error( $acct ) ) {
-			$actor = self::get_actor( $post );
-			$acct  = Webfinger::guess( $actor );
+			$actor = Actor::init_from_json( $post->post_content );
+			if ( \is_wp_error( $actor ) ) {
+				return '';
+			}
+
+			$acct = Webfinger::guess( $actor );
 		}
 
 		$acct = Sanitize::webfinger( $acct );
