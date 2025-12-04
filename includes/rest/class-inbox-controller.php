@@ -17,7 +17,6 @@ use Activitypub\Moderation;
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\is_activity_public;
-use function Activitypub\is_activity_reply;
 use function Activitypub\is_collection;
 use function Activitypub\is_same_domain;
 use function Activitypub\user_can_activitypub;
@@ -369,16 +368,13 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return array An array of user IDs who are the recipients of the activity.
 	 */
 	private function get_local_recipients( $activity ) {
+		$user_ids = array();
+
 		if ( is_activity_public( $activity ) ) {
-			if ( is_activity_reply( $activity ) ) {
-				return Actors::get_all_ids();
-			} else {
-				return Following::get_follower_ids( $activity['actor'] );
-			}
+			$user_ids = Following::get_follower_ids( $activity['actor'] );
 		}
 
 		$recipients = extract_recipients_from_activity( $activity );
-		$user_ids   = array();
 
 		foreach ( $recipients as $recipient ) {
 
