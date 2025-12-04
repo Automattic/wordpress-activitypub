@@ -368,12 +368,13 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return array An array of user IDs who are the recipients of the activity.
 	 */
 	private function get_local_recipients( $activity ) {
-		if ( is_activity_public( $activity ) ) { // Public activity, deliver to followers of the actor.
-			return Following::get_follower_ids( $activity['actor'] );
+		$user_ids = array();
+
+		if ( is_activity_public( $activity ) ) {
+			$user_ids = Following::get_follower_ids( $activity['actor'] );
 		}
 
 		$recipients = extract_recipients_from_activity( $activity );
-		$user_ids   = array();
 
 		foreach ( $recipients as $recipient ) {
 
