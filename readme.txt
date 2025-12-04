@@ -114,7 +114,7 @@ For reasons of data protection, it is not possible to see the followers of other
 #### Fixed
 - Fix admin styling for quote comments to match likes and reposts
 - Mastodon importer now unpacks nested archives instead of getting confused by the extra folder.
-- Route public replies to all actors to ensure conversation continuity.
+- Add individually specified recipients to public activities in shared inbox.
 
 ### 7.7.0 - 2025-12-03
 #### Added
