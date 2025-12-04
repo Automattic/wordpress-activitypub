@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Send a Reject activity when a quote comment is deleted, revoking previous quote permissions and ensuring consistent inbox handling.

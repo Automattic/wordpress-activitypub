@@ -298,7 +298,9 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	public function test_get_object_id( $activity, $expected ) {
 		// Get the object ID using reflection since it's a private method.
 		$get_object_id = new \ReflectionMethod( Outbox::class, 'get_object_id' );
-		$get_object_id->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$get_object_id->setAccessible( true );
+		}
 
 		$result = $get_object_id->invoke( null, $activity );
 
