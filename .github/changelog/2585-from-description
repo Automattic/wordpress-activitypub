@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Route public replies to all actors to ensure conversation continuity.
