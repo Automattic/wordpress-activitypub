@@ -225,15 +225,15 @@ class Mastodon {
 
 		// Unzip package to working directory.
 		\unzip_file( $file, self::$archive );
-		$files = $wp_filesystem->dirlist( self::$archive );
+		self::maybe_unwrap_archive();
 
-		if ( ! isset( $files['outbox.json'] ) ) {
+		if ( ! $wp_filesystem->exists( self::$archive . '/outbox.json' ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
 			echo \esc_html__( 'The archive does not contain an Outbox file, please try again.', 'activitypub' ) . '</p>';
+			return;
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		self::$outbox = \json_decode( \file_get_contents( self::$archive . '/outbox.json' ), true );
+		self::$outbox = \json_decode( $wp_filesystem->get_contents( self::$archive . '/outbox.json' ), true );
 
 		\wp_suspend_cache_invalidation();
 		\wp_defer_term_counting( true );
@@ -597,5 +597,33 @@ class Mastodon {
 		}
 
 		return $attachment;
+	}
+
+	/**
+	 * Detect and unwrap single nested directory in archive.
+	 *
+	 * Some Mastodon exports wrap all files in a root folder. This method
+	 * detects this pattern and updates the archive path to point inside it.
+	 */
+	private static function maybe_unwrap_archive() {
+		global $wp_filesystem;
+
+		$files = $wp_filesystem->dirlist( self::$archive );
+
+		// Check if there's exactly one directory at root level.
+		if ( count( $files ) !== 1 ) {
+			return;
+		}
+
+		$first = reset( $files );
+		if ( 'd' !== $first['type'] ) {
+			return;
+		}
+
+		// Check if outbox.json exists inside the nested directory.
+		$nested_path = self::$archive . '/' . $first['name'];
+		if ( $wp_filesystem->exists( $nested_path . '/outbox.json' ) ) {
+			self::$archive = $nested_path;
+		}
 	}
 }
