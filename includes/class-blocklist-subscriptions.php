@@ -52,7 +52,7 @@ class Blocklist_Subscriptions {
 
 		$subscriptions = self::get_all();
 
-		// Already subscribed.
+		// Not already subscribed.
 		if ( ! isset( $subscriptions[ $url ] ) ) {
 			// Add subscription with timestamp 0 (never synced).
 			$subscriptions[ $url ] = 0;
