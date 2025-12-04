@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Wrap blocked domains and keywords tables in collapsible details element.
