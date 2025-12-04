@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Blocklist_Subscriptions;
 use Activitypub\Moderation;
 
 use function Activitypub\home_host;
@@ -156,6 +157,14 @@ class Settings_Fields {
 			'activitypub_site_blocked_keywords',
 			\esc_html__( 'Blocked Keywords', 'activitypub' ),
 			array( self::class, 'render_site_blocked_keywords_field' ),
+			'activitypub_settings',
+			'activitypub_moderation'
+		);
+
+		add_settings_field(
+			'activitypub_blocklist_subscriptions',
+			\esc_html__( 'Blocklist Subscriptions', 'activitypub' ),
+			array( self::class, 'render_blocklist_subscriptions_field' ),
 			'activitypub_settings',
 			'activitypub_moderation'
 		);
@@ -488,6 +497,67 @@ class Settings_Fields {
 					<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
 				</button>
 			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render blocklist subscriptions field.
+	 */
+	public static function render_blocklist_subscriptions_field() {
+		$subscriptions = Blocklist_Subscriptions::get_all();
+		?>
+		<p class="description"><?php \esc_html_e( 'Subscribe to remote blocklists that sync automatically every week.', 'activitypub' ); ?></p>
+
+		<div class="activitypub-blocklist-subscriptions">
+			<?php if ( ! empty( $subscriptions ) ) : ?>
+			<table class="widefat striped" role="presentation" style="max-width: 500px; margin: 15px 0;">
+				<thead>
+					<tr>
+						<th style="padding: 10px;"><?php \esc_html_e( 'URL', 'activitypub' ); ?></th>
+						<th style="padding: 10px;"><?php \esc_html_e( 'Last Synced', 'activitypub' ); ?></th>
+						<th style="width: 80px;"></th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach ( $subscriptions as $url => $timestamp ) : ?>
+					<tr>
+						<td>
+							<abbr title="<?php echo \esc_attr( $url ); ?>"><?php echo \esc_html( \wp_parse_url( $url, PHP_URL_HOST ) ); ?></abbr>
+						</td>
+						<td>
+							<?php if ( $timestamp > 0 ) : ?>
+								<?php echo \esc_html( \human_time_diff( $timestamp, \time() ) . ' ' . \__( 'ago', 'activitypub' ) ); ?>
+							<?php else : ?>
+								<em><?php \esc_html_e( 'Never', 'activitypub' ); ?></em>
+							<?php endif; ?>
+						</td>
+						<td>
+							<button type="button" class="button button-small remove-blocklist-subscription-btn" data-url="<?php echo \esc_attr( $url ); ?>">
+								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+							</button>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php endif; ?>
+
+			<div class="add-blocklist-subscription-form" style="display: flex; max-width: 500px; gap: 8px;">
+				<input type="url" class="regular-text" id="new_blocklist_subscription_url" placeholder="<?php \esc_attr_e( 'https://example.com/blocklist.csv', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
+				<button type="button" class="button add-blocklist-subscription-btn" style="flex-shrink: 0; white-space: nowrap;">
+					<?php \esc_html_e( 'Subscribe', 'activitypub' ); ?>
+				</button>
+			</div>
+
+			<?php if ( ! isset( $subscriptions[ Blocklist_Subscriptions::IFTAS_DNI_URL ] ) ) : ?>
+			<p class="description" style="margin-top: 10px;">
+				<button type="button" class="button add-blocklist-subscription-btn" data-url="<?php echo \esc_attr( Blocklist_Subscriptions::IFTAS_DNI_URL ); ?>">
+					<?php \esc_html_e( 'Subscribe to IFTAS DNI List', 'activitypub' ); ?>
+				</button>
+				<?php \esc_html_e( 'A curated list of the worst actors on the fediverse.', 'activitypub' ); ?>
+			</p>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

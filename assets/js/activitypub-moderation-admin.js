@@ -83,6 +83,9 @@
 
 		// Site moderation management.
 		initSiteModeration();
+
+		// Blocklist subscriptions management.
+		initBlocklistSubscriptions();
 	}
 
 	/**
@@ -296,6 +299,90 @@
 			var type = $( this ).data( 'type' );
 			var value = $( this ).data( 'value' );
 			removeSiteBlockedTerm( type, value );
+		});
+	}
+
+	/**
+	 * Initialize blocklist subscriptions management
+	 */
+	function initBlocklistSubscriptions() {
+		// Function to add a blocklist subscription.
+		function addBlocklistSubscription( url ) {
+			if ( ! url ) {
+				var message = activitypubModerationL10n.enterUrl || 'Please enter a URL.';
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( message, 'assertive' );
+				}
+				alert( message );
+				return;
+			}
+
+			// Disable the button while processing.
+			var button = $( '.add-blocklist-subscription-btn' );
+			button.prop( 'disabled', true );
+
+			wp.ajax.post( 'activitypub_blocklist_subscription', {
+				operation: 'add',
+				url: url,
+				_wpnonce: activitypubModerationL10n.nonce
+			}).done( function() {
+				// Reload the page to show the updated list.
+				window.location.reload();
+			}).fail( function( response ) {
+				var message = response && response.message ? response.message : activitypubModerationL10n.subscriptionFailed || 'Failed to add subscription.';
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( message, 'assertive' );
+				}
+				alert( message );
+				button.prop( 'disabled', false );
+			});
+		}
+
+		// Function to remove a blocklist subscription.
+		function removeBlocklistSubscription( url ) {
+			wp.ajax.post( 'activitypub_blocklist_subscription', {
+				operation: 'remove',
+				url: url,
+				_wpnonce: activitypubModerationL10n.nonce
+			}).done( function() {
+				// Remove the row from the UI.
+				$( '.remove-blocklist-subscription-btn[data-url="' + url + '"]' ).closest( 'tr' ).remove();
+
+				// If no more subscriptions, remove the table.
+				var table = $( '.activitypub-blocklist-subscriptions table' );
+				if ( table.find( 'tbody tr' ).length === 0 ) {
+					table.remove();
+				}
+			}).fail( function( response ) {
+				var message = response && response.message ? response.message : activitypubModerationL10n.removeSubscriptionFailed || 'Failed to remove subscription.';
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( message, 'assertive' );
+				}
+				alert( message );
+			});
+		}
+
+		// Add subscription functionality (button click).
+		$( document ).on( 'click', '.add-blocklist-subscription-btn', function( e ) {
+			e.preventDefault();
+			var url = $( this ).data( 'url' ) || $( '#new_blocklist_subscription_url' ).val().trim();
+			addBlocklistSubscription( url );
+		});
+
+		// Add subscription functionality (Enter key).
+		$( document ).on( 'keypress', '#new_blocklist_subscription_url', function( e ) {
+			if ( e.which === 13 ) { // Enter key.
+				e.preventDefault();
+				var url = $( this ).val().trim();
+				addBlocklistSubscription( url );
+			}
+		});
+
+		// Remove subscription functionality.
+		$( document ).on( 'click', '.remove-blocklist-subscription-btn', function( e ) {
+			e.preventDefault();
+			var url = $( this ).data( 'url' );
+			removeBlocklistSubscription( url );
 		});
 	}
 

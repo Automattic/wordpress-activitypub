@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin\Import;
 
+use Activitypub\Blocklist_Subscriptions;
 use Activitypub\Moderation;
 
 /**
@@ -15,11 +16,6 @@ use Activitypub\Moderation;
  * Imports domain blocklists in CSV format (Mastodon, IFTAS DNI, etc.)
  */
 class Blocklist {
-
-	/**
-	 * IFTAS DNI list URL.
-	 */
-	const IFTAS_DNI_URL = 'https://about.iftas.org/wp-content/uploads/2025/10/iftas-dni-latest.csv';
 
 	/**
 	 * Dispatch the importer based on current step.
@@ -89,6 +85,12 @@ class Blocklist {
 					<input type="url" id="import_url" name="import_url" size="50" class="code" placeholder="https://example.com/blocklist.csv" required />
 				</label>
 			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="subscribe" value="1" />
+					<?php \esc_html_e( 'Subscribe for automatic weekly updates', 'activitypub' ); ?>
+				</label>
+			</p>
 			<p class="submit">
 				<input type="submit" name="submit" id="submit" class="button" value="<?php \esc_attr_e( 'Import from URL', 'activitypub' ); ?>" />
 			</p>
@@ -98,7 +100,13 @@ class Blocklist {
 		<p><?php \esc_html_e( 'Import from a well-known blocklist:', 'activitypub' ); ?></p>
 		<form method="post" action="<?php echo \esc_url( \admin_url( 'admin.php?import=blocklist&amp;step=2' ) ); ?>">
 			<?php \wp_nonce_field( 'import-blocklist-url' ); ?>
-			<input type="hidden" name="import_url" value="<?php echo \esc_attr( self::IFTAS_DNI_URL ); ?>" />
+			<input type="hidden" name="import_url" value="<?php echo \esc_attr( Blocklist_Subscriptions::IFTAS_DNI_URL ); ?>" />
+			<p>
+				<label>
+					<input type="checkbox" name="subscribe" value="1" />
+					<?php \esc_html_e( 'Subscribe for automatic weekly updates', 'activitypub' ); ?>
+				</label>
+			</p>
 			<p>
 				<button type="submit" class="button">
 					<?php \esc_html_e( 'Import IFTAS DNI List', 'activitypub' ); ?>
@@ -187,49 +195,24 @@ class Blocklist {
 			return;
 		}
 
-		// Fetch the URL content.
-		$response = \wp_remote_get(
-			$url,
-			array(
-				'timeout'     => 30,
-				'redirection' => 5,
-			)
-		);
+		$result = Blocklist_Subscriptions::sync( $url );
 
-		if ( \is_wp_error( $response ) ) {
-			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( $response->get_error_message() ) );
+		if ( false === $result ) {
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to fetch or parse the blocklist URL.', 'activitypub' ) );
 			return;
 		}
 
-		$response_code = \wp_remote_retrieve_response_code( $response );
-		if ( 200 !== $response_code ) {
-			\printf(
-				'<p><strong>%s</strong><br />%s</p>',
-				\esc_html( $error_message ),
-				/* translators: %d: HTTP response code */
-				\esc_html( \sprintf( \__( 'Failed to fetch URL. HTTP response code: %d', 'activitypub' ), $response_code ) )
-			);
-			return;
-		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in dispatch().
+		$subscribe = ! empty( $_POST['subscribe'] );
 
-		$body = \wp_remote_retrieve_body( $response );
-		if ( empty( $body ) ) {
-			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'The URL returned empty content.', 'activitypub' ) );
-			return;
-		}
+		// Add subscription if requested (no need to sync again, just did it).
+		$subscribed = $subscribe && Blocklist_Subscriptions::add( $url );
 
-		$domains = self::parse_csv_string( $body );
-
-		if ( empty( $domains ) ) {
-			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'No valid domains found at the URL.', 'activitypub' ) );
-			return;
-		}
-
-		self::import( $domains );
+		self::show_url_import_results( $result, $subscribed );
 	}
 
 	/**
-	 * Execute the import.
+	 * Execute the import for file uploads.
 	 *
 	 * @param array $domains Array of domains to import.
 	 */
@@ -287,10 +270,38 @@ class Blocklist {
 	}
 
 	/**
-	 * Parse a CSV file and extract domain names.
+	 * Show results for URL import.
 	 *
-	 * Supports Mastodon CSV format (with #domain header) and simple
-	 * one-domain-per-line format.
+	 * @param int  $imported   Number of domains imported.
+	 * @param bool $subscribed Whether the URL was subscribed to.
+	 */
+	private static function show_url_import_results( $imported, $subscribed ) {
+		echo '<h3>' . \esc_html__( 'Import Complete', 'activitypub' ) . '</h3>';
+
+		\printf(
+			'<p>%s</p>',
+			\esc_html(
+				\sprintf(
+					/* translators: %s: Number of domains */
+					\_n( 'Imported %s new domain.', 'Imported %s new domains.', $imported, 'activitypub' ),
+					\number_format_i18n( $imported )
+				)
+			)
+		);
+
+		if ( $subscribed ) {
+			echo '<p>' . \esc_html__( 'Subscribed for automatic weekly updates.', 'activitypub' ) . '</p>';
+		}
+
+		\printf(
+			'<p><a href="%s">%s</a></p>',
+			\esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) ),
+			\esc_html__( 'View blocked domains in settings', 'activitypub' )
+		);
+	}
+
+	/**
+	 * Parse a CSV file and extract domain names.
 	 *
 	 * @param string $file_path Path to the CSV file.
 	 * @return array Array of unique, valid domain names.
@@ -306,80 +317,6 @@ class Blocklist {
 			return array();
 		}
 
-		return self::parse_csv_string( $content );
-	}
-
-	/**
-	 * Parse CSV content from a string and extract domain names.
-	 *
-	 * Supports Mastodon CSV format (with #domain header) and simple
-	 * one-domain-per-line format.
-	 *
-	 * @param string $content CSV content as a string.
-	 * @return array Array of unique, valid domain names.
-	 */
-	public static function parse_csv_string( $content ) {
-		$domains = array();
-
-		if ( empty( $content ) ) {
-			return $domains;
-		}
-
-		// Split into lines.
-		$lines = \preg_split( '/\r\n|\r|\n/', $content );
-		if ( empty( $lines ) ) {
-			return $domains;
-		}
-
-		// Parse first line to detect format.
-		$first_line = \str_getcsv( $lines[0] );
-		$first_cell = \trim( $first_line[0] ?? '' );
-		$has_header = \str_starts_with( $first_cell, '#' ) || 'domain' === \strtolower( $first_cell );
-
-		// Find domain column index.
-		$domain_index = 0;
-		if ( $has_header ) {
-			foreach ( $first_line as $i => $col ) {
-				$col = \ltrim( \strtolower( \trim( $col ) ), '#' );
-				if ( 'domain' === $col ) {
-					$domain_index = $i;
-					break;
-				}
-			}
-			// Remove header from lines.
-			\array_shift( $lines );
-		}
-
-		// Process each line.
-		foreach ( $lines as $line ) {
-			$row    = \str_getcsv( $line );
-			$domain = \trim( $row[ $domain_index ] ?? '' );
-
-			// Skip empty lines and comments.
-			if ( empty( $domain ) || \str_starts_with( $domain, '#' ) ) {
-				continue;
-			}
-
-			if ( self::is_valid_domain( $domain ) ) {
-				$domains[] = \strtolower( $domain );
-			}
-		}
-
-		return \array_unique( $domains );
-	}
-
-	/**
-	 * Validate a domain name.
-	 *
-	 * @param string $domain The domain to validate.
-	 * @return bool True if valid, false otherwise.
-	 */
-	private static function is_valid_domain( $domain ) {
-		// Must contain at least one dot (filter_var would accept "localhost").
-		if ( ! \str_contains( $domain, '.' ) ) {
-			return false;
-		}
-
-		return (bool) \filter_var( $domain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME );
+		return Blocklist_Subscriptions::parse_csv_string( $content );
 	}
 }
