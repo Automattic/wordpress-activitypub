@@ -230,13 +230,15 @@ input.blog-user-identifier {
 	font-family: dashicons;
 }
 
-.repost .dashboard-comment-wrap,
-.like .dashboard-comment-wrap {
+.like .dashboard-comment-wrap,
+.quote .dashboard-comment-wrap,
+.repost .dashboard-comment-wrap {
 	padding-inline-start: 63px;
 }
 
-.repost .dashboard-comment-wrap .comment-author,
-.like .dashboard-comment-wrap .comment-author {
+.like .dashboard-comment-wrap .comment-author,
+.quote .dashboard-comment-wrap .comment-author,
+.repost .dashboard-comment-wrap .comment-author {
 	margin-block: 0;
 }
 
