@@ -35,7 +35,7 @@ try/{idea}       # Experimental ideas.
 git checkout -b add/new-feature
 
 # Create PR with GitHub CLI.
-gh pr create --assignee @me --reviewer Fediverse
+gh pr create --assignee @me --reviewer Automattic/fediverse
 
 # Check PR status and CI.
 gh pr status

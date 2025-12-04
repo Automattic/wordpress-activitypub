@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Mastodon importer now unpacks nested archives instead of getting confused by the extra folder.
