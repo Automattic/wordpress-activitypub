@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fix admin styling for quote comments to match likes and reposts [#2584]
 - Mastodon importer now unpacks nested archives instead of getting confused by the extra folder. [#2581]
-- Route public replies to all actors to ensure conversation continuity. [#2585]
+- Add individually specified recipients to public activities in shared inbox. [#2585]
 
 ## [7.7.0] - 2025-12-03
 ### Added
