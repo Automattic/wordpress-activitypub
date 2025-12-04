@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.7.1] - 2025-12-04
+### Fixed
+- Fix admin styling for quote comments to match likes and reposts [#2584]
+- Mastodon importer now unpacks nested archives instead of getting confused by the extra folder. [#2581]
+- Add individually specified recipients to public activities in shared inbox. [#2585]
+
 ## [7.7.0] - 2025-12-03
 ### Added
 - Add documentation guide for using ActivityPub blocks in classic themes with Block Template Parts [#2577]
@@ -1567,6 +1573,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.7.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.7.0...7.7.1
 [7.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.6.1...7.7.0
 [7.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.6.0...7.6.1
 [7.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.5.0...7.6.0
