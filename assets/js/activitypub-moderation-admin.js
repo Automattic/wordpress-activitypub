@@ -346,7 +346,9 @@
 				_wpnonce: activitypubModerationL10n.nonce
 			}).done( function() {
 				// Remove the row from the UI.
-				$( '.remove-blocklist-subscription-btn[data-url="' + url + '"]' ).closest( 'tr' ).remove();
+				$( '.remove-blocklist-subscription-btn' ).filter( function() {
+					return $( this ).data( 'url' ) === url;
+				}).closest( 'tr' ).remove();
 
 				// If no more subscriptions, remove the table.
 				var table = $( '.activitypub-blocklist-subscriptions table' );
