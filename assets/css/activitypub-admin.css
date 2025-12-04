@@ -230,15 +230,11 @@ input.blog-user-identifier {
 	font-family: dashicons;
 }
 
-.like .dashboard-comment-wrap,
-.quote .dashboard-comment-wrap,
-.repost .dashboard-comment-wrap {
+.activitypub-comment .dashboard-comment-wrap {
 	padding-inline-start: 63px;
 }
 
-.like .dashboard-comment-wrap .comment-author,
-.quote .dashboard-comment-wrap .comment-author,
-.repost .dashboard-comment-wrap .comment-author {
+.activitypub-comment .dashboard-comment-wrap .comment-author {
 	margin-block: 0;
 }
 
