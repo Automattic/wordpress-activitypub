@@ -572,7 +572,7 @@ class Health_Check {
 			$result['badge']['color'] = 'orange';
 			$result['description']    = \sprintf(
 				'<p>%s</p><p>%s</p>',
-				\__( 'The constant <code>DISABLE_WP_CRON</code> is set to <code>true</code> in your configuration. This disables WordPress\'s built-in cron system, which ActivityPub relies on for timely publishing of posts and processing of reactions (likes, boosts, replies).', 'activitypub' ),
+				\__( 'The constant <code>DISABLE_WP_CRON</code> is set to <code>true</code> in your configuration. This disables WordPress&#8217;s built-in cron system, which ActivityPub relies on for timely publishing of posts and processing of reactions (likes, boosts, replies).', 'activitypub' ),
 				\__( 'While it is fine to have a system cron job that calls <code>wp-cron.php</code> at regular intervals, completely disabling WP-Cron may cause delays in ActivityPub functionality. If you notice delays in post publishing or reactions appearing, consider either removing this constant or ensuring you have a system cron job running frequently (every 1-5 minutes).', 'activitypub' )
 			);
 			$result['actions']        = \sprintf(
