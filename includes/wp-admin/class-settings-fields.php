@@ -438,10 +438,12 @@ class Settings_Fields {
 			<details style="margin: 10px 0;">
 				<summary style="cursor: pointer; padding: 8px 0; color: inherit;">
 					<?php
-					\printf(
-						/* translators: %s: Number of blocked domains */
-						\esc_html( \_n( '%s blocked domain', '%s blocked domains', $count, 'activitypub' ) ),
-						\number_format_i18n( $count )
+					echo \esc_html(
+						\sprintf(
+							/* translators: %s: Number of blocked domains */
+							\_n( '%s blocked domain', '%s blocked domains', $count, 'activitypub' ),
+							\number_format_i18n( $count )
+						)
 					);
 					?>
 				</summary>
@@ -484,10 +486,12 @@ class Settings_Fields {
 			<details style="margin: 10px 0;">
 				<summary style="cursor: pointer; padding: 8px 0; color: inherit;">
 					<?php
-					\printf(
-						/* translators: %s: Number of blocked keywords */
-						\esc_html( \_n( '%s blocked keyword', '%s blocked keywords', $count, 'activitypub' ) ),
-						\number_format_i18n( $count )
+					echo \esc_html(
+						\sprintf(
+							/* translators: %s: Number of blocked keywords */
+							\_n( '%s blocked keyword', '%s blocked keywords', $count, 'activitypub' ),
+							\number_format_i18n( $count )
+						)
 					);
 					?>
 				</summary>
