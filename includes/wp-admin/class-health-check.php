@@ -109,6 +109,11 @@ class Health_Check {
 			'test'  => array( self::class, 'test_check_for_captcha_plugins' ),
 		);
 
+		$tests['direct']['activitypub_test_wp_cron'] = array(
+			'label' => \__( 'WP-Cron Configuration Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_wp_cron' ),
+		);
+
 		return $tests;
 	}
 
@@ -536,6 +541,46 @@ class Health_Check {
 				esc_url( admin_url( 'plugins.php?s=captcha&plugin_status=all' ) )
 			)
 		);
+
+		return $result;
+	}
+
+	/**
+	 * WP-Cron configuration test.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_wp_cron() {
+		$result = array(
+			'label'       => \__( 'WP-Cron is properly configured', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Your WP-Cron configuration allows for timely publishing and processing of ActivityPub activities.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_wp_cron',
+		);
+
+		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'WP-Cron is disabled', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				\__( 'The constant <code>DISABLE_WP_CRON</code> is set to <code>true</code> in your configuration. This disables WordPress\'s built-in cron system, which ActivityPub relies on for timely publishing of posts and processing of reactions (likes, boosts, replies).', 'activitypub' ),
+				\__( 'While it is fine to have a system cron job that calls <code>wp-cron.php</code> at regular intervals, completely disabling WP-Cron may cause delays in ActivityPub functionality. If you notice delays in post publishing or reactions appearing, consider either removing this constant or ensuring you have a system cron job running frequently (every 1-5 minutes).', 'activitypub' )
+			);
+			$result['actions']        = \sprintf(
+				'<p><a href="%s" target="_blank">%s</a></p>',
+				'https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/',
+				\__( 'Learn more about setting up system cron for WordPress', 'activitypub' )
+			);
+		}
 
 		return $result;
 	}
