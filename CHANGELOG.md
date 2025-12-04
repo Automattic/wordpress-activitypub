@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Always includes id, first, and last links in collection responses, ensuring followers and following lists display correctly in Mastodon. [#2473]
 - Automatically approves reactions on ActivityPub posts in the Reader view for a smoother, more seamless interaction experience. [#2526]
 - Deliver public activities to followers only. [#2539]
+- Route public replies to all actors to ensure conversation continuity. [#2585]
 - Disable REST API endpoints for internal post types. [#2463]
 - False mention email notifications for users in CC field without actual mention tags. [#2532]
 - Fix "Filename too long" errors when downloading attachments from URLs with query parameters (e.g., Instagram CDN URLs). [#2499]
