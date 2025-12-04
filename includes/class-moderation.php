@@ -224,6 +224,38 @@ class Moderation {
 	}
 
 	/**
+	 * Add multiple site-wide blocks at once.
+	 *
+	 * More efficient than calling add_site_block() in a loop as it
+	 * performs a single database update.
+	 *
+	 * @param string $type   The block type (domain or keyword only).
+	 * @param array  $values Array of values to block.
+	 */
+	public static function add_site_blocks( $type, $values ) {
+		if ( ! in_array( $type, array( self::TYPE_DOMAIN, self::TYPE_KEYWORD ), true ) ) {
+			return;
+		}
+
+		if ( empty( $values ) ) {
+			return;
+		}
+
+		foreach ( $values as $value ) {
+			/**
+			 * Fired when a domain or keyword is blocked site-wide.
+			 *
+			 * @param string $value The blocked domain or keyword.
+			 * @param string $type  The block type (actor, domain, keyword).
+			 */
+			\do_action( 'activitypub_add_site_block', $value, $type );
+		}
+
+		$existing = \get_option( self::OPTION_KEYS[ $type ], array() );
+		\update_option( self::OPTION_KEYS[ $type ], array_unique( array_merge( $existing, $values ) ) );
+	}
+
+	/**
 	 * Remove a site-wide block.
 	 *
 	 * @param string $type  The block type (actor, domain, keyword).
