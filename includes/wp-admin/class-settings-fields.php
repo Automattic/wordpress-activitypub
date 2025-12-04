@@ -429,23 +429,35 @@ class Settings_Fields {
 	 */
 	public static function render_site_blocked_domains_field() {
 		$blocked_domains = Moderation::get_site_blocks()['domains'];
+		$count           = \count( $blocked_domains );
 		?>
 		<p class="description"><?php \esc_html_e( 'Block entire ActivityPub instances by domain name.', 'activitypub' ); ?></p>
 
 		<div class="activitypub-site-block-list">
 			<?php if ( ! empty( $blocked_domains ) ) : ?>
-			<table class="widefat striped activitypub-site-blocked-domain" role="presentation" style="max-width: 500px; margin: 15px 0;">
-				<?php foreach ( $blocked_domains as $domain ) : ?>
-					<tr>
-						<td><?php echo \esc_html( $domain ); ?></td>
-						<td style="width: 80px;">
-							<button type="button" class="button button-small remove-site-block-btn" data-type="domain" data-value="<?php echo \esc_attr( $domain ); ?>">
-								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
-							</button>
-						</td>
-					</tr>
-				<?php endforeach; ?>
-			</table>
+			<details style="margin: 10px 0;">
+				<summary style="cursor: pointer; padding: 8px 0; color: inherit;">
+					<?php
+					\printf(
+						/* translators: %s: Number of blocked domains */
+						\esc_html( \_n( '%s blocked domain', '%s blocked domains', $count, 'activitypub' ) ),
+						\number_format_i18n( $count )
+					);
+					?>
+				</summary>
+				<table class="widefat striped activitypub-site-blocked-domain" role="presentation" style="max-width: 500px; margin-top: 10px;">
+					<?php foreach ( $blocked_domains as $domain ) : ?>
+						<tr>
+							<td><?php echo \esc_html( $domain ); ?></td>
+							<td style="width: 80px;">
+								<button type="button" class="button button-small remove-site-block-btn" data-type="domain" data-value="<?php echo \esc_attr( $domain ); ?>">
+									<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+								</button>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</table>
+			</details>
 			<?php endif; ?>
 
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
@@ -463,23 +475,35 @@ class Settings_Fields {
 	 */
 	public static function render_site_blocked_keywords_field() {
 		$blocked_keywords = Moderation::get_site_blocks()['keywords'];
+		$count            = \count( $blocked_keywords );
 		?>
 		<p class="description"><?php \esc_html_e( 'Block ActivityPub content containing specific keywords.', 'activitypub' ); ?></p>
 
 		<div class="activitypub-site-block-list">
 			<?php if ( ! empty( $blocked_keywords ) ) : ?>
-			<table class="widefat striped activitypub-site-blocked-keyword" role="presentation" style="max-width: 500px; margin: 15px 0;">
-				<?php foreach ( $blocked_keywords as $keyword ) : ?>
-					<tr>
-						<td><?php echo \esc_html( $keyword ); ?></td>
-						<td style="width: 80px;">
-							<button type="button" class="button button-small remove-site-block-btn" data-type="keyword" data-value="<?php echo \esc_attr( $keyword ); ?>">
-								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
-							</button>
-						</td>
-					</tr>
-				<?php endforeach; ?>
-			</table>
+			<details style="margin: 10px 0;">
+				<summary style="cursor: pointer; padding: 8px 0; color: inherit;">
+					<?php
+					\printf(
+						/* translators: %s: Number of blocked keywords */
+						\esc_html( \_n( '%s blocked keyword', '%s blocked keywords', $count, 'activitypub' ) ),
+						\number_format_i18n( $count )
+					);
+					?>
+				</summary>
+				<table class="widefat striped activitypub-site-blocked-keyword" role="presentation" style="max-width: 500px; margin-top: 10px;">
+					<?php foreach ( $blocked_keywords as $keyword ) : ?>
+						<tr>
+							<td><?php echo \esc_html( $keyword ); ?></td>
+							<td style="width: 80px;">
+								<button type="button" class="button button-small remove-site-block-btn" data-type="keyword" data-value="<?php echo \esc_attr( $keyword ); ?>">
+									<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+								</button>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</table>
+			</details>
 			<?php endif; ?>
 
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
