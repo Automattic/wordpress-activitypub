@@ -7,72 +7,15 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
-import { useState, useEffect, useRef, lazy, Suspense } from '@wordpress/element';
 import { CommandMenu } from '@wordpress/commands';
-import { SnackbarList, Spinner } from '@wordpress/components';
+import { SnackbarList } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
+import { Outlet } from '../../router';
 import Sidebar from '../sidebar';
-import Panel from '../panel';
-import { STORE_NAME } from '../../store';
-import type { SocialWebSelectors } from '../../store';
 import './style.scss';
 
-// Lazy load route stages for better performance
-// Use magic comments to give chunks proper names
-const FeedStage = lazy( () => import( /* webpackChunkName: "social-web/feed-stage" */ '../../routes/feed/stage' ) );
-
-// Lazy load inspector components
-const FeedInspector = lazy(
-	() => import( /* webpackChunkName: "social-web/feed-inspector" */ '../../routes/feed/inspector' )
-);
-
-/**
- * Parse the URL hash to extract section and item ID
- * Format: #/section or #/section/itemId
- */
-function parseHash(): { section: string; itemId: string | number | null } {
-	const hash = window.location.hash.slice( 1 ); // Remove #
-	if ( ! hash || hash === '/' ) {
-		return { section: 'feed', itemId: null };
-	}
-
-	const parts = hash.split( '/' ).filter( Boolean );
-	const section = parts[ 0 ] || 'feed';
-	const itemId = parts[ 1 ] || null;
-
-	// Convert itemId to number for feed
-	if ( section === 'feed' && itemId ) {
-		return { section, itemId: parseInt( itemId, 10 ) };
-	}
-
-	return { section, itemId };
-}
-
-/**
- * Update the URL hash without triggering a page reload
- *
- * @param {string}              section Section name
- * @param {string|number|null} itemId  Optional item ID
- */
-function updateHash( section: string, itemId?: string | number | null ) {
-	const hash = itemId ? `#/${ section }/${ itemId }` : `#/${ section }`;
-	window.history.pushState( null, '', hash );
-}
-
 export function Layout() {
-	const [ activeSection, setActiveSection ] = useState( 'feed' );
-	const [ selectedItemId, setSelectedItemId ] = useState< string | number | null >( null );
-
-	// Get active actor ID
-	const activeActorId = useSelect(
-		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
-		[]
-	);
-
-	// Track previous actor ID to detect changes
-	const prevActiveActorId = useRef( activeActorId );
-
 	// Get notices for the snackbar
 	const notices = useSelect( ( select ) => {
 		const store = select( noticesStore ) as any;
@@ -80,131 +23,17 @@ export function Layout() {
 	}, [] );
 	const { removeNotice } = useDispatch( noticesStore ) as any;
 
-	// Initialize from URL hash on mount
-	useEffect( () => {
-		const { section, itemId } = parseHash();
-		setActiveSection( section );
-		setSelectedItemId( itemId );
-	}, [] );
-
-	// Close inspector when actor changes
-	useEffect( () => {
-		if ( prevActiveActorId.current !== activeActorId && selectedItemId ) {
-			setSelectedItemId( null );
-			updateHash( activeSection );
-		}
-		prevActiveActorId.current = activeActorId;
-	}, [ activeActorId, selectedItemId, activeSection ] );
-
-	// Listen for hash changes (back/forward navigation).
-	useEffect( () => {
-		const syncUrlToState = () => {
-			const { section, itemId } = parseHash();
-			setActiveSection( section );
-			setSelectedItemId( itemId );
-		};
-
-		window.addEventListener( 'hashchange', syncUrlToState );
-		return () => {
-			window.removeEventListener( 'hashchange', syncUrlToState );
-		};
-	}, [] );
-
-	const selectItem = ( id: string | number ) => {
-		setSelectedItemId( id );
-		updateHash( activeSection, id );
-	};
-
-	const closeInspector = () => {
-		setSelectedItemId( null );
-		updateHash( activeSection );
-	};
-
-	const navigate = ( section: string ) => {
-		setActiveSection( section );
-		setSelectedItemId( null );
-		updateHash( section );
-	};
-
-	// Render main content (stage) with Suspense for lazy loading
-	const renderStage = () => {
-		const props = { onSelectItem: selectItem };
-
-		let StageComponent;
-		switch ( activeSection ) {
-			case 'feed':
-			default:
-				StageComponent = FeedStage;
-		}
-
-		return (
-			<Suspense
-				fallback={
-					<div style={ { padding: '20px', textAlign: 'center' } }>
-						<Spinner />
-					</div>
-				}
-			>
-				<StageComponent { ...props } />
-			</Suspense>
-		);
-	};
-
-	// Render detail panel (inspector) with Suspense for lazy loading
-	const renderInspector = () => {
-		if ( ! selectedItemId ) {
-			return null;
-		}
-
-		let InspectorComponent;
-		let props;
-
-		switch ( activeSection ) {
-			case 'feed':
-			default:
-				// Feed inspector expects number type
-				if ( typeof selectedItemId !== 'number' ) {
-					return null;
-				}
-				InspectorComponent = FeedInspector;
-				props = { id: selectedItemId, onClose: closeInspector };
-		}
-
-		return (
-			<Suspense
-				fallback={
-					<div style={ { padding: '20px', textAlign: 'center' } }>
-						<Spinner />
-					</div>
-				}
-			>
-				<InspectorComponent { ...props } />
-			</Suspense>
-		);
-	};
-
-	const showInspector = !! selectedItemId;
-
 	return (
-		<div className="app-layout" data-section={ activeSection }>
+		<div className="app-layout">
 			<CommandMenu />
 			<div className="app-content">
 				{ /* Sidebar - 240px fixed width (no Panel wrapper, stays dark) */ }
 				<div className="sidebar-region">
-					<Sidebar activeSection={ activeSection } onNavigate={ navigate } />
+					<Sidebar />
 				</div>
 
-				{ /* Stage - main content area */ }
-				<div className="stage-region">
-					<Panel>{ renderStage() }</Panel>
-				</div>
-
-				{ /* Inspector - optional 380px side panel */ }
-				{ showInspector && (
-					<div className="inspector-region">
-						<Panel>{ renderInspector() }</Panel>
-					</div>
-				) }
+				{ /* Route content (stage + inspector) rendered via Outlet */ }
+				<Outlet />
 			</div>
 
 			<SnackbarList notices={ notices } onRemove={ removeNotice } />

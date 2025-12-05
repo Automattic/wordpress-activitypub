@@ -9,12 +9,25 @@ import { ShortcutProvider } from '@wordpress/keyboard-shortcuts';
 /**
  * Internal dependencies
  */
+import Router from './router';
 import { Layout } from './components/layout';
 import { SettingsProvider } from './contexts/settings-context';
 import { ObjectTypeProvider } from './contexts/object-type-context';
 import type { SocialWebSettings } from './types';
+import type { Route } from './router/types';
 import './store'; // Import to register the store
 import './style.scss'; // Import all styles
+
+/**
+ * Route definitions for the Social Web application.
+ */
+const routes: Route[] = [
+	{
+		path: '/',
+		contentLoader: () => import( /* webpackChunkName: "social-web/feed-content" */ './routes/feed/content' ),
+		routeLoader: () => import( /* webpackChunkName: "social-web/feed-route" */ './routes/feed/route' ),
+	},
+];
 
 /**
  * Initialize the Social Web application.
@@ -34,7 +47,7 @@ export function initialize( id: string, settings: SocialWebSettings ): void {
 			<ObjectTypeProvider>
 				<ShortcutProvider>
 					<SlotFillProvider>
-						<Layout />
+						<Router routes={ routes } rootComponent={ Layout } />
 					</SlotFillProvider>
 				</ShortcutProvider>
 			</ObjectTypeProvider>

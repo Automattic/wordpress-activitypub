@@ -8,6 +8,15 @@ import { SettingsProvider } from '../../../contexts/settings-context';
 import type { SocialWebSettings } from '../../../types';
 import type { FeedPost, Comment } from '../../../types';
 
+// Mock router hooks
+const mockNavigate = jest.fn();
+let mockSearchParams: { postId?: number } = { postId: 1 };
+
+jest.mock( '../../../router', () => ( {
+	useSearch: () => mockSearchParams,
+	useNavigate: () => mockNavigate,
+} ) );
+
 // Mock WordPress dependencies
 jest.mock( '@wordpress/i18n', () => ( {
 	__: ( text: string ) => text,
@@ -113,16 +122,18 @@ jest.mock( '../../../store', () => ( {
 } ) );
 
 describe( 'FeedInspector', () => {
-	const mockOnClose = jest.fn();
-
 	beforeEach( () => {
 		jest.clearAllMocks();
+		// Reset mock search params to default
+		mockSearchParams = { postId: 1 };
 	} );
 
 	const renderInspector = ( postId: number = 1 ) => {
+		// Set the postId in mock search params
+		mockSearchParams = { postId };
 		return render(
 			<SettingsProvider settings={ mockSettings }>
-				<FeedInspector id={ postId } onClose={ mockOnClose } />
+				<FeedInspector />
 			</SettingsProvider>
 		);
 	};
@@ -416,13 +427,23 @@ describe( 'FeedInspector', () => {
 			expect( screen.getByText( 'Close' ) ).toBeInTheDocument();
 		} );
 
-		it( 'should call onClose when close button is clicked', () => {
+		it( 'should navigate to remove postId when close button is clicked', () => {
 			renderInspector();
 
 			const closeButton = screen.getByText( 'Close' );
 			fireEvent.click( closeButton );
 
-			expect( mockOnClose ).toHaveBeenCalledTimes( 1 );
+			expect( mockNavigate ).toHaveBeenCalledTimes( 1 );
+			expect( mockNavigate ).toHaveBeenCalledWith( {
+				search: expect.any( Function ),
+			} );
+
+			// Verify the search function removes postId
+			const navigateCall = mockNavigate.mock.calls[ 0 ][ 0 ];
+			const searchFn = navigateCall.search;
+			const result = searchFn( { postId: 1, otherParam: 'value' } );
+			expect( result ).toEqual( { otherParam: 'value' } );
+			expect( result.postId ).toBeUndefined();
 		} );
 	} );
 } );
