@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Preserve newlines inside pre elements when federating content.
