@@ -435,8 +435,8 @@ class Settings_Fields {
 
 		<div class="activitypub-site-block-list">
 			<?php if ( ! empty( $blocked_domains ) ) : ?>
-			<details style="margin: 10px 0;">
-				<summary style="cursor: pointer; padding: 8px 0; color: inherit;">
+			<details class="activitypub-site-block-details">
+				<summary>
 					<?php
 					echo \esc_html(
 						\sprintf(
@@ -447,11 +447,11 @@ class Settings_Fields {
 					);
 					?>
 				</summary>
-				<table class="widefat striped activitypub-site-blocked-domain" role="presentation" style="max-width: 500px; margin-top: 10px;">
+				<table class="widefat striped activitypub-site-blocked-domain" role="presentation">
 					<?php foreach ( $blocked_domains as $domain ) : ?>
 						<tr>
 							<td><?php echo \esc_html( $domain ); ?></td>
-							<td style="width: 80px;">
+							<td>
 								<button type="button" class="button button-small remove-site-block-btn" data-type="domain" data-value="<?php echo \esc_attr( $domain ); ?>">
 									<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
 								</button>
@@ -483,8 +483,8 @@ class Settings_Fields {
 
 		<div class="activitypub-site-block-list">
 			<?php if ( ! empty( $blocked_keywords ) ) : ?>
-			<details style="margin: 10px 0;">
-				<summary style="cursor: pointer; padding: 8px 0; color: inherit;">
+			<details class="activitypub-site-block-details">
+				<summary>
 					<?php
 					echo \esc_html(
 						\sprintf(
@@ -495,11 +495,11 @@ class Settings_Fields {
 					);
 					?>
 				</summary>
-				<table class="widefat striped activitypub-site-blocked-keyword" role="presentation" style="max-width: 500px; margin-top: 10px;">
+				<table class="widefat striped activitypub-site-blocked-keyword" role="presentation">
 					<?php foreach ( $blocked_keywords as $keyword ) : ?>
 						<tr>
 							<td><?php echo \esc_html( $keyword ); ?></td>
-							<td style="width: 80px;">
+							<td>
 								<button type="button" class="button button-small remove-site-block-btn" data-type="keyword" data-value="<?php echo \esc_attr( $keyword ); ?>">
 									<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
 								</button>
