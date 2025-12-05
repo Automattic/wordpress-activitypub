@@ -1107,6 +1107,54 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that code blocks preserve newlines when content is transformed.
+	 *
+	 * @covers ::get_content
+	 */
+	public function test_code_blocks_preserve_newlines() {
+		$code_content = "function test() {\n\treturn true;\n}";
+		$post         = self::factory()->post->create_and_get(
+			array(
+				'post_title'   => 'Code Example',
+				'post_content' => '<pre>' . $code_content . '</pre>',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object  = Post::transform( $post )->to_object();
+		$content = $object->get_content();
+
+		// The pre block content should preserve newlines and tabs.
+		$this->assertStringContainsString( '<pre>', $content, 'Content should contain pre tag' );
+		$this->assertStringContainsString( "\n", $content, 'Content should preserve newlines inside pre blocks' );
+		$this->assertStringContainsString( "\t", $content, 'Content should preserve tabs inside pre blocks' );
+	}
+
+	/**
+	 * Test that regular content has whitespace stripped while code blocks are preserved.
+	 *
+	 * @covers ::get_content
+	 */
+	public function test_mixed_content_preserves_code_blocks() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_title'   => 'Mixed Content',
+				'post_content' => "<p>Regular paragraph</p>\n\n<pre class=\"code\">line1\nline2\nline3</pre>\n\n<p>Another paragraph</p>",
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object  = Post::transform( $post )->to_object();
+		$content = $object->get_content();
+
+		// Pre block should preserve newlines.
+		$this->assertStringContainsString( "line1\nline2\nline3", $content, 'Pre block should preserve newlines' );
+
+		// Regular paragraphs should be joined without extra newlines.
+		$this->assertStringNotContainsString( "</p>\n\n<p>", $content, 'Paragraphs should not have newlines between them' );
+	}
+
+	/**
 	 * Data provider for get_post_content_template tests with various scenarios.
 	 *
 	 * @return array Each test case contains:

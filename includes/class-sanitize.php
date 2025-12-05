@@ -201,4 +201,25 @@ class Sanitize {
 
 		return $content;
 	}
+
+	/**
+	 * Strip newlines, carriage returns, and tabs from content while preserving them inside pre elements.
+	 *
+	 * Code blocks require whitespace to be preserved for proper formatting.
+	 *
+	 * @param string $content The content to process.
+	 *
+	 * @return string The trimmed content with whitespace stripped except inside pre elements.
+	 */
+	public static function strip_whitespace( $content ) {
+		return \trim(
+			\preg_replace_callback(
+				'/(<pre[^>]*>.*?<\/pre>)|[\n\r\t]+/is',
+				static function ( $matches ) {
+					return $matches[1] ?? '';
+				},
+				$content
+			)
+		);
+	}
 }

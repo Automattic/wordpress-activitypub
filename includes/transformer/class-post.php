@@ -12,6 +12,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Replies;
 use Activitypub\Model\Blog;
+use Activitypub\Sanitize;
 use Activitypub\Shortcodes;
 
 use function Activitypub\esc_hashtag;
@@ -539,8 +540,7 @@ class Post extends Base {
 		\wp_reset_postdata();
 
 		$content = \wpautop( $content );
-		$content = \preg_replace( '/[\n\r\t]/', '', $content );
-		$content = \trim( $content );
+		$content = Sanitize::strip_whitespace( $content );
 
 		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
