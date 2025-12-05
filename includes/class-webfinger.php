@@ -215,14 +215,16 @@ class Webfinger {
 			\rawurlencode( $identifier )
 		);
 
-		$response = \wp_safe_remote_get(
-			$webfinger_url,
-			array(
-				'headers' => array( 'Accept' => 'application/jrd+json' ),
-			)
-		);
+		$set_accept_header = function ( $args ) {
+			$args['headers']['Accept'] = 'application/jrd+json';
+			return $args;
+		};
 
-		if ( \is_wp_error( $response ) || \wp_remote_retrieve_response_code( $response ) >= 400 ) {
+		\add_filter( 'http_request_args', $set_accept_header );
+		$response = Http::get( $webfinger_url );
+		\remove_filter( 'http_request_args', $set_accept_header );
+
+		if ( \is_wp_error( $response ) ) {
 			return new \WP_Error(
 				'webfinger_url_not_accessible',
 				__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
