@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Mentions now work with GoToSocial and other platforms that require signed requests.
