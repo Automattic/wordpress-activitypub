@@ -31,6 +31,7 @@ import type { AnyRoute, AnyRouter, RouteComponent } from '@tanstack/react-router
  */
 import { useState, useEffect } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
@@ -47,6 +48,13 @@ export { Outlet };
 
 // Create Link component for navigation
 export const Link = createLink( { defaultPreload: 'intent' } );
+
+/**
+ * Not found component displayed when no route matches.
+ */
+function NotFoundComponent() {
+	return <div style={ { padding: '20px', textAlign: 'center' } }>{ __( 'Page not found', 'activitypub' ) }</div>;
+}
 
 /**
  * Creates a TanStack route from a Route definition.
@@ -197,6 +205,7 @@ export default function Router( { routes, rootComponent }: RouterProps ) {
 					history,
 					routeTree,
 					defaultPreload: 'intent',
+					defaultNotFoundComponent: NotFoundComponent,
 				} as never );
 				setRouter( newRouter );
 			}
