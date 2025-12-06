@@ -37,25 +37,25 @@ interface MenuItemConfig {
 
 const menuItems: MenuItemConfig[] = [ { id: 'feed', path: '/', label: __( 'Feed', 'activitypub' ), icon: postList } ];
 
-export default function Sidebar() {
+export default function Sidebar(): JSX.Element {
 	const { adminUrl } = useSettings();
 	const location = useLocation();
 	const navigate = useNavigate();
 	const { hasActiveFilters, clearAllFilters } = useFeedFilters();
 
 	// Get current path from router
-	const currentPath = location.pathname;
+	const currentPath: string = location.pathname;
 
 	// Check if a route is currently active
-	const isRouteActive = ( path: string ) => {
+	const isRouteActive = ( path: string ): boolean => {
 		return currentPath === path;
 	};
 
 	// For feed route, also consider filters for "selected" state
-	const isFeedFullySelected = isRouteActive( '/' ) && ! hasActiveFilters;
+	const isFeedFullySelected: boolean = isRouteActive( '/' ) && ! hasActiveFilters;
 
 	// Handle menu item click - navigate and clear filters if going to feed
-	const handleMenuItemClick = ( path: string ) => {
+	const handleMenuItemClick = ( path: string ): void => {
 		if ( path === '/' ) {
 			clearAllFilters();
 		}
