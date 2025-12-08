@@ -67,11 +67,16 @@ class Mention {
 	public static function replace_with_links( $result ) {
 		$post = Remote_Actors::fetch_by_acct( $result[0] );
 
-		if ( is_wp_error( $post ) ) {
+		if ( \is_wp_error( $post ) ) {
 			return $result[0];
 		}
 
-		$actor    = Remote_Actors::get_actor( $post );
+		$actor = Remote_Actors::get_actor( $post );
+
+		if ( \is_wp_error( $actor ) ) {
+			return $result[0];
+		}
+
 		$username = $actor->get_preferred_username() ?: $actor->get_name() ?: ltrim( $result[0], '@' );
 		$url      = object_to_uri( $actor->get_url() ?: $actor->get_id() );
 
