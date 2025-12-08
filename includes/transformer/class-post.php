@@ -364,7 +364,9 @@ class Post extends Base {
 		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
 
 		if ( 0 === $max_media ) {
-			return array();
+			$this->attachment = array();
+
+			return $this->attachment;
 		}
 
 		$media = array(
