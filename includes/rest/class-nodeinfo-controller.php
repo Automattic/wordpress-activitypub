@@ -184,7 +184,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 	 * @return array NodeInfo schema data.
 	 */
 	public function get_item_schema() {
-		$schema = array(
+		return array(
 			'$schema'    => 'http://json-schema.org/draft-04/schema#',
 			'title'      => 'nodeinfo',
 			'type'       => 'object',
@@ -344,7 +344,5 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 				),
 			),
 		);
-
-		return $schema;
 	}
 }
