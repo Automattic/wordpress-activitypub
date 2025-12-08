@@ -52,6 +52,11 @@
 		line-height: var(--wpds-spacing-80, 32px);
 	}
 
+	.sidebar-description {
+		margin: 0 0 var(--wpds-spacing-80, 32px) 0;
+		padding: 0 var(--wpds-spacing-40, 16px);
+	}
+
 	.menu-item {
 		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
 
