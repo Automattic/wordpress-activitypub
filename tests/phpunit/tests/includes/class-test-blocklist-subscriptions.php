@@ -126,4 +126,25 @@ class Test_Blocklist_Subscriptions extends \WP_UnitTestCase {
 
 		$this->assertTrue( $result );
 	}
+
+	/**
+	 * Test sync returns false when URL contains no valid domains.
+	 *
+	 * @covers ::sync
+	 */
+	public function test_sync_returns_false_for_no_valid_domains() {
+		$filter_http_request = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => "<html>\n<head><title>Not a blocklist</title></head>\n<body>Hello World</body>\n</html>",
+			);
+		};
+		\add_filter( 'pre_http_request', $filter_http_request );
+
+		$result = Blocklist_Subscriptions::sync( 'https://example.com/not-a-blocklist.html' );
+
+		\remove_filter( 'pre_http_request', $filter_http_request );
+
+		$this->assertFalse( $result );
+	}
 }

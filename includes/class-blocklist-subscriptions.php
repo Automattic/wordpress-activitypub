@@ -116,7 +116,7 @@ class Blocklist_Subscriptions {
 		$domains = self::parse_csv_string( $body );
 
 		if ( empty( $domains ) ) {
-			return 0;
+			return false;
 		}
 
 		// Get existing blocks and find new ones.

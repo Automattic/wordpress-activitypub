@@ -1108,7 +1108,7 @@ class Admin {
 			if ( false === $result ) {
 				// Remove the subscription since sync failed.
 				Blocklist_Subscriptions::remove( $url );
-				\wp_send_json_error( array( 'message' => \__( 'Failed to fetch blocklist. The URL may be unreachable or contain invalid data.', 'activitypub' ) ) );
+				\wp_send_json_error( array( 'message' => \__( 'Failed to fetch blocklist. The URL may be unreachable or not contain valid domains.', 'activitypub' ) ) );
 			}
 
 			\wp_send_json_success();
