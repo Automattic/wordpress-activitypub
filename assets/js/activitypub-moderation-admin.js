@@ -90,6 +90,26 @@
 	}
 
 	/**
+	 * Create a table row for a blocked term.
+	 *
+	 * @param {string} type    - The type of block (domain or keyword)
+	 * @param {string} value   - The blocked value
+	 * @param {string} context - The context (user or site)
+	 * @return {jQuery} The constructed table row
+	 */
+	function createBlockedTermRow( type, value, context ) {
+		var $button = $( '<button>', {
+			type: 'button',
+			'class': 'button button-small remove-' + context + '-block-btn',
+			'data-type': type,
+			'data-value': value,
+			text: __( 'Remove', 'activitypub' )
+		} );
+
+		return $( '<tr>' ).append( $( '<td>' ).text( value ), $( '<td>' ).append( $button ) );
+	}
+
+	/**
 	 * Helper function to add a blocked term to the UI
 	 */
 	function addBlockedTermToUI( type, value, context, userId ) {
@@ -104,7 +124,7 @@
 				table = $( '<table class="widefat striped activitypub-blocked-' + type + '" role="presentation" style="max-width: 500px; margin: 15px 0;"><tbody></tbody></table>' );
 				container.find( '#new_user_' + type ).closest( '.add-user-block-form' ).before( table );
 			}
-			table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-user-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
+			table.find( 'tbody' ).append( createBlockedTermRow( type, value, context ) );
 		} else if ( context === 'site' ) {
 			// For site moderation, add to the table inside the details element
 			var details = $( '.activitypub-site-block-details[data-type="' + type + '"]' );
@@ -116,7 +136,7 @@
 				details.find( 'summary' ).after( table );
 			}
 
-			table.find( 'tbody' ).append( '<tr><td>' + value + '</td><td><button type="button" class="button button-small remove-site-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
+			table.find( 'tbody' ).append( createBlockedTermRow( type, value, context ) );
 
 			updateSiteBlockSummary( type );
 		}
