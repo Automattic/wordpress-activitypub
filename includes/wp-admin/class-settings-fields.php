@@ -434,21 +434,26 @@ class Settings_Fields {
 		<p class="description"><?php \esc_html_e( 'Block entire ActivityPub instances by domain name.', 'activitypub' ); ?></p>
 
 		<div class="activitypub-site-block-list">
-			<?php if ( ! empty( $blocked_domains ) ) : ?>
-			<details class="activitypub-site-block-details">
+			<details class="activitypub-site-block-details" data-type="domain"<?php echo empty( $blocked_domains ) ? ' open' : ''; ?>>
 				<summary>
-					<?php
-					echo \esc_html(
-						\sprintf(
-							/* translators: %s: Number of blocked domains */
-							\_n( '%s blocked domain', '%s blocked domains', $count, 'activitypub' ),
-							\number_format_i18n( $count )
-						)
-					);
-					?>
+					<?php if ( $count > 0 ) : ?>
+						<?php
+						echo \esc_html(
+							\sprintf(
+								/* translators: %s: Number of blocked domains */
+								\_n( '%s blocked domain', '%s blocked domains', $count, 'activitypub' ),
+								\number_format_i18n( $count )
+							)
+						);
+						?>
+					<?php else : ?>
+						<?php \esc_html_e( 'No blocked domains', 'activitypub' ); ?>
+					<?php endif; ?>
 				</summary>
+				<?php if ( ! empty( $blocked_domains ) ) : ?>
 				<table class="widefat striped activitypub-site-blocked-domain" role="presentation">
-					<?php foreach ( $blocked_domains as $domain ) : ?>
+					<tbody>
+						<?php foreach ( $blocked_domains as $domain ) : ?>
 						<tr>
 							<td><?php echo \esc_html( $domain ); ?></td>
 							<td>
@@ -457,10 +462,11 @@ class Settings_Fields {
 								</button>
 							</td>
 						</tr>
-					<?php endforeach; ?>
+						<?php endforeach; ?>
+					</tbody>
 				</table>
+				<?php endif; ?>
 			</details>
-			<?php endif; ?>
 
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 				<input type="text" class="regular-text" id="new_site_domain" placeholder="<?php \esc_attr_e( 'example.com', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
@@ -482,21 +488,26 @@ class Settings_Fields {
 		<p class="description"><?php \esc_html_e( 'Block ActivityPub content containing specific keywords.', 'activitypub' ); ?></p>
 
 		<div class="activitypub-site-block-list">
-			<?php if ( ! empty( $blocked_keywords ) ) : ?>
-			<details class="activitypub-site-block-details">
+			<details class="activitypub-site-block-details" data-type="keyword"<?php echo empty( $blocked_keywords ) ? ' open' : ''; ?>>
 				<summary>
-					<?php
-					echo \esc_html(
-						\sprintf(
-							/* translators: %s: Number of blocked keywords */
-							\_n( '%s blocked keyword', '%s blocked keywords', $count, 'activitypub' ),
-							\number_format_i18n( $count )
-						)
-					);
-					?>
+					<?php if ( $count > 0 ) : ?>
+						<?php
+						echo \esc_html(
+							\sprintf(
+								/* translators: %s: Number of blocked keywords */
+								\_n( '%s blocked keyword', '%s blocked keywords', $count, 'activitypub' ),
+								\number_format_i18n( $count )
+							)
+						);
+						?>
+					<?php else : ?>
+						<?php \esc_html_e( 'No blocked keywords', 'activitypub' ); ?>
+					<?php endif; ?>
 				</summary>
+				<?php if ( ! empty( $blocked_keywords ) ) : ?>
 				<table class="widefat striped activitypub-site-blocked-keyword" role="presentation">
-					<?php foreach ( $blocked_keywords as $keyword ) : ?>
+					<tbody>
+						<?php foreach ( $blocked_keywords as $keyword ) : ?>
 						<tr>
 							<td><?php echo \esc_html( $keyword ); ?></td>
 							<td>
@@ -505,10 +516,11 @@ class Settings_Fields {
 								</button>
 							</td>
 						</tr>
-					<?php endforeach; ?>
+						<?php endforeach; ?>
+					</tbody>
 				</table>
+				<?php endif; ?>
 			</details>
-			<?php endif; ?>
 
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 				<input type="text" class="regular-text" id="new_site_keyword" placeholder="<?php \esc_attr_e( 'spam keyword', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
