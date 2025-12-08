@@ -9,10 +9,13 @@ import type { Term } from '@wordpress/core-data';
 import { MenuItem, MenuGroup } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
 import { useTagFilter } from '../../hooks/use-tag-filter';
-import { isAtRoot } from '../../utils';
 import './style.scss';
 
-export function PopularTags() {
+interface PopularTagsProps {
+	onNavigate?: () => void;
+}
+
+export function PopularTags( { onNavigate }: PopularTagsProps = {} ) {
 	const { records: tags, isResolving } = useEntityRecords< Term >( 'taxonomy', 'ap_tag', {
 		per_page: 5,
 		orderby: 'count',
@@ -23,18 +26,10 @@ export function PopularTags() {
 	const { selectedTagId, updateTagFilter } = useTagFilter();
 
 	// Toggle: if clicking the same tag, clear the filter
-	// On mobile, also navigate to feed stage after updating filter
 	const updateFilter = ( tagId: number ): void => {
-		const atRoot = isAtRoot();
-
-		updateTagFilter( selectedTagId === tagId ? null : tagId, {
-			onComplete: () => {
-				// Navigate to feed stage on mobile if currently at sidebar
-				if ( atRoot ) {
-					window.location.hash = '#/feed';
-				}
-			},
-		} );
+		updateTagFilter( selectedTagId === tagId ? null : tagId );
+		// Close mobile sidebar after filter update
+		onNavigate?.();
 	};
 
 	if ( isResolving || ! tags || tags.length === 0 ) {

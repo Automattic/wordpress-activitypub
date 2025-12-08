@@ -6,16 +6,6 @@ import { sprintf, _x } from '@wordpress/i18n';
 import { dateI18n, getSettings } from '@wordpress/date';
 
 /**
- * Check if the current location is at the root hash (sidebar view on mobile)
- *
- * @return True if at root (#/, #, or empty hash)
- */
-export function isAtRoot(): boolean {
-	const hash = window.location.hash;
-	return ! hash || hash === '#' || hash === '#/';
-}
-
-/**
  * Format relative time in short format (5m, 2h, 6d)
  * For dates older than a week, returns the site's date format
  *

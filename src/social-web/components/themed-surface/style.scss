@@ -13,4 +13,6 @@
 	flex-direction: column;
 	flex: 1;
 	min-height: 0;
+	// Ensure content aligns to top, not center
+	justify-content: flex-start;
 }

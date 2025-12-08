@@ -41,6 +41,9 @@
 	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;
+	// Ensure content aligns to top, not center
+	align-items: stretch;
+	justify-content: flex-start;
 }
 
 // Position the SnackbarList at the bottom left of the viewport
@@ -78,6 +81,30 @@
 			background-color: var(--wpds-color-bg-surface-primary, #ffffff);
 		}
 
+		// Mobile sidebar fills the content area
+		.sidebar-region--mobile {
+			flex: 1;
+			width: 100%;
+			overflow: hidden;
+
+			.sidebar {
+				height: 100%;
+				overflow-y: auto;
+				-webkit-overflow-scrolling: touch;
+			}
+
+			// Hide SiteHub in sidebar on mobile (already shown in header)
+			.site-hub {
+				display: none;
+			}
+		}
+
+		// On mobile, only show one region at a time
+		// When inspector is present, hide stage (inspector takes priority)
+		.stage-region:has(~ .inspector-region) {
+			display: none;
+		}
+
 		// Remove panel margins on mobile for full-screen experience
 		// Following Site Editor pattern - panels go edge-to-edge
 		.panel {
@@ -93,7 +120,7 @@
 		// Inspector content scrolls independently
 		.inspector-region {
 			.activitypub-inspector {
-				height: 100%;
+				flex: 1;
 				overflow-y: auto;
 				-webkit-overflow-scrolling: touch; // Smooth scrolling on iOS
 			}

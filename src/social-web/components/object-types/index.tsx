@@ -9,7 +9,6 @@ import type { Term } from '@wordpress/core-data';
 import { Icon, MenuItem, MenuGroup } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
 import { useObjectTypeFilter } from '../../hooks/use-object-type-filter';
-import { isAtRoot } from '../../utils';
 import { postContent, audio, file, calendar, image, comment, page, pin, video } from '@wordpress/icons';
 
 // Object type configuration with translations and icons - matches object-type field definitions
@@ -26,7 +25,11 @@ export const objectTypeConfig: Record< string, { label: string; icon: any } > = 
 	Place: { label: __( 'Places & Locations', 'activitypub' ), icon: pin },
 };
 
-export function ObjectTypes() {
+interface ObjectTypesProps {
+	onNavigate?: () => void;
+}
+
+export function ObjectTypes( { onNavigate }: ObjectTypesProps = {} ) {
 	const { records: objectTypes, isResolving } = useEntityRecords< Term >( 'taxonomy', 'ap_object_type', {
 		per_page: -1,
 	} );
@@ -34,18 +37,10 @@ export function ObjectTypes() {
 	const { selectedObjectTypeId, updateObjectTypeFilter } = useObjectTypeFilter();
 
 	// Toggle: if clicking the same object type, clear the filter
-	// On mobile, also navigate to feed stage after updating filter
 	const updateFilter = ( objectTypeId: number ): void => {
-		const atRoot = isAtRoot();
-
-		updateObjectTypeFilter( selectedObjectTypeId === objectTypeId ? null : objectTypeId, {
-			onComplete: () => {
-				// Navigate to feed stage on mobile if currently at sidebar
-				if ( atRoot ) {
-					window.location.hash = '#/feed';
-				}
-			},
-		} );
+		updateObjectTypeFilter( selectedObjectTypeId === objectTypeId ? null : objectTypeId );
+		// Close mobile sidebar after filter update
+		onNavigate?.();
 	};
 
 	if ( isResolving || ! objectTypes || objectTypes.length === 0 ) {

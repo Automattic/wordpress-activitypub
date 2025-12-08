@@ -95,8 +95,12 @@
 
 // Inspector view styles - modern and flat
 .activitypub-inspector {
-	height: 100%;
+	flex: 1;
 	overflow: auto;
+	// Content flows from top, not centered
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
 }
 
 .activitypub-inspector-loading {

@@ -26,10 +26,10 @@ import './style.scss';
 
 interface SiteHubProps {
 	onNavigateBack?: () => void;
-	selectedItemId?: string | number | null | unknown;
+	showBackButton?: boolean;
 }
 
-function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
+function SiteHub( { onNavigateBack, showBackButton }: SiteHubProps = {} ) {
 	const { homeUrl, siteTitle } = useSelect( ( select ) => {
 		const { getEntityRecord } = select( coreStore );
 		const _base = getEntityRecord< UnstableBase >( 'root', '__unstableBase' );
@@ -41,11 +41,11 @@ function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
 
 	const { open: openCommandCenter } = useDispatch( commandsStore );
 
-	// On mobile, enable back navigation when an item is selected (inspector is open)
-	const shouldEnableBack = onNavigateBack && selectedItemId;
+	// On mobile, the icon always triggers navigation (back or toggle sidebar)
+	const hasMobileNavigation = !! onNavigateBack;
 
 	const handleIconClick = ( e: React.MouseEvent ) => {
-		if ( shouldEnableBack ) {
+		if ( hasMobileNavigation ) {
 			e.preventDefault();
 			onNavigateBack();
 		}
@@ -57,11 +57,13 @@ function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
 				<div className="site-hub__icon-container">
 					<Button
 						__next40pxDefaultSize
-						href={ shouldEnableBack ? undefined : '/wp-admin/' }
-						onClick={ shouldEnableBack ? handleIconClick : undefined }
+						href={ hasMobileNavigation ? undefined : '/wp-admin/' }
+						onClick={ hasMobileNavigation ? handleIconClick : undefined }
 						label={
-							shouldEnableBack
-								? __( 'Navigate back', 'activitypub' )
+							hasMobileNavigation
+								? showBackButton
+									? __( 'Navigate back', 'activitypub' )
+									: __( 'Open menu', 'activitypub' )
 								: __( 'Go to the Dashboard', 'activitypub' )
 						}
 						className="site-hub__icon-button"

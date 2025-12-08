@@ -37,7 +37,11 @@ interface MenuItemConfig {
 
 const menuItems: MenuItemConfig[] = [ { id: 'feed', path: '/', label: __( 'Feed', 'activitypub' ), icon: postList } ];
 
-export default function Sidebar(): JSX.Element {
+interface SidebarProps {
+	onNavigate?: () => void;
+}
+
+export default function Sidebar( { onNavigate }: SidebarProps = {} ): JSX.Element {
 	const { adminUrl } = useSettings();
 	const location = useLocation();
 	const navigate = useNavigate();
@@ -59,7 +63,13 @@ export default function Sidebar(): JSX.Element {
 		if ( path === '/' ) {
 			clearAllFilters();
 		}
-		navigate( { to: path } );
+		if ( onNavigate ) {
+			// On mobile: close sidebar (which navigates and removes canvas param)
+			onNavigate();
+		} else {
+			// On desktop: just navigate to the path
+			navigate( { to: path } );
+		}
 	};
 
 	return (
@@ -97,11 +107,11 @@ export default function Sidebar(): JSX.Element {
 				</NavigableMenu>
 
 				{ /* Route-specific sidebar content */ }
-				{ isRouteActive( '/' ) && <ObjectTypes /> }
+				{ isRouteActive( '/' ) && <ObjectTypes onNavigate={ onNavigate } /> }
 			</nav>
 
 			{ /* Route-specific sidebar content */ }
-			{ isRouteActive( '/' ) && <PopularTags /> }
+			{ isRouteActive( '/' ) && <PopularTags onNavigate={ onNavigate } /> }
 
 			{ /* Footer */ }
 			<div className="footer">
