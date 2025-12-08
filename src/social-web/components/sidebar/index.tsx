@@ -17,30 +17,49 @@ import { chevronRight, chevronLeft, cog, postList } from '@wordpress/icons';
 import { __, isRTL } from '@wordpress/i18n';
 import { useSettings } from '../../contexts/settings-context';
 import { useFeedFilters } from '../../hooks/use-feed-filters';
+import { useLocation, useNavigate } from '../../router';
 import SiteHub from '../site-hub';
 import ActorSwitcher from '../actor-switcher';
 import { ObjectTypes } from '../object-types';
 import { PopularTags } from '../popular-tags';
 import './style.scss';
 
-const menuItems = [ { id: 'feed', label: __( 'Feed', 'activitypub' ), icon: postList } ];
-
-interface SidebarProps {
-	activeSection: string;
-	onNavigate: ( section: string ) => void;
+/**
+ * Menu item configuration for sidebar navigation.
+ * Each item maps to a route path.
+ */
+interface MenuItemConfig {
+	id: string;
+	path: string;
+	label: string;
+	icon: typeof postList;
 }
 
-export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
+const menuItems: MenuItemConfig[] = [ { id: 'feed', path: '/', label: __( 'Feed', 'activitypub' ), icon: postList } ];
+
+export default function Sidebar(): JSX.Element {
 	const { adminUrl } = useSettings();
+	const location = useLocation();
+	const navigate = useNavigate();
 	const { hasActiveFilters, clearAllFilters } = useFeedFilters();
 
-	// Feed should be selected when on feed section and no filters are active
-	const isFeedSelected = activeSection === 'feed' && ! hasActiveFilters;
+	// Get current path from router
+	const currentPath: string = location.pathname;
 
-	// Handle Feed click: navigate to feed and clear all filters
-	const handleFeedClick = () => {
-		onNavigate( 'feed' );
-		clearAllFilters();
+	// Check if a route is currently active
+	const isRouteActive = ( path: string ): boolean => {
+		return currentPath === path;
+	};
+
+	// For feed route, also consider filters for "selected" state
+	const isFeedFullySelected: boolean = isRouteActive( '/' ) && ! hasActiveFilters;
+
+	// Handle menu item click - navigate and clear filters if going to feed
+	const handleMenuItemClick = ( path: string ): void => {
+		if ( path === '/' ) {
+			clearAllFilters();
+		}
+		navigate( { to: path } );
 	};
 
 	return (
@@ -66,8 +85,8 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 						{ menuItems.map( ( item ) => (
 							<MenuItem
 								key={ item.id }
-								isSelected={ item.id === 'feed' ? isFeedSelected : activeSection === item.id }
-								onClick={ item.id === 'feed' ? handleFeedClick : () => onNavigate( item.id ) }
+								isSelected={ item.path === '/' ? isFeedFullySelected : isRouteActive( item.path ) }
+								onClick={ () => handleMenuItemClick( item.path ) }
 								className="menu-item"
 							>
 								{ item.icon && <Icon icon={ item.icon } size={ 24 } /> }
@@ -77,12 +96,12 @@ export default function Sidebar( { activeSection, onNavigate }: SidebarProps ) {
 					</MenuGroup>
 				</NavigableMenu>
 
-				{ /* Object Types Filter - shown only on Feed */ }
-				{ activeSection === 'feed' && <ObjectTypes /> }
+				{ /* Route-specific sidebar content */ }
+				{ isRouteActive( '/' ) && <ObjectTypes /> }
 			</nav>
 
-			{ /* Popular Tags - Only show on feed section */ }
-			{ activeSection === 'feed' && <PopularTags /> }
+			{ /* Route-specific sidebar content */ }
+			{ isRouteActive( '/' ) && <PopularTags /> }
 
 			{ /* Footer */ }
 			<div className="footer">
