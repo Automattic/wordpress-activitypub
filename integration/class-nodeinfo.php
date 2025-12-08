@@ -66,6 +66,15 @@ class Nodeinfo {
 
 		$nodeinfo['protocols'][] = 'activitypub';
 
+		$nodeinfo['services']['inbound']  = array_merge(
+			$nodeinfo['services']['inbound'],
+			array( 'gnusocial' )
+		);
+		$nodeinfo['services']['outbound'] = array_merge(
+			$nodeinfo['services']['outbound'],
+			array( 'friendica', 'gnusocial', 'mediagoblin', 'wordpress' )
+		);
+
 		$nodeinfo['usage']['users'] = array(
 			'total'          => get_total_users(),
 			'activeMonth'    => get_active_users(),
