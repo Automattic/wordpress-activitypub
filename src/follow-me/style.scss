@@ -99,12 +99,44 @@
 			display: inline-block;
 			margin: 0;
 		}
+
 		.activitypub-profile__avatar,
 		.activitypub-profile__name,
 		.activitypub-profile__handle,
 		.activitypub-profile__bio,
 		.activitypub-profile__stats {
 			display: none;
+		}
+
+		// Support inner button width settings.
+		// When width is set, switch from inline to block layout to enable percentage widths.
+		// The `.has-custom-width` class is added by core/button when width is selected.
+		div.wp-block-button.has-custom-width {
+			display: block;
+			max-width: none;
+
+			.wp-block-button__link {
+				width: 100%;
+				justify-content: center;
+			}
+		}
+
+		// Width class support - match core/button calculations.
+		// These classes are on the inner .wp-block-button element.
+		div.wp-block-button__width-25 {
+			width: calc(25% - (var(--wp--style--block-gap, 0.5em) * 0.75));
+		}
+
+		div.wp-block-button__width-50 {
+			width: calc(50% - (var(--wp--style--block-gap, 0.5em) * 0.5));
+		}
+
+		div.wp-block-button__width-75 {
+			width: calc(75% - (var(--wp--style--block-gap, 0.5em) * 0.25));
+		}
+
+		div.wp-block-button__width-100 {
+			width: 100%;
 		}
 	}
 

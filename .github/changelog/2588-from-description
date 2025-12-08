@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Follow Me block button-only style now respects width settings from the inner Button block.

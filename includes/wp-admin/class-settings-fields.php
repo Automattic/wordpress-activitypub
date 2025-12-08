@@ -60,7 +60,11 @@ class Settings_Fields {
 			'activitypub_moderation',
 			\esc_html__( 'Moderation', 'activitypub' ),
 			array( self::class, 'render_moderation_section_description' ),
-			'activitypub_settings'
+			'activitypub_settings',
+			array(
+				'before_section' => '<div id="moderation">',
+				'after_section'  => '</div>',
+			)
 		);
 
 		// Add settings fields.

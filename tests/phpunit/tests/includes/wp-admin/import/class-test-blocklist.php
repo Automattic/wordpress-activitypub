@@ -352,4 +352,38 @@ class Test_Blocklist extends \WP_UnitTestCase {
 		$this->assertContains( 'valid.com', $domains );
 		$this->assertNotContains( '-invalid.com', $domains );
 	}
+
+	/**
+	 * Test that email-like identifiers are skipped gracefully.
+	 *
+	 * @covers ::parse_csv
+	 */
+	public function test_parse_csv_skips_email_like_identifiers() {
+		$csv_content  = "user@example.com\n";
+		$csv_content .= "admin@bad.org\n";
+		$csv_content .= "valid.org\n";
+		$csv_content .= "@invalid.net\n";
+
+		$file    = $this->create_temp_csv( $csv_content );
+		$domains = Blocklist::parse_csv( $file );
+
+		$this->assertSame( array( 'valid.org' ), $domains );
+	}
+
+	/**
+	 * Test that email-like identifiers in Mastodon CSV format are skipped gracefully.
+	 *
+	 * @covers ::parse_csv
+	 */
+	public function test_parse_csv_mastodon_format_skips_email_like_identifiers() {
+		$csv_content  = "#domain,#severity,#public_comment\n";
+		$csv_content .= "user@example.com,suspend,\"Test\"\n";
+		$csv_content .= "valid.org,silence,\"Test\"\n";
+		$csv_content .= "admin@bad.org,suspend,\"Test\"\n";
+
+		$file    = $this->create_temp_csv( $csv_content );
+		$domains = Blocklist::parse_csv( $file );
+
+		$this->assertSame( array( 'valid.org' ), $domains );
+	}
 }
