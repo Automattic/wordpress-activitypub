@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix NodeInfo documents to comply with schema specification.
