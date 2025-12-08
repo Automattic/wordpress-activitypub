@@ -5,48 +5,32 @@
  * - Sidebar (300px fixed) - Navigation
  * - Stage (flexible) - Main content
  * - Inspector (380px fixed, optional) - Detail panel
+ *
+ * On mobile, only shows SiteHub header + active region (stage or inspector).
+ * Follows WordPress Site Editor mobile navigation pattern.
  */
 
 import { CommandMenu } from '@wordpress/commands';
 import { SnackbarList } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import { Outlet, useLocation } from '../../router';
+import { Outlet, useLocation, useNavigate } from '../../router';
+import { useMobileViewport } from '../../hooks/use-mobile-viewport';
 import Sidebar from '../sidebar';
 import SiteHub from '../site-hub';
 import './style.scss';
 
-/**
- * Determine mobile view state based on router location.
- * - 'sidebar': At root path with no inspector open
- * - 'stage': Viewing content list (no item selected)
- * - 'inspector': Viewing item detail (postId in search params)
- *
- * @param {string}                  pathname Current route pathname.
- * @param {Record<string, unknown>} search   Current route search params.
- * @return {'sidebar' | 'stage' | 'inspector'} The mobile view state.
- */
-function getMobileView( pathname: string, search: Record< string, unknown > ): 'sidebar' | 'stage' | 'inspector' {
-	const hasInspector = 'postId' in search && search.postId;
-
-	if ( hasInspector ) {
-		return 'inspector';
-	}
-
-	// If we're at root without inspector, show stage (feed list)
-	// The sidebar is always accessible via back navigation
-	if ( pathname === '/' ) {
-		return 'stage';
-	}
-
-	return 'stage';
-}
-
 export function Layout() {
+	// Detect mobile viewport using WordPress standard breakpoint
+	const isMobileViewport = useMobileViewport();
+
 	// Get current location from router - includes search params
 	const location = useLocation();
+	const navigate = useNavigate();
+
 	// TanStack Router's useLocation includes search as a property
 	const search = ( location.search || {} ) as Record< string, unknown >;
+	const hasInspector = 'postId' in search && search.postId;
 
 	// Get notices for the snackbar
 	const notices = useSelect( ( select ) => {
@@ -55,30 +39,50 @@ export function Layout() {
 	}, [] );
 	const { removeNotice } = useDispatch( noticesStore ) as any;
 
-	// Determine mobile view state
-	const mobileView = getMobileView( location.pathname, search );
-	const hasInspector = mobileView === 'inspector';
-
-	// Mobile-specific back navigation handler
+	// Mobile back navigation - uses router navigate for predictable behavior
 	const navigateBack = () => {
-		// Use browser history to navigate back
-		window.history.back();
+		if ( hasInspector ) {
+			// From inspector → stage: remove postId from search params
+			navigate( {
+				search: ( prev: Record< string, unknown > ) => {
+					const { postId, ...rest } = prev;
+					return rest;
+				},
+			} );
+		}
+		// From stage: SiteHub icon links to /wp-admin/ (handled in SiteHub)
 	};
 
-	return (
-		<div className="app-layout" data-mobile-view={ mobileView }>
-			<CommandMenu />
+	// Desktop layout: Sidebar + Stage + Inspector
+	if ( ! isMobileViewport ) {
+		return (
+			<div className="app-layout">
+				<CommandMenu />
+				<div className="app-content">
+					{ /* Sidebar with SiteHub - 300px fixed width */ }
+					<div className="sidebar-region">
+						<Sidebar />
+					</div>
 
-			{ /* Single SiteHub instance - positioned via CSS based on mobile view */ }
-			<SiteHub onNavigateBack={ navigateBack } selectedItemId={ hasInspector ? search.postId : null } />
-
-			<div className="app-content">
-				{ /* Sidebar - 300px fixed width (no Panel wrapper, stays dark) */ }
-				<div className="sidebar-region">
-					<Sidebar />
+					{ /* Route content (stage + inspector) rendered via Outlet */ }
+					<Outlet />
 				</div>
 
-				{ /* Route content (stage + inspector) rendered via Outlet */ }
+				<SnackbarList notices={ notices } onRemove={ removeNotice } />
+			</div>
+		);
+	}
+
+	// Mobile layout: SiteHub header + active region only
+	return (
+		<div className="app-layout app-layout--mobile">
+			<CommandMenu />
+
+			{ /* Mobile SiteHub header with back navigation */ }
+			<SiteHub onNavigateBack={ navigateBack } selectedItemId={ hasInspector ? search.postId : null } />
+
+			<div className="app-content app-content--mobile">
+				{ /* Route content (stage or inspector) rendered via Outlet */ }
 				<Outlet />
 			</div>
 

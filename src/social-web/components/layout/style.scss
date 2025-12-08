@@ -10,11 +10,6 @@
 	height: 100%;
 	background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
 	overflow: hidden;
-
-	// Hide SiteHub on desktop (only shown on mobile)
-	> .site-hub {
-		display: none;
-	}
 }
 
 .app-content {
@@ -56,56 +51,62 @@
 	z-index: 100000; // High z-index to ensure it appears above other content
 }
 
-// Responsive - Mobile/Tablet optimization
+// Mobile layout - uses React conditional rendering via useMobileViewport hook
 // Following WordPress Site Editor mobile navigation pattern:
-// One region visible at a time: Sidebar → Stage → Inspector
-@media (max-width: 782px) {
-	.app-content {
-		position: relative;
-		flex-direction: column;
-	}
-
-	// All regions are absolutely positioned and full-screen on mobile
-	.sidebar-region,
-	.stage-region,
-	.inspector-region {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		width: 100%;
-		height: 100%;
-		overflow: auto;
-	}
-
-	// Show SiteHub on mobile - positioned at top of visible region
-	.app-layout > .site-hub {
-		display: block;
-	}
-
-	// Mobile View: Sidebar (default)
-	// Show only sidebar, hide stage and SiteHub
-	.app-layout[data-mobile-view="sidebar"] {
-		> .site-hub {
-			display: none; // No header in sidebar view
-		}
-		.sidebar-region {
-			display: flex;
-		}
-		.stage-region {
-			display: none;
-		}
-	}
-
-	// Mobile View: Stage
-	// Show only stage with SiteHub header, hide sidebar
-	.sidebar-region {
-		display: none;
-	}
-	.stage-region, .inspector-region {
+// Only shows SiteHub header + active region (stage or inspector)
+.app-layout--mobile {
+	// Show SiteHub header on mobile
+	> .site-hub {
 		display: flex;
-		background-color: var(--wpds-color-bg-surface-primary, #ffffff);
+		flex-shrink: 0;
+		background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+	}
+
+	// Mobile content fills remaining space
+	.app-content--mobile {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+
+		// Stage and inspector regions fill mobile content area
+		.stage-region,
+		.inspector-region {
+			flex: 1;
+			width: 100%;
+			overflow: hidden;
+			background-color: var(--wpds-color-bg-surface-primary, #ffffff);
+		}
+
+		// Remove panel margins on mobile for full-screen experience
+		// Following Site Editor pattern - panels go edge-to-edge
+		.panel {
+			margin: 0;
+			border-radius: 0;
+		}
+
+		// Make ThemedSurface full-screen on mobile
+		.themed-surface {
+			border-radius: 0;
+		}
+
+		// Inspector content scrolls independently
+		.inspector-region {
+			.activitypub-inspector {
+				height: 100%;
+				overflow-y: auto;
+				-webkit-overflow-scrolling: touch; // Smooth scrolling on iOS
+			}
+		}
+
+		// Stage content also scrolls independently
+		.stage-region {
+			.dataviews-wrapper {
+				height: 100%;
+				overflow-y: auto;
+				-webkit-overflow-scrolling: touch;
+			}
+		}
 	}
 
 	// Adjust snackbar position on mobile

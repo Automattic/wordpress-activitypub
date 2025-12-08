@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { dispatch, select } from '@wordpress/data';
+import { dispatch, resolveSelect, select } from '@wordpress/data';
 import { store as preferencesStore } from '@wordpress/preferences';
 import { store as coreStore } from '@wordpress/core-data';
 
@@ -21,8 +21,8 @@ export function* getActiveActorId() {
 		// Restore saved actor ID
 		yield dispatch( STORE_NAME ).setActiveActor( savedActorId );
 	} else {
-		// No saved preference, initialize with current user ID
-		const currentUser = select( coreStore ).getCurrentUser();
+		// No saved preference, wait for current user data and initialize with user ID
+		const currentUser: { id?: number } = yield resolveSelect( coreStore ).getCurrentUser();
 		if ( currentUser?.id ) {
 			yield dispatch( STORE_NAME ).setActiveActor( currentUser.id );
 		}
