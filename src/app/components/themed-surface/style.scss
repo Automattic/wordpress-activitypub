@@ -7,10 +7,17 @@
 
 .themed-surface {
 	background: var(--wpds-color-bg-surface-neutral-strong, #ffffff);
-	border-radius: var(--wpds-border-radius-large, 8px);
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
 	flex: 1;
 	min-height: 0;
+
+	// Mobile: no rounded corners (full-screen content)
+	border-radius: 0;
+
+	// Desktop: restore rounded corners
+	@media (min-width: 782px) {
+		border-radius: var(--wpds-border-radius-large, 8px);
+	}
 }
