@@ -77,7 +77,7 @@ class Mention {
 			return $result[0];
 		}
 
-		$username = $actor->get_preferred_username() ?: $actor->get_name() ?: ltrim( $result[0], '@' );
+		$username = $actor->get_preferred_username() ?: $actor->get_name() ?: Sanitize::webfinger( $result[0] );
 		$url      = object_to_uri( $actor->get_url() ?: $actor->get_id() );
 
 		return \sprintf( '<a rel="mention" class="u-url mention" href="%1$s">@%2$s</a>', esc_url( $url ), esc_html( $username ) );
