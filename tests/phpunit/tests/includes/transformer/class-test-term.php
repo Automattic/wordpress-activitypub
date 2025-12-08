@@ -71,9 +71,13 @@ class Test_Term extends \WP_UnitTestCase {
 		// Check type is OrderedCollection.
 		$this->assertEquals( 'OrderedCollection', $object->get_type() );
 
-		// Check ID is the term link.
+		// Check ID uses stable term_id-based URL.
+		$expected_id = \add_query_arg( 'term_id', $term->term_id, \home_url( '/' ) );
+		$this->assertEquals( $expected_id, $object->get_id() );
+
+		// Check URL is the term link.
 		$expected_url = get_term_link( $term );
-		$this->assertEquals( $expected_url, $object->get_id() );
+		$this->assertEquals( $expected_url, $object->get_url() );
 	}
 
 	/**
@@ -86,13 +90,43 @@ class Test_Term extends \WP_UnitTestCase {
 		$transformer = new Term( $term );
 		$id          = $transformer->to_id();
 
-		// Should return the term link.
+		// Should return stable term_id-based URL.
+		$expected_id = \add_query_arg( 'term_id', $term->term_id, \home_url( '/' ) );
+		$this->assertEquals( $expected_id, $id );
+	}
+
+	/**
+	 * Test get_id returns stable ID.
+	 *
+	 * @covers ::get_id
+	 */
+	public function test_get_id() {
+		$term        = get_term( self::$term_id );
+		$transformer = new Term( $term );
+
+		$expected_id = \add_query_arg( 'term_id', $term->term_id, \home_url( '/' ) );
+		$this->assertEquals( $expected_id, $transformer->get_id() );
+	}
+
+	/**
+	 * Test get_url returns term link.
+	 *
+	 * @covers ::get_url
+	 */
+	public function test_get_url() {
+		$term        = get_term( self::$term_id );
+		$transformer = new Term( $term );
+
 		$expected_url = get_term_link( $term );
-		$this->assertEquals( $expected_url, $id );
+		$this->assertEquals( $expected_url, $transformer->get_url() );
 	}
 
 	/**
 	 * Test with category taxonomy.
+	 *
+	 * @covers ::to_object
+	 * @covers ::get_id
+	 * @covers ::get_url
 	 */
 	public function test_category_term() {
 		$category = self::factory()->term->create_and_get(
@@ -107,6 +141,12 @@ class Test_Term extends \WP_UnitTestCase {
 		$object      = $transformer->to_object();
 
 		$this->assertEquals( 'OrderedCollection', $object->get_type() );
-		$this->assertEquals( get_term_link( $category ), $object->get_id() );
+
+		// ID should use stable term_id-based URL.
+		$expected_id = \add_query_arg( 'term_id', $category->term_id, \home_url( '/' ) );
+		$this->assertEquals( $expected_id, $object->get_id() );
+
+		// URL should be the term link.
+		$this->assertEquals( get_term_link( $category ), $object->get_url() );
 	}
 }
