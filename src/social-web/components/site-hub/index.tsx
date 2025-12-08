@@ -7,15 +7,16 @@
 /**
  * WordPress dependencies
  */
-import { useSelect } from '@wordpress/data';
+import { useSelect, useDispatch } from '@wordpress/data';
 import { Button, __experimentalHStack as HStack, VisuallyHidden } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { store as coreStore } from '@wordpress/core-data';
 import { decodeEntities } from '@wordpress/html-entities';
 import { search } from '@wordpress/icons';
+import { store as commandsStore } from '@wordpress/commands';
+import { displayShortcut } from '@wordpress/keycodes';
 import { filterURLForDisplay } from '@wordpress/url';
 import type { UnstableBase } from '@wordpress/core-data';
-import { useState, useEffect } from '@wordpress/element';
 
 /**
  * Internal dependencies
@@ -25,7 +26,7 @@ import './style.scss';
 
 interface SiteHubProps {
 	onNavigateBack?: () => void;
-	selectedItemId?: string | number | null;
+	selectedItemId?: string | number | null | unknown;
 }
 
 function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
@@ -38,24 +39,10 @@ function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
 		};
 	}, [] );
 
-	// Track hash changes to trigger re-renders
-	const [ currentHash, setCurrentHash ] = useState( window.location.hash );
+	const { open: openCommandCenter } = useDispatch( commandsStore );
 
-	useEffect( () => {
-		const handleHashChange = () => {
-			setCurrentHash( window.location.hash );
-		};
-
-		window.addEventListener( 'hashchange', handleHashChange );
-		return () => {
-			window.removeEventListener( 'hashchange', handleHashChange );
-		};
-	}, [] );
-
-	// On mobile, determine if we should show back functionality
-	// Similar to WordPress Site Editor's approach: check if we're at the "root" view
-	const isAtRoot = ! currentHash || currentHash === '#' || currentHash === '#/';
-	const shouldEnableBack = onNavigateBack && ! isAtRoot;
+	// On mobile, enable back navigation when an item is selected (inspector is open)
+	const shouldEnableBack = onNavigateBack && selectedItemId;
 
 	const handleIconClick = ( e: React.MouseEvent ) => {
 		if ( shouldEnableBack ) {
@@ -104,7 +91,9 @@ function SiteHub( { onNavigateBack, selectedItemId }: SiteHubProps = {} ) {
 							size="compact"
 							className="site-hub__command-button"
 							icon={ search }
+							onClick={ () => openCommandCenter() }
 							label={ __( 'Open command palette', 'activitypub' ) }
+							shortcut={ displayShortcut.primary( 'k' ) }
 						/>
 					</HStack>
 				</HStack>

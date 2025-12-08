@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Prevents unwanted comment types—like pingbacks, trackbacks, notes and custom system comments, from being federated, ensuring only real user comments are shared with the fediverse.

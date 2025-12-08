@@ -504,7 +504,7 @@ class Blog extends Actor {
 			$hashtags[] = array(
 				'type' => 'Hashtag',
 				'href' => \get_tag_link( $tag->term_id ),
-				'name' => esc_hashtag( $tag->slug ),
+				'name' => esc_hashtag( $tag->name ),
 			);
 		}
 

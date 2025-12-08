@@ -121,7 +121,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		\add_filter( 'pre_http_request', $mock_callback, 10, 3 );
 
 		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
-		$send_to_inboxes->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
 
 		// Invoke the method.
 		try {
@@ -153,7 +155,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Make `Dispatcher::send_to_additional_inboxes` a public method.
 		$send_to_additional_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_additional_inboxes' );
-		$send_to_additional_inboxes->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_additional_inboxes->setAccessible( true );
+		}
 
 		try {
 			$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
@@ -231,7 +235,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$activity    = Outbox::get_activity( $outbox_item );
 
 		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
-		$should_send->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$should_send->setAccessible( true );
+		}
 
 		// No followers, so should not send.
 		try {
@@ -523,7 +529,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Make the method accessible.
 		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
-		$send_to_inboxes->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
 
 		// Invoke the method.
 		try {
@@ -570,7 +578,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Make the method accessible.
 		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
-		$send_to_inboxes->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
 
 		// Invoke the method.
 		try {
@@ -613,7 +623,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Make the method accessible.
 		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
-		$send_to_inboxes->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
 
 		// Invoke the method.
 		try {

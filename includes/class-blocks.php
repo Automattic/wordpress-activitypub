@@ -204,6 +204,7 @@ class Blocks {
 		$html = '<div ' . $wrapper_attrs . '>';
 
 		// Try to get and append the embed if requested.
+		$embed = null;
 		if ( $show_embed ) {
 			$embed = wp_oembed_get( $attrs['url'] );
 			if ( $embed ) {
@@ -212,8 +213,8 @@ class Blocks {
 			}
 		}
 
-		// Only show the link if we're not showing the embed.
-		if ( ! $show_embed ) {
+		// Show the link if embed is not requested or if embed failed.
+		if ( ! $show_embed || ! $embed ) {
 			$html .= sprintf(
 				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
 				esc_url( $attrs['url'] ),

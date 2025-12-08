@@ -18,6 +18,7 @@ import { normalizeFieldOrder } from './utils';
 import { STORE_NAME } from '../../store';
 import type { SocialWebSelectors } from '../../store';
 import type { FeedPost } from '../../types';
+import { useNavigate } from '../../router';
 import './style.scss';
 
 const DEFAULT_VIEW: View = {
@@ -42,11 +43,18 @@ const defaultLayouts = {
 	},
 };
 
-interface FeedStageProps {
-	onSelectItem: ( id: number ) => void;
-}
+export default function FeedStage() {
+	const navigate = useNavigate();
 
-export default function FeedStage( { onSelectItem }: FeedStageProps ) {
+	// Navigate to inspector by updating search params
+	const selectItem = useCallback(
+		( id: number ) => {
+			navigate( {
+				search: ( prev: Record< string, unknown > ) => ( { ...prev, postId: id } ),
+			} );
+		},
+		[ navigate ]
+	);
 	// Get active actor ID from store
 	const activeActorId = useSelect(
 		( select ) => ( select( STORE_NAME ) as SocialWebSelectors ).getActiveActorId(),
@@ -187,10 +195,10 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 			const selectedItem = feed.find( ( item ) => item.id.toString() === selectedId );
 
 			if ( selectedItem ) {
-				onSelectItem( selectedItem.id );
+				selectItem( selectedItem.id );
 			}
 		},
-		[ feed, onSelectItem ]
+		[ feed, selectItem ]
 	);
 
 	// Infinite scroll handler
@@ -267,7 +275,7 @@ export default function FeedStage( { onSelectItem }: FeedStageProps ) {
 				view={ normalizedView }
 				onChangeView={ updateFeedView }
 				isLoading={ isResolving || isLoadingMore }
-				onClickItem={ ( item ) => onSelectItem( item.id ) }
+				onClickItem={ ( item ) => selectItem( item.id ) }
 				isItemClickable={ () => true }
 				getItemId={ ( item ) => item.id.toString() }
 				selection={ selection }

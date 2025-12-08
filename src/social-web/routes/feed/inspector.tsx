@@ -14,11 +14,7 @@ import { useSettings } from '../../contexts/settings-context';
 import type { Comment, FeedPost } from '../../types';
 import { getRelativeTime } from '../../utils';
 import { useTagFilter } from '../../hooks/use-tag-filter';
-
-interface FeedInspectorProps {
-	id: number;
-	onClose: () => void;
-}
+import { useSearch, useNavigate } from '../../router';
 
 // Helper to render HTML content with proper entity decoding and unescape
 const RenderHTML = ( { html }: { html: string } ) => {
@@ -28,14 +24,33 @@ const RenderHTML = ( { html }: { html: string } ) => {
 	return <div dangerouslySetInnerHTML={ { __html: decoded } } />;
 };
 
-export default function FeedInspector( { id, onClose }: FeedInspectorProps ) {
+export default function FeedInspector() {
+	const search = useSearch( { strict: false } ) as { postId?: number };
+	const navigate = useNavigate();
+	const id = search.postId;
+
+	// Close inspector by removing postId from search params
+	const onClose = () => {
+		navigate( {
+			search: ( prev: Record< string, unknown > ) => {
+				const { postId: _, ...rest } = prev as { postId?: number };
+				return rest;
+			},
+		} );
+	};
+
 	const { defaultAvatar } = useSettings();
-	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id );
+	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id ?? 0 );
 	const { records: comments, isResolving: isLoadingComments } = useEntityRecords< Comment >( 'root', 'comment', {
-		post: id,
+		post: id ?? 0,
 		order: 'asc',
 		orderby: 'date',
 	} );
+
+	// Early return if no id (shouldn't happen due to route config, but handle gracefully)
+	if ( ! id ) {
+		return null;
+	}
 
 	// Fetch tag terms if the post has tags
 	const tagIds = post?.ap_tag || [];

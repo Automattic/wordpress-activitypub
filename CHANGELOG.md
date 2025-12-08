@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.7.1] - 2025-12-04
+### Fixed
+- Fix admin styling for quote comments to match likes and reposts [#2584]
+- Mastodon importer now unpacks nested archives instead of getting confused by the extra folder. [#2581]
+- Add individually specified recipients to public activities in shared inbox. [#2585]
+
+## [7.7.0] - 2025-12-03
+### Added
+- Add documentation guide for using ActivityPub blocks in classic themes with Block Template Parts [#2577]
+- Added a new Fediverse Extra Fields block to display ActivityPub extra fields, featuring compact, stacked, and card layouts with flexible user selection options. [#2439]
+- Added support for quote comments, improving detection and handling of quoted replies and links in post interactions. [#2330]
+- Add notifications for boosts, likes, and new followers in Mastodon apps via the Enable Mastodon Apps plugin [#2570]
+- Adds support for turning tags, categories, and custom taxonomies into federated collections in the Reader view so you can browse and follow topics more seamlessly. [#2552]
+- Prevent email notifications for comments on ActivityPub custom post types. [#2527]
+- Send a Reject activity when a quote comment is deleted, revoking previous quote permissions and ensuring consistent inbox handling. [#2460]
+- Store and retrieve webfinger acct for remote actors to improve identification and reduce lookups [#2575]
+
+### Changed
+- Improve gallery and image block markup for ap_posts with better alt text and optimized layouts. [#2519]
+- Improve support for media attachments by handling Audio, Document, and Video object types in addition to Images. [#2544]
+- Maintain consistent return values in Create handler. [#2507]
+- Remove trailing hashtags from incoming posts to prevent duplication with taxonomy tags. [#2518]
+- Store comments and reactions from followed actors on reader posts, and keep them separate from your site's comments in wp-admin. [#2508]
+- Update compatibility testing for PHP 8.5 and WordPress 6.9 [#2573]
+- Use tag name instead of slug for hashtag display. [#2564]
+
+### Fixed
+- Always includes id, first, and last links in collection responses, ensuring followers and following lists display correctly in Mastodon. [#2473]
+- Automatically approves reactions on ActivityPub posts in the Reader view for a smoother, more seamless interaction experience. [#2526]
+- Deliver public activities to followers only. [#2539]
+- Disable REST API endpoints for internal post types. [#2463]
+- False mention email notifications for users in CC field without actual mention tags. [#2532]
+- Fix "Filename too long" errors when downloading attachments from URLs with query parameters (e.g., Instagram CDN URLs). [#2499]
+- Fix make_clickable corrupting existing anchor tags in ActivityPub content [#2517]
+- Fix PHP 8.5 deprecation warnings for ReflectionProperty::setAccessible() and ReflectionMethod::setAccessible() [#2574]
+- Improved handling of unusual activity data to avoid errors when activities contain unexpected formats. [#2502]
+- Preserve original ActivityPub activity timestamps when creating posts and comments instead of using current time. [#2498]
+- Prevented duplicate email notifications when ActivityPub instances re-send Follow activities for already-following actors. [#2452]
+- Prevents unwanted comment types—like pingbacks, trackbacks, notes and custom system comments, from being federated, ensuring only real user comments are shared with the fediverse. [#2494]
+- Removed a redundant instruction from the custom post content settings to simplify the UI. [#2471]
+- Reply block now shows fallback link when oEmbed fails instead of empty div. [#2571]
+- Simplified reply links by removing special handling for federated comments, making replies work the same for all comments where replying is allowed. [#2461]
+- Undefined array key warning in Scheduler::async_batch when called without arguments. [#2497]
+
 ## [7.6.1] - 2025-11-12
 ### Fixed
 - Fixed compatibility with Pixelfed and similar platforms by treating activities without recipients as public, ensuring boosts and reposts work correctly. [#2448]
@@ -1529,6 +1573,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.7.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.7.0...7.7.1
+[7.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.6.1...7.7.0
 [7.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.6.0...7.6.1
 [7.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.5.0...7.6.0
 [7.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.4.0...7.5.0

@@ -84,7 +84,7 @@ class Test_Base extends \WP_UnitTestCase {
 	 * @param array  $expected_audience  The expected audience.
 	 */
 	public function test_set_audience( $content_visibility, $object_attributes, $expected_audience ) {
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => 'Test content that is longer than the note length limit',
@@ -123,7 +123,9 @@ class Test_Base extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionObject( $transformer );
 		$method     = $reflection->getMethod( 'set_audience' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$transformed_object = $method->invoke( $transformer, new Generic_Object() );
 

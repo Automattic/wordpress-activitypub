@@ -27,6 +27,13 @@ function load() {
 		array( __NAMESPACE__ . '\Mastodon', 'dispatch' )
 	);
 
+	\register_importer(
+		'blocklist',
+		\__( 'Domain Blocklist', 'activitypub' ),
+		\__( 'Import a domain blocklist in CSV format (Mastodon, IFTAS DNI, etc.)', 'activitypub' ),
+		array( __NAMESPACE__ . '\Blocklist', 'dispatch' )
+	);
+
 	if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
 		\register_importer(
 			'starter-kit',

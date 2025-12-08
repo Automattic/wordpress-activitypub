@@ -139,7 +139,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Attachments::class );
 		$method     = $reflection->getMethod( 'normalize_attachment' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( null, $attachment );
 
@@ -165,7 +167,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Attachments::class );
 		$method     = $reflection->getMethod( 'normalize_attachment' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( null, $attachment );
 
@@ -189,7 +193,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Attachments::class );
 		$method     = $reflection->getMethod( 'normalize_attachment' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( null, $attachment );
 
@@ -208,7 +214,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Attachments::class );
 		$method     = $reflection->getMethod( 'normalize_attachment' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( null, $attachment );
 

@@ -462,6 +462,10 @@ class Remote_Actors {
 			self::add_error( $post->ID, $actor );
 		}
 
+		if ( ! $actor->get_webfinger() ) {
+			$actor->set_webfinger( self::get_acct( $post->ID ) );
+		}
+
 		return $actor;
 	}
 
@@ -491,6 +495,13 @@ class Remote_Actors {
 				\__( 'Invalid actor data', 'activitypub' ),
 				array( 'status' => 400 )
 			);
+		}
+
+		if ( $actor->get_webfinger() ) {
+			$webfinger = Sanitize::webfinger( $actor->get_webfinger() );
+		} else {
+			$webfinger = Webfinger::uri_to_acct( $actor->get_id() );
+			$webfinger = \is_wp_error( $webfinger ) ? Webfinger::guess( $actor ) : Sanitize::webfinger( $webfinger );
 		}
 
 		/*
@@ -528,6 +539,7 @@ class Remote_Actors {
 
 		$meta_input = array(
 			'_activitypub_inbox' => $inbox,
+			'_activitypub_acct'  => $webfinger,
 		);
 
 		// Store avatar URL if available.
@@ -634,8 +646,12 @@ class Remote_Actors {
 		$acct = Webfinger::uri_to_acct( $post->guid );
 
 		if ( \is_wp_error( $acct ) ) {
-			$actor = self::get_actor( $post );
-			$acct  = Webfinger::guess( $actor );
+			$actor = Actor::init_from_json( $post->post_content );
+			if ( \is_wp_error( $actor ) ) {
+				return '';
+			}
+
+			$acct = Webfinger::guess( $actor );
 		}
 
 		$acct = Sanitize::webfinger( $acct );
