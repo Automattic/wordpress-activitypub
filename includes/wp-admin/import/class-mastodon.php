@@ -352,7 +352,7 @@ class Mastodon {
 		}
 
 		if ( ! empty( $comments_skipped ) ) {
-			echo '<p>' . \esc_html__( 'Skipped comments (orphaned self-replies):', 'activitypub' ) . '<br>';
+			echo '<p>' . \esc_html__( 'Skipped comments:', 'activitypub' ) . '<br>';
 			echo \wp_kses( \implode( '<br>', $comments_skipped ), array( 'br' => array() ) );
 			echo '</p>';
 		}
@@ -388,8 +388,11 @@ class Mastodon {
 		 * Example:
 		 * - actor: https://mastodon.social/users/example
 		 * - inReplyTo: https://mastodon.social/users/example/statuses/123
+		 *
+		 * Adding a trailing slash ensures we don't match partial usernames
+		 * (e.g., "example" shouldn't match "example2").
 		 */
-		return \str_starts_with( $post['object']['inReplyTo'], \rtrim( $post['actor'], '/' ) );
+		return \str_starts_with( $post['object']['inReplyTo'], \rtrim( $post['actor'], '/' ) . '/' );
 	}
 
 	/**
