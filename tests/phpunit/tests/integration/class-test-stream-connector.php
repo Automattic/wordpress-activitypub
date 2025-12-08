@@ -343,7 +343,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 		}
 
 		// Create a mock outbox post.
-		$outbox_post_id = $this->factory->post->create(
+		$outbox_post_id = self::factory()->post->create(
 			array(
 				'post_type'  => 'ap_outbox',
 				'post_title' => get_permalink( self::$post_id ),
@@ -394,7 +394,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 		}
 
 		// Create a mock outbox post.
-		$outbox_post_id = $this->factory->post->create(
+		$outbox_post_id = self::factory()->post->create(
 			array(
 				'post_type'  => 'ap_outbox',
 				'post_title' => get_permalink( self::$post_id ),
@@ -462,7 +462,9 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Connector::class );
 		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->stream_connector, $outbox_post );
 
@@ -521,7 +523,9 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Connector::class );
 		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->stream_connector, $outbox_post );
 
@@ -553,7 +557,9 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Connector::class );
 		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->stream_connector, $outbox_post );
 
@@ -609,7 +615,9 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Connector::class );
 		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->stream_connector, $outbox_post );
 
@@ -648,7 +656,9 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Connector::class );
 		$method     = $reflection->getMethod( 'prepare_outbox_data_for_response' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->stream_connector, $outbox_post );
 

@@ -35,7 +35,7 @@ try/{idea}       # Experimental ideas.
 git checkout -b add/new-feature
 
 # Create PR with GitHub CLI.
-gh pr create --assignee @me --reviewer Fediverse
+gh pr create --assignee @me --reviewer Automattic/fediverse
 
 # Check PR status and CI.
 gh pr status
@@ -73,6 +73,8 @@ The repository uses Jetpack Changelogger for automated changelog generation.
 ### PR Template Changelog Section
 
 Every PR template (`.github/PULL_REQUEST_TEMPLATE.md`) includes changelog fields:
+
+**CRITICAL:** You must use the exact template markup from `.github/PULL_REQUEST_TEMPLATE.md`. Do not create custom formatting - use the actual checkboxes `- [x]` and `<details>` sections exactly as shown in the template.
 
 1. **Check "Automatically create a changelog entry" checkbox**
 2. **Select Significance:** Patch/Minor/Major

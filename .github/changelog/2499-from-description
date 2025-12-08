@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix "Filename too long" errors when downloading attachments from URLs with query parameters (e.g., Instagram CDN URLs).

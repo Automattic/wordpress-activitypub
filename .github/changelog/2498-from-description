@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Preserve original ActivityPub activity timestamps when creating posts and comments instead of using current time.

@@ -259,7 +259,9 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Use reflection to access the private method.
 		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		try {
 			$result = $method->invoke( null, $activity );
@@ -285,7 +287,9 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Use reflection to access the private method.
 		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		try {
 			$result = $method->invoke( null, 'invalid_data' );
@@ -310,7 +314,9 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Use reflection to access the private method.
 		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		try {
 			$result = $method->invoke( null, $activity );
@@ -368,7 +374,9 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Use reflection to access the private method.
 		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		try {
 			$result = $method->invoke( null, $activity );
@@ -1091,7 +1099,9 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Use reflection to access the private method.
 		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( null, $activity );
 
