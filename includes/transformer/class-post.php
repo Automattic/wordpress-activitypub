@@ -432,10 +432,7 @@ class Post extends Base {
 		}
 
 		// Check if the post has a title.
-		if (
-			! \post_type_supports( $this->item->post_type, 'title' ) ||
-			! $this->item->post_title
-		) {
+		if ( ! \post_type_supports( $this->item->post_type, 'title' ) || ! $this->item->post_title ) {
 			return 'Note';
 		}
 
@@ -566,12 +563,14 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		// Remove Content from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
-			return \__( '(This post is being modified)', 'activitypub' );
+		if ( false !== $this->content ) {
+			return $this->content;
 		}
 
-		if ( false !== $this->content ) {
+		// Remove Content from drafts.
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+			$this->content = \__( '(This post is being modified)', 'activitypub' );
+
 			return $this->content;
 		}
 
@@ -668,15 +667,18 @@ class Post extends Base {
 
 		if ( empty( $reply_urls ) ) {
 			$this->in_reply_to = null;
+
 			return $this->in_reply_to;
 		}
 
 		if ( 1 === count( $reply_urls ) ) {
 			$this->in_reply_to = \current( $reply_urls );
+
 			return $this->in_reply_to;
 		}
 
 		$this->in_reply_to = \array_values( \array_unique( $reply_urls ) );
+
 		return $this->in_reply_to;
 	}
 
