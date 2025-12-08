@@ -52,7 +52,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 			$this->namespace,
 			'/' . $this->rest_base . '/(?P<version>\d\.\d)',
 			array(
-				'args' => array(
+				'args'   => array(
 					'version' => array(
 						'description' => 'The version of the NodeInfo schema.',
 						'type'        => 'string',
@@ -64,6 +64,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 					'callback'            => array( $this, 'get_item' ),
 					'permission_callback' => '__return_true',
 				),
+				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
 	}
@@ -175,5 +176,175 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 		 * @param string $version  The NodeInfo version.
 		 */
 		return \apply_filters( 'nodeinfo_data', $nodeinfo, $version );
+	}
+
+	/**
+	 * Retrieves the NodeInfo schema, conforming to JSON Schema.
+	 *
+	 * @return array NodeInfo schema data.
+	 */
+	public function get_item_schema() {
+		$schema = array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'nodeinfo',
+			'type'       => 'object',
+			'properties' => array(
+				'version'           => array(
+					'description' => 'The version of the NodeInfo schema.',
+					'type'        => 'string',
+					'enum'        => array( '2.0', '2.1' ),
+				),
+				'software'          => array(
+					'description' => 'Information about the software.',
+					'type'        => 'object',
+					'properties'  => array(
+						'name'       => array(
+							'description' => 'The canonical name of this server software.',
+							'type'        => 'string',
+						),
+						'version'    => array(
+							'description' => 'The version of this server software.',
+							'type'        => 'string',
+						),
+						'homepage'   => array(
+							'description' => 'The url of the homepage of this server software.',
+							'type'        => 'string',
+							'format'      => 'uri',
+						),
+						'repository' => array(
+							'description' => 'The url of the source code repository of this server software.',
+							'type'        => 'string',
+							'format'      => 'uri',
+						),
+					),
+				),
+				'protocols'         => array(
+					'description' => 'The protocols supported on this server.',
+					'type'        => 'array',
+					'items'       => array(
+						'type' => 'string',
+						'enum' => array(
+							'activitypub',
+							'buddycloud',
+							'dfrn',
+							'diaspora',
+							'libertree',
+							'ostatus',
+							'pumpio',
+							'tent',
+							'xmpp',
+							'zot',
+						),
+					),
+				),
+				'services'          => array(
+					'description' => 'The third party sites this server can connect to via their application API.',
+					'type'        => 'object',
+					'properties'  => array(
+						'inbound'  => array(
+							'description' => 'The third party sites this server can retrieve messages from for combined display with regular traffic.',
+							'type'        => 'array',
+							'items'       => array(
+								'type' => 'string',
+								'enum' => array(
+									'atom1.0',
+									'gnusocial',
+									'imap',
+									'pnut',
+									'pop3',
+									'pumpio',
+									'rss2.0',
+									'twitter',
+								),
+							),
+						),
+						'outbound' => array(
+							'description' => 'The third party sites this server can publish messages to on the behalf of a user.',
+							'type'        => 'array',
+							'items'       => array(
+								'type' => 'string',
+								'enum' => array(
+									'atom1.0',
+									'blogger',
+									'buddycloud',
+									'diaspora',
+									'dreamwidth',
+									'drupal',
+									'facebook',
+									'friendica',
+									'gnusocial',
+									'google',
+									'insanejournal',
+									'libertree',
+									'linkedin',
+									'livejournal',
+									'mediagoblin',
+									'myspace',
+									'pinterest',
+									'pnut',
+									'posterous',
+									'pumpio',
+									'redmatrix',
+									'rss2.0',
+									'smtp',
+									'tent',
+									'tumblr',
+									'twitter',
+									'wordpress',
+									'xmpp',
+								),
+							),
+						),
+					),
+				),
+				'openRegistrations' => array(
+					'description' => 'Whether this server allows open self-registration.',
+					'type'        => 'boolean',
+				),
+				'usage'             => array(
+					'description' => 'Usage statistics for this server.',
+					'type'        => 'object',
+					'properties'  => array(
+						'users'         => array(
+							'description' => 'Statistics about the users of this server.',
+							'type'        => 'object',
+							'properties'  => array(
+								'total'          => array(
+									'description' => 'The total amount of on this server registered users.',
+									'type'        => 'integer',
+									'minimum'     => 0,
+								),
+								'activeMonth'    => array(
+									'description' => 'The amount of users that signed in at least once in the last 30 days.',
+									'type'        => 'integer',
+									'minimum'     => 0,
+								),
+								'activeHalfyear' => array(
+									'description' => 'The amount of users that signed in at least once in the last 180 days.',
+									'type'        => 'integer',
+									'minimum'     => 0,
+								),
+							),
+						),
+						'localPosts'    => array(
+							'description' => 'The amount of posts that were made by users that are registered on this server.',
+							'type'        => 'integer',
+							'minimum'     => 0,
+						),
+						'localComments' => array(
+							'description' => 'The amount of comments that were made by users that are registered on this server.',
+							'type'        => 'integer',
+							'minimum'     => 0,
+						),
+					),
+				),
+				'metadata'          => array(
+					'description' => 'Free form key value pairs for software specific values.',
+					'type'        => 'object',
+				),
+			),
+		);
+
+		return $schema;
 	}
 }
