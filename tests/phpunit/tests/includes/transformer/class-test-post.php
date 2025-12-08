@@ -112,8 +112,8 @@ class Test_Post extends \WP_UnitTestCase {
 					'post_content' => 'Short content',
 				),
 				null,
-				'Note',
-				'Should return Note for short content',
+				'Article',
+				'Should return Article for short content with title',
 			),
 			'no_title'             => array(
 				array(
