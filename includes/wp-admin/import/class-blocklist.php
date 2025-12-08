@@ -281,7 +281,7 @@ class Blocklist {
 
 		\printf(
 			'<p><a href="%s">%s</a></p>',
-			\esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) ),
+			\esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings#moderation' ) ),
 			\esc_html__( 'View blocked domains in settings', 'activitypub' )
 		);
 	}
