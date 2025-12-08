@@ -1,3 +1,5 @@
+@use "@wordpress/base-styles/mixins";
+
 /**
  * ThemedSurface styles
  *
@@ -17,7 +19,7 @@
 	border-radius: 0;
 
 	// Desktop: restore rounded corners
-	@media (min-width: 782px) {
+	@include mixins.break-medium() {
 		border-radius: var(--wpds-border-radius-large, 8px);
 	}
 }

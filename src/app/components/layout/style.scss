@@ -1,3 +1,6 @@
+@use "@wordpress/base-styles/mixins";
+@use "@wordpress/base-styles/breakpoints";
+
 /* Ensure provider wrappers (SlotFillProvider, ShortcutProvider) fill height */
 #activitypub-app-root > div {
 	height: 100%;
@@ -76,7 +79,7 @@
 	height: calc(100vh - 56px);
 
 	// Desktop: static side-by-side layout
-	@media (min-width: 782px) {
+	@include mixins.break-medium() {
 		position: static;
 		top: auto;
 		left: auto;
@@ -90,7 +93,7 @@
 .stage-region {
 	z-index: 2;
 
-	@media (min-width: 782px) {
+	@include mixins.break-medium() {
 		z-index: auto;
 		flex: 1 1 auto;
 		min-width: 0;
@@ -100,7 +103,7 @@
 .inspector-region {
 	z-index: 3; // Stacks on top of stage on mobile
 
-	@media (min-width: 782px) {
+	@include mixins.break-medium() {
 		z-index: auto;
 		flex: 0 0 var(--sw-inspector-width, 380px);
 	}
@@ -115,7 +118,7 @@
 }
 
 // Mobile snackbar adjustments
-@media (max-width: 782px) {
+@media (max-width: #{breakpoints.$break-medium}) {
 	.components-snackbar-list {
 		left: 10px;
 		right: 10px;

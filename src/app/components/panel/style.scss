@@ -1,3 +1,5 @@
+@use "@wordpress/base-styles/mixins";
+
 .panel {
 	flex: 1;
 	min-height: 0;
@@ -8,7 +10,7 @@
 	margin: 0;
 
 	// Desktop: restore margin
-	@media (min-width: 782px) {
+	@include mixins.break-medium() {
 		margin: var(--wpds-spacing-40, 16px) var(--wpds-spacing-40, 16px) var(--wpds-spacing-40, 16px) 0;
 	}
 }
