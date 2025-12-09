@@ -664,4 +664,136 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( '?', $result[0]['url'] );
 		$this->assertStringNotContainsString( 'size=', $result[0]['url'] );
 	}
+
+	/**
+	 * Test that video attachments use remote URL directly without downloading.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_video_uses_remote_url() {
+		// Create a test post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_post',
+				'post_content' => 'Test video content',
+			)
+		);
+
+		$attachments = array(
+			array(
+				'url'       => 'https://example.com/video.mp4',
+				'mediaType' => 'video/mp4',
+				'name'      => 'Test Video',
+				'type'      => 'Video',
+			),
+		);
+
+		$result = Attachments::import_post_files( $attachments, $post_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+
+		// Verify the URL is the original remote URL (not downloaded).
+		$this->assertEquals( 'https://example.com/video.mp4', $result[0]['url'] );
+		$this->assertEquals( 'video/mp4', $result[0]['mime_type'] );
+		$this->assertEquals( 'Test Video', $result[0]['alt'] );
+
+		// Verify content was updated with video block.
+		$post = get_post( $post_id );
+		$this->assertStringContainsString( '<!-- wp:video', $post->post_content );
+		$this->assertStringContainsString( 'https://example.com/video.mp4', $post->post_content );
+	}
+
+	/**
+	 * Test that audio attachments use remote URL directly without downloading.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_audio_uses_remote_url() {
+		// Create a test post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_post',
+				'post_content' => 'Test audio content',
+			)
+		);
+
+		$attachments = array(
+			array(
+				'url'       => 'https://example.com/podcast.mp3',
+				'mediaType' => 'audio/mpeg',
+				'name'      => 'Test Audio',
+				'type'      => 'Audio',
+			),
+		);
+
+		$result = Attachments::import_post_files( $attachments, $post_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+
+		// Verify the URL is the original remote URL (not downloaded).
+		$this->assertEquals( 'https://example.com/podcast.mp3', $result[0]['url'] );
+		$this->assertEquals( 'audio/mpeg', $result[0]['mime_type'] );
+		$this->assertEquals( 'Test Audio', $result[0]['alt'] );
+
+		// Verify content was updated with audio block.
+		$post = get_post( $post_id );
+		$this->assertStringContainsString( '<!-- wp:audio', $post->post_content );
+		$this->assertStringContainsString( 'https://example.com/podcast.mp3', $post->post_content );
+	}
+
+	/**
+	 * Test mixed attachments with images, video, and audio.
+	 *
+	 * @covers ::import_post_files
+	 * @covers ::save_file
+	 */
+	public function test_mixed_attachments_images_video_audio() {
+		// Create a test post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_post',
+				'post_content' => 'Mixed media content',
+			)
+		);
+
+		$attachments = array(
+			array(
+				'url'       => 'https://example.com/image.jpg',
+				'mediaType' => 'image/jpeg',
+				'name'      => 'Test Image',
+				'type'      => 'Image',
+			),
+			array(
+				'url'       => 'https://example.com/video.mp4',
+				'mediaType' => 'video/mp4',
+				'name'      => 'Test Video',
+				'type'      => 'Video',
+			),
+			array(
+				'url'       => 'https://example.com/audio.mp3',
+				'mediaType' => 'audio/mpeg',
+				'name'      => 'Test Audio',
+				'type'      => 'Audio',
+			),
+		);
+
+		$result = Attachments::import_post_files( $attachments, $post_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 3, $result );
+
+		// Image should be downloaded to local storage.
+		$this->assertStringContainsString( 'activitypub/ap_posts', $result[0]['url'] );
+		$this->assertEquals( 'image/jpeg', $result[0]['mime_type'] );
+
+		// Video should use remote URL.
+		$this->assertEquals( 'https://example.com/video.mp4', $result[1]['url'] );
+		$this->assertEquals( 'video/mp4', $result[1]['mime_type'] );
+
+		// Audio should use remote URL.
+		$this->assertEquals( 'https://example.com/audio.mp3', $result[2]['url'] );
+		$this->assertEquals( 'audio/mpeg', $result[2]['mime_type'] );
+	}
 }

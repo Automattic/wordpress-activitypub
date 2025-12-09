@@ -170,6 +170,32 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_queried_object with term_id query var.
+	 *
+	 * @covers ::get_queried_object
+	 */
+	public function test_get_queried_object_with_term_id() {
+		// Create a test term.
+		$term = self::factory()->term->create_and_get(
+			array(
+				'taxonomy' => 'post_tag',
+				'name'     => 'Test Tag',
+				'slug'     => 'test-tag',
+			)
+		);
+
+		// Test with term_id query var.
+		Query::get_instance()->__destruct();
+		$this->go_to( \add_query_arg( 'term_id', $term->term_id, \home_url( '/' ) ) );
+		\set_query_var( 'term_id', $term->term_id );
+		$query  = Query::get_instance();
+		$object = $query->get_queried_object();
+
+		$this->assertInstanceOf( 'WP_Term', $object );
+		$this->assertEquals( $term->term_id, $object->term_id );
+	}
+
+	/**
 	 * Test is_activitypub_request method.
 	 *
 	 * @covers ::is_activitypub_request

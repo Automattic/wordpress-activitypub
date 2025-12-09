@@ -483,6 +483,9 @@ class Attachments {
 	/**
 	 * Save a file directly to uploads/activitypub/{type}/{id}/.
 	 *
+	 * For video and audio files, returns the remote URL directly without downloading
+	 * to avoid storage overhead for large media files.
+	 *
 	 * @param array  $attachment_data The normalized attachment data.
 	 * @param int    $object_id       The post or comment ID to attach to.
 	 * @param string $object_type     The object type ('post' or 'comment').
@@ -490,12 +493,23 @@ class Attachments {
 	 * @return array|\WP_Error {
 	 *     Array of file data on success, WP_Error on failure.
 	 *
-	 *     @type string $url       Full URL to the saved file.
+	 *     @type string $url       Full URL to the saved file (or remote URL for video/audio).
 	 *     @type string $mime_type MIME type of the file.
 	 *     @type string $alt       Alt text from attachment name field.
 	 * }
 	 */
 	private static function save_file( $attachment_data, $object_id, $object_type ) {
+		$mime_type = $attachment_data['mediaType'] ?? '';
+
+		// Skip download for video and audio files - use remote URL directly.
+		if ( str_starts_with( $mime_type, 'video/' ) || str_starts_with( $mime_type, 'audio/' ) ) {
+			return array(
+				'url'       => $attachment_data['url'],
+				'mime_type' => $attachment_data['mediaType'],
+				'alt'       => $attachment_data['name'] ?? '',
+			);
+		}
+
 		if ( ! \function_exists( 'download_url' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}

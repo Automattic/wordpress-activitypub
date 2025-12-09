@@ -2,11 +2,39 @@
  * ActivityPub Moderation Admin JavaScript
  */
 
-(function( $ ) {
+/* global activitypubModerationL10n, jQuery */
+
+/**
+ * @param {Object} $  - jQuery
+ * @param {Object} wp - WordPress global object
+ * @param {Object} wp.i18n - Internationalization functions
+ * @param {Object} wp.a11y - Accessibility functions
+ * @param {Object} wp.ajax - AJAX functions
+ */
+(function( $, wp ) {
 	'use strict';
+
+	var __ = wp.i18n.__;
+	var _n = wp.i18n._n;
+	var sprintf = wp.i18n.sprintf;
+
+	/**
+	 * Helper function to show a message using wp.a11y and alert
+	 *
+	 * @param {string} message - The message to display
+	 */
+	function showMessage( message ) {
+		if ( wp.a11y && wp.a11y.speak ) {
+			wp.a11y.speak( message, 'assertive' );
+		}
+		alert( message );
+	}
 
 	/**
 	 * Helper function to validate domain format
+	 *
+	 * @param {string} domain - The domain to validate
+	 * @return {boolean} Whether the domain is valid
 	 */
 	function isValidDomain( domain ) {
 		// Basic domain validation - must contain at least one dot and valid characters
@@ -16,6 +44,12 @@
 
 	/**
 	 * Helper function to check if a term already exists in the UI
+	 *
+	 * @param {string}      type    - The type of block (domain or keyword)
+	 * @param {string}      value   - The value to check
+	 * @param {string}      context - The context (user or site)
+	 * @param {number|null} userId  - The user ID (for user context)
+	 * @return {boolean} Whether the term is already blocked
 	 */
 	function isTermAlreadyBlocked( type, value, context, userId ) {
 		var selector;
@@ -28,28 +62,109 @@
 	}
 
 	/**
+	 * Validate a blocked term value
+	 *
+	 * @param {string}      type    - The type of block (domain or keyword)
+	 * @param {string}      value   - The value to validate
+	 * @param {string}      context - The context (user or site)
+	 * @param {number|null} userId  - The user ID (for user context)
+	 * @return {boolean} Whether the value is valid
+	 */
+	function validateBlockedTerm( type, value, context, userId ) {
+		if ( ! value ) {
+			showMessage( __( 'Please enter a value to block.', 'activitypub' ) );
+			return false;
+		}
+
+		if ( type === 'domain' && ! isValidDomain( value ) ) {
+			showMessage( __( 'Please enter a valid domain (e.g., example.com).', 'activitypub' ) );
+			return false;
+		}
+
+		if ( isTermAlreadyBlocked( type, value, context, userId ) ) {
+			showMessage( __( 'This term is already blocked.', 'activitypub' ) );
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Create a table row for a blocked term.
+	 *
+	 * @param {string} type    - The type of block (domain or keyword)
+	 * @param {string} value   - The blocked value
+	 * @param {string} context - The context (user or site)
+	 * @return {jQuery} The constructed table row
+	 */
+	function createBlockedTermRow( type, value, context ) {
+		var $button = $( '<button>', {
+			type: 'button',
+			'class': 'button button-small remove-' + context + '-block-btn',
+			'data-type': type,
+			'data-value': value,
+			text: __( 'Remove', 'activitypub' )
+		} );
+
+		return $( '<tr>' ).append( $( '<td>' ).text( value ), $( '<td>' ).append( $button ) );
+	}
+
+	/**
 	 * Helper function to add a blocked term to the UI
 	 */
 	function addBlockedTermToUI( type, value, context, userId ) {
+		var table;
+
 		if ( context === 'user' ) {
 			// For user moderation, add to the appropriate table
 			var container = $( '.activitypub-user-block-list[data-user-id="' + userId + '"]' );
 
-			var table = container.find( '.activitypub-blocked-' + type );
+			table = container.find( '.activitypub-blocked-' + type );
 			if ( table.length === 0 ) {
 				table = $( '<table class="widefat striped activitypub-blocked-' + type + '" role="presentation" style="max-width: 500px; margin: 15px 0;"><tbody></tbody></table>' );
 				container.find( '#new_user_' + type ).closest( '.add-user-block-form' ).before( table );
 			}
-			table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-user-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
+			table.find( 'tbody' ).append( createBlockedTermRow( type, value, context ) );
 		} else if ( context === 'site' ) {
-			// For site moderation, add to the appropriate table
-			var container = $( '#new_site_' + type ).closest( '.activitypub-site-block-list' );
-			var table = container.find( '.activitypub-site-blocked-' + type );
+			// For site moderation, add to the table inside the details element
+			var details = $( '.activitypub-site-block-details[data-type="' + type + '"]' );
+			table = details.find( '.activitypub-site-blocked-' + type );
+
 			if ( table.length === 0 ) {
-				table = $( '<table class="widefat striped activitypub-site-blocked-' + type + '" role="presentation" style="max-width: 500px; margin: 15px 0;"><tbody></tbody></table>' );
-				container.find( '.add-site-block-form' ).before( table );
+				// Create table inside the details element (after summary)
+				table = $( '<table class="widefat striped activitypub-site-blocked-' + type + '" role="presentation"><tbody></tbody></table>' );
+				details.find( 'summary' ).after( table );
 			}
-			table.append( '<tr><td>' + value + '</td><td style="width: 80px;"><button type="button" class="button button-small remove-site-block-btn" data-type="' + type + '" data-value="' + value + '">Remove</button></td></tr>' );
+
+			table.find( 'tbody' ).append( createBlockedTermRow( type, value, context ) );
+
+			updateSiteBlockSummary( type );
+		}
+	}
+
+	/**
+	 * Helper function to update the site block summary count
+	 */
+	function updateSiteBlockSummary( type ) {
+		var details = $( '.activitypub-site-block-details[data-type="' + type + '"]' );
+		var table = details.find( '.activitypub-site-blocked-' + type );
+		var count = table.find( 'tbody tr' ).length || table.find( 'tr' ).length;
+		var summary = details.find( 'summary' );
+
+		if ( count === 0 ) {
+			// Empty state
+			var emptyText = type === 'domain'
+				? __( 'No blocked domains', 'activitypub' )
+				: __( 'No blocked keywords', 'activitypub' );
+			summary.text( emptyText );
+			details.attr( 'open', '' );
+			table.remove();
+		} else {
+			// Has items - use _n for proper pluralization
+			var text = type === 'domain'
+				? _n( '%s blocked domain', '%s blocked domains', count, 'activitypub' )
+				: _n( '%s blocked keyword', '%s blocked keywords', count, 'activitypub' );
+			summary.text( sprintf( text, count ) );
 		}
 	}
 
@@ -63,13 +178,11 @@
 
 		if ( button.length > 0 ) {
 			// Remove the parent table row
-			var parent = button.closest( 'tr' );
-			var container = parent.closest( 'table' );
-			parent.remove();
+			button.closest( 'tr' ).remove();
 
-			// If the container is now empty, remove it
-			if ( container.find( 'tr' ).length === 0 ) {
-				container.remove();
+			// Update the summary count for site blocks
+			if ( context === 'site' ) {
+				updateSiteBlockSummary( type );
 			}
 		}
 	}
@@ -83,6 +196,9 @@
 
 		// Site moderation management.
 		initSiteModeration();
+
+		// Blocklist subscriptions management.
+		initBlocklistSubscriptions();
 	}
 
 	/**
@@ -94,33 +210,7 @@
 			var input = $( '#new_user_' + type );
 			var value = input.val().trim();
 
-			if ( ! value ) {
-				// Use wp.a11y.speak for better accessibility.
-				if ( wp.a11y && wp.a11y.speak ) {
-					wp.a11y.speak( activitypubModerationL10n.enterValue, 'assertive' );
-				} else {
-					alert( activitypubModerationL10n.enterValue );
-				}
-				return;
-			}
-
-			// Validate domain format if this is a domain block
-			if ( type === 'domain' && ! isValidDomain( value ) ) {
-				var message = activitypubModerationL10n.invalidDomain || 'Please enter a valid domain (e.g., example.com).';
-				if ( wp.a11y && wp.a11y.speak ) {
-					wp.a11y.speak( message, 'assertive' );
-				}
-				alert( message );
-				return;
-			}
-
-			// Check if the term is already blocked
-			if ( isTermAlreadyBlocked( type, value, 'user', userId ) ) {
-				var message = activitypubModerationL10n.alreadyBlocked || 'This term is already blocked.';
-				if ( wp.a11y && wp.a11y.speak ) {
-					wp.a11y.speak( message, 'assertive' );
-				}
-				alert( message );
+			if ( ! validateBlockedTerm( type, value, 'user', userId ) ) {
 				return;
 			}
 
@@ -136,12 +226,8 @@
 				input.val( '' );
 				addBlockedTermToUI( type, value, 'user', userId );
 			}).fail( function( response ) {
-				var message = response && response.message ? response.message : activitypubModerationL10n.addBlockFailed;
-				if ( wp.a11y && wp.a11y.speak ) {
-					wp.a11y.speak( message, 'assertive' );
-				} else {
-					alert( message );
-				}
+				var message = response && response.message ? response.message : __( 'Failed to add block.', 'activitypub' );
+				showMessage( message );
 			});
 		}
 
@@ -157,12 +243,8 @@
 			}).done( function() {
 				removeBlockedTermFromUI( type, value, 'user' );
 			}).fail( function( response ) {
-				var message = response && response.message ? response.message : activitypubModerationL10n.removeBlockFailed;
-				if ( wp.a11y && wp.a11y.speak ) {
-					wp.a11y.speak( message, 'assertive' );
-				} else {
-					alert( message );
-				}
+				var message = response && response.message ? response.message : __( 'Failed to remove block.', 'activitypub' );
+				showMessage( message );
 			});
 		}
 
@@ -204,32 +286,7 @@
 			var input = $( '#new_site_' + type );
 			var value = input.val().trim();
 
-			if ( ! value ) {
-				if ( wp.a11y && wp.a11y.speak ) {
-					wp.a11y.speak( activitypubModerationL10n.enterValue, 'assertive' );
-				} else {
-					alert( activitypubModerationL10n.enterValue );
-				}
-				return;
-			}
-
-			// Validate domain format if this is a domain block
-			if ( type === 'domain' && ! isValidDomain( value ) ) {
-				var message = activitypubModerationL10n.invalidDomain || 'Please enter a valid domain (e.g., example.com).';
-				if ( wp.a11y && wp.a11y.speak ) {
-					wp.a11y.speak( message, 'assertive' );
-				}
-				alert( message );
-				return;
-			}
-
-			// Check if the term is already blocked
-			if ( isTermAlreadyBlocked( type, value, 'site' ) ) {
-				var message = activitypubModerationL10n.alreadyBlocked || 'This term is already blocked.';
-				if ( wp.a11y && wp.a11y.speak ) {
-					wp.a11y.speak( message, 'assertive' );
-				}
-				alert( message );
+			if ( ! validateBlockedTerm( type, value, 'site', null ) ) {
 				return;
 			}
 
@@ -244,12 +301,8 @@
 				input.val( '' );
 				addBlockedTermToUI( type, value, 'site' );
 			}).fail( function( response ) {
-				var message = response && response.message ? response.message : activitypubModerationL10n.addBlockFailed;
-				if ( wp.a11y && wp.a11y.speak ) {
-					wp.a11y.speak( message, 'assertive' );
-				} else {
-					alert( message );
-				}
+				var message = response && response.message ? response.message : __( 'Failed to add block.', 'activitypub' );
+				showMessage( message );
 			});
 		}
 
@@ -264,12 +317,8 @@
 			}).done( function() {
 				removeBlockedTermFromUI( type, value, 'site' );
 			}).fail( function( response ) {
-				var message = response && response.message ? response.message : activitypubModerationL10n.removeBlockFailed;
-				if ( wp.a11y && wp.a11y.speak ) {
-					wp.a11y.speak( message, 'assertive' );
-				} else {
-					alert( message );
-				}
+				var message = response && response.message ? response.message : __( 'Failed to remove block.', 'activitypub' );
+				showMessage( message );
 			});
 		}
 
@@ -299,7 +348,93 @@
 		});
 	}
 
+	/**
+	 * Initialize blocklist subscriptions management
+	 */
+	function initBlocklistSubscriptions() {
+		// Function to add a blocklist subscription.
+		function addBlocklistSubscription( url ) {
+			if ( ! url ) {
+				var message = activitypubModerationL10n.enterUrl || 'Please enter a URL.';
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( message, 'assertive' );
+				}
+				alert( message );
+				return;
+			}
+
+			// Disable the button while processing.
+			var button = $( '.add-blocklist-subscription-btn' );
+			button.prop( 'disabled', true );
+
+			wp.ajax.post( 'activitypub_blocklist_subscription', {
+				operation: 'add',
+				url: url,
+				_wpnonce: activitypubModerationL10n.nonce
+			}).done( function() {
+				// Reload the page to show the updated list.
+				window.location.reload();
+			}).fail( function( response ) {
+				var message = response && response.message ? response.message : activitypubModerationL10n.subscriptionFailed || 'Failed to add subscription.';
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( message, 'assertive' );
+				}
+				alert( message );
+				button.prop( 'disabled', false );
+			});
+		}
+
+		// Function to remove a blocklist subscription.
+		function removeBlocklistSubscription( url ) {
+			wp.ajax.post( 'activitypub_blocklist_subscription', {
+				operation: 'remove',
+				url: url,
+				_wpnonce: activitypubModerationL10n.nonce
+			}).done( function() {
+				// Remove the row from the UI.
+				$( '.remove-blocklist-subscription-btn' ).filter( function() {
+					return $( this ).data( 'url' ) === url;
+				}).closest( 'tr' ).remove();
+
+				// If no more subscriptions, remove the table.
+				var table = $( '.activitypub-blocklist-subscriptions table' );
+				if ( table.find( 'tbody tr' ).length === 0 ) {
+					table.remove();
+				}
+			}).fail( function( response ) {
+				var message = response && response.message ? response.message : activitypubModerationL10n.removeSubscriptionFailed || 'Failed to remove subscription.';
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( message, 'assertive' );
+				}
+				alert( message );
+			});
+		}
+
+		// Add subscription functionality (button click).
+		$( document ).on( 'click', '.add-blocklist-subscription-btn', function( e ) {
+			e.preventDefault();
+			var url = $( this ).data( 'url' ) || $( '#new_blocklist_subscription_url' ).val().trim();
+			addBlocklistSubscription( url );
+		});
+
+		// Add subscription functionality (Enter key).
+		$( document ).on( 'keypress', '#new_blocklist_subscription_url', function( e ) {
+			if ( e.which === 13 ) { // Enter key.
+				e.preventDefault();
+				var url = $( this ).val().trim();
+				addBlocklistSubscription( url );
+			}
+		});
+
+		// Remove subscription functionality.
+		$( document ).on( 'click', '.remove-blocklist-subscription-btn', function( e ) {
+			e.preventDefault();
+			var url = $( this ).data( 'url' );
+			removeBlocklistSubscription( url );
+		});
+	}
+
 	// Initialize when document is ready.
 	$( document ).ready( init );
 
-})( jQuery );
+})( jQuery, wp );

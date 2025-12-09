@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Mastodon importer now imports self-replies as comments, preserving thread structure.
