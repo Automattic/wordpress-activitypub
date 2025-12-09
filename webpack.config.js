@@ -3,7 +3,7 @@
  *
  * This configuration:
  * - Places JS chunks in their source directory structure (src/foo/ → build/foo/)
- * - Handles social-web vendor chunks separately
+ * - Handles client vendor chunks separately
  */
 
 const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
@@ -37,11 +37,11 @@ const processConfig = ( config ) => {
 				...( config.optimization?.splitChunks || {} ),
 				cacheGroups: {
 					...( config.optimization?.splitChunks?.cacheGroups || {} ),
-					// Social-web vendor chunk
-					socialWebVendors: {
+					// Client vendor chunk
+					clientVendors: {
 						test: /[\\/]node_modules[\\/]/,
-						name: 'social-web/vendors',
-						chunks: ( chunk ) => chunk.name && chunk.name.startsWith( 'social-web/' ),
+						name: 'client/vendors',
+						chunks: ( chunk ) => chunk.name && chunk.name.startsWith( 'client/' ),
 						priority: 20,
 						reuseExistingChunk: true,
 						enforce: true,
