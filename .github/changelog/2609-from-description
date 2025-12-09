@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add image optimization for imported attachments (resize to 1200px max, convert to WebP).
