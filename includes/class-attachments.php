@@ -670,13 +670,21 @@ class Attachments {
 		// Check if WebP is supported.
 		$can_webp = $editor->supports_mime_type( 'image/webp' );
 
-		// Determine output format.
+		// Determine output format and save.
 		if ( $can_webp ) {
+			// Convert to WebP.
 			$new_path = \preg_replace( '/\.[^.]+$/', '.webp', $file_path );
 			$result   = $editor->save( $new_path, 'image/webp' );
 		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
 			// Keep original format for potentially transparent images when WebP not available.
-			$result = $needs_resize ? $editor->save( $file_path ) : true;
+			if ( ! $needs_resize ) {
+				// No changes needed.
+				return array(
+					'path'    => $file_path,
+					'changed' => false,
+				);
+			}
+			$result = $editor->save( $file_path );
 		} else {
 			// Convert to JPEG when WebP not available.
 			$new_path = \preg_replace( '/\.[^.]+$/', '.jpg', $file_path );
@@ -690,18 +698,17 @@ class Attachments {
 			);
 		}
 
-		// If format changed, delete the original.
-		if ( is_array( $result ) && isset( $result['path'] ) && $result['path'] !== $file_path ) {
+		// Handle result - $result is always an array from $editor->save().
+		$result_path = $result['path'] ?? $file_path;
+
+		// If path changed (format conversion), delete the original file.
+		if ( $result_path !== $file_path ) {
 			\wp_delete_file( $file_path );
-			return array(
-				'path'    => $result['path'],
-				'changed' => true,
-			);
 		}
 
 		return array(
-			'path'    => $file_path,
-			'changed' => $needs_resize,
+			'path'    => $result_path,
+			'changed' => true,
 		);
 	}
 
