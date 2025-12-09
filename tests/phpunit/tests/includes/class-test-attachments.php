@@ -801,4 +801,245 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertEquals( 'https://example.com/audio.mp3', $result[2]['url'] );
 		$this->assertEquals( 'audio/mpeg', $result[2]['mime_type'] );
 	}
+
+	/**
+	 * Test optimize_image returns original path for non-image files.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_skips_non_images() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Test with audio file.
+		$audio_file = AP_TESTS_DIR . '/data/assets/sample-audio.mp3';
+		$result     = $method->invoke( null, $audio_file, 1200 );
+		$this->assertEquals( $audio_file, $result );
+
+		// Test with video file.
+		$video_file = AP_TESTS_DIR . '/data/assets/sample-video.mp4';
+		$result     = $method->invoke( null, $video_file, 1200 );
+		$this->assertEquals( $video_file, $result );
+	}
+
+	/**
+	 * Test optimize_image skips GIF files (may be animated).
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_skips_gif() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Create a simple GIF file.
+		$gif_file = wp_tempnam( 'test.gif' ) . '.gif';
+		// Minimal valid GIF89a header.
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Test data, not obfuscation.
+		$gif_data = base64_decode( 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test file creation.
+		file_put_contents( $gif_file, $gif_data );
+
+		$result = $method->invoke( null, $gif_file, 1200 );
+		$this->assertEquals( $gif_file, $result );
+
+		// Clean up.
+		wp_delete_file( $gif_file );
+	}
+
+	/**
+	 * Test optimize_image converts JPEG to WebP when supported.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_converts_to_webp() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Copy test image to temp location with proper extension.
+		$source    = AP_TESTS_DIR . '/data/assets/test.jpg';
+		$temp_dir  = sys_get_temp_dir();
+		$temp_file = $temp_dir . '/test-webp-' . uniqid() . '.jpg';
+		copy( $source, $temp_file );
+
+		$result = $method->invoke( null, $temp_file, 1200 );
+
+		// Check if WebP is supported in this environment.
+		$editor = wp_get_image_editor( $source );
+		if ( ! is_wp_error( $editor ) && $editor->supports_mime_type( 'image/webp' ) ) {
+			// Should be converted to WebP.
+			$this->assertStringEndsWith( '.webp', $result );
+			$this->assertFileExists( $result );
+			// Clean up result file.
+			wp_delete_file( $result );
+			// Clean up original if it still exists (shouldn't, but be safe).
+			if ( file_exists( $temp_file ) ) {
+				wp_delete_file( $temp_file );
+			}
+		} else {
+			// WebP not supported, should convert to JPEG or keep original.
+			$this->assertFileExists( $result );
+			wp_delete_file( $result );
+			if ( file_exists( $temp_file ) ) {
+				wp_delete_file( $temp_file );
+			}
+		}
+	}
+
+	/**
+	 * Test optimize_image resizes large images.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_resizes_large_images() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Create a large test image (2000x2000).
+		$large_image = wp_tempnam( 'large.jpg' ) . '.jpg';
+		$image       = imagecreatetruecolor( 2000, 2000 );
+		$white       = imagecolorallocate( $image, 255, 255, 255 );
+		imagefill( $image, 0, 0, $white );
+		imagejpeg( $image, $large_image, 90 );
+		imagedestroy( $image );
+
+		// Optimize with max dimension of 500.
+		$result = $method->invoke( null, $large_image, 500 );
+
+		$this->assertFileExists( $result );
+
+		// Check the dimensions of the result.
+		$editor = wp_get_image_editor( $result );
+		if ( ! is_wp_error( $editor ) ) {
+			$size = $editor->get_size();
+			$this->assertLessThanOrEqual( 500, $size['width'] );
+			$this->assertLessThanOrEqual( 500, $size['height'] );
+		}
+
+		// Clean up.
+		wp_delete_file( $result );
+		if ( file_exists( $large_image ) ) {
+			wp_delete_file( $large_image );
+		}
+	}
+
+	/**
+	 * Test optimize_image preserves small images dimensions.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_preserves_small_images() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Copy small test image (100x100) to temp location.
+		$source    = AP_TESTS_DIR . '/data/assets/test.jpg';
+		$temp_file = wp_tempnam( 'small.jpg' ) . '.jpg';
+		copy( $source, $temp_file );
+
+		// Get original dimensions.
+		$original_editor = wp_get_image_editor( $temp_file );
+		$this->assertNotWPError( $original_editor );
+		$original_size = $original_editor->get_size();
+
+		// Optimize with max dimension larger than image.
+		$result = $method->invoke( null, $temp_file, 1200 );
+
+		$this->assertFileExists( $result );
+
+		// Check dimensions are preserved.
+		$result_editor = wp_get_image_editor( $result );
+		if ( ! is_wp_error( $result_editor ) ) {
+			$result_size = $result_editor->get_size();
+			$this->assertEquals( $original_size['width'], $result_size['width'] );
+			$this->assertEquals( $original_size['height'], $result_size['height'] );
+		}
+
+		// Clean up.
+		wp_delete_file( $result );
+		if ( file_exists( $temp_file ) ) {
+			wp_delete_file( $temp_file );
+		}
+	}
+
+	/**
+	 * Test optimize_image returns original for non-existent file.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_handles_nonexistent_file() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		$fake_path = '/tmp/nonexistent-image-12345.jpg';
+		$result    = $method->invoke( null, $fake_path, 1200 );
+
+		// Should return original path when file doesn't exist or can't be processed.
+		$this->assertEquals( $fake_path, $result );
+	}
+
+	/**
+	 * Test optimize_image handles PNG files correctly.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_handles_png() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Create a test PNG image.
+		$png_file = wp_tempnam( 'test.png' ) . '.png';
+		$image    = imagecreatetruecolor( 100, 100 );
+		// Enable alpha channel for transparency.
+		imagesavealpha( $image, true );
+		$transparent = imagecolorallocatealpha( $image, 0, 0, 0, 127 );
+		imagefill( $image, 0, 0, $transparent );
+		imagepng( $image, $png_file );
+		imagedestroy( $image );
+
+		$result = $method->invoke( null, $png_file, 1200 );
+
+		$this->assertFileExists( $result );
+
+		// Check if WebP is supported.
+		$editor = wp_get_image_editor( $png_file );
+		if ( ! is_wp_error( $editor ) && $editor->supports_mime_type( 'image/webp' ) ) {
+			// Should be converted to WebP.
+			$this->assertStringEndsWith( '.webp', $result );
+		}
+
+		// Clean up.
+		wp_delete_file( $result );
+		if ( file_exists( $png_file ) ) {
+			wp_delete_file( $png_file );
+		}
+	}
+
+	/**
+	 * Test get_unique_path generates unique filenames.
+	 *
+	 * @covers ::get_unique_path
+	 */
+	public function test_get_unique_path() {
+		$method = new \ReflectionMethod( Attachments::class, 'get_unique_path' );
+		$method->setAccessible( true );
+
+		$temp_dir = sys_get_temp_dir();
+
+		// Test with non-existent file - should return same path.
+		$non_existent = $temp_dir . '/unique-test-' . uniqid() . '.jpg';
+		$result       = $method->invoke( null, $non_existent );
+		$this->assertEquals( $non_existent, $result );
+
+		// Test with existing file - should return path with counter.
+		$existing_file = wp_tempnam( 'existing.jpg' ) . '.jpg';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test file creation.
+		file_put_contents( $existing_file, 'test' );
+
+		$result = $method->invoke( null, $existing_file );
+		$this->assertNotEquals( $existing_file, $result );
+		$this->assertStringContainsString( '-1.jpg', $result );
+
+		// Clean up.
+		wp_delete_file( $existing_file );
+	}
 }
