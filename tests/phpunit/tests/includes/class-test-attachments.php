@@ -789,9 +789,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertIsArray( $result );
 		$this->assertCount( 3, $result );
 
-		// Image should be downloaded to local storage.
+		// Image should be downloaded to local storage (may be converted to WebP).
 		$this->assertStringContainsString( 'activitypub/ap_posts', $result[0]['url'] );
-		$this->assertEquals( 'image/jpeg', $result[0]['mime_type'] );
+		$this->assertContains( $result[0]['mime_type'], array( 'image/jpeg', 'image/webp' ) );
 
 		// Video should use remote URL.
 		$this->assertEquals( 'https://example.com/video.mp4', $result[1]['url'] );

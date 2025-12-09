@@ -427,13 +427,14 @@ class Attachments {
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
+		// Initialize filesystem.
+		\WP_Filesystem();
+		global $wp_filesystem;
+
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
 		if ( $is_local ) {
 			// Read local file from disk.
-			\WP_Filesystem();
-			global $wp_filesystem;
-
 			if ( ! $wp_filesystem->exists( $attachment_data['url'] ) ) {
 				/* translators: %s: file path */
 				return new \WP_Error( 'file_not_found', sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
@@ -451,18 +452,24 @@ class Attachments {
 			}
 		}
 
-		// Optimize images before sideloading (resize and convert to WebP).
-		$optimized = self::optimize_image( $tmp_file, self::MAX_IMAGE_DIMENSION );
-		if ( $optimized['changed'] ) {
-			$tmp_file = $optimized['path'];
-		}
-
-		// Prepare file array for WordPress.
+		// Get original filename from URL.
 		$original_name = \basename( \wp_parse_url( $attachment_data['url'], PHP_URL_PATH ) );
 
-		// Update filename extension if format changed.
-		if ( $optimized['changed'] ) {
-			$new_ext       = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
+		// Rename temp file to have proper extension for optimize_image to detect mime type.
+		$original_ext = \pathinfo( $original_name, PATHINFO_EXTENSION );
+		if ( $original_ext ) {
+			$renamed_tmp = $tmp_file . '.' . $original_ext;
+			if ( $wp_filesystem->move( $tmp_file, $renamed_tmp, true ) ) {
+				$tmp_file = $renamed_tmp;
+			}
+		}
+
+		// Optimize images before sideloading (resize and convert to WebP).
+		$tmp_file = self::optimize_image( $tmp_file, self::MAX_IMAGE_DIMENSION );
+
+		// Update filename extension to match optimized file.
+		$new_ext = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
+		if ( $new_ext ) {
 			$original_name = \preg_replace( '/\.[^.]+$/', '.' . $new_ext, $original_name );
 		}
 
@@ -472,14 +479,12 @@ class Attachments {
 		);
 
 		// Prepare attachment post data.
-		// Clear mime type if format changed so WordPress auto-detects it.
-		$mime_type = $optimized['changed'] ? '' : ( $attachment_data['mediaType'] ?? '' );
+		// Let WordPress auto-detect the mime type from the file.
 		$post_data = array(
-			'post_mime_type' => $mime_type,
-			'post_title'     => $attachment_data['name'] ?? '',
-			'post_content'   => $attachment_data['name'] ?? '',
-			'post_author'    => $author_id,
-			'meta_input'     => array(
+			'post_title'   => $attachment_data['name'] ?? '',
+			'post_content' => $attachment_data['name'] ?? '',
+			'post_author'  => $author_id,
+			'meta_input'   => array(
 				'_source_url' => $attachment_data['url'],
 			),
 		);
@@ -579,11 +584,8 @@ class Attachments {
 		}
 
 		// Optimize images (resize and convert to WebP).
-		$optimized = self::optimize_image( $file_path, $max_dimension );
-		if ( $optimized['changed'] ) {
-			$file_path = $optimized['path'];
-			$file_name = \basename( $file_path );
-		}
+		$file_path = self::optimize_image( $file_path, $max_dimension );
+		$file_name = \basename( $file_path );
 
 		// Get mime type and validate file.
 		$file_info = \wp_check_filetype_and_ext( $file_path, $file_name );
@@ -597,6 +599,32 @@ class Attachments {
 	}
 
 	/**
+	 * Get a unique file path by appending a counter if the file already exists.
+	 *
+	 * @param string $file_path The desired file path.
+	 *
+	 * @return string A unique file path that doesn't exist.
+	 */
+	private static function get_unique_path( $file_path ) {
+		if ( ! \file_exists( $file_path ) ) {
+			return $file_path;
+		}
+
+		$path_info = \pathinfo( $file_path );
+		$dir       = $path_info['dirname'];
+		$base_name = $path_info['filename'];
+		$extension = isset( $path_info['extension'] ) ? '.' . $path_info['extension'] : '';
+		$counter   = 1;
+
+		do {
+			$new_path = $dir . '/' . $base_name . '-' . $counter . $extension;
+			++$counter;
+		} while ( \file_exists( $new_path ) );
+
+		return $new_path;
+	}
+
+	/**
 	 * Optimize an image file by resizing and converting to WebP.
 	 *
 	 * Uses WordPress image editor to resize large images and convert them
@@ -605,32 +633,23 @@ class Attachments {
 	 * @param string $file_path     Path to the image file.
 	 * @param int    $max_dimension Maximum width/height in pixels.
 	 *
-	 * @return array{path: string, changed: bool}|\WP_Error The optimized file path and whether it changed, or WP_Error.
+	 * @return string The optimized file path.
 	 */
 	private static function optimize_image( $file_path, $max_dimension ) {
 		// Check if it's an image.
 		$mime_type = \wp_check_filetype( $file_path )['type'] ?? '';
 		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
-			return array(
-				'path'    => $file_path,
-				'changed' => false,
-			);
+			return $file_path;
 		}
 
 		// Skip SVG and GIF files (GIFs may be animated).
 		if ( \in_array( $mime_type, array( 'image/svg+xml', 'image/gif' ), true ) ) {
-			return array(
-				'path'    => $file_path,
-				'changed' => false,
-			);
+			return $file_path;
 		}
 
 		$editor = \wp_get_image_editor( $file_path );
 		if ( \is_wp_error( $editor ) ) {
-			return array(
-				'path'    => $file_path,
-				'changed' => false,
-			);
+			return $file_path;
 		}
 
 		$size         = $editor->get_size();
@@ -647,29 +666,23 @@ class Attachments {
 		// Determine output format and save.
 		if ( $can_webp ) {
 			// Convert to WebP.
-			$new_path = \preg_replace( '/\.[^.]+$/', '.webp', $file_path );
+			$new_path = self::get_unique_path( \preg_replace( '/\.[^.]+$/', '.webp', $file_path ) );
 			$result   = $editor->save( $new_path, 'image/webp' );
 		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
 			// Keep original format for potentially transparent images when WebP not available.
 			if ( ! $needs_resize ) {
 				// No changes needed.
-				return array(
-					'path'    => $file_path,
-					'changed' => false,
-				);
+				return $file_path;
 			}
 			$result = $editor->save( $file_path );
 		} else {
 			// Convert to JPEG when WebP not available.
-			$new_path = \preg_replace( '/\.[^.]+$/', '.jpg', $file_path );
+			$new_path = self::get_unique_path( \preg_replace( '/\.[^.]+$/', '.jpg', $file_path ) );
 			$result   = $editor->save( $new_path, 'image/jpeg' );
 		}
 
 		if ( \is_wp_error( $result ) ) {
-			return array(
-				'path'    => $file_path,
-				'changed' => false,
-			);
+			return $file_path;
 		}
 
 		// Handle result - $result is always an array from $editor->save().
@@ -680,10 +693,7 @@ class Attachments {
 			\wp_delete_file( $file_path );
 		}
 
-		return array(
-			'path'    => $result_path,
-			'changed' => true,
-		);
+		return $result_path;
 	}
 
 	/**
