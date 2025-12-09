@@ -539,6 +539,7 @@ class Attachments {
 	 * @param array  $attachment_data The normalized attachment data.
 	 * @param int    $object_id       The post or comment ID to attach to.
 	 * @param string $object_type     The object type ('post' or 'comment').
+	 * @param int    $max_dimension   Optional. Maximum image dimension in pixels. Default MAX_IMAGE_DIMENSION.
 	 *
 	 * @return array|\WP_Error {
 	 *     Array of file data on success, WP_Error on failure.
@@ -548,7 +549,7 @@ class Attachments {
 	 *     @type string $alt       Alt text from attachment name field.
 	 * }
 	 */
-	private static function save_file( $attachment_data, $object_id, $object_type ) {
+	private static function save_file( $attachment_data, $object_id, $object_type, $max_dimension = self::MAX_IMAGE_DIMENSION ) {
 		$mime_type = $attachment_data['mediaType'] ?? '';
 
 		// Skip download for video and audio files - use remote URL directly.
@@ -605,7 +606,7 @@ class Attachments {
 		}
 
 		// Optimize images (resize and convert to WebP).
-		$optimized = self::optimize_image( $file_path, self::MAX_IMAGE_DIMENSION );
+		$optimized = self::optimize_image( $file_path, $max_dimension );
 		if ( $optimized['changed'] ) {
 			$file_path = $optimized['path'];
 			$file_name = \basename( $file_path );
