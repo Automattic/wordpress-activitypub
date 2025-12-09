@@ -687,7 +687,7 @@ class Remote_Actors {
 
 		// Try to cache the avatar locally.
 		$remote_avatar_url = object_to_uri( $actor_data['icon'] );
-		$local_url         = Attachments::cache_actor_avatar( $remote_avatar_url, $id );
+		$local_url         = Attachments::save_actor_avatar( $remote_avatar_url, $id );
 
 		$avatar_url = $local_url ? $local_url : $remote_avatar_url;
 		\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
@@ -707,14 +707,14 @@ class Remote_Actors {
 		$remote_avatar_url = object_to_uri( $actor->get_icon() );
 
 		if ( empty( $remote_avatar_url ) ) {
-			// No avatar to cache, clean up any existing cached avatar.
-			Attachments::delete_actor_avatar_files( $post_id );
+			// No avatar to save, clean up any existing avatar.
+			Attachments::delete_actors_directory( $post_id );
 			\delete_post_meta( $post_id, '_activitypub_avatar_url' );
 			return;
 		}
 
-		// Download and cache the avatar locally.
-		$local_url = Attachments::cache_actor_avatar( $remote_avatar_url, $post_id );
+		// Download and save the avatar locally.
+		$local_url = Attachments::save_actor_avatar( $remote_avatar_url, $post_id );
 
 		// Store the local URL if caching succeeded, otherwise store the remote URL.
 		$avatar_url = $local_url ? $local_url : $remote_avatar_url;
