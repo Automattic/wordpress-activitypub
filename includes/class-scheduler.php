@@ -62,6 +62,7 @@ class Scheduler {
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 		\add_action( 'activitypub_inbox_purge', array( self::class, 'purge_inbox' ) );
 		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_inbox_activity' ) );
+		\add_action( 'activitypub_sync_blocklist_subscriptions', array( Blocklist_Subscriptions::class, 'sync_all' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
@@ -132,6 +133,10 @@ class Scheduler {
 		if ( ! \wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
 			\wp_schedule_event( time(), 'daily', 'activitypub_inbox_purge' );
 		}
+
+		if ( ! \wp_next_scheduled( 'activitypub_sync_blocklist_subscriptions' ) ) {
+			\wp_schedule_event( time(), 'weekly', 'activitypub_sync_blocklist_subscriptions' );
+		}
 	}
 
 	/**
@@ -145,6 +150,7 @@ class Scheduler {
 		\wp_unschedule_hook( 'activitypub_reprocess_outbox' );
 		\wp_unschedule_hook( 'activitypub_outbox_purge' );
 		\wp_unschedule_hook( 'activitypub_inbox_purge' );
+		\wp_unschedule_hook( 'activitypub_sync_blocklist_subscriptions' );
 	}
 
 	/**
