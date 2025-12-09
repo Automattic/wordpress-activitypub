@@ -1200,6 +1200,8 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertTrue( \is_dir( $fake_dir ) );
 
 		// Clean up.
-		\rmdir( $fake_dir );
+		global $wp_filesystem;
+		\WP_Filesystem();
+		$wp_filesystem->rmdir( $fake_dir );
 	}
 }
