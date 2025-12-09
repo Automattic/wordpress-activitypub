@@ -11,7 +11,6 @@ import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
-import { Page } from '../../components/page';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
 import { normalizeFieldOrder } from './utils';
@@ -264,39 +263,33 @@ export default function FeedStage() {
 	] );
 
 	return (
-		<Page
-			title={ __( 'Feed', 'activitypub' ) }
-			subTitle={ __( 'ActivityPub posts from your network', 'activitypub' ) }
-			hasPadding={ false }
-		>
-			<DataViews
-				data={ allLoadedRecords }
-				fields={ fields }
-				view={ normalizedView }
-				onChangeView={ updateFeedView }
-				isLoading={ isResolving || isLoadingMore }
-				onClickItem={ ( item ) => selectItem( item.id ) }
-				isItemClickable={ () => true }
-				getItemId={ ( item ) => item.id.toString() }
-				selection={ selection }
-				onChangeSelection={ changeSelection }
-				empty={
-					<p>
-						{ normalizedView.search || ( normalizedView.filters && normalizedView.filters.length > 0 )
-							? __( 'No posts found.', 'activitypub' )
-							: __(
-									'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
-									'activitypub'
-							  ) }
-					</p>
-				}
-				paginationInfo={ {
-					totalItems,
-					totalPages,
-					infiniteScrollHandler,
-				} }
-				defaultLayouts={ defaultLayouts }
-			/>
-		</Page>
+		<DataViews
+			data={ allLoadedRecords }
+			fields={ fields }
+			view={ normalizedView }
+			onChangeView={ updateFeedView }
+			isLoading={ isResolving || isLoadingMore }
+			onClickItem={ ( item ) => selectItem( item.id ) }
+			isItemClickable={ () => true }
+			getItemId={ ( item ) => item.id.toString() }
+			selection={ selection }
+			onChangeSelection={ changeSelection }
+			empty={
+				<p>
+					{ normalizedView.search || ( normalizedView.filters && normalizedView.filters.length > 0 )
+						? __( 'No posts found.', 'activitypub' )
+						: __(
+								'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
+								'activitypub'
+						  ) }
+				</p>
+			}
+			paginationInfo={ {
+				totalItems,
+				totalPages,
+				infiniteScrollHandler,
+			} }
+			defaultLayouts={ defaultLayouts }
+		/>
 	);
 }
