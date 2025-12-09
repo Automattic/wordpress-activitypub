@@ -13,6 +13,7 @@ use Activitypub\Comment;
 use Activitypub\Model\Blog;
 use Activitypub\Moderation;
 use Activitypub\Scheduler\Actor;
+use Activitypub\Statistics;
 
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
@@ -944,6 +945,7 @@ class Admin {
 		\wp_add_dashboard_widget( 'activitypub_blog', \__( 'ActivityPub Plugin News', 'activitypub' ), array( self::class, 'blog_dashboard_widget' ) );
 		if ( user_can_activitypub( \get_current_user_id() ) && ! is_user_type_disabled( 'user' ) ) {
 			\wp_add_dashboard_widget( 'activitypub_profile', \__( 'ActivityPub Author profile', 'activitypub' ), array( self::class, 'profile_dashboard_widget' ) );
+			\wp_add_dashboard_widget( 'activitypub_stats', \__( 'Fediverse Activity', 'activitypub' ), array( self::class, 'stats_dashboard_widget' ) );
 		}
 		if ( ! is_user_type_disabled( 'blog' ) ) {
 			\wp_add_dashboard_widget( 'activitypub_blog_profile', \__( 'ActivityPub Blog profile', 'activitypub' ), array( self::class, 'blogprofile_dashboard_widget' ) );
@@ -1007,6 +1009,113 @@ class Admin {
 			<?php endif; ?>
 		</p>
 		<?php
+	}
+
+	/**
+	 * Add the Fediverse Activity stats as a Dashboard widget.
+	 */
+	public static function stats_dashboard_widget() {
+		$user_id = \get_current_user_id();
+		$stats   = Statistics::get_user_stats( $user_id );
+
+		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 2 );
+		?>
+		<style>
+			.activitypub-stats-grid {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr);
+				gap: 16px;
+				margin-bottom: 16px;
+			}
+			.activitypub-stat-item {
+				text-align: center;
+				padding: 12px;
+				background: #f6f7f7;
+				border-radius: 4px;
+			}
+			.activitypub-stat-item .stat-value {
+				display: block;
+				font-size: 24px;
+				font-weight: 600;
+				color: #1d2327;
+				line-height: 1.2;
+			}
+			.activitypub-stat-item .stat-label {
+				display: block;
+				font-size: 12px;
+				color: #646970;
+				margin-top: 4px;
+			}
+			.activitypub-top-post {
+				padding: 8px 0;
+				border-bottom: 1px solid #f0f0f1;
+			}
+			.activitypub-top-post:last-child {
+				border-bottom: none;
+			}
+			.activitypub-top-post-title {
+				display: block;
+				font-weight: 500;
+				margin-bottom: 4px;
+				color: #2271b1;
+				text-decoration: none;
+			}
+			.activitypub-top-post-title:hover {
+				color: #135e96;
+			}
+			.activitypub-top-post-stats {
+				font-size: 12px;
+				color: #646970;
+			}
+		</style>
+
+		<div class="activitypub-stats-grid">
+			<div class="activitypub-stat-item">
+				<span class="stat-value"><?php echo \esc_html( \number_format_i18n( $stats['followers'] ) ); ?></span>
+				<span class="stat-label"><?php \esc_html_e( 'Followers', 'activitypub' ); ?></span>
+			</div>
+			<div class="activitypub-stat-item">
+				<span class="stat-value"><?php echo \esc_html( \number_format_i18n( $stats['following'] ) ); ?></span>
+				<span class="stat-label"><?php \esc_html_e( 'Following', 'activitypub' ); ?></span>
+			</div>
+			<div class="activitypub-stat-item">
+				<span class="stat-value"><?php echo \esc_html( \number_format_i18n( $stats['total_likes'] ) ); ?></span>
+				<span class="stat-label"><?php \esc_html_e( 'Likes', 'activitypub' ); ?></span>
+			</div>
+			<div class="activitypub-stat-item">
+				<span class="stat-value"><?php echo \esc_html( \number_format_i18n( $stats['total_reposts'] ) ); ?></span>
+				<span class="stat-label"><?php \esc_html_e( 'Reposts', 'activitypub' ); ?></span>
+			</div>
+		</div>
+
+		<?php
+		$top_posts = Statistics::get_top_posts( $user_id, 3 );
+
+		if ( ! empty( $top_posts ) ) :
+			?>
+			<h4 style="margin: 16px 0 8px;"><?php \esc_html_e( 'Top Posts', 'activitypub' ); ?></h4>
+			<?php foreach ( $top_posts as $post ) : ?>
+				<div class="activitypub-top-post">
+					<a href="<?php echo \esc_url( $post['url'] ); ?>" class="activitypub-top-post-title" target="_blank">
+						<?php echo \esc_html( $post['title'] ?: \__( '(no title)', 'activitypub' ) ); ?>
+					</a>
+					<span class="activitypub-top-post-stats">
+						<?php
+						printf(
+							/* translators: 1: number of likes, 2: number of reposts, 3: number of replies */
+							\esc_html__( '%1$s likes, %2$s reposts, %3$s replies', 'activitypub' ),
+							\esc_html( \number_format_i18n( $post['likes'] ) ),
+							\esc_html( \number_format_i18n( $post['reposts'] ) ),
+							\esc_html( \number_format_i18n( $post['replies'] ) )
+						);
+						?>
+					</span>
+				</div>
+			<?php endforeach; ?>
+			<?php
+		endif;
+
+		\remove_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers' );
 	}
 
 	/**
