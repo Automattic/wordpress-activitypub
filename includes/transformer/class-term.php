@@ -22,17 +22,45 @@ class Term extends Base {
 		$base_object               = new \Activitypub\Activity\Base_Object();
 		$base_object->{'@context'} = 'https://www.w3.org/ns/activitystreams';
 		$base_object->set_type( 'OrderedCollection' );
-		$base_object->set_id( \get_term_link( $this->item ) );
+		$base_object->set_id( $this->get_id() );
+		$base_object->set_url( $this->get_url() );
 
 		return $base_object;
 	}
 
 	/**
-	 * Get the OrderedCollection ID (term link).
+	 * Get the OrderedCollection ID.
 	 *
-	 * @return string The OrderedCollection ID (term link).
+	 * @return string The OrderedCollection ID.
 	 */
 	public function to_id() {
-		return \get_term_link( $this->item );
+		return $this->get_id();
+	}
+
+	/**
+	 * Returns the stable ID of the Term.
+	 *
+	 * Uses term_id query parameter to ensure the ID remains stable
+	 * even if the term slug is changed.
+	 *
+	 * @return string The Term's stable ID.
+	 */
+	public function get_id() {
+		return \add_query_arg( 'term_id', $this->item->term_id, \home_url( '/' ) );
+	}
+
+	/**
+	 * Returns the URL of the Term.
+	 *
+	 * @return string The Term's URL (term link).
+	 */
+	public function get_url() {
+		$term_link = \get_term_link( $this->item );
+
+		if ( \is_wp_error( $term_link ) ) {
+			return '';
+		}
+
+		return \esc_url( $term_link );
 	}
 }
