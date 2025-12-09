@@ -442,24 +442,44 @@ class Settings_Fields {
 	 */
 	public static function render_site_blocked_domains_field() {
 		$blocked_domains = Moderation::get_site_blocks()['domains'];
+		$count           = \count( $blocked_domains );
 		?>
 		<p class="description"><?php \esc_html_e( 'Block entire ActivityPub instances by domain name.', 'activitypub' ); ?></p>
 
 		<div class="activitypub-site-block-list">
-			<?php if ( ! empty( $blocked_domains ) ) : ?>
-			<table class="widefat striped activitypub-site-blocked-domain" role="presentation" style="max-width: 500px; margin: 15px 0;">
-				<?php foreach ( $blocked_domains as $domain ) : ?>
-					<tr>
-						<td><?php echo \esc_html( $domain ); ?></td>
-						<td style="width: 80px;">
-							<button type="button" class="button button-small remove-site-block-btn" data-type="domain" data-value="<?php echo \esc_attr( $domain ); ?>">
-								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
-							</button>
-						</td>
-					</tr>
-				<?php endforeach; ?>
-			</table>
-			<?php endif; ?>
+			<details class="activitypub-site-block-details" data-type="domain"<?php echo empty( $blocked_domains ) ? ' open' : ''; ?>>
+				<summary>
+					<?php if ( $count > 0 ) : ?>
+						<?php
+						echo \esc_html(
+							\sprintf(
+								/* translators: %s: Number of blocked domains */
+								\_n( '%s blocked domain', '%s blocked domains', $count, 'activitypub' ),
+								\number_format_i18n( $count )
+							)
+						);
+						?>
+					<?php else : ?>
+						<?php \esc_html_e( 'No blocked domains', 'activitypub' ); ?>
+					<?php endif; ?>
+				</summary>
+				<?php if ( ! empty( $blocked_domains ) ) : ?>
+				<table class="widefat striped activitypub-site-blocked-domain" role="presentation">
+					<tbody>
+						<?php foreach ( $blocked_domains as $domain ) : ?>
+						<tr>
+							<td><?php echo \esc_html( $domain ); ?></td>
+							<td>
+								<button type="button" class="button button-small remove-site-block-btn" data-type="domain" data-value="<?php echo \esc_attr( $domain ); ?>">
+									<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+								</button>
+							</td>
+						</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<?php endif; ?>
+			</details>
 
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 				<input type="text" class="regular-text" id="new_site_domain" placeholder="<?php \esc_attr_e( 'example.com', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
@@ -476,24 +496,44 @@ class Settings_Fields {
 	 */
 	public static function render_site_blocked_keywords_field() {
 		$blocked_keywords = Moderation::get_site_blocks()['keywords'];
+		$count            = \count( $blocked_keywords );
 		?>
 		<p class="description"><?php \esc_html_e( 'Block ActivityPub content containing specific keywords.', 'activitypub' ); ?></p>
 
 		<div class="activitypub-site-block-list">
-			<?php if ( ! empty( $blocked_keywords ) ) : ?>
-			<table class="widefat striped activitypub-site-blocked-keyword" role="presentation" style="max-width: 500px; margin: 15px 0;">
-				<?php foreach ( $blocked_keywords as $keyword ) : ?>
-					<tr>
-						<td><?php echo \esc_html( $keyword ); ?></td>
-						<td style="width: 80px;">
-							<button type="button" class="button button-small remove-site-block-btn" data-type="keyword" data-value="<?php echo \esc_attr( $keyword ); ?>">
-								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
-							</button>
-						</td>
-					</tr>
-				<?php endforeach; ?>
-			</table>
-			<?php endif; ?>
+			<details class="activitypub-site-block-details" data-type="keyword"<?php echo empty( $blocked_keywords ) ? ' open' : ''; ?>>
+				<summary>
+					<?php if ( $count > 0 ) : ?>
+						<?php
+						echo \esc_html(
+							\sprintf(
+								/* translators: %s: Number of blocked keywords */
+								\_n( '%s blocked keyword', '%s blocked keywords', $count, 'activitypub' ),
+								\number_format_i18n( $count )
+							)
+						);
+						?>
+					<?php else : ?>
+						<?php \esc_html_e( 'No blocked keywords', 'activitypub' ); ?>
+					<?php endif; ?>
+				</summary>
+				<?php if ( ! empty( $blocked_keywords ) ) : ?>
+				<table class="widefat striped activitypub-site-blocked-keyword" role="presentation">
+					<tbody>
+						<?php foreach ( $blocked_keywords as $keyword ) : ?>
+						<tr>
+							<td><?php echo \esc_html( $keyword ); ?></td>
+							<td>
+								<button type="button" class="button button-small remove-site-block-btn" data-type="keyword" data-value="<?php echo \esc_attr( $keyword ); ?>">
+									<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+								</button>
+							</td>
+						</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<?php endif; ?>
+			</details>
 
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 				<input type="text" class="regular-text" id="new_site_keyword" placeholder="<?php \esc_attr_e( 'spam keyword', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />

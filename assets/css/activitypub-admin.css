@@ -104,6 +104,25 @@ summary {
 	color: #2271b1;
 }
 
+.activitypub-site-block-details {
+	margin: 10px 0;
+}
+
+.activitypub-site-block-details summary {
+	padding: 8px 0;
+	color: inherit;
+	text-decoration: none;
+}
+
+.activitypub-site-block-details table {
+	max-width: 500px;
+	margin-top: 10px;
+}
+
+.activitypub-site-block-details td:last-child {
+	width: 80px;
+}
+
 .activitypub-settings-accordion {
 	border: 1px solid #c3c4c7;
 }

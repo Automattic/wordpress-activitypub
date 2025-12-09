@@ -42,6 +42,48 @@ class Post extends Base {
 	private $actor_object = null;
 
 	/**
+	 * The content.
+	 *
+	 * @var string|false False indicates not yet computed.
+	 */
+	private $content = false;
+
+	/**
+	 * The summary.
+	 *
+	 * @var string|null|false False indicates not yet computed.
+	 */
+	private $summary = false;
+
+	/**
+	 * The tags.
+	 *
+	 * @var array|false False indicates not yet computed.
+	 */
+	private $tags = false;
+
+	/**
+	 * The attachment.
+	 *
+	 * @var array|false False indicates not yet computed.
+	 */
+	private $attachment = false;
+
+	/**
+	 * The mentions.
+	 *
+	 * @var array|false False indicates not yet computed.
+	 */
+	private $mentions = false;
+
+	/**
+	 * The in_reply_to.
+	 *
+	 * @var string|array|null|false False indicates not yet computed.
+	 */
+	private $in_reply_to = false;
+
+	/**
 	 * Transforms the WP_Post object to an ActivityPub Object
 	 *
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
@@ -290,12 +332,18 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
+		if ( false !== $this->attachment ) {
+			return $this->attachment;
+		}
+
 		/*
 		 * Remove attachments from the Fediverse if a post was federated and then set back to draft.
 		 * Except in preview mode, where we want to show attachments.
 		 */
 		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
-			return array();
+			$this->attachment = array();
+
+			return $this->attachment;
 		}
 
 		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true );
@@ -316,7 +364,9 @@ class Post extends Base {
 		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
 
 		if ( 0 === $max_media ) {
-			return array();
+			$this->attachment = array();
+
+			return $this->attachment;
 		}
 
 		$media = array(
@@ -363,7 +413,9 @@ class Post extends Base {
 		 *
 		 * @return array The filtered attachments.
 		 */
-		return \apply_filters( 'activitypub_attachments', $attachments, $this->item );
+		$this->attachment = \apply_filters( 'activitypub_attachments', $attachments, $this->item );
+
+		return $this->attachment;
 	}
 
 	/**
@@ -381,15 +433,8 @@ class Post extends Base {
 			return \ucfirst( $post_format_setting );
 		}
 
-		$has_title = \post_type_supports( $this->item->post_type, 'title' );
-		$content   = \wp_strip_all_tags( $this->item->post_content );
-
 		// Check if the post has a title.
-		if (
-			! $has_title ||
-			! $this->item->post_title ||
-			\strlen( $content ) <= ACTIVITYPUB_NOTE_LENGTH
-		) {
+		if ( ! \post_type_supports( $this->item->post_type, 'title' ) || ! $this->item->post_title ) {
 			return 'Note';
 		}
 
@@ -430,6 +475,10 @@ class Post extends Base {
 	 * @return array The list of Tags.
 	 */
 	protected function get_tag() {
+		if ( false !== $this->tags ) {
+			return $this->tags;
+		}
+
 		$tags = parent::get_tag();
 
 		$post_tags = \get_the_tags( $this->item->ID );
@@ -448,7 +497,9 @@ class Post extends Base {
 			}
 		}
 
-		return \array_unique( $tags, SORT_REGULAR );
+		$this->tags = \array_unique( $tags, SORT_REGULAR );
+
+		return $this->tags;
 	}
 
 	/**
@@ -464,12 +515,20 @@ class Post extends Base {
 			return null;
 		}
 
-		// Remove Teaser from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
-			return \__( '(This post is being modified)', 'activitypub' );
+		if ( false !== $this->summary ) {
+			return $this->summary;
 		}
 
-		return generate_post_summary( $this->item );
+		// Remove Teaser from drafts.
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+			$this->summary = \__( '(This post is being modified)', 'activitypub' );
+
+			return $this->summary;
+		}
+
+		$this->summary = generate_post_summary( $this->item );
+
+		return $this->summary;
 	}
 
 	/**
@@ -506,9 +565,15 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
+		if ( false !== $this->content ) {
+			return $this->content;
+		}
+
 		// Remove Content from drafts.
 		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
-			return \__( '(This post is being modified)', 'activitypub' );
+			$this->content = \__( '(This post is being modified)', 'activitypub' );
+
+			return $this->content;
 		}
 
 		global $post;
@@ -551,7 +616,9 @@ class Post extends Base {
 		 * @param string   $content The transformed post content.
 		 * @param \WP_Post $post    The post object being transformed.
 		 */
-		return \apply_filters( 'activitypub_the_content', $content, $post );
+		$this->content = \apply_filters( 'activitypub_the_content', $content, $post );
+
+		return $this->content;
 	}
 
 	/**
@@ -578,8 +645,13 @@ class Post extends Base {
 	 * @return string|array|null The in-reply-to URL of the post.
 	 */
 	protected function get_in_reply_to() {
+		if ( false !== $this->in_reply_to ) {
+			return $this->in_reply_to;
+		}
+
 		if ( ! site_supports_blocks() ) {
-			return null;
+			$this->in_reply_to = null;
+			return $this->in_reply_to;
 		}
 
 		$reply_urls = array();
@@ -596,14 +668,20 @@ class Post extends Base {
 		}
 
 		if ( empty( $reply_urls ) ) {
-			return null;
+			$this->in_reply_to = null;
+
+			return $this->in_reply_to;
 		}
 
 		if ( 1 === count( $reply_urls ) ) {
-			return \current( $reply_urls );
+			$this->in_reply_to = \current( $reply_urls );
+
+			return $this->in_reply_to;
 		}
 
-		return \array_values( \array_unique( $reply_urls ) );
+		$this->in_reply_to = \array_values( \array_unique( $reply_urls ) );
+
+		return $this->in_reply_to;
 	}
 
 	/**
@@ -639,6 +717,10 @@ class Post extends Base {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
+		if ( false !== $this->mentions ) {
+			return $this->mentions;
+		}
+
 		/**
 		 * Filter the mentions in the post content.
 		 *
@@ -648,12 +730,14 @@ class Post extends Base {
 		 *
 		 * @return array The filtered mentions.
 		 */
-		return apply_filters(
+		$this->mentions = apply_filters(
 			'activitypub_extract_mentions',
 			array(),
 			$this->item->post_content . ' ' . $this->item->post_excerpt,
 			$this->item
 		);
+
+		return $this->mentions;
 	}
 
 	/**

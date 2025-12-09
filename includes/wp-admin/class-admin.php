@@ -344,9 +344,15 @@ class Admin {
 		\wp_enqueue_script(
 			'activitypub-moderation-admin',
 			ACTIVITYPUB_PLUGIN_URL . 'assets/js/activitypub-moderation-admin.js',
-			array( 'jquery', 'wp-util', 'wp-a11y' ),
+			array( 'jquery', 'wp-util', 'wp-a11y', 'wp-i18n' ),
 			ACTIVITYPUB_PLUGIN_VERSION,
 			true
+		);
+
+		\wp_set_script_translations(
+			'activitypub-moderation-admin',
+			'activitypub',
+			ACTIVITYPUB_PLUGIN_DIR . 'languages'
 		);
 
 		// Localize script with translations and nonces.
@@ -354,12 +360,7 @@ class Admin {
 			'activitypub-moderation-admin',
 			'activitypubModerationL10n',
 			array(
-				'enterValue'        => \__( 'Please enter a value to block.', 'activitypub' ),
-				'addBlockFailed'    => \__( 'Failed to add block.', 'activitypub' ),
-				'removeBlockFailed' => \__( 'Failed to remove block.', 'activitypub' ),
-				'alreadyBlocked'    => \__( 'This term is already blocked.', 'activitypub' ),
-				'invalidDomain'     => \__( 'Please enter a valid domain (e.g., example.com).', 'activitypub' ),
-				'nonce'             => \wp_create_nonce( 'activitypub_moderation_settings' ),
+				'nonce' => \wp_create_nonce( 'activitypub_moderation_settings' ),
 			)
 		);
 	}
