@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Attachments;
 use Activitypub\Http;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -122,6 +123,11 @@ class Remote_Actors {
 			\kses_init_filters();
 		}
 
+		// Cache the actor's avatar locally.
+		if ( ! \is_wp_error( $post_id ) ) {
+			self::cache_avatar( $post_id, $actor );
+		}
+
 		return $post_id;
 	}
 
@@ -167,6 +173,11 @@ class Remote_Actors {
 		if ( $has_kses ) {
 			// Restore KSES filters.
 			\kses_init_filters();
+		}
+
+		// Re-cache the actor's avatar if it has changed.
+		if ( ! \is_wp_error( $post_id ) ) {
+			self::cache_avatar( $post_id, $actor );
 		}
 
 		return $post_id;
@@ -542,12 +553,6 @@ class Remote_Actors {
 			'_activitypub_acct'  => $webfinger,
 		);
 
-		// Store avatar URL if available.
-		$icon = object_to_uri( $actor->get_icon() );
-		if ( $icon ) {
-			$meta_input['_activitypub_avatar_url'] = $icon;
-		}
-
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
 			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?: $actor->get_preferred_username() ) ),
@@ -664,6 +669,9 @@ class Remote_Actors {
 	/**
 	 * Get the avatar URL for a remote actor.
 	 *
+	 * Returns the locally cached avatar URL if available, otherwise falls back
+	 * to the default avatar.
+	 *
 	 * @param int $id The ID of the remote actor post.
 	 *
 	 * @return string The avatar URL or empty string if not found.
@@ -674,7 +682,7 @@ class Remote_Actors {
 			return $avatar_url;
 		}
 
-		// If not found in meta, try to extract from post_content JSON.
+		// If not found in meta, try to extract from post_content JSON and cache it.
 		$post = \get_post( $id );
 		if ( ! $post || empty( $post->post_content ) ) {
 			return '';
@@ -688,9 +696,36 @@ class Remote_Actors {
 			return $default_avatar_url;
 		}
 
-		$avatar_url = object_to_uri( $actor_data['icon'] );
-		// Cache it in meta for next time.
-		\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
+		return self::cache_avatar( $id, $actor_data );
+	}
+
+	/**
+	 * Cache a remote actor's avatar locally.
+	 *
+	 * Downloads the avatar image, optimizes it (resize/WebP), and stores it locally.
+	 *
+	 * @param int                $post_id The actor post ID.
+	 * @param Actor|array|object $actor   The actor object or data array.
+	 *
+	 * @return string|null The cached avatar URL, or null if no avatar.
+	 */
+	private static function cache_avatar( $post_id, $actor ) {
+		$data              = $actor instanceof Actor ? $actor->to_array() : (array) $actor;
+		$remote_avatar_url = object_to_uri( $data['icon'] ?? null );
+
+		if ( empty( $remote_avatar_url ) ) {
+			// No avatar to save, clean up any existing avatar.
+			Attachments::delete_actors_directory( $post_id );
+			\delete_post_meta( $post_id, '_activitypub_avatar_url' );
+			return null;
+		}
+
+		// Download and save the avatar locally.
+		$local_url = Attachments::save_actor_avatar( $post_id, $remote_avatar_url );
+
+		// Store the local URL if caching succeeded, otherwise store the remote URL.
+		$avatar_url = $local_url ?: $remote_avatar_url;
+		\update_post_meta( $post_id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
 
 		return $avatar_url;
 	}
