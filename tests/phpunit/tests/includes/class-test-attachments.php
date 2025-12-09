@@ -1057,7 +1057,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		$avatar_url = 'https://example.com/avatar.jpg';
-		$result     = Attachments::save_actor_avatar( $avatar_url, $actor_id );
+		$result     = Attachments::save_actor_avatar( $actor_id, $avatar_url );
 
 		$this->assertIsString( $result );
 		$this->assertStringContainsString( 'wp-content/uploads/activitypub/actors/' . $actor_id, $result );
@@ -1077,7 +1077,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 			)
 		);
 
-		$result = Attachments::save_actor_avatar( '', $actor_id );
+		$result = Attachments::save_actor_avatar( $actor_id, '' );
 
 		$this->assertFalse( $result );
 	}
@@ -1094,7 +1094,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 			)
 		);
 
-		$result = Attachments::save_actor_avatar( 'not-a-valid-url', $actor_id );
+		$result = Attachments::save_actor_avatar( $actor_id, 'not-a-valid-url' );
 
 		$this->assertFalse( $result );
 	}
@@ -1112,7 +1112,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		// Use the missing.jpg URL that our mock returns as an error.
-		$result = Attachments::save_actor_avatar( 'https://example.com/missing.jpg', $actor_id );
+		$result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/missing.jpg' );
 
 		$this->assertFalse( $result );
 	}
@@ -1131,11 +1131,11 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		// Save first avatar.
-		$first_result = Attachments::save_actor_avatar( 'https://example.com/avatar1.jpg', $actor_id );
+		$first_result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar1.jpg' );
 		$this->assertIsString( $first_result );
 
 		// Save second avatar (should replace the first).
-		$second_result = Attachments::save_actor_avatar( 'https://example.com/avatar2.jpg', $actor_id );
+		$second_result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar2.jpg' );
 		$this->assertIsString( $second_result );
 
 		// URLs should be different (different source filenames).
@@ -1155,7 +1155,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		// Save an avatar first.
-		$avatar_url = Attachments::save_actor_avatar( 'https://example.com/avatar.jpg', $actor_id );
+		$avatar_url = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar.jpg' );
 		$this->assertIsString( $avatar_url );
 
 		// Get the directory path.

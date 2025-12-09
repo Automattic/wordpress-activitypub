@@ -685,14 +685,7 @@ class Remote_Actors {
 			return $default_avatar_url;
 		}
 
-		// Try to cache the avatar locally.
-		$remote_avatar_url = object_to_uri( $actor_data['icon'] );
-		$local_url         = Attachments::save_actor_avatar( $remote_avatar_url, $id );
-
-		$avatar_url = $local_url ? $local_url : $remote_avatar_url;
-		\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
-
-		return $avatar_url;
+		return self::cache_avatar( $id, $actor_data );
 	}
 
 	/**
@@ -700,24 +693,32 @@ class Remote_Actors {
 	 *
 	 * Downloads the avatar image, optimizes it (resize/WebP), and stores it locally.
 	 *
-	 * @param int   $post_id The actor post ID.
-	 * @param Actor $actor   The actor object.
+	 * @param int                $post_id The actor post ID.
+	 * @param Actor|array|object $actor   The actor object or data array.
+	 *
+	 * @return string|null The cached avatar URL, or null if no avatar.
 	 */
 	private static function cache_avatar( $post_id, $actor ) {
-		$remote_avatar_url = object_to_uri( $actor->get_icon() );
+		if ( \is_array( $actor ) || ( \is_object( $actor ) && ! $actor instanceof Actor ) ) {
+			$remote_avatar_url = object_to_uri( $actor['icon'] ?? ( $actor->icon ?? null ) );
+		} else {
+			$remote_avatar_url = object_to_uri( $actor->get_icon() );
+		}
 
 		if ( empty( $remote_avatar_url ) ) {
 			// No avatar to save, clean up any existing avatar.
 			Attachments::delete_actors_directory( $post_id );
 			\delete_post_meta( $post_id, '_activitypub_avatar_url' );
-			return;
+			return null;
 		}
 
 		// Download and save the avatar locally.
-		$local_url = Attachments::save_actor_avatar( $remote_avatar_url, $post_id );
+		$local_url = Attachments::save_actor_avatar( $post_id, $remote_avatar_url );
 
 		// Store the local URL if caching succeeded, otherwise store the remote URL.
 		$avatar_url = $local_url ?: $remote_avatar_url;
 		\update_post_meta( $post_id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
+
+		return $avatar_url;
 	}
 }
