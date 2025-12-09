@@ -717,7 +717,7 @@ class Remote_Actors {
 		$local_url = Attachments::save_actor_avatar( $remote_avatar_url, $post_id );
 
 		// Store the local URL if caching succeeded, otherwise store the remote URL.
-		$avatar_url = $local_url ? $local_url : $remote_avatar_url;
+		$avatar_url = $local_url ?: $remote_avatar_url;
 		\update_post_meta( $post_id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
 	}
 }
