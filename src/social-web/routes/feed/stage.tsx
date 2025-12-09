@@ -106,9 +106,11 @@ export default function FeedStage() {
 		onChangeQueryParams: ( params ) => {
 			const currentUrl = window.location.href;
 			const currentArgs = getQueryArgs( currentUrl );
+			const infiniteScrollEnabled = params.infiniteScrollEnabled ?? DEFAULT_VIEW.infiniteScrollEnabled;
 			const newUrl = addQueryArgs( currentUrl, {
 				...currentArgs,
-				paged: params.page || undefined,
+				// Don't persist page for infinite scroll - only for traditional pagination
+				paged: infiniteScrollEnabled ? undefined : params.page || undefined,
 				search: params.search || undefined,
 			} );
 			window.history.pushState( null, '', newUrl );
@@ -131,19 +133,6 @@ export default function FeedStage() {
 		},
 		[ view.filters, updateView ]
 	);
-
-	// Reset view to default state when actor switches
-	const prevActiveActorId = useRef( activeActorId );
-	useEffect( () => {
-		if ( prevActiveActorId.current !== activeActorId ) {
-			// Actor changed - reset to default view, preserving only field visibility
-			updateView( {
-				...DEFAULT_VIEW,
-				fields: view.fields,
-			} );
-			prevActiveActorId.current = activeActorId;
-		}
-	}, [ activeActorId, updateView ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
@@ -176,11 +165,11 @@ export default function FeedStage() {
 		}
 
 		const selectedId = selection[ 0 ];
-		const exists = feed.some( ( item ) => item.id.toString() === selectedId );
+		const exists = allLoadedRecords.some( ( item ) => item.id.toString() === selectedId );
 		if ( ! exists ) {
 			setSelection( [] );
 		}
-	}, [ feed, selection ] );
+	}, [ allLoadedRecords, selection ] );
 
 	const changeSelection = useCallback(
 		( nextSelection: string[] ) => {
@@ -268,7 +257,7 @@ export default function FeedStage() {
 			fields={ fields }
 			view={ normalizedView }
 			onChangeView={ updateFeedView }
-			isLoading={ isResolving || isLoadingMore }
+			isLoading={ isResolving }
 			onClickItem={ ( item ) => selectItem( item.id ) }
 			isItemClickable={ () => true }
 			getItemId={ ( item ) => item.id.toString() }
