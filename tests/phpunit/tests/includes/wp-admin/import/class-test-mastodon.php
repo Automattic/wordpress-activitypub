@@ -787,6 +787,463 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that self-replies are imported as comments.
+	 */
+	public function test_import_self_replies_as_comments() {
+		$outbox_json = wp_json_encode(
+			array(
+				'orderedItems' => array(
+					// Root post.
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/1/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:30:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/1',
+							'type'      => 'Note',
+							'content'   => '<p>Root post</p>',
+							'published' => '2024-01-15T10:30:00Z',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+					// Self-reply (thread continuation).
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/2/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:35:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/2',
+							'type'      => 'Note',
+							'content'   => '<p>Thread continuation</p>',
+							'published' => '2024-01-15T10:35:00Z',
+							'inReplyTo' => 'https://mastodon.social/users/example/statuses/1',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+				),
+			)
+		);
+
+		$outbox = json_decode( $outbox_json, true );
+
+		$reflection = new ReflectionClass( Mastodon::class );
+
+		$outbox_property = $reflection->getProperty( 'outbox' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
+		$outbox_property->setValue( null, $outbox );
+
+		$author_property = $reflection->getProperty( 'author' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
+		$author_property->setValue( null, $this->user_id );
+
+		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
+		$fetch_attachments_property->setValue( null, false );
+
+		ob_start();
+		$result = Mastodon::import_posts();
+		$output = ob_get_clean();
+
+		$this->assertTrue( $result );
+
+		// Should have 1 post.
+		$posts = get_posts(
+			array(
+				'author'      => $this->user_id,
+				'post_status' => 'publish',
+				'numberposts' => 10,
+			)
+		);
+
+		$this->assertCount( 1, $posts, 'Should import 1 root post' );
+		$this->assertStringContainsString( 'Root post', $posts[0]->post_content );
+
+		// Should have 1 comment on that post.
+		$comments = get_comments( array( 'post_id' => $posts[0]->ID ) );
+		$this->assertCount( 1, $comments, 'Should import 1 self-reply as comment' );
+		$this->assertStringContainsString( 'Thread continuation', $comments[0]->comment_content );
+
+		// Check comment metadata.
+		$source_id = get_comment_meta( $comments[0]->comment_ID, 'source_id', true );
+		$this->assertSame( 'https://mastodon.social/users/example/statuses/2', $source_id );
+
+		// Verify output messages.
+		$this->assertStringContainsString( 'Imported 1 post', $output );
+		$this->assertStringContainsString( 'Imported 1 comment', $output );
+	}
+
+	/**
+	 * Test that external replies are imported as posts (not comments).
+	 */
+	public function test_import_external_replies_as_posts() {
+		$outbox_json = wp_json_encode(
+			array(
+				'orderedItems' => array(
+					// Reply to external post.
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/1/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:30:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/1',
+							'type'      => 'Note',
+							'content'   => '<p>Reply to someone else</p>',
+							'published' => '2024-01-15T10:30:00Z',
+							'inReplyTo' => 'https://other.server/users/someone/statuses/999',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+				),
+			)
+		);
+
+		$outbox = json_decode( $outbox_json, true );
+
+		$reflection = new ReflectionClass( Mastodon::class );
+
+		$outbox_property = $reflection->getProperty( 'outbox' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
+		$outbox_property->setValue( null, $outbox );
+
+		$author_property = $reflection->getProperty( 'author' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
+		$author_property->setValue( null, $this->user_id );
+
+		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
+		$fetch_attachments_property->setValue( null, false );
+
+		ob_start();
+		$result = Mastodon::import_posts();
+		$output = ob_get_clean();
+
+		$this->assertTrue( $result );
+		$this->assertStringContainsString( 'Imported 1 post', $output );
+
+		// Should import as a post, not a comment.
+		$posts = get_posts(
+			array(
+				'author'      => $this->user_id,
+				'post_status' => 'publish',
+				'numberposts' => 10,
+			)
+		);
+
+		$this->assertCount( 1, $posts, 'External reply should be imported as a post' );
+		$this->assertStringContainsString( 'Reply to someone else', $posts[0]->post_content );
+
+		// Should not create any comments.
+		$comments = get_comments( array( 'post_id' => $posts[0]->ID ) );
+		$this->assertCount( 0, $comments, 'Should not create comments for external replies' );
+	}
+
+	/**
+	 * Test nested self-reply threading (A → B → C).
+	 */
+	public function test_import_nested_self_replies() {
+		$outbox_json = wp_json_encode(
+			array(
+				'orderedItems' => array(
+					// Root post (A).
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/1/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:00:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/1',
+							'type'      => 'Note',
+							'content'   => '<p>Post A - Root</p>',
+							'published' => '2024-01-15T10:00:00Z',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+					// Self-reply to A (B).
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/2/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:05:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/2',
+							'type'      => 'Note',
+							'content'   => '<p>Post B - Reply to A</p>',
+							'published' => '2024-01-15T10:05:00Z',
+							'inReplyTo' => 'https://mastodon.social/users/example/statuses/1',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+					// Self-reply to B (C).
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/3/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:10:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/3',
+							'type'      => 'Note',
+							'content'   => '<p>Post C - Reply to B</p>',
+							'published' => '2024-01-15T10:10:00Z',
+							'inReplyTo' => 'https://mastodon.social/users/example/statuses/2',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+				),
+			)
+		);
+
+		$outbox = json_decode( $outbox_json, true );
+
+		$reflection = new ReflectionClass( Mastodon::class );
+
+		$outbox_property = $reflection->getProperty( 'outbox' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
+		$outbox_property->setValue( null, $outbox );
+
+		$author_property = $reflection->getProperty( 'author' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
+		$author_property->setValue( null, $this->user_id );
+
+		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
+		$fetch_attachments_property->setValue( null, false );
+
+		ob_start();
+		$result = Mastodon::import_posts();
+		$output = ob_get_clean();
+
+		$this->assertTrue( $result );
+
+		// Should have 1 post.
+		$posts = get_posts(
+			array(
+				'author'      => $this->user_id,
+				'post_status' => 'publish',
+				'numberposts' => 10,
+			)
+		);
+
+		$this->assertCount( 1, $posts, 'Should import 1 root post' );
+
+		// Should have 2 comments (B and C).
+		$comments = get_comments(
+			array(
+				'post_id' => $posts[0]->ID,
+				'orderby' => 'comment_date',
+				'order'   => 'ASC',
+			)
+		);
+
+		$this->assertCount( 2, $comments, 'Should import 2 self-replies as comments' );
+
+		// Comment B should be a top-level comment.
+		$this->assertEquals( 0, $comments[0]->comment_parent, 'First comment should be top-level' );
+		$this->assertStringContainsString( 'Post B', $comments[0]->comment_content );
+
+		// Comment C should be a reply to B.
+		$this->assertEquals( $comments[0]->comment_ID, $comments[1]->comment_parent, 'Second comment should be reply to first' );
+		$this->assertStringContainsString( 'Post C', $comments[1]->comment_content );
+
+		// Verify output.
+		$this->assertStringContainsString( 'Imported 2 comments', $output );
+	}
+
+	/**
+	 * Test that orphaned self-replies are skipped.
+	 */
+	public function test_import_orphaned_self_replies_are_skipped() {
+		$outbox_json = wp_json_encode(
+			array(
+				'orderedItems' => array(
+					// Self-reply without a parent in the import (orphaned).
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/2/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:35:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/2',
+							'type'      => 'Note',
+							'content'   => '<p>Reply to missing parent</p>',
+							'published' => '2024-01-15T10:35:00Z',
+							'inReplyTo' => 'https://mastodon.social/users/example/statuses/1',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+				),
+			)
+		);
+
+		$outbox = json_decode( $outbox_json, true );
+
+		$reflection = new ReflectionClass( Mastodon::class );
+
+		$outbox_property = $reflection->getProperty( 'outbox' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
+		$outbox_property->setValue( null, $outbox );
+
+		$author_property = $reflection->getProperty( 'author' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
+		$author_property->setValue( null, $this->user_id );
+
+		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
+		$fetch_attachments_property->setValue( null, false );
+
+		ob_start();
+		$result = Mastodon::import_posts();
+		$output = ob_get_clean();
+
+		$this->assertTrue( $result );
+
+		// Should not import any posts (the self-reply's parent is missing).
+		$posts = get_posts(
+			array(
+				'author'      => $this->user_id,
+				'post_status' => 'publish',
+				'numberposts' => 10,
+			)
+		);
+
+		$this->assertCount( 0, $posts, 'Should not import any posts' );
+
+		// Should report the skipped orphan.
+		$this->assertStringContainsString( 'Skipped comments', $output );
+		$this->assertStringContainsString( 'statuses/2', $output );
+	}
+
+	/**
+	 * Test self-reply to an external reply (becomes comment on that post).
+	 */
+	public function test_self_reply_to_external_reply() {
+		$outbox_json = wp_json_encode(
+			array(
+				'orderedItems' => array(
+					// External reply (imported as post).
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/1/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:00:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/1',
+							'type'      => 'Note',
+							'content'   => '<p>Reply to external post</p>',
+							'published' => '2024-01-15T10:00:00Z',
+							'inReplyTo' => 'https://other.server/users/someone/statuses/999',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+					// Self-reply to the external reply (becomes comment).
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/2/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:05:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/2',
+							'type'      => 'Note',
+							'content'   => '<p>Adding more context</p>',
+							'published' => '2024-01-15T10:05:00Z',
+							'inReplyTo' => 'https://mastodon.social/users/example/statuses/1',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+				),
+			)
+		);
+
+		$outbox = json_decode( $outbox_json, true );
+
+		$reflection = new ReflectionClass( Mastodon::class );
+
+		$outbox_property = $reflection->getProperty( 'outbox' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$outbox_property->setAccessible( true );
+		}
+		$outbox_property->setValue( null, $outbox );
+
+		$author_property = $reflection->getProperty( 'author' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$author_property->setAccessible( true );
+		}
+		$author_property->setValue( null, $this->user_id );
+
+		$fetch_attachments_property = $reflection->getProperty( 'fetch_attachments' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$fetch_attachments_property->setAccessible( true );
+		}
+		$fetch_attachments_property->setValue( null, false );
+
+		ob_start();
+		$result = Mastodon::import_posts();
+		ob_get_clean();
+
+		$this->assertTrue( $result );
+
+		// External reply should be imported as post.
+		$posts = get_posts(
+			array(
+				'author'      => $this->user_id,
+				'post_status' => 'publish',
+				'numberposts' => 10,
+			)
+		);
+
+		$this->assertCount( 1, $posts, 'External reply should be imported as post' );
+
+		// Self-reply to external reply should be a comment on that post.
+		$comments = get_comments( array( 'post_id' => $posts[0]->ID ) );
+		$this->assertCount( 1, $comments, 'Self-reply should become comment on external reply post' );
+		$this->assertStringContainsString( 'Adding more context', $comments[0]->comment_content );
+	}
+
+	/**
 	 * Test that the filter hook is called.
 	 */
 	public function test_import_posts_calls_filter_hook() {
