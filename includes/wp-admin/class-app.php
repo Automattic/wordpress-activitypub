@@ -51,8 +51,16 @@ class App {
 			\sprintf( 'wp.apiFetch.use( wp.apiFetch.createPreloadingMiddleware( %s ) );', \wp_json_encode( $preload_data ) )
 		);
 
-		$vendors_asset = include \plugin_dir_path( ACTIVITYPUB_PLUGIN_FILE ) . 'build/app/vendors.asset.php';
+		$router_asset = include \plugin_dir_path( ACTIVITYPUB_PLUGIN_FILE ) . 'build/app/tanstack-router.asset.php';
+		\wp_enqueue_script(
+			'activitypub-app-tanstack-router',
+			\plugins_url( 'build/app/tanstack-router.js', ACTIVITYPUB_PLUGIN_FILE ),
+			$router_asset['dependencies'],
+			$router_asset['version'],
+			true
+		);
 
+		$vendors_asset = include \plugin_dir_path( ACTIVITYPUB_PLUGIN_FILE ) . 'build/app/vendors.asset.php';
 		\wp_enqueue_script(
 			'activitypub-app-vendors',
 			\plugins_url( 'build/app/vendors.js', ACTIVITYPUB_PLUGIN_FILE ),
@@ -66,7 +74,7 @@ class App {
 		\wp_enqueue_script(
 			'activitypub-app',
 			\plugins_url( 'build/app/index.js', ACTIVITYPUB_PLUGIN_FILE ),
-			array_merge( $asset_file['dependencies'], array( 'activitypub-app-vendors' ) ),
+			array_merge( $asset_file['dependencies'], array( 'activitypub-app-tanstack-router', 'activitypub-app-vendors' ) ),
 			$asset_file['version'],
 			true
 		);

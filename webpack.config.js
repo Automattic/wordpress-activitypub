@@ -37,7 +37,16 @@ const processConfig = ( config ) => {
 				...( config.optimization?.splitChunks || {} ),
 				cacheGroups: {
 					...( config.optimization?.splitChunks?.cacheGroups || {} ),
-					// App vendor chunk
+					// TanStack Router - loaded async since it's large (~250KB)
+					tanstackRouter: {
+						test: /[\\/]node_modules[\\/]@tanstack[\\/]/,
+						name: 'app/tanstack-router',
+						chunks: ( chunk ) => chunk.name && chunk.name.startsWith( 'app/' ),
+						priority: 30,
+						reuseExistingChunk: true,
+						enforce: true,
+					},
+					// App vendor chunk (other dependencies)
 					appVendors: {
 						test: /[\\/]node_modules[\\/]/,
 						name: 'app/vendors',
