@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Attachments processor class.
@@ -28,6 +29,13 @@ class Attachments {
 	public static $comments_dir = '/activitypub/comments/';
 
 	/**
+	 * Directory for storing actor avatar files.
+	 *
+	 * @var string
+	 */
+	public static $actors_dir = '/activitypub/actors/';
+
+	/**
 	 * Maximum width for imported images.
 	 *
 	 * @var int
@@ -35,10 +43,18 @@ class Attachments {
 	const MAX_IMAGE_DIMENSION = 1200;
 
 	/**
+	 * Maximum width for actor avatars.
+	 *
+	 * @var int
+	 */
+	const MAX_AVATAR_DIMENSION = 512;
+
+	/**
 	 * Initialize the class and set up filters.
 	 */
 	public static function init() {
 		\add_action( 'before_delete_post', array( self::class, 'delete_ap_posts_directory' ) );
+		\add_action( 'before_delete_post', array( self::class, 'delete_actors_directory' ) );
 	}
 
 	/**
@@ -207,7 +223,18 @@ class Attachments {
 	 */
 	private static function get_storage_paths( $object_id, $object_type ) {
 		$upload_dir = \wp_upload_dir();
-		$sub_dir    = 'comment' === $object_type ? self::$comments_dir : self::$ap_posts_dir;
+
+		switch ( $object_type ) {
+			case 'comment':
+				$sub_dir = self::$comments_dir;
+				break;
+			case 'actor':
+				$sub_dir = self::$actors_dir;
+				break;
+			default:
+				$sub_dir = self::$ap_posts_dir;
+				break;
+		}
 
 		return array(
 			'basedir' => $upload_dir['basedir'] . $sub_dir . $object_id,
@@ -957,5 +984,63 @@ class Attachments {
 		$gallery .= '<!-- /wp:gallery -->';
 
 		return $gallery;
+	}
+
+	/**
+	 * Save a remote actor's avatar locally.
+	 *
+	 * Downloads the avatar image, optimizes it, and stores it in the actors directory.
+	 * Returns the local URL for the saved avatar.
+	 *
+	 * @param int    $actor_id   The local actor post ID.
+	 * @param string $avatar_url The remote avatar URL.
+	 *
+	 * @return string|false The local avatar URL on success, false on failure.
+	 */
+	public static function save_actor_avatar( $actor_id, $avatar_url ) {
+		// Validate actor_id is a positive integer to prevent path traversal.
+		$actor_id = (int) $actor_id;
+		if ( $actor_id <= 0 ) {
+			return false;
+		}
+
+		if ( empty( $avatar_url ) || ! \filter_var( $avatar_url, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		// Delete existing avatar files before saving new one.
+		// This prevents accumulating old avatar files since save_file creates unique filenames.
+		self::delete_actors_directory( $actor_id );
+
+		$attachment_data = array( 'url' => $avatar_url );
+		$result          = self::save_file( $attachment_data, $actor_id, 'actor', self::MAX_AVATAR_DIMENSION );
+
+		if ( \is_wp_error( $result ) || ! isset( $result['url'] ) ) {
+			return false;
+		}
+
+		return $result['url'];
+	}
+
+	/**
+	 * Delete the activitypub files directory for an actor.
+	 *
+	 * @param int $actor_id The actor post ID.
+	 */
+	public static function delete_actors_directory( $actor_id ) {
+		if ( Remote_Actors::POST_TYPE !== \get_post_type( $actor_id ) ) {
+			return;
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+
+		\WP_Filesystem();
+		global $wp_filesystem;
+
+		$activitypub_dir = self::get_storage_paths( $actor_id, 'actor' )['basedir'];
+
+		if ( $wp_filesystem->is_dir( $activitypub_dir ) ) {
+			$wp_filesystem->rmdir( $activitypub_dir, true );
+		}
 	}
 }
