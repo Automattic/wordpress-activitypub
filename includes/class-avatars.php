@@ -47,17 +47,22 @@ class Avatars {
 			return $args;
 		}
 
-		$avatar = null;
+		// Respect WordPress "show avatars" setting.
+		if ( ! \get_option( 'show_avatars' ) ) {
+			$avatar = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
+		} else {
+			$avatar = null;
 
-		// First, try to get avatar from remote actor.
-		$remote_actor_id = \get_comment_meta( $id_or_email->comment_ID, '_activitypub_remote_actor_id', true );
-		if ( $remote_actor_id ) {
-			$avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
-		}
+			// First, try to get avatar from remote actor.
+			$remote_actor_id = \get_comment_meta( $id_or_email->comment_ID, '_activitypub_remote_actor_id', true );
+			if ( $remote_actor_id ) {
+				$avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
+			}
 
-		// Fall back to avatar_url comment meta for backward compatibility.
-		if ( ! $avatar ) {
-			$avatar = \get_comment_meta( $id_or_email->comment_ID, 'avatar_url', true );
+			// Fall back to avatar_url comment meta for backward compatibility.
+			if ( ! $avatar ) {
+				$avatar = \get_comment_meta( $id_or_email->comment_ID, 'avatar_url', true );
+			}
 		}
 
 		if ( $avatar ) {

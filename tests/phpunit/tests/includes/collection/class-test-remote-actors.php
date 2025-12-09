@@ -1249,8 +1249,8 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$avatar_without_setting = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertStringContainsString( 'assets/img/mp.jpg', $avatar_without_setting );
 
-		// Re-enable for other tests.
-		\update_option( 'show_avatars', 1 );
+		// Clean up.
+		\delete_option( 'show_avatars' );
 	}
 
 	/**
