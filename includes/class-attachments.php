@@ -28,6 +28,13 @@ class Attachments {
 	public static $comments_dir = '/activitypub/comments/';
 
 	/**
+	 * Maximum width for imported images.
+	 *
+	 * @var int
+	 */
+	const MAX_IMAGE_DIMENSION = 1200;
+
+	/**
 	 * Initialize the class and set up filters.
 	 */
 	public static function init() {
@@ -444,15 +451,31 @@ class Attachments {
 			}
 		}
 
+		// Optimize images before sideloading (resize and convert to WebP).
+		$optimized = self::optimize_image( $tmp_file );
+		if ( $optimized['changed'] ) {
+			$tmp_file = $optimized['path'];
+		}
+
 		// Prepare file array for WordPress.
+		$original_name = \basename( \wp_parse_url( $attachment_data['url'], PHP_URL_PATH ) );
+
+		// Update filename extension if format changed.
+		if ( $optimized['changed'] ) {
+			$new_ext       = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
+			$original_name = \preg_replace( '/\.[^.]+$/', '.' . $new_ext, $original_name );
+		}
+
 		$file_array = array(
-			'name'     => \basename( \wp_parse_url( $attachment_data['url'], PHP_URL_PATH ) ),
+			'name'     => $original_name,
 			'tmp_name' => $tmp_file,
 		);
 
 		// Prepare attachment post data.
+		// Clear mime type if format changed so WordPress auto-detects it.
+		$mime_type = $optimized['changed'] ? '' : ( $attachment_data['mediaType'] ?? '' );
 		$post_data = array(
-			'post_mime_type' => $attachment_data['mediaType'] ?? '',
+			'post_mime_type' => $mime_type,
 			'post_title'     => $attachment_data['name'] ?? '',
 			'post_content'   => $attachment_data['name'] ?? '',
 			'post_author'    => $author_id,
@@ -463,8 +486,8 @@ class Attachments {
 
 		// Add alt text for images.
 		if ( ! empty( $attachment_data['name'] ) ) {
-			$mime_type = $attachment_data['mediaType'] ?? '';
-			if ( 'image' === strtok( $mime_type, '/' ) ) {
+			$original_mime = $attachment_data['mediaType'] ?? '';
+			if ( 'image' === strtok( $original_mime, '/' ) ) {
 				$post_data['meta_input']['_wp_attachment_image_alt'] = $attachment_data['name'];
 			}
 		}
@@ -554,6 +577,13 @@ class Attachments {
 			return new \WP_Error( 'file_move_failed', \__( 'Failed to move file to destination.', 'activitypub' ) );
 		}
 
+		// Optimize images (resize and convert to WebP).
+		$optimized = self::optimize_image( $file_path );
+		if ( $optimized['changed'] ) {
+			$file_path = $optimized['path'];
+			$file_name = \basename( $file_path );
+		}
+
 		// Get mime type and validate file.
 		$file_info = \wp_check_filetype_and_ext( $file_path, $file_name );
 		$mime_type = $file_info['type'] ?? $attachment_data['mediaType'] ?? '';
@@ -562,6 +592,89 @@ class Attachments {
 			'url'       => $paths['baseurl'] . '/' . $file_name,
 			'mime_type' => $mime_type,
 			'alt'       => $attachment_data['name'] ?? '',
+		);
+	}
+
+	/**
+	 * Optimize an image file by resizing and converting to WebP.
+	 *
+	 * Uses WordPress image editor to resize large images and convert them
+	 * to WebP format for better compression while maintaining quality.
+	 *
+	 * @param string $file_path Path to the image file.
+	 *
+	 * @return array{path: string, changed: bool}|\WP_Error The optimized file path and whether it changed, or WP_Error.
+	 */
+	private static function optimize_image( $file_path ) {
+		// Check if it's an image.
+		$mime_type = \wp_check_filetype( $file_path )['type'] ?? '';
+		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
+			return array(
+				'path'    => $file_path,
+				'changed' => false,
+			);
+		}
+
+		// Skip SVG and GIF files (GIFs may be animated).
+		if ( \in_array( $mime_type, array( 'image/svg+xml', 'image/gif' ), true ) ) {
+			return array(
+				'path'    => $file_path,
+				'changed' => false,
+			);
+		}
+
+		$editor = \wp_get_image_editor( $file_path );
+		if ( \is_wp_error( $editor ) ) {
+			return array(
+				'path'    => $file_path,
+				'changed' => false,
+			);
+		}
+
+		$size          = $editor->get_size();
+		$max_dimension = self::MAX_IMAGE_DIMENSION;
+		$needs_resize  = $size['width'] > $max_dimension || $size['height'] > $max_dimension;
+
+		// Resize if needed.
+		if ( $needs_resize ) {
+			$editor->resize( $max_dimension, $max_dimension, false );
+		}
+
+		// Check if WebP is supported.
+		$can_webp = $editor->supports_mime_type( 'image/webp' );
+
+		// Determine output format.
+		if ( $can_webp ) {
+			$new_path = \preg_replace( '/\.[^.]+$/', '.webp', $file_path );
+			$result   = $editor->save( $new_path, 'image/webp' );
+		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
+			// Keep original format for potentially transparent images when WebP not available.
+			$result = $needs_resize ? $editor->save( $file_path ) : true;
+		} else {
+			// Convert to JPEG when WebP not available.
+			$new_path = \preg_replace( '/\.[^.]+$/', '.jpg', $file_path );
+			$result   = $editor->save( $new_path, 'image/jpeg' );
+		}
+
+		if ( \is_wp_error( $result ) ) {
+			return array(
+				'path'    => $file_path,
+				'changed' => false,
+			);
+		}
+
+		// If format changed, delete the original.
+		if ( is_array( $result ) && isset( $result['path'] ) && $result['path'] !== $file_path ) {
+			\wp_delete_file( $file_path );
+			return array(
+				'path'    => $result['path'],
+				'changed' => true,
+			);
+		}
+
+		return array(
+			'path'    => $file_path,
+			'changed' => $needs_resize,
 		);
 	}
 

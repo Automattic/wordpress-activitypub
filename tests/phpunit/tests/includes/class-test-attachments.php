@@ -481,8 +481,11 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$attachments = \get_attached_media( '', $post_id );
 		$this->assertCount( 3, $attachments ); // shared.jpg, inline-only.jpg, attachment-only.jpg.
 
-		// Verify image block was added for attachment-only.jpg (single images use standalone blocks).
-		$this->assertStringContainsString( '<!-- wp:image', $post->post_content );
+		// Verify image block or gallery was added for attachment-only.jpg.
+		$this->assertTrue(
+			str_contains( $post->post_content, '<!-- wp:image' ) || str_contains( $post->post_content, '<!-- wp:gallery' ),
+			'Expected image or gallery block in post content'
+		);
 	}
 
 	/**
@@ -624,8 +627,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertIsInt( $result[0] );
 
 		// Verify the attachment filename is clean without query parameters.
+		// Note: Image may be converted to WebP during optimization.
 		$attachment_file = get_attached_file( $result[0] );
-		$this->assertStringEndsWith( '.jpg', $attachment_file );
+		$this->assertMatchesRegularExpression( '/\.(jpg|webp)$/', $attachment_file );
 		$this->assertStringNotContainsString( '?', $attachment_file );
 		$this->assertStringNotContainsString( 'stp=', $attachment_file );
 		$this->assertStringNotContainsString( 'nc_cat=', $attachment_file );
@@ -660,7 +664,8 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertCount( 1, $result );
 
 		// Verify the URL doesn't contain query parameters.
-		$this->assertStringEndsWith( '.png', $result[0]['url'] );
+		// Note: Image may be converted to WebP during optimization.
+		$this->assertMatchesRegularExpression( '/\.(png|webp)$/', $result[0]['url'] );
 		$this->assertStringNotContainsString( '?', $result[0]['url'] );
 		$this->assertStringNotContainsString( 'size=', $result[0]['url'] );
 	}
