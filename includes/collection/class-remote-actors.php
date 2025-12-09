@@ -699,11 +699,8 @@ class Remote_Actors {
 	 * @return string|null The cached avatar URL, or null if no avatar.
 	 */
 	private static function cache_avatar( $post_id, $actor ) {
-		if ( \is_array( $actor ) || ( \is_object( $actor ) && ! $actor instanceof Actor ) ) {
-			$remote_avatar_url = object_to_uri( $actor['icon'] ?? ( $actor->icon ?? null ) );
-		} else {
-			$remote_avatar_url = object_to_uri( $actor->get_icon() );
-		}
+		$data              = $actor instanceof Actor ? $actor->to_array() : (array) $actor;
+		$remote_avatar_url = object_to_uri( $data['icon'] ?? null );
 
 		if ( empty( $remote_avatar_url ) ) {
 			// No avatar to save, clean up any existing avatar.
