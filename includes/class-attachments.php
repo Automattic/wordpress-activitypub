@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Attachments processor class.
@@ -28,6 +29,13 @@ class Attachments {
 	public static $comments_dir = '/activitypub/comments/';
 
 	/**
+	 * Directory for storing actor avatar files.
+	 *
+	 * @var string
+	 */
+	public static $actors_dir = '/activitypub/actors/';
+
+	/**
 	 * Maximum width for imported images.
 	 *
 	 * @var int
@@ -35,10 +43,18 @@ class Attachments {
 	const MAX_IMAGE_DIMENSION = 1200;
 
 	/**
+	 * Maximum width for actor avatars.
+	 *
+	 * @var int
+	 */
+	const MAX_AVATAR_DIMENSION = 512;
+
+	/**
 	 * Initialize the class and set up filters.
 	 */
 	public static function init() {
 		\add_action( 'before_delete_post', array( self::class, 'delete_ap_posts_directory' ) );
+		\add_action( 'before_delete_post', array( self::class, 'delete_actors_directory' ) );
 	}
 
 	/**
@@ -207,7 +223,18 @@ class Attachments {
 	 */
 	private static function get_storage_paths( $object_id, $object_type ) {
 		$upload_dir = \wp_upload_dir();
-		$sub_dir    = 'comment' === $object_type ? self::$comments_dir : self::$ap_posts_dir;
+
+		switch ( $object_type ) {
+			case 'comment':
+				$sub_dir = self::$comments_dir;
+				break;
+			case 'actor':
+				$sub_dir = self::$actors_dir;
+				break;
+			default:
+				$sub_dir = self::$ap_posts_dir;
+				break;
+		}
 
 		return array(
 			'basedir' => $upload_dir['basedir'] . $sub_dir . $object_id,
@@ -427,14 +454,13 @@ class Attachments {
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
-		// Initialize filesystem.
-		\WP_Filesystem();
-		global $wp_filesystem;
-
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
 		if ( $is_local ) {
 			// Read local file from disk.
+			\WP_Filesystem();
+			global $wp_filesystem;
+
 			if ( ! $wp_filesystem->exists( $attachment_data['url'] ) ) {
 				/* translators: %s: file path */
 				return new \WP_Error( 'file_not_found', sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
@@ -452,24 +478,18 @@ class Attachments {
 			}
 		}
 
-		// Get original filename from URL.
-		$original_name = \basename( \wp_parse_url( $attachment_data['url'], PHP_URL_PATH ) );
-
-		// Rename temp file to have proper extension for optimize_image to detect mime type.
-		$original_ext = \pathinfo( $original_name, PATHINFO_EXTENSION );
-		if ( $original_ext ) {
-			$renamed_tmp = $tmp_file . '.' . $original_ext;
-			if ( $wp_filesystem->move( $tmp_file, $renamed_tmp, true ) ) {
-				$tmp_file = $renamed_tmp;
-			}
+		// Optimize images before sideloading (resize and convert to WebP).
+		$optimized = self::optimize_image( $tmp_file );
+		if ( $optimized['changed'] ) {
+			$tmp_file = $optimized['path'];
 		}
 
-		// Optimize images before sideloading (resize and convert to WebP).
-		$tmp_file = self::optimize_image( $tmp_file, self::MAX_IMAGE_DIMENSION );
+		// Prepare file array for WordPress.
+		$original_name = \basename( \wp_parse_url( $attachment_data['url'], PHP_URL_PATH ) );
 
-		// Update filename extension to match optimized file.
-		$new_ext = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
-		if ( $new_ext ) {
+		// Update filename extension if format changed.
+		if ( $optimized['changed'] ) {
+			$new_ext       = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
 			$original_name = \preg_replace( '/\.[^.]+$/', '.' . $new_ext, $original_name );
 		}
 
@@ -479,12 +499,14 @@ class Attachments {
 		);
 
 		// Prepare attachment post data.
-		// Let WordPress auto-detect the mime type from the file.
+		// Clear mime type if format changed so WordPress auto-detects it.
+		$mime_type = $optimized['changed'] ? '' : ( $attachment_data['mediaType'] ?? '' );
 		$post_data = array(
-			'post_title'   => $attachment_data['name'] ?? '',
-			'post_content' => $attachment_data['name'] ?? '',
-			'post_author'  => $author_id,
-			'meta_input'   => array(
+			'post_mime_type' => $mime_type,
+			'post_title'     => $attachment_data['name'] ?? '',
+			'post_content'   => $attachment_data['name'] ?? '',
+			'post_author'    => $author_id,
+			'meta_input'     => array(
 				'_source_url' => $attachment_data['url'],
 			),
 		);
@@ -517,7 +539,6 @@ class Attachments {
 	 * @param array  $attachment_data The normalized attachment data.
 	 * @param int    $object_id       The post or comment ID to attach to.
 	 * @param string $object_type     The object type ('post' or 'comment').
-	 * @param int    $max_dimension   Optional. Maximum image dimension in pixels. Default MAX_IMAGE_DIMENSION.
 	 *
 	 * @return array|\WP_Error {
 	 *     Array of file data on success, WP_Error on failure.
@@ -527,7 +548,7 @@ class Attachments {
 	 *     @type string $alt       Alt text from attachment name field.
 	 * }
 	 */
-	private static function save_file( $attachment_data, $object_id, $object_type, $max_dimension = self::MAX_IMAGE_DIMENSION ) {
+	private static function save_file( $attachment_data, $object_id, $object_type ) {
 		$mime_type = $attachment_data['mediaType'] ?? '';
 
 		// Skip download for video and audio files - use remote URL directly.
@@ -584,8 +605,11 @@ class Attachments {
 		}
 
 		// Optimize images (resize and convert to WebP).
-		$file_path = self::optimize_image( $file_path, $max_dimension );
-		$file_name = \basename( $file_path );
+		$optimized = self::optimize_image( $file_path );
+		if ( $optimized['changed'] ) {
+			$file_path = $optimized['path'];
+			$file_name = \basename( $file_path );
+		}
 
 		// Get mime type and validate file.
 		$file_info = \wp_check_filetype_and_ext( $file_path, $file_name );
@@ -599,61 +623,44 @@ class Attachments {
 	}
 
 	/**
-	 * Get a unique file path by appending a counter if the file already exists.
-	 *
-	 * @param string $file_path The desired file path.
-	 *
-	 * @return string A unique file path that doesn't exist.
-	 */
-	private static function get_unique_path( $file_path ) {
-		if ( ! \file_exists( $file_path ) ) {
-			return $file_path;
-		}
-
-		$path_info = \pathinfo( $file_path );
-		$dir       = $path_info['dirname'];
-		$base_name = $path_info['filename'];
-		$extension = isset( $path_info['extension'] ) ? '.' . $path_info['extension'] : '';
-		$counter   = 1;
-
-		do {
-			$new_path = $dir . '/' . $base_name . '-' . $counter . $extension;
-			++$counter;
-		} while ( \file_exists( $new_path ) );
-
-		return $new_path;
-	}
-
-	/**
 	 * Optimize an image file by resizing and converting to WebP.
 	 *
 	 * Uses WordPress image editor to resize large images and convert them
 	 * to WebP format for better compression while maintaining quality.
 	 *
-	 * @param string $file_path     Path to the image file.
-	 * @param int    $max_dimension Maximum width/height in pixels.
+	 * @param string $file_path Path to the image file.
 	 *
-	 * @return string The optimized file path.
+	 * @return array{path: string, changed: bool}|\WP_Error The optimized file path and whether it changed, or WP_Error.
 	 */
-	private static function optimize_image( $file_path, $max_dimension ) {
+	private static function optimize_image( $file_path ) {
 		// Check if it's an image.
 		$mime_type = \wp_check_filetype( $file_path )['type'] ?? '';
 		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
-			return $file_path;
+			return array(
+				'path'    => $file_path,
+				'changed' => false,
+			);
 		}
 
 		// Skip SVG and GIF files (GIFs may be animated).
 		if ( \in_array( $mime_type, array( 'image/svg+xml', 'image/gif' ), true ) ) {
-			return $file_path;
+			return array(
+				'path'    => $file_path,
+				'changed' => false,
+			);
 		}
 
 		$editor = \wp_get_image_editor( $file_path );
 		if ( \is_wp_error( $editor ) ) {
-			return $file_path;
+			return array(
+				'path'    => $file_path,
+				'changed' => false,
+			);
 		}
 
-		$size         = $editor->get_size();
-		$needs_resize = $size['width'] > $max_dimension || $size['height'] > $max_dimension;
+		$size          = $editor->get_size();
+		$max_dimension = self::MAX_IMAGE_DIMENSION;
+		$needs_resize  = $size['width'] > $max_dimension || $size['height'] > $max_dimension;
 
 		// Resize if needed.
 		if ( $needs_resize ) {
@@ -663,37 +670,39 @@ class Attachments {
 		// Check if WebP is supported.
 		$can_webp = $editor->supports_mime_type( 'image/webp' );
 
-		// Determine output format and save.
+		// Determine output format.
 		if ( $can_webp ) {
-			// Convert to WebP.
-			$new_path = self::get_unique_path( \preg_replace( '/\.[^.]+$/', '.webp', $file_path ) );
+			$new_path = \preg_replace( '/\.[^.]+$/', '.webp', $file_path );
 			$result   = $editor->save( $new_path, 'image/webp' );
 		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
 			// Keep original format for potentially transparent images when WebP not available.
-			if ( ! $needs_resize ) {
-				// No changes needed.
-				return $file_path;
-			}
-			$result = $editor->save( $file_path );
+			$result = $needs_resize ? $editor->save( $file_path ) : true;
 		} else {
 			// Convert to JPEG when WebP not available.
-			$new_path = self::get_unique_path( \preg_replace( '/\.[^.]+$/', '.jpg', $file_path ) );
+			$new_path = \preg_replace( '/\.[^.]+$/', '.jpg', $file_path );
 			$result   = $editor->save( $new_path, 'image/jpeg' );
 		}
 
 		if ( \is_wp_error( $result ) ) {
-			return $file_path;
+			return array(
+				'path'    => $file_path,
+				'changed' => false,
+			);
 		}
 
-		// Handle result - $result is always an array from $editor->save().
-		$result_path = $result['path'] ?? $file_path;
-
-		// If path changed (format conversion), delete the original file.
-		if ( $result_path !== $file_path ) {
+		// If format changed, delete the original.
+		if ( is_array( $result ) && isset( $result['path'] ) && $result['path'] !== $file_path ) {
 			\wp_delete_file( $file_path );
+			return array(
+				'path'    => $result['path'],
+				'changed' => true,
+			);
 		}
 
-		return $result_path;
+		return array(
+			'path'    => $file_path,
+			'changed' => $needs_resize,
+		);
 	}
 
 	/**
@@ -957,5 +966,63 @@ class Attachments {
 		$gallery .= '<!-- /wp:gallery -->';
 
 		return $gallery;
+	}
+
+	/**
+	 * Save a remote actor's avatar locally.
+	 *
+	 * Downloads the avatar image, optimizes it, and stores it in the actors directory.
+	 * Returns the local URL for the saved avatar.
+	 *
+	 * @param int    $actor_id   The local actor post ID.
+	 * @param string $avatar_url The remote avatar URL.
+	 *
+	 * @return string|false The local avatar URL on success, false on failure.
+	 */
+	public static function save_actor_avatar( $actor_id, $avatar_url ) {
+		// Validate actor_id is a positive integer to prevent path traversal.
+		$actor_id = (int) $actor_id;
+		if ( $actor_id <= 0 ) {
+			return false;
+		}
+
+		if ( empty( $avatar_url ) || ! \filter_var( $avatar_url, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		// Delete existing avatar files before saving new one.
+		// This prevents accumulating old avatar files since save_file creates unique filenames.
+		self::delete_actors_directory( $actor_id );
+
+		$attachment_data = array( 'url' => $avatar_url );
+		$result          = self::save_file( $attachment_data, $actor_id, 'actor', self::MAX_AVATAR_DIMENSION );
+
+		if ( \is_wp_error( $result ) || ! isset( $result['url'] ) ) {
+			return false;
+		}
+
+		return $result['url'];
+	}
+
+	/**
+	 * Delete the activitypub files directory for an actor.
+	 *
+	 * @param int $actor_id The actor post ID.
+	 */
+	public static function delete_actors_directory( $actor_id ) {
+		if ( Remote_Actors::POST_TYPE !== \get_post_type( $actor_id ) ) {
+			return;
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+
+		\WP_Filesystem();
+		global $wp_filesystem;
+
+		$activitypub_dir = self::get_storage_paths( $actor_id, 'actor' )['basedir'];
+
+		if ( $wp_filesystem->is_dir( $activitypub_dir ) ) {
+			$wp_filesystem->rmdir( $activitypub_dir, true );
+		}
 	}
 }
