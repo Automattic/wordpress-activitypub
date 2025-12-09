@@ -1,5 +1,6 @@
 {
 	"description": "Claude Code settings for WordPress ActivityPub plugin development",
+	"includeCoAuthoredBy": false,
 	"skills": {
 		"allowedSkills": [
 			"activitypub-dev-cycle",
