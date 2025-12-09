@@ -342,6 +342,12 @@ class Health_Check {
 			'private' => false,
 		);
 
+		$info['activitypub']['fields']['activitypub_ap_post_purge_days'] = array(
+			'label'   => \__( 'Remote Posts Retention Period', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_ap_post_purge_days', 180 ) ),
+			'private' => false,
+		);
+
 		$info['activitypub']['fields']['vary_header'] = array(
 			'label'   => \__( 'Vary Header', 'activitypub' ),
 			'value'   => \esc_attr( (int) \get_option( 'activitypub_vary_header', '1' ) ),

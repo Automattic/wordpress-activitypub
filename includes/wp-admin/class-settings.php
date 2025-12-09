@@ -188,6 +188,17 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_ap_post_purge_days',
+			array(
+				'type'         => 'integer',
+				'description'  => \__( 'Number of days to keep remote posts.', 'activitypub' ),
+				'default'      => 180,
+				'show_in_rest' => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_vary_header',
 			array(
 				'type'        => 'boolean',

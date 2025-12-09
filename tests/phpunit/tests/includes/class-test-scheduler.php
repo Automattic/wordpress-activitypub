@@ -12,6 +12,7 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
 use Activitypub\Dispatcher;
@@ -688,5 +689,188 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $activitypub_pre_http_get_remote_object_callback );
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_by_actor_callback );
 		\remove_filter( 'schedule_event', $schedule_event_callback );
+	}
+
+	/**
+	 * Test purge_ap_posts method with more than 200 posts.
+	 *
+	 * @covers ::purge_ap_posts
+	 */
+	public function test_purge_ap_posts_more_than_200_posts() {
+		// Create 20 posts older than 6 months (will be deleted).
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+			)
+		);
+
+		// Create 5 posts newer than 6 months (will be kept).
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 month' ) ),
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		Scheduler::purge_ap_posts();
+		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		// Remove filter before checking actual count.
+		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert that 20 old posts were deleted, leaving 5.
+		$actual_count = get_posts(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+		$this->assertEquals( 5, count( $actual_count ) );
+	}
+
+	/**
+	 * Test purge_ap_posts method with 200 or fewer posts.
+	 *
+	 * @covers ::purge_ap_posts
+	 */
+	public function test_purge_ap_posts_200_or_fewer_posts() {
+		// Create 20 posts, all older than 1 year.
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-13 months' ) ),
+			)
+		);
+
+		Scheduler::purge_ap_posts();
+		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		// Assert that no posts were deleted (below threshold).
+		$this->assertEquals( 20, wp_count_posts( Posts::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Test purge_ap_posts preserves posts with comments.
+	 *
+	 * @covers ::purge_ap_posts
+	 */
+	public function test_purge_ap_posts_preserves_posts_with_comments() {
+		// Create an old post without comments (will be deleted).
+		$post_without_comments = self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+			)
+		);
+
+		// Create an old post with a comment (will be preserved).
+		$post_with_comment = self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+			)
+		);
+
+		// Add a comment to the second post.
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_with_comment,
+				'comment_content'  => 'Test comment',
+				'comment_approved' => 1,
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		Scheduler::purge_ap_posts();
+		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		// Remove filter.
+		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert that post without comments was deleted.
+		$this->assertNull( get_post( $post_without_comments ) );
+
+		// Assert that post with comment was preserved.
+		$this->assertNotNull( get_post( $post_with_comment ) );
+	}
+
+	/**
+	 * Test purge_ap_posts method with changing activitypub_ap_post_purge_days option.
+	 *
+	 * @covers ::purge_ap_posts
+	 */
+	public function test_purge_ap_posts_with_different_purge_days() {
+		// Create posts older than 2 months.
+		self::factory()->post->create_many(
+			25,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 months' ) ),
+				'post_status' => 'publish',
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		// Run purge_ap_posts with default days (180).
+		Scheduler::purge_ap_posts();
+		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		// Remove filter before checking actual count.
+		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Verify posts are not deleted (2 months < 180 days).
+		$this->assertEquals( 25, wp_count_posts( Posts::POST_TYPE )->publish );
+
+		// Change the purge days option to 30 days.
+		update_option( 'activitypub_ap_post_purge_days', 30 );
+
+		// Re-add the mock filter for the second purge run.
+		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		// Run purge_ap_posts with changed days.
+		Scheduler::purge_ap_posts();
+		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		// Remove filter before checking actual count.
+		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Verify posts are deleted (2 months > 30 days).
+		$this->assertEquals( 0, wp_count_posts( Posts::POST_TYPE )->publish );
 	}
 }
