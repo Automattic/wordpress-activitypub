@@ -452,7 +452,7 @@ class Attachments {
 		}
 
 		// Optimize images before sideloading (resize and convert to WebP).
-		$optimized = self::optimize_image( $tmp_file );
+		$optimized = self::optimize_image( $tmp_file, self::MAX_IMAGE_DIMENSION );
 		if ( $optimized['changed'] ) {
 			$tmp_file = $optimized['path'];
 		}
@@ -578,7 +578,7 @@ class Attachments {
 		}
 
 		// Optimize images (resize and convert to WebP).
-		$optimized = self::optimize_image( $file_path );
+		$optimized = self::optimize_image( $file_path, self::MAX_IMAGE_DIMENSION );
 		if ( $optimized['changed'] ) {
 			$file_path = $optimized['path'];
 			$file_name = \basename( $file_path );
@@ -601,11 +601,12 @@ class Attachments {
 	 * Uses WordPress image editor to resize large images and convert them
 	 * to WebP format for better compression while maintaining quality.
 	 *
-	 * @param string $file_path Path to the image file.
+	 * @param string $file_path     Path to the image file.
+	 * @param int    $max_dimension Maximum width/height in pixels.
 	 *
 	 * @return array{path: string, changed: bool}|\WP_Error The optimized file path and whether it changed, or WP_Error.
 	 */
-	private static function optimize_image( $file_path ) {
+	private static function optimize_image( $file_path, $max_dimension ) {
 		// Check if it's an image.
 		$mime_type = \wp_check_filetype( $file_path )['type'] ?? '';
 		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
@@ -631,9 +632,8 @@ class Attachments {
 			);
 		}
 
-		$size          = $editor->get_size();
-		$max_dimension = self::MAX_IMAGE_DIMENSION;
-		$needs_resize  = $size['width'] > $max_dimension || $size['height'] > $max_dimension;
+		$size         = $editor->get_size();
+		$needs_resize = $size['width'] > $max_dimension || $size['height'] > $max_dimension;
 
 		// Resize if needed.
 		if ( $needs_resize ) {
