@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Blocklist_Subscriptions;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Comment;
@@ -75,6 +76,7 @@ class Admin {
 		\add_action( 'wp_dashboard_setup', array( self::class, 'add_dashboard_widgets' ) );
 
 		\add_action( 'wp_ajax_activitypub_moderation_settings', array( self::class, 'ajax_moderation_settings' ) );
+		\add_action( 'wp_ajax_activitypub_blocklist_subscription', array( self::class, 'ajax_blocklist_subscription' ) );
 	}
 
 	/**
@@ -1068,6 +1070,53 @@ class Admin {
 			\wp_send_json_success();
 		} else {
 			\wp_send_json_error( array( 'message' => $error_message ) );
+		}
+	}
+
+	/**
+	 * AJAX handler for blocklist subscriptions (add/remove).
+	 */
+	public static function ajax_blocklist_subscription() {
+		$operation = \sanitize_text_field( \wp_unslash( $_POST['operation'] ?? '' ) );
+		$url       = \sanitize_url( \wp_unslash( $_POST['url'] ?? '' ) );
+
+		// Validate required parameters.
+		if ( ! \in_array( $operation, array( 'add', 'remove' ), true ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid operation.', 'activitypub' ) ) );
+		}
+
+		if ( empty( $url ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid URL.', 'activitypub' ) ) );
+		}
+
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_moderation_settings' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
+		if ( 'add' === $operation ) {
+			// First add the subscription (validates URL format).
+			if ( ! Blocklist_Subscriptions::add( $url ) ) {
+				\wp_send_json_error( array( 'message' => \__( 'Invalid URL.', 'activitypub' ) ) );
+			}
+
+			// Then sync to validate it works and import domains.
+			$result = Blocklist_Subscriptions::sync( $url );
+			if ( false === $result ) {
+				// Remove the subscription since sync failed.
+				Blocklist_Subscriptions::remove( $url );
+				\wp_send_json_error( array( 'message' => \__( 'Failed to fetch blocklist. The URL may be unreachable or not contain valid domains.', 'activitypub' ) ) );
+			}
+
+			\wp_send_json_success();
+		} elseif ( Blocklist_Subscriptions::remove( $url ) ) {
+			\wp_send_json_success();
+		} else {
+			\wp_send_json_error( array( 'message' => \__( 'Failed to remove subscription.', 'activitypub' ) ) );
 		}
 	}
 }
