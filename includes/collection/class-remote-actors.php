@@ -681,7 +681,6 @@ class Remote_Actors {
 
 		$actor_data = \json_decode( $post->post_content, true );
 		if ( empty( $actor_data['icon'] ) ) {
-			$default_avatar_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
 			\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $default_avatar_url ) );
 
 			return $default_avatar_url;
