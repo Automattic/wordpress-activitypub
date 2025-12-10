@@ -53,7 +53,6 @@ class Options {
 						'enum' => array( 'title', 'excerpt', 'content' ),
 					),
 				),
-				'default'      => 'content',
 			)
 		);
 
@@ -147,10 +146,9 @@ class Options {
 			'activitypub',
 			'activitypub_allow_likes',
 			array(
-				'type'              => 'integer',
-				'description'       => 'Allow likes.',
-				'default'           => '1',
-				'sanitize_callback' => 'absint',
+				'type'        => 'integer',
+				'description' => 'Allow likes.',
+				'default'     => '1',
 			)
 		);
 
@@ -158,10 +156,9 @@ class Options {
 			'activitypub',
 			'activitypub_allow_reposts',
 			array(
-				'type'              => 'integer',
-				'description'       => 'Allow reposts.',
-				'default'           => '1',
-				'sanitize_callback' => 'absint',
+				'type'        => 'integer',
+				'description' => 'Allow reposts.',
+				'default'     => '1',
 			)
 		);
 
@@ -169,10 +166,9 @@ class Options {
 			'activitypub',
 			'activitypub_auto_approve_reactions',
 			array(
-				'type'              => 'integer',
-				'description'       => 'Auto-approve Reactions.',
-				'default'           => '0',
-				'sanitize_callback' => 'absint',
+				'type'        => 'integer',
+				'description' => 'Auto-approve Reactions.',
+				'default'     => '0',
 			)
 		);
 
