@@ -32,24 +32,21 @@ class Menu {
 		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_settings_list_tables' ) );
 		\add_action( 'load-' . $settings_page, array( Screen_Options::class, 'add_settings_list_options' ) );
 
+		if ( site_supports_blocks() && \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
+			$app_hook = \add_dashboard_page(
+				\__( 'Social Web', 'activitypub' ),
+				\__( 'Social Web', 'activitypub' ),
+				ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ? 'manage_options' : 'activitypub',
+				'activitypub-social-web',
+				array( App::class, 'render_page' )
+			);
+
+			\add_action( 'load-' . $app_hook, array( App::class, 'remove_admin_notices' ) );
+			\add_action( 'admin_print_scripts-' . $app_hook, array( App::class, 'enqueue_scripts' ) );
+		}
+
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
-			$capability = ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ? 'manage_options' : 'activitypub';
-
-			// Check for block support and WP version.
-			if ( site_supports_blocks() && \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
-				$app_hook = \add_dashboard_page(
-					\__( 'Social Web', 'activitypub' ),
-					\__( 'Social Web', 'activitypub' ),
-					$capability,
-					'activitypub-social-web',
-					array( Social_Web::class, 'render_page' )
-				);
-
-				\add_action( 'load-' . $app_hook, array( Social_Web::class, 'remove_admin_notices' ) );
-				\add_action( 'admin_print_scripts-' . $app_hook, array( Social_Web::class, 'enqueue_scripts' ) );
-			}
-
 			$followers_list_page = \add_users_page(
 				\__( 'Followers ⁂', 'activitypub' ),
 				\__( 'Followers ⁂', 'activitypub' ),
