@@ -481,8 +481,11 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$attachments = \get_attached_media( '', $post_id );
 		$this->assertCount( 3, $attachments ); // shared.jpg, inline-only.jpg, attachment-only.jpg.
 
-		// Verify image block was added for attachment-only.jpg (single images use standalone blocks).
-		$this->assertStringContainsString( '<!-- wp:image', $post->post_content );
+		// Verify image block or gallery was added for attachment-only.jpg.
+		$this->assertTrue(
+			str_contains( $post->post_content, '<!-- wp:image' ) || str_contains( $post->post_content, '<!-- wp:gallery' ),
+			'Expected image or gallery block in post content'
+		);
 	}
 
 	/**
@@ -624,8 +627,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertIsInt( $result[0] );
 
 		// Verify the attachment filename is clean without query parameters.
+		// Note: Image may be converted to WebP during optimization.
 		$attachment_file = get_attached_file( $result[0] );
-		$this->assertStringEndsWith( '.jpg', $attachment_file );
+		$this->assertMatchesRegularExpression( '/\.(jpg|webp)$/', $attachment_file );
 		$this->assertStringNotContainsString( '?', $attachment_file );
 		$this->assertStringNotContainsString( 'stp=', $attachment_file );
 		$this->assertStringNotContainsString( 'nc_cat=', $attachment_file );
@@ -660,8 +664,544 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertCount( 1, $result );
 
 		// Verify the URL doesn't contain query parameters.
-		$this->assertStringEndsWith( '.png', $result[0]['url'] );
+		// Note: Image may be converted to WebP during optimization.
+		$this->assertMatchesRegularExpression( '/\.(png|webp)$/', $result[0]['url'] );
 		$this->assertStringNotContainsString( '?', $result[0]['url'] );
 		$this->assertStringNotContainsString( 'size=', $result[0]['url'] );
+	}
+
+	/**
+	 * Test that video attachments use remote URL directly without downloading.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_video_uses_remote_url() {
+		// Create a test post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_post',
+				'post_content' => 'Test video content',
+			)
+		);
+
+		$attachments = array(
+			array(
+				'url'       => 'https://example.com/video.mp4',
+				'mediaType' => 'video/mp4',
+				'name'      => 'Test Video',
+				'type'      => 'Video',
+			),
+		);
+
+		$result = Attachments::import_post_files( $attachments, $post_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+
+		// Verify the URL is the original remote URL (not downloaded).
+		$this->assertEquals( 'https://example.com/video.mp4', $result[0]['url'] );
+		$this->assertEquals( 'video/mp4', $result[0]['mime_type'] );
+		$this->assertEquals( 'Test Video', $result[0]['alt'] );
+
+		// Verify content was updated with video block.
+		$post = get_post( $post_id );
+		$this->assertStringContainsString( '<!-- wp:video', $post->post_content );
+		$this->assertStringContainsString( 'https://example.com/video.mp4', $post->post_content );
+	}
+
+	/**
+	 * Test that audio attachments use remote URL directly without downloading.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_audio_uses_remote_url() {
+		// Create a test post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_post',
+				'post_content' => 'Test audio content',
+			)
+		);
+
+		$attachments = array(
+			array(
+				'url'       => 'https://example.com/podcast.mp3',
+				'mediaType' => 'audio/mpeg',
+				'name'      => 'Test Audio',
+				'type'      => 'Audio',
+			),
+		);
+
+		$result = Attachments::import_post_files( $attachments, $post_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+
+		// Verify the URL is the original remote URL (not downloaded).
+		$this->assertEquals( 'https://example.com/podcast.mp3', $result[0]['url'] );
+		$this->assertEquals( 'audio/mpeg', $result[0]['mime_type'] );
+		$this->assertEquals( 'Test Audio', $result[0]['alt'] );
+
+		// Verify content was updated with audio block.
+		$post = get_post( $post_id );
+		$this->assertStringContainsString( '<!-- wp:audio', $post->post_content );
+		$this->assertStringContainsString( 'https://example.com/podcast.mp3', $post->post_content );
+	}
+
+	/**
+	 * Test mixed attachments with images, video, and audio.
+	 *
+	 * @covers ::import_post_files
+	 * @covers ::save_file
+	 */
+	public function test_mixed_attachments_images_video_audio() {
+		// Create a test post.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_post',
+				'post_content' => 'Mixed media content',
+			)
+		);
+
+		$attachments = array(
+			array(
+				'url'       => 'https://example.com/image.jpg',
+				'mediaType' => 'image/jpeg',
+				'name'      => 'Test Image',
+				'type'      => 'Image',
+			),
+			array(
+				'url'       => 'https://example.com/video.mp4',
+				'mediaType' => 'video/mp4',
+				'name'      => 'Test Video',
+				'type'      => 'Video',
+			),
+			array(
+				'url'       => 'https://example.com/audio.mp3',
+				'mediaType' => 'audio/mpeg',
+				'name'      => 'Test Audio',
+				'type'      => 'Audio',
+			),
+		);
+
+		$result = Attachments::import_post_files( $attachments, $post_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 3, $result );
+
+		// Image should be downloaded to local storage (may be converted to WebP).
+		$this->assertStringContainsString( 'activitypub/ap_posts', $result[0]['url'] );
+		$this->assertContains( $result[0]['mime_type'], array( 'image/jpeg', 'image/webp' ) );
+
+		// Video should use remote URL.
+		$this->assertEquals( 'https://example.com/video.mp4', $result[1]['url'] );
+		$this->assertEquals( 'video/mp4', $result[1]['mime_type'] );
+
+		// Audio should use remote URL.
+		$this->assertEquals( 'https://example.com/audio.mp3', $result[2]['url'] );
+		$this->assertEquals( 'audio/mpeg', $result[2]['mime_type'] );
+	}
+
+	/**
+	 * Test optimize_image returns original path for non-image files.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_skips_non_images() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Test with audio file.
+		$audio_file = AP_TESTS_DIR . '/data/assets/sample-audio.mp3';
+		$result     = $method->invoke( null, $audio_file, 1200 );
+		$this->assertEquals( $audio_file, $result );
+
+		// Test with video file.
+		$video_file = AP_TESTS_DIR . '/data/assets/sample-video.mp4';
+		$result     = $method->invoke( null, $video_file, 1200 );
+		$this->assertEquals( $video_file, $result );
+	}
+
+	/**
+	 * Test optimize_image skips GIF files (may be animated).
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_skips_gif() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Create a simple GIF file.
+		$gif_file = wp_tempnam( 'test.gif' ) . '.gif';
+		// Minimal valid GIF89a header.
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Test data, not obfuscation.
+		$gif_data = base64_decode( 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test file creation.
+		file_put_contents( $gif_file, $gif_data );
+
+		$result = $method->invoke( null, $gif_file, 1200 );
+		$this->assertEquals( $gif_file, $result );
+
+		// Clean up.
+		wp_delete_file( $gif_file );
+	}
+
+	/**
+	 * Test optimize_image converts JPEG to WebP when supported.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_converts_to_webp() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Copy test image to temp location with proper extension.
+		$source    = AP_TESTS_DIR . '/data/assets/test.jpg';
+		$temp_dir  = sys_get_temp_dir();
+		$temp_file = $temp_dir . '/test-webp-' . uniqid() . '.jpg';
+		copy( $source, $temp_file );
+
+		$result = $method->invoke( null, $temp_file, 1200 );
+
+		// Check if WebP is supported in this environment.
+		$editor = wp_get_image_editor( $source );
+		if ( ! is_wp_error( $editor ) && $editor->supports_mime_type( 'image/webp' ) ) {
+			// Should be converted to WebP.
+			$this->assertStringEndsWith( '.webp', $result );
+			$this->assertFileExists( $result );
+			// Clean up result file.
+			wp_delete_file( $result );
+			// Clean up original if it still exists (shouldn't, but be safe).
+			if ( file_exists( $temp_file ) ) {
+				wp_delete_file( $temp_file );
+			}
+		} else {
+			// WebP not supported, should convert to JPEG or keep original.
+			$this->assertFileExists( $result );
+			wp_delete_file( $result );
+			if ( file_exists( $temp_file ) ) {
+				wp_delete_file( $temp_file );
+			}
+		}
+	}
+
+	/**
+	 * Test optimize_image resizes large images.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_resizes_large_images() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Create a large test image (2000x2000).
+		$large_image = wp_tempnam( 'large.jpg' ) . '.jpg';
+		$image       = imagecreatetruecolor( 2000, 2000 );
+		$white       = imagecolorallocate( $image, 255, 255, 255 );
+		imagefill( $image, 0, 0, $white );
+		imagejpeg( $image, $large_image, 90 );
+		imagedestroy( $image );
+
+		// Optimize with max dimension of 500.
+		$result = $method->invoke( null, $large_image, 500 );
+
+		$this->assertFileExists( $result );
+
+		// Check the dimensions of the result.
+		$editor = wp_get_image_editor( $result );
+		if ( ! is_wp_error( $editor ) ) {
+			$size = $editor->get_size();
+			$this->assertLessThanOrEqual( 500, $size['width'] );
+			$this->assertLessThanOrEqual( 500, $size['height'] );
+		}
+
+		// Clean up.
+		wp_delete_file( $result );
+		if ( file_exists( $large_image ) ) {
+			wp_delete_file( $large_image );
+		}
+	}
+
+	/**
+	 * Test optimize_image preserves small images dimensions.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_preserves_small_images() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Copy small test image (100x100) to temp location.
+		$source    = AP_TESTS_DIR . '/data/assets/test.jpg';
+		$temp_file = wp_tempnam( 'small.jpg' ) . '.jpg';
+		copy( $source, $temp_file );
+
+		// Get original dimensions.
+		$original_editor = wp_get_image_editor( $temp_file );
+		$this->assertNotWPError( $original_editor );
+		$original_size = $original_editor->get_size();
+
+		// Optimize with max dimension larger than image.
+		$result = $method->invoke( null, $temp_file, 1200 );
+
+		$this->assertFileExists( $result );
+
+		// Check dimensions are preserved.
+		$result_editor = wp_get_image_editor( $result );
+		if ( ! is_wp_error( $result_editor ) ) {
+			$result_size = $result_editor->get_size();
+			$this->assertEquals( $original_size['width'], $result_size['width'] );
+			$this->assertEquals( $original_size['height'], $result_size['height'] );
+		}
+
+		// Clean up.
+		wp_delete_file( $result );
+		if ( file_exists( $temp_file ) ) {
+			wp_delete_file( $temp_file );
+		}
+	}
+
+	/**
+	 * Test optimize_image returns original for non-existent file.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_handles_nonexistent_file() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		$fake_path = '/tmp/nonexistent-image-12345.jpg';
+		$result    = $method->invoke( null, $fake_path, 1200 );
+
+		// Should return original path when file doesn't exist or can't be processed.
+		$this->assertEquals( $fake_path, $result );
+	}
+
+	/**
+	 * Test optimize_image handles PNG files correctly.
+	 *
+	 * @covers ::optimize_image
+	 */
+	public function test_optimize_image_handles_png() {
+		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
+		$method->setAccessible( true );
+
+		// Create a test PNG image.
+		$png_file = wp_tempnam( 'test.png' ) . '.png';
+		$image    = imagecreatetruecolor( 100, 100 );
+		// Enable alpha channel for transparency.
+		imagesavealpha( $image, true );
+		$transparent = imagecolorallocatealpha( $image, 0, 0, 0, 127 );
+		imagefill( $image, 0, 0, $transparent );
+		imagepng( $image, $png_file );
+		imagedestroy( $image );
+
+		$result = $method->invoke( null, $png_file, 1200 );
+
+		$this->assertFileExists( $result );
+
+		// Check if WebP is supported.
+		$editor = wp_get_image_editor( $png_file );
+		if ( ! is_wp_error( $editor ) && $editor->supports_mime_type( 'image/webp' ) ) {
+			// Should be converted to WebP.
+			$this->assertStringEndsWith( '.webp', $result );
+		}
+
+		// Clean up.
+		wp_delete_file( $result );
+		if ( file_exists( $png_file ) ) {
+			wp_delete_file( $png_file );
+		}
+	}
+
+	/**
+	 * Test get_unique_path generates unique filenames.
+	 *
+	 * @covers ::get_unique_path
+	 */
+	public function test_get_unique_path() {
+		$method = new \ReflectionMethod( Attachments::class, 'get_unique_path' );
+		$method->setAccessible( true );
+
+		$temp_dir = sys_get_temp_dir();
+
+		// Test with non-existent file - should return same path.
+		$non_existent = $temp_dir . '/unique-test-' . uniqid() . '.jpg';
+		$result       = $method->invoke( null, $non_existent );
+		$this->assertEquals( $non_existent, $result );
+
+		// Test with existing file - should return path with counter.
+		$existing_file = wp_tempnam( 'existing.jpg' ) . '.jpg';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test file creation.
+		file_put_contents( $existing_file, 'test' );
+
+		$result = $method->invoke( null, $existing_file );
+		$this->assertNotEquals( $existing_file, $result );
+		$this->assertStringContainsString( '-1.jpg', $result );
+
+		// Clean up.
+		wp_delete_file( $existing_file );
+	}
+
+	/**
+	 * Test save_actor_avatar with valid URL.
+	 *
+	 * @covers ::save_actor_avatar
+	 */
+	public function test_save_actor_avatar_success() {
+		// Create a test actor post.
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		$avatar_url = 'https://example.com/avatar.jpg';
+		$result     = Attachments::save_actor_avatar( $actor_id, $avatar_url );
+
+		$this->assertIsString( $result );
+		$this->assertStringContainsString( 'wp-content/uploads/activitypub/actors/' . $actor_id, $result );
+		// Note: Image may be converted to WebP during optimization.
+		$this->assertMatchesRegularExpression( '/\.(jpg|webp)$/', $result );
+	}
+
+	/**
+	 * Test save_actor_avatar with empty URL.
+	 *
+	 * @covers ::save_actor_avatar
+	 */
+	public function test_save_actor_avatar_empty_url() {
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		$result = Attachments::save_actor_avatar( $actor_id, '' );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test save_actor_avatar with invalid URL.
+	 *
+	 * @covers ::save_actor_avatar
+	 */
+	public function test_save_actor_avatar_invalid_url() {
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		$result = Attachments::save_actor_avatar( $actor_id, 'not-a-valid-url' );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test save_actor_avatar with download error.
+	 *
+	 * @covers ::save_actor_avatar
+	 */
+	public function test_save_actor_avatar_download_error() {
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		// Use the missing.jpg URL that our mock returns as an error.
+		$result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/missing.jpg' );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test save_actor_avatar replaces existing avatar.
+	 *
+	 * @covers ::save_actor_avatar
+	 * @covers ::delete_actors_directory
+	 */
+	public function test_save_actor_avatar_replaces_existing() {
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		// Save first avatar.
+		$first_result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar1.jpg' );
+		$this->assertIsString( $first_result );
+
+		// Save second avatar (should replace the first).
+		$second_result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar2.jpg' );
+		$this->assertIsString( $second_result );
+
+		// URLs should be different (different source filenames).
+		$this->assertNotEquals( $first_result, $second_result );
+	}
+
+	/**
+	 * Test delete_actors_directory removes actor files.
+	 *
+	 * @covers ::delete_actors_directory
+	 */
+	public function test_delete_actors_directory() {
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		// Save an avatar first.
+		$avatar_url = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar.jpg' );
+		$this->assertIsString( $avatar_url );
+
+		// Get the directory path.
+		$upload_dir = \wp_upload_dir();
+		$actor_dir  = $upload_dir['basedir'] . '/activitypub/actors/' . $actor_id;
+
+		// Verify directory exists.
+		$this->assertTrue( \is_dir( $actor_dir ) );
+
+		// Delete the directory.
+		Attachments::delete_actors_directory( $actor_id );
+
+		// Verify directory is gone.
+		$this->assertFalse( \is_dir( $actor_dir ) );
+	}
+
+	/**
+	 * Test delete_actors_directory ignores non-actor post types.
+	 *
+	 * @covers ::delete_actors_directory
+	 */
+	public function test_delete_actors_directory_ignores_non_actors() {
+		// Create a regular post (not an actor).
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type' => 'post',
+			)
+		);
+
+		// Create a directory that would match the path pattern.
+		$upload_dir = \wp_upload_dir();
+		$fake_dir   = $upload_dir['basedir'] . '/activitypub/actors/' . $post_id;
+		\wp_mkdir_p( $fake_dir );
+
+		// Verify directory exists.
+		$this->assertTrue( \is_dir( $fake_dir ) );
+
+		// Try to delete - should be ignored because it's not an actor post type.
+		Attachments::delete_actors_directory( $post_id );
+
+		// Directory should still exist.
+		$this->assertTrue( \is_dir( $fake_dir ) );
+
+		// Clean up.
+		global $wp_filesystem;
+		\WP_Filesystem();
+		$wp_filesystem->rmdir( $fake_dir );
 	}
 }

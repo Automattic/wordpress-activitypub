@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Skip downloading video and audio attachments, embedding remote URLs directly to avoid storage limits.

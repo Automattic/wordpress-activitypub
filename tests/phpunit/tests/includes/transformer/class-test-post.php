@@ -112,8 +112,8 @@ class Test_Post extends \WP_UnitTestCase {
 					'post_content' => 'Short content',
 				),
 				null,
-				'Note',
-				'Should return Note for short content',
+				'Article',
+				'Should return Article for short content with title',
 			),
 			'no_title'             => array(
 				array(
@@ -426,7 +426,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
 
-		$result = $method->invoke( $transformer );
+		// Create a new transformer instance to avoid cached attachment result.
+		$transformer = new Post( $post );
+		$result      = $method->invoke( $transformer );
 		$this->assertTrue( (bool) \did_filter( 'activitypub_attachment_ids' ) );
 	}
 

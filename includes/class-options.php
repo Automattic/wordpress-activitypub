@@ -27,6 +27,8 @@ class Options {
 		\add_filter( 'option_activitypub_max_image_attachments', array( self::class, 'default_max_image_attachments' ) );
 		\add_filter( 'option_activitypub_support_post_types', array( self::class, 'support_post_types_ensure_array' ) );
 		\add_filter( 'option_activitypub_object_type', array( self::class, 'default_object_type' ) );
+
+		\add_action( 'update_option_activitypub_relay_mode', array( self::class, 'relay_mode_changed' ), 10, 2 );
 	}
 
 	/**
@@ -181,5 +183,43 @@ class Options {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Handle relay mode option changes.
+	 *
+	 * When relay mode is enabled, switch to blog-only mode and set username to "relay".
+	 * When disabled, restore previous settings.
+	 *
+	 * @param mixed $old_value The old option value.
+	 * @param mixed $new_value The new option value.
+	 */
+	public static function relay_mode_changed( $old_value, $new_value ) {
+		if ( $new_value && ! $old_value ) {
+			// Enabling relay mode.
+			// Store previous username and actor mode for restoration.
+			\update_option( 'activitypub_relay_previous_blog_identifier', \get_option( 'activitypub_blog_identifier' ) );
+			\update_option( 'activitypub_relay_previous_actor_mode', \get_option( 'activitypub_actor_mode' ) );
+
+			// Set blog username to "relay".
+			\update_option( 'activitypub_blog_identifier', 'relay' );
+
+			// Switch to blog-only mode.
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		} elseif ( ! $new_value && $old_value ) {
+			// Disabling relay mode - restore previous settings.
+			$previous_identifier = \get_option( 'activitypub_relay_previous_blog_identifier' );
+			$previous_actor_mode = \get_option( 'activitypub_relay_previous_actor_mode' );
+
+			if ( $previous_identifier ) {
+				\update_option( 'activitypub_blog_identifier', $previous_identifier );
+				\delete_option( 'activitypub_relay_previous_blog_identifier' );
+			}
+
+			if ( $previous_actor_mode ) {
+				\update_option( 'activitypub_actor_mode', $previous_actor_mode );
+				\delete_option( 'activitypub_relay_previous_actor_mode' );
+			}
+		}
 	}
 }

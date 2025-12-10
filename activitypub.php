@@ -92,6 +92,11 @@ function plugin_init() {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
 	}
 
+	// Only load relay if relay mode is enabled.
+	if ( \get_option( 'activitypub_relay_mode', false ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\Relay', 'init' ) );
+	}
+
 	// Load development tools.
 	if ( 'local' === wp_get_environment_type() ) {
 		$loader_file = __DIR__ . '/local/load.php';

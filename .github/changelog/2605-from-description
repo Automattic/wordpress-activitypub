@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Use stable term_id-based IDs for Term transformer to ensure federation consistency.
