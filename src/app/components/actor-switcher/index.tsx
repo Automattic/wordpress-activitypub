@@ -8,14 +8,13 @@ import { Button, __experimentalHStack as HStack } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { __ } from '@wordpress/i18n';
-import { useSettings } from '../../contexts/settings-context';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors, AppActions } from '../../store';
 import SiteIcon from '../site-icon';
+import { DEFAULT_AVATAR } from '../avatar';
 import './style.scss';
 
 export default function ActorSwitcher() {
-	const { defaultAvatar, adminUrl } = useSettings();
 	const { setActiveActor } = useDispatch( STORE_NAME ) as AppActions;
 
 	const { currentUser, activeActorId, canManageSite } = useSelect(
@@ -34,7 +33,7 @@ export default function ActorSwitcher() {
 
 	// Determine which actor info to display
 	const isSiteActor = activeActorId === 0;
-	const userAvatarUrl = currentUser?.avatar_urls?.[ 48 ] || defaultAvatar;
+	const userAvatarUrl = currentUser?.avatar_urls?.[ 48 ] || DEFAULT_AVATAR;
 	const displayName = isSiteActor ? __( 'Site', 'activitypub' ) : currentUser?.name || '';
 
 	// Toggle between user and site actor
@@ -47,7 +46,7 @@ export default function ActorSwitcher() {
 
 	return (
 		<Button
-			{ ...( canManageSite ? { onClick: toggleActor } : { href: `${ adminUrl }profile.php` } ) }
+			{ ...( canManageSite ? { onClick: toggleActor } : { href: 'profile.php' } ) }
 			className="actor-switcher"
 			label={ canManageSite ? __( 'Switch Actor', 'activitypub' ) : __( 'Profile', 'activitypub' ) }
 		>
@@ -60,7 +59,7 @@ export default function ActorSwitcher() {
 						alt={ displayName }
 						className="actor-switcher__avatar"
 						onError={ ( e ) => {
-							( e.target as HTMLImageElement ).src = defaultAvatar;
+							( e.target as HTMLImageElement ).src = DEFAULT_AVATAR;
 						} }
 					/>
 				) }

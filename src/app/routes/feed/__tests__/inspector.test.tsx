@@ -86,11 +86,7 @@ const mockComments: Comment[] = [
 ];
 
 const mockSettings: AppSettings = {
-	adminUrl: 'https://example.com/wp-admin',
 	defaultAvatar: 'https://example.com/default-avatar.jpg',
-	nonce: 'test-nonce',
-	restUrl: 'https://example.com/wp-json',
-	siteTitle: 'Test Site',
 };
 
 // Mock @wordpress/core-data
@@ -226,10 +222,10 @@ describe( 'FeedInspector', () => {
 
 			renderInspector();
 
-			const avatar = screen.getByAltText( 'Unknown author' ) as HTMLImageElement;
+			const avatar = screen.getByRole( 'presentation' ) as HTMLImageElement;
 			expect( avatar ).toBeInTheDocument();
 			// Avatar should be rendered even without actor_info (will use default or fallback)
-			expect( avatar.src ).toBeTruthy();
+			expect( avatar.src ).toContain( 'data:image/svg+xml' );
 		} );
 
 		it( 'should fallback to default avatar on image load error', () => {
@@ -246,7 +242,7 @@ describe( 'FeedInspector', () => {
 			// Simulate image load error
 			fireEvent.error( avatar );
 
-			expect( avatar.src ).toContain( 'default-avatar.jpg' );
+			expect( avatar.src ).toContain( 'data:image/svg+xml' );
 		} );
 
 		it( 'should have correct CSS class on avatar', () => {
@@ -258,7 +254,7 @@ describe( 'FeedInspector', () => {
 			renderInspector();
 
 			const avatar = screen.getByAltText( 'John Doe' );
-			expect( avatar ).toHaveClass( 'activitypub-inspector-avatar' );
+			expect( avatar ).toHaveClass( 'activitypub-avatar' );
 		} );
 	} );
 
