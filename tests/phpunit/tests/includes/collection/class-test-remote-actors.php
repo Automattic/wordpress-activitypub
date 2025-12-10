@@ -1218,42 +1218,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
-	 * Test get_avatar_url respects WordPress "show avatars" setting.
-	 *
-	 * @covers ::get_avatar_url
-	 */
-	public function test_get_avatar_url_respects_show_avatars_setting() {
-		// Create a remote actor with avatar.
-		$actor_data = array(
-			'id'                => 'https://example.com/users/show-avatars-test',
-			'type'              => 'Person',
-			'preferredUsername' => 'showavatarstest',
-			'name'              => 'Show Avatars Test',
-			'icon'              => array(
-				'type' => 'Image',
-				'url'  => 'https://example.com/custom-avatar.jpg',
-			),
-			'inbox'             => 'https://example.com/inbox-show-avatars',
-		);
-
-		$remote_actor_id = Remote_Actors::upsert( $actor_data );
-		$this->assertIsInt( $remote_actor_id );
-
-		// With show_avatars enabled (default), should return the custom avatar.
-		\update_option( 'show_avatars', 1 );
-		$avatar_with_setting = Remote_Actors::get_avatar_url( $remote_actor_id );
-		$this->assertEquals( 'https://example.com/custom-avatar.jpg', $avatar_with_setting );
-
-		// With show_avatars disabled, should return the default avatar.
-		\update_option( 'show_avatars', 0 );
-		$avatar_without_setting = Remote_Actors::get_avatar_url( $remote_actor_id );
-		$this->assertStringContainsString( 'assets/img/mp.jpg', $avatar_without_setting );
-
-		// Clean up.
-		\delete_option( 'show_avatars' );
-	}
-
-	/**
 	 * Test that webfinger acct is stored when creating an actor.
 	 *
 	 * @covers ::create

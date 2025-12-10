@@ -82,14 +82,15 @@ wp_interactivity_config(
 
 // Set initial context data.
 $context = array(
-	'followers' => $followers,
-	'isLoading' => false,
-	'order'     => $attributes['order'],
-	'page'      => 1,
-	'pages'     => ceil( $follower_data['total'] / $_per_page ),
-	'per_page'  => $_per_page,
-	'total'     => $follower_data['total'],
-	'userId'    => $user_id,
+	'followers'   => $followers,
+	'isLoading'   => false,
+	'order'       => $attributes['order'],
+	'page'        => 1,
+	'pages'       => ceil( $follower_data['total'] / $_per_page ),
+	'per_page'    => $_per_page,
+	'showAvatars' => (bool) \get_option( 'show_avatars' ),
+	'total'       => $follower_data['total'],
+	'userId'      => $user_id,
 );
 
 // Get block wrapper attributes with the data-wp-interactive attribute.
@@ -115,15 +116,17 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						rel="external noreferrer noopener"
 						data-wp-bind--title="context.item.handle">
 
-						<img
-							data-wp-bind--src="context.item.icon.url"
-							data-wp-on--error="callbacks.setDefaultAvatar"
-							src=""
-							alt=""
-							class="follower-avatar"
-							width="48"
-							height="48"
-						>
+						<template data-wp-if="context.showAvatars">
+							<img
+								data-wp-bind--src="context.item.icon.url"
+								data-wp-on--error="callbacks.setDefaultAvatar"
+								src=""
+								alt=""
+								class="follower-avatar"
+								width="48"
+								height="48"
+							>
+						</template>
 
 						<div class="follower-info">
 							<span class="follower-name" data-wp-text="context.item.name"></span>
