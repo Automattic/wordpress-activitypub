@@ -797,12 +797,13 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			)
 		);
 
-		// Add a comment to the second post.
+		// Add a comment from a local user to the second post.
 		self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => $post_with_comment,
 				'comment_content'  => 'Test comment',
 				'comment_approved' => 1,
+				'user_id'          => 1, // Local user comment.
 			)
 		);
 
@@ -824,7 +825,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		// Assert that post without comments was deleted.
 		$this->assertNull( get_post( $post_without_comments ) );
 
-		// Assert that post with comment was preserved.
+		// Assert that post with local user comment was preserved.
 		$this->assertNotNull( get_post( $post_with_comment ) );
 	}
 

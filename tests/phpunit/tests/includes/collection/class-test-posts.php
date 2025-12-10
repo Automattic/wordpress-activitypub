@@ -1423,7 +1423,7 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test purge method preserves posts with comments.
+	 * Test purge method preserves posts with local user comments.
 	 *
 	 * @covers ::purge
 	 */
@@ -1437,7 +1437,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			)
 		);
 
-		// Create old post with a comment (should be preserved).
+		// Create old post with a local user comment (should be preserved).
 		$post_with_comment = self::factory()->post->create(
 			array(
 				'post_type'   => Posts::POST_TYPE,
@@ -1446,12 +1446,13 @@ class Test_Posts extends \WP_UnitTestCase {
 			)
 		);
 
-		// Add a comment to the second post.
+		// Add a comment from a local user to the second post.
 		self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => $post_with_comment,
 				'comment_content'  => 'Test comment',
 				'comment_approved' => 1,
+				'user_id'          => 1, // Local user comment.
 			)
 		);
 
@@ -1475,17 +1476,17 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Post without comments should be deleted.
 		$this->assertNull( get_post( $post_without_comments ) );
 
-		// Post with comment should still exist.
+		// Post with local user comment should still exist.
 		$this->assertNotNull( get_post( $post_with_comment ) );
 	}
 
 	/**
-	 * Test purge preserves posts with multiple comments.
+	 * Test purge preserves posts with multiple local user comments.
 	 *
 	 * @covers ::purge
 	 */
 	public function test_purge_preserves_posts_with_multiple_comments() {
-		// Create old post with multiple comments (should be preserved).
+		// Create old post with multiple local user comments (should be preserved).
 		$post_with_comments = self::factory()->post->create(
 			array(
 				'post_type'   => Posts::POST_TYPE,
@@ -1494,12 +1495,13 @@ class Test_Posts extends \WP_UnitTestCase {
 			)
 		);
 
-		// Add multiple comments.
+		// Add multiple comments from local users.
 		self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => $post_with_comments,
 				'comment_content'  => 'First comment',
 				'comment_approved' => 1,
+				'user_id'          => 1, // Local user comment.
 			)
 		);
 		self::factory()->comment->create(
@@ -1507,6 +1509,7 @@ class Test_Posts extends \WP_UnitTestCase {
 				'comment_post_ID'  => $post_with_comments,
 				'comment_content'  => 'Second comment',
 				'comment_approved' => 1,
+				'user_id'          => 1, // Local user comment.
 			)
 		);
 
