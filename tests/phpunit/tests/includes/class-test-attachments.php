@@ -1042,4 +1042,166 @@ class Test_Attachments extends \WP_UnitTestCase {
 		// Clean up.
 		wp_delete_file( $existing_file );
 	}
+
+	/**
+	 * Test save_actor_avatar with valid URL.
+	 *
+	 * @covers ::save_actor_avatar
+	 */
+	public function test_save_actor_avatar_success() {
+		// Create a test actor post.
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		$avatar_url = 'https://example.com/avatar.jpg';
+		$result     = Attachments::save_actor_avatar( $actor_id, $avatar_url );
+
+		$this->assertIsString( $result );
+		$this->assertStringContainsString( 'wp-content/uploads/activitypub/actors/' . $actor_id, $result );
+		// Note: Image may be converted to WebP during optimization.
+		$this->assertMatchesRegularExpression( '/\.(jpg|webp)$/', $result );
+	}
+
+	/**
+	 * Test save_actor_avatar with empty URL.
+	 *
+	 * @covers ::save_actor_avatar
+	 */
+	public function test_save_actor_avatar_empty_url() {
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		$result = Attachments::save_actor_avatar( $actor_id, '' );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test save_actor_avatar with invalid URL.
+	 *
+	 * @covers ::save_actor_avatar
+	 */
+	public function test_save_actor_avatar_invalid_url() {
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		$result = Attachments::save_actor_avatar( $actor_id, 'not-a-valid-url' );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test save_actor_avatar with download error.
+	 *
+	 * @covers ::save_actor_avatar
+	 */
+	public function test_save_actor_avatar_download_error() {
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		// Use the missing.jpg URL that our mock returns as an error.
+		$result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/missing.jpg' );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test save_actor_avatar replaces existing avatar.
+	 *
+	 * @covers ::save_actor_avatar
+	 * @covers ::delete_actors_directory
+	 */
+	public function test_save_actor_avatar_replaces_existing() {
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		// Save first avatar.
+		$first_result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar1.jpg' );
+		$this->assertIsString( $first_result );
+
+		// Save second avatar (should replace the first).
+		$second_result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar2.jpg' );
+		$this->assertIsString( $second_result );
+
+		// URLs should be different (different source filenames).
+		$this->assertNotEquals( $first_result, $second_result );
+	}
+
+	/**
+	 * Test delete_actors_directory removes actor files.
+	 *
+	 * @covers ::delete_actors_directory
+	 */
+	public function test_delete_actors_directory() {
+		$actor_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_actor',
+			)
+		);
+
+		// Save an avatar first.
+		$avatar_url = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar.jpg' );
+		$this->assertIsString( $avatar_url );
+
+		// Get the directory path.
+		$upload_dir = \wp_upload_dir();
+		$actor_dir  = $upload_dir['basedir'] . '/activitypub/actors/' . $actor_id;
+
+		// Verify directory exists.
+		$this->assertTrue( \is_dir( $actor_dir ) );
+
+		// Delete the directory.
+		Attachments::delete_actors_directory( $actor_id );
+
+		// Verify directory is gone.
+		$this->assertFalse( \is_dir( $actor_dir ) );
+	}
+
+	/**
+	 * Test delete_actors_directory ignores non-actor post types.
+	 *
+	 * @covers ::delete_actors_directory
+	 */
+	public function test_delete_actors_directory_ignores_non_actors() {
+		// Create a regular post (not an actor).
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type' => 'post',
+			)
+		);
+
+		// Create a directory that would match the path pattern.
+		$upload_dir = \wp_upload_dir();
+		$fake_dir   = $upload_dir['basedir'] . '/activitypub/actors/' . $post_id;
+		\wp_mkdir_p( $fake_dir );
+
+		// Verify directory exists.
+		$this->assertTrue( \is_dir( $fake_dir ) );
+
+		// Try to delete - should be ignored because it's not an actor post type.
+		Attachments::delete_actors_directory( $post_id );
+
+		// Directory should still exist.
+		$this->assertTrue( \is_dir( $fake_dir ) );
+
+		// Clean up.
+		global $wp_filesystem;
+		\WP_Filesystem();
+		$wp_filesystem->rmdir( $fake_dir );
+	}
 }

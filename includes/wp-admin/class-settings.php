@@ -369,6 +369,17 @@ class Settings {
 				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
 			)
 		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_relay_mode',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Enable relay mode to forward public activities to all followers.',
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
 	}
 
 	/**
