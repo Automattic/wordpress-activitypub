@@ -7,6 +7,8 @@
 
 namespace Activitypub;
 
+use Activitypub\Model\Blog;
+
 /**
  * Options class.
  */
@@ -16,6 +18,8 @@ class Options {
 	 * Initialize the options.
 	 */
 	public static function init() {
+		\add_action( 'init', array( self::class, 'register_settings' ), 11 );
+
 		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_option_activitypub_actor_mode' ) );
 		\add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
 		\add_filter( 'pre_option_activitypub_vary_header', array( self::class, 'pre_option_activitypub_vary_header' ) );
@@ -29,6 +33,367 @@ class Options {
 		\add_filter( 'option_activitypub_object_type', array( self::class, 'default_object_type' ) );
 
 		\add_action( 'update_option_activitypub_relay_mode', array( self::class, 'relay_mode_changed' ), 10, 2 );
+	}
+
+	/**
+	 * Register ActivityPub settings.
+	 */
+	public static function register_settings() {
+		/*
+		 * Options Group: activitypub
+		 */
+		\register_setting(
+			'activitypub',
+			'activitypub_post_content_type',
+			array(
+				'type'         => 'string',
+				'description'  => 'Use title and link, summary, full or custom content',
+				'show_in_rest' => array(
+					'schema' => array(
+						'enum' => array( 'title', 'excerpt', 'content' ),
+					),
+				),
+				'default'      => 'content',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_custom_post_content',
+			array(
+				'type'         => 'string',
+				'description'  => 'Define your own custom post template',
+				'show_in_rest' => true,
+				'default'      => ACTIVITYPUB_CUSTOM_POST_CONTENT,
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_max_image_attachments',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Number of images to attach to posts.',
+				'default'           => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
+				'sanitize_callback' => function ( $value ) {
+					return \is_numeric( $value ) ? \absint( $value ) : ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
+				},
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_use_hashtags',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Add hashtags in the content as native tags and replace the #tag with the tag-link',
+				'default'     => '0',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_use_opengraph',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Automatically add "fediverse:creator" OpenGraph tags for Authors and the Blog-User.',
+				'default'     => '1',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_support_post_types',
+			array(
+				'type'         => 'string',
+				'description'  => 'Enable ActivityPub support for post types',
+				'show_in_rest' => true,
+				'default'      => array( 'post' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_actor_mode',
+			array(
+				'type'         => 'string',
+				'description'  => 'Choose your preferred Actor-Mode.',
+				'default'      => ACTIVITYPUB_ACTOR_MODE,
+				'show_in_rest' => array(
+					'schema' => array(
+						'type' => 'string',
+						'enum' => array(
+							ACTIVITYPUB_ACTOR_MODE,
+							ACTIVITYPUB_BLOG_MODE,
+							ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+						),
+					),
+				),
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_attribution_domains',
+			array(
+				'type'              => 'string',
+				'description'       => 'Websites allowed to credit you.',
+				'default'           => home_host(),
+				'sanitize_callback' => array( Sanitize::class, 'host_list' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_allow_likes',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Allow likes.',
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_allow_reposts',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Allow reposts.',
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_auto_approve_reactions',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Auto-approve Reactions.',
+				'default'           => '0',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_relays',
+			array(
+				'type'              => 'array',
+				'description'       => 'Relays',
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_site_blocked_actors',
+			array(
+				'type'              => 'array',
+				'description'       => 'Site-wide blocked ActivityPub actors.',
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
+			)
+		);
+
+		/*
+		 * Options Group: activitypub_advanced
+		 */
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_outbox_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => 'Number of days to keep items in the Outbox.',
+				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_inbox_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => 'Number of days to keep items in the Inbox.',
+				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_vary_header',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Add the Vary header to the ActivityPub response.',
+				'default'     => true,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_content_negotiation',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable content negotiation.',
+				'default'     => true,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_authorized_fetch',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Require HTTP signature authentication.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_rfc9421_signature',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Use RFC-9421 signature.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_following_ui',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Show Following UI in admin menus and settings.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_create_posts',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Allow creating posts via ActivityPub.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_object_type',
+			array(
+				'type'         => 'string',
+				'description'  => 'The Activity-Object-Type',
+				'show_in_rest' => array(
+					'schema' => array(
+						'enum' => array( 'note', 'wordpress-post-format' ),
+					),
+				),
+				'default'      => ACTIVITYPUB_DEFAULT_OBJECT_TYPE,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_relay_mode',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Enable relay mode to forward public activities to all followers.',
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		/*
+		 * Options Group: activitypub_blog
+		 */
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_description',
+			array(
+				'type'         => 'string',
+				'description'  => 'The Description of the Blog-User',
+				'show_in_rest' => true,
+				'default'      => '',
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_identifier',
+			array(
+				'type'              => 'string',
+				'description'       => 'The Identifier of the Blog-User',
+				'show_in_rest'      => true,
+				'default'           => Blog::get_default_username(),
+				'sanitize_callback' => array( Sanitize::class, 'blog_identifier' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_header_image',
+			array(
+				'type'        => 'integer',
+				'description' => 'The Attachment-ID of the Sites Header-Image',
+				'default'     => null,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_mailer_new_dm',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send a notification when someone sends a user of the blog a direct message.',
+				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_mailer_new_follower',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send a notification when someone starts to follow a user of the blog.',
+				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_mailer_new_mention',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send a notification when someone mentions a user of the blog.',
+				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_also_known_as',
+			array(
+				'type'              => 'array',
+				'description'       => 'An array of URLs that the blog user is known by.',
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'identifier_list' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_hide_social_graph',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Hide Followers and Followings on Profile.',
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
 	}
 
 	/**
