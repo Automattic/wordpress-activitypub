@@ -457,8 +457,8 @@ class Posts {
 	 * Purge old remote posts.
 	 *
 	 * Deletes remote posts older than the specified number of days,
-	 * but preserves posts that have comments (including likes, reposts, quotes)
-	 * as these indicate meaningful local user interactions.
+	 * but preserves posts that have comments from local users
+	 * as these indicate meaningful local interactions.
 	 *
 	 * @param int $days Number of days to keep items. Items older than this will be deleted.
 	 *
@@ -484,11 +484,22 @@ class Posts {
 			)
 		);
 
+		global $wpdb;
+
 		$deleted = 0;
 		foreach ( $post_ids as $post_id ) {
-			// Preserve posts with comments (includes likes, reposts, quotes).
-			$comment_count = (int) \get_comments_number( $post_id );
-			if ( $comment_count > 0 ) {
+			/*
+			 * Preserve posts with comments from local users.
+			 * Local user comments have a user_id > 0, while Fediverse comments have user_id = 0.
+			 */
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$local_comments = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND user_id > 0",
+					$post_id
+				)
+			);
+			if ( $local_comments > 0 ) {
 				continue;
 			}
 
