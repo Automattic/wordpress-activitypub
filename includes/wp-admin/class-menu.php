@@ -38,11 +38,11 @@ class Menu {
 				\__( 'Social Web', 'activitypub' ),
 				ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ? 'manage_options' : 'activitypub',
 				'activitypub-social-web',
-				array( Client::class, 'render_page' )
+				array( App::class, 'render_page' )
 			);
 
-			\add_action( 'load-' . $app_hook, array( Client::class, 'remove_admin_notices' ) );
-			\add_action( 'admin_print_scripts-' . $app_hook, array( Client::class, 'enqueue_scripts' ) );
+			\add_action( 'load-' . $app_hook, array( App::class, 'remove_admin_notices' ) );
+			\add_action( 'admin_print_scripts-' . $app_hook, array( App::class, 'enqueue_scripts' ) );
 		}
 
 		// User has to be able to publish posts.

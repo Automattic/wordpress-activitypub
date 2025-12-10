@@ -3,7 +3,7 @@
  *
  * This configuration:
  * - Places JS chunks in their source directory structure (src/foo/ → build/foo/)
- * - Handles client vendor chunks separately
+ * - Handles app vendor chunks separately
  */
 
 const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
@@ -37,11 +37,11 @@ const processConfig = ( config ) => {
 				...( config.optimization?.splitChunks || {} ),
 				cacheGroups: {
 					...( config.optimization?.splitChunks?.cacheGroups || {} ),
-					// Client vendor chunk
-					clientVendors: {
+					// App vendor chunk
+					appVendors: {
 						test: /[\\/]node_modules[\\/]/,
-						name: 'client/vendors',
-						chunks: ( chunk ) => chunk.name && chunk.name.startsWith( 'client/' ),
+						name: 'app/vendors',
+						chunks: ( chunk ) => chunk.name && chunk.name.startsWith( 'app/' ),
 						priority: 20,
 						reuseExistingChunk: true,
 						enforce: true,
