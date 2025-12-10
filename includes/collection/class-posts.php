@@ -488,6 +488,18 @@ class Posts {
 
 		$deleted = 0;
 		foreach ( $post_ids as $post_id ) {
+			/**
+			 * Filter whether to preserve a specific ap_post from being purged.
+			 *
+			 * @param bool $preserve Whether to preserve this post. Default false.
+			 * @param int  $post_id  The ap_post ID being considered for deletion.
+			 *
+			 * @return bool Whether to preserve this post from deletion.
+			 */
+			if ( \apply_filters( 'activitypub_preserve_ap_post', false, $post_id ) ) {
+				continue;
+			}
+
 			/*
 			 * Preserve posts with comments from local users.
 			 * Local user comments have a user_id > 0, while Fediverse comments have user_id = 0.
