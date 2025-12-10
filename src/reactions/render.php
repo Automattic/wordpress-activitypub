@@ -43,6 +43,10 @@ if ( empty( $content ) ) {
 	unset( $attributes['title'] );
 } else {
 	$content = implode( PHP_EOL, wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
+	// Hide empty headings.
+	if ( empty( wp_strip_all_tags( $content ) ) ) {
+		$content = '';
+	}
 }
 
 // Get the Post ID from attributes or use the current post.
