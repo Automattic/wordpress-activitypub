@@ -344,7 +344,7 @@ class Health_Check {
 
 		$info['activitypub']['fields']['activitypub_ap_post_purge_days'] = array(
 			'label'   => \__( 'Remote Posts Retention Period', 'activitypub' ),
-			'value'   => \esc_attr( (int) \get_option( 'activitypub_ap_post_purge_days', 180 ) ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_ap_post_purge_days', 30 ) ),
 			'private' => false,
 		);
 

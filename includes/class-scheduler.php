@@ -69,9 +69,9 @@ class Scheduler {
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
 
-		\add_action( 'update_option_activitypub_outbox_purge_days', array( self::class, 'handle_outbox_purge_days_update' ), 10, 2 );
-		\add_action( 'update_option_activitypub_inbox_purge_days', array( self::class, 'handle_inbox_purge_days_update' ), 10, 2 );
-		\add_action( 'update_option_activitypub_ap_post_purge_days', array( self::class, 'handle_ap_post_purge_days_update' ), 10, 2 );
+		\add_action( 'update_option_activitypub_outbox_purge_days', array( self::class, 'update_outbox_purge_schedule' ), 10, 2 );
+		\add_action( 'update_option_activitypub_inbox_purge_days', array( self::class, 'update_inbox_purge_schedule' ), 10, 2 );
+		\add_action( 'update_option_activitypub_ap_post_purge_days', array( self::class, 'update_ap_post_purge_schedule' ), 10, 2 );
 	}
 
 	/**
@@ -339,7 +339,7 @@ class Scheduler {
 	 * Purge remote posts based on a schedule.
 	 */
 	public static function purge_ap_posts() {
-		$days = (int) get_option( 'activitypub_ap_post_purge_days', 180 );
+		$days = (int) get_option( 'activitypub_ap_post_purge_days', 30 );
 		Posts::purge( $days );
 	}
 
@@ -396,7 +396,7 @@ class Scheduler {
 	 * @param int $old_value The old value.
 	 * @param int $value     The new value.
 	 */
-	public static function handle_outbox_purge_days_update( $old_value, $value ) {
+	public static function update_outbox_purge_schedule( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
 			\wp_clear_scheduled_hook( 'activitypub_outbox_purge' );
 		} elseif ( ! \wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
@@ -410,7 +410,7 @@ class Scheduler {
 	 * @param int $old_value The old value.
 	 * @param int $value     The new value.
 	 */
-	public static function handle_inbox_purge_days_update( $old_value, $value ) {
+	public static function update_inbox_purge_schedule( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
 			\wp_clear_scheduled_hook( 'activitypub_inbox_purge' );
 		} elseif ( ! \wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
@@ -424,7 +424,7 @@ class Scheduler {
 	 * @param int $old_value The old value.
 	 * @param int $value     The new value.
 	 */
-	public static function handle_ap_post_purge_days_update( $old_value, $value ) {
+	public static function update_ap_post_purge_schedule( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
 			\wp_clear_scheduled_hook( 'activitypub_ap_post_purge' );
 		} elseif ( ! \wp_next_scheduled( 'activitypub_ap_post_purge' ) ) {

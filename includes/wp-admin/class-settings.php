@@ -190,10 +190,9 @@ class Settings {
 			'activitypub_advanced',
 			'activitypub_ap_post_purge_days',
 			array(
-				'type'         => 'integer',
-				'description'  => \__( 'Number of days to keep remote posts.', 'activitypub' ),
-				'default'      => 180,
-				'show_in_rest' => false,
+				'type'        => 'integer',
+				'description' => 'Number of days to keep remote posts.',
+				'default'     => 30,
 			)
 		);
 

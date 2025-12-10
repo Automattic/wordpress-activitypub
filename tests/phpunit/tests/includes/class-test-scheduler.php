@@ -315,7 +315,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	 * @covers ::purge_outbox
 	 */
 	public function test_purge_outbox_with_different_purge_days() {
-		// Create posts older than initial_days.
+		// Create posts older than 4 months.
 		self::factory()->post->create_many(
 			25,
 			array(
@@ -328,21 +328,24 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			)
 		);
 
-		// Run purge_outbox with initial_days.
+		// Set initial purge days to 180 (posts are 4 months old, so they shouldn't be deleted).
+		update_option( 'activitypub_outbox_purge_days', 180 );
+
+		// Run purge_outbox with 180 days retention.
 		Scheduler::purge_outbox();
 		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
 
-		// Verify posts are not deleted.
+		// Verify posts are not deleted (4 months < 180 days).
 		$this->assertEquals( 25, wp_count_posts( Outbox::POST_TYPE )->publish );
 
-		// Change the purge days option.
+		// Change the purge days option to 90 days (posts are 4 months old, so they should be deleted).
 		update_option( 'activitypub_outbox_purge_days', 90 );
 
-		// Run purge_outbox with changed_days.
+		// Run purge_outbox with changed days.
 		Scheduler::purge_outbox();
 		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
 
-		// Verify posts are deleted.
+		// Verify posts are deleted (4 months > 90 days).
 		$this->assertEquals( 0, wp_count_posts( Outbox::POST_TYPE )->publish );
 	}
 
@@ -594,6 +597,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			)
 		);
 
+		// Set initial purge days to 180 (posts are 2 months old, so they shouldn't be deleted).
+		update_option( 'activitypub_inbox_purge_days', 180 );
+
 		// Mock the count to exceed the 200-post threshold.
 		$wp_count_posts_callback = function ( $counts, $type ) {
 			if ( Inbox::POST_TYPE === $type ) {
@@ -603,7 +609,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		};
 		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
-		// Run purge_inbox with default days (180).
+		// Run purge_inbox with 180 days retention.
 		Scheduler::purge_inbox();
 		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
 
@@ -838,6 +844,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			)
 		);
 
+		// Set initial purge days to 180 (posts are 2 months old, so they shouldn't be deleted).
+		update_option( 'activitypub_ap_post_purge_days', 180 );
+
 		// Mock the count to exceed the 200-post threshold.
 		$wp_count_posts_callback = function ( $counts, $type ) {
 			if ( Posts::POST_TYPE === $type ) {
@@ -847,7 +856,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		};
 		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
-		// Run purge_ap_posts with default days (180).
+		// Run purge_ap_posts with 180 days retention.
 		Scheduler::purge_ap_posts();
 		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
