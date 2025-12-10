@@ -54,14 +54,17 @@ class Blog_Settings_Fields {
 			'activitypub_blog_profile'
 		);
 
-		\add_settings_field(
-			'activitypub_blog_identifier',
-			\__( 'Change Profile ID', 'activitypub' ),
-			array( self::class, 'profile_id_callback' ),
-			'activitypub_blog_settings',
-			'activitypub_blog_profile',
-			array( 'label_for' => 'activitypub_blog_identifier' )
-		);
+		// Don't show profile ID field when relay mode is enabled.
+		if ( ! \get_option( 'activitypub_relay_mode', false ) ) {
+			\add_settings_field(
+				'activitypub_blog_identifier',
+				\__( 'Change Profile ID', 'activitypub' ),
+				array( self::class, 'profile_id_callback' ),
+				'activitypub_blog_settings',
+				'activitypub_blog_profile',
+				array( 'label_for' => 'activitypub_blog_identifier' )
+			);
+		}
 
 		\add_settings_field(
 			'activitypub_blog_description',
