@@ -668,11 +668,6 @@ class Remote_Actors {
 	public static function get_avatar_url( $id ) {
 		$default_avatar_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
 
-		// Respect WordPress "show avatars" setting.
-		if ( ! \get_option( 'show_avatars' ) ) {
-			return $default_avatar_url;
-		}
-
 		$avatar_url = \get_post_meta( $id, '_activitypub_avatar_url', true );
 		if ( $avatar_url ) {
 			return $avatar_url;
