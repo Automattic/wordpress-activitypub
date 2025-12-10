@@ -2,6 +2,14 @@
  * Avatar component that displays an actor's avatar with fallback support.
  */
 
+/**
+ * WordPress dependencies
+ */
+import { SyntheticEvent } from '@wordpress/element';
+
+/**
+ * Internal dependencies
+ */
 import type { Actor, FeedPost } from '../../types';
 import './style.scss';
 
@@ -14,15 +22,17 @@ interface AvatarProps {
 
 export default function Avatar( { item }: AvatarProps ) {
 	const avatarUrl: string = item.actor_info?.icon || DEFAULT_AVATAR;
+	const altText: string = item.actor_info?.name || item.actor_info?.username || '';
 
 	return (
 		<img
-			alt={ item.actor_info?.name || item.actor_info?.username || '' }
+			alt={ altText }
 			src={ avatarUrl }
 			className="activitypub-avatar"
-			onError={ ( e ): void => {
+			onError={ ( e: SyntheticEvent< HTMLImageElement > ): void => {
 				( e.target as HTMLImageElement ).src = DEFAULT_AVATAR;
 			} }
+			{ ...( ! altText && { role: 'presentation' } ) }
 		/>
 	);
 }
