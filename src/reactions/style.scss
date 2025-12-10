@@ -174,3 +174,28 @@
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	padding: 0.5rem;
 }
+
+/* Summary display style */
+.wp-block-activitypub-reactions {
+	.activitypub-reactions-summary {
+		display: inline;
+		font-size: var(--wp--preset--font-size--small, 0.875em);
+		color: var(--wp--preset--color--contrast, currentColor);
+	}
+
+	.reactions-summary-item {
+		white-space: nowrap;
+	}
+
+	.reactions-summary-separator {
+		opacity: 0.6;
+	}
+
+	.reactions-summary-count {
+		font-weight: var(--wp--custom--font-weight--semi-bold, 600);
+	}
+
+	.reactions-summary-label {
+		margin-inline-start: var(--wp--preset--spacing--10, 0.25em);
+	}
+}

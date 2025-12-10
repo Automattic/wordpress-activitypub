@@ -7,6 +7,33 @@
 	"category": "widgets",
 	"icon": "heart",
 	"description": "Display Fediverse likes and reposts",
+	"example": {
+		"attributes": {
+			"className": "is-style-facepile"
+		}
+	},
+	"styles": [
+		{ "name": "facepile", "label": "Facepile", "isDefault": true },
+		{ "name": "summary", "label": "Summary" }
+	],
+	"attributes": {
+		"displayStyle": {
+			"type": "string",
+			"default": "facepile"
+		},
+		"separator": {
+			"type": "string",
+			"default": ", "
+		},
+		"showComments": {
+			"type": "boolean",
+			"default": true
+		},
+		"showEmpty": {
+			"type": "boolean",
+			"default": true
+		}
+	},
 	"supports": {
 		"align": [ "wide", "full" ],
 		"color": {
