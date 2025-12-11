@@ -201,4 +201,18 @@ class Sanitize {
 
 		return $content;
 	}
+
+	/**
+	 * Strip whitespace between HTML tags.
+	 *
+	 * Removes newlines, carriage returns, and tabs that appear between HTML tags,
+	 * preserving whitespace within text content and preformatted elements.
+	 *
+	 * @param string $content The content to process.
+	 *
+	 * @return string The content with whitespace between tags removed.
+	 */
+	public static function strip_whitespace( $content ) {
+		return \trim( \preg_replace( '/>[\n\r\t]+</', '><', $content ) );
+	}
 }
