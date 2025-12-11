@@ -1,10 +1,8 @@
-import apiFetch from '@wordpress/api-fetch';
 import { SelectControl, RangeControl, PanelBody } from '@wordpress/components';
 import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-editor';
-import { store as coreStore } from '@wordpress/core-data';
+import { store as coreStore, useEntityRecords } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useState, useEffect } from '@wordpress/element';
-import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 import { useOptions } from '../shared/use-options';
 import { useUserOptions } from '../shared/use-user-options';
@@ -13,12 +11,12 @@ import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
 /**
  * Edit component.
  *
- * @param {Object} props Component props.
- * @param {Object} props.attributes Block attributes.
- * @param {Function} props.setAttributes Set block attributes.
- * @param {Object} props.context Block context.
- * @param {string} props.context.postType Post type.
- * @param {number} props.context.postId Post ID.
+ * @param {Object}   props                   Component props.
+ * @param {Object}   props.attributes        Block attributes.
+ * @param {Function} props.setAttributes     Set block attributes.
+ * @param {Object}   props.context           Block context.
+ * @param {string}   props.context.postType  Post type.
+ * @param {number}   props.context.postId    Post ID.
  *
  * @return {JSX.Element} Edit component.
  */
@@ -54,7 +52,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		if ( ! usersOptions.find( ( { value } ) => value === selectedUser ) ) {
 			setAttributes( { selectedUser: usersOptions[ 0 ].value } );
 		}
-	}, [ selectedUser, usersOptions ] );
+	}, [ selectedUser, usersOptions, setAttributes ] );
 
 	// Template for InnerBlocks - allows only a heading block.
 	const TEMPLATE = [
@@ -125,72 +123,38 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 }
 
 /**
- * Builds the API path for fetching followers.
- *
- * @param {number} userId - The ID of the user whose followers are being fetched.
- * @param {number} per_page - The number of followers to fetch per page.
- * @param {string} order - The order in which to fetch followers ('asc' or 'desc').
- * @param {number} page - The page number to fetch.
- * @return {string} The API path with query arguments for fetching followers.
- */
-function getPath( userId, per_page, order, page ) {
-	const { namespace } = useOptions();
-	const path = `/${ namespace }/actors/${ userId }/followers`;
-	const args = { per_page, order, page, context: 'full' };
-
-	return addQueryArgs( path, args );
-}
-
-/**
  * Component to display followers of a user.
  *
- * @param {Object} props - The component props.
- * @param {String} props.selectedUser - The ID of the user whose followers are being fetched.
- * @param {number} props.per_page - The number of followers to fetch per page.
- * @param {string} props.order - The order in which to fetch followers ('asc' or 'desc').
- * @param {number} props.page - The page number to fetch.
- * @param {function} props.setPage - The function to set the page number.
- * @param {Object} props.followerData - Optional pre-fetched follower data.
+ * @param {Object}   props              The component props.
+ * @param {string}   props.selectedUser The ID of the user whose followers are being fetched.
+ * @param {number}   props.per_page     The number of followers to fetch per page.
+ * @param {string}   props.order        The order in which to fetch followers ('asc' or 'desc').
+ * @param {number}   props.page         The page number to fetch.
+ * @param {Function} props.setPage      The function to set the page number.
+ * @return {JSX.Element} The followers list component.
  */
-function Followers( {
-	selectedUser,
-	per_page,
-	order,
-	page: passedPage,
-	setPage: passedSetPage,
-	followerData = false,
-} ) {
+function Followers( { selectedUser, per_page, order, page: passedPage, setPage: passedSetPage } ) {
 	const userId = selectedUser === 'blog' ? 0 : selectedUser;
-	const [ followers, setFollowers ] = useState( [] );
-	const [ pages, setPages ] = useState( 0 );
-	const [ total, setTotal ] = useState( 0 );
 	const [ localPage, setLocalPage ] = useState( 1 );
 	const page = passedPage || localPage;
 	const setPage = passedSetPage || setLocalPage;
 
-	const setData = ( followers, total ) => {
-		setFollowers( followers );
-		setTotal( total );
-		setPages( Math.ceil( total / per_page ) );
-	};
+	const { records: followers, totalItems } = useEntityRecords( 'postType', 'ap_actor', {
+		activitypub_following: userId,
+		per_page,
+		page,
+		order,
+		orderby: 'id',
+	} );
 
-	useEffect( () => {
-		if ( followerData && page === 1 ) {
-			return setData( followerData.followers, followerData.total );
-		}
-
-		const path = getPath( userId, per_page, order, page );
-		apiFetch( { path } )
-			.then( ( { orderedItems, totalItems } ) => setData( orderedItems, totalItems ) )
-			.catch( () => setData( [], 0 ) );
-	}, [ userId, per_page, order, page, followerData ] );
+	const pages = Math.ceil( ( totalItems || 0 ) / per_page );
 
 	return (
 		<div className="followers-container">
-			{ followers.length ? (
+			{ followers?.length ? (
 				<ul className="followers-list">
 					{ followers.map( ( follower ) => (
-						<li key={ follower.url } className="follower-item">
+						<li key={ follower.guid.rendered } className="follower-item">
 							<Follower { ...follower } />
 						</li>
 					) ) }
@@ -207,10 +171,10 @@ function Followers( {
 /**
  * Component to display pagination navigation.
  *
- * @param {Object} props - The component props.
- * @param {number} props.page - The current page number.
- * @param {number} props.pages - The total number of pages.
- * @param {function} props.setPage - The function to set the page number.
+ * @param {Object}   props         The component props.
+ * @param {number}   props.page    The current page number.
+ * @param {number}   props.pages   The total number of pages.
+ * @param {Function} props.setPage The function to set the page number.
  */
 function Pagination( { page, pages, setPage } ) {
 	if ( pages <= 1 ) {
@@ -253,18 +217,26 @@ function Pagination( { page, pages, setPage } ) {
 }
 
 /**
+ * @typedef {Object} FollowerMeta
+ * @property {string} [_activitypub_acct]       The account handle.
+ * @property {string} [_activitypub_avatar_url] The avatar URL.
+ */
+
+/**
  * Component to display a single follower.
  *
- * @param {Object} props - The component props.
- * @param {string} props.name - The name of the follower.
- * @param {Object} props.icon - The icon of the follower.
- * @param {string} props.url - The URL of the follower.
- * @param {string} props.preferredUsername - The preferred username of the follower.
+ * @param {Object}       props       The component props.
+ * @param {Object}       props.title The title object containing rendered name.
+ * @param {Object}       props.guid  The guid object containing rendered URL.
+ * @param {FollowerMeta} props.meta  The object containing follower data.
+ * @return {JSX.Element} The follower component.
  */
-function Follower( { name, icon, url, preferredUsername } ) {
-	const handle = `@${ preferredUsername }`;
+function Follower( { title, guid, meta } ) {
 	const { defaultAvatarUrl, showAvatars } = useOptions();
-	const avatar = icon?.url || defaultAvatarUrl;
+	const name = title?.rendered || '';
+	const url = guid?.rendered || '#';
+	const handle = meta?._activitypub_acct ? `@${ meta._activitypub_acct }` : '';
+	const avatar = meta?._activitypub_avatar_url || defaultAvatarUrl;
 
 	return (
 		<a className="follower-link" href={ url } title={ handle } onClick={ ( event ) => event.preventDefault() }>

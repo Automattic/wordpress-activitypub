@@ -31,6 +31,8 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
 
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
+		\add_filter( 'rest_' . Remote_Actors::POST_TYPE . '_collection_params', array( self::class, 'register_ap_actor_rest_query_params' ) );
+		\add_filter( 'rest_' . Remote_Actors::POST_TYPE . '_query', array( self::class, 'filter_ap_actor_rest_query' ), 10, 2 );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
@@ -61,7 +63,7 @@ class Post_Types {
 				'query_var'        => false,
 				'delete_with_user' => false,
 				'can_export'       => true,
-				'supports'         => array(),
+				'supports'         => array( 'custom-fields' ),
 			)
 		);
 
@@ -93,6 +95,29 @@ class Post_Types {
 				'type'              => 'string',
 				'single'            => false,
 				'sanitize_callback' => 'sanitize_text_field',
+				'show_in_rest'      => true,
+			)
+		);
+
+		\register_post_meta(
+			Remote_Actors::POST_TYPE,
+			'_activitypub_acct',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => 'sanitize_text_field',
+				'show_in_rest'      => true,
+			)
+		);
+
+		\register_post_meta(
+			Remote_Actors::POST_TYPE,
+			'_activitypub_avatar_url',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => 'sanitize_url',
+				'show_in_rest'      => true,
 			)
 		);
 	}
@@ -570,6 +595,45 @@ class Post_Types {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Register custom query parameters for the ap_actor REST endpoint.
+	 *
+	 * @param array $params The existing collection parameters.
+	 *
+	 * @return array Modified collection parameters.
+	 */
+	public static function register_ap_actor_rest_query_params( $params ) {
+		$params['activitypub_following'] = array(
+			'description' => \__( 'Filter actors by who they follow (WordPress user ID).', 'activitypub' ),
+			'type'        => 'integer',
+		);
+
+		return $params;
+	}
+
+	/**
+	 * Filter the ap_actor REST query to support meta filtering.
+	 *
+	 * @param array            $args    Query arguments.
+	 * @param \WP_REST_Request $request The REST request.
+	 *
+	 * @return array Modified query arguments.
+	 */
+	public static function filter_ap_actor_rest_query( $args, $request ) {
+		$following = $request->get_param( 'activitypub_following' );
+
+		if ( $following ) {
+			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				array(
+					'key'   => Followers::FOLLOWER_META_KEY,
+					'value' => $following,
+				),
+			);
+		}
+
+		return $args;
 	}
 
 	/**
