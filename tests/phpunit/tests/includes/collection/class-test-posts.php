@@ -31,18 +31,18 @@ class Test_Posts extends \WP_UnitTestCase {
 		Post_Types::register_post_post_type();
 
 		// Mock HTTP requests for Remote_Actors::fetch_by_uri.
-		add_filter( 'pre_http_request', array( $this, 'mock_http_request' ), 10, 3 );
+		\add_filter( 'pre_http_request', array( $this, 'mock_http_request' ), 10, 3 );
 
 		// Also hook into the ActivityPub-specific filter to bypass URL validation.
-		add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ), 10, 2 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ), 10, 2 );
 	}
 
 	/**
 	 * Tear down test environment.
 	 */
 	public function tear_down() {
-		remove_filter( 'pre_http_request', array( $this, 'mock_http_request' ) );
-		remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ) );
+		\remove_filter( 'pre_http_request', array( $this, 'mock_http_request' ) );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ) );
 
 		$this->remove_added_uploads();
 
@@ -353,7 +353,7 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( '\WP_Post', $result );
 		$this->assertEquals( '2023-06-15 14:30:00', $result->post_date_gmt );
-		$this->assertEquals( get_date_from_gmt( '2023-06-15 14:30:00' ), $result->post_date );
+		$this->assertEquals( \get_date_from_gmt( '2023-06-15 14:30:00' ), $result->post_date );
 	}
 
 	/**
@@ -771,7 +771,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		);
 		$this->assertCount( 1, $posts );
 		// Verify no attachments initially.
-		$attachments = get_attached_media( '', $post1->ID );
+		$attachments = \get_attached_media( '', $post1->ID );
 		$this->assertEmpty( $attachments );
 
 		// Update with attachments.
@@ -857,11 +857,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		);
 
 		// Mock the new image URL.
-		add_filter(
+		\add_filter(
 			'pre_http_request',
 			function ( $response, $parsed_args, $url ) {
 				if ( 'https://example.com/new-image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
-					copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
+					\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
 
 					return array(
 						'response' => array( 'code' => 200 ),
@@ -1355,7 +1355,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
 			)
 		);
 
@@ -1365,7 +1365,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 month' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
 			)
 		);
 
@@ -1376,18 +1376,18 @@ class Test_Posts extends \WP_UnitTestCase {
 			}
 			return $counts;
 		};
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		$deleted = Posts::purge( 180 );
-		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Assert that 20 old posts were deleted.
 		$this->assertEquals( 20, $deleted );
 
 		// Verify 5 new posts remain.
-		$remaining = get_posts(
+		$remaining = \get_posts(
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
@@ -1410,16 +1410,16 @@ class Test_Posts extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 year' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
 			)
 		);
 
 		$deleted = Posts::purge( 180 );
-		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
 		// Assert no posts were deleted (below threshold).
 		$this->assertEquals( 0, $deleted );
-		$this->assertEquals( 20, wp_count_posts( Posts::POST_TYPE )->publish );
+		$this->assertEquals( 20, \wp_count_posts( Posts::POST_TYPE )->publish );
 	}
 
 	/**
@@ -1433,7 +1433,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 year' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
 			)
 		);
 
@@ -1442,7 +1442,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 year' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
 			)
 		);
 
@@ -1463,21 +1463,21 @@ class Test_Posts extends \WP_UnitTestCase {
 			}
 			return $counts;
 		};
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		$deleted = Posts::purge( 180 );
-		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Assert only 1 post was deleted.
 		$this->assertEquals( 1, $deleted );
 
 		// Post without comments should be deleted.
-		$this->assertNull( get_post( $post_without_comments ) );
+		$this->assertNull( \get_post( $post_without_comments ) );
 
 		// Post with local user comment should still exist.
-		$this->assertNotNull( get_post( $post_with_comment ) );
+		$this->assertNotNull( \get_post( $post_with_comment ) );
 	}
 
 	/**
@@ -1491,7 +1491,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 year' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
 			)
 		);
 
@@ -1518,7 +1518,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 year' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
 			)
 		);
 
@@ -1529,16 +1529,16 @@ class Test_Posts extends \WP_UnitTestCase {
 			}
 			return $counts;
 		};
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		$deleted = Posts::purge( 180 );
 
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Only post without interactions should be deleted.
 		$this->assertEquals( 1, $deleted );
-		$this->assertNotNull( get_post( $post_with_comments ) );
-		$this->assertNull( get_post( $post_without_interactions ) );
+		$this->assertNotNull( \get_post( $post_with_comments ) );
+		$this->assertNull( \get_post( $post_without_interactions ) );
 	}
 
 	/**
@@ -1553,7 +1553,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-45 days' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-45 days' ) ),
 			)
 		);
 
@@ -1564,7 +1564,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			}
 			return $counts;
 		};
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		// Purge with 60 days retention - should not delete.
 		$deleted = Posts::purge( 60 );
@@ -1572,9 +1572,9 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Purge with 30 days retention - should delete all.
 		$deleted = Posts::purge( 30 );
-		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		$this->assertEquals( 10, $deleted );
 	}
@@ -1591,7 +1591,7 @@ class Test_Posts extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 year' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
 			)
 		);
 
@@ -1602,11 +1602,11 @@ class Test_Posts extends \WP_UnitTestCase {
 			}
 			return $counts;
 		};
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		$deleted = Posts::purge( 180 );
 
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Should return exact count of deleted posts.
 		$this->assertEquals( 15, $deleted );

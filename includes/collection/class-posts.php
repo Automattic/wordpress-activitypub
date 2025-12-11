@@ -259,8 +259,8 @@ class Posts {
 	 * @return array|\WP_Error The post array or WP_Error on failure.
 	 */
 	private static function activity_to_post( $activity ) {
-		if ( ! is_array( $activity ) ) {
-			return new \WP_Error( 'invalid_activity', __( 'Invalid activity format', 'activitypub' ) );
+		if ( ! \is_array( $activity ) ) {
+			return new \WP_Error( 'invalid_activity', \__( 'Invalid activity format', 'activitypub' ) );
 		}
 
 		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );

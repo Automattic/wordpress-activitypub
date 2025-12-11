@@ -142,7 +142,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			}
 			return $event;
 		};
-		add_filter( 'schedule_event', $schedule_event_callback );
+		\add_filter( 'schedule_event', $schedule_event_callback );
 
 		// Run reprocess_outbox.
 		Scheduler::reprocess_outbox();
@@ -154,7 +154,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		// Test with published activities (should not be scheduled).
 		$published_id = Outbox::add( $activity, self::$user_id );
-		wp_update_post(
+		\wp_update_post(
 			array(
 				'ID'          => $published_id,
 				'post_status' => 'publish',
@@ -171,7 +171,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertNotContains( $published_id, $scheduled_events, 'Published activity should not be scheduled' );
 
 		// Clean up.
-		remove_filter( 'schedule_event', $schedule_event_callback );
+		\remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
 	/**
@@ -187,7 +187,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			}
 			return $event;
 		};
-		add_filter( 'schedule_event', $schedule_event_callback );
+		\add_filter( 'schedule_event', $schedule_event_callback );
 
 		// Run reprocess_outbox with no pending activities.
 		Scheduler::reprocess_outbox();
@@ -195,7 +195,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		// Verify no events were scheduled.
 		$this->assertEmpty( $scheduled_events, 'No events should be scheduled when there are no pending activities' );
 
-		remove_filter( 'schedule_event', $schedule_event_callback );
+		\remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
 	/**
@@ -226,16 +226,16 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			}
 			return $event;
 		};
-		add_filter( 'schedule_event', $schedule_event_callback );
+		\add_filter( 'schedule_event', $schedule_event_callback );
 
 		// Run reprocess_outbox.
 		Scheduler::reprocess_outbox();
 
 		// Verify scheduling time.
-		$this->assertSame( $scheduled_time, wp_next_scheduled( 'activitypub_process_outbox', array( $pending_id ) ) );
+		$this->assertSame( $scheduled_time, \wp_next_scheduled( 'activitypub_process_outbox', array( $pending_id ) ) );
 
 		// Clean up.
-		remove_filter( 'schedule_event', $schedule_event_callback );
+		\remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
 	/**
@@ -250,9 +250,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Outbox::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 month' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
 				'meta_input'  => array(
-					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Update',
+					'_activitypub_activity_type' => \wp_rand( 0, 1 ) ? 'Create' : 'Update',
 				),
 			)
 		);
@@ -261,9 +261,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Outbox::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
 				'meta_input'  => array(
-					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Update',
+					'_activitypub_activity_type' => \wp_rand( 0, 1 ) ? 'Create' : 'Update',
 				),
 			)
 		);
@@ -271,7 +271,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			5,
 			array(
 				'post_type'   => Outbox::POST_TYPE,
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
 				'post_status' => 'publish',
 				'meta_input'  => array(
 					'_activitypub_activity_type' => 'Follow',
@@ -280,10 +280,10 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		);
 
 		Scheduler::purge_outbox();
-		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
 
 		// Assert that 5 posts were deleted, leaving 25.
-		$this->assertEquals( 30, wp_count_posts( Outbox::POST_TYPE )->publish );
+		$this->assertEquals( 30, \wp_count_posts( Outbox::POST_TYPE )->publish );
 	}
 
 	/**
@@ -298,15 +298,15 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Outbox::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
 			)
 		);
 
 		Scheduler::purge_outbox();
-		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
 
 		// Assert that no posts were deleted.
-		$this->assertEquals( 20, wp_count_posts( Outbox::POST_TYPE )->publish );
+		$this->assertEquals( 20, \wp_count_posts( Outbox::POST_TYPE )->publish );
 	}
 
 	/**
@@ -320,33 +320,33 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			25,
 			array(
 				'post_type'   => Outbox::POST_TYPE,
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-4 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-4 months' ) ),
 				'post_status' => 'publish',
 				'meta_input'  => array(
-					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Update',
+					'_activitypub_activity_type' => \wp_rand( 0, 1 ) ? 'Create' : 'Update',
 				),
 			)
 		);
 
 		// Set initial purge days to 180 (posts are 4 months old, so they shouldn't be deleted).
-		update_option( 'activitypub_outbox_purge_days', 180 );
+		\update_option( 'activitypub_outbox_purge_days', 180 );
 
 		// Run purge_outbox with 180 days retention.
 		Scheduler::purge_outbox();
-		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
 
 		// Verify posts are not deleted (4 months < 180 days).
-		$this->assertEquals( 25, wp_count_posts( Outbox::POST_TYPE )->publish );
+		$this->assertEquals( 25, \wp_count_posts( Outbox::POST_TYPE )->publish );
 
 		// Change the purge days option to 90 days (posts are 4 months old, so they should be deleted).
-		update_option( 'activitypub_outbox_purge_days', 90 );
+		\update_option( 'activitypub_outbox_purge_days', 90 );
 
 		// Run purge_outbox with changed days.
 		Scheduler::purge_outbox();
-		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
 
 		// Verify posts are deleted (4 months > 90 days).
-		$this->assertEquals( 0, wp_count_posts( Outbox::POST_TYPE )->publish );
+		$this->assertEquals( 0, \wp_count_posts( Outbox::POST_TYPE )->publish );
 	}
 
 	/**
@@ -368,12 +368,12 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		\do_action( 'activitypub_update_comment_counts', 10, 0 );
 
 		// Verify a scheduled event was created.
-		$next_scheduled = wp_next_scheduled( 'activitypub_update_comment_counts', array( 10, 0 ) );
+		$next_scheduled = \wp_next_scheduled( 'activitypub_update_comment_counts', array( 10, 0 ) );
 		$this->assertNotFalse( $next_scheduled );
 
 		// Clean up.
-		delete_option( 'activitypub_migration_lock' );
-		wp_clear_scheduled_hook( 'activitypub_update_comment_counts', array( 10, 0 ) );
+		\delete_option( 'activitypub_migration_lock' );
+		\wp_clear_scheduled_hook( 'activitypub_update_comment_counts', array( 10, 0 ) );
 	}
 
 	/**
@@ -462,12 +462,12 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			}
 			return $event;
 		};
-		add_filter( 'schedule_event', $schedule_event_callback );
+		\add_filter( 'schedule_event', $schedule_event_callback );
 
 		Scheduler::schedule_announce_activity( $outbox_activity_id, $activity, self::$user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 
 		// Get the most recent outbox item for the blog actor.
-		$announce_outbox_items = get_posts(
+		$announce_outbox_items = \get_posts(
 			array(
 				'post_type'      => Outbox::POST_TYPE,
 				'post_author'    => Actors::BLOG_USER_ID,
@@ -485,8 +485,8 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertContains( $announce_outbox_id, $scheduled_events, 'Should schedule the announce outbox activity' );
 
 		// Check for Announce activity in the outbox.
-		$announce_post     = get_post( $announce_outbox_id );
-		$announce_activity = json_decode( $announce_post->post_content, true );
+		$announce_post     = \get_post( $announce_outbox_id );
+		$announce_activity = \json_decode( $announce_post->post_content, true );
 		$this->assertEquals( 'Announce', $announce_activity['type'] );
 
 		// Verify the original author is in the CC field.
@@ -495,7 +495,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertContains( $original_author_url, $announce_activity['cc'], 'Original author should be in cc field' );
 
 		// Clean up.
-		remove_filter( 'schedule_event', $schedule_event_callback );
+		\remove_filter( 'schedule_event', $schedule_event_callback );
 	}
 
 	/**
@@ -510,9 +510,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Inbox::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 month' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
 				'meta_input'  => array(
-					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Follow',
+					'_activitypub_activity_type' => \wp_rand( 0, 1 ) ? 'Create' : 'Follow',
 				),
 			)
 		);
@@ -521,9 +521,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Inbox::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-13 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-13 months' ) ),
 				'meta_input'  => array(
-					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Follow',
+					'_activitypub_activity_type' => \wp_rand( 0, 1 ) ? 'Create' : 'Follow',
 				),
 			)
 		);
@@ -535,13 +535,13 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			}
 			return $counts;
 		};
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		Scheduler::purge_inbox();
-		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
 
 		// Assert that 5 posts were deleted, leaving 20.
-		$actual_count = get_posts(
+		$actual_count = \get_posts(
 			array(
 				'post_type'   => Inbox::POST_TYPE,
 				'post_status' => 'publish',
@@ -549,10 +549,10 @@ class Test_Scheduler extends \WP_UnitTestCase {
 				'fields'      => 'ids',
 			)
 		);
-		$this->assertEquals( 20, count( $actual_count ) );
+		$this->assertEquals( 20, \count( $actual_count ) );
 
 		// Clean up filter.
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 	}
 
 	/**
@@ -567,15 +567,15 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Inbox::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-13 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-13 months' ) ),
 			)
 		);
 
 		Scheduler::purge_inbox();
-		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
 
 		// Assert that no posts were deleted.
-		$this->assertEquals( 20, wp_count_posts( Inbox::POST_TYPE )->publish );
+		$this->assertEquals( 20, \wp_count_posts( Inbox::POST_TYPE )->publish );
 	}
 
 	/**
@@ -589,16 +589,16 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			25,
 			array(
 				'post_type'   => Inbox::POST_TYPE,
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-2 months' ) ),
 				'post_status' => 'publish',
 				'meta_input'  => array(
-					'_activitypub_activity_type' => wp_rand( 0, 1 ) ? 'Create' : 'Follow',
+					'_activitypub_activity_type' => \wp_rand( 0, 1 ) ? 'Create' : 'Follow',
 				),
 			)
 		);
 
 		// Set initial purge days to 180 (posts are 2 months old, so they shouldn't be deleted).
-		update_option( 'activitypub_inbox_purge_days', 180 );
+		\update_option( 'activitypub_inbox_purge_days', 180 );
 
 		// Mock the count to exceed the 200-post threshold.
 		$wp_count_posts_callback = function ( $counts, $type ) {
@@ -607,33 +607,33 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			}
 			return $counts;
 		};
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		// Run purge_inbox with 180 days retention.
 		Scheduler::purge_inbox();
-		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Verify posts are not deleted (2 months < 180 days).
-		$this->assertEquals( 25, wp_count_posts( Inbox::POST_TYPE )->publish );
+		$this->assertEquals( 25, \wp_count_posts( Inbox::POST_TYPE )->publish );
 
 		// Change the purge days option to 30 days.
-		update_option( 'activitypub_inbox_purge_days', 30 );
+		\update_option( 'activitypub_inbox_purge_days', 30 );
 
 		// Re-add the mock filter for the second purge run.
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		// Run purge_inbox with changed days.
 		Scheduler::purge_inbox();
-		wp_cache_delete( _count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Verify posts are deleted (2 months > 30 days).
-		$this->assertEquals( 0, wp_count_posts( Inbox::POST_TYPE )->publish );
+		$this->assertEquals( 0, \wp_count_posts( Inbox::POST_TYPE )->publish );
 	}
 
 	/**
@@ -709,7 +709,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
 			)
 		);
 
@@ -719,7 +719,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 month' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
 			)
 		);
 
@@ -730,16 +730,16 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			}
 			return $counts;
 		};
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		Scheduler::purge_ap_posts();
-		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Assert that 20 old posts were deleted, leaving 5.
-		$actual_count = get_posts(
+		$actual_count = \get_posts(
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
@@ -747,7 +747,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 				'fields'      => 'ids',
 			)
 		);
-		$this->assertEquals( 5, count( $actual_count ) );
+		$this->assertEquals( 5, \count( $actual_count ) );
 	}
 
 	/**
@@ -762,15 +762,15 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-13 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-13 months' ) ),
 			)
 		);
 
 		Scheduler::purge_ap_posts();
-		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
 		// Assert that no posts were deleted (below threshold).
-		$this->assertEquals( 20, wp_count_posts( Posts::POST_TYPE )->publish );
+		$this->assertEquals( 20, \wp_count_posts( Posts::POST_TYPE )->publish );
 	}
 
 	/**
@@ -784,7 +784,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
 			)
 		);
 
@@ -793,7 +793,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
 			)
 		);
 
@@ -814,19 +814,19 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			}
 			return $counts;
 		};
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		Scheduler::purge_ap_posts();
-		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
 		// Remove filter.
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Assert that post without comments was deleted.
-		$this->assertNull( get_post( $post_without_comments ) );
+		$this->assertNull( \get_post( $post_without_comments ) );
 
 		// Assert that post with local user comment was preserved.
-		$this->assertNotNull( get_post( $post_with_comment ) );
+		$this->assertNotNull( \get_post( $post_with_comment ) );
 	}
 
 	/**
@@ -840,13 +840,13 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			25,
 			array(
 				'post_type'   => Posts::POST_TYPE,
-				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-2 months' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-2 months' ) ),
 				'post_status' => 'publish',
 			)
 		);
 
 		// Set initial purge days to 180 (posts are 2 months old, so they shouldn't be deleted).
-		update_option( 'activitypub_ap_post_purge_days', 180 );
+		\update_option( 'activitypub_ap_post_purge_days', 180 );
 
 		// Mock the count to exceed the 200-post threshold.
 		$wp_count_posts_callback = function ( $counts, $type ) {
@@ -855,32 +855,32 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			}
 			return $counts;
 		};
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		// Run purge_ap_posts with 180 days retention.
 		Scheduler::purge_ap_posts();
-		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Verify posts are not deleted (2 months < 180 days).
-		$this->assertEquals( 25, wp_count_posts( Posts::POST_TYPE )->publish );
+		$this->assertEquals( 25, \wp_count_posts( Posts::POST_TYPE )->publish );
 
 		// Change the purge days option to 30 days.
-		update_option( 'activitypub_ap_post_purge_days', 30 );
+		\update_option( 'activitypub_ap_post_purge_days', 30 );
 
 		// Re-add the mock filter for the second purge run.
-		add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		// Run purge_ap_posts with changed days.
 		Scheduler::purge_ap_posts();
-		wp_cache_delete( _count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
-		remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Verify posts are deleted (2 months > 30 days).
-		$this->assertEquals( 0, wp_count_posts( Posts::POST_TYPE )->publish );
+		$this->assertEquals( 0, \wp_count_posts( Posts::POST_TYPE )->publish );
 	}
 }
