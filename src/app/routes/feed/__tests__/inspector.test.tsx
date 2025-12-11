@@ -2,11 +2,11 @@
  * @jest-environment jsdom
  */
 
+import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import FeedInspector from '../inspector';
 import { SettingsProvider } from '../../../contexts/settings-context';
-import type { AppSettings } from '../../../types';
-import type { FeedPost, Comment } from '../../../types';
+import type { AppSettings, Comment, FeedPost } from '../../../types';
 
 // Mock router hooks
 const mockNavigate = jest.fn();
@@ -20,7 +20,6 @@ jest.mock( '../../../router', () => ( {
 // Mock WordPress dependencies
 jest.mock( '@wordpress/i18n', () => ( {
 	__: ( text: string ) => text,
-	_x: ( text: string ) => text,
 	sprintf: ( format: string, ...args: any[] ) => {
 		let result = format;
 		args.forEach( ( arg ) => {
@@ -56,25 +55,25 @@ jest.mock( '../../../components/page', () => ( {
 } ) );
 
 const mockPost: FeedPost = {
+	author: 0,
+	comment_status: '',
+	date_gmt: '',
+	guid: { rendered: '' },
+	modified: '',
+	modified_gmt: '',
+	ping_status: '',
+	slug: '',
+	status: '',
+	type: '',
 	id: 1,
 	date: '2024-01-15T12:00:00',
-	date_gmt: '2024-01-15T12:00:00',
-	modified: '2024-01-15T12:00:00',
-	modified_gmt: '2024-01-15T12:00:00',
-	slug: 'test-post',
-	status: 'publish',
-	type: 'ap_post',
-	guid: { rendered: 'https://example.com/?p=1' },
-	comment_status: 'open',
-	ping_status: 'open',
-	author: 1,
 	actor_info: {
 		name: 'John Doe',
 		icon: 'https://example.com/avatar.jpg',
+		url: 'https://example.com/actor/johndoe',
 		username: 'johndoe',
-		url: 'https://example.com/@johndoe',
 		webfinger: 'johndoe@example.com',
-		identifier: 'https://example.com/users/johndoe',
+		identifier: 'https://example.com/actor/johndoe',
 	},
 	title: { rendered: 'Test Post Title' },
 	content: { rendered: '<p>Test post content</p>' },
@@ -86,46 +85,37 @@ const mockComments: Comment[] = [
 	{
 		id: 1,
 		post: 1,
-		parent: 0,
-		author: 2,
 		author_name: 'Commenter One',
-		author_url: 'https://example.com/@commenter1',
-		author_avatar_urls: {
-			'48': 'https://example.com/avatar1.jpg',
-		},
 		content: { rendered: '<p>First comment</p>' },
 		date: '2024-01-15T13:00:00',
-		date_gmt: '2024-01-15T13:00:00',
-		link: 'https://example.com/post/1#comment-1',
-		status: 'approved',
-		type: 'comment',
+		parent: 0,
+		author: 0,
+		author_url: '',
+		author_avatar_urls: {},
+		date_gmt: '',
+		link: '',
+		status: '',
+		type: '',
 	},
 	{
 		id: 2,
 		post: 1,
-		parent: 0,
-		author: 3,
 		author_name: 'Commenter Two',
-		author_url: 'https://example.com/@commenter2',
-		author_avatar_urls: {
-			'48': 'https://example.com/avatar2.jpg',
-		},
 		content: { rendered: '<p>Second comment</p>' },
 		date: '2024-01-15T14:00:00',
-		date_gmt: '2024-01-15T14:00:00',
-		link: 'https://example.com/post/1#comment-2',
-		status: 'approved',
-		type: 'comment',
+		parent: 0,
+		author: 0,
+		author_url: '',
+		author_avatar_urls: {},
+		date_gmt: '',
+		link: '',
+		status: '',
+		type: '',
 	},
 ];
 
 const mockSettings: AppSettings = {
-	adminUrl: 'https://example.com/wp-admin',
-	defaultAvatar: 'https://example.com/default-avatar.jpg',
-	nonce: 'test-nonce',
-	restUrl: 'https://example.com/wp-json',
-	siteTitle: 'Test Site',
-	siteUrl: 'https://example.com',
+	namespace: 'activitypub/v1',
 };
 
 // Mock @wordpress/core-data
@@ -137,23 +127,23 @@ jest.mock( '@wordpress/core-data', () => ( {
 	useEntityRecords: ( ...args: any[] ) => mockUseEntityRecords( ...args ),
 } ) );
 
-// Mock @wordpress/views
-jest.mock( '@wordpress/views', () => ( {
-	useView: () => ( {
-		view: { filters: [], page: 1, openFilters: false },
-		updateView: jest.fn(),
-	} ),
-} ) );
-
 // Mock @wordpress/data
 jest.mock( '@wordpress/data', () => ( {
 	useSelect: () => null,
-	useDispatch: () => ( {} ),
 } ) );
 
 // Mock the store to avoid loading @wordpress/preferences
 jest.mock( '../../../store', () => ( {
 	STORE_NAME: 'activitypub/app',
+} ) );
+
+// Mock use-tag-filter hook to avoid loading @wordpress/views
+const mockUpdateTagFilter = jest.fn();
+jest.mock( '../../../hooks/use-tag-filter', () => ( {
+	useTagFilter: () => ( {
+		selectedTagId: null,
+		updateTagFilter: mockUpdateTagFilter,
+	} ),
 } ) );
 
 describe( 'FeedInspector', () => {
@@ -261,10 +251,10 @@ describe( 'FeedInspector', () => {
 
 			renderInspector();
 
-			const avatar = screen.getByAltText( 'Unknown author' ) as HTMLImageElement;
+			const avatar = screen.getByRole( 'presentation' ) as HTMLImageElement;
 			expect( avatar ).toBeInTheDocument();
 			// Avatar should be rendered even without actor_info (will use default or fallback)
-			expect( avatar.src ).toBeTruthy();
+			expect( avatar.src ).toContain( 'data:image/svg+xml' );
 		} );
 
 		it( 'should fallback to default avatar on image load error', () => {
@@ -281,7 +271,7 @@ describe( 'FeedInspector', () => {
 			// Simulate image load error
 			fireEvent.error( avatar );
 
-			expect( avatar.src ).toContain( 'default-avatar.jpg' );
+			expect( avatar.src ).toContain( 'data:image/svg+xml' );
 		} );
 
 		it( 'should have correct CSS class on avatar', () => {
@@ -293,7 +283,7 @@ describe( 'FeedInspector', () => {
 			renderInspector();
 
 			const avatar = screen.getByAltText( 'John Doe' );
-			expect( avatar ).toHaveClass( 'activitypub-inspector-avatar' );
+			expect( avatar ).toHaveClass( 'activitypub-avatar' );
 		} );
 	} );
 

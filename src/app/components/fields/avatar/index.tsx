@@ -16,8 +16,8 @@ import type { Field } from '@wordpress/dataviews';
 /**
  * Internal dependencies
  */
+import Avatar from '../../avatar';
 import type { Actor } from '../../../types';
-import Avatar from './avatar';
 import './style.scss';
 
 export const avatarField: Field< Actor > = {

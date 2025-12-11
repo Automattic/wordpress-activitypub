@@ -173,8 +173,6 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$request->set_param( 'per_page', 10 );
 		$response = rest_get_server()->dispatch( $request );
 
-		\update_option( 'activitypub_actor_mode', $actor_mode );
-
 		$data = $response->get_data();
 
 		// Test pagination properties.
@@ -188,6 +186,8 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertErrorResponse( 'rest_post_invalid_page_number', $response, 400 );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
 	}
 
 	/**

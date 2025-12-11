@@ -2,12 +2,11 @@
  * @jest-environment jsdom
  */
 
+import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
-import type { DataViewRenderFieldProps } from '@wordpress/dataviews';
 import { metadataField } from '../index';
 import { SettingsProvider } from '../../../../contexts/settings-context';
-import type { FeedPost } from '../../../../types';
-import type { AppSettings } from '../../../../types';
+import type { AppSettings, FeedPost } from '../../../../types';
 
 // Mock WordPress dependencies
 jest.mock( '@wordpress/i18n', () => ( {
@@ -19,12 +18,7 @@ jest.mock( '@wordpress/html-entities', () => ( {
 } ) );
 
 const mockSettings: AppSettings = {
-	adminUrl: 'https://example.com/wp-admin',
-	defaultAvatar: 'https://example.com/default-avatar.jpg',
-	nonce: 'test-nonce',
-	restUrl: 'https://example.com/wp-json',
-	siteTitle: 'Test Site',
-	siteUrl: 'https://example.com',
+	namespace: 'activitypub/v1',
 };
 
 const createMockFeedPost = ( overrides?: Partial< FeedPost > ): FeedPost => ( {
@@ -119,8 +113,8 @@ describe( 'metadataField', () => {
 
 			const avatar = screen.getByAltText( 'John Doe' ) as HTMLImageElement;
 			expect( avatar ).toBeInTheDocument();
-			// Avatar should have a src attribute (may be default or empty)
-			expect( avatar.src ).toBeTruthy();
+			// Avatar should use SVG data URI fallback when icon is empty
+			expect( avatar.src ).toContain( 'data:image/svg+xml' );
 		} );
 
 		it( 'should use default avatar when actor_info is missing', () => {
@@ -129,10 +123,10 @@ describe( 'metadataField', () => {
 			} );
 			renderMetadataField( post );
 
-			const avatar = screen.getByAltText( 'Unknown author' ) as HTMLImageElement;
+			const avatar = screen.getByRole( 'presentation' ) as HTMLImageElement;
 			expect( avatar ).toBeInTheDocument();
-			// Avatar should have a src attribute (may be default or empty)
-			expect( avatar.src ).toBeTruthy();
+			// Avatar should use SVG data URI fallback
+			expect( avatar.src ).toContain( 'data:image/svg+xml' );
 		} );
 
 		it( 'should fallback to default avatar on image load error', () => {
@@ -145,8 +139,8 @@ describe( 'metadataField', () => {
 			// Simulate image load error
 			fireEvent.error( avatar );
 
-			// Check that src contains the defaultAvatar filename after error
-			expect( avatar.src ).toContain( 'default-avatar.jpg' );
+			// Check that src contains the SVG data URI fallback after error
+			expect( avatar.src ).toContain( 'data:image/svg+xml' );
 		} );
 
 		it( 'should render author name', () => {
@@ -191,7 +185,7 @@ describe( 'metadataField', () => {
 			renderMetadataField( post );
 
 			const avatar = screen.getByAltText( 'John Doe' );
-			expect( avatar ).toHaveClass( 'activitypub-feed-avatar' );
+			expect( avatar ).toHaveClass( 'activitypub-avatar' );
 		} );
 
 		it( 'should have correct CSS class on container', () => {

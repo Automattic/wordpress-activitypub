@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import type { ReactNode, SyntheticEvent } from 'react';
+import type { ReactNode } from 'react';
 
 /**
  * WordPress dependencies
@@ -13,9 +13,9 @@ import type { Field } from '@wordpress/dataviews';
 /**
  * Internal dependencies
  */
-import { useSettings } from '../../../contexts/settings-context';
 import type { FeedPost } from '../../../types';
 import { getRelativeTime } from '../../../utils';
+import Avatar from '../../avatar';
 
 export const metadataField: Field< FeedPost > = {
 	id: 'metadata',
@@ -29,21 +29,12 @@ export const metadataField: Field< FeedPost > = {
 		return `${ author } · ${ relativeTime }`;
 	},
 	render: ( { item }: { item: FeedPost } ): ReactNode => {
-		const { defaultAvatar } = useSettings();
 		const name: string = decodeEntities( item.actor_info?.name || __( 'Unknown author', 'activitypub' ) );
-		const avatarUrl: string = item.actor_info?.icon || '';
 		const relativeTime: string = item.date ? getRelativeTime( item.date ) : '';
 
 		return (
 			<div className="activitypub-feed-post-meta">
-				<img
-					src={ avatarUrl }
-					alt={ name }
-					className="activitypub-feed-avatar"
-					onError={ ( e: SyntheticEvent< HTMLImageElement > ): void => {
-						e.currentTarget.src = defaultAvatar;
-					} }
-				/>
+				<Avatar item={ item } />
 				<span className="author">{ name }</span>
 				{ relativeTime && (
 					<>
