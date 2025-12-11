@@ -169,7 +169,7 @@ class Blocklist_Subscriptions {
 		}
 
 		// Parse first line to detect format.
-		$first_line = \str_getcsv( $lines[0] );
+		$first_line = \str_getcsv( $lines[0], ',', '"', '\\' );
 		$first_cell = \trim( $first_line[0] ?? '' );
 		$has_header = \str_starts_with( $first_cell, '#' ) || 'domain' === \strtolower( $first_cell );
 
@@ -189,7 +189,7 @@ class Blocklist_Subscriptions {
 
 		// Process each line.
 		foreach ( $lines as $line ) {
-			$row    = \str_getcsv( $line );
+			$row    = \str_getcsv( $line, ',', '"', '\\' );
 			$domain = \trim( $row[ $domain_index ] ?? '' );
 
 			// Skip empty lines and comments.
