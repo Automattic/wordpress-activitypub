@@ -76,6 +76,17 @@ class Interactions {
 			}
 		}
 
+		/**
+		 * Filters the comment post ID for a given target URL.
+		 *
+		 * Allows other plugins to resolve URLs to post IDs for their custom post types.
+		 *
+		 * @param int    $comment_post_id The comment post ID (0 if not found).
+		 * @param string $target_url      The target URL being resolved.
+		 * @param array  $activity        The activity object.
+		 */
+		$comment_post_id = \apply_filters( 'activitypub_comment_post_id', $comment_post_id, $target_url, $activity );
+
 		// Handle nested replies (replies to comments).
 		if ( ! $comment_post_id && $parent_comment_id ) {
 			$parent_comment  = \get_comment( $parent_comment_id );
