@@ -31,18 +31,18 @@ class Test_Posts extends \WP_UnitTestCase {
 		Post_Types::register_post_post_type();
 
 		// Mock HTTP requests for Remote_Actors::fetch_by_uri.
-		add_filter( 'pre_http_request', array( $this, 'mock_http_request' ), 10, 3 );
+		\add_filter( 'pre_http_request', array( $this, 'mock_http_request' ), 10, 3 );
 
 		// Also hook into the ActivityPub-specific filter to bypass URL validation.
-		add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ), 10, 2 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ), 10, 2 );
 	}
 
 	/**
 	 * Tear down test environment.
 	 */
 	public function tear_down() {
-		remove_filter( 'pre_http_request', array( $this, 'mock_http_request' ) );
-		remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ) );
+		\remove_filter( 'pre_http_request', array( $this, 'mock_http_request' ) );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ) );
 
 		$this->remove_added_uploads();
 
@@ -353,7 +353,7 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( '\WP_Post', $result );
 		$this->assertEquals( '2023-06-15 14:30:00', $result->post_date_gmt );
-		$this->assertEquals( get_date_from_gmt( '2023-06-15 14:30:00' ), $result->post_date );
+		$this->assertEquals( \get_date_from_gmt( '2023-06-15 14:30:00' ), $result->post_date );
 	}
 
 	/**
@@ -771,7 +771,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		);
 		$this->assertCount( 1, $posts );
 		// Verify no attachments initially.
-		$attachments = get_attached_media( '', $post1->ID );
+		$attachments = \get_attached_media( '', $post1->ID );
 		$this->assertEmpty( $attachments );
 
 		// Update with attachments.
@@ -857,11 +857,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		);
 
 		// Mock the new image URL.
-		add_filter(
+		\add_filter(
 			'pre_http_request',
 			function ( $response, $parsed_args, $url ) {
 				if ( 'https://example.com/new-image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
-					copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
+					\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
 
 					return array(
 						'response' => array( 'code' => 200 ),
@@ -1341,5 +1341,274 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertStringContainsString( '<strong>bold text</strong>', $result );
 		$this->assertStringNotContainsString( '#test', $result );
 		$this->assertStringNotContainsString( '#php', $result );
+	}
+
+	/**
+	 * Test purge method with more than 200 posts.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_more_than_200_posts() {
+		// Create 20 old posts (will be deleted).
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
+			)
+		);
+
+		// Create 5 new posts (will be kept).
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Posts::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert that 20 old posts were deleted.
+		$this->assertEquals( 20, $deleted );
+
+		// Verify 5 new posts remain.
+		$remaining = \get_posts(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+		$this->assertCount( 5, $remaining );
+	}
+
+	/**
+	 * Test purge method with 200 or fewer posts.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_200_or_fewer_posts() {
+		// Create 20 old posts.
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		$deleted = Posts::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		// Assert no posts were deleted (below threshold).
+		$this->assertEquals( 0, $deleted );
+		$this->assertEquals( 20, \wp_count_posts( Posts::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Test purge method preserves posts with local user comments.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_preserves_posts_with_comments() {
+		// Create old post without comments (should be deleted).
+		$post_without_comments = self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Create old post with a local user comment (should be preserved).
+		$post_with_comment = self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Add a comment from a local user to the second post.
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_with_comment,
+				'comment_content'  => 'Test comment',
+				'comment_approved' => 1,
+				'user_id'          => 1, // Local user comment.
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Posts::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert only 1 post was deleted.
+		$this->assertEquals( 1, $deleted );
+
+		// Post without comments should be deleted.
+		$this->assertNull( \get_post( $post_without_comments ) );
+
+		// Post with local user comment should still exist.
+		$this->assertNotNull( \get_post( $post_with_comment ) );
+	}
+
+	/**
+	 * Test purge preserves posts with multiple local user comments.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_preserves_posts_with_multiple_comments() {
+		// Create old post with multiple local user comments (should be preserved).
+		$post_with_comments = self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Add multiple comments from local users.
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_with_comments,
+				'comment_content'  => 'First comment',
+				'comment_approved' => 1,
+				'user_id'          => 1, // Local user comment.
+			)
+		);
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_with_comments,
+				'comment_content'  => 'Second comment',
+				'comment_approved' => 1,
+				'user_id'          => 1, // Local user comment.
+			)
+		);
+
+		// Create old post without any interactions (should be deleted).
+		$post_without_interactions = self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Posts::purge( 180 );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Only post without interactions should be deleted.
+		$this->assertEquals( 1, $deleted );
+		$this->assertNotNull( \get_post( $post_with_comments ) );
+		$this->assertNull( \get_post( $post_without_interactions ) );
+	}
+
+	/**
+	 * Test purge method with different retention days.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_with_different_days() {
+		// Create posts older than 60 days but newer than 30 days.
+		self::factory()->post->create_many(
+			10,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-45 days' ) ),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		// Purge with 60 days retention - should not delete.
+		$deleted = Posts::purge( 60 );
+		$this->assertEquals( 0, $deleted );
+
+		// Purge with 30 days retention - should delete all.
+		$deleted = Posts::purge( 30 );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		$this->assertEquals( 10, $deleted );
+	}
+
+	/**
+	 * Test purge returns count of deleted items.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_returns_deleted_count() {
+		// Create 15 old posts.
+		self::factory()->post->create_many(
+			15,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Posts::purge( 180 );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Should return exact count of deleted posts.
+		$this->assertEquals( 15, $deleted );
 	}
 }

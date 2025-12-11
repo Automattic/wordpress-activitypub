@@ -393,4 +393,51 @@ class Outbox {
 
 		return $title;
 	}
+
+	/**
+	 * Purge old outbox items.
+	 *
+	 * Deletes outbox items older than the specified number of days,
+	 * except for Follow activities which are always preserved.
+	 *
+	 * @param int $days Number of days to keep items. Items older than this will be deleted.
+	 *
+	 * @return int The number of items deleted.
+	 */
+	public static function purge( $days ) {
+		$total_posts = (int) \wp_count_posts( self::POST_TYPE )->publish;
+		if ( $total_posts <= 20 ) {
+			return 0;
+		}
+
+		$post_ids = \get_posts(
+			array(
+				'post_type'   => self::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'numberposts' => -1,
+				'date_query'  => array(
+					array(
+						'before' => \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) ),
+					),
+				),
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => 'Follow',
+						'compare' => '!=',
+					),
+				),
+			)
+		);
+
+		$deleted = 0;
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
+			++$deleted;
+		}
+
+		return $deleted;
+	}
 }
