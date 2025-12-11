@@ -15,13 +15,7 @@ type ToggleProps = {
 	displayName: string;
 };
 
-export default function Toggle( {
-	isOpen,
-	onToggle,
-	isSiteActor,
-	userAvatarUrl,
-	displayName,
-}: ToggleProps ) {
+export default function Toggle( { isOpen, onToggle, isSiteActor, userAvatarUrl, displayName }: ToggleProps ) {
 	return (
 		<Button
 			onClick={ onToggle }
