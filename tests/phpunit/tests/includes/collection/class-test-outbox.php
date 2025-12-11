@@ -222,16 +222,16 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Create first outbox item.
 		$first_id = \Activitypub\add_to_outbox( $object, $activity_type, 1 );
 		$this->assertNotFalse( $first_id );
-		$this->assertEquals( 'pending', get_post_status( $first_id ) );
+		$this->assertEquals( 'pending', \get_post_status( $first_id ) );
 
 		// Create second outbox item with same object_id and activity_type.
 		$second_id = \Activitypub\add_to_outbox( $object, $activity_type, 1 );
 		$this->assertNotFalse( $second_id );
 
 		// First item should now be published (invalidated).
-		$this->assertEquals( 'publish', get_post_status( $first_id ) );
+		$this->assertEquals( 'publish', \get_post_status( $first_id ) );
 		// New item should still be pending.
-		$this->assertEquals( 'pending', get_post_status( $second_id ) );
+		$this->assertEquals( 'pending', \get_post_status( $second_id ) );
 	}
 
 	/**
@@ -252,10 +252,10 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Add new item that should trigger invalidation of item1.
 		$new_item = \Activitypub\add_to_outbox( $object1, 'Create', 1 );
 
-		$this->assertEquals( 'publish', get_post_status( $item1 ) );
-		$this->assertEquals( 'pending', get_post_status( $item2 ) );
-		$this->assertEquals( 'pending', get_post_status( $item3 ) );
-		$this->assertEquals( 'pending', get_post_status( $new_item ) );
+		$this->assertEquals( 'publish', \get_post_status( $item1 ) );
+		$this->assertEquals( 'pending', \get_post_status( $item2 ) );
+		$this->assertEquals( 'pending', \get_post_status( $item3 ) );
+		$this->assertEquals( 'pending', \get_post_status( $new_item ) );
 	}
 
 	/**
@@ -271,19 +271,19 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$update_id = \Activitypub\add_to_outbox( $object, 'Update', 1 );
 		$like_id   = \Activitypub\add_to_outbox( $object, 'Like', 1 );
 
-		$this->assertEquals( 'pending', get_post_status( $create_id ) );
-		$this->assertEquals( 'pending', get_post_status( $update_id ) );
-		$this->assertEquals( 'pending', get_post_status( $like_id ) );
+		$this->assertEquals( 'pending', \get_post_status( $create_id ) );
+		$this->assertEquals( 'pending', \get_post_status( $update_id ) );
+		$this->assertEquals( 'pending', \get_post_status( $like_id ) );
 
 		// Add Delete activity.
 		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
 
 		// All previous activities should be published (invalidated).
-		$this->assertEquals( 'publish', get_post_status( $create_id ) );
-		$this->assertEquals( 'publish', get_post_status( $update_id ) );
-		$this->assertEquals( 'publish', get_post_status( $like_id ) );
+		$this->assertEquals( 'publish', \get_post_status( $create_id ) );
+		$this->assertEquals( 'publish', \get_post_status( $update_id ) );
+		$this->assertEquals( 'publish', \get_post_status( $like_id ) );
 		// Delete activity should still be pending.
-		$this->assertEquals( 'pending', get_post_status( $delete_id ) );
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
 	}
 
 	/**
@@ -404,9 +404,9 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Only ID for Deletes.
 		if ( 'Delete' === $expected ) {
-			$this->assertSame( get_permalink( $id ), $activity->get_object() );
+			$this->assertSame( \get_permalink( $id ), $activity->get_object() );
 		} else {
-			$outbox_activity = json_decode( get_post( $undo_id )->post_content, true );
+			$outbox_activity = \json_decode( \get_post( $undo_id )->post_content, true );
 			$this->assertEquals( $outbox_activity['object'], $activity->get_object()->to_array( false ) );
 		}
 
@@ -458,8 +458,184 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertNotInstanceOf( \WP_Error::class, $activity );
 
 		// Verify the updated attribute is set and matches the post's modified date.
-		$post             = get_post( $id );
-		$expected_updated = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_modified ) );
+		$post             = \get_post( $id );
+		$expected_updated = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified ) );
 		$this->assertEquals( $expected_updated, $activity->get_updated() );
+	}
+
+	/**
+	 * Test purge method with more than 20 posts.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_more_than_20_posts() {
+		// Create 20 old posts with activity type (will be deleted).
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
+				'meta_input'  => array(
+					'_activitypub_activity_type' => 'Create',
+				),
+			)
+		);
+
+		// Create 5 new posts (will be kept).
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
+				'meta_input'  => array(
+					'_activitypub_activity_type' => 'Create',
+				),
+			)
+		);
+
+		// Mock the count to exceed the 20-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Outbox::POST_TYPE === $type ) {
+				$counts->publish = 25;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Outbox::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert that 20 old posts were deleted.
+		$this->assertEquals( 20, $deleted );
+
+		// Verify 5 new posts remain.
+		$remaining = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+		$this->assertCount( 5, $remaining );
+	}
+
+	/**
+	 * Test purge method with 20 or fewer posts.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_20_or_fewer_posts() {
+		// Create 15 old posts.
+		self::factory()->post->create_many(
+			15,
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		$deleted = Outbox::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+
+		// Assert no posts were deleted (below threshold).
+		$this->assertEquals( 0, $deleted );
+		$this->assertEquals( 15, \wp_count_posts( Outbox::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Test purge method preserves Follow activities.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_preserves_follow_activities() {
+		// Create old Follow activity (should be preserved).
+		$follow_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+		\update_post_meta( $follow_post_id, '_activitypub_activity_type', 'Follow' );
+
+		// Create old Create activity (should be deleted).
+		$create_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+		\update_post_meta( $create_post_id, '_activitypub_activity_type', 'Create' );
+
+		// Mock the count to exceed the 20-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Outbox::POST_TYPE === $type ) {
+				$counts->publish = 25;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Outbox::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert only 1 post was deleted (Create, not Follow).
+		$this->assertEquals( 1, $deleted );
+
+		// Follow activity should still exist.
+		$this->assertNotNull( \get_post( $follow_post_id ) );
+
+		// Create activity should be deleted.
+		$this->assertNull( \get_post( $create_post_id ) );
+	}
+
+	/**
+	 * Test purge method with different retention days.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_with_different_days() {
+		// Create posts older than 60 days but newer than 30 days.
+		self::factory()->post->create_many(
+			10,
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-45 days' ) ),
+				'meta_input'  => array(
+					'_activitypub_activity_type' => 'Create',
+				),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Outbox::POST_TYPE === $type ) {
+				$counts->publish = 25;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		// Purge with 60 days retention - should not delete.
+		$deleted = Outbox::purge( 60 );
+		$this->assertEquals( 0, $deleted );
+
+		// Purge with 30 days retention - should delete all.
+		$deleted = Outbox::purge( 30 );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		$this->assertEquals( 10, $deleted );
 	}
 }
