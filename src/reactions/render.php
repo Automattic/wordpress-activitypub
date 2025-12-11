@@ -105,6 +105,7 @@ if ( $is_summary ) {
 	if ( empty( $counts ) ) {
 		ob_end_clean();
 		echo '<!-- Reactions block: No reactions found. -->';
+		echo '<!-- Reactions block: No reactions found. -->';
 		return;
 	}
 
