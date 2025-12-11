@@ -505,13 +505,13 @@ class Posts {
 			 * Local user comments have a user_id > 0, while Fediverse comments have user_id = 0.
 			 */
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$local_comments = (int) $wpdb->get_var(
+			$has_local_comments = (bool) $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND user_id > 0",
+					"SELECT 1 FROM $wpdb->comments WHERE comment_post_ID = %d AND user_id > 0 LIMIT 1",
 					$post_id
 				)
 			);
-			if ( $local_comments > 0 ) {
+			if ( $has_local_comments ) {
 				continue;
 			}
 
