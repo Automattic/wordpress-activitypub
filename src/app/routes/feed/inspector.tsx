@@ -4,17 +4,24 @@
  * Detail view for a single feed post in the side panel
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/components';
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
 import { sprintf, __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { close } from '@wordpress/icons';
-import { useSettings } from '../../contexts/settings-context';
-import type { Comment, FeedPost } from '../../types';
+
+/**
+ * Internal dependencies
+ */
+import Avatar from '../../components/avatar';
 import { getRelativeTime } from '../../utils';
 import { useTagFilter } from '../../hooks/use-tag-filter';
 import { useSearch, useNavigate } from '../../router';
+import type { Comment, FeedPost } from '../../types';
 
 // Helper to render HTML content with proper entity decoding and unescape
 const RenderHTML = ( { html }: { html: string } ) => {
@@ -39,7 +46,6 @@ export default function FeedInspector() {
 		} );
 	};
 
-	const { defaultAvatar } = useSettings();
 	const { record: post, isResolving: isLoading } = useEntityRecord< FeedPost >( 'postType', 'ap_post', id ?? 0 );
 	const { records: comments, isResolving: isLoadingComments } = useEntityRecords< Comment >( 'root', 'comment', {
 		post: id ?? 0,
@@ -82,7 +88,6 @@ export default function FeedInspector() {
 	const author = decodeEntities( actor?.name || __( 'Unknown author', 'activitypub' ) );
 	const webfinger = actor?.webfinger || '';
 	const profileUrl = actor?.url || '';
-	const avatarUrl = actor?.icon || '';
 	const postLink = post.link || '';
 	const relativeTime = post.date ? getRelativeTime( post.date ) : '';
 
@@ -91,14 +96,7 @@ export default function FeedInspector() {
 			<Card className="activitypub-inspector-card">
 				<CardHeader>
 					<div className="activitypub-inspector-header">
-						<img
-							src={ avatarUrl }
-							alt={ author }
-							className="activitypub-inspector-avatar"
-							onError={ ( e ) => {
-								( e.target as HTMLImageElement ).src = defaultAvatar;
-							} }
-						/>
+						<Avatar item={ post } />
 						<div className="activitypub-inspector-author">
 							<a
 								href={ profileUrl }

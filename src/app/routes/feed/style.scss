@@ -36,13 +36,9 @@
 	font-size: var(--wpds-font-size-small, 13px);
 	color: var(--wpds-color-fg-secondary, #646970);
 
-	.activitypub-feed-avatar {
+	.activitypub-avatar {
 		width: var(--wpds-spacing-50, 20px);
 		height: var(--wpds-spacing-50, 20px);
-		border-radius: 50%;
-		object-fit: cover;
-		background-color: var(--wpds-color-bg-neutral-weak, #f0f0f1);
-		flex-shrink: 0;
 	}
 
 	.author {
@@ -147,15 +143,6 @@
 
 .activitypub-inspector-close {
 	margin-left: auto;
-	flex-shrink: 0;
-}
-
-.activitypub-inspector-avatar {
-	width: var(--wpds-spacing-120, 48px);
-	height: var(--wpds-spacing-120, 48px);
-	border-radius: 50%;
-	object-fit: cover;
-	background-color: var(--wpds-color-bg-neutral-weak, #f0f0f1);
 	flex-shrink: 0;
 }
 

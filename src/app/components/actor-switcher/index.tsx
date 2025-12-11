@@ -10,10 +10,11 @@ import { useSelect, useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { useSettings } from '../../contexts/settings-context';
+import { addQueryArgs } from '@wordpress/url';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors, AppActions } from '../../store';
 import SiteIcon from '../site-icon';
+import { DEFAULT_AVATAR } from '../avatar';
 import './style.scss';
 
 // Actor mode constants matching PHP definitions.
@@ -23,7 +24,6 @@ const BLOG_MODE = 'blog';
 const ACTOR_AND_BLOG_MODE = 'actor_blog';
 
 export default function ActorSwitcher() {
-	const { defaultAvatar, adminUrl } = useSettings();
 	const { setActiveActor } = useDispatch( STORE_NAME ) as AppActions;
 
 	const { currentUser, activeActorId, actorMode, hasUserCap, hasBlogCap } = useSelect(
@@ -73,7 +73,7 @@ export default function ActorSwitcher() {
 		}
 	}, [ isSiteActor, canUseUserActor, canUseBlogActor, currentUserId, setActiveActor ] );
 
-	const userAvatarUrl: string = currentUser?.avatar_urls?.[ 48 ] || defaultAvatar;
+	const userAvatarUrl: string = currentUser?.avatar_urls?.[ 48 ] || DEFAULT_AVATAR;
 	const displayName: string = isSiteActor ? __( 'Site', 'activitypub' ) : currentUser?.name || '';
 
 	// Toggle between user and site actor.
@@ -86,8 +86,8 @@ export default function ActorSwitcher() {
 	// Determine the appropriate settings link based on available actor.
 	const href: string =
 		canUseBlogActor && ! canUseUserActor
-			? `${ adminUrl }options-general.php?page=activitypub&tab=blog-profile`
-			: `${ adminUrl }profile.php#activitypub`;
+			? addQueryArgs( 'options-general.php', { page: 'activitypub', tab: 'blog-profile' } )
+			: 'profile.php#activitypub';
 
 	return (
 		<Button
@@ -104,7 +104,7 @@ export default function ActorSwitcher() {
 						alt={ displayName }
 						className="actor-switcher__avatar"
 						onError={ ( e ): void => {
-							( e.target as HTMLImageElement ).src = defaultAvatar;
+							( e.target as HTMLImageElement ).src = DEFAULT_AVATAR;
 						} }
 					/>
 				) }
