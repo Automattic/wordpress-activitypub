@@ -22,8 +22,8 @@ import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
 
 export default function FeedDescription(): ReactNode {
-	const activeActorId: number = useSelect(
-		( select ): number => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(),
+	const activeActorId: number | null = useSelect(
+		( select ): number | null => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(),
 		[]
 	);
 

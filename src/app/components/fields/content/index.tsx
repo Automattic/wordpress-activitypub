@@ -38,8 +38,8 @@ export const contentField: Field< FeedPost > = {
 		const { getObjectTypeName, isLoading } = useObjectType();
 
 		// Get the object type name from the cached map
-		const objectTypeId: number = item.ap_object_type?.[ 0 ];
-		const objectTypeName: string = getObjectTypeName( objectTypeId );
+		const objectTypeId: number | undefined = item.ap_object_type?.[ 0 ];
+		const objectTypeName: string | null = getObjectTypeName( objectTypeId );
 
 		// While loading, show a placeholder to prevent flicker
 		if ( isLoading && ! objectTypeName ) {

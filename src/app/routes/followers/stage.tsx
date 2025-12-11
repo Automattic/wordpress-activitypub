@@ -74,8 +74,8 @@ export default function FollowersStage(): ReactNode {
 	} );
 
 	// Get active actor ID from store
-	const activeActorId: number = useSelect(
-		( select ): number => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(),
+	const activeActorId: number | null = useSelect(
+		( select ): number | null => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(),
 		[]
 	);
 
