@@ -437,13 +437,15 @@ class Post_Types {
 			'show_ui'             => true,
 			'supports'            => array( 'title', 'editor', 'page-attributes', 'author' ),
 			'capabilities'        => array(
+				'create_posts'      => 'activitypub', // Require activitypub capability to create extra fields.
 				'edit_others_posts' => 'do_not_allow', // Disallow editing others' Extra Fields (only own ones).
 			),
 		);
 
 		\register_post_type( Extra_Fields::USER_POST_TYPE, $extra_field_args );
 
-		unset( $extra_field_args['capabilities'] ); // Allow editing the Blog's Extra Fields.
+		// Blog Extra Fields require manage_options capability.
+		$extra_field_args['capabilities'] = array( 'create_posts' => 'manage_options' );
 		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $extra_field_args );
 
 		/**
