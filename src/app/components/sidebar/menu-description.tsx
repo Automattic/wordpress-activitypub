@@ -28,7 +28,7 @@ export default function MenuDescription( { menuItem: { description } }: MenuDesc
 		return <p className="sidebar-description">{ description }</p>;
 	}
 
-	const Description: ( () => ReactNode ) | ComponentType = description;
+	const Description: ComponentType = description;
 
 	return (
 		<p className="sidebar-description">
