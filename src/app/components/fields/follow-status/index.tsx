@@ -23,7 +23,7 @@ export const followStatusField: Field< Actor > = {
 	id: 'follow_status',
 	label: __( 'Following', 'activitypub' ),
 	enableHiding: true,
-	getValue: ( { item }: { item: Actor } ): boolean => item.follow_status?.follows_back,
+	getValue: ( { item }: { item: Actor } ): boolean | undefined => item.follow_status?.follows_back,
 	render: ( { item }: { item: Actor } ): ReactNode => {
 		if ( item.follow_status?.follows_back ) {
 			return <span className="activitypub-mutual">{ _x( 'Mutual', 'Follow status', 'activitypub' ) }</span>;

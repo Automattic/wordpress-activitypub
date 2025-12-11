@@ -209,7 +209,7 @@ export default function FeedStage(): ReactNode {
 			}
 
 			const selectedId: string = nextSelection[ 0 ];
-			const selectedItem: FeedPost = feed.find(
+			const selectedItem: FeedPost | undefined = feed.find(
 				( item: FeedPost ): boolean => item.id.toString() === selectedId
 			);
 

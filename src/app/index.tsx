@@ -40,7 +40,7 @@ const routes: Route[] = [
  * @param settings The editor settings.
  */
 export function initialize( id: string, settings: AppSettings ): void {
-	const target: HTMLElement = document.getElementById( id );
+	const target: HTMLElement | null = document.getElementById( id );
 	if ( ! target ) {
 		return;
 	}
