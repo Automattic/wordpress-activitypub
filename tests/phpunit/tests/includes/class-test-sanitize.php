@@ -354,6 +354,22 @@ class Test_Sanitize extends \WP_UnitTestCase {
 				"<p>Text</p>\n<img src=\"test.jpg\" />\n<p>More</p>",
 				'<p>Text</p><img src="test.jpg" /><p>More</p>',
 			),
+			'preserves_spaces_with_newlines'    => array(
+				"<p>Hello</p> \n <p>World</p>",
+				"<p>Hello</p> \n <p>World</p>",
+			),
+			'preserves_space_after_newline'     => array(
+				"<span>A</span>\n <span>B</span>",
+				"<span>A</span>\n <span>B</span>",
+			),
+			'preserves_space_before_newline'    => array(
+				"<span>A</span> \n<span>B</span>",
+				"<span>A</span> \n<span>B</span>",
+			),
+			'multiple_spaces_with_newlines'     => array(
+				"<div>A</div>  \n\t  <div>B</div>",
+				"<div>A</div>  \n\t  <div>B</div>",
+			),
 		);
 	}
 
