@@ -259,8 +259,8 @@ class Posts {
 	 * @return array|\WP_Error The post array or WP_Error on failure.
 	 */
 	private static function activity_to_post( $activity ) {
-		if ( ! is_array( $activity ) ) {
-			return new \WP_Error( 'invalid_activity', __( 'Invalid activity format', 'activitypub' ) );
+		if ( ! \is_array( $activity ) ) {
+			return new \WP_Error( 'invalid_activity', \__( 'Invalid activity format', 'activitypub' ) );
 		}
 
 		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
@@ -451,5 +451,74 @@ class Posts {
 
 		// Delete the specific meta entry with this value.
 		return \delete_post_meta( $post_id, '_activitypub_user_id', $user_id );
+	}
+
+	/**
+	 * Purge old remote posts.
+	 *
+	 * Deletes remote posts older than the specified number of days,
+	 * but preserves posts that have comments from local users
+	 * as these indicate meaningful local interactions.
+	 *
+	 * @param int $days Number of days to keep items. Items older than this will be deleted.
+	 *
+	 * @return int The number of items deleted.
+	 */
+	public static function purge( $days ) {
+		$total_posts = (int) \wp_count_posts( self::POST_TYPE )->publish;
+		if ( $total_posts <= 200 ) {
+			return 0;
+		}
+
+		$post_ids = \get_posts(
+			array(
+				'post_type'   => self::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'numberposts' => -1,
+				'date_query'  => array(
+					array(
+						'before' => \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) ),
+					),
+				),
+			)
+		);
+
+		global $wpdb;
+
+		$deleted = 0;
+		foreach ( $post_ids as $post_id ) {
+			/**
+			 * Filter whether to preserve a specific ap_post from being purged.
+			 *
+			 * @param bool $preserve Whether to preserve this post. Default false.
+			 * @param int  $post_id  The ap_post ID being considered for deletion.
+			 *
+			 * @return bool Whether to preserve this post from deletion.
+			 */
+			if ( \apply_filters( 'activitypub_preserve_ap_post', false, $post_id ) ) {
+				continue;
+			}
+
+			/*
+			 * Preserve posts with comments from local users.
+			 * Local user comments have a user_id > 0, while Fediverse comments have user_id = 0.
+			 */
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$has_local_comments = (bool) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT 1 FROM $wpdb->comments WHERE comment_post_ID = %d AND user_id > 0 LIMIT 1",
+					$post_id
+				)
+			);
+			if ( $has_local_comments ) {
+				continue;
+			}
+
+			\wp_delete_post( $post_id, true );
+			++$deleted;
+		}
+
+		return $deleted;
 	}
 }
