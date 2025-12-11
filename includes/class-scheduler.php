@@ -323,7 +323,7 @@ class Scheduler {
 	 * Purge outbox items based on a schedule.
 	 */
 	public static function purge_outbox() {
-		$days = (int) get_option( 'activitypub_outbox_purge_days', 180 );
+		$days = (int) \get_option( 'activitypub_outbox_purge_days', 180 );
 		Outbox::purge( $days );
 	}
 
