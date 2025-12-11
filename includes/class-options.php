@@ -18,7 +18,8 @@ class Options {
 	 * Initialize the options.
 	 */
 	public static function init() {
-		\add_action( 'init', array( self::class, 'register_settings' ), 11 );
+		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
+		\add_action( 'rest_api_init', array( self::class, 'register_settings' ) );
 
 		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_option_activitypub_actor_mode' ) );
 		\add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
@@ -53,6 +54,7 @@ class Options {
 						'enum' => array( 'title', 'excerpt', 'content' ),
 					),
 				),
+				'default'      => 'content',
 			)
 		);
 
@@ -146,9 +148,10 @@ class Options {
 			'activitypub',
 			'activitypub_allow_likes',
 			array(
-				'type'        => 'integer',
-				'description' => 'Allow likes.',
-				'default'     => '1',
+				'type'              => 'integer',
+				'description'       => 'Allow likes.',
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
 			)
 		);
 
@@ -156,9 +159,10 @@ class Options {
 			'activitypub',
 			'activitypub_allow_reposts',
 			array(
-				'type'        => 'integer',
-				'description' => 'Allow reposts.',
-				'default'     => '1',
+				'type'              => 'integer',
+				'description'       => 'Allow reposts.',
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
 			)
 		);
 
@@ -166,9 +170,10 @@ class Options {
 			'activitypub',
 			'activitypub_auto_approve_reactions',
 			array(
-				'type'        => 'integer',
-				'description' => 'Auto-approve Reactions.',
-				'default'     => '0',
+				'type'              => 'integer',
+				'description'       => 'Auto-approve Reactions.',
+				'default'           => '0',
+				'sanitize_callback' => 'absint',
 			)
 		);
 
