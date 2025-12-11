@@ -266,4 +266,107 @@ class Test_Sanitize extends \WP_UnitTestCase {
 		$this->assertStringContainsString( '<strong>Bold</strong>', $result );
 		$this->assertStringContainsString( '<em>italic</em>', $result );
 	}
+
+	/**
+	 * Data provider for strip_whitespace tests.
+	 *
+	 * @return array Test data with input and expected output.
+	 */
+	public function strip_whitespace_provider() {
+		return array(
+			'removes_newlines_between_tags'     => array(
+				"<p>Hello</p>\n<p>World</p>",
+				'<p>Hello</p><p>World</p>',
+			),
+			'removes_tabs_between_tags'         => array(
+				"<p>Hello</p>\t\t<p>World</p>",
+				'<p>Hello</p><p>World</p>',
+			),
+			'removes_carriage_returns'          => array(
+				"<p>Hello</p>\r\n<p>World</p>",
+				'<p>Hello</p><p>World</p>',
+			),
+			'removes_mixed_whitespace'          => array(
+				"<div>\n\t<p>Text</p>\n</div>",
+				'<div><p>Text</p></div>',
+			),
+			'preserves_spaces_between_tags'     => array(
+				'<span>Hello</span> <span>World</span>',
+				'<span>Hello</span> <span>World</span>',
+			),
+			'preserves_whitespace_in_text'      => array(
+				"<p>Hello\nWorld</p>",
+				"<p>Hello\nWorld</p>",
+			),
+			'preserves_pre_content'             => array(
+				"<pre>function test() {\n    return true;\n}</pre>",
+				"<pre>function test() {\n    return true;\n}</pre>",
+			),
+			'preserves_code_content'            => array(
+				"<code>const x = 1;\nconst y = 2;</code>",
+				"<code>const x = 1;\nconst y = 2;</code>",
+			),
+			'complex_html_with_pre'             => array(
+				"<p>Some text</p>\n<pre>code line 1\ncode line 2</pre>\n<p>More text</p>",
+				"<p>Some text</p><pre>code line 1\ncode line 2</pre><p>More text</p>",
+			),
+			'trims_leading_trailing_whitespace' => array(
+				"\n\n<p>Hello</p>\n\n",
+				'<p>Hello</p>',
+			),
+			'empty_string'                      => array(
+				'',
+				'',
+			),
+			'whitespace_only'                   => array(
+				"\n\t\r\n",
+				'',
+			),
+			'nested_tags_with_whitespace'       => array(
+				"<div>\n\t<ul>\n\t\t<li>Item</li>\n\t</ul>\n</div>",
+				'<div><ul><li>Item</li></ul></div>',
+			),
+			'self_closing_hr_between_tags'      => array(
+				"<p>Before</p>\n<hr />\n<p>After</p>",
+				'<p>Before</p><hr /><p>After</p>',
+			),
+			'self_closing_br_between_tags'      => array(
+				"<p>Line 1</p>\n<br>\n<p>Line 2</p>",
+				'<p>Line 1</p><br><p>Line 2</p>',
+			),
+			'br_inside_paragraph'               => array(
+				"<p>Line 1<br>\nLine 2</p>",
+				"<p>Line 1<br>\nLine 2</p>",
+			),
+			'hr_with_xhtml_syntax'              => array(
+				"<div>\n<hr/>\n</div>",
+				'<div><hr/></div>',
+			),
+			'deeply_nested_divs'                => array(
+				"<div>\n\t<div>\n\t\t<div>\n\t\t\t<p>Deep</p>\n\t\t</div>\n\t</div>\n</div>",
+				'<div><div><div><p>Deep</p></div></div></div>',
+			),
+			'mixed_self_closing_and_nested'     => array(
+				"<div>\n\t<p>Text</p>\n\t<hr />\n\t<p>More</p>\n</div>",
+				'<div><p>Text</p><hr /><p>More</p></div>',
+			),
+			'img_self_closing'                  => array(
+				"<p>Text</p>\n<img src=\"test.jpg\" />\n<p>More</p>",
+				'<p>Text</p><img src="test.jpg" /><p>More</p>',
+			),
+		);
+	}
+
+	/**
+	 * Test strip_whitespace with various inputs.
+	 *
+	 * @dataProvider strip_whitespace_provider
+	 * @covers ::strip_whitespace
+	 *
+	 * @param string $input    Input value.
+	 * @param string $expected Expected output.
+	 */
+	public function test_strip_whitespace( $input, $expected ) {
+		$this->assertSame( $expected, Sanitize::strip_whitespace( $input ) );
+	}
 }
