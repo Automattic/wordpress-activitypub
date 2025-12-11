@@ -58,9 +58,23 @@ jest.mock( '../../../components/page', () => ( {
 const mockPost: FeedPost = {
 	id: 1,
 	date: '2024-01-15T12:00:00',
+	date_gmt: '2024-01-15T12:00:00',
+	modified: '2024-01-15T12:00:00',
+	modified_gmt: '2024-01-15T12:00:00',
+	slug: 'test-post',
+	status: 'publish',
+	type: 'ap_post',
+	guid: { rendered: 'https://example.com/?p=1' },
+	comment_status: 'open',
+	ping_status: 'open',
+	author: 1,
 	actor_info: {
 		name: 'John Doe',
 		icon: 'https://example.com/avatar.jpg',
+		username: 'johndoe',
+		url: 'https://example.com/@johndoe',
+		webfinger: 'johndoe@example.com',
+		identifier: 'https://example.com/users/johndoe',
 	},
 	title: { rendered: 'Test Post Title' },
 	content: { rendered: '<p>Test post content</p>' },
@@ -72,16 +86,36 @@ const mockComments: Comment[] = [
 	{
 		id: 1,
 		post: 1,
+		parent: 0,
+		author: 2,
 		author_name: 'Commenter One',
+		author_url: 'https://example.com/@commenter1',
+		author_avatar_urls: {
+			'48': 'https://example.com/avatar1.jpg',
+		},
 		content: { rendered: '<p>First comment</p>' },
 		date: '2024-01-15T13:00:00',
+		date_gmt: '2024-01-15T13:00:00',
+		link: 'https://example.com/post/1#comment-1',
+		status: 'approved',
+		type: 'comment',
 	},
 	{
 		id: 2,
 		post: 1,
+		parent: 0,
+		author: 3,
 		author_name: 'Commenter Two',
+		author_url: 'https://example.com/@commenter2',
+		author_avatar_urls: {
+			'48': 'https://example.com/avatar2.jpg',
+		},
 		content: { rendered: '<p>Second comment</p>' },
 		date: '2024-01-15T14:00:00',
+		date_gmt: '2024-01-15T14:00:00',
+		link: 'https://example.com/post/1#comment-2',
+		status: 'approved',
+		type: 'comment',
 	},
 ];
 
@@ -91,6 +125,7 @@ const mockSettings: AppSettings = {
 	nonce: 'test-nonce',
 	restUrl: 'https://example.com/wp-json',
 	siteTitle: 'Test Site',
+	siteUrl: 'https://example.com',
 };
 
 // Mock @wordpress/core-data

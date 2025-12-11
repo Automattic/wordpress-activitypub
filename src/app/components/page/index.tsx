@@ -4,8 +4,15 @@
  * A reusable page wrapper that provides consistent header layout and content structure.
  */
 
-import { ReactNode } from 'react';
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
 import clsx from 'clsx';
+
+/**
+ * Internal dependencies
+ */
 import './style.scss';
 
 interface PageProps {

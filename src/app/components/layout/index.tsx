@@ -7,21 +7,33 @@
  * - Inspector (380px fixed, optional) - Detail panel
  */
 
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import { CommandMenu } from '@wordpress/commands';
 import { SnackbarList } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
+
+/**
+ * Internal dependencies
+ */
 import { Outlet } from '../../router';
 import Sidebar from '../sidebar';
 import './style.scss';
 
-export function Layout() {
+export function Layout(): ReactNode {
 	// Get notices for the snackbar
 	const notices = useSelect( ( select ) => {
-		const store = select( noticesStore ) as any;
-		return store.getNotices().filter( ( notice: any ) => notice.type === 'snackbar' );
-	}, [] );
-	const { removeNotice } = useDispatch( noticesStore ) as any;
+		const { getNotices } = select( noticesStore );
+		return getNotices().filter( ( notice ): boolean => notice.type === 'snackbar' );
+	}, [] ) as Array< { id: string; content: string } >;
+	const { removeNotice } = useDispatch( noticesStore );
 
 	return (
 		<div className="app-layout">

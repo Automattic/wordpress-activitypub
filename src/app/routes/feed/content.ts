@@ -5,5 +5,8 @@
  * This module is loaded lazily by the router for code splitting.
  */
 
+/**
+ * Internal dependencies
+ */
 export { default as stage } from './stage';
 export { default as inspector } from './inspector';

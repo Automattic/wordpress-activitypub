@@ -4,8 +4,15 @@
  * This component wraps content with appropriate theme context for consistent styling.
  */
 
-import { ReactNode } from 'react';
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
 import clsx from 'clsx';
+
+/**
+ * Internal dependencies
+ */
 import './style.scss';
 
 interface ThemedSurfaceProps {
@@ -19,6 +26,6 @@ interface ThemedSurfaceProps {
  * Wraps content in a themed surface with light background.
  * Uses wpds design tokens that are provided by ThemeProvider context.
  */
-export default function ThemedSurface( { className, children }: ThemedSurfaceProps ) {
+export default function ThemedSurface( { className, children }: ThemedSurfaceProps ): ReactNode {
 	return <div className={ clsx( 'themed-surface', className ) }>{ children }</div>;
 }

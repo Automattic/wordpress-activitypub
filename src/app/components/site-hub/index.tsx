@@ -5,6 +5,11 @@
  */
 
 /**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
  * WordPress dependencies
  */
 import { useSelect, useDispatch } from '@wordpress/data';
@@ -24,10 +29,15 @@ import type { UnstableBase } from '@wordpress/core-data';
 import SiteIcon from '../site-icon';
 import './style.scss';
 
-function SiteHub() {
-	const { homeUrl, siteTitle } = useSelect( ( select ) => {
+interface SiteHubData {
+	homeUrl: string | undefined;
+	siteTitle: string | undefined;
+}
+
+function SiteHub(): ReactNode {
+	const { homeUrl, siteTitle }: SiteHubData = useSelect( ( select ): SiteHubData => {
 		const { getEntityRecord } = select( coreStore );
-		const _base = getEntityRecord< UnstableBase >( 'root', '__unstableBase' );
+		const _base: UnstableBase | undefined = getEntityRecord< UnstableBase >( 'root', '__unstableBase' );
 		return {
 			homeUrl: _base?.home,
 			siteTitle: ! _base?.name && !! _base?.url ? filterURLForDisplay( _base?.url ) : _base?.name,
@@ -71,7 +81,7 @@ function SiteHub() {
 							size="compact"
 							className="site-hub__command-button"
 							icon={ search }
-							onClick={ () => openCommandCenter() }
+							onClick={ (): any => openCommandCenter() }
 							label={ __( 'Open command palette', 'activitypub' ) }
 							shortcut={ displayShortcut.primary( 'k' ) }
 						/>

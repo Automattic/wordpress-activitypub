@@ -1,6 +1,7 @@
 /**
  * External dependencies
  */
+import type { ReactNode } from 'react';
 import clsx from 'clsx';
 
 /**
@@ -22,10 +23,19 @@ interface SiteIconProps {
 	className?: string;
 }
 
-function SiteIcon( { className }: SiteIconProps ) {
-	const { isRequestingSite, siteIconUrl } = useSelect( ( select ) => {
+interface SiteIconData {
+	isRequestingSite: boolean;
+	siteIconUrl: string | undefined;
+}
+
+function SiteIcon( { className }: SiteIconProps ): ReactNode {
+	const { isRequestingSite, siteIconUrl }: SiteIconData = useSelect( ( select ): SiteIconData => {
 		const { getEntityRecord } = select( coreStore );
-		const siteData = getEntityRecord< UnstableBase >( 'root', '__unstableBase', undefined );
+		const siteData: UnstableBase | undefined = getEntityRecord< UnstableBase >(
+			'root',
+			'__unstableBase',
+			undefined
+		);
 
 		return {
 			isRequestingSite: ! siteData,
@@ -33,7 +43,7 @@ function SiteIcon( { className }: SiteIconProps ) {
 		};
 	}, [] );
 
-	let icon = null;
+	let icon: ReactNode = null;
 
 	if ( isRequestingSite ) {
 		icon = <div className="site-icon__image" />;

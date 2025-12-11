@@ -2,11 +2,18 @@
  * Action handlers for follower management.
  */
 
+/**
+ * WordPress dependencies
+ */
 import apiFetch from '@wordpress/api-fetch';
 import { dispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { __, _n } from '@wordpress/i18n';
 import type { Action } from '@wordpress/dataviews';
+
+/**
+ * Internal dependencies
+ */
 import type { Actor } from '../../types';
 
 // Get dispatch functions and namespace once for all action handlers
@@ -97,7 +104,7 @@ export async function follow( items: Actor[] ): Promise< void > {
  * Get all available actions for the DataViews component.
  */
 export function getFollowerActions(): Action< Actor >[] {
-	const followingEnabled = window.activityPubAdmin?.followingEnabled ?? false;
+	const followingEnabled = false; // TODO: Replace with actual setting check.
 
 	const actions: Action< Actor >[] = [
 		{

@@ -6,25 +6,33 @@
  */
 
 declare module '@wordpress/icons' {
-	import { ReactElement } from 'react';
+	import type { ReactElement } from 'react';
 
-	// ReactElements used in the project.
-	export const addCard: ReactElement;
-	export const arrowLeft: ReactElement;
-	export const chartBar: ReactElement;
+	// Icons used in src/app/components/object-types/index.tsx
+	export const audio: ReactElement;
+	export const calendar: ReactElement;
+	export const file: ReactElement;
+	export const image: ReactElement;
+	export const page: ReactElement;
+	export const pin: ReactElement;
+	export const postContent: ReactElement;
+	export const video: ReactElement;
+
+	// Icons used in src/app/components/sidebar/index.tsx
 	export const chevronLeft: ReactElement;
-	export const chevronLeftSmall: ReactElement;
 	export const chevronRight: ReactElement;
-	export const chevronRightSmall: ReactElement;
-	export const close: ReactElement;
-	export const comment: ReactElement;
-	export const commentContent: ReactElement;
 	export const cog: ReactElement;
-	export const group: ReactElement;
-	export const home: ReactElement;
-	export const people: ReactElement;
 	export const postList: ReactElement;
+
+	// Icons used in src/app/components/site-hub/index.tsx
 	export const search: ReactElement;
-	export const trendingUp: ReactElement;
+
+	// Icons used in src/app/components/site-icon/index.tsx
 	export const wordpress: ReactElement;
+
+	// Icons used in src/app/routes/feed/inspector.tsx
+	export const close: ReactElement;
+
+	// Icon used in src/app/components/object-types/index.tsx (also declared above)
+	export const comment: ReactElement;
 }

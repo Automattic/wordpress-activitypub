@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { Filter } from '@wordpress/dataviews';
+import type { Filter } from '@wordpress/dataviews';
 import { useMemo, useCallback } from '@wordpress/element';
 import { useView } from '@wordpress/views';
 

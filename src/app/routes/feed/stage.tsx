@@ -4,13 +4,25 @@
  * Main feed list view with DataViews
  */
 
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import { useMemo, useCallback, useState, useEffect, useRef } from '@wordpress/element';
 import { DataViews } from '@wordpress/dataviews';
+import type { Field, View as DataViewsView } from '@wordpress/dataviews';
 import { useView } from '@wordpress/views';
-import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
+
+/**
+ * Internal dependencies
+ */
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
 import { normalizeFieldOrder } from './utils';
@@ -20,7 +32,10 @@ import type { FeedPost } from '../../types';
 import { useNavigate } from '../../router';
 import './style.scss';
 
-const DEFAULT_VIEW: View = {
+// Using ReturnType to get the View type from useView to avoid version conflicts between @wordpress/views and @wordpress/dataviews
+type ViewType = ReturnType< typeof useView >[ 'view' ];
+
+const DEFAULT_VIEW: ViewType = {
 	type: 'list',
 	perPage: 20,
 	page: 1,
@@ -42,20 +57,26 @@ const defaultLayouts = {
 	},
 };
 
-export default function FeedStage() {
+export default function FeedStage(): ReactNode {
 	const navigate = useNavigate();
 
 	// Navigate to inspector by updating search params
-	const selectItem = useCallback(
-		( id: number ) => {
-			navigate( {
-				search: ( prev: Record< string, unknown > ) => ( { ...prev, postId: id } ),
+	const selectItem: ( id: number ) => void = useCallback(
+		( id: number ): void => {
+			void navigate( {
+				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => ( {
+					...prev,
+					postId: id,
+				} ) ) as never,
 			} );
 		},
 		[ navigate ]
 	);
 	// Get active actor ID from store
-	const activeActorId = useSelect( ( select ) => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(), [] );
+	const activeActorId: number | null = useSelect(
+		( select ): number | null => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(),
+		[]
+	);
 
 	// Track URL query parameters as state for reactivity
 	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
@@ -73,7 +94,7 @@ export default function FeedStage() {
 
 	// Listen for URL changes (browser back/forward).
 	useEffect( () => {
-		const updateQueryParams = () => {
+		const updateQueryParams = (): void => {
 			const args = getQueryArgs( window.location.href ) as {
 				paged?: string;
 				search?: string;
@@ -87,7 +108,7 @@ export default function FeedStage() {
 		window.addEventListener( 'popstate', updateQueryParams );
 		window.addEventListener( 'hashchange', updateQueryParams );
 
-		return () => {
+		return (): void => {
 			window.removeEventListener( 'popstate', updateQueryParams );
 			window.removeEventListener( 'hashchange', updateQueryParams );
 		};
@@ -100,10 +121,10 @@ export default function FeedStage() {
 		slug: 'feed',
 		defaultView: DEFAULT_VIEW,
 		queryParams: urlQueryParams,
-		onChangeQueryParams: ( params ) => {
-			const currentUrl = window.location.href;
+		onChangeQueryParams: ( params ): void => {
+			const currentUrl: string = window.location.href;
 			const currentArgs = getQueryArgs( currentUrl );
-			const newUrl = addQueryArgs( currentUrl, {
+			const newUrl: string = addQueryArgs( currentUrl, {
 				...currentArgs,
 				paged: params.page || undefined,
 				search: params.search || undefined,
@@ -119,10 +140,10 @@ export default function FeedStage() {
 
 	// Wrap updateView to reset page when filters change
 	const updateFeedView = useCallback(
-		( updatedView: View ) => {
+		( updatedView: ViewType ): void => {
 			// Reset to page 1 when filters change
-			const filtersChanged = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
-			const page = filtersChanged ? 1 : updatedView.page;
+			const filtersChanged: boolean = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
+			const page: number = filtersChanged ? 1 : updatedView.page ?? 1;
 
 			updateView( { ...updatedView, page } );
 		},
@@ -131,7 +152,7 @@ export default function FeedStage() {
 
 	// Reset view to default state when actor switches
 	const prevActiveActorId = useRef( activeActorId );
-	useEffect( () => {
+	useEffect( (): void => {
 		if ( prevActiveActorId.current !== activeActorId ) {
 			// Actor changed - reset to default view, preserving only field visibility
 			updateView( {
@@ -153,12 +174,12 @@ export default function FeedStage() {
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
-		() => [ metadataField, titleField, contentField, dateField, objectTypeField, tagField ],
+		(): Field< FeedPost >[] => [ metadataField, titleField, contentField, dateField, objectTypeField, tagField ],
 		[]
 	);
 
 	// Normalize view.fields to maintain the canonical order defined in fields array
-	const normalizedView = useMemo( () => normalizeFieldOrder( view, fields ), [ view, fields ] );
+	const normalizedView: ViewType = useMemo( () => normalizeFieldOrder( view, fields ), [ view, fields ] );
 
 	const [ selection, setSelection ] = useState< string[] >( [] );
 
@@ -167,28 +188,30 @@ export default function FeedStage() {
 	const [ isLoadingMore, setIsLoadingMore ] = useState( false );
 	const lastProcessedPage = useRef< number >( 0 );
 
-	useEffect( () => {
+	useEffect( (): void => {
 		if ( selection.length === 0 ) {
 			return;
 		}
 
-		const selectedId = selection[ 0 ];
-		const exists = feed.some( ( item ) => item.id.toString() === selectedId );
+		const selectedId: string = selection[ 0 ];
+		const exists: boolean = feed.some( ( item: FeedPost ): boolean => item.id.toString() === selectedId );
 		if ( ! exists ) {
 			setSelection( [] );
 		}
 	}, [ feed, selection ] );
 
 	const changeSelection = useCallback(
-		( nextSelection: string[] ) => {
+		( nextSelection: string[] ): void => {
 			setSelection( nextSelection );
 
 			if ( nextSelection.length === 0 ) {
 				return;
 			}
 
-			const selectedId = nextSelection[ 0 ];
-			const selectedItem = feed.find( ( item ) => item.id.toString() === selectedId );
+			const selectedId: string = nextSelection[ 0 ];
+			const selectedItem: FeedPost = feed.find(
+				( item: FeedPost ): boolean => item.id.toString() === selectedId
+			);
 
 			if ( selectedItem ) {
 				selectItem( selectedItem.id );
@@ -198,8 +221,8 @@ export default function FeedStage() {
 	);
 
 	// Infinite scroll handler
-	const infiniteScrollHandler = useCallback( () => {
-		const currentPage = view.page || 1;
+	const infiniteScrollHandler = useCallback( (): void => {
+		const currentPage: number = view.page || 1;
 
 		// Prevent concurrent requests or loading beyond available pages
 		if ( isLoadingMore || currentPage >= ( totalPages || 1 ) ) {
@@ -214,9 +237,9 @@ export default function FeedStage() {
 	}, [ isLoadingMore, view, totalPages, updateFeedView ] );
 
 	// Accumulate data across pages for infinite scroll
-	useEffect( () => {
-		const currentPage = normalizedView.page || 1;
-		const infiniteScrollEnabled = normalizedView.infiniteScrollEnabled;
+	useEffect( (): void => {
+		const currentPage: number = normalizedView.page || 1;
+		const infiniteScrollEnabled: boolean = normalizedView.infiniteScrollEnabled;
 
 		// Clear records when on first page with no results (handles filter/search changes)
 		if ( feed.length === 0 && currentPage === 1 ) {
@@ -243,9 +266,11 @@ export default function FeedStage() {
 			setIsLoadingMore( false );
 		} else {
 			// Append new records while avoiding duplicates
-			setAllLoadedRecords( ( prev ) => {
-				const existingIds = new Set( prev.map( ( item ) => item.id ) );
-				const newRecords = feed.filter( ( record ) => ! existingIds.has( record.id ) );
+			setAllLoadedRecords( ( prev: FeedPost[] ): FeedPost[] => {
+				const existingIds = new Set( prev.map( ( item: FeedPost ): number => item.id ) );
+				const newRecords: FeedPost[] = feed.filter(
+					( record: FeedPost ): boolean => ! existingIds.has( record.id )
+				);
 				return newRecords.length > 0 ? [ ...prev, ...newRecords ] : prev;
 			} );
 			lastProcessedPage.current = currentPage;
@@ -263,12 +288,12 @@ export default function FeedStage() {
 		<DataViews
 			data={ allLoadedRecords }
 			fields={ fields }
-			view={ normalizedView }
-			onChangeView={ updateFeedView }
+			view={ normalizedView as DataViewsView }
+			onChangeView={ updateFeedView as ( view: DataViewsView ) => void }
 			isLoading={ isResolving || isLoadingMore }
-			onClickItem={ ( item ) => selectItem( item.id ) }
-			isItemClickable={ () => true }
-			getItemId={ ( item ) => item.id.toString() }
+			onClickItem={ ( item: FeedPost ): void => selectItem( item.id ) }
+			isItemClickable={ (): true => true }
+			getItemId={ ( item: FeedPost ): string => item.id.toString() }
 			selection={ selection }
 			onChangeSelection={ changeSelection }
 			empty={

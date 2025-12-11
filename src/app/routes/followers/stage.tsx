@@ -5,12 +5,17 @@
  */
 
 /**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
  * WordPress dependencies
  */
 import { useMemo } from '@wordpress/element';
-import { DataViews } from '@wordpress/dataviews';
+import { Action, DataViews } from '@wordpress/dataviews';
+import type { Field, View as DataViewsView } from '@wordpress/dataviews';
 import { useView } from '@wordpress/views';
-import type { View, Field } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 
@@ -20,14 +25,18 @@ import { useSelect } from '@wordpress/data';
 import { Page } from '../../components/page';
 import { useFollowers } from '../../hooks/use-followers';
 import { avatarField, nameField, webfingerField, modifiedField, followStatusField } from '../../components/fields';
-import { getFollowerActions } from './FollowerActions';
+import { getFollowerActions } from './follower-actions';
 import type { Actor } from '../../types';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
 import './style.scss';
 
+// Using ReturnType to get the View type from useView to avoid version conflicts
+// between @wordpress/views and @wordpress/dataviews
+type ViewType = ReturnType< typeof useView >[ 'view' ];
+
 // Default view configuration
-const DEFAULT_VIEW: View = {
+const DEFAULT_VIEW: ViewType = {
 	type: 'table',
 	perPage: 20,
 	page: 1,
@@ -55,7 +64,7 @@ const defaultLayouts = {
 	},
 };
 
-export default function FollowersStage() {
+export default function FollowersStage(): ReactNode {
 	// Use the views hook to persist user preferences.
 	const { view, updateView } = useView( {
 		kind: 'postType',
@@ -65,7 +74,10 @@ export default function FollowersStage() {
 	} );
 
 	// Get active actor ID from store
-	const activeActorId = useSelect( ( select ) => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(), [] );
+	const activeActorId: number = useSelect(
+		( select ): number => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(),
+		[]
+	);
 
 	// Fetch followers using entity records
 	const { followers, isResolving, totalItems, totalPages } = useFollowers( {
@@ -79,23 +91,23 @@ export default function FollowersStage() {
 
 	// Define fields configuration
 	const fields: Field< Actor >[] = useMemo(
-		() => [ avatarField, nameField, webfingerField, modifiedField, followStatusField ],
+		(): Field< Actor >[] => [ avatarField, nameField, webfingerField, modifiedField, followStatusField ],
 		[]
 	);
 
 	// Get actions
-	const actions = useMemo( () => getFollowerActions(), [] );
+	const actions: Action< Actor >[] = useMemo( (): Action< Actor >[] => getFollowerActions(), [] );
 
 	return (
 		<Page title={ __( 'Followers', 'activitypub' ) } hasPadding={ false }>
 			<DataViews
 				data={ followers }
 				fields={ fields }
-				view={ view }
-				onChangeView={ updateView }
+				view={ view as DataViewsView }
+				onChangeView={ updateView as ( view: DataViewsView ) => void }
 				actions={ actions }
 				isLoading={ isResolving }
-				getItemId={ ( item ) => item.id.toString() }
+				getItemId={ ( item: Actor ): string => item.id.toString() }
 				empty={
 					<p>
 						{ view.search

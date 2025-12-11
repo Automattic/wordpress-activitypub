@@ -14,9 +14,6 @@
 		"resolveJsonModule": true,
 		"noEmit": true,
 		"baseUrl": ".",
-		"paths": {
-			"@wordpress/*": [ "../../node_modules/@wordpress/*/src" ]
-		},
 		"typeRoots": [ "../../node_modules/@types", "./types" ]
 	},
 	"include": [ "**/*.ts", "**/*.tsx", "types/**/*.d.ts" ],

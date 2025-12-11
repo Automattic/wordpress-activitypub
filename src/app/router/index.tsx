@@ -8,6 +8,7 @@
 /**
  * External dependencies
  */
+import type { ComponentType } from 'react';
 import { parseHref } from '@tanstack/history';
 import type { RouterHistory, HistoryLocation } from '@tanstack/history';
 import {
@@ -38,7 +39,6 @@ import { __ } from '@wordpress/i18n';
  */
 import type { Route, RouteConfig, RouteLoaderContext, RouteModule, RouteSurfaces } from './types';
 import Panel from '../components/panel';
-import { ComponentType } from 'react';
 
 // Re-export hooks for use in route components
 export { useNavigate, useSearch, useLoaderData, useLocation };

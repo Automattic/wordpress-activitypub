@@ -21,7 +21,15 @@ export const STORE_NAME = 'activitypub/app';
 /**
  * Store configuration
  */
-const storeConfig = {
+interface StoreConfig {
+	reducer: typeof reducer;
+	actions: typeof actions;
+	selectors: typeof selectors;
+	resolvers: typeof resolvers;
+	controls: typeof dataControls;
+}
+
+const storeConfig: StoreConfig = {
 	reducer,
 	actions,
 	selectors,

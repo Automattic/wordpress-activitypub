@@ -3,6 +3,6 @@
  */
 
 /**
- * Re-export shared types for convenience
+ * Internal dependencies
  */
 export type { Follower, Actor, ActorInfo, FollowStatus } from '../../types';
