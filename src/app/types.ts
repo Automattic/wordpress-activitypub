@@ -3,12 +3,7 @@
  */
 
 export interface AppSettings {
-	adminUrl: string;
-	defaultAvatar: string;
-	nonce: string;
-	restUrl: string;
-	siteTitle: string;
-	siteUrl: string;
+	namespace: string;
 }
 
 export interface Follower {

@@ -23,11 +23,11 @@ import {
 } from '@wordpress/components';
 import { chevronRight, chevronLeft, cog, postList } from '@wordpress/icons';
 import { __, isRTL } from '@wordpress/i18n';
+import { addQueryArgs } from '@wordpress/url';
 
 /**
  * Internal dependencies
  */
-import { useSettings } from '../../contexts/settings-context';
 import { useFeedFilters } from '../../hooks/use-feed-filters';
 import { useLocation, useNavigate } from '../../router';
 import SiteHub from '../site-hub';
@@ -61,7 +61,6 @@ export const menuItems: MenuItemConfig[] = [
 ];
 
 export default function Sidebar(): ReactNode {
-	const { adminUrl } = useSettings();
 	const location = useLocation();
 	const navigate = useNavigate();
 	const { hasActiveFilters, clearAllFilters } = useFeedFilters();
@@ -137,7 +136,7 @@ export default function Sidebar(): ReactNode {
 						icon={ cog }
 						iconSize={ 20 }
 						size="compact"
-						href={ `${ adminUrl }admin.php?page=activitypub` }
+						href={ addQueryArgs( 'admin.php', { page: 'activitypub' } ) }
 						target="_blank"
 						label={ __( 'Settings', 'activitypub' ) }
 						className="footer-settings-button"
