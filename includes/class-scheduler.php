@@ -339,7 +339,7 @@ class Scheduler {
 	 * Purge remote posts based on a schedule.
 	 */
 	public static function purge_ap_posts() {
-		$days = (int) get_option( 'activitypub_ap_post_purge_days', 30 );
+		$days = (int) \get_option( 'activitypub_ap_post_purge_days', 30 );
 		Posts::purge( $days );
 	}
 
