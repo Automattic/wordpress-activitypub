@@ -331,7 +331,7 @@ class Scheduler {
 	 * Purge inbox items based on a schedule.
 	 */
 	public static function purge_inbox() {
-		$days = (int) get_option( 'activitypub_inbox_purge_days', 180 );
+		$days = (int) \get_option( 'activitypub_inbox_purge_days', 180 );
 		Inbox::purge( $days );
 	}
 
