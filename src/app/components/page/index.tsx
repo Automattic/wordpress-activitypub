@@ -37,7 +37,7 @@ export function Page( {
 	hasBorder = false,
 	contentWidth = 'default',
 	children,
-}: PageProps ) {
+}: PageProps ): ReactNode {
 	return (
 		<div className="page">
 			<header className={ clsx( 'header', { 'has-border': hasBorder } ) }>

@@ -8,12 +8,12 @@
 /**
  * External dependencies
  */
-import { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
 /**
  * Internal dependencies
  */
-import { MenuItemConfig } from './index';
+import type { MenuItemConfig } from './index';
 
 interface MenuDescriptionProps {
 	menuItem: MenuItemConfig;
@@ -28,7 +28,7 @@ export default function MenuDescription( { menuItem: { description } }: MenuDesc
 		return <p className="sidebar-description">{ description }</p>;
 	}
 
-	const Description = description;
+	const Description: ( () => ReactNode ) | ComponentType = description;
 
 	return (
 		<p className="sidebar-description">

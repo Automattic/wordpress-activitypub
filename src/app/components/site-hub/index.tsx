@@ -81,7 +81,7 @@ function SiteHub(): ReactNode {
 							size="compact"
 							className="site-hub__command-button"
 							icon={ search }
-							onClick={ (): any => openCommandCenter() }
+							onClick={ openCommandCenter }
 							label={ __( 'Open command palette', 'activitypub' ) }
 							shortcut={ displayShortcut.primary( 'k' ) }
 						/>
