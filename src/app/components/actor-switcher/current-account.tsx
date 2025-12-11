@@ -3,6 +3,7 @@
  */
 
 import SiteIcon from '../site-icon';
+import { DEFAULT_AVATAR } from '../avatar';
 
 type CurrentAccountProps = {
 	isSiteActor: boolean;
@@ -17,7 +18,14 @@ export default function CurrentAccount( { isSiteActor, userAvatarUrl, displayNam
 			{ isSiteActor ? (
 				<SiteIcon className="actor-switcher__dropdown-avatar" />
 			) : (
-				<img src={ userAvatarUrl } alt={ displayName } className="actor-switcher__dropdown-avatar" />
+				<img
+					src={ userAvatarUrl }
+					alt={ displayName }
+					className="actor-switcher__dropdown-avatar"
+					onError={ ( e ): void => {
+						( e.target as HTMLImageElement ).src = DEFAULT_AVATAR;
+					} }
+				/>
 			) }
 			<div className="actor-switcher__account-info">
 				<span className="actor-switcher__account-name">{ displayName }</span>
