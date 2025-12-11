@@ -21,10 +21,6 @@
 			"type": "string",
 			"default": "facepile"
 		},
-		"separator": {
-			"type": "string",
-			"default": ", "
-		},
 		"showComments": {
 			"type": "boolean",
 			"default": true

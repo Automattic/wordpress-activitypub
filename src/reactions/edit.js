@@ -1,5 +1,6 @@
+import clsx from 'clsx';
 import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, TextControl, ToggleControl } from '@wordpress/components';
+import { PanelBody, ToggleControl } from '@wordpress/components';
 import { __, _x, sprintf } from '@wordpress/i18n';
 import { select } from '@wordpress/data';
 import { useEffect, useRef } from '@wordpress/element';
@@ -60,27 +61,36 @@ const DUMMY_COUNTS = {
 /**
  * Summary component for displaying reaction counts.
  *
- * @param {Object} props           Component props.
- * @param {string} props.separator Separator between items.
+ * @param {Object}  props              Component props.
+ * @param {boolean} props.showComments Whether to show comments count.
+ * @param {boolean} props.showEmpty    Whether to show items with zero count.
  * @return {JSX.Element} Component to render.
  */
-function Summary( { separator } ) {
-	const items = [
-		{ label: __( 'Comments', 'activitypub' ), count: DUMMY_COUNTS.comments },
-		{ label: __( 'Likes', 'activitypub' ), count: DUMMY_COUNTS.likes },
-		{ label: __( 'Reposts', 'activitypub' ), count: DUMMY_COUNTS.reposts },
-		{ label: __( 'Quotes', 'activitypub' ), count: DUMMY_COUNTS.quotes },
+function Summary( { showComments, showEmpty } ) {
+	const allItems = [
+		{ key: 'comments', label: __( 'Comments', 'activitypub' ), count: DUMMY_COUNTS.comments },
+		{ key: 'likes', label: __( 'Likes', 'activitypub' ), count: DUMMY_COUNTS.likes },
+		{ key: 'reposts', label: __( 'Reposts', 'activitypub' ), count: DUMMY_COUNTS.reposts },
+		{ key: 'quotes', label: __( 'Quotes', 'activitypub' ), count: DUMMY_COUNTS.quotes },
 	];
+
+	// Filter items based on settings.
+	const items = allItems.filter( ( item ) => {
+		if ( item.key === 'comments' && ! showComments ) {
+			return false;
+		}
+		if ( ! showEmpty && item.count === 0 ) {
+			return false;
+		}
+		return true;
+	} );
 
 	return (
 		<div className="activitypub-reactions-summary">
-			{ items.map( ( item, index ) => (
-				<span key={ item.label }>
-					{ index > 0 && <span className="reactions-summary-separator">{ separator }</span> }
-					<span className="reactions-summary-item">
-						<span className="reactions-summary-count">{ item.count }</span>
-						<span className="reactions-summary-label">{ item.label }</span>
-					</span>
+			{ items.map( ( item ) => (
+				<span key={ item.key } className="reactions-summary-item">
+					<span className="reactions-summary-count">{ item.count }</span>
+					<span className="reactions-summary-label">{ item.label }</span>
 				</span>
 			) ) }
 		</div>
@@ -96,13 +106,7 @@ function Summary( { separator } ) {
  * @return {JSX.Element} Component to render.
  */
 export default function Edit( { attributes, setAttributes, __unstableLayoutClassNames } ) {
-	const {
-		className = '',
-		displayStyle = 'facepile',
-		separator = ', ',
-		showComments = true,
-		showEmpty = true,
-	} = attributes;
+	const { className = '', displayStyle = 'facepile', showComments = true, showEmpty = true } = attributes;
 	const blockProps = useBlockProps( {
 		className: __unstableLayoutClassNames,
 	} );
@@ -121,7 +125,7 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 		const hasStyleClass = className?.includes( 'is-style-' );
 		if ( ! showAvatars && ! hasStyleClass ) {
 			setAttributes( {
-				className: ( className ? className + ' ' : '' ) + 'is-style-summary',
+				className: clsx( className, 'is-style-summary' ),
 				displayStyle: 'summary',
 			} );
 		}
@@ -129,9 +133,11 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 
 	// Sync displayStyle attribute with className when style changes.
 	const classNameStyle = className?.includes( 'is-style-summary' ) ? 'summary' : 'facepile';
-	if ( classNameStyle !== displayStyle ) {
-		setAttributes( { displayStyle: classNameStyle } );
-	}
+	useEffect( () => {
+		if ( classNameStyle !== displayStyle ) {
+			setAttributes( { displayStyle: classNameStyle } );
+		}
+	}, [ classNameStyle, displayStyle, setAttributes ] );
 
 	// Use displayStyle attribute for rendering decision.
 	const isSummaryStyle = displayStyle === 'summary';
@@ -167,14 +173,6 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 							onChange={ ( value ) => setAttributes( { showEmpty: value } ) }
 							__nextHasNoMarginBottom
 						/>
-						<TextControl
-							label={ __( 'Separator', 'activitypub' ) }
-							help={ __( 'Character(s) to separate each item.', 'activitypub' ) }
-							value={ separator }
-							onChange={ ( value ) => setAttributes( { separator: value } ) }
-							__next40pxDefaultSize
-							__nextHasNoMarginBottom
-						/>
 					</PanelBody>
 				</InspectorControls>
 			) }
@@ -185,7 +183,7 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 				renderAppender={ false }
 			/>
 			{ isSummaryStyle ? (
-				<Summary separator={ separator } />
+				<Summary showComments={ showComments } showEmpty={ showEmpty } />
 			) : (
 				<Reactions postId={ getCurrentPostId() } fallbackReactions={ DUMMY_REACTIONS } />
 			) }

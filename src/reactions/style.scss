@@ -185,10 +185,10 @@
 
 	.reactions-summary-item {
 		white-space: nowrap;
-	}
 
-	.reactions-summary-separator {
-		opacity: 0.6;
+		&:not(:last-child) {
+			margin-inline-end: 1em;
+		}
 	}
 
 	.reactions-summary-count {

@@ -24,7 +24,6 @@ $attributes = wp_parse_args(
 	array(
 		'align'        => null,
 		'displayStyle' => $default_display_style,
-		'separator'    => ', ',
 		'showComments' => true,
 		'showEmpty'    => true,
 	)
@@ -84,37 +83,38 @@ if ( $is_summary ) {
 			continue;
 		}
 
+		// phpcs:disable WordPress.WP.I18n
+		$label = sprintf(
+			_n(
+				$type_object['count_single'],
+				$type_object['count_plural'],
+				$count,
+				'activitypub'
+			),
+			number_format_i18n( $count )
+		);
+		// phpcs:enable WordPress.WP.I18n
+
 		$counts[ $_type ] = array(
 			'count' => $count,
-			'label' => $type_object['label'],
+			'label' => $label,
 		);
 	}
 
 	// Don't render if there are no items to show.
 	if ( empty( $counts ) ) {
 		ob_end_clean();
+		echo '<!-- Reactions block: No reactions found. -->';
 		return;
 	}
 
 	?>
 	<div class="activitypub-reactions-summary">
-		<?php
-		$index = 0;
-		foreach ( $counts as $data ) :
-			if ( $index > 0 ) :
-				?>
-				<span class="reactions-summary-separator"><?php echo esc_html( $attributes['separator'] ); ?></span>
-				<?php
-			endif;
-			?>
+		<?php foreach ( $counts as $data ) : ?>
 			<span class="reactions-summary-item">
-				<span class="reactions-summary-count"><?php echo esc_html( number_format_i18n( $data['count'] ) ); ?></span>
-				<span class="reactions-summary-label"><?php echo esc_html( $data['label'] ); ?></span>
+				<?php echo esc_html( $data['label'] ); ?>
 			</span>
-			<?php
-			++$index;
-		endforeach;
-		?>
+		<?php endforeach; ?>
 	</div>
 	<?php
 
@@ -174,6 +174,9 @@ if ( $is_summary ) {
 		return;
 	}
 
+	// Check if avatars should be shown.
+	$show_avatars = get_option( 'show_avatars', true );
+
 	// Set up the Interactivity API config.
 	wp_interactivity_config(
 		'activitypub/reactions',
@@ -223,6 +226,7 @@ if ( $is_summary ) {
 			$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
 			?>
 		<div class="reaction-group" data-reaction-type="<?php echo esc_attr( $_type ); ?>">
+			<?php if ( $show_avatars ) : ?>
 			<ul class="reaction-avatars">
 				<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
 					<li>
@@ -246,6 +250,7 @@ if ( $is_summary ) {
 					</li>
 				</template>
 			</ul>
+			<?php endif; ?>
 			<button
 				class="reaction-label wp-element-button"
 				data-reaction-type="<?php echo esc_attr( $_type ); ?>"
@@ -269,6 +274,7 @@ if ( $is_summary ) {
 		<template data-wp-each="context.modal.items">
 			<li class="reaction-item">
 				<a data-wp-bind--href="context.item.url" target="_blank" rel="noopener noreferrer">
+					<?php if ( $show_avatars ) : ?>
 					<img
 						alt=""
 						data-wp-bind--alt="context.item.name"
@@ -276,6 +282,7 @@ if ( $is_summary ) {
 						data-wp-on--error="callbacks.setDefaultAvatar"
 						src=""
 					/>
+					<?php endif; ?>
 					<span class="reaction-name" data-wp-text="context.item.name"></span>
 				</a>
 			</li>
