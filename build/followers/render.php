@@ -46,6 +46,7 @@ if ( is_wp_error( $user ) ) {
 }
 
 $_per_page     = absint( $attributes['per_page'] );
+$_show_avatars = (bool) \get_option( 'show_avatars' );
 $follower_data = Followers::query( $user_id, $_per_page );
 
 // Prepare Followers data for the Interactivity API context.
@@ -115,6 +116,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						rel="external noreferrer noopener"
 						data-wp-bind--title="context.item.handle">
 
+						<?php if ( $_show_avatars ) : ?>
 						<img
 							data-wp-bind--src="context.item.icon.url"
 							data-wp-on--error="callbacks.setDefaultAvatar"
@@ -124,6 +126,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							width="48"
 							height="48"
 						>
+						<?php endif; ?>
 
 						<div class="follower-info">
 							<span class="follower-name" data-wp-text="context.item.name"></span>
