@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
@@ -63,7 +64,7 @@ class Post_Types {
 				'query_var'        => false,
 				'delete_with_user' => false,
 				'can_export'       => true,
-				'supports'         => array( 'custom-fields' ),
+				'supports'         => array( 'title', 'custom-fields' ),
 			)
 		);
 
@@ -606,8 +607,10 @@ class Post_Types {
 	 */
 	public static function register_ap_actor_rest_query_params( $params ) {
 		$params['activitypub_following'] = array(
-			'description' => \__( 'Filter actors by who they follow (WordPress user ID).', 'activitypub' ),
-			'type'        => 'integer',
+			'description'       => \__( 'Filter actors by who they follow (WordPress user ID).', 'activitypub' ),
+			'type'              => 'integer',
+			'sanitize_callback' => 'absint',
+			'validate_callback' => 'is_user_member_of_blog',
 		);
 
 		return $params;
@@ -624,7 +627,8 @@ class Post_Types {
 	public static function filter_ap_actor_rest_query( $args, $request ) {
 		$following = $request->get_param( 'activitypub_following' );
 
-		if ( $following ) {
+		// Only filter if user ID provided and social graph is visible or current user can edit that user.
+		if ( $following && ( Actors::show_social_graph( $following ) || \current_user_can( 'edit_user', $following ) ) ) {
 			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				array(
 					'key'   => Followers::FOLLOWER_META_KEY,

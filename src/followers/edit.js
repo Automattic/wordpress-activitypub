@@ -3,6 +3,7 @@ import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-
 import { store as coreStore, useEntityRecords } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useState, useEffect } from '@wordpress/element';
+import { decodeEntities } from '@wordpress/html-entities';
 import { __ } from '@wordpress/i18n';
 import { useOptions } from '../shared/use-options';
 import { useUserOptions } from '../shared/use-user-options';
@@ -233,7 +234,7 @@ function Pagination( { page, pages, setPage } ) {
  */
 function Follower( { title, guid, meta } ) {
 	const { defaultAvatarUrl, showAvatars } = useOptions();
-	const name = title?.rendered || '';
+	const name = decodeEntities( title?.rendered || '' );
 	const url = guid?.rendered || '#';
 	const handle = meta?._activitypub_acct ? `@${ meta._activitypub_acct }` : '';
 	const avatar = meta?._activitypub_avatar_url || defaultAvatarUrl;
