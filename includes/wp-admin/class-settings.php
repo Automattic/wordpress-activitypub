@@ -248,6 +248,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_reader_ui',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable the Reader to view posts from accounts you follow.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_create_posts',
 			array(
 				'type'        => 'boolean',

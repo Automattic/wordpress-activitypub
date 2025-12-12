@@ -34,6 +34,11 @@ class Test_Options extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_blog_identifier' );
 		\delete_option( 'activitypub_actor_mode' );
 
+		// Clean up reader-specific options.
+		\delete_option( 'activitypub_reader_ui' );
+		\delete_option( 'activitypub_following_ui' );
+		\delete_option( 'activitypub_create_posts' );
+
 		parent::tear_down();
 	}
 
@@ -107,5 +112,81 @@ class Test_Options extends \WP_UnitTestCase {
 		// Verify previous value options were deleted.
 		$this->assertFalse( \get_option( 'activitypub_relay_previous_blog_identifier', false ) );
 		$this->assertFalse( \get_option( 'activitypub_relay_previous_actor_mode', false ) );
+	}
+
+	/**
+	 * Test that enabling reader UI enables following UI.
+	 *
+	 * @covers \Activitypub\Options::pre_option_activitypub_following_ui
+	 */
+	public function test_reader_ui_enables_following_ui() {
+		// Initially following UI should be disabled.
+		$this->assertEquals( '0', \get_option( 'activitypub_following_ui', '0' ) );
+
+		// Enable reader UI.
+		\update_option( 'activitypub_reader_ui', '1' );
+
+		// Following UI should now be enabled via the filter.
+		$this->assertEquals( '1', \get_option( 'activitypub_following_ui', '0' ) );
+	}
+
+	/**
+	 * Test that enabling reader UI enables create posts.
+	 *
+	 * @covers \Activitypub\Options::pre_option_activitypub_create_posts
+	 */
+	public function test_reader_ui_enables_create_posts() {
+		// Initially create posts should be disabled.
+		$this->assertFalse( \get_option( 'activitypub_create_posts', false ) );
+
+		// Enable reader UI.
+		\update_option( 'activitypub_reader_ui', '1' );
+
+		// Create posts should now be enabled via the filter.
+		$this->assertEquals( '1', \get_option( 'activitypub_create_posts', false ) );
+	}
+
+	/**
+	 * Test that disabling reader UI does not force following UI.
+	 *
+	 * @covers \Activitypub\Options::pre_option_activitypub_following_ui
+	 */
+	public function test_reader_ui_disabled_does_not_force_following_ui() {
+		// Ensure reader UI is disabled.
+		\delete_option( 'activitypub_reader_ui' );
+
+		// Set following UI manually.
+		\update_option( 'activitypub_following_ui', '1' );
+
+		// Following UI should remain as set.
+		$this->assertEquals( '1', \get_option( 'activitypub_following_ui', '0' ) );
+
+		// Disable following UI.
+		\update_option( 'activitypub_following_ui', '0' );
+
+		// Following UI should be disabled.
+		$this->assertEquals( '0', \get_option( 'activitypub_following_ui', '0' ) );
+	}
+
+	/**
+	 * Test that disabling reader UI does not force create posts.
+	 *
+	 * @covers \Activitypub\Options::pre_option_activitypub_create_posts
+	 */
+	public function test_reader_ui_disabled_does_not_force_create_posts() {
+		// Ensure reader UI is disabled.
+		\delete_option( 'activitypub_reader_ui' );
+
+		// Set create posts manually.
+		\update_option( 'activitypub_create_posts', '1' );
+
+		// Create posts should remain as set.
+		$this->assertEquals( '1', \get_option( 'activitypub_create_posts', false ) );
+
+		// Disable create posts.
+		\delete_option( 'activitypub_create_posts' );
+
+		// Create posts should be disabled.
+		$this->assertFalse( \get_option( 'activitypub_create_posts', false ) );
 	}
 }

@@ -32,7 +32,7 @@ class Menu {
 		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_settings_list_tables' ) );
 		\add_action( 'load-' . $settings_page, array( Screen_Options::class, 'add_settings_list_options' ) );
 
-		if ( site_supports_blocks() && \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
+		if ( \get_option( 'activitypub_reader_ui', '0' ) && site_supports_blocks() && \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
 			$app_hook = \add_dashboard_page(
 				\__( 'Social Web', 'activitypub' ),
 				\__( 'Social Web', 'activitypub' ),
