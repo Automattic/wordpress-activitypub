@@ -7,9 +7,9 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Activitypub;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Post_Types;
 
 /**
  * Test class for Post Types.
@@ -30,7 +30,8 @@ class Test_Post_Types extends \WP_UnitTestCase {
 	 */
 	public function set_up(): void {
 		parent::set_up();
-		Activitypub::init();
+
+		Post_Types::init();
 
 		global $wp_rest_server;
 		$wp_rest_server = new \Spy_REST_Server();
@@ -56,12 +57,15 @@ class Test_Post_Types extends \WP_UnitTestCase {
 	public function test_prevent_empty_post_meta() {
 		$post_id = self::factory()->post->create( array( 'post_author' => 1 ) );
 
+		// Storing the default value should be prevented.
 		\update_post_meta( $post_id, 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
-		$this->assertEmpty( \get_post_meta( $post_id, 'activitypub_max_image_attachments', true ) );
-		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
+		$this->assertFalse( \metadata_exists( 'post', $post_id, 'activitypub_max_image_attachments' ) );
 
+		// Storing a non-default value should work.
 		\update_post_meta( $post_id, 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS + 3 );
+		$this->assertTrue( \metadata_exists( 'post', $post_id, 'activitypub_max_image_attachments' ) );
 		$this->assertEquals( ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS + 3, \get_post_meta( $post_id, 'activitypub_max_image_attachments', true ) );
+
 		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
 	}
 
