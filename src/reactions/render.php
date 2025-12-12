@@ -61,8 +61,7 @@ if ( ! $has_style_class ) {
 	$attributes['displayStyle'] = $default_display_style;
 }
 
-$is_compact   = 'compact' === $attributes['displayStyle'];
-$show_avatars = ! $is_compact;
+$show_avatars = 'facepile' === $attributes['displayStyle'];
 
 // Fetch reactions.
 $reactions = array();
