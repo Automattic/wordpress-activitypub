@@ -226,7 +226,7 @@ class Advanced_Settings_Fields {
 			</label>
 		</p>
 		<p class="description">
-			Adds a "Social Web" page to your Dashboard where you can read posts and shares from accounts you follow. Also enables the Following feature.
+			Adds a "Social Web" interface where you can read posts and shares from accounts you follow. Also enables the Following feature. Look for it in Dashboard > Social Web.
 		</p>
 		<p class="description">
 			⚠ This feature is experimental and may change significantly in future updates.
