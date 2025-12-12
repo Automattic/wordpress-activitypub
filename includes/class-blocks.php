@@ -89,8 +89,8 @@ class Blocks {
 		if ( ! \get_option( 'show_avatars', true ) ) {
 			$reactions_args['styles'] = array(
 				array(
-					'name'      => 'summary',
-					'label'     => __( 'Summary', 'activitypub' ),
+					'name'      => 'compact',
+					'label'     => __( 'Compact', 'activitypub' ),
 					'isDefault' => true,
 				),
 			);

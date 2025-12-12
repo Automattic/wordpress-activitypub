@@ -15,7 +15,7 @@ if ( is_activitypub_request() || is_feed() ) {
 }
 
 // Get the default display style based on WordPress avatar settings.
-$default_display_style = get_option( 'show_avatars', true ) ? 'facepile' : 'summary';
+$default_display_style = get_option( 'show_avatars', true ) ? 'facepile' : 'compact';
 
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args(
@@ -52,18 +52,18 @@ $_post_id = $attributes['postId'] ?? get_the_ID();
 $block_id = 'activitypub-reactions-block-' . wp_unique_id();
 
 /*
- * Determine display style - summary style hides avatars.
+ * Determine display style - compact style hides avatars.
  * For auto-hooked blocks without explicit style, use avatar setting to determine style.
  */
 $has_style_class = isset( $attributes['className'] ) && strpos( $attributes['className'], 'is-style-' ) !== false;
 if ( ! $has_style_class ) {
-	$default_style              = get_option( 'show_avatars', true ) ? 'facepile' : 'summary';
+	$default_style              = get_option( 'show_avatars', true ) ? 'facepile' : 'compact';
 	$attributes['className']    = trim( ( $attributes['className'] ?? '' ) . ' is-style-' . $default_style );
 	$attributes['displayStyle'] = $default_style;
 }
 
-$is_summary   = 'summary' === $attributes['displayStyle'];
-$show_avatars = ! $is_summary;
+$is_compact   = 'compact' === $attributes['displayStyle'];
+$show_avatars = ! $is_compact;
 
 // Fetch reactions.
 $reactions = array();

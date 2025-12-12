@@ -13,13 +13,13 @@ import { useOptions } from '../shared/use-options';
  *
  * @param {Object} props           Component props.
  * @param {Array}  props.reactions Array of reaction objects.
- * @param {string} props.displayStyle The display style ('facepile' or 'summary').
+ * @param {string} props.displayStyle The display style ('facepile' or 'compact').
  * @return {JSX.Element}           The rendered component.
  */
 const FacepileRow = ( { reactions, displayStyle } ) => {
 	const { defaultAvatarUrl } = useOptions();
 
-	if ( displayStyle === 'summary' ) {
+	if ( displayStyle === 'compact' ) {
 		return null;
 	}
 
@@ -55,7 +55,7 @@ const FacepileRow = ( { reactions, displayStyle } ) => {
  *
  * @param {Object} props              Component props.
  * @param {Array}  props.reactions    Array of reaction objects.
- * @param {string} props.displayStyle The display style ('facepile' or 'summary').
+ * @param {string} props.displayStyle The display style ('facepile' or 'compact').
  * @return {JSX.Element} The rendered component.
  */
 const ReactionList = ( { reactions, displayStyle } ) => {
@@ -94,7 +94,7 @@ const ReactionList = ( { reactions, displayStyle } ) => {
  * @param {Object} props              Component props.
  * @param {Array}  props.items        Array of reaction objects.
  * @param {string} props.label        Label for the reaction group.
- * @param {string} props.displayStyle The display style ('facepile' or 'summary').
+ * @param {string} props.displayStyle The display style ('facepile' or 'compact').
  * @return {JSX.Element}              The rendered component.
  */
 const ReactionGroup = ( { items, label, displayStyle } ) => {

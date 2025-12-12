@@ -19,8 +19,8 @@
       "isDefault": true
     },
     {
-      "name": "summary",
-      "label": "Summary"
+      "name": "compact",
+      "label": "Compact"
     }
   ],
   "attributes": {

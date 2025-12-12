@@ -76,7 +76,7 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 		// Only apply default if no style has been explicitly chosen yet.
 		const hasStyleClass = className?.includes( 'is-style-' );
 		if ( ! hasStyleClass ) {
-			const defaultStyle = showAvatars ? 'facepile' : 'summary';
+			const defaultStyle = showAvatars ? 'facepile' : 'compact';
 			setAttributes( {
 				className: clsx( className, `is-style-${ defaultStyle }` ),
 				displayStyle: defaultStyle,
@@ -85,7 +85,7 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 	}, [ className, showAvatars, setAttributes ] );
 
 	// Sync displayStyle attribute with className when style changes.
-	const classNameStyle = className?.includes( 'is-style-summary' ) ? 'summary' : 'facepile';
+	const classNameStyle = className?.includes( 'is-style-compact' ) ? 'compact' : 'facepile';
 	useEffect( () => {
 		if ( classNameStyle !== displayStyle ) {
 			setAttributes( { displayStyle: classNameStyle } );

@@ -498,6 +498,79 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the reactions block with facepile style shows avatars.
+	 */
+	public function test_render_reactions_block_facepile_style_shows_avatars() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"className":"is-style-facepile","displayStyle":"facepile"} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-facepile', $output );
+		$this->assertStringContainsString( 'reaction-avatars', $output );
+	}
+
+	/**
+	 * Test the reactions block with compact style hides avatars.
+	 */
+	public function test_render_reactions_block_compact_style_hides_avatars() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"className":"is-style-compact","displayStyle":"compact"} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-compact', $output );
+		$this->assertStringNotContainsString( 'reaction-avatars', $output );
+	}
+
+	/**
+	 * Test the reactions block defaults to facepile when avatars are enabled.
+	 */
+	public function test_render_reactions_block_defaults_to_facepile_with_avatars_enabled() {
+		\update_option( 'show_avatars', true );
+
+		$post_id = $this->get_post_id_with_reactions();
+
+		// Block without explicit style class.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-facepile', $output );
+		$this->assertStringContainsString( 'reaction-avatars', $output );
+	}
+
+	/**
+	 * Test the reactions block defaults to compact when avatars are disabled.
+	 */
+	public function test_render_reactions_block_defaults_to_compact_with_avatars_disabled() {
+		\update_option( 'show_avatars', false );
+
+		$post_id = $this->get_post_id_with_reactions();
+
+		// Block without explicit style class.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-compact', $output );
+		$this->assertStringNotContainsString( 'reaction-avatars', $output );
+
+		// Restore default.
+		\update_option( 'show_avatars', true );
+	}
+
+	/**
+	 * Test the reactions block with no reactions returns empty comment.
+	 */
+	public function test_render_reactions_block_with_no_reactions() {
+		$post_id = self::factory()->post->create();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( '<!-- Reactions block: No reactions found. -->', $output );
+	}
+
+	/**
 	 * Get a post ID with reactions.
 	 *
 	 * @return int Post ID.
