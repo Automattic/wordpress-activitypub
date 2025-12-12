@@ -11,8 +11,8 @@ import { useOptions } from '../shared/use-options';
 /**
  * A component that renders a row of user avatars for a given set of reactions.
  *
- * @param {Object} props           Component props.
- * @param {Array}  props.reactions Array of reaction objects.
+ * @param {Object} props              Component props.
+ * @param {Array}  props.reactions    Array of reaction objects.
  * @param {string} props.displayStyle The display style ('facepile' or 'compact').
  * @return {JSX.Element}           The rendered component.
  */
@@ -127,11 +127,11 @@ const ReactionGroup = ( { items, label, displayStyle } ) => {
 /**
  * The Reactions component.
  *
- * @param {Object}  props                  Component props.
- * @param {?number} props.postId           The Post ID.
- * @param {?Object} props.reactions        Optional reactions data.
+ * @param {Object}  props                   Component props.
+ * @param {?number} props.postId            The Post ID.
+ * @param {?Object} props.reactions         Optional reactions data.
  * @param {?Object} props.fallbackReactions Optional fallback reactions data to use if no real reactions are found.
- * @param {string}  props.displayStyle     The display style ('facepile' or 'summary').
+ * @param {string}  props.displayStyle      The display style ('facepile' or 'summary').
  * @return {?JSX.Element}                  The rendered component.
  */
 export function Reactions( {

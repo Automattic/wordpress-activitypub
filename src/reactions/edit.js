@@ -52,9 +52,9 @@ const DUMMY_REACTIONS = {
 /**
  * Edit component for the Reactions block.
  *
- * @param {Object} props                              Block props.
- * @param {Object} props.attributes                   Block attributes.
- * @param {string} props.__unstableLayoutClassNames   Layout class names.
+ * @param {Object} props                            Block props.
+ * @param {Object} props.attributes                 Block attributes.
+ * @param {string} props.__unstableLayoutClassNames Layout class names.
  * @return {JSX.Element} Component to render.
  */
 export default function Edit( { attributes, setAttributes, __unstableLayoutClassNames } ) {
