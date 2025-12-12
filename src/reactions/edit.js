@@ -3,7 +3,8 @@ import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { __, _x, sprintf } from '@wordpress/i18n';
 import { select } from '@wordpress/data';
-import { useEffect, useRef } from '@wordpress/element';
+import { useEffect, useRef, useState } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
 import { Reactions } from './reactions';
 import { useOptions } from '../shared/use-options';
 
@@ -61,17 +62,68 @@ const DUMMY_COUNTS = {
 /**
  * Summary component for displaying reaction counts.
  *
- * @param {Object}  props              Component props.
- * @param {boolean} props.showComments Whether to show comments count.
- * @param {boolean} props.showEmpty    Whether to show items with zero count.
+ * @param {Object}  props                     Component props.
+ * @param {?number} props.postId              The Post ID.
+ * @param {boolean} props.showComments        Whether to show comments count.
+ * @param {boolean} props.showEmpty           Whether to show items with zero count.
+ * @param {?Object} props.fallbackCounts      Optional fallback counts to use if no real data is found.
  * @return {JSX.Element} Component to render.
  */
-function Summary( { showComments, showEmpty } ) {
+function Summary( { postId = null, showComments, showEmpty, fallbackCounts = null } ) {
+	const { namespace } = useOptions();
+	const [ counts, setCounts ] = useState( fallbackCounts );
+	const [ loading, setLoading ] = useState( ! fallbackCounts );
+
+	useEffect( () => {
+		// If no postId is provided or it's not a number (Site Editor), use fallback.
+		if ( ! postId || typeof postId !== 'number' ) {
+			if ( fallbackCounts ) {
+				setCounts( fallbackCounts );
+			}
+			setLoading( false );
+			return;
+		}
+
+		setLoading( true );
+		apiFetch( {
+			path: `/${ namespace }/posts/${ postId }/reactions`,
+		} )
+			.then( ( response ) => {
+				// Build counts from the response
+				const newCounts = {
+					likes: response.likes?.count || 0,
+					reposts: response.reposts?.count || 0,
+					quotes: response.quotes?.count || 0,
+				};
+
+				// Check if there are any real reactions
+				const hasReactions = Object.values( newCounts ).some( ( count ) => count > 0 );
+
+				// If there are no real reactions and fallback is provided, use the fallback.
+				if ( ! hasReactions && fallbackCounts ) {
+					setCounts( fallbackCounts );
+				} else {
+					setCounts( newCounts );
+				}
+				setLoading( false );
+			} )
+			.catch( () => {
+				if ( fallbackCounts ) {
+					setCounts( fallbackCounts );
+				}
+				setLoading( false );
+			} );
+	}, [ postId, fallbackCounts, namespace ] );
+
+	if ( loading || ! counts ) {
+		return null;
+	}
+
 	const allItems = [
-		{ key: 'comments', label: __( 'Comments', 'activitypub' ), count: DUMMY_COUNTS.comments },
-		{ key: 'likes', label: __( 'Likes', 'activitypub' ), count: DUMMY_COUNTS.likes },
-		{ key: 'reposts', label: __( 'Reposts', 'activitypub' ), count: DUMMY_COUNTS.reposts },
-		{ key: 'quotes', label: __( 'Quotes', 'activitypub' ), count: DUMMY_COUNTS.quotes },
+		{ key: 'comments', label: __( 'Comments', 'activitypub' ), count: counts.comments || 0 },
+		{ key: 'likes', label: __( 'Likes', 'activitypub' ), count: counts.likes || 0 },
+		{ key: 'reposts', label: __( 'Reposts', 'activitypub' ), count: counts.reposts || 0 },
+		{ key: 'quotes', label: __( 'Quotes', 'activitypub' ), count: counts.quotes || 0 },
 	];
 
 	// Filter items based on settings.
@@ -183,7 +235,12 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 				renderAppender={ false }
 			/>
 			{ isSummaryStyle ? (
-				<Summary showComments={ showComments } showEmpty={ showEmpty } />
+				<Summary
+					postId={ getCurrentPostId() }
+					showComments={ showComments }
+					showEmpty={ showEmpty }
+					fallbackCounts={ DUMMY_COUNTS }
+				/>
 			) : (
 				<Reactions postId={ getCurrentPostId() } fallbackReactions={ DUMMY_REACTIONS } />
 			) }
