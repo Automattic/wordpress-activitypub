@@ -1,15 +1,19 @@
 /**
  * Object Types Component
  *
- * Displays ap_object_type taxonomy terms as a clickable list of object types
+ * Displays ap_object_type taxonomy terms as a clickable list of object types.
+ * Only shows object types that have posts for the currently active actor.
  */
 
 import { useEntityRecords } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
+import { useSelect } from '@wordpress/data';
 import { Icon, MenuItem, MenuGroup } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
 import { useObjectTypeFilter } from '../../hooks/use-object-type-filter';
 import { postContent, audio, file, calendar, image, comment, page, pin, video } from '@wordpress/icons';
+import { STORE_NAME } from '../../store';
+import type { AppSelectors } from '../../store';
 
 // Object type configuration with translations and icons - matches object-type field definitions
 export const objectTypeConfig: Record< string, { label: string; icon: any } > = {
@@ -26,9 +30,22 @@ export const objectTypeConfig: Record< string, { label: string; icon: any } > = 
 };
 
 export function ObjectTypes() {
-	const { records: objectTypes, isResolving } = useEntityRecords< Term >( 'taxonomy', 'ap_object_type', {
-		per_page: -1,
-	} );
+	// Get active actor ID from store to filter object types
+	const activeActorId = useSelect( ( select ) => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(), [] );
+
+	// Only fetch when we have an active actor ID (including 0 for site actor)
+	const hasActiveActor = activeActorId !== null;
+
+	const { records: objectTypes, isResolving } = useEntityRecords< Term >(
+		'taxonomy',
+		'ap_object_type',
+		hasActiveActor
+			? {
+					per_page: -1,
+					user_id: activeActorId,
+			  }
+			: undefined
+	);
 
 	const { selectedObjectTypeId, updateObjectTypeFilter } = useObjectTypeFilter();
 
