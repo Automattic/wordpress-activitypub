@@ -194,7 +194,7 @@ export function Reactions( {
 	}
 
 	return (
-		<>
+		<div className="activitypub-reactions">
 			{ Object.entries( reactions ).map( ( [ key, group ] ) => {
 				if ( ! group.items?.length ) {
 					return null;
@@ -209,7 +209,7 @@ export function Reactions( {
 					/>
 				);
 			} ) }
-		</>
+		</div>
 	);
 }
 
