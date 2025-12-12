@@ -57,9 +57,8 @@ $block_id = 'activitypub-reactions-block-' . wp_unique_id();
  */
 $has_style_class = isset( $attributes['className'] ) && strpos( $attributes['className'], 'is-style-' ) !== false;
 if ( ! $has_style_class ) {
-	$default_style              = get_option( 'show_avatars', true ) ? 'facepile' : 'compact';
-	$attributes['className']    = trim( ( $attributes['className'] ?? '' ) . ' is-style-' . $default_style );
-	$attributes['displayStyle'] = $default_style;
+	$attributes['className']    = trim( ( $attributes['className'] ?? '' ) . ' is-style-' . $default_display_style );
+	$attributes['displayStyle'] = $default_display_style;
 }
 
 $is_compact   = 'compact' === $attributes['displayStyle'];
