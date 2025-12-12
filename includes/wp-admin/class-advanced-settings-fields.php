@@ -79,15 +79,6 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_following_ui' )
 		);
 
-		\add_settings_field(
-			'activitypub_create_posts',
-			\__( 'Create Posts', 'activitypub' ),
-			array( self::class, 'render_create_posts_field' ),
-			'activitypub_advanced_settings',
-			'activitypub_advanced_settings',
-			array( 'label_for' => 'activitypub_create_posts' )
-		);
-
 		if ( \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
 			\add_settings_field(
 				'activitypub_reader_ui',
