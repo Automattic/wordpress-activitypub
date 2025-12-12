@@ -99,7 +99,7 @@
 			gap: 0.25rem;
 			flex: 0 0 auto;
 			padding: 0.25rem 0.5rem;
-			font-size: 70%;
+			font-size: var(--wp--preset--font-size--small, 0.875rem);
 			color: currentColor;
 			transition: background-color 0.2s ease;
 			white-space: nowrap;
@@ -177,6 +177,10 @@
 
 /* Summary display style - inline buttons without avatars */
 .wp-block-activitypub-reactions.is-style-summary {
+	.wp-block-heading {
+		margin-bottom: 0.5em;
+	}
+
 	.activitypub-reactions {
 		flex-direction: row;
 		flex-wrap: wrap;
