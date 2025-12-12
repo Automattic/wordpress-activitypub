@@ -68,7 +68,7 @@ const ReactionList = ( { reactions, displayStyle } ) => {
 				return (
 					<li key={ index } className="reaction-item">
 						<a href={ reaction.url } className="reaction-item" target="_blank" rel="noopener noreferrer">
-							{ displayStyle !== 'summary' && (
+							{ displayStyle === 'facepile' && (
 								<img
 									src={ avatar }
 									alt={ reaction.name }
