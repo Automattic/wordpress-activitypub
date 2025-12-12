@@ -5,6 +5,11 @@ import { Filter } from '@wordpress/dataviews';
 import { useMemo, useCallback } from '@wordpress/element';
 import { useView } from '@wordpress/views';
 
+/**
+ * Internal dependencies
+ */
+import { useNavigate } from '../router';
+
 interface UpdateTagFilterOptions {
 	onComplete?: () => void;
 }
@@ -23,6 +28,7 @@ interface UseTagFilterReturn {
  * @return {UseTagFilterReturn} Selected tag ID and update function
  */
 export function useTagFilter(): UseTagFilterReturn {
+	const navigate = useNavigate();
 	const { view, updateView } = useView( {
 		kind: 'postType',
 		name: 'ap_post',
@@ -79,12 +85,20 @@ export function useTagFilter(): UseTagFilterReturn {
 				page: 1, // Reset to first page
 			} );
 
+			// Close inspector by removing postId from URL
+			void navigate( {
+				search: ( prev: Record< string, unknown > ) => {
+					const { postId: _, ...rest } = prev as { postId?: number };
+					return rest;
+				},
+			} );
+
 			// Call completion callback if provided
 			if ( options.onComplete ) {
 				options.onComplete();
 			}
 		},
-		[ view, updateView ]
+		[ view, updateView, navigate ]
 	);
 
 	return { selectedTagId, updateTagFilter };
