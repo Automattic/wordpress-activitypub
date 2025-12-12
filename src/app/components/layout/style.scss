@@ -1,3 +1,6 @@
+@use "@wordpress/base-styles/mixins";
+@use "@wordpress/base-styles/breakpoints";
+
 /* Ensure provider wrappers (SlotFillProvider, ShortcutProvider) fill height */
 #activitypub-app-root > div {
 	height: 100%;
@@ -10,6 +13,16 @@
 	height: 100%;
 	background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
 	overflow: hidden;
+	isolation: isolate; // Create stacking context for z-index
+}
+
+// Backdrop for mobile sidebar drawer
+.sidebar-backdrop {
+	position: fixed;
+	inset: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	z-index: 100002;
+	cursor: pointer;
 }
 
 .app-content {
@@ -19,6 +32,11 @@
 	display: flex;
 	background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
 	overflow: hidden;
+
+	// Mobile: stack content vertically
+	&.is-mobile {
+		flex-direction: column;
+	}
 }
 
 .sidebar-region {
@@ -26,21 +44,69 @@
 	width: 300px;
 	display: flex;
 	flex-direction: column;
+	height: 100%;
+
+	// Mobile drawer styles
+	&.is-mobile {
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 300px;
+		max-width: 85vw;
+		z-index: 100003;
+		box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+		background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+	}
 }
 
-.stage-region {
-	flex-grow: 1;
-	min-width: 0;
+// Stage and inspector regions
+// Mobile: full-screen fixed positioning with z-index stacking (inspector overlays stage)
+// Desktop: side-by-side flex layout
+.stage-region,
+.inspector-region {
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+
+	// Mobile: full-screen fixed positioning (below mobile header)
+	position: fixed;
+	top: 56px; // Height of SiteHubMobile header
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: 100vw;
+	height: calc(100vh - 56px);
+
+	// Desktop: static side-by-side layout
+	@include mixins.break-medium() {
+		position: static;
+		top: auto;
+		left: auto;
+		right: auto;
+		bottom: auto;
+		width: auto;
+		height: auto;
+	}
+}
+
+.stage-region {
+	z-index: 2;
+
+	@include mixins.break-medium() {
+		z-index: auto;
+		flex: 1 1 auto;
+		min-width: 0;
+	}
 }
 
 .inspector-region {
-	width: var(--sw-inspector-width);
-	flex-shrink: 0;
-	display: flex;
-	flex-direction: column;
+	z-index: 3; // Stacks on top of stage on mobile
+
+	@include mixins.break-medium() {
+		z-index: auto;
+		flex: 0 0 var(--sw-inspector-width, 380px);
+	}
 }
 
 // Position the SnackbarList at the bottom left of the viewport
@@ -51,18 +117,8 @@
 	z-index: 100000; // High z-index to ensure it appears above other content
 }
 
-// Responsive
-@media (max-width: 782px) {
-	.app-content {
-		flex-direction: column;
-	}
-
-	.sidebar-region,
-	.inspector-region {
-		width: 100%;
-	}
-
-	// Adjust snackbar position on mobile
+// Mobile snackbar adjustments
+@media (max-width: #{breakpoints.$break-medium}) {
 	.components-snackbar-list {
 		left: 10px;
 		right: 10px;
