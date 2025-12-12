@@ -610,7 +610,7 @@ class Post_Types {
 			'description'       => \__( 'Filter actors by who they follow (WordPress user ID).', 'activitypub' ),
 			'type'              => 'integer',
 			'sanitize_callback' => 'absint',
-			'validate_callback' => 'is_user_member_of_blog',
+			'validate_callback' => '\Activitypub\user_can_activitypub',
 		);
 
 		return $params;
@@ -627,14 +627,20 @@ class Post_Types {
 	public static function filter_ap_actor_rest_query( $args, $request ) {
 		$following = $request->get_param( 'activitypub_following' );
 
-		// Only filter if user ID provided and social graph is visible or current user can edit that user.
-		if ( $following && ( Actors::show_social_graph( $following ) || \current_user_can( 'edit_user', $following ) ) ) {
+		if ( null === $following ) {
+			return $args;
+		}
+
+		// Only return followers if social graph is visible.
+		if ( Actors::show_social_graph( $following ) ) {
 			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				array(
 					'key'   => Followers::FOLLOWER_META_KEY,
 					'value' => $following,
 				),
 			);
+		} else {
+			$args['post__in'] = array( 0 );
 		}
 
 		return $args;

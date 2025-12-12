@@ -10,7 +10,6 @@ namespace Activitypub\Tests;
 use Activitypub\Activitypub;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
-use Activitypub\Post_Types;
 
 /**
  * Test class for Post Types.
@@ -103,45 +102,75 @@ class Test_Post_Types extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test ap_actor REST endpoint returns followers when social graph is hidden.
-	 *
-	 * The REST endpoint should still return followers regardless of the
-	 * activitypub_hide_social_graph setting, as this setting only affects
-	 * the ActivityPub protocol endpoint, not the WordPress REST API.
+	 * Test ap_actor REST endpoint respects social graph visibility setting.
 	 *
 	 * @covers ::register_ap_actor_rest_query_params
 	 * @covers ::filter_ap_actor_rest_query
 	 */
-	public function test_ap_actor_rest_endpoint_returns_followers_with_hidden_social_graph() {
+	public function test_ap_actor_rest_endpoint_respects_social_graph_visibility() {
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 
-		// Hide social graph.
-		\update_user_option( $user_id, 'activitypub_hide_social_graph', '1' );
+		// Enable blog user for this test.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		// Create test follower.
+		// Create test follower for user.
 		$follower_id = self::factory()->post->create(
 			array(
 				'post_type'   => Remote_Actors::POST_TYPE,
-				'post_title'  => 'Hidden Graph Follower',
+				'post_title'  => 'User Follower',
 				'post_status' => 'publish',
-				'guid'        => 'https://example.com/users/hidden',
+				'guid'        => 'https://example.com/users/follower',
 			)
 		);
 		\add_post_meta( $follower_id, Followers::FOLLOWER_META_KEY, $user_id );
 
-		// Query the REST API.
+		// Create test follower for blog user (ID 0).
+		$blog_follower_id = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_title'  => 'Blog Follower',
+				'post_status' => 'publish',
+				'guid'        => 'https://example.com/users/blog-follower',
+			)
+		);
+		\add_post_meta( $blog_follower_id, Followers::FOLLOWER_META_KEY, 0 );
+
+		// Verify followers are returned when social graph is visible.
 		$request = new \WP_REST_Request( 'GET', '/wp/v2/ap_actor' );
 		$request->set_param( 'activitypub_following', $user_id );
-
 		$response = $this->server->dispatch( $request );
-
 		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 1, $response->get_data(), 'User followers should be returned when social graph is visible.' );
 
-		$data = $response->get_data();
-		$this->assertCount( 1, $data );
-		$this->assertEquals( $follower_id, $data[0]['id'] );
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/ap_actor' );
+		$request->set_param( 'activitypub_following', 0 );
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 1, $response->get_data(), 'Blog followers should be returned when social graph is visible.' );
+
+		// Hide social graph for user.
+		\update_user_option( $user_id, 'activitypub_hide_social_graph', '1' );
+
+		// Verify no followers are returned for user with hidden social graph.
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/ap_actor' );
+		$request->set_param( 'activitypub_following', $user_id );
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 0, $response->get_data(), 'User followers should not be returned when social graph is hidden.' );
+
+		// Hide social graph for blog.
+		\update_option( 'activitypub_hide_social_graph', '1' );
+
+		// Verify no followers are returned for blog with hidden social graph.
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/ap_actor' );
+		$request->set_param( 'activitypub_following', 0 );
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 0, $response->get_data(), 'Blog followers should not be returned when social graph is hidden.' );
 
 		// Clean up.
 		\delete_user_option( $user_id, 'activitypub_hide_social_graph' );
+		\delete_option( 'activitypub_hide_social_graph' );
+		\delete_option( 'activitypub_actor_mode' );
 	}
 }

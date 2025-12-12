@@ -1,13 +1,29 @@
-import { SelectControl, RangeControl, PanelBody } from '@wordpress/components';
+import { SelectControl, RangeControl, PanelBody, Notice } from '@wordpress/components';
 import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-editor';
-import { store as coreStore, useEntityRecords } from '@wordpress/core-data';
+import { store as coreStore, useEntityRecords, useEntityRecord } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useMemo } from '@wordpress/element';
 import { decodeEntities } from '@wordpress/html-entities';
 import { __ } from '@wordpress/i18n';
 import { useOptions } from '../shared/use-options';
 import { useUserOptions } from '../shared/use-user-options';
 import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
+
+/**
+ * Check if a user has their social graph hidden based on user meta.
+ *
+ * @param {Object} userMeta The user's metadata.
+ * @return {boolean} True if social graph is hidden.
+ */
+function hasSocialGraphHidden( userMeta ) {
+	if ( ! userMeta ) {
+		return false;
+	}
+
+	return Object.entries( userMeta ).some(
+		( [ key, value ] ) => key.endsWith( 'activitypub_hide_social_graph' ) && value
+	);
+}
 
 /**
  * Edit component.
@@ -34,6 +50,78 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		setPage( 1 );
 		setAttributes( { [ key ]: value } );
 	};
+
+	// Get site settings to check blog social graph visibility.
+	const { record: siteSettings } = useEntityRecord( 'root', 'site', undefined );
+	const blogSocialGraphHidden = !! siteSettings?.activitypub_hide_social_graph;
+
+	// Get current user for capability checks and to determine if they can edit settings.
+	const { currentUser, usersWithMeta, siteUrl } = useSelect( ( select ) => {
+		const { getCurrentUser, getUsers, getEntityRecord } = select( coreStore );
+		const siteData = getEntityRecord( 'root', '__unstableBase' );
+
+		return {
+			currentUser: getCurrentUser(),
+			usersWithMeta: getUsers( { capabilities: 'activitypub' } ),
+			siteUrl: siteData?.home,
+		};
+	}, [] );
+
+	// Filter user options based on social graph visibility.
+	const filteredUsersOptions = useMemo( () => {
+		if ( ! usersOptions.length ) {
+			return [];
+		}
+
+		return usersOptions.filter( ( { value } ) => {
+			// Always keep 'inherit' (Dynamic User) option.
+			if ( value === 'inherit' ) {
+				return true;
+			}
+			// Check blog social graph visibility.
+			if ( value === 'blog' ) {
+				return ! blogSocialGraphHidden;
+			}
+			// Check individual user social graph visibility.
+			const user = usersWithMeta?.find( ( u ) => String( u.id ) === value );
+			return ! hasSocialGraphHidden( user?.meta );
+		} );
+	}, [ usersOptions, blogSocialGraphHidden, usersWithMeta ] );
+
+	// Determine if we should show a notice for hidden social graph.
+	const showHiddenNotice = useMemo( () => {
+		// Don't show notice for 'inherit' mode.
+		if ( selectedUser === 'inherit' ) {
+			return false;
+		}
+
+		return ! filteredUsersOptions.find( ( { value } ) => value === selectedUser );
+	}, [ selectedUser, filteredUsersOptions ] );
+
+	// Determine if current user can edit the settings for the selected user.
+	const canEditSettings = useMemo( () => {
+		if ( ! showHiddenNotice || ! currentUser ) {
+			return false;
+		}
+		if ( selectedUser === 'blog' ) {
+			return currentUser.capabilities?.manage_options;
+		}
+
+		return String( currentUser.id ) === selectedUser;
+	}, [ showHiddenNotice, currentUser, selectedUser ] );
+
+	// Get the settings URL for the notice.
+	const settingsUrl = useMemo( () => {
+		if ( ! canEditSettings || ! siteUrl ) {
+			return null;
+		}
+		if ( selectedUser === 'blog' ) {
+			return siteUrl + '/wp-admin/options-general.php?page=activitypub&tab=blog-profile';
+		}
+
+		return siteUrl + '/wp-admin/profile.php#activitypub';
+	}, [ canEditSettings, selectedUser, siteUrl ] );
+
 	const authorId = useSelect(
 		( select ) => {
 			const { getEditedEntityRecord } = select( coreStore );
@@ -46,14 +134,16 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 
 	useEffect( () => {
 		// if there are no users yet, do nothing
-		if ( ! usersOptions.length ) {
+		if ( ! filteredUsersOptions.length ) {
 			return;
 		}
-		// ensure that the selected user is in the list of options, if not, select the first available user
-		if ( ! usersOptions.find( ( { value } ) => value === selectedUser ) ) {
-			setAttributes( { selectedUser: usersOptions[ 0 ].value } );
+
+		// Ensure that the selected user is in the list of options, if not, select the first available user
+		// but only if the notice isn't showing (to preserve existing blocks with hidden social graph)
+		if ( ! showHiddenNotice && ! filteredUsersOptions.find( ( { value } ) => value === selectedUser ) ) {
+			setAttributes( { selectedUser: filteredUsersOptions[ 0 ].value } );
 		}
-	}, [ selectedUser, usersOptions, setAttributes ] );
+	}, [ selectedUser, filteredUsersOptions, setAttributes, showHiddenNotice ] );
 
 	// Template for InnerBlocks - allows only a heading block.
 	const TEMPLATE = [
@@ -71,11 +161,11 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		<div { ...blockProps }>
 			<InspectorControls key="setting">
 				<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
-					{ usersOptions.length > 1 && (
+					{ filteredUsersOptions.length > 1 && (
 						<SelectControl
 							label={ __( 'Select User', 'activitypub' ) }
 							value={ selectedUser }
-							options={ usersOptions }
+							options={ filteredUsersOptions }
 							onChange={ setAttributeWithPageReset( 'selectedUser' ) }
 							__next40pxDefaultSize
 							__nextHasNoMarginBottom
@@ -109,7 +199,22 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 					renderAppender={ false }
 				/>
 
-				{ selectedUser === 'inherit' ? (
+				{ showHiddenNotice ? (
+					<Notice status="warning" isDismissible={ false }>
+						{ __(
+							'The selected user has their social graph hidden. This block will not display followers on the frontend.',
+							'activitypub'
+						) }
+						{ settingsUrl && (
+							<>
+								{ ' ' }
+								<a href={ settingsUrl } target="_blank" rel="noopener noreferrer">
+									{ __( 'Edit privacy settings', 'activitypub' ) }
+								</a>
+							</>
+						) }
+					</Notice>
+				) : selectedUser === 'inherit' ? (
 					authorId ? (
 						<Followers { ...attributes } page={ page } setPage={ setPage } selectedUser={ authorId } />
 					) : (

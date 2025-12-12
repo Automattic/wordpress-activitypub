@@ -191,6 +191,7 @@ class Activitypub {
 				'single'            => true,
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
+				'show_in_rest'      => true,
 			)
 		);
 
