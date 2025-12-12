@@ -51,7 +51,17 @@ $_post_id = $attributes['postId'] ?? get_the_ID();
 // Generate a unique ID for the block.
 $block_id = 'activitypub-reactions-block-' . wp_unique_id();
 
-// Determine display style - summary style hides avatars.
+/*
+ * Determine display style - summary style hides avatars.
+ * For auto-hooked blocks without explicit style, use avatar setting to determine style.
+ */
+$has_style_class = isset( $attributes['className'] ) && strpos( $attributes['className'], 'is-style-' ) !== false;
+if ( ! $has_style_class ) {
+	$default_style              = get_option( 'show_avatars', true ) ? 'facepile' : 'summary';
+	$attributes['className']    = trim( ( $attributes['className'] ?? '' ) . ' is-style-' . $default_style );
+	$attributes['displayStyle'] = $default_style;
+}
+
 $is_summary   = 'summary' === $attributes['displayStyle'];
 $show_avatars = ! $is_summary;
 
@@ -233,6 +243,7 @@ $inner_content = $reactions_content . ob_get_clean();
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
 		'id'                  => $block_id,
+		'class'               => $attributes['className'] ?? '',
 		'data-wp-interactive' => 'activitypub/reactions',
 		'data-wp-context'     => wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
 		'data-wp-init'        => 'callbacks.initReactions',

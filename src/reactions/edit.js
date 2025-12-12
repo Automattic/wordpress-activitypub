@@ -66,7 +66,7 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 	const { showAvatars = true } = useOptions();
 	const hasInitialized = useRef( false );
 
-	// On first render, if avatars are disabled and no style class is set, default to summary.
+	// On first render, set default style based on avatar setting.
 	useEffect( () => {
 		if ( hasInitialized.current ) {
 			return;
@@ -75,10 +75,11 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 
 		// Only apply default if no style has been explicitly chosen yet.
 		const hasStyleClass = className?.includes( 'is-style-' );
-		if ( ! showAvatars && ! hasStyleClass ) {
+		if ( ! hasStyleClass ) {
+			const defaultStyle = showAvatars ? 'facepile' : 'summary';
 			setAttributes( {
-				className: clsx( className, 'is-style-summary' ),
-				displayStyle: 'summary',
+				className: clsx( className, `is-style-${ defaultStyle }` ),
+				displayStyle: defaultStyle,
 			} );
 		}
 	}, [ className, showAvatars, setAttributes ] );
