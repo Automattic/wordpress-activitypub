@@ -27,14 +27,6 @@
     "displayStyle": {
       "type": "string",
       "default": "facepile"
-    },
-    "showComments": {
-      "type": "boolean",
-      "default": true
-    },
-    "showEmpty": {
-      "type": "boolean",
-      "default": true
     }
   },
   "supports": {

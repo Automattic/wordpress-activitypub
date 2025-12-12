@@ -161,7 +161,7 @@
 		}
 
 		.reaction-name {
-			font-size: 75%;
+			font-size: inherit;
 		}
 	}
 }
@@ -175,27 +175,18 @@
 	padding: 0.5rem;
 }
 
-/* Summary display style */
-.wp-block-activitypub-reactions {
-	.activitypub-reactions-summary {
-		display: inline;
-		font-size: var(--wp--preset--font-size--small, 0.875em);
-		color: var(--wp--preset--color--contrast, currentColor);
+/* Summary display style - inline buttons without avatars */
+.wp-block-activitypub-reactions.is-style-summary {
+	.activitypub-reactions {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0.5em;
+		display: inline-flex;
 	}
 
-	.reactions-summary-item {
-		white-space: nowrap;
-
-		&:not(:last-child) {
-			margin-inline-end: 1em;
-		}
-	}
-
-	.reactions-summary-count {
-		font-weight: var(--wp--custom--font-weight--semi-bold, 600);
-	}
-
-	.reactions-summary-label {
-		margin-inline-start: var(--wp--preset--spacing--10, 0.25em);
+	.reaction-group {
+		width: auto;
+		margin: 0;
+		display: inline-flex;
 	}
 }
