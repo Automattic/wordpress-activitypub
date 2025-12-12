@@ -8,7 +8,7 @@
 /**
  * External dependencies
  */
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { parseHref } from '@tanstack/history';
 import type { RouterHistory, HistoryLocation } from '@tanstack/history';
 import {
@@ -18,6 +18,8 @@ import {
 	createRootRoute,
 	createRoute,
 	createRouter,
+	LazyRoute,
+	LinkComponent,
 	Outlet,
 	RouterProvider,
 	useLoaderData,
@@ -47,12 +49,12 @@ export { useNavigate, useSearch, useLoaderData, useLocation };
 export { Outlet };
 
 // Create Link component for navigation
-export const Link = createLink( { defaultPreload: 'intent' } );
+export const Link: LinkComponent< any > = createLink( { defaultPreload: 'intent' } );
 
 /**
  * Not found component displayed when no route matches.
  */
-function NotFoundComponent() {
+function NotFoundComponent(): ReactNode {
 	return <div style={ { padding: '20px', textAlign: 'center' } }>{ __( 'Page not found', 'activitypub' ) }</div>;
 }
 
@@ -64,7 +66,7 @@ function NotFoundComponent() {
  *
  * @param route       Route configuration
  * @param parentRoute Parent route.
- * @return Tanstack Route.
+ * @return TanStack Route.
  */
 async function createRouteFromDefinition( route: Route, parentRoute: AnyRoute ): Promise< AnyRoute > {
 	let routeConfig: RouteConfig = {};
@@ -76,11 +78,11 @@ async function createRouteFromDefinition( route: Route, parentRoute: AnyRoute ):
 
 	// Create base route configuration
 	// Using 'any' for TanStack callbacks due to strictNullChecks requirement
-	const baseRoute = createRoute( {
+	const baseRoute: AnyRoute = createRoute( {
 		getParentRoute: (): AnyRoute => parentRoute,
 		path: route.path,
 		beforeLoad: routeConfig.beforeLoad
-			? ( ctx: any ) =>
+			? ( ctx: any ): void | Promise< void > =>
 					routeConfig.beforeLoad!( {
 						params: ctx.params || {},
 						search: ctx.search || {},
@@ -101,11 +103,11 @@ async function createRouteFromDefinition( route: Route, parentRoute: AnyRoute ):
 				inspector: inspectorVisible as boolean,
 			};
 		},
-		loaderDeps: ( opts: any ) => opts.search,
+		loaderDeps: ( opts: any ): any => opts.search,
 	} );
 
 	// Chain .lazy() to preload content module on intent
-	const lazyRoute = baseRoute.lazy( async () => {
+	const lazyRoute: AnyRoute = baseRoute.lazy( async (): Promise< LazyRoute< any > > => {
 		const module: RouteSurfaces = route.contentLoader ? await route.contentLoader() : {};
 
 		const Stage: ComponentType = module.stage;
@@ -149,14 +151,14 @@ async function createRouteFromDefinition( route: Route, parentRoute: AnyRoute ):
  * @return Router tree.
  */
 async function createRouteTree( routes: Route[], rootComponent: RouteComponent ): Promise< AnyRoute > {
-	const rootRoute = createRootRoute( {
+	const rootRoute: AnyRoute = createRootRoute( {
 		component: rootComponent,
 		context: (): Record< string, unknown > => ( {} ),
 	} );
 
 	// Create routes from definitions
 	const dynamicRoutes: AnyRoute[] = await Promise.all(
-		routes.map( ( route: Route ) => createRouteFromDefinition( route, rootRoute ) )
+		routes.map( ( route: Route ): Promise< AnyRoute > => createRouteFromDefinition( route, rootRoute ) )
 	);
 
 	return rootRoute.addChildren( dynamicRoutes );
@@ -188,7 +190,7 @@ interface RouterProps {
 	rootComponent: RouteComponent;
 }
 
-export default function Router( { routes, rootComponent }: RouterProps ) {
+export default function Router( { routes, rootComponent }: RouterProps ): ReactNode {
 	const [ router, setRouter ] = useState< AnyRouter | null >( null );
 
 	useEffect( () => {

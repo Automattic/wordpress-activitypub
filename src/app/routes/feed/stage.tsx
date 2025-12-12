@@ -8,6 +8,7 @@
  * External dependencies
  */
 import type { ReactNode } from 'react';
+import { UseNavigateResult } from '@tanstack/react-router';
 
 /**
  * WordPress dependencies
@@ -58,7 +59,7 @@ const defaultLayouts = {
 };
 
 export default function FeedStage(): ReactNode {
-	const navigate = useNavigate();
+	const navigate: UseNavigateResult< string > = useNavigate();
 
 	// Navigate to inspector by updating search params
 	const selectItem: ( id: number ) => void = useCallback(

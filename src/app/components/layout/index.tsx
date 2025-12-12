@@ -17,7 +17,7 @@
 /**
  * External dependencies
  */
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { ParsedLocation } from '@tanstack/react-router';
 
 /**
@@ -86,8 +86,8 @@ export function Layout(): ReactNode {
 							duration: disableMotion ? 0 : 0.2,
 							ease: 'easeOut',
 						} }
-						onClick={ () => setIsMobileSidebarOpen( false ) }
-						onKeyDown={ ( event ) => {
+						onClick={ (): void => setIsMobileSidebarOpen( false ) }
+						onKeyDown={ ( event: KeyboardEvent< HTMLDivElement > ): void => {
 							if ( event.key === 'Escape' ) {
 								setIsMobileSidebarOpen( false );
 							}

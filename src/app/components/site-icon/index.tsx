@@ -43,14 +43,12 @@ function SiteIcon( { className }: SiteIconProps ): ReactNode {
 		};
 	}, [] );
 
-	let icon: ReactNode = null;
+	let icon: ReactNode = <Icon className="site-icon__icon" icon={ wordpress } size={ 48 } />;
 
 	if ( isRequestingSite ) {
 		icon = <div className="site-icon__image" />;
 	} else if ( siteIconUrl ) {
 		icon = <img className="site-icon__image" alt={ __( 'Site Icon', 'activitypub' ) } src={ siteIconUrl } />;
-	} else {
-		icon = <Icon className="site-icon__icon" icon={ wordpress } size={ 48 } />;
 	}
 
 	return <div className={ clsx( className, 'site-icon' ) }>{ icon }</div>;

@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { createReduxStore, register } from '@wordpress/data';
+import { createReduxStore, register, StoreDescriptor } from '@wordpress/data';
 import { controls as dataControls } from '@wordpress/data-controls';
 
 /**
@@ -11,7 +11,6 @@ import { actions } from './actions';
 import { selectors } from './selectors';
 import { reducer } from './reducer';
 import { resolvers } from './resolvers';
-import type { State } from './types';
 
 /**
  * Store name
@@ -40,7 +39,7 @@ const storeConfig: StoreConfig = {
 /**
  * Create and register the store
  */
-export const store = createReduxStore( STORE_NAME, storeConfig );
+export const store: StoreDescriptor = createReduxStore( STORE_NAME, storeConfig );
 
 register( store );
 

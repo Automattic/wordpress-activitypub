@@ -8,6 +8,7 @@
  * External dependencies
  */
 import type { ComponentType, ReactNode } from 'react';
+import { ParsedLocation, UseNavigateResult } from '@tanstack/react-router';
 
 /**
  * WordPress dependencies
@@ -61,8 +62,8 @@ export const menuItems: MenuItemConfig[] = [
 ];
 
 export default function Sidebar(): ReactNode {
-	const location = useLocation();
-	const navigate = useNavigate();
+	const location: ParsedLocation< any > = useLocation();
+	const navigate: UseNavigateResult< string > = useNavigate();
 	const { hasActiveFilters, clearAllFilters } = useFeedFilters();
 
 	// Check if a route is currently active

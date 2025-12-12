@@ -27,11 +27,12 @@ const namespace = 'activitypub/1.0'; // Standard ActivityPub REST API namespace
 export async function deleteFollower( items: Actor[] ): Promise< void > {
 	try {
 		// Delete each follower relationship.
-		const deletePromises = items.map( ( item ) =>
-			apiFetch( {
-				path: `/${ namespace }/admin/actors/${ item.id }/unfollow`,
-				method: 'DELETE',
-			} )
+		const deletePromises: Promise< unknown >[] = items.map(
+			( item: Actor ): Promise< unknown > =>
+				apiFetch( {
+					path: `/${ namespace }/admin/actors/${ item.id }/unfollow`,
+					method: 'DELETE',
+				} )
 		);
 
 		await Promise.all( deletePromises );
@@ -52,14 +53,15 @@ export async function deleteFollower( items: Actor[] ): Promise< void > {
  */
 export async function blockActor( items: Actor[] ): Promise< void > {
 	try {
-		const blockPromises = items.map( ( item ) =>
-			apiFetch( {
-				path: `/${ namespace }/admin/actors/${ item.id }/block`,
-				method: 'POST',
-				data: {
-					site_wide: false, // User-specific block by default
-				},
-			} )
+		const blockPromises: Promise< unknown >[] = items.map(
+			( item: Actor ): Promise< unknown > =>
+				apiFetch( {
+					path: `/${ namespace }/admin/actors/${ item.id }/block`,
+					method: 'POST',
+					data: {
+						site_wide: false, // User-specific block by default
+					},
+				} )
 		);
 
 		await Promise.all( blockPromises );
@@ -80,11 +82,12 @@ export async function blockActor( items: Actor[] ): Promise< void > {
  */
 export async function follow( items: Actor[] ): Promise< void > {
 	try {
-		const followPromises = items.map( ( item ) =>
-			apiFetch( {
-				path: `/${ namespace }/admin/actors/${ item.id }/follow`,
-				method: 'POST',
-			} )
+		const followPromises: Promise< unknown >[] = items.map(
+			( item: Actor ): Promise< unknown > =>
+				apiFetch( {
+					path: `/${ namespace }/admin/actors/${ item.id }/follow`,
+					method: 'POST',
+				} )
 		);
 
 		await Promise.all( followPromises );

@@ -8,6 +8,7 @@
  * External dependencies
  */
 import type { ReactNode } from 'react';
+import { UseNavigateResult } from '@tanstack/react-router';
 
 /**
  * WordPress dependencies
@@ -26,7 +27,7 @@ import Avatar from '../../components/avatar';
 import { getRelativeTime } from '../../utils';
 import { useTagFilter } from '../../hooks/use-tag-filter';
 import { useSearch, useNavigate } from '../../router';
-import type { Comment, FeedPost } from '../../types';
+import type { ActorInfo, Comment, FeedPost } from '../../types';
 
 interface RenderHTMLProps {
 	html: string;
@@ -46,7 +47,7 @@ interface SearchParams {
 
 export default function FeedInspector(): ReactNode {
 	const search: SearchParams = useSearch( { strict: false } ) as SearchParams;
-	const navigate = useNavigate();
+	const navigate: UseNavigateResult< string > = useNavigate();
 	const id: number | undefined = search.postId;
 
 	// Close inspector by removing postId from search params
@@ -97,7 +98,7 @@ export default function FeedInspector(): ReactNode {
 		return <div className="activitypub-inspector-loading">{ __( 'Post not found', 'activitypub' ) }</div>;
 	}
 
-	const actor = post.actor_info;
+	const actor: ActorInfo = post.actor_info;
 	const author: string = decodeEntities( actor?.name || __( 'Unknown author', 'activitypub' ) );
 	const webfinger: string = actor?.webfinger || '';
 	const profileUrl: string = actor?.url || '';
