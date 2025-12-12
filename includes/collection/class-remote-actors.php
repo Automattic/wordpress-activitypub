@@ -674,9 +674,11 @@ class Remote_Actors {
 	 *
 	 * @param int $id The ID of the remote actor post.
 	 *
-	 * @return string The avatar URL or empty string if not found.
+	 * @return string The avatar URL or a default one if not found.
 	 */
 	public static function get_avatar_url( $id ) {
+		$default_avatar_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
+
 		$avatar_url = \get_post_meta( $id, '_activitypub_avatar_url', true );
 		if ( $avatar_url ) {
 			return $avatar_url;
@@ -685,12 +687,11 @@ class Remote_Actors {
 		// If not found in meta, try to extract from post_content JSON and cache it.
 		$post = \get_post( $id );
 		if ( ! $post || empty( $post->post_content ) ) {
-			return '';
+			return $default_avatar_url;
 		}
 
 		$actor_data = \json_decode( $post->post_content, true );
 		if ( empty( $actor_data['icon'] ) ) {
-			$default_avatar_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
 			\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $default_avatar_url ) );
 
 			return $default_avatar_url;

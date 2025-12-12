@@ -1,7 +1,8 @@
 /**
  * Site Hub Component
  *
- * Displays site icon, title, and command palette toggle
+ * Displays site icon, title, and command palette toggle.
+ * SiteHubMobile provides a mobile-specific header with back navigation and menu button.
  */
 
 /**
@@ -14,13 +15,14 @@ import type { ReactNode } from 'react';
  */
 import { useSelect, useDispatch } from '@wordpress/data';
 import { Button, __experimentalHStack as HStack, VisuallyHidden } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
+import { __, isRTL } from '@wordpress/i18n';
 import { store as coreStore } from '@wordpress/core-data';
 import { decodeEntities } from '@wordpress/html-entities';
-import { search } from '@wordpress/icons';
+import { search, chevronLeft, chevronRight, menu } from '@wordpress/icons';
 import { store as commandsStore } from '@wordpress/commands';
 import { displayShortcut } from '@wordpress/keycodes';
 import { filterURLForDisplay } from '@wordpress/url';
+import { forwardRef } from '@wordpress/element';
 import type { UnstableBase } from '@wordpress/core-data';
 
 /**
@@ -28,6 +30,7 @@ import type { UnstableBase } from '@wordpress/core-data';
  */
 import SiteIcon from '../site-icon';
 import './style.scss';
+import { ForwardedRef, ForwardRefExoticComponent } from 'react';
 
 interface SiteHubData {
 	homeUrl: string | undefined;
@@ -91,5 +94,51 @@ function SiteHub(): ReactNode {
 		</div>
 	);
 }
+
+/**
+ * Mobile Site Hub props.
+ */
+interface SiteHubMobileProps {
+	onMenuClick: () => void;
+	title?: string;
+}
+
+/**
+ * Mobile Site Hub Component
+ *
+ * Provides a mobile-specific header with:
+ * - Back button (chevron) that navigates to dashboard
+ * - Title showing the current navigation context
+ * - Menu button (hamburger) to open sidebar drawer
+ */
+export const SiteHubMobile: ForwardRefExoticComponent< SiteHubMobileProps > = forwardRef<
+	HTMLDivElement,
+	SiteHubMobileProps
+>( function SiteHubMobile(
+	{ onMenuClick, title }: SiteHubMobileProps,
+	ref: ForwardedRef< HTMLDivElement >
+): ReactNode {
+	return (
+		<div className="site-hub-mobile" ref={ ref }>
+			<HStack spacing={ 2 } justify="flex-start">
+				<Button
+					icon={ isRTL() ? chevronRight : chevronLeft }
+					href="/wp-admin/"
+					label={ __( 'Go to the Dashboard', 'activitypub' ) }
+					className="site-hub-mobile__button"
+					size="compact"
+				/>
+				<span className="site-hub-mobile__title">{ title || __( 'Social Web', 'activitypub' ) }</span>
+			</HStack>
+			<Button
+				icon={ menu }
+				onClick={ onMenuClick }
+				label={ __( 'Open menu', 'activitypub' ) }
+				className="site-hub-mobile__button"
+				size="compact"
+			/>
+		</div>
+	);
+} );
 
 export default SiteHub;

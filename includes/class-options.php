@@ -24,6 +24,8 @@ class Options {
 		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_option_activitypub_actor_mode' ) );
 		\add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
 		\add_filter( 'pre_option_activitypub_vary_header', array( self::class, 'pre_option_activitypub_vary_header' ) );
+		\add_filter( 'pre_option_activitypub_following_ui', array( self::class, 'pre_option_activitypub_following_ui' ) );
+		\add_filter( 'pre_option_activitypub_create_posts', array( self::class, 'pre_option_activitypub_create_posts' ) );
 
 		\add_filter( 'pre_option_activitypub_allow_likes', array( self::class, 'maybe_disable_interactions' ) );
 		\add_filter( 'pre_option_activitypub_allow_replies', array( self::class, 'maybe_disable_interactions' ) );
@@ -274,6 +276,16 @@ class Options {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_reader_ui',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable the Reader to view posts from accounts you follow.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_create_posts',
 			array(
 				'type'        => 'boolean',
@@ -466,6 +478,44 @@ class Options {
 		}
 
 		return '0';
+	}
+
+	/**
+	 * Pre-get option filter for the Following UI.
+	 *
+	 * Forces the Following UI to be enabled when the Reader is enabled.
+	 *
+	 * @param string $pre The pre-get option value.
+	 *
+	 * @return string If the Reader is enabled, return '1', otherwise return the pre-get option value.
+	 */
+	public static function pre_option_activitypub_following_ui( $pre ) {
+		/*
+		 * Bypass the filter to get the actual stored value for activitypub_reader_ui.
+		 * This avoids infinite loops if activitypub_reader_ui also had a pre_option filter.
+		 */
+		if ( \get_option( 'activitypub_reader_ui', '0' ) ) {
+			return '1';
+		}
+
+		return $pre;
+	}
+
+	/**
+	 * Pre-get option filter for the Create Posts setting.
+	 *
+	 * Forces the Create Posts setting to be enabled when the Reader is enabled.
+	 *
+	 * @param string $pre The pre-get option value.
+	 *
+	 * @return string If the Reader is enabled, return '1', otherwise return the pre-get option value.
+	 */
+	public static function pre_option_activitypub_create_posts( $pre ) {
+		if ( \get_option( 'activitypub_reader_ui', '0' ) ) {
+			return '1';
+		}
+
+		return $pre;
 	}
 
 	/**

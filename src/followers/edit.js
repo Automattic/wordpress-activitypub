@@ -263,21 +263,23 @@ function Pagination( { page, pages, setPage } ) {
  */
 function Follower( { name, icon, url, preferredUsername } ) {
 	const handle = `@${ preferredUsername }`;
-	const { defaultAvatarUrl } = useOptions();
+	const { defaultAvatarUrl, showAvatars } = useOptions();
 	const avatar = icon?.url || defaultAvatarUrl;
 
 	return (
 		<a className="follower-link" href={ url } title={ handle } onClick={ ( event ) => event.preventDefault() }>
-			<img
-				width="48"
-				height="48"
-				src={ avatar }
-				className="follower-avatar"
-				alt={ name }
-				onError={ ( event ) => {
-					event.target.src = defaultAvatarUrl;
-				} }
-			/>
+			{ showAvatars && (
+				<img
+					width="48"
+					height="48"
+					src={ avatar }
+					className="follower-avatar"
+					alt={ name }
+					onError={ ( event ) => {
+						event.target.src = defaultAvatarUrl;
+					} }
+				/>
+			) }
 			<div className="follower-info">
 				<span className="follower-name">{ name }</span>
 				<span className="follower-username">{ handle }</span>

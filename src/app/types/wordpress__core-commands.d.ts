@@ -9,6 +9,4 @@ declare module '@wordpress/core-commands' {
 	export interface PrivateApis {
 		useCommands: () => void;
 	}
-
-	export const privateApis: PrivateApis;
 }

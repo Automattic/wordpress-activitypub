@@ -37,5 +37,5 @@ declare module '@wordpress/commands' {
 
 	export const store: StoreDescriptor< CommandsState, CommandsActions, CommandsSelectors >;
 
-	export const CommandMenu: ComponentType< {} >;
+	export const CommandMenu: ComponentType;
 }

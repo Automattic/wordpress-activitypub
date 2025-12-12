@@ -11,6 +11,7 @@ declare module '@wordpress/icons' {
 	// Icons used in src/app/components/object-types/index.tsx
 	export const audio: ReactElement;
 	export const calendar: ReactElement;
+	export const comment: ReactElement;
 	export const file: ReactElement;
 	export const image: ReactElement;
 	export const page: ReactElement;
@@ -25,6 +26,7 @@ declare module '@wordpress/icons' {
 	export const postList: ReactElement;
 
 	// Icons used in src/app/components/site-hub/index.tsx
+	export const menu: ReactElement;
 	export const search: ReactElement;
 
 	// Icons used in src/app/components/site-icon/index.tsx
@@ -32,7 +34,4 @@ declare module '@wordpress/icons' {
 
 	// Icons used in src/app/routes/feed/inspector.tsx
 	export const close: ReactElement;
-
-	// Icon used in src/app/components/object-types/index.tsx (also declared above)
-	export const comment: ReactElement;
 }
