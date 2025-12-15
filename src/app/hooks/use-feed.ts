@@ -35,7 +35,7 @@ interface UseFeedReturn {
 }
 
 // Stable default values to prevent unnecessary re-renders
-const DEFAULT_FIELDS = [
+const DEFAULT_FIELDS: string[] = [
 	'id',
 	'date',
 	'modified',
