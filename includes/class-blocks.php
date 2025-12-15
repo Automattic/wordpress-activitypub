@@ -84,7 +84,12 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
+		// Register reactions block, conditionally removing facepile style if avatars are disabled.
+		$reactions_args = array();
+		if ( ! \get_option( 'show_avatars', true ) ) {
+			$reactions_args['styles'] = array();
+		}
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions', $reactions_args );
 
 		\register_block_type_from_metadata(
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',

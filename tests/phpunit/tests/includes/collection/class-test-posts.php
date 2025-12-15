@@ -1347,6 +1347,85 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test delete_all method deletes all posts.
+	 *
+	 * @covers ::delete_all
+	 */
+	public function test_delete_all() {
+		// Create some posts.
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+			)
+		);
+
+		// Verify posts were created.
+		$count_before = \wp_count_posts( Posts::POST_TYPE )->publish;
+		$this->assertEquals( 5, $count_before );
+
+		// Delete all posts.
+		$deleted = Posts::delete_all();
+
+		// Clear cache to get accurate count.
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		// Verify all posts were deleted.
+		$count_after = \wp_count_posts( Posts::POST_TYPE )->publish;
+		$this->assertEquals( 0, $count_after );
+
+		// Verify return value.
+		$this->assertEquals( 5, $deleted );
+	}
+
+	/**
+	 * Test delete_all method with mixed post statuses.
+	 *
+	 * @covers ::delete_all
+	 */
+	public function test_delete_all_mixed_statuses() {
+		// Create posts with different statuses.
+		self::factory()->post->create_many(
+			3,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+			)
+		);
+		self::factory()->post->create_many(
+			2,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'draft',
+			)
+		);
+		self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'trash',
+			)
+		);
+
+		// Delete all posts.
+		$deleted = Posts::delete_all();
+
+		// Verify all posts were deleted regardless of status.
+		$remaining = \get_posts(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'any',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+		$this->assertEmpty( $remaining );
+
+		// Verify return value includes all posts.
+		$this->assertEquals( 6, $deleted );
+	}
+
+	/**
 	 * Test purge method with more than 200 posts.
 	 *
 	 * @covers ::purge
