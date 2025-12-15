@@ -34,6 +34,23 @@ interface UseFeedReturn {
 	totalPages: number | null;
 }
 
+// Stable default values to prevent unnecessary re-renders
+const DEFAULT_FIELDS: string[] = [
+	'id',
+	'date',
+	'modified',
+	'title',
+	'excerpt',
+	'content',
+	'actor_info',
+	'status',
+	'link',
+	'ap_object_type',
+	'ap_tag',
+];
+const DEFAULT_FILTERS: Filter[] = [];
+const EMPTY_FEED: FeedPost[] = [];
+
 export function useFeed( {
 	perPage = 20,
 	page = 1,
@@ -41,20 +58,8 @@ export function useFeed( {
 	order = 'desc',
 	search = '',
 	userId,
-	fields = [
-		'id',
-		'date',
-		'modified',
-		'title',
-		'excerpt',
-		'content',
-		'actor_info',
-		'status',
-		'link',
-		'ap_object_type',
-		'ap_tag',
-	],
-	filters = [],
+	fields = DEFAULT_FIELDS,
+	filters = DEFAULT_FILTERS,
 }: UseFeedParams = {} ): UseFeedReturn {
 	// Don't fetch if userId is not set
 	const enabled: boolean = userId !== null && userId !== undefined;
@@ -113,7 +118,7 @@ export function useFeed( {
 	);
 
 	return {
-		feed: enabled ? records || [] : [],
+		feed: enabled ? records || EMPTY_FEED : EMPTY_FEED,
 		hasResolved,
 		isResolving,
 		totalItems: enabled ? totalItems : null,
