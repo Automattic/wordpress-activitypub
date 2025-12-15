@@ -226,6 +226,16 @@ class Options {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_ap_post_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => 'Number of days to keep remote posts.',
+				'default'     => 30,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_vary_header',
 			array(
 				'type'        => 'boolean',

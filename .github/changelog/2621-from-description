@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Preserve whitespace inside preformatted elements when federating content.

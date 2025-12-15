@@ -1137,7 +1137,7 @@ class Test_Post extends \WP_UnitTestCase {
 					'post_content' => 'Short note',
 					'post_status'  => 'publish',
 				),
-				"[ap_title type=\"html\"]\n\n[ap_content]",
+				'[ap_title type="html"][ap_content]',
 				'wordpress-post-format',
 				'[ap_title]\n\n[ap_content]',
 				'wordpress-post-format should add title for Note type without reply.',
