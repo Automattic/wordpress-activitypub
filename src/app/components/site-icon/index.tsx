@@ -43,7 +43,7 @@ function SiteIcon( { className }: SiteIconProps ): ReactNode {
 		};
 	}, [] );
 
-	let icon: ReactNode = <Icon className="site-icon__icon" icon={ wordpress } size={ 48 } />;
+	let icon: ReactNode = <Icon className="site-icon__icon" icon={ wordpress } size={ 32 } />;
 
 	if ( isRequestingSite ) {
 		icon = <div className="site-icon__image" />;
