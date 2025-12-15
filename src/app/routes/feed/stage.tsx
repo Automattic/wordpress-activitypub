@@ -116,6 +116,23 @@ export default function FeedStage(): ReactNode {
 		};
 	}, [] );
 
+	// Memoize onChangeQueryParams to prevent updateView from changing on every render.
+	const handleChangeQueryParams = useCallback( ( params: { page?: number; search?: string } ): void => {
+		const currentUrl: string = window.location.href;
+		const currentArgs = getQueryArgs( currentUrl );
+		const newUrl: string = addQueryArgs( currentUrl, {
+			...currentArgs,
+			paged: params.page || undefined,
+			search: params.search || undefined,
+		} );
+		window.history.pushState( null, '', newUrl );
+
+		setUrlQueryParams( {
+			page: params.page,
+			search: params.search,
+		} );
+	}, [] );
+
 	// Use the views hook to persist user preferences
 	const { view, updateView } = useView( {
 		kind: 'postType',
@@ -123,21 +140,7 @@ export default function FeedStage(): ReactNode {
 		slug: 'feed',
 		defaultView: DEFAULT_VIEW,
 		queryParams: urlQueryParams,
-		onChangeQueryParams: ( params ): void => {
-			const currentUrl: string = window.location.href;
-			const currentArgs = getQueryArgs( currentUrl );
-			const newUrl: string = addQueryArgs( currentUrl, {
-				...currentArgs,
-				paged: params.page || undefined,
-				search: params.search || undefined,
-			} );
-			window.history.pushState( null, '', newUrl );
-
-			setUrlQueryParams( {
-				page: params.page,
-				search: params.search,
-			} );
-		},
+		onChangeQueryParams: handleChangeQueryParams,
 	} );
 
 	// Wrap updateView to reset page when filters change
@@ -163,7 +166,8 @@ export default function FeedStage(): ReactNode {
 			} );
 			prevActiveActorId.current = activeActorId;
 		}
-	}, [ activeActorId, updateView ] );
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- updateView changes reference frequently; condition guards against repeated calls
+	}, [ activeActorId ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
 		perPage: view.perPage || 20,
@@ -172,7 +176,7 @@ export default function FeedStage(): ReactNode {
 		order: view.sort?.direction || 'desc',
 		search: view.search || '',
 		userId: activeActorId,
-		filters: view.filters || [],
+		filters: view.filters || DEFAULT_VIEW.filters,
 	} );
 
 	// Get following count to determine which empty state to show.
