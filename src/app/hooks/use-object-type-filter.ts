@@ -1,4 +1,9 @@
 /**
+ * External dependencies
+ */
+import type { UseNavigateResult } from '@tanstack/react-router';
+
+/**
  * WordPress dependencies
  */
 import type { Filter } from '@wordpress/dataviews';
@@ -28,7 +33,7 @@ interface UseObjectTypeFilterReturn {
  * @return {UseObjectTypeFilterReturn} Selected object type ID and update function
  */
 export function useObjectTypeFilter(): UseObjectTypeFilterReturn {
-	const navigate = useNavigate();
+	const navigate: UseNavigateResult< string > = useNavigate();
 	const { view, updateView } = useView( {
 		kind: 'postType',
 		name: 'ap_post',
@@ -87,10 +92,10 @@ export function useObjectTypeFilter(): UseObjectTypeFilterReturn {
 
 			// Close inspector by removing postId from URL
 			void navigate( {
-				search: ( prev: Record< string, unknown > ) => {
+				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
 					const { postId: _, ...rest } = prev as { postId?: number };
 					return rest;
-				},
+				} ) as never,
 			} );
 
 			// Call completion callback if provided

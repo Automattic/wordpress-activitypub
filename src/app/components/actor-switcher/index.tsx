@@ -9,6 +9,7 @@
  * External dependencies
  */
 import type { ReactNode, SyntheticEvent } from 'react';
+import { UseNavigateResult } from '@tanstack/react-router';
 
 /**
  * WordPress dependencies
@@ -37,7 +38,7 @@ const BLOG_MODE = 'blog';
 const ACTOR_AND_BLOG_MODE = 'actor_blog';
 
 export default function ActorSwitcher(): ReactNode {
-	const navigate = useNavigate();
+	const navigate: UseNavigateResult< string > = useNavigate();
 	const { setActiveActor } = useDispatch( STORE_NAME ) as AppActions;
 
 	const { currentUser, activeActorId, actorMode, hasUserCap, hasBlogCap } = useSelect(
@@ -97,10 +98,10 @@ export default function ActorSwitcher(): ReactNode {
 
 			// Close inspector.
 			void navigate( {
-				search: ( prev: Record< string, unknown > ) => {
+				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
 					const { postId: _, ...rest } = prev as { postId?: number };
 					return rest;
-				},
+				} ) as never,
 			} );
 		}
 	};
