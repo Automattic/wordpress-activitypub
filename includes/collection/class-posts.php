@@ -454,6 +454,32 @@ class Posts {
 	}
 
 	/**
+	 * Delete all posts.
+	 *
+	 * Used during plugin uninstall to clean up all remote posts.
+	 *
+	 * @return int The number of posts deleted.
+	 */
+	public static function delete_all() {
+		$post_ids = \get_posts(
+			array(
+				'post_type'   => self::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'numberposts' => -1,
+			)
+		);
+
+		$deleted = 0;
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
+			++$deleted;
+		}
+
+		return $deleted;
+	}
+
+	/**
 	 * Purge old remote posts.
 	 *
 	 * Deletes remote posts older than the specified number of days,
