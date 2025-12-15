@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"target": "ES2020",
 		"module": "esnext",
-		"lib": [ "ES2020", "DOM" ],
+		"lib": [ "ES2020", "DOM", "DOM.Iterable" ],
 		"jsx": "react-jsx",
 		"jsxImportSource": "react",
 		"moduleResolution": "node",
@@ -14,9 +14,7 @@
 		"resolveJsonModule": true,
 		"noEmit": true,
 		"baseUrl": ".",
-		"paths": {
-			"@wordpress/*": [ "../../node_modules/@wordpress/*/src" ]
-		},
+		"types": [ "react", "react-dom" ],
 		"typeRoots": [ "../../node_modules/@types", "./types" ]
 	},
 	"include": [ "**/*.ts", "**/*.tsx", "types/**/*.d.ts" ],

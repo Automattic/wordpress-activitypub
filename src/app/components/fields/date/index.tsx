@@ -1,5 +1,12 @@
+/**
+ * WordPress dependencies
+ */
 import { __ } from '@wordpress/i18n';
 import type { Field } from '@wordpress/dataviews';
+
+/**
+ * Internal dependencies
+ */
 import type { FeedPost } from '../../../types';
 
 export const dateField: Field< FeedPost > = {
@@ -7,8 +14,8 @@ export const dateField: Field< FeedPost > = {
 	label: __( 'Date', 'activitypub' ),
 	enableHiding: false,
 	enableSorting: true,
-	getValue: ( { item }: { item: FeedPost } ) => item.date || '',
-	render: ( { item }: { item: FeedPost } ) => {
+	getValue: ( { item }: { item: FeedPost } ): string => item.date || '',
+	render: ( { item }: { item: FeedPost } ): string => {
 		if ( ! item.date ) {
 			return '';
 		}

@@ -1,7 +1,19 @@
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { __unstableStripHTML as stripHTML, safeHTML } from '@wordpress/dom';
 import type { Field } from '@wordpress/dataviews';
+
+/**
+ * Internal dependencies
+ */
 import type { FeedPost } from '../../../types';
 import { useObjectType } from '../../../contexts/object-type-context';
 import './style.scss';
@@ -18,16 +30,16 @@ export const contentField: Field< FeedPost > = {
 	label: __( 'Content', 'activitypub' ),
 	enableHiding: false,
 	enableSorting: false,
-	getValue: ( { item }: { item: FeedPost } ) => {
-		const text = item.excerpt?.rendered || item.content?.rendered || '';
+	getValue: ( { item }: { item: FeedPost } ): string => {
+		const text: string = item.excerpt?.rendered || item.content?.rendered || '';
 		return decodeEntities( stripHTML( text ) );
 	},
-	render: ( { item }: { item: FeedPost } ) => {
+	render: ( { item }: { item: FeedPost } ): ReactNode => {
 		const { getObjectTypeName, isLoading } = useObjectType();
 
 		// Get the object type name from the cached map
-		const objectTypeId = item.ap_object_type?.[ 0 ];
-		const objectTypeName = getObjectTypeName( objectTypeId );
+		const objectTypeId: number | undefined = item.ap_object_type?.[ 0 ];
+		const objectTypeName: string | null = getObjectTypeName( objectTypeId );
 
 		// While loading, show a placeholder to prevent flicker
 		if ( isLoading && ! objectTypeName ) {
@@ -35,11 +47,11 @@ export const contentField: Field< FeedPost > = {
 		}
 
 		// Check if this is a Note type
-		const isNote = objectTypeName === 'Note';
+		const isNote: boolean = objectTypeName === 'Note';
 
 		if ( isNote ) {
 			// Show full content for Notes (HTML)
-			const content = safeHTML( decodeEntities( item.content?.rendered || '' ) );
+			const content: string = safeHTML( decodeEntities( item.content?.rendered || '' ) );
 
 			return (
 				<div className="activitypub-feed-post">
@@ -52,7 +64,7 @@ export const contentField: Field< FeedPost > = {
 		}
 
 		// Show excerpt for Articles and other types (plain text)
-		const plainText = contentField.getValue( { item } ).trim();
+		const plainText: string = contentField.getValue( { item } ).trim();
 
 		return <div className="activitypub-feed-excerpt">{ plainText || '\u00A0' }</div>;
 	},

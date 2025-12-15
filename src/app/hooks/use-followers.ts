@@ -37,10 +37,20 @@ export function useFollowers( {
 	fields = [ 'id', 'date', 'modified', 'slug', 'title', 'meta', 'actor_info', 'follow_status' ],
 }: UseFollowersParams = {} ): UseFollowersReturn {
 	// Don't fetch if userId is not set
-	const enabled = userId !== null && userId !== undefined;
+	const enabled: boolean = userId !== null && userId !== undefined;
 
-	const queryArgs = useMemo( () => {
-		const args: any = {
+	interface QueryArgs extends Record< string, unknown > {
+		per_page: number;
+		page: number;
+		orderby: string;
+		order: 'asc' | 'desc';
+		search: string;
+		_fields: string[];
+		follower_of?: number;
+	}
+
+	const queryArgs: QueryArgs = useMemo( (): QueryArgs => {
+		const args: QueryArgs = {
 			per_page: perPage,
 			page,
 			orderby: orderBy,
