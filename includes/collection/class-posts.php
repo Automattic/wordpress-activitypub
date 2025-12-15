@@ -464,7 +464,7 @@ class Posts {
 		$post_ids = \get_posts(
 			array(
 				'post_type'   => self::POST_TYPE,
-				'post_status' => 'any',
+				'post_status' => array( 'any', 'trash', 'auto-draft' ),
 				'fields'      => 'ids',
 				'numberposts' => -1,
 			)
