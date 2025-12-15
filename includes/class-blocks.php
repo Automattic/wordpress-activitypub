@@ -87,13 +87,7 @@ class Blocks {
 		// Register reactions block, conditionally removing facepile style if avatars are disabled.
 		$reactions_args = array();
 		if ( ! \get_option( 'show_avatars', true ) ) {
-			$reactions_args['styles'] = array(
-				array(
-					'name'      => 'compact',
-					'label'     => __( 'Compact', 'activitypub' ),
-					'isDefault' => true,
-				),
-			);
+			$reactions_args['styles'] = array();
 		}
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions', $reactions_args );
 
