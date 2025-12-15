@@ -87,6 +87,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Statistics', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
@@ -130,6 +131,7 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Health_Check', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings_Fields', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Statistics_Dashboard', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\User_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'init' ) );
 

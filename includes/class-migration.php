@@ -32,6 +32,7 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_create_post_outbox_items', array( self::class, 'create_post_outbox_items' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_create_comment_outbox_items', array( self::class, 'create_comment_outbox_items' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_avatar_to_remote_actors', array( self::class, 'migrate_avatar_to_remote_actors' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_backfill_statistics', array( Statistics::class, 'backfill_historical_stats' ) );
 	}
 
 	/**
@@ -213,6 +214,11 @@ class Migration {
 		if ( \version_compare( $version_from_db, '7.6.0', '<' ) ) {
 			self::clean_up_inbox();
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
+		}
+
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			// Backfill historical statistics data.
+			\wp_schedule_single_event( \time(), 'activitypub_backfill_statistics' );
 		}
 
 		// Ensure all required cron schedules are registered.
