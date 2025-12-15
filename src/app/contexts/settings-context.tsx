@@ -2,23 +2,29 @@
  * WordPress dependencies
  */
 import { createContext, useContext } from '@wordpress/element';
-import type { ReactNode } from 'react';
+import type { Context, ReactNode } from 'react';
 
 /**
  * Internal dependencies
  */
 import type { AppSettings } from '../types';
 
-const SettingsContext = createContext< AppSettings | undefined >( undefined );
+const SettingsContext: Context< AppSettings | undefined > = createContext< AppSettings | undefined >( undefined );
 
-export function SettingsProvider( { children, settings }: { children: ReactNode; settings: AppSettings } ) {
+interface SettingsProviderProps {
+	children: ReactNode;
+	settings: AppSettings;
+}
+
+export function SettingsProvider( { children, settings }: SettingsProviderProps ): ReactNode {
 	return <SettingsContext.Provider value={ settings }>{ children }</SettingsContext.Provider>;
 }
 
-export function useSettings() {
-	const settings = useContext( SettingsContext );
+export function useSettings(): AppSettings {
+	const settings: AppSettings | undefined = useContext( SettingsContext );
 	if ( ! settings ) {
 		throw new Error( 'useSettings must be used within a SettingsProvider' );
 	}
+
 	return settings;
 }

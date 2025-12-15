@@ -5,6 +5,9 @@
  * with Gutenberg's routing infrastructure.
  */
 
+/**
+ * External dependencies
+ */
 import type { ComponentType } from 'react';
 
 /**

@@ -1,11 +1,18 @@
+/**
+ * WordPress dependencies
+ */
 import { useEntityRecords } from '@wordpress/core-data';
 import { useMemo } from '@wordpress/element';
+
+/**
+ * Internal dependencies
+ */
 import type { FeedPost } from '../types';
 
 interface Filter {
 	field: string;
 	operator: string;
-	value: any;
+	value: number | number[] | string | string[];
 }
 
 interface UseFeedParams {
@@ -50,10 +57,22 @@ export function useFeed( {
 	filters = [],
 }: UseFeedParams = {} ): UseFeedReturn {
 	// Don't fetch if userId is not set
-	const enabled = userId !== null && userId !== undefined;
+	const enabled: boolean = userId !== null && userId !== undefined;
 
-	const queryArgs = useMemo( () => {
-		const args: any = {
+	interface QueryArgs extends Record< string, unknown > {
+		per_page: number;
+		page: number;
+		orderby: string;
+		order: 'asc' | 'desc';
+		search: string;
+		_fields: string[];
+		user_id?: number;
+		ap_object_type?: number[];
+		ap_tag?: number | number[] | string | string[];
+	}
+
+	const queryArgs: QueryArgs = useMemo( (): QueryArgs => {
+		const args: QueryArgs = {
 			per_page: perPage,
 			page,
 			orderby: orderBy,
@@ -68,16 +87,18 @@ export function useFeed( {
 		}
 
 		// Extract ap_object_type filter from filters array
-		const apObjectTypeFilter: Filter = filters.find( ( f: Filter ): boolean => f.field === 'ap_object_type' );
+		const apObjectTypeFilter: Filter | undefined = filters.find(
+			( f: Filter ): boolean => f.field === 'ap_object_type'
+		);
 		if ( apObjectTypeFilter?.value !== undefined ) {
 			// Wrap single value in array for REST API
 			args.ap_object_type = Array.isArray( apObjectTypeFilter.value )
-				? apObjectTypeFilter.value
-				: [ apObjectTypeFilter.value ];
+				? ( apObjectTypeFilter.value as number[] )
+				: [ apObjectTypeFilter.value as number ];
 		}
 
 		// Extract ap_tag filter from filters array
-		const apTagFilter: Filter = filters.find( ( f: Filter ): boolean => f.field === 'ap_tag' );
+		const apTagFilter: Filter | undefined = filters.find( ( f: Filter ): boolean => f.field === 'ap_tag' );
 		if ( apTagFilter?.value !== undefined ) {
 			args.ap_tag = apTagFilter.value;
 		}

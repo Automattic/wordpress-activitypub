@@ -3,6 +3,11 @@
  */
 
 /**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
@@ -21,6 +26,6 @@ export const avatarField: Field< Actor > = {
 	type: 'media',
 	enableHiding: false,
 	enableSorting: false,
-	getValue: ( { item }: { item: Actor } ) => item.actor_info?.icon || '',
-	render: ( { item }: { item: Actor } ) => <Avatar item={ item } />,
+	getValue: ( { item }: { item: Actor } ): string => item.actor_info?.icon || '',
+	render: ( { item }: { item: Actor } ): ReactNode => <Avatar item={ item } />,
 };

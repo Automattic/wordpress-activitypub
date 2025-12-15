@@ -5,8 +5,15 @@
  * Uses ThemedSurface component with margin spacing.
  */
 
-import { ReactNode } from 'react';
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
 import clsx from 'clsx';
+
+/**
+ * Internal dependencies
+ */
 import ThemedSurface from '../themed-surface';
 import './style.scss';
 
@@ -15,7 +22,7 @@ interface PanelProps {
 	children: ReactNode;
 }
 
-export default function Panel( { className, children }: PanelProps ) {
+export default function Panel( { className, children }: PanelProps ): ReactNode {
 	return (
 		<div className={ clsx( 'panel', className ) }>
 			<ThemedSurface>{ children }</ThemedSurface>

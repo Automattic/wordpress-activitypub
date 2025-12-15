@@ -17,6 +17,7 @@
 /**
  * External dependencies
  */
+import type { KeyboardEvent, ReactNode } from 'react';
 import { ParsedLocation } from '@tanstack/react-router';
 
 /**
@@ -41,16 +42,15 @@ import { Outlet, useLocation } from '../../router';
 import Sidebar, { MenuItemConfig, menuItems } from '../sidebar';
 import { SiteHubMobile } from '../site-hub';
 import './style.scss';
-import { KeyboardEventHandler } from 'react';
 
-export function Layout() {
+export function Layout(): ReactNode {
 	const isMobileViewport: boolean = useViewportMatch( 'medium', '<' );
 	const location: ParsedLocation< any > = useLocation();
 	const disableMotion: boolean = useReducedMotion();
 	const [ isMobileSidebarOpen, setIsMobileSidebarOpen ] = useState( false );
 
 	// Get the current page title from menu items based on route
-	const currentTitle: string = useMemo( () => {
+	const currentTitle: string = useMemo( (): string => {
 		const menuItem: MenuItemConfig = menuItems.find(
 			( item: MenuItemConfig ): boolean => item.path === location.pathname
 		);
@@ -58,16 +58,16 @@ export function Layout() {
 	}, [ location.pathname ] );
 
 	// Auto-close sidebar on navigation or viewport change
-	useEffect( () => {
+	useEffect( (): void => {
 		setIsMobileSidebarOpen( false );
 	}, [ location.pathname, isMobileViewport ] );
 
 	// Get notices for the snackbar
 	const notices = useSelect( ( select ) => {
-		const store = select( noticesStore ) as any;
-		return store.getNotices().filter( ( notice: any ) => notice.type === 'snackbar' );
-	}, [] );
-	const { removeNotice } = useDispatch( noticesStore ) as any;
+		const { getNotices } = select( noticesStore );
+		return getNotices().filter( ( notice ): boolean => notice.type === 'snackbar' );
+	}, [] ) as Array< { id: string; content: string } >;
+	const { removeNotice } = useDispatch( noticesStore );
 
 	return (
 		<div className="app-layout">
@@ -86,8 +86,8 @@ export function Layout() {
 							duration: disableMotion ? 0 : 0.2,
 							ease: 'easeOut',
 						} }
-						onClick={ () => setIsMobileSidebarOpen( false ) }
-						onKeyDown={ ( event ) => {
+						onClick={ (): void => setIsMobileSidebarOpen( false ) }
+						onKeyDown={ ( event: KeyboardEvent< HTMLDivElement > ): void => {
 							if ( event.key === 'Escape' ) {
 								setIsMobileSidebarOpen( false );
 							}
@@ -131,7 +131,7 @@ export function Layout() {
 			{ /* Mobile: Header + content */ }
 			{ isMobileViewport && (
 				<div className="app-content is-mobile">
-					<SiteHubMobile title={ currentTitle } onMenuClick={ () => setIsMobileSidebarOpen( true ) } />
+					<SiteHubMobile title={ currentTitle } onMenuClick={ (): void => setIsMobileSidebarOpen( true ) } />
 					<Outlet />
 				</div>
 			) }

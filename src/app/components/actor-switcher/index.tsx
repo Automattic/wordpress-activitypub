@@ -5,12 +5,24 @@
  * based on user capabilities and actor mode settings.
  */
 
+/**
+ * External dependencies
+ */
+import type { ReactNode, SyntheticEvent } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import { Button, __experimentalHStack as HStack } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs } from '@wordpress/url';
+
+/**
+ * Internal dependencies
+ */
 import { STORE_NAME } from '../../store';
 import type { AppSelectors, AppActions } from '../../store';
 import { useNavigate } from '../../router';
@@ -24,7 +36,7 @@ const ACTOR_MODE = 'actor';
 const BLOG_MODE = 'blog';
 const ACTOR_AND_BLOG_MODE = 'actor_blog';
 
-export default function ActorSwitcher() {
+export default function ActorSwitcher(): ReactNode {
 	const navigate = useNavigate();
 	const { setActiveActor } = useDispatch( STORE_NAME ) as AppActions;
 
@@ -113,8 +125,8 @@ export default function ActorSwitcher() {
 						src={ userAvatarUrl }
 						alt={ displayName }
 						className="actor-switcher__avatar"
-						onError={ ( e ): void => {
-							( e.target as HTMLImageElement ).src = DEFAULT_AVATAR;
+						onError={ ( e: SyntheticEvent< HTMLImageElement > ): void => {
+							e.currentTarget.src = DEFAULT_AVATAR;
 						} }
 					/>
 				) }

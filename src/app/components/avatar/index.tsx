@@ -3,9 +3,9 @@
  */
 
 /**
- * WordPress dependencies
+ * External dependencies
  */
-import { SyntheticEvent } from '@wordpress/element';
+import type { ReactNode, SyntheticEvent } from 'react';
 
 /**
  * Internal dependencies
@@ -20,7 +20,7 @@ interface AvatarProps {
 	item: Actor | FeedPost;
 }
 
-export default function Avatar( { item }: AvatarProps ) {
+export default function Avatar( { item }: AvatarProps ): ReactNode {
 	const avatarUrl: string = item.actor_info?.icon || DEFAULT_AVATAR;
 	const altText: string = item.actor_info?.name || item.actor_info?.username || '';
 

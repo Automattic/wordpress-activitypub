@@ -7,7 +7,7 @@
 /**
  * External dependencies
  */
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 /**
  * WordPress dependencies
@@ -22,9 +22,12 @@ import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
 
 export default function FeedDescription(): ReactNode {
-	const activeActorId = useSelect( ( select ) => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(), [] );
+	const activeActorId: number | null = useSelect(
+		( select ): number | null => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(),
+		[]
+	);
 
-	const text =
+	const text: string =
 		activeActorId === 0
 			? __( 'Posts from accounts this site follows.', 'activitypub' )
 			: __( 'Posts from accounts you follow.', 'activitypub' );

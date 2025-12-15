@@ -2,6 +2,9 @@
  * Utility functions for ActivityPub App.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { sprintf, _x } from '@wordpress/i18n';
 import { dateI18n, getSettings } from '@wordpress/date';
 
@@ -14,13 +17,13 @@ import { dateI18n, getSettings } from '@wordpress/date';
  */
 export function getRelativeTime( dateString: string ): string {
 	// Ensure the date string is parsed as UTC by adding 'Z' if not present
-	const date = new Date( dateString.endsWith( 'Z' ) ? dateString : dateString + 'Z' );
+	const date: Date = new Date( dateString.endsWith( 'Z' ) ? dateString : dateString + 'Z' );
 	const now: number = Date.now();
 
 	const diffMs: number = now - date.getTime();
-	const diffMinutes: any = Math.floor( diffMs / ( 1000 * 60 ) );
-	const diffHours: any = Math.floor( diffMs / ( 1000 * 60 * 60 ) );
-	const diffDays: any = Math.floor( diffMs / ( 1000 * 60 * 60 * 24 ) );
+	const diffMinutes: number = Math.floor( diffMs / ( 1000 * 60 ) );
+	const diffHours: number = Math.floor( diffMs / ( 1000 * 60 * 60 ) );
+	const diffDays: number = Math.floor( diffMs / ( 1000 * 60 * 60 * 24 ) );
 
 	if ( diffMinutes < 60 ) {
 		return sprintf(
