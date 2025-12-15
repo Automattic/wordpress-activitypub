@@ -25,6 +25,7 @@ import { useSelect } from '@wordpress/data';
  * Internal dependencies
  */
 import { useFeed } from '../../hooks/use-feed';
+import { useFollowing } from '../../hooks/use-following';
 import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
 import { normalizeFieldOrder } from './utils';
 import { STORE_NAME } from '../../store';
@@ -174,6 +175,12 @@ export default function FeedStage(): ReactNode {
 		filters: view.filters || [],
 	} );
 
+	// Get following count to determine which empty state to show.
+	const { totalItems: followingCount, hasResolved: followingResolved } = useFollowing( {
+		perPage: 1,
+		userId: activeActorId,
+	} );
+
 	const fields: Field< FeedPost >[] = useMemo(
 		(): Field< FeedPost >[] => [ metadataField, titleField, contentField, dateField, objectTypeField, tagField ],
 		[]
@@ -181,6 +188,32 @@ export default function FeedStage(): ReactNode {
 
 	// Normalize view.fields to maintain the canonical order defined in fields array
 	const normalizedView: ViewType = useMemo( () => normalizeFieldOrder( view, fields ), [ view, fields ] );
+
+	// Generate empty state content based on following status.
+	const renderEmptyStateContent = (): ReactNode => {
+		// If search or filters are active, show simple "no results" message.
+		if ( normalizedView.search || ( normalizedView.filters && normalizedView.filters.length > 0 ) ) {
+			return __( 'No posts found.', 'activitypub' );
+		}
+
+		// If not following anyone, show link to following page.
+		if ( followingResolved && ! followingCount ) {
+			const followingUrl =
+				activeActorId === 0
+					? addQueryArgs( 'options-general.php', { page: 'activitypub', tab: 'following' } )
+					: addQueryArgs( 'users.php', { page: 'activitypub-following-list' } );
+
+			return (
+				<>
+					{ __( 'Your feed is waiting to come alive.', 'activitypub' ) }{ ' ' }
+					<a href={ followingUrl }>{ __( 'Start following people on the Fediverse', 'activitypub' ) }</a>
+				</>
+			);
+		}
+
+		// Default: following people but no posts yet.
+		return __( 'Nothing new from the people you follow. Check back soon for fresh updates.', 'activitypub' );
+	};
 
 	const [ selection, setSelection ] = useState< string[] >( [] );
 
@@ -297,16 +330,7 @@ export default function FeedStage(): ReactNode {
 			getItemId={ ( item: FeedPost ): string => item.id.toString() }
 			selection={ selection }
 			onChangeSelection={ changeSelection }
-			empty={
-				<p>
-					{ normalizedView.search || ( normalizedView.filters && normalizedView.filters.length > 0 )
-						? __( 'No posts found.', 'activitypub' )
-						: __(
-								'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
-								'activitypub'
-						  ) }
-				</p>
-			}
+			empty={ <p>{ renderEmptyStateContent() }</p> }
 			paginationInfo={ {
 				totalItems,
 				totalPages,
