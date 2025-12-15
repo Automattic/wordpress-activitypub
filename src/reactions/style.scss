@@ -99,7 +99,7 @@
 			gap: 0.25rem;
 			flex: 0 0 auto;
 			padding: 0.25rem 0.5rem;
-			font-size: 70%;
+			font-size: var(--wp--preset--font-size--small, 0.875rem);
 			color: currentColor;
 			transition: background-color 0.2s ease;
 			white-space: nowrap;
@@ -161,7 +161,7 @@
 		}
 
 		.reaction-name {
-			font-size: 75%;
+			font-size: var(--wp--preset--font-size--small, 0.875rem);
 		}
 	}
 }
@@ -173,4 +173,24 @@
 	max-height: 300px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	padding: 0.5rem;
+}
+
+/* Compact display style - inline buttons without avatars */
+.wp-block-activitypub-reactions.is-style-compact {
+	.wp-block-heading {
+		margin-bottom: 0.5em;
+	}
+
+	.activitypub-reactions {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0.5em;
+		display: inline-flex;
+	}
+
+	.reaction-group {
+		width: auto;
+		margin: 0;
+		display: inline-flex;
+	}
 }
