@@ -470,13 +470,11 @@ class Posts {
 			)
 		);
 
-		$deleted = 0;
 		foreach ( $post_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
-			++$deleted;
 		}
 
-		return $deleted;
+		return count( $post_ids );
 	}
 
 	/**
