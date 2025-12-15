@@ -633,7 +633,7 @@ class Post_Types {
 	}
 
 	/**
-	 * Filter WP_Query args to support follower_of parameter.
+	 * Filter WP_Query args to support follower_of and followed_by parameters.
 	 *
 	 * @param array            $args    Array of arguments for WP_Query.
 	 * @param \WP_REST_Request $request The REST API request.
@@ -641,7 +641,7 @@ class Post_Types {
 	 */
 	public static function filter_ap_actor_query_by_follower( $args, $request ) {
 		if ( ! empty( $request['follower_of'] ) ) {
-			// Add meta_query to filter by _activitypub_following.
+			// Add meta_query to filter by _activitypub_following (actors who follow this user).
 			if ( ! isset( $args['meta_query'] ) ) {
 				$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			}
@@ -649,6 +649,18 @@ class Post_Types {
 			$args['meta_query'][] = array(
 				'key'   => Followers::FOLLOWER_META_KEY,
 				'value' => $request['follower_of'],
+			);
+		}
+
+		if ( ! empty( $request['followed_by'] ) ) {
+			// Add meta_query to filter by _activitypub_followed_by (actors this user follows).
+			if ( ! isset( $args['meta_query'] ) ) {
+				$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			}
+
+			$args['meta_query'][] = array(
+				'key'   => Following::FOLLOWING_META_KEY,
+				'value' => $request['followed_by'],
 			);
 		}
 

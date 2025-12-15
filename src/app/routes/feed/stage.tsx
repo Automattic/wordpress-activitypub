@@ -25,6 +25,7 @@ import { useSelect } from '@wordpress/data';
  * Internal dependencies
  */
 import { useFeed } from '../../hooks/use-feed';
+import { useFollowing } from '../../hooks/use-following';
 import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
 import { normalizeFieldOrder } from './utils';
 import { STORE_NAME } from '../../store';
@@ -174,6 +175,12 @@ export default function FeedStage(): ReactNode {
 		filters: view.filters || [],
 	} );
 
+	// Get following count to determine which empty state to show.
+	const { totalItems: followingCount, hasResolved: followingResolved } = useFollowing( {
+		perPage: 1,
+		userId: activeActorId,
+	} );
+
 	const fields: Field< FeedPost >[] = useMemo(
 		(): Field< FeedPost >[] => [ metadataField, titleField, contentField, dateField, objectTypeField, tagField ],
 		[]
@@ -299,12 +306,26 @@ export default function FeedStage(): ReactNode {
 			onChangeSelection={ changeSelection }
 			empty={
 				<p>
-					{ normalizedView.search || ( normalizedView.filters && normalizedView.filters.length > 0 )
-						? __( 'No posts found.', 'activitypub' )
-						: __(
-								'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
-								'activitypub'
-						  ) }
+					{ normalizedView.search || ( normalizedView.filters && normalizedView.filters.length > 0 ) ? (
+						__( 'No posts found.', 'activitypub' )
+					) : followingResolved && followingCount === 0 ? (
+						<>
+							{ __( "You're not following anyone yet.", 'activitypub' ) }{ ' ' }
+							<a
+								href={ addQueryArgs( 'options-general.php', {
+									page: 'activitypub',
+									tab: 'following',
+								} ) }
+							>
+								{ __( 'Find people to follow', 'activitypub' ) }
+							</a>
+						</>
+					) : (
+						__(
+							'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
+							'activitypub'
+						)
+					) }
 				</p>
 			}
 			paginationInfo={ {
