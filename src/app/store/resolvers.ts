@@ -1,32 +1,38 @@
 /**
  * WordPress dependencies
  */
-import { dispatch, select } from '@wordpress/data';
+import { dispatch, select, resolveSelect } from '@wordpress/data';
 import { store as preferencesStore } from '@wordpress/preferences';
 import { store as coreStore, User } from '@wordpress/core-data';
 
 /**
  * Internal dependencies
  */
-import { STORE_NAME } from './index';
-import type { AppActions } from './index';
+import { SET_ACTIVE_ACTOR } from './types';
 
 /**
  * Resolver to initialize the active actor from preferences
  */
 export function* getActiveActorId(): Generator {
-	const preferences = select( preferencesStore );
-	const savedActorId: any = preferences.get( 'activitypub/app', 'activeActorId' );
+	// Use sync select for preferences (already loaded)
+	let actorId: number = select( preferencesStore ).get( 'activitypub/app', 'activeActorId' );
 
-	if ( savedActorId !== undefined && savedActorId !== null ) {
-		// Restore saved actor ID
-		( dispatch( STORE_NAME ) as unknown as AppActions ).setActiveActor( savedActorId );
-	} else {
-		// No saved preference, initialize with current user ID
-		const currentUser: User< 'view' > = select( coreStore ).getCurrentUser();
+	// No saved preference, initialize with current user ID
+	if ( actorId === undefined || actorId === null ) {
+		const currentUser: User< 'view' > = yield resolveSelect( coreStore ).getCurrentUser();
 		if ( currentUser?.id ) {
-			( dispatch( STORE_NAME ) as unknown as AppActions ).setActiveActor( currentUser.id );
+			actorId = currentUser.id;
+			// Save to preferences for future loads
+			dispatch( preferencesStore ).set( 'activitypub/app', 'activeActorId', actorId );
 		}
+	}
+
+	// Return action to set the state
+	if ( actorId !== undefined ) {
+		return {
+			type: SET_ACTIVE_ACTOR,
+			actorId,
+		};
 	}
 }
 
