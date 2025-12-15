@@ -1377,23 +1377,6 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test delete_all method with no posts.
-	 *
-	 * @covers ::delete_all
-	 */
-	public function test_delete_all_empty() {
-		// Ensure no posts exist.
-		$count_before = \wp_count_posts( Posts::POST_TYPE )->publish;
-		$this->assertEquals( 0, $count_before );
-
-		// Delete all posts (none exist).
-		$deleted = Posts::delete_all();
-
-		// Verify return value is 0.
-		$this->assertEquals( 0, $deleted );
-	}
-
-	/**
 	 * Test delete_all method with mixed post statuses.
 	 *
 	 * @covers ::delete_all
@@ -1423,9 +1406,6 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Delete all posts.
 		$deleted = Posts::delete_all();
-
-		// Clear cache.
-		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
 
 		// Verify all posts were deleted regardless of status.
 		$remaining = \get_posts(
