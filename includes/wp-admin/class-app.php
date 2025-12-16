@@ -13,13 +13,13 @@ namespace Activitypub\WP_Admin;
 class App {
 
 	/**
-	 * Hide the admin bar on the App page.
+	 * Initialize the App page.
 	 *
-	 * Must run early (on init) before the admin bar is initialized.
+	 * Must run early (on admin_init) before the admin bar is initialized.
 	 */
-	public static function hide_admin_bar() {
+	public static function init() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( \is_admin() && isset( $_GET['page'] ) && 'activitypub-social-web' === $_GET['page'] ) {
+		if ( isset( $_GET['page'] ) && 'activitypub-social-web' === $_GET['page'] ) {
 			\add_filter( 'wp_admin_bar_class', '__return_false' );
 		}
 	}
