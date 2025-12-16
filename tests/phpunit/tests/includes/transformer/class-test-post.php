@@ -796,7 +796,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$object = Post::transform( $post )->to_object();
 
 		// Assert that the reply block was transformed into a mention link.
-		$this->assertStringContainsString( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
+		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
+		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -827,7 +828,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Assert that the reply block was not transformed into a mention link.
-		$this->assertStringContainsString( '<div class="activitypub-reply-block wp-block-activitypub-reply" aria-label="Reply" data-in-reply-to="https://example.com/posts/123"><p><a title="This post is a response to the referenced content." aria-label="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to" target="_blank">&#8620;example.com/posts/123</a></p></div>', $content );
+		// Note: clean_html() strips class/aria-label/data-* from <div> but preserves class/title on <a>.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to" target="_blank">&#8620;example.com/posts/123</a></p></div>', $content );
 	}
 
 	/**
@@ -882,10 +884,12 @@ class Test_Post extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Assert that the first reply block was transformed into a mention link.
-		$this->assertStringContainsString( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
+		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
+		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
 
 		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
-		$this->assertStringContainsString( '<div class="activitypub-reply-block wp-block-activitypub-reply" aria-label="Reply" data-in-reply-to="https://other.site/posts/456"><p><a title="This post is a response to the referenced content." aria-label="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to" target="_blank">&#8620;other.site/posts/456</a></p></div>', $content );
+		// Note: clean_html() strips class/aria-label/data-* from <div> but preserves class/title on <a>.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to" target="_blank">&#8620;other.site/posts/456</a></p></div>', $content );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
