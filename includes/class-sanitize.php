@@ -86,7 +86,7 @@ class Sanitize {
 	public static function host_list( $value ) {
 		$value = \explode( PHP_EOL, (string) $value );
 		$value = \array_map(
-			function ( $host ) {
+			static function ( $host ) {
 				$host = \trim( $host );
 				$host = \strtolower( $host );
 				$host = \set_url_scheme( $host );

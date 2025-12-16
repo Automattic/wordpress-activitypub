@@ -114,7 +114,8 @@ export function useFeed( {
 	const { records, hasResolved, isResolving, totalItems, totalPages } = useEntityRecords< FeedPost >(
 		'postType',
 		'ap_post',
-		enabled ? queryArgs : undefined
+		queryArgs,
+		{ enabled }
 	);
 
 	return {

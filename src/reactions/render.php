@@ -97,7 +97,7 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 		'label' => $label,
 		'count' => $count,
 		'items' => array_map(
-			function ( $comment ) {
+			static function ( $comment ) {
 				return array(
 					'name'   => html_entity_decode( $comment->comment_author ),
 					'url'    => $comment->comment_author_url,
@@ -128,7 +128,7 @@ wp_interactivity_state( 'activitypub/reactions', array( 'reactions' => array( $_
 
 // Render a subset of the most recent reactions for facepile.
 $reactions = array_map(
-	function ( $reaction ) use ( $attributes ) {
+	static function ( $reaction ) use ( $attributes ) {
 		$count = 20;
 		if ( 'wide' === $attributes['align'] ) {
 			$count = 40;

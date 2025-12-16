@@ -122,7 +122,7 @@ class Post_Controller extends \WP_REST_Controller {
 			$reactions[ $type_object['collection'] ] = array(
 				'label' => $label,
 				'items' => \array_map(
-					function ( $comment ) {
+					static function ( $comment ) {
 						return array(
 							'name'   => html_entity_decode( $comment->comment_author ),
 							'url'    => $comment->comment_author_url,

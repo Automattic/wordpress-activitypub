@@ -506,7 +506,7 @@ class Health_Check {
 		// search for the word 'captcha' in the list of active plugins.
 		$captcha_plugins = array_filter(
 			$active_plugins,
-			function ( $plugin ) {
+			static function ( $plugin ) {
 				return \str_contains( strtolower( $plugin ), 'captcha' );
 			}
 		);
@@ -518,7 +518,7 @@ class Health_Check {
 		// Get nice plugin names instead of file paths using WordPress built-in functions.
 		$all_plugins          = \get_plugins();
 		$captcha_plugin_names = array_map(
-			function ( $plugin_file ) use ( $all_plugins ) {
+			static function ( $plugin_file ) use ( $all_plugins ) {
 				if ( isset( $all_plugins[ $plugin_file ]['Name'] ) ) {
 					return $all_plugins[ $plugin_file ]['Name'];
 				}
