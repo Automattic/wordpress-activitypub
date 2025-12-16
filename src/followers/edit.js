@@ -53,8 +53,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	};
 
 	// Get site settings to check blog social graph visibility.
-	const { blogSocialGraphHidden, currentUser, usersWithMeta, siteUrl } = useSelect( ( select ) => {
-		const { getCurrentUser, getUsers, getEntityRecord } = select( coreStore );
+	const { blogSocialGraphHidden, currentUser, usersWithMeta, siteUrl, canManageOptions } = useSelect( ( select ) => {
+		const { getCurrentUser, getUsers, getEntityRecord, canUser } = select( coreStore );
 		const siteSettings = getEntityRecord( 'root', 'site' );
 		const siteData = getEntityRecord( 'root', '__unstableBase' );
 
@@ -63,12 +63,23 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 			currentUser: getCurrentUser(),
 			usersWithMeta: getUsers( { capabilities: 'activitypub', context: 'edit' } ),
 			siteUrl: siteData?.home,
+			canManageOptions: canUser( 'update', { kind: 'root', name: 'site' } ),
 		};
 	}, [] );
 
+	const authorId = useSelect(
+		( select ) => {
+			const { getEditedEntityRecord } = select( coreStore );
+			const _authorId = getEditedEntityRecord( 'postType', postType, postId )?.author;
+
+			return _authorId ?? null;
+		},
+		[ postType, postId ]
+	);
+
 	// Filter user options based on social graph visibility.
 	const filteredUsersOptions = useMemo( () => {
-		if ( ! usersOptions.length ) {
+		if ( ! usersOptions.length || ! usersWithMeta ) {
 			return [];
 		}
 
@@ -89,47 +100,52 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 
 	// Determine if we should show a notice for hidden social graph.
 	const showHiddenNotice = useMemo( () => {
-		// Don't show notice for 'inherit' mode.
-		if ( selectedUser === 'inherit' ) {
+		if ( ! usersWithMeta ) {
 			return false;
 		}
 
-		return ! filteredUsersOptions.find( ( { value } ) => value === selectedUser );
-	}, [ selectedUser, filteredUsersOptions ] );
+		// Check blog social graph visibility.
+		if ( selectedUser === 'blog' ) {
+			return blogSocialGraphHidden;
+		}
+
+		// For 'inherit' mode, check if the resolved author has hidden social graph.
+		if ( selectedUser === 'inherit' ) {
+			if ( ! authorId ) {
+				return false;
+			}
+			const author = usersWithMeta.find( ( u ) => u.id === authorId );
+			return author ? hasSocialGraphHidden( author.meta ) : false;
+		}
+
+		return false;
+	}, [ selectedUser, authorId, usersWithMeta, blogSocialGraphHidden ] );
 
 	// Determine if current user can edit the settings for the selected user.
 	const canEditSettings = useMemo( () => {
 		if ( ! showHiddenNotice || ! currentUser ) {
 			return false;
 		}
+
 		if ( selectedUser === 'blog' ) {
-			return currentUser.capabilities?.manage_options;
+			return canManageOptions;
 		}
 
-		return String( currentUser.id ) === selectedUser;
-	}, [ showHiddenNotice, currentUser, selectedUser ] );
+		return currentUser.id === authorId;
+	}, [ showHiddenNotice, currentUser, selectedUser, authorId, canManageOptions ] );
 
 	// Get the settings URL for the notice.
 	const settingsUrl = useMemo( () => {
 		if ( ! canEditSettings || ! siteUrl ) {
 			return null;
 		}
+
 		if ( selectedUser === 'blog' ) {
 			return siteUrl + '/wp-admin/options-general.php?page=activitypub&tab=blog-profile';
 		}
 
 		return siteUrl + '/wp-admin/profile.php#activitypub';
-	}, [ canEditSettings, selectedUser, siteUrl ] );
-
-	const authorId = useSelect(
-		( select ) => {
-			const { getEditedEntityRecord } = select( coreStore );
-			const _authorId = getEditedEntityRecord( 'postType', postType, postId )?.author;
-
-			return _authorId ?? null;
-		},
-		[ postType, postId ]
-	);
+	}, [ canEditSettings, siteUrl, selectedUser ] );
 
 	useEffect( () => {
 		// if there are no users yet, do nothing
@@ -137,12 +153,16 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 			return;
 		}
 
-		// Ensure that the selected user is in the list of options, if not, select the first available user
-		// but only if the notice isn't showing (to preserve existing blocks with hidden social graph)
-		if ( ! showHiddenNotice && ! filteredUsersOptions.find( ( { value } ) => value === selectedUser ) ) {
+		// If selected user is not in the filtered options, auto-switch to first available.
+		// Exception: 'blog' and 'inherit' show a notice instead of auto-switching.
+		if (
+			selectedUser !== 'blog' &&
+			selectedUser !== 'inherit' &&
+			! filteredUsersOptions.find( ( { value } ) => value === selectedUser )
+		) {
 			setAttributes( { selectedUser: filteredUsersOptions[ 0 ].value } );
 		}
-	}, [ selectedUser, filteredUsersOptions, setAttributes, showHiddenNotice ] );
+	}, [ selectedUser, filteredUsersOptions, setAttributes ] );
 
 	// Template for InnerBlocks - allows only a heading block.
 	const TEMPLATE = [
@@ -231,23 +251,6 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 }
 
 /**
- * Builds the API path for fetching followers.
- *
- * @param {string} namespace The ActivityPub namespace.
- * @param {number} userId    The ID of the user whose followers are being fetched.
- * @param {number} per_page  The number of followers to fetch per page.
- * @param {string} order     The order in which to fetch followers ('asc' or 'desc').
- * @param {number} page      The page number to fetch.
- * @return {string} The API path with query arguments for fetching followers.
- */
-function getPath( namespace, userId, per_page, order, page ) {
-	const path = `/${ namespace }/actors/${ userId }/followers`;
-	const args = { per_page, order, page, context: 'full' };
-
-	return addQueryArgs( path, args );
-}
-
-/**
  * Component to display followers of a user.
  *
  * @param {Object}   props              The component props.
@@ -256,54 +259,45 @@ function getPath( namespace, userId, per_page, order, page ) {
  * @param {string}   props.order        The order in which to fetch followers ('asc' or 'desc').
  * @param {number}   props.page         The page number to fetch.
  * @param {Function} props.setPage      The function to set the page number.
+ * @param {Object}   props.followerData Optional pre-fetched follower data.
  * @return {JSX.Element} The followers list component.
  */
-function Followers( { selectedUser, per_page, order, page: passedPage, setPage: passedSetPage } ) {
+function Followers( {
+	selectedUser,
+	per_page,
+	order,
+	page: passedPage,
+	setPage: passedSetPage,
+	followerData = false,
+} ) {
 	const { namespace } = useOptions();
 	const userId = selectedUser === 'blog' ? 0 : selectedUser;
 	const [ followers, setFollowers ] = useState( [] );
 	const [ pages, setPages ] = useState( 0 );
-	const [ socialGraphHidden, setSocialGraphHidden ] = useState( false );
 	const [ localPage, setLocalPage ] = useState( 1 );
 	const page = passedPage || localPage;
 	const setPage = passedSetPage || setLocalPage;
 
-	const setData = ( newFollowers, total, isHidden = false ) => {
-		setFollowers( newFollowers );
+	const setData = ( followers, total ) => {
+		setFollowers( followers );
 		setPages( Math.ceil( total / per_page ) );
-		setSocialGraphHidden( isHidden );
 	};
 
 	useEffect( () => {
-		if ( ! namespace ) {
-			return;
+		if ( followerData && page === 1 ) {
+			return setData( followerData.followers, followerData.total );
 		}
 
-		const path = getPath( namespace, userId, per_page, order, page );
+		const path = addQueryArgs( `/${ namespace }/actors/${ userId }/followers`, {
+			per_page,
+			order,
+			page,
+			context: 'full',
+		} );
 		apiFetch( { path } )
-			.then( ( response ) => {
-				// When social graph is hidden, the endpoint returns a response without orderedItems.
-				if ( ! ( 'orderedItems' in response ) ) {
-					setData( [], 0, true );
-					return;
-				}
-				const items = response.orderedItems || [];
-				const total = response.totalItems || 0;
-				setData( items, total, false );
-			} )
-			.catch( () => setData( [], 0, false ) );
-	}, [ namespace, userId, per_page, order, page ] );
-
-	if ( socialGraphHidden ) {
-		return (
-			<Notice status="warning" isDismissible={ false }>
-				{ __(
-					'The selected user has their social graph hidden. This block will not display followers on the frontend.',
-					'activitypub'
-				) }
-			</Notice>
-		);
-	}
+			.then( ( { orderedItems = [], totalItems = 0 } ) => setData( orderedItems, totalItems ) )
+			.catch( () => setData( [], 0 ) );
+	}, [ namespace, userId, per_page, order, page, followerData ] );
 
 	return (
 		<div className="followers-container">
