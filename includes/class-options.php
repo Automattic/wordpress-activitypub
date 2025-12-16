@@ -76,7 +76,7 @@ class Options {
 				'type'              => 'integer',
 				'description'       => 'Number of images to attach to posts.',
 				'default'           => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return \is_numeric( $value ) ? \absint( $value ) : ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
 				},
 			)
