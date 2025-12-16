@@ -135,15 +135,11 @@ class Nodeinfo {
 				'orderby' => 'ID',
 				'order'   => 'ASC',
 				'cap'     => 'activitypub',
-				'fields'  => array( 'ID' ),
+				'fields'  => 'ID',
 			)
 		);
+		$admins = array_map( array( Webfinger::class, 'get_user_resource' ), $admins );
 
-		return array_map(
-			static function ( $user ) {
-				return Webfinger::get_user_resource( $user->ID );
-			},
-			$admins
-		);
+		return array_values( array_filter( $admins ) );
 	}
 }
