@@ -111,7 +111,7 @@ function plugin_init() {
 	if ( \defined( 'SSP_VERSION' ) ) {
 		add_filter(
 			'activitypub_transformer',
-			function ( $transformer, $data, $object_class ) {
+			static function ( $transformer, $data, $object_class ) {
 				if (
 					'WP_Post' === $object_class &&
 					\get_post_meta( $data->ID, 'audio_file', true )

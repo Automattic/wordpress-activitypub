@@ -116,7 +116,7 @@ class Blocks {
 				 * @param \WP_REST_Request $request    The request object.
 				 * @return int The number of published posts.
 				 */
-				'get_callback' => function ( $response, $field_name, $request ) {
+				'get_callback' => static function ( $response, $field_name, $request ) {
 					return (int) count_user_posts( $request->get_param( 'id' ), 'post', true );
 				},
 				'schema'       => array(
@@ -300,7 +300,7 @@ class Blocks {
 		// Convert paragraphs to blocks.
 		\preg_match_all( '#<p>.*?</p>#is', $data['post_content'], $matches );
 		$blocks = \array_map(
-			function ( $paragraph ) {
+			static function ( $paragraph ) {
 				return '<!-- wp:paragraph -->' . PHP_EOL . $paragraph . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL;
 			},
 			$matches[0] ?? array()

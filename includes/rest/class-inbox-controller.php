@@ -76,7 +76,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'object' => array(
 							'description'       => 'The object of the activity.',
 							'required'          => true,
-							'validate_callback' => function ( $param, $request, $key ) {
+							'validate_callback' => static function ( $param, $request, $key ) {
 								/**
 								 * Filter the ActivityPub object validation.
 								 *
@@ -92,7 +92,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 							'description'       => 'The primary recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
 							'required'          => false,
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -103,7 +103,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'cc'     => array(
 							'description'       => 'The secondary recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -114,7 +114,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'bcc'    => array(
 							'description'       => 'The private recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}

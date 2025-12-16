@@ -88,7 +88,7 @@ class Classic_Editor {
 
 		// Transform IDs into associative arrays.
 		$media_ids = \array_map(
-			function ( $id ) {
+			static function ( $id ) {
 				return array( 'id' => $id );
 			},
 			$query->get_posts()
