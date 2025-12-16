@@ -1,9 +1,10 @@
+import apiFetch from '@wordpress/api-fetch';
 import { SelectControl, RangeControl, PanelBody, Notice } from '@wordpress/components';
 import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-editor';
-import { store as coreStore, useEntityRecords, useEntityRecord } from '@wordpress/core-data';
+import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useState, useEffect, useMemo } from '@wordpress/element';
-import { decodeEntities } from '@wordpress/html-entities';
+import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 import { useOptions } from '../shared/use-options';
 import { useUserOptions } from '../shared/use-user-options';
@@ -28,12 +29,12 @@ function hasSocialGraphHidden( userMeta ) {
 /**
  * Edit component.
  *
- * @param {Object}   props                   Component props.
- * @param {Object}   props.attributes        Block attributes.
- * @param {Function} props.setAttributes     Set block attributes.
- * @param {Object}   props.context           Block context.
- * @param {string}   props.context.postType  Post type.
- * @param {number}   props.context.postId    Post ID.
+ * @param {Object}   props                  Component props.
+ * @param {Object}   props.attributes       Block attributes.
+ * @param {Function} props.setAttributes    Set block attributes.
+ * @param {Object}   props.context          Block context.
+ * @param {string}   props.context.postType Post type.
+ * @param {number}   props.context.postId   Post ID.
  *
  * @return {JSX.Element} Edit component.
  */
@@ -52,17 +53,15 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	};
 
 	// Get site settings to check blog social graph visibility.
-	const { record: siteSettings } = useEntityRecord( 'root', 'site', undefined );
-	const blogSocialGraphHidden = !! siteSettings?.activitypub_hide_social_graph;
-
-	// Get current user for capability checks and to determine if they can edit settings.
-	const { currentUser, usersWithMeta, siteUrl } = useSelect( ( select ) => {
+	const { blogSocialGraphHidden, currentUser, usersWithMeta, siteUrl } = useSelect( ( select ) => {
 		const { getCurrentUser, getUsers, getEntityRecord } = select( coreStore );
+		const siteSettings = getEntityRecord( 'root', 'site' );
 		const siteData = getEntityRecord( 'root', '__unstableBase' );
 
 		return {
+			blogSocialGraphHidden: !! siteSettings?.activitypub_hide_social_graph,
 			currentUser: getCurrentUser(),
-			usersWithMeta: getUsers( { capabilities: 'activitypub' } ),
+			usersWithMeta: getUsers( { capabilities: 'activitypub', context: 'edit' } ),
 			siteUrl: siteData?.home,
 		};
 	}, [] );
@@ -229,6 +228,23 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 }
 
 /**
+ * Builds the API path for fetching followers.
+ *
+ * @param {string} namespace The ActivityPub namespace.
+ * @param {number} userId    The ID of the user whose followers are being fetched.
+ * @param {number} per_page  The number of followers to fetch per page.
+ * @param {string} order     The order in which to fetch followers ('asc' or 'desc').
+ * @param {number} page      The page number to fetch.
+ * @return {string} The API path with query arguments for fetching followers.
+ */
+function getPath( namespace, userId, per_page, order, page ) {
+	const path = `/${ namespace }/actors/${ userId }/followers`;
+	const args = { per_page, order, page, context: 'full' };
+
+	return addQueryArgs( path, args );
+}
+
+/**
  * Component to display followers of a user.
  *
  * @param {Object}   props              The component props.
@@ -240,27 +256,58 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
  * @return {JSX.Element} The followers list component.
  */
 function Followers( { selectedUser, per_page, order, page: passedPage, setPage: passedSetPage } ) {
+	const { namespace } = useOptions();
 	const userId = selectedUser === 'blog' ? 0 : selectedUser;
+	const [ followers, setFollowers ] = useState( [] );
+	const [ pages, setPages ] = useState( 0 );
+	const [ socialGraphHidden, setSocialGraphHidden ] = useState( false );
 	const [ localPage, setLocalPage ] = useState( 1 );
 	const page = passedPage || localPage;
 	const setPage = passedSetPage || setLocalPage;
 
-	const { records: followers, totalItems } = useEntityRecords( 'postType', 'ap_actor', {
-		activitypub_following: userId,
-		per_page,
-		page,
-		order,
-		orderby: 'id',
-	} );
+	const setData = ( newFollowers, total, isHidden = false ) => {
+		setFollowers( newFollowers );
+		setPages( Math.ceil( total / per_page ) );
+		setSocialGraphHidden( isHidden );
+	};
 
-	const pages = Math.ceil( ( totalItems || 0 ) / per_page );
+	useEffect( () => {
+		if ( ! namespace ) {
+			return;
+		}
+
+		const path = getPath( namespace, userId, per_page, order, page );
+		apiFetch( { path } )
+			.then( ( response ) => {
+				// When social graph is hidden, the endpoint returns a response without orderedItems.
+				if ( ! ( 'orderedItems' in response ) ) {
+					setData( [], 0, true );
+					return;
+				}
+				const items = response.orderedItems || [];
+				const total = response.totalItems || 0;
+				setData( items, total, false );
+			} )
+			.catch( () => setData( [], 0, false ) );
+	}, [ namespace, userId, per_page, order, page ] );
+
+	if ( socialGraphHidden ) {
+		return (
+			<Notice status="warning" isDismissible={ false }>
+				{ __(
+					'The selected user has their social graph hidden. This block will not display followers on the frontend.',
+					'activitypub'
+				) }
+			</Notice>
+		);
+	}
 
 	return (
 		<div className="followers-container">
-			{ followers?.length ? (
+			{ followers.length ? (
 				<ul className="followers-list">
 					{ followers.map( ( follower ) => (
-						<li key={ follower.guid.rendered } className="follower-item">
+						<li key={ follower.url } className="follower-item">
 							<Follower { ...follower } />
 						</li>
 					) ) }
@@ -281,6 +328,7 @@ function Followers( { selectedUser, per_page, order, page: passedPage, setPage: 
  * @param {number}   props.page    The current page number.
  * @param {number}   props.pages   The total number of pages.
  * @param {Function} props.setPage The function to set the page number.
+ * @return {JSX.Element|null} The pagination component or null if not needed.
  */
 function Pagination( { page, pages, setPage } ) {
 	if ( pages <= 1 ) {
@@ -323,26 +371,19 @@ function Pagination( { page, pages, setPage } ) {
 }
 
 /**
- * @typedef {Object} FollowerMeta
- * @property {string} [_activitypub_acct]       The account handle.
- * @property {string} [_activitypub_avatar_url] The avatar URL.
- */
-
-/**
  * Component to display a single follower.
  *
- * @param {Object}       props       The component props.
- * @param {Object}       props.title The title object containing rendered name.
- * @param {Object}       props.guid  The guid object containing rendered URL.
- * @param {FollowerMeta} props.meta  The object containing follower data.
+ * @param {Object} props                   The component props.
+ * @param {string} props.name              The name of the follower.
+ * @param {Object} props.icon              The icon of the follower.
+ * @param {string} props.url               The URL of the follower.
+ * @param {string} props.preferredUsername The preferred username of the follower.
  * @return {JSX.Element} The follower component.
  */
-function Follower( { title, guid, meta } ) {
+function Follower( { name, icon, url, preferredUsername } ) {
+	const handle = `@${ preferredUsername }`;
 	const { defaultAvatarUrl, showAvatars } = useOptions();
-	const name = decodeEntities( title?.rendered || '' );
-	const url = guid?.rendered || '#';
-	const handle = meta?._activitypub_acct ? `@${ meta._activitypub_acct }` : '';
-	const avatar = meta?._activitypub_avatar_url || defaultAvatarUrl;
+	const avatar = icon?.url || defaultAvatarUrl;
 
 	return (
 		<a className="follower-link" href={ url } title={ handle } onClick={ ( event ) => event.preventDefault() }>
