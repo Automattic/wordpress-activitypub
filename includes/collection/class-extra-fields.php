@@ -217,7 +217,7 @@ class Extra_Fields {
 
 		\add_filter(
 			'activitypub_link_rel',
-			function ( $rel ) {
+			static function ( $rel ) {
 				$rel .= ' me';
 
 				return $rel;
