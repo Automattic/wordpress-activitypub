@@ -3,7 +3,7 @@ import { SelectControl, RangeControl, PanelBody, Notice } from '@wordpress/compo
 import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
-import { useState, useEffect, useMemo } from '@wordpress/element';
+import { useState, useEffect, useMemo, createInterpolateElement } from '@wordpress/element';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 import { useOptions } from '../shared/use-options';
@@ -200,18 +200,21 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 
 				{ showHiddenNotice ? (
 					<Notice status="warning" isDismissible={ false }>
-						{ __(
-							'The selected user has their social graph hidden. This block will not display followers on the frontend.',
-							'activitypub'
-						) }
-						{ settingsUrl && (
-							<>
-								{ ' ' }
-								<a href={ settingsUrl } target="_blank" rel="noopener noreferrer">
-									{ __( 'Edit privacy settings', 'activitypub' ) }
-								</a>
-							</>
-						) }
+						{ settingsUrl
+							? createInterpolateElement(
+									/* translators: <a> is a link to the profile settings page. */
+									__(
+										'The selected user has their social graph hidden. This block will not display followers on the frontend. <a>Edit privacy settings</a>',
+										'activitypub'
+									),
+									{
+										a: <a href={ settingsUrl } target="_blank" rel="noopener noreferrer" />,
+									}
+							  )
+							: __(
+									'The selected user has their social graph hidden. This block will not display followers on the frontend.',
+									'activitypub'
+							  ) }
 					</Notice>
 				) : selectedUser === 'inherit' ? (
 					authorId ? (
