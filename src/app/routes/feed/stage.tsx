@@ -26,6 +26,7 @@ import { useSelect } from '@wordpress/data';
  */
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
+import EmptyState from '../../components/empty-state';
 import { normalizeFieldOrder } from './utils';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
@@ -301,16 +302,7 @@ export default function FeedStage(): ReactNode {
 			getItemId={ ( item: FeedPost ): string => item.id.toString() }
 			selection={ selection }
 			onChangeSelection={ changeSelection }
-			empty={
-				<p>
-					{ normalizedView.search || ( normalizedView.filters && normalizedView.filters.length > 0 )
-						? __( 'No posts found.', 'activitypub' )
-						: __(
-								'No posts found in your feed. Posts from ActivityPub actors you follow will appear here.',
-								'activitypub'
-						  ) }
-				</p>
-			}
+			empty={ <EmptyState /> }
 			paginationInfo={ {
 				totalItems,
 				totalPages,

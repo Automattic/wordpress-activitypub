@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Improve Reader empty state to show contextual messages based on following status.
