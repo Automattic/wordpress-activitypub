@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
  * WordPress dependencies
  */
 import { __, _x } from '@wordpress/i18n';
-import type { Field } from '@wordpress/dataviews';
+import type { Field } from '@wordpress/dataviews/wp';
 
 /**
  * Internal dependencies

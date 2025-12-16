@@ -12,7 +12,7 @@ import type { ReactNode } from 'react';
  */
 import { __ } from '@wordpress/i18n';
 import { dateI18n } from '@wordpress/date';
-import type { Field } from '@wordpress/dataviews';
+import type { Field } from '@wordpress/dataviews/wp';
 
 /**
  * Internal dependencies

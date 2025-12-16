@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { __unstableStripHTML as stripHTML, safeHTML } from '@wordpress/dom';
-import type { Field } from '@wordpress/dataviews';
+import type { Field } from '@wordpress/dataviews/wp';
 
 /**
  * Internal dependencies
