@@ -627,47 +627,6 @@ class Post_Types {
 				),
 			)
 		);
-
-		// Add custom query parameter for filtering by following relationships.
-		\add_filter( 'rest_ap_actor_query', array( self::class, 'filter_ap_actor_query_by_following' ), 10, 2 );
-
-		// Register followed_by as a valid REST API collection parameter.
-		\add_filter(
-			\sprintf( 'rest_%s_collection_params', Remote_Actors::POST_TYPE ),
-			function ( $params ) {
-				$params['followed_by'] = array(
-					'description'       => __( 'Filter to actors that this user ID follows.', 'activitypub' ),
-					'type'              => 'integer',
-					'sanitize_callback' => 'absint',
-				);
-
-				return $params;
-			}
-		);
-	}
-
-	/**
-	 * Filter WP_Query args to support followed_by parameter.
-	 *
-	 * @param array            $args    Array of arguments for WP_Query.
-	 * @param \WP_REST_Request $request The REST API request.
-	 * @return array Modified query arguments.
-	 */
-	public static function filter_ap_actor_query_by_following( $args, $request ) {
-		// Use isset() instead of ! empty() because 0 is a valid user ID (blog actor).
-		if ( isset( $request['followed_by'] ) && '' !== $request['followed_by'] ) {
-			// Add meta_query to filter by _activitypub_followed_by (actors this user follows).
-			if ( ! isset( $args['meta_query'] ) ) {
-				$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			}
-
-			$args['meta_query'][] = array(
-				'key'   => Following::FOLLOWING_META_KEY,
-				'value' => $request['followed_by'],
-			);
-		}
-
-		return $args;
 	}
 
 	/**
