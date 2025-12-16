@@ -627,6 +627,32 @@ class Post_Types {
 				),
 			)
 		);
+
+		// Add custom query parameter for filtering by follower relationships.
+		\add_filter( 'rest_ap_actor_query', array( self::class, 'filter_ap_actor_query_by_follower' ), 10, 2 );
+	}
+
+	/**
+	 * Filter WP_Query args to support follower_of parameter.
+	 *
+	 * @param array            $args    Array of arguments for WP_Query.
+	 * @param \WP_REST_Request $request The REST API request.
+	 * @return array Modified query arguments.
+	 */
+	public static function filter_ap_actor_query_by_follower( $args, $request ) {
+		if ( ! empty( $request['follower_of'] ) ) {
+			// Add meta_query to filter by _activitypub_following.
+			if ( ! isset( $args['meta_query'] ) ) {
+				$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			}
+
+			$args['meta_query'][] = array(
+				'key'   => Followers::FOLLOWER_META_KEY,
+				'value' => $request['follower_of'],
+			);
+		}
+
+		return $args;
 	}
 
 	/**
