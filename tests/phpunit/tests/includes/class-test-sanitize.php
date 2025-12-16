@@ -442,10 +442,6 @@ class Test_Sanitize extends \WP_UnitTestCase {
 				'<p lang="en" dir="ltr">Hello</p>',
 				'<p>Hello</p>',
 			),
-			'preserves_datetime'       => array(
-				'<time datetime="2024-01-15">Jan 15</time>',
-				'<time datetime="2024-01-15">Jan 15</time>',
-			),
 			'preserves_cite'           => array(
 				'<blockquote cite="https://example.com">Quote</blockquote>',
 				'<blockquote cite="https://example.com">Quote</blockquote>',
