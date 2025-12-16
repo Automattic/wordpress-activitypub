@@ -91,7 +91,7 @@ export function Layout(): ReactNode {
 						} }
 						role="button"
 						tabIndex={ -1 }
-						aria-label="Close menu"
+						aria-label={ __( 'Close menu', 'activitypub' ) }
 					/>
 				) }
 			</AnimatePresence>
