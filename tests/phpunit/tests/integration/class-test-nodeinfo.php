@@ -383,7 +383,7 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 
 		// Check that staffAccounts is an array with no empty strings.
 		$this->assertIsArray( $result['metadata']['staffAccounts'] );
-		$this->assertEmpty( $result['metadata']['staffAccounts'], 'Staff accounts should not contain empty strings' );
+		$this->assertEmpty( $result['metadata']['staffAccounts'], 'Staff accounts should be empty in blog-only mode' );
 
 		\delete_option( 'activitypub_actor_mode' );
 	}
