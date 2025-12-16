@@ -405,7 +405,7 @@ class Admin {
 		// Disable the edit_post capability for federated posts.
 		\add_filter(
 			'user_has_cap',
-			function ( $all_caps, $caps, $arg ) {
+			static function ( $all_caps, $caps, $arg ) {
 				if ( 'edit_post' !== $arg[0] ) {
 					return $all_caps;
 				}
@@ -436,7 +436,7 @@ class Admin {
 
 		add_filter(
 			"views_{$screen_id}",
-			function ( $views ) {
+			static function ( $views ) {
 				if ( Extra_Fields::is_extra_fields_post_type( get_current_screen()->post_type ) ) {
 					return array();
 				}
@@ -915,7 +915,7 @@ class Admin {
 		$tabs = \get_current_screen()->get_help_tabs();
 		$ids  = \array_values( \wp_list_pluck( $tabs, 'id' ) );
 		$ids  = \array_map(
-			function ( $id ) {
+			static function ( $id ) {
 				return '#tab-link-' . $id;
 			},
 			$ids

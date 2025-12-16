@@ -226,7 +226,7 @@ class Activitypub {
 				'description'       => 'The user description.',
 				'single'            => true,
 				'default'           => '',
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return wp_kses( $value, 'user_description' );
 				},
 			)
@@ -337,7 +337,7 @@ class Activitypub {
 				'description'       => 'User-specific blocked ActivityPub domains.',
 				'single'            => true,
 				'default'           => array(),
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return \array_unique( \array_map( array( Sanitize::class, 'host_list' ), $value ) );
 				},
 			)
@@ -351,7 +351,7 @@ class Activitypub {
 				'description'       => 'User-specific blocked ActivityPub keywords.',
 				'single'            => true,
 				'default'           => array(),
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return \array_map( 'sanitize_text_field', $value );
 				},
 			)

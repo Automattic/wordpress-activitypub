@@ -62,7 +62,7 @@ $followers = array_map(
 	 *
 	 * @return array
 	 */
-	function ( $follower ) {
+	static function ( $follower ) {
 		$actor    = Remote_Actors::get_actor( $follower );
 		$username = $actor->get_preferred_username();
 
