@@ -23,7 +23,6 @@ import { ParsedLocation } from '@tanstack/react-router';
 /**
  * WordPress dependencies
  */
-import { CommandMenu } from '@wordpress/commands';
 import {
 	SnackbarList,
 	__unstableMotion as motion,
@@ -71,8 +70,6 @@ export function Layout(): ReactNode {
 
 	return (
 		<div className="app-layout">
-			<CommandMenu />
-
 			{ /* Mobile: Backdrop for sidebar drawer */ }
 			<AnimatePresence>
 				{ isMobileViewport && isMobileSidebarOpen && (
