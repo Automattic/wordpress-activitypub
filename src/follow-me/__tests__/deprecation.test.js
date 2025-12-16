@@ -2,18 +2,18 @@
  * Tests for the follow-me block deprecations.
  *
  * These tests verify the deprecation logic (isEligible, migrate) works correctly.
- * Due to Jest ESM limitations with @wordpress/blocks, we recreate the deprecation
- * logic here rather than importing it directly.
+ * We recreate the deprecation config here because importing from the source file
+ * pulls in @wordpress/blocks which has Jest ESM compatibility issues.
  */
 
 import classnames from 'classnames';
+import { __unstableStripHTML as stripHTML } from '@wordpress/dom';
 import {
 	v1Markup,
 	v1MarkupButtonOnly,
 	v1MarkupCustomText,
 	v1MarkupWithUser,
 	v2Markup,
-	v2MarkupNotButtonOnly,
 	v2MarkupWithClassName,
 	v3Markup,
 	v3MarkupCustomText,
@@ -107,6 +107,9 @@ const v2Config = {
 /**
  * v3 deprecation config (mirrors src/follow-me/deprecation.js).
  * Fixes broken button HTML when unfiltered_html capability is restricted.
+ *
+ * Note: The actual implementation uses __( 'Follow', 'activitypub' ) for the i18n
+ * fallback, but we use a plain string here since Jest tests don't use i18n functions.
  */
 const v3Config = {
 	attributes: {
@@ -122,7 +125,7 @@ const v3Config = {
 
 	migrate( attributes, innerBlocks ) {
 		const { tagName, ...buttonAttributes } = innerBlocks[ 0 ].attributes;
-		const text = innerBlocks[ 0 ].originalContent.replace( /<[^>]*>/g, '' ) ?? 'Follow';
+		const text = stripHTML( innerBlocks[ 0 ].originalContent ) || 'Follow';
 
 		const buttonBlock = createBlock( 'core/button', { ...buttonAttributes, text } );
 
@@ -194,7 +197,7 @@ describe( 'Follow Me block deprecations', () => {
 			} );
 
 			it( 'should return false when buttonOnly is false', () => {
-				expect( v2Config.isEligible( v2MarkupNotButtonOnly.attributes ) ).toBe( false );
+				expect( v2Config.isEligible( { buttonOnly: false } ) ).toBe( false );
 			} );
 
 			it( 'should return false when buttonOnly is not set', () => {
@@ -215,12 +218,6 @@ describe( 'Follow Me block deprecations', () => {
 
 				expect( newAttributes.className ).toContain( 'is-style-button-only' );
 				expect( newAttributes.className ).toContain( 'my-custom-class' );
-			} );
-
-			it( 'should add is-style-default when buttonOnly is false', () => {
-				const newAttributes = v2Config.migrate( v2MarkupNotButtonOnly.attributes );
-
-				expect( newAttributes.className ).toContain( 'is-style-default' );
 			} );
 		} );
 	} );

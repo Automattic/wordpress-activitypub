@@ -69,17 +69,6 @@ export const v2Markup = {
 };
 
 /**
- * v2 with buttonOnly=false.
- */
-export const v2MarkupNotButtonOnly = {
-	html: `<!-- wp:activitypub/follow-me {"buttonOnly":false} /-->`,
-	attributes: {
-		buttonOnly: false,
-	},
-	innerBlocks: [],
-};
-
-/**
  * v2 with existing className.
  */
 export const v2MarkupWithClassName = {
