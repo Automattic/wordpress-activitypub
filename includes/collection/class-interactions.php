@@ -412,7 +412,7 @@ class Interactions {
 		// No nonce possible for this submission route.
 		\add_filter(
 			'akismet_comment_nonce',
-			function () {
+			static function () {
 				return 'inactive';
 			}
 		);

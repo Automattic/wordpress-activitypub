@@ -310,7 +310,7 @@ class Enable_Mastodon_Apps {
 		$account->fields = self::get_extra_fields( $user_id_to_use );
 		// Now do it in source['fields'] with stripped tags.
 		$account->source['fields'] = \array_map(
-			function ( $field ) {
+			static function ( $field ) {
 				$field['value'] = \wp_strip_all_tags( $field['value'], true );
 				return $field;
 			},
@@ -588,7 +588,7 @@ class Enable_Mastodon_Apps {
 
 		if ( ! empty( $object['attachment'] ) ) {
 			$status->media_attachments = array_map(
-				function ( $attachment ) {
+				static function ( $attachment ) {
 					$default_attachment = array(
 						'url'       => null,
 						'mediaType' => null,
@@ -676,7 +676,7 @@ class Enable_Mastodon_Apps {
 			}
 
 			$new_statuses         = array_map(
-				function ( $item ) use ( $account, $args ) {
+				static function ( $item ) use ( $account, $args ) {
 					if ( $args['exclude_replies'] ) {
 						if ( isset( $item['object']['inReplyTo'] ) && $item['object']['inReplyTo'] ) {
 							return null;
@@ -844,7 +844,7 @@ class Enable_Mastodon_Apps {
 		// Sort by date descending.
 		\usort(
 			$notifications,
-			function ( $a, $b ) {
+			static function ( $a, $b ) {
 				$a_date = \is_array( $a ) ? $a['created_at'] : $a->created_at;
 				$b_date = \is_array( $b ) ? $b['created_at'] : $b->created_at;
 				return \strcmp( $b_date, $a_date );
