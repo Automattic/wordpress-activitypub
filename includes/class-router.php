@@ -158,7 +158,7 @@ class Router {
 
 		add_action(
 			'wp_head',
-			function () use ( $id ) {
+			static function () use ( $id ) {
 				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);

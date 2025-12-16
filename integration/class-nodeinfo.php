@@ -140,7 +140,7 @@ class Nodeinfo {
 		);
 
 		return array_map(
-			function ( $user ) {
+			static function ( $user ) {
 				return Webfinger::get_user_resource( $user->ID );
 			},
 			$admins
