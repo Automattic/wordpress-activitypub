@@ -385,4 +385,158 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	public function test_strip_whitespace( $input, $expected ) {
 		$this->assertSame( $expected, Sanitize::strip_whitespace( $input ) );
 	}
+
+	/**
+	 * Data provider for clean_html tests.
+	 *
+	 * @return array Test data with input and expected output.
+	 */
+	public function clean_html_provider() {
+		return array(
+			'empty_string'             => array( '', '' ),
+			'removes_class_from_p'     => array(
+				'<p class="wp-block-paragraph">Hello</p>',
+				'<p>Hello</p>',
+			),
+			'preserves_class_on_a'     => array(
+				'<a href="https://example.com" class="u-url mention">Link</a>',
+				'<a href="https://example.com" class="u-url mention">Link</a>',
+			),
+			'removes_id'               => array(
+				'<span id="main-content">Content</span>',
+				'<span>Content</span>',
+			),
+			'removes_style'            => array(
+				'<span style="color: red;">Styled</span>',
+				'<span>Styled</span>',
+			),
+			'removes_data_attributes'  => array(
+				'<span data-id="123" data-custom="value">Content</span>',
+				'<span>Content</span>',
+			),
+			'strips_loading_decoding'  => array(
+				'<img src="image.jpg" loading="lazy" decoding="async" alt="Test" />',
+				'<img src="image.jpg" alt="Test" />',
+			),
+			'preserves_href'           => array(
+				'<a href="https://example.com">Link</a>',
+				'<a href="https://example.com">Link</a>',
+			),
+			'strips_bad_protocol'      => array(
+				'<a href="javascript:alert(1)">Link</a>',
+				'<a href="alert(1)">Link</a>',
+			),
+			'preserves_img_essentials' => array(
+				'<img src="image.jpg" alt="Desc" width="300" height="200" />',
+				'<img src="image.jpg" alt="Desc" width="300" height="200" />',
+			),
+			'preserves_title'          => array(
+				'<a href="https://example.com" title="Example">Link</a>',
+				'<a href="https://example.com" title="Example">Link</a>',
+			),
+			'preserves_rel_and_target' => array(
+				'<a href="https://example.com" rel="me" target="_blank">Link</a>',
+				'<a href="https://example.com" rel="me" target="_blank">Link</a>',
+			),
+			'strips_lang_dir'          => array(
+				'<p lang="en" dir="ltr">Hello</p>',
+				'<p>Hello</p>',
+			),
+			'preserves_cite'           => array(
+				'<blockquote cite="https://example.com">Quote</blockquote>',
+				'<blockquote cite="https://example.com">Quote</blockquote>',
+			),
+			'preserves_video_attrs'    => array(
+				'<video src="video.mp4" width="640" height="360" controls poster="thumb.jpg"></video>',
+				'<video src="video.mp4" width="640" height="360" controls poster="thumb.jpg"></video>',
+			),
+			'preserves_audio_attrs'    => array(
+				'<audio src="audio.mp3" controls></audio>',
+				'<audio src="audio.mp3" controls></audio>',
+			),
+			'strips_hreflang'          => array(
+				'<a href="https://example.de" hreflang="de">German</a>',
+				'<a href="https://example.de">German</a>',
+			),
+			'preserves_details_open'   => array(
+				'<details open><summary>Title</summary></details>',
+				'<details open><summary>Title</summary></details>',
+			),
+			'self_closing_tags'        => array(
+				'<br class="clear" />',
+				'<br />',
+			),
+			'no_attributes'            => array(
+				'<p>Simple paragraph</p>',
+				'<p>Simple paragraph</p>',
+			),
+			'plain_text'               => array(
+				'Just plain text',
+				'Just plain text',
+			),
+			'complex_wordpress_figure' => array(
+				'<figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="768" src="https://example.com/image.jpg" alt="Test" class="wp-image-123" data-id="123" /><figcaption class="wp-element-caption">Caption</figcaption></figure>',
+				'<figure><img width="1024" height="768" src="https://example.com/image.jpg" alt="Test" /><figcaption>Caption</figcaption></figure>',
+			),
+		);
+	}
+
+	/**
+	 * Test clean_html with various inputs.
+	 *
+	 * @dataProvider clean_html_provider
+	 * @covers ::clean_html
+	 *
+	 * @param string $input    Input value.
+	 * @param string $expected Expected output.
+	 */
+	public function test_clean_html( $input, $expected ) {
+		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
+	}
+
+	/**
+	 * Test that null input returns null.
+	 *
+	 * @covers ::clean_html
+	 */
+	public function test_clean_html_null() {
+		$this->assertNull( Sanitize::clean_html( null ) );
+	}
+
+	/**
+	 * Test the activitypub_allowed_html filter.
+	 *
+	 * @covers ::clean_html
+	 */
+	public function test_allowed_html_filter() {
+		add_filter(
+			'activitypub_allowed_html',
+			function ( $allowed_html ) {
+				// Add data-custom attribute to span.
+				$allowed_html['span']['data-custom'] = true;
+				return $allowed_html;
+			}
+		);
+
+		$input    = '<span data-custom="allowed" data-other="removed">Content</span>';
+		$expected = '<span data-custom="allowed">Content</span>';
+		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
+
+		remove_all_filters( 'activitypub_allowed_html' );
+	}
+
+	/**
+	 * Test that rel attribute is preserved on anchors.
+	 *
+	 * @covers ::clean_html
+	 */
+	public function test_rel_attribute_preserved() {
+		$input    = '<a href="https://example.com" rel="mention">Link</a>';
+		$expected = '<a href="https://example.com" rel="mention">Link</a>';
+		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
+
+		$input    = '<a href="https://example.com" rel="nofollow">Link</a>';
+		$expected = '<a href="https://example.com" rel="nofollow">Link</a>';
+		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
+	}
 }
