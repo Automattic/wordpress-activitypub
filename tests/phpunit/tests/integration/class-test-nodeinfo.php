@@ -364,6 +364,31 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test staff accounts do not contain empty strings when user type is disabled.
+	 *
+	 * @covers ::add_nodeinfo_data
+	 * @covers ::get_staff
+	 */
+	public function test_nodeinfo_staff_accounts_filters_empty_strings() {
+		$original_nodeinfo = array(
+			'protocols' => array(),
+			'usage'     => array(),
+			'metadata'  => array(),
+		);
+
+		// Set blog-only mode, which disables user accounts.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$result = Nodeinfo::add_nodeinfo_data( $original_nodeinfo, '2.0' );
+
+		// Check that staffAccounts is an array with no empty strings.
+		$this->assertIsArray( $result['metadata']['staffAccounts'] );
+		$this->assertEmpty( $result['metadata']['staffAccounts'], 'Staff accounts should be empty in blog-only mode' );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
 	 * Test integration with actual WordPress hooks.
 	 *
 	 * @covers ::init
