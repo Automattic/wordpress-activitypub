@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Reduce federated content size by removing unnecessary HTML attributes.
