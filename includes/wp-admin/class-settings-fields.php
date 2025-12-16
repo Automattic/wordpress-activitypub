@@ -599,7 +599,7 @@ class Settings_Fields {
 				<button type="button" class="button add-blocklist-subscription-btn" data-url="<?php echo \esc_attr( Blocklist_Subscriptions::IFTAS_DNI_URL ); ?>">
 					<?php \esc_html_e( 'Subscribe to IFTAS DNI List', 'activitypub' ); ?>
 				</button>
-				<?php \esc_html_e( 'A curated list of the worst actors on the fediverse.', 'activitypub' ); ?>
+				<?php echo \wp_kses_post( \__( 'Domains <a href="https://about.iftas.org/" target="_blank" rel="noopener">IFTAS</a> recommends not federating with.', 'activitypub' ) ); ?>
 			</p>
 			<?php endif; ?>
 		</div>
