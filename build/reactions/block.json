@@ -7,6 +7,28 @@
   "category": "widgets",
   "icon": "heart",
   "description": "Display Fediverse likes and reposts",
+  "example": {
+    "attributes": {
+      "className": "is-style-facepile"
+    }
+  },
+  "styles": [
+    {
+      "name": "facepile",
+      "label": "Facepile",
+      "isDefault": true
+    },
+    {
+      "name": "compact",
+      "label": "Compact"
+    }
+  ],
+  "attributes": {
+    "displayStyle": {
+      "type": "string",
+      "default": "facepile"
+    }
+  },
   "supports": {
     "align": [
       "wide",

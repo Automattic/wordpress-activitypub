@@ -10,6 +10,7 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Posts;
 use Activitypub\Scheduler\Actor;
 
 /**
@@ -107,6 +108,13 @@ class Cli extends \WP_CLI_Command {
 		}
 
 		$processed = $this->process_user_deletions( $user_ids );
+
+		// Delete all remote posts.
+		$deleted_posts = Posts::delete_all();
+		if ( $deleted_posts > 0 ) {
+			\WP_CLI::line( \WP_CLI::colorize( "%G✓%n Deleted {$deleted_posts} remote post(s)." ) );
+		}
+
 		$this->display_completion_message( $processed );
 	}
 
@@ -123,6 +131,7 @@ class Cli extends \WP_CLI_Command {
 		\WP_CLI::line( \WP_CLI::colorize( "%y{$question}%n" ) );
 		\WP_CLI::line( \WP_CLI::colorize( '%y• Send Delete activities to all followers%n' ) );
 		\WP_CLI::line( \WP_CLI::colorize( '%y• Remove your blog from ActivityPub networks%n' ) );
+		\WP_CLI::line( \WP_CLI::colorize( '%y• Delete all cached remote posts%n' ) );
 		\WP_CLI::line( '' );
 	}
 

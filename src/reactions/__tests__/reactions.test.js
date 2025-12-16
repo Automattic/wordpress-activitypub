@@ -75,4 +75,24 @@ describe( 'FacepileRow', () => {
 		const list = screen.getByRole( 'list' );
 		expect( list.children ).toHaveLength( 0 );
 	} );
+
+	test( 'renders avatars when displayStyle is facepile', () => {
+		render( <FacepileRow reactions={ mockReactions } displayStyle="facepile" /> );
+
+		const avatars = screen.getAllByRole( 'img' );
+		expect( avatars ).toHaveLength( 2 );
+	} );
+
+	test( 'returns null when displayStyle is compact', () => {
+		const { container } = render( <FacepileRow reactions={ mockReactions } displayStyle="compact" /> );
+
+		expect( container.firstChild ).toBeNull();
+	} );
+
+	test( 'renders avatars when displayStyle is undefined (default)', () => {
+		render( <FacepileRow reactions={ mockReactions } /> );
+
+		const avatars = screen.getAllByRole( 'img' );
+		expect( avatars ).toHaveLength( 2 );
+	} );
 } );
