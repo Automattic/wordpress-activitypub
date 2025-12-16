@@ -273,7 +273,7 @@ function esc_hashtag( $input ) {
 	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = preg_replace_callback(
 		'/-+(.)/',
-		function ( $matches ) {
+		static function ( $matches ) {
 			return strtoupper( $matches[1] );
 		},
 		$hashtag
@@ -993,7 +993,7 @@ function get_enclosures( $post_id ) {
 	}
 
 	$enclosures = array_map(
-		function ( $enclosure ) {
+		static function ( $enclosure ) {
 			// Check if the enclosure is a string.
 			if ( ! $enclosure || ! is_string( $enclosure ) ) {
 				return false;

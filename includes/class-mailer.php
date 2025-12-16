@@ -207,7 +207,7 @@ class Mailer {
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-follower.php', false, $template_args );
 		$html_message = \ob_get_clean();
 
-		$alt_function = function ( $mailer ) use ( $actor, $admin_url ) {
+		$alt_function = static function ( $mailer ) use ( $actor, $admin_url ) {
 			/* translators: 1: Follower name */
 			$message = \sprintf( \__( 'New Follower: %1$s.', 'activitypub' ), $actor['name'] ) . "\r\n\r\n";
 			/* translators: Follower URL */
@@ -295,7 +295,7 @@ class Mailer {
 			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-dm.php', false, $template_args );
 			$html_message = \ob_get_clean();
 
-			$alt_function = function ( $mailer ) use ( $actor, $activity ) {
+			$alt_function = static function ( $mailer ) use ( $actor, $activity ) {
 				$content = \html_entity_decode(
 					\wp_strip_all_tags(
 						str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
@@ -395,7 +395,7 @@ class Mailer {
 			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-mention.php', false, $template_args );
 			$html_message = \ob_get_clean();
 
-			$alt_function = function ( $mailer ) use ( $actor, $activity ) {
+			$alt_function = static function ( $mailer ) use ( $actor, $activity ) {
 				$content = \html_entity_decode(
 					\wp_strip_all_tags(
 						str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )

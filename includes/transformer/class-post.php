@@ -889,7 +889,7 @@ class Post extends Base {
 						$media['image'] = array_merge(
 							$media['image'],
 							array_map(
-								function ( $id ) {
+								static function ( $id ) {
 									return array( 'id' => $id );
 								},
 								$block['attrs']['ids']

@@ -118,7 +118,7 @@ class Following_Controller extends Actors_Controller {
 		if ( Actors::show_social_graph( $user_id ) ) {
 			$response['orderedItems'] = \array_filter(
 				\array_map(
-					function ( $item ) use ( $context ) {
+					static function ( $item ) use ( $context ) {
 						if ( 'full' === $context ) {
 							$actor = Remote_Actors::get_actor( $item );
 							if ( \is_wp_error( $actor ) ) {

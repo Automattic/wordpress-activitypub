@@ -603,7 +603,7 @@ abstract class Base {
 
 		return \array_filter(
 			$attachments,
-			function ( $attachment ) use ( &$seen_ids ) {
+			static function ( $attachment ) use ( &$seen_ids ) {
 				if ( isset( $attachment['id'] ) && ! in_array( $attachment['id'], $seen_ids, true ) ) {
 					$seen_ids[] = $attachment['id'];
 					return true;
