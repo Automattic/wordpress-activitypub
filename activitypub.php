@@ -121,6 +121,7 @@ function plugin_init() {
  */
 function plugin_admin_init() {
 	// Screen Options and Menus are set before `admin_init`.
+	\add_action( 'init', array( __NAMESPACE__ . '\WP_Admin\App', 'hide_admin_bar' ), 0 ); // Before admin bar init.
 	\add_action( 'init', array( __NAMESPACE__ . '\WP_Admin\Heartbeat', 'init' ), 9 ); // Before script loader.
 	\add_filter( 'init', array( __NAMESPACE__ . '\WP_Admin\Screen_Options', 'init' ) );
 	\add_action( 'admin_menu', array( __NAMESPACE__ . '\WP_Admin\Menu', 'admin_menu' ) );

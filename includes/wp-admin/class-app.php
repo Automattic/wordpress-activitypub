@@ -13,6 +13,18 @@ namespace Activitypub\WP_Admin;
 class App {
 
 	/**
+	 * Hide the admin bar on the App page.
+	 *
+	 * Must run early (on init) before the admin bar is initialized.
+	 */
+	public static function hide_admin_bar() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( \is_admin() && isset( $_GET['page'] ) && 'activitypub-social-web' === $_GET['page'] ) {
+			\add_filter( 'wp_admin_bar_class', '__return_false' );
+		}
+	}
+
+	/**
 	 * Remove admin notices from the App page.
 	 */
 	public static function remove_admin_notices() {
@@ -32,6 +44,10 @@ class App {
 	 * Enqueue scripts and styles for the App page.
 	 */
 	public static function enqueue_scripts() {
+		\wp_dequeue_style( 'colors' );
+		\wp_dequeue_script( 'common' );
+		\wp_dequeue_script( 'svg-painter' );
+
 		// Define paths to preload - must match exact fields from entities.js.
 		$preload_paths = array(
 			'/?_fields=description,gmt_offset,home,name,site_icon,site_icon_url,site_logo,timezone_string,url,page_for_posts,page_on_front,show_on_front',
