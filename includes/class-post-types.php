@@ -36,6 +36,8 @@ class Post_Types {
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_rest_params' ) );
 
 		\add_filter( 'rest_ap_post_query', array( self::class, 'filter_ap_post_by_user' ), 10, 2 );
+		\add_filter( 'rest_ap_object_type_query', array( self::class, 'filter_object_type_by_user' ), 10, 2 );
+		\add_filter( 'rest_ap_object_type_collection_params', array( self::class, 'register_object_type_user_param' ) );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
@@ -717,6 +719,15 @@ class Post_Types {
 					),
 				);
 
+				$params['ap_tag'] = array(
+					'description' => 'Filter posts by ActivityPub tag (term IDs).',
+					'type'        => 'array',
+					'items'       => array(
+						'type'    => 'integer',
+						'minimum' => 0,
+					),
+				);
+
 				return $params;
 			}
 		);
@@ -731,19 +742,24 @@ class Post_Types {
 	 * @return array Modified query arguments.
 	 */
 	public static function filter_ap_post_by_user( $args, $request ) {
-		// Check if a specific user_id is requested via query parameter.
-		$user_id = \get_current_user_id();
-		if ( isset( $request['user_id'] ) ) {
-			$user_id = (int) $request['user_id'];
-		}
+		$ap_tag = $request->get_param( 'ap_tag' );
+		if ( ! empty( $ap_tag ) ) {
+			if ( ! isset( $args['tax_query'] ) ) {
+				$args['tax_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+			}
 
-		if ( ! $user_id && 0 !== $user_id ) {
-			// If no user is logged in, return empty results.
-			$args['post__in'] = array( 0 );
+			$args['tax_query'][] = array(
+				'taxonomy' => 'ap_tag',
+				'field'    => 'term_id',
+				'terms'    => $ap_tag,
+			);
+
 			return $args;
 		}
 
-		// Add meta query to filter by _activitypub_user_id.
+		// Filter by user_id (defaults to current user, use 0 for site/blog actor).
+		$user_id = isset( $request['user_id'] ) ? (int) $request['user_id'] : \get_current_user_id();
+
 		if ( ! isset( $args['meta_query'] ) ) {
 			$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		}
@@ -766,6 +782,67 @@ class Post_Types {
 				'terms'    => $request['ap_object_type'],
 			);
 		}
+
+		return $args;
+	}
+
+	/**
+	 * Register user_id parameter for ap_object_type taxonomy REST API.
+	 *
+	 * @param array $params Existing collection parameters.
+	 *
+	 * @return array Modified collection parameters.
+	 */
+	public static function register_object_type_user_param( $params ) {
+		$params['user_id'] = array(
+			'description'       => __( 'Filter terms to those with posts from this user ID.', 'activitypub' ),
+			'type'              => 'integer',
+			'sanitize_callback' => 'absint',
+		);
+
+		return $params;
+	}
+
+	/**
+	 * Filter ap_object_type REST query to only return terms that have posts for the given user.
+	 *
+	 * Uses a direct SQL query to efficiently get term IDs without loading all post IDs.
+	 *
+	 * @param array            $args    Query arguments.
+	 * @param \WP_REST_Request $request The REST API request.
+	 *
+	 * @return array Modified query arguments.
+	 */
+	public static function filter_object_type_by_user( $args, $request ) {
+		$user_id = $request->get_param( 'user_id' );
+		if ( null === $user_id ) {
+			return $args;
+		}
+
+		global $wpdb;
+
+		// Get term IDs that have at least one ap_post for this user.
+		$term_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT DISTINCT tt.term_id
+				FROM {$wpdb->term_taxonomy} tt
+				INNER JOIN {$wpdb->term_relationships} tr ON tt.term_taxonomy_id = tr.term_taxonomy_id
+				INNER JOIN {$wpdb->posts} p ON tr.object_id = p.ID
+				INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+				WHERE tt.taxonomy = 'ap_object_type'
+				AND p.post_type = 'ap_post'
+				AND pm.meta_key = '_activitypub_user_id'
+				AND pm.meta_value = %s",
+				$user_id
+			)
+		);
+
+		if ( empty( $term_ids ) ) {
+			// Force empty result.
+			$term_ids = array( 0 );
+		}
+
+		$args['include'] = \array_map( 'intval', $term_ids );
 
 		return $args;
 	}
