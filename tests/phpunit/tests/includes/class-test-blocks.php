@@ -479,22 +479,77 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test the reactions block with deprecated markup.
+	 * Test the reactions block with v1 deprecated markup (title attribute, no HTML content).
+	 *
+	 * Block v1 (plugin 1.0.0): Dynamic block with title attribute, self-closing.
 	 */
-	public function test_render_reactions_block_with_deprecated_markup() {
+	public function test_render_reactions_block_with_v1_markup() {
 		$post_id = $this->get_post_id_with_reactions();
 
+		// v1 with custom title.
 		$block_markup = '<!-- wp:activitypub/reactions {"title":"What people think about it on the Fediverse!","postId":' . $post_id . '} /-->';
 		$output       = do_blocks( $block_markup );
 		$expected     = '<h6 class="wp-block-heading">What people think about it on the Fediverse!</h6>';
 
 		$this->assertStringContainsString( $expected, $output );
 
+		// v1 with default title.
 		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
 		$output       = do_blocks( $block_markup );
 		$expected     = '<h6 class="wp-block-heading">Fediverse Reactions</h6>';
 
 		$this->assertStringContainsString( $expected, $output );
+	}
+
+	/**
+	 * Test the reactions block with v2 deprecated markup (fragment with separate div).
+	 *
+	 * Block v2 (plugin 2.0.0): Fragment with InnerBlocks and separate div, no wp-block- prefix.
+	 */
+	public function test_render_reactions_block_with_v2_markup() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		// v2 format: fragment with heading innerBlock and separate div (no wp-block- prefix).
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} -->
+<!-- wp:heading {"level":6} -->
+<h6 class="wp-block-heading">Fediverse reactions</h6>
+<!-- /wp:heading -->
+<div class="activitypub-reactions-block"></div>
+<!-- /wp:activitypub/reactions -->';
+
+		$output = do_blocks( $block_markup );
+
+		// Should render the heading from innerBlocks.
+		$this->assertStringContainsString( 'Fediverse reactions', $output );
+		// Should have the wrapper with wp-block- prefix (from get_block_wrapper_attributes).
+		$this->assertStringContainsString( 'wp-block-activitypub-reactions', $output );
+		// Should have reaction content.
+		$this->assertStringContainsString( 'activitypub-reactions', $output );
+	}
+
+	/**
+	 * Test the reactions block with v3 markup (useBlockProps with wp-block- prefix).
+	 *
+	 * Block v3 (plugin 3.0.0+): Uses useBlockProps.save() with wp-block- prefix class.
+	 */
+	public function test_render_reactions_block_with_v3_markup() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		// v3 format: div with useBlockProps (has wp-block- prefix) wrapping InnerBlocks.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} -->
+<div class="wp-block-activitypub-reactions activitypub-reactions-block"><!-- wp:heading {"level":6} -->
+<h6 class="wp-block-heading">Fediverse reactions</h6>
+<!-- /wp:heading --></div>
+<!-- /wp:activitypub/reactions -->';
+
+		$output = do_blocks( $block_markup );
+
+		// Should render the heading from innerBlocks.
+		$this->assertStringContainsString( 'Fediverse reactions', $output );
+		// Should have the wrapper with wp-block- prefix.
+		$this->assertStringContainsString( 'wp-block-activitypub-reactions', $output );
+		// Should have reaction content.
+		$this->assertStringContainsString( 'activitypub-reactions', $output );
 	}
 
 	/**

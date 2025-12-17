@@ -415,6 +415,7 @@ class Options {
 				'description'       => 'Hide Followers and Followings on Profile.',
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
+				'show_in_rest'      => true,
 			)
 		);
 	}

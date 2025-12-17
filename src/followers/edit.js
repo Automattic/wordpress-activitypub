@@ -1,9 +1,9 @@
 import apiFetch from '@wordpress/api-fetch';
-import { SelectControl, RangeControl, PanelBody } from '@wordpress/components';
+import { SelectControl, RangeControl, PanelBody, Notice } from '@wordpress/components';
 import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useMemo, createInterpolateElement } from '@wordpress/element';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 import { useOptions } from '../shared/use-options';
@@ -11,14 +11,30 @@ import { useUserOptions } from '../shared/use-user-options';
 import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
 
 /**
+ * Check if a user has their social graph hidden based on user meta.
+ *
+ * @param {Object} userMeta The user's metadata.
+ * @return {boolean} True if social graph is hidden.
+ */
+function hasSocialGraphHidden( userMeta ) {
+	if ( ! userMeta ) {
+		return false;
+	}
+
+	return Object.entries( userMeta ).some(
+		( [ key, value ] ) => key.endsWith( 'activitypub_hide_social_graph' ) && value
+	);
+}
+
+/**
  * Edit component.
  *
- * @param {Object} props Component props.
- * @param {Object} props.attributes Block attributes.
- * @param {Function} props.setAttributes Set block attributes.
- * @param {Object} props.context Block context.
- * @param {string} props.context.postType Post type.
- * @param {number} props.context.postId Post ID.
+ * @param {Object}   props                  Component props.
+ * @param {Object}   props.attributes       Block attributes.
+ * @param {Function} props.setAttributes    Set block attributes.
+ * @param {Object}   props.context          Block context.
+ * @param {string}   props.context.postType Post type.
+ * @param {number}   props.context.postId   Post ID.
  *
  * @return {JSX.Element} Edit component.
  */
@@ -35,6 +51,22 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		setPage( 1 );
 		setAttributes( { [ key ]: value } );
 	};
+
+	// Get site settings to check blog social graph visibility.
+	const { blogSocialGraphHidden, currentUser, usersWithMeta, siteUrl, canManageOptions } = useSelect( ( select ) => {
+		const { getCurrentUser, getUsers, getEntityRecord, canUser } = select( coreStore );
+		const siteSettings = getEntityRecord( 'root', 'site' );
+		const siteData = getEntityRecord( 'root', '__unstableBase' );
+
+		return {
+			blogSocialGraphHidden: !! siteSettings?.activitypub_hide_social_graph,
+			currentUser: getCurrentUser(),
+			usersWithMeta: getUsers( { capabilities: 'activitypub', context: 'edit' } ),
+			siteUrl: siteData?.home,
+			canManageOptions: canUser( 'update', { kind: 'root', name: 'site' } ),
+		};
+	}, [] );
+
 	const authorId = useSelect(
 		( select ) => {
 			const { getEditedEntityRecord } = select( coreStore );
@@ -45,16 +77,92 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		[ postType, postId ]
 	);
 
+	// Filter user options based on social graph visibility.
+	const filteredUsersOptions = useMemo( () => {
+		if ( ! usersOptions.length || ! usersWithMeta ) {
+			return [];
+		}
+
+		return usersOptions.filter( ( { value } ) => {
+			// Always keep 'inherit' (Dynamic User) option.
+			if ( value === 'inherit' ) {
+				return true;
+			}
+			// Check blog social graph visibility.
+			if ( value === 'blog' ) {
+				return ! blogSocialGraphHidden;
+			}
+			// Check individual user social graph visibility.
+			const user = usersWithMeta?.find( ( u ) => String( u.id ) === value );
+			return ! hasSocialGraphHidden( user?.meta );
+		} );
+	}, [ usersOptions, blogSocialGraphHidden, usersWithMeta ] );
+
+	// Determine if we should show a notice for hidden social graph.
+	const showHiddenNotice = useMemo( () => {
+		if ( ! usersWithMeta ) {
+			return false;
+		}
+
+		// Check blog social graph visibility.
+		if ( selectedUser === 'blog' ) {
+			return blogSocialGraphHidden;
+		}
+
+		// For 'inherit' mode, check if the resolved author has hidden social graph.
+		if ( selectedUser === 'inherit' ) {
+			if ( ! authorId ) {
+				return false;
+			}
+			const author = usersWithMeta.find( ( u ) => u.id === authorId );
+			return author ? hasSocialGraphHidden( author.meta ) : false;
+		}
+
+		return false;
+	}, [ selectedUser, authorId, usersWithMeta, blogSocialGraphHidden ] );
+
+	// Determine if current user can edit the settings for the selected user.
+	const canEditSettings = useMemo( () => {
+		if ( ! showHiddenNotice || ! currentUser ) {
+			return false;
+		}
+
+		if ( selectedUser === 'blog' ) {
+			return canManageOptions;
+		}
+
+		return currentUser.id === authorId;
+	}, [ showHiddenNotice, currentUser, selectedUser, authorId, canManageOptions ] );
+
+	// Get the settings URL for the notice.
+	const settingsUrl = useMemo( () => {
+		if ( ! canEditSettings || ! siteUrl ) {
+			return null;
+		}
+
+		if ( selectedUser === 'blog' ) {
+			return siteUrl + '/wp-admin/options-general.php?page=activitypub&tab=blog-profile';
+		}
+
+		return siteUrl + '/wp-admin/profile.php#activitypub';
+	}, [ canEditSettings, siteUrl, selectedUser ] );
+
 	useEffect( () => {
 		// if there are no users yet, do nothing
-		if ( ! usersOptions.length ) {
+		if ( ! filteredUsersOptions.length ) {
 			return;
 		}
-		// ensure that the selected user is in the list of options, if not, select the first available user
-		if ( ! usersOptions.find( ( { value } ) => value === selectedUser ) ) {
-			setAttributes( { selectedUser: usersOptions[ 0 ].value } );
+
+		// If selected user is not in the filtered options, auto-switch to first available.
+		// Exception: 'blog' and 'inherit' show a notice instead of auto-switching.
+		if (
+			selectedUser !== 'blog' &&
+			selectedUser !== 'inherit' &&
+			! filteredUsersOptions.find( ( { value } ) => value === selectedUser )
+		) {
+			setAttributes( { selectedUser: filteredUsersOptions[ 0 ].value } );
 		}
-	}, [ selectedUser, usersOptions ] );
+	}, [ selectedUser, filteredUsersOptions, setAttributes ] );
 
 	// Template for InnerBlocks - allows only a heading block.
 	const TEMPLATE = [
@@ -72,11 +180,11 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		<div { ...blockProps }>
 			<InspectorControls key="setting">
 				<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
-					{ usersOptions.length > 1 && (
+					{ filteredUsersOptions.length > 1 && (
 						<SelectControl
 							label={ __( 'Select User', 'activitypub' ) }
 							value={ selectedUser }
-							options={ usersOptions }
+							options={ filteredUsersOptions }
 							onChange={ setAttributeWithPageReset( 'selectedUser' ) }
 							__next40pxDefaultSize
 							__nextHasNoMarginBottom
@@ -110,7 +218,25 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 					renderAppender={ false }
 				/>
 
-				{ selectedUser === 'inherit' ? (
+				{ showHiddenNotice ? (
+					<Notice status="warning" isDismissible={ false }>
+						{ settingsUrl
+							? createInterpolateElement(
+									/* translators: <a> is a link to the profile settings page. */
+									__(
+										'The selected user has their social graph hidden. This block will not display followers on the frontend. <a>Edit privacy settings</a>',
+										'activitypub'
+									),
+									{
+										a: <a href={ settingsUrl } target="_blank" rel="noopener noreferrer" />,
+									}
+							  )
+							: __(
+									'The selected user has their social graph hidden. This block will not display followers on the frontend.',
+									'activitypub'
+							  ) }
+					</Notice>
+				) : selectedUser === 'inherit' ? (
 					authorId ? (
 						<Followers { ...attributes } page={ page } setPage={ setPage } selectedUser={ authorId } />
 					) : (
@@ -125,32 +251,16 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 }
 
 /**
- * Builds the API path for fetching followers.
- *
- * @param {number} userId - The ID of the user whose followers are being fetched.
- * @param {number} per_page - The number of followers to fetch per page.
- * @param {string} order - The order in which to fetch followers ('asc' or 'desc').
- * @param {number} page - The page number to fetch.
- * @return {string} The API path with query arguments for fetching followers.
- */
-function getPath( userId, per_page, order, page ) {
-	const { namespace } = useOptions();
-	const path = `/${ namespace }/actors/${ userId }/followers`;
-	const args = { per_page, order, page, context: 'full' };
-
-	return addQueryArgs( path, args );
-}
-
-/**
  * Component to display followers of a user.
  *
- * @param {Object} props - The component props.
- * @param {String} props.selectedUser - The ID of the user whose followers are being fetched.
- * @param {number} props.per_page - The number of followers to fetch per page.
- * @param {string} props.order - The order in which to fetch followers ('asc' or 'desc').
- * @param {number} props.page - The page number to fetch.
- * @param {function} props.setPage - The function to set the page number.
- * @param {Object} props.followerData - Optional pre-fetched follower data.
+ * @param {Object}   props              The component props.
+ * @param {string}   props.selectedUser The ID of the user whose followers are being fetched.
+ * @param {number}   props.per_page     The number of followers to fetch per page.
+ * @param {string}   props.order        The order in which to fetch followers ('asc' or 'desc').
+ * @param {number}   props.page         The page number to fetch.
+ * @param {Function} props.setPage      The function to set the page number.
+ * @param {Object}   props.followerData Optional pre-fetched follower data.
+ * @return {JSX.Element} The followers list component.
  */
 function Followers( {
 	selectedUser,
@@ -160,17 +270,16 @@ function Followers( {
 	setPage: passedSetPage,
 	followerData = false,
 } ) {
+	const { namespace } = useOptions();
 	const userId = selectedUser === 'blog' ? 0 : selectedUser;
 	const [ followers, setFollowers ] = useState( [] );
 	const [ pages, setPages ] = useState( 0 );
-	const [ total, setTotal ] = useState( 0 );
 	const [ localPage, setLocalPage ] = useState( 1 );
 	const page = passedPage || localPage;
 	const setPage = passedSetPage || setLocalPage;
 
 	const setData = ( followers, total ) => {
 		setFollowers( followers );
-		setTotal( total );
 		setPages( Math.ceil( total / per_page ) );
 	};
 
@@ -179,11 +288,16 @@ function Followers( {
 			return setData( followerData.followers, followerData.total );
 		}
 
-		const path = getPath( userId, per_page, order, page );
+		const path = addQueryArgs( `/${ namespace }/actors/${ userId }/followers`, {
+			per_page,
+			order,
+			page,
+			context: 'full',
+		} );
 		apiFetch( { path } )
-			.then( ( { orderedItems, totalItems } ) => setData( orderedItems, totalItems ) )
+			.then( ( { orderedItems = [], totalItems = 0 } ) => setData( orderedItems, totalItems ) )
 			.catch( () => setData( [], 0 ) );
-	}, [ userId, per_page, order, page, followerData ] );
+	}, [ namespace, userId, per_page, order, page, followerData ] );
 
 	return (
 		<div className="followers-container">
@@ -207,10 +321,11 @@ function Followers( {
 /**
  * Component to display pagination navigation.
  *
- * @param {Object} props - The component props.
- * @param {number} props.page - The current page number.
- * @param {number} props.pages - The total number of pages.
- * @param {function} props.setPage - The function to set the page number.
+ * @param {Object}   props         The component props.
+ * @param {number}   props.page    The current page number.
+ * @param {number}   props.pages   The total number of pages.
+ * @param {Function} props.setPage The function to set the page number.
+ * @return {JSX.Element|null} The pagination component or null if not needed.
  */
 function Pagination( { page, pages, setPage } ) {
 	if ( pages <= 1 ) {
@@ -255,11 +370,12 @@ function Pagination( { page, pages, setPage } ) {
 /**
  * Component to display a single follower.
  *
- * @param {Object} props - The component props.
- * @param {string} props.name - The name of the follower.
- * @param {Object} props.icon - The icon of the follower.
- * @param {string} props.url - The URL of the follower.
- * @param {string} props.preferredUsername - The preferred username of the follower.
+ * @param {Object} props                   The component props.
+ * @param {string} props.name              The name of the follower.
+ * @param {Object} props.icon              The icon of the follower.
+ * @param {string} props.url               The URL of the follower.
+ * @param {string} props.preferredUsername The preferred username of the follower.
+ * @return {JSX.Element} The follower component.
  */
 function Follower( { name, icon, url, preferredUsername } ) {
 	const handle = `@${ preferredUsername }`;
