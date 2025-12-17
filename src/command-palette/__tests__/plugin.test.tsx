@@ -5,7 +5,12 @@ import { sprintf } from '@wordpress/i18n';
 
 jest.mock( '@wordpress/i18n', () => ( {
 	__: jest.fn( ( text ) => text ),
-	sprintf: jest.fn( ( format, ...args ) => format.replace( /%s/g, () => args.shift() ) ),
+	sprintf: jest.fn( ( format, ...args ) => {
+		// Handle both %s and numbered placeholders like %1$s
+		return format
+			.replace( /%(\d+)\$s/g, ( _match, num ) => args[ parseInt( num, 10 ) - 1 ] ?? '' )
+			.replace( /%s/g, () => args.shift() );
+	} ),
 } ) );
 
 describe( 'ActivityPub Command Palette', () => {
