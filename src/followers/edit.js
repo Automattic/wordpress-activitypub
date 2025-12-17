@@ -3,7 +3,7 @@ import { SelectControl, RangeControl, PanelBody, Notice } from '@wordpress/compo
 import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
-import { useState, useEffect, useMemo, createInterpolateElement } from '@wordpress/element';
+import { useState, useEffect, useMemo, useCallback, createInterpolateElement } from '@wordpress/element';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 import { useOptions } from '../shared/use-options';
@@ -39,7 +39,7 @@ function hasSocialGraphHidden( userMeta ) {
  * @return {JSX.Element} Edit component.
  */
 export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
-	const { className = '', order, per_page, selectedUser } = attributes;
+	const { className = '', order, per_page: perPage, selectedUser } = attributes;
 	const blockProps = useBlockProps();
 	const [ page, setPage ] = useState( 1 );
 	const orderOptions = [
@@ -200,7 +200,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 					/>
 					<RangeControl
 						label={ __( 'Number of Followers', 'activitypub' ) }
-						value={ per_page }
+						value={ perPage }
 						onChange={ setAttributeWithPageReset( 'per_page' ) }
 						min={ 1 }
 						max={ 10 }
@@ -218,7 +218,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 					renderAppender={ false }
 				/>
 
-				{ showHiddenNotice ? (
+				{ showHiddenNotice && (
 					<Notice status="warning" isDismissible={ false }>
 						{ settingsUrl
 							? createInterpolateElement(
@@ -228,6 +228,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 										'activitypub'
 									),
 									{
+										/* eslint-disable-next-line jsx-a11y/anchor-has-content -- Content provided by createInterpolateElement */
 										a: <a href={ settingsUrl } target="_blank" rel="noopener noreferrer" />,
 									}
 							  )
@@ -236,13 +237,17 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 									'activitypub'
 							  ) }
 					</Notice>
-				) : selectedUser === 'inherit' ? (
-					authorId ? (
-						<Followers { ...attributes } page={ page } setPage={ setPage } selectedUser={ authorId } />
-					) : (
-						<InheritModeBlockFallback name={ __( 'Followers', 'activitypub' ) } />
-					)
-				) : (
+				) }
+
+				{ ! showHiddenNotice && selectedUser === 'inherit' && authorId && (
+					<Followers { ...attributes } page={ page } setPage={ setPage } selectedUser={ authorId } />
+				) }
+
+				{ ! showHiddenNotice && selectedUser === 'inherit' && ! authorId && (
+					<InheritModeBlockFallback name={ __( 'Followers', 'activitypub' ) } />
+				) }
+
+				{ ! showHiddenNotice && selectedUser !== 'inherit' && (
 					<Followers { ...attributes } page={ page } setPage={ setPage } />
 				) }
 			</div>
@@ -264,7 +269,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
  */
 function Followers( {
 	selectedUser,
-	per_page,
+	per_page: perPage,
 	order,
 	page: passedPage,
 	setPage: passedSetPage,
@@ -278,10 +283,13 @@ function Followers( {
 	const page = passedPage || localPage;
 	const setPage = passedSetPage || setLocalPage;
 
-	const setData = ( followers, total ) => {
-		setFollowers( followers );
-		setPages( Math.ceil( total / per_page ) );
-	};
+	const setData = useCallback(
+		( newFollowers, total ) => {
+			setFollowers( newFollowers );
+			setPages( Math.ceil( total / perPage ) );
+		},
+		[ perPage ]
+	);
 
 	useEffect( () => {
 		if ( followerData && page === 1 ) {
@@ -289,7 +297,7 @@ function Followers( {
 		}
 
 		const path = addQueryArgs( `/${ namespace }/actors/${ userId }/followers`, {
-			per_page,
+			per_page: perPage,
 			order,
 			page,
 			context: 'full',
@@ -297,7 +305,7 @@ function Followers( {
 		apiFetch( { path } )
 			.then( ( { orderedItems = [], totalItems = 0 } ) => setData( orderedItems, totalItems ) )
 			.catch( () => setData( [], 0 ) );
-	}, [ namespace, userId, per_page, order, page, followerData ] );
+	}, [ namespace, userId, perPage, order, page, followerData, setData ] );
 
 	return (
 		<div className="followers-container">
@@ -338,31 +346,27 @@ function Pagination( { page, pages, setPage } ) {
 	return (
 		<nav className="followers-pagination" role="navigation">
 			<h1 className="screen-reader-text">{ __( 'Follower navigation', 'activitypub' ) }</h1>
-			<a
+			<button
+				type="button"
 				className="pagination-previous"
-				aria-disabled={ disablePreviousLink }
+				disabled={ disablePreviousLink }
 				aria-label={ __( 'Previous page', 'activitypub' ) }
-				onClick={ ( event ) => {
-					event.preventDefault();
-					setPage( page - 1 );
-				} }
+				onClick={ () => setPage( page - 1 ) }
 			>
 				{ __( 'Previous', 'activitypub' ) }
-			</a>
+			</button>
 
 			<div className="pagination-info">{ `${ page } / ${ pages }` }</div>
 
-			<a
+			<button
+				type="button"
 				className="pagination-next"
-				aria-disabled={ disableNextLink }
+				disabled={ disableNextLink }
 				aria-label={ __( 'Next page', 'activitypub' ) }
-				onClick={ ( event ) => {
-					event.preventDefault();
-					setPage( page + 1 );
-				} }
+				onClick={ () => setPage( page + 1 ) }
 			>
 				{ __( 'Next', 'activitypub' ) }
-			</a>
+			</button>
 		</nav>
 	);
 }

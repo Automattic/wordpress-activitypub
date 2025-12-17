@@ -64,7 +64,7 @@ describe( 'ActivityPub Command Palette', () => {
 		} );
 
 		test( 'handles multiple placeholders', () => {
-			const result = sprintf( '%s: %s', 'ActivityPub', 'Test' );
+			const result = sprintf( '%1$s: %2$s', 'ActivityPub', 'Test' );
 			expect( result ).toBe( 'ActivityPub: Test' );
 		} );
 

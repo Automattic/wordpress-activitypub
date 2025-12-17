@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from '@wordpress/element';
+import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { useOptions } from '../shared/use-options';
@@ -139,13 +139,13 @@ export function Reactions( {
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
 
-	const onError = () => {
+	const onError = useCallback( () => {
 		// On error, use fallback reactions if provided
 		if ( fallbackReactions ) {
 			setReactions( fallbackReactions );
 		}
 		setLoading( false );
-	};
+	}, [ fallbackReactions ] );
 
 	useEffect( () => {
 		if ( providedReactions ) {
@@ -177,7 +177,7 @@ export function Reactions( {
 				setLoading( false );
 			} )
 			.catch( onError );
-	}, [ postId, providedReactions, fallbackReactions, namespace ] );
+	}, [ postId, providedReactions, fallbackReactions, namespace, onError ] );
 
 	if ( loading ) {
 		return null;

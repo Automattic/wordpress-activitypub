@@ -2,8 +2,8 @@
 	"compilerOptions": {
 		"target": "ESNext",
 		"module": "ESNext",
-		"moduleResolution": "node",
-		"jsx": "react",
+		"moduleResolution": "bundler",
+		"jsx": "react-jsx",
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
 		"strict": false,
@@ -12,7 +12,11 @@
 		"resolveJsonModule": true,
 		"typeRoots": [ "./node_modules/@types", "./src" ],
 		"types": [ "jest" ],
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"baseUrl": ".",
+		"paths": {
+			"react": [ "node_modules/@wordpress/element/node_modules/@types/react" ]
+		}
 	},
 	"include": [ "src/**/*" ],
 	"exclude": [ "node_modules", "build", "vendor" ]

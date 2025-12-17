@@ -34,22 +34,23 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	// Get author ID from context or current post depending on editor.
 	const authorId = useSelect(
 		( select ) => {
-			const editorStore = select( 'core/editor' );
-			const coreStore = select( 'core' );
+			if ( contextPostId && contextPostType ) {
+				const coreStore = select( 'core' );
+				if ( coreStore ) {
+					const editedRecord =
+						coreStore.getEditedEntityRecord?.( 'postType', contextPostType, contextPostId ) ?? null;
+					if ( editedRecord?.author ) {
+						return editedRecord.author;
+					}
 
-			if ( contextPostId && contextPostType && coreStore ) {
-				const editedRecord =
-					coreStore.getEditedEntityRecord?.( 'postType', contextPostType, contextPostId ) ?? null;
-				if ( editedRecord?.author ) {
-					return editedRecord.author;
-				}
-
-				const record = coreStore.getEntityRecord?.( 'postType', contextPostType, contextPostId ) ?? null;
-				if ( record?.author ) {
-					return record.author;
+					const record = coreStore.getEntityRecord?.( 'postType', contextPostType, contextPostId ) ?? null;
+					if ( record?.author ) {
+						return record.author;
+					}
 				}
 			}
 
+			const editorStore = select( 'core/editor' );
 			if ( editorStore && editorStore.getCurrentPostAttribute ) {
 				return editorStore.getCurrentPostAttribute( 'author' );
 			}

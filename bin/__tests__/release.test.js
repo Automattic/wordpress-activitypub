@@ -3,9 +3,6 @@ global.window = {};
 global.document = {};
 global.navigator = {};
 
-const fs = require( 'fs' );
-const path = require( 'path' );
-
 describe( 'Release script version replacements', () => {
 	const testVersion = '1.2.3';
 

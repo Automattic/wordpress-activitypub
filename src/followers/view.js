@@ -19,7 +19,7 @@ const { apiFetch, url } = window.wp;
  * @property {string}  order     The order in which to fetch followers (e.g., 'asc', 'desc').
  * @property {number}  page      The current page of followers.
  * @property {number}  pages     The total number of pages of followers.
- * @property {number}  per_page  The number of followers per page.
+ * @property {number}  perPage   The number of followers per page.
  * @property {number}  total     The total number of followers.
  * @property {string}  userId    The user ID for which to fetch followers.
  */
@@ -35,7 +35,7 @@ const { actions } = store( 'activitypub/followers', {
 		/**
 		 * Get the pagination text.
 		 *
-		 * @return {string}
+		 * @return {string} The pagination text showing current page and total pages.
 		 */
 		get paginationText() {
 			const { page, pages } = getContext();
@@ -45,7 +45,7 @@ const { actions } = store( 'activitypub/followers', {
 		/**
 		 * Check if the previous link should be disabled.
 		 *
-		 * @return {boolean}
+		 * @return {boolean} True if the previous link should be disabled.
 		 */
 		get disablePreviousLink() {
 			const { page } = getContext();
@@ -55,7 +55,7 @@ const { actions } = store( 'activitypub/followers', {
 		/**
 		 * Check if the next link should be disabled.
 		 *
-		 * @return {boolean}
+		 * @return {boolean} True if the next link should be disabled.
 		 */
 		get disableNextLink() {
 			const { page, pages } = getContext();
@@ -70,7 +70,7 @@ const { actions } = store( 'activitypub/followers', {
 		 */
 		async fetchFollowers() {
 			const context = getContext();
-			const { userId, page, per_page, order } = context;
+			const { userId, page, per_page: perPage, order } = context;
 
 			// Set loading state.
 			context.isLoading = true;
@@ -80,7 +80,7 @@ const { actions } = store( 'activitypub/followers', {
 				const { namespace } = getConfig();
 				const path = url.addQueryArgs( `/${ namespace }/actors/${ userId }/followers`, {
 					context: 'full',
-					per_page,
+					per_page: perPage,
 					order,
 					page,
 				} );
@@ -97,8 +97,9 @@ const { actions } = store( 'activitypub/followers', {
 				} ) );
 
 				context.total = totalItems;
-				context.pages = Math.ceil( totalItems / per_page );
+				context.pages = Math.ceil( totalItems / perPage );
 			} catch ( error ) {
+				// eslint-disable-next-line no-console -- Log error for debugging.
 				console.error( 'Error fetching followers:', error );
 			} finally {
 				// Clear loading state.
@@ -118,6 +119,7 @@ const { actions } = store( 'activitypub/followers', {
 			if ( context.page > 1 ) {
 				context.page--;
 				actions.fetchFollowers().catch( ( error ) => {
+					// eslint-disable-next-line no-console -- Log error for debugging.
 					console.error( 'Error fetching followers:', error );
 				} );
 			}
@@ -135,6 +137,7 @@ const { actions } = store( 'activitypub/followers', {
 			if ( context.page < context.pages ) {
 				context.page++;
 				actions.fetchFollowers().catch( ( error ) => {
+					// eslint-disable-next-line no-console -- Log error for debugging.
 					console.error( 'Error fetching followers:', error );
 				} );
 			}

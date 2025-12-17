@@ -56,7 +56,7 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 					}, 1000 );
 				},
 				( error ) => {
-					// Log error if copying fails.
+					// eslint-disable-next-line no-console -- Log error if copying fails.
 					console.error( 'Could not copy text: ', error );
 				}
 			);
@@ -144,7 +144,7 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 				// Close the modal after opening the URL.
 				actions.closeModal( new Event( 'click' ) );
 			} catch ( error ) {
-				// Handle error.
+				// eslint-disable-next-line no-console -- Log error for debugging.
 				console.error( 'Error submitting profile:', error );
 				context.isLoading = false;
 				context.isError = true;

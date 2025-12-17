@@ -126,6 +126,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 						setIsValidEmbed( false );
 					}
 				} catch ( error ) {
+					// eslint-disable-next-line no-console -- Log error for debugging.
 					console.log( 'Could not fetch embed:', error );
 					setAttributes( { isValidActivityPub: false } );
 					setIsValidEmbed( false );
@@ -137,7 +138,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 				setIsCheckingEmbed( false );
 			}
 		},
-		[ embedPost, setAttributes ]
+		[ setAttributes ]
 	);
 
 	// Debounce the URL check to avoid too many requests.
@@ -148,7 +149,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 		if ( url ) {
 			debouncedCheckUrl( url );
 		}
-	}, [ url ] );
+	}, [ url, debouncedCheckUrl ] );
 
 	const onKeyDown = ( event ) => {
 		if ( event.key === 'Enter' ) {
@@ -174,6 +175,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 				</PanelBody>
 			</InspectorControls>
 
+			{ /* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- Block wrapper, keyboard handled by inner TextControl */ }
 			<div onClick={ focusInput } { ...useBlockProps() }>
 				{ isSelected && (
 					<TextControl
@@ -191,6 +193,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 				{ showEmbed && <div { ...innerBlocksProps } /> }
 
 				{ url && ! showEmbed && ! isSelected && (
+					/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- Preview wrapper, clicking focuses input */
 					<div
 						className="activitypub-reply-block-editor__preview"
 						contentEditable={ false }

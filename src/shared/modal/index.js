@@ -95,7 +95,11 @@ export function createModalStore( namespace ) {
 			toggleModal( event ) {
 				const { modal } = getContext();
 
-				modal.isOpen ? actions.closeModal( event ) : actions.openModal( event );
+				if ( modal.isOpen ) {
+					actions.closeModal( event );
+				} else {
+					actions.openModal( event );
+				}
 			},
 		},
 
@@ -271,13 +275,14 @@ export function createModalStore( namespace ) {
 						return;
 					}
 
+					const activeEl = element.ownerDocument.activeElement;
 					if ( event.shiftKey ) {
 						/* shift + tab */
-						if ( document.activeElement === firstFocusableElement ) {
+						if ( activeEl === firstFocusableElement ) {
 							lastFocusableElement.focus();
 							event.preventDefault();
 						}
-					} /* tab */ else if ( document.activeElement === lastFocusableElement ) {
+					} /* tab */ else if ( activeEl === lastFocusableElement ) {
 						firstFocusableElement.focus();
 						event.preventDefault();
 					}

@@ -23,9 +23,9 @@ import { getDefaultVisibility } from './utils';
  * @return {React.JSX.Element|null} The settings panel for ActivityPub or null for sync blocks.
  */
 const EditorPlugin = () => {
-	const postType = useSelect( ( select ) => select( editorStore ).getCurrentPostType(), [] );
+	const postType = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
-	const postDate = useSelect( ( select ) => select( editorStore ).getCurrentPost().date, [] );
+	const postDate = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPost().date, [] );
 
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {
@@ -188,7 +188,7 @@ const EditorPlugin = () => {
  * @return {React.JSX.Element} The preview menu item component.
  */
 const EditorPreview = () => {
-	const post_status = useSelect( ( select ) => select( editorStore ).getCurrentPost().status, [] );
+	const postStatus = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPost().status, [] );
 
 	/**
 	 * Opens the Fediverse preview for the current post in a new tab.
@@ -206,7 +206,7 @@ const EditorPreview = () => {
 				<PluginPreviewMenuItem
 					onClick={ onActivityPubPreview }
 					icon={ external }
-					disabled={ post_status === 'auto-draft' }
+					disabled={ postStatus === 'auto-draft' }
 				>
 					{ __( 'Fediverse preview ⁂', 'activitypub' ) }
 				</PluginPreviewMenuItem>

@@ -29,11 +29,12 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 		 */
 		async fetchReactions() {
 			const context = getContext();
-			const { namespace } = getConfig();
 
 			if ( ! context.postId ) {
 				return;
 			}
+
+			const { namespace } = getConfig();
 
 			try {
 				// Update the state with the new Reactions data.
@@ -41,6 +42,7 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 					path: `/${ namespace }/posts/${ context.postId }/reactions`,
 				} );
 			} catch ( error ) {
+				// eslint-disable-next-line no-console -- Log error for debugging.
 				console.error( 'Error fetching reactions:', error );
 			}
 		},

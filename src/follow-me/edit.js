@@ -49,11 +49,11 @@ function getNormalizedProfile( profile ) {
 /**
  * Fetch profile data.
  *
- * @param {number} userId User ID.
+ * @param {number} userId    User ID.
+ * @param {string} namespace API namespace.
  * @return {Promise} Promise resolving with profile data.
  */
-function fetchProfile( userId ) {
-	const { namespace } = useOptions();
+function fetchProfile( userId, namespace ) {
 	const fetchOptions = {
 		headers: { Accept: 'application/activity+json' },
 		path: `/${ namespace }/actors/${ userId }`,
@@ -110,16 +110,19 @@ function EditorProfile( { profile, className, innerBlocksProps } ) {
 
 					{ ! isButtonOnly && (
 						<div className="activitypub-profile__stats">
-							{ Object.entries( stats ).map( ( [ key, count ] ) => (
-								<div key={ key }>
-									<strong>{ count }</strong>{ ' ' }
-									{ key === 'posts'
-										? _n( 'post', 'posts', count, 'activitypub' )
-										: key === 'followers'
-										? _n( 'follower', 'followers', count, 'activitypub' )
-										: _n( 'following', 'following', count, 'activitypub' ) }
-								</div>
-							) ) }
+							{ Object.entries( stats ).map( ( [ key, count ] ) => {
+								const labels = {
+									posts: _n( 'post', 'posts', count, 'activitypub' ),
+									followers: _n( 'follower', 'followers', count, 'activitypub' ),
+									following: _n( 'following', 'following', count, 'activitypub' ),
+								};
+
+								return (
+									<div key={ key }>
+										<strong>{ count }</strong> { labels[ key ] }
+									</div>
+								);
+							} ) }
 						</div>
 					) }
 				</div>
@@ -144,6 +147,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
 	const usersOptions = useUserOptions( { withInherit: true } );
+	const { namespace } = useOptions();
 	const { selectedUser, className = 'is-style-default' } = attributes;
 	const isInheritMode = selectedUser === 'inherit';
 	const [ profile, setProfile ] = useState( getNormalizedProfile( DEFAULT_PROFILE_DATA ) );
@@ -178,7 +182,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		}
 
 		const effectiveUserId = isInheritMode ? authorId : userId;
-		fetchProfile( effectiveUserId )
+		fetchProfile( effectiveUserId, namespace )
 			.then( ( data ) => {
 				setProfile( getNormalizedProfile( data ) );
 
@@ -200,8 +204,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 
 				if ( effectiveUserId ) {
 					apiFetch( { path: `/wp/v2/users/${ effectiveUserId }/?context=activitypub` } )
-						.then( ( { post_count } ) => {
-							setProfile( ( prevProfile ) => ( { ...prevProfile, postsCount: post_count } ) );
+						.then( ( { post_count: postsCount } ) => {
+							setProfile( ( prevProfile ) => ( { ...prevProfile, postsCount } ) );
 						} )
 						.catch( () => {} );
 				} else {
@@ -218,7 +222,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 				}
 			} )
 			.catch( () => {} );
-	}, [ userId, authorId, isInheritMode ] );
+	}, [ userId, authorId, isInheritMode, namespace ] );
 
 	useEffect( () => {
 		// If there are no users yet, do nothing.
@@ -229,7 +233,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		if ( ! usersOptions.find( ( { value } ) => value === selectedUser ) ) {
 			setAttributes( { selectedUser: usersOptions[ 0 ].value } );
 		}
-	}, [ selectedUser, usersOptions ] );
+	}, [ selectedUser, usersOptions, setAttributes ] );
 
 	return (
 		<div { ...blockProps }>

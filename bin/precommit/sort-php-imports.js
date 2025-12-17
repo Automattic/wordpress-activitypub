@@ -6,7 +6,6 @@
  */
 
 const fs = require( 'fs' );
-const path = require( 'path' );
 
 // Sort imports in a PHP file
 const sortImports = ( filePath ) => {

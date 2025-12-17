@@ -18,7 +18,7 @@ jest.mock( '@wordpress/i18n', () => ( {
 	__: ( text ) => text,
 	sprintf: ( format, ...args ) => {
 		let formatted = format;
-		args.forEach( ( arg, index ) => {
+		args.forEach( ( arg ) => {
 			formatted = formatted.replace( /%s/, arg );
 		} );
 		return formatted;
@@ -38,6 +38,7 @@ jest.mock( '@wordpress/components', () => ( {
 	),
 	SelectControl: ( { label, value, options, onChange } ) => (
 		<div data-testid="select-control">
+			{ /* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Test mock component */ }
 			<label>{ label }</label>
 			<select value={ value } onChange={ ( e ) => onChange( e.target.value ) }>
 				{ options.map( ( opt ) => (
@@ -50,6 +51,7 @@ jest.mock( '@wordpress/components', () => ( {
 	),
 	RangeControl: ( { label, value, onChange, min, max, help } ) => (
 		<div data-testid="range-control">
+			{ /* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Test mock component */ }
 			<label>{ label }</label>
 			<input
 				type="range"

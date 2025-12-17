@@ -80,7 +80,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 					}, 1000 );
 				},
 				( error ) => {
-					// Log error if copying fails.
+					// eslint-disable-next-line no-console -- Log error if copying fails.
 					console.error( 'Could not copy text: ', error );
 				}
 			);
@@ -165,7 +165,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 					Object.assign( state, { hasRemoteUser: true, profileURL, template } );
 				}
 			} catch ( error ) {
-				// Handle error.
+				// eslint-disable-next-line no-console -- Log error for debugging.
 				console.error( 'Error submitting profile:', error );
 				context.isLoading = false;
 				context.isError = true;
