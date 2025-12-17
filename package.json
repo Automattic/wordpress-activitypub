@@ -11,7 +11,7 @@
 	},
 	"scripts": {
 		"dev": "wp-scripts start --experimental-modules",
-		"build": "wp-scripts format && wp-scripts build --experimental-modules",
+		"build": "rm -rf build && wp-scripts format && wp-scripts build --experimental-modules",
 		"format": "wp-scripts format",
 		"lint:css": "wp-scripts lint-style",
 		"lint:js": "wp-scripts lint-js",

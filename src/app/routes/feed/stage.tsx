@@ -193,18 +193,6 @@ export default function FeedStage(): ReactNode {
 	const [ isLoadingMore, setIsLoadingMore ] = useState( false );
 	const lastProcessedPage = useRef< number >( 0 );
 
-	useEffect( (): void => {
-		if ( selection.length === 0 ) {
-			return;
-		}
-
-		const selectedId: string = selection[ 0 ];
-		const exists: boolean = feed.some( ( item: FeedPost ): boolean => item.id.toString() === selectedId );
-		if ( ! exists ) {
-			setSelection( [] );
-		}
-	}, [ feed, selection ] );
-
 	const changeSelection = useCallback(
 		( nextSelection: string[] ): void => {
 			setSelection( nextSelection );
@@ -213,16 +201,10 @@ export default function FeedStage(): ReactNode {
 				return;
 			}
 
-			const selectedId: string = nextSelection[ 0 ];
-			const selectedItem: FeedPost | undefined = feed.find(
-				( item: FeedPost ): boolean => item.id.toString() === selectedId
-			);
-
-			if ( selectedItem ) {
-				selectItem( selectedItem.id );
-			}
+			// We already have the ID from the selection - no need to look up the item
+			selectItem( Number( nextSelection[ 0 ] ) );
 		},
-		[ feed, selectItem ]
+		[ selectItem ]
 	);
 
 	// Infinite scroll handler
