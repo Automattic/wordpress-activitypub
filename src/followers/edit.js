@@ -346,27 +346,39 @@ function Pagination( { page, pages, setPage } ) {
 	return (
 		<nav className="followers-pagination" role="navigation">
 			<h1 className="screen-reader-text">{ __( 'Follower navigation', 'activitypub' ) }</h1>
-			<button
-				type="button"
+			{ /* eslint-disable-next-line jsx-a11y/anchor-is-valid -- Using anchor for visual consistency with frontend pagination */ }
+			<a
+				href="#followers-pagination"
 				className="pagination-previous"
-				disabled={ disablePreviousLink }
+				aria-disabled={ disablePreviousLink }
 				aria-label={ __( 'Previous page', 'activitypub' ) }
-				onClick={ () => setPage( page - 1 ) }
+				onClick={ ( event ) => {
+					event.preventDefault();
+					if ( ! disablePreviousLink ) {
+						setPage( page - 1 );
+					}
+				} }
 			>
 				{ __( 'Previous', 'activitypub' ) }
-			</button>
+			</a>
 
 			<div className="pagination-info">{ `${ page } / ${ pages }` }</div>
 
-			<button
-				type="button"
+			{ /* eslint-disable-next-line jsx-a11y/anchor-is-valid -- Using anchor for visual consistency with frontend pagination */ }
+			<a
+				href="#followers-pagination"
 				className="pagination-next"
-				disabled={ disableNextLink }
+				aria-disabled={ disableNextLink }
 				aria-label={ __( 'Next page', 'activitypub' ) }
-				onClick={ () => setPage( page + 1 ) }
+				onClick={ ( event ) => {
+					event.preventDefault();
+					if ( ! disableNextLink ) {
+						setPage( page + 1 );
+					}
+				} }
 			>
 				{ __( 'Next', 'activitypub' ) }
-			</button>
+			</a>
 		</nav>
 	);
 }
