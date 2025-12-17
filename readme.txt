@@ -119,7 +119,7 @@ For reasons of data protection, it is not possible to see the followers of other
 - Add local caching for remote actor avatars.
 - Add relay mode to forward public activities to all followers.
 - Add scheduled cleanup for remote posts, preserving posts with local user interactions.
-- Add site health check to warn when DISABLE_WP_CRON may impact ActivityPub functionality
+- Add site health check to warn when DISABLE_WP_CRON may impact ActivityPub functionality.
 - Add Social Web Reader for browsing ActivityPub content directly in WordPress admin.
 - Delete remote posts on plugin uninstall.
 - Mastodon importer now imports self-replies as comments, preserving thread structure.
