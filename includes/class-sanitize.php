@@ -215,4 +215,79 @@ class Sanitize {
 	public static function strip_whitespace( $content ) {
 		return \trim( \preg_replace( '/>[\n\r\t]+</', '><', $content ) );
 	}
+
+	/**
+	 * Clean HTML for ActivityPub federation.
+	 *
+	 * Keeps all WordPress allowed tags but removes global attributes like
+	 * class, id, style, data-*, aria-* that increase payload size.
+	 *
+	 * @see https://github.com/Automattic/wordpress-activitypub/issues/2619
+	 *
+	 * @param string $content The HTML content to clean.
+	 *
+	 * @return string The cleaned HTML content.
+	 */
+	public static function clean_html( $content ) {
+		if ( empty( $content ) ) {
+			return $content;
+		}
+
+		// Start with all WordPress allowed post tags.
+		$allowed_html = \wp_kses_allowed_html( 'post' );
+
+		// Global attributes to remove from all elements.
+		$remove_attrs = array(
+			'aria-controls',
+			'aria-current',
+			'aria-describedby',
+			'aria-details',
+			'aria-expanded',
+			'aria-hidden',
+			'aria-label',
+			'aria-labelledby',
+			'aria-live',
+			'class',
+			'data-*',
+			'decoding',
+			'dir',
+			'hidden',
+			'id',
+			'lang',
+			'loading',
+			'role',
+			'style',
+			'tabindex',
+			'title',
+			'xml:lang',
+		);
+
+		/**
+		 * Filter the global attributes to remove from all elements.
+		 *
+		 * @param array $remove_attrs Global attributes to remove.
+		 */
+		$remove_attrs = \apply_filters( 'activitypub_remove_html_attributes', $remove_attrs );
+
+		// Remove global attributes from all tags.
+		foreach ( $allowed_html as $tag => $attrs ) {
+			$allowed_html[ $tag ] = \array_diff_key( $attrs, \array_flip( $remove_attrs ) );
+		}
+
+		// Re-add class and title for anchors (needed for microformats).
+		$allowed_html['a']['class'] = true;
+		$allowed_html['a']['title'] = true;
+
+		// Re-add class for spans (needed for microformats).
+		$allowed_html['span']['class'] = true;
+
+		/**
+		 * Filter the final allowed HTML for ActivityPub content.
+		 *
+		 * @param array $allowed_html The allowed HTML structure for wp_kses.
+		 */
+		$allowed_html = \apply_filters( 'activitypub_allowed_html', $allowed_html );
+
+		return \wp_kses( $content, $allowed_html, \wp_allowed_protocols() );
+	}
 }
