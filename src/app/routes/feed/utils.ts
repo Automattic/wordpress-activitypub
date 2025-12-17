@@ -20,7 +20,8 @@ type ViewType = ReturnType< typeof useView >[ 'view' ];
  * @return The view with fields sorted in canonical order
  */
 export function normalizeFieldOrder( view: ViewType, fields: Array< { id: string } > ): ViewType {
-	if ( ! view.fields ) {
+	// Guard against undefined view
+	if ( ! view || ! view.fields ) {
 		return view;
 	}
 

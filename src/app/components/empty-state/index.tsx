@@ -24,6 +24,13 @@ import { useView } from '@wordpress/views';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
 
+// Minimal default view for consistency with other components using the same view state
+const DEFAULT_VIEW = {
+	type: 'list' as const,
+	filters: [],
+	search: '',
+};
+
 export default function EmptyState(): ReactNode {
 	const activeActorId = useSelect(
 		( select ): number | null => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(),
@@ -34,6 +41,7 @@ export default function EmptyState(): ReactNode {
 		kind: 'postType',
 		name: 'ap_post',
 		slug: 'feed',
+		defaultView: DEFAULT_VIEW,
 	} );
 
 	// If search or filters are active, show simple "no results" message.
