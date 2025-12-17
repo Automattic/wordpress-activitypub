@@ -199,11 +199,14 @@ export default function FeedStage(): ReactNode {
 		}
 
 		const selectedId: string = selection[ 0 ];
-		const exists: boolean = feed.some( ( item: FeedPost ): boolean => item.id.toString() === selectedId );
+		// Check allLoadedRecords since infinite scroll accumulates items from multiple pages
+		const exists: boolean = allLoadedRecords.some(
+			( item: FeedPost ): boolean => item.id.toString() === selectedId
+		);
 		if ( ! exists ) {
 			setSelection( [] );
 		}
-	}, [ feed, selection ] );
+	}, [ allLoadedRecords, selection ] );
 
 	const changeSelection = useCallback(
 		( nextSelection: string[] ): void => {
@@ -214,7 +217,8 @@ export default function FeedStage(): ReactNode {
 			}
 
 			const selectedId: string = nextSelection[ 0 ];
-			const selectedItem: FeedPost | undefined = feed.find(
+			// Search allLoadedRecords since infinite scroll accumulates items from multiple pages
+			const selectedItem: FeedPost | undefined = allLoadedRecords.find(
 				( item: FeedPost ): boolean => item.id.toString() === selectedId
 			);
 
@@ -222,7 +226,7 @@ export default function FeedStage(): ReactNode {
 				selectItem( selectedItem.id );
 			}
 		},
-		[ feed, selectItem ]
+		[ allLoadedRecords, selectItem ]
 	);
 
 	// Infinite scroll handler
