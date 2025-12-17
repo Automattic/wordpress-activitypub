@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.8.0] - 2025-12-17
+### Added
+- Add blocklist subscriptions for automatic weekly synchronization of remote blocklists. [#2590]
+- Add compact display style to Reactions block that hides avatars. [#2617]
+- Add domain blocklist importer for bulk importing blocked domains. [#2589]
+- Add image optimization for imported attachments (resize to 1200px max, convert to WebP). [#2609]
+- Add local caching for remote actor avatars. [#2610]
+- Add relay mode to forward public activities to all followers. [#2560]
+- Add scheduled cleanup for remote posts, preserving posts with local user interactions. [#2612]
+- Add site health check to warn when DISABLE_WP_CRON may impact ActivityPub functionality [#2583]
+- Add Social Web Reader for browsing ActivityPub content directly in WordPress admin. [#2388]
+- Delete remote posts on plugin uninstall. [#2632]
+- Mastodon importer now imports self-replies as comments, preserving thread structure. [#2572]
+
+### Changed
+- Cache expensive operations in Post transformer to improve performance. [#2604]
+- Improve performance and reliability of @-mention detection. [#2602]
+- Reduce federated content size by removing unnecessary HTML attributes. [#2643]
+- Skip downloading video and audio attachments, embedding remote URLs directly to avoid storage limits. [#2608]
+- Use stable term_id-based IDs for Term transformer to ensure federation consistency. [#2605]
+- Wrap blocked domains and keywords tables in collapsible details element. [#2591]
+
+### Fixed
+- Ensure NodeInfo accurately represents site administrators to the Fediverse. [#2639]
+- Fediverse Followers block now works correctly when the "Hide Social Graph" privacy option is enabled. [#2625]
+- Fix NodeInfo documents to comply with schema specification. [#2603]
+- Follow Me block button-only style now respects width settings from the inner Button block. [#2588]
+- Preserve whitespace inside preformatted elements when federating content. [#2621]
+- Respect WordPress "show avatars" setting for remote actor avatars. [#2611]
+
 ## [7.7.1] - 2025-12-04
 ### Fixed
 - Fix admin styling for quote comments to match likes and reposts [#2584]
@@ -1573,6 +1603,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.8.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.7.1...7.8.0
 [7.7.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.7.0...7.7.1
 [7.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.6.1...7.7.0
 [7.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.6.0...7.6.1

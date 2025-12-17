@@ -1,4 +1,0 @@
-Significance: patch
-Type: changed
-
-Cache expensive operations in Post transformer to improve performance.
