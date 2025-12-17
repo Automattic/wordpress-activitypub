@@ -54,6 +54,14 @@ if [ -n "$PHP_FILES" ]; then
   echo "$PHP_FILES" | xargs composer lint:fix > /dev/null 2>&1 || { echo "PHP formatting failed"; exit 1; }
 fi
 
+# Get all changed CSS/SCSS files.
+CSS_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E "\.(css|scss)$" || true)
+
+# Run Stylelint with auto-fix on changed CSS/SCSS files.
+if [ -n "$CSS_FILES" ]; then
+  echo "$CSS_FILES" | xargs npx wp-scripts lint-style --fix > /dev/null 2>&1 || { echo "CSS linting failed"; exit 1; }
+fi
+
 # Run the WordPress formatter without showing all file output.
 npm run format > /dev/null 2>&1 || { echo "JavaScript formatting failed"; exit 1; }
 

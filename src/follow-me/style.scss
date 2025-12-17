@@ -1,4 +1,4 @@
-@use '../shared/modal/style';
+@use "../shared/modal/style";
 
 .activitypub-follow-me-block-wrapper {
 	display: block;
@@ -75,6 +75,7 @@
 
 	// Style variations - applied to the wrapper
 	&:not(.is-style-button-only):not(.is-style-profile) {
+
 		.activitypub-profile__bio,
 		.activitypub-profile__stats {
 			display: none;
@@ -82,6 +83,7 @@
 	}
 
 	&.is-style-button-only {
+
 		.activitypub-profile {
 			padding: 0;
 		}
@@ -146,6 +148,7 @@
 		overflow: hidden;
 
 		&.has-background {
+
 			.activitypub-profile {
 				padding: 0;
 			}
@@ -213,6 +216,7 @@
 }
 
 .activitypub-dialog {
+
 	&__section {
 		padding: 1.5rem 2rem;
 		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);

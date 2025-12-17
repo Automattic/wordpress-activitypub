@@ -4,7 +4,7 @@
  */
 
 // Import global styles (design tokens, body styles, root element)
-@use './styles/design-tokens.scss';
+@use "./styles/design-tokens";
 
 // Main layout container.
 .activitypub-app-layout {

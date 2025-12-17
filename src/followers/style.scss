@@ -17,11 +17,8 @@ button {
 
 	.wp-block-heading,
 	.followers-pagination {
-		border-color: var(--wp--preset--color--foreground,
-			var(--wp--preset--color--primary,
-				#e0e0e0
-			)
-		);
+		border-color:
+ var(--wp--preset--color--foreground, var(--wp--preset--color--primary, #e0e0e0));
 	}
 
 	.followers-container {
@@ -50,16 +47,10 @@ button {
 			box-shadow: none; // Twenty Sixteen.
 			transition: background-color 0.2s ease;
 
-			&:hover, &:focus {
-				background-color: var(--wp--preset--color--subtle-background,
-					var(--wp--preset--color--accent-2,
-						var(--wp--preset--color--tertiary,
-							var(--wp--preset--color--secondary,
-								#f0f0f0
-							)
-						)
-					)
-				);
+			&:hover,
+ &:focus {
+				background-color:
+ var(--wp--preset--color--subtle-background, var(--wp--preset--color--accent-2, var(--wp--preset--color--tertiary, var(--wp--preset--color--secondary, #f0f0f0))));
 				box-shadow: none; // Twenty Seventeen.
 				outline: none;
 
@@ -209,6 +200,7 @@ button {
 		}
 
 		@keyframes spin {
+
 			to {
 				transform: rotate(360deg);
 			}
@@ -239,7 +231,8 @@ button {
 		border: 1px solid #e0e0e0;
 		margin-bottom: 8px;
 
-		&:hover, &:focus {
+		&:hover,
+ &:focus {
 			border-color: color.adjust(#e0e0e0, $lightness: -10%);
 		}
 	}
@@ -252,6 +245,7 @@ button {
 
 // Compact style variation
 .wp-block-activitypub-followers.is-style-compact {
+
 	.follower-link {
 		padding: 4px;
 	}

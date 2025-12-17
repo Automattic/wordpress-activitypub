@@ -68,7 +68,7 @@
 	font-size: 16px;
 	color: #646970;
 	margin: 0 0 20px;
-	font-weight: normal;
+	font-weight: 400;
 }
 
 /* Steps Styles */
@@ -101,6 +101,7 @@
 .activitypub-step-completed .step-text h3 {
 	margin: 0;
 }
+
 .activitypub-step-completed .step-text h3::after {
 	content: ".";
 }
@@ -276,6 +277,7 @@
 
 /* Responsive Adjustments */
 @media screen and (max-width: 782px) {
+
 	.activitypub-welcome-container {
 		margin: 20px;
 		padding: 20px;

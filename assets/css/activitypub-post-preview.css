@@ -91,14 +91,14 @@ main address .webfinger {
 
 .name {
 	color: #ccc;
-	font-weight: bold;
+	font-weight: 700;
 	display: block;
 }
 
 .webfinger {
 	color: #ccc;
 	font-size: 0.8em;
-	font-weight: bold;
+	font-weight: 700;
 	display: block;
 	margin-top: 0.5em;
 }

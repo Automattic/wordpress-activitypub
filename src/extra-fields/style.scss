@@ -50,7 +50,7 @@
 		color: inherit;
 
 		&::after {
-			content: ':';
+			content: ":";
 		}
 	}
 
@@ -88,6 +88,7 @@
  * Displays fields in a stacked format with label on top and value below.
  */
 .is-style-stacked {
+
 	.activitypub-extra-fields {
 		display: block;
 		table-layout: auto;
@@ -158,7 +159,7 @@
 			font-size: 0.9em;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
-			color: currentColor;
+			color: currentcolor;
 			margin-bottom: 0.5em;
 			padding-bottom: 0;
 			padding-right: 0;

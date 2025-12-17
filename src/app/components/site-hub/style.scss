@@ -30,7 +30,7 @@
 	view-transition-name: toggle;
 	/* stylelint-enable  */
 	position: relative;
-	color: var(--wpds-color-fg-inverted-primary, #ffffff);
+	color: var(--wpds-color-fg-inverted-primary, #fff);
 	height: var(--wpds-spacing-160, 64px);
 	width: var(--wpds-spacing-160, 64px);
 	overflow: hidden;
@@ -43,7 +43,7 @@
 
 	&:hover,
 	&:active {
-		color: var(--wpds-color-fg-inverted-primary, #ffffff);
+		color: var(--wpds-color-fg-inverted-primary, #fff);
 	}
 
 	&:focus-visible,
@@ -110,7 +110,8 @@
 
 	&:focus-visible {
 		// Push the shadow away from the title.
-		box-shadow: 0 0 0 var(--wp-admin-border-width-focus) #1e1e1e,
+		box-shadow:
+			0 0 0 var(--wp-admin-border-width-focus) #1e1e1e,
 			0 0 0 calc(2 * var(--wp-admin-border-width-focus)) var(--wpds-color-stroke-focus-brand, #0675c4);
 
 		// Windows High Contrast mode will show this outline, but not the box-shadow.
@@ -143,6 +144,7 @@
 
 	&:hover,
 	&:active {
+
 		svg {
 			fill: var(--wpds-color-private-bg-fg-fill, #f0f0f0);
 		}
@@ -167,17 +169,17 @@
 }
 
 .site-hub-mobile__title {
-	color: var(--wpds-color-fg-inverted-primary, #ffffff);
+	color: var(--wpds-color-fg-inverted-primary, #fff);
 	font-size: var(--wpds-font-size-medium, 16px);
 	font-weight: var(--wpds-font-weight-medium, 500);
 }
 
 .site-hub-mobile__button.components-button {
-	color: var(--wpds-color-fg-inverted-secondary, #cccccc);
+	color: var(--wpds-color-fg-inverted-secondary, #ccc);
 
 	&:hover:not(:disabled),
 	&:focus:not(:disabled) {
-		color: var(--wpds-color-fg-inverted-primary, #ffffff);
+		color: var(--wpds-color-fg-inverted-primary, #fff);
 	}
 
 	&:focus-visible {
