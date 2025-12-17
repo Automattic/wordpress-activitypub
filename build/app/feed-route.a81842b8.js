@@ -36,4 +36,4 @@ const route = {
 /***/ })
 
 }]);
-//# sourceMappingURL=feed-route.a1658013.js.map
+//# sourceMappingURL=feed-route.a81842b8.js.map

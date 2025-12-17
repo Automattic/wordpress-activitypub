@@ -17,7 +17,6 @@ import { useMemo, useCallback, useState, useEffect, useRef } from '@wordpress/el
 import { DataViews } from '@wordpress/dataviews/wp';
 import type { Field, View as DataViewsView } from '@wordpress/dataviews/wp';
 import { useView } from '@wordpress/views';
-import { __ } from '@wordpress/i18n';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
 

@@ -58,8 +58,8 @@ function EmptyState() {
     slug: 'feed'
   });
 
-  // If search or filters are active, show simple "no results" message.
-  if (view.search || view.filters && view.filters.length > 0) {
+  // If view is not initialized or search/filters are active, show simple "no results" message.
+  if (!view || view.search || view.filters && view.filters.length > 0) {
     return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_6__.jsx)("p", {
       children: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('No posts found.', 'activitypub')
     });
@@ -1667,4 +1667,4 @@ function getRelativeTime(dateString) {
 /***/ })
 
 }]);
-//# sourceMappingURL=feed-content.d1b1d388.js.map
+//# sourceMappingURL=feed-content.dfe72803.js.map
