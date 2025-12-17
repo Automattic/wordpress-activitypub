@@ -110,7 +110,7 @@ const { actions } = store( 'activitypub/followers', {
 		/**
 		 * Navigate to the previous page.
 		 *
-		 * @param {Event} event - The click event.
+		 * @param {Event} event The click event.
 		 */
 		previousPage( event ) {
 			event.preventDefault();
@@ -128,7 +128,7 @@ const { actions } = store( 'activitypub/followers', {
 		/**
 		 * Navigate to the next page.
 		 *
-		 * @param {Event} event - The click event.
+		 * @param {Event} event The click event.
 		 */
 		nextPage( event ) {
 			event.preventDefault();

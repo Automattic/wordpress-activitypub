@@ -14,7 +14,7 @@ import { getContext, store, getElement } from '@wordpress/interactivity';
  * The Interactivity API merges all stores that share the same namespace,
  * so these actions and callbacks are added directly to the importing block’s existing store.
  *
- * @param {string} namespace - The interactivity namespace for the block.
+ * @param {string} namespace The interactivity namespace for the block.
  */
 export function createModalStore( namespace ) {
 	const { actions, callbacks } = store( namespace, {

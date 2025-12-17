@@ -7,7 +7,7 @@ import { useOptions } from './use-options';
  * Block fallback component for inheriting user context in ActivityPub blocks.
  *
  * @param {Object} props
- * @param {string} props.name - Name of the block.
+ * @param {string} props.name Name of the block.
  * @return {JSX.Element} Rendered fallback block.
  */
 export function InheritModeBlockFallback( { name } ) {

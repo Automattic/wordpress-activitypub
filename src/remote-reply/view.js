@@ -223,7 +223,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		/**
 		 * Store remote user data in localStorage.
 		 *
-		 * @param {Object} data - Remote user data to store.
+		 * @param {Object} data Remote user data to store.
 		 */
 		setStore( data ) {
 			localStorage.setItem( callbacks.storageKey, JSON.stringify( data ) );
@@ -239,7 +239,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		/**
 		 * Best guess whether a string is a valid ActivityPub handle.
 		 *
-		 * @param {string} string - String to check.
+		 * @param {string} string String to check.
 		 * @return {boolean} True if string is a valid handle, false otherwise.
 		 */
 		isHandle( string ) {
@@ -252,7 +252,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		/**
 		 * Checks if a string is a valid URL.
 		 *
-		 * @param {string} string - String to check.
+		 * @param {string} string String to check.
 		 * @return {boolean} True if string is a valid URL, false otherwise.
 		 */
 		isUrl( string ) {

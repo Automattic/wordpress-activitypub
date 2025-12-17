@@ -8,7 +8,7 @@ import { useOptions } from './use-options';
  * React hook providing user options for ActivityPub blocks.
  *
  * @param {Object}  params
- * @param {boolean} params.withInherit - Whether to include the inherit option.
+ * @param {boolean} params.withInherit Whether to include the inherit option.
  * @return {Array} List of user option objects.
  */
 export function useUserOptions( { withInherit = false } ) {

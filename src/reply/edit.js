@@ -29,11 +29,11 @@ const HELP_TEXT = {
 /**
  * Edit component for the ActivityPub Reply block.
  *
- * @param {Object}   props               - Component props.
- * @param {Object}   props.attributes    - Block attributes.
- * @param {Function} props.setAttributes - Function to update block attributes.
- * @param {string}   props.clientId      - Block client ID.
- * @param {boolean}  props.isSelected    - Whether the block is selected.
+ * @param {Object}   props               Component props.
+ * @param {Object}   props.attributes    Block attributes.
+ * @param {Function} props.setAttributes Function to update block attributes.
+ * @param {string}   props.clientId      Block client ID.
+ * @param {boolean}  props.isSelected    Whether the block is selected.
  */
 export default function Edit( { attributes, setAttributes, clientId, isSelected } ) {
 	const { url = '', embedPost = false } = attributes;
