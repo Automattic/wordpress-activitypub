@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Add site health check to warn when DISABLE_WP_CRON may impact ActivityPub functionality
