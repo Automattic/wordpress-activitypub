@@ -297,7 +297,7 @@ class Admin {
 			);
 		}
 
-		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
+		if ( false !== strpos( $hook_suffix, 'activitypub' ) && 'dashboard_page_activitypub-social-web' !== $hook_suffix ) {
 			wp_enqueue_style(
 				'activitypub-admin-styles',
 				plugins_url(

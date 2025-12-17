@@ -493,9 +493,10 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 			'type'   => 'Create',
 			'actor'  => 'https://remote.example/@test',
 			'object' => array(
-				'id'      => 'https://remote.example/post/deduplicate',
-				'type'    => 'Note',
-				'content' => 'Test deduplication',
+				'id'           => 'https://remote.example/post/deduplicate',
+				'type'         => 'Note',
+				'content'      => 'Test deduplication',
+				'attributedTo' => 'https://remote.example/@test',
 			),
 		);
 

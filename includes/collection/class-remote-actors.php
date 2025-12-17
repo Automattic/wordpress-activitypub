@@ -61,6 +61,17 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Get an Remote Actor from the collection.
+	 *
+	 * @param int $id The object ID.
+	 *
+	 * @return \WP_Post|null The post object or null on failure.
+	 */
+	public static function get( $id ) {
+		return \get_post( $id );
+	}
+
+	/**
 	 * Upsert (insert or update) a remote actor as a custom post type.
 	 *
 	 * @param array|Actor $actor ActivityPub actor object (array or actor, must include 'id').

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "activitypub/app",
+  "title": "ActivityPub App",
+  "category": "widgets",
+  "description": "ActivityPub admin interface",
+  "textdomain": "activitypub",
+  "editorScript": "file:./index.js"
+}
