@@ -54,6 +54,14 @@ if [ -n "$PHP_FILES" ]; then
   echo "$PHP_FILES" | xargs composer lint:fix > /dev/null 2>&1 || { echo "PHP formatting failed"; exit 1; }
 fi
 
+# Get all changed JS/TS files.
+JS_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E "\.(js|jsx|ts|tsx)$" || true)
+
+# Run JS linting on changed files.
+if [ -n "$JS_FILES" ]; then
+  echo "$JS_FILES" | xargs npm run lint:js -- || { echo "JavaScript linting failed"; exit 1; }
+fi
+
 # Run the WordPress formatter without showing all file output.
 npm run format > /dev/null 2>&1 || { echo "JavaScript formatting failed"; exit 1; }
 
