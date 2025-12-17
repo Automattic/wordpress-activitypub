@@ -36,3 +36,4 @@ src
 tsconfig.json
 tests
 vendor
+webpack.config.js
