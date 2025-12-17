@@ -294,12 +294,6 @@ class Statistics_Dashboard {
 				</ul>
 			</div>
 			<?php endif; ?>
-
-			<div class="activitypub-stats-actions">
-				<a href="<?php echo \esc_url( Statistics::get_wrapped_url( $default_actor ) ); ?>" class="button button-secondary activitypub-wrapped-link" target="_blank">
-					<?php \esc_html_e( 'View Shareable Card', 'activitypub' ); ?>
-				</a>
-			</div>
 		</div>
 		<?php
 	}
@@ -516,15 +510,14 @@ class Statistics_Dashboard {
 
 		// Format numbers for display.
 		$formatted = array(
-			'stats'       => array(
+			'stats'      => array(
 				'posts_count'       => \number_format_i18n( $stats['posts_count'] ),
 				'followers_total'   => \number_format_i18n( $stats['followers_total'] ),
 				'top_posts'         => $stats['top_posts'],
 				'top_multiplicator' => $stats['top_multiplicator'],
 			),
-			'comparison'  => $comparison_data,
-			'monthly'     => \array_values( $monthly_data ),
-			'wrapped_url' => Statistics::get_wrapped_url( $user_id ),
+			'comparison' => $comparison_data,
+			'monthly'    => \array_values( $monthly_data ),
 		);
 
 		\wp_send_json_success( $formatted );

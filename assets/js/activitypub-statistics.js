@@ -74,9 +74,6 @@
 
 		// Update top posts.
 		updateTopPosts( $widget, data.stats.top_posts );
-
-		// Update wrapped card link.
-		$widget.find( '.activitypub-wrapped-link' ).attr( 'href', data.wrapped_url );
 	}
 
 	/**
