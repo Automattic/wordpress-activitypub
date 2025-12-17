@@ -1,6 +1,7 @@
 import classnames from 'classnames';
 import { useBlockProps, useInnerBlocksProps } from '@wordpress/block-editor';
 import { createBlock } from '@wordpress/blocks';
+import { __unstableStripHTML as stripHTML } from '@wordpress/dom';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -184,7 +185,7 @@ const v3 = {
 	 */
 	migrate( attributes, innerBlocks ) {
 		const { tagName, ...buttonAttributes } = innerBlocks[ 0 ].attributes;
-		const text = innerBlocks[ 0 ].originalContent.replace( /<[^>]*>/g, '' ) ?? __( 'Follow', 'activitypub' );
+		const text = stripHTML( innerBlocks[ 0 ].originalContent ) || __( 'Follow', 'activitypub' );
 
 		// Create a proper button block with the correct structure and the extracted text
 		const buttonBlock = createBlock( 'core/button', { ...buttonAttributes, text } );
