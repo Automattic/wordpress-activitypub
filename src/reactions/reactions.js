@@ -4,12 +4,6 @@ import apiFetch from '@wordpress/api-fetch';
 import { useOptions } from '../shared/use-options';
 
 /**
- * @typedef {Object} JSX
- * @typedef {import('react').ReactElement} JSX.Element
- * @property
- */
-
-/**
  * A component that renders a row of user avatars for a given set of reactions.
  *
  * @param {Object} props              Component props.
@@ -160,7 +154,7 @@ export function Reactions( {
 			return;
 		}
 
-		// if no postId is provided or it's not a number (Site Editor), return early.
+		// if no postId is provided, or it's not a number (Site Editor), return early.
 		if ( ! postId || typeof postId !== 'number' ) {
 			onError();
 			return;

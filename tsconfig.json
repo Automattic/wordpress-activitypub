@@ -1,8 +1,15 @@
 {
-	"extends": "./node_modules/@wordpress/scripts/config/tsconfig.json",
 	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "node",
 		"jsx": "react",
 		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"strict": false,
+		"noEmit": true,
+		"isolatedModules": true,
+		"resolveJsonModule": true,
 		"typeRoots": [ "./node_modules/@types", "./src" ],
 		"types": [ "jest" ],
 		"skipLibCheck": true
