@@ -24,10 +24,21 @@
 
 // Highlights section.
 .activitypub-stats-highlights {
+	margin-bottom: 20px;
+}
+
+.activitypub-stats-period {
+	font-size: 11px;
+	color: #757575;
+	margin: 0 0 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+}
+
+.activitypub-stats-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
 	gap: 12px;
-	margin-bottom: 20px;
 }
 
 .activitypub-stat-item {

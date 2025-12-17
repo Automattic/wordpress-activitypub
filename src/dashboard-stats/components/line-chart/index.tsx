@@ -6,13 +6,32 @@ interface Props {
 	commentTypes: Record< string, CommentType > | null;
 }
 
-// Colors for different engagement types.
-const COLORS = {
-	engagement: '#3858e9',
-	like: '#d63638',
-	repost: '#00a32a',
-	comment: '#dba617',
-};
+// WordPress default color palette (always available).
+// @see https://developer.wordpress.org/themes/global-settings-and-styles/settings/color/
+const WP_DEFAULT_COLORS = [
+	{ slug: 'vivid-red', hex: '#cf2e2e' },
+	{ slug: 'vivid-green-cyan', hex: '#00d084' },
+	{ slug: 'luminous-vivid-amber', hex: '#fcb900' },
+	{ slug: 'vivid-purple', hex: '#9b51e0' },
+	{ slug: 'vivid-cyan-blue', hex: '#0693e3' },
+	{ slug: 'luminous-vivid-orange', hex: '#ff6900' },
+];
+
+/**
+ * Get CSS variable with fallback to hex value.
+ * Uses CSS var() with fallback for best compatibility.
+ */
+function getColor( index: number ): string {
+	const color = WP_DEFAULT_COLORS[ index % WP_DEFAULT_COLORS.length ];
+	return `var(--wp--preset--color--${ color.slug }, ${ color.hex })`;
+}
+
+/**
+ * Get the engagement color (primary/accent, uses vivid-cyan-blue).
+ */
+function getEngagementColor(): string {
+	return 'var(--wp--preset--color--vivid-cyan-blue, #0693e3)';
+}
 
 /**
  * Line Chart Component.
@@ -24,34 +43,59 @@ export default function LineChart( { monthly, commentTypes }: Props ) {
 		return null;
 	}
 
+	// Get colors once at render time.
+	const engagementColor = getEngagementColor();
+
 	const width = 600;
 	const height = 200;
 	const padding = { top: 20, right: 20, bottom: 30, left: 40 };
 	const chartWidth = width - padding.left - padding.right;
 	const chartHeight = height - padding.top - padding.bottom;
 
-	// Get all engagement values to find max.
-	const maxEngagement = Math.max( ...monthly.map( ( m ) => m.engagement || 0 ), 1 );
+	// Get engagement type slugs from commentTypes.
+	const typeKeys = commentTypes ? Object.keys( commentTypes ) : [];
 
-	// Calculate points for the line.
-	const points = monthly.map( ( month, index ) => {
-		const x = padding.left + ( index / ( monthly.length - 1 || 1 ) ) * chartWidth;
+	// Get max value across all engagement types for proper scaling.
+	const maxEngagement = Math.max(
+		...monthly.map( ( m ) => m.engagement || 0 ),
+		...typeKeys.flatMap( ( type ) => monthly.map( ( m ) => ( m[ `${ type }_count` ] as number ) || 0 ) ),
+		1
+	);
+
+	// Calculate x positions for each month.
+	const xPositions = monthly.map( ( _, index ) => {
+		return padding.left + ( index / ( monthly.length - 1 || 1 ) ) * chartWidth;
+	} );
+
+	// Calculate points for the total engagement line.
+	const engagementPoints = monthly.map( ( month, index ) => {
+		const x = xPositions[ index ];
 		const y = padding.top + chartHeight - ( ( month.engagement || 0 ) / maxEngagement ) * chartHeight;
 		return { x, y, month };
 	} );
 
-	// Create path for the line.
-	const linePath = points
-		.map( ( point, index ) => {
-			return index === 0 ? `M ${ point.x } ${ point.y }` : `L ${ point.x } ${ point.y }`;
-		} )
+	// Create path for the engagement line.
+	const engagementPath = engagementPoints
+		.map( ( point, index ) => ( index === 0 ? `M ${ point.x } ${ point.y }` : `L ${ point.x } ${ point.y }` ) )
 		.join( ' ' );
 
 	// Create path for the area fill.
 	const areaPath =
-		linePath +
-		` L ${ points[ points.length - 1 ].x } ${ padding.top + chartHeight }` +
-		` L ${ points[ 0 ].x } ${ padding.top + chartHeight } Z`;
+		engagementPath +
+		` L ${ engagementPoints[ engagementPoints.length - 1 ].x } ${ padding.top + chartHeight }` +
+		` L ${ engagementPoints[ 0 ].x } ${ padding.top + chartHeight } Z`;
+
+	// Helper to create line path for a specific type.
+	const createLinePath = ( type: string ) => {
+		return monthly
+			.map( ( month, index ) => {
+				const value = ( month[ `${ type }_count` ] as number ) || 0;
+				const x = xPositions[ index ];
+				const y = padding.top + chartHeight - ( value / maxEngagement ) * chartHeight;
+				return index === 0 ? `M ${ x } ${ y }` : `L ${ x } ${ y }`;
+			} )
+			.join( ' ' );
+	};
 
 	// Month labels.
 	const monthLabels = [
@@ -71,13 +115,12 @@ export default function LineChart( { monthly, commentTypes }: Props ) {
 
 	// Build legend items from comment types.
 	const legendItems = [
-		{ key: 'engagement', label: __( 'Total Engagement', 'activitypub' ), color: COLORS.engagement },
+		{ key: 'engagement', label: __( 'Total Engagement', 'activitypub' ), color: engagementColor },
 	];
 
 	if ( commentTypes ) {
-		Object.entries( commentTypes ).forEach( ( [ slug, type ] ) => {
-			const color = COLORS[ slug as keyof typeof COLORS ] || '#8c8f94';
-			legendItems.push( { key: slug, label: type.label, color } );
+		Object.entries( commentTypes ).forEach( ( [ slug, type ], index ) => {
+			legendItems.push( { key: slug, label: type.label, color: getColor( index ) } );
 		} );
 	}
 
@@ -88,8 +131,8 @@ export default function LineChart( { monthly, commentTypes }: Props ) {
 				<svg viewBox={ `0 0 ${ width } ${ height }` } className="activitypub-line-chart">
 					<defs>
 						<linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-							<stop offset="0%" stopColor={ COLORS.engagement } stopOpacity={ 0.3 } />
-							<stop offset="100%" stopColor={ COLORS.engagement } stopOpacity={ 0.05 } />
+							<stop offset="0%" stopColor={ engagementColor } stopOpacity={ 0.3 } />
+							<stop offset="100%" stopColor={ engagementColor } stopOpacity={ 0.05 } />
 						</linearGradient>
 					</defs>
 
@@ -106,19 +149,31 @@ export default function LineChart( { monthly, commentTypes }: Props ) {
 						/>
 					) ) }
 
-					{ /* Area fill */ }
+					{ /* Area fill for total engagement */ }
 					<path d={ areaPath } fill="url(#areaGradient)" />
 
-					{ /* Line */ }
-					<path d={ linePath } fill="none" stroke={ COLORS.engagement } strokeWidth="2" />
+					{ /* Lines for each engagement type */ }
+					{ typeKeys.map( ( type, index ) => (
+						<path
+							key={ type }
+							d={ createLinePath( type ) }
+							fill="none"
+							stroke={ getColor( index ) }
+							strokeWidth="2"
+							strokeOpacity="0.7"
+						/>
+					) ) }
 
-					{ /* Data points */ }
-					{ points.map( ( point, index ) => (
-						<circle key={ index } cx={ point.x } cy={ point.y } r="4" fill={ COLORS.engagement } />
+					{ /* Total engagement line */ }
+					<path d={ engagementPath } fill="none" stroke={ engagementColor } strokeWidth="2" />
+
+					{ /* Data points for total engagement */ }
+					{ engagementPoints.map( ( point, index ) => (
+						<circle key={ index } cx={ point.x } cy={ point.y } r="4" fill={ engagementColor } />
 					) ) }
 
 					{ /* X-axis labels */ }
-					{ points.map( ( point, index ) => (
+					{ engagementPoints.map( ( point, index ) => (
 						<text key={ index } x={ point.x } y={ height - 5 } textAnchor="middle" className="chart-label">
 							{ monthLabels[ point.month.month - 1 ] }
 						</text>

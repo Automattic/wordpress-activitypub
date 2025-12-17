@@ -279,15 +279,83 @@ class Cli extends \WP_CLI_Command {
 
 		switch ( $args[0] ) {
 			case 'populate':
-				Statistics::populate_demo_data( $user_id );
+				$this->populate_demo_stats( $user_id );
 				\WP_CLI::success( "Demo statistics populated for user ID: {$user_id}" );
 				break;
 			case 'clear':
-				Statistics::clear_demo_data( $user_id );
+				$this->clear_demo_stats( $user_id );
 				\WP_CLI::success( "Demo statistics cleared for user ID: {$user_id}" );
 				break;
 			default:
 				\WP_CLI::error( 'Unknown action. Use "populate" or "clear".' );
 		}
+	}
+
+	/**
+	 * Populate demo statistics data for testing.
+	 *
+	 * @param int $user_id The user ID to populate data for.
+	 */
+	private function populate_demo_stats( $user_id ) {
+		$current_year  = (int) \gmdate( 'Y' );
+		$current_month = (int) \gmdate( 'n' );
+
+		// Get registered comment types dynamically.
+		$comment_types = Comment::get_comment_type_slugs();
+
+		// Base values that will grow over time.
+		$followers_base = 50;
+
+		// Populate monthly stats for the current year.
+		for ( $month = 1; $month <= $current_month; $month++ ) {
+			// Create realistic growth patterns.
+			$growth_factor  = $month / 12;
+			$seasonal_boost = \in_array( $month, array( 3, 9, 10 ), true ) ? 1.3 : 1.0;
+
+			$posts_count = (int) ( \wp_rand( 6, 14 ) * $seasonal_boost );
+
+			// Followers grow over time.
+			$followers_gained = (int) ( \wp_rand( 10, 30 ) * ( 1 + $growth_factor * 0.5 ) );
+			$followers_lost   = \wp_rand( 1, 5 );
+			$followers_base  += $followers_gained - $followers_lost;
+
+			$stats = array(
+				'posts_count'       => $posts_count,
+				'followers_gained'  => $followers_gained,
+				'followers_lost'    => $followers_lost,
+				'followers_total'   => $followers_base,
+				'top_posts'         => array(),
+				'top_multiplicator' => array(
+					'name'  => '@supporter' . $month . '@mastodon.social',
+					'url'   => 'https://mastodon.social/@supporter' . $month,
+					'count' => \wp_rand( 3, 10 ),
+				),
+				'collected_at'      => \gmdate( 'Y-m-d H:i:s', \strtotime( "$current_year-$month-28" ) ),
+			);
+
+			// Add counts for each registered comment type dynamically.
+			foreach ( $comment_types as $type ) {
+				$stats[ $type . '_count' ] = (int) ( \wp_rand( 5, 30 ) * ( 1 + $growth_factor ) * $seasonal_boost );
+			}
+
+			Statistics::save_monthly_stats( $user_id, $current_year, $month, $stats );
+		}
+	}
+
+	/**
+	 * Clear demo statistics data.
+	 *
+	 * @param int $user_id The user ID to clear data for.
+	 */
+	private function clear_demo_stats( $user_id ) {
+		$current_year = (int) \gmdate( 'Y' );
+
+		for ( $month = 1; $month <= 12; $month++ ) {
+			$option_name = Statistics::get_monthly_option_name( $user_id, $current_year, $month );
+			\delete_option( $option_name );
+		}
+
+		$annual_option = Statistics::get_annual_option_name( $user_id, $current_year );
+		\delete_option( $annual_option );
 	}
 }

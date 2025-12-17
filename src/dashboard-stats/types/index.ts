@@ -15,17 +15,16 @@ export interface StatComparison {
 export interface Comparison {
 	followers?: StatComparison;
 	posts?: StatComparison;
-	like?: StatComparison;
-	repost?: StatComparison;
+	// Dynamic keys for engagement types (like, repost, quote, comment, etc.)
+	[ key: string ]: StatComparison | undefined;
 }
 
 export interface MonthData {
 	month: number;
 	posts_count: number;
 	engagement: number;
-	like_count?: number;
-	repost_count?: number;
-	comment_count?: number;
+	// Dynamic keys for engagement type counts (like_count, repost_count, quote_count, etc.)
+	[ key: string ]: number | undefined;
 }
 
 export interface CommentType {
