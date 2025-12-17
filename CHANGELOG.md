@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add local caching for remote actor avatars. [#2610]
 - Add relay mode to forward public activities to all followers. [#2560]
 - Add scheduled cleanup for remote posts, preserving posts with local user interactions. [#2612]
-- Add site health check to warn when DISABLE_WP_CRON may impact ActivityPub functionality [#2583]
+- Add site health check to warn when DISABLE_WP_CRON may impact ActivityPub functionality. [#2583]
 - Add Social Web Reader for browsing ActivityPub content directly in WordPress admin. [#2388]
 - Delete remote posts on plugin uninstall. [#2632]
 - Mastodon importer now imports self-replies as comments, preserving thread structure. [#2572]
