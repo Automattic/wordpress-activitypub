@@ -7,7 +7,6 @@
 
 namespace Activitypub\Tests\Integration;
 
-use Activitypub\Activity\Actor;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Integration\Enable_Mastodon_Apps;

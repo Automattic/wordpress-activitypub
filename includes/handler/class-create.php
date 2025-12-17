@@ -41,10 +41,8 @@ class Create {
 			$result = false;
 		} elseif ( is_activity_reply( $activity ) || is_quote_activity( $activity ) ) { // Check for replies and quotes.
 			$result = self::create_interaction( $activity, $user_ids, $activity_object );
-		} elseif ( \get_option( 'activitypub_create_posts', false ) ) { // Handle non-interaction objects.
+		} else { // Handle non-interaction objects.
 			$result = self::create_post( $activity, $user_ids, $activity_object );
-		} else {
-			$result = false;
 		}
 
 		if ( false === $result ) {

@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"target": "ES2020",
+		"module": "esnext",
+		"lib": [ "ES2020", "DOM", "DOM.Iterable" ],
+		"jsx": "react-jsx",
+		"jsxImportSource": "react",
+		"moduleResolution": "bundler",
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"allowSyntheticDefaultImports": true,
+		"strict": false,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"noEmit": true,
+		"baseUrl": ".",
+		"types": [ "react", "react-dom" ],
+		"typeRoots": [ "../../node_modules/@types", "./types" ]
+	},
+	"include": [ "**/*.ts", "**/*.tsx", "types/**/*.d.ts" ],
+	"exclude": [ "node_modules", "build" ]
+}

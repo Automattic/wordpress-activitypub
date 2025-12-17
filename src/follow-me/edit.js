@@ -4,6 +4,7 @@ import { __, _n } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { SelectControl, PanelBody } from '@wordpress/components';
+import { safeHTML } from '@wordpress/dom';
 import { useEffect, useState } from '@wordpress/element';
 import { useUserOptions } from '../shared/use-user-options';
 import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
@@ -98,7 +99,10 @@ function EditorProfile( { profile, className, innerBlocksProps } ) {
 					<div { ...innerBlocksProps } />
 
 					{ ! isButtonOnly && (
-						<div className="activitypub-profile__bio" dangerouslySetInnerHTML={ { __html: summary } } />
+						<div
+							className="activitypub-profile__bio"
+							dangerouslySetInnerHTML={ { __html: safeHTML( summary ) } }
+						/>
 					) }
 
 					{ ! isButtonOnly && (

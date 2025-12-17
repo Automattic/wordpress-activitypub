@@ -91,10 +91,10 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		// Verify Manager class is not yet loaded.
 		$this->assertFalse( class_exists( '\Automattic\Jetpack\Connection\Manager' ), 'Manager class should not exist yet' );
 
-		// Ensure hooks are not already registered.
+		// Ensure Jetpack-specific hooks are not already registered.
 		$this->assertFalse( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
-		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
+		$this->assertFalse( has_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ) ) );
+		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) ) );
 
 		// Initialize Jetpack integration without Manager class loaded.
 		Jetpack::init();
@@ -107,8 +107,8 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$this->assertTrue( has_filter( 'jetpack_api_include_comment_types_count' ) );
 
 		// Following UI hooks should NOT be registered without Manager class.
-		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
+		$this->assertFalse( has_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ) ) );
+		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) ) );
 	}
 
 	/**
@@ -120,10 +120,10 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		// Load mock Manager class.
 		$this->load_mock_manager();
 
-		// Ensure hooks are not already registered.
+		// Ensure Jetpack-specific hooks are not already registered.
 		$this->assertFalse( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
-		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
+		$this->assertFalse( has_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ) ) );
+		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) ) );
 
 		// Initialize Jetpack integration with Manager class.
 		Jetpack::init();
@@ -136,8 +136,9 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$this->assertTrue( has_filter( 'jetpack_api_include_comment_types_count' ) );
 
 		// Following UI hooks should also be registered (mock Manager returns connected).
-		$this->assertTrue( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertTrue( has_filter( 'pre_option_activitypub_following_ui' ) );
+		// has_filter() returns the priority (int) when callback is found, false otherwise.
+		$this->assertNotFalse( has_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ) ) );
+		$this->assertNotFalse( has_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) ) );
 	}
 
 	/**
