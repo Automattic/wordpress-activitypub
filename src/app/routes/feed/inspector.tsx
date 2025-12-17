@@ -18,6 +18,7 @@ import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
 import { sprintf, __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
+import { safeHTML } from '@wordpress/dom';
 import { close } from '@wordpress/icons';
 
 /**
@@ -33,12 +34,14 @@ interface RenderHTMLProps {
 	html: string;
 }
 
-// Helper to render HTML content with proper entity decoding and unescape
+// Helper to render HTML content with proper entity decoding, unescape, and sanitization
 const RenderHTML = ( { html }: RenderHTMLProps ): ReactNode => {
 	// Remove backslash escapes (e.g., \! becomes !)
 	const unescaped: string = html.replace( /\\(.)/g, '$1' );
 	const decoded: string = decodeEntities( unescaped );
-	return <div dangerouslySetInnerHTML={ { __html: decoded } } />;
+	const sanitized: string = safeHTML( decoded );
+
+	return <div dangerouslySetInnerHTML={ { __html: sanitized } } />;
 };
 
 interface SearchParams {
