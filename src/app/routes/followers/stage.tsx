@@ -73,6 +73,9 @@ export default function FollowersStage(): ReactNode {
 		defaultView: DEFAULT_VIEW,
 	} );
 
+	// Guard against undefined view (can happen during initialization)
+	const safeView: ViewType = view ?? DEFAULT_VIEW;
+
 	// Get active actor ID from store
 	const activeActorId: number | null = useSelect(
 		( select ): number | null => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(),
@@ -81,11 +84,11 @@ export default function FollowersStage(): ReactNode {
 
 	// Fetch followers using entity records
 	const { followers, isResolving, totalItems, totalPages } = useFollowers( {
-		perPage: view.perPage || 20,
-		page: view.page || 1,
-		orderBy: view.sort?.field || 'modified',
-		order: view.sort?.direction || 'desc',
-		search: view.search || '',
+		perPage: safeView.perPage || 20,
+		page: safeView.page || 1,
+		orderBy: safeView.sort?.field || 'modified',
+		order: safeView.sort?.direction || 'desc',
+		search: safeView.search || '',
 		userId: activeActorId,
 	} );
 
@@ -103,14 +106,14 @@ export default function FollowersStage(): ReactNode {
 			<DataViews
 				data={ followers }
 				fields={ fields }
-				view={ view as DataViewsView }
+				view={ safeView as DataViewsView }
 				onChangeView={ updateView as ( view: DataViewsView ) => void }
 				actions={ actions }
 				isLoading={ isResolving }
 				getItemId={ ( item: Actor ): string => item.id.toString() }
 				empty={
 					<p>
-						{ view.search
+						{ safeView.search
 							? __( 'No followers found.', 'activitypub' )
 							: __( 'No followers.', 'activitypub' ) }
 					</p>

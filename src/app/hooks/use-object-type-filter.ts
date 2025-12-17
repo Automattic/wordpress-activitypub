@@ -32,29 +32,36 @@ interface UseObjectTypeFilterReturn {
  *
  * @return {UseObjectTypeFilterReturn} Selected object type ID and update function
  */
+const DEFAULT_VIEW = {
+	type: 'list' as const,
+	filters: [] as Filter[],
+};
+
 export function useObjectTypeFilter(): UseObjectTypeFilterReturn {
 	const navigate: UseNavigateResult< string > = useNavigate();
 	const { view, updateView } = useView( {
 		kind: 'postType',
 		name: 'ap_post',
 		slug: 'feed',
-		defaultView: {
-			type: 'list',
-			filters: [],
-		},
+		defaultView: DEFAULT_VIEW,
 	} );
+
+	// Guard against undefined view
+	const safeView = view ?? DEFAULT_VIEW;
 
 	// Derive selected object type from view.filters
 	const selectedObjectTypeId: number | null = useMemo( (): number | null => {
-		const objectTypeFilter: Filter = view.filters?.find( ( f: Filter ): boolean => f.field === 'ap_object_type' );
+		const objectTypeFilter: Filter = safeView.filters?.find(
+			( f: Filter ): boolean => f.field === 'ap_object_type'
+		);
 		// With 'is' operator, value is a single number, not an array
 		return objectTypeFilter?.value ?? null;
-	}, [ view.filters ] );
+	}, [ safeView.filters ] );
 
 	// Update object type filter with toggle support
 	const updateObjectTypeFilter = useCallback(
 		( objectTypeId: number | null, options: UpdateObjectTypeFilterOptions = {} ): void => {
-			const currentFilters: Filter[] = view.filters || [];
+			const currentFilters: Filter[] = safeView.filters || [];
 			const objectTypeFilterIndex: number = currentFilters.findIndex(
 				( f: Filter ): boolean => f.field === 'ap_object_type'
 			);
@@ -85,7 +92,7 @@ export function useObjectTypeFilter(): UseObjectTypeFilterReturn {
 
 			// Update the view with new filters
 			updateView( {
-				...view,
+				...safeView,
 				filters: newFilters,
 				page: 1, // Reset to first page
 			} );
@@ -103,7 +110,7 @@ export function useObjectTypeFilter(): UseObjectTypeFilterReturn {
 				options.onComplete();
 			}
 		},
-		[ view, updateView, navigate ]
+		[ safeView, updateView, navigate ]
 	);
 
 	return { selectedObjectTypeId, updateObjectTypeFilter };

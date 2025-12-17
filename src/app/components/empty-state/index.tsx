@@ -37,7 +37,7 @@ export default function EmptyState(): ReactNode {
 	} );
 
 	// If search or filters are active, show simple "no results" message.
-	if ( view.search || ( view.filters && view.filters.length > 0 ) ) {
+	if ( view?.search || ( view?.filters && view.filters.length > 0 ) ) {
 		return <p>{ __( 'No posts found.', 'activitypub' ) }</p>;
 	}
 

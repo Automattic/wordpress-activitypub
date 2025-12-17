@@ -32,31 +32,36 @@ interface UseTagFilterReturn {
  *
  * @return {UseTagFilterReturn} Selected tag ID and update function
  */
+const DEFAULT_VIEW = {
+	type: 'list' as const,
+	filters: [] as Filter[],
+};
+
 export function useTagFilter(): UseTagFilterReturn {
 	const navigate: UseNavigateResult< string > = useNavigate();
 	const { view, updateView } = useView( {
 		kind: 'postType',
 		name: 'ap_post',
 		slug: 'feed',
-		defaultView: {
-			type: 'list',
-			filters: [],
-		},
+		defaultView: DEFAULT_VIEW,
 	} );
+
+	// Guard against undefined view
+	const safeView = view ?? DEFAULT_VIEW;
 
 	// Derive selected tag from view.filters
 	const selectedTagId: number | null = useMemo( (): number | null => {
-		const tagFilter: Filter = view.filters?.find( ( f: Filter ): boolean => f.field === 'ap_tag' );
+		const tagFilter: Filter = safeView.filters?.find( ( f: Filter ): boolean => f.field === 'ap_tag' );
 		const value: number[] = tagFilter?.value ?? [];
 
 		// Only highlight when exactly one tag is selected
 		return value.length === 1 ? value[ 0 ] : null;
-	}, [ view.filters ] );
+	}, [ safeView.filters ] );
 
 	// Update tag filter with toggle support
 	const updateTagFilter = useCallback(
 		( tagId: number | null, options: UpdateTagFilterOptions = {} ): void => {
-			const currentFilters: Filter[] = view.filters || [];
+			const currentFilters: Filter[] = safeView.filters || [];
 			const tagFilterIndex: number = currentFilters.findIndex( ( f: Filter ): boolean => f.field === 'ap_tag' );
 
 			let newFilters: Filter[];
@@ -85,7 +90,7 @@ export function useTagFilter(): UseTagFilterReturn {
 
 			// Update the view with new filters
 			updateView( {
-				...view,
+				...safeView,
 				filters: newFilters,
 				page: 1, // Reset to first page
 			} );
@@ -103,7 +108,7 @@ export function useTagFilter(): UseTagFilterReturn {
 				options.onComplete();
 			}
 		},
-		[ view, updateView, navigate ]
+		[ safeView, updateView, navigate ]
 	);
 
 	return { selectedTagId, updateTagFilter };

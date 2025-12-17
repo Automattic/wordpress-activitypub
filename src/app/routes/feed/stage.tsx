@@ -143,16 +143,20 @@ export default function FeedStage(): ReactNode {
 		onChangeQueryParams: handleChangeQueryParams,
 	} );
 
+	// Guard against undefined view (can happen during initialization)
+	const safeView: ViewType = view ?? DEFAULT_VIEW;
+
 	// Wrap updateView to reset page when filters change
 	const updateFeedView = useCallback(
 		( updatedView: ViewType ): void => {
 			// Reset to page 1 when filters change
-			const filtersChanged: boolean = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
+			const filtersChanged: boolean =
+				JSON.stringify( safeView.filters ) !== JSON.stringify( updatedView.filters );
 			const page: number = filtersChanged ? 1 : updatedView.page ?? 1;
 
 			updateView( { ...updatedView, page } );
 		},
-		[ view.filters, updateView ]
+		[ safeView.filters, updateView ]
 	);
 
 	// Reset view to default state when actor switches
@@ -162,7 +166,7 @@ export default function FeedStage(): ReactNode {
 			// Actor changed - reset to default view, preserving only field visibility
 			updateView( {
 				...DEFAULT_VIEW,
-				fields: view.fields,
+				fields: safeView.fields,
 			} );
 			prevActiveActorId.current = activeActorId;
 		}
@@ -170,13 +174,13 @@ export default function FeedStage(): ReactNode {
 	}, [ activeActorId ] );
 
 	const { feed, isResolving, totalItems, totalPages } = useFeed( {
-		perPage: view.perPage || 20,
-		page: view.page || 1,
-		orderBy: view.sort?.field || 'date',
-		order: view.sort?.direction || 'desc',
-		search: view.search || '',
+		perPage: safeView.perPage || 20,
+		page: safeView.page || 1,
+		orderBy: safeView.sort?.field || 'date',
+		order: safeView.sort?.direction || 'desc',
+		search: safeView.search || '',
 		userId: activeActorId,
-		filters: view.filters || DEFAULT_VIEW.filters,
+		filters: safeView.filters || DEFAULT_VIEW.filters,
 	} );
 
 	const fields: Field< FeedPost >[] = useMemo(
@@ -185,7 +189,7 @@ export default function FeedStage(): ReactNode {
 	);
 
 	// Normalize view.fields to maintain the canonical order defined in fields array
-	const normalizedView: ViewType = useMemo( () => normalizeFieldOrder( view, fields ), [ view, fields ] );
+	const normalizedView: ViewType = useMemo( () => normalizeFieldOrder( safeView, fields ), [ safeView, fields ] );
 
 	const [ selection, setSelection ] = useState< string[] >( [] );
 
@@ -228,7 +232,7 @@ export default function FeedStage(): ReactNode {
 
 	// Infinite scroll handler
 	const infiniteScrollHandler = useCallback( (): void => {
-		const currentPage: number = view.page || 1;
+		const currentPage: number = safeView.page || 1;
 
 		// Prevent concurrent requests or loading beyond available pages
 		if ( isLoadingMore || currentPage >= ( totalPages || 1 ) ) {
@@ -237,10 +241,10 @@ export default function FeedStage(): ReactNode {
 
 		setIsLoadingMore( true );
 		updateFeedView( {
-			...view,
+			...safeView,
 			page: currentPage + 1,
 		} );
-	}, [ isLoadingMore, view, totalPages, updateFeedView ] );
+	}, [ isLoadingMore, safeView, totalPages, updateFeedView ] );
 
 	// Accumulate data across pages for infinite scroll
 	useEffect( (): void => {

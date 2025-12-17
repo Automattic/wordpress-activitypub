@@ -17,30 +17,35 @@ interface UseFeedFiltersReturn {
  *
  * @return {UseFeedFiltersReturn} Filter status and clear function
  */
+const DEFAULT_VIEW = {
+	type: 'list' as const,
+	filters: [],
+};
+
 export function useFeedFilters(): UseFeedFiltersReturn {
 	const { view, updateView } = useView( {
 		kind: 'postType',
 		name: 'ap_post',
 		slug: 'feed',
-		defaultView: {
-			type: 'list',
-			filters: [],
-		},
+		defaultView: DEFAULT_VIEW,
 	} );
+
+	// Guard against undefined view
+	const safeView = view ?? DEFAULT_VIEW;
 
 	// Check if any filters are active
 	const hasActiveFilters: boolean = useMemo( (): boolean => {
-		return ( view.filters?.length ?? 0 ) > 0;
-	}, [ view.filters ] );
+		return ( safeView.filters?.length ?? 0 ) > 0;
+	}, [ safeView.filters ] );
 
 	// Clear all filters
 	const clearAllFilters = useCallback( (): void => {
 		updateView( {
-			...view,
+			...safeView,
 			filters: [],
 			page: 1, // Reset to first page
 		} );
-	}, [ view, updateView ] );
+	}, [ safeView, updateView ] );
 
 	return { hasActiveFilters, clearAllFilters };
 }
