@@ -240,7 +240,8 @@ input.blog-user-identifier {
 /* stylelint-disable-next-line selector-id-pattern -- WordPress core ID */
 #dashboard_right_now li a.activitypub-followers::before {
 	content: "\f307";
-	font-family: dashicons, sans-serif;
+	/* stylelint-disable-next-line font-family-no-missing-generic-family-keyword */
+	font-family: dashicons;
 }
 
 .activitypub-comment .dashboard-comment-wrap {
