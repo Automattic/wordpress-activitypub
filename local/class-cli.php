@@ -8,9 +8,11 @@
 namespace Activitypub\Development;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Comment;
+use Activitypub\Statistics;
 
 use function Activitypub\camel_to_snake_case;
 use function WP_CLI\Utils\get_flag_value;
@@ -238,5 +240,54 @@ class Cli extends \WP_CLI_Command {
 		\do_action( 'activitypub_handled_inbox_' . $type, $activity_data, $user_ids, $activity, $post_id, Inbox::CONTEXT_INBOX );
 
 		\WP_CLI::success( sprintf( 'Inbox item %d has been reprocessed as %s activity.', $post_id, $activity_data['type'] ) );
+	}
+
+	/**
+	 * Manage statistics demo data.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <action>
+	 * : The action to perform. Either `populate` or `clear`.
+	 * ---
+	 * options:
+	 *   - populate
+	 *   - clear
+	 * ---
+	 *
+	 * [--user_id=<user_id>]
+	 * : The user ID to populate/clear data for. Defaults to blog user (0).
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Populate demo stats for the blog
+	 *     $ wp activitypub stats populate
+	 *
+	 *     # Populate demo stats for a specific user
+	 *     $ wp activitypub stats populate --user_id=1
+	 *
+	 *     # Clear demo stats for the blog
+	 *     $ wp activitypub stats clear
+	 *
+	 * @synopsis <action> [--user_id=<user_id>]
+	 *
+	 * @param array $args       The positional arguments.
+	 * @param array $assoc_args The associative arguments.
+	 */
+	public function stats( $args, $assoc_args = array() ) {
+		$user_id = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : Actors::BLOG_USER_ID;
+
+		switch ( $args[0] ) {
+			case 'populate':
+				Statistics::populate_demo_data( $user_id );
+				\WP_CLI::success( "Demo statistics populated for user ID: {$user_id}" );
+				break;
+			case 'clear':
+				Statistics::clear_demo_data( $user_id );
+				\WP_CLI::success( "Demo statistics cleared for user ID: {$user_id}" );
+				break;
+			default:
+				\WP_CLI::error( 'Unknown action. Use "populate" or "clear".' );
+		}
 	}
 }

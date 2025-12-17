@@ -1,0 +1,206 @@
+.activitypub-stats-widget {
+	position: relative;
+}
+
+.activitypub-stats-header {
+	margin-bottom: 16px;
+
+	.components-select-control {
+		margin: 0;
+	}
+}
+
+.activitypub-stats-loading {
+	display: flex;
+	justify-content: center;
+	padding: 32px;
+}
+
+.activitypub-stats-empty {
+	color: #757575;
+	text-align: center;
+	padding: 24px;
+}
+
+// Highlights section.
+.activitypub-stats-highlights {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+	gap: 12px;
+	margin-bottom: 20px;
+}
+
+.activitypub-stat-item {
+	text-align: center;
+	padding: 12px 8px;
+	background: #f6f7f7;
+	border-radius: 4px;
+
+	.stat-value {
+		display: block;
+		font-size: 24px;
+		font-weight: 600;
+		color: #1d2327;
+		line-height: 1.2;
+	}
+
+	.stat-label {
+		display: block;
+		font-size: 11px;
+		color: #757575;
+		margin-top: 4px;
+		text-transform: uppercase;
+		letter-spacing: 0.3px;
+	}
+
+	.stat-change {
+		display: inline-block;
+		font-size: 12px;
+		margin-top: 4px;
+		color: #757575;
+
+		&.positive {
+			color: #00a32a;
+		}
+
+		&.negative {
+			color: #d63638;
+		}
+	}
+}
+
+// Chart section.
+.activitypub-stats-chart {
+	margin-bottom: 20px;
+
+	h4 {
+		margin: 0 0 12px;
+		font-size: 13px;
+		font-weight: 600;
+		color: #1d2327;
+	}
+}
+
+.activitypub-chart-container {
+	background: #f6f7f7;
+	border-radius: 4px;
+	padding: 12px;
+}
+
+.activitypub-line-chart {
+	width: 100%;
+	height: auto;
+	display: block;
+
+	.chart-label {
+		font-size: 10px;
+		fill: #757575;
+	}
+}
+
+.activitypub-chart-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid #e0e0e0;
+}
+
+.activitypub-legend-item {
+	display: flex;
+	align-items: center;
+	font-size: 12px;
+	color: #50575e;
+
+	.legend-color {
+		width: 12px;
+		height: 3px;
+		border-radius: 2px;
+		margin-right: 6px;
+	}
+}
+
+// Top supporter section.
+.activitypub-stats-multiplicator {
+	margin-bottom: 16px;
+	padding: 12px;
+	background: #fef3cd;
+	border-radius: 4px;
+	border-left: 4px solid #f0c33c;
+
+	h4 {
+		margin: 0 0 8px;
+		font-size: 11px;
+		font-weight: 600;
+		color: #856404;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	p {
+		margin: 0;
+		font-size: 13px;
+		color: #1d2327;
+	}
+
+	a {
+		text-decoration: none;
+		font-weight: 500;
+		color: #2271b1;
+
+		&:hover {
+			text-decoration: underline;
+			color: #135e96;
+		}
+	}
+}
+
+// Top posts section.
+.activitypub-stats-top-posts {
+	h4 {
+		margin: 0 0 8px;
+		font-size: 13px;
+		font-weight: 600;
+		color: #1d2327;
+	}
+
+	ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	li {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 8px 0;
+		border-bottom: 1px solid #f0f0f1;
+
+		&:last-child {
+			border-bottom: 0;
+		}
+	}
+
+	a {
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-decoration: none;
+		margin-right: 12px;
+		color: #2271b1;
+
+		&:hover {
+			text-decoration: underline;
+			color: #135e96;
+		}
+	}
+
+	.engagement-count {
+		font-size: 12px;
+		color: #757575;
+		white-space: nowrap;
+	}
+}

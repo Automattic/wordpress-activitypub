@@ -1,0 +1,37 @@
+import { __, sprintf } from '@wordpress/i18n';
+import type { TopPost } from '../../types';
+
+interface Props {
+	posts: TopPost[] | null | undefined;
+}
+
+/**
+ * Top Posts Component.
+ */
+export default function TopPosts( { posts }: Props ) {
+	if ( ! posts?.length ) {
+		return null;
+	}
+
+	return (
+		<div className="activitypub-stats-top-posts">
+			<h4>{ __( 'Top Posts', 'activitypub' ) }</h4>
+			<ul>
+				{ posts.map( ( post ) => (
+					<li key={ post.post_id }>
+						<a href={ post.url } target="_blank" rel="noopener noreferrer">
+							{ post.title || __( '(no title)', 'activitypub' ) }
+						</a>
+						<span className="engagement-count">
+							{ sprintf(
+								/* translators: %s: engagement count */
+								__( '%s engagements', 'activitypub' ),
+								post.engagement_count.toLocaleString()
+							) }
+						</span>
+					</li>
+				) ) }
+			</ul>
+		</div>
+	);
+}

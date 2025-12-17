@@ -593,7 +593,9 @@ class Statistics {
 	}
 
 	/**
-	 * Get statistics for the current period (real-time).
+	 * Get statistics for the current period.
+	 *
+	 * Uses stored monthly stats if available, otherwise queries live data.
 	 *
 	 * @param int    $user_id The user ID.
 	 * @param string $period  The period ('month', 'year', 'all').
@@ -601,7 +603,26 @@ class Statistics {
 	 * @return array The statistics.
 	 */
 	public static function get_current_stats( $user_id, $period = 'month' ) {
-		$now = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$now           = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$current_year  = (int) \gmdate( 'Y', $now );
+		$current_month = (int) \gmdate( 'n', $now );
+
+		// For monthly period, check for stored stats first.
+		if ( 'month' === $period ) {
+			$stored_stats = self::get_monthly_stats( $user_id, $current_year, $current_month );
+
+			if ( $stored_stats ) {
+				return array(
+					'posts_count'       => $stored_stats['posts_count'] ?? 0,
+					'followers_total'   => $stored_stats['followers_total'] ?? self::get_follower_count( $user_id ),
+					'top_posts'         => $stored_stats['top_posts'] ?? array(),
+					'top_multiplicator' => $stored_stats['top_multiplicator'] ?? null,
+					'period'            => $period,
+					'start'             => \gmdate( 'Y-m-01 00:00:00', $now ),
+					'end'               => \gmdate( 'Y-m-t 23:59:59', $now ),
+				);
+			}
+		}
 
 		switch ( $period ) {
 			case 'year':
@@ -642,6 +663,8 @@ class Statistics {
 	/**
 	 * Get monthly breakdown for the current year (for graphs).
 	 *
+	 * Uses stored monthly stats if available, otherwise queries live data.
+	 *
 	 * @param int $user_id The user ID.
 	 * @param int $year    Optional. The year. Defaults to current year.
 	 *
@@ -663,20 +686,43 @@ class Statistics {
 		$max_month = ( $year === $current_year ) ? $current_month : 12;
 
 		for ( $month = 1; $month <= $max_month; $month++ ) {
-			$start = \gmdate( 'Y-m-d 00:00:00', \strtotime( sprintf( '%d-%02d-01', $year, $month ) ) );
-			$end   = \gmdate( 'Y-m-d 23:59:59', \strtotime( 'last day of ' . sprintf( '%d-%02d', $year, $month ) ) );
+			// Check for stored monthly stats first.
+			$stored_stats = self::get_monthly_stats( $user_id, $year, $month );
 
-			$engagement = self::count_engagement_in_range( $user_id, $start, $end );
+			if ( $stored_stats ) {
+				// Use stored data.
+				$engagement = 0;
+				foreach ( $comment_types as $type ) {
+					$engagement += $stored_stats[ $type . '_count' ] ?? 0;
+				}
 
-			$month_data = array(
-				'month'       => $month,
-				'posts_count' => self::count_federated_posts_in_range( $user_id, $start, $end ),
-				'engagement'  => $engagement,
-			);
+				$month_data = array(
+					'month'       => $month,
+					'posts_count' => $stored_stats['posts_count'] ?? 0,
+					'engagement'  => $engagement,
+				);
 
-			// Add counts for each comment type tracked in stats.
-			foreach ( $comment_types as $type ) {
-				$month_data[ $type . '_count' ] = self::count_engagement_in_range( $user_id, $start, $end, $type );
+				// Add counts for each comment type from stored stats.
+				foreach ( $comment_types as $type ) {
+					$month_data[ $type . '_count' ] = $stored_stats[ $type . '_count' ] ?? 0;
+				}
+			} else {
+				// Query live data.
+				$start = \gmdate( 'Y-m-d 00:00:00', \strtotime( sprintf( '%d-%02d-01', $year, $month ) ) );
+				$end   = \gmdate( 'Y-m-d 23:59:59', \strtotime( 'last day of ' . sprintf( '%d-%02d', $year, $month ) ) );
+
+				$engagement = self::count_engagement_in_range( $user_id, $start, $end );
+
+				$month_data = array(
+					'month'       => $month,
+					'posts_count' => self::count_federated_posts_in_range( $user_id, $start, $end ),
+					'engagement'  => $engagement,
+				);
+
+				// Add counts for each comment type tracked in stats.
+				foreach ( $comment_types as $type ) {
+					$month_data[ $type . '_count' ] = self::count_engagement_in_range( $user_id, $start, $end, $type );
+				}
 			}
 
 			$months[ $month ] = $month_data;
@@ -688,6 +734,8 @@ class Statistics {
 	/**
 	 * Get year-over-year comparison for current month.
 	 *
+	 * Uses stored monthly stats if available, otherwise queries live data.
+	 *
 	 * @param int $user_id The user ID.
 	 *
 	 * @return array Comparison data with current values and changes from last year.
@@ -698,24 +746,24 @@ class Statistics {
 		$current_month = (int) \gmdate( 'n', $now );
 		$last_year     = $current_year - 1;
 
-		// Current month this year.
-		$this_year_start = \gmdate( 'Y-m-01 00:00:00', $now );
-		$this_year_end   = \gmdate( 'Y-m-t 23:59:59', $now );
-
-		// Same month last year.
-		$last_year_start = \gmdate( 'Y-m-d 00:00:00', \strtotime( sprintf( '%d-%02d-01', $last_year, $current_month ) ) );
-		$last_year_end   = \gmdate( 'Y-m-d 23:59:59', \strtotime( 'last day of ' . sprintf( '%d-%02d', $last_year, $current_month ) ) );
-
-		// Get current stats.
-		$current_posts     = self::count_federated_posts_in_range( $user_id, $this_year_start, $this_year_end );
-		$current_followers = self::get_follower_count( $user_id );
-
-		// Get last year stats.
-		$last_posts = self::count_federated_posts_in_range( $user_id, $last_year_start, $last_year_end );
-
-		// Get last year's follower count from stored stats.
+		// Check for stored stats first.
+		$current_stats   = self::get_monthly_stats( $user_id, $current_year, $current_month );
 		$last_year_stats = self::get_monthly_stats( $user_id, $last_year, $current_month );
-		$last_followers  = $last_year_stats ? ( $last_year_stats['followers_total'] ?? 0 ) : 0;
+
+		if ( $current_stats ) {
+			// Use stored data.
+			$current_posts     = $current_stats['posts_count'] ?? 0;
+			$current_followers = $current_stats['followers_total'] ?? self::get_follower_count( $user_id );
+		} else {
+			// Query live data.
+			$this_year_start   = \gmdate( 'Y-m-01 00:00:00', $now );
+			$this_year_end     = \gmdate( 'Y-m-t 23:59:59', $now );
+			$current_posts     = self::count_federated_posts_in_range( $user_id, $this_year_start, $this_year_end );
+			$current_followers = self::get_follower_count( $user_id );
+		}
+
+		$last_posts     = $last_year_stats ? ( $last_year_stats['posts_count'] ?? 0 ) : 0;
+		$last_followers = $last_year_stats ? ( $last_year_stats['followers_total'] ?? 0 ) : 0;
 
 		$comparison = array(
 			'posts'     => array(
@@ -731,8 +779,15 @@ class Statistics {
 		// Add comparison for each registered comment type dynamically.
 		$comment_types = Comment::get_comment_type_slugs();
 		foreach ( $comment_types as $type ) {
-			$current_count = self::count_engagement_in_range( $user_id, $this_year_start, $this_year_end, $type );
-			$last_count    = self::count_engagement_in_range( $user_id, $last_year_start, $last_year_end, $type );
+			$current_count = $current_stats ? ( $current_stats[ $type . '_count' ] ?? 0 ) : 0;
+			$last_count    = $last_year_stats ? ( $last_year_stats[ $type . '_count' ] ?? 0 ) : 0;
+
+			// If no stored stats, query live data.
+			if ( ! $current_stats ) {
+				$this_year_start = \gmdate( 'Y-m-01 00:00:00', $now );
+				$this_year_end   = \gmdate( 'Y-m-t 23:59:59', $now );
+				$current_count   = self::count_engagement_in_range( $user_id, $this_year_start, $this_year_end, $type );
+			}
 
 			$comparison[ $type ] = array(
 				'current' => $current_count,
@@ -931,5 +986,77 @@ class Statistics {
 		}
 
 		return (int) \gmdate( 'Y', \strtotime( $earliest_date ) );
+	}
+
+	/**
+	 * Populate demo statistics data for testing.
+	 *
+	 * @param int $user_id The user ID to populate data for.
+	 *
+	 * @return bool True on success.
+	 */
+	public static function populate_demo_data( $user_id ) {
+		$current_year  = (int) \gmdate( 'Y' );
+		$current_month = (int) \gmdate( 'n' );
+
+		// Base values that will grow over time.
+		$followers_base = 50;
+
+		// Populate monthly stats for the current year.
+		for ( $month = 1; $month <= $current_month; $month++ ) {
+			// Create realistic growth patterns.
+			$growth_factor  = $month / 12;
+			$seasonal_boost = \in_array( $month, array( 3, 9, 10 ), true ) ? 1.3 : 1.0; // Spring and fall boosts.
+
+			$posts_count    = (int) ( \wp_rand( 6, 14 ) * $seasonal_boost );
+			$likes_count    = (int) ( \wp_rand( 20, 50 ) * ( 1 + $growth_factor ) * $seasonal_boost );
+			$reposts_count  = (int) ( \wp_rand( 5, 20 ) * ( 1 + $growth_factor ) * $seasonal_boost );
+			$comments_count = (int) ( \wp_rand( 3, 15 ) * ( 1 + $growth_factor ) * $seasonal_boost );
+
+			// Followers grow over time.
+			$followers_gained = (int) ( \wp_rand( 10, 30 ) * ( 1 + $growth_factor * 0.5 ) );
+			$followers_lost   = \wp_rand( 1, 5 );
+			$followers_base  += $followers_gained - $followers_lost;
+
+			$stats = array(
+				'posts_count'       => $posts_count,
+				'like_count'        => $likes_count,
+				'repost_count'      => $reposts_count,
+				'comment_count'     => $comments_count,
+				'followers_gained'  => $followers_gained,
+				'followers_lost'    => $followers_lost,
+				'followers_total'   => $followers_base,
+				'top_posts'         => array(),
+				'top_multiplicator' => array(
+					'name'  => '@supporter' . $month . '@mastodon.social',
+					'url'   => 'https://mastodon.social/@supporter' . $month,
+					'count' => \wp_rand( 3, 10 ),
+				),
+				'collected_at'      => \gmdate( 'Y-m-d H:i:s', \strtotime( "$current_year-$month-28" ) ),
+			);
+
+			self::save_monthly_stats( $user_id, $current_year, $month, $stats );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Clear demo statistics data.
+	 *
+	 * @param int $user_id The user ID to clear data for.
+	 *
+	 * @return bool True on success.
+	 */
+	public static function clear_demo_data( $user_id ) {
+		$current_year = (int) \gmdate( 'Y' );
+
+		for ( $month = 1; $month <= 12; $month++ ) {
+			\delete_option( self::get_monthly_option_name( $user_id, $current_year, $month ) );
+		}
+
+		\delete_option( self::get_annual_option_name( $user_id, $current_year ) );
+
+		return true;
 	}
 }
