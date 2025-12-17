@@ -45,6 +45,10 @@ if ( is_wp_error( $user ) ) {
 	return '<!-- Followers block: `' . $user_id . '` not an active ActivityPub user -->';
 }
 
+if ( ! Actors::show_social_graph( $user_id ) ) {
+	return '<!-- Followers block: social graph is hidden for this user -->';
+}
+
 $_per_page     = absint( $attributes['per_page'] );
 $_show_avatars = (bool) \get_option( 'show_avatars' );
 $follower_data = Followers::query( $user_id, $_per_page );
