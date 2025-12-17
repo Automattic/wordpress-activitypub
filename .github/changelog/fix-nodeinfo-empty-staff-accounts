@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Ensure NodeInfo accurately represents site administrators to the Fediverse.

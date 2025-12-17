@@ -1,9 +1,19 @@
 /**
+ * External dependencies
+ */
+import type { UseNavigateResult } from '@tanstack/react-router';
+
+/**
  * WordPress dependencies
  */
-import { Filter } from '@wordpress/dataviews';
+import type { Filter } from '@wordpress/dataviews/wp';
 import { useMemo, useCallback } from '@wordpress/element';
 import { useView } from '@wordpress/views';
+
+/**
+ * Internal dependencies
+ */
+import { useNavigate } from '../router';
 
 interface UpdateObjectTypeFilterOptions {
 	onComplete?: () => void;
@@ -23,6 +33,7 @@ interface UseObjectTypeFilterReturn {
  * @return {UseObjectTypeFilterReturn} Selected object type ID and update function
  */
 export function useObjectTypeFilter(): UseObjectTypeFilterReturn {
+	const navigate: UseNavigateResult< string > = useNavigate();
 	const { view, updateView } = useView( {
 		kind: 'postType',
 		name: 'ap_post',
@@ -79,12 +90,20 @@ export function useObjectTypeFilter(): UseObjectTypeFilterReturn {
 				page: 1, // Reset to first page
 			} );
 
+			// Close inspector by removing postId from URL
+			void navigate( {
+				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
+					const { postId: _, ...rest } = prev as { postId?: number };
+					return rest;
+				} ) as never,
+			} );
+
 			// Call completion callback if provided
 			if ( options.onComplete ) {
 				options.onComplete();
 			}
 		},
-		[ view, updateView ]
+		[ view, updateView, navigate ]
 	);
 
 	return { selectedObjectTypeId, updateObjectTypeFilter };

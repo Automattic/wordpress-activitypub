@@ -1,7 +1,11 @@
 /**
+ * External dependencies
+ */
+import type { Root } from 'react-dom/client';
+
+/**
  * WordPress dependencies
  */
-import React from 'react';
 import { createRoot } from '@wordpress/element';
 import { SlotFillProvider } from '@wordpress/components';
 import { ShortcutProvider } from '@wordpress/keyboard-shortcuts';
@@ -36,12 +40,12 @@ const routes: Route[] = [
  * @param settings The editor settings.
  */
 export function initialize( id: string, settings: AppSettings ): void {
-	const target = document.getElementById( id );
+	const target: HTMLElement | null = document.getElementById( id );
 	if ( ! target ) {
 		return;
 	}
 
-	const root = createRoot( target );
+	const root: Root = createRoot( target );
 	root.render(
 		<SettingsProvider settings={ settings }>
 			<ObjectTypeProvider>
@@ -57,6 +61,7 @@ export function initialize( id: string, settings: AppSettings ): void {
 
 // Extend Window interface for type safety.
 declare global {
+	// noinspection JSUnusedGlobalSymbols
 	interface Window {
 		wp: {
 			activitypubApp?: {

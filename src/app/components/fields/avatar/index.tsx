@@ -3,10 +3,15 @@
  */
 
 /**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import type { Field } from '@wordpress/dataviews';
+import type { Field } from '@wordpress/dataviews/wp';
 
 /**
  * Internal dependencies
@@ -21,6 +26,6 @@ export const avatarField: Field< Actor > = {
 	type: 'media',
 	enableHiding: false,
 	enableSorting: false,
-	getValue: ( { item }: { item: Actor } ) => item.actor_info?.icon || '',
-	render: ( { item }: { item: Actor } ) => <Avatar item={ item } />,
+	getValue: ( { item }: { item: Actor } ): string => item.actor_info?.icon || '',
+	render: ( { item }: { item: Actor } ): ReactNode => <Avatar item={ item } />,
 };

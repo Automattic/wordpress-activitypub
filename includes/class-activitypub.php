@@ -9,6 +9,7 @@ namespace Activitypub;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Posts;
 
 /**
  * ActivityPub Class.
@@ -84,6 +85,8 @@ class Activitypub {
 
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
+
+		Posts::delete_all();
 
 		Options::delete();
 	}
@@ -191,6 +194,7 @@ class Activitypub {
 				'single'            => true,
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
+				'show_in_rest'      => true,
 			)
 		);
 
@@ -222,7 +226,7 @@ class Activitypub {
 				'description'       => 'The user description.',
 				'single'            => true,
 				'default'           => '',
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return wp_kses( $value, 'user_description' );
 				},
 			)
@@ -333,7 +337,7 @@ class Activitypub {
 				'description'       => 'User-specific blocked ActivityPub domains.',
 				'single'            => true,
 				'default'           => array(),
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return \array_unique( \array_map( array( Sanitize::class, 'host_list' ), $value ) );
 				},
 			)
@@ -347,7 +351,7 @@ class Activitypub {
 				'description'       => 'User-specific blocked ActivityPub keywords.',
 				'single'            => true,
 				'default'           => array(),
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return \array_map( 'sanitize_text_field', $value );
 				},
 			)

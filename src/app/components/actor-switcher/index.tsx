@@ -5,14 +5,28 @@
  * based on user capabilities and actor mode settings.
  */
 
+/**
+ * External dependencies
+ */
+import type { ReactNode, SyntheticEvent } from 'react';
+import { UseNavigateResult } from '@tanstack/react-router';
+
+/**
+ * WordPress dependencies
+ */
 import { Button, __experimentalHStack as HStack } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { addQueryArgs } from '@wordpress/url';
+
+/**
+ * Internal dependencies
+ */
 import { STORE_NAME } from '../../store';
 import type { AppSelectors, AppActions } from '../../store';
+import { useNavigate } from '../../router';
 import SiteIcon from '../site-icon';
 import { DEFAULT_AVATAR } from '../avatar';
 import './style.scss';
@@ -23,7 +37,8 @@ const ACTOR_MODE = 'actor';
 const BLOG_MODE = 'blog';
 const ACTOR_AND_BLOG_MODE = 'actor_blog';
 
-export default function ActorSwitcher() {
+export default function ActorSwitcher(): ReactNode {
+	const navigate: UseNavigateResult< string > = useNavigate();
 	const { setActiveActor } = useDispatch( STORE_NAME ) as AppActions;
 
 	const { currentUser, activeActorId, actorMode, hasUserCap, hasBlogCap } = useSelect(
@@ -80,6 +95,14 @@ export default function ActorSwitcher() {
 	const onClick = (): void => {
 		if ( canSwitchActors && currentUserId ) {
 			setActiveActor( activeActorId === 0 ? currentUserId : 0 );
+
+			// Close inspector.
+			void navigate( {
+				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
+					const { postId: _, ...rest } = prev as { postId?: number };
+					return rest;
+				} ) as never,
+			} );
 		}
 	};
 
@@ -103,8 +126,8 @@ export default function ActorSwitcher() {
 						src={ userAvatarUrl }
 						alt={ displayName }
 						className="actor-switcher__avatar"
-						onError={ ( e ): void => {
-							( e.target as HTMLImageElement ).src = DEFAULT_AVATAR;
+						onError={ ( e: SyntheticEvent< HTMLImageElement > ): void => {
+							e.currentTarget.src = DEFAULT_AVATAR;
 						} }
 					/>
 				) }

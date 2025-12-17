@@ -14,14 +14,13 @@ import { SET_ACTIVE_ACTOR } from './types';
  * Store actions
  */
 export const actions = {
-	*setActiveActor( actorId: number ) {
+	setActiveActor( actorId: number ): SetActiveActorAction {
 		// Save to preferences
-		yield dispatch( preferencesStore ).set( 'activitypub/app', 'activeActorId', actorId );
+		dispatch( preferencesStore ).set( 'activitypub/app', 'activeActorId', actorId );
 
-		// Update state
 		return {
 			type: SET_ACTIVE_ACTOR,
 			actorId,
-		} as SetActiveActorAction;
+		};
 	},
 };

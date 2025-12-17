@@ -13,13 +13,13 @@ createModalStore( 'activitypub/reactions' );
 
 /**
  * @typedef {Object} context
- * @property {String} blockId The block ID.
- * @property {Object} modal The modal state.
+ * @property {String} blockId          The block ID.
+ * @property {Object} modal            The modal state.
  * @property {boolean} modal.isCompact Whether the modal is compact.
- * @property {boolean} modal.isOpen Whether the modal is open.
- * @property {Object} modal.items The items to display in the modal.
- * @property {String} postId The post ID.
- * @property {Object} reactions Reactions data, keyed by reaction type.
+ * @property {boolean} modal.isOpen    Whether the modal is open.
+ * @property {Object} modal.items      The items to display in the modal.
+ * @property {String} postId           The post ID.
+ * @property {Object} reactions        Reactions data, keyed by reaction type.
  */
 
 const { callbacks, state } = store( 'activitypub/reactions', {

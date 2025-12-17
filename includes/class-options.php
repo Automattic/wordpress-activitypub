@@ -78,7 +78,7 @@ class Options {
 				'type'              => 'integer',
 				'description'       => 'Number of images to attach to posts.',
 				'default'           => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return \is_numeric( $value ) ? \absint( $value ) : ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
 				},
 			)
@@ -221,6 +221,16 @@ class Options {
 				'type'        => 'integer',
 				'description' => 'Number of days to keep items in the Inbox.',
 				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_ap_post_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => 'Number of days to keep remote posts.',
+				'default'     => 30,
 			)
 		);
 
@@ -405,6 +415,7 @@ class Options {
 				'description'       => 'Hide Followers and Followings on Profile.',
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
+				'show_in_rest'      => true,
 			)
 		);
 	}

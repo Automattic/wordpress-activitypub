@@ -13,28 +13,4 @@ declare module '@wordpress/keyboard-shortcuts' {
 	}
 
 	export const ShortcutProvider: ComponentType< ShortcutProviderProps >;
-
-	export interface ShortcutConfig {
-		name: string;
-		category: string;
-		description: string;
-		keyCombination: {
-			modifier?: string;
-			character: string;
-		};
-		aliases?: Array< {
-			modifier?: string;
-			character: string;
-		} >;
-	}
-
-	export function useShortcut(
-		name: string,
-		callback: ( event: KeyboardEvent ) => void,
-		options?: {
-			bindGlobal?: boolean;
-			eventName?: 'keydown' | 'keypress' | 'keyup';
-			isDisabled?: boolean;
-		}
-	): void;
 }

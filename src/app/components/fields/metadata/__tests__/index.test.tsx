@@ -24,9 +24,23 @@ const mockSettings: AppSettings = {
 const createMockFeedPost = ( overrides?: Partial< FeedPost > ): FeedPost => ( {
 	id: 1,
 	date: '2024-01-15T12:00:00',
+	date_gmt: '2024-01-15T12:00:00',
+	modified: '2024-01-15T12:00:00',
+	modified_gmt: '2024-01-15T12:00:00',
+	slug: 'test-post',
+	status: 'publish',
+	type: 'ap_post',
+	guid: { rendered: 'https://example.com/?p=1' },
+	comment_status: 'open',
+	ping_status: 'open',
+	author: 1,
 	actor_info: {
 		name: 'John Doe',
 		icon: 'https://example.com/avatar.jpg',
+		username: 'johndoe',
+		url: 'https://example.com/@johndoe',
+		webfinger: 'johndoe@example.com',
+		identifier: 'https://example.com/users/johndoe',
 	},
 	title: { rendered: 'Test Post' },
 	content: { rendered: 'Test content' },
@@ -72,7 +86,7 @@ describe( 'metadataField', () => {
 				throw new Error( 'render function not defined' );
 			}
 
-			return render( <RenderComponent item={ post } />, { wrapper: Wrapper } );
+			return render( <RenderComponent item={ post } field={ metadataField as never } />, { wrapper: Wrapper } );
 		};
 
 		it( 'should render avatar with actor icon when available', () => {
@@ -88,15 +102,19 @@ describe( 'metadataField', () => {
 			const post = createMockFeedPost( {
 				actor_info: {
 					name: 'John Doe',
-					icon: undefined,
+					icon: '',
+					username: 'johndoe',
+					url: 'https://example.com/@johndoe',
+					webfinger: 'johndoe@example.com',
+					identifier: 'https://example.com/users/johndoe',
 				},
 			} );
 			renderMetadataField( post );
 
 			const avatar = screen.getByAltText( 'John Doe' ) as HTMLImageElement;
 			expect( avatar ).toBeInTheDocument();
-			// Avatar should have a src attribute (may be default or empty)
-			expect( avatar.src ).toBeTruthy();
+			// Avatar should use SVG data URI fallback when icon is empty
+			expect( avatar.src ).toContain( 'data:image/svg+xml' );
 		} );
 
 		it( 'should use default avatar when actor_info is missing', () => {

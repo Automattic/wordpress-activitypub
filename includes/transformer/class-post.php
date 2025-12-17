@@ -603,10 +603,6 @@ class Post extends Base {
 		$content = \do_shortcode( $content );
 		\wp_reset_postdata();
 
-		$content = \wpautop( $content );
-		$content = \preg_replace( '/[\n\r\t]/', '', $content );
-		$content = \trim( $content );
-
 		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
 
@@ -893,7 +889,7 @@ class Post extends Base {
 						$media['image'] = array_merge(
 							$media['image'],
 							array_map(
-								function ( $id ) {
+								static function ( $id ) {
 									return array( 'id' => $id );
 								},
 								$block['attrs']['ids']
@@ -992,7 +988,7 @@ class Post extends Base {
 				&& empty( $this->get_in_reply_to() )
 				&& empty( $this->get_mentions() )
 			) {
-				$template .= "[ap_title type=\"html\"]\n\n";
+				$template .= '[ap_title type="html"]';
 			}
 
 			$template .= '[ap_content]';

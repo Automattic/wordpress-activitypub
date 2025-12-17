@@ -1,8 +1,15 @@
+/**
+ * WordPress dependencies
+ */
 import { __ } from '@wordpress/i18n';
 import { resolveSelect } from '@wordpress/data';
 import { store as coreDataStore } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
-import type { Field } from '@wordpress/dataviews';
+import type { Field } from '@wordpress/dataviews/wp';
+
+/**
+ * Internal dependencies
+ */
 import type { FeedPost } from '../../../types';
 
 export const tagField: Field< FeedPost > = {

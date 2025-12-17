@@ -84,7 +84,12 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
+		// Register reactions block, conditionally removing facepile style if avatars are disabled.
+		$reactions_args = array();
+		if ( ! \get_option( 'show_avatars', true ) ) {
+			$reactions_args['styles'] = array();
+		}
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions', $reactions_args );
 
 		\register_block_type_from_metadata(
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
@@ -111,7 +116,7 @@ class Blocks {
 				 * @param \WP_REST_Request $request    The request object.
 				 * @return int The number of published posts.
 				 */
-				'get_callback' => function ( $response, $field_name, $request ) {
+				'get_callback' => static function ( $response, $field_name, $request ) {
 					return (int) count_user_posts( $request->get_param( 'id' ), 'post', true );
 				},
 				'schema'       => array(
@@ -295,7 +300,7 @@ class Blocks {
 		// Convert paragraphs to blocks.
 		\preg_match_all( '#<p>.*?</p>#is', $data['post_content'], $matches );
 		$blocks = \array_map(
-			function ( $paragraph ) {
+			static function ( $paragraph ) {
 				return '<!-- wp:paragraph -->' . PHP_EOL . $paragraph . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL;
 			},
 			$matches[0] ?? array()

@@ -2,18 +2,30 @@
  * Webfinger/Profile field for DataViews.
  */
 
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import { __ } from '@wordpress/i18n';
-import type { Field } from '@wordpress/dataviews';
+import type { Field } from '@wordpress/dataviews/wp';
+
+/**
+ * Internal dependencies
+ */
 import type { Actor } from '../../../types';
 
 export const webfingerField: Field< Actor > = {
 	id: 'webfinger',
 	label: __( 'Profile', 'activitypub' ),
 	enableHiding: true,
-	getValue: ( { item }: { item: Actor } ) => item.actor_info?.webfinger || '',
-	render: ( { item }: { item: Actor } ) => {
-		const webfinger = item.actor_info?.webfinger || '';
-		const url = item.actor_info?.url || '#';
+	getValue: ( { item }: { item: Actor } ): string => item.actor_info?.webfinger || '',
+	render: ( { item }: { item: Actor } ): ReactNode => {
+		const webfinger: string = item.actor_info?.webfinger || '';
+		const url: string = item.actor_info?.url || '#';
 
 		if ( ! webfinger ) {
 			return <span>—</span>;

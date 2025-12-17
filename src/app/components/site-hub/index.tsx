@@ -6,6 +6,11 @@
  */
 
 /**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
  * WordPress dependencies
  */
 import { useSelect, useDispatch } from '@wordpress/data';
@@ -27,10 +32,15 @@ import SiteIcon from '../site-icon';
 import './style.scss';
 import { ForwardedRef, ForwardRefExoticComponent } from 'react';
 
-function SiteHub() {
-	const { homeUrl, siteTitle } = useSelect( ( select ) => {
+interface SiteHubData {
+	homeUrl: string | undefined;
+	siteTitle: string | undefined;
+}
+
+function SiteHub(): ReactNode {
+	const { homeUrl, siteTitle }: SiteHubData = useSelect( ( select ): SiteHubData => {
 		const { getEntityRecord } = select( coreStore );
-		const _base = getEntityRecord< UnstableBase >( 'root', '__unstableBase' );
+		const _base: UnstableBase | undefined = getEntityRecord< UnstableBase >( 'root', '__unstableBase' );
 		return {
 			homeUrl: _base?.home,
 			siteTitle: ! _base?.name && !! _base?.url ? filterURLForDisplay( _base?.url ) : _base?.name,
@@ -74,7 +84,7 @@ function SiteHub() {
 							size="compact"
 							className="site-hub__command-button"
 							icon={ search }
-							onClick={ () => openCommandCenter() }
+							onClick={ openCommandCenter }
 							label={ __( 'Open command palette', 'activitypub' ) }
 							shortcut={ displayShortcut.primary( 'k' ) }
 						/>
@@ -104,7 +114,10 @@ interface SiteHubMobileProps {
 export const SiteHubMobile: ForwardRefExoticComponent< SiteHubMobileProps > = forwardRef<
 	HTMLDivElement,
 	SiteHubMobileProps
->( function SiteHubMobile( { onMenuClick, title }: SiteHubMobileProps, ref: ForwardedRef< HTMLDivElement > ) {
+>( function SiteHubMobile(
+	{ onMenuClick, title }: SiteHubMobileProps,
+	ref: ForwardedRef< HTMLDivElement >
+): ReactNode {
 	return (
 		<div className="site-hub-mobile" ref={ ref }>
 			<HStack spacing={ 2 } justify="flex-start">

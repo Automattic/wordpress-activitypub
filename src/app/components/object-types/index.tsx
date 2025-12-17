@@ -5,18 +5,35 @@
  * Only shows object types that have posts for the currently active actor.
  */
 
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import { useEntityRecords } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { Icon, MenuItem, MenuGroup } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
-import { useObjectTypeFilter } from '../../hooks/use-object-type-filter';
 import { postContent, audio, file, calendar, image, comment, page, pin, video } from '@wordpress/icons';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
 
+/**
+ * Internal dependencies
+ */
+import { useObjectTypeFilter } from '../../hooks/use-object-type-filter';
+
+interface ObjectTypeConfigItem {
+	label: string;
+	icon: typeof postContent;
+}
+
 // Object type configuration with translations and icons - matches object-type field definitions
-export const objectTypeConfig: Record< string, { label: string; icon: any } > = {
+export const objectTypeConfig: Record< string, ObjectTypeConfigItem > = {
 	// @see Base_Object::TYPES
 	Article: { label: __( 'Articles', 'activitypub' ), icon: postContent },
 	Note: { label: __( 'Notes & Updates', 'activitypub' ), icon: comment },
@@ -29,7 +46,7 @@ export const objectTypeConfig: Record< string, { label: string; icon: any } > = 
 	Place: { label: __( 'Places & Locations', 'activitypub' ), icon: pin },
 };
 
-export function ObjectTypes() {
+export function ObjectTypes(): ReactNode {
 	// Get active actor ID from store to filter object types
 	const activeActorId = useSelect( ( select ) => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(), [] );
 
@@ -50,7 +67,7 @@ export function ObjectTypes() {
 	const { selectedObjectTypeId, updateObjectTypeFilter } = useObjectTypeFilter();
 
 	// Toggle: if clicking the same object type, clear the filter
-	const updateFilter = ( objectTypeId: number ): void =>
+	const updateFilter: ( objectTypeId: number ) => void = ( objectTypeId: number ): void =>
 		updateObjectTypeFilter( selectedObjectTypeId === objectTypeId ? null : objectTypeId );
 
 	if ( isResolving || ! objectTypes || objectTypes.length === 0 ) {
@@ -58,7 +75,9 @@ export function ObjectTypes() {
 	}
 
 	// Filter to only show known object types (those with config)
-	const knownObjectTypes = objectTypes.filter( ( objectType: Term ) => objectTypeConfig[ objectType.name ] );
+	const knownObjectTypes: Term[] = objectTypes.filter(
+		( objectType: Term ): boolean => !! objectTypeConfig[ objectType.name ]
+	);
 
 	// Don't show the filter if there are no object types or only one type
 	if ( knownObjectTypes.length <= 1 ) {
@@ -66,26 +85,26 @@ export function ObjectTypes() {
 	}
 
 	// Sort by the order in objectTypeConfig object
-	const configOrder = Object.keys( objectTypeConfig );
-	const sortedObjectTypes = [ ...knownObjectTypes ].sort( ( a: Term, b: Term ) => {
-		const indexA = configOrder.indexOf( a.name );
-		const indexB = configOrder.indexOf( b.name );
+	const configOrder: string[] = Object.keys( objectTypeConfig );
+	const sortedObjectTypes: Term[] = [ ...knownObjectTypes ].sort( ( a: Term, b: Term ): number => {
+		const indexA: number = configOrder.indexOf( a.name );
+		const indexB: number = configOrder.indexOf( b.name );
 		return indexA - indexB;
 	} );
 
 	return (
 		<MenuGroup className="object-types-menu">
-			{ sortedObjectTypes.map( ( objectType: Term ) => {
-				const config = objectTypeConfig[ objectType.name ];
+			{ sortedObjectTypes.map( ( objectType: Term ): ReactNode => {
+				const config: ObjectTypeConfigItem = objectTypeConfig[ objectType.name ];
 				return (
 					<MenuItem
 						key={ objectType.id }
-						onClick={ () => updateFilter( objectType.id ) }
+						onClick={ (): void => updateFilter( objectType.id ) }
 						className="menu-item"
 						aria-pressed={ selectedObjectTypeId === objectType.id }
 						aria-label={
 							/* translators: %s: object type name */
-							sprintf( __( 'Filter by type: %s', 'activitypub' ) as string, config.label as any )
+							sprintf( __( 'Filter by type: %s', 'activitypub' ), config.label )
 						}
 					>
 						<Icon icon={ config.icon } size={ 24 } />

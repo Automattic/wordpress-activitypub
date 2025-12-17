@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { createReduxStore, register } from '@wordpress/data';
+import { createReduxStore, register, StoreDescriptor } from '@wordpress/data';
 import { controls as dataControls } from '@wordpress/data-controls';
 
 /**
@@ -11,7 +11,6 @@ import { actions } from './actions';
 import { selectors } from './selectors';
 import { reducer } from './reducer';
 import { resolvers } from './resolvers';
-import type { State } from './types';
 
 /**
  * Store name
@@ -21,7 +20,15 @@ export const STORE_NAME = 'activitypub/app';
 /**
  * Store configuration
  */
-const storeConfig = {
+interface StoreConfig {
+	reducer: typeof reducer;
+	actions: typeof actions;
+	selectors: typeof selectors;
+	resolvers: typeof resolvers;
+	controls: typeof dataControls;
+}
+
+const storeConfig: StoreConfig = {
 	reducer,
 	actions,
 	selectors,
@@ -32,7 +39,7 @@ const storeConfig = {
 /**
  * Create and register the store
  */
-export const store = createReduxStore( STORE_NAME, storeConfig );
+export const store: StoreDescriptor = createReduxStore( STORE_NAME, storeConfig );
 
 register( store );
 

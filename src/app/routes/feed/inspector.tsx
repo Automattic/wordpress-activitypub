@@ -5,6 +5,12 @@
  */
 
 /**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+import { UseNavigateResult } from '@tanstack/react-router';
+
+/**
  * WordPress dependencies
  */
 import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/components';
@@ -21,28 +27,36 @@ import Avatar from '../../components/avatar';
 import { getRelativeTime } from '../../utils';
 import { useTagFilter } from '../../hooks/use-tag-filter';
 import { useSearch, useNavigate } from '../../router';
-import type { Comment, FeedPost } from '../../types';
+import type { ActorInfo, Comment, FeedPost } from '../../types';
+
+interface RenderHTMLProps {
+	html: string;
+}
 
 // Helper to render HTML content with proper entity decoding and unescape
-const RenderHTML = ( { html }: { html: string } ) => {
+const RenderHTML = ( { html }: RenderHTMLProps ): ReactNode => {
 	// Remove backslash escapes (e.g., \! becomes !)
-	const unescaped = html.replace( /\\(.)/g, '$1' );
-	const decoded = decodeEntities( unescaped );
+	const unescaped: string = html.replace( /\\(.)/g, '$1' );
+	const decoded: string = decodeEntities( unescaped );
 	return <div dangerouslySetInnerHTML={ { __html: decoded } } />;
 };
 
-export default function FeedInspector() {
-	const search = useSearch( { strict: false } ) as { postId?: number };
-	const navigate = useNavigate();
-	const id = search.postId;
+interface SearchParams {
+	postId?: number;
+}
+
+export default function FeedInspector(): ReactNode {
+	const search: SearchParams = useSearch( { strict: false } ) as SearchParams;
+	const navigate: UseNavigateResult< string > = useNavigate();
+	const id: number | undefined = search.postId;
 
 	// Close inspector by removing postId from search params
-	const onClose = () => {
-		navigate( {
-			search: ( prev: Record< string, unknown > ) => {
-				const { postId: _, ...rest } = prev as { postId?: number };
+	const onClose: () => void = (): void => {
+		void navigate( {
+			search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
+				const { postId: _, ...rest } = prev as SearchParams;
 				return rest;
-			},
+			} ) as never,
 		} );
 	};
 
@@ -59,7 +73,7 @@ export default function FeedInspector() {
 	}
 
 	// Fetch tag terms if the post has tags
-	const tagIds = post?.ap_tag || [];
+	const tagIds: number[] = post?.ap_tag || [];
 	const { records: terms } = useEntityRecords< Term >( 'taxonomy', 'ap_tag', {
 		include: tagIds,
 	} );
@@ -67,7 +81,7 @@ export default function FeedInspector() {
 	// Use the shared tag filter hook
 	const { selectedTagId, updateTagFilter } = useTagFilter();
 
-	const handleTagClick = ( tagId: number ) => {
+	const handleTagClick: ( tagId: number ) => void = ( tagId: number ): void => {
 		// Apply filter and close inspector
 		updateTagFilter( tagId, { onComplete: onClose } );
 	};
@@ -84,12 +98,12 @@ export default function FeedInspector() {
 		return <div className="activitypub-inspector-loading">{ __( 'Post not found', 'activitypub' ) }</div>;
 	}
 
-	const actor = post.actor_info;
-	const author = decodeEntities( actor?.name || __( 'Unknown author', 'activitypub' ) );
-	const webfinger = actor?.webfinger || '';
-	const profileUrl = actor?.url || '';
-	const postLink = post.link || '';
-	const relativeTime = post.date ? getRelativeTime( post.date ) : '';
+	const actor: ActorInfo = post.actor_info;
+	const author: string = decodeEntities( actor?.name || __( 'Unknown author', 'activitypub' ) );
+	const webfinger: string = actor?.webfinger || '';
+	const profileUrl: string = actor?.url || '';
+	const postLink: string = post.link || '';
+	const relativeTime: string = post.date ? getRelativeTime( post.date ) : '';
 
 	return (
 		<div className="activitypub-inspector">
@@ -142,21 +156,23 @@ export default function FeedInspector() {
 					) }
 					{ terms && terms.length > 0 && (
 						<div className="activitypub-inspector-tags">
-							{ terms.map( ( term: Term ) => (
-								<Button
-									key={ term.id }
-									size="small"
-									variant="secondary"
-									onClick={ () => handleTagClick( term.id ) }
-									aria-pressed={ selectedTagId === term.id }
-									aria-label={
-										/* translators: %s: tag name */
-										sprintf( __( 'Filter by tag: %s', 'activitypub' ) as string, term.name as any )
-									}
-								>
-									#{ term.name }
-								</Button>
-							) ) }
+							{ terms.map(
+								( term: Term ): ReactNode => (
+									<Button
+										key={ term.id }
+										size="small"
+										variant="secondary"
+										onClick={ (): void => handleTagClick( term.id ) }
+										aria-pressed={ selectedTagId === term.id }
+										aria-label={
+											/* translators: %s: tag name */
+											sprintf( __( 'Filter by tag: %s', 'activitypub' ), term.name )
+										}
+									>
+										#{ term.name }
+									</Button>
+								)
+							) }
 						</div>
 					) }
 				</CardBody>
@@ -172,9 +188,11 @@ export default function FeedInspector() {
 						{ isLoadingComments && <Spinner /> }
 						{ ! isLoadingComments && comments && comments.length > 0 && (
 							<div>
-								{ comments.map( ( comment ) => {
+								{ comments.map( ( comment: Comment ): ReactNode => {
 									// Use date_gmt for reliable UTC parsing
-									const commentDate = comment.date_gmt ? getRelativeTime( comment.date_gmt ) : '';
+									const commentDate: string = comment.date_gmt
+										? getRelativeTime( comment.date_gmt )
+										: '';
 									return (
 										<div key={ comment.id } className="activitypub-inspector-comment">
 											<div className="activitypub-inspector-comment-meta">

@@ -151,7 +151,7 @@ class Post_Types {
 				'description'       => 'The type of the activity',
 				'single'            => true,
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => Activity::TYPES,
@@ -185,7 +185,7 @@ class Post_Types {
 				'type'              => 'string',
 				'single'            => true,
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
@@ -254,7 +254,7 @@ class Post_Types {
 				'description'       => 'The type of the activity',
 				'single'            => true,
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => Activity::TYPES,
@@ -277,7 +277,7 @@ class Post_Types {
 				'type'              => 'string',
 				'single'            => true,
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => array( 'application', 'blog', 'user' ),
@@ -323,7 +323,7 @@ class Post_Types {
 				'type'              => 'string',
 				'single'            => true,
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
@@ -480,7 +480,7 @@ class Post_Types {
 					'type'              => 'string',
 					'single'            => true,
 					'show_in_rest'      => true,
-					'sanitize_callback' => function ( $value ) {
+					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',
 							'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
@@ -515,7 +515,7 @@ class Post_Types {
 					'type'              => 'string',
 					'single'            => true,
 					'show_in_rest'      => true,
-					'sanitize_callback' => function ( $value ) {
+					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',
 							'enum'    => array( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS, ACTIVITYPUB_INTERACTION_POLICY_ME ),
@@ -538,7 +538,7 @@ class Post_Types {
 					'type'              => 'string',
 					'single'            => true,
 					'show_in_rest'      => true,
-					'sanitize_callback' => function ( $value ) {
+					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',
 							'enum'    => array( 'pending', 'federated', 'failed' ),
@@ -570,7 +570,7 @@ class Post_Types {
 				 * @param array $response Prepared response array.
 				 * @return string The raw post content.
 				 */
-				'get_callback' => function ( $response ) {
+				'get_callback' => static function ( $response ) {
 					return \get_post_field( 'post_content', $response['id'] );
 				},
 				'schema'       => array(

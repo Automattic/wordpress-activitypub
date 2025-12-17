@@ -87,7 +87,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 						'object' => array(
 							'description'       => 'The object of the activity.',
 							'required'          => true,
-							'validate_callback' => function ( $param, $request, $key ) {
+							'validate_callback' => static function ( $param, $request, $key ) {
 								/**
 								 * Filter the ActivityPub object validation.
 								 *

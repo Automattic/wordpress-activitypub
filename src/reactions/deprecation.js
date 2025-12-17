@@ -1,5 +1,41 @@
+import { InnerBlocks } from '@wordpress/block-editor';
 import { createBlock } from '@wordpress/blocks';
 
+/**
+ * v2: Handle save format change from Interactivity API commit (c0c84100)
+ *
+ * Old format: <><InnerBlocks.Content /><div className="activitypub-reactions-block"></div></>
+ * New format: <div {...useBlockProps.save()}><InnerBlocks.Content /></div>
+ */
+const v2 = {
+	attributes: {},
+
+	supports: {
+		html: false,
+		align: true,
+		layout: {
+			default: {
+				type: 'constrained',
+				orientation: 'vertical',
+				justifyContent: 'center',
+			},
+		},
+	},
+
+	save() {
+		return (
+			<>
+				<InnerBlocks.Content />
+				<div className="activitypub-reactions-block"></div>
+			</>
+		);
+	},
+};
+
+/**
+ * v1: Handle title attribute migration to heading innerBlock (92e196e9)
+ * Original block (77ae436c) was fully dynamic with no save output.
+ */
 const v1 = {
 	attributes: {
 		title: {
@@ -10,27 +46,19 @@ const v1 = {
 
 	supports: {
 		html: false,
-		color: {
-			gradients: true,
-			link: true,
-			__experimentalDefaultControls: {
-				background: true,
-				text: true,
-				link: true,
+		align: true,
+		layout: {
+			default: {
+				type: 'constrained',
+				orientation: 'vertical',
+				justifyContent: 'center',
 			},
 		},
-		__experimentalBorder: {
-			radius: true,
-			width: true,
-			color: true,
-			style: true,
-		},
-		typography: {
-			fontSize: true,
-			__experimentalDefaultControls: {
-				fontSize: true,
-			},
-		},
+	},
+
+	// Original block had no save function - dynamic block only
+	save() {
+		return null;
 	},
 
 	/**
@@ -61,4 +89,4 @@ const v1 = {
 	},
 };
 
-export default [ v1 ];
+export default [ v2, v1 ];
