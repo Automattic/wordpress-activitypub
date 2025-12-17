@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 7.7.1
+Stable tag: 7.8.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,36 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.8.0 - 2025-12-17
+#### Added
+- Add blocklist subscriptions for automatic weekly synchronization of remote blocklists.
+- Add compact display style to Reactions block that hides avatars.
+- Add domain blocklist importer for bulk importing blocked domains.
+- Add image optimization for imported attachments (resize to 1200px max, convert to WebP).
+- Add local caching for remote actor avatars.
+- Add relay mode to forward public activities to all followers.
+- Add scheduled cleanup for remote posts, preserving posts with local user interactions.
+- Add site health check to warn when DISABLE_WP_CRON may impact ActivityPub functionality
+- Add Social Web Reader for browsing ActivityPub content directly in WordPress admin.
+- Delete remote posts on plugin uninstall.
+- Mastodon importer now imports self-replies as comments, preserving thread structure.
+
+#### Changed
+- Cache expensive operations in Post transformer to improve performance.
+- Improve performance and reliability of @-mention detection.
+- Reduce federated content size by removing unnecessary HTML attributes.
+- Skip downloading video and audio attachments, embedding remote URLs directly to avoid storage limits.
+- Use stable term_id-based IDs for Term transformer to ensure federation consistency.
+- Wrap blocked domains and keywords tables in collapsible details element.
+
+#### Fixed
+- Ensure NodeInfo accurately represents site administrators to the Fediverse.
+- Fediverse Followers block now works correctly when the "Hide Social Graph" privacy option is enabled.
+- Fix NodeInfo documents to comply with schema specification.
+- Follow Me block button-only style now respects width settings from the inner Button block.
+- Preserve whitespace inside preformatted elements when federating content.
+- Respect WordPress "show avatars" setting for remote actor avatars.
 
 ### 7.7.1 - 2025-12-04
 #### Fixed
@@ -418,9 +448,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.7.0 =
+= 7.8.0 =
 
-Continue building your author profile page with the new Extra Fields block!
+This update introduces improved moderation tools, including blocklist subscriptions and bulk domain imports, making it easier to manage and scale moderation across the Fediverse.
 
 == Installation ==
 
