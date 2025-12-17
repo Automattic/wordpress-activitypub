@@ -138,7 +138,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 				setIsCheckingEmbed( false );
 			}
 		},
-		[ setAttributes ]
+		[ setAttributes, setIsValidEmbed, setIsCheckingEmbed ]
 	);
 
 	// Debounce the URL check to avoid too many requests.
