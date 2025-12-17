@@ -2,34 +2,34 @@ import { store, getContext, getConfig } from '@wordpress/interactivity';
 import { createModalStore } from '../shared/modal';
 import './style.scss';
 
-/** @var {object} wp WordPress global. */
+/** @member {Object} wp WordPress global. */
 const { apiFetch } = window.wp;
 
 createModalStore( 'activitypub/remote-reply' );
 
 /**
  * @typedef {Object} config
- * @property {String} namespace ActivityPub REST Namespace.
- * @property {Object} i18n Internationalization strings.
- * @property {String} i18n.copy "Copy" button text.
- * @property {String} i18n.copied "Copied" button text.
- * @property {String} i18n.emptyProfileError Error message for empty remote profile.
- * @property {String} i18n.invalidProfileError Error message for invalid remote profile.
- * @property {String} i18n.genericError Generic error message.
+ * @property {string} namespace                ActivityPub REST Namespace.
+ * @property {Object} i18n                     Internationalization strings.
+ * @property {string} i18n.copy                "Copy" button text.
+ * @property {string} i18n.copied              "Copied" button text.
+ * @property {string} i18n.emptyProfileError   Error message for empty remote profile.
+ * @property {string} i18n.invalidProfileError Error message for invalid remote profile.
+ * @property {string} i18n.genericError        Generic error message.
  */
 
 /**
  * @typedef {Object} context
- * @property {String} blockId The block ID.
- * @property {String} commentId The comment ID.
- * @property {String} commentURL The comment URL.
- * @property {String} copyButtonText The copy button text.
- * @property {String} errorMessage The error message.
- * @property {boolean} isError Whether there is an error.
- * @property {boolean} isLoading Whether the remote profile is being submitted.
- * @property {Object} modal The modal state.
- * @property {boolean} modal.isOpen Whether the modal is open.
- * @property {String} remoteProfile The remote profile.
+ * @property {string}  blockId           The block ID.
+ * @property {string}  commentId         The comment ID.
+ * @property {string}  commentURL        The comment URL.
+ * @property {string}  copyButtonText    The copy button text.
+ * @property {string}  errorMessage      The error message.
+ * @property {boolean} isError           Whether there is an error.
+ * @property {boolean} isLoading         Whether the remote profile is being submitted.
+ * @property {Object}  modal             The modal state.
+ * @property {boolean} modal.isOpen      Whether the modal is open.
+ * @property {string}  remoteProfile     The remote profile.
  * @property {boolean} shouldSaveProfile Whether to save the profile.
  */
 
@@ -38,7 +38,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		/**
 		 * Get the remote profile URL.
 		 *
-		 * @returns {String} The remote profile URL.
+		 * @return {string} The remote profile URL.
 		 */
 		get remoteProfileUrl() {
 			const { commentURL } = getContext();
@@ -50,8 +50,8 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		/**
 		 * Handle the opening of the modal.
 		 *
-		 * @param {Event} event The event that triggered the modal opening/closing.
-		 * @param {String} event.key The key pressed, if any.
+		 * @param {Event}  event     The event that triggered the modal opening/closing.
+		 * @param {string} event.key The key pressed, if any.
 		 */
 		onReplyLinkKeydown( event ) {
 			// Handle Enter key to open the modal.
@@ -89,8 +89,8 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		/**
 		 * Update the remote profile value.
 		 *
-		 * @param {Event} event Input event.
-		 * @param {String} event.target.value The remote profile value.
+		 * @param {Event}  event              Input event.
+		 * @param {string} event.target.value The remote profile value.
 		 */
 		updateRemoteProfile( event ) {
 			const context = getContext();
@@ -104,8 +104,8 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		/**
 		 * Handle keydown event for remote profile input.
 		 *
-		 * @param {Event} event Keydown event.
-		 * @param {String} event.key Key pressed.
+		 * @param {Event}  event     Keydown event.
+		 * @param {string} event.key Key pressed.
 		 */
 		onInputKeydown( event ) {
 			if ( event.key === 'Enter' ) {
@@ -212,7 +212,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		/**
 		 * Retrieve the remote user data from localStorage.
 		 *
-		 * @returns {Object} Remote user data or empty object, if not set.
+		 * @return {Object} Remote user data or empty object, if not set.
 		 */
 		getStore() {
 			const data = localStorage.getItem( callbacks.storageKey );
@@ -240,7 +240,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		 * Best guess whether a string is a valid ActivityPub handle.
 		 *
 		 * @param {string} string - String to check.
-		 * @returns {boolean} True if string is a valid handle, false otherwise.
+		 * @return {boolean} True if string is a valid handle, false otherwise.
 		 */
 		isHandle( string ) {
 			// Check if the string starts with '@' and contains a valid URL.
@@ -253,7 +253,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		 * Checks if a string is a valid URL.
 		 *
 		 * @param {string} string - String to check.
-		 * @returns {boolean} True if string is a valid URL, false otherwise.
+		 * @return {boolean} True if string is a valid URL, false otherwise.
 		 */
 		isUrl( string ) {
 			try {

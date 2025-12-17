@@ -8,7 +8,7 @@ import { useOptions } from './use-options';
  *
  * @param {Object} props
  * @param {string} props.name - Name of the block.
- * @returns {JSX.Element} Rendered fallback block.
+ * @return {JSX.Element} Rendered fallback block.
  */
 export function InheritModeBlockFallback( { name } ) {
 	const { enabled } = useOptions();

@@ -7,9 +7,9 @@ import { useOptions } from './use-options';
 /**
  * React hook providing user options for ActivityPub blocks.
  *
- * @param {Object} params
+ * @param {Object}  params
  * @param {boolean} params.withInherit - Whether to include the inherit option.
- * @returns {Array} List of user option objects.
+ * @return {Array} List of user option objects.
  */
 export function useUserOptions( { withInherit = false } ) {
 	/**
@@ -17,7 +17,7 @@ export function useUserOptions( { withInherit = false } ) {
 	 *
 	 * @type {Object}
 	 * @property {boolean} enabled.users - Whether users are enabled.
-	 * @property {boolean} enabled.blog - Whether the blog user is enabled.
+	 * @property {boolean} enabled.blog  - Whether the blog user is enabled.
 	 */
 	const { enabled, namespace } = useOptions();
 	const [ currentUserCanActivityPub, setCurrentUserCanActivityPub ] = useState( false );

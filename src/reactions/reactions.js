@@ -6,6 +6,7 @@ import { useOptions } from '../shared/use-options';
 /**
  * @typedef {Object} JSX
  * @typedef {import('react').ReactElement} JSX.Element
+ * @property
  */
 
 /**

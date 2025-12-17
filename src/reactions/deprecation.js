@@ -64,8 +64,8 @@ const v1 = {
 	/**
 	 * Checks if the block is eligible for migration.
 	 *
-	 * @param {Object} attributes The block attributes.
-	 *
+	 * @param {Object} attributes       The block attributes.
+	 * @param {string} attributes.title The block title.
 	 * @return {boolean} Whether the block is eligible for migration.
 	 */
 	isEligible( { title } ) {
@@ -75,8 +75,8 @@ const v1 = {
 	/**
 	 * Migrates the block to use a core heading block instead of the custom heading attribute.
 	 *
-	 * @param {Object} attributes The attributes for the block.
-	 *
+	 * @param {Object} attributes       The attributes for the block.
+	 * @param {string} attributes.title The block title.
 	 * @return {Array} The new attributes and inner blocks.
 	 */
 	migrate( { title, ...newAttributes } ) {

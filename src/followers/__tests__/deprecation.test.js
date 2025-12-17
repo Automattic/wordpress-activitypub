@@ -11,8 +11,8 @@ import { v1Markup, v1MarkupNoTitle, v1MarkupCustomTitle, v1MarkupWithOptions } f
 /**
  * Mock createBlock to avoid Jest/ESM issues with @wordpress/blocks.
  *
- * @param {string} name       Block name.
- * @param {Object} attributes Block attributes.
+ * @param {string} name        Block name.
+ * @param {Object} attributes  Block attributes.
  * @param {Array}  innerBlocks Inner blocks.
  * @return {Object} Mock block object.
  */

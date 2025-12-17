@@ -19,7 +19,7 @@ const HELP_TEXT = {
 	checking: () => (
 		<>
 			<Spinner />
-			{ ' ' + __( 'Checking URL...', 'activitypub' ) }
+			{ ' ' + __( 'Checking URL…', 'activitypub' ) }
 		</>
 	),
 	valid: __( 'The author will be notified of your response.', 'activitypub' ),
@@ -29,11 +29,11 @@ const HELP_TEXT = {
 /**
  * Edit component for the ActivityPub Reply block.
  *
- * @param {Object} props - Component props.
- * @param {Object} props.attributes - Block attributes.
+ * @param {Object}   props               - Component props.
+ * @param {Object}   props.attributes    - Block attributes.
  * @param {Function} props.setAttributes - Function to update block attributes.
- * @param {string} props.clientId - Block client ID.
- * @param {boolean} props.isSelected - Whether the block is selected.
+ * @param {string}   props.clientId      - Block client ID.
+ * @param {boolean}  props.isSelected    - Whether the block is selected.
  */
 export default function Edit( { attributes, setAttributes, clientId, isSelected } ) {
 	const { url = '', embedPost = false } = attributes;
@@ -103,13 +103,13 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 					 *
 					 * @typedef {Object} OEmbedResponse
 					 * @property {string} [provider_name] The name of the oEmbed provider.
-					 * @property {string} [html] The HTML content to embed.
-					 * @property {string} [title] The title of the embedded content.
-					 * @property {string} [author_name] The author of the embedded content.
-					 * @property {string} [author_url] The URL of the author.
-					 * @property {number} [width] The width of the embedded content.
-					 * @property {number} [height] The height of the embedded content.
-					 * @property {string} [type] The type of the embedded content (rich, video, photo).
+					 * @property {string} [html]          The HTML content to embed.
+					 * @property {string} [title]         The title of the embedded content.
+					 * @property {string} [author_name]   The author of the embedded content.
+					 * @property {string} [author_url]    The URL of the author.
+					 * @property {number} [width]         The width of the embedded content.
+					 * @property {number} [height]        The height of the embedded content.
+					 * @property {string} [type]          The type of the embedded content (rich, video, photo).
 					 */
 					const response = await apiFetch( {
 						path: addQueryArgs( '/oembed/1.0/proxy', {

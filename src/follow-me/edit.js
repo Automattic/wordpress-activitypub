@@ -64,7 +64,10 @@ function fetchProfile( userId ) {
 /**
  * Profile component for the editor.
  *
- * @param {Object} props Component props.
+ * @param {Object} props                  Component props.
+ * @param {Object} props.profile          Profile data.
+ * @param {string} props.className        Block class name.
+ * @param {Object} props.innerBlocksProps Inner blocks props.
  * @return {JSX.Element} Profile component.
  */
 function EditorProfile( { profile, className, innerBlocksProps } ) {
@@ -128,12 +131,12 @@ function EditorProfile( { profile, className, innerBlocksProps } ) {
 /**
  * Edit component.
  *
- * @param {Object} props Component props.
- * @param {Object} props.attributes Block attributes.
- * @param {Function} props.setAttributes Set block attributes.
- * @param {Object} props.context Block context.
- * @param {string} props.context.postType Post type.
- * @param {number} props.context.postId Post ID.
+ * @param {Object}   props                  Component props.
+ * @param {Object}   props.attributes       Block attributes.
+ * @param {Function} props.setAttributes    Set block attributes.
+ * @param {Object}   props.context          Block context.
+ * @param {string}   props.context.postType Post type.
+ * @param {number}   props.context.postId   Post ID.
  * @return {JSX.Element} Edit component.
  */
 export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {

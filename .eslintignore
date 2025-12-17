@@ -1,0 +1,2 @@
+# Non-transpiled JavaScript files that need to remain ES5 compatible
+assets/

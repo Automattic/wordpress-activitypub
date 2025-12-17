@@ -2,9 +2,9 @@ import { getContext, store, getElement } from '@wordpress/interactivity';
 
 /**
  * @typedef {Object} context
- * @property {String} blockId - The ID of the block.
- * @property {Object} modal - The modal state.
- * @property {boolean} modal.isOpen - Whether the modal is open.
+ * @property {string}  blockId         - The ID of the block.
+ * @property {Object}  modal           - The modal state.
+ * @property {boolean} modal.isOpen    - Whether the modal is open.
  * @property {boolean} modal.isCompact - Whether the modal is compact.
  */
 
@@ -142,8 +142,8 @@ export function createModalStore( namespace ) {
 			/**
 			 * Handles keydown events on the document.
 			 *
-			 * @param {Event} event Keydown event.
-			 * @param {String} event.key The key that was pressed.
+			 * @param {Event}  event     Keydown event.
+			 * @param {string} event.key The key that was pressed.
 			 */
 			documentKeydown( event ) {
 				const { modal } = getContext();
@@ -226,7 +226,7 @@ export function createModalStore( namespace ) {
 				const spaceRight = viewportWidth - buttonRect.right;
 
 				// Default position (below button, relative to the block).
-				let position = {
+				const position = {
 					top: `${ relativeTop + 8 }px`,
 					left: `${ relativeLeft - 2 }px`, // -2 px to account for the button border.
 				};
@@ -277,11 +277,9 @@ export function createModalStore( namespace ) {
 							lastFocusableElement.focus();
 							event.preventDefault();
 						}
-					} /* tab */ else {
-						if ( document.activeElement === lastFocusableElement ) {
-							firstFocusableElement.focus();
-							event.preventDefault();
-						}
+					} /* tab */ else if ( document.activeElement === lastFocusableElement ) {
+						firstFocusableElement.focus();
+						event.preventDefault();
 					}
 				} );
 			},

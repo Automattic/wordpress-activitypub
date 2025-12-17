@@ -6,6 +6,11 @@ import * as fixtures from './fixtures';
 /**
  * Mock createBlock to avoid blocks store initialization issues.
  * Returns a simple object matching the block structure.
+ *
+ * @param {string} name        Block name.
+ * @param {Object} attributes  Block attributes.
+ * @param {Array}  innerBlocks Inner blocks.
+ * @return {Object} Mock block object.
  */
 const createBlock = ( name, attributes = {}, innerBlocks = [] ) => ( {
 	name,
