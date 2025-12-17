@@ -9,7 +9,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { dispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { __, _n } from '@wordpress/i18n';
-import type { Action } from '@wordpress/dataviews';
+import type { Action } from '@wordpress/dataviews/wp';
 
 /**
  * Internal dependencies

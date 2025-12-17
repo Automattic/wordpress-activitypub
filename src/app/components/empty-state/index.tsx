@@ -34,6 +34,11 @@ export default function EmptyState(): ReactNode {
 		kind: 'postType',
 		name: 'ap_post',
 		slug: 'feed',
+		defaultView: {
+			type: 'list',
+			search: '',
+			filters: [],
+		},
 	} );
 
 	// If search or filters are active, show simple "no results" message.

@@ -13,8 +13,8 @@ import type { ReactNode } from 'react';
  * WordPress dependencies
  */
 import { useMemo } from '@wordpress/element';
-import { Action, DataViews } from '@wordpress/dataviews';
-import type { Field, View as DataViewsView } from '@wordpress/dataviews';
+import { Action, DataViews } from '@wordpress/dataviews/wp';
+import type { Field, View as DataViewsView } from '@wordpress/dataviews/wp';
 import { useView } from '@wordpress/views';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
