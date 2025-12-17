@@ -165,13 +165,6 @@ summary {
 	user-select: auto;
 }
 
-.activitypub-settings-accordion-trigger {
-	color: #2c3338;
-	cursor: pointer;
-	font-weight: 400;
-	text-align: left;
-}
-
 .activitypub-settings-accordion-trigger .title {
 	pointer-events: none;
 	font-weight: 600;
@@ -227,7 +220,7 @@ input.blog-user-identifier {
 	display: block;
 	margin-bottom: 40px;
 	background-image: rgb(168, 165, 175);
-	background-image: linear-gradient(180deg, red, yellow);
+	background-image: linear-gradient(180deg, #f00, #ff0);
 	background-size: cover;
 }
 
@@ -244,9 +237,10 @@ input.blog-user-identifier {
 	margin-bottom: 0;
 }
 
+/* stylelint-disable-next-line selector-id-pattern -- WordPress core ID */
 #dashboard_right_now li a.activitypub-followers::before {
 	content: "\f307";
-	font-family: dashicons;
+	font-family: dashicons, sans-serif;
 }
 
 .activitypub-comment .dashboard-comment-wrap {
@@ -341,6 +335,8 @@ input.blog-user-identifier {
 }
 
 .plugin-list .plugin-action-buttons li {
+	display: inline-block;
+	vertical-align: middle;
 	margin: 0 0 10px 0;
 }
 
@@ -356,11 +352,6 @@ input.blog-user-identifier {
 	text-align: left;
 }
 
-.plugin-list .plugin-action-buttons li {
-	display: inline-block;
-	vertical-align: middle;
-}
-
 .plugin-list .plugin-action-buttons li .button {
 	margin-right: 20px;
 }
@@ -369,11 +360,13 @@ input.blog-user-identifier {
 	margin-right: 24px;
 }
 
+/* stylelint-disable no-descending-specificity */
 .plugin-list .plugin-card .name,
 .plugin-list .plugin-card .desc,
 .plugin-card .desc > p {
 	margin-right: 0;
 }
+/* stylelint-enable no-descending-specificity */
 
 .plugin-list .plugin-card .desc p:first-of-type {
 	margin-top: 0;

@@ -55,6 +55,7 @@
 					margin-right: 0;
 				}
 
+				/* stylelint-disable-next-line no-descending-specificity */
 				&:hover {
 					z-index: 2;
 					transform: translateY(-2px);
@@ -78,8 +79,8 @@
 			border-radius: 50%;
 			border: 0.5px solid var(--wp--preset--color--contrast, rgba(255, 255, 255, 0.8));
 			box-shadow:
-				0 0 0 0.5px rgba(255, 255, 255, 0.8), 
-			0 1px 3px rgba(0, 0,				 0.2); // Soft drop shadow
+				0 0 0 0.5px rgba(255, 255, 255, 0.8),
+				0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
 			transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 			will-change: transform;
 
@@ -138,6 +139,8 @@
 			margin-bottom: 0;
 		}
 
+		// Different context than .reaction-avatars li a
+		/* stylelint-disable no-descending-specificity */
 		a {
 			box-shadow: none;
 			display: flex;
@@ -153,6 +156,7 @@
 				background-color: rgba(0, 0, 0, 0.03);
 			}
 		}
+		/* stylelint-enable no-descending-specificity */
 
 		img {
 			box-shadow: none;
@@ -191,6 +195,7 @@
 		display: inline-flex;
 	}
 
+	/* stylelint-disable-next-line no-descending-specificity */
 	.reaction-group {
 		width: auto;
 		margin: 0;

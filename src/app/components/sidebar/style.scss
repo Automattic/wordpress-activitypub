@@ -1,3 +1,9 @@
+/**
+ * Disable no-descending-specificity: Focus states are separated into
+ * reset rules (:focus:not(:disabled)) and color rules (:focus-visible).
+ * They set different properties with no conflict.
+ */
+/* stylelint-disable no-descending-specificity */
 .sidebar {
 	display: flex;
 	flex-direction: column;

@@ -17,8 +17,7 @@ button {
 
 	.wp-block-heading,
 	.followers-pagination {
-		border-color:
- var(--wp--preset--color--foreground, var(--wp--preset--color--primary, #e0e0e0));
+		border-color: var(--wp--preset--color--foreground, var(--wp--preset--color--primary, #e0e0e0));
 	}
 
 	.followers-container {
@@ -46,17 +45,25 @@ button {
 			border-radius: 8px;
 			box-shadow: none; // Twenty Sixteen.
 			transition: background-color 0.2s ease;
+		}
 
-			&:hover,
- &:focus {
-				background-color:
- var(--wp--preset--color--subtle-background, var(--wp--preset--color--accent-2, var(--wp--preset--color--tertiary, var(--wp--preset--color--secondary, #f0f0f0))));
-				box-shadow: none; // Twenty Seventeen.
-				outline: none;
+		.external-link-icon {
+			width: 16px;
+			height: 16px;
+			margin-left: 8px;
+			opacity: 0;
+			transition: opacity 0.2s ease;
+		}
 
-				.external-link-icon {
-					opacity: 1;
-				}
+		.follower-link:hover,
+		.follower-link:focus {
+			/* stylelint-disable-next-line max-line-length */
+			background-color: var(--wp--preset--color--subtle-background, var(--wp--preset--color--accent-2, var(--wp--preset--color--tertiary, var(--wp--preset--color--secondary, #f0f0f0))));
+			box-shadow: none; // Twenty Seventeen.
+			outline: none;
+
+			.external-link-icon {
+				opacity: 1;
 			}
 		}
 
@@ -91,13 +98,6 @@ button {
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis;
-		}
-
-		.external-link-icon {
-			width: 16px;
-			height: 16px;
-			margin-left: 8px;
-			transition: opacity 0.2s ease;
 		}
 
 		.followers-pagination {
@@ -232,7 +232,7 @@ button {
 		margin-bottom: 8px;
 
 		&:hover,
- &:focus {
+		&:focus {
 			border-color: color.adjust(#e0e0e0, $lightness: -10%);
 		}
 	}
@@ -243,9 +243,10 @@ button {
 	}
 }
 
-// Compact style variation
+// Compact style variation - mutually exclusive with .is-style-card
 .wp-block-activitypub-followers.is-style-compact {
 
+	/* stylelint-disable-next-line no-descending-specificity */
 	.follower-link {
 		padding: 4px;
 	}
@@ -264,6 +265,7 @@ button {
 		font-size: 80%;
 	}
 
+	/* stylelint-disable-next-line no-descending-specificity */
 	.followers-pagination {
 		margin-top: 8px;
 		padding-top: 4px;

@@ -61,7 +61,7 @@
 }
 
 // Stage and inspector regions
-// Mobile: full-screen fixed positioning with z-index stacking (inspector overlays stage)
+// Mobile: full-screen fixed with z-index (inspector overlays stage)
 // Desktop: side-by-side flex layout
 .stage-region,
 .inspector-region {
