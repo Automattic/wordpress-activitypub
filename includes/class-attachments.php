@@ -194,9 +194,10 @@ class Attachments {
 			// Compare timestamps - re-download if remote is newer.
 			$paths       = self::get_emoji_storage_paths( $emoji_url );
 			$url_path    = \wp_parse_url( $emoji_url, PHP_URL_PATH );
-			$file_name   = \sanitize_file_name( \basename( $url_path ) );
-			$file_path   = $paths['basedir'] . '/' . $file_name;
-			$local_time  = \file_exists( $file_path ) ? \filemtime( $file_path ) : 0;
+			$file_stem   = \sanitize_file_name( \pathinfo( $url_path, PATHINFO_FILENAME ) );
+			$matches     = \glob( $paths['basedir'] . '/' . $file_stem . '.*' );
+			$file_path   = ( $matches && \is_file( $matches[0] ) ) ? $matches[0] : null;
+			$local_time  = $file_path ? \filemtime( $file_path ) : 0;
 			$remote_time = \strtotime( $updated );
 
 			if ( $remote_time && $local_time >= $remote_time ) {
@@ -214,11 +215,19 @@ class Attachments {
 			return false;
 		}
 
+		if ( ! \wp_get_image_mime( $tmp_file ) ) {
+			\wp_delete_file( $tmp_file );
+			return false;
+		}
+
 		// Get storage paths for this emoji.
 		$paths = self::get_emoji_storage_paths( $emoji_url );
 
 		// Create directory if it doesn't exist.
-		\wp_mkdir_p( $paths['basedir'] );
+		if ( ! \wp_mkdir_p( $paths['basedir'] ) ) {
+			\wp_delete_file( $tmp_file );
+			return false;
+		}
 
 		// Generate filename from URL path (consistent with get_emoji_url lookup).
 		$url_path  = \wp_parse_url( $emoji_url, PHP_URL_PATH );

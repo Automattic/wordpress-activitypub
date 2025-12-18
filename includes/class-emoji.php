@@ -26,7 +26,10 @@ class Emoji {
 	public static function prepare_comment_data( $comment_data, $activity ) {
 		// Replace emoji in content at insert-time.
 		if ( ! empty( $comment_data['comment_content'] ) && ! empty( $activity['object'] ) ) {
-			$comment_data['comment_content'] = self::replace_custom_emoji( $comment_data['comment_content'], $activity['object'] );
+			// Unslash, replace emoji, then re-slash to avoid escaping img tag attributes.
+			$content                         = \wp_unslash( $comment_data['comment_content'] );
+			$content                         = self::replace_custom_emoji( $content, $activity['object'] );
+			$comment_data['comment_content'] = \addslashes( $content );
 		}
 
 		return $comment_data;

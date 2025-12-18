@@ -1304,4 +1304,25 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertFalse( Attachments::import_emoji( '' ) );
 		$this->assertFalse( Attachments::import_emoji( 'not-a-url' ) );
 	}
+
+	/**
+	 * Test emoji import returns false when download fails.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_returns_false_on_download_failure() {
+		$emoji_url = 'https://example.com/emoji/download-fail.png';
+
+		// Mock a failed HTTP request.
+		$fail_download = function () {
+			return new \WP_Error( 'http_request_failed', 'Connection failed' );
+		};
+		\add_filter( 'pre_http_request', $fail_download );
+
+		$result = Attachments::import_emoji( $emoji_url );
+
+		\remove_filter( 'pre_http_request', $fail_download );
+
+		$this->assertFalse( $result );
+	}
 }
