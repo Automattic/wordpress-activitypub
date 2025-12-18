@@ -496,7 +496,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 */
 	public function test_create_post_enabled_by_option() {
 		// Enable the option.
-		\update_option( 'activitypub_create_posts', true );
+		\update_option( 'activitypub_create_posts', '1' );
 
 		// Mock HTTP request for Remote_Actors::fetch_by_uri.
 		$mock_callback = function ( $pre, $url_or_object ) {
