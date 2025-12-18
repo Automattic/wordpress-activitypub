@@ -12,7 +12,7 @@ import { RequestUtils } from '@wordpress/e2e-test-utils-playwright';
  * Global setup for ActivityPub E2E tests.
  *
  * @param {import('@playwright/test').FullConfig} config
- * @returns {Promise<void>}
+ * @return {Promise<void>}
  */
 async function globalSetup( config ) {
 	const { storageState, baseURL } = config.projects[ 0 ].use;

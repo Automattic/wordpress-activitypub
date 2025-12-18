@@ -40,7 +40,9 @@ const createBlock = ( name, attributes = {}, innerBlocks = [] ) => ( {
  * Migrates the buttonOnly attribute to a block style className.
  * Shared between v1 and v2 deprecations.
  *
- * @param {Object} attributes Block attributes including buttonOnly and className.
+ * @param {Object}  attributes            Block attributes including buttonOnly and className.
+ * @param {boolean} attributes.buttonOnly Whether to show only the button.
+ * @param {string}  attributes.className  Existing class names.
  * @return {Object} New attributes with className instead of buttonOnly.
  */
 function migrateButtonOnly( { buttonOnly = false, className = '', ...newAttributes } ) {

@@ -1,12 +1,7 @@
-import { useState, useEffect, useRef } from '@wordpress/element';
+import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { useOptions } from '../shared/use-options';
-
-/**
- * @typedef {Object} JSX
- * @typedef {import('react').ReactElement} JSX.Element
- */
 
 /**
  * A component that renders a row of user avatars for a given set of reactions.
@@ -144,13 +139,13 @@ export function Reactions( {
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
 
-	const onError = () => {
+	const onError = useCallback( () => {
 		// On error, use fallback reactions if provided
 		if ( fallbackReactions ) {
 			setReactions( fallbackReactions );
 		}
 		setLoading( false );
-	};
+	}, [ fallbackReactions ] );
 
 	useEffect( () => {
 		if ( providedReactions ) {
@@ -159,7 +154,7 @@ export function Reactions( {
 			return;
 		}
 
-		// if no postId is provided or it's not a number (Site Editor), return early.
+		// if no postId is provided, or it's not a number (Site Editor), return early.
 		if ( ! postId || typeof postId !== 'number' ) {
 			onError();
 			return;
@@ -182,7 +177,7 @@ export function Reactions( {
 				setLoading( false );
 			} )
 			.catch( onError );
-	}, [ postId, providedReactions, fallbackReactions, namespace ] );
+	}, [ postId, providedReactions, fallbackReactions, namespace, onError ] );
 
 	if ( loading ) {
 		return null;

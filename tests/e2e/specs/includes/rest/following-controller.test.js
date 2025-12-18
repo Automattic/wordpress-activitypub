@@ -7,7 +7,7 @@ test.describe( 'ActivityPub Following Collection REST API', () => {
 	let testUserId;
 	let followingEndpoint;
 
-	test.beforeAll( async ( { requestUtils } ) => {
+	test.beforeAll( async () => {
 		// Use the default test user
 		testUserId = 1;
 		followingEndpoint = `/activitypub/1.0/actors/${ testUserId }/following`;

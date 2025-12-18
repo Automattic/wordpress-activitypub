@@ -70,19 +70,19 @@ export default function FeedInspector(): ReactNode {
 		orderby: 'date',
 	} );
 
-	// Early return if no id (shouldn't happen due to route config, but handle gracefully)
-	if ( ! id ) {
-		return null;
-	}
-
-	// Fetch tag terms if the post has tags
+	// Fetch tag terms if the post has tags - must be called before early return
 	const tagIds: number[] = post?.ap_tag || [];
 	const { records: terms } = useEntityRecords< Term >( 'taxonomy', 'ap_tag', {
 		include: tagIds,
 	} );
 
-	// Use the shared tag filter hook
+	// Use the shared tag filter hook - must be called before early return
 	const { selectedTagId, updateTagFilter } = useTagFilter();
+
+	// Early return if no id (shouldn't happen due to route config, but handle gracefully)
+	if ( ! id ) {
+		return null;
+	}
 
 	const handleTagClick: ( tagId: number ) => void = ( tagId: number ): void => {
 		// Apply filter and close inspector
