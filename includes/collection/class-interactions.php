@@ -321,6 +321,15 @@ class Interactions {
 			$allowed_tags['p'] = array();
 		}
 
+		// Add `img` for custom emoji support.
+		if ( ! array_key_exists( 'img', $allowed_tags ) ) {
+			$allowed_tags['img'] = array(
+				'src'   => true,
+				'alt'   => true,
+				'class' => true,
+			);
+		}
+
 		return $allowed_tags;
 	}
 
@@ -370,7 +379,7 @@ class Interactions {
 		$gm_date   = \gmdate( 'Y-m-d H:i:s', \strtotime( $published ) );
 
 		$comment_data = array(
-			'comment_author'       => Emoji::replace_custom_emoji( $comment_author ?? __( 'Anonymous', 'activitypub' ), $actor ),
+			'comment_author'       => $comment_author ?? __( 'Anonymous', 'activitypub' ),
 			'comment_author_url'   => \esc_url_raw( $url ),
 			'comment_content'      => Emoji::replace_custom_emoji( $comment_content, $activity['object'] ),
 			'comment_type'         => 'comment',
