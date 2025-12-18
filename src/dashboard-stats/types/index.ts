@@ -3,10 +3,6 @@ export interface Actor {
 	label: string;
 }
 
-export interface Settings {
-	actors: Actor[];
-}
-
 export interface StatComparison {
 	current: number;
 	change: number;

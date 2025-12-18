@@ -54,6 +54,9 @@ class Scheduler {
 	public static function init() {
 		self::register_schedulers();
 
+		// Custom cron schedules.
+		\add_filter( 'cron_schedules', array( self::class, 'add_cron_schedules' ) );
+
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_remote_actors', array( self::class, 'update_remote_actors' ) );
 		\add_action( 'activitypub_cleanup_remote_actors', array( self::class, 'cleanup_remote_actors' ) );
@@ -91,6 +94,27 @@ class Scheduler {
 		 * @since 5.0.0
 		 */
 		\do_action( 'activitypub_register_schedulers' );
+	}
+
+	/**
+	 * Add custom cron schedules.
+	 *
+	 * @param array $schedules Existing cron schedules.
+	 *
+	 * @return array Modified cron schedules.
+	 */
+	public static function add_cron_schedules( $schedules ) {
+		$schedules['monthly'] = array(
+			'interval' => 30 * DAY_IN_SECONDS,
+			'display'  => \__( 'Once Monthly', 'activitypub' ),
+		);
+
+		$schedules['yearly'] = array(
+			'interval' => 365 * DAY_IN_SECONDS,
+			'display'  => \__( 'Once Yearly', 'activitypub' ),
+		);
+
+		return $schedules;
 	}
 
 	/**
@@ -147,7 +171,18 @@ class Scheduler {
 			\wp_schedule_event( time(), 'weekly', 'activitypub_sync_blocklist_subscriptions' );
 		}
 
-		Statistics::register_schedules();
+		// Schedule monthly stats collection for the 1st of each month.
+		if ( ! \wp_next_scheduled( 'activitypub_collect_monthly_stats' ) ) {
+			// Calculate next 1st of month at 2:00 AM.
+			$next_first = self::get_next_first_of_month();
+			\wp_schedule_event( $next_first, 'monthly', 'activitypub_collect_monthly_stats' );
+		}
+
+		// Schedule annual stats compilation for January 1st.
+		if ( ! \wp_next_scheduled( 'activitypub_compile_annual_stats' ) ) {
+			$next_year = self::get_next_january_first();
+			\wp_schedule_event( $next_year, 'yearly', 'activitypub_compile_annual_stats' );
+		}
 	}
 
 	/**
@@ -163,8 +198,35 @@ class Scheduler {
 		\wp_unschedule_hook( 'activitypub_inbox_purge' );
 		\wp_unschedule_hook( 'activitypub_ap_post_purge' );
 		\wp_unschedule_hook( 'activitypub_sync_blocklist_subscriptions' );
+		\wp_unschedule_hook( 'activitypub_collect_monthly_stats' );
+		\wp_unschedule_hook( 'activitypub_compile_annual_stats' );
+	}
 
-		Statistics::deregister_schedules();
+	/**
+	 * Get the next 1st of month timestamp.
+	 *
+	 * @return int Unix timestamp of next 1st of month at 2:00 AM.
+	 */
+	private static function get_next_first_of_month() {
+		$now        = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$next_month = \strtotime( 'first day of next month 02:00:00', $now );
+
+		return $next_month;
+	}
+
+	/**
+	 * Get the next January 1st timestamp.
+	 *
+	 * @return int Unix timestamp of next January 1st at 3:00 AM.
+	 */
+	private static function get_next_january_first() {
+		$now  = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$year = (int) \gmdate( 'Y', $now );
+
+		// If we're past January 1st, schedule for next year.
+		$jan_first = \strtotime( sprintf( '%d-01-01 03:00:00', $year + 1 ) );
+
+		return $jan_first;
 	}
 
 	/**

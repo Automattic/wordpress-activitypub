@@ -7,8 +7,6 @@
 
 namespace Activitypub\WP_Admin;
 
-use Activitypub\Collection\Actors;
-
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\user_can_activitypub;
 
@@ -69,17 +67,9 @@ class Statistics_Dashboard {
 		);
 
 		// Add inline script to initialize the widget.
-		$actors   = self::get_available_actors();
-		$settings = array(
-			'actors' => $actors,
-		);
-
 		\wp_add_inline_script(
 			'activitypub-dashboard-stats',
-			sprintf(
-				'wp.domReady( function() { activitypub.dashboardStats.initialize( "activitypub-stats-widget-root", %s ); } );',
-				\wp_json_encode( $settings )
-			)
+			'wp.domReady( function() { activitypub.dashboardStats.initialize( "activitypub-stats-widget-root" ); } );'
 		);
 	}
 
@@ -93,33 +83,6 @@ class Statistics_Dashboard {
 		$has_blog_access = ! is_user_type_disabled( 'blog' ) && \current_user_can( 'manage_options' );
 
 		return $has_user_access || $has_blog_access;
-	}
-
-	/**
-	 * Get available actors (user/blog) for the current user.
-	 *
-	 * @return array Array of available actors with id and label.
-	 */
-	private static function get_available_actors() {
-		$actors = array();
-
-		// Check if current user can access their own stats.
-		if ( user_can_activitypub( \get_current_user_id() ) && ! is_user_type_disabled( 'user' ) ) {
-			$actors[] = array(
-				'id'    => \get_current_user_id(),
-				'label' => \__( 'Your Stats', 'activitypub' ),
-			);
-		}
-
-		// Check if blog stats are available.
-		if ( ! is_user_type_disabled( 'blog' ) && \current_user_can( 'manage_options' ) ) {
-			$actors[] = array(
-				'id'    => Actors::BLOG_USER_ID,
-				'label' => \__( 'Blog Stats', 'activitypub' ),
-			);
-		}
-
-		return $actors;
 	}
 
 	/**
