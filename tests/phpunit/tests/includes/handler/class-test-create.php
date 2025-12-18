@@ -484,7 +484,7 @@ class Test_Create extends \WP_UnitTestCase {
 
 		// Verify no post was created.
 		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_disabled' );
-		$this->assertTrue( \is_wp_error( $created_object ) || \is_null( $created_object ) );
+		$this->assertTrue( \is_wp_error( $created_object ) );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
 	}
