@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.9.0] - 2025-12-18
+### Added
+- Hide comments from specific post types in the WordPress admin comments list. [#2662]
+
+### Fixed
+- Prevent comment email notifications for ap_post. [#2667]
+- Prevent post creation when Reader is deactivated. [#2666]
+
 ## [7.8.0] - 2025-12-17
 ### Added
 - Add blocklist subscriptions for automatic weekly synchronization of remote blocklists. [#2590]
@@ -1603,6 +1611,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.9.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.0...7.9.0
 [7.8.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.7.1...7.8.0
 [7.7.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.7.0...7.7.1
 [7.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.6.1...7.7.0
