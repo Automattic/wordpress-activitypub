@@ -1,0 +1,10 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"name": "activitypub/test-block",
+	"apiVersion": 3,
+	"version": "2.0.0",
+	"title": "Test Block",
+	"category": "widgets",
+	"description": "A test block for version replacement testing.",
+	"textdomain": "activitypub"
+}
