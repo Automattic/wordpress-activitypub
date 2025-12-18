@@ -188,7 +188,7 @@ class Emoji {
 	private static function replace_emoji_in_text( $text, $placeholder, $emoji_url ) {
 		$name = trim( $placeholder, ':' );
 
-		return str_replace(
+		return str_ireplace(
 			$placeholder,
 			sprintf(
 				'<img src="%s" alt="%s" title="%s" class="emoji" width="20" height="20" draggable="false" />',

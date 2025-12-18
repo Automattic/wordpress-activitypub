@@ -1171,6 +1171,7 @@ class Migration {
 	 * 3. Stores as _activitypub_emoji post meta
 	 *
 	 * @param int $batch_size Optional. Number of actors to process per batch. Default 50.
+	 * @param int $offset     Optional. Offset for pagination. Default 0.
 	 * @return array|null Array with batch size if there are more actors to process, null otherwise.
 	 */
 	public static function migrate_actor_emoji( $batch_size = 50, $offset = 0 ) {
