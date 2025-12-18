@@ -436,4 +436,110 @@ class Test_Create extends \WP_UnitTestCase {
 		// Should not create objects with malformed data.
 		$this->assertEquals( count( $objects_before ), count( $objects_after ) );
 	}
+
+	/**
+	 * Test create_post returns false when activitypub_create_posts option is disabled.
+	 *
+	 * @covers ::create_post
+	 */
+	public function test_create_post_disabled_by_option() {
+		// Ensure option is not set.
+		\delete_option( 'activitypub_create_posts' );
+
+		// Mock HTTP request for Remote_Actors::fetch_by_uri.
+		$mock_callback = function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
+			if ( 'https://example.com/users/testuser' === $url ) {
+				return array(
+					'id'                => 'https://example.com/users/testuser',
+					'type'              => 'Person',
+					'name'              => 'Test Actor',
+					'preferredUsername' => 'testuser',
+					'url'               => 'https://example.com/users/testuser',
+					'inbox'             => 'https://example.com/users/testuser/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
+
+		$activity = array(
+			'id'     => 'https://example.com/activities/create_disabled',
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/testuser',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'           => 'https://example.com/objects/note_disabled',
+				'type'         => 'Note',
+				'content'      => '<p>This should not be created</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'published'    => '2023-01-01T12:00:00Z',
+				'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			),
+		);
+
+		$result = Create::create_post( $activity, array( $this->user_id ) );
+
+		$this->assertFalse( $result );
+
+		// Verify no post was created.
+		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_disabled' );
+		$this->assertTrue( \is_wp_error( $created_object ) || \is_null( $created_object ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
+	}
+
+	/**
+	 * Test create_post works when activitypub_create_posts option is enabled.
+	 *
+	 * @covers ::create_post
+	 */
+	public function test_create_post_enabled_by_option() {
+		// Enable the option.
+		\update_option( 'activitypub_create_posts', true );
+
+		// Mock HTTP request for Remote_Actors::fetch_by_uri.
+		$mock_callback = function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
+			if ( 'https://example.com/users/testuser2' === $url ) {
+				return array(
+					'id'                => 'https://example.com/users/testuser2',
+					'type'              => 'Person',
+					'name'              => 'Test Actor 2',
+					'preferredUsername' => 'testuser2',
+					'url'               => 'https://example.com/users/testuser2',
+					'inbox'             => 'https://example.com/users/testuser2/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
+
+		$activity = array(
+			'id'     => 'https://example.com/activities/create_enabled',
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/testuser2',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'           => 'https://example.com/objects/note_enabled',
+				'type'         => 'Note',
+				'content'      => '<p>This should be created</p>',
+				'attributedTo' => 'https://example.com/users/testuser2',
+				'published'    => '2023-01-01T12:00:00Z',
+				'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			),
+		);
+
+		$result = Create::create_post( $activity, array( $this->user_id ) );
+
+		$this->assertInstanceOf( 'WP_Post', $result );
+
+		// Verify post was created.
+		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_enabled' );
+		$this->assertNotNull( $created_object );
+		$this->assertStringContainsString( 'This should be created', $created_object->post_content );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
+		\delete_option( 'activitypub_create_posts' );
+	}
 }
