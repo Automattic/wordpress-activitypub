@@ -800,15 +800,11 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$comment_id = Interactions::add_comment( $activity );
 		$comment    = get_comment( $comment_id );
 
-		// Test emoji replacement in comment content.
-		$this->assertStringContainsString(
-			'<img src="https://example.com/files/kappa.png" alt="kappa" title="kappa" class="emoji" width="20" height="20" draggable="false" />',
-			$comment->comment_content
-		);
-		$this->assertStringContainsString(
-			'<img src="https://example.com/files/smile.png" alt="smile" title="smile" class="emoji" width="20" height="20" draggable="false" />',
-			$comment->comment_content
-		);
+		// Test emoji replacement in comment content (emoji is cached locally).
+		$this->assertStringContainsString( 'kappa.png" alt="kappa" title="kappa" class="emoji"', $comment->comment_content );
+		$this->assertStringContainsString( 'smile.png" alt="smile" title="smile" class="emoji"', $comment->comment_content );
+		$this->assertStringNotContainsString( ':kappa:', $comment->comment_content );
+		$this->assertStringNotContainsString( ':smile:', $comment->comment_content );
 
 		// Test that shortcode is stored in database, not HTML.
 		$this->assertSame( 'Test User :kappa:', $comment->comment_author );
@@ -823,7 +819,8 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Test emoji replacement on display via comment_author filter.
 		$author_with_emoji = get_comment_author( $comment_id );
-		$this->assertStringContainsString( '<img src="https://example.com/files/kappa.png" alt="kappa" title="kappa" class="emoji" width="20" height="20" draggable="false" />', $author_with_emoji );
+		$this->assertStringContainsString( 'kappa.png" alt="kappa" title="kappa" class="emoji"', $author_with_emoji );
+		$this->assertStringNotContainsString( ':kappa:', $author_with_emoji );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $filter, 10 );
 	}

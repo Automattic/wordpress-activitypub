@@ -163,7 +163,7 @@ class Emoji {
 	 * @return string The processed text with emoji replacements.
 	 */
 	public static function replace_for_actor( $text, $actor_url ) {
-		$actor_post = Collection\Remote_Actors::get_by_actor( $actor_url );
+		$actor_post = Collection\Remote_Actors::get_by_uri( $actor_url );
 		if ( ! $actor_post || \is_wp_error( $actor_post ) ) {
 			return $text;
 		}
