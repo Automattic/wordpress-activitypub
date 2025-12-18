@@ -118,13 +118,10 @@ const updateReadmeWithChangelog = ( version ) => {
 	// 2. Remove the square brackets from the version numbers.
 	// 3. Remove PR numbers like [#123] from the ends of lines.
 	let formattedChangelog = releases
-		.map( ( release ) => {
-			return release.content
+		.map( ( entry ) => {
+			return entry.content
 				.replace( /### /g, '#### ' )
-				.replace(
-					`## [${ release.version }] - ${ release.date }`,
-					`### ${ release.version } - ${ release.date }`
-				)
+				.replace( `## [${ entry.version }] - ${ entry.date }`, `### ${ entry.version } - ${ entry.date }` )
 				.replace( /\s+\[#\d+\]$/gm, '' )
 				.trim();
 		} )

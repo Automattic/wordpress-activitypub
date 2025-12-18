@@ -7,18 +7,18 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 	let testUserId;
 	let followersEndpoint;
 
-	test.beforeAll( async ( { requestUtils } ) => {
+	test.beforeAll( async () => {
 		// Use the admin user (ID 1) which should always exist and be an actor
 		// In ActivityPub, by default the admin user is enabled as an actor
 		testUserId = 1;
 		followersEndpoint = `/activitypub/1.0/actors/${ testUserId }/followers`;
 	} );
 
-	test.afterAll( async ( { requestUtils } ) => {
+	test.afterAll( async () => {
 		// No cleanup needed - we're using the admin user
 	} );
 
-	test.beforeEach( async ( { requestUtils } ) => {
+	test.beforeEach( async () => {
 		// Clean up any existing followers before each test
 		// This would require a custom endpoint or direct database manipulation
 	} );

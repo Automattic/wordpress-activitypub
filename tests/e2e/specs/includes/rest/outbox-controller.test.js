@@ -7,7 +7,7 @@ test.describe( 'ActivityPub Outbox REST API', () => {
 	let testUserId;
 	let outboxEndpoint;
 
-	test.beforeAll( async ( { requestUtils } ) => {
+	test.beforeAll( async () => {
 		// Use the default test user
 		testUserId = 1;
 		outboxEndpoint = `/activitypub/1.0/actors/${ testUserId }/outbox`;
