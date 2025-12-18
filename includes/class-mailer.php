@@ -173,6 +173,14 @@ class Mailer {
 
 		$actor = self::normalize_actor( $actor );
 
+		// Replace emoji in actor name and summary.
+		if ( ! empty( $actor['name'] ) ) {
+			$actor['name'] = Emoji::replace_for_actor( $actor['name'], $actor['url'] );
+		}
+		if ( ! empty( $actor['summary'] ) ) {
+			$actor['summary'] = Emoji::replace_for_actor( $actor['summary'], $actor['url'] );
+		}
+
 		$template_args = array_merge(
 			$actor,
 			array(

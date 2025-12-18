@@ -1204,4 +1204,104 @@ class Test_Attachments extends \WP_UnitTestCase {
 		\WP_Filesystem();
 		$wp_filesystem->rmdir( $fake_dir );
 	}
+
+	/**
+	 * Test emoji import caches file and returns local URL.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_caches_file() {
+		$emoji_url = 'https://example.com/emoji/kappa.png';
+		$result    = Attachments::import_emoji( $emoji_url );
+
+		$this->assertNotFalse( $result );
+		$this->assertStringContainsString( '/activitypub/emoji/', $result );
+		$this->assertStringContainsString( 'kappa.png', $result );
+	}
+
+	/**
+	 * Test emoji import returns cached URL when no updated timestamp provided.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_uses_cache_without_updated() {
+		$emoji_url = 'https://example.com/emoji/smile.png';
+
+		// First import.
+		$first_result = Attachments::import_emoji( $emoji_url );
+		$this->assertNotFalse( $first_result );
+
+		// Second import without updated timestamp - should use cache.
+		$second_result = Attachments::import_emoji( $emoji_url );
+		$this->assertEquals( $first_result, $second_result );
+	}
+
+	/**
+	 * Test emoji import uses cache when updated timestamp is older than cached file.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_uses_cache_when_updated_is_older() {
+		$emoji_url = 'https://example.com/emoji/old.png';
+
+		// First import.
+		$first_result = Attachments::import_emoji( $emoji_url );
+		$this->assertNotFalse( $first_result );
+
+		// Second import with old updated timestamp - should use cache.
+		$old_timestamp = '2020-01-01T00:00:00Z';
+		$second_result = Attachments::import_emoji( $emoji_url, $old_timestamp );
+		$this->assertEquals( $first_result, $second_result );
+	}
+
+	/**
+	 * Test emoji import re-downloads when updated timestamp is newer than cached file.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_redownloads_when_updated_is_newer() {
+		$emoji_url = 'https://example.com/emoji/new.png';
+
+		// First import.
+		$first_result = Attachments::import_emoji( $emoji_url );
+		$this->assertNotFalse( $first_result );
+
+		// Get the cached file path and modify its timestamp to be old.
+		$upload_dir = \wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/activitypub/emoji/example.com/new.png';
+		$this->assertTrue( \file_exists( $file_path ), 'Cached file should exist' );
+
+		// Set file modification time to the past.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Direct touch() needed for test timestamp manipulation.
+		\touch( $file_path, \strtotime( '2020-01-01' ) );
+
+		// Track if download was attempted.
+		$download_attempted = false;
+		$track_download     = function ( $response, $parsed_args, $url ) use ( &$download_attempted, $emoji_url ) {
+			if ( $url === $emoji_url ) {
+				$download_attempted = true;
+			}
+			return $response;
+		};
+		\add_filter( 'pre_http_request', $track_download, 5, 3 );
+
+		// Import with newer updated timestamp - should re-download.
+		$new_timestamp = '2025-01-01T00:00:00Z';
+		$second_result = Attachments::import_emoji( $emoji_url, $new_timestamp );
+
+		\remove_filter( 'pre_http_request', $track_download, 5 );
+
+		$this->assertNotFalse( $second_result );
+		$this->assertTrue( $download_attempted, 'Should have attempted to re-download the emoji' );
+	}
+
+	/**
+	 * Test emoji import returns false for invalid URL.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_returns_false_for_invalid_url() {
+		$this->assertFalse( Attachments::import_emoji( '' ) );
+		$this->assertFalse( Attachments::import_emoji( 'not-a-url' ) );
+	}
 }

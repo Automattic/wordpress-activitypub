@@ -90,7 +90,7 @@ class Emoji {
 		}
 
 		foreach ( $emoji_data as $emoji ) {
-			$local_url = Attachments::import_emoji( $emoji['url'] );
+			$local_url = Attachments::import_emoji( $emoji['url'], $emoji['updated'] ?? null );
 			$emoji_url = $local_url ? $local_url : $emoji['url'];
 			$text      = self::replace_emoji_in_text( $text, $emoji['name'], $emoji_url );
 		}
@@ -124,10 +124,11 @@ class Emoji {
 	 * @param array $data The data array containing emoji definitions in 'tag'.
 	 *
 	 * @return array {
-	 *      Array of emoji data with url and name keys.
+	 *      Array of emoji data with url, name, and optional updated keys.
 	 *
-	 *      @type string $url  The URL of the emoji image.
-	 *      @type string $name The shortcode name of the emoji (e.g., ":emoji:").
+	 *      @type string      $url     The URL of the emoji image.
+	 *      @type string      $name    The shortcode name of the emoji (e.g., ":emoji:").
+	 *      @type string|null $updated Optional. The emoji's updated timestamp (ISO 8601).
 	 *  }
 	 */
 	public static function extract_emoji_data( $data ) {
@@ -140,13 +141,39 @@ class Emoji {
 		foreach ( $data['tag'] as $tag ) {
 			if ( isset( $tag['type'] ) && 'Emoji' === $tag['type'] && ! empty( $tag['name'] ) && ! empty( $tag['icon']['url'] ) ) {
 				$emoji_data[] = array(
-					'url'  => $tag['icon']['url'],
-					'name' => $tag['name'],
+					'url'     => $tag['icon']['url'],
+					'name'    => $tag['name'],
+					'updated' => $tag['updated'] ?? null,
 				);
 			}
 		}
 
 		return $emoji_data;
+	}
+
+	/**
+	 * Replace emoji in text using a remote actor's stored emoji data.
+	 *
+	 * Looks up the remote actor by URL and uses their stored emoji data
+	 * to replace emoji shortcodes in the text.
+	 *
+	 * @param string $text      The text to process.
+	 * @param string $actor_url The actor's URL to look up emoji data.
+	 *
+	 * @return string The processed text with emoji replacements.
+	 */
+	public static function replace_for_actor( $text, $actor_url ) {
+		$actor_post = Collection\Remote_Actors::get_by_actor( $actor_url );
+		if ( ! $actor_post || \is_wp_error( $actor_post ) ) {
+			return $text;
+		}
+
+		$emoji_data = \get_post_meta( $actor_post->ID, '_activitypub_emoji', true );
+		if ( empty( $emoji_data ) ) {
+			return $text;
+		}
+
+		return self::replace_from_json( $text, $emoji_data );
 	}
 
 	/**
@@ -159,12 +186,15 @@ class Emoji {
 	 * @return string The processed text.
 	 */
 	private static function replace_emoji_in_text( $text, $placeholder, $emoji_url ) {
+		$name = trim( $placeholder, ':' );
+
 		return str_replace(
 			$placeholder,
 			sprintf(
-				'<img src="%s" alt="%s" class="emoji" />',
+				'<img src="%s" alt="%s" title="%s" class="emoji" width="20" height="20" draggable="false" />',
 				\esc_url( $emoji_url ),
-				\esc_attr( trim( $placeholder, ':' ) )
+				\esc_attr( $name ),
+				\esc_attr( $name )
 			),
 			$text
 		);

@@ -414,3 +414,9 @@ input.blog-user-identifier {
 .edit-comments-php .column-author img.emoji {
 	float: none;
 }
+
+@media (prefers-reduced-motion: reduce) {
+	.emoji {
+		animation: none !important;
+	}
+}

@@ -170,13 +170,15 @@ class Attachments {
 	 * Import a remote emoji image locally.
 	 *
 	 * Downloads the emoji image and stores it organized by source domain.
-	 * If the emoji is already cached, returns the existing local URL.
+	 * If the emoji is already cached and not stale, returns the existing local URL.
 	 *
-	 * @param string $emoji_url The remote emoji URL.
+	 * @param string      $emoji_url The remote emoji URL.
+	 * @param string|null $updated   Optional. The remote emoji's updated timestamp (ISO 8601).
+	 *                               If provided and newer than cached version, re-downloads.
 	 *
 	 * @return string|false The local emoji URL on success, false on failure.
 	 */
-	public static function import_emoji( $emoji_url ) {
+	public static function import_emoji( $emoji_url, $updated = null ) {
 		if ( empty( $emoji_url ) || ! \filter_var( $emoji_url, FILTER_VALIDATE_URL ) ) {
 			return false;
 		}
@@ -184,7 +186,22 @@ class Attachments {
 		// Check if already cached.
 		$cached_url = self::get_emoji_url( $emoji_url );
 		if ( $cached_url ) {
-			return $cached_url;
+			// If no updated timestamp provided, use cached version.
+			if ( ! $updated ) {
+				return $cached_url;
+			}
+
+			// Compare timestamps - re-download if remote is newer.
+			$paths       = self::get_emoji_storage_paths( $emoji_url );
+			$url_path    = \wp_parse_url( $emoji_url, PHP_URL_PATH );
+			$file_name   = \sanitize_file_name( \basename( $url_path ) );
+			$file_path   = $paths['basedir'] . '/' . $file_name;
+			$local_time  = \file_exists( $file_path ) ? \filemtime( $file_path ) : 0;
+			$remote_time = \strtotime( $updated );
+
+			if ( $remote_time && $local_time >= $remote_time ) {
+				return $cached_url;
+			}
 		}
 
 		if ( ! \function_exists( 'download_url' ) ) {

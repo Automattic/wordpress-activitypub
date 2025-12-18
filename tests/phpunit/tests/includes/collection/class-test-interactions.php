@@ -802,11 +802,11 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Test emoji replacement in comment content.
 		$this->assertStringContainsString(
-			'<img src="https://example.com/files/kappa.png" alt="kappa" class="emoji" />',
+			'<img src="https://example.com/files/kappa.png" alt="kappa" title="kappa" class="emoji" width="20" height="20" draggable="false" />',
 			$comment->comment_content
 		);
 		$this->assertStringContainsString(
-			'<img src="https://example.com/files/smile.png" alt="smile" class="emoji" />',
+			'<img src="https://example.com/files/smile.png" alt="smile" title="smile" class="emoji" width="20" height="20" draggable="false" />',
 			$comment->comment_content
 		);
 
@@ -823,7 +823,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Test emoji replacement on display via comment_author filter.
 		$author_with_emoji = get_comment_author( $comment_id );
-		$this->assertStringContainsString( '<img src="https://example.com/files/kappa.png" alt="kappa" class="emoji" />', $author_with_emoji );
+		$this->assertStringContainsString( '<img src="https://example.com/files/kappa.png" alt="kappa" title="kappa" class="emoji" width="20" height="20" draggable="false" />', $author_with_emoji );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $filter, 10 );
 	}

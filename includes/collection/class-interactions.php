@@ -316,9 +316,13 @@ class Interactions {
 		// Add `img` for custom emoji support.
 		if ( ! array_key_exists( 'img', $allowed_tags ) ) {
 			$allowed_tags['img'] = array(
-				'src'   => true,
-				'alt'   => true,
-				'class' => true,
+				'src'       => true,
+				'alt'       => true,
+				'title'     => true,
+				'class'     => true,
+				'width'     => true,
+				'height'    => true,
+				'draggable' => true,
 			);
 		}
 
