@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Interactions;
+use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\object_id_to_comment;
 
@@ -720,27 +721,41 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Emoji::replace_custom_emoji
 	 */
 	public function test_activity_to_comment_with_emoji() {
-		// Mock actor with emoji in name.
-		$filter = function ( $value, $actor ) {
-			return array(
-				'name' => 'Test User :kappa:',
-				'icon' => array(
-					'url' => 'https://example.com/icon',
-				),
-				'url'  => $actor,
-				'id'   => 'http://example.org/users/example',
-				'tag'  => array(
-					array(
-						'type' => 'Emoji',
-						'name' => ':kappa:',
-						'icon' => array(
-							'type'      => 'Image',
-							'mediaType' => 'image/png',
-							'url'       => 'https://example.com/files/kappa.png',
-						),
+		$actor_uri = 'http://example.org/users/emoji-user';
+
+		// Create remote actor with emoji data.
+		$actor_data    = array(
+			'id'                => $actor_uri,
+			'type'              => 'Person',
+			'preferredUsername' => 'emoji-user',
+			'name'              => 'Test User :kappa:',
+			'inbox'             => 'http://example.org/users/emoji-user/inbox',
+			'publicKey'         => array(
+				'id'           => $actor_uri . '#main-key',
+				'owner'        => $actor_uri,
+				'publicKeyPem' => "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0\n-----END PUBLIC KEY-----",
+			),
+			'tag'               => array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':kappa:',
+					'icon' => array(
+						'type'      => 'Image',
+						'mediaType' => 'image/png',
+						'url'       => 'https://example.com/files/kappa.png',
 					),
 				),
-			);
+			),
+		);
+		$actor_post_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $actor_post_id );
+
+		// Mock actor metadata lookup.
+		$filter = function ( $value, $actor ) use ( $actor_uri, $actor_data ) {
+			if ( $actor === $actor_uri ) {
+				return array_merge( $actor_data, array( 'url' => $actor_uri ) );
+			}
+			return $value;
 		};
 		\add_filter( 'pre_get_remote_metadata_by_actor', $filter, 10, 2 );
 
@@ -754,7 +769,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 			'id'       => 'https://example.com/activities/1',
 			'type'     => 'Note',
 			'content'  => 'Hello world :kappa: and :smile:',
-			'actor'    => self::$user_url,
+			'actor'    => $actor_uri,
 			'object'   => array(
 				'id'        => 'https://example.com/objects/1',
 				'content'   => 'Hello world :kappa: and :smile:',
@@ -798,8 +813,12 @@ class Test_Interactions extends \WP_UnitTestCase {
 		// Test that shortcode is stored in database, not HTML.
 		$this->assertSame( 'Test User :kappa:', $comment->comment_author );
 
-		// Test that emoji metadata is stored.
-		$emoji_data = get_comment_meta( $comment_id, 'activitypub_author_emoji', true );
+		// Test that comment is linked to remote actor.
+		$remote_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+		$this->assertEquals( $actor_post_id, $remote_actor_id );
+
+		// Test that emoji data is stored on remote actor.
+		$emoji_data = get_post_meta( $actor_post_id, '_activitypub_emoji', true );
 		$this->assertNotEmpty( $emoji_data );
 
 		// Test emoji replacement on display via comment_author filter.

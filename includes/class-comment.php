@@ -34,7 +34,7 @@ class Comment {
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
-		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 3 );
+		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
 		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
 	}
 
@@ -848,28 +848,27 @@ class Comment {
 	 * Render emoji in comment author name.
 	 *
 	 * Replaces emoji shortcodes with img tags on the get_comment_author filter.
+	 * Emoji data is retrieved from the linked remote actor.
 	 *
-	 * @param string           $author     The comment author name.
-	 * @param string           $comment_id The comment ID as a numeric string.
-	 * @param \WP_Comment|null $comment    The comment object.
+	 * @param string $author     The comment author name.
+	 * @param string $comment_id The comment ID as a numeric string.
+	 *
 	 * @return string The comment author name with rendered emoji.
 	 */
-	public static function render_emoji( $author, $comment_id, $comment = null ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$emoji_data = \get_comment_meta( $comment_id, 'activitypub_author_emoji', true );
+	public static function render_emoji( $author, $comment_id ) {
+		$remote_actor_id = \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+
+		if ( empty( $remote_actor_id ) ) {
+			return $author;
+		}
+
+		$emoji_data = \get_post_meta( $remote_actor_id, '_activitypub_emoji', true );
 
 		if ( empty( $emoji_data ) ) {
 			return $author;
 		}
 
-		$emoji_tags = \json_decode( $emoji_data, true );
-		if ( ! is_array( $emoji_tags ) ) {
-			return $author;
-		}
-
-		// Build activity array for emoji replacement.
-		$activity = array( 'tag' => $emoji_tags );
-
-		return Emoji::replace_custom_emoji( $author, $activity );
+		return Emoji::replace_from_json( $author, $emoji_data );
 	}
 
 	/**
@@ -878,6 +877,7 @@ class Comment {
 	 * This runs at priority 20 after WordPress's esc_html() filter on comment_author.
 	 *
 	 * @param string $author The comment author name (already escaped by WordPress).
+	 *
 	 * @return string The comment author name with emoji images unescaped.
 	 */
 	public static function unescape_emoji( $author ) {

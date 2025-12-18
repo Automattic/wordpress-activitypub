@@ -13,6 +13,47 @@ namespace Activitypub;
 class Emoji {
 
 	/**
+	 * Prepare comment data with emoji handling.
+	 *
+	 * Replaces emoji in content at insert-time. Author emoji is handled
+	 * at display-time via the remote actor's stored emoji data.
+	 *
+	 * @param array $comment_data The comment data array.
+	 * @param array $activity     The activity array.
+	 *
+	 * @return array The comment data with emoji processing applied.
+	 */
+	public static function prepare_comment_data( $comment_data, $activity ) {
+		// Replace emoji in content at insert-time.
+		if ( ! empty( $comment_data['comment_content'] ) && ! empty( $activity['object'] ) ) {
+			$comment_data['comment_content'] = self::replace_custom_emoji( $comment_data['comment_content'], $activity['object'] );
+		}
+
+		return $comment_data;
+	}
+
+	/**
+	 * Prepare actor meta for emoji storage.
+	 *
+	 * Extracts emoji data from an actor and returns it for storage as post meta.
+	 *
+	 * @param array $actor The actor array containing potential emoji in tags.
+	 *
+	 * @return array Meta input array with emoji data, or empty array if no emoji.
+	 */
+	public static function prepare_actor_meta( $actor ) {
+		$emoji_data = self::extract_emoji_data( $actor );
+
+		if ( empty( $emoji_data ) ) {
+			return array();
+		}
+
+		return array(
+			'_activitypub_emoji' => \wp_json_encode( $actor['tag'] ),
+		);
+	}
+
+	/**
 	 * Replace custom emoji shortcodes with their corresponding emoji.
 	 *
 	 * @param string $text     The text to process.
@@ -36,9 +77,29 @@ class Emoji {
 	}
 
 	/**
+	 * Replace emoji from stored JSON data.
+	 *
+	 * Used for display-time replacement when emoji data was stored as JSON.
+	 *
+	 * @param string $text       The text to process.
+	 * @param string $emoji_json JSON-encoded emoji tag data.
+	 *
+	 * @return string The processed text with emoji replacements.
+	 */
+	public static function replace_from_json( $text, $emoji_json ) {
+		$tags = \json_decode( $emoji_json, true );
+
+		if ( empty( $tags ) || ! is_array( $tags ) ) {
+			return $text;
+		}
+
+		return self::replace_custom_emoji( $text, array( 'tag' => $tags ) );
+	}
+
+	/**
 	 * Extract emoji data from activity tags.
 	 *
-	 * @param array $activity The activity array containing emoji definitions.
+	 * @param array $data The data array containing emoji definitions in 'tag'.
 	 *
 	 * @return array {
 	 *      Array of emoji data with url and name keys.
@@ -47,14 +108,14 @@ class Emoji {
 	 *      @type string $name The shortcode name of the emoji (e.g., ":emoji:").
 	 *  }
 	 */
-	private static function extract_emoji_data( $activity ) {
-		if ( empty( $activity['tag'] ) || ! is_array( $activity['tag'] ) ) {
+	public static function extract_emoji_data( $data ) {
+		if ( empty( $data['tag'] ) || ! is_array( $data['tag'] ) ) {
 			return array();
 		}
 
 		$emoji_data = array();
 
-		foreach ( $activity['tag'] as $tag ) {
+		foreach ( $data['tag'] as $tag ) {
 			if ( isset( $tag['type'] ) && 'Emoji' === $tag['type'] && ! empty( $tag['name'] ) && ! empty( $tag['icon']['url'] ) ) {
 				$emoji_data[] = array(
 					'url'  => $tag['icon']['url'],

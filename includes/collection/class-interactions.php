@@ -108,17 +108,9 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_author                  = empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'];
-		$comment_data['comment_author']  = $comment_author;
+		$comment_data['comment_author']  = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 		$comment_data['comment_content'] = \addslashes( $activity['object']['content'] );
-
-		add_filter(
-			'pre_comment_content',
-			function ( $comment_content ) use ( $activity ) {
-				return Emoji::replace_custom_emoji( $comment_content, $activity['object'] );
-			},
-			20 // After wp_filter_post_kses().
-		);
+		$comment_data                    = Emoji::prepare_comment_data( $comment_data, $activity );
 
 		return self::persist( $comment_data, self::UPDATE );
 	}
@@ -381,7 +373,7 @@ class Interactions {
 		$comment_data = array(
 			'comment_author'       => $comment_author ?? __( 'Anonymous', 'activitypub' ),
 			'comment_author_url'   => \esc_url_raw( $url ),
-			'comment_content'      => Emoji::replace_custom_emoji( $comment_content, $activity['object'] ),
+			'comment_content'      => $comment_content,
 			'comment_type'         => 'comment',
 			'comment_author_email' => $webfinger,
 			'comment_date'         => \get_date_from_gmt( $gm_date ),
@@ -405,20 +397,7 @@ class Interactions {
 			$comment_data['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
 		}
 
-		// Store emoji data for display-time replacement.
-		if ( ! empty( $actor['tag'] ) ) {
-			$comment_data['comment_meta']['activitypub_author_emoji'] = \wp_json_encode( $actor['tag'] );
-		}
-
-		add_filter(
-			'pre_comment_content',
-			function ( $comment_content ) use ( $activity ) {
-				return Emoji::replace_custom_emoji( $comment_content, $activity['object'] );
-			},
-			20
-		);
-
-		return $comment_data;
+		return Emoji::prepare_comment_data( $comment_data, $activity );
 	}
 
 	/**

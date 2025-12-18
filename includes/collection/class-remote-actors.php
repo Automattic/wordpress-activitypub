@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Attachments;
+use Activitypub\Emoji;
 use Activitypub\Http;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -552,6 +553,10 @@ class Remote_Actors {
 			'_activitypub_inbox' => $inbox,
 			'_activitypub_acct'  => $webfinger,
 		);
+
+		// Add emoji meta if actor has emoji in tags.
+		$emoji_meta = Emoji::prepare_actor_meta( $actor->to_array() );
+		$meta_input = array_merge( $meta_input, $emoji_meta );
 
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
