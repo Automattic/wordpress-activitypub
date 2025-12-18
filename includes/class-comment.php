@@ -704,9 +704,7 @@ class Comment {
 
 		// Do only exclude interactions of `ap_post` post type.
 		if ( \is_admin() ) {
-			if ( \get_option( 'activitypub_create_posts', false ) ) {
-				$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), array( Posts::POST_TYPE ) );
-			}
+			$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
 			return;
 		}
 
@@ -767,14 +765,11 @@ class Comment {
 			return 1;
 		}
 
-		// Auto approve reactions to an `ap_post`.
-		if ( \get_option( 'activitypub_create_posts', false ) ) {
-			$post_id = $comment_data['comment_post_ID'];
-			$post    = \get_post( $post_id );
+		$post_id = $comment_data['comment_post_ID'];
+		$post    = \get_post( $post_id );
 
-			if ( $post && Posts::POST_TYPE === $post->post_type ) {
-				return 1;
-			}
+		if ( $post && in_array( $post->post_type, self::hide_for(), true ) ) {
+			return 1;
 		}
 
 		return $approved;
@@ -826,5 +821,24 @@ class Comment {
 	 */
 	public static function is_comment_type_enabled( $comment_type ) {
 		return '1' === get_option( "activitypub_allow_{$comment_type}s", '1' );
+	}
+
+	/**
+	 * Get post types to hide comments for in admin.
+	 *
+	 * These are non-public post types whose comments should not appear
+	 * in the main comments list in the WordPress admin.
+	 *
+	 * @return string[] Array of post type names to hide comments for.
+	 */
+	public static function hide_for() {
+		$post_types = array( Posts::POST_TYPE );
+
+		/**
+		 * Filters the list of post types to hide comments for.
+		 *
+		 * @param string[] $post_types Array of post type names to hide comments for.
+		 */
+		return \apply_filters( 'activitypub_hide_comments_for', $post_types );
 	}
 }
