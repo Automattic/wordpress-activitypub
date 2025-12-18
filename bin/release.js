@@ -280,6 +280,20 @@ async function createRelease() {
 		] );
 	} );
 
+	// Update version in block.json files
+	const blockJsonFiles = execWithOutput( 'find src -name "block.json"' ).split( '\n' );
+
+	blockJsonFiles.forEach( ( filePath ) => {
+		if ( filePath ) {
+			updateVersionInFile( filePath, version, [
+				{
+					search: /"version": "\d+\.\d+\.\d+"/,
+					replace: `"version": "${ version }"`,
+				},
+			] );
+		}
+	} );
+
 	// Stage and commit changes
 	exec( 'git add .' );
 	exec( `git commit -m "Release ${ version }"` );
