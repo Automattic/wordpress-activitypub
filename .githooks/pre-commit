@@ -60,6 +60,7 @@ fi
 # Run JS linting on changed files.
 if [ -n "$JS_FILES" ]; then
   echo "$JS_FILES" | xargs npm run lint:js -- || { echo "JavaScript linting failed"; exit 1; }
+fi
 
 # Run Stylelint with auto-fix on changed CSS/SCSS files.
 if [ -n "$CSS_FILES" ]; then
