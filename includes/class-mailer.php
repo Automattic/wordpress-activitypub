@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Posts;
 
 /**
  * Mailer Class.
@@ -462,13 +463,23 @@ class Mailer {
 			return $maybe_notify;
 		}
 
+		// Only prevent if the create_posts option is enabled.
+		if ( '1' !== \get_option( 'activitypub_create_posts', false ) ) {
+			return $maybe_notify;
+		}
+
 		$comment = \get_comment( $comment_id );
 		if ( ! $comment ) {
 			return $maybe_notify;
 		}
 
+		$post = \get_post( $comment->comment_post_ID );
+		if ( ! $post ) {
+			return $maybe_notify;
+		}
+
 		// Prevent notifications for comments on ap_post.
-		if ( is_ap_post( $comment->comment_post_ID ) ) {
+		if ( Posts::POST_TYPE === $post->post_type ) {
 			return false;
 		}
 
