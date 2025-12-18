@@ -45,6 +45,7 @@ class Admin {
 		\add_filter( 'manage_edit-comments_columns', array( static::class, 'manage_comment_columns' ) );
 		\add_action( 'manage_comments_custom_column', array( static::class, 'manage_comments_custom_column' ), 9, 2 );
 		\add_filter( 'admin_comment_types_dropdown', array( static::class, 'comment_types_dropdown' ) );
+		\add_filter( 'views_edit-comments', array( static::class, 'comment_views' ) );
 
 		\add_filter( 'manage_posts_columns', array( static::class, 'manage_post_columns' ), 10, 2 );
 		\add_action( 'manage_posts_custom_column', array( self::class, 'manage_posts_custom_column' ), 10, 2 );
@@ -545,6 +546,41 @@ class Admin {
 		}
 
 		return $types;
+	}
+
+	/**
+	 * Add "Fediverse" view to the comment views.
+	 *
+	 * This allows users to see comments from hidden post types like ap_post.
+	 *
+	 * @param array $views The existing comment views.
+	 *
+	 * @return array The extended comment views.
+	 */
+	public static function comment_views( $views ) {
+		$post_types = Comment::hide_for();
+
+		if ( empty( $post_types ) ) {
+			return $views;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$is_fediverse_view = isset( $_GET['comment_status'] ) && 'federated' === $_GET['comment_status'];
+		$current           = $is_fediverse_view ? 'current' : '';
+
+		// Remove "current" class from "All" when in Fediverse view.
+		if ( $is_fediverse_view && isset( $views['all'] ) ) {
+			$views['all'] = \str_replace( 'current', '', $views['all'] );
+		}
+
+		$views['federated'] = \sprintf(
+			'<a href="%s" class="%s">%s</a>',
+			\esc_url( \admin_url( 'edit-comments.php?comment_status=federated' ) ),
+			\esc_attr( $current ),
+			\esc_html__( 'Fediverse', 'activitypub' )
+		);
+
+		return $views;
 	}
 
 	/**

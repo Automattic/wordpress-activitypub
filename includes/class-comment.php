@@ -702,9 +702,17 @@ class Comment {
 			return;
 		}
 
-		// Do only exclude interactions of `ap_post` post type.
+		// Handle admin comment queries.
 		if ( \is_admin() ) {
-			$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			if ( isset( $_GET['comment_status'] ) && 'federated' === $_GET['comment_status'] && empty( $query->query_vars['count'] ) ) {
+				// Show only comments from hidden post types (Fediverse view).
+				$query->query_vars['post_type'] = self::hide_for();
+				$query->query_vars['status']    = 'all';
+			} else {
+				// Exclude comments from hidden post types.
+				$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
+			}
 			return;
 		}
 
