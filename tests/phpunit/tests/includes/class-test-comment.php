@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Posts;
 use Activitypub\Comment;
 
 /**
@@ -990,6 +991,20 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Clean up.
 		\delete_option( 'activitypub_create_posts' );
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Test get_post_types_to_hide_comments_for.
+	 *
+	 * @covers ::get_post_types_to_hide_comments_for
+	 */
+	public function test_get_post_types_to_hide_comments_for() {
+		$post_types = Comment::get_post_types_to_hide_comments_for();
+
+		$this->assertIsArray( $post_types );
+		$this->assertContains( Posts::POST_TYPE, $post_types, 'ap_post should be in the list of post types to hide comments for' );
+		$this->assertNotContains( 'post', $post_types, 'post should not be in the list of post types to hide comments for' );
+		$this->assertNotContains( 'page', $post_types, 'page should not be in the list of post types to hide comments for' );
 	}
 
 	/**
