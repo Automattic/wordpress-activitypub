@@ -14,13 +14,13 @@
 		letter-spacing: 0.5px;
 		margin: var(--wpds-spacing-30, 12px) 0 var(--wpds-spacing-20, 8px) 0;
 		padding: 0 var(--wpds-spacing-20, 8px);
-		color: var(--wpds-color-fg-inverted-tertiary, #999999);
+		color: var(--wpds-color-fg-inverted-tertiary, #999);
 	}
 
 	&__loading {
 		font-size: 13px;
 		padding: var(--wpds-spacing-20, 8px);
-		color: var(--wpds-color-fg-inverted-secondary, #cccccc);
+		color: var(--wpds-color-fg-inverted-secondary, #ccc);
 	}
 
 	// Override WordPress core MenuGroup styles
@@ -40,12 +40,12 @@
 
 		&:hover {
 			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1));
-			color: var(--wpds-color-fg-inverted-primary, #ffffff);
+			color: var(--wpds-color-fg-inverted-primary, #fff);
 		}
 
 		&.is-pressed {
 			background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15));
-			color: var(--wpds-color-fg-inverted-primary, #ffffff);
+			color: var(--wpds-color-fg-inverted-primary, #fff);
 		}
 
 		svg {

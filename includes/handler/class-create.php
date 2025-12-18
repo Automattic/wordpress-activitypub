@@ -104,6 +104,10 @@ class Create {
 	 * @return \WP_Post|\WP_Error|false The post on success, WP_Error on failure, false if already exists.
 	 */
 	public static function create_post( $activity, $user_ids, $activity_object = null ) {
+		if ( ! \get_option( 'activitypub_create_posts', false ) ) {
+			return false;
+		}
+
 		$existing_post = Posts::get_by_guid( $activity['object']['id'] );
 
 		// If post exists, call update action.

@@ -236,6 +236,65 @@ function old_function() {}`;
 		} );
 	} );
 
+	describe( 'Block.json file patterns (src/**/block.json)', () => {
+		const patterns = [
+			{
+				search: /"version": "\d+\.\d+\.\d+"/,
+				replace: `"version": "${ testVersion }"`,
+			},
+		];
+
+		test( 'replaces version field in block.json', () => {
+			const content = `{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"name": "activitypub/follow-me",
+	"version": "2.0.0",
+	"title": "Follow me"
+}`;
+
+			const result = applyVersionReplacements( content, testVersion, patterns );
+			expect( result ).toContain( `"version": "${ testVersion }"` );
+			expect( result ).not.toContain( '"version": "2.0.0"' );
+		} );
+
+		test( 'replaces version in block.json fixture file', () => {
+			const fixturePath = path.join( __dirname, 'fixtures', 'block.json' );
+			const content = fs.readFileSync( fixturePath, 'utf8' );
+
+			const result = applyVersionReplacements( content, testVersion, patterns );
+			expect( result ).toContain( `"version": "${ testVersion }"` );
+			expect( result ).not.toContain( '"version": "2.0.0"' );
+		} );
+
+		test( 'preserves other JSON structure', () => {
+			const content = `{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"name": "activitypub/test-block",
+	"apiVersion": 3,
+	"version": "1.5.0",
+	"title": "Test Block",
+	"category": "widgets"
+}`;
+
+			const result = applyVersionReplacements( content, testVersion, patterns );
+			expect( result ).toContain( '"name": "activitypub/test-block"' );
+			expect( result ).toContain( '"apiVersion": 3' );
+			expect( result ).toContain( '"title": "Test Block"' );
+			expect( result ).toContain( `"version": "${ testVersion }"` );
+		} );
+
+		test( 'handles version field regardless of position', () => {
+			const content = `{
+	"version": "0.9.0",
+	"name": "activitypub/early-version"
+}`;
+
+			const result = applyVersionReplacements( content, testVersion, patterns );
+			expect( result ).toContain( `"version": "${ testVersion }"` );
+			expect( result ).not.toContain( '"version": "0.9.0"' );
+		} );
+	} );
+
 	describe( 'Edge cases and complex scenarios', () => {
 		test( 'handles multiple replacements in single file', () => {
 			const content = `/**
