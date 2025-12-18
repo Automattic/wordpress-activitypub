@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Posts;
 
 /**
  * ActivityPub Comment Class.
@@ -703,7 +704,7 @@ class Comment {
 
 		// Do only exclude interactions of `ap_post` post type.
 		if ( \is_admin() ) {
-			$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::get_post_types_to_hide_comments_for() );
+			$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
 			return;
 		}
 
@@ -767,7 +768,7 @@ class Comment {
 		$post_id = $comment_data['comment_post_ID'];
 		$post    = \get_post( $post_id );
 
-		if ( $post && in_array( $post->post_type, self::get_post_types_to_hide_comments_for(), true ) ) {
+		if ( $post && in_array( $post->post_type, self::hide_for(), true ) ) {
 			return 1;
 		}
 
@@ -830,14 +831,14 @@ class Comment {
 	 *
 	 * @return string[] Array of post type names to hide comments for.
 	 */
-	public static function get_post_types_to_hide_comments_for() {
-		$post_types = \get_post_types( array( 'public' => false ), 'names' );
+	public static function hide_for() {
+		$post_types = array( Posts::POST_TYPE );
 
 		/**
 		 * Filters the list of post types to hide comments for.
 		 *
 		 * @param string[] $post_types Array of post type names to hide comments for.
 		 */
-		return \apply_filters( 'activitypub_post_types_to_hide_comments_for', $post_types );
+		return \apply_filters( 'activitypub_hide_comments_for', $post_types );
 	}
 }
