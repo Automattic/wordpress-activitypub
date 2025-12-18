@@ -4,6 +4,7 @@
 
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { metadataField } from '../index';
 import { SettingsProvider } from '../../../../contexts/settings-context';
 import type { AppSettings, FeedPost } from '../../../../types';
@@ -77,7 +78,7 @@ describe( 'metadataField', () => {
 
 	describe( 'render', () => {
 		const renderMetadataField = ( post: FeedPost ) => {
-			const Wrapper = ( { children }: { children: React.ReactNode } ) => (
+			const Wrapper = ( { children }: { children: ReactNode } ) => (
 				<SettingsProvider settings={ mockSettings }>{ children }</SettingsProvider>
 			);
 

@@ -84,23 +84,23 @@ main address {
 	font-style: normal;
 }
 
-main address .name,
-main address .webfinger {
-	color: #000;
-}
-
 .name {
 	color: #ccc;
-	font-weight: bold;
+	font-weight: 700;
 	display: block;
 }
 
 .webfinger {
 	color: #ccc;
 	font-size: 0.8em;
-	font-weight: bold;
+	font-weight: 700;
 	display: block;
 	margin-top: 0.5em;
+}
+
+main address .name,
+main address .webfinger {
+	color: #000;
 }
 
 address img,
@@ -150,10 +150,6 @@ main .attachments.layout-2 {
 	height: auto;
 }
 
-main .attachments.layout-3 > img:first-child {
-	grid-row: span 2;
-}
-
 main .attachments img {
 	border: 0;
 	box-sizing: border-box;
@@ -163,6 +159,10 @@ main .attachments img {
 	overflow: hidden;
 	position: relative;
 	width: 100%;
+}
+
+main .attachments.layout-3 > img:first-child {
+	grid-row: span 2;
 }
 
 main .attachments video,

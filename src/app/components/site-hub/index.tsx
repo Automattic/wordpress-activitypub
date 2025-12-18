@@ -8,7 +8,7 @@
 /**
  * External dependencies
  */
-import type { ReactNode } from 'react';
+import type { ForwardedRef, ForwardRefExoticComponent, ReactNode } from 'react';
 
 /**
  * WordPress dependencies
@@ -30,7 +30,6 @@ import type { UnstableBase } from '@wordpress/core-data';
  */
 import SiteIcon from '../site-icon';
 import './style.scss';
-import { ForwardedRef, ForwardRefExoticComponent } from 'react';
 
 interface SiteHubData {
 	homeUrl: string | undefined;

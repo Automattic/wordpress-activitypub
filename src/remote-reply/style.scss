@@ -28,12 +28,14 @@
 
 .activitypub-remote-profile,
 .activitypub-remote-reply__link {
+
 	&[hidden] {
 		display: none !important;
 	}
 }
 
 .activitypub-dialog {
+
 	&__section {
 		padding: 1.5rem 2rem;
 		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);

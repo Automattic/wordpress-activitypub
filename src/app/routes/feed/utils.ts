@@ -15,8 +15,8 @@ type ViewType = ReturnType< typeof useView >[ 'view' ];
  * Normalizes view fields to maintain canonical order.
  * Sorts the visible fields according to the order defined in the fields array.
  *
- * @param view   - The current view configuration
- * @param fields - Array of field objects with their canonical order
+ * @param view   The current view configuration
+ * @param fields Array of field objects with their canonical order
  * @return The view with fields sorted in canonical order
  */
 export function normalizeFieldOrder( view: ViewType, fields: Array< { id: string } > ): ViewType {

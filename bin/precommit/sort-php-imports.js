@@ -6,7 +6,6 @@
  */
 
 const fs = require( 'fs' );
-const path = require( 'path' );
 
 // Sort imports in a PHP file
 const sortImports = ( filePath ) => {
@@ -16,7 +15,7 @@ const sortImports = ( filePath ) => {
 		// Find blocks of use statements
 		const useStatementRegex = /^use\s+([^;]+);/gm;
 		let match;
-		let blocks = [];
+		const blocks = [];
 
 		// Find all blocks of consecutive use statements
 		while ( ( match = useStatementRegex.exec( content ) ) !== null ) {
