@@ -42,14 +42,36 @@ class Emoji {
 	 * @return array Meta input array with emoji data, or empty array if no emoji.
 	 */
 	public static function prepare_actor_meta( $actor ) {
-		$emoji_data = self::extract_emoji_data( $actor );
+		$emoji_tags = self::get_emoji_tags( $actor );
 
-		if ( empty( $emoji_data ) ) {
+		if ( empty( $emoji_tags ) ) {
 			return array();
 		}
 
 		return array(
-			'_activitypub_emoji' => \wp_json_encode( $actor['tag'] ),
+			'_activitypub_emoji' => \wp_json_encode( $emoji_tags ),
+		);
+	}
+
+	/**
+	 * Get only the emoji-type tags from a data array.
+	 *
+	 * @param array $data The data array containing tags.
+	 *
+	 * @return array Array of emoji tag objects.
+	 */
+	private static function get_emoji_tags( $data ) {
+		if ( empty( $data['tag'] ) || ! is_array( $data['tag'] ) ) {
+			return array();
+		}
+
+		return array_values(
+			array_filter(
+				$data['tag'],
+				function ( $tag ) {
+					return isset( $tag['type'] ) && 'Emoji' === $tag['type'];
+				}
+			)
 		);
 	}
 
