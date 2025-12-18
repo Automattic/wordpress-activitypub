@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 7.8.0
+Stable tag: 7.8.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,14 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.8.1 - 2025-12-18
+#### Added
+- Hide comments from specific post types in the WordPress admin comments list.
+
+#### Fixed
+- Prevent comment email notifications for ap_post.
+- Prevent post creation when Reader is deactivated.
 
 ### 7.8.0 - 2025-12-17
 #### Added
