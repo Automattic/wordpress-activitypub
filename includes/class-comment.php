@@ -705,7 +705,7 @@ class Comment {
 		// Handle admin comment queries.
 		if ( \is_admin() ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			if ( isset( $_GET['comment_status'] ) && 'federated' === $_GET['comment_status'] && empty( $query->query_vars['count'] ) ) {
+			if ( ( isset( $_GET['comment_status'] ) && 'federated' === $_GET['comment_status'] && empty( $query->query_vars['count'] ) ) || $query->query_vars['post_type'] ) {
 				// Show only comments from hidden post types (Fediverse view).
 				$query->query_vars['post_type'] = self::hide_for();
 				$query->query_vars['status']    = 'all';

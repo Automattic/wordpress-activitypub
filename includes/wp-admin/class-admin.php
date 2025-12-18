@@ -573,11 +573,20 @@ class Admin {
 			$views['all'] = \str_replace( 'current', '', $views['all'] );
 		}
 
+		// Count comments from hidden post types.
+		$count = \get_comments(
+			array(
+				'post_type' => $post_types,
+				'count'     => true,
+			)
+		);
+
 		$views['federated'] = \sprintf(
-			'<a href="%s" class="%s">%s</a>',
+			'<a href="%s" class="%s">%s <span class="count">(%s)</span></a>',
 			\esc_url( \admin_url( 'edit-comments.php?comment_status=federated' ) ),
 			\esc_attr( $current ),
-			\esc_html__( 'Fediverse', 'activitypub' )
+			\esc_html__( 'Fediverse', 'activitypub' ),
+			\esc_html( \number_format_i18n( $count ) )
 		);
 
 		return $views;
