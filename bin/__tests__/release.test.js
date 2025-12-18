@@ -239,7 +239,7 @@ function old_function() {}`;
 		} );
 	} );
 
-	describe( 'Block.json file patterns (src/**/block.json)', () => {
+	describe( 'Block.json file patterns (src/**/block.json and build/**/block.json)', () => {
 		const patterns = [
 			{
 				search: /"version": "\d+\.\d+\.\d+"/,
