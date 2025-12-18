@@ -118,13 +118,10 @@ const updateReadmeWithChangelog = ( version ) => {
 	// 2. Remove the square brackets from the version numbers.
 	// 3. Remove PR numbers like [#123] from the ends of lines.
 	let formattedChangelog = releases
-		.map( ( release ) => {
-			return release.content
+		.map( ( entry ) => {
+			return entry.content
 				.replace( /### /g, '#### ' )
-				.replace(
-					`## [${ release.version }] - ${ release.date }`,
-					`### ${ release.version } - ${ release.date }`
-				)
+				.replace( `## [${ entry.version }] - ${ entry.date }`, `### ${ entry.version } - ${ entry.date }` )
 				.replace( /\s+\[#\d+\]$/gm, '' )
 				.trim();
 		} )
@@ -280,8 +277,8 @@ async function createRelease() {
 		] );
 	} );
 
-	// Update version in block.json files
-	const blockJsonFiles = execWithOutput( 'find src -name "block.json"' ).split( '\n' );
+	// Update version in block.json files (src and build directories)
+	const blockJsonFiles = execWithOutput( 'find src build -name "block.json"' ).split( '\n' );
 
 	blockJsonFiles.forEach( ( filePath ) => {
 		if ( filePath ) {

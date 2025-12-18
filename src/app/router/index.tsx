@@ -9,7 +9,9 @@
  * External dependencies
  */
 import type { ComponentType, ReactNode } from 'react';
+// eslint-disable-next-line import/no-extraneous-dependencies -- Bundled with @tanstack/react-router
 import { parseHref } from '@tanstack/history';
+// eslint-disable-next-line import/no-extraneous-dependencies -- Bundled with @tanstack/react-router
 import type { RouterHistory, HistoryLocation } from '@tanstack/history';
 import {
 	createBrowserHistory,

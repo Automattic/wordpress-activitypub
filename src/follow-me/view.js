@@ -2,37 +2,37 @@ import { store, getContext, getElement, getConfig } from '@wordpress/interactivi
 import { getBlockStyles, getPopupStyles } from './button-style';
 import { createModalStore } from '../shared/modal';
 
-/** @var {object} wp WordPress global. */
+/** @member {Object} wp WordPress global. */
 const { apiFetch } = window.wp;
 
 createModalStore( 'activitypub/follow-me' );
 
 /**
  * @typedef {Object} config
- * @property {String} namespace ActivityPub REST Namespace.
- * @property {Object} i18n Internationalization strings.
- * @property {String} i18n.copy "Copy" button text.
- * @property {String} i18n.copied "Copied" button text.
- * @property {String} i18n.emptyProfileError Error message for empty remote profile.
- * @property {String} i18n.genericError Generic error message.
- * @property {String} i18n.invalidProfileError Error message for invalid remote profile.
+ * @property {string} namespace                ActivityPub REST Namespace.
+ * @property {Object} i18n                     Internationalization strings.
+ * @property {string} i18n.copy                "Copy" button text.
+ * @property {string} i18n.copied              "Copied" button text.
+ * @property {string} i18n.emptyProfileError   Error message for empty remote profile.
+ * @property {string} i18n.genericError        Generic error message.
+ * @property {string} i18n.invalidProfileError Error message for invalid remote profile.
  */
 
 /**
  * @typedef {Object} context
- * @property {String} backgroundColor The background color for the button.
- * @property {String} blockId The block ID.
- * @property {String} buttonStyle The button style.
- * @property {String} copyButtonText The copy button text.
- * @property {String} errorMessage The error message.
- * @property {boolean} isError Whether the remote profile input has an error.
- * @property {boolean} isLoading Whether the remote profile is being submitted.
- * @property {Object} modal The modal state.
- * @property {boolean} modal.isOpen Whether the modal is open.
- * @property {String} remoteProfile The remote profile.
- * @property {String} template The template for the remote reply URL.
- * @property {String} userId The user ID.
- * @property {String} webfinger The webfinger of the user.
+ * @property {string}  backgroundColor The background color for the button.
+ * @property {string}  blockId         The block ID.
+ * @property {string}  buttonStyle     The button style.
+ * @property {string}  copyButtonText  The copy button text.
+ * @property {string}  errorMessage    The error message.
+ * @property {boolean} isError         Whether the remote profile input has an error.
+ * @property {boolean} isLoading       Whether the remote profile is being submitted.
+ * @property {Object}  modal           The modal state.
+ * @property {boolean} modal.isOpen    Whether the modal is open.
+ * @property {string}  remoteProfile   The remote profile.
+ * @property {string}  template        The template for the remote reply URL.
+ * @property {string}  userId          The user ID.
+ * @property {string}  webfinger       The webfinger of the user.
  */
 
 const { actions, callbacks } = store( 'activitypub/follow-me', {
@@ -56,7 +56,7 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 					}, 1000 );
 				},
 				( error ) => {
-					// Log error if copying fails.
+					// eslint-disable-next-line no-console -- Log error if copying fails.
 					console.error( 'Could not copy text: ', error );
 				}
 			);
@@ -78,8 +78,8 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 		/**
 		 * Handle the opening of the modal.
 		 *
-		 * @param {Event} event The event that triggered the modal opening/closing.
-		 * @param {String} event.key The key pressed, if any.
+		 * @param {Event}  event     The event that triggered the modal opening/closing.
+		 * @param {string} event.key The key pressed, if any.
 		 */
 		onKeydown( event ) {
 			if ( getElement().ref.tagName === 'A' && ( event.key === 'Enter' || event.key === ' ' ) ) {
@@ -91,8 +91,8 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 		/**
 		 * Handle keydown event for remote profile input.
 		 *
-		 * @param {Event} event Keydown event.
-		 * @param {String} event.key The key pressed.
+		 * @param {Event}  event     Keydown event.
+		 * @param {string} event.key The key pressed.
 		 */
 		handleKeyDown( event ) {
 			if ( event.key === 'Enter' ) {
@@ -104,7 +104,7 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 		/**
 		 * Submit the remote profile.
 		 */
-		submitRemoteProfile: function* () {
+		*submitRemoteProfile() {
 			const context = getContext();
 			const { namespace, i18n } = getConfig();
 			const input = context.remoteProfile.trim();
@@ -144,7 +144,7 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 				// Close the modal after opening the URL.
 				actions.closeModal( new Event( 'click' ) );
 			} catch ( error ) {
-				// Handle error.
+				// eslint-disable-next-line no-console -- Log error for debugging.
 				console.error( 'Error submitting profile:', error );
 				context.isLoading = false;
 				context.isError = true;
@@ -179,8 +179,8 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 		/**
 		 * Best guess whether a string is a valid ActivityPub handle.
 		 *
-		 * @param {string} string - String to check.
-		 * @returns {boolean} True if string is a valid handle, false otherwise.
+		 * @param {string} string String to check.
+		 * @return {boolean} True if string is a valid handle, false otherwise.
 		 */
 		isHandle( string ) {
 			// Check if the string starts with '@' and contains a valid URL.
@@ -192,8 +192,8 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 		/**
 		 * Checks if a string is a valid URL.
 		 *
-		 * @param {string} string - String to check.
-		 * @returns {boolean} True if string is a valid URL, false otherwise.
+		 * @param {string} string String to check.
+		 * @return {boolean} True if string is a valid URL, false otherwise.
 		 */
 		isUrl( string ) {
 			try {

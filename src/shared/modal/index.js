@@ -2,9 +2,9 @@ import { getContext, store, getElement } from '@wordpress/interactivity';
 
 /**
  * @typedef {Object} context
- * @property {String} blockId - The ID of the block.
- * @property {Object} modal - The modal state.
- * @property {boolean} modal.isOpen - Whether the modal is open.
+ * @property {string}  blockId         - The ID of the block.
+ * @property {Object}  modal           - The modal state.
+ * @property {boolean} modal.isOpen    - Whether the modal is open.
  * @property {boolean} modal.isCompact - Whether the modal is compact.
  */
 
@@ -14,7 +14,7 @@ import { getContext, store, getElement } from '@wordpress/interactivity';
  * The Interactivity API merges all stores that share the same namespace,
  * so these actions and callbacks are added directly to the importing block’s existing store.
  *
- * @param {string} namespace - The interactivity namespace for the block.
+ * @param {string} namespace The interactivity namespace for the block.
  */
 export function createModalStore( namespace ) {
 	const { actions, callbacks } = store( namespace, {
@@ -95,7 +95,11 @@ export function createModalStore( namespace ) {
 			toggleModal( event ) {
 				const { modal } = getContext();
 
-				modal.isOpen ? actions.closeModal( event ) : actions.openModal( event );
+				if ( modal.isOpen ) {
+					actions.closeModal( event );
+				} else {
+					actions.openModal( event );
+				}
 			},
 		},
 
@@ -142,8 +146,8 @@ export function createModalStore( namespace ) {
 			/**
 			 * Handles keydown events on the document.
 			 *
-			 * @param {Event} event Keydown event.
-			 * @param {String} event.key The key that was pressed.
+			 * @param {Event}  event     Keydown event.
+			 * @param {string} event.key The key that was pressed.
 			 */
 			documentKeydown( event ) {
 				const { modal } = getContext();
@@ -226,7 +230,7 @@ export function createModalStore( namespace ) {
 				const spaceRight = viewportWidth - buttonRect.right;
 
 				// Default position (below button, relative to the block).
-				let position = {
+				const position = {
 					top: `${ relativeTop + 8 }px`,
 					left: `${ relativeLeft - 2 }px`, // -2 px to account for the button border.
 				};
@@ -271,17 +275,16 @@ export function createModalStore( namespace ) {
 						return;
 					}
 
+					const activeEl = element.ownerDocument.activeElement;
 					if ( event.shiftKey ) {
 						/* shift + tab */
-						if ( document.activeElement === firstFocusableElement ) {
+						if ( activeEl === firstFocusableElement ) {
 							lastFocusableElement.focus();
 							event.preventDefault();
 						}
-					} /* tab */ else {
-						if ( document.activeElement === lastFocusableElement ) {
-							firstFocusableElement.focus();
-							event.preventDefault();
-						}
+					} /* tab */ else if ( activeEl === lastFocusableElement ) {
+						firstFocusableElement.focus();
+						event.preventDefault();
 					}
 				} );
 			},

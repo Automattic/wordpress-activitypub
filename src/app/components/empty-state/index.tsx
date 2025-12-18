@@ -60,6 +60,7 @@ export default function EmptyState(): ReactNode {
 					'activitypub'
 				),
 				{
+					/* eslint-disable-next-line jsx-a11y/anchor-has-content -- Content provided by createInterpolateElement */
 					a: <a href={ followingUrl } />,
 				}
 			) }

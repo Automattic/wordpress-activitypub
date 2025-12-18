@@ -993,9 +993,6 @@ class Test_Mailer extends WP_UnitTestCase {
 	 * @covers ::maybe_prevent_comment_notification
 	 */
 	public function test_prevent_email_notifications_for_ap_post_comments() {
-		// Enable the create_posts option.
-		\update_option( 'activitypub_create_posts', '1' );
-
 		// Create an ap_post.
 		$ap_post_id = self::factory()->post->create(
 			array(
@@ -1019,9 +1016,6 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Test notify_moderator filter.
 		$notify_moderator = \apply_filters( 'notify_moderator', true, $comment_id );
 		$this->assertFalse( $notify_moderator, 'Email notifications to moderator should be prevented for ap_post comments' );
-
-		// Clean up.
-		\delete_option( 'activitypub_create_posts' );
 	}
 
 	/**
@@ -1030,9 +1024,6 @@ class Test_Mailer extends WP_UnitTestCase {
 	 * @covers ::maybe_prevent_comment_notification
 	 */
 	public function test_allow_email_notifications_for_regular_post_comments() {
-		// Enable the create_posts option.
-		\update_option( 'activitypub_create_posts', '1' );
-
 		// Create a regular post.
 		$post_id = self::factory()->post->create(
 			array(
@@ -1055,43 +1046,6 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Test notify_moderator filter.
 		$notify_moderator = \apply_filters( 'notify_moderator', true, $comment_id );
 		$this->assertTrue( $notify_moderator, 'Email notifications to moderator should be allowed for regular post comments' );
-
-		// Clean up.
-		\delete_option( 'activitypub_create_posts' );
-	}
-
-	/**
-	 * Test that email notifications are allowed for ap_post when option is disabled.
-	 *
-	 * @covers ::maybe_prevent_comment_notification
-	 */
-	public function test_allow_email_notifications_when_option_disabled() {
-		// Ensure the create_posts option is disabled.
-		\delete_option( 'activitypub_create_posts' );
-
-		// Create an ap_post.
-		$ap_post_id = self::factory()->post->create(
-			array(
-				'post_type'   => 'ap_post',
-				'post_status' => 'publish',
-			)
-		);
-
-		// Create a comment on the ap_post.
-		$comment_id = self::factory()->comment->create(
-			array(
-				'comment_post_ID'  => $ap_post_id,
-				'comment_approved' => '1',
-			)
-		);
-
-		// Test notify_post_author filter.
-		$notify_author = \apply_filters( 'notify_post_author', true, $comment_id );
-		$this->assertTrue( $notify_author, 'Email notifications should be allowed when option is disabled' );
-
-		// Test notify_moderator filter.
-		$notify_moderator = \apply_filters( 'notify_moderator', true, $comment_id );
-		$this->assertTrue( $notify_moderator, 'Email notifications should be allowed when option is disabled' );
 	}
 
 	/**
@@ -1100,9 +1054,6 @@ class Test_Mailer extends WP_UnitTestCase {
 	 * @covers ::maybe_prevent_comment_notification
 	 */
 	public function test_respect_existing_notification_settings() {
-		// Enable the create_posts option.
-		\update_option( 'activitypub_create_posts', '1' );
-
 		// Create an ap_post.
 		$ap_post_id = self::factory()->post->create(
 			array(
@@ -1125,9 +1076,6 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		$notify_moderator = \apply_filters( 'notify_moderator', false, $comment_id );
 		$this->assertFalse( $notify_moderator, 'Should respect already disabled notifications' );
-
-		// Clean up.
-		\delete_option( 'activitypub_create_posts' );
 	}
 
 	/**

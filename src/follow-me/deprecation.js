@@ -39,7 +39,9 @@ const v2BlockSupports = v1BlockSupports;
 /**
  * Migrates the buttonOnly attribute to a block style for the Follow Me block.
  *
- * @param {Object} attributes The block attributes.
+ * @param {Object}  attributes            The block attributes.
+ * @param {boolean} attributes.buttonOnly Whether to show only the button.
+ * @param {string}  attributes.className  Existing class names.
  * @return {Object} The migrated block attributes.
  */
 function migrateButtonOnly( { buttonOnly = false, className = '', ...newAttributes } ) {
@@ -73,8 +75,9 @@ const v1 = {
 	/**
 	 * Checks if the block is eligible for migration.
 	 *
-	 * @param {Object} attributes The block attributes.
-	 *
+	 * @param {Object}  attributes            The block attributes.
+	 * @param {string}  attributes.buttonText The button text.
+	 * @param {boolean} attributes.buttonOnly Whether to show only the button.
 	 * @return {boolean} Whether the block is eligible for migration.
 	 */
 	isEligible( { buttonText, buttonOnly } ) {
@@ -85,8 +88,8 @@ const v1 = {
 	/**
 	 * Migrates the Follow Me block to use a core button block instead of the custom button.
 	 *
-	 * @param {Object} attributes The block attributes.
-	 *
+	 * @param {Object} attributes            The block attributes.
+	 * @param {string} attributes.buttonText The button text.
 	 * @return {[Object, Array]} An array with the new block attributes and inner blocks.
 	 */
 	migrate( { buttonText, ...newAttributes } ) {
@@ -119,8 +122,8 @@ const v2 = {
 	/**
 	 * Checks if the block is eligible for migration.
 	 *
-	 * @param {Object} attributes The block attributes.
-	 *
+	 * @param {Object}  attributes            The block attributes.
+	 * @param {boolean} attributes.buttonOnly Whether to show only the button.
 	 * @return {boolean} Whether the block is eligible for migration.
 	 */
 	isEligible( { buttonOnly } ) {
@@ -166,8 +169,8 @@ const v3 = {
 	/**
 	 * Checks if the block is eligible for migration.
 	 *
-	 * @param {Object} attributes The block attributes.
-	 * @param {array} innerBlocks The inner blocks.
+	 * @param {Object} attributes  The block attributes.
+	 * @param {Array}  innerBlocks The inner blocks.
 	 *
 	 * @return {boolean} Whether the block is eligible for migration.
 	 */
@@ -178,8 +181,8 @@ const v3 = {
 	/**
 	 * Migrates the Follow Me block to fix the broken button.
 	 *
-	 * @param {Object} attributes The block attributes.
-	 * @param {array} innerBlocks The inner blocks.
+	 * @param {Object} attributes  The block attributes.
+	 * @param {Array}  innerBlocks The inner blocks.
 	 *
 	 * @return {[Object, Array]} An array with the new block attributes and inner blocks.
 	 */
