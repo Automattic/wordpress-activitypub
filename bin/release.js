@@ -277,8 +277,8 @@ async function createRelease() {
 		] );
 	} );
 
-	// Update version in block.json files
-	const blockJsonFiles = execWithOutput( 'find src -name "block.json"' ).split( '\n' );
+	// Update version in block.json files (src and build directories)
+	const blockJsonFiles = execWithOutput( 'find src build -name "block.json"' ).split( '\n' );
 
 	blockJsonFiles.forEach( ( filePath ) => {
 		if ( filePath ) {
