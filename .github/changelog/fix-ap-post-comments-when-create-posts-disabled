@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Prevent comments on ap_post when create_posts option is disabled.

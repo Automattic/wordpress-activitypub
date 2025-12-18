@@ -923,6 +923,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers ::add_comment
 	 */
 	public function test_add_comment_to_ap_post() {
+		// Enable create_posts to allow comments on ap_post.
+		\update_option( 'activitypub_create_posts', '1' );
+
 		// Create an ap_post.
 		$ap_post_id = wp_insert_post(
 			array(
@@ -972,6 +975,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\delete_option( 'activitypub_create_posts' );
 	}
 
 	/**
@@ -980,6 +984,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers ::add_reaction
 	 */
 	public function test_add_reaction_to_ap_post() {
+		// Enable create_posts to allow reactions on ap_post.
+		\update_option( 'activitypub_create_posts', '1' );
+
 		// Create an ap_post.
 		$ap_post_id = wp_insert_post(
 			array(
@@ -1025,6 +1032,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\delete_option( 'activitypub_create_posts' );
 	}
 
 	/**
@@ -1033,6 +1041,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers ::add_comment
 	 */
 	public function test_add_comment_to_ap_post_when_disabled() {
+		// Enable create_posts to allow comments on ap_post.
+		\update_option( 'activitypub_create_posts', '1' );
+
 		// Create an ap_post with local visibility (disabled for federation).
 		$ap_post_id = wp_insert_post(
 			array(
@@ -1076,6 +1087,170 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * Test that comments on ap_post are rejected when create_posts is disabled.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::persist
+	 */
+	public function test_add_comment_to_ap_post_rejects_when_create_posts_disabled() {
+		// Ensure create_posts is disabled.
+		\update_option( 'activitypub_create_posts', '0' );
+
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/create-posts-disabled',
+			)
+		);
+
+		$this->assertIsInt( $ap_post_id );
+
+		$activity = array(
+			'actor'  => 'https://example.com/users/commenter',
+			'id'     => 'https://example.com/activities/comment/create-posts-disabled',
+			'object' => array(
+				'id'        => 'https://example.com/notes/create-posts-disabled',
+				'content'   => 'Comment when create_posts disabled',
+				'inReplyTo' => 'https://remote.example.com/users/remoteuser/statuses/create-posts-disabled',
+			),
+		);
+
+		// Mock actor metadata.
+		$filter = function () {
+			return array(
+				'name'              => 'Remote Commenter',
+				'preferredUsername' => 'commenter',
+				'id'                => 'https://example.com/users/commenter',
+				'url'               => 'https://example.com/@commenter',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $filter );
+
+		// Try to add comment - should fail because create_posts is disabled.
+		$result = Interactions::add_comment( $activity );
+
+		$this->assertFalse( $result, 'Comment should not be added to ap_post when create_posts is disabled' );
+
+		// Clean up.
+		remove_filter( 'pre_get_remote_metadata_by_actor', $filter );
+		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * Test that reactions on ap_post are rejected when create_posts is disabled.
+	 *
+	 * @covers ::add_reaction
+	 * @covers ::persist
+	 */
+	public function test_add_reaction_to_ap_post_rejects_when_create_posts_disabled() {
+		// Ensure create_posts is disabled.
+		\update_option( 'activitypub_create_posts', '0' );
+
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post for Reaction',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/reaction-disabled',
+			)
+		);
+
+		$this->assertIsInt( $ap_post_id );
+
+		$activity = array(
+			'type'   => 'Like',
+			'actor'  => 'https://example.com/users/liker',
+			'object' => 'https://remote.example.com/users/remoteuser/statuses/reaction-disabled',
+			'id'     => 'https://example.com/activities/like/disabled',
+		);
+
+		// Mock actor metadata.
+		$filter = function () {
+			return array(
+				'name'              => 'Remote Liker',
+				'preferredUsername' => 'liker',
+				'id'                => 'https://example.com/users/liker',
+				'url'               => 'https://example.com/@liker',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $filter );
+
+		// Try to add reaction - should fail because create_posts is disabled.
+		$result = Interactions::add_reaction( $activity );
+
+		$this->assertFalse( $result, 'Reaction should not be added to ap_post when create_posts is disabled' );
+
+		// Clean up.
+		remove_filter( 'pre_get_remote_metadata_by_actor', $filter );
+		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * Test that comments on ap_post work when create_posts is enabled.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::persist
+	 */
+	public function test_add_comment_to_ap_post_works_when_create_posts_enabled() {
+		// Enable create_posts.
+		\update_option( 'activitypub_create_posts', '1' );
+
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/create-posts-enabled',
+			)
+		);
+
+		$this->assertIsInt( $ap_post_id );
+
+		$activity = array(
+			'actor'  => 'https://example.com/users/commenter',
+			'id'     => 'https://example.com/activities/comment/create-posts-enabled',
+			'object' => array(
+				'id'        => 'https://example.com/notes/create-posts-enabled',
+				'content'   => 'Comment when create_posts enabled',
+				'inReplyTo' => 'https://remote.example.com/users/remoteuser/statuses/create-posts-enabled',
+			),
+		);
+
+		// Mock actor metadata.
+		$filter = function () {
+			return array(
+				'name'              => 'Remote Commenter',
+				'preferredUsername' => 'commenter',
+				'id'                => 'https://example.com/users/commenter',
+				'url'               => 'https://example.com/@commenter',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $filter );
+
+		// Add comment - should succeed because create_posts is enabled.
+		$comment_id = Interactions::add_comment( $activity );
+
+		$this->assertNotFalse( $comment_id, 'Comment should be added to ap_post when create_posts is enabled' );
+		$this->assertIsInt( $comment_id );
+
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( $ap_post_id, $comment->comment_post_ID );
+
+		// Clean up.
+		remove_filter( 'pre_get_remote_metadata_by_actor', $filter );
+		\delete_option( 'activitypub_create_posts' );
 	}
 
 	/**
@@ -1084,6 +1259,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers ::add_comment
 	 */
 	public function test_add_comment_nested_reply_to_ap_post() {
+		// Enable create_posts to allow comments on ap_post.
+		\update_option( 'activitypub_create_posts', '1' );
+
 		// Create an ap_post.
 		$ap_post_id = wp_insert_post(
 			array(
@@ -1142,5 +1320,6 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\delete_option( 'activitypub_create_posts' );
 	}
 }

@@ -398,6 +398,11 @@ class Interactions {
 	 * @return array|string|int|\WP_Error|false The comment data or false on failure
 	 */
 	public static function persist( $comment_data, $action = self::INSERT ) {
+		// Don't allow comments on ap_post if create_posts is disabled.
+		if ( is_ap_post( $comment_data['comment_post_ID'] ) && '1' !== \get_option( 'activitypub_create_posts', false ) ) {
+			return false;
+		}
+
 		if (
 			is_post_disabled( $comment_data['comment_post_ID'] ) &&
 			! is_ap_post( $comment_data['comment_post_ID'] )
