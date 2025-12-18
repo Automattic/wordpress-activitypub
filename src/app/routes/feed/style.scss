@@ -11,6 +11,7 @@
 
 // List view item stacking
 .dataviews-view-list {
+
 	.dataviews-view-list__item {
 		cursor: pointer;
 	}
@@ -59,7 +60,7 @@
 .activitypub-feed-post-title {
 	margin: 0 0 var(--wpds-spacing-30, 12px);
 	font-size: inherit;
-	font-weight: normal;
+	font-weight: 400;
 	line-height: 1.4;
 	color: var(--wpds-color-fg-primary, #1d2327);
 	max-width: 100%;
@@ -118,6 +119,25 @@
 
 	.components-card__body {
 		padding: var(--wpds-spacing-40, 16px) var(--wpds-spacing-60, 24px) 0 !important;
+
+		h2 {
+			margin: 0 0 var(--wpds-spacing-40, 16px);
+			font-size: var(--wpds-font-size-large, 20px);
+			font-weight: var(--wpds-font-weight-semibold, 600);
+			line-height: 1.4;
+			color: var(--wpds-color-fg-primary, #1d2327);
+		}
+
+		> div {
+			line-height: 1.6;
+			color: var(--wpds-color-fg-primary, #2c3338);
+			margin-bottom: var(--wpds-spacing-40, 16px);
+
+			img {
+				max-width: 100%;
+				height: auto;
+			}
+		}
 	}
 }
 
@@ -189,27 +209,6 @@
 	}
 }
 
-.activitypub-inspector-card .components-card__body {
-	h2 {
-		margin: 0 0 var(--wpds-spacing-40, 16px);
-		font-size: var(--wpds-font-size-large, 20px);
-		font-weight: var(--wpds-font-weight-semibold, 600);
-		line-height: 1.4;
-		color: var(--wpds-color-fg-primary, #1d2327);
-	}
-
-	> div {
-		line-height: 1.6;
-		color: var(--wpds-color-fg-primary, #2c3338);
-		margin-bottom: var(--wpds-spacing-40, 16px);
-
-		img {
-			max-width: 100%;
-			height: auto;
-		}
-	}
-}
-
 .activitypub-inspector-link {
 	margin-top: var(--wpds-spacing-40, 16px);
 }
@@ -265,6 +264,7 @@
 // Link styling for links in content
 .activitypub-feed-content,
 .activitypub-inspector-card .components-card__body {
+
 	a {
 		color: var(--wpds-color-fg-brand, #135e96);
 		text-decoration: none;

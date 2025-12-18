@@ -73,9 +73,9 @@
 	display: block;
 	text-decoration: none;
 	color: inherit;
-	padding: .5rem 1rem 1rem;
+	padding: 0.5rem 1rem 1rem;
 	margin: 0 1rem;
-	transition: box-shadow .5s ease-in-out;
+	transition: box-shadow 0.5s ease-in-out;
 	white-space: nowrap;
 }
 
@@ -165,13 +165,6 @@ summary {
 	user-select: auto;
 }
 
-.activitypub-settings-accordion-trigger {
-	color: #2c3338;
-	cursor: pointer;
-	font-weight: 400;
-	text-align: left;
-}
-
 .activitypub-settings-accordion-trigger .title {
 	pointer-events: none;
 	font-weight: 600;
@@ -182,13 +175,13 @@ summary {
 .activitypub-settings-accordion-viewed .icon {
 	border: solid #50575e medium;
 	border-width: 0 2px 2px 0;
-	height: .5rem;
+	height: 0.5rem;
 	pointer-events: none;
 	position: absolute;
 	right: 1.5em;
 	top: 50%;
 	transform: translateY(-70%) rotate(45deg);
-	width: .5rem;
+	width: 0.5rem;
 }
 
 .activitypub-settings-accordion-trigger[aria-expanded="true"] .icon {
@@ -226,8 +219,8 @@ input.blog-user-identifier {
 	position: relative;
 	display: block;
 	margin-bottom: 40px;
-	background-image: rgb(168,165,175);
-	background-image: linear-gradient(180deg, red, yellow);
+	background-image: rgb(168, 165, 175);
+	background-image: linear-gradient(180deg, #f00, #ff0);
 	background-size: cover;
 }
 
@@ -244,8 +237,10 @@ input.blog-user-identifier {
 	margin-bottom: 0;
 }
 
+/* stylelint-disable-next-line selector-id-pattern -- WordPress core ID */
 #dashboard_right_now li a.activitypub-followers::before {
 	content: "\f307";
+	/* stylelint-disable-next-line font-family-no-missing-generic-family-keyword */
 	font-family: dashicons;
 }
 
@@ -260,6 +255,7 @@ input.blog-user-identifier {
 .extra-fields-nav a + a {
 	margin-left: 8px;
 }
+
 .rtl .extra-fields-nav a + a {
 	margin-left: auto;
 	margin-right: 8px;
@@ -268,9 +264,11 @@ input.blog-user-identifier {
 .contextual-help-tabs-wrap dt {
 	font-weight: 600;
 }
+
 .contextual-help-tabs-wrap .activitypub-block-screenshot {
 	margin: 10px 0;
 }
+
 .contextual-help-tabs-wrap .activitypub-block-screenshot img {
 	border: 1px solid #ddd;
 	border-radius: 4px;
@@ -278,6 +276,7 @@ input.blog-user-identifier {
 	height: auto;
 	max-width: 100%;
 }
+
 .contextual-help-tabs-wrap .activitypub-block-screenshot figcaption {
 	color: #555;
 	font-style: italic;
@@ -310,7 +309,7 @@ input.blog-user-identifier {
 	color: #50575e;
 }
 
-.contextual-help-tabs-wrap blockquote cite:before {
+.contextual-help-tabs-wrap blockquote cite::before {
 	content: "—";
 }
 
@@ -337,8 +336,11 @@ input.blog-user-identifier {
 }
 
 .plugin-list .plugin-action-buttons li {
+	display: inline-block;
+	vertical-align: middle;
 	margin: 0 0 10px 0;
 }
+
 .plugin-list .plugin-card .action-links {
 	position: static;
 	margin-left: 148px;
@@ -351,11 +353,6 @@ input.blog-user-identifier {
 	text-align: left;
 }
 
-.plugin-list .plugin-action-buttons li {
-	display: inline-block;
-	vertical-align: middle;
-}
-
 .plugin-list .plugin-action-buttons li .button {
 	margin-right: 20px;
 }
@@ -364,11 +361,13 @@ input.blog-user-identifier {
 	margin-right: 24px;
 }
 
+/* stylelint-disable no-descending-specificity */
 .plugin-list .plugin-card .name,
 .plugin-list .plugin-card .desc,
 .plugin-card .desc > p {
 	margin-right: 0;
 }
+/* stylelint-enable no-descending-specificity */
 
 .plugin-list .plugin-card .desc p:first-of-type {
 	margin-top: 0;
@@ -388,11 +387,13 @@ input.blog-user-identifier {
 }
 
 @keyframes highlight-fade {
+
 	0% {
 		background-color: #e7f3ff;
 		border-color: #3582c4;
 		box-shadow: 0 0 0 1px #3582c4;
 	}
+
 	100% {
 		background-color: #fff;
 		border-color: #8c8f94;
@@ -401,6 +402,7 @@ input.blog-user-identifier {
 }
 
 @media screen and (max-width: 782px) {
+
 	.activitypub-settings {
 		margin: 0 22px;
 	}

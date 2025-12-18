@@ -1,7 +1,9 @@
 #!/usr/bin/env sh
 
-# Get all changed PHP files once.
-PHP_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep "\.php$" || true)
+# Get all changed files once and filter by type.
+CHANGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
+PHP_FILES=$(echo "$CHANGED_FILES" | grep "\.php$" || true)
+CSS_FILES=$(echo "$CHANGED_FILES" | grep -E "\.(css|scss)$" || true)
 
 # Skip if no PHP files are changed.
 if [ -n "$PHP_FILES" ]; then
@@ -52,6 +54,11 @@ if [ -n "$PHP_FILES" ]; then
 
   # Run PHP Code Sniffer on all changed PHP files at once.
   echo "$PHP_FILES" | xargs composer lint:fix > /dev/null 2>&1 || { echo "PHP formatting failed"; exit 1; }
+fi
+
+# Run Stylelint with auto-fix on changed CSS/SCSS files.
+if [ -n "$CSS_FILES" ]; then
+  echo "$CSS_FILES" | xargs npx wp-scripts lint-style --fix > /dev/null 2>&1 || { echo "CSS linting failed"; exit 1; }
 fi
 
 # Run the WordPress formatter without showing all file output.
