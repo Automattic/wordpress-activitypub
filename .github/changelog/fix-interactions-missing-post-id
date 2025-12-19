@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix error when receiving replies to non-existent posts.
