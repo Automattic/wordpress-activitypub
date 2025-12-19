@@ -236,14 +236,14 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$rich_comment_id = Interactions::add_comment( $this->create_test_rich_object() );
 		$rich_comment    = get_comment( $rich_comment_id, ARRAY_A );
 
-		// img tags are allowed for emoji support.
-		$this->assertEquals( 'Hello<br />example<p>example</p><img src="https://example.com/image.jpg" alt="" />', $rich_comment['comment_content'] );
+		// Non-emoji img tags are stripped. Only local emoji images with class="emoji" are allowed.
+		$this->assertEquals( 'Hello<br />example<p>example</p>', $rich_comment['comment_content'] );
 
 		$rich_comment_array = array(
 			'comment_post_ID'      => self::$post_id,
 			'comment_author'       => 'Example User',
 			'comment_author_url'   => self::$user_url,
-			'comment_content'      => 'Hello<br />example<p>example</p><img src="https://example.com/image.jpg" alt="" />',
+			'comment_content'      => 'Hello<br />example<p>example</p>',
 			'comment_type'         => 'comment',
 			'comment_author_email' => '',
 			'comment_parent'       => 0,

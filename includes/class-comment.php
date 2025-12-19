@@ -881,11 +881,15 @@ class Comment {
 	 * @return string The comment author name with emoji images unescaped.
 	 */
 	public static function unescape_emoji( $author ) {
-		// Only unescape if there are emoji images present.
-		if ( false !== strpos( $author, 'class=&quot;emoji&quot;' ) ) {
-			$author = \html_entity_decode( $author, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		// Only attempt to unescape if there are emoji images present in the escaped string.
+		if ( false === \strpos( $author, 'class=&quot;emoji&quot;' ) ) {
+			return $author;
 		}
 
-		return $author;
+		// Decode entities so we can selectively restore emoji <img> tags.
+		$decoded = \html_entity_decode( $author, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+		// Use strict KSES validation to only allow valid emoji img tags.
+		return \wp_kses( $decoded, Emoji::get_kses_allowed_html() );
 	}
 }

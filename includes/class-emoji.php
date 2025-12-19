@@ -13,6 +13,61 @@ namespace Activitypub;
 class Emoji {
 
 	/**
+	 * Get the allowed HTML structure for emoji img tags.
+	 *
+	 * Uses WordPress KSES features (WP 5.9+) to strictly validate emoji images:
+	 * - Requires class="emoji"
+	 * - Validates src URL points to local emoji directory
+	 * - Requires standard emoji dimensions
+	 *
+	 * @return array The allowed HTML structure for use with wp_kses.
+	 */
+	public static function get_kses_allowed_html() {
+		return array(
+			'img' => array(
+				'class'     => array(
+					'required' => true,
+					'values'   => array( 'emoji' ),
+				),
+				'src'       => array(
+					'required'       => true,
+					'value_callback' => array( self::class, 'validate_emoji_src' ),
+				),
+				'alt'       => array( 'required' => true ),
+				'title'     => array( 'required' => true ),
+				'height'    => array(
+					'required' => true,
+					'values'   => array( '20' ),
+				),
+				'width'     => array(
+					'required' => true,
+					'values'   => array( '20' ),
+				),
+				'draggable' => array(
+					'required' => true,
+					'values'   => array( 'false' ),
+				),
+			),
+		);
+	}
+
+	/**
+	 * Validate emoji src attribute for wp_kses.
+	 *
+	 * Only allows emoji URLs from local uploads directory.
+	 *
+	 * @param string $value The src attribute value.
+	 *
+	 * @return bool True if the src is valid, false otherwise.
+	 */
+	public static function validate_emoji_src( $value ) {
+		$upload_dir = \wp_upload_dir();
+		$emoji_base = $upload_dir['baseurl'] . Attachments::$emoji_dir;
+
+		return \str_starts_with( $value, $emoji_base );
+	}
+
+	/**
 	 * Prepare comment data with emoji handling.
 	 *
 	 * Replaces emoji in content at insert-time. Author emoji is handled
@@ -94,8 +149,11 @@ class Emoji {
 
 		foreach ( $emoji_data as $emoji ) {
 			$local_url = Attachments::import_emoji( $emoji['url'], $emoji['updated'] ?? null );
-			$emoji_url = $local_url ? $local_url : $emoji['url'];
-			$text      = self::replace_emoji_in_text( $text, $emoji['name'], $emoji_url );
+
+			// Only replace if the emoji was successfully uploaded locally.
+			if ( $local_url ) {
+				$text = self::replace_emoji_in_text( $text, $emoji['name'], $local_url );
+			}
 		}
 
 		return $text;

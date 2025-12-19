@@ -183,6 +183,21 @@ class Attachments {
 			return false;
 		}
 
+		/**
+		 * Filters the result of emoji import before processing.
+		 *
+		 * Allows short-circuiting the emoji import, useful for testing.
+		 *
+		 * @param string|false|null $result    The import result. Return a URL string to short-circuit,
+		 *                                     false to indicate failure, or null to proceed normally.
+		 * @param string            $emoji_url The remote emoji URL being imported.
+		 * @param string|null       $updated   The remote emoji's updated timestamp.
+		 */
+		$pre_import = \apply_filters( 'activitypub_pre_import_emoji', null, $emoji_url, $updated );
+		if ( null !== $pre_import ) {
+			return $pre_import;
+		}
+
 		// Check if already cached.
 		$cached_url = self::get_emoji_url( $emoji_url );
 		if ( $cached_url ) {

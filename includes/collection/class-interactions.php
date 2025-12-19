@@ -313,17 +313,10 @@ class Interactions {
 			$allowed_tags['p'] = array();
 		}
 
-		// Add `img` for custom emoji support.
+		// Add `img` for custom emoji support with strict validation.
+		$emoji_html = Emoji::get_kses_allowed_html();
 		if ( ! array_key_exists( 'img', $allowed_tags ) ) {
-			$allowed_tags['img'] = array(
-				'src'       => true,
-				'alt'       => true,
-				'title'     => true,
-				'class'     => true,
-				'width'     => true,
-				'height'    => true,
-				'draggable' => true,
-			);
+			$allowed_tags['img'] = $emoji_html['img'];
 		}
 
 		return $allowed_tags;

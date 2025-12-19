@@ -17,6 +17,44 @@ use Activitypub\Emoji;
 class Test_Emoji extends \WP_UnitTestCase {
 
 	/**
+	 * Set up each test.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		// Mock emoji imports to return a local URL.
+		\add_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ), 10, 2 );
+	}
+
+	/**
+	 * Tear down each test.
+	 */
+	public function tear_down() {
+		\remove_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ), 10 );
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Mock emoji import to return a local URL.
+	 *
+	 * @param string|false|null $result    The import result.
+	 * @param string            $emoji_url The remote emoji URL.
+	 *
+	 * @return string Mocked local URL based on the remote URL.
+	 */
+	public function mock_emoji_import( $result, $emoji_url ) {
+		// Only mock emoji URLs from example.com.
+		if ( false === \strpos( $emoji_url, 'example.com/emoji/' ) ) {
+			return $result;
+		}
+
+		// Return a mock local URL that preserves the filename.
+		$filename = \basename( $emoji_url );
+		return 'http://example.org/wp-content/uploads/activitypub/emoji/example.com/' . $filename;
+	}
+
+	/**
 	 * Test replacing multiple emoji in a string.
 	 *
 	 * @covers ::replace_custom_emoji
