@@ -471,6 +471,7 @@ class Remote_Actors {
 
 		if ( \is_wp_error( $actor ) ) {
 			self::add_error( $post->ID, $actor );
+
 			return $actor;
 		}
 
