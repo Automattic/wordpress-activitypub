@@ -509,20 +509,19 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	 * @covers ::clean_html
 	 */
 	public function test_allowed_html_filter() {
-		add_filter(
-			'activitypub_allowed_html',
-			function ( $allowed_html ) {
-				// Add data-custom attribute to span.
-				$allowed_html['span']['data-custom'] = true;
-				return $allowed_html;
-			}
-		);
+		$allowed_html_filter = static function ( $allowed_html ) {
+			// Add data-custom attribute to span.
+			$allowed_html['span']['data-custom'] = true;
+
+			return $allowed_html;
+		};
+		\add_filter( 'activitypub_allowed_html', $allowed_html_filter );
 
 		$input    = '<span data-custom="allowed" data-other="removed">Content</span>';
 		$expected = '<span data-custom="allowed">Content</span>';
 		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
 
-		remove_all_filters( 'activitypub_allowed_html' );
+		\remove_filter( 'activitypub_allowed_html', $allowed_html_filter );
 	}
 
 	/**

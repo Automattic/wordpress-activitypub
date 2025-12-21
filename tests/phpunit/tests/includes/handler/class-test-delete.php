@@ -85,19 +85,17 @@ class Test_Delete extends \WP_UnitTestCase {
 		$actor_url = 'https://example.com/users/testactor';
 
 		// Mock actor metadata.
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $actor_url ) {
-				return array(
-					'type'              => 'Person',
-					'name'              => 'Test Actor',
-					'preferredUsername' => 'testactor',
-					'id'                => $actor_url,
-					'url'               => 'https://example.com/@testactor',
-					'inbox'             => $actor_url . '/inbox',
-				);
-			}
-		);
+		$http_get_filter = static function () use ( $actor_url ) {
+			return array(
+				'type'              => 'Person',
+				'name'              => 'Test Actor',
+				'preferredUsername' => 'testactor',
+				'id'                => $actor_url,
+				'url'               => 'https://example.com/@testactor',
+				'inbox'             => $actor_url . '/inbox',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $http_get_filter );
 
 		$actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $actor_url );
 
@@ -145,7 +143,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertNotNull( \get_comment( $other_comment_id ), 'Other comment should not be deleted' );
 
 		// Clean up.
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $http_get_filter );
 	}
 
 	/**
@@ -157,21 +155,18 @@ class Test_Delete extends \WP_UnitTestCase {
 		$nonexistent_actor_id = 999999;
 
 		// Mock the return value to capture it.
-		$result = null;
-		\add_action(
-			'activitypub_delete_remote_actor_interactions',
-			function ( $actor_id ) use ( &$result ) {
-				$result = Delete::delete_interactions( $actor_id );
-			},
-			5
-		);
+		$result                     = null;
+		$delete_interactions_action = static function ( $actor_id ) use ( &$result ) {
+			$result = Delete::delete_interactions( $actor_id );
+		};
+		\add_action( 'activitypub_delete_remote_actor_interactions', $delete_interactions_action, 5 );
 
 		\do_action( 'activitypub_delete_remote_actor_interactions', $nonexistent_actor_id );
 
 		// Verify it returns false when no comments exist.
 		$this->assertFalse( $result, 'Should return false when no comments exist' );
 
-		\remove_all_actions( 'activitypub_delete_remote_actor_interactions', 5 );
+		\remove_action( 'activitypub_delete_remote_actor_interactions', $delete_interactions_action, 5 );
 	}
 
 	/**
@@ -183,19 +178,17 @@ class Test_Delete extends \WP_UnitTestCase {
 		$actor_url = 'https://example.com/users/testactor';
 
 		// Mock actor metadata.
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $actor_url ) {
-				return array(
-					'type'              => 'Person',
-					'name'              => 'Test Actor',
-					'preferredUsername' => 'testactor',
-					'id'                => $actor_url,
-					'url'               => 'https://example.com/@testactor',
-					'inbox'             => $actor_url . '/inbox',
-				);
-			}
-		);
+		$http_get_filter = static function () use ( $actor_url ) {
+			return array(
+				'type'              => 'Person',
+				'name'              => 'Test Actor',
+				'preferredUsername' => 'testactor',
+				'id'                => $actor_url,
+				'url'               => 'https://example.com/@testactor',
+				'inbox'             => $actor_url . '/inbox',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $http_get_filter );
 
 		$actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $actor_url );
 
@@ -229,7 +222,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		}
 
 		// Clean up.
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $http_get_filter );
 	}
 
 	/**
@@ -241,21 +234,18 @@ class Test_Delete extends \WP_UnitTestCase {
 		$nonexistent_actor_id = 999999;
 
 		// Mock the return value to capture it.
-		$result = null;
-		\add_action(
-			'activitypub_delete_remote_actor_posts',
-			function ( $actor_id ) use ( &$result ) {
-				$result = Delete::delete_posts( $actor_id );
-			},
-			5
-		);
+		$result              = null;
+		$delete_posts_action = static function ( $actor_id ) use ( &$result ) {
+			$result = Delete::delete_posts( $actor_id );
+		};
+		\add_action( 'activitypub_delete_remote_actor_posts', $delete_posts_action, 5 );
 
 		\do_action( 'activitypub_delete_remote_actor_posts', $nonexistent_actor_id );
 
 		// Verify it returns false when no posts exist.
 		$this->assertFalse( $result, 'Should return false when no posts exist' );
 
-		\remove_all_actions( 'activitypub_delete_remote_actor_posts', 5 );
+		\remove_action( 'activitypub_delete_remote_actor_posts', $delete_posts_action, 5 );
 	}
 
 	/**
@@ -422,15 +412,11 @@ class Test_Delete extends \WP_UnitTestCase {
 		$action_fired   = false;
 		$action_success = null;
 
-		\add_action(
-			'activitypub_handled_delete',
-			function ( $act, $users, $success ) use ( &$action_fired, &$action_success ) {
-				$action_fired   = true;
-				$action_success = $success;
-			},
-			10,
-			3
-		);
+		$handled_delete_action = static function ( $act, $users, $success ) use ( &$action_fired, &$action_success ) {
+			$action_fired   = true;
+			$action_success = $success;
+		};
+		\add_action( 'activitypub_handled_delete', $handled_delete_action, 10, 3 );
 
 		// Call delete_object - should not throw errors.
 		Delete::delete_object( $activity, array( self::$user_id ) );
@@ -440,7 +426,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertFalse( $action_success, 'Success should be false when nothing was deleted' );
 
 		\remove_filter( 'pre_http_request', $filter );
-		\remove_all_actions( 'activitypub_handled_delete' );
+		\remove_action( 'activitypub_handled_delete', $handled_delete_action, 10 );
 	}
 
 	/**
