@@ -32,6 +32,13 @@ class Test_Attachments extends \WP_UnitTestCase {
 	protected static $author_id;
 
 	/**
+	 * Emoji test directory path.
+	 *
+	 * @var string
+	 */
+	protected static $emoji_dir;
+
+	/**
 	 * Set up before class.
 	 */
 	public static function set_up_before_class() {
@@ -51,6 +58,25 @@ class Test_Attachments extends \WP_UnitTestCase {
 				'post_author'  => self::$author_id,
 			)
 		);
+
+		// Create emoji test directory.
+		$upload_dir      = \wp_upload_dir();
+		self::$emoji_dir = $upload_dir['basedir'] . Attachments::$emoji_dir;
+		\wp_mkdir_p( self::$emoji_dir );
+	}
+
+	/**
+	 * Clean up after all tests.
+	 */
+	public static function tear_down_after_class() {
+		global $wp_filesystem;
+		\WP_Filesystem();
+
+		if ( $wp_filesystem->is_dir( self::$emoji_dir ) ) {
+			$wp_filesystem->rmdir( self::$emoji_dir, true );
+		}
+
+		parent::tear_down_after_class();
 	}
 
 	/**
@@ -1324,5 +1350,86 @@ class Test_Attachments extends \WP_UnitTestCase {
 		\remove_filter( 'pre_http_request', $fail_download );
 
 		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Call private get_emoji_url method via reflection.
+	 *
+	 * @param string $emoji_url The emoji URL.
+	 * @return string|false The local URL or false.
+	 */
+	private function call_get_emoji_url( $emoji_url ) {
+		$method = new \ReflectionMethod( Attachments::class, 'get_emoji_url' );
+		$method->setAccessible( true );
+
+		return $method->invoke( null, $emoji_url );
+	}
+
+	/**
+	 * Test that glob metacharacters in emoji URLs don't match unintended files.
+	 *
+	 * Without sanitization, glob patterns could match unintended files:
+	 * - '[abc].*' would match files starting with a, b, or c
+	 * - '*.*' would match all files
+	 * - '?.*' would match any single-character filename
+	 *
+	 * With sanitization, these metacharacters are removed.
+	 *
+	 * @covers ::get_emoji_url
+	 * @dataProvider data_glob_metacharacter_urls
+	 */
+	public function test_get_emoji_url_sanitizes_glob_metacharacters( $malicious_filename, $files_to_create ) {
+		global $wp_filesystem;
+		\WP_Filesystem();
+
+		$domain_dir = self::$emoji_dir . 'glob-test.example.com';
+		$wp_filesystem->mkdir( $domain_dir, FS_CHMOD_DIR );
+
+		// Create files that would match the unsanitized glob pattern.
+		foreach ( $files_to_create as $filename ) {
+			$wp_filesystem->put_contents( $domain_dir . '/' . $filename, 'test' );
+		}
+
+		// URL with glob metacharacters.
+		$url    = 'https://glob-test.example.com/emoji/' . $malicious_filename;
+		$result = $this->call_get_emoji_url( $url );
+
+		// Should NOT match any files because metacharacters are sanitized.
+		$this->assertFalse( $result, sprintf( 'Glob pattern "%s" should not match existing files', $malicious_filename ) );
+	}
+
+	/**
+	 * Data provider for glob metacharacter tests.
+	 *
+	 * @return array Test cases: [malicious_filename, files_that_would_match_if_not_sanitized].
+	 */
+	public function data_glob_metacharacter_urls() {
+		return array(
+			'brackets'      => array( '[abc].png', array( 'a.png', 'b.png', 'c.png' ) ),
+			'asterisk'      => array( 'test*.png', array( 'test1.png', 'test2.png', 'testing.png' ) ),
+			'question_mark' => array( 'tes?.png', array( 'test.png', 'tess.png', 'tesx.png' ) ),
+			'curly_braces'  => array( '{foo,bar}.png', array( 'foo.png', 'bar.png' ) ),
+		);
+	}
+
+	/**
+	 * Test that get_emoji_url finds cached files for normal URLs.
+	 *
+	 * @covers ::get_emoji_url
+	 */
+	public function test_get_emoji_url_finds_cached_file() {
+		global $wp_filesystem;
+		\WP_Filesystem();
+
+		$domain_dir = self::$emoji_dir . 'cache-test.example.com';
+		$wp_filesystem->mkdir( $domain_dir, FS_CHMOD_DIR );
+		$wp_filesystem->put_contents( $domain_dir . '/normal-emoji.png', 'test' );
+
+		// Normal URL should find the cached file.
+		$url    = 'https://cache-test.example.com/emoji/normal-emoji.png';
+		$result = $this->call_get_emoji_url( $url );
+
+		$this->assertNotFalse( $result );
+		$this->assertStringContainsString( 'normal-emoji.png', $result );
 	}
 }
