@@ -542,4 +542,48 @@ class Test_Create extends \WP_UnitTestCase {
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
 		\delete_option( 'activitypub_create_posts' );
 	}
+
+	/**
+	 * Test that replies to non-existent posts return false.
+	 *
+	 * @covers \Activitypub\Collection\Interactions::add_comment
+	 */
+	public function test_reply_to_non_existent_post_returns_false() {
+		$object = array(
+			'actor'  => $this->user_url,
+			'type'   => 'Create',
+			'id'     => 'https://example.com/id/' . microtime( true ),
+			'to'     => array( $this->user_url ),
+			'cc'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'        => 'https://example.com/reply/123',
+				'url'       => 'https://example.com/reply/123',
+				'inReplyTo' => 'https://non-existent-site.example/post/999',
+				'content'   => 'Reply to non-existent post',
+			),
+		);
+
+		$result = Create::handle_create( $object, $this->user_id );
+
+		$this->assertNull( $result );
+
+		// Verify no comment was created.
+		$args = array(
+			'type'   => 'comment',
+			'status' => 'any',
+		);
+
+		$query    = new \WP_Comment_Query( $args );
+		$comments = $query->comments;
+
+		// Filter to check for our specific comment.
+		$found = array_filter(
+			$comments,
+			function ( $comment ) {
+				return 'Reply to non-existent post' === $comment->comment_content;
+			}
+		);
+
+		$this->assertEmpty( $found );
+	}
 }
