@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix fatal error when displaying posts with mentions of invalid remote actors.
