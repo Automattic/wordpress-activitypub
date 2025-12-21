@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 7.8.1
+Stable tag: 7.8.2
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,11 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.8.2 - 2025-12-21
+#### Fixed
+- Fix error when receiving replies to non-existent posts.
+- Fix fatal error when displaying posts with mentions of invalid remote actors.
 
 ### 7.8.1 - 2025-12-18
 #### Added
