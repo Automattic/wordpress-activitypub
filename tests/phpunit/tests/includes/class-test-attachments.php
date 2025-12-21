@@ -1377,6 +1377,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 *
 	 * @covers ::get_emoji_url
 	 * @dataProvider data_glob_metacharacter_urls
+	 *
+	 * @param string   $malicious_filename Filename containing glob metacharacters.
+	 * @param string[] $files_to_create    Files that would match the unsanitized pattern.
 	 */
 	public function test_get_emoji_url_sanitizes_glob_metacharacters( $malicious_filename, $files_to_create ) {
 		global $wp_filesystem;

@@ -101,6 +101,34 @@ class Test_Interactions extends \WP_UnitTestCase {
 		parent::set_up();
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( __CLASS__, 'get_remote_metadata_by_actor' ), 0, 2 );
+		\add_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ), 10, 2 );
+	}
+
+	/**
+	 * Tear down each test.
+	 */
+	public function tear_down() {
+		\remove_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ) );
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Mock emoji import to return a local URL.
+	 *
+	 * @param string|false|null $result    The import result.
+	 * @param string            $emoji_url The remote emoji URL.
+	 *
+	 * @return string|false|null Mocked local URL or original result.
+	 */
+	public function mock_emoji_import( $result, $emoji_url ) {
+		if ( false === \strpos( $emoji_url, 'example.com/' ) ) {
+			return $result;
+		}
+
+		$upload_dir = \wp_upload_dir();
+
+		return $upload_dir['baseurl'] . '/activitypub/emoji/example.com/' . \basename( $emoji_url );
 	}
 
 	/**
