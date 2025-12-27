@@ -174,13 +174,26 @@ class Following extends \WP_List_Table {
 	 * @return array
 	 */
 	public function get_columns() {
-		return array(
+		$columns = array(
 			'cb'         => '<input type="checkbox" />',
 			'username'   => \__( 'Username', 'activitypub' ),
 			'post_title' => \__( 'Name', 'activitypub' ),
 			'webfinger'  => \__( 'Profile', 'activitypub' ),
 			'modified'   => \__( 'Last updated', 'activitypub' ),
 		);
+
+		/**
+		 * Filters the columns displayed in the ActivityPub Following list table.
+		 *
+		 * Allows plugins to add, remove, or reorder columns shown in the
+		 * Following list table on the ActivityPub admin screen.
+		 *
+		 * @since 7.9.0
+		 *
+		 * @param string[]                              $columns Array of columns.
+		 * @param \Activitypub\WP_Admin\Table\Following $table   The current Following list table instance.
+		 */
+		return \apply_filters( 'activitypub_following_columns', $columns, $this );
 	}
 
 	/**
@@ -189,11 +202,24 @@ class Following extends \WP_List_Table {
 	 * @return array
 	 */
 	public function get_sortable_columns() {
-		return array(
+		$columns = array(
 			'username'   => array( 'username', true ),
 			'post_title' => array( 'post_title', true ),
 			'modified'   => array( 'modified', false ),
 		);
+
+		/**
+		 * Filters the sortable columns in the ActivityPub Following list table.
+		 *
+		 * Allows plugins to register additional sortable columns or modify the default sortable behavior.
+		 *
+		 * @since 7.9.0
+		 *
+		 * @param array<string, array>                  $columns Sortable columns in the format
+		 *                                                       `column_id => array( orderby, is_sortable_default )`.
+		 * @param \Activitypub\WP_Admin\Table\Following $table   The current Following list table instance.
+		 */
+		return apply_filters( 'activitypub_following_sortable_columns', $columns, $this );
 	}
 
 	/**
@@ -350,6 +376,26 @@ class Following extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_default( $item, $column_name ) {
+		/**
+		 * Filters the displayed value for a column in the ActivityPub Following list table.
+		 *
+		 * Allows plugins to provide custom output for individual columns.
+		 * If a non-null value is returned, it will be used instead of the
+		 * default column rendering logic.
+		 *
+		 * @since 7.9.0
+		 *
+		 * @param string|null                           $value       The column value. Default null.
+		 * @param string                                $column_name The name of the current column.
+		 * @param array                                 $item        The current following item data.
+		 * @param \Activitypub\WP_Admin\Table\Following $table       The current Following list table instance.
+		 */
+		$value = \apply_filters( 'activitypub_following_column_value', null, $column_name, $item, $this );
+
+		if ( null !== $value ) {
+			return $value;
+		}
+
 		if ( ! array_key_exists( $column_name, $item ) ) {
 			return \esc_html__( 'None', 'activitypub' );
 		}
