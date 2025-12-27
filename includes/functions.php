@@ -1446,10 +1446,14 @@ function get_content_visibility( $post_id ) {
 	);
 
 	if ( in_array( $visibility, $options, true ) ) {
-		// Visibility is explicitly set, use it.
+		// Visibility is explicitly set to a non-public value, use it.
 		$_visibility = $visibility;
+	} elseif ( \metadata_exists( 'post', $post->ID, 'activitypub_content_visibility' ) ) {
+		// Meta exists but is not in options - treat as explicit public.
+		// This handles both '' (Block Editor) and 'public' (Classic Editor).
+		$_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 	} else {
-		// No explicit visibility set, calculate default.
+		// No visibility meta exists, calculate default based on age/status.
 		$status = \get_post_meta( $post->ID, 'activitypub_status', true );
 
 		if ( 'federated' === $status ) {

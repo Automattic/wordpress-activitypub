@@ -241,7 +241,36 @@ class Classic_Editor {
 		// Save content visibility.
 		if ( isset( $_POST['activitypub_content_visibility'] ) ) {
 			$visibility = \sanitize_text_field( \wp_unslash( $_POST['activitypub_content_visibility'] ) );
-			\update_post_meta( $post_id, 'activitypub_content_visibility', $visibility );
+
+			// Normalize 'public' to empty string to match REST API behavior.
+			if ( 'public' === $visibility ) {
+				$visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+			}
+
+			// Calculate the natural default (what it would be without saved meta).
+			$post           = \get_post( $post_id );
+			$status         = \get_post_meta( $post_id, 'activitypub_status', true );
+			$post_timestamp = \strtotime( $post->post_date );
+			$one_month_ago  = \strtotime( '-30 days' );
+			$is_old_post    = $post_timestamp < $one_month_ago;
+
+			// Determine what the natural default would be.
+			if ( 'federated' === $status ) {
+				$natural_default = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+			} elseif ( $is_old_post ) {
+				$natural_default = ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
+			} else {
+				$natural_default = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+			}
+
+			// Only save if different from natural default (to avoid flooding DB).
+			// For old posts, we need to save public explicitly to override the age-based default.
+			if ( $visibility !== $natural_default ) {
+				\update_post_meta( $post_id, 'activitypub_content_visibility', $visibility );
+			} else {
+				// Value matches natural default, remove any saved meta.
+				\delete_post_meta( $post_id, 'activitypub_content_visibility' );
+			}
 		}
 
 		// Save quote interaction policy.
