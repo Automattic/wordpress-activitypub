@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix old posts being federated when edited despite "Do not federate" default.
