@@ -330,7 +330,8 @@ function is_post_disabled( $post ) {
 		return true;
 	}
 
-	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	// Use effective visibility (saved or calculated default).
+	$visibility = get_content_visibility( $post );
 
 	if (
 		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ||
@@ -1422,7 +1423,11 @@ function is_same_domain( $url ) {
 /**
  * Get the visibility of a post.
  *
- * @param int $post_id The post ID.
+ * Returns the saved visibility value or calculates a default based on
+ * post age and federation status. This ensures consistent behavior between
+ * the UI (which shows defaults) and the actual federation logic.
+ *
+ * @param int|\WP_Post $post_id The post ID or post object.
  *
  * @return string|false The visibility of the post or false if not found.
  */
@@ -1441,7 +1446,25 @@ function get_content_visibility( $post_id ) {
 	);
 
 	if ( in_array( $visibility, $options, true ) ) {
+		// Visibility is explicitly set, use it.
 		$_visibility = $visibility;
+	} else {
+		// No explicit visibility set, calculate default.
+		$status = \get_post_meta( $post->ID, 'activitypub_status', true );
+
+		if ( 'federated' === $status ) {
+			// Post is already federated, default to public.
+			$_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+		} else {
+			// Check if post is older than 30 days.
+			$post_timestamp = \strtotime( $post->post_date );
+			$one_month_ago  = \strtotime( '-30 days' );
+
+			if ( $post_timestamp < $one_month_ago ) {
+				// Old post, default to local (do not federate).
+				$_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
+			}
+		}
 	}
 
 	/**

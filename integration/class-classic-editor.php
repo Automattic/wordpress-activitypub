@@ -189,28 +189,7 @@ class Classic_Editor {
 	 * @return string The default visibility value.
 	 */
 	private static function get_default_visibility( $post ) {
-		// If already set, use that value.
-		$saved_visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
-		if ( $saved_visibility ) {
-			return $saved_visibility;
-		}
-
-		// If post is federated, use public.
-		$status = \get_post_meta( $post->ID, 'activitypub_status', true );
-		if ( 'federated' === $status ) {
-			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
-		}
-
-		// If post is older than 1 month, default to local.
-		$post_timestamp = \strtotime( $post->post_date );
-		$one_month_ago  = \strtotime( '-30 days' );
-
-		if ( $post_timestamp < $one_month_ago ) {
-			return ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
-		}
-
-		// Default to public for new posts.
-		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+		return \Activitypub\get_content_visibility( $post );
 	}
 
 	/**
