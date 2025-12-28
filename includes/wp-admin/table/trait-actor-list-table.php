@@ -37,17 +37,17 @@ trait Actor_List_Table {
 		 *
 		 * @since 7.9.0
 		 *
-		 * @param string|null                           $value       The column value. Default null.
-		 * @param string                                $column_name The name of the current column.
-		 * @param array                                 $item        The current following item data.
-		 * @param \Activitypub\WP_Admin\Table\Following $table       The current Following list table instance.
+		 * @param string|null $value       The column value. Default null.
+		 * @param string      $column_name The name of the current column.
+		 * @param array       $item        The current following item data.
+		 * @param int         $user_id     The user id of the local actor.
 		 */
 		$value = \apply_filters(
 			'activitypub_' . $this->actor_list_table_key() . '_column_value',
 			null,
 			$column_name,
 			$item,
-			$this
+			$this->user_id
 		);
 
 		if ( null !== $value ) {
@@ -79,11 +79,11 @@ trait Actor_List_Table {
 		 *
 		 * @since 7.9.0
 		 *
-		 * @param array<string, array>                  $columns Sortable columns in the format
+		 * @param array<string, array> $columns   Sortable columns in the format
 		 *                                                       `column_id => array( orderby, is_sortable_default )`.
-		 * @param \Activitypub\WP_Admin\Table\Following $table   The current Following list table instance.
+		 * @param int                  $user_id   The user id of the local actor.
 		 */
-		return \apply_filters( 'activitypub_' . $this->actor_list_table_key() . '_sortable_columns', $columns, $this );
+		return \apply_filters( 'activitypub_' . $this->actor_list_table_key() . '_sortable_columns', $columns, $this->user_id );
 	}
 
 	/**
@@ -108,10 +108,10 @@ trait Actor_List_Table {
 		 *
 		 * @since 7.9.0
 		 *
-		 * @param string[]                              $columns Array of columns.
-		 * @param \Activitypub\WP_Admin\Table\Following $table   The current Following list table instance.
+		 * @param string[] $columns Array of columns.
+		 * @param int      $user_id   The user id of the local actor.
 		 */
-		return \apply_filters( 'activitypub_' . $this->actor_list_table_key() . '_columns', $columns, $this );
+		return \apply_filters( 'activitypub_' . $this->actor_list_table_key() . '_columns', $columns, $this->user_id );
 	}
 
 	/**
