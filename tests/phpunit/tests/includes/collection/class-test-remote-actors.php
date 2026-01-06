@@ -1422,4 +1422,111 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$stored_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
 		$this->assertEquals( 'custom@example.org', $stored_acct );
 	}
+
+	/**
+	 * Test get_by_uri returns WP_Error when post is deleted after ID lookup.
+	 *
+	 * This is a regression test for the fix that prevents PHP warnings like:
+	 * "Attempt to read property 'post_content' on null"
+	 *
+	 * The scenario: A post ID exists in the database but get_post() returns null
+	 * (e.g., due to race condition or database inconsistency).
+	 *
+	 * @covers ::get_by_uri
+	 */
+	public function test_get_by_uri_returns_wp_error_when_post_deleted_after_id_lookup() {
+		global $wpdb;
+
+		// Create a remote actor.
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/disappearing',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/disappearing',
+			'inbox'             => 'https://remote.example.com/actor/disappearing/inbox',
+			'name'              => 'Disappearing Actor',
+			'preferredUsername' => 'disappearing',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Verify actor exists.
+		$post = Remote_Actors::get_by_uri( 'https://remote.example.com/actor/disappearing' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+
+		// Simulate a race condition: delete the post directly from DB and clear cache.
+		// This mimics the scenario where the post is deleted between the guid lookup
+		// and the get_post() call.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( $wpdb->posts, array( 'ID' => $post_id ) );
+		\clean_post_cache( $post_id );
+
+		// Now get_by_uri should return WP_Error, not null (which would cause PHP warnings).
+		$result = Remote_Actors::get_by_uri( 'https://remote.example.com/actor/disappearing' );
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_actor_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * Test fetch_by_acct returns WP_Error when post is deleted after ID lookup.
+	 *
+	 * This is a regression test for the fix that prevents PHP warnings when
+	 * get_post() returns null after finding a post ID via meta query.
+	 *
+	 * @covers ::fetch_by_acct
+	 */
+	public function test_fetch_by_acct_returns_wp_error_when_post_deleted_after_id_lookup() {
+		global $wpdb;
+
+		// Create a remote actor.
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/disappearing-acct',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/disappearing-acct',
+			'inbox'             => 'https://remote.example.com/actor/disappearing-acct/inbox',
+			'name'              => 'Disappearing Acct Actor',
+			'preferredUsername' => 'disappearingacct',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Store the acct meta.
+		\update_post_meta( $post_id, '_activitypub_acct', 'disappearingacct@remote.example.com' );
+
+		// Verify actor exists via acct.
+		$post = Remote_Actors::fetch_by_acct( 'disappearingacct@remote.example.com' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+
+		// Simulate a race condition: delete the post directly from DB and clear cache,
+		// but leave the postmeta intact (this is the scenario that triggers the bug).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( $wpdb->posts, array( 'ID' => $post_id ) );
+		\clean_post_cache( $post_id );
+
+		// Mock webfinger to fail, so it doesn't try to re-fetch.
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 404 ),
+					'body'     => 'Not Found',
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
+
+		// Now fetch_by_acct should return WP_Error, not null.
+		$result = Remote_Actors::fetch_by_acct( 'disappearingacct@remote.example.com' );
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_actor_not_found', $result->get_error_code() );
+
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+	}
 }
