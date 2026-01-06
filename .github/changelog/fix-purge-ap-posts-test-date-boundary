@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed flaky test for purge_ap_posts due to date boundary condition with -1 month
