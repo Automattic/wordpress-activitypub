@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed inconsistent default value for the hashtag setting on new installations.
