@@ -356,7 +356,7 @@ class Settings_Fields {
 	 * Render use hashtags field.
 	 */
 	public static function render_use_hashtags_field() {
-		$value = get_option( 'activitypub_use_hashtags', '1' );
+		$value = get_option( 'activitypub_use_hashtags', '0' );
 		?>
 		<p>
 			<label>
