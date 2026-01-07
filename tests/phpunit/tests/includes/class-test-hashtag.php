@@ -269,4 +269,105 @@ ENDPRE;
 			),
 		);
 	}
+
+	/**
+	 * Test that hashtag filters are added when the setting is enabled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_adds_filters_when_enabled() {
+		// Remove any existing filters first.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
+		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
+
+		// Enable the hashtag setting.
+		\update_option( 'activitypub_use_hashtags', '1' );
+
+		// Call init.
+		\Activitypub\Hashtag::init();
+
+		// Verify filters were added.
+		$this->assertNotFalse(
+			\has_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) ),
+			'insert_post action should be added when hashtags are enabled'
+		);
+		$this->assertNotFalse(
+			\has_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) ),
+			'the_content filter should be added when hashtags are enabled'
+		);
+		$this->assertNotFalse(
+			\has_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ) ),
+			'filter_activity_object filter should be added when hashtags are enabled'
+		);
+
+		// Clean up.
+		\delete_option( 'activitypub_use_hashtags' );
+	}
+
+	/**
+	 * Test that hashtag filters are not added when the setting is disabled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_does_not_add_filters_when_disabled() {
+		// Remove any existing filters first.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
+		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
+
+		// Disable the hashtag setting (default).
+		\update_option( 'activitypub_use_hashtags', '0' );
+
+		// Call init.
+		\Activitypub\Hashtag::init();
+
+		// Verify filters were NOT added.
+		$this->assertFalse(
+			\has_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) ),
+			'insert_post action should not be added when hashtags are disabled'
+		);
+		$this->assertFalse(
+			\has_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) ),
+			'the_content filter should not be added when hashtags are disabled'
+		);
+		$this->assertFalse(
+			\has_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ) ),
+			'filter_activity_object filter should not be added when hashtags are disabled'
+		);
+
+		// Clean up.
+		\delete_option( 'activitypub_use_hashtags' );
+	}
+
+	/**
+	 * Test that hashtag filters are enabled when the option is the string '1'.
+	 *
+	 * WordPress checkboxes can store values like '1', 1, true, or '0', 0, false, ''.
+	 * The current implementation treats only the string '1' as enabling hashtags,
+	 * and this test verifies that behavior.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_with_string_option_value() {
+		// Remove any existing filters first.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
+		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
+
+		// Test with string '1' (typical checkbox value).
+		\update_option( 'activitypub_use_hashtags', '1' );
+		\Activitypub\Hashtag::init();
+
+		$this->assertNotFalse(
+			\has_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) ),
+			'Hashtag feature should be enabled with string "1"'
+		);
+
+		// Clean up.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
+		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
+		\delete_option( 'activitypub_use_hashtags' );
+	}
 }
