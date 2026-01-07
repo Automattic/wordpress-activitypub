@@ -61,13 +61,24 @@ class Hashtag {
 			return;
 		}
 
-		$tags = array();
+		$tags    = array();
+		$content = $post->post_content . "\n" . $post->post_excerpt;
 
-		// Skip hashtags in HTML attributes, like hex colors.
-		$content = wp_strip_all_tags( $post->post_content . "\n" . $post->post_excerpt );
+		// Remove content from protected HTML elements to match enrich_content_data behavior.
+		// These are the same tags that enrich_content_data skips when processing content.
+		$protected_tags = array( 'a', 'pre', 'code', 'textarea', 'style', 'script' );
+		foreach ( $protected_tags as $tag ) {
+			$content = \preg_replace( '/<' . $tag . '\b[^>]*>.*?<\/' . $tag . '>/si', '', $content );
+		}
+
+		// Also remove HTML comments.
+		$content = \preg_replace( '/<!--.*?-->/s', '', $content );
+
+		// Strip remaining HTML tags and attributes (like hex colors in style attributes).
+		$content = \wp_strip_all_tags( $content );
 
 		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $content, $match ) ) {
-			$tags = array_unique( $match[1] );
+			$tags = \array_unique( $match[1] );
 		}
 
 		\wp_add_post_tags( $post->ID, \implode( ', ', $tags ) );
