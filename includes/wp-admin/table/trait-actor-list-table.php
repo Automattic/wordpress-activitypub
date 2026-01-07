@@ -92,6 +92,7 @@ trait Actor_List_Table {
 	 * @return array
 	 */
 	public function get_columns() {
+		$key     = $this->actor_list_table_key();
 		$columns = array(
 			'cb'         => '<input type="checkbox" />',
 			'username'   => \__( 'Username', 'activitypub' ),
@@ -99,6 +100,10 @@ trait Actor_List_Table {
 			'webfinger'  => \__( 'Profile', 'activitypub' ),
 			'modified'   => \__( 'Last updated', 'activitypub' ),
 		);
+
+		if ( 'blocked_actors' === $key ) {
+			$columns['modified'] = \__( 'Blocked date', 'activitypub' );
+		}
 
 		/**
 		 * Filters the columns displayed in the ActivityPub Following list table.
@@ -111,7 +116,7 @@ trait Actor_List_Table {
 		 * @param string[] $columns Array of columns.
 		 * @param int      $user_id   The user id of the local actor.
 		 */
-		return \apply_filters( 'activitypub_' . $this->actor_list_table_key() . '_columns', $columns, $this->user_id );
+		return \apply_filters( 'activitypub_' . $key . '_columns', $columns, $this->user_id );
 	}
 
 	/**
