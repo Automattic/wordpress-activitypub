@@ -75,7 +75,7 @@ class Hashtag {
 	/**
 	 * Extract text content from outside protected HTML elements.
 	 *
-	 * Uses wp_html_split() to properly parse HTML and skip content inside
+	 * Uses WP_HTML_Tag_Processor to properly parse HTML and skip content inside
 	 * protected tags, matching the behavior of enrich_content_data().
 	 *
 	 * @param string $content The HTML content to process.
@@ -83,47 +83,39 @@ class Hashtag {
 	 * @return string Text content from non-protected areas only.
 	 */
 	private static function extract_text_outside_protected_tags( $content ) {
-		$tag_stack      = array();
-		$protected_tags = array(
-			'pre',
-			'code',
-			'textarea',
-			'style',
-			'a',
-		);
+		$processor = new \WP_HTML_Tag_Processor( $content );
 
+		/*
+		 * Do not process content inside protected tags.
+		 *
+		 * Note: STYLE and TEXTAREA are "atomic" elements in WP_HTML_Tag_Processor,
+		 * meaning their content is bundled with the tag token and won't appear
+		 * as separate #text nodes.
+		 * See https://github.com/WordPress/wordpress-develop/blob/0fb3bb29596918864d808d156268a2df63c83620/src/wp-includes/html-api/class-wp-html-tag-processor.php#L276
+		 */
+		$protected_tags   = array( 'PRE', 'CODE', 'A' );
+		$tag_stack        = array();
 		$filtered_content = '';
-		$in_protected_tag = false;
 
-		foreach ( \wp_html_split( $content ) as $chunk ) {
-			// Skip HTML comments.
-			if ( \preg_match( '#^<!--[\s\S]*-->$#i', $chunk ) ) {
-				continue;
-			}
+		while ( $processor->next_token() ) {
+			$token_type = $processor->get_token_type();
 
-			// Handle HTML tags.
-			if ( \preg_match( '#^<(/)?([a-z-]+)\b[^>]*>$#i', $chunk, $m ) ) {
-				$tag = \strtolower( $m[2] );
+			if ( '#tag' === $token_type ) {
+				$tag_name = $processor->get_tag();
 
-				if ( '/' === $m[1] ) {
+				if ( $processor->is_tag_closer() ) {
 					// Closing tag: remove from stack.
-					$i = \array_search( $tag, $tag_stack, true );
+					$i = \array_search( $tag_name, $tag_stack, true );
 					if ( false !== $i ) {
 						$tag_stack = \array_slice( $tag_stack, 0, $i );
 					}
-				} else {
+				} elseif ( \in_array( $tag_name, $protected_tags, true ) ) {
 					// Opening tag: add to stack.
-					$tag_stack[] = $tag;
+					$tag_stack[] = $tag_name;
 				}
-
-				// Update protected state based on current stack.
-				$in_protected_tag = \array_intersect( $tag_stack, $protected_tags );
-				continue;
-			}
-
-			// Only include text chunks that are outside protected tags.
-			if ( ! $in_protected_tag ) {
-				$filtered_content .= $chunk;
+			} elseif ( '#text' === $token_type && empty( $tag_stack ) ) {
+				// Only include text chunks that are outside protected tags.
+				$filtered_content .= $processor->get_modifiable_text();
 			}
 		}
 
