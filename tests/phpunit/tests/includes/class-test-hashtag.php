@@ -249,10 +249,11 @@ ENDPRE;
 	}
 
 	/**
-	 * Test that hashtag filters work with boolean-like option values.
+	 * Test that hashtag filters are enabled when the option is the string '1'.
 	 *
-	 * WordPress checkboxes can store '1', 1, true, or '0', 0, false, ''.
-	 * This test ensures the setting works correctly with string '1'.
+	 * WordPress checkboxes can store values like '1', 1, true, or '0', 0, false, ''.
+	 * The current implementation treats only the string '1' as enabling hashtags,
+	 * and this test verifies that behavior.
 	 *
 	 * @covers ::init
 	 */
@@ -272,7 +273,9 @@ ENDPRE;
 		);
 
 		// Clean up.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
 		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
 		\delete_option( 'activitypub_use_hashtags' );
 	}
 }
