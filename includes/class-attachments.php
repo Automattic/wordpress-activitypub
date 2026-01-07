@@ -67,10 +67,15 @@ class Attachments {
 			return;
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		\WP_Filesystem();
 		global $wp_filesystem;
+		if ( ! $wp_filesystem ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			\WP_Filesystem();
+		}
+
+		if ( ! $wp_filesystem ) {
+			return;
+		}
 
 		$activitypub_dir = self::get_storage_paths( $post_id, 'post' )['basedir'];
 
@@ -455,8 +460,14 @@ class Attachments {
 		}
 
 		// Initialize filesystem.
-		\WP_Filesystem();
 		global $wp_filesystem;
+		if ( ! $wp_filesystem ) {
+			\WP_Filesystem();
+		}
+
+		if ( ! $wp_filesystem ) {
+			return new \WP_Error( 'filesystem_error', \__( 'Could not initialize filesystem.', 'activitypub' ) );
+		}
 
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
@@ -589,8 +600,14 @@ class Attachments {
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
 		// Initialize filesystem if needed.
-		\WP_Filesystem();
 		global $wp_filesystem;
+		if ( ! $wp_filesystem ) {
+			\WP_Filesystem();
+		}
+
+		if ( ! $wp_filesystem ) {
+			return new \WP_Error( 'filesystem_error', \__( 'Could not initialize filesystem.', 'activitypub' ) );
+		}
 
 		// Make sure file name is unique.
 		$counter = 1;
@@ -1032,10 +1049,15 @@ class Attachments {
 			return;
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		\WP_Filesystem();
 		global $wp_filesystem;
+		if ( ! $wp_filesystem ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			\WP_Filesystem();
+		}
+
+		if ( ! $wp_filesystem ) {
+			return;
+		}
 
 		$activitypub_dir = self::get_storage_paths( $actor_id, 'actor' )['basedir'];
 
