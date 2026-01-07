@@ -68,7 +68,13 @@ class Remote_Actors {
 	 * @return \WP_Post|null The post object or null on failure.
 	 */
 	public static function get( $id ) {
-		return \get_post( $id );
+		$post = \get_post( $id );
+
+		if ( $post && self::POST_TYPE === $post->post_type ) {
+			return $post;
+		}
+
+		return null;
 	}
 
 	/**
