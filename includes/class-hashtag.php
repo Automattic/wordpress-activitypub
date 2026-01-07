@@ -61,27 +61,73 @@ class Hashtag {
 			return;
 		}
 
-		$tags    = array();
 		$content = $post->post_content . "\n" . $post->post_excerpt;
+		$content = self::extract_text_outside_protected_tags( $content );
 
-		// Remove content from protected HTML elements to match enrich_content_data behavior.
-		// These are the same tags that enrich_content_data skips when processing content.
-		$protected_tags = array( 'a', 'pre', 'code', 'textarea', 'style' );
-		foreach ( $protected_tags as $tag ) {
-			$content = \preg_replace( '/<' . $tag . '\b[^>]*>.*?<\/' . $tag . '>/si', '', $content );
-		}
-
-		// Also remove HTML comments.
-		$content = \preg_replace( '/<!--.*?-->/s', '', $content );
-
-		// Strip remaining HTML tags and attributes (like hex colors in style attributes).
-		$content = \wp_strip_all_tags( $content );
-
+		$tags = array();
 		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $content, $match ) ) {
 			$tags = \array_unique( $match[1] );
 		}
 
 		\wp_add_post_tags( $post->ID, \implode( ', ', $tags ) );
+	}
+
+	/**
+	 * Extract text content from outside protected HTML elements.
+	 *
+	 * Uses wp_html_split() to properly parse HTML and skip content inside
+	 * protected tags, matching the behavior of enrich_content_data().
+	 *
+	 * @param string $content The HTML content to process.
+	 *
+	 * @return string Text content from non-protected areas only.
+	 */
+	private static function extract_text_outside_protected_tags( $content ) {
+		$tag_stack      = array();
+		$protected_tags = array(
+			'pre',
+			'code',
+			'textarea',
+			'style',
+			'a',
+		);
+
+		$filtered_content = '';
+		$in_protected_tag = false;
+
+		foreach ( \wp_html_split( $content ) as $chunk ) {
+			// Skip HTML comments.
+			if ( \preg_match( '#^<!--[\s\S]*-->$#i', $chunk ) ) {
+				continue;
+			}
+
+			// Handle HTML tags.
+			if ( \preg_match( '#^<(/)?([a-z-]+)\b[^>]*>$#i', $chunk, $m ) ) {
+				$tag = \strtolower( $m[2] );
+
+				if ( '/' === $m[1] ) {
+					// Closing tag: remove from stack.
+					$i = \array_search( $tag, $tag_stack, true );
+					if ( false !== $i ) {
+						$tag_stack = \array_slice( $tag_stack, 0, $i );
+					}
+				} else {
+					// Opening tag: add to stack.
+					$tag_stack[] = $tag;
+				}
+
+				// Update protected state based on current stack.
+				$in_protected_tag = \array_intersect( $tag_stack, $protected_tags );
+				continue;
+			}
+
+			// Only include text chunks that are outside protected tags.
+			if ( ! $in_protected_tag ) {
+				$filtered_content .= $chunk;
+			}
+		}
+
+		return $filtered_content;
 	}
 
 	/**
