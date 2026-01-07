@@ -66,7 +66,7 @@ class Hashtag {
 
 		// Remove content from protected HTML elements to match enrich_content_data behavior.
 		// These are the same tags that enrich_content_data skips when processing content.
-		$protected_tags = array( 'a', 'pre', 'code', 'textarea', 'style', 'script' );
+		$protected_tags = array( 'a', 'pre', 'code', 'textarea', 'style' );
 		foreach ( $protected_tags as $tag ) {
 			$content = \preg_replace( '/<' . $tag . '\b[^>]*>.*?<\/' . $tag . '>/si', '', $content );
 		}

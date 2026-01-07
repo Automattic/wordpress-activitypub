@@ -171,6 +171,9 @@ ENDPRE;
 		$this->assertNotContains( 'precode', $tags, 'Should not extract hashtags from <pre> tags' );
 		$this->assertNotContains( 'inlinecode', $tags, 'Should not extract hashtags from <code> tags' );
 		$this->assertNotContains( 'commenttag', $tags, 'Should not extract hashtags from HTML comments' );
+
+		// Re-add the hook to restore global state for subsequent tests.
+		\add_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ), 10, 2 );
 	}
 
 	/**
@@ -210,6 +213,9 @@ ENDPRE;
 		// Should NOT contain numeric hashtags from links.
 		$this->assertNotContains( '1', $tags, 'Should not extract #1 from links' );
 		$this->assertNotContains( '2', $tags, 'Should not extract #2 from links' );
+
+		// Re-add the hook to restore global state for subsequent tests.
+		\add_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ), 10, 2 );
 	}
 
 	/**
