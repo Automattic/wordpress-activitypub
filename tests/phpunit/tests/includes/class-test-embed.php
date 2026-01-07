@@ -167,4 +167,173 @@ class Test_Embed extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'https://example.com/image1.jpg', $result );
 		$this->assertStringContainsString( 'https://example.com/image2.jpg', $result );
 	}
+
+	/**
+	 * Test get_html_for_object when author fetch returns WP_Error.
+	 *
+	 * This test ensures that the code handles WP_Error gracefully when fetching
+	 * the author object fails, preventing fatal errors.
+	 *
+	 * @covers ::get_html_for_object
+	 */
+	public function test_get_html_for_object_with_author_fetch_error() {
+		// Mock Http::get_remote_object to return WP_Error for the author URL.
+		$filter = function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
+			if ( 'https://example.com/author/1' === $url ) {
+				return new \WP_Error( 'http_request_failed', 'Connection failed' );
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		// Create a test object without avatar_url but with author URL (attributedTo).
+		$object = array(
+			'id'           => 'https://example.com/post/1',
+			'url'          => 'https://example.com/post/1',
+			'content'      => 'Test content when author fetch fails.',
+			'attributedTo' => 'https://example.com/author/1',
+		);
+
+		// This should not throw a fatal error even when author fetch fails.
+		$result = Embed::get_html_for_object( $object );
+
+		// The result should still contain the content.
+		$this->assertStringContainsString( 'Test content when author fetch fails.', $result );
+		// The author URL should be used as webfinger fallback.
+		$this->assertStringContainsString( 'https://example.com/author/1', $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
+	 * Test get_html_for_object when author fetch succeeds.
+	 *
+	 * This test ensures that author data (avatar, name, webfinger) is properly
+	 * extracted when the remote author fetch succeeds.
+	 *
+	 * @covers ::get_html_for_object
+	 */
+	public function test_get_html_for_object_with_successful_author_fetch() {
+		// Mock Http::get_remote_object to return author data.
+		$filter = function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
+			if ( 'https://example.com/author/2' === $url ) {
+				return array(
+					'id'                => 'https://example.com/author/2',
+					'type'              => 'Person',
+					'name'              => 'Test Author',
+					'preferredUsername' => 'testauthor',
+					'url'               => 'https://example.com/@testauthor',
+					'icon'              => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/avatar.png',
+					),
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		// Create a test object without avatar_url but with author URL.
+		$object = array(
+			'id'           => 'https://example.com/post/2',
+			'url'          => 'https://example.com/post/2',
+			'content'      => 'Test content with successful author fetch.',
+			'attributedTo' => 'https://example.com/author/2',
+		);
+
+		$result = Embed::get_html_for_object( $object );
+
+		// Should contain the fetched author name.
+		$this->assertStringContainsString( 'Test Author', $result );
+		// Should contain the fetched avatar URL.
+		$this->assertStringContainsString( 'https://example.com/avatar.png', $result );
+		// Should contain the constructed webfinger.
+		$this->assertStringContainsString( '@testauthor@example.com', $result );
+		// Should still contain the content.
+		$this->assertStringContainsString( 'Test content with successful author fetch.', $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
+	 * Test get_html_for_object with existing avatar URL (no author fetch needed).
+	 *
+	 * When the activity object already has an avatar URL, no author fetch should occur.
+	 *
+	 * @covers ::get_html_for_object
+	 */
+	public function test_get_html_for_object_with_existing_avatar() {
+		$fetch_called = false;
+
+		// Mock to track if fetch is called.
+		$filter = function ( $pre ) use ( &$fetch_called ) {
+			$fetch_called = true;
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		// Create a test object with avatar_url already set.
+		$object = array(
+			'id'           => 'https://example.com/post/3',
+			'url'          => 'https://example.com/post/3',
+			'content'      => 'Test content with existing avatar.',
+			'attributedTo' => 'https://example.com/author/3',
+			'icon'         => array(
+				'url' => 'https://example.com/existing-avatar.png',
+			),
+		);
+
+		$result = Embed::get_html_for_object( $object );
+
+		// Should contain the existing avatar URL.
+		$this->assertStringContainsString( 'https://example.com/existing-avatar.png', $result );
+		// Author fetch should not have been called since avatar already exists.
+		$this->assertFalse( $fetch_called );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
+	 * Test get_html_for_object webfinger fallback when author has no preferredUsername.
+	 *
+	 * @covers ::get_html_for_object
+	 */
+	public function test_get_html_for_object_webfinger_fallback() {
+		// Mock Http::get_remote_object to return author without preferredUsername.
+		$filter = function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
+			if ( 'https://example.com/author/4' === $url ) {
+				return array(
+					'id'   => 'https://example.com/author/4',
+					'type' => 'Person',
+					'name' => 'Author Without Username',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/avatar4.png',
+					),
+					// No preferredUsername or url - webfinger should fallback.
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		$object = array(
+			'id'           => 'https://example.com/post/4',
+			'url'          => 'https://example.com/post/4',
+			'content'      => 'Test webfinger fallback.',
+			'attributedTo' => 'https://example.com/author/4',
+		);
+
+		$result = Embed::get_html_for_object( $object );
+
+		// Should contain the content.
+		$this->assertStringContainsString( 'Test webfinger fallback.', $result );
+		// Should fallback to author_url for webfinger.
+		$this->assertStringContainsString( 'https://example.com/author/4', $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
 }

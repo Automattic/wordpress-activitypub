@@ -703,7 +703,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	 * @covers ::purge_ap_posts
 	 */
 	public function test_purge_ap_posts_more_than_200_posts() {
-		// Create 20 posts older than 6 months (will be deleted).
+		// Create 20 posts older than 30 days (will be deleted).
 		self::factory()->post->create_many(
 			20,
 			array(
@@ -713,13 +713,13 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			)
 		);
 
-		// Create 5 posts newer than 6 months (will be kept).
+		// Create 5 posts newer than 30 days (will be kept).
 		self::factory()->post->create_many(
 			5,
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 week' ) ),
 			)
 		);
 
