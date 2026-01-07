@@ -52,13 +52,13 @@ class Embed {
 		$author_name = $activity_object['attributedTo'] ?? '';
 		$avatar_url  = $activity_object['icon']['url'] ?? '';
 		$author_url  = $author_name;
-		$author      = array(); // Initialize $author as an empty array to prevent WP_Error issues.
 
 		// If we don't have an avatar URL, but we have an author URL, try to fetch it.
 		if ( ! $avatar_url && $author_url ) {
-			$author_response = Http::get_remote_object( $author_url );
-			if ( ! is_wp_error( $author_response ) ) {
-				$author      = $author_response;
+			$author = Http::get_remote_object( $author_url );
+			if ( is_wp_error( $author ) ) {
+				$author = array();
+			} else {
 				$avatar_url  = $author['icon']['url'] ?? '';
 				$author_name = empty( $author['name'] ) ? $author_name : $author['name'];
 			}
