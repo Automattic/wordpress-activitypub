@@ -702,11 +702,12 @@ class Comment {
 			return;
 		}
 
-		// Do only exclude interactions of `ap_post` post type.
-		if ( \is_admin() ) {
-			$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
-			return;
-		}
+		/*
+		 * Exclude interactions of `ap_post` post type.
+		 * We do not want to display them on the comment management screen
+		 * or in the admin bar.
+		 */
+		$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
 
 		// Do not exclude likes and reposts on non-singular pages.
 		if ( ! \is_singular() ) {

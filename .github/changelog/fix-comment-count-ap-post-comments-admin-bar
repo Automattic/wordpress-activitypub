@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Admin bar: do not count interactions on posts from folks you follow in the comment bbubble of the admin bar.
