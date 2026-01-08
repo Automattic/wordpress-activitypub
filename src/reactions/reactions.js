@@ -111,7 +111,7 @@ const ReactionGroup = ( { items, label, displayStyle } ) => {
 				{ label }
 			</Button>
 			{ isOpen && buttonRef && (
-				<Popover anchor={ buttonRef } onClose={ () => setIsOpen( false ) }>
+				<Popover anchor={ buttonRef } onClose={ () => setIsOpen( false ) } className="activitypub-popover">
 					<ReactionList reactions={ items } displayStyle={ displayStyle } />
 				</Popover>
 			) }
