@@ -276,7 +276,9 @@ class Test_Router extends \WP_UnitTestCase {
 	 * Test that unsupported taxonomy terms don't trigger redirects.
 	 *
 	 * This test verifies the fix for #2730 (Polylang conflict) and #2725 (posts page redirect).
-	 * When a term_id belongs to an unsupported taxonomy, the router should not redirect.
+	 * When a term_id belongs to an unsupported taxonomy, the router should return early
+	 * without redirecting. The unsupported taxonomy check happens before the ActivityPub
+	 * request check, so no HTTP_ACCEPT header is needed.
 	 *
 	 * @covers ::template_redirect
 	 */
@@ -300,19 +302,16 @@ class Test_Router extends \WP_UnitTestCase {
 		// Set the term_id query var (simulating what might happen with Polylang).
 		\set_query_var( 'term_id', $term_id );
 
-		// Simulate an ActivityPub request to test the early return path.
-		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
-
 		global $wp_query;
 
 		// Call template_redirect - it should return early for unsupported taxonomy.
+		// Note: No HTTP_ACCEPT header needed because the taxonomy check happens first.
 		Router::template_redirect();
 
 		// The query should not be set to 404 for valid but unsupported taxonomy terms.
 		$this->assertFalse( $wp_query->is_404(), 'Should not set 404 for valid unsupported taxonomy terms.' );
 
 		// Clean up.
-		unset( $_SERVER['HTTP_ACCEPT'] );
 		\set_query_var( 'term_id', null );
 		\wp_delete_term( $term_id, 'language' );
 		\unregister_taxonomy( 'language' );
