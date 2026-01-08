@@ -273,6 +273,12 @@ class Router {
 				return;
 			}
 
+			$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
+
+			if ( ! in_array( $term->taxonomy, $supported_taxonomies, true ) ) {
+				return;
+			}
+
 			// Don't redirect for ActivityPub requests.
 			if ( is_activitypub_request() ) {
 				return;
