@@ -39,9 +39,9 @@ const EditorPlugin = () => {
 		// Only sync if there's no stored value and the default isn't 'public'.
 		// We skip 'public' since it's the implicit default (empty string in DB).
 		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
-			setMeta( { activitypub_content_visibility: defaultVisibility } );
+			setMeta( { ...meta, activitypub_content_visibility: defaultVisibility } );
 		}
-	}, [ defaultVisibility, meta?.activitypub_content_visibility, setMeta ] );
+	}, [ defaultVisibility, meta, setMeta ] );
 
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {
