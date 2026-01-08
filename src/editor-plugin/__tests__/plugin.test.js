@@ -185,17 +185,15 @@ describe( 'EditorPlugin visibility sync logic', () => {
 
 	test( 'does not sync when stored value is empty string (public)', () => {
 		const setMeta = jest.fn();
-		// Empty string means public was explicitly saved.
+		// Empty string means public was explicitly saved; this choice should be preserved.
 		const meta = { activitypub_content_visibility: '' };
 		const postDate = new Date( Date.now() - 60 * 24 * 60 * 60 * 1000 ); // 60 days ago.
 
 		simulateSyncLogic( meta, postDate, setMeta );
 
-		// Empty string is falsy, so this WILL sync - but that's correct behavior
-		// because we want to ensure the computed default is persisted.
-		expect( setMeta ).toHaveBeenCalledWith( {
-			activitypub_content_visibility: 'local',
-		} );
+		// Empty string is falsy, but it represents an explicit 'public' choice,
+		// so we must not overwrite it with a computed default.
+		expect( setMeta ).not.toHaveBeenCalled();
 	} );
 
 	test( 'preserves existing meta fields when syncing', () => {
