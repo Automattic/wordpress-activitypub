@@ -703,9 +703,9 @@ class Comment {
 		}
 
 		/*
-		 * Exclude interactions of `ap_post` post type.
-		 * We do not want to display them on the comment management screen
-		 * or in the admin bar.
+		 * Exclude interactions of `ap_post` post type from all comment queries
+		 * (except ActivityPub and REST requests), so they are not shown in
+		 * standard comment listings (including admin screens and frontend).
 		 */
 		$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
 
