@@ -279,8 +279,6 @@ class Router {
 			 * @since unreleased
 			 *
 			 * @param array $supported_taxonomies Array of taxonomy names. Default array( 'category', 'post_tag' ).
-			 *
-			 * @return array Filtered array of taxonomy names.
 			 */
 			$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
 
