@@ -48,6 +48,19 @@ class Test_Router extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Tear down test environment.
+	 */
+	public function tear_down(): void {
+		// Clean up common state that may be left by tests.
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		\set_query_var( 'preview', null );
+		\set_query_var( 'term_id', null );
+		Query::get_instance()->__destruct();
+
+		parent::tear_down();
+	}
+
+	/**
 	 * Test that ActivityPub requests for custom post types return 200.
 	 *
 	 * @covers ::render_activitypub_template
@@ -220,19 +233,271 @@ class Test_Router extends \WP_UnitTestCase {
 		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
 		\set_query_var( 'preview', true );
 
+		// Save callback to variable for proper removal.
+		$preview_template_callback = function () {
+			return '/custom/template.php';
+		};
+
 		// Add filter before testing.
-		\add_filter(
-			'activitypub_preview_template',
-			function () {
-				return '/custom/template.php';
-			}
-		);
+		\add_filter( 'activitypub_preview_template', $preview_template_callback );
 
 		// Test that the filter is applied.
 		$template = Router::render_activitypub_template( 'original.php' );
 		$this->assertEquals( '/custom/template.php', $template, 'Custom preview template should be used when filter is applied.' );
 
 		// Clean up.
+		\remove_filter( 'activitypub_preview_template', $preview_template_callback );
+	}
+
+	/**
+	 * Test that the activitypub_supported_taxonomies filter has correct defaults.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_supported_taxonomies_filter_defaults() {
+		$supported = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
+
+		$this->assertContains( 'category', $supported, 'Category should be a supported taxonomy by default.' );
+		$this->assertContains( 'post_tag', $supported, 'Post tag should be a supported taxonomy by default.' );
+		$this->assertCount( 2, $supported, 'Should have exactly 2 default supported taxonomies.' );
+	}
+
+	/**
+	 * Test that the activitypub_supported_taxonomies filter can be modified.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_supported_taxonomies_filter_can_be_modified() {
+		\add_filter(
+			'activitypub_supported_taxonomies',
+			function ( $taxonomies ) {
+				$taxonomies[] = 'custom_taxonomy';
+				return $taxonomies;
+			}
+		);
+
+		$supported = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
+
+		$this->assertContains( 'custom_taxonomy', $supported, 'Custom taxonomy should be added via filter.' );
+		$this->assertCount( 3, $supported, 'Should have 3 taxonomies after adding custom one.' );
+
+		// Clean up.
+		\remove_all_filters( 'activitypub_supported_taxonomies' );
+	}
+
+	/**
+	 * Test that unsupported taxonomy terms don't trigger redirects.
+	 *
+	 * This test verifies the fix for #2730 (Polylang conflict) and #2725 (posts page redirect).
+	 * When a term_id belongs to an unsupported taxonomy, the router should return early
+	 * without redirecting. The unsupported taxonomy check happens before the ActivityPub
+	 * request check, so no HTTP_ACCEPT header is needed.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_unsupported_taxonomy_does_not_redirect() {
+		// Register a custom taxonomy (simulating Polylang's language taxonomy).
+		\register_taxonomy(
+			'language',
+			'post',
+			array(
+				'public' => true,
+				'label'  => 'Language',
+			)
+		);
+
+		// Create a term in the custom taxonomy.
+		$term = \wp_insert_term( 'English', 'language' );
+		$this->assertNotWPError( $term, 'Term creation should succeed.' );
+
+		$term_id = $term['term_id'];
+
+		// Set the term_id query var (simulating what might happen with Polylang).
+		\set_query_var( 'term_id', $term_id );
+
+		global $wp_query;
+
+		// Call template_redirect - it should return early for unsupported taxonomy.
+		// Note: No HTTP_ACCEPT header needed because the taxonomy check happens first.
+		Router::template_redirect();
+
+		// The query should not be set to 404 for valid but unsupported taxonomy terms.
+		$this->assertFalse( $wp_query->is_404(), 'Should not set 404 for valid unsupported taxonomy terms.' );
+
+		// Clean up.
+		\set_query_var( 'term_id', null );
+		\wp_delete_term( $term_id, 'language' );
+		\unregister_taxonomy( 'language' );
+	}
+
+	/**
+	 * Test that supported taxonomy terms are handled correctly for ActivityPub requests.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_supported_taxonomy_activitypub_request_no_redirect() {
+		// Create a category term.
+		$term = \wp_insert_term( 'Test Category', 'category' );
+		$this->assertNotWPError( $term, 'Term creation should succeed.' );
+
+		$term_id = $term['term_id'];
+
+		// Set the term_id query var.
+		\set_query_var( 'term_id', $term_id );
+
+		// Simulate an ActivityPub request - should return early without redirect.
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+
+		global $wp_query;
+
+		// Call template_redirect - it should return early for ActivityPub requests.
+		Router::template_redirect();
+
+		// The query should not be set to 404 for valid category terms.
+		$this->assertFalse( $wp_query->is_404(), 'Should not set 404 for valid category terms.' );
+
+		// Clean up.
 		unset( $_SERVER['HTTP_ACCEPT'] );
+		\set_query_var( 'term_id', null );
+		\wp_delete_term( $term_id, 'category' );
+	}
+
+	/**
+	 * Test that invalid term_id sets 404.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_invalid_term_id_sets_404() {
+		// Set an invalid term_id query var.
+		\set_query_var( 'term_id', 999999 );
+
+		global $wp_query;
+
+		// Call template_redirect - it should set 404 for invalid term.
+		Router::template_redirect();
+
+		$this->assertTrue( $wp_query->is_404(), 'Should set 404 for invalid term_id.' );
+
+		// Clean up.
+		\set_query_var( 'term_id', null );
+		$wp_query->is_404 = false;
+	}
+
+	/**
+	 * Test that supported taxonomy terms trigger redirects for non-ActivityPub requests.
+	 *
+	 * This verifies the core redirect functionality still works after the taxonomy filtering fix.
+	 * Uses an exception in the wp_redirect filter to intercept before exit() is called.
+	 *
+	 * @covers ::template_redirect
+	 *
+	 * @throws \Exception If a non-redirect exception is caught during template_redirect.
+	 */
+	public function test_supported_taxonomy_triggers_redirect() {
+		// Create a category term.
+		$term = \wp_insert_term( 'Redirect Test Category', 'category' );
+		$this->assertNotWPError( $term, 'Term creation should succeed.' );
+
+		$term_id   = $term['term_id'];
+		$term_link = \get_term_link( $term_id, 'category' );
+
+		// Set the term_id query var.
+		\set_query_var( 'term_id', $term_id );
+
+		// Save callback to variable for proper removal.
+		$redirect_callback = function ( $location ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			throw new \Exception( 'REDIRECT:' . $location );
+		};
+
+		// Use exception to intercept redirect before exit() is called.
+		\add_filter( 'wp_redirect', $redirect_callback );
+
+		$redirect_location = null;
+		try {
+			Router::template_redirect();
+		} catch ( \Exception $e ) {
+			if ( 0 === strpos( $e->getMessage(), 'REDIRECT:' ) ) {
+				$redirect_location = substr( $e->getMessage(), 9 );
+			} else {
+				throw $e;
+			}
+		}
+
+		// Verify redirect was attempted to the correct term link.
+		$this->assertNotNull( $redirect_location, 'Should attempt redirect for supported taxonomy term.' );
+		$this->assertEquals( $term_link, $redirect_location, 'Should redirect to the term link.' );
+
+		// Clean up.
+		\remove_filter( 'wp_redirect', $redirect_callback );
+		\wp_delete_term( $term_id, 'category' );
+	}
+
+	/**
+	 * Test that the activitypub_supported_taxonomies filter is actually used by the Router.
+	 *
+	 * This verifies that adding a custom taxonomy via the filter allows redirects for that taxonomy.
+	 *
+	 * @covers ::template_redirect
+	 *
+	 * @throws \Exception If a non-redirect exception is caught during template_redirect.
+	 */
+	public function test_filter_adds_custom_taxonomy_to_redirects() {
+		// Register a custom taxonomy.
+		\register_taxonomy(
+			'custom_tax',
+			'post',
+			array(
+				'public' => true,
+				'label'  => 'Custom Tax',
+			)
+		);
+
+		// Create a term in the custom taxonomy.
+		$term = \wp_insert_term( 'Custom Term', 'custom_tax' );
+		$this->assertNotWPError( $term, 'Term creation should succeed.' );
+
+		$term_id   = $term['term_id'];
+		$term_link = \get_term_link( $term_id, 'custom_tax' );
+
+		// Set the term_id query var.
+		\set_query_var( 'term_id', $term_id );
+
+		// Save callbacks to variables for proper removal.
+		$taxonomy_callback = function ( $taxonomies ) {
+			$taxonomies[] = 'custom_tax';
+			return $taxonomies;
+		};
+		$redirect_callback = function ( $location ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			throw new \Exception( 'REDIRECT:' . $location );
+		};
+
+		// Add custom taxonomy to supported list via filter.
+		\add_filter( 'activitypub_supported_taxonomies', $taxonomy_callback );
+
+		// Use exception to intercept redirect before exit() is called.
+		\add_filter( 'wp_redirect', $redirect_callback );
+
+		$redirect_location = null;
+		try {
+			Router::template_redirect();
+		} catch ( \Exception $e ) {
+			if ( 0 === strpos( $e->getMessage(), 'REDIRECT:' ) ) {
+				$redirect_location = substr( $e->getMessage(), 9 );
+			} else {
+				throw $e;
+			}
+		}
+
+		// Verify redirect was attempted.
+		$this->assertNotNull( $redirect_location, 'Should attempt redirect for custom taxonomy added via filter.' );
+		$this->assertEquals( $term_link, $redirect_location, 'Should redirect to the custom taxonomy term link.' );
+
+		// Clean up.
+		\remove_filter( 'wp_redirect', $redirect_callback );
+		\remove_filter( 'activitypub_supported_taxonomies', $taxonomy_callback );
+		\wp_delete_term( $term_id, 'custom_tax' );
+		\unregister_taxonomy( 'custom_tax' );
 	}
 }
