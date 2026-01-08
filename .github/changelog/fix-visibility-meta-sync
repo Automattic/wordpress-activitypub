@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed visibility setting not being saved when pre-selected value differs from public.

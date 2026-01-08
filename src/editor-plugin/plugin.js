@@ -12,6 +12,7 @@ import {
 import { Icon, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
+import { useEffect } from '@wordpress/element';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 import { SVG, Path } from '@wordpress/primitives';
@@ -26,6 +27,21 @@ const EditorPlugin = () => {
 	const postType = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 	const postDate = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPost().date, [] );
+
+	// Get the computed default visibility.
+	const defaultVisibility = getDefaultVisibility( meta, postDate );
+
+	// Sync computed default to meta when it differs from stored value.
+	// This ensures the default is persisted even if user doesn't change it.
+	useEffect( () => {
+		const storedVisibility = meta?.activitypub_content_visibility;
+
+		// Only sync if there's no stored value and the default isn't 'public'.
+		// We skip 'public' since it's the implicit default (empty string in DB).
+		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
+			setMeta( { activitypub_content_visibility: defaultVisibility } );
+		}
+	}, [ defaultVisibility, meta?.activitypub_content_visibility, setMeta ] );
 
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {
@@ -124,7 +140,7 @@ const EditorPlugin = () => {
 					"This adjusts the visibility of a post in the fediverse, but note that it won't affect how the post appears on the blog.",
 					'activitypub'
 				) }
-				selected={ getDefaultVisibility( meta, postDate ) }
+				selected={ defaultVisibility }
 				options={ [
 					{
 						label: enhancedLabel(
