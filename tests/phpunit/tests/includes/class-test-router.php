@@ -235,4 +235,139 @@ class Test_Router extends \WP_UnitTestCase {
 		// Clean up.
 		unset( $_SERVER['HTTP_ACCEPT'] );
 	}
+
+	/**
+	 * Test that the activitypub_supported_taxonomies filter has correct defaults.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_supported_taxonomies_filter_defaults() {
+		$supported = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
+
+		$this->assertContains( 'category', $supported, 'Category should be a supported taxonomy by default.' );
+		$this->assertContains( 'post_tag', $supported, 'Post tag should be a supported taxonomy by default.' );
+		$this->assertCount( 2, $supported, 'Should have exactly 2 default supported taxonomies.' );
+	}
+
+	/**
+	 * Test that the activitypub_supported_taxonomies filter can be modified.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_supported_taxonomies_filter_can_be_modified() {
+		\add_filter(
+			'activitypub_supported_taxonomies',
+			function ( $taxonomies ) {
+				$taxonomies[] = 'custom_taxonomy';
+				return $taxonomies;
+			}
+		);
+
+		$supported = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
+
+		$this->assertContains( 'custom_taxonomy', $supported, 'Custom taxonomy should be added via filter.' );
+		$this->assertCount( 3, $supported, 'Should have 3 taxonomies after adding custom one.' );
+
+		// Clean up.
+		\remove_all_filters( 'activitypub_supported_taxonomies' );
+	}
+
+	/**
+	 * Test that unsupported taxonomy terms don't trigger redirects.
+	 *
+	 * This test verifies the fix for #2730 (Polylang conflict) and #2725 (posts page redirect).
+	 * When a term_id belongs to an unsupported taxonomy, the router should not redirect.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_unsupported_taxonomy_does_not_redirect() {
+		// Register a custom taxonomy (simulating Polylang's language taxonomy).
+		\register_taxonomy(
+			'language',
+			'post',
+			array(
+				'public' => true,
+				'label'  => 'Language',
+			)
+		);
+
+		// Create a term in the custom taxonomy.
+		$term = \wp_insert_term( 'English', 'language' );
+		$this->assertNotWPError( $term, 'Term creation should succeed.' );
+
+		$term_id = $term['term_id'];
+
+		// Set the term_id query var (simulating what might happen with Polylang).
+		\set_query_var( 'term_id', $term_id );
+
+		// Simulate an ActivityPub request to test the early return path.
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+
+		global $wp_query;
+
+		// Call template_redirect - it should return early for unsupported taxonomy.
+		Router::template_redirect();
+
+		// The query should not be set to 404 for valid but unsupported taxonomy terms.
+		$this->assertFalse( $wp_query->is_404(), 'Should not set 404 for valid unsupported taxonomy terms.' );
+
+		// Clean up.
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		\set_query_var( 'term_id', null );
+		\wp_delete_term( $term_id, 'language' );
+		\unregister_taxonomy( 'language' );
+	}
+
+	/**
+	 * Test that supported taxonomy terms are handled correctly for ActivityPub requests.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_supported_taxonomy_activitypub_request_no_redirect() {
+		// Create a category term.
+		$term = \wp_insert_term( 'Test Category', 'category' );
+		$this->assertNotWPError( $term, 'Term creation should succeed.' );
+
+		$term_id = $term['term_id'];
+
+		// Set the term_id query var.
+		\set_query_var( 'term_id', $term_id );
+
+		// Simulate an ActivityPub request - should return early without redirect.
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+
+		global $wp_query;
+
+		// Call template_redirect - it should return early for ActivityPub requests.
+		Router::template_redirect();
+
+		// The query should not be set to 404 for valid category terms.
+		$this->assertFalse( $wp_query->is_404(), 'Should not set 404 for valid category terms.' );
+
+		// Clean up.
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		\set_query_var( 'term_id', null );
+		\wp_delete_term( $term_id, 'category' );
+	}
+
+	/**
+	 * Test that invalid term_id sets 404.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_invalid_term_id_sets_404() {
+		// Set an invalid term_id query var.
+		\set_query_var( 'term_id', 999999 );
+
+		global $wp_query;
+
+		// Call template_redirect - it should set 404 for invalid term.
+		Router::template_redirect();
+
+		$this->assertTrue( $wp_query->is_404(), 'Should set 404 for invalid term_id.' );
+
+		// Clean up.
+		\set_query_var( 'term_id', null );
+		$wp_query->is_404 = false;
+	}
 }
