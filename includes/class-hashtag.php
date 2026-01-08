@@ -88,9 +88,11 @@ class Hashtag {
 		/*
 		 * Do not process content inside protected tags.
 		 *
-		 * Note: STYLE and TEXTAREA are "atomic" elements in WP_HTML_Tag_Processor,
-		 * meaning their content is bundled with the tag token and won't appear
-		 * as separate #text nodes.
+		 * Note: SCRIPT, STYLE, and TEXTAREA are "atomic" elements in
+		 * WP_HTML_Tag_Processor, meaning their content is bundled with the tag
+		 * token and won't appear as separate #text nodes. Because of this they
+		 * do not need to be listed in $protected_tags: their inner text is
+		 * never surfaced as #text tokens for us to process.
 		 * See https://github.com/WordPress/wordpress-develop/blob/0fb3bb29596918864d808d156268a2df63c83620/src/wp-includes/html-api/class-wp-html-tag-processor.php#L276
 		 */
 		$protected_tags   = array( 'PRE', 'CODE', 'A' );
