@@ -226,7 +226,16 @@ class Remote_Actors {
 			);
 		}
 
-		return \get_post( $post_id );
+		$post = \get_post( $post_id );
+		if ( ! $post instanceof \WP_Post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return $post;
 	}
 
 	/**
@@ -286,7 +295,16 @@ class Remote_Actors {
 			return $post_id;
 		}
 
-		return \get_post( $post_id );
+		$post = \get_post( $post_id );
+		if ( ! $post instanceof \WP_Post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return $post;
 	}
 
 	/**
@@ -310,7 +328,16 @@ class Remote_Actors {
 		);
 
 		if ( $post_id ) {
-			return \get_post( $post_id );
+			$post = \get_post( $post_id );
+			if ( ! $post instanceof \WP_Post ) {
+				return new \WP_Error(
+					'activitypub_actor_not_found',
+					\__( 'Actor not found', 'activitypub' ),
+					array( 'status' => 404 )
+				);
+			}
+
+			return $post;
 		}
 
 		$profile_uri = Webfinger::resolve( $acct );
