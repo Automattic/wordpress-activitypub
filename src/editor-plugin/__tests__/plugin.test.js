@@ -146,7 +146,8 @@ describe( 'EditorPlugin visibility sync logic', () => {
 		const storedVisibility = meta?.activitypub_content_visibility;
 
 		// This mirrors the useEffect logic in plugin.js.
-		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
+		// Use undefined check because empty string '' means 'public' was explicitly saved.
+		if ( storedVisibility === undefined && defaultVisibility !== 'public' ) {
 			setMetaFn( { ...meta, activitypub_content_visibility: defaultVisibility } );
 		}
 	};

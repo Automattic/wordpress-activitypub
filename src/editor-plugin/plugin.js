@@ -36,9 +36,10 @@ const EditorPlugin = () => {
 	useEffect( () => {
 		const storedVisibility = meta?.activitypub_content_visibility;
 
-		// Only sync if there's no stored value and the default isn't 'public'.
+		// Only sync if visibility was never set (undefined) and the default isn't 'public'.
+		// We use undefined check because empty string '' means 'public' was explicitly saved.
 		// We skip 'public' since it's the implicit default (empty string in DB).
-		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
+		if ( storedVisibility === undefined && defaultVisibility !== 'public' ) {
 			setMeta( { ...meta, activitypub_content_visibility: defaultVisibility } );
 		}
 	}, [ defaultVisibility, meta, setMeta ] );
