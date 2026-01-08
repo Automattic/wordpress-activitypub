@@ -48,6 +48,19 @@ class Test_Router extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Tear down test environment.
+	 */
+	public function tear_down(): void {
+		// Clean up common state that may be left by tests.
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		\set_query_var( 'preview', null );
+		\set_query_var( 'term_id', null );
+		Query::get_instance()->__destruct();
+
+		parent::tear_down();
+	}
+
+	/**
 	 * Test that ActivityPub requests for custom post types return 200.
 	 *
 	 * @covers ::render_activitypub_template
@@ -220,20 +233,20 @@ class Test_Router extends \WP_UnitTestCase {
 		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
 		\set_query_var( 'preview', true );
 
+		// Save callback to variable for proper removal.
+		$preview_template_callback = function () {
+			return '/custom/template.php';
+		};
+
 		// Add filter before testing.
-		\add_filter(
-			'activitypub_preview_template',
-			function () {
-				return '/custom/template.php';
-			}
-		);
+		\add_filter( 'activitypub_preview_template', $preview_template_callback );
 
 		// Test that the filter is applied.
 		$template = Router::render_activitypub_template( 'original.php' );
 		$this->assertEquals( '/custom/template.php', $template, 'Custom preview template should be used when filter is applied.' );
 
 		// Clean up.
-		unset( $_SERVER['HTTP_ACCEPT'] );
+		\remove_filter( 'activitypub_preview_template', $preview_template_callback );
 	}
 
 	/**
@@ -381,13 +394,6 @@ class Test_Router extends \WP_UnitTestCase {
 	 * @throws \Exception If a non-redirect exception is caught during template_redirect.
 	 */
 	public function test_supported_taxonomy_triggers_redirect() {
-		// Clear any existing filters and state to ensure clean test.
-		\remove_all_filters( 'wp_redirect' );
-		\remove_all_filters( 'activitypub_preview_template' );
-		unset( $_SERVER['HTTP_ACCEPT'] );
-		\set_query_var( 'preview', null );
-		Query::get_instance()->__destruct();
-
 		// Create a category term.
 		$term = \wp_insert_term( 'Redirect Test Category', 'category' );
 		$this->assertNotWPError( $term, 'Term creation should succeed.' );
@@ -398,14 +404,14 @@ class Test_Router extends \WP_UnitTestCase {
 		// Set the term_id query var.
 		\set_query_var( 'term_id', $term_id );
 
+		// Save callback to variable for proper removal.
+		$redirect_callback = function ( $location ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			throw new \Exception( 'REDIRECT:' . $location );
+		};
+
 		// Use exception to intercept redirect before exit() is called.
-		\add_filter(
-			'wp_redirect',
-			function ( $location ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
-				throw new \Exception( 'REDIRECT:' . $location );
-			}
-		);
+		\add_filter( 'wp_redirect', $redirect_callback );
 
 		$redirect_location = null;
 		try {
@@ -423,8 +429,7 @@ class Test_Router extends \WP_UnitTestCase {
 		$this->assertEquals( $term_link, $redirect_location, 'Should redirect to the term link.' );
 
 		// Clean up.
-		\remove_all_filters( 'wp_redirect' );
-		\set_query_var( 'term_id', null );
+		\remove_filter( 'wp_redirect', $redirect_callback );
 		\wp_delete_term( $term_id, 'category' );
 	}
 
@@ -438,14 +443,6 @@ class Test_Router extends \WP_UnitTestCase {
 	 * @throws \Exception If a non-redirect exception is caught during template_redirect.
 	 */
 	public function test_filter_adds_custom_taxonomy_to_redirects() {
-		// Clear any existing filters and state to ensure clean test.
-		\remove_all_filters( 'wp_redirect' );
-		\remove_all_filters( 'activitypub_supported_taxonomies' );
-		\remove_all_filters( 'activitypub_preview_template' );
-		unset( $_SERVER['HTTP_ACCEPT'] );
-		\set_query_var( 'preview', null );
-		Query::get_instance()->__destruct();
-
 		// Register a custom taxonomy.
 		\register_taxonomy(
 			'custom_tax',
@@ -466,23 +463,21 @@ class Test_Router extends \WP_UnitTestCase {
 		// Set the term_id query var.
 		\set_query_var( 'term_id', $term_id );
 
+		// Save callbacks to variables for proper removal.
+		$taxonomy_callback = function ( $taxonomies ) {
+			$taxonomies[] = 'custom_tax';
+			return $taxonomies;
+		};
+		$redirect_callback = function ( $location ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			throw new \Exception( 'REDIRECT:' . $location );
+		};
+
 		// Add custom taxonomy to supported list via filter.
-		\add_filter(
-			'activitypub_supported_taxonomies',
-			function ( $taxonomies ) {
-				$taxonomies[] = 'custom_tax';
-				return $taxonomies;
-			}
-		);
+		\add_filter( 'activitypub_supported_taxonomies', $taxonomy_callback );
 
 		// Use exception to intercept redirect before exit() is called.
-		\add_filter(
-			'wp_redirect',
-			function ( $location ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
-				throw new \Exception( 'REDIRECT:' . $location );
-			}
-		);
+		\add_filter( 'wp_redirect', $redirect_callback );
 
 		$redirect_location = null;
 		try {
@@ -500,9 +495,8 @@ class Test_Router extends \WP_UnitTestCase {
 		$this->assertEquals( $term_link, $redirect_location, 'Should redirect to the custom taxonomy term link.' );
 
 		// Clean up.
-		\remove_all_filters( 'wp_redirect' );
-		\remove_all_filters( 'activitypub_supported_taxonomies' );
-		\set_query_var( 'term_id', null );
+		\remove_filter( 'wp_redirect', $redirect_callback );
+		\remove_filter( 'activitypub_supported_taxonomies', $taxonomy_callback );
 		\wp_delete_term( $term_id, 'custom_tax' );
 		\unregister_taxonomy( 'custom_tax' );
 	}
