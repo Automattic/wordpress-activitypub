@@ -369,4 +369,137 @@ class Test_Router extends \WP_UnitTestCase {
 		\set_query_var( 'term_id', null );
 		$wp_query->is_404 = false;
 	}
+
+	/**
+	 * Test that supported taxonomy terms trigger redirects for non-ActivityPub requests.
+	 *
+	 * This verifies the core redirect functionality still works after the taxonomy filtering fix.
+	 * Uses an exception in the wp_redirect filter to intercept before exit() is called.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_supported_taxonomy_triggers_redirect() {
+		// Clear any existing filters and state to ensure clean test.
+		\remove_all_filters( 'wp_redirect' );
+		\remove_all_filters( 'activitypub_preview_template' );
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		\set_query_var( 'preview', null );
+		Query::get_instance()->__destruct();
+
+		// Create a category term.
+		$term = \wp_insert_term( 'Redirect Test Category', 'category' );
+		$this->assertNotWPError( $term, 'Term creation should succeed.' );
+
+		$term_id   = $term['term_id'];
+		$term_link = \get_term_link( $term_id, 'category' );
+
+		// Set the term_id query var.
+		\set_query_var( 'term_id', $term_id );
+
+		// Use exception to intercept redirect before exit() is called.
+		\add_filter(
+			'wp_redirect',
+			function ( $location ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+				throw new \Exception( 'REDIRECT:' . $location );
+			}
+		);
+
+		$redirect_location = null;
+		try {
+			Router::template_redirect();
+		} catch ( \Exception $e ) {
+			if ( 0 === strpos( $e->getMessage(), 'REDIRECT:' ) ) {
+				$redirect_location = substr( $e->getMessage(), 9 );
+			} else {
+				throw $e;
+			}
+		}
+
+		// Verify redirect was attempted to the correct term link.
+		$this->assertNotNull( $redirect_location, 'Should attempt redirect for supported taxonomy term.' );
+		$this->assertEquals( $term_link, $redirect_location, 'Should redirect to the term link.' );
+
+		// Clean up.
+		\remove_all_filters( 'wp_redirect' );
+		\set_query_var( 'term_id', null );
+		\wp_delete_term( $term_id, 'category' );
+	}
+
+	/**
+	 * Test that the activitypub_supported_taxonomies filter is actually used by the Router.
+	 *
+	 * This verifies that adding a custom taxonomy via the filter allows redirects for that taxonomy.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_filter_adds_custom_taxonomy_to_redirects() {
+		// Clear any existing filters and state to ensure clean test.
+		\remove_all_filters( 'wp_redirect' );
+		\remove_all_filters( 'activitypub_supported_taxonomies' );
+		\remove_all_filters( 'activitypub_preview_template' );
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		\set_query_var( 'preview', null );
+		Query::get_instance()->__destruct();
+
+		// Register a custom taxonomy.
+		\register_taxonomy(
+			'custom_tax',
+			'post',
+			array(
+				'public' => true,
+				'label'  => 'Custom Tax',
+			)
+		);
+
+		// Create a term in the custom taxonomy.
+		$term = \wp_insert_term( 'Custom Term', 'custom_tax' );
+		$this->assertNotWPError( $term, 'Term creation should succeed.' );
+
+		$term_id   = $term['term_id'];
+		$term_link = \get_term_link( $term_id, 'custom_tax' );
+
+		// Set the term_id query var.
+		\set_query_var( 'term_id', $term_id );
+
+		// Add custom taxonomy to supported list via filter.
+		\add_filter(
+			'activitypub_supported_taxonomies',
+			function ( $taxonomies ) {
+				$taxonomies[] = 'custom_tax';
+				return $taxonomies;
+			}
+		);
+
+		// Use exception to intercept redirect before exit() is called.
+		\add_filter(
+			'wp_redirect',
+			function ( $location ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+				throw new \Exception( 'REDIRECT:' . $location );
+			}
+		);
+
+		$redirect_location = null;
+		try {
+			Router::template_redirect();
+		} catch ( \Exception $e ) {
+			if ( 0 === strpos( $e->getMessage(), 'REDIRECT:' ) ) {
+				$redirect_location = substr( $e->getMessage(), 9 );
+			} else {
+				throw $e;
+			}
+		}
+
+		// Verify redirect was attempted.
+		$this->assertNotNull( $redirect_location, 'Should attempt redirect for custom taxonomy added via filter.' );
+		$this->assertEquals( $term_link, $redirect_location, 'Should redirect to the custom taxonomy term link.' );
+
+		// Clean up.
+		\remove_all_filters( 'wp_redirect' );
+		\remove_all_filters( 'activitypub_supported_taxonomies' );
+		\set_query_var( 'term_id', null );
+		\wp_delete_term( $term_id, 'custom_tax' );
+		\unregister_taxonomy( 'custom_tax' );
+	}
 }
