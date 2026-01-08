@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Improved security of the Starter Kit URL import by using wp_safe_remote_get.
