@@ -377,6 +377,8 @@ class Test_Router extends \WP_UnitTestCase {
 	 * Uses an exception in the wp_redirect filter to intercept before exit() is called.
 	 *
 	 * @covers ::template_redirect
+	 *
+	 * @throws \Exception If a non-redirect exception is caught during template_redirect.
 	 */
 	public function test_supported_taxonomy_triggers_redirect() {
 		// Clear any existing filters and state to ensure clean test.
@@ -432,6 +434,8 @@ class Test_Router extends \WP_UnitTestCase {
 	 * This verifies that adding a custom taxonomy via the filter allows redirects for that taxonomy.
 	 *
 	 * @covers ::template_redirect
+	 *
+	 * @throws \Exception If a non-redirect exception is caught during template_redirect.
 	 */
 	public function test_filter_adds_custom_taxonomy_to_redirects() {
 		// Clear any existing filters and state to ensure clean test.
