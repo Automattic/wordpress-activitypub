@@ -1,4 +1,4 @@
 Significance: patch
 Type: added
 
-Added content negotiation support for author pages with custom permalink IDs.
+Force content negotiation on author pages when using permalink as Actor ID.
