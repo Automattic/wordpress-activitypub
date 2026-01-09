@@ -572,15 +572,20 @@ class Test_Query extends \WP_UnitTestCase {
 	 * @covers ::should_negotiate_content
 	 */
 	public function test_should_negotiate_content_author_permalink_as_id() {
-		// Use pretty permalinks so we test the author page URL, not ?author= query param.
+		// Use pretty permalinks so author URL doesn't have ?author= query param.
 		$this->set_permalink_structure( '/%postname%/' );
+
+		// Get user info for author URL.
+		$user       = \get_user_by( 'id', self::$user_id );
+		$author_url = \home_url( '/author/' . $user->user_nicename . '/' );
 
 		// Disable global content negotiation.
 		\update_option( 'activitypub_content_negotiation', '0' );
 
 		// Without the user option, author page should not negotiate.
 		Query::get_instance()->__destruct();
-		$this->go_to( \get_author_posts_url( self::$user_id ) );
+		$_SERVER['REQUEST_URI'] = $author_url;
+		$this->go_to( $author_url );
 		$this->assertFalse( Query::get_instance()->should_negotiate_content() );
 
 		// Enable permalink as Actor ID for the user.
@@ -588,10 +593,11 @@ class Test_Query extends \WP_UnitTestCase {
 
 		// Now author page should negotiate content even with global setting disabled.
 		Query::get_instance()->__destruct();
-		$this->go_to( \get_author_posts_url( self::$user_id ) );
+		$this->go_to( $author_url );
 		$this->assertTrue( Query::get_instance()->should_negotiate_content() );
 
 		// Clean up.
+		unset( $_SERVER['REQUEST_URI'] );
 		\delete_user_option( self::$user_id, 'activitypub_use_permalink_as_id' );
 		\delete_option( 'activitypub_content_negotiation' );
 	}
