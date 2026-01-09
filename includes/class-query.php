@@ -338,11 +338,8 @@ class Query {
 			$return = true;
 		}
 
-		if ( \is_author() ) {
-			$permalink = \get_user_option( 'activitypub_use_permalink_as_id', \get_queried_object_id() );
-			if ( $permalink ) {
-				$return = true;
-			}
+		if ( \is_author() || \get_user_option( 'activitypub_use_permalink_as_id', \get_queried_object_id() ) ) {
+			$return = true;
 		}
 
 		/**
