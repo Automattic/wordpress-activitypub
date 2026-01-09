@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Added content negotiation support for author pages with custom permalink IDs.
