@@ -151,7 +151,7 @@ class Test_Replies extends \WP_UnitTestCase {
 
 		$context = Replies::get_context_collection( $context_post_id );
 
-		$this->assertSame( \get_author_posts_url( Actors::BLOG_USER_ID ), $context['attributedTo'] );
+		$this->assertSame( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id(), $context['attributedTo'] );
 
 		\delete_option( 'activitypub_actor_mode' );
 	}
