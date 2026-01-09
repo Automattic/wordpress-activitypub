@@ -42,6 +42,11 @@ class Blocks {
 				'blog'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
+			'profileUrls'      => array(
+				'user' => \admin_url( 'profile.php#activitypub' ),
+				'blog' => \admin_url( 'options-general.php?page=activitypub&tab=blog-profile' ),
+			),
+			'showAvatars'      => (bool) \get_option( 'show_avatars' ),
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -76,9 +81,15 @@ class Blocks {
 	 * Register the blocks.
 	 */
 	public static function register_blocks() {
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
-		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions' );
+		// Register reactions block, conditionally removing facepile style if avatars are disabled.
+		$reactions_args = array();
+		if ( ! \get_option( 'show_avatars', true ) ) {
+			$reactions_args['styles'] = array();
+		}
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions', $reactions_args );
 
 		\register_block_type_from_metadata(
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
@@ -105,7 +116,7 @@ class Blocks {
 				 * @param \WP_REST_Request $request    The request object.
 				 * @return int The number of published posts.
 				 */
-				'get_callback' => function ( $response, $field_name, $request ) {
+				'get_callback' => static function ( $response, $field_name, $request ) {
 					return (int) count_user_posts( $request->get_param( 'id' ), 'post', true );
 				},
 				'schema'       => array(
@@ -199,6 +210,7 @@ class Blocks {
 		$html = '<div ' . $wrapper_attrs . '>';
 
 		// Try to get and append the embed if requested.
+		$embed = null;
 		if ( $show_embed ) {
 			$embed = wp_oembed_get( $attrs['url'] );
 			if ( $embed ) {
@@ -207,8 +219,8 @@ class Blocks {
 			}
 		}
 
-		// Only show the link if we're not showing the embed.
-		if ( ! $show_embed ) {
+		// Show the link if embed is not requested or if embed failed.
+		if ( ! $show_embed || ! $embed ) {
 			$html .= sprintf(
 				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
 				esc_url( $attrs['url'] ),
@@ -279,8 +291,8 @@ class Blocks {
 	/**
 	 * Converts content to blocks before saving to the database.
 	 *
-	 * @param array  $data The post data to be inserted.
-	 * @param object $post The Mastodon Create activity.
+	 * @param array $data The post data to be inserted.
+	 * @param array $post The Mastodon Create activity.
 	 *
 	 * @return array
 	 */
@@ -288,7 +300,7 @@ class Blocks {
 		// Convert paragraphs to blocks.
 		\preg_match_all( '#<p>.*?</p>#is', $data['post_content'], $matches );
 		$blocks = \array_map(
-			function ( $paragraph ) {
+			static function ( $paragraph ) {
 				return '<!-- wp:paragraph -->' . PHP_EOL . $paragraph . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL;
 			},
 			$matches[0] ?? array()
@@ -297,8 +309,8 @@ class Blocks {
 		$data['post_content'] = \rtrim( \implode( PHP_EOL, $blocks ), PHP_EOL );
 
 		// Add reply block if it's a reply.
-		if ( null !== $post->object->inReplyTo ) {
-			$reply_block          = \sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, \esc_url( $post->object->inReplyTo ) );
+		if ( ! empty( $post['object']['inReplyTo'] ) ) {
+			$reply_block          = \sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, \esc_url( $post['object']['inReplyTo'] ) );
 			$data['post_content'] = $reply_block . $data['post_content'];
 		}
 

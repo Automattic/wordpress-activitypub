@@ -12,6 +12,7 @@ use Activitypub\Collection\Posts;
 
 use function Activitypub\get_activity_visibility;
 use function Activitypub\is_activity_reply;
+use function Activitypub\is_quote_activity;
 use function Activitypub\is_self_ping;
 use function Activitypub\object_id_to_comment;
 
@@ -38,12 +39,10 @@ class Create {
 		// Check for private and/or direct messages.
 		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
 			$result = false;
-		} elseif ( is_activity_reply( $activity ) ) { // Check for replies.
+		} elseif ( is_activity_reply( $activity ) || is_quote_activity( $activity ) ) { // Check for replies and quotes.
 			$result = self::create_interaction( $activity, $user_ids, $activity_object );
-		} elseif ( \get_option( 'activitypub_create_posts', false ) ) { // Handle non-interaction objects.
+		} else { // Handle non-interaction objects.
 			$result = self::create_post( $activity, $user_ids, $activity_object );
-		} else {
-			$result = false;
 		}
 
 		if ( false === $result ) {
@@ -70,21 +69,15 @@ class Create {
 	 * @param int[]                          $user_ids        The ids of the local blog-users.
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 *
-	 * @return \WP_Comment|\WP_Error|false The created comment, WP_Error on failure, false if not processed.
+	 * @return \WP_Comment|\WP_Error|false The created comment, WP_Error on failure, false if already exists or not processed.
 	 */
 	public static function create_interaction( $activity, $user_ids, $activity_object = null ) {
-		$check_dupe = object_id_to_comment( $activity['object']['id'] );
+		$existing_comment = object_id_to_comment( $activity['object']['id'] );
 
 		// If comment exists, call update action.
-		if ( $check_dupe ) {
-			/**
-			 * Fires when a Create activity is received for an existing comment.
-			 *
-			 * @param array                          $activity        The activity-object.
-			 * @param int[]                          $user_ids        The ids of the local blog-users.
-			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
-			 */
-			\do_action( 'activitypub_inbox_update', $activity, (array) $user_ids, $activity_object );
+		if ( $existing_comment ) {
+			Update::handle_update( $activity, (array) $user_ids, $activity_object );
+
 			return false;
 		}
 
@@ -108,21 +101,19 @@ class Create {
 	 * @param int[]                          $user_ids        The ids of the local blog-users.
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 *
-	 * @return \WP_Post|\WP_Error|false The post on success or WP_Error on failure.
+	 * @return \WP_Post|\WP_Error|false The post on success, WP_Error on failure, false if already exists.
 	 */
 	public static function create_post( $activity, $user_ids, $activity_object = null ) {
-		$check_dupe = Posts::get_by_guid( $activity['object']['id'] );
+		if ( ! \get_option( 'activitypub_create_posts', false ) ) {
+			return false;
+		}
 
-		// If comment exists, call update action.
-		if ( ! \is_wp_error( $check_dupe ) ) {
-			/**
-			 * Fires when a Create activity is received for an existing object.
-			 *
-			 * @param array                          $activity        The activity-object.
-			 * @param int[]                          $user_ids        The id of the local blog-user.
-			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
-			 */
-			\do_action( 'activitypub_inbox_update', $activity, (array) $user_ids, $activity_object );
+		$existing_post = Posts::get_by_guid( $activity['object']['id'] );
+
+		// If post exists, call update action.
+		if ( $existing_post instanceof \WP_Post ) {
+			Update::handle_update( $activity, (array) $user_ids, $activity_object );
+
 			return false;
 		}
 

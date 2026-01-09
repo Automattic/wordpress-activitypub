@@ -51,9 +51,6 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 		parent::tear_down();
 
 		Shortcodes::unregister();
-
-		// Delete the post.
-		wp_delete_post( $this->post->ID, true );
 	}
 
 	/**

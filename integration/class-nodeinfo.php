@@ -66,6 +66,15 @@ class Nodeinfo {
 
 		$nodeinfo['protocols'][] = 'activitypub';
 
+		$nodeinfo['services']['inbound']  = array_merge(
+			$nodeinfo['services']['inbound'],
+			array( 'gnusocial' )
+		);
+		$nodeinfo['services']['outbound'] = array_merge(
+			$nodeinfo['services']['outbound'],
+			array( 'friendica', 'gnusocial', 'mediagoblin', 'wordpress' )
+		);
+
 		$nodeinfo['usage']['users'] = array(
 			'total'          => get_total_users(),
 			'activeMonth'    => get_active_users(),
@@ -74,9 +83,6 @@ class Nodeinfo {
 
 		$nodeinfo['metadata']['federation']    = array( 'enabled' => true );
 		$nodeinfo['metadata']['staffAccounts'] = self::get_staff();
-
-		$nodeinfo['services']['inbound'][]  = 'activitypub';
-		$nodeinfo['services']['outbound'][] = 'activitypub';
 
 		return $nodeinfo;
 	}
@@ -129,15 +135,11 @@ class Nodeinfo {
 				'orderby' => 'ID',
 				'order'   => 'ASC',
 				'cap'     => 'activitypub',
-				'fields'  => array( 'ID' ),
+				'fields'  => 'ID',
 			)
 		);
+		$admins = array_map( array( Webfinger::class, 'get_user_resource' ), $admins );
 
-		return array_map(
-			function ( $user ) {
-				return Webfinger::get_user_resource( $user->ID );
-			},
-			$admins
-		);
+		return array_values( array_filter( $admins ) );
 	}
 }

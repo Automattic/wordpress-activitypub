@@ -186,6 +186,50 @@ class Test_Like extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test Like activity with trailing slash in object URL.
+	 *
+	 * This test verifies that Like activities from Pixelfed and other platforms
+	 * that include trailing slashes in object URLs are processed correctly.
+	 *
+	 * @covers ::handle_like
+	 * @covers \Activitypub\Collection\Interactions::add_reaction
+	 */
+	public function test_handle_like_with_trailing_slash() {
+		// Create activity with trailing slash in object URL (as Pixelfed sends).
+		$activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://pixelfed.social/users/pfefferle#likes/30434186',
+			'type'     => 'Like',
+			'actor'    => $this->user_url,
+			'object'   => $this->post_permalink . '/', // Add trailing slash.
+		);
+
+		// Get comment count before.
+		$comments_before = \get_comments(
+			array(
+				'type'    => 'like',
+				'post_id' => $this->post_id,
+			)
+		);
+		$count_before    = count( $comments_before );
+
+		// Process the like.
+		Like::handle_like( $activity, $this->user_id );
+
+		// Check that comment was created despite trailing slash.
+		$comments_after = \get_comments(
+			array(
+				'type'    => 'like',
+				'post_id' => $this->post_id,
+			)
+		);
+		$count_after    = count( $comments_after );
+
+		$this->assertEquals( $count_before + 1, $count_after, 'Like with trailing slash should create comment' );
+		$this->assertInstanceOf( 'WP_Comment', $comments_after[0], 'Should create WP_Comment object' );
+	}
+
+	/**
 	 * Test duplicate like handling.
 	 *
 	 * @covers ::handle_like
@@ -233,18 +277,14 @@ class Test_Like extends \WP_UnitTestCase {
 		$hook_success  = null;
 		$hook_result   = null;
 
-		\add_action(
-			'activitypub_handled_like',
-			function ( $activity, $user_id, $success, $result ) use ( &$hook_fired, &$hook_activity, &$hook_user_id, &$hook_success, &$hook_result ) {
-				$hook_fired    = true;
-				$hook_activity = $activity;
-				$hook_user_id  = $user_id;
-				$hook_success  = $success;
-				$hook_result   = $result;
-			},
-			10,
-			4
-		);
+		$handled_like_callback = function ( $activity, $user_id, $success, $result ) use ( &$hook_fired, &$hook_activity, &$hook_user_id, &$hook_success, &$hook_result ) {
+			$hook_fired    = true;
+			$hook_activity = $activity;
+			$hook_user_id  = $user_id;
+			$hook_success  = $success;
+			$hook_result   = $result;
+		};
+		\add_action( 'activitypub_handled_like', $handled_like_callback, 10, 4 );
 
 		$activity = $this->create_test_object();
 		Like::handle_like( $activity, $this->user_id );
@@ -258,7 +298,7 @@ class Test_Like extends \WP_UnitTestCase {
 		$this->assertInstanceOf( 'WP_Comment', $hook_result, 'Result should be WP_Comment' );
 
 		// Clean up.
-		\remove_all_actions( 'activitypub_handled_like' );
+		\remove_action( 'activitypub_handled_like', $handled_like_callback );
 	}
 
 	/**

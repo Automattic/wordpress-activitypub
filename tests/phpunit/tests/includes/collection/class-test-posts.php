@@ -11,6 +11,8 @@ use Activitypub\Attachments;
 use Activitypub\Collection\Posts;
 use Activitypub\Post_Types;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Posts Collection Test Class.
  *
@@ -29,18 +31,46 @@ class Test_Posts extends \WP_UnitTestCase {
 		Post_Types::register_post_post_type();
 
 		// Mock HTTP requests for Remote_Actors::fetch_by_uri.
-		add_filter( 'pre_http_request', array( $this, 'mock_http_request' ), 10, 3 );
+		\add_filter( 'pre_http_request', array( $this, 'mock_http_request' ), 10, 3 );
+
+		// Also hook into the ActivityPub-specific filter to bypass URL validation.
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ), 10, 2 );
 	}
 
 	/**
 	 * Tear down test environment.
 	 */
 	public function tear_down() {
-		remove_filter( 'pre_http_request', array( $this, 'mock_http_request' ) );
+		\remove_filter( 'pre_http_request', array( $this, 'mock_http_request' ) );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ) );
 
 		$this->remove_added_uploads();
 
 		parent::tear_down();
+	}
+
+	/**
+	 * Mock remote object fetching to bypass URL validation.
+	 *
+	 * @param mixed  $response      The response to return.
+	 * @param string $url_or_object The URL or object being fetched.
+	 * @return mixed The mocked response or null to continue.
+	 */
+	public function mock_remote_object( $response, $url_or_object ) {
+		if ( 'https://example.com/users/testuser' === object_to_uri( $url_or_object ) ) {
+			return array(
+				'id'                => 'https://example.com/users/testuser',
+				'type'              => 'Person',
+				'name'              => 'Test Actor',
+				'preferredUsername' => 'testuser',
+				'summary'           => 'A test actor',
+				'url'               => 'https://example.com/users/testuser',
+				'inbox'             => 'https://example.com/users/testuser/inbox',
+				'outbox'            => 'https://example.com/users/testuser/outbox',
+			);
+		}
+
+		return $response;
 	}
 
 	/**
@@ -229,7 +259,9 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Use reflection to access the private method.
 		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		try {
 			$result = $method->invoke( null, $activity );
@@ -255,7 +287,9 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Use reflection to access the private method.
 		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		try {
 			$result = $method->invoke( null, 'invalid_data' );
@@ -273,13 +307,16 @@ class Test_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_activity_to_post_minimal() {
 		$activity = array(
-			'type' => 'Note',
+			'type'    => 'Note',
+			'content' => '<p>Minimal content for excerpt generation</p>',
 		);
 
 		// Use reflection to access the private method.
 		$reflection = new \ReflectionClass( Posts::class );
 		$method     = $reflection->getMethod( 'activity_to_post' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		try {
 			$result = $method->invoke( null, $activity );
@@ -289,10 +326,68 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$this->assertIsArray( $result );
 		$this->assertEquals( '', $result['post_title'] );
-		$this->assertEquals( '', $result['post_content'] );
+		$this->assertStringContainsString( 'Minimal content', $result['post_content'] );
+		// Note: generate_post_summary() expects a WP_Post object, so passing $activity['content']
+		// returns empty. WordPress will auto-generate the excerpt from content after post creation.
 		$this->assertEquals( '', $result['post_excerpt'] );
 		$this->assertEquals( Posts::POST_TYPE, $result['post_type'] );
 		$this->assertEquals( 'publish', $result['post_status'] );
+	}
+
+	/**
+	 * Test that published timestamp is preserved when creating posts.
+	 *
+	 * @covers ::activity_to_post
+	 * @covers ::add
+	 */
+	public function test_preserves_published_timestamp() {
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/timestamp-test',
+				'type'         => 'Note',
+				'name'         => 'Timestamp Test',
+				'content'      => '<p>Test content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'published'    => '2023-06-15T14:30:00Z',
+			),
+		);
+
+		$result = Posts::add( $activity, 1 );
+
+		$this->assertInstanceOf( '\WP_Post', $result );
+		$this->assertEquals( '2023-06-15 14:30:00', $result->post_date_gmt );
+		$this->assertEquals( \get_date_from_gmt( '2023-06-15 14:30:00' ), $result->post_date );
+	}
+
+	/**
+	 * Test that activity_to_post handles missing content gracefully.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_missing_content() {
+		$activity = array(
+			'type'    => 'Note',
+			'name'    => 'Title Only',
+			'summary' => 'Summary text',
+		);
+
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'activity_to_post' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		try {
+			$result = $method->invoke( null, $activity );
+		} catch ( \Exception $exception ) {
+			$result = $exception;
+		}
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'Title Only', $result['post_title'] );
+		$this->assertEquals( '', $result['post_content'] );
+		$this->assertEquals( 'Summary text', $result['post_excerpt'] );
 	}
 
 	/**
@@ -679,7 +774,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		);
 		$this->assertCount( 1, $posts );
 		// Verify no attachments initially.
-		$attachments = get_attached_media( '', $post1->ID );
+		$attachments = \get_attached_media( '', $post1->ID );
 		$this->assertEmpty( $attachments );
 
 		// Update with attachments.
@@ -765,11 +860,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		);
 
 		// Mock the new image URL.
-		add_filter(
+		\add_filter(
 			'pre_http_request',
 			function ( $response, $parsed_args, $url ) {
 				if ( 'https://example.com/new-image.jpg' === $url && isset( $parsed_args['filename'] ) ) {
-					copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
+					\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
 
 					return array(
 						'response' => array( 'code' => 200 ),
@@ -848,5 +943,754 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Note: With file-based storage, we don't detect unchanged attachments, so files get replaced.
 		$new_files = glob( $file_dir . '/*' );
 		$this->assertCount( 1, $new_files, 'File should still exist after update' );
+	}
+
+	/**
+	 * Test extracting hashtags from activity tags.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags() {
+		$tags = array(
+			array(
+				'type' => 'Hashtag',
+				'name' => '#test',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => '#wordpress',
+			),
+			array(
+				'type' => 'Mention',
+				'name' => '@user',
+			),
+		);
+
+		$result = Posts::extract_hashtags( $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 2, $result );
+		// Helper always strips # prefix.
+		$this->assertContains( 'test', $result );
+		$this->assertContains( 'wordpress', $result ); // phpcs:ignore WordPress.WP.CapitalPDangit.MisspelledInText
+		$this->assertNotContains( '@user', $result );
+	}
+
+	/**
+	 * Test extracting hashtags without # prefix in source.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags_without_prefix() {
+		$tags = array(
+			array(
+				'type' => 'Hashtag',
+				'name' => 'test',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => 'wordpress',
+			),
+		);
+
+		$result = Posts::extract_hashtags( $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 2, $result );
+		$this->assertContains( 'test', $result );
+		$this->assertContains( 'wordpress', $result ); // phpcs:ignore WordPress.WP.CapitalPDangit.MisspelledInText
+	}
+
+	/**
+	 * Test extracting hashtags from empty array.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags_from_empty_array() {
+		$result = Posts::extract_hashtags( array() );
+
+		$this->assertIsArray( $result );
+		$this->assertEmpty( $result );
+	}
+
+	/**
+	 * Test extracting hashtags from null value.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags_from_null() {
+		$result = Posts::extract_hashtags( null );
+
+		$this->assertIsArray( $result );
+		$this->assertEmpty( $result );
+	}
+
+	/**
+	 * Test extracting hashtags when tags have no name field.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags_missing_name_field() {
+		$tags = array(
+			array(
+				'type' => 'Hashtag',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => '#valid',
+			),
+		);
+
+		$result = Posts::extract_hashtags( $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+		$this->assertContains( 'valid', $result );
+	}
+
+	/**
+	 * Test extracting hashtags when tags have no type field.
+	 *
+	 * @covers ::extract_hashtags
+	 */
+	public function test_extract_hashtags_missing_type_field() {
+		$tags = array(
+			array(
+				'name' => '#invalid',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => '#valid',
+			),
+		);
+
+		$result = Posts::extract_hashtags( $tags );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+		$this->assertContains( 'valid', $result );
+		$this->assertNotContains( 'invalid', $result );
+	}
+
+	/**
+	 * Test that hashtag removal works in activity_to_post.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_removes_hashtags() {
+		$activity = array(
+			'id'        => 'https://example.com/objects/hashtag-test',
+			'type'      => 'Note',
+			'name'      => 'Hashtag Test',
+			'content'   => '<p>This is a test #test #wordpress</p>',
+			'published' => '2023-01-01T12:00:00Z',
+			'tag'       => array(
+				array(
+					'type' => 'Hashtag',
+					'name' => '#test',
+				),
+				array(
+					'type' => 'Hashtag',
+					'name' => '#wordpress',
+				),
+			),
+		);
+
+		// Use reflection to access the private method.
+		$reflection = new \ReflectionClass( Posts::class );
+		$method     = $reflection->getMethod( 'activity_to_post' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( null, $activity );
+
+		$this->assertIsArray( $result );
+		// Content should have hashtags removed.
+		$this->assertStringNotContainsString( '#test', $result['post_content'] );
+		$this->assertStringNotContainsString( '#WordPress', $result['post_content'] );
+		$this->assertStringContainsString( 'This is a test', $result['post_content'] );
+	}
+
+	/**
+	 * Data provider for remove_hashtags tests.
+	 *
+	 * @return array Test data.
+	 */
+	public function remove_hashtags_provider() {
+		return array(
+			'simple_hashtag_removal'          => array(
+				'<p>This is a test #wordpress #activitypub</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => '#wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => '#activitypub',
+					),
+				),
+				'<p>This is a test</p>',
+			),
+			'hashtags_without_hash_prefix'    => array(
+				'<p>Testing content #php #javascript</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'javascript',
+					),
+				),
+				'<p>Testing content</p>',
+			),
+			'hashtags_in_anchor_tags'         => array(
+				'<p>Check out this post <a href="https://example.com/tag/wordpress">#wordpress</a> <a href="https://example.com/tag/php">#php</a></p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => '#wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => '#php',
+					),
+				),
+				'<p>Check out this post</p>',
+			),
+			'mixed_hashtags'                  => array(
+				'<p>Post about coding <a href="https://example.com/tag/php">#php</a> #javascript</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'javascript',
+					),
+				),
+				'<p>Post about coding</p>',
+			),
+			'inline_hashtags_not_removed'     => array(
+				'<p>Testing #wordpress in the middle and more text</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+				),
+				'<p>Testing #wordpress in the middle and more text</p>',
+			),
+			'partial_match_should_not_remove' => array(
+				'<p>Testing #wordpressdevelopment in content #wordpress</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+				),
+				'<p>Testing #wordpressdevelopment in content</p>',
+			),
+			'empty_hashtags_array'            => array(
+				'<p>Testing #wordpress #php</p>',
+				array(),
+				'<p>Testing #wordpress #php</p>',
+			),
+			'empty_content'                   => array(
+				'',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+				),
+				'',
+			),
+			'no_matching_hashtags'            => array(
+				'<p>Testing #wordpress #php</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'javascript',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'python',
+					),
+				),
+				'<p>Testing #wordpress #php</p>',
+			),
+			'case_insensitive_removal'        => array(
+				'<p>Testing content #WordPress #PHP</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+				),
+				'<p>Testing content</p>',
+			),
+			'trailing_hashtags_only'          => array(
+				'<p>Testing #wordpress in middle #php #activitypub</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'wordpress',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'php',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'activitypub',
+					),
+				),
+				'<p>Testing #wordpress in middle</p>',
+			),
+			'special_characters_in_hashtags'  => array(
+				'<p>Testing content #c++ #.net</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'c++',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => '.net',
+					),
+				),
+				'<p>Testing content</p>',
+			),
+			'multiple_spaces_cleanup'         => array(
+				'<p>Testing content #tag1    #tag2    #tag3</p>',
+				array(
+					array(
+						'type' => 'Hashtag',
+						'name' => 'tag1',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'tag2',
+					),
+					array(
+						'type' => 'Hashtag',
+						'name' => 'tag3',
+					),
+				),
+				'<p>Testing content</p>',
+			),
+		);
+	}
+
+	/**
+	 * Test remove_hashtags with various inputs.
+	 *
+	 * @dataProvider remove_hashtags_provider
+	 * @covers ::remove_hashtags
+	 *
+	 * @param string $content  Input content.
+	 * @param array  $hashtags Hashtags to remove.
+	 * @param string $expected Expected output.
+	 */
+	public function test_remove_hashtags( $content, $hashtags, $expected ) {
+		$result = Posts::remove_hashtags( $content, $hashtags );
+		$this->assertEquals( $expected, $result );
+	}
+
+	/**
+	 * Test remove_hashtags with non-array hashtags parameter.
+	 *
+	 * @covers ::remove_hashtags
+	 */
+	public function test_remove_hashtags_with_invalid_hashtags() {
+		$content = '<p>Testing #WordPress #php</p>';
+
+		// Should return original content when hashtags is not an array.
+		$this->assertEquals( $content, Posts::remove_hashtags( $content, 'not-an-array' ) );
+		$this->assertEquals( $content, Posts::remove_hashtags( $content, null ) );
+		$this->assertEquals( $content, Posts::remove_hashtags( $content, 123 ) );
+	}
+
+	/**
+	 * Test remove_hashtags preserves content structure.
+	 *
+	 * @covers ::remove_hashtags
+	 */
+	public function test_remove_hashtags_preserves_structure() {
+		$content = '<p>First paragraph content</p><p>Second paragraph with <strong>bold text</strong> #php #test</p>';
+		$tags    = array(
+			array(
+				'type' => 'Hashtag',
+				'name' => 'test',
+			),
+			array(
+				'type' => 'Hashtag',
+				'name' => 'php',
+			),
+		);
+		$result  = Posts::remove_hashtags( $content, $tags );
+
+		// Should preserve HTML structure and remove trailing hashtags only.
+		$this->assertStringContainsString( '<p>First paragraph content</p>', $result );
+		$this->assertStringContainsString( '<strong>bold text</strong>', $result );
+		$this->assertStringNotContainsString( '#test', $result );
+		$this->assertStringNotContainsString( '#php', $result );
+	}
+
+	/**
+	 * Test delete_all method deletes all posts.
+	 *
+	 * @covers ::delete_all
+	 */
+	public function test_delete_all() {
+		// Create some posts.
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+			)
+		);
+
+		// Verify posts were created.
+		$count_before = \wp_count_posts( Posts::POST_TYPE )->publish;
+		$this->assertEquals( 5, $count_before );
+
+		// Delete all posts.
+		$deleted = Posts::delete_all();
+
+		// Clear cache to get accurate count.
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		// Verify all posts were deleted.
+		$count_after = \wp_count_posts( Posts::POST_TYPE )->publish;
+		$this->assertEquals( 0, $count_after );
+
+		// Verify return value.
+		$this->assertEquals( 5, $deleted );
+	}
+
+	/**
+	 * Test delete_all method with mixed post statuses.
+	 *
+	 * @covers ::delete_all
+	 */
+	public function test_delete_all_mixed_statuses() {
+		// Create posts with different statuses.
+		self::factory()->post->create_many(
+			3,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+			)
+		);
+		self::factory()->post->create_many(
+			2,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'draft',
+			)
+		);
+		self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'trash',
+			)
+		);
+
+		// Delete all posts.
+		$deleted = Posts::delete_all();
+
+		// Verify all posts were deleted regardless of status.
+		$remaining = \get_posts(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'any',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+		$this->assertEmpty( $remaining );
+
+		// Verify return value includes all posts.
+		$this->assertEquals( 6, $deleted );
+	}
+
+	/**
+	 * Test purge method with more than 200 posts.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_more_than_200_posts() {
+		// Create 20 old posts (will be deleted).
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
+			)
+		);
+
+		// Create 5 new posts (will be kept).
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Posts::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert that 20 old posts were deleted.
+		$this->assertEquals( 20, $deleted );
+
+		// Verify 5 new posts remain.
+		$remaining = \get_posts(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+		$this->assertCount( 5, $remaining );
+	}
+
+	/**
+	 * Test purge method with 200 or fewer posts.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_200_or_fewer_posts() {
+		// Create 20 old posts.
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		$deleted = Posts::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		// Assert no posts were deleted (below threshold).
+		$this->assertEquals( 0, $deleted );
+		$this->assertEquals( 20, \wp_count_posts( Posts::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Test purge method preserves posts with local user comments.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_preserves_posts_with_comments() {
+		// Create old post without comments (should be deleted).
+		$post_without_comments = self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Create old post with a local user comment (should be preserved).
+		$post_with_comment = self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Add a comment from a local user to the second post.
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_with_comment,
+				'comment_content'  => 'Test comment',
+				'comment_approved' => 1,
+				'user_id'          => 1, // Local user comment.
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Posts::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert only 1 post was deleted.
+		$this->assertEquals( 1, $deleted );
+
+		// Post without comments should be deleted.
+		$this->assertNull( \get_post( $post_without_comments ) );
+
+		// Post with local user comment should still exist.
+		$this->assertNotNull( \get_post( $post_with_comment ) );
+	}
+
+	/**
+	 * Test purge preserves posts with multiple local user comments.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_preserves_posts_with_multiple_comments() {
+		// Create old post with multiple local user comments (should be preserved).
+		$post_with_comments = self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Add multiple comments from local users.
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_with_comments,
+				'comment_content'  => 'First comment',
+				'comment_approved' => 1,
+				'user_id'          => 1, // Local user comment.
+			)
+		);
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_with_comments,
+				'comment_content'  => 'Second comment',
+				'comment_approved' => 1,
+				'user_id'          => 1, // Local user comment.
+			)
+		);
+
+		// Create old post without any interactions (should be deleted).
+		$post_without_interactions = self::factory()->post->create(
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Posts::purge( 180 );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Only post without interactions should be deleted.
+		$this->assertEquals( 1, $deleted );
+		$this->assertNotNull( \get_post( $post_with_comments ) );
+		$this->assertNull( \get_post( $post_without_interactions ) );
+	}
+
+	/**
+	 * Test purge method with different retention days.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_with_different_days() {
+		// Create posts older than 60 days but newer than 30 days.
+		self::factory()->post->create_many(
+			10,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-45 days' ) ),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		// Purge with 60 days retention - should not delete.
+		$deleted = Posts::purge( 60 );
+		$this->assertEquals( 0, $deleted );
+
+		// Purge with 30 days retention - should delete all.
+		$deleted = Posts::purge( 30 );
+		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		$this->assertEquals( 10, $deleted );
+	}
+
+	/**
+	 * Test purge returns count of deleted items.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_returns_deleted_count() {
+		// Create 15 old posts.
+		self::factory()->post->create_many(
+			15,
+			array(
+				'post_type'   => Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Posts::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Posts::purge( 180 );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Should return exact count of deleted posts.
+		$this->assertEquals( 15, $deleted );
 	}
 }

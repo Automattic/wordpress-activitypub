@@ -115,15 +115,15 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
 
 		// Mock safe_remote_post to simulate a failed request.
-		\add_filter(
-			'pre_http_request',
-			function () use ( $code, $message ) {
-				return new \WP_Error( $code, $message );
-			}
-		);
+		$mock_callback = function () use ( $code, $message ) {
+			return new \WP_Error( $code, $message );
+		};
+		\add_filter( 'pre_http_request', $mock_callback, 10, 3 );
 
 		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
-		$send_to_inboxes->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
 
 		// Invoke the method.
 		try {
@@ -134,7 +134,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		$this->assertSame( $expected, $retries, 'Expected all inboxes to be scheduled for retry' );
 
-		\remove_all_filters( 'pre_http_request' );
+		\remove_filter( 'pre_http_request', $mock_callback );
 	}
 
 	/**
@@ -155,7 +155,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Make `Dispatcher::send_to_additional_inboxes` a public method.
 		$send_to_additional_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_additional_inboxes' );
-		$send_to_additional_inboxes->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_additional_inboxes->setAccessible( true );
+		}
 
 		try {
 			$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
@@ -220,8 +222,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		\remove_filter( 'pre_http_request', $fake_request );
 
 		\delete_option( 'activitypub_relays' );
-		\wp_delete_post( $post_id );
-		\wp_delete_post( $outbox_item->ID );
 	}
 
 	/**
@@ -235,7 +235,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$activity    = Outbox::get_activity( $outbox_item );
 
 		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
-		$should_send->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$should_send->setAccessible( true );
+		}
 
 		// No followers, so should not send.
 		try {
@@ -343,30 +345,21 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		// Create a test actor.
 		$actor_id = self::$user_id;
 
-		$callback = function ( $pre, $parsed_args, $url ) {
+		$callback = function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
 			if ( 'https://mastodon.social/@user/123456789' === $url ) {
 				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => \wp_json_encode(
-						array(
-							'type'         => 'Note',
-							'id'           => 'https://mastodon.social/@user/123456789',
-							'attributedTo' => 'https://mastodon.social/@user',
-						)
-					),
+					'type'         => 'Note',
+					'id'           => 'https://mastodon.social/@user/123456789',
+					'attributedTo' => 'https://mastodon.social/@user',
 				);
 			}
 
 			if ( 'https://mastodon.social/@user' === $url ) {
 				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => \wp_json_encode(
-						array(
-							'type'  => 'Person',
-							'id'    => 'https://mastodon.social/@user',
-							'inbox' => 'https://mastodon.social/inbox',
-						)
-					),
+					'type'  => 'Person',
+					'id'    => 'https://mastodon.social/@user',
+					'inbox' => 'https://mastodon.social/inbox',
 				);
 			}
 
@@ -374,7 +367,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		};
 
 		// Mock the HTTP response for the remote object.
-		\add_filter( 'pre_http_request', $callback, 10, 3 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $callback, 10, 2 );
 
 		// Get inboxes for the activity.
 		$inboxes = Dispatcher::add_inboxes_of_replied_urls( array(), $actor_id, $activity );
@@ -383,7 +376,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$this->assertContains( 'https://mastodon.social/inbox', $inboxes, 'Inbox should be added for different domain in_reply_to URLs' );
 
 		// Clean up.
-		\remove_filter( 'pre_http_request', $callback );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $callback );
 	}
 
 	/**
@@ -439,7 +432,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $fake_request );
-		\wp_delete_post( $outbox_id, true );
 	}
 
 	/**
@@ -473,9 +465,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Verify that no activity was sent.
 		$this->assertSame( 0, did_action( 'activitypub_sent_to_inbox' ), 'Non-Accept activities should not be sent immediately' );
-
-		// Clean up.
-		\wp_delete_post( $outbox_id, true );
 	}
 
 	/**
@@ -540,7 +529,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Make the method accessible.
 		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
-		$send_to_inboxes->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
 
 		// Invoke the method.
 		try {
@@ -556,10 +547,8 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$this->assertTrue( $http_called, 'HTTP should be called for remote inbox' );
 
 		// Clean up.
-		\remove_filter( 'pre_http_request', $http_callback, 10 );
-		\remove_action( 'activitypub_sent_to_inbox', $inbox_callback, 10 );
-		\wp_delete_post( $post_id );
-		\wp_delete_post( $outbox_item->ID );
+		\remove_filter( 'pre_http_request', $http_callback );
+		\remove_action( 'activitypub_sent_to_inbox', $inbox_callback );
 	}
 
 	/**
@@ -589,7 +578,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Make the method accessible.
 		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
-		$send_to_inboxes->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
 
 		// Invoke the method.
 		try {
@@ -603,8 +594,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $http_callback );
-		\wp_delete_post( $post_id );
-		\wp_delete_post( $outbox_item->ID );
 	}
 
 	/**
@@ -634,7 +623,9 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Make the method accessible.
 		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
-		$send_to_inboxes->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
 
 		// Invoke the method.
 		try {
@@ -648,8 +639,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $http_callback );
-		\wp_delete_post( $post_id );
-		\wp_delete_post( $outbox_item->ID );
 	}
 
 	/**
@@ -706,6 +695,5 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $fake_request );
-		\wp_delete_post( $outbox_id, true );
 	}
 }

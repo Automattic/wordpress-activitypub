@@ -8,7 +8,10 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Blocks;
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Interactions;
+
+use function Activitypub\object_to_uri;
 
 /**
  * Test class for Blocks.
@@ -16,6 +19,75 @@ use Activitypub\Collection\Interactions;
  * @coversDefaultClass \Activitypub\Blocks
  */
 class Test_Blocks extends \WP_UnitTestCase {
+
+	/**
+	 * User ID for Extra Fields block tests.
+	 *
+	 * @var int
+	 */
+	private static $extra_fields_user_id;
+
+	/**
+	 * Set up before class.
+	 *
+	 * @param \WP_UnitTest_Factory $factory Factory instance.
+	 */
+	public static function wpSetUpBeforeClass( $factory ) {
+		// Create test user for Extra Fields block tests.
+		self::$extra_fields_user_id = $factory->user->create(
+			array(
+				'user_login' => 'extra_fields_user',
+				'user_email' => 'extrafields@example.com',
+			)
+		);
+
+		// Create some extra fields for the user.
+		$factory->post->create(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_title'   => 'Website',
+				'post_content' => '<!-- wp:paragraph --><p><a href="https://example.com" rel="me">example.com</a></p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_author'  => self::$extra_fields_user_id,
+				'menu_order'   => 10,
+			)
+		);
+
+		$factory->post->create(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_title'   => 'Location',
+				'post_content' => '<!-- wp:paragraph --><p>San Francisco, CA</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_author'  => self::$extra_fields_user_id,
+				'menu_order'   => 20,
+			)
+		);
+
+		$factory->post->create(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_title'   => 'Pronouns',
+				'post_content' => '<!-- wp:paragraph --><p>they/them</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_author'  => self::$extra_fields_user_id,
+				'menu_order'   => 30,
+			)
+		);
+
+		// Create extra fields for blog.
+		$factory->post->create(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_title'   => 'Blog Website',
+				'post_content' => '<!-- wp:paragraph --><p><a href="https://blog.example.com" rel="me">blog.example.com</a></p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_author'  => self::$extra_fields_user_id,
+				'menu_order'   => 10,
+			)
+		);
+	}
+
 	/**
 	 * Test register_post_meta.
 	 *
@@ -98,18 +170,17 @@ class Test_Blocks extends \WP_UnitTestCase {
 			),
 		);
 
-		$pre_filter = function ( $preempt, $args, $url ) use ( $mock_activity ) {
+		$pre_filter = function ( $pre, $url_or_object ) use ( $mock_activity ) {
+			$url = object_to_uri( $url_or_object );
 			if ( false !== strpos( $url, 'mastodon.social' ) ) {
-				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => wp_json_encode( $mock_activity ),
-				);
+				return $mock_activity;
 			}
-			return $preempt;
+
+			return $pre;
 		};
 
 		// Add filter to mock the HTTP response before Http::get_remote_object is called.
-		add_filter( 'pre_http_request', $pre_filter, 10, 3 );
+		add_filter( 'activitypub_pre_http_get_remote_object', $pre_filter, 10, 2 );
 
 		$block_markup = sprintf(
 			'<!-- wp:activitypub/reply {"url":"%s","embedPost":true} /-->',
@@ -139,7 +210,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'p-name', $output );
 		$this->assertStringContainsString( 'u-url', $output );
 
-		remove_filter( 'pre_http_request', $pre_filter, 10, 3 );
+		remove_filter( 'activitypub_pre_http_get_remote_object', $pre_filter );
 	}
 
 	/**
@@ -185,8 +256,8 @@ class Test_Blocks extends \WP_UnitTestCase {
 			'post_content' => '<p>First paragraph</p><p>Second paragraph</p>',
 		);
 
-		$post = (object) array(
-			'object' => (object) array(
+		$post = array(
+			'object' => array(
 				'inReplyTo' => null,
 			),
 		);
@@ -207,8 +278,8 @@ class Test_Blocks extends \WP_UnitTestCase {
 		);
 
 		$reply_url = 'https://mastodon.social/@user/123456';
-		$post      = (object) array(
-			'object' => (object) array(
+		$post      = array(
+			'object' => array(
 				'inReplyTo' => $reply_url,
 			),
 		);
@@ -220,22 +291,338 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test the reactions block with deprecated markup.
+	 * Test filter_import_mastodon_post_data without inReplyTo field.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
 	 */
-	public function test_render_reactions_block_with_deprecated_markup() {
+	public function test_filter_import_mastodon_post_data_without_in_reply_to() {
+		$data = array(
+			'post_content' => '<p>Regular post without reply</p>',
+		);
+
+		$post = array(
+			'object' => array(
+				// No inReplyTo field.
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		$this->assertStringNotContainsString( 'wp:activitypub/reply', $result['post_content'], 'Should not add reply block when no inReplyTo' );
+		$this->assertStringContainsString( "<!-- wp:paragraph -->\n<p>Regular post without reply</p>\n<!-- /wp:paragraph -->", $result['post_content'] );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data with multiple paragraphs and a reply.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_multiple_paragraphs_and_reply() {
+		$data = array(
+			'post_content' => '<p>First paragraph</p><p>Second paragraph</p><p>Third paragraph</p>',
+		);
+
+		$reply_url = 'https://mastodon.social/@alice/789';
+		$post      = array(
+			'object' => array(
+				'inReplyTo' => $reply_url,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should have reply block at the start.
+		$this->assertStringStartsWith( '<!-- wp:activitypub/reply', $result['post_content'], 'Reply block should be at the start' );
+
+		// Should have all three paragraphs as blocks.
+		$this->assertStringContainsString( '<!-- wp:paragraph -->', $result['post_content'] );
+		$this->assertSame( 3, substr_count( $result['post_content'], '<!-- wp:paragraph -->' ), 'Should have 3 paragraph blocks' );
+		$this->assertSame( 3, substr_count( $result['post_content'], '<!-- /wp:paragraph -->' ), 'Should close 3 paragraph blocks' );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data with empty content.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_empty_content() {
+		$data = array(
+			'post_content' => '',
+		);
+
+		$post = array(
+			'object' => array(
+				'inReplyTo' => null,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should handle empty content gracefully.
+		$this->assertSame( '', $result['post_content'], 'Should return empty string for empty content' );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data with content but no paragraph tags.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_non_paragraph_content() {
+		$data = array(
+			'post_content' => 'Plain text without paragraph tags',
+		);
+
+		$post = array(
+			'object' => array(
+				'inReplyTo' => null,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should handle content without <p> tags.
+		$this->assertSame( '', $result['post_content'], 'Should return empty string when no paragraphs found' );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data preserves data keys.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_preserves_other_data() {
+		$data = array(
+			'post_content' => '<p>Test content</p>',
+			'post_author'  => 123,
+			'post_date'    => '2024-01-15T10:30:00Z',
+			'post_excerpt' => 'Test excerpt',
+			'meta_input'   => array( '_source_id' => 'test-id' ),
+		);
+
+		$post = array(
+			'object' => array(
+				'inReplyTo' => null,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should preserve all other data keys.
+		$this->assertArrayHasKey( 'post_author', $result, 'Should preserve post_author' );
+		$this->assertSame( 123, $result['post_author'], 'Should preserve post_author value' );
+		$this->assertArrayHasKey( 'post_date', $result, 'Should preserve post_date' );
+		$this->assertSame( '2024-01-15T10:30:00Z', $result['post_date'], 'Should preserve post_date value' );
+		$this->assertArrayHasKey( 'post_excerpt', $result, 'Should preserve post_excerpt' );
+		$this->assertArrayHasKey( 'meta_input', $result, 'Should preserve meta_input' );
+
+		// Should only modify post_content.
+		$this->assertNotSame( '<p>Test content</p>', $result['post_content'], 'Should modify post_content' );
+		$this->assertStringContainsString( '<!-- wp:paragraph -->', $result['post_content'], 'Should add block markup' );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data with nested HTML in paragraphs.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_nested_html() {
+		$data = array(
+			'post_content' => '<p>Text with <a href="https://example.com">a link</a> and <strong>bold text</strong></p>',
+		);
+
+		$post = array(
+			'object' => array(
+				'inReplyTo' => null,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should preserve nested HTML.
+		$this->assertStringContainsString( '<a href="https://example.com">a link</a>', $result['post_content'], 'Should preserve links' );
+		$this->assertStringContainsString( '<strong>bold text</strong>', $result['post_content'], 'Should preserve strong tags' );
+		$this->assertStringContainsString( '<!-- wp:paragraph -->', $result['post_content'], 'Should add block markup' );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data integration with array-based post data.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_complete_activity() {
+		$data = array(
+			'post_content' => '<p>Complete test</p>',
+		);
+
+		// Realistic Mastodon activity structure.
+		$post = array(
+			'id'        => 'https://mastodon.social/users/example/statuses/123/activity',
+			'type'      => 'Create',
+			'actor'     => 'https://mastodon.social/users/example',
+			'published' => '2024-01-15T10:30:00Z',
+			'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object'    => array(
+				'id'        => 'https://mastodon.social/users/example/statuses/123',
+				'type'      => 'Note',
+				'content'   => '<p>Complete test</p>',
+				'published' => '2024-01-15T10:30:00Z',
+				'inReplyTo' => 'https://mastodon.social/@other/456',
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		// Should work with complete activity structure.
+		$this->assertIsArray( $result, 'Should return array' );
+		$this->assertArrayHasKey( 'post_content', $result, 'Should have post_content key' );
+		$this->assertStringContainsString( 'wp:activitypub/reply', $result['post_content'], 'Should add reply block' );
+		$this->assertStringContainsString( '<!-- wp:paragraph -->', $result['post_content'], 'Should add paragraph block' );
+	}
+
+	/**
+	 * Test the reactions block with v1 deprecated markup (title attribute, no HTML content).
+	 *
+	 * Block v1 (plugin 1.0.0): Dynamic block with title attribute, self-closing.
+	 */
+	public function test_render_reactions_block_with_v1_markup() {
 		$post_id = $this->get_post_id_with_reactions();
 
+		// v1 with custom title.
 		$block_markup = '<!-- wp:activitypub/reactions {"title":"What people think about it on the Fediverse!","postId":' . $post_id . '} /-->';
 		$output       = do_blocks( $block_markup );
 		$expected     = '<h6 class="wp-block-heading">What people think about it on the Fediverse!</h6>';
 
 		$this->assertStringContainsString( $expected, $output );
 
+		// v1 with default title.
 		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
 		$output       = do_blocks( $block_markup );
 		$expected     = '<h6 class="wp-block-heading">Fediverse Reactions</h6>';
 
 		$this->assertStringContainsString( $expected, $output );
+	}
+
+	/**
+	 * Test the reactions block with v2 deprecated markup (fragment with separate div).
+	 *
+	 * Block v2 (plugin 2.0.0): Fragment with InnerBlocks and separate div, no wp-block- prefix.
+	 */
+	public function test_render_reactions_block_with_v2_markup() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		// v2 format: fragment with heading innerBlock and separate div (no wp-block- prefix).
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} -->
+<!-- wp:heading {"level":6} -->
+<h6 class="wp-block-heading">Fediverse reactions</h6>
+<!-- /wp:heading -->
+<div class="activitypub-reactions-block"></div>
+<!-- /wp:activitypub/reactions -->';
+
+		$output = do_blocks( $block_markup );
+
+		// Should render the heading from innerBlocks.
+		$this->assertStringContainsString( 'Fediverse reactions', $output );
+		// Should have the wrapper with wp-block- prefix (from get_block_wrapper_attributes).
+		$this->assertStringContainsString( 'wp-block-activitypub-reactions', $output );
+		// Should have reaction content.
+		$this->assertStringContainsString( 'activitypub-reactions', $output );
+	}
+
+	/**
+	 * Test the reactions block with v3 markup (useBlockProps with wp-block- prefix).
+	 *
+	 * Block v3 (plugin 3.0.0+): Uses useBlockProps.save() with wp-block- prefix class.
+	 */
+	public function test_render_reactions_block_with_v3_markup() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		// v3 format: div with useBlockProps (has wp-block- prefix) wrapping InnerBlocks.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} -->
+<div class="wp-block-activitypub-reactions activitypub-reactions-block"><!-- wp:heading {"level":6} -->
+<h6 class="wp-block-heading">Fediverse reactions</h6>
+<!-- /wp:heading --></div>
+<!-- /wp:activitypub/reactions -->';
+
+		$output = do_blocks( $block_markup );
+
+		// Should render the heading from innerBlocks.
+		$this->assertStringContainsString( 'Fediverse reactions', $output );
+		// Should have the wrapper with wp-block- prefix.
+		$this->assertStringContainsString( 'wp-block-activitypub-reactions', $output );
+		// Should have reaction content.
+		$this->assertStringContainsString( 'activitypub-reactions', $output );
+	}
+
+	/**
+	 * Test the reactions block with facepile style shows avatars.
+	 */
+	public function test_render_reactions_block_facepile_style_shows_avatars() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"className":"is-style-facepile","displayStyle":"facepile"} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-facepile', $output );
+		$this->assertStringContainsString( 'reaction-avatars', $output );
+	}
+
+	/**
+	 * Test the reactions block with compact style hides avatars.
+	 */
+	public function test_render_reactions_block_compact_style_hides_avatars() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"className":"is-style-compact","displayStyle":"compact"} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-compact', $output );
+		$this->assertStringNotContainsString( 'reaction-avatars', $output );
+	}
+
+	/**
+	 * Test the reactions block defaults to facepile when avatars are enabled.
+	 */
+	public function test_render_reactions_block_defaults_to_facepile_with_avatars_enabled() {
+		\update_option( 'show_avatars', true );
+
+		$post_id = $this->get_post_id_with_reactions();
+
+		// Block without explicit style class.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-facepile', $output );
+		$this->assertStringContainsString( 'reaction-avatars', $output );
+	}
+
+	/**
+	 * Test the reactions block defaults to compact when avatars are disabled.
+	 */
+	public function test_render_reactions_block_defaults_to_compact_with_avatars_disabled() {
+		\update_option( 'show_avatars', false );
+
+		$post_id = $this->get_post_id_with_reactions();
+
+		// Block without explicit style class.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-compact', $output );
+		$this->assertStringNotContainsString( 'reaction-avatars', $output );
+
+		// Restore default.
+		\update_option( 'show_avatars', true );
+	}
+
+	/**
+	 * Test the reactions block with no reactions returns empty comment.
+	 */
+	public function test_render_reactions_block_with_no_reactions() {
+		$post_id = self::factory()->post->create();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( '<!-- Reactions block: No reactions found. -->', $output );
 	}
 
 	/**
@@ -254,30 +641,26 @@ class Test_Blocks extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-				);
-			}
-		);
+		$mock_actor_metadata = function () {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
 
-		\add_filter(
-			'pre_comment_approved',
-			function () {
-				return '1';
-			}
-		);
+		$approve_comment = function () {
+			return '1';
+		};
+		\add_filter( 'pre_comment_approved', $approve_comment );
 
 		Interactions::add_reaction( $activity );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		remove_all_filters( 'pre_comment_approved' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
+		remove_filter( 'pre_comment_approved', $approve_comment );
 
 		return $post_id;
 	}
@@ -308,5 +691,145 @@ class Test_Blocks extends \WP_UnitTestCase {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Test Extra Fields block rendering with blog user.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 * @covers \Activitypub\Collection\Extra_Fields::get_formatted_content
+	 */
+	public function test_render_extra_fields_block_with_blog_user() {
+		$block_markup = '<!-- wp:activitypub/extra-fields {"selectedUser":"blog"} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'activitypub-extra-fields-block-wrapper', $output );
+		$this->assertStringContainsString( 'Blog Website', $output );
+		$this->assertStringContainsString( 'blog.example.com', $output );
+	}
+
+	/**
+	 * Test Extra Fields block rendering with specific user ID.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 * @covers \Activitypub\Collection\Extra_Fields::get_formatted_content
+	 */
+	public function test_render_extra_fields_block_with_specific_user() {
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d"} /-->',
+			self::$extra_fields_user_id
+		);
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'Website', $output );
+		$this->assertStringContainsString( 'example.com', $output );
+		$this->assertStringContainsString( 'Location', $output );
+		$this->assertStringContainsString( 'San Francisco, CA', $output );
+		$this->assertStringContainsString( 'Pronouns', $output );
+		$this->assertStringContainsString( 'they/them', $output );
+	}
+
+	/**
+	 * Test Extra Fields block maxFields attribute limits output.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 */
+	public function test_render_extra_fields_block_with_max_fields() {
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d","maxFields":2} /-->',
+			self::$extra_fields_user_id
+		);
+		$output       = do_blocks( $block_markup );
+
+		// Should contain first two fields.
+		$this->assertStringContainsString( 'Website', $output );
+		$this->assertStringContainsString( 'Location', $output );
+
+		// Should not contain third field.
+		$this->assertStringNotContainsString( 'Pronouns', $output );
+		$this->assertStringNotContainsString( 'they/them', $output );
+	}
+
+	/**
+	 * Test Extra Fields block with no extra fields returns empty.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 */
+	public function test_render_extra_fields_block_with_no_fields() {
+		$user_id = self::factory()->user->create(
+			array(
+				'user_login' => 'empty_user',
+				'user_email' => 'empty@example.com',
+			)
+		);
+
+		// Prevent default extra fields from being created.
+		$prevent_extra_fields = function ( $fields, $uid ) use ( $user_id ) {
+			if ( $uid === $user_id ) {
+				return array();
+			}
+			return $fields;
+		};
+		add_filter( 'activitypub_get_actor_extra_fields', $prevent_extra_fields, 10, 2 );
+
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d"} /-->',
+			$user_id
+		);
+		$output       = do_blocks( $block_markup );
+
+		$this->assertEmpty( $output );
+
+		remove_filter( 'activitypub_get_actor_extra_fields', $prevent_extra_fields );
+	}
+
+	/**
+	 * Test Extra Fields block with cards style and background color.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 */
+	public function test_render_extra_fields_block_with_cards_style() {
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d","className":"is-style-cards","backgroundColor":"primary"} /-->',
+			self::$extra_fields_user_id
+		);
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-cards', $output );
+		$this->assertStringContainsString( 'var(--wp--preset--color--primary)', $output );
+	}
+
+	/**
+	 * Test Extra Fields block preserves HTML in field content.
+	 *
+	 * @covers ::get_user_id
+	 * @covers \Activitypub\Collection\Extra_Fields::get_actor_fields
+	 * @covers \Activitypub\Collection\Extra_Fields::get_formatted_content
+	 */
+	public function test_render_extra_fields_block_preserves_html() {
+		self::factory()->post->create(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_title'   => 'Rich Content',
+				'post_content' => '<!-- wp:paragraph --><p>Visit <strong>my site</strong> at <a href="https://test.com">test.com</a></p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_author'  => self::$extra_fields_user_id,
+				'menu_order'   => 40,
+			)
+		);
+
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/extra-fields {"selectedUser":"%d"} /-->',
+			self::$extra_fields_user_id
+		);
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( '<strong>my site</strong>', $output );
+		$this->assertStringContainsString( '<a href="https://test.com"', $output );
 	}
 }

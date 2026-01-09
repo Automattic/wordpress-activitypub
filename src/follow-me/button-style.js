@@ -92,10 +92,10 @@ function getLinkColor( text ) {
 /**
  * Generates a CSS selector.
  *
- * @param {string} selector CSS selector.
- * @param {string} prop CSS property.
- * @param {string|null} value CSS value.
- * @param {string} pseudo Pseudo-selector.
+ * @param {string}      selector CSS selector.
+ * @param {string}      prop     CSS property.
+ * @param {string|null} value    CSS value.
+ * @param {string}      pseudo   Pseudo-selector.
  * @return {string} CSS selector.
  */
 function generateSelector( selector, prop, value = null, pseudo = '' ) {
@@ -109,9 +109,9 @@ function generateSelector( selector, prop, value = null, pseudo = '' ) {
  * Gets styles for a button.
  *
  * @param {string} selector CSS selector.
- * @param {string} button Button color.
- * @param {string} text Text color.
- * @param {string} hover Hover color.
+ * @param {string} button   Button color.
+ * @param {string} text     Text color.
+ * @param {string} hover    Hover color.
  * @return {string} CSS styles.
  */
 function getStyles( selector, button, text, hover ) {
@@ -126,8 +126,8 @@ function getStyles( selector, button, text, hover ) {
 /**
  * Gets block styles.
  *
- * @param {string} base Base selector.
- * @param {Object} style Style object.
+ * @param {string}        base            Base selector.
+ * @param {Object}        style           Style object.
  * @param {Object|string} backgroundColor Background color.
  * @return {string} CSS styles.
  */

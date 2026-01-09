@@ -14,6 +14,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory as Transformer_Factory;
 
@@ -22,10 +23,10 @@ use Activitypub\Transformer\Factory as Transformer_Factory;
  *
  * @return array The activitypub context.
  *
- * @deprecated unreleased Use the respective context function instead.
+ * @deprecated 7.6.0 Use the respective context function instead.
  */
 function get_context() {
-	\_deprecated_function( __FUNCTION__, 'unreleased', 'Use the respective context function instead.' );
+	\_deprecated_function( __FUNCTION__, '7.6.0', 'Use the respective context function instead.' );
 
 	$context = Activity::JSON_LD_CONTEXT;
 
@@ -272,7 +273,7 @@ function esc_hashtag( $input ) {
 	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = preg_replace_callback(
 		'/-+(.)/',
-		function ( $matches ) {
+		static function ( $matches ) {
 			return strtoupper( $matches[1] );
 		},
 		$hashtag
@@ -348,6 +349,24 @@ function is_post_disabled( $post ) {
 	 * @param \WP_Post $post     The post object.
 	 */
 	return \apply_filters( 'activitypub_is_post_disabled', $disabled, $post );
+}
+
+/**
+ * Check if a post is an ActivityPub post.
+ *
+ * @param mixed $post The post object or ID.
+ *
+ * @return boolean True if the post is an ActivityPub post, false otherwise.
+ */
+function is_ap_post( $post ) {
+	$post = \get_post( $post );
+
+	if ( ! $post ) {
+		return false;
+	}
+
+	// Check for ap_post post type.
+	return Posts::POST_TYPE === $post->post_type;
 }
 
 /**
@@ -588,6 +607,12 @@ function get_activity_visibility( $activity ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
 	}
 
+	// Activities with no recipients are treated as public.
+	$recipients = extract_recipients_from_activity( $activity );
+	if ( empty( $recipients ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+	}
+
 	return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 }
 
@@ -607,6 +632,10 @@ function is_activity_public( $data ) {
 
 	$recipients = extract_recipients_from_activity( $data );
 
+	if ( empty( $recipients ) ) {
+		return true;
+	}
+
 	return ! empty( array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
 }
 
@@ -619,6 +648,22 @@ function is_activity_public( $data ) {
  */
 function is_activity_reply( $data ) {
 	return ! empty( $data['object']['inReplyTo'] );
+}
+
+/**
+ * Check if passed Activity is a quote.
+ *
+ * Checks for quote properties: quote, quoteUrl, quoteUri, or _misskey_quote.
+ *
+ * @param array $data The Activity object as array.
+ *
+ * @return boolean True if a quote, false if not.
+ */
+function is_quote_activity( $data ) {
+	return ! empty( $data['object']['quote'] ) ||
+		! empty( $data['object']['quoteUrl'] ) ||
+		! empty( $data['object']['quoteUri'] ) ||
+		! empty( $data['object']['_misskey_quote'] );
 }
 
 /**
@@ -758,13 +803,18 @@ function object_to_uri( $data ) {
 
 	// Return part of Object that makes most sense.
 	switch ( $type ) {
-		case 'Image':
-			// See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
+		case 'Audio':    // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-audio.
+		case 'Document': // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-document.
+		case 'Image':    // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
+		case 'Video':    // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-video.
 			$data = object_to_uri( $data['url'] );
 			break;
-		case 'Link':
+
+		case 'Link':     // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-link.
+		case 'Mention':  // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-mention.
 			$data = $data['href'];
 			break;
+
 		default:
 			$data = $data['id'];
 			break;
@@ -943,7 +993,7 @@ function get_enclosures( $post_id ) {
 	}
 
 	$enclosures = array_map(
-		function ( $enclosure ) {
+		static function ( $enclosure ) {
 			// Check if the enclosure is a string.
 			if ( ! $enclosure || ! is_string( $enclosure ) ) {
 				return false;

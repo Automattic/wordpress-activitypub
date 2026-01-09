@@ -7,6 +7,7 @@
 
 namespace Activitypub\Integration;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -17,6 +18,7 @@ use Activitypub\Transformer\Factory;
 use Activitypub\Webfinger as Webfinger_Util;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
+use Enable_Mastodon_Apps\Entity\Notification;
 use Enable_Mastodon_Apps\Entity\Status;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -30,6 +32,13 @@ use function Activitypub\is_user_type_disabled;
  * @see https://github.com/akirk/enable-mastodon-apps
  */
 class Enable_Mastodon_Apps {
+	/**
+	 * Default limit for notifications.
+	 *
+	 * @var int
+	 */
+	const DEFAULT_NOTIFICATION_LIMIT = 15;
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -45,6 +54,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
 		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 		\add_filter( 'mastodon_api_submit_status_text', array( Mention::class, 'the_content' ) );
+		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 2 );
 	}
 
 	/**
@@ -186,45 +196,29 @@ class Enable_Mastodon_Apps {
 	public static function api_account_followers( $followers, $user_id ) {
 		$user_id               = self::maybe_map_user_to_blog( $user_id );
 		$activitypub_followers = Followers::get_many( $user_id, 40 );
-		$mastodon_followers    = array_map(
-			function ( $item ) {
-				$actor = Remote_Actors::get_actor( $item );
-				$acct  = Webfinger_Util::uri_to_acct( $actor->get_id() );
+		$mastodon_followers    = array();
 
-				if ( $acct && ! is_wp_error( $acct ) ) {
-					$acct = \str_replace( 'acct:', '', $acct );
-				} else {
-					$acct = $actor->get_id();
-				}
+		foreach ( $activitypub_followers as $follower ) {
+			$actor = Remote_Actors::get_actor( $follower );
+			if ( ! $actor || \is_wp_error( $actor ) ) {
+				continue;
+			}
 
-				$account                  = new Account();
-				$account->id              = \strval( $item->ID );
-				$account->username        = $actor->get_preferred_username();
-				$account->acct            = $acct;
-				$account->display_name    = $actor->get_name();
-				$account->url             = $actor->get_url();
-				$account->avatar          = $actor->get_icon_url();
-				$account->avatar_static   = $actor->get_icon_url();
-				$account->created_at      = new \DateTime( $actor->get_published() );
-				$account->last_status_at  = new \DateTime( $actor->get_published() );
-				$account->note            = $actor->get_summary();
-				$account->header          = $actor->get_image_url();
-				$account->header_static   = $actor->get_image_url();
-				$account->followers_count = 0;
-				$account->following_count = 0;
-				$account->statuses_count  = 0;
-				$account->bot             = false;
-				$account->locked          = false;
-				$account->group           = false;
-				$account->discoverable    = false;
-				$account->noindex         = false;
-				$account->fields          = array();
-				$account->emojis          = array();
+			$account = self::actor_to_account( $actor );
 
-				return $account;
-			},
-			$activitypub_followers
-		);
+			$account->followers_count = 0;
+			$account->following_count = 0;
+			$account->statuses_count  = 0;
+			$account->bot             = false;
+			$account->locked          = false;
+			$account->group           = false;
+			$account->discoverable    = false;
+			$account->noindex         = false;
+			$account->fields          = array();
+			$account->emojis          = array();
+
+			$mastodon_followers[] = $account;
+		}
 
 		return array_merge( $mastodon_followers, $followers );
 	}
@@ -316,7 +310,7 @@ class Enable_Mastodon_Apps {
 		$account->fields = self::get_extra_fields( $user_id_to_use );
 		// Now do it in source['fields'] with stripped tags.
 		$account->source['fields'] = \array_map(
-			function ( $field ) {
+			static function ( $field ) {
 				$field['value'] = \wp_strip_all_tags( $field['value'], true );
 				return $field;
 			},
@@ -369,57 +363,93 @@ class Enable_Mastodon_Apps {
 	/**
 	 * Get account for actor.
 	 *
-	 * @param string $uri The URI.
+	 * @param string|Actor $actor_or_uri The Actor object or URI.
 	 *
 	 * @return Account|null The account.
 	 */
-	private static function get_account_for_actor( $uri ) {
-		if ( ! is_string( $uri ) || empty( $uri ) ) {
-			return null;
+	private static function get_account_for_actor( $actor_or_uri ) {
+		// If it's already an Actor object, use it directly.
+		if ( $actor_or_uri instanceof Actor ) {
+			return self::actor_to_account( $actor_or_uri );
 		}
-		$data = get_remote_metadata_by_actor( $uri );
 
-		if ( ! $data || is_wp_error( $data ) ) {
+		if ( ! \is_string( $actor_or_uri ) || empty( $actor_or_uri ) ) {
 			return null;
 		}
+
+		// Fetch actor from cache or remote.
+		$actor_post = Remote_Actors::fetch_by_uri( $actor_or_uri );
+		if ( ! $actor_post || \is_wp_error( $actor_post ) ) {
+			return null;
+		}
+
+		$actor = Remote_Actors::get_actor( $actor_post );
+		if ( ! $actor || \is_wp_error( $actor ) ) {
+			return null;
+		}
+
+		return self::actor_to_account( $actor );
+	}
+
+	/**
+	 * Convert an Actor object to an Account.
+	 *
+	 * @param Actor $actor The actor object.
+	 *
+	 * @return Account The account.
+	 */
+	private static function actor_to_account( $actor ) {
 		$account = new Account();
 
-		$acct = Webfinger_Util::uri_to_acct( $uri );
-		if ( ! $acct || is_wp_error( $acct ) ) {
-			return null;
+		$actor_id = $actor->get__id();
+		if ( ! $actor_id ) {
+			$actor_id = $actor->get_id();
 		}
 
-		if ( str_starts_with( $acct, 'acct:' ) ) {
-			$acct = substr( $acct, 5 );
+		$account->id           = \strval( $actor_id );
+		$account->username     = $actor->get_preferred_username();
+		$account->acct         = $actor->get_webfinger();
+		$account->display_name = $actor->get_name();
+		$account->url          = $actor->get_url();
+		$account->created_at   = new \DateTime( 'now' );
+
+		$icon   = $actor->get_icon();
+		$avatar = null;
+		if ( $icon ) {
+			if ( \is_array( $icon ) && isset( $icon['url'] ) ) {
+				$avatar = $icon['url'];
+			} elseif ( \is_string( $icon ) ) {
+				$avatar = $icon;
+			}
+		}
+		if ( $avatar ) {
+			$account->avatar        = $avatar;
+			$account->avatar_static = $avatar;
 		}
 
-		$account->id           = $acct;
-		$account->username     = $acct;
-		$account->acct         = $acct;
-		$account->display_name = $data['name'];
-		$account->url          = $uri;
-
-		if ( ! empty( $data['summary'] ) ) {
-			$account->note = $data['summary'];
+		$summary = $actor->get_summary();
+		if ( $summary ) {
+			$account->note = $summary;
 		}
 
-		if (
-			isset( $data['icon']['type'] ) &&
-			isset( $data['icon']['url'] ) &&
-			'Image' === $data['icon']['type']
-		) {
-			$account->avatar        = $data['icon']['url'];
-			$account->avatar_static = $data['icon']['url'];
+		$image  = $actor->get_image();
+		$header = null;
+		if ( $image ) {
+			if ( \is_array( $image ) && isset( $image['url'] ) ) {
+				$header = $image['url'];
+			} elseif ( \is_string( $image ) ) {
+				$header = $image;
+			}
+		}
+		if ( $header ) {
+			$account->header        = $header;
+			$account->header_static = $header;
 		}
 
-		if ( isset( $data['image'] ) ) {
-			$account->header        = $data['image']['url'];
-			$account->header_static = $data['image']['url'];
+		$published = $actor->get_published();
+		if ( $published ) {
+			$account->created_at = new \DateTime( $published );
 		}
-		if ( ! isset( $data['published'] ) ) {
-			$data['published'] = 'now';
-		}
-		$account->created_at = new \DateTime( $data['published'] );
 
 		return $account;
 	}
@@ -483,28 +513,13 @@ class Enable_Mastodon_Apps {
 
 		foreach ( $followers as $follower ) {
 			$actor = Remote_Actors::get_actor( $follower );
-			$acct  = Webfinger_Util::uri_to_acct( $actor->get_id() );
-
-			if ( $acct && ! is_wp_error( $acct ) ) {
-				$acct = \str_replace( 'acct:', '', $acct );
-			} else {
-				$acct = $actor->get_url();
+			if ( ! $actor || \is_wp_error( $actor ) ) {
+				continue;
 			}
 
-			$account                 = new Account();
-			$account->id             = \strval( $follower->guid );
-			$account->username       = $actor->get_preferred_username();
-			$account->acct           = $acct;
-			$account->display_name   = $actor->get_name();
-			$account->url            = $actor->get_url();
-			$account->uri            = $actor->get_id();
-			$account->avatar         = $actor->get_icon_url();
-			$account->avatar_static  = $actor->get_icon_url();
-			$account->created_at     = new \DateTime( $actor->get_published() );
-			$account->last_status_at = new \DateTime( $actor->get_published() );
-			$account->note           = $actor->get_summary();
-			$account->header         = $actor->get_image_url();
-			$account->header_static  = $actor->get_image_url();
+			$account = self::actor_to_account( $actor );
+
+			$account->uri = $actor->get_id();
 
 			$search_data['accounts'][] = $account;
 		}
@@ -547,7 +562,7 @@ class Enable_Mastodon_Apps {
 			$object = $item;
 		}
 
-		if ( ! isset( $object['type'] ) || 'Note' !== $object['type'] || ! $account ) {
+		if ( ! isset( $object['type'] ) || ! in_array( $object['type'], array( 'Article', 'Note' ), true ) || ! $account ) {
 			return null;
 		}
 
@@ -573,7 +588,7 @@ class Enable_Mastodon_Apps {
 
 		if ( ! empty( $object['attachment'] ) ) {
 			$status->media_attachments = array_map(
-				function ( $attachment ) {
+				static function ( $attachment ) {
 					$default_attachment = array(
 						'url'       => null,
 						'mediaType' => null,
@@ -661,7 +676,7 @@ class Enable_Mastodon_Apps {
 			}
 
 			$new_statuses         = array_map(
-				function ( $item ) use ( $account, $args ) {
+				static function ( $item ) use ( $account, $args ) {
 					if ( $args['exclude_replies'] ) {
 						if ( isset( $item['object']['inReplyTo'] ) && $item['object']['inReplyTo'] ) {
 							return null;
@@ -738,5 +753,197 @@ class Enable_Mastodon_Apps {
 		}
 
 		return $context;
+	}
+
+	/**
+	 * Add repost and like notifications from ActivityPub comments.
+	 *
+	 * @param array  $notifications The notifications array.
+	 * @param object $request       The request object.
+	 *
+	 * @return array The filtered notifications.
+	 */
+	public static function api_notifications_get( $notifications, $request ) {
+		$types         = $request->get_param( 'types' );
+		$exclude_types = $request->get_param( 'exclude_types' );
+
+		$include_reblog    = ( ! \is_array( $types ) || \in_array( 'reblog', $types, true ) ) &&
+							( ! \is_array( $exclude_types ) || ! \in_array( 'reblog', $exclude_types, true ) );
+		$include_favourite = ( ! \is_array( $types ) || \in_array( 'favourite', $types, true ) ) &&
+							( ! \is_array( $exclude_types ) || ! \in_array( 'favourite', $exclude_types, true ) );
+		$include_follow    = ( ! \is_array( $types ) || \in_array( 'follow', $types, true ) ) &&
+							( ! \is_array( $exclude_types ) || ! \in_array( 'follow', $exclude_types, true ) );
+
+		if ( ! $include_reblog && ! $include_favourite && ! $include_follow ) {
+			return $notifications;
+		}
+
+		$user_id = \get_current_user_id();
+		if ( ! $user_id ) {
+			return $notifications;
+		}
+
+		$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : self::DEFAULT_NOTIFICATION_LIMIT;
+
+		if ( ! \class_exists( Notification::class ) ) {
+			return $notifications;
+		}
+
+		// Get reblog/favourite notifications from comments.
+		if ( $include_reblog || $include_favourite ) {
+			$comment_types = array();
+			if ( $include_reblog ) {
+				$comment_types[] = 'repost';
+			}
+			if ( $include_favourite ) {
+				$comment_types[] = 'like';
+			}
+
+			$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
+
+			$comments = \get_comments(
+				array(
+					'post_author' => $user_id,
+					'post_type'   => $post_types,
+					'type__in'    => $comment_types,
+					'number'      => $limit,
+					'orderby'     => 'comment_date',
+					'order'       => 'DESC',
+				)
+			);
+
+			foreach ( $comments as $comment ) {
+				$type = 'repost' === $comment->comment_type ? 'reblog' : 'favourite';
+
+				$account = self::get_account_for_comment( $comment );
+				if ( ! $account ) {
+					continue;
+				}
+
+				$status = self::api_post_status( $comment->comment_post_ID );
+				if ( ! $status ) {
+					continue;
+				}
+
+				$notification             = new Notification();
+				$notification->id         = \strval( $comment->comment_ID );
+				$notification->type       = $type;
+				$notification->created_at = \mysql2date( 'Y-m-d\TH:i:s.000P', $comment->comment_date, false );
+				$notification->account    = $account;
+				$notification->status     = $status;
+
+				$notifications[] = $notification;
+			}
+		}
+
+		// Get follow notifications from followers.
+		if ( $include_follow ) {
+			$notifications = self::add_follow_notifications( $notifications, $user_id, $limit );
+		}
+
+		// Sort by date descending.
+		\usort(
+			$notifications,
+			static function ( $a, $b ) {
+				$a_date = \is_array( $a ) ? $a['created_at'] : $a->created_at;
+				$b_date = \is_array( $b ) ? $b['created_at'] : $b->created_at;
+				return \strcmp( $b_date, $a_date );
+			}
+		);
+
+		return \array_slice( $notifications, 0, $limit );
+	}
+
+	/**
+	 * Add follow notifications from ActivityPub followers.
+	 *
+	 * @param array $notifications The notifications array.
+	 * @param int   $user_id       The user ID.
+	 * @param int   $limit         The limit.
+	 *
+	 * @return array The notifications array with follow notifications added.
+	 */
+	private static function add_follow_notifications( $notifications, $user_id, $limit ) {
+		$user_id = self::maybe_map_user_to_blog( $user_id );
+
+		$followers = Followers::get_many(
+			$user_id,
+			$limit,
+			null,
+			array(
+				'orderby' => 'post_date',
+				'order'   => 'DESC',
+			)
+		);
+
+		foreach ( $followers as $follower ) {
+			$actor = Remote_Actors::get_actor( $follower );
+			if ( ! $actor || \is_wp_error( $actor ) ) {
+				continue;
+			}
+
+			$account = self::get_account_for_actor( $actor );
+			if ( ! $account ) {
+				continue;
+			}
+
+			$notification             = new Notification();
+			$notification->id         = \strval( $follower->ID );
+			$notification->type       = 'follow';
+			$notification->created_at = \mysql2date( 'Y-m-d\TH:i:s.000P', $follower->post_date, false );
+			$notification->account    = $account;
+
+			$notifications[] = $notification;
+		}
+
+		return $notifications;
+	}
+
+	/**
+	 * Get account for a comment from cached data.
+	 *
+	 * @param object $comment The comment object.
+	 *
+	 * @return Account|null The account.
+	 */
+	private static function get_account_for_comment( $comment ) {
+		$default_avatar = \get_avatar_url( $comment->comment_author_email ?: '', array( 'size' => 96 ) );
+
+		// Try to get cached remote actor data.
+		$remote_actor_id = \get_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', true );
+		if ( $remote_actor_id ) {
+			$actor = Remote_Actors::get_actor( $remote_actor_id );
+			if ( $actor && ! \is_wp_error( $actor ) ) {
+				$account = self::actor_to_account( $actor );
+
+				// Use remote actor post ID as account ID.
+				$account->id = \strval( $remote_actor_id );
+
+				// Use default avatar if actor has none.
+				if ( empty( $account->avatar ) ) {
+					$account->avatar        = $default_avatar;
+					$account->avatar_static = $default_avatar;
+				}
+
+				return $account;
+			}
+		}
+
+		// Fallback to comment author data.
+		if ( empty( $comment->comment_author_url ) ) {
+			return null;
+		}
+
+		$account                = new Account();
+		$account->id            = $comment->comment_author_url;
+		$account->username      = $comment->comment_author;
+		$account->acct          = $comment->comment_author_email ?: $comment->comment_author;
+		$account->display_name  = $comment->comment_author;
+		$account->url           = $comment->comment_author_url;
+		$account->avatar        = $default_avatar;
+		$account->avatar_static = $default_avatar;
+		$account->created_at    = new \DateTime( $comment->comment_date );
+
+		return $account;
 	}
 }

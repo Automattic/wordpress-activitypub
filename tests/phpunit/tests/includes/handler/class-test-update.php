@@ -20,7 +20,7 @@ use Activitypub\Handler\Update;
 class Test_Update extends \WP_UnitTestCase {
 
 	/**
-	 * Test that the activitypub_inbox_create fallback is triggered.
+	 * Test that the activitypub_handled_create fallback is triggered.
 	 */
 	public function test_activitypub_inbox_create_fallback() {
 		\update_option( 'activitypub_create_posts', true );
@@ -35,32 +35,28 @@ class Test_Update extends \WP_UnitTestCase {
 			'type'   => 'Update',
 			'actor'  => $test_actor,
 			'object' => array(
-				'id'      => 'https://example.com/objects/12345',
-				'type'    => 'Note',
-				'content' => 'Test note',
+				'id'           => 'https://example.com/objects/12345',
+				'type'         => 'Note',
+				'content'      => 'Test note',
+				'attributedTo' => $test_actor,
 			),
 		);
 
 		// Add a fallback handler for the action.
-		\add_action(
-			'activitypub_inbox_create',
-			function ( $activity_data ) use ( &$called, $test_actor ) {
-				if ( isset( $activity_data['actor'] ) && $activity_data['actor'] === $test_actor ) {
-					$called = true;
-				}
-			},
-			10,
-			3
-		);
+		$create_fallback_callback = function ( $activity_data ) use ( &$called, $test_actor ) {
+			if ( isset( $activity_data['actor'] ) && $activity_data['actor'] === $test_actor ) {
+				$called = true;
+			}
+		};
+		\add_action( 'activitypub_handled_create', $create_fallback_callback, 10, 4 );
 
-		// Call the handler via the new handled_inbox_update hook.
+		// Call the handler via the handled_inbox_update hook.
 		\do_action( 'activitypub_handled_inbox_update', $activity, array( $this->user_id ), null );
 
-		$this->assertTrue( $called, 'The fallback activitypub_inbox_create action should be triggered.' );
+		$this->assertTrue( $called, 'The fallback activitypub_handled_create action should be triggered.' );
 
 		// Clean up by removing the action.
-		\remove_all_actions( 'activitypub_inbox_create' );
-		\remove_all_actions( 'activitypub_handled_inbox_update' );
+		\remove_action( 'activitypub_handled_create', $create_fallback_callback );
 		\delete_option( 'activitypub_create_posts' );
 	}
 
@@ -98,14 +94,11 @@ class Test_Update extends \WP_UnitTestCase {
 			if ( is_wp_error( $http_response ) ) {
 				return $http_response;
 			}
-			return array(
-				'response' => array( 'code' => 200 ),
-				'body'     => wp_json_encode( $http_response ),
-			);
+			return $http_response;
 		};
 
 		// Mock HTTP request.
-		\add_filter( 'pre_http_request', $fake_request, 10 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fake_request, 10, 2 );
 
 		// Execute the update_actor method.
 		Update::update_actor( $activity_data, 1 );
@@ -129,7 +122,7 @@ class Test_Update extends \WP_UnitTestCase {
 			}
 		}
 
-		\remove_filter( 'pre_http_request', $fake_request, 10 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fake_request );
 	}
 
 	/**

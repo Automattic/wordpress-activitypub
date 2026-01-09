@@ -158,7 +158,7 @@ class Router {
 
 		add_action(
 			'wp_head',
-			function () use ( $id ) {
+			static function () use ( $id ) {
 				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);
@@ -262,6 +262,41 @@ class Router {
 			\wp_safe_redirect( $actor->get_url(), 301 );
 			exit;
 		}
+
+		$term_id = \get_query_var( 'term_id', null );
+		if ( $term_id ) {
+			$term = \get_term( $term_id );
+
+			// Load a 404-page if `term_id` is set but not valid.
+			if ( ! $term || \is_wp_error( $term ) ) {
+				$wp_query->set_404();
+				return;
+			}
+
+			/**
+			 * Filters the taxonomies supported for term redirects.
+			 *
+			 * @since unreleased
+			 *
+			 * @param array $supported_taxonomies Array of taxonomy names. Default array( 'category', 'post_tag' ).
+			 */
+			$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
+
+			if ( ! in_array( $term->taxonomy, $supported_taxonomies, true ) ) {
+				return;
+			}
+
+			// Don't redirect for ActivityPub requests.
+			if ( is_activitypub_request() ) {
+				return;
+			}
+
+			$term_link = \get_term_link( $term );
+			if ( ! \is_wp_error( $term_link ) ) {
+				\wp_safe_redirect( $term_link, 301 );
+				exit;
+			}
+		}
 	}
 
 	/**
@@ -280,6 +315,7 @@ class Router {
 		$vars[] = 'type';
 		$vars[] = 'c';
 		$vars[] = 'p';
+		$vars[] = 'term_id';
 
 		return $vars;
 	}

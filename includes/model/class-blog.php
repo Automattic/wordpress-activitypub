@@ -102,11 +102,16 @@ class Blog extends Actor {
 	/**
 	 * Get the type of the object.
 	 *
+	 * If relay mode is enabled, return "Service".
 	 * If the Blog is in "single user" mode, return "Person" instead of "Group".
 	 *
 	 * @return string The type of the object.
 	 */
 	public function get_type() {
+		if ( \get_option( 'activitypub_relay_mode', false ) ) {
+			return 'Service';
+		}
+
 		if ( is_single_user() ) {
 			return 'Person';
 		} else {
@@ -504,7 +509,7 @@ class Blog extends Actor {
 			$hashtags[] = array(
 				'type' => 'Hashtag',
 				'href' => \get_tag_link( $tag->term_id ),
-				'name' => esc_hashtag( $tag->slug ),
+				'name' => esc_hashtag( $tag->name ),
 			);
 		}
 

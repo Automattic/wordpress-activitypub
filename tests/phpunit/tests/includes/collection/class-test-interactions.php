@@ -54,7 +54,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create(
@@ -98,14 +98,6 @@ class Test_Interactions extends \WP_UnitTestCase {
 		parent::set_up();
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( __CLASS__, 'get_remote_metadata_by_actor' ), 0, 2 );
-	}
-
-	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_post( self::$outbox_id, true );
-		wp_delete_user( self::$user_id );
 	}
 
 	/**
@@ -230,9 +222,6 @@ class Test_Interactions extends \WP_UnitTestCase {
 		// Verify avatar URL is stored on the remote actor.
 		$avatar_url = \Activitypub\Collection\Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/avatar.jpg', $avatar_url );
-
-		// Clean up.
-		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**
@@ -463,11 +452,6 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		$found_our_comments = array_intersect( $comment_ids, array( $comment_id_1, $comment_id_2 ) );
 		$this->assertGreaterThanOrEqual( 1, count( $found_our_comments ), 'Should find at least one of our test comments' );
-
-		// Clean up.
-		wp_delete_comment( $comment_id_1, true );
-		wp_delete_comment( $comment_id_2, true );
-		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**
@@ -564,11 +548,6 @@ class Test_Interactions extends \WP_UnitTestCase {
 		// Verify at least one of our comments is found.
 		$found = array_intersect( $comment_ids, array( $comment_id_1, $comment_id_2 ) );
 		$this->assertGreaterThanOrEqual( 1, count( $found ), 'Should find at least one of our comments' );
-
-		// Clean up.
-		wp_delete_comment( $comment_id_1, true );
-		wp_delete_comment( $comment_id_2, true );
-		wp_delete_post( $remote_actor_id, true );
 	}
 
 	/**
@@ -598,25 +577,22 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-				);
-			}
-		);
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 
 		// Try to add comment.
 		$result = Interactions::add_comment( $activity );
 		$this->assertFalse( $result, 'Comment should not be added to disabled post' );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		wp_delete_post( $disabled_post_id, true );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 	}
 
 	/**
@@ -636,23 +612,21 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-				);
-			}
-		);
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 
 		// Try to add comment.
 		$result = Interactions::add_comment( $activity );
 		$this->assertFalse( $result, 'Comment should not be added to disabled post' );
 
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 	}
 
 	/**
@@ -679,25 +653,22 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-				);
-			}
-		);
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 
 		// Try to add reaction.
 		$result = Interactions::add_reaction( $activity );
 		$this->assertFalse( $result, 'Reaction should not be added to disabled post' );
 
 		// Clean up.
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		wp_delete_post( $disabled_post_id, true );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 	}
 
 	/**
@@ -714,23 +685,21 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 
 		// Mock actor metadata.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'name'              => 'Test User',
-					'preferredUsername' => 'test',
-					'id'                => 'https://example.com/users/test',
-					'url'               => 'https://example.com/@test',
-				);
-			}
-		);
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'test',
+				'id'                => 'https://example.com/users/test',
+				'url'               => 'https://example.com/@test',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 
 		// Try to add reaction.
 		$result = Interactions::add_reaction( $activity );
 		$this->assertFalse( $result, 'Reaction should not be added to disabled post' );
 
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 	}
 
 	/**
@@ -883,5 +852,347 @@ class Test_Interactions extends \WP_UnitTestCase {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Test add_comment with quote property.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::get_quote_url
+	 */
+	public function test_add_comment_with_quote_property() {
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'type'     => 'Note',
+				'id'       => 'https://example.com/note/456',
+				'content'  => '<p class="quote-inline">RE: <a href="' . self::$post_permalink . '">Post</a></p><p>Great post!</p>',
+				'quote'    => self::$post_permalink,
+				'quoteUri' => self::$post_permalink,
+			),
+		);
+
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10, 2 );
+
+		$comment_id = Interactions::add_comment( $activity );
+
+		$this->assertNotFalse( $comment_id );
+		$this->assertIsInt( $comment_id );
+
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( self::$post_id, $comment->comment_post_ID );
+		$this->assertStringContainsString( 'Great post!', $comment->comment_content );
+		$this->assertStringNotContainsString( 'quote-inline', $comment->comment_content );
+		$this->assertEquals( 'quote', $comment->comment_type, 'Comment type should be set to quote' );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+	}
+
+	/**
+	 * Mock actor metadata for testing.
+	 *
+	 * @param bool   $response The value to return.
+	 * @param string $url      The actor URL.
+	 *
+	 * @return array Actor metadata.
+	 */
+	public function mock_actor_metadata( $response, $url ) {
+		if ( 'https://example.com/users/testuser' === $url ) {
+			return array(
+				'name'              => 'Test User',
+				'preferredUsername' => 'testuser',
+				'id'                => 'https://example.com/users/testuser',
+				'url'               => 'https://example.com/@testuser',
+			);
+		}
+		return $response;
+	}
+
+	/**
+	 * Test add_comment with ap_post post type.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_to_ap_post() {
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/123',
+			)
+		);
+
+		$this->assertIsInt( $ap_post_id );
+
+		$activity = array(
+			'actor'  => 'https://example.com/users/commenter',
+			'id'     => 'https://example.com/activities/comment/999',
+			'object' => array(
+				'id'        => 'https://example.com/notes/999',
+				'content'   => 'Comment on remote post',
+				'inReplyTo' => 'https://remote.example.com/users/remoteuser/statuses/123',
+			),
+		);
+
+		// Mock actor metadata.
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Remote Commenter',
+				'preferredUsername' => 'commenter',
+				'id'                => 'https://example.com/users/commenter',
+				'url'               => 'https://example.com/@commenter',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		// Add comment to ap_post.
+		$comment_id = Interactions::add_comment( $activity );
+
+		$this->assertNotFalse( $comment_id );
+		$this->assertIsInt( $comment_id );
+
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( $ap_post_id, $comment->comment_post_ID, 'Comment should be attached to ap_post' );
+		$this->assertEquals( 'Comment on remote post', $comment->comment_content );
+		$this->assertEquals( 'Remote Commenter', $comment->comment_author );
+
+		// Clean up.
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+	}
+
+	/**
+	 * Test add_reaction with ap_post post type.
+	 *
+	 * @covers ::add_reaction
+	 */
+	public function test_add_reaction_to_ap_post() {
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post for Reaction',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/456',
+			)
+		);
+
+		$this->assertIsInt( $ap_post_id );
+
+		$activity = array(
+			'type'   => 'Like',
+			'actor'  => 'https://example.com/users/liker',
+			'object' => 'https://remote.example.com/users/remoteuser/statuses/456',
+			'id'     => 'https://example.com/activities/like/789',
+		);
+
+		// Mock actor metadata.
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Remote Liker',
+				'preferredUsername' => 'liker',
+				'id'                => 'https://example.com/users/liker',
+				'url'               => 'https://example.com/@liker',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		// Add reaction to ap_post.
+		$comment_id = Interactions::add_reaction( $activity );
+
+		$this->assertNotFalse( $comment_id );
+		$this->assertIsInt( $comment_id );
+
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( $ap_post_id, $comment->comment_post_ID, 'Reaction should be attached to ap_post' );
+		$this->assertEquals( 'like', $comment->comment_type );
+
+		// Clean up.
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+	}
+
+	/**
+	 * Test add_comment to disabled post type does not work for ap_post.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_to_ap_post_when_disabled() {
+		// Create an ap_post with local visibility (disabled for federation).
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Disabled AP Post',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/disabled',
+			)
+		);
+		add_post_meta( $ap_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		$activity = array(
+			'actor'  => 'https://example.com/users/commenter',
+			'id'     => 'https://example.com/activities/comment/disabled',
+			'object' => array(
+				'id'        => 'https://example.com/notes/disabled',
+				'content'   => 'Comment on disabled post',
+				'inReplyTo' => 'https://remote.example.com/users/remoteuser/statuses/disabled',
+			),
+		);
+
+		// Mock actor metadata.
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Remote Commenter',
+				'preferredUsername' => 'commenter',
+				'id'                => 'https://example.com/users/commenter',
+				'url'               => 'https://example.com/@commenter',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		// Try to add comment - should succeed because ap_post bypasses disabled check.
+		$comment_id = Interactions::add_comment( $activity );
+
+		$this->assertNotFalse( $comment_id, 'Comment should be added to ap_post even when disabled' );
+		$this->assertIsInt( $comment_id );
+
+		// Clean up.
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+	}
+
+	/**
+	 * Test add_comment returns false when post ID cannot be determined.
+	 *
+	 * This tests the guard against missing post ID when the inReplyTo
+	 * doesn't resolve to any known post or comment.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_returns_false_when_no_post_id() {
+		$activity = array(
+			'actor'  => 'https://example.com/users/someone',
+			'id'     => 'https://example.com/activities/orphan',
+			'object' => array(
+				'id'        => 'https://example.com/notes/orphan',
+				'content'   => 'This is a reply to nothing',
+				'inReplyTo' => 'https://nonexistent.example.com/post/does-not-exist',
+			),
+		);
+
+		// Mock actor metadata.
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Someone',
+				'preferredUsername' => 'someone',
+				'id'                => 'https://example.com/users/someone',
+				'url'               => 'https://example.com/@someone',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		$result = Interactions::add_comment( $activity );
+
+		$this->assertFalse( $result, 'Should return false when inReplyTo does not resolve to a post or comment' );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+	}
+
+	/**
+	 * Test add_reaction returns false when post ID cannot be determined.
+	 *
+	 * @covers ::add_reaction
+	 */
+	public function test_add_reaction_returns_false_when_no_post_id() {
+		$activity = array(
+			'type'   => 'Like',
+			'actor'  => 'https://example.com/users/liker',
+			'object' => 'https://nonexistent.example.com/post/does-not-exist',
+			'id'     => 'https://example.com/activities/orphan-like',
+		);
+
+		// Mock actor metadata.
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Liker',
+				'preferredUsername' => 'liker',
+				'id'                => 'https://example.com/users/liker',
+				'url'               => 'https://example.com/@liker',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		$result = Interactions::add_reaction( $activity );
+
+		$this->assertFalse( $result, 'Should return false when object does not resolve to a post' );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+	}
+
+	/**
+	 * Test that nested replies work with ap_post.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_nested_reply_to_ap_post() {
+		// Create an ap_post.
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post for Nested Reply',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+				'guid'         => 'https://remote.example.com/users/remoteuser/statuses/nested',
+			)
+		);
+
+		// Mock actor metadata.
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Remote Commenter',
+				'preferredUsername' => 'commenter',
+				'id'                => 'https://example.com/users/commenter',
+				'url'               => 'https://example.com/@commenter',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		// Add first comment.
+		$activity1 = array(
+			'actor'  => 'https://example.com/users/commenter',
+			'id'     => 'https://example.com/activities/comment/parent',
+			'object' => array(
+				'id'        => 'https://example.com/notes/parent',
+				'content'   => 'Parent comment',
+				'inReplyTo' => 'https://remote.example.com/users/remoteuser/statuses/nested',
+			),
+		);
+
+		$parent_comment_id = Interactions::add_comment( $activity1 );
+		$this->assertIsInt( $parent_comment_id );
+
+		// Add nested reply.
+		$activity2 = array(
+			'actor'  => 'https://example.com/users/commenter',
+			'id'     => 'https://example.com/activities/comment/child',
+			'object' => array(
+				'id'        => 'https://example.com/notes/child',
+				'content'   => 'Child comment',
+				'inReplyTo' => 'https://example.com/notes/parent',
+			),
+		);
+
+		$child_comment_id = Interactions::add_comment( $activity2 );
+		$this->assertIsInt( $child_comment_id );
+
+		$child_comment = \get_comment( $child_comment_id );
+		$this->assertEquals( $ap_post_id, $child_comment->comment_post_ID, 'Nested reply should be attached to same ap_post' );
+		$this->assertEquals( $parent_comment_id, $child_comment->comment_parent, 'Child should have parent comment ID' );
+
+		// Clean up.
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 	}
 }

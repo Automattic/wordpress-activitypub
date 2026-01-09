@@ -5,16 +5,16 @@
 /vendor/
 _site
 .idea/
-.claude
+# Claude Code - track skills but ignore local overrides
+.claude/**/*.local*
 .cursor
 .DS_Store
 .php_cs.cache
 .phpunit.cache
 .phpunit.result.cache
 .sass-cache
-.vscode/settings.json
+.vscode
 .windsurf
 .windsurfrules
 .wp-env.override.json
-CLAUDE*
 composer.lock

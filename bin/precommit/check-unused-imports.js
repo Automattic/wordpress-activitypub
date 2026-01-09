@@ -15,7 +15,7 @@ const checkUnusedImports = ( filePath ) => {
 		// Find all import statements
 		const useStatementRegex = /^use\s+([^;]+);/gm;
 		let match;
-		let allImports = [];
+		const allImports = [];
 
 		// Find all imports
 		while ( ( match = useStatementRegex.exec( content ) ) !== null ) {
@@ -50,7 +50,7 @@ const checkUnusedImports = ( filePath ) => {
 			const { shortName, isFunction, fullMatch } = importInfo;
 
 			// Create regex patterns to find usages
-			let patterns = [];
+			const patterns = [];
 
 			if ( isFunction ) {
 				// For functions, look for function calls: shortName(

@@ -1,7 +1,10 @@
 #!/usr/bin/env sh
 
-# Get all changed PHP files once.
-PHP_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep "\.php$" || true)
+# Get all changed files once and filter by type.
+CHANGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
+PHP_FILES=$(echo "$CHANGED_FILES" | grep "\.php$" || true)
+JS_FILES=$(echo "$CHANGED_FILES" | grep -E "\.(js|jsx|ts|tsx)$" || true)
+CSS_FILES=$(echo "$CHANGED_FILES" | grep -E "\.(css|scss)$" || true)
 
 # Skip if no PHP files are changed.
 if [ -n "$PHP_FILES" ]; then
@@ -23,8 +26,45 @@ if [ -n "$PHP_FILES" ]; then
     exit 1
   fi
 
+  # Check for forbidden remove_all_filters patterns in test files.
+  FORBIDDEN_PATTERN=0
+  for file in $PHP_FILES; do
+    if echo "$file" | grep -q "^tests/"; then
+      if grep -n "remove_all_filters.*['\"]pre_http_request['\"]" "$file" > /dev/null 2>&1; then
+        if [ $FORBIDDEN_PATTERN -eq 0 ]; then
+          echo "❌ Found forbidden pattern in test files:"
+          echo ""
+          FORBIDDEN_PATTERN=1
+        fi
+        echo "  $file:"
+        grep -n "remove_all_filters.*['\"]pre_http_request['\"]" "$file" | sed 's/^/    Line /'
+        echo ""
+      fi
+    fi
+  done
+
+  if [ $FORBIDDEN_PATTERN -eq 1 ]; then
+    echo "⚠️  Please use remove_filter() with specific callback variables instead of remove_all_filters()."
+    echo ""
+    echo "Example:"
+    echo "  ❌ Bad:  remove_all_filters( 'pre_http_request' );"
+    echo "  ✅ Good: remove_filter( 'pre_http_request', \$callback_variable );"
+    echo ""
+    exit 1
+  fi
+
   # Run PHP Code Sniffer on all changed PHP files at once.
   echo "$PHP_FILES" | xargs composer lint:fix > /dev/null 2>&1 || { echo "PHP formatting failed"; exit 1; }
+fi
+
+# Run JS linting on changed files.
+if [ -n "$JS_FILES" ]; then
+  echo "$JS_FILES" | xargs npm run lint:js -- || { echo "JavaScript linting failed"; exit 1; }
+fi
+
+# Run Stylelint with auto-fix on changed CSS/SCSS files.
+if [ -n "$CSS_FILES" ]; then
+  echo "$CSS_FILES" | xargs npx wp-scripts lint-style --fix > /dev/null 2>&1 || { echo "CSS linting failed"; exit 1; }
 fi
 
 # Run the WordPress formatter without showing all file output.

@@ -13,6 +13,7 @@ use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Factory;
 use Activitypub\Transformer\Json;
 use Activitypub\Transformer\Post;
+use Activitypub\Transformer\Term;
 
 /**
  * Test class for Transformer Factory.
@@ -49,9 +50,16 @@ class Test_Factory extends \WP_UnitTestCase {
 	protected static $user_id;
 
 	/**
+	 * Test term ID.
+	 *
+	 * @var int
+	 */
+	protected static $term_id;
+
+	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$post_id = $factory->post->create();
@@ -80,16 +88,16 @@ class Test_Factory extends \WP_UnitTestCase {
 				),
 			)
 		);
-	}
 
-	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_post( self::$post_id, true );
-		wp_delete_post( self::$attachment_id, true );
-		wp_delete_comment( self::$comment_id, true );
-		wp_delete_user( self::$user_id, true );
+		// Create test term.
+		$term          = $factory->term->create_and_get(
+			array(
+				'taxonomy' => 'post_tag',
+				'name'     => 'Test Tag',
+				'slug'     => 'test-tag',
+			)
+		);
+		self::$term_id = $term->term_id;
 	}
 
 	/**
@@ -185,25 +193,21 @@ class Test_Factory extends \WP_UnitTestCase {
 	 * @covers ::get_transformer
 	 */
 	public function test_get_transformer_filter() {
-		add_filter(
-			'activitypub_transformer',
-			// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.classFound
-			function ( $transformer, $data, $class ) {
-				if ( 'WP_Post' === $class && 'post' === $data->post_type ) {
-					return new Activity_Object( $data );
-				}
-				return $transformer;
-			},
-			10,
-			3
-		);
+		// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.classFound
+		$transformer_filter_callback = function ( $transformer, $data, $class ) {
+			if ( 'WP_Post' === $class && 'post' === $data->post_type ) {
+				return new Activity_Object( $data );
+			}
+			return $transformer;
+		};
+		add_filter( 'activitypub_transformer', $transformer_filter_callback, 10, 3 );
 
 		$post        = get_post( self::$post_id );
 		$transformer = Factory::get_transformer( $post );
 
 		$this->assertInstanceOf( Activity_Object::class, $transformer );
 
-		remove_all_filters( 'activitypub_transformer' );
+		remove_filter( 'activitypub_transformer', $transformer_filter_callback );
 	}
 
 	/**
@@ -212,12 +216,10 @@ class Test_Factory extends \WP_UnitTestCase {
 	 * @covers ::get_transformer
 	 */
 	public function test_get_transformer_invalid_filter() {
-		add_filter(
-			'activitypub_transformer',
-			function () {
-				return 'invalid';
-			}
-		);
+		$invalid_transformer_callback = function () {
+			return 'invalid';
+		};
+		add_filter( 'activitypub_transformer', $invalid_transformer_callback );
 
 		$post   = get_post( self::$post_id );
 		$result = Factory::get_transformer( $post );
@@ -225,28 +227,21 @@ class Test_Factory extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertEquals( 'invalid_transformer', $result->get_error_code() );
 
-		remove_all_filters( 'activitypub_transformer' );
+		remove_filter( 'activitypub_transformer', $invalid_transformer_callback );
 	}
 
 	/**
 	 * Test successful URI transformation.
 	 */
 	public function test_successful_uri_transformation() {
-		// Mock-Daten für die HTTP-Antwort.
 		$fake_request = function () {
 			return array(
-				'response' => array( 'code' => 200 ),
-				'body'     => wp_json_encode(
-					array(
-						'id'      => 'https://example.com/activity/1',
-						'type'    => 'Note',
-						'content' => 'Test Content',
-					)
-				),
+				'id'      => 'https://example.com/activity/1',
+				'type'    => 'Note',
+				'content' => 'Test Content',
 			);
 		};
-
-		add_filter( 'pre_http_request', $fake_request, 10 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fake_request );
 
 		$uri_transformer = Factory::get_transformer( 'https://example.com/activity/1' );
 		$result          = $uri_transformer->to_object();
@@ -256,24 +251,49 @@ class Test_Factory extends \WP_UnitTestCase {
 		$this->assertEquals( 'Note', $result->get_type() );
 		$this->assertEquals( 'Test Content', $result->get_content() );
 
-		remove_filter( 'pre_http_request', $fake_request, 10 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fake_request );
 	}
 
 	/**
 	 * Test URI transformation with error.
 	 */
 	public function test_uri_transformation_error() {
-		// WP_Error für fehlgeschlagene Anfrage erstellen.
-		$fake_request = function () {
+		$fake_error_request = function () {
 			return new \WP_Error( 'fetch_error', 'Failed to fetch remote object' );
 		};
-
-		add_filter( 'pre_http_request', $fake_request, 10 );
+		\add_filter( 'pre_http_request', $fake_error_request );
 
 		$uri_transformer = Factory::get_transformer( 'https://example.com/invalid' );
 
 		$this->assertWPError( $uri_transformer );
 
-		remove_filter( 'pre_http_request', $fake_request, 10 );
+		\remove_filter( 'pre_http_request', $fake_error_request );
+	}
+
+	/**
+	 * Test get_transformer with WP_Error input.
+	 *
+	 * @covers ::get_transformer
+	 */
+	public function test_get_transformer_with_wp_error() {
+		$wp_error = new \WP_Error( 'test_error', 'Test error message' );
+		$result   = Factory::get_transformer( $wp_error );
+
+		// Should return the same WP_Error object.
+		$this->assertWPError( $result );
+		$this->assertEquals( 'test_error', $result->get_error_code() );
+		$this->assertEquals( 'Test error message', $result->get_error_message() );
+	}
+
+	/**
+	 * Test get_transformer with WP_Term.
+	 *
+	 * @covers ::get_transformer
+	 */
+	public function test_get_transformer_term() {
+		$term        = get_term( self::$term_id );
+		$transformer = Factory::get_transformer( $term );
+
+		$this->assertInstanceOf( Term::class, $transformer );
 	}
 }

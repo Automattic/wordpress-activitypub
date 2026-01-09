@@ -116,7 +116,7 @@ class Moderation {
 
 			case self::TYPE_DOMAIN:
 			case self::TYPE_KEYWORD:
-				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array();
 
 				if ( ! \in_array( $value, $blocks, true ) ) {
 					/**
@@ -152,7 +152,7 @@ class Moderation {
 
 			case self::TYPE_DOMAIN:
 			case self::TYPE_KEYWORD:
-				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array(); // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+				$blocks = \get_user_meta( $user_id, self::USER_META_KEYS[ $type ], true ) ?: array();
 				$key    = \array_search( $value, $blocks, true );
 
 				if ( false !== $key ) {
@@ -183,8 +183,8 @@ class Moderation {
 	public static function get_user_blocks( $user_id ) {
 		return array(
 			'actors'   => \wp_list_pluck( Blocked_Actors::get_many( $user_id ), 'guid' ),
-			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_DOMAIN ], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_KEYWORD ], true ) ?: array(), // phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_DOMAIN ], true ) ?: array(),
+			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_KEYWORD ], true ) ?: array(),
 		);
 	}
 
@@ -221,6 +221,38 @@ class Moderation {
 		}
 
 		return true; // Already blocked.
+	}
+
+	/**
+	 * Add multiple site-wide blocks at once.
+	 *
+	 * More efficient than calling add_site_block() in a loop as it
+	 * performs a single database update.
+	 *
+	 * @param string $type   The block type (domain or keyword only).
+	 * @param array  $values Array of values to block.
+	 */
+	public static function add_site_blocks( $type, $values ) {
+		if ( ! in_array( $type, array( self::TYPE_DOMAIN, self::TYPE_KEYWORD ), true ) ) {
+			return;
+		}
+
+		if ( empty( $values ) ) {
+			return;
+		}
+
+		foreach ( $values as $value ) {
+			/**
+			 * Fired when a domain or keyword is blocked site-wide.
+			 *
+			 * @param string $value The blocked domain or keyword.
+			 * @param string $type  The block type (actor, domain, keyword).
+			 */
+			\do_action( 'activitypub_add_site_block', $value, $type );
+		}
+
+		$existing = \get_option( self::OPTION_KEYS[ $type ], array() );
+		\update_option( self::OPTION_KEYS[ $type ], array_unique( array_merge( $existing, $values ) ) );
 	}
 
 	/**

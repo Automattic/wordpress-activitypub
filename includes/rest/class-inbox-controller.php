@@ -76,7 +76,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'object' => array(
 							'description'       => 'The object of the activity.',
 							'required'          => true,
-							'validate_callback' => function ( $param, $request, $key ) {
+							'validate_callback' => static function ( $param, $request, $key ) {
 								/**
 								 * Filter the ActivityPub object validation.
 								 *
@@ -92,7 +92,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 							'description'       => 'The primary recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
 							'required'          => false,
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -103,7 +103,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'cc'     => array(
 							'description'       => 'The secondary recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -114,7 +114,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'bcc'    => array(
 							'description'       => 'The private recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -176,7 +176,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 					/**
 					 * ActivityPub inbox action.
 					 *
-					 * @deprecated unreleased Support activitypub_inbox_shared instead to avoid duplicate processing.
+					 * @deprecated 7.6.0 Support activitypub_inbox_shared instead to avoid duplicate processing.
 					 *
 					 * @param array              $data     The data array.
 					 * @param int                $user_id  The user ID.
@@ -189,7 +189,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 					/**
 					 * ActivityPub inbox action for specific activity types.
 					 *
-					 * @deprecated unreleased Support activitypub_inbox_shared_{type} instead to avoid duplicate processing.
+					 * @deprecated 7.6.0 Support activitypub_inbox_shared_{type} instead to avoid duplicate processing.
 					 *
 					 * @param array              $data     The data array.
 					 * @param int                $user_id  The user ID.
@@ -206,7 +206,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 * This hook fires once per activity with all recipients.
 			 * Preferred for new implementations to avoid duplication.
 			 *
-			 * @since unreleased
+			 * @since 7.6.0
 			 *
 			 * @param array              $data       The data array.
 			 * @param array              $recipients Array of user IDs.
@@ -222,7 +222,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 * This hook fires once per activity with all recipients.
 			 * Preferred for new implementations to avoid duplication.
 			 *
-			 * @since unreleased
+			 * @since 7.6.0
 			 *
 			 * @param array              $data       The data array.
 			 * @param array              $recipients Array of user IDs.
@@ -368,13 +368,13 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return array An array of user IDs who are the recipients of the activity.
 	 */
 	private function get_local_recipients( $activity ) {
-		// Public activity, deliver to all local ActivityPub users.
+		$user_ids = array();
+
 		if ( is_activity_public( $activity ) ) {
-			return Actors::get_all_ids();
+			$user_ids = Following::get_follower_ids( $activity['actor'] );
 		}
 
 		$recipients = extract_recipients_from_activity( $activity );
-		$user_ids   = array();
 
 		foreach ( $recipients as $recipient ) {
 

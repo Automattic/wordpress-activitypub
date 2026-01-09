@@ -67,18 +67,14 @@ class Test_Activity_Object extends WP_UnitTestCase {
 	 * @covers ::get_mentions
 	 */
 	public function test_get_mentions() {
-		add_filter(
-			'activitypub_extract_mentions',
-			function () {
-				return array(
-					'@mention'  => 'https://example.com/@mention',
-					'@mention2' => 'https://example.com/@mention2',
-					'@mention3' => 'https://example.com/@mention3',
-				);
-			},
-			10,
-			2
-		);
+		$extract_mentions_callback = function () {
+			return array(
+				'@mention'  => 'https://example.com/@mention',
+				'@mention2' => 'https://example.com/@mention2',
+				'@mention3' => 'https://example.com/@mention3',
+			);
+		};
+		add_filter( 'activitypub_extract_mentions', $extract_mentions_callback );
 
 		$transformer = new Activity_Object( $this->test_object );
 		$mentions    = $this->get_protected_method( $transformer, 'get_mentions' );
@@ -87,22 +83,20 @@ class Test_Activity_Object extends WP_UnitTestCase {
 		$this->assertCount( 3, $mentions );
 		$this->assertEquals( 'https://example.com/@mention', $mentions['@mention'] );
 
-		remove_all_filters( 'activitypub_extract_mentions' );
+		remove_filter( 'activitypub_extract_mentions', $extract_mentions_callback );
 	}
 
 	/**
 	 * Test get_cc method.
 	 */
 	public function test_get_cc() {
-		add_filter(
-			'activitypub_extract_mentions',
-			function () {
-				return array(
-					'@mention'  => 'https://example.com/@mention',
-					'@mention2' => 'https://example.com/@mention2',
-				);
-			}
-		);
+		$extract_mentions_callback = function () {
+			return array(
+				'@mention'  => 'https://example.com/@mention',
+				'@mention2' => 'https://example.com/@mention2',
+			);
+		};
+		add_filter( 'activitypub_extract_mentions', $extract_mentions_callback );
 
 		$transformer = new Activity_Object( $this->test_object );
 		$object      = $transformer->to_object();
@@ -113,7 +107,7 @@ class Test_Activity_Object extends WP_UnitTestCase {
 		$this->assertContains( 'https://example.com/@mention', $cc );
 		$this->assertContains( 'https://example.com/@mention2', $cc );
 
-		remove_all_filters( 'activitypub_extract_mentions' );
+		remove_filter( 'activitypub_extract_mentions', $extract_mentions_callback );
 	}
 
 	/**
@@ -160,14 +154,12 @@ class Test_Activity_Object extends WP_UnitTestCase {
 	 * @covers ::get_tag
 	 */
 	public function test_get_tag() {
-		add_filter(
-			'activitypub_extract_mentions',
-			function () {
-				return array(
-					'@mention' => 'https://example.com/@mention',
-				);
-			}
-		);
+		$extract_mentions_callback = function () {
+			return array(
+				'@mention' => 'https://example.com/@mention',
+			);
+		};
+		add_filter( 'activitypub_extract_mentions', $extract_mentions_callback );
 
 		$this->test_object->set_tag(
 			array(
@@ -193,7 +185,7 @@ class Test_Activity_Object extends WP_UnitTestCase {
 		$this->assertEquals( '@mention', $tags[1]['name'] );
 		$this->assertEquals( 'https://example.com/@mention', $tags[1]['href'] );
 
-		remove_all_filters( 'activitypub_extract_mentions' );
+		remove_filter( 'activitypub_extract_mentions', $extract_mentions_callback );
 	}
 
 	/**
@@ -208,7 +200,9 @@ class Test_Activity_Object extends WP_UnitTestCase {
 	protected function get_protected_method( $obj, $method_name, $parameters = array() ) {
 		$reflection = new \ReflectionClass( get_class( $obj ) );
 		$method     = $reflection->getMethod( $method_name );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		return $method->invokeArgs( $obj, $parameters );
 	}

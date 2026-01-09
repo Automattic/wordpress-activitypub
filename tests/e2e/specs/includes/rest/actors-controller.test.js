@@ -7,7 +7,7 @@ test.describe( 'ActivityPub Actors REST API', () => {
 	let testUserId;
 	let actorEndpoint;
 
-	test.beforeAll( async ( { requestUtils } ) => {
+	test.beforeAll( async () => {
 		// Use the default test user
 		testUserId = 1;
 		actorEndpoint = `/activitypub/1.0/actors/${ testUserId }`;

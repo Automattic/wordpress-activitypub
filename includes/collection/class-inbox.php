@@ -83,6 +83,17 @@ class Inbox {
 		$title      = self::get_object_title( $activity->get_object() );
 		$visibility = is_activity_public( $activity ) ? ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC : ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 
+		/*
+		 * For QuoteRequest activities, we store the instrument URL as the object_id.
+		 * This allows efficient querying by instrument (the quote post URL).
+		 * For all other activities, we store the object URL as before.
+		 */
+		if ( 'QuoteRequest' === $activity->get_type() && $activity->get_instrument() ) {
+			$object_id = object_to_uri( $activity->get_instrument() ?? '' );
+		} else {
+			$object_id = object_to_uri( $activity->get_object() ?? '' );
+		}
+
 		$inbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
@@ -96,7 +107,7 @@ class Inbox {
 			'post_status'  => 'publish',
 			'guid'         => $activity->get_id(),
 			'meta_input'   => array(
-				'_activitypub_object_id'             => object_to_uri( $activity->get_object() ),
+				'_activitypub_object_id'             => $object_id,
 				'_activitypub_activity_type'         => $activity->get_type(),
 				'_activitypub_activity_remote_actor' => object_to_uri( $activity->get_actor() ),
 				'activitypub_content_visibility'     => $visibility,
@@ -128,12 +139,12 @@ class Inbox {
 	/**
 	 * Get the title of an activity recursively.
 	 *
-	 * @param Activity|Base_Object $activity_object The activity object.
+	 * @param Activity|Base_Object|array $activity_object The activity object.
 	 *
 	 * @return string The title.
 	 */
 	private static function get_object_title( $activity_object ) {
-		if ( ! $activity_object ) {
+		if ( ! $activity_object || is_array( $activity_object ) ) {
 			return '';
 		}
 
@@ -143,11 +154,9 @@ class Inbox {
 			return $post_id ? \get_the_title( $post_id ) : '';
 		}
 
-		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		$title = $activity_object->get_name() ?: $activity_object->get_content();
 
 		if ( ! $title && $activity_object->get_object() instanceof Base_Object ) {
-			// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 			$title = $activity_object->get_object()->get_name() ?: $activity_object->get_object()->get_content();
 		}
 
@@ -372,6 +381,51 @@ class Inbox {
 	}
 
 	/**
+	 * Get an inbox item by activity type and object ID.
+	 *
+	 * This is useful for finding specific activity types (like QuoteRequest)
+	 * by their object identifier. For QuoteRequest activities, the object_id
+	 * is the instrument URL (the quote post).
+	 *
+	 * @param string $activity_type The activity type (e.g., 'QuoteRequest').
+	 * @param string $object_id     The object identifier to search for.
+	 *
+	 * @return \WP_Post|\WP_Error The inbox item or WP_Error if not found.
+	 */
+	public static function get_by_type_and_object( $activity_type, $object_id ) {
+		$posts = \get_posts(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'posts_per_page' => 1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Necessary for querying by activity type and object ID.
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => $activity_type,
+					),
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $object_id,
+					),
+				),
+			)
+		);
+
+		if ( empty( $posts ) ) {
+			return new \WP_Error(
+				'activitypub_inbox_item_not_found',
+				\__( 'Inbox item not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return $posts[0];
+	}
+
+	/**
 	 * Deduplicate inbox items with the same GUID.
 	 *
 	 * If multiple inbox items exist with the same GUID (due to race conditions),
@@ -382,28 +436,70 @@ class Inbox {
 	 * @return \WP_Post|false The primary inbox post, or false if no posts found.
 	 */
 	public static function deduplicate( $guid ) {
-		$duplicates = \get_posts(
-			array(
-				'post_type'      => self::POST_TYPE,
-				'guid'           => $guid,
-				'posts_per_page' => -1,
-				'post_status'    => 'any',
+		global $wpdb;
+
+		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
+		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE guid=%s AND post_type=%s ORDER BY ID ASC",
+				\esc_url( $guid ),
+				self::POST_TYPE
 			)
 		);
 
-		if ( empty( $duplicates ) ) {
+		if ( empty( $post_ids ) ) {
 			return false;
 		}
 
-		// Keep the first post, all others are duplicates.
-		$primary = array_shift( $duplicates );
+		// Keep the first (oldest) post as primary.
+		$primary_id = array_shift( $post_ids );
+		$primary    = \get_post( $primary_id );
 
-		foreach ( $duplicates as $duplicate ) {
-			$recipients = \get_post_meta( $duplicate->ID, '_activitypub_user_id', false );
-			self::add_recipients( $primary->ID, $recipients );
-			\wp_delete_post( $duplicate->ID, true );
+		// Merge recipients from duplicates into primary and delete duplicates.
+		foreach ( $post_ids as $duplicate_id ) {
+			$recipients = \get_post_meta( $duplicate_id, '_activitypub_user_id', false );
+			self::add_recipients( $primary_id, $recipients );
+			\wp_delete_post( $duplicate_id, true );
 		}
 
 		return $primary;
+	}
+
+	/**
+	 * Purge old inbox items.
+	 *
+	 * Deletes inbox items older than the specified number of days.
+	 *
+	 * @param int $days Number of days to keep items. Items older than this will be deleted.
+	 *
+	 * @return int The number of items deleted.
+	 */
+	public static function purge( $days ) {
+		$total_posts = (int) \wp_count_posts( self::POST_TYPE )->publish;
+		if ( $total_posts <= 200 ) {
+			return 0;
+		}
+
+		$post_ids = \get_posts(
+			array(
+				'post_type'   => self::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'numberposts' => -1,
+				'date_query'  => array(
+					array(
+						'before' => \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) ),
+					),
+				),
+			)
+		);
+
+		$deleted = 0;
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
+			++$deleted;
+		}
+
+		return $deleted;
 	}
 }

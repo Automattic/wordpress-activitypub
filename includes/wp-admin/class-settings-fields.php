@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Blocklist_Subscriptions;
 use Activitypub\Moderation;
 
 use function Activitypub\home_host;
@@ -59,7 +60,11 @@ class Settings_Fields {
 			'activitypub_moderation',
 			\esc_html__( 'Moderation', 'activitypub' ),
 			array( self::class, 'render_moderation_section_description' ),
-			'activitypub_settings'
+			'activitypub_settings',
+			array(
+				'before_section' => '<div id="moderation">',
+				'after_section'  => '</div>',
+			)
 		);
 
 		// Add settings fields.
@@ -159,6 +164,14 @@ class Settings_Fields {
 			'activitypub_settings',
 			'activitypub_moderation'
 		);
+
+		add_settings_field(
+			'activitypub_blocklist_subscriptions',
+			\esc_html__( 'Blocklist Subscriptions', 'activitypub' ),
+			array( self::class, 'render_blocklist_subscriptions_field' ),
+			'activitypub_settings',
+			'activitypub_moderation'
+		);
 	}
 
 	/**
@@ -231,7 +244,6 @@ class Settings_Fields {
 	public static function render_custom_post_content_field() {
 		$value = get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 		?>
-		<p><strong><?php esc_html_e( 'These settings only apply if you use the "Note" Object-Type setting above.', 'activitypub' ); ?></strong></p>
 		<p>
 			<textarea id="activitypub_custom_post_content" name="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo esc_attr( ACTIVITYPUB_CUSTOM_POST_CONTENT ); ?>"><?php echo esc_textarea( wp_kses( $value, 'post' ) ); ?></textarea>
 			<details>
@@ -344,7 +356,7 @@ class Settings_Fields {
 	 * Render use hashtags field.
 	 */
 	public static function render_use_hashtags_field() {
-		$value = get_option( 'activitypub_use_hashtags', '1' );
+		$value = get_option( 'activitypub_use_hashtags', '0' );
 		?>
 		<p>
 			<label>
@@ -430,24 +442,44 @@ class Settings_Fields {
 	 */
 	public static function render_site_blocked_domains_field() {
 		$blocked_domains = Moderation::get_site_blocks()['domains'];
+		$count           = \count( $blocked_domains );
 		?>
 		<p class="description"><?php \esc_html_e( 'Block entire ActivityPub instances by domain name.', 'activitypub' ); ?></p>
 
 		<div class="activitypub-site-block-list">
-			<?php if ( ! empty( $blocked_domains ) ) : ?>
-			<table class="widefat striped activitypub-site-blocked-domain" role="presentation" style="max-width: 500px; margin: 15px 0;">
-				<?php foreach ( $blocked_domains as $domain ) : ?>
-					<tr>
-						<td><?php echo \esc_html( $domain ); ?></td>
-						<td style="width: 80px;">
-							<button type="button" class="button button-small remove-site-block-btn" data-type="domain" data-value="<?php echo \esc_attr( $domain ); ?>">
-								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
-							</button>
-						</td>
-					</tr>
-				<?php endforeach; ?>
-			</table>
-			<?php endif; ?>
+			<details class="activitypub-site-block-details" data-type="domain"<?php echo empty( $blocked_domains ) ? ' open' : ''; ?>>
+				<summary>
+					<?php if ( $count > 0 ) : ?>
+						<?php
+						echo \esc_html(
+							\sprintf(
+								/* translators: %s: Number of blocked domains */
+								\_n( '%s blocked domain', '%s blocked domains', $count, 'activitypub' ),
+								\number_format_i18n( $count )
+							)
+						);
+						?>
+					<?php else : ?>
+						<?php \esc_html_e( 'No blocked domains', 'activitypub' ); ?>
+					<?php endif; ?>
+				</summary>
+				<?php if ( ! empty( $blocked_domains ) ) : ?>
+				<table class="widefat striped activitypub-site-blocked-domain" role="presentation">
+					<tbody>
+						<?php foreach ( $blocked_domains as $domain ) : ?>
+						<tr>
+							<td><?php echo \esc_html( $domain ); ?></td>
+							<td>
+								<button type="button" class="button button-small remove-site-block-btn" data-type="domain" data-value="<?php echo \esc_attr( $domain ); ?>">
+									<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+								</button>
+							</td>
+						</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<?php endif; ?>
+			</details>
 
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 				<input type="text" class="regular-text" id="new_site_domain" placeholder="<?php \esc_attr_e( 'example.com', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
@@ -464,24 +496,44 @@ class Settings_Fields {
 	 */
 	public static function render_site_blocked_keywords_field() {
 		$blocked_keywords = Moderation::get_site_blocks()['keywords'];
+		$count            = \count( $blocked_keywords );
 		?>
 		<p class="description"><?php \esc_html_e( 'Block ActivityPub content containing specific keywords.', 'activitypub' ); ?></p>
 
 		<div class="activitypub-site-block-list">
-			<?php if ( ! empty( $blocked_keywords ) ) : ?>
-			<table class="widefat striped activitypub-site-blocked-keyword" role="presentation" style="max-width: 500px; margin: 15px 0;">
-				<?php foreach ( $blocked_keywords as $keyword ) : ?>
-					<tr>
-						<td><?php echo \esc_html( $keyword ); ?></td>
-						<td style="width: 80px;">
-							<button type="button" class="button button-small remove-site-block-btn" data-type="keyword" data-value="<?php echo \esc_attr( $keyword ); ?>">
-								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
-							</button>
-						</td>
-					</tr>
-				<?php endforeach; ?>
-			</table>
-			<?php endif; ?>
+			<details class="activitypub-site-block-details" data-type="keyword"<?php echo empty( $blocked_keywords ) ? ' open' : ''; ?>>
+				<summary>
+					<?php if ( $count > 0 ) : ?>
+						<?php
+						echo \esc_html(
+							\sprintf(
+								/* translators: %s: Number of blocked keywords */
+								\_n( '%s blocked keyword', '%s blocked keywords', $count, 'activitypub' ),
+								\number_format_i18n( $count )
+							)
+						);
+						?>
+					<?php else : ?>
+						<?php \esc_html_e( 'No blocked keywords', 'activitypub' ); ?>
+					<?php endif; ?>
+				</summary>
+				<?php if ( ! empty( $blocked_keywords ) ) : ?>
+				<table class="widefat striped activitypub-site-blocked-keyword" role="presentation">
+					<tbody>
+						<?php foreach ( $blocked_keywords as $keyword ) : ?>
+						<tr>
+							<td><?php echo \esc_html( $keyword ); ?></td>
+							<td>
+								<button type="button" class="button button-small remove-site-block-btn" data-type="keyword" data-value="<?php echo \esc_attr( $keyword ); ?>">
+									<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+								</button>
+							</td>
+						</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<?php endif; ?>
+			</details>
 
 			<div class="add-site-block-form" style="display: flex; max-width: 500px; gap: 8px;">
 				<input type="text" class="regular-text" id="new_site_keyword" placeholder="<?php \esc_attr_e( 'spam keyword', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
@@ -489,6 +541,67 @@ class Settings_Fields {
 					<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
 				</button>
 			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render blocklist subscriptions field.
+	 */
+	public static function render_blocklist_subscriptions_field() {
+		$subscriptions = Blocklist_Subscriptions::get_all();
+		?>
+		<p class="description"><?php \esc_html_e( 'Subscribe to remote blocklists that sync automatically every week.', 'activitypub' ); ?></p>
+
+		<div class="activitypub-blocklist-subscriptions">
+			<?php if ( ! empty( $subscriptions ) ) : ?>
+			<table class="widefat striped" role="presentation" style="max-width: 500px; margin: 15px 0;">
+				<thead>
+					<tr>
+						<th style="padding: 10px;"><?php \esc_html_e( 'URL', 'activitypub' ); ?></th>
+						<th style="padding: 10px;"><?php \esc_html_e( 'Last Synced', 'activitypub' ); ?></th>
+						<th style="width: 80px;"></th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach ( $subscriptions as $url => $timestamp ) : ?>
+					<tr>
+						<td>
+							<abbr title="<?php echo \esc_attr( $url ); ?>"><?php echo \esc_html( \wp_parse_url( $url, PHP_URL_HOST ) ); ?></abbr>
+						</td>
+						<td>
+							<?php if ( $timestamp > 0 ) : ?>
+								<?php echo \esc_html( \human_time_diff( $timestamp, \time() ) . ' ' . \__( 'ago', 'activitypub' ) ); ?>
+							<?php else : ?>
+								<em><?php \esc_html_e( 'Never', 'activitypub' ); ?></em>
+							<?php endif; ?>
+						</td>
+						<td>
+							<button type="button" class="button button-small remove-blocklist-subscription-btn" data-url="<?php echo \esc_attr( $url ); ?>">
+								<?php \esc_html_e( 'Remove', 'activitypub' ); ?>
+							</button>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php endif; ?>
+
+			<div class="add-blocklist-subscription-form" style="display: flex; max-width: 500px; gap: 8px;">
+				<input type="url" class="regular-text" id="new_blocklist_subscription_url" placeholder="<?php \esc_attr_e( 'https://example.com/blocklist.csv', 'activitypub' ); ?>" style="flex: 1; min-width: 0;" />
+				<button type="button" class="button add-blocklist-subscription-btn" style="flex-shrink: 0; white-space: nowrap;">
+					<?php \esc_html_e( 'Subscribe', 'activitypub' ); ?>
+				</button>
+			</div>
+
+			<?php if ( ! isset( $subscriptions[ Blocklist_Subscriptions::IFTAS_DNI_URL ] ) ) : ?>
+			<p class="description" style="margin-top: 10px;">
+				<button type="button" class="button add-blocklist-subscription-btn" data-url="<?php echo \esc_attr( Blocklist_Subscriptions::IFTAS_DNI_URL ); ?>">
+					<?php \esc_html_e( 'Subscribe to IFTAS DNI List', 'activitypub' ); ?>
+				</button>
+				<?php echo \wp_kses_post( \__( 'Domains <a href="https://about.iftas.org/" target="_blank" rel="noopener">IFTAS</a> recommends not federating with.', 'activitypub' ) ); ?>
+			</p>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

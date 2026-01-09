@@ -7,7 +7,7 @@ test.describe( 'ActivityPub Outbox REST API', () => {
 	let testUserId;
 	let outboxEndpoint;
 
-	test.beforeAll( async ( { requestUtils } ) => {
+	test.beforeAll( async () => {
 		// Use the default test user
 		testUserId = 1;
 		outboxEndpoint = `/activitypub/1.0/actors/${ testUserId }/outbox`;
@@ -98,7 +98,7 @@ test.describe( 'ActivityPub Outbox REST API', () => {
 	test( 'should handle page parameter', async ( { requestUtils } ) => {
 		try {
 			const data = await requestUtils.rest( {
-				path: `${ outboxEndpoint }?page=1`,
+				path: `${ outboxEndpoint }?page=1&per_page=10`,
 			} );
 
 			// If successful, verify the response structure

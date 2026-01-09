@@ -53,20 +53,11 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		foreach ( self::$user_ids as $user_id ) {
-			wp_delete_user( $user_id );
-		}
-	}
-
-	/**
 	 * Clean up after each test.
 	 */
 	public function tear_down() {
 		// Remove filters that may have been added during tests.
-		remove_filter( 'nodeinfo_data', array( Nodeinfo::class, 'add_nodeinfo_data' ), 10 );
+		remove_filter( 'nodeinfo_data', array( Nodeinfo::class, 'add_nodeinfo_data' ) );
 		remove_filter( 'nodeinfo2_data', array( Nodeinfo::class, 'add_nodeinfo2_data' ) );
 		remove_filter( 'wellknown_nodeinfo_data', array( Nodeinfo::class, 'add_wellknown_nodeinfo_data' ) );
 
@@ -370,6 +361,31 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 			$method = $reflection->getMethod( $method_name );
 			$this->assertTrue( $method->isStatic(), "Method {$method_name} should be static" );
 		}
+	}
+
+	/**
+	 * Test staff accounts do not contain empty strings when user type is disabled.
+	 *
+	 * @covers ::add_nodeinfo_data
+	 * @covers ::get_staff
+	 */
+	public function test_nodeinfo_staff_accounts_filters_empty_strings() {
+		$original_nodeinfo = array(
+			'protocols' => array(),
+			'usage'     => array(),
+			'metadata'  => array(),
+		);
+
+		// Set blog-only mode, which disables user accounts.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$result = Nodeinfo::add_nodeinfo_data( $original_nodeinfo, '2.0' );
+
+		// Check that staffAccounts is an array with no empty strings.
+		$this->assertIsArray( $result['metadata']['staffAccounts'] );
+		$this->assertEmpty( $result['metadata']['staffAccounts'], 'Staff accounts should be empty in blog-only mode' );
+
+		\delete_option( 'activitypub_actor_mode' );
 	}
 
 	/**

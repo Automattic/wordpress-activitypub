@@ -52,15 +52,6 @@ class Test_Undo extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after each test.
-	 */
-	public function tear_down() {
-		// Remove any HTTP mocking filters.
-		\remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-		parent::tear_down();
-	}
-
-	/**
 	 * Test handle_undo with follow activities.
 	 *
 	 * @dataProvider follow_undo_provider
@@ -71,20 +62,18 @@ class Test_Undo extends \WP_UnitTestCase {
 	 */
 	public function test_handle_undo_follow( $actor_url, $description ) {
 		// Mock HTTP requests for actor metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () use ( $actor_url ) {
-				return array(
-					'id'                => $actor_url,
-					'type'              => 'Person',
-					'name'              => 'Test Actor',
-					'preferredUsername' => 'testactor',
-					'inbox'             => $actor_url . '/inbox',
-					'outbox'            => $actor_url . '/outbox',
-					'url'               => $actor_url,
-				);
-			}
-		);
+		$mock_actor_metadata = function () use ( $actor_url ) {
+			return array(
+				'id'                => $actor_url,
+				'type'              => 'Person',
+				'name'              => 'Test Actor',
+				'preferredUsername' => 'testactor',
+				'inbox'             => $actor_url . '/inbox',
+				'outbox'            => $actor_url . '/outbox',
+				'url'               => $actor_url,
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
 
 		// Add follower first by simulating a Follow activity through the inbox.
 		$user_actor     = Actors::get_by_id( self::$user_id );
@@ -133,6 +122,9 @@ class Test_Undo extends \WP_UnitTestCase {
 		// Verify follower was removed.
 		$followers_after = Followers::get_many( self::$user_id );
 		$this->assertEmpty( $followers_after, $description . ' - Should have no followers after Undo activity' );
+
+		// Clean up filter.
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
 	}
 
 	/**
@@ -169,23 +161,21 @@ class Test_Undo extends \WP_UnitTestCase {
 	 */
 	public function test_handle_undo_comment_activities( $actor_url, $activity_type, $description ) {
 		// Mock HTTP requests for actor metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () use ( $actor_url ) {
-				return array(
-					'id'                => $actor_url,
-					'type'              => 'Person',
-					'name'              => 'Test Actor',
-					'preferredUsername' => 'testactor',
-					'inbox'             => $actor_url . '/inbox',
-					'outbox'            => $actor_url . '/outbox',
-					'url'               => $actor_url,
-				);
-			}
-		);
+		$mock_actor_metadata = function () use ( $actor_url ) {
+			return array(
+				'id'                => $actor_url,
+				'type'              => 'Person',
+				'name'              => 'Test Actor',
+				'preferredUsername' => 'testactor',
+				'inbox'             => $actor_url . '/inbox',
+				'outbox'            => $actor_url . '/outbox',
+				'url'               => $actor_url,
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
 
 		// Create a test post.
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_author' => self::$user_id,
 				'post_title'  => 'Test Post for ' . $description,
@@ -236,6 +226,9 @@ class Test_Undo extends \WP_UnitTestCase {
 		// Verify comment was deleted.
 		$comment_after = \get_comment( $comment_id );
 		$this->assertNull( $comment_after, $description . ' - Comment should be deleted after Undo activity' );
+
+		// Clean up filter.
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
 	}
 
 	/**
@@ -264,36 +257,30 @@ class Test_Undo extends \WP_UnitTestCase {
 		$user_id_data  = null;
 		$state_data    = null;
 
-		\add_action(
-			'activitypub_handled_undo',
-			function ( $activity, $user_id, $state ) use ( &$action_fired, &$activity_data, &$user_id_data, &$state_data ) {
-				$action_fired  = true;
-				$activity_data = $activity;
-				$user_id_data  = $user_id;
-				$state_data    = $state;
-			},
-			10,
-			3
-		);
+		$action_hook_callback = function ( $activity, $user_id, $state ) use ( &$action_fired, &$activity_data, &$user_id_data, &$state_data ) {
+			$action_fired  = true;
+			$activity_data = $activity;
+			$user_id_data  = $user_id;
+			$state_data    = $state;
+		};
+		\add_action( 'activitypub_handled_undo', $action_hook_callback, 10, 3 );
 
 		// Test with a valid follow activity that should fire the hook.
 		$actor = 'https://example.com/test-actor';
 
 		// Mock HTTP requests for actor metadata.
-		\add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () use ( $actor ) {
-				return array(
-					'id'                => $actor,
-					'type'              => 'Person',
-					'name'              => 'Test Actor',
-					'preferredUsername' => 'testactor',
-					'inbox'             => $actor . '/inbox',
-					'outbox'            => $actor . '/outbox',
-					'url'               => $actor,
-				);
-			}
-		);
+		$mock_actor_metadata = function () use ( $actor ) {
+			return array(
+				'id'                => $actor,
+				'type'              => 'Person',
+				'name'              => 'Test Actor',
+				'preferredUsername' => 'testactor',
+				'inbox'             => $actor . '/inbox',
+				'outbox'            => $actor . '/outbox',
+				'url'               => $actor,
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
 
 		$user_actor     = Actors::get_by_id( self::$user_id );
 		$user_actor_url = $user_actor->get_id();
@@ -336,6 +323,10 @@ class Test_Undo extends \WP_UnitTestCase {
 		$this->assertContains( self::$user_id, $user_id_data, 'Array should contain user ID' );
 		// State can be false if follower removal fails, but action should still fire.
 		$this->assertTrue( isset( $state_data ) );
+
+		// Clean up hooks.
+		\remove_action( 'activitypub_handled_undo', $action_hook_callback );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
 	}
 
 	/**

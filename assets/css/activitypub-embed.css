@@ -67,17 +67,6 @@
 .activitypub-embed-content .ap-preview {
 	border: 1px solid #e6e6e6;
 	border-radius: 8px;
-	overflow: hidden;
-}
-
-.activitypub-embed-content .ap-preview img {
-	width: 100%;
-	height: auto;
-	display: block;
-}
-
-.activitypub-embed-content .ap-preview {
-	border-radius: 8px;
 	box-sizing: border-box;
 	display: grid;
 	gap: 2px;
@@ -90,25 +79,10 @@
 	width: 100%;
 }
 
-.activitypub-embed-content .ap-preview.layout-1 {
-	grid-template-columns: 1fr;
-	grid-template-rows: 1fr;
-}
-
-.activitypub-embed-content .ap-preview.layout-2 {
-	aspect-ratio: auto;
-	grid-template-rows: 1fr;
-	height: auto;
-}
-
-.activitypub-embed-content .ap-preview.layout-3 > img:first-child {
-	grid-row: span 2;
-}
-
 .activitypub-embed-content .ap-preview img {
 	border: 0;
 	box-sizing: border-box;
-	display: inline-block;
+	display: block;
 	height: 100%;
 	object-fit: cover;
 	overflow: hidden;
@@ -125,6 +99,21 @@
 
 .activitypub-embed-content .ap-preview audio {
 	width: 100%;
+}
+
+.activitypub-embed-content .ap-preview.layout-1 {
+	grid-template-columns: 1fr;
+	grid-template-rows: 1fr;
+}
+
+.activitypub-embed-content .ap-preview.layout-2 {
+	aspect-ratio: auto;
+	grid-template-rows: 1fr;
+	height: auto;
+}
+
+.activitypub-embed-content .ap-preview.layout-3 > img:first-child {
+	grid-row: span 2;
 }
 
 .activitypub-embed-content .ap-preview-text {
@@ -145,7 +134,9 @@
 	align-items: center;
 	gap: 5px;
 }
+
 @media only screen and (max-width: 399px) {
+
 	.activitypub-embed-meta span.ap-stat {
 		display: none !important;
 	}

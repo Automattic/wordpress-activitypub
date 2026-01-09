@@ -9,6 +9,8 @@ namespace Activitypub\Tests;
 
 use Activitypub\Mention;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Test class for Activitypub Mention.
  *
@@ -23,9 +25,13 @@ class Test_Mention extends \WP_UnitTestCase {
 	 */
 	public static $actors = array(
 		'username@example.org' => array(
-			'id'   => 'https://example.org/users/username',
-			'url'  => 'https://example.org/users/username',
-			'name' => 'username',
+			'@context'          => 'https://www.w3.org/ns/activitystreams',
+			'id'                => 'https://example.org/users/username',
+			'type'              => 'Person',
+			'url'               => 'https://example.org/users/username',
+			'name'              => 'username',
+			'preferredUsername' => 'username',
+			'inbox'             => 'https://example.org/users/username/inbox',
 		),
 	);
 
@@ -34,16 +40,16 @@ class Test_Mention extends \WP_UnitTestCase {
 	 */
 	public function set_up() {
 		parent::set_up();
-		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
 		add_filter( 'pre_http_request', array( $this, 'pre_http_request' ), 10, 3 );
+		add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'activitypub_pre_http_get_remote_object' ), 10, 2 );
 	}
 
 	/**
 	 * Tear down the test case.
 	 */
 	public function tear_down() {
-		remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
 		remove_filter( 'pre_http_request', array( $this, 'pre_http_request' ) );
+		remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'activitypub_pre_http_get_remote_object' ) );
 		parent::tear_down();
 	}
 
@@ -99,6 +105,26 @@ ENDPRE;
 	 * @return array|false|\WP_Error
 	 */
 	public function pre_http_request( $response, $parsed_args, $url ) {
+		// Mock webfinger for test actors.
+		if ( 'https://example.org/.well-known/webfinger?resource=acct%3Ausername%40example.org' === $url ) {
+			return array(
+				'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				'body'     => wp_json_encode(
+					array(
+						'subject' => 'acct:username@example.org',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://example.org/users/username',
+							),
+						),
+					)
+				),
+				'response' => array( 'code' => 200 ),
+			);
+		}
+
 		// Mock responses for remote users.
 		if ( 'https://notiz.blog/.well-known/webfinger?resource=acct%3Apfefferle%40notiz.blog' === $url ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
@@ -124,17 +150,36 @@ ENDPRE;
 	}
 
 	/**
-	 * Filters remote metadata by actor.
+	 * Mock ActivityPub remote object requests.
 	 *
-	 * @param array|string $pre   The pre-filtered value.
-	 * @param string       $actor The actor.
-	 * @return array|string
+	 * @param mixed        $pre           The pre-filtered value.
+	 * @param array|string $url_or_object The URL or object.
+	 * @return mixed
 	 */
-	public static function pre_get_remote_metadata_by_actor( $pre, $actor ) {
-		$actor = ltrim( $actor, '@' );
+	public function activitypub_pre_http_get_remote_object( $pre, $url_or_object ) {
+		$url = object_to_uri( $url_or_object );
 
-		if ( isset( self::$actors[ $actor ] ) ) {
-			return self::$actors[ $actor ];
+		// Check if this is a URL from our test actors.
+		foreach ( self::$actors as $actor_data ) {
+			if ( isset( $actor_data['id'] ) && $actor_data['id'] === $url ) {
+				return $actor_data;
+			}
+			if ( isset( $actor_data['url'] ) && $actor_data['url'] === $url ) {
+				return $actor_data;
+			}
+		}
+
+		// Return parsed object data for ActivityPub actors.
+		if ( 'https://notiz.blog/author/matthias-pfefferle/' === $url ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$fixture = json_decode( file_get_contents( AP_TESTS_DIR . '/data/fixtures/notiz-blog-author-matthias-pfefferle.json' ), true );
+			return json_decode( $fixture['body'], true );
+		}
+
+		if ( 'https://lemmy.ml/u/pfefferle' === $url ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$fixture = json_decode( file_get_contents( AP_TESTS_DIR . '/data/fixtures/lemmy-ml-u-pfefferle.json' ), true );
+			return json_decode( $fixture['body'], true );
 		}
 
 		return $pre;
