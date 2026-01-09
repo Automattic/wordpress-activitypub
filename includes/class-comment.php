@@ -29,7 +29,7 @@ class Comment {
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
-		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
+		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 11, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
@@ -731,7 +731,11 @@ class Comment {
 	 * @return int|string|\WP_Error The approval status. 1, 0, 'spam', 'trash', or WP_Error.
 	 */
 	public static function pre_comment_approved( $approved, $comment_data ) {
-		if ( $approved || \is_wp_error( $approved ) ) {
+		/*
+		 * Only return early for already-approved comments or errors.
+		 * Don't short-circuit on 'spam' or 'trash' - we may want to override those.
+		 */
+		if ( 1 === $approved || '1' === $approved || \is_wp_error( $approved ) ) {
 			return $approved;
 		}
 
