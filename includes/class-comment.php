@@ -732,10 +732,11 @@ class Comment {
 	 */
 	public static function pre_comment_approved( $approved, $comment_data ) {
 		/*
-		 * Only return early for already-approved comments or errors.
-		 * Don't short-circuit on 'spam' or 'trash' - we may want to override those.
+		 * Only return early for already-approved comments, trash, or errors.
+		 * Don't short-circuit on 'spam' - we may want to override Akismet.
+		 * Respect 'trash' since it comes from the WordPress disallowed list.
 		 */
-		if ( 1 === $approved || '1' === $approved || \is_wp_error( $approved ) ) {
+		if ( 1 === $approved || '1' === $approved || 'trash' === $approved || \is_wp_error( $approved ) ) {
 			return $approved;
 		}
 
