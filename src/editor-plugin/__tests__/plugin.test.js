@@ -146,8 +146,8 @@ describe( 'EditorPlugin visibility sync logic', () => {
 		const storedVisibility = meta?.activitypub_content_visibility;
 
 		// This mirrors the useEffect logic in plugin.js.
-		// Use undefined check because empty string '' means 'public' was explicitly saved.
-		if ( storedVisibility === undefined && defaultVisibility !== 'public' ) {
+		// WordPress may return '' (empty string) or undefined for unset meta.
+		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
 			setMetaFn( { ...meta, activitypub_content_visibility: defaultVisibility } );
 		}
 	};
@@ -184,17 +184,18 @@ describe( 'EditorPlugin visibility sync logic', () => {
 		expect( setMeta ).not.toHaveBeenCalled();
 	} );
 
-	test( 'does not sync when stored value is empty string (public)', () => {
+	test( 'syncs when stored value is empty string', () => {
 		const setMeta = jest.fn();
-		// Empty string means public was explicitly saved; this choice should be preserved.
+		// Empty string means the meta was never set (WordPress returns '' for unset meta).
 		const meta = { activitypub_content_visibility: '' };
 		const postDate = new Date( Date.now() - 60 * 24 * 60 * 60 * 1000 ); // 60 days ago.
 
 		simulateSyncLogic( meta, postDate, setMeta );
 
-		// Empty string is falsy, but it represents an explicit 'public' choice,
-		// so we must not overwrite it with a computed default.
-		expect( setMeta ).not.toHaveBeenCalled();
+		// Empty string is treated as "not set", so we sync the computed default.
+		expect( setMeta ).toHaveBeenCalledWith( {
+			activitypub_content_visibility: 'local',
+		} );
 	} );
 
 	test( 'preserves existing meta fields when syncing', () => {
