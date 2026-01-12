@@ -636,7 +636,7 @@ abstract class Base {
 		}
 
 		if ( ! empty( $image_meta['focal_length'] ) ) {
-			$exif['focalLength'] = (string) ( (float) $image_meta['focal_length'] );
+			$exif['focalLength'] = (string) (float) $image_meta['focal_length'];
 		}
 
 		if ( ! empty( $image_meta['iso'] ) ) {
