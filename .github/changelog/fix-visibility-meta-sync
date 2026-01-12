@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed visibility setting not being saved correctly in block editor and classic editor.

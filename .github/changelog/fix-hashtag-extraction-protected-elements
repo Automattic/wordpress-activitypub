@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed unwanted tags being created from hashtags inside links and other protected HTML elements.
