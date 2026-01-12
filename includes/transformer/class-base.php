@@ -640,7 +640,7 @@ abstract class Base {
 		}
 
 		if ( ! empty( $image_meta['iso'] ) ) {
-			$exif['photographicSensitivity'] = (string) ( (int) $image_meta['iso'] );
+			$exif['photographicSensitivity'] = (string) (int) $image_meta['iso'];
 		}
 
 		if ( ! empty( $image_meta['camera'] ) ) {
