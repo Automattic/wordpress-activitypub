@@ -524,6 +524,12 @@ abstract class Base {
 						}
 					}
 
+					// Add EXIF metadata using the Vernissage namespace.
+					$exif = $this->get_exif_data( $id );
+					if ( $exif ) {
+						$image['exif'] = $exif;
+					}
+
 					$attachment = $image;
 				}
 				break;
@@ -589,6 +595,70 @@ abstract class Base {
 		\do_action( 'activitypub_get_image_post', $id, $image_size );
 
 		return $image;
+	}
+
+	/**
+	 * Get EXIF metadata for an image attachment using the Vernissage namespace.
+	 *
+	 * @link https://joinvernissage.org/ns#exif
+	 *
+	 * @param int $attachment_id The attachment ID.
+	 *
+	 * @return array|null EXIF data object or null if no EXIF data available.
+	 */
+	protected function get_exif_data( $attachment_id ) {
+		$metadata = \wp_get_attachment_metadata( $attachment_id );
+
+		if ( empty( $metadata['image_meta'] ) ) {
+			return null;
+		}
+
+		$image_meta = $metadata['image_meta'];
+		$exif       = array();
+
+		// Map WordPress image_meta to Vernissage EXIF properties.
+		if ( ! empty( $image_meta['created_timestamp'] ) ) {
+			$exif['createDate'] = \gmdate( 'c', (int) $image_meta['created_timestamp'] );
+		}
+
+		if ( ! empty( $image_meta['shutter_speed'] ) ) {
+			$shutter_speed = (float) $image_meta['shutter_speed'];
+			// Format shutter speed as a fraction (e.g., "1/100") for speeds faster than 1 second.
+			if ( $shutter_speed > 0 && $shutter_speed < 1 ) {
+				$exif['exposureTime'] = '1/' . \round( 1 / $shutter_speed );
+			} elseif ( $shutter_speed >= 1 ) {
+				$exif['exposureTime'] = (string) $shutter_speed;
+			}
+		}
+
+		if ( ! empty( $image_meta['aperture'] ) ) {
+			$exif['fNumber'] = 'f/' . (float) $image_meta['aperture'];
+		}
+
+		if ( ! empty( $image_meta['focal_length'] ) ) {
+			$exif['focalLength'] = (string) ( (float) $image_meta['focal_length'] );
+		}
+
+		if ( ! empty( $image_meta['iso'] ) ) {
+			$exif['photographicSensitivity'] = (string) ( (int) $image_meta['iso'] );
+		}
+
+		if ( ! empty( $image_meta['camera'] ) ) {
+			$exif['model'] = \sanitize_text_field( $image_meta['camera'] );
+		}
+
+		/**
+		 * Filter the EXIF data for an image attachment.
+		 *
+		 * @param array $exif          The EXIF data object for the Vernissage namespace.
+		 * @param array $image_meta    The WordPress image_meta array.
+		 * @param int   $attachment_id The attachment ID.
+		 *
+		 * @return array The filtered EXIF data object.
+		 */
+		$exif = \apply_filters( 'activitypub_image_exif', $exif, $image_meta, $attachment_id );
+
+		return ! empty( $exif ) ? $exif : null;
 	}
 
 	/**

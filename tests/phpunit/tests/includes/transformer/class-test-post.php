@@ -1204,4 +1204,197 @@ class Test_Post extends \WP_UnitTestCase {
 			),
 		);
 	}
+
+	/**
+	 * Test get_exif_data method returns null when no EXIF data.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_returns_null_when_no_exif() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Clear image_meta to simulate no EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array();
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertNull( $exif, 'Should return null when no EXIF data is available.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test get_exif_data method returns EXIF data in Vernissage format.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_returns_vernissage_format() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'created_timestamp' => 1704067200, // 2024-01-01 00:00:00 UTC.
+			'shutter_speed'     => 0.01,       // 1/100.
+			'aperture'          => 2.8,
+			'focal_length'      => 50,
+			'iso'               => 400,
+			'camera'            => 'Canon EOS R5',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertIsArray( $exif, 'Should return an array.' );
+		$this->assertArrayHasKey( 'createDate', $exif, 'Should contain createDate.' );
+		$this->assertArrayHasKey( 'exposureTime', $exif, 'Should contain exposureTime.' );
+		$this->assertArrayHasKey( 'fNumber', $exif, 'Should contain fNumber.' );
+		$this->assertArrayHasKey( 'focalLength', $exif, 'Should contain focalLength.' );
+		$this->assertArrayHasKey( 'photographicSensitivity', $exif, 'Should contain photographicSensitivity.' );
+		$this->assertArrayHasKey( 'model', $exif, 'Should contain model.' );
+
+		// Check value formats.
+		$this->assertSame( '2024-01-01T00:00:00+00:00', $exif['createDate'], 'createDate should be ISO 8601 format.' );
+		$this->assertSame( '1/100', $exif['exposureTime'], 'exposureTime should be fraction format.' );
+		$this->assertSame( 'f/2.8', $exif['fNumber'], 'fNumber should be f/X.X format.' );
+		$this->assertSame( '50', $exif['focalLength'], 'focalLength should be numeric string.' );
+		$this->assertSame( '400', $exif['photographicSensitivity'], 'photographicSensitivity should be string.' );
+		$this->assertSame( 'Canon EOS R5', $exif['model'], 'model should be camera name.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test get_exif_data with long exposure (>= 1 second).
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_long_exposure() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data with long exposure.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'shutter_speed' => 2.5, // 2.5 seconds.
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertSame( '2.5', $exif['exposureTime'], 'Long exposure should be shown as seconds.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test that EXIF data is included in image attachments.
+	 *
+	 * @covers \Activitypub\Transformer\Base::transform_attachment
+	 */
+	public function test_transform_attachment_includes_exif() {
+		$attachment_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$attachment_src = \wp_get_attachment_image_src( $attachment_id );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'iso'    => 800,
+			'camera' => 'Nikon Z6',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_author'  => 1,
+				'post_content' => sprintf(
+					'<!-- wp:image {"id": %1$d,"sizeSlug":"large"} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->',
+					$attachment_id,
+					$attachment_src[0]
+				),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object      = Post::transform( get_post( $post_id ) )->to_object();
+		$attachments = $object->get_attachment();
+
+		$this->assertCount( 1, $attachments, 'Should have one attachment.' );
+		$this->assertArrayHasKey( 'exif', $attachments[0], 'Attachment should include exif object.' );
+		$this->assertArrayHasKey( 'photographicSensitivity', $attachments[0]['exif'], 'EXIF should include ISO.' );
+		$this->assertArrayHasKey( 'model', $attachments[0]['exif'], 'EXIF should include camera model.' );
+		$this->assertSame( '800', $attachments[0]['exif']['photographicSensitivity'], 'ISO should be 800.' );
+		$this->assertSame( 'Nikon Z6', $attachments[0]['exif']['model'], 'Camera model should be Nikon Z6.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test activitypub_image_exif filter.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_filter() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'camera' => 'Test Camera',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		// Add filter to extend EXIF data.
+		$filter = function ( $exif, $image_meta, $id ) use ( $attachment_id ) {
+			$this->assertSame( $attachment_id, $id, 'Filter should receive correct attachment ID.' );
+			$exif['make'] = 'Test Manufacturer';
+			return $exif;
+		};
+		\add_filter( 'activitypub_image_exif', $filter, 10, 3 );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertArrayHasKey( 'make', $exif, 'Filter should be able to add EXIF properties.' );
+		$this->assertSame( 'Test Manufacturer', $exif['make'], 'Filter should set make.' );
+
+		\remove_filter( 'activitypub_image_exif', $filter );
+		\wp_delete_attachment( $attachment_id, true );
+	}
 }
