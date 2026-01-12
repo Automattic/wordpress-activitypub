@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { getDefaultVisibility, VISIBILITY_PUBLIC, VISIBILITY_LOCAL } from '../utils';
+import { getDefaultVisibility } from '../utils';
 
 describe( 'EditorPlugin getDefaultVisibility', () => {
 	test( 'returns saved visibility value if already set', () => {
@@ -17,7 +17,7 @@ describe( 'EditorPlugin getDefaultVisibility', () => {
 		expect( result ).toBe( 'quiet_public' );
 	} );
 
-	test( 'returns public (empty string) for federated posts', () => {
+	test( 'returns public for federated posts', () => {
 		const meta = {
 			activitypub_status: 'federated',
 		};
@@ -25,8 +25,7 @@ describe( 'EditorPlugin getDefaultVisibility', () => {
 
 		const result = getDefaultVisibility( meta, postDate );
 
-		expect( result ).toBe( VISIBILITY_PUBLIC );
-		expect( result ).toBe( '' );
+		expect( result ).toBe( 'public' );
 	} );
 
 	test( 'returns local for posts older than 1 month', () => {
@@ -37,7 +36,7 @@ describe( 'EditorPlugin getDefaultVisibility', () => {
 
 		const result = getDefaultVisibility( meta, postDate );
 
-		expect( result ).toBe( VISIBILITY_LOCAL );
+		expect( result ).toBe( 'local' );
 	} );
 
 	test( 'returns local for posts exactly 1 month old', () => {
@@ -48,10 +47,10 @@ describe( 'EditorPlugin getDefaultVisibility', () => {
 
 		const result = getDefaultVisibility( meta, postDate );
 
-		expect( result ).toBe( VISIBILITY_LOCAL );
+		expect( result ).toBe( 'local' );
 	} );
 
-	test( 'returns public (empty string) for posts less than 1 month old', () => {
+	test( 'returns public for posts less than 1 month old', () => {
 		const meta = {
 			activitypub_status: 'pending',
 		};
@@ -59,34 +58,34 @@ describe( 'EditorPlugin getDefaultVisibility', () => {
 
 		const result = getDefaultVisibility( meta, postDate );
 
-		expect( result ).toBe( VISIBILITY_PUBLIC );
+		expect( result ).toBe( 'public' );
 	} );
 
-	test( 'returns public (empty string) for new posts', () => {
+	test( 'returns public for new posts', () => {
 		const meta = {};
 		const postDate = new Date(); // Now
 
 		const result = getDefaultVisibility( meta, postDate );
 
-		expect( result ).toBe( VISIBILITY_PUBLIC );
+		expect( result ).toBe( 'public' );
 	} );
 
-	test( 'returns public (empty string) when postDate is null', () => {
+	test( 'returns public when postDate is null', () => {
 		const meta = {};
 		const postDate = null;
 
 		const result = getDefaultVisibility( meta, postDate );
 
-		expect( result ).toBe( VISIBILITY_PUBLIC );
+		expect( result ).toBe( 'public' );
 	} );
 
-	test( 'returns public (empty string) when meta is empty', () => {
+	test( 'returns public when meta is empty', () => {
 		const meta = {};
 		const postDate = new Date( Date.now() - 7 * 24 * 60 * 60 * 1000 ); // 7 days ago
 
 		const result = getDefaultVisibility( meta, postDate );
 
-		expect( result ).toBe( VISIBILITY_PUBLIC );
+		expect( result ).toBe( 'public' );
 	} );
 
 	test( 'prioritizes explicit value over federated status', () => {
@@ -98,19 +97,19 @@ describe( 'EditorPlugin getDefaultVisibility', () => {
 
 		const result = getDefaultVisibility( meta, postDate );
 
-		expect( result ).toBe( VISIBILITY_LOCAL );
+		expect( result ).toBe( 'local' );
 	} );
 
 	test( 'prioritizes explicit value over post age', () => {
 		const meta = {
-			activitypub_content_visibility: 'quiet_public',
+			activitypub_content_visibility: 'public',
 			activitypub_status: 'pending',
 		};
 		const postDate = new Date( Date.now() - 60 * 24 * 60 * 60 * 1000 ); // 60 days ago
 
 		const result = getDefaultVisibility( meta, postDate );
 
-		expect( result ).toBe( 'quiet_public' );
+		expect( result ).toBe( 'public' );
 	} );
 
 	test( 'handles edge case: exactly 30 days old', () => {
@@ -123,7 +122,7 @@ describe( 'EditorPlugin getDefaultVisibility', () => {
 
 		// Should be on the borderline, but our logic uses < so this should be public
 		// However, due to potential millisecond differences, this might be local
-		expect( [ VISIBILITY_PUBLIC, VISIBILITY_LOCAL ] ).toContain( result );
+		expect( [ 'public', 'local' ] ).toContain( result );
 	} );
 } );
 
@@ -131,7 +130,7 @@ describe( 'EditorPlugin getDefaultVisibility', () => {
  * Tests for the visibility sync logic.
  *
  * The useEffect in EditorPlugin syncs the computed default visibility to meta
- * when there's no stored value and the default isn't public (empty string).
+ * when there's no stored value and the default isn't 'public'.
  * We test this logic by simulating the conditions the useEffect checks.
  */
 describe( 'EditorPlugin visibility sync logic', () => {
@@ -148,8 +147,8 @@ describe( 'EditorPlugin visibility sync logic', () => {
 
 		// This mirrors the useEffect logic in plugin.js.
 		// WordPress may return '' (empty string) or undefined for unset meta.
-		// We skip syncing when default is '' (public) since that's the implicit default.
-		if ( ! storedVisibility && defaultVisibility ) {
+		// We skip 'public' since it's the implicit default.
+		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
 			setMetaFn( { ...meta, activitypub_content_visibility: defaultVisibility } );
 		}
 	};
@@ -162,7 +161,7 @@ describe( 'EditorPlugin visibility sync logic', () => {
 		simulateSyncLogic( meta, postDate, setMeta );
 
 		expect( setMeta ).toHaveBeenCalledWith( {
-			activitypub_content_visibility: VISIBILITY_LOCAL,
+			activitypub_content_visibility: 'local',
 		} );
 	} );
 
@@ -173,7 +172,7 @@ describe( 'EditorPlugin visibility sync logic', () => {
 
 		simulateSyncLogic( meta, postDate, setMeta );
 
-		// Public is empty string, so no sync needed (it's the implicit default).
+		// Public is the implicit default, no sync needed.
 		expect( setMeta ).not.toHaveBeenCalled();
 	} );
 
@@ -189,7 +188,7 @@ describe( 'EditorPlugin visibility sync logic', () => {
 
 	test( 'syncs when stored value is empty string and default is not public', () => {
 		const setMeta = jest.fn();
-		// Empty string means public or unset - either way, sync if default differs.
+		// Empty string means unset - sync if default differs from public.
 		const meta = { activitypub_content_visibility: '' };
 		const postDate = new Date( Date.now() - 60 * 24 * 60 * 60 * 1000 ); // 60 days ago.
 
@@ -197,19 +196,19 @@ describe( 'EditorPlugin visibility sync logic', () => {
 
 		// Old post defaults to local, so we sync.
 		expect( setMeta ).toHaveBeenCalledWith( {
-			activitypub_content_visibility: VISIBILITY_LOCAL,
+			activitypub_content_visibility: 'local',
 		} );
 	} );
 
 	test( 'does not sync when stored value is empty string and default is public', () => {
 		const setMeta = jest.fn();
-		// Empty string for both stored and default = no sync needed.
+		// Empty string stored, default is public = no sync needed.
 		const meta = { activitypub_content_visibility: '' };
 		const postDate = new Date(); // Now - defaults to public.
 
 		simulateSyncLogic( meta, postDate, setMeta );
 
-		// Both are empty string (public), no sync needed.
+		// Default is public, no sync needed.
 		expect( setMeta ).not.toHaveBeenCalled();
 	} );
 
@@ -226,7 +225,7 @@ describe( 'EditorPlugin visibility sync logic', () => {
 		expect( setMeta ).toHaveBeenCalledWith( {
 			activitypub_content_warning: 'some warning',
 			activitypub_max_image_attachments: 5,
-			activitypub_content_visibility: VISIBILITY_LOCAL,
+			activitypub_content_visibility: 'local',
 		} );
 	} );
 } );

@@ -36,10 +36,10 @@ const EditorPlugin = () => {
 	useEffect( () => {
 		const storedVisibility = meta?.activitypub_content_visibility;
 
-		// Only sync if visibility was never set and the default isn't public.
+		// Only sync if visibility was never set and the default isn't 'public'.
 		// WordPress may return '' (empty string) or undefined for unset meta.
-		// We skip syncing when default is '' (public) since that's the implicit default.
-		if ( ! storedVisibility && defaultVisibility ) {
+		// We skip 'public' since it's the implicit default.
+		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
 			setMeta( { ...meta, activitypub_content_visibility: defaultVisibility } );
 		}
 	}, [ defaultVisibility, meta, setMeta ] );
@@ -149,7 +149,7 @@ const EditorPlugin = () => {
 							__( 'Public', 'activitypub' ),
 							__( 'Post will be visible to everyone and appear in public timelines.', 'activitypub' )
 						),
-						value: '',
+						value: 'public',
 					},
 					{
 						label: enhancedLabel(

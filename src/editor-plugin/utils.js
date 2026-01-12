@@ -1,12 +1,9 @@
 /**
- * Visibility constants matching PHP ACTIVITYPUB_CONTENT_VISIBILITY_* constants.
- */
-export const VISIBILITY_PUBLIC = '';
-export const VISIBILITY_QUIET_PUBLIC = 'quiet_public';
-export const VISIBILITY_LOCAL = 'local';
-
-/**
  * Calculates the default visibility for a post based on its metadata and age.
+ *
+ * Note: JS uses 'public' as the value, while PHP uses '' (empty string).
+ * PHP's get_content_visibility() treats any value not in ['quiet_public', 'private', 'local']
+ * as public, so 'public' works correctly.
  *
  * Priority order:
  * 1. Explicitly set visibility value
@@ -17,17 +14,17 @@ export const VISIBILITY_LOCAL = 'local';
  * @param {Object}      meta     The post metadata object.
  * @param {string|Date} postDate The post date.
  *
- * @return {string} The default visibility value ('' for public, 'quiet_public', or 'local').
+ * @return {string} The default visibility value ('public', 'quiet_public', or 'local').
  */
 export const getDefaultVisibility = ( meta, postDate ) => {
-	// If already set, use that value.
+	// If already set, use that value (handles both 'public' and '' as public).
 	if ( meta?.activitypub_content_visibility ) {
 		return meta.activitypub_content_visibility;
 	}
 
 	// If post is federated, use public.
 	if ( meta?.activitypub_status === 'federated' ) {
-		return VISIBILITY_PUBLIC;
+		return 'public';
 	}
 
 	// If post is older than 1 month, default to local.
@@ -36,10 +33,10 @@ export const getDefaultVisibility = ( meta, postDate ) => {
 		const oneMonthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
 		if ( postTimestamp < oneMonthAgo ) {
-			return VISIBILITY_LOCAL;
+			return 'local';
 		}
 	}
 
 	// Default to public for new posts.
-	return VISIBILITY_PUBLIC;
+	return 'public';
 };
