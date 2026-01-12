@@ -1,6 +1,10 @@
 /**
  * Calculates the default visibility for a post based on its metadata and age.
  *
+ * Note: JS uses 'public' as the value, while PHP uses '' (empty string).
+ * PHP's get_content_visibility() treats any value not in ['quiet_public', 'private', 'local']
+ * as public, so 'public' works correctly.
+ *
  * Priority order:
  * 1. Explicitly set visibility value
  * 2. Federated posts default to public
@@ -13,7 +17,7 @@
  * @return {string} The default visibility value ('public', 'quiet_public', or 'local').
  */
 export const getDefaultVisibility = ( meta, postDate ) => {
-	// If already set, use that value.
+	// If already set, use that value (handles both 'public' and '' as public).
 	if ( meta?.activitypub_content_visibility ) {
 		return meta.activitypub_content_visibility;
 	}
