@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Force content negotiation on author pages when using permalink as Actor ID.
