@@ -51,9 +51,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test post activity scheduling for regular posts.
 	 *
-	 * @covers ::schedule_post_activity
+	 * @covers ::triage
 	 */
-	public function test_schedule_post_activity_regular_post() {
+	public function test_triage_regular_post() {
 		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
@@ -65,13 +65,13 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test post activity scheduling for regular posts.
 	 *
-	 * @covers ::schedule_post_activity
+	 * @covers ::triage
 	 */
-	public function test_not_schedule_delete_activity_unfederated_post() {
-		\remove_action( 'wp_after_insert_post', array( Post::class, 'schedule_post_activity' ), 33 );
+	public function test_not_prepare_delete_activity_unfederated_post() {
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
-		\add_action( 'wp_after_insert_post', array( Post::class, 'schedule_post_activity' ), 33, 4 );
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
 
 		// Trash the post.
 		\wp_delete_post( $post_id );
@@ -83,7 +83,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * Test that publishing a post schedules a Create activity.
 	 *
 	 * @ticket https://github.com/Automattic/wordpress-activitypub/pull/1408
-	 * @covers ::schedule_post_activity
+	 * @covers ::triage
 	 */
 	public function test_activity_type_on_publish() {
 		$post_id        = self::factory()->post->create(
@@ -104,9 +104,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test post activity scheduling during bulk edits.
 	 *
-	 * @covers ::schedule_post_activity
+	 * @covers ::triage
 	 */
-	public function test_schedule_post_activity_bulk_edit() {
+	public function test_triage_bulk_edit() {
 		wp_set_current_user( self::$user_id );
 		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
