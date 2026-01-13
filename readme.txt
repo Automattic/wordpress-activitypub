@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 7.8.2
+Stable tag: 7.8.3
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,26 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.8.3 - 2026-01-12
+#### Security
+- Improved security of the Starter Kit URL import by using wp_safe_remote_get.
+
+#### Added
+- Force content negotiation on author pages when using permalink as Actor ID.
+
+#### Fixed
+- Actors: avoid PHP warnings when trying to fetch invalid actor.
+- Add ClassicPress compatibility by detecting it and disabling block support.
+- Check if WP_Filesystem initialized successfully before using it to prevent fatal errors on hosts using FTP-based filesystem.
+- Fixed ActivityPub comments being marked as spam by Akismet.
+- Fixed an issue where embedding remote posts could fail when the author's profile was temporarily unavailable.
+- Fixed flaky test for purge_ap_posts due to date boundary condition with -1 month
+- Fixed inconsistent default value for the hashtag setting on new installations.
+- Fixed reactions popover styles affecting other WordPress popovers.
+- Fixed unwanted 301 redirects on search and posts pages when using Polylang or similar plugins.
+- Fixed unwanted tags being created from hashtags inside links and other protected HTML elements.
+- Fixed visibility setting not being saved correctly in block editor and classic editor.
 
 ### 7.8.2 - 2025-12-21
 #### Fixed

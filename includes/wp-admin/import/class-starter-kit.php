@@ -197,7 +197,7 @@ class Starter_Kit {
 		}
 
 		// Fetch the URL content.
-		$response = \wp_remote_get(
+		$response = \wp_safe_remote_get(
 			$url,
 			array(
 				'timeout'     => 30,
