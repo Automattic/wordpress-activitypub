@@ -9,10 +9,15 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Following;
+use Activitypub\Collection\Inbox;
+use Activitypub\Http;
 use Activitypub\Moderation;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\extract_recipients_from_activity;
+use function Activitypub\is_activity_public;
+use function Activitypub\is_collection;
 use function Activitypub\is_same_domain;
 use function Activitypub\user_can_activitypub;
 
@@ -71,7 +76,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'object' => array(
 							'description'       => 'The object of the activity.',
 							'required'          => true,
-							'validate_callback' => function ( $param, $request, $key ) {
+							'validate_callback' => static function ( $param, $request, $key ) {
 								/**
 								 * Filter the ActivityPub object validation.
 								 *
@@ -87,7 +92,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 							'description'       => 'The primary recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
 							'required'          => false,
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -98,7 +103,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'cc'     => array(
 							'description'       => 'The secondary recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -109,7 +114,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'bcc'    => array(
 							'description'       => 'The private recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -152,8 +157,9 @@ class Inbox_Controller extends \WP_REST_Controller {
 		} else {
 			$recipients = $this->get_local_recipients( $data );
 
+			// Filter out blocked recipients.
+			$allowed_recipients = array();
 			foreach ( $recipients as $user_id ) {
-				// Check user-specific blocks for this recipient.
 				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
 					/**
 					 * ActivityPub inbox disallowed activity for specific user.
@@ -164,27 +170,105 @@ class Inbox_Controller extends \WP_REST_Controller {
 					 * @param Activity|\WP_Error $activity The Activity object.
 					 */
 					\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
-					continue;
+				} else {
+					$allowed_recipients[] = $user_id;
+
+					/**
+					 * ActivityPub inbox action.
+					 *
+					 * @deprecated 7.6.0 Support activitypub_inbox_shared instead to avoid duplicate processing.
+					 *
+					 * @param array              $data     The data array.
+					 * @param int                $user_id  The user ID.
+					 * @param string             $type     The type of the activity.
+					 * @param Activity|\WP_Error $activity The Activity object.
+					 * @param string             $context  The context of the request (shared_inbox when called from shared inbox endpoint).
+					 */
+					\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity, Inbox::CONTEXT_SHARED_INBOX );
+
+					/**
+					 * ActivityPub inbox action for specific activity types.
+					 *
+					 * @deprecated 7.6.0 Support activitypub_inbox_shared_{type} instead to avoid duplicate processing.
+					 *
+					 * @param array              $data     The data array.
+					 * @param int                $user_id  The user ID.
+					 * @param Activity|\WP_Error $activity The Activity object.
+					 * @param string             $context  The context of the request (shared_inbox when called from shared inbox endpoint).
+					 */
+					\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, Inbox::CONTEXT_SHARED_INBOX );
 				}
+			}
+
+			/**
+			 * ActivityPub shared inbox action.
+			 *
+			 * This hook fires once per activity with all recipients.
+			 * Preferred for new implementations to avoid duplication.
+			 *
+			 * @since 7.6.0
+			 *
+			 * @param array              $data       The data array.
+			 * @param array              $recipients Array of user IDs.
+			 * @param string             $type       The type of the activity.
+			 * @param Activity|\WP_Error $activity   The Activity object.
+			 * @param string             $context    The context of the request.
+			 */
+			\do_action( 'activitypub_inbox_shared', $data, $allowed_recipients, $type, $activity, Inbox::CONTEXT_SHARED_INBOX );
+
+			/**
+			 * ActivityPub shared inbox action for specific activity types.
+			 *
+			 * This hook fires once per activity with all recipients.
+			 * Preferred for new implementations to avoid duplication.
+			 *
+			 * @since 7.6.0
+			 *
+			 * @param array              $data       The data array.
+			 * @param array              $recipients Array of user IDs.
+			 * @param Activity|\WP_Error $activity   The Activity object.
+			 * @param string             $context    The context of the request.
+			 */
+			\do_action( 'activitypub_inbox_shared_' . $type, $data, $allowed_recipients, $activity, Inbox::CONTEXT_SHARED_INBOX );
+
+			/**
+			 * Filter to skip inbox storage.
+			 *
+			 * Skip inbox storage for debugging purposes or to reduce load for
+			 * certain Activity-Types, like "Delete".
+			 *
+			 * @param bool  $skip Whether to skip inbox storage.
+			 * @param array $data  The activity data array.
+			 *
+			 * @return bool Whether to skip inbox storage.
+			 */
+			$skip = \apply_filters( 'activitypub_skip_inbox_storage', false, $data );
+
+			if ( ! $skip ) {
+				$result = Inbox::add( $activity, $allowed_recipients );
 
 				/**
-				 * ActivityPub inbox action.
+				 * Fires after an ActivityPub Inbox activity has been handled.
 				 *
 				 * @param array              $data     The data array.
-				 * @param int                $user_id  The user ID.
+				 * @param array              $user_ids The user IDs.
 				 * @param string             $type     The type of the activity.
 				 * @param Activity|\WP_Error $activity The Activity object.
+				 * @param \WP_Error|int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+				 * @param string             $context  The context of the request ('inbox' or 'shared_inbox').
 				 */
-				\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
+				\do_action( 'activitypub_handled_inbox', $data, $allowed_recipients, $type, $activity, $result, Inbox::CONTEXT_SHARED_INBOX );
 
 				/**
-				 * ActivityPub inbox action for specific activity types.
+				 * Fires after an ActivityPub Inbox activity has been handled.
 				 *
 				 * @param array              $data     The data array.
-				 * @param int                $user_id  The user ID.
+				 * @param array              $user_ids The user IDs.
 				 * @param Activity|\WP_Error $activity The Activity object.
+				 * @param \WP_Error|int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+				 * @param string             $context  The context of the request ('inbox' or 'shared_inbox').
 				 */
-				\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
+				\do_action( 'activitypub_handled_inbox_' . $type, $data, $allowed_recipients, $activity, $result, Inbox::CONTEXT_SHARED_INBOX );
 			}
 		}
 
@@ -284,13 +368,29 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return array An array of user IDs who are the recipients of the activity.
 	 */
 	private function get_local_recipients( $activity ) {
+		$user_ids = array();
+
+		if ( is_activity_public( $activity ) ) {
+			$user_ids = Following::get_follower_ids( $activity['actor'] );
+		}
+
 		$recipients = extract_recipients_from_activity( $activity );
-		$user_ids   = array();
 
 		foreach ( $recipients as $recipient ) {
 
 			if ( ! is_same_domain( $recipient ) ) {
-				continue;
+				$collection = Http::get_remote_object( $recipient );
+
+				// If it is a remote actor we can skip it.
+				if ( \is_wp_error( $collection ) ) {
+					continue;
+				}
+
+				if ( is_collection( $collection ) ) {
+					$_user_ids = Following::get_follower_ids( $activity['actor'] );
+					$user_ids  = array_merge( $user_ids, $_user_ids );
+					continue;
+				}
 			}
 
 			$user_id = Actors::get_id_by_resource( $recipient );
@@ -306,6 +406,15 @@ class Inbox_Controller extends \WP_REST_Controller {
 			$user_ids[] = $user_id;
 		}
 
-		return $user_ids;
+		// Check for an Actor in the Object field.
+		if ( empty( $user_ids ) ) {
+			$user_id = Actors::get_id_by_resource( $activity['object'] );
+
+			if ( ! \is_wp_error( $user_id ) && user_can_activitypub( $user_id ) ) {
+				$user_ids[] = $user_id;
+			}
+		}
+
+		return array_unique( array_map( 'intval', $user_ids ) );
 	}
 }

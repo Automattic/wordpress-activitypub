@@ -99,7 +99,7 @@ class Starter_Kit {
 				self::$actor_list = \array_values(
 					array_filter(
 						array_map(
-							function ( $actor ) {
+							static function ( $actor ) {
 								$actor = \sanitize_text_field( $actor );
 								$actor = \wp_unslash( $actor );
 								return self::is_valid_actor( $actor ) ? $actor : null;
@@ -197,7 +197,7 @@ class Starter_Kit {
 		}
 
 		// Fetch the URL content.
-		$response = \wp_remote_get(
+		$response = \wp_safe_remote_get(
 			$url,
 			array(
 				'timeout'     => 30,
@@ -308,7 +308,7 @@ class Starter_Kit {
 			return;
 		}
 
-		self::$blog_user_filter_callback = function ( $users ) {
+		self::$blog_user_filter_callback = static function ( $users ) {
 			return \preg_replace(
 				'/<\/select>/',
 				'<option value="0">' . \__( 'Blog User', 'activitypub' ) . '</option></select>',

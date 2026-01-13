@@ -109,6 +109,11 @@ class Health_Check {
 			'test'  => array( self::class, 'test_check_for_captcha_plugins' ),
 		);
 
+		$tests['direct']['activitypub_test_wp_cron'] = array(
+			'label' => \__( 'WP-Cron Configuration Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_wp_cron' ),
+		);
+
 		return $tests;
 	}
 
@@ -337,6 +342,12 @@ class Health_Check {
 			'private' => false,
 		);
 
+		$info['activitypub']['fields']['activitypub_ap_post_purge_days'] = array(
+			'label'   => \__( 'Remote Posts Retention Period', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_ap_post_purge_days', 30 ) ),
+			'private' => false,
+		);
+
 		$info['activitypub']['fields']['vary_header'] = array(
 			'label'   => \__( 'Vary Header', 'activitypub' ),
 			'value'   => \esc_attr( (int) \get_option( 'activitypub_vary_header', '1' ) ),
@@ -352,12 +363,6 @@ class Health_Check {
 		$info['activitypub']['fields']['authorized_fetch'] = array(
 			'label'   => \__( 'Authorized Fetch', 'activitypub' ),
 			'value'   => \esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
-			'private' => false,
-		);
-
-		$info['activitypub']['fields']['shared_inbox'] = array(
-			'label'   => \__( 'Shared Inbox', 'activitypub' ),
-			'value'   => \esc_attr( (int) \get_option( 'activitypub_shared_inbox', '0' ) ),
 			'private' => false,
 		);
 
@@ -501,7 +506,7 @@ class Health_Check {
 		// search for the word 'captcha' in the list of active plugins.
 		$captcha_plugins = array_filter(
 			$active_plugins,
-			function ( $plugin ) {
+			static function ( $plugin ) {
 				return \str_contains( strtolower( $plugin ), 'captcha' );
 			}
 		);
@@ -513,7 +518,7 @@ class Health_Check {
 		// Get nice plugin names instead of file paths using WordPress built-in functions.
 		$all_plugins          = \get_plugins();
 		$captcha_plugin_names = array_map(
-			function ( $plugin_file ) use ( $all_plugins ) {
+			static function ( $plugin_file ) use ( $all_plugins ) {
 				if ( isset( $all_plugins[ $plugin_file ]['Name'] ) ) {
 					return $all_plugins[ $plugin_file ]['Name'];
 				}
@@ -542,6 +547,46 @@ class Health_Check {
 				esc_url( admin_url( 'plugins.php?s=captcha&plugin_status=all' ) )
 			)
 		);
+
+		return $result;
+	}
+
+	/**
+	 * WP-Cron configuration test.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_wp_cron() {
+		$result = array(
+			'label'       => \__( 'WP-Cron is properly configured', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Your WP-Cron configuration allows for timely publishing and processing of ActivityPub activities.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_wp_cron',
+		);
+
+		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'WP-Cron is disabled', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				\__( 'The constant <code>DISABLE_WP_CRON</code> is set to <code>true</code> in your configuration. This disables WordPress&#8217;s built-in cron system, which ActivityPub relies on for timely publishing of posts and processing of reactions (likes, boosts, replies).', 'activitypub' ),
+				\__( 'While it is fine to have a system cron job that calls <code>wp-cron.php</code> at regular intervals, completely disabling WP-Cron may cause delays in ActivityPub functionality. If you notice delays in post publishing or reactions appearing, consider either removing this constant or ensuring you have a system cron job running frequently (every 1-5 minutes).', 'activitypub' )
+			);
+			$result['actions']        = \sprintf(
+				'<p><a href="%s" target="_blank">%s</a></p>',
+				'https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/',
+				\__( 'Learn more about setting up system cron for WordPress', 'activitypub' )
+			);
+		}
 
 		return $result;
 	}

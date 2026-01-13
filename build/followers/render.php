@@ -45,8 +45,13 @@ if ( is_wp_error( $user ) ) {
 	return '<!-- Followers block: `' . $user_id . '` not an active ActivityPub user -->';
 }
 
+if ( ! Actors::show_social_graph( $user_id ) ) {
+	return '<!-- Followers block: social graph is hidden for this user -->';
+}
+
 $_per_page     = absint( $attributes['per_page'] );
-$follower_data = Followers::get_followers_with_count( $user_id, $_per_page );
+$_show_avatars = (bool) \get_option( 'show_avatars' );
+$follower_data = Followers::query( $user_id, $_per_page );
 
 // Prepare Followers data for the Interactivity API context.
 $followers = array_map(
@@ -57,15 +62,15 @@ $followers = array_map(
 	 *
 	 * @return array
 	 */
-	function ( $follower ) {
+	static function ( $follower ) {
 		$actor    = Remote_Actors::get_actor( $follower );
 		$username = $actor->get_preferred_username();
 
 		return array(
 			'handle' => '@' . $username,
 			'icon'   => $actor->get_icon(),
-			'name'   => $actor->get_name() ?? $username,
-			'url'    => object_to_uri( $actor->get_url() ) ?? $actor->get_id(),
+			'name'   => $actor->get_name() ?: $username,
+			'url'    => object_to_uri( $actor->get_url() ) ?: $actor->get_id(),
 		);
 	},
 	$follower_data['followers']
@@ -115,6 +120,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						rel="external noreferrer noopener"
 						data-wp-bind--title="context.item.handle">
 
+						<?php if ( $_show_avatars ) : ?>
 						<img
 							data-wp-bind--src="context.item.icon.url"
 							data-wp-on--error="callbacks.setDefaultAvatar"
@@ -124,6 +130,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							width="48"
 							height="48"
 						>
+						<?php endif; ?>
 
 						<div class="follower-info">
 							<span class="follower-name" data-wp-text="context.item.name"></span>

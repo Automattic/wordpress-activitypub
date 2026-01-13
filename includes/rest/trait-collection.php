@@ -15,6 +15,15 @@ namespace Activitypub\Rest;
  */
 trait Collection {
 	/**
+	 * The JSON-LD context for ActivityPub collections.
+	 *
+	 * @var array
+	 */
+	private $json_ld_context = array(
+		'https://www.w3.org/ns/activitystreams',
+	);
+
+	/**
 	 * Prepares a collection response by adding navigation links and handling pagination.
 	 *
 	 * Adds first, last, next, and previous page links to a collection response
@@ -38,9 +47,10 @@ trait Collection {
 			);
 		}
 
-		// No need to add links if there's only one page.
-		if ( 1 >= $max_pages && null === $page ) {
-			return $response;
+		// Set the JSON-LD context if not already set.
+		if ( empty( $response['@context'] ) ) {
+			// Ensure the context is the first element in the response.
+			$response = array( '@context' => $this->json_ld_context ) + $response;
 		}
 
 		$response['id']    = \add_query_arg( $request->get_query_params(), $response['id'] );

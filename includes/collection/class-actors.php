@@ -222,13 +222,6 @@ class Actors {
 			// Check for http(s) URIs.
 			case 'http':
 			case 'https':
-				// Check locally stored remote Actor.
-				$post = Remote_Actors::get_by_uri( $uri );
-
-				if ( ! \is_wp_error( $post ) ) {
-					return $post->ID;
-				}
-
 				// Check for http(s)://blog.example.com/@username.
 				$resource_path = \wp_parse_url( $uri, PHP_URL_PATH );
 
@@ -377,38 +370,45 @@ class Actors {
 	/**
 	 * Get all active actors, including the Blog actor if enabled.
 	 *
-	 * @return array Array of User and Blog actor objects.
+	 * @return int[] Array of User and Blog actor IDs.
 	 */
-	public static function get_all() {
-		$return = array();
+	public static function get_all_ids() {
+		$user_ids = array();
 
 		if ( ! is_user_type_disabled( 'user' ) ) {
-			$users = \get_users(
+			$user_ids = \get_users(
 				array(
+					'fields'         => 'ID',
 					'capability__in' => array( 'activitypub' ),
 				)
 			);
-
-			foreach ( $users as $user ) {
-				$actor = User::from_wp_user( $user->ID );
-
-				if ( \is_wp_error( $actor ) ) {
-					continue;
-				}
-
-				$return[] = $actor;
-			}
 		}
 
 		// Also include the blog actor if active.
 		if ( ! is_user_type_disabled( 'blog' ) ) {
-			$blog_actor = self::get_by_id( self::BLOG_USER_ID );
-			if ( ! \is_wp_error( $blog_actor ) ) {
-				$return[] = $blog_actor;
-			}
+			$user_ids[] = self::BLOG_USER_ID;
 		}
 
-		return $return;
+		return array_map( 'intval', $user_ids );
+	}
+
+	/**
+	 * Get all active actors, including the Blog actor if enabled.
+	 *
+	 * @return Actor[] Array of User and Blog actor objects.
+	 */
+	public static function get_all() {
+		$user_ids = self::get_all_ids();
+
+		$actors = array_map( array( self::class, 'get_by_id' ), $user_ids );
+
+		// Filter out any WP_Error instances.
+		return array_filter(
+			$actors,
+			static function ( $actor ) {
+				return ! \is_wp_error( $actor );
+			}
+		);
 	}
 
 	/**

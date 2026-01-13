@@ -822,31 +822,27 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 */
 	public function test_webfinger_actor_resolution() {
 		// Mock webfinger resolution to return a URL.
-		add_filter(
-			'pre_http_request',
-			function ( $response, $args, $url ) {
-				if ( strpos( $url, '/.well-known/webfinger' ) !== false ) {
-					return array(
-						'response' => array( 'code' => 200 ),
-						'body'     => wp_json_encode(
-							array(
-								'subject' => 'acct:spammer@bad.example.com',
-								'links'   => array(
-									array(
-										'rel'  => 'self',
-										'type' => 'application/activity+json',
-										'href' => 'https://bad.example.com/@spammer',
-									),
+		$mock_callback = function ( $response, $args, $url ) {
+			if ( strpos( $url, '/.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => wp_json_encode(
+						array(
+							'subject' => 'acct:spammer@bad.example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => 'https://bad.example.com/@spammer',
 								),
-							)
-						),
-					);
-				}
-				return $response;
-			},
-			10,
-			3
-		);
+							),
+						)
+					),
+				);
+			}
+			return $response;
+		};
+		add_filter( 'pre_http_request', $mock_callback, 10, 3 );
 
 		// Block the resolved URL.
 		Moderation::add_site_block( 'domain', 'bad.example.com' );
@@ -869,7 +865,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 		// Clean up.
 		Moderation::remove_site_block( 'domain', 'bad.example.com' );
-		remove_all_filters( 'pre_http_request' );
+		remove_filter( 'pre_http_request', $mock_callback );
 	}
 
 	/**

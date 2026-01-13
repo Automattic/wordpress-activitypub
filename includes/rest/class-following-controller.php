@@ -7,11 +7,11 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 
-use function Activitypub\get_context;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 
@@ -101,20 +101,24 @@ class Following_Controller extends Actors_Controller {
 		$page     = $request->get_param( 'page' ) ?? 1;
 		$context  = $request->get_param( 'context' );
 
-		$data = Following::get_following_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
+		$data = Following::query( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
 		$response = array(
-			'@context'   => get_context(),
 			'id'         => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user_id ) ),
 			'generator'  => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'       => 'OrderedCollection',
 			'totalItems' => $data['total'],
 		);
 
+		if ( 'full' === $context ) {
+			// Ensure the context is the first element in the response.
+			$response = array( '@context' => Base_Object::JSON_LD_CONTEXT ) + $response;
+		}
+
 		if ( Actors::show_social_graph( $user_id ) ) {
 			$response['orderedItems'] = \array_filter(
 				\array_map(
-					function ( $item ) use ( $context ) {
+					static function ( $item ) use ( $context ) {
 						if ( 'full' === $context ) {
 							$actor = Remote_Actors::get_actor( $item );
 							if ( \is_wp_error( $actor ) ) {

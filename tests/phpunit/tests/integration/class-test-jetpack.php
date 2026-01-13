@@ -68,13 +68,13 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		// Remove any filters that may have been added during tests.
-		remove_all_filters( 'jetpack_sync_post_meta_whitelist' );
-		remove_all_filters( 'jetpack_sync_comment_meta_whitelist' );
-		remove_all_filters( 'jetpack_sync_whitelisted_comment_types' );
-		remove_all_filters( 'jetpack_json_api_comment_types' );
-		remove_all_filters( 'jetpack_api_include_comment_types_count' );
-		remove_all_filters( 'activitypub_following_row_actions' );
-		remove_all_filters( 'pre_option_activitypub_following_ui' );
+		\remove_filter( 'jetpack_sync_post_meta_whitelist', array( 'Activitypub\Integration\Jetpack', 'add_sync_meta' ) );
+		\remove_filter( 'jetpack_sync_comment_meta_whitelist', array( 'Activitypub\Integration\Jetpack', 'add_sync_comment_meta' ) );
+		\remove_filter( 'jetpack_sync_whitelisted_comment_types', array( 'Activitypub\Integration\Jetpack', 'add_comment_types' ) );
+		\remove_filter( 'jetpack_json_api_comment_types', array( 'Activitypub\Integration\Jetpack', 'add_comment_types' ) );
+		\remove_filter( 'jetpack_api_include_comment_types_count', array( 'Activitypub\Integration\Jetpack', 'add_comment_types' ) );
+		\remove_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ), 20 );
+		\remove_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) );
 
 		parent::tear_down();
 	}
@@ -91,10 +91,10 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		// Verify Manager class is not yet loaded.
 		$this->assertFalse( class_exists( '\Automattic\Jetpack\Connection\Manager' ), 'Manager class should not exist yet' );
 
-		// Ensure hooks are not already registered.
+		// Ensure Jetpack-specific hooks are not already registered.
 		$this->assertFalse( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
-		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
+		$this->assertFalse( has_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ) ) );
+		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) ) );
 
 		// Initialize Jetpack integration without Manager class loaded.
 		Jetpack::init();
@@ -107,8 +107,8 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$this->assertTrue( has_filter( 'jetpack_api_include_comment_types_count' ) );
 
 		// Following UI hooks should NOT be registered without Manager class.
-		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
+		$this->assertFalse( has_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ) ) );
+		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) ) );
 	}
 
 	/**
@@ -120,10 +120,10 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		// Load mock Manager class.
 		$this->load_mock_manager();
 
-		// Ensure hooks are not already registered.
+		// Ensure Jetpack-specific hooks are not already registered.
 		$this->assertFalse( has_filter( 'jetpack_sync_post_meta_whitelist' ) );
-		$this->assertFalse( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui' ) );
+		$this->assertFalse( has_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ) ) );
+		$this->assertFalse( has_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) ) );
 
 		// Initialize Jetpack integration with Manager class.
 		Jetpack::init();
@@ -136,8 +136,9 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$this->assertTrue( has_filter( 'jetpack_api_include_comment_types_count' ) );
 
 		// Following UI hooks should also be registered (mock Manager returns connected).
-		$this->assertTrue( has_filter( 'activitypub_following_row_actions' ) );
-		$this->assertTrue( has_filter( 'pre_option_activitypub_following_ui' ) );
+		// has_filter() returns the priority (int) when callback is found, false otherwise.
+		$this->assertNotFalse( has_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ) ) );
+		$this->assertNotFalse( has_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) ) );
 	}
 
 	/**
@@ -337,19 +338,16 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		}
 
 		// Mock the feed ID meta if provided.
+		$metadata_filter = null;
 		if ( false !== $feed_id ) {
-			add_filter(
-				'get_post_metadata',
-				function ( $value, $object_id, $meta_key ) use ( $item, $feed_id ) {
-					if ( $object_id === $item['id'] && '_activitypub_actor_feed' === $meta_key ) {
-						// Return as array of values (WordPress expects this format).
-						return array( array( 'feed_id' => $feed_id ) );
-					}
-					return $value;
-				},
-				10,
-				3
-			);
+			$metadata_filter = function ( $value, $object_id, $meta_key ) use ( $item, $feed_id ) {
+				if ( $object_id === $item['id'] && '_activitypub_actor_feed' === $meta_key ) {
+					// Return as array of values (WordPress expects this format).
+					return array( array( 'feed_id' => $feed_id ) );
+				}
+				return $value;
+			};
+			add_filter( 'get_post_metadata', $metadata_filter, 10, 3 );
 		}
 
 		$updated_actions = Jetpack::add_reader_link( $original_actions, $item );
@@ -369,6 +367,8 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		}
 
 		// Clean up filters.
-		remove_all_filters( 'get_post_metadata' );
+		if ( null !== $metadata_filter ) {
+			\remove_filter( 'get_post_metadata', $metadata_filter );
+		}
 	}
 }

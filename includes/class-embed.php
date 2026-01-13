@@ -56,9 +56,11 @@ class Embed {
 		// If we don't have an avatar URL, but we have an author URL, try to fetch it.
 		if ( ! $avatar_url && $author_url ) {
 			$author = Http::get_remote_object( $author_url );
-			if ( ! is_wp_error( $author ) ) {
+			if ( is_wp_error( $author ) ) {
+				$author = array();
+			} else {
 				$avatar_url  = $author['icon']['url'] ?? '';
-				$author_name = $author['name'] ?? $author_name;
+				$author_name = empty( $author['name'] ) ? $author_name : $author['name'];
 			}
 		}
 

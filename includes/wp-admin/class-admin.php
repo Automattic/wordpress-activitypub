@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Blocklist_Subscriptions;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Comment;
@@ -75,6 +76,7 @@ class Admin {
 		\add_action( 'wp_dashboard_setup', array( self::class, 'add_dashboard_widgets' ) );
 
 		\add_action( 'wp_ajax_activitypub_moderation_settings', array( self::class, 'ajax_moderation_settings' ) );
+		\add_action( 'wp_ajax_activitypub_blocklist_subscription', array( self::class, 'ajax_blocklist_subscription' ) );
 	}
 
 	/**
@@ -273,7 +275,29 @@ class Admin {
 			false
 		);
 
-		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
+		// Register and enqueue command palette integration.
+		if ( user_can_activitypub( \get_current_user_id() ) || \current_user_can( 'manage_options' ) ) {
+			$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/command-palette/plugin.asset.php';
+			wp_enqueue_script(
+				'activitypub-command-palette',
+				plugins_url( 'build/command-palette/plugin.js', ACTIVITYPUB_PLUGIN_FILE ),
+				$asset_data['dependencies'],
+				$asset_data['version'],
+				true
+			);
+
+			wp_localize_script(
+				'activitypub-command-palette',
+				'activitypubCommandPalette',
+				array(
+					'followingEnabled' => '1' === \get_option( 'activitypub_following_ui', '0' ),
+					'actorMode'        => \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ),
+					'canManageOptions' => \current_user_can( 'manage_options' ),
+				)
+			);
+		}
+
+		if ( false !== strpos( $hook_suffix, 'activitypub' ) && 'dashboard_page_activitypub-social-web' !== $hook_suffix ) {
 			wp_enqueue_style(
 				'activitypub-admin-styles',
 				plugins_url(
@@ -320,9 +344,15 @@ class Admin {
 		\wp_enqueue_script(
 			'activitypub-moderation-admin',
 			ACTIVITYPUB_PLUGIN_URL . 'assets/js/activitypub-moderation-admin.js',
-			array( 'jquery', 'wp-util', 'wp-a11y' ),
+			array( 'jquery', 'wp-util', 'wp-a11y', 'wp-i18n' ),
 			ACTIVITYPUB_PLUGIN_VERSION,
 			true
+		);
+
+		\wp_set_script_translations(
+			'activitypub-moderation-admin',
+			'activitypub',
+			ACTIVITYPUB_PLUGIN_DIR . 'languages'
 		);
 
 		// Localize script with translations and nonces.
@@ -330,12 +360,7 @@ class Admin {
 			'activitypub-moderation-admin',
 			'activitypubModerationL10n',
 			array(
-				'enterValue'        => \__( 'Please enter a value to block.', 'activitypub' ),
-				'addBlockFailed'    => \__( 'Failed to add block.', 'activitypub' ),
-				'removeBlockFailed' => \__( 'Failed to remove block.', 'activitypub' ),
-				'alreadyBlocked'    => \__( 'This term is already blocked.', 'activitypub' ),
-				'invalidDomain'     => \__( 'Please enter a valid domain (e.g., example.com).', 'activitypub' ),
-				'nonce'             => \wp_create_nonce( 'activitypub_moderation_settings' ),
+				'nonce' => \wp_create_nonce( 'activitypub_moderation_settings' ),
 			)
 		);
 	}
@@ -380,7 +405,7 @@ class Admin {
 		// Disable the edit_post capability for federated posts.
 		\add_filter(
 			'user_has_cap',
-			function ( $all_caps, $caps, $arg ) {
+			static function ( $all_caps, $caps, $arg ) {
 				if ( 'edit_post' !== $arg[0] ) {
 					return $all_caps;
 				}
@@ -406,22 +431,12 @@ class Admin {
 	 * Add ActivityPub specific actions/filters to the post list view.
 	 */
 	public static function list_posts() {
-		// Show only the user's extra fields.
-		\add_action(
-			'pre_get_posts',
-			function ( $query ) {
-				if ( $query->get( 'post_type' ) === 'ap_extrafield' ) {
-					$query->set( 'author', get_current_user_id() );
-				}
-			}
-		);
-
 		// Remove all views for the extra fields.
 		$screen_id = get_current_screen()->id;
 
 		add_filter(
 			"views_{$screen_id}",
-			function ( $views ) {
+			static function ( $views ) {
 				if ( Extra_Fields::is_extra_fields_post_type( get_current_screen()->post_type ) ) {
 					return array();
 				}
@@ -900,7 +915,7 @@ class Admin {
 		$tabs = \get_current_screen()->get_help_tabs();
 		$ids  = \array_values( \wp_list_pluck( $tabs, 'id' ) );
 		$ids  = \array_map(
-			function ( $id ) {
+			static function ( $id ) {
 				return '#tab-link-' . $id;
 			},
 			$ids
@@ -1055,6 +1070,53 @@ class Admin {
 			\wp_send_json_success();
 		} else {
 			\wp_send_json_error( array( 'message' => $error_message ) );
+		}
+	}
+
+	/**
+	 * AJAX handler for blocklist subscriptions (add/remove).
+	 */
+	public static function ajax_blocklist_subscription() {
+		$operation = \sanitize_text_field( \wp_unslash( $_POST['operation'] ?? '' ) );
+		$url       = \sanitize_url( \wp_unslash( $_POST['url'] ?? '' ) );
+
+		// Validate required parameters.
+		if ( ! \in_array( $operation, array( 'add', 'remove' ), true ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid operation.', 'activitypub' ) ) );
+		}
+
+		if ( empty( $url ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid URL.', 'activitypub' ) ) );
+		}
+
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_moderation_settings' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
+		if ( 'add' === $operation ) {
+			// First add the subscription (validates URL format).
+			if ( ! Blocklist_Subscriptions::add( $url ) ) {
+				\wp_send_json_error( array( 'message' => \__( 'Invalid URL.', 'activitypub' ) ) );
+			}
+
+			// Then sync to validate it works and import domains.
+			$result = Blocklist_Subscriptions::sync( $url );
+			if ( false === $result ) {
+				// Remove the subscription since sync failed.
+				Blocklist_Subscriptions::remove( $url );
+				\wp_send_json_error( array( 'message' => \__( 'Failed to fetch blocklist. The URL may be unreachable or not contain valid domains.', 'activitypub' ) ) );
+			}
+
+			\wp_send_json_success();
+		} elseif ( Blocklist_Subscriptions::remove( $url ) ) {
+			\wp_send_json_success();
+		} else {
+			\wp_send_json_error( array( 'message' => \__( 'Failed to remove subscription.', 'activitypub' ) ) );
 		}
 	}
 }

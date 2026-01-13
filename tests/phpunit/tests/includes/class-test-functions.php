@@ -450,12 +450,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		add_filter( 'activitypub_is_post_disabled', '__return_true' );
 		$this->assertTrue( \Activitypub\is_post_disabled( $public_post_id ) );
 		remove_filter( 'activitypub_is_post_disabled', '__return_true' );
-
-		// Clean up.
-		wp_delete_post( $public_post_id, true );
-		wp_delete_post( $local_post_id, true );
-		wp_delete_post( $private_post_id, true );
-		wp_delete_post( $password_post_id, true );
 	}
 
 	/**
@@ -469,14 +463,10 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		add_post_meta( $visible_private_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 		$this->assertTrue( \Activitypub\is_post_disabled( $visible_private_post_id ) );
 
-		wp_delete_post( $visible_private_post_id, true );
-
 		$visible_local_post_id = self::factory()->post->create();
 
 		add_post_meta( $visible_local_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 		$this->assertTrue( \Activitypub\is_post_disabled( $visible_local_post_id ) );
-
-		wp_delete_post( $visible_local_post_id, true );
 	}
 
 	/**
@@ -592,7 +582,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			$desc
 		);
 
-		\wp_delete_post( $post_id, true );
 		\remove_shortcode( 'activitypub_test_shortcode' );
 	}
 
@@ -816,9 +805,6 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertEquals( 'Follow', $activity->get_type() );
 		$this->assertEquals( 'https://example.org/?author=1', get_post_meta( $id, '_activitypub_object_id', true ) );
-
-		// Delete the Outbox item.
-		wp_delete_post( $id );
 	}
 
 	/**
@@ -1003,7 +989,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 						'monkey' => 'https://www.w3.org/ns/activitystreams#Public',
 					),
 				),
-				false,
+				true,
 			),
 			array(
 				array(
@@ -1334,13 +1320,13 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
 				'description' => 'Public visibility via as:Public identifier',
 			),
-			// Empty activity.
+			// Empty activity - no recipients means public.
 			array(
 				'activity'    => array(
 					'type' => 'Create',
 				),
-				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
-				'description' => 'Empty activity defaults to private',
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				'description' => 'Empty activity (no recipients) is treated as public',
 			),
 		);
 	}
@@ -1405,5 +1391,331 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 */
 	public function test_camel_to_snake_case( $original, $expected ) {
 		$this->assertSame( $expected, \Activitypub\camel_to_snake_case( $original ) );
+	}
+
+	/**
+	 * Data provider for esc_hashtag tests.
+	 *
+	 * @return array Test cases with input and expected output.
+	 */
+	public function esc_hashtag_provider() {
+		return array(
+			'simple_word'              => array( 'test', '#test' ),
+			'word_with_spaces'         => array( 'test tag', '#testTag' ),
+			'multiple_spaces'          => array( 'test  multiple   spaces', '#testMultipleSpaces' ),
+			'with_special_chars'       => array( 'test@tag!', '#testTag' ),
+			'with_underscores'         => array( 'test_tag', '#testTag' ),
+			'with_capitals'            => array( 'TestTag', '#TestTag' ),
+			'with_capitals_underscore' => array( 'Test_Tag', '#TestTag' ),
+			'with_leading_hashtag'     => array( '#test', '#Test' ),
+			'with_multiple_hashtags'   => array( '##test', '#Test' ),
+			'with_leading_hyphen'      => array( '-test', '#Test' ),
+			'with_trailing_hyphen'     => array( 'test-', '#test' ),
+			'with_leading_underscore'  => array( '_test', '#Test' ),
+			'with_trailing_underscore' => array( 'test_', '#test' ),
+			'mixed_case'               => array( 'TestTag', '#TestTag' ),
+			'with_numbers'             => array( 'test123', '#test123' ),
+			'with_unicode'             => array( 'tëst', '#tëst' ),
+			'with_unicode_spaces'      => array( 'tëst tàg', '#tëstTàg' ),
+			'german_umlauts'           => array( 'über straße', '#überStraße' ),
+			'japanese_characters'      => array( 'テスト', '#テスト' ),
+			'arabic_characters'        => array( 'اختبار', '#اختبار' ),
+			'cyrillic_characters'      => array( 'тест', '#тест' ),
+			'empty_string'             => array( '', '#' ),
+			'only_spaces'              => array( '   ', '#' ),
+			'only_special_chars'       => array( '@!#$%', '#' ),
+			'hyphenated_words'         => array( 'foo-bar-baz', '#fooBarBaz' ),
+			'quotes'                   => array( "test'tag", '#testTag' ),
+			'double_quotes'            => array( 'test"tag', '#testTag' ),
+			'ampersand'                => array( 'test&tag', '#testTag' ),
+			'html_entities'            => array( 'test&amp;tag', '#testTag' ),
+			'leading_trailing_spaces'  => array( '  test  ', '#Test' ),
+			'multiple_hyphens'         => array( 'test--tag', '#testTag' ),
+			'camelCase_preservation'   => array( 'testTag', '#testTag' ),
+			'with_dots'                => array( 'test.tag', '#testTag' ),
+			'with_commas'              => array( 'test,tag', '#testTag' ),
+			'with_semicolons'          => array( 'test;tag', '#testTag' ),
+			'with_slashes'             => array( 'test/tag', '#testTag' ),
+			'with_backslashes'         => array( 'test\\tag', '#testTag' ),
+			'with_parentheses'         => array( 'test(tag)', '#testTag' ),
+			'with_brackets'            => array( 'test[tag]', '#testTag' ),
+			'with_braces'              => array( 'test{tag}', '#testTag' ),
+			'emoji_mixed'              => array( 'test 😀 tag', '#testTag' ),
+			'chinese_characters'       => array( '测试 标签', '#测试标签' ),
+			'korean_characters'        => array( '테스트 태그', '#테스트태그' ),
+			'greek_characters'         => array( 'δοκιμή', '#δοκιμή' ),
+			'hebrew_characters'        => array( 'בדיקה', '#בדיקה' ),
+			'thai_characters'          => array( 'ทดสอบ', '#ทดสอบ' ),
+		);
+	}
+
+	/**
+	 * Test esc_hashtag function.
+	 *
+	 * @dataProvider esc_hashtag_provider
+	 * @covers \Activitypub\esc_hashtag
+	 *
+	 * @param string $input    The input string.
+	 * @param string $expected The expected hashtag output.
+	 */
+	public function test_esc_hashtag( $input, $expected ) {
+		$result = \Activitypub\esc_hashtag( $input );
+		$this->assertSame( $expected, $result );
+	}
+
+	/**
+	 * Test esc_hashtag filter hook.
+	 *
+	 * @covers \Activitypub\esc_hashtag
+	 */
+	public function test_esc_hashtag_filter() {
+		$filter_callback = function ( $hashtag, $input ) {
+			if ( 'custom' === $input ) {
+				return '#CustomTag';
+			}
+			return $hashtag;
+		};
+
+		\add_filter( 'activitypub_esc_hashtag', $filter_callback, 10, 2 );
+
+		$result = \Activitypub\esc_hashtag( 'custom' );
+		$this->assertSame( '#CustomTag', $result );
+
+		\remove_filter( 'activitypub_esc_hashtag', $filter_callback );
+	}
+
+	/**
+	 * Test esc_hashtag with HTML special characters.
+	 *
+	 * @covers \Activitypub\esc_hashtag
+	 */
+	public function test_esc_hashtag_html_escaping() {
+		$result = \Activitypub\esc_hashtag( '<script>alert("xss")</script>' );
+		$this->assertStringNotContainsString( '<script>', $result );
+		$this->assertStringNotContainsString( 'alert', $result );
+		// The result should be HTML-escaped.
+		$this->assertStringStartsWith( '#', $result );
+	}
+
+	/**
+	 * Test esc_hashtag with quoted strings.
+	 *
+	 * @covers \Activitypub\esc_hashtag
+	 */
+	public function test_esc_hashtag_with_quotes() {
+		// Test single quotes.
+		$result = \Activitypub\esc_hashtag( "test's tag" );
+		$this->assertSame( '#testSTag', $result );
+
+		// Test double quotes.
+		$result = \Activitypub\esc_hashtag( 'test"s tag' );
+		$this->assertSame( '#testSTag', $result );
+
+		// Test HTML entities for quotes.
+		$result = \Activitypub\esc_hashtag( 'test&#039;s tag' );
+		$this->assertSame( '#testSTag', $result );
+	}
+
+	/**
+	 * Test is_activity_reply function with inReplyTo.
+	 *
+	 * @covers \Activitypub\is_activity_reply
+	 */
+	public function test_is_activity_reply_with_in_reply_to() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => 'This is a reply',
+				'inReplyTo' => 'https://example.com/post/123',
+			),
+		);
+
+		$this->assertTrue( \Activitypub\is_activity_reply( $activity ) );
+	}
+
+	/**
+	 * Test is_activity_reply returns false for non-reply.
+	 *
+	 * @covers \Activitypub\is_activity_reply
+	 */
+	public function test_is_activity_reply_returns_false_for_non_reply() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Just a regular post',
+			),
+		);
+
+		$this->assertFalse( \Activitypub\is_activity_reply( $activity ) );
+	}
+
+	/**
+	 * Test is_quote_activity function with quote property.
+	 *
+	 * @covers \Activitypub\is_quote_activity
+	 */
+	public function test_is_quote_activity_with_quote() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p class="quote-inline">RE: <a href="https://example.com/post">Post</a></p><p>My comment</p>',
+				'quote'   => 'https://example.com/post',
+			),
+		);
+
+		$this->assertTrue( \Activitypub\is_quote_activity( $activity ) );
+	}
+
+	/**
+	 * Test is_quote_activity function with quoteUrl property.
+	 *
+	 * @covers \Activitypub\is_quote_activity
+	 */
+	public function test_is_quote_activity_with_quote_url() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'     => 'Note',
+				'content'  => '<p>My comment</p>',
+				'quoteUrl' => 'https://example.com/post',
+			),
+		);
+
+		$this->assertTrue( \Activitypub\is_quote_activity( $activity ) );
+	}
+
+	/**
+	 * Test is_quote_activity function with quoteUri property.
+	 *
+	 * @covers \Activitypub\is_quote_activity
+	 */
+	public function test_is_quote_activity_with_quote_uri() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'     => 'Note',
+				'content'  => '<p>My comment</p>',
+				'quoteUri' => 'https://example.com/post',
+			),
+		);
+
+		$this->assertTrue( \Activitypub\is_quote_activity( $activity ) );
+	}
+
+	/**
+	 * Test is_quote_activity function with _misskey_quote property.
+	 *
+	 * @covers \Activitypub\is_quote_activity
+	 */
+	public function test_is_quote_activity_with_misskey_quote() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'           => 'Note',
+				'content'        => '<p>My comment</p>',
+				'_misskey_quote' => 'https://example.com/post',
+			),
+		);
+
+		$this->assertTrue( \Activitypub\is_quote_activity( $activity ) );
+	}
+
+	/**
+	 * Test is_quote_activity returns false for non-quote.
+	 *
+	 * @covers \Activitypub\is_quote_activity
+	 */
+	public function test_is_quote_activity_returns_false_for_non_quote() {
+		$activity = array(
+			'type'   => 'Create',
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Just a regular post',
+			),
+		);
+
+		$this->assertFalse( \Activitypub\is_quote_activity( $activity ) );
+	}
+
+	/**
+	 * Test is_ap_post function with ap_post post type.
+	 *
+	 * @covers \Activitypub\is_ap_post
+	 */
+	public function test_is_ap_post_with_ap_post_type() {
+		$ap_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'ap_post',
+				'post_title'   => 'Test AP Post',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$this->assertTrue( \Activitypub\is_ap_post( $ap_post_id ), 'Should return true for ap_post post type' );
+		$this->assertTrue( \Activitypub\is_ap_post( get_post( $ap_post_id ) ), 'Should return true when passed WP_Post object' );
+	}
+
+	/**
+	 * Test is_ap_post function with regular post type.
+	 *
+	 * @covers \Activitypub\is_ap_post
+	 */
+	public function test_is_ap_post_with_regular_post() {
+		$post_id = wp_insert_post(
+			array(
+				'post_type'    => 'post',
+				'post_title'   => 'Test Regular Post',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$this->assertFalse( \Activitypub\is_ap_post( $post_id ), 'Should return false for regular post' );
+		$this->assertFalse( \Activitypub\is_ap_post( get_post( $post_id ) ), 'Should return false when passed WP_Post object' );
+	}
+
+	/**
+	 * Test is_ap_post function with invalid post.
+	 *
+	 * @covers \Activitypub\is_ap_post
+	 */
+	public function test_is_ap_post_with_invalid_post() {
+		$this->assertFalse( \Activitypub\is_ap_post( 999999 ), 'Should return false for non-existent post ID' );
+		$this->assertFalse( \Activitypub\is_ap_post( null ), 'Should return false for null' );
+		$this->assertFalse( \Activitypub\is_ap_post( false ), 'Should return false for false' );
+	}
+
+	/**
+	 * Test is_ap_post function with different post types.
+	 *
+	 * @covers \Activitypub\is_ap_post
+	 */
+	public function test_is_ap_post_with_various_post_types() {
+		// Test with page.
+		$page_id = wp_insert_post(
+			array(
+				'post_type'    => 'page',
+				'post_title'   => 'Test Page',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+			)
+		);
+		$this->assertFalse( \Activitypub\is_ap_post( $page_id ), 'Should return false for page post type' );
+
+		// Test with custom post type.
+		register_post_type( 'custom_test_type' );
+		$custom_id = wp_insert_post(
+			array(
+				'post_type'    => 'custom_test_type',
+				'post_title'   => 'Test Custom',
+				'post_content' => 'Test Content',
+				'post_status'  => 'publish',
+			)
+		);
+		$this->assertFalse( \Activitypub\is_ap_post( $custom_id ), 'Should return false for custom post type' );
 	}
 }

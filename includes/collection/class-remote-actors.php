@@ -8,11 +8,11 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Attachments;
 use Activitypub\Http;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
-use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_actor;
 use function Activitypub\object_to_uri;
 
@@ -58,6 +58,23 @@ class Remote_Actors {
 		\wp_cache_set( self::CACHE_KEY_INBOXES, $inboxes, 'activitypub' );
 
 		return $inboxes;
+	}
+
+	/**
+	 * Get an Remote Actor from the collection.
+	 *
+	 * @param int $id The object ID.
+	 *
+	 * @return \WP_Post|null The post object or null on failure.
+	 */
+	public static function get( $id ) {
+		$post = \get_post( $id );
+
+		if ( $post && self::POST_TYPE === $post->post_type ) {
+			return $post;
+		}
+
+		return null;
 	}
 
 	/**
@@ -112,6 +129,11 @@ class Remote_Actors {
 			\kses_init_filters();
 		}
 
+		// Cache the actor's avatar locally.
+		if ( ! \is_wp_error( $post_id ) ) {
+			self::cache_avatar( $post_id, $actor );
+		}
+
 		return $post_id;
 	}
 
@@ -159,6 +181,11 @@ class Remote_Actors {
 			\kses_init_filters();
 		}
 
+		// Re-cache the actor's avatar if it has changed.
+		if ( ! \is_wp_error( $post_id ) ) {
+			self::cache_avatar( $post_id, $actor );
+		}
+
 		return $post_id;
 	}
 
@@ -199,7 +226,16 @@ class Remote_Actors {
 			);
 		}
 
-		return \get_post( $post_id );
+		$post = \get_post( $post_id );
+		if ( ! $post instanceof \WP_Post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return $post;
 	}
 
 	/**
@@ -259,7 +295,16 @@ class Remote_Actors {
 			return $post_id;
 		}
 
-		return \get_post( $post_id );
+		$post = \get_post( $post_id );
+		if ( ! $post instanceof \WP_Post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return $post;
 	}
 
 	/**
@@ -283,7 +328,16 @@ class Remote_Actors {
 		);
 
 		if ( $post_id ) {
-			return \get_post( $post_id );
+			$post = \get_post( $post_id );
+			if ( ! $post instanceof \WP_Post ) {
+				return new \WP_Error(
+					'activitypub_actor_not_found',
+					\__( 'Actor not found', 'activitypub' ),
+					array( 'status' => 404 )
+				);
+			}
+
+			return $post;
 		}
 
 		$profile_uri = Webfinger::resolve( $acct );
@@ -450,6 +504,12 @@ class Remote_Actors {
 
 		if ( \is_wp_error( $actor ) ) {
 			self::add_error( $post->ID, $actor );
+
+			return $actor;
+		}
+
+		if ( ! $actor->get_webfinger() ) {
+			$actor->set_webfinger( self::get_acct( $post->ID ) );
 		}
 
 		return $actor;
@@ -483,17 +543,60 @@ class Remote_Actors {
 			);
 		}
 
+		if ( $actor->get_webfinger() ) {
+			$webfinger = Sanitize::webfinger( $actor->get_webfinger() );
+		} else {
+			$webfinger = Webfinger::uri_to_acct( $actor->get_id() );
+			$webfinger = \is_wp_error( $webfinger ) ? Webfinger::guess( $actor ) : Sanitize::webfinger( $webfinger );
+		}
+
+		/*
+		 * Temporarily remove mention/hashtag/link filters to prevent infinite recursion when
+		 * storing remote actors with mentions/hashtags in their bios.
+		 *
+		 * PROBLEM: These filters are globally registered on 'init' for all to_json() calls,
+		 * but they're designed for OUTGOING content (federation). When processing mentions in
+		 * an actor's bio during storage, the Mention filter fetches the mentioned actor, which
+		 * then processes mentions in THEIR bio, creating infinite recursion.
+		 *
+		 * SHORTCOMINGS:
+		 * - Fragile: Easy to forget when adding new storage locations (e.g., Inbox storage).
+		 * - Scattered: Same pattern would need to be repeated anywhere we store remote content.
+		 * - Race conditions: If filters are re-added/removed elsewhere, this could break.
+		 * - Not semantic: We're working around a design issue rather than fixing it.
+		 *
+		 * BETTER LONG-TERM SOLUTION:
+		 * Distinguish between "incoming" (storage) and "outgoing" (federation) contexts:
+		 * - INCOMING: Store received ActivityPub data as-is, don't process mentions/hashtags.
+		 *   (Remote_Actors::prepare_custom_post_type, Inbox storage)
+		 * - OUTGOING: Process mentions/hashtags when serving our content to other servers.
+		 *   (Dispatcher, REST API controllers, Transformers)
+		 */
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
+		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+
+		$actor_json = $actor->to_json();
+
+		// Re-add the filters.
+		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
+		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
+		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+
+		$meta_input = array(
+			'_activitypub_inbox' => $inbox,
+			'_activitypub_acct'  => $webfinger,
+		);
+
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
-			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?? $actor->get_preferred_username() ) ),
+			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?: $actor->get_preferred_username() ) ),
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,
-			'post_content' => \wp_slash( $actor->to_json() ),
+			'post_content' => \wp_slash( $actor_json ),
 			'post_excerpt' => \wp_kses( \wp_slash( (string) $actor->get_summary() ), 'user_description' ),
 			'post_status'  => 'publish',
-			'meta_input'   => array(
-				'_activitypub_inbox' => $inbox,
-			),
+			'meta_input'   => $meta_input,
 		);
 	}
 
@@ -515,7 +618,7 @@ class Remote_Actors {
 
 		// If it's an email-like webfinger address, resolve it.
 		if ( \filter_var( $actor, FILTER_VALIDATE_EMAIL ) ) {
-			$resolved = \Activitypub\Webfinger::resolve( $actor );
+			$resolved = Webfinger::resolve( $actor );
 			return \is_wp_error( $resolved ) ? null : object_to_uri( $resolved );
 		}
 
@@ -535,7 +638,14 @@ class Remote_Actors {
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_public_key( $key_id ) {
-		$actor = get_remote_metadata_by_actor( \strip_fragment_from_url( $key_id ) );
+		$actor = self::get_by_uri( \strip_fragment_from_url( $key_id ) );
+
+		if ( \is_wp_error( $actor ) ) {
+			$actor = Http::get_remote_object( $key_id );
+		} else {
+			$actor = \json_decode( $actor->post_content, true );
+		}
+
 		if ( \is_wp_error( $actor ) ) {
 			return new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
 		}
@@ -576,8 +686,12 @@ class Remote_Actors {
 		$acct = Webfinger::uri_to_acct( $post->guid );
 
 		if ( \is_wp_error( $acct ) ) {
-			$actor = self::get_actor( $post );
-			$acct  = Webfinger::guess( $actor );
+			$actor = Actor::init_from_json( $post->post_content );
+			if ( \is_wp_error( $actor ) ) {
+				return '';
+			}
+
+			$acct = Webfinger::guess( $actor );
 		}
 
 		$acct = Sanitize::webfinger( $acct );
@@ -585,5 +699,70 @@ class Remote_Actors {
 		\update_post_meta( $id, '_activitypub_acct', $acct );
 
 		return $acct;
+	}
+
+	/**
+	 * Get the avatar URL for a remote actor.
+	 *
+	 * Returns the locally cached avatar URL if available, otherwise falls back
+	 * to the default avatar.
+	 *
+	 * @param int $id The ID of the remote actor post.
+	 *
+	 * @return string The avatar URL or a default one if not found.
+	 */
+	public static function get_avatar_url( $id ) {
+		$default_avatar_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
+
+		$avatar_url = \get_post_meta( $id, '_activitypub_avatar_url', true );
+		if ( $avatar_url ) {
+			return $avatar_url;
+		}
+
+		// If not found in meta, try to extract from post_content JSON and cache it.
+		$post = \get_post( $id );
+		if ( ! $post || empty( $post->post_content ) ) {
+			return $default_avatar_url;
+		}
+
+		$actor_data = \json_decode( $post->post_content, true );
+		if ( empty( $actor_data['icon'] ) ) {
+			\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $default_avatar_url ) );
+
+			return $default_avatar_url;
+		}
+
+		return self::cache_avatar( $id, $actor_data );
+	}
+
+	/**
+	 * Cache a remote actor's avatar locally.
+	 *
+	 * Downloads the avatar image, optimizes it (resize/WebP), and stores it locally.
+	 *
+	 * @param int                $post_id The actor post ID.
+	 * @param Actor|array|object $actor   The actor object or data array.
+	 *
+	 * @return string|null The cached avatar URL, or null if no avatar.
+	 */
+	private static function cache_avatar( $post_id, $actor ) {
+		$data              = $actor instanceof Actor ? $actor->to_array() : (array) $actor;
+		$remote_avatar_url = object_to_uri( $data['icon'] ?? null );
+
+		if ( empty( $remote_avatar_url ) ) {
+			// No avatar to save, clean up any existing avatar.
+			Attachments::delete_actors_directory( $post_id );
+			\delete_post_meta( $post_id, '_activitypub_avatar_url' );
+			return null;
+		}
+
+		// Download and save the avatar locally.
+		$local_url = Attachments::save_actor_avatar( $post_id, $remote_avatar_url );
+
+		// Store the local URL if caching succeeded, otherwise store the remote URL.
+		$avatar_url = $local_url ?: $remote_avatar_url;
+		\update_post_meta( $post_id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
+
+		return $avatar_url;
 	}
 }

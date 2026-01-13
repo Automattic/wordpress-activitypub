@@ -86,7 +86,7 @@ class Sanitize {
 	public static function host_list( $value ) {
 		$value = \explode( PHP_EOL, (string) $value );
 		$value = \array_map(
-			function ( $host ) {
+			static function ( $host ) {
 				$host = \trim( $host );
 				$host = \strtolower( $host );
 				$host = \set_url_scheme( $host );
@@ -181,5 +181,113 @@ class Sanitize {
 		$value = \trim( $value, '@' );
 
 		return $value;
+	}
+
+	/**
+	 * Sanitize content for ActivityPub.
+	 *
+	 * @param string $content The content to convert.
+	 *
+	 * @return string The converted content.
+	 */
+	public static function content( $content ) {
+		// Only make URLs clickable if no anchor tags exist, to avoid corrupting existing links.
+		if ( false === \strpos( $content, '<a ' ) ) {
+			$content = \make_clickable( $content );
+		}
+
+		$content = \wpautop( $content );
+		$content = \wp_kses_post( $content );
+
+		return $content;
+	}
+
+	/**
+	 * Strip whitespace between HTML tags.
+	 *
+	 * Removes newlines, carriage returns, and tabs that appear between HTML tags,
+	 * preserving whitespace within text content and preformatted elements.
+	 *
+	 * @param string $content The content to process.
+	 *
+	 * @return string The content with whitespace between tags removed.
+	 */
+	public static function strip_whitespace( $content ) {
+		return \trim( \preg_replace( '/>[\n\r\t]+</', '><', $content ) );
+	}
+
+	/**
+	 * Clean HTML for ActivityPub federation.
+	 *
+	 * Keeps all WordPress allowed tags but removes global attributes like
+	 * class, id, style, data-*, aria-* that increase payload size.
+	 *
+	 * @see https://github.com/Automattic/wordpress-activitypub/issues/2619
+	 *
+	 * @param string $content The HTML content to clean.
+	 *
+	 * @return string The cleaned HTML content.
+	 */
+	public static function clean_html( $content ) {
+		if ( empty( $content ) ) {
+			return $content;
+		}
+
+		// Start with all WordPress allowed post tags.
+		$allowed_html = \wp_kses_allowed_html( 'post' );
+
+		// Global attributes to remove from all elements.
+		$remove_attrs = array(
+			'aria-controls',
+			'aria-current',
+			'aria-describedby',
+			'aria-details',
+			'aria-expanded',
+			'aria-hidden',
+			'aria-label',
+			'aria-labelledby',
+			'aria-live',
+			'class',
+			'data-*',
+			'decoding',
+			'dir',
+			'hidden',
+			'id',
+			'lang',
+			'loading',
+			'role',
+			'style',
+			'tabindex',
+			'title',
+			'xml:lang',
+		);
+
+		/**
+		 * Filter the global attributes to remove from all elements.
+		 *
+		 * @param array $remove_attrs Global attributes to remove.
+		 */
+		$remove_attrs = \apply_filters( 'activitypub_remove_html_attributes', $remove_attrs );
+
+		// Remove global attributes from all tags.
+		foreach ( $allowed_html as $tag => $attrs ) {
+			$allowed_html[ $tag ] = \array_diff_key( $attrs, \array_flip( $remove_attrs ) );
+		}
+
+		// Re-add class and title for anchors (needed for microformats).
+		$allowed_html['a']['class'] = true;
+		$allowed_html['a']['title'] = true;
+
+		// Re-add class for spans (needed for microformats).
+		$allowed_html['span']['class'] = true;
+
+		/**
+		 * Filter the final allowed HTML for ActivityPub content.
+		 *
+		 * @param array $allowed_html The allowed HTML structure for wp_kses.
+		 */
+		$allowed_html = \apply_filters( 'activitypub_allowed_html', $allowed_html );
+
+		return \wp_kses( $content, $allowed_html, \wp_allowed_protocols() );
 	}
 }

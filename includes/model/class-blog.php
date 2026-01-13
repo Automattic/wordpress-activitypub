@@ -103,11 +103,16 @@ class Blog extends Actor {
 	/**
 	 * Get the type of the object.
 	 *
+	 * If relay mode is enabled, return "Service".
 	 * If the Blog is in "single user" mode, return "Person" instead of "Group".
 	 *
 	 * @return string The type of the object.
 	 */
 	public function get_type() {
+		if ( \get_option( 'activitypub_relay_mode', false ) ) {
+			return 'Service';
+		}
+
 		if ( is_single_user() ) {
 			return 'Person';
 		} else {
@@ -392,15 +397,9 @@ class Blog extends Actor {
 	 * @return string[]|null The endpoints.
 	 */
 	public function get_endpoints() {
-		$endpoints = null;
-
-		if ( \get_option( 'activitypub_shared_inbox' ) ) {
-			$endpoints = array(
-				'sharedInbox' => get_rest_url_by_path( 'inbox' ),
-			);
-		}
-
-		return $endpoints;
+		return array(
+			'sharedInbox' => get_rest_url_by_path( 'inbox' ),
+		);
 	}
 
 	/**

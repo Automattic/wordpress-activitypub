@@ -8,7 +8,9 @@
 namespace Activitypub\Tests\Activity;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
+use Activitypub\Transformer\Post;
 use DMS\PHPUnitExtensions\ArraySubset\Assert;
 
 /**
@@ -29,15 +31,14 @@ class Test_Activity extends \WP_UnitTestCase {
 			)
 		);
 
-		add_filter(
-			'activitypub_extract_mentions',
-			function ( $mentions ) {
-				$mentions['@alex'] = 'https://example.com/alex';
-				return $mentions;
-			}
-		);
+		$extract_mentions_filter = function ( $mentions ) {
+			$mentions['@alex'] = 'https://example.com/alex';
 
-		$activitypub_post = \Activitypub\Transformer\Post::transform( get_post( $post ) )->to_object();
+			return $mentions;
+		};
+		add_filter( 'activitypub_extract_mentions', $extract_mentions_filter );
+
+		$activitypub_post = Post::transform( get_post( $post ) )->to_object();
 
 		$activitypub_activity = new Activity();
 		$activitypub_activity->set_type( 'Create' );
@@ -46,7 +47,7 @@ class Test_Activity extends \WP_UnitTestCase {
 		$this->assertContains( \Activitypub\get_rest_url_by_path( 'actors/1/followers' ), $activitypub_activity->get_cc() );
 		$this->assertContains( 'https://example.com/alex', $activitypub_activity->get_cc() );
 
-		remove_all_filters( 'activitypub_extract_mentions' );
+		remove_filter( 'activitypub_extract_mentions', $extract_mentions_filter );
 		\wp_trash_post( $post );
 	}
 
@@ -60,7 +61,7 @@ class Test_Activity extends \WP_UnitTestCase {
 			'content' => 'Hello world!',
 		);
 
-		$object = \Activitypub\Activity\Base_Object::init_from_array( $test_array );
+		$object = Base_Object::init_from_array( $test_array );
 
 		$this->assertEquals( 'Hello world!', $object->get_content() );
 
@@ -225,8 +226,5 @@ class Test_Activity extends \WP_UnitTestCase {
 		$activity->set_object( $activity_object );
 
 		$this->assertContains( 'https://example.com/author/456', $activity->get_to() );
-
-		// Delete user.
-		\wp_delete_user( $user_id );
 	}
 }

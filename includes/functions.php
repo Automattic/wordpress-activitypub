@@ -14,6 +14,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory as Transformer_Factory;
 
@@ -21,8 +22,12 @@ use Activitypub\Transformer\Factory as Transformer_Factory;
  * Returns the ActivityPub default JSON-context.
  *
  * @return array The activitypub context.
+ *
+ * @deprecated 7.6.0 Use the respective context function instead.
  */
 function get_context() {
+	\_deprecated_function( __FUNCTION__, '7.6.0', 'Use the respective context function instead.' );
+
 	$context = Activity::JSON_LD_CONTEXT;
 
 	/**
@@ -117,7 +122,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) { // phpcs:ignor
  * @return array The followers.
  */
 function get_followers( $user_id ) {
-	return Followers::get_followers( $user_id );
+	return Followers::get_many( $user_id );
 }
 
 /**
@@ -128,7 +133,7 @@ function get_followers( $user_id ) {
  * @return int The number of followers.
  */
 function count_followers( $user_id ) {
-	return Followers::count_followers( $user_id );
+	return Followers::count( $user_id );
 }
 
 /**
@@ -287,13 +292,13 @@ function snake_to_camel_case( $input ) {
 function esc_hashtag( $input ) {
 
 	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
-	// Remove all characters that are not letters, numbers, or underscores.
-	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}_]+/u', '_', $hashtag );
+	// Remove all characters that are not letters, numbers, or hyphens.
+	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
 
-	// Capitalize every letter that is preceded by an underscore.
+	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = preg_replace_callback(
-		'/_(.)/',
-		function ( $matches ) {
+		'/-+(.)/',
+		static function ( $matches ) {
 			return strtoupper( $matches[1] );
 		},
 		$hashtag
@@ -301,6 +306,7 @@ function esc_hashtag( $input ) {
 
 	// Add a hashtag to the beginning of the string.
 	$hashtag = ltrim( $hashtag, '#' );
+	$hashtag = trim( $hashtag, '-' );
 	$hashtag = '#' . $hashtag;
 
 	/**
@@ -368,6 +374,24 @@ function is_post_disabled( $post ) {
 	 * @param \WP_Post $post     The post object.
 	 */
 	return \apply_filters( 'activitypub_is_post_disabled', $disabled, $post );
+}
+
+/**
+ * Check if a post is an ActivityPub post.
+ *
+ * @param mixed $post The post object or ID.
+ *
+ * @return boolean True if the post is an ActivityPub post, false otherwise.
+ */
+function is_ap_post( $post ) {
+	$post = \get_post( $post );
+
+	if ( ! $post ) {
+		return false;
+	}
+
+	// Check for ap_post post type.
+	return Posts::POST_TYPE === $post->post_type;
 }
 
 /**
@@ -608,6 +632,12 @@ function get_activity_visibility( $activity ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
 	}
 
+	// Activities with no recipients are treated as public.
+	$recipients = extract_recipients_from_activity( $activity );
+	if ( empty( $recipients ) ) {
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+	}
+
 	return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 }
 
@@ -627,6 +657,10 @@ function is_activity_public( $data ) {
 
 	$recipients = extract_recipients_from_activity( $data );
 
+	if ( empty( $recipients ) ) {
+		return true;
+	}
+
 	return ! empty( array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
 }
 
@@ -639,6 +673,22 @@ function is_activity_public( $data ) {
  */
 function is_activity_reply( $data ) {
 	return ! empty( $data['object']['inReplyTo'] );
+}
+
+/**
+ * Check if passed Activity is a quote.
+ *
+ * Checks for quote properties: quote, quoteUrl, quoteUri, or _misskey_quote.
+ *
+ * @param array $data The Activity object as array.
+ *
+ * @return boolean True if a quote, false if not.
+ */
+function is_quote_activity( $data ) {
+	return ! empty( $data['object']['quote'] ) ||
+		! empty( $data['object']['quoteUrl'] ) ||
+		! empty( $data['object']['quoteUri'] ) ||
+		! empty( $data['object']['_misskey_quote'] );
 }
 
 /**
@@ -746,7 +796,7 @@ function url_to_commentid( $url ) {
  *
  * @param array|string $data The ActivityPub object.
  *
- * @return string The URI of the ActivityPub object.
+ * @return string|null The URI of the ActivityPub object.
  */
 function object_to_uri( $data ) {
 	// Check whether it is already simple.
@@ -778,13 +828,18 @@ function object_to_uri( $data ) {
 
 	// Return part of Object that makes most sense.
 	switch ( $type ) {
-		case 'Image':
-			// See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
+		case 'Audio':    // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-audio.
+		case 'Document': // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-document.
+		case 'Image':    // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image.
+		case 'Video':    // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-video.
 			$data = object_to_uri( $data['url'] );
 			break;
-		case 'Link':
+
+		case 'Link':     // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-link.
+		case 'Mention':  // See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-mention.
 			$data = $data['href'];
 			break;
+
 		default:
 			$data = $data['id'];
 			break;
@@ -963,7 +1018,7 @@ function get_enclosures( $post_id ) {
 	}
 
 	$enclosures = array_map(
-		function ( $enclosure ) {
+		static function ( $enclosure ) {
 			// Check if the enclosure is a string.
 			if ( ! $enclosure || ! is_string( $enclosure ) ) {
 				return false;
@@ -1618,7 +1673,7 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
  * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
  * @param int        $user_id      The ID of the WordPress User.
  *
- * @return int|false|\WP_Post|\WP_Error The Outbox ID or false on failure, the Actor post or a WP_Error.
+ * @return int|\WP_Error The Outbox ID on success or a WP_Error on failure.
  */
 function follow( $remote_actor, $user_id ) {
 	if ( \is_numeric( $remote_actor ) ) {
@@ -1733,6 +1788,26 @@ function is_actor( $data ) {
 }
 
 /**
+ * Check if an `$data` is a Collection.
+ *
+ * @see https://www.w3.org/ns/activitystreams#collections
+ *
+ * @param array|object|string $data The data to check.
+ *
+ * @return boolean True if the `$data` is a Collection, false otherwise.
+ */
+function is_collection( $data ) {
+	/**
+	 * Filters the collection types.
+	 *
+	 * @param array $types The collection types.
+	 */
+	$types = apply_filters( 'activitypub_collection_types', array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
+
+	return _is_type_of( $data, $types );
+}
+
+/**
  * Private helper to check if $data is of a given type set.
  *
  * @param array|object|string $data  The data to check.
@@ -1810,4 +1885,41 @@ function extract_name_from_uri( $uri ) {
 	}
 
 	return $name;
+}
+
+/**
+ * Get the authority (scheme + host) from a URL.
+ *
+ * @param string $url The URL to parse.
+ *
+ * @return string|false The authority, or false on failure.
+ */
+function get_url_authority( $url ) {
+	$parsed = wp_parse_url( $url );
+
+	if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+		return false;
+	}
+
+	return $parsed['scheme'] . '://' . $parsed['host'];
+}
+
+/**
+ * Check if a plugin is active, loading plugin.php if necessary.
+ *
+ * This is a wrapper around the core is_plugin_active() function that ensures
+ * the function is available by loading wp-admin/includes/plugin.php if needed.
+ * This is useful when checking plugin status outside of the admin context.
+ *
+ * @param string $plugin Plugin basename (e.g., 'plugin-folder/plugin-file.php').
+ *
+ * @return bool True if the plugin is active, false otherwise.
+ */
+function is_plugin_active( $plugin ) {
+	// Include plugin.php if not already loaded (needed for core is_plugin_active).
+	if ( ! \function_exists( 'is_plugin_active' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	}
+
+	return \is_plugin_active( $plugin );
 }

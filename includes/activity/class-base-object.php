@@ -21,8 +21,8 @@ namespace Activitypub\Activity;
  *
  * @see https://www.w3.org/TR/activitystreams-core/#object
  *
- * @method string|null          get_attachment()         Gets the attachment property of the object.
- * @method string|null          get_attributed_to()      Gets the entity attributed as the original author.
+ * @method array|string|null    get_attachment()         Gets the attachment property of the object.
+ * @method array|string|null    get_attributed_to()      Gets the entity attributed as the original author.
  * @method string|null          get_audience()           Gets the total population of entities for which the object can be considered relevant.
  * @method string[]|string|null get_bcc()                Gets the private secondary audience of the object.
  * @method string[]|string|null get_bto()                Gets the private primary audience of the object.
@@ -40,12 +40,16 @@ namespace Activitypub\Activity;
  * @method string[]|string|null get_in_reply_to()        Gets the objects this object is in reply to.
  * @method array|null           get_interaction_policy() Gets the interaction policy property of the object.
  * @method array|null           get_likes()              Gets the collection of likes for this object.
- * @method string|null          get_location()           Gets the physical or logical locations associated with the object.
+ * @method array|string|null    get_location()           Gets the physical or logical locations associated with the object.
  * @method string|null          get_media_type()         Gets the MIME media type of the content property.
  * @method string|null          get_name()               Gets the natural language name of the object.
  * @method string[]|null        get_name_map()           Gets the name map property of the object.
  * @method string|null          get_preview()            Gets the entity that provides a preview of this object.
  * @method string|null          get_published()          Gets the date and time the object was published in ISO 8601 format.
+ * @method string|null          get_quote()              Gets the quote property of the object (FEP-044f).
+ * @method string|null          get_quote_url()          Gets the quoteUrl property of the object.
+ * @method string|null          get_quote_uri()          Gets the quoteUri property of the object.
+ * @method string|null          get__misskey_quote()     Gets the _misskey_quote property of the object.
  * @method string|array|null    get_replies()            Gets the collection of responses to this object.
  * @method bool|null            get_sensitive()          Gets the sensitive property of the object.
  * @method array|null           get_shares()             Gets the collection of shares for this object.
@@ -81,12 +85,16 @@ namespace Activitypub\Activity;
  * @method Base_Object set_in_reply_to( string|string[] $in_reply_to ) Sets the is in reply to property of the object.
  * @method Base_Object set_interaction_policy( array|null $policy )    Sets the interaction policy property of the object.
  * @method Base_Object set_likes( array $likes )                       Sets the collection of likes for this object.
- * @method Base_Object set_location( string $location )                Sets the physical or logical locations associated with the object.
+ * @method Base_Object set_location( array|string $location )          Sets the physical or logical locations associated with the object.
  * @method Base_Object set_media_type( string $media_type )            Sets the MIME media type of the content property.
  * @method Base_Object set_name( string $name )                        Sets the natural language name of the object.
  * @method Base_Object set_name_map( array|null $name_map )            Sets the name map property of the object.
  * @method Base_Object set_preview( string $preview )                  Sets the entity that provides a preview of this object.
  * @method Base_Object set_published( string|null $published )         Sets the date and time the object was published in ISO 8601 format.
+ * @method Base_Object set_quote( string $quote )                      Sets the quote property of the object (FEP-044f).
+ * @method Base_Object set_quote_url( string $quote_url )              Sets the quoteUrl property of the object.
+ * @method Base_Object set_quote_uri( string $quote_uri )              Sets the quoteUri property of the object.
+ * @method Base_Object set__misskey_quote( mixed $misskey_quote )      Sets the _misskey_quote property of the object.
  * @method Base_Object set_replies( string|array $replies )            Sets the collection of responses to this object.
  * @method Base_Object set_sensitive( bool|null $sensitive )           Sets the sensitive property of the object.
  * @method Base_Object set_shares( array $shares )                     Sets the collection of shares for this object.
@@ -551,6 +559,43 @@ class Base_Object extends Generic_Object {
 	 * @var array|null
 	 */
 	protected $interaction_policy;
+
+	/**
+	 * Fediverse Enhancement Proposal 044f: Quote Property
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md
+	 * @see https://w3id.org/fep/044f#quote
+	 *
+	 * @var string|null
+	 */
+	protected $quote;
+
+	/**
+	 * ActivityStreams quoteUrl property.
+	 *
+	 * @see https://www.w3.org/ns/activitystreams#quoteUrl
+	 *
+	 * @var string|null
+	 */
+	protected $quote_url;
+
+	/**
+	 * Fedibird-specific quoteUri property.
+	 *
+	 * @see https://fedibird.com/ns#quoteUri
+	 *
+	 * @var string|null
+	 */
+	protected $quote_uri;
+
+	/**
+	 * Misskey-specific quote property.
+	 *
+	 * @see https://misskey-hub.net/ns/#_misskey_quote
+	 *
+	 * @var string|null
+	 */
+	protected $_misskey_quote; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * Generic getter.

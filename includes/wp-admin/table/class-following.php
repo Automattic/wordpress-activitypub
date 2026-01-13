@@ -128,7 +128,7 @@ class Following extends \WP_List_Table {
 				$profile  = Remote_Actors::normalize_identifier( $original );
 				if ( ! $profile ) {
 					/* translators: %s: Account profile that could not be followed */
-					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $profile ) ) );
+					\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'Unable to follow account &#8220;%s&#8221;. Please verify the account exists and try again.', 'activitypub' ), \esc_html( $original ) ) );
 					$redirect_to = \add_query_arg( 'resource', $original, $redirect_to );
 					break;
 				}
@@ -223,11 +223,11 @@ class Following extends \WP_List_Table {
 		}
 
 		if ( Following_Collection::PENDING === $status ) {
-			$following_with_count = Following_Collection::get_pending_with_count( $this->user_id, $per_page, $page_num, $args );
+			$following_with_count = Following_Collection::query_pending( $this->user_id, $per_page, $page_num, $args );
 		} elseif ( Following_Collection::ACCEPTED === $status ) {
-			$following_with_count = Following_Collection::get_following_with_count( $this->user_id, $per_page, $page_num, $args );
+			$following_with_count = Following_Collection::query( $this->user_id, $per_page, $page_num, $args );
 		} else {
-			$following_with_count = Following_Collection::get_all_with_count( $this->user_id, $per_page, $page_num, $args );
+			$following_with_count = Following_Collection::query_all( $this->user_id, $per_page, $page_num, $args );
 		}
 
 		$followings = $following_with_count['following'];
@@ -251,10 +251,10 @@ class Following extends \WP_List_Table {
 			$this->items[] = array(
 				'id'         => $following->ID,
 				'icon'       => object_to_uri( $actor->get_icon() ?? ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg' ),
-				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
+				'post_title' => $actor->get_name() ?: $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
-				'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
-				'webfinger'  => Remote_Actors::get_acct( $following->ID ),
+				'url'        => object_to_uri( $actor->get_url() ?: $actor->get_id() ),
+				'webfinger'  => $actor->get_webfinger(),
 				'status'     => Following_Collection::check_status( $this->user_id, $following->ID ),
 				'identifier' => $actor->get_id(),
 				'modified'   => $following->post_modified_gmt,
@@ -268,7 +268,7 @@ class Following extends \WP_List_Table {
 	 * @return string[]
 	 */
 	public function get_views() {
-		$count  = Following_Collection::count( $this->user_id );
+		$count  = Following_Collection::count_by_status( $this->user_id );
 		$path   = 'users.php?page=activitypub-following-list';
 		$status = Following_Collection::ALL;
 

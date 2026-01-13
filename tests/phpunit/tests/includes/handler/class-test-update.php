@@ -20,6 +20,47 @@ use Activitypub\Handler\Update;
 class Test_Update extends \WP_UnitTestCase {
 
 	/**
+	 * Test that the activitypub_handled_create fallback is triggered.
+	 */
+	public function test_activitypub_inbox_create_fallback() {
+		\update_option( 'activitypub_create_posts', true );
+
+		// Initialize Update handler to register hooks.
+		Update::init();
+
+		$called     = false;
+		$test_actor = 'https://example.com/users/fallback';
+		$activity   = array(
+			'id'     => 'https://example.com/activities/12345',
+			'type'   => 'Update',
+			'actor'  => $test_actor,
+			'object' => array(
+				'id'           => 'https://example.com/objects/12345',
+				'type'         => 'Note',
+				'content'      => 'Test note',
+				'attributedTo' => $test_actor,
+			),
+		);
+
+		// Add a fallback handler for the action.
+		$create_fallback_callback = function ( $activity_data ) use ( &$called, $test_actor ) {
+			if ( isset( $activity_data['actor'] ) && $activity_data['actor'] === $test_actor ) {
+				$called = true;
+			}
+		};
+		\add_action( 'activitypub_handled_create', $create_fallback_callback, 10, 4 );
+
+		// Call the handler via the handled_inbox_update hook.
+		\do_action( 'activitypub_handled_inbox_update', $activity, array( $this->user_id ), null );
+
+		$this->assertTrue( $called, 'The fallback activitypub_handled_create action should be triggered.' );
+
+		// Clean up by removing the action.
+		\remove_action( 'activitypub_handled_create', $create_fallback_callback );
+		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
 	 * User ID.
 	 *
 	 * @var int
@@ -53,14 +94,11 @@ class Test_Update extends \WP_UnitTestCase {
 			if ( is_wp_error( $http_response ) ) {
 				return $http_response;
 			}
-			return array(
-				'response' => array( 'code' => 200 ),
-				'body'     => wp_json_encode( $http_response ),
-			);
+			return $http_response;
 		};
 
 		// Mock HTTP request.
-		\add_filter( 'pre_http_request', $fake_request, 10 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fake_request, 10, 2 );
 
 		// Execute the update_actor method.
 		Update::update_actor( $activity_data, 1 );
@@ -71,7 +109,7 @@ class Test_Update extends \WP_UnitTestCase {
 			$this->assertWPError( $follower, $description );
 		} else {
 			// For successful updates, add follower first then test update.
-			Followers::add_follower( $this->user_id, $actor_url );
+			Followers::add( $this->user_id, $actor_url );
 
 			$follower = Remote_Actors::get_by_uri( $actor_url );
 			$this->assertNotNull( $follower, $description );
@@ -84,7 +122,7 @@ class Test_Update extends \WP_UnitTestCase {
 			}
 		}
 
-		\remove_filter( 'pre_http_request', $fake_request, 10 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fake_request );
 	}
 
 	/**

@@ -7,8 +7,9 @@
 
 namespace Activitypub\WP_Admin\Import;
 
+use Activitypub\Attachments;
+
 use function Activitypub\is_activity_public;
-use function Activitypub\site_supports_blocks;
 
 /**
  * Mastodon importer class.
@@ -32,7 +33,7 @@ class Mastodon {
 	/**
 	 * Outbox file.
 	 *
-	 * @var object
+	 * @var array
 	 */
 	private static $outbox;
 
@@ -153,7 +154,7 @@ class Mastodon {
 	 */
 	public static function import_options() {
 		$author = 0;
-		if ( isset( self::$outbox->{'orderedItems'}[0] ) ) {
+		if ( isset( self::$outbox['orderedItems'][0] ) ) {
 			$users = \get_users(
 				array(
 					'fields'     => 'ID',
@@ -161,7 +162,7 @@ class Mastodon {
 					'meta_query' => array(
 						array(
 							'key'     => $GLOBALS['wpdb']->get_blog_prefix() . 'activitypub_also_known_as',
-							'value'   => self::$outbox->{'orderedItems'}[0]->actor,
+							'value'   => self::$outbox['orderedItems'][0]['actor'],
 							'compare' => 'LIKE',
 						),
 					),
@@ -224,15 +225,15 @@ class Mastodon {
 
 		// Unzip package to working directory.
 		\unzip_file( $file, self::$archive );
-		$files = $wp_filesystem->dirlist( self::$archive );
+		self::maybe_unwrap_archive();
 
-		if ( ! isset( $files['outbox.json'] ) ) {
+		if ( ! $wp_filesystem->exists( self::$archive . '/outbox.json' ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
 			echo \esc_html__( 'The archive does not contain an Outbox file, please try again.', 'activitypub' ) . '</p>';
+			return;
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		self::$outbox = \json_decode( \file_get_contents( self::$archive . '/outbox.json' ) );
+		self::$outbox = \json_decode( $wp_filesystem->get_contents( self::$archive . '/outbox.json' ), true );
 
 		\wp_suspend_cache_invalidation();
 		\wp_defer_term_counting( true );
@@ -271,179 +272,273 @@ class Mastodon {
 	/**
 	 * Process posts.
 	 *
+	 * Uses a multi-pass approach:
+	 * 1. Categorize posts into regular posts and self-replies.
+	 * 2. Import regular posts (root posts and external replies) as WordPress posts.
+	 * 3. Import self-replies as comments on their parent posts.
+	 *
 	 * @return true|\WP_Error True on success, WP_Error on failure.
 	 */
 	public static function import_posts() {
 		$skipped  = array();
 		$imported = 0;
 
-		foreach ( self::$outbox->{'orderedItems'} as $post ) {
+		// Pass 1: Categorize posts.
+		$posts_to_import = array();
+		$self_replies    = array();
+
+		foreach ( self::$outbox['orderedItems'] as $post ) {
 			// Skip boosts.
-			if ( 'Announce' === $post->type ) {
+			if ( 'Announce' === $post['type'] ) {
 				continue;
 			}
 
-			if ( ! is_activity_public( \get_object_vars( $post ) ) ) {
+			if ( ! is_activity_public( $post ) ) {
 				continue;
 			}
 
-			// @todo: Skip replies to comments and import them as comments.
-
-			$post_data = array(
-				'post_author'  => self::$author,
-				'post_date'    => $post->published,
-				'post_excerpt' => $post->object->summary ?? '',
-				'post_content' => $post->object->content,
-				'post_status'  => 'publish',
-				'post_type'    => 'post',
-				'meta_input'   => array( '_source_id' => $post->object->id ),
-				'tags_input'   => \array_map(
-					function ( $tag ) {
-						if ( 'Hashtag' === $tag->type ) {
-							return \ltrim( $tag->name, '#' );
-						}
-
-						return '';
-					},
-					$post->object->tag
-				),
-			);
-
-			/**
-			 * Filter the post data before inserting it into the database.
-			 *
-			 * @param array  $post_data The post data to be inserted.
-			 * @param object $post      The Mastodon Create activity.
-			 */
-			$post_data = \apply_filters( 'activitypub_import_mastodon_post_data', $post_data, $post );
-
-			$post_exists = \post_exists( '', $post_data['post_content'], $post_data['post_date'], $post_data['post_type'] );
-
-			/**
-			 * Filter ID of the existing post corresponding to post currently importing.
-			 *
-			 * Return 0 to force the post to be imported. Filter the ID to be something else
-			 * to override which existing post is mapped to the imported post.
-			 *
-			 * @see post_exists()
-			 *
-			 * @param int   $post_exists  Post ID, or 0 if post did not exist.
-			 * @param array $post_data    The post array to be inserted.
-			 */
-			$post_exists = \apply_filters( 'wp_import_existing_post', $post_exists, $post_data );
-
-			if ( $post_exists ) {
-				$skipped[] = $post->object->id;
-				continue;
+			if ( self::is_self_reply( $post ) ) {
+				$self_replies[] = $post;
+			} else {
+				// Root posts and external replies are imported as WordPress posts.
+				$posts_to_import[] = $post;
 			}
-
-			$post_id = \wp_insert_post( $post_data, true );
-
-			if ( \is_wp_error( $post_id ) ) {
-				return $post_id;
-			}
-
-			\set_post_format( $post_id, 'status' );
-
-			// Process attachments if enabled.
-			$attachment_ids = array();
-			if ( self::$fetch_attachments && ! empty( $post->object->attachment ) ) {
-				global $wp_filesystem;
-
-				require_once ABSPATH . 'wp-admin/includes/media.php';
-				require_once ABSPATH . 'wp-admin/includes/file.php';
-				require_once ABSPATH . 'wp-admin/includes/image.php';
-
-				foreach ( $post->object->attachment as $attachment ) {
-					if ( ! isset( $attachment->url ) || ! isset( $attachment->{'mediaType'} ) ) {
-						continue;
-					}
-
-					$file_path = self::$archive . $attachment->url;
-					if ( ! $wp_filesystem->exists( $file_path ) ) {
-						continue;
-					}
-
-					$file_array = array(
-						'name'     => \basename( $file_path ),
-						'tmp_name' => $file_path,
-					);
-
-					$meta = array();
-					if ( 'image' === strtok( $attachment->{'mediaType'}, '/' ) && ! empty( $attachment->name ) ) {
-						$meta = array( '_wp_attachment_image_alt' => $attachment->name );
-					}
-
-					$attachment_data = array(
-						'post_mime_type' => $attachment->{'mediaType'},
-						'post_title'     => $attachment->name ?? '',
-						'post_content'   => $attachment->name ?? '',
-						'post_status'    => 'inherit',
-						'post_author'    => self::$author,
-						'meta_input'     => $meta,
-					);
-
-					$attachment_id = \media_handle_sideload( $file_array, $post_id, '', $attachment_data );
-
-					if ( \is_wp_error( $attachment_id ) ) {
-						continue;
-					}
-
-					$attachment_ids[] = $attachment_id;
-				}
-
-				// If we have attachments, add them to the post content.
-				if ( ! empty( $attachment_ids ) ) {
-					$type = strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
-
-					if ( site_supports_blocks() ) {
-						if ( 1 === \count( $attachment_ids ) && ( 'video' === $type || 'audio' === $type ) ) {
-							$media = sprintf(
-								'<!-- wp:%1$s {"id":"%2$s"} --><figure class="wp-block-%1$s"><%1$s controls src="%3$s"></%1$s></figure><!-- /wp:%1$s -->',
-								\esc_attr( $type ),
-								\esc_attr( $attachment_ids[0] ),
-								\esc_url( \wp_get_attachment_url( $attachment_ids[0] ) )
-							);
-						} else {
-							$media = self::get_gallery_block( $attachment_ids );
-						}
-					} else { // phpcs:ignore Universal.ControlStructures.DisallowLonelyIf.Found
-						// Classic editor: Use shortcodes.
-						if ( 1 === \count( $attachment_ids ) && ( 'video' === $type || 'audio' === $type ) ) {
-							// Block editor: Use video block.
-							$media = sprintf( '[%1$s src="%2$s"]', \esc_attr( $type ), \esc_url( \wp_get_attachment_url( $attachment_ids[0] ) ) );
-						} else {
-							$media = '[gallery ids="' . \implode( ',', $attachment_ids ) . '" link="none"]';
-						}
-					}
-
-					\wp_update_post(
-						array(
-							'ID'           => $post_id,
-							'post_content' => $post_data['post_content'] . "\n\n" . $media,
-						)
-					);
-				}
-			}
-
-			// phpcs:ignore
-			if ( $post_id && isset( $post->object->replies->first->next ) ) {
-				// @todo: Import replies as comments.
-			}
-
-			++$imported;
 		}
 
+		// Pass 2: Import regular posts as WordPress posts.
+		$source_to_post_id = array();
+		foreach ( $posts_to_import as $post ) {
+			$result = self::import_as_post( $post );
+
+			if ( \is_wp_error( $result ) ) {
+				return $result;
+			}
+
+			if ( $result ) {
+				$source_to_post_id[ $post['object']['id'] ] = $result;
+				++$imported;
+			} else {
+				$skipped[] = $post['object']['id'];
+			}
+		}
+
+		// Pass 3: Import self-replies as comments (sorted by date for correct threading).
+		\usort(
+			$self_replies,
+			static function ( $a, $b ) {
+				return \strtotime( $a['published'] ) <=> \strtotime( $b['published'] );
+			}
+		);
+
+		$source_to_comment_id = array();
+		$comments_skipped     = array();
+		$comments_imported    = 0;
+
+		foreach ( $self_replies as $post ) {
+			$result = self::import_as_comment( $post, $source_to_post_id, $source_to_comment_id );
+
+			if ( $result ) {
+				++$comments_imported;
+			} else {
+				$comments_skipped[] = $post['object']['id'];
+			}
+		}
+
+		// Output results.
 		if ( ! empty( $skipped ) ) {
 			echo '<p>' . \esc_html__( 'Skipped posts:', 'activitypub' ) . '<br>';
-			echo wp_kses( implode( '<br>', $skipped ), array( 'br' => array() ) );
+			echo \wp_kses( \implode( '<br>', $skipped ), array( 'br' => array() ) );
 			echo '</p>';
 		}
 
-		/* translators: %d: Number of posts */
+		if ( ! empty( $comments_skipped ) ) {
+			echo '<p>' . \esc_html__( 'Skipped comments:', 'activitypub' ) . '<br>';
+			echo \wp_kses( \implode( '<br>', $comments_skipped ), array( 'br' => array() ) );
+			echo '</p>';
+		}
+
+		/* translators: %s: Number of posts */
 		echo '<p>' . \esc_html( \sprintf( \_n( 'Imported %s post.', 'Imported %s posts.', $imported, 'activitypub' ), \number_format_i18n( $imported ) ) ) . '</p>';
 
+		if ( $comments_imported > 0 ) {
+			/* translators: %s: Number of comments */
+			echo '<p>' . \esc_html( \sprintf( \_n( 'Imported %s comment from self-reply threads.', 'Imported %s comments from self-reply threads.', $comments_imported, 'activitypub' ), \number_format_i18n( $comments_imported ) ) ) . '</p>';
+		}
+
 		return true;
+	}
+
+	/**
+	 * Check if a post is a self-reply (thread continuation).
+	 *
+	 * A self-reply is when a user replies to their own post, creating a thread.
+	 *
+	 * @param array $post The Mastodon activity.
+	 *
+	 * @return bool True if replying to own post.
+	 */
+	private static function is_self_reply( $post ) {
+		if ( empty( $post['object']['inReplyTo'] ) ) {
+			return false;
+		}
+
+		/*
+		 * Compare base URLs (actor URL should be a prefix of inReplyTo for self-replies).
+		 *
+		 * Example:
+		 * - actor: https://mastodon.social/users/example
+		 * - inReplyTo: https://mastodon.social/users/example/statuses/123
+		 *
+		 * Adding a trailing slash ensures we don't match partial usernames
+		 * (e.g., "example" shouldn't match "example2").
+		 */
+		return \str_starts_with( $post['object']['inReplyTo'], \rtrim( $post['actor'], '/' ) . '/' );
+	}
+
+	/**
+	 * Import a single activity as a WordPress post.
+	 *
+	 * @param array $post The Mastodon activity.
+	 *
+	 * @return int|false|\WP_Error Post ID on success, false if skipped, WP_Error on failure.
+	 */
+	private static function import_as_post( $post ) {
+		$post_data = array(
+			'post_author'  => self::$author,
+			'post_date'    => $post['published'],
+			'post_excerpt' => $post['object']['summary'] ?? '',
+			'post_content' => $post['object']['content'],
+			'post_status'  => 'publish',
+			'post_type'    => 'post',
+			'meta_input'   => array( '_source_id' => $post['object']['id'] ),
+			'tags_input'   => \array_map(
+				static function ( $tag ) {
+					if ( 'Hashtag' === $tag['type'] ) {
+						return \ltrim( $tag['name'], '#' );
+					}
+
+					return '';
+				},
+				$post['object']['tag'] ?? array()
+			),
+		);
+
+		/**
+		 * Filter the post data before inserting it into the database.
+		 *
+		 * @param array $post_data The post data to be inserted.
+		 * @param array $post      The Mastodon Create activity.
+		 */
+		$post_data = \apply_filters( 'activitypub_import_mastodon_post_data', $post_data, $post );
+
+		$post_exists = \post_exists( '', $post_data['post_content'], $post_data['post_date'], $post_data['post_type'] );
+
+		/**
+		 * Filter ID of the existing post corresponding to post currently importing.
+		 *
+		 * Return 0 to force the post to be imported. Filter the ID to be something else
+		 * to override which existing post is mapped to the imported post.
+		 *
+		 * @see post_exists()
+		 *
+		 * @param int   $post_exists  Post ID, or 0 if post did not exist.
+		 * @param array $post_data    The post array to be inserted.
+		 */
+		$post_exists = \apply_filters( 'wp_import_existing_post', $post_exists, $post_data );
+
+		if ( $post_exists ) {
+			return false;
+		}
+
+		$post_id = \wp_insert_post( $post_data, true );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		\set_post_format( $post_id, 'status' );
+
+		// Process attachments if enabled.
+		if ( self::$fetch_attachments && ! empty( $post['object']['attachment'] ) ) {
+			// Prepend archive path to attachment URLs for local files.
+			$attachments = \array_map( array( self::class, 'prepend_archive_path' ), $post['object']['attachment'] );
+
+			Attachments::import( $attachments, $post_id, self::$author );
+		}
+
+		return $post_id;
+	}
+
+	/**
+	 * Import a self-reply as a comment on its parent post.
+	 *
+	 * @param array $post                 The Mastodon activity.
+	 * @param array $source_to_post_id    Mapping of source IDs to WordPress post IDs.
+	 * @param array $source_to_comment_id Mapping of source IDs to WordPress comment IDs (passed by reference).
+	 *
+	 * @return int|false Comment ID on success, false if parent not found or skipped.
+	 */
+	private static function import_as_comment( $post, $source_to_post_id, &$source_to_comment_id ) {
+		$in_reply_to = $post['object']['inReplyTo'];
+
+		// Find parent - could be a post or another comment.
+		$parent_post_id    = null;
+		$parent_comment_id = 0;
+
+		if ( isset( $source_to_post_id[ $in_reply_to ] ) ) {
+			// Replying to a root post or external reply.
+			$parent_post_id = $source_to_post_id[ $in_reply_to ];
+		} elseif ( isset( $source_to_comment_id[ $in_reply_to ] ) ) {
+			// Replying to another comment (nested thread).
+			$parent_comment_id = $source_to_comment_id[ $in_reply_to ];
+			$parent_comment    = \get_comment( $parent_comment_id );
+
+			if ( $parent_comment ) {
+				$parent_post_id = $parent_comment->comment_post_ID;
+			}
+		}
+
+		// If we couldn't find the parent, skip this comment.
+		if ( ! $parent_post_id ) {
+			return false;
+		}
+
+		// Check for duplicate.
+		$existing_comments = \get_comments(
+			array(
+				'post_id'    => $parent_post_id,
+				'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value' => $post['object']['id'], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'number'     => 1,
+			)
+		);
+
+		if ( ! empty( $existing_comments ) ) {
+			// Already imported, add to mapping and skip.
+			$source_to_comment_id[ $post['object']['id'] ] = $existing_comments[0]->comment_ID;
+
+			return false;
+		}
+
+		$comment_data = array(
+			'comment_post_ID'  => $parent_post_id,
+			'comment_parent'   => $parent_comment_id,
+			'comment_author'   => \get_the_author_meta( 'display_name', self::$author ),
+			'comment_content'  => $post['object']['content'],
+			'comment_date'     => $post['published'],
+			'user_id'          => self::$author,
+			'comment_approved' => 1,
+		);
+
+		$comment_id = \wp_insert_comment( $comment_data );
+
+		if ( $comment_id ) {
+			\update_comment_meta( $comment_id, 'source_id', $post['object']['id'] );
+
+			$source_to_comment_id[ $post['object']['id'] ] = $comment_id;
+		}
+
+		return $comment_id;
 	}
 
 	/**
@@ -493,33 +588,45 @@ class Mastodon {
 	}
 
 	/**
-	 * Get gallery block.
+	 * Prepend archive path to local attachment URLs.
 	 *
-	 * @param array $attachment_ids The attachment IDs to use.
-	 * @return string The gallery block markup.
+	 * @param array $attachment The attachment array.
+	 *
+	 * @return array The attachment array with updated URL.
 	 */
-	private static function get_gallery_block( $attachment_ids ) {
-		// Block editor: Use gallery block.
-		$gallery  = '<!-- wp:gallery {"ids":[' . \implode( ',', $attachment_ids ) . '],"linkTo":"none"} -->' . "\n";
-		$gallery .= '<figure class="wp-block-gallery has-nested-images columns-default is-cropped">';
-
-		foreach ( $attachment_ids as $id ) {
-			$image_src = \wp_get_attachment_image_src( $id, 'large' );
-			if ( ! $image_src ) {
-				continue;
-			}
-
-			$caption  = \get_post_field( 'post_content', $id );
-			$gallery .= "\n<!-- wp:image {\"id\":{$id},\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n";
-			$gallery .= '<figure class="wp-block-image size-large">';
-			$gallery .= '<img src="' . \esc_url( $image_src[0] ) . '" alt="' . \esc_attr( $caption ) . '" class="' . \esc_attr( 'wp-image-' . $id ) . '"/>';
-			$gallery .= '</figure>';
-			$gallery .= "\n<!-- /wp:image -->\n";
+	private static function prepend_archive_path( $attachment ) {
+		if ( ! empty( $attachment['url'] ) && ! preg_match( '#^https?://#i', $attachment['url'] ) ) {
+			$attachment['url'] = self::$archive . $attachment['url'];
 		}
 
-		$gallery .= "</figure>\n";
-		$gallery .= '<!-- /wp:gallery -->';
+		return $attachment;
+	}
 
-		return $gallery;
+	/**
+	 * Detect and unwrap single nested directory in archive.
+	 *
+	 * Some Mastodon exports wrap all files in a root folder. This method
+	 * detects this pattern and updates the archive path to point inside it.
+	 */
+	private static function maybe_unwrap_archive() {
+		global $wp_filesystem;
+
+		$files = $wp_filesystem->dirlist( self::$archive );
+
+		// Check if there's exactly one directory at root level.
+		if ( count( $files ) !== 1 ) {
+			return;
+		}
+
+		$first = reset( $files );
+		if ( 'd' !== $first['type'] ) {
+			return;
+		}
+
+		// Check if outbox.json exists inside the nested directory.
+		$nested_path = self::$archive . '/' . $first['name'];
+		if ( $wp_filesystem->exists( $nested_path . '/outbox.json' ) ) {
+			self::$archive = $nested_path;
+		}
 	}
 }

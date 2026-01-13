@@ -12,6 +12,8 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Move;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Test class for the Move handler.
  *
@@ -33,21 +35,12 @@ class Test_Move extends \WP_UnitTestCase {
 	private $user_id_2;
 
 	/**
-	 * Setup the test.
+	 * Set up the test.
 	 */
 	public function setUp(): void {
 		parent::setUp();
-		$this->user_id   = $this->factory->user->create();
-		$this->user_id_2 = $this->factory->user->create();
-	}
-
-	/**
-	 * Tear down the test.
-	 */
-	public function tearDown(): void {
-		parent::tearDown();
-		wp_delete_user( $this->user_id );
-		wp_delete_user( $this->user_id_2 );
+		$this->user_id   = self::factory()->user->create();
+		$this->user_id_2 = self::factory()->user->create();
 	}
 
 	/**
@@ -84,29 +77,20 @@ class Test_Move extends \WP_UnitTestCase {
 		// Add the user ID meta value.
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
-		$filter = function ( $preempt, $args, $url ) use ( $target, $target_object, $origin, $origin_object ) {
+		$filter = function ( $pre, $url_or_object ) use ( $target, $target_object, $origin, $origin_object ) {
+			$url = object_to_uri( $url_or_object );
 			if ( $url === $target ) {
-				return array(
-					'body'     => wp_json_encode( $target_object ),
-					'response' => array( 'code' => 200 ),
-				);
+				return $target_object;
 			}
 			if ( $url === $origin ) {
-				return array(
-					'body'     => wp_json_encode( $origin_object ),
-					'response' => array( 'code' => 200 ),
-				);
+				return $origin_object;
 			}
-			return $preempt;
+
+			return $pre;
 		};
 
 		// Mock the HTTP request.
-		add_filter(
-			'pre_http_request',
-			$filter,
-			10,
-			3
-		);
+		add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
 
 		$activity = array(
 			'type'   => 'Move',
@@ -123,9 +107,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertNotNull( $updated_follower );
 		$this->assertEquals( $target, $updated_follower->guid );
 
-		\wp_delete_post( $updated_follower->ID );
-
-		\remove_filter( 'pre_http_request', $filter, 10 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
 
 	/**
@@ -151,18 +133,13 @@ class Test_Move extends \WP_UnitTestCase {
 		// Add the user ID meta value.
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
+		// Mock HTTP request to return invalid data.
 		$filter = function () {
 			return array(
-				'body'     => wp_json_encode( array( 'type' => 'Invalid' ) ),
-				'response' => array( 'code' => 200 ),
+				'type' => 'Invalid',
 			);
 		};
-
-		// Mock HTTP request to return invalid data.
-		add_filter(
-			'pre_http_request',
-			$filter
-		);
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
 
 		$activity = array(
 			'type'   => 'Move',
@@ -173,17 +150,16 @@ class Test_Move extends \WP_UnitTestCase {
 		Move::handle_move( $activity, 1 );
 
 		// Assert that the original follower still exists and wasn't modified.
-		$existing_follower = Followers::get_follower( $this->user_id, $origin );
+		$existing_follower = Followers::get_by_uri( $this->user_id, $origin );
 		$this->assertNotNull( $existing_follower );
 		$this->assertEquals( $origin, $existing_follower->guid );
 
 		// Assert that no new follower was created for the target.
-		$target_follower = Followers::get_follower( $this->user_id, $target );
+		$target_follower = Followers::get_by_uri( $this->user_id, $target );
 		$this->assertWPError( $target_follower );
 
 		// Cleanup.
-		\wp_delete_post( $id );
-		\remove_filter( 'pre_http_request', $filter );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
 
 	/**
@@ -206,7 +182,7 @@ class Test_Move extends \WP_UnitTestCase {
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
 		// Store initial followers count.
-		$initial_followers = Followers::get_followers( $this->user_id );
+		$initial_followers = Followers::get_many( $this->user_id );
 		$initial_count     = count( $initial_followers );
 
 		$activity = array(
@@ -216,11 +192,11 @@ class Test_Move extends \WP_UnitTestCase {
 		Move::handle_move( $activity, 1 );
 
 		// Verify that no followers were added or removed.
-		$final_followers = Followers::get_followers( $this->user_id );
+		$final_followers = Followers::get_many( $this->user_id );
 		$this->assertEquals( $initial_count, count( $final_followers ) );
 
 		// Verify that our test follower remains unchanged.
-		$existing_follower = Followers::get_follower( $this->user_id, 'https://example.com/test-profile' );
+		$existing_follower = Followers::get_by_uri( $this->user_id, 'https://example.com/test-profile' );
 		$this->assertNotNull( $existing_follower );
 
 		$actor = Remote_Actors::get_actor( $existing_follower );
@@ -230,6 +206,84 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Cleanup.
 		$test_follower->delete();
+	}
+
+	/**
+	 * Test the handle_move method when target exists but origin does not.
+	 *
+	 * This tests the scenario where the new profile is already followed,
+	 * but the old profile is not. In this case, no action should be taken.
+	 */
+	public function test_handle_move_with_existing_target_but_missing_origin() {
+		$target = 'https://example.com/new-profile';
+		$origin = 'https://example.com/old-profile';
+
+		// Create only the target follower, not the origin.
+		$target_follower = new Actor();
+		$target_follower->set_inbox( 'https://example.com/new-profile/inbox' );
+		$target_follower->set_type( 'Person' );
+		$target_follower->set_id( $target );
+		$target_follower->set_url( $target );
+		$target_id = Remote_Actors::upsert( $target_follower );
+
+		// Add user ID to target.
+		\add_post_meta( $target_id, Followers::FOLLOWER_META_KEY, $this->user_id );
+
+		$filter = function ( $preempt, $args, $url ) use ( $target, $origin ) {
+			if ( $url === $target ) {
+				return array(
+					'body'     => \wp_json_encode(
+						array(
+							'type'          => 'Person',
+							'id'            => $target,
+							'url'           => $target,
+							'name'          => 'New Profile',
+							'inbox'         => 'https://example.com/new-profile/inbox',
+							'also_known_as' => array( $origin ),
+						)
+					),
+					'response' => array( 'code' => 200 ),
+				);
+			}
+			if ( $url === $origin ) {
+				return array(
+					'body'     => \wp_json_encode(
+						array(
+							'type'    => 'Person',
+							'id'      => $origin,
+							'url'     => $origin,
+							'name'    => 'Old Profile',
+							'inbox'   => 'https://example.com/old-profile/inbox',
+							'movedTo' => $target,
+						)
+					),
+					'response' => array( 'code' => 200 ),
+				);
+			}
+			return $preempt;
+		};
+
+		// Mock the HTTP request.
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$activity = array(
+			'type'   => 'Move',
+			'actor'  => $origin,
+			'object' => $target,
+		);
+
+		Move::handle_move( $activity, 1 );
+
+		// Verify that the target still exists with the same followers.
+		$target_users = \get_post_meta( $target_id, Followers::FOLLOWER_META_KEY, false );
+		$this->assertContains( (string) $this->user_id, $target_users );
+		$this->assertCount( 1, $target_users );
+
+		// Verify that no origin follower was created.
+		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
+
+		// Cleanup.
+		\remove_filter( 'pre_http_request', $filter );
 	}
 
 	/**
@@ -263,44 +317,38 @@ class Test_Move extends \WP_UnitTestCase {
 		\wp_cache_delete( $origin_id, 'posts' );
 		\wp_cache_delete( $target_id, 'posts' );
 
-		$filter = function ( $preempt, $args, $url ) use ( $target, $origin ) {
+		$filter = function ( $pre, $url_or_object ) use ( $target, $origin ) {
+			$url = object_to_uri( $url_or_object );
+
 			if ( $url === $target ) {
 				return array(
-					'body'     => wp_json_encode(
-						array(
-							'type'          => 'Person',
-							'id'            => $target,
-							'url'           => $target,
-							'name'          => 'New Profile',
-							'inbox'         => 'https://example.com/new-profile/inbox',
-							'also_known_as' => array(
-								$origin,
-							),
-						)
+					'type'          => 'Person',
+					'id'            => $target,
+					'url'           => $target,
+					'name'          => 'New Profile',
+					'inbox'         => 'https://example.com/new-profile/inbox',
+					'also_known_as' => array(
+						$origin,
 					),
-					'response' => array( 'code' => 200 ),
 				);
 			}
+
 			if ( $url === $origin ) {
 				return array(
-					'body'     => wp_json_encode(
-						array(
-							'type'    => 'Person',
-							'id'      => $origin,
-							'url'     => $origin,
-							'name'    => 'Old Profile',
-							'inbox'   => 'https://example.com/old-profile/inbox',
-							'movedTo' => $target,
-						)
-					),
-					'response' => array( 'code' => 200 ),
+					'type'    => 'Person',
+					'id'      => $origin,
+					'url'     => $origin,
+					'name'    => 'Old Profile',
+					'inbox'   => 'https://example.com/old-profile/inbox',
+					'movedTo' => $target,
 				);
 			}
-			return $preempt;
+
+			return $pre;
 		};
 
 		// Mock the HTTP request.
-		add_filter( 'pre_http_request', $filter, 10, 3 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
 
 		$activity = array(
 			'type'   => 'Move',
@@ -319,6 +367,6 @@ class Test_Move extends \WP_UnitTestCase {
 		// Check if the origin follower was deleted.
 		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
 
-		remove_filter( 'pre_http_request', $filter );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
 }

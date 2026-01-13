@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Posts;
 
 /**
  * ActivityPub Comment Class.
@@ -28,7 +29,7 @@ class Comment {
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
-		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
+		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 11, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
@@ -69,10 +70,6 @@ class Comment {
 	 */
 	public static function comment_reply_link( $link, $args, $comment ) {
 		if ( self::are_comments_allowed( $comment ) ) {
-			if ( \current_user_can( 'activitypub' ) && self::was_received( $comment ) ) {
-				return self::create_fediverse_reply_link( $link, $args );
-			}
-
 			return $link;
 		}
 
@@ -93,28 +90,6 @@ class Comment {
 		 * @param string $block The HTML markup for the remote reply container.
 		 */
 		return \apply_filters( 'activitypub_comment_reply_link', $block );
-	}
-
-	/**
-	 * Create a link to reply to a federated comment.
-	 *
-	 * This function adds a title attribute to the reply link to inform the user
-	 * that the comment was received from the fediverse and the reply will be sent
-	 * to the original author.
-	 *
-	 * @param string $link The HTML markup for the comment reply link.
-	 * @param array  $args The args provided by the `comment_reply_link` filter.
-	 *
-	 * @return string The modified HTML markup for the comment reply link.
-	 */
-	private static function create_fediverse_reply_link( $link, $args ) {
-		$str_to_replace = sprintf( '>%s<', $args['reply_text'] );
-		$replace_with   = sprintf(
-			' title="%s">%s<',
-			esc_attr__( 'This comment was received from the fediverse and your reply will be sent to the original author', 'activitypub' ),
-			esc_html__( 'Reply with federation', 'activitypub' )
-		);
-		return str_replace( $str_to_replace, $replace_with, $link );
 	}
 
 	/**
@@ -636,7 +611,7 @@ class Comment {
 			array(
 				'label'          => __( 'Reposts', 'activitypub' ),
 				'singular'       => __( 'Repost', 'activitypub' ),
-				'description'    => __( 'A repost on the indieweb is a post that is purely a 100% re-publication of another (typically someone else\'s) post.', 'activitypub' ),
+				'description'    => 'A repost (or Announce) is when a post appears in the timeline because someone else shared it, while still showing the original author as the source.',
 				'icon'           => '♻️',
 				'class'          => 'p-repost',
 				'type'           => 'repost',
@@ -655,7 +630,7 @@ class Comment {
 			array(
 				'label'          => __( 'Likes', 'activitypub' ),
 				'singular'       => __( 'Like', 'activitypub' ),
-				'description'    => __( 'A like is a popular webaction button and in some cases post type on various silos such as Facebook and Instagram.', 'activitypub' ),
+				'description'    => 'A like is a small positive reaction that shows appreciation for a post without sharing it further.',
 				'icon'           => '👍',
 				'class'          => 'p-like',
 				'type'           => 'like',
@@ -666,6 +641,25 @@ class Comment {
 				'count_single'   => _x( '%d like', 'number of likes', 'activitypub' ),
 				/* translators: %d: Number of likes */
 				'count_plural'   => _x( '%d likes', 'number of likes', 'activitypub' ),
+			)
+		);
+
+		register_comment_type(
+			'quote',
+			array(
+				'label'          => __( 'Quotes', 'activitypub' ),
+				'singular'       => __( 'Quote', 'activitypub' ),
+				'description'    => 'A quote is when a post is shared along with an added comment, so the original post appears together with the sharer&#8217;s own words.',
+				'icon'           => '❞',
+				'class'          => 'p-quote',
+				'type'           => 'quote',
+				'collection'     => 'quotes',
+				'activity_types' => array( 'quote' ),
+				'excerpt'        => html_entity_decode( \__( '&hellip; quoted this!', 'activitypub' ) ),
+				/* translators: %d: Number of quotes */
+				'count_single'   => _x( '%d quote', 'number of quotes', 'activitypub' ),
+				/* translators: %d: Number of quotes */
+				'count_plural'   => _x( '%d quotes', 'number of quotes', 'activitypub' ),
 			)
 		);
 	}
@@ -708,8 +702,14 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts on admin pages or on non-singular pages.
-		if ( is_admin() || ! is_singular() ) {
+		// Do only exclude interactions of `ap_post` post type.
+		if ( \is_admin() ) {
+			$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
+			return;
+		}
+
+		// Do not exclude likes and reposts on non-singular pages.
+		if ( ! \is_singular() ) {
 			return;
 		}
 
@@ -731,7 +731,12 @@ class Comment {
 	 * @return int|string|\WP_Error The approval status. 1, 0, 'spam', 'trash', or WP_Error.
 	 */
 	public static function pre_comment_approved( $approved, $comment_data ) {
-		if ( $approved || \is_wp_error( $approved ) ) {
+		/*
+		 * Only return early for already-approved comments, trash, or errors.
+		 * Don't short-circuit on 'spam' - we may want to override Akismet.
+		 * Respect 'trash' since it comes from the WordPress disallowed list.
+		 */
+		if ( 1 === $approved || '1' === $approved || 'trash' === $approved || \is_wp_error( $approved ) ) {
 			return $approved;
 		}
 
@@ -762,6 +767,13 @@ class Comment {
 		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
 
 		if ( 1 === (int) $ok_to_comment ) {
+			return 1;
+		}
+
+		$post_id = $comment_data['comment_post_ID'];
+		$post    = \get_post( $post_id );
+
+		if ( $post && in_array( $post->post_type, self::hide_for(), true ) ) {
 			return 1;
 		}
 
@@ -814,5 +826,24 @@ class Comment {
 	 */
 	public static function is_comment_type_enabled( $comment_type ) {
 		return '1' === get_option( "activitypub_allow_{$comment_type}s", '1' );
+	}
+
+	/**
+	 * Get post types to hide comments for in admin.
+	 *
+	 * These are non-public post types whose comments should not appear
+	 * in the main comments list in the WordPress admin.
+	 *
+	 * @return string[] Array of post type names to hide comments for.
+	 */
+	public static function hide_for() {
+		$post_types = array( Posts::POST_TYPE );
+
+		/**
+		 * Filters the list of post types to hide comments for.
+		 *
+		 * @param string[] $post_types Array of post type names to hide comments for.
+		 */
+		return \apply_filters( 'activitypub_hide_comments_for', $post_types );
 	}
 }

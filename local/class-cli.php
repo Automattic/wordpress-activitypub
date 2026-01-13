@@ -7,10 +7,12 @@
 
 namespace Activitypub\Development;
 
-use Activitypub\Collection\Actors;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Inbox;
 use Activitypub\Comment;
 
+use function Activitypub\camel_to_snake_case;
 use function WP_CLI\Utils\get_flag_value;
 use function WP_CLI\Utils\make_progress_bar;
 
@@ -26,11 +28,11 @@ class Cli extends \WP_CLI_Command {
 	 *
 	 * ## OPTIONS
 	 *
-	 * <actor_url>
-	 *     The URL of the actor to add as a follower.
+	 * <actor>
+	 *     The URL or Webfinger of the actor to add as a follower.
 	 *
-	 * [--user=<user>]
-	 *     The user to add the follower to. Defaults to the blog actor.
+	 * [--user=<id|login|email>]
+	 *     The WordPress user to add the follower to. Omit to add to blog actor.
 	 *     ---
 	 *     default: 0
 	 *     ---
@@ -38,20 +40,19 @@ class Cli extends \WP_CLI_Command {
 	 * ## EXAMPLES
 	 *
 	 *    $ wp activitypub add_follower https://example.com/@user
-	 *    $ wp activitypub add_follower https://example.com/@user --user=1
+	 *    $ wp activitypub add_follower user@example.com --user=1
 	 *    $ wp --user=pfefferle activitypub add_follower https://example.com/@user
 	 *
-	 * @synopsis <actor_url> [--user=<user>]
+	 * @synopsis <actor> [--user=<id|login|email>]
 	 *
-	 * @param array $args       The arguments.
-	 * @param array $assoc_args The associative arguments.
+	 * @param array $args The arguments.
 	 */
-	public function add_follower( $args, $assoc_args ) {
+	public function add_follower( $args ) {
 		$actor_url = $args[0];
-		$user_id   = get_flag_value( $assoc_args, 'user', Actors::BLOG_USER_ID );
+		$user_id   = get_current_user_id();
 		\WP_CLI::log( sprintf( 'Adding follower %s to user %d...', $actor_url, $user_id ) );
 
-		$result = Followers::add_follower( $user_id, $actor_url );
+		$result = Followers::add( $user_id, $actor_url );
 
 		if ( \is_wp_error( $result ) ) {
 			\WP_CLI::error( $result->get_error_message() );
@@ -169,5 +170,73 @@ class Cli extends \WP_CLI_Command {
 		if ( 'progress' === $format ) {
 			$notify->finish();
 		}
+	}
+
+	/**
+	 * Reprocess an inbox item.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <post_id>
+	 * : The post ID of the ap_inbox item to reprocess.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Reprocess inbox item with ID 123
+	 *     $ wp activitypub reprocess_inbox 123
+	 *     Success: Inbox item 123 has been reprocessed.
+	 *
+	 * @param array $args The arguments.
+	 */
+	public function reprocess_inbox( $args ) {
+		$post_id = absint( $args[0] );
+
+		if ( ! $post_id ) {
+			\WP_CLI::error( 'Invalid post ID provided.' );
+		}
+
+		$post = Inbox::get( $post_id );
+
+		if ( ! $post ) {
+			\WP_CLI::error( sprintf( 'Post with ID %d not found.', $post_id ) );
+		}
+
+		\WP_CLI::log( sprintf( 'Reprocessing inbox item %d...', $post_id ) );
+
+		// Get the activity data from the inbox post.
+		$activity_data = json_decode( $post->post_content, true );
+
+		if ( ! $activity_data ) {
+			\WP_CLI::error( 'Failed to decode activity data.' );
+		}
+
+		// Get the activity type.
+		if ( ! isset( $activity_data['type'] ) ) {
+			\WP_CLI::error( 'Activity data does not contain a type field.' );
+		}
+
+		$type = camel_to_snake_case( $activity_data['type'] );
+
+		// Get recipients from post meta.
+		$user_ids = Inbox::get_recipients( $post_id );
+
+		if ( empty( $user_ids ) ) {
+			\WP_CLI::error( 'No recipients found for this inbox item.' );
+		}
+
+		// Create Activity object from the activity data.
+		$activity = Activity::init_from_array( $activity_data );
+
+		if ( \is_wp_error( $activity ) ) {
+			\WP_CLI::error( sprintf( 'Failed to initialize activity: %s', $activity->get_error_message() ) );
+		}
+
+		// Trigger both sets of action hooks that handlers may be registered on.
+		\do_action( 'activitypub_inbox', $activity_data, $user_ids, $type, $activity, Inbox::CONTEXT_INBOX );
+		\do_action( 'activitypub_inbox_' . $type, $activity_data, $user_ids, $activity, Inbox::CONTEXT_INBOX );
+		\do_action( 'activitypub_handled_inbox', $activity_data, $user_ids, $type, $activity, $post_id, Inbox::CONTEXT_INBOX );
+		\do_action( 'activitypub_handled_inbox_' . $type, $activity_data, $user_ids, $activity, $post_id, Inbox::CONTEXT_INBOX );
+
+		\WP_CLI::success( sprintf( 'Inbox item %d has been reprocessed as %s activity.', $post_id, $activity_data['type'] ) );
 	}
 }

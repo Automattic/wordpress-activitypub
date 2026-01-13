@@ -1,7 +1,7 @@
 import { getContext, getElement, store, withScope, getConfig } from '@wordpress/interactivity';
 import { createModalStore } from '../shared/modal';
 
-/** @var {Object} window.wp WordPress global object */
+/** @member {Object} window.wp WordPress global object */
 const { apiFetch } = window.wp;
 
 createModalStore( 'activitypub/reactions' );
@@ -13,13 +13,13 @@ createModalStore( 'activitypub/reactions' );
 
 /**
  * @typedef {Object} context
- * @property {String} blockId The block ID.
- * @property {Object} modal The modal state.
+ * @property {string}  blockId         The block ID.
+ * @property {Object}  modal           The modal state.
  * @property {boolean} modal.isCompact Whether the modal is compact.
- * @property {boolean} modal.isOpen Whether the modal is open.
- * @property {Object} modal.items The items to display in the modal.
- * @property {String} postId The post ID.
- * @property {Object} reactions Reactions data, keyed by reaction type.
+ * @property {boolean} modal.isOpen    Whether the modal is open.
+ * @property {Object}  modal.items     The items to display in the modal.
+ * @property {string}  postId          The post ID.
+ * @property {Object}  reactions       Reactions data, keyed by reaction type.
  */
 
 const { callbacks, state } = store( 'activitypub/reactions', {
@@ -29,9 +29,12 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 		 */
 		async fetchReactions() {
 			const context = getContext();
-			const { namespace } = getConfig();
 
-			if ( ! context.postId ) return;
+			if ( ! context.postId ) {
+				return;
+			}
+
+			const { namespace } = getConfig();
 
 			try {
 				// Update the state with the new Reactions data.
@@ -39,6 +42,7 @@ const { callbacks, state } = store( 'activitypub/reactions', {
 					path: `/${ namespace }/posts/${ context.postId }/reactions`,
 				} );
 			} catch ( error ) {
+				// eslint-disable-next-line no-console -- Log error for debugging.
 				console.error( 'Error fetching reactions:', error );
 			}
 		},

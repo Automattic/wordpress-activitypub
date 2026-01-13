@@ -34,7 +34,7 @@ class Test_Query extends \WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create(
@@ -51,14 +51,6 @@ class Test_Query extends \WP_UnitTestCase {
 				'post_status'  => 'publish',
 			)
 		);
-	}
-
-	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_post( self::$post_id, true );
-		wp_delete_user( self::$user_id );
 	}
 
 	/**
@@ -123,6 +115,36 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_activitypub_object_id doesn't fatal when queried object filter returns WP_Error.
+	 *
+	 * @covers ::get_activitypub_object_id
+	 */
+	public function test_get_activitypub_object_id_with_wp_error_from_queried_object_filter() {
+		// Mock a scenario where activitypub_queried_object filter returns WP_Error.
+		$filter_callback = function ( $queried_object ) {
+			// Return WP_Error to simulate an error condition.
+			if ( $queried_object instanceof \WP_Post ) {
+				return new \WP_Error( 'queried_object_error', 'Failed to process queried object' );
+			}
+			return $queried_object;
+		};
+		\add_filter( 'activitypub_queried_object', $filter_callback, 10, 1 );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( \get_permalink( self::$post_id ) );
+		$query = Query::get_instance();
+
+		// This should not cause a fatal error.
+		$result = $query->get_activitypub_object_id();
+
+		// Result should be null when queried object is error.
+		$this->assertNull( $result );
+
+		// Clean up filter.
+		\remove_filter( 'activitypub_queried_object', $filter_callback );
+	}
+
+	/**
 	 * Test get_queried_object method.
 	 *
 	 * @covers ::get_queried_object
@@ -145,6 +167,32 @@ class Test_Query extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_User', $object );
 		$this->assertEquals( self::$user_id, $object->ID );
+	}
+
+	/**
+	 * Test get_queried_object with term_id query var.
+	 *
+	 * @covers ::get_queried_object
+	 */
+	public function test_get_queried_object_with_term_id() {
+		// Create a test term.
+		$term = self::factory()->term->create_and_get(
+			array(
+				'taxonomy' => 'post_tag',
+				'name'     => 'Test Tag',
+				'slug'     => 'test-tag',
+			)
+		);
+
+		// Test with term_id query var.
+		Query::get_instance()->__destruct();
+		$this->go_to( \add_query_arg( 'term_id', $term->term_id, \home_url( '/' ) ) );
+		\set_query_var( 'term_id', $term->term_id );
+		$query  = Query::get_instance();
+		$object = $query->get_queried_object();
+
+		$this->assertInstanceOf( 'WP_Term', $object );
+		$this->assertEquals( $term->term_id, $object->term_id );
 	}
 
 	/**
@@ -201,7 +249,9 @@ class Test_Query extends \WP_UnitTestCase {
 	public function test_maybe_get_virtual_object() {
 		$reflection = new \ReflectionClass( Query::class );
 		$method     = $reflection->getMethod( 'maybe_get_virtual_object' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$query = Query::get_instance();
 
@@ -284,8 +334,6 @@ class Test_Query extends \WP_UnitTestCase {
 
 		$this->go_to( $at_url );
 		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
-
-		\wp_delete_user( $user_id );
 	}
 
 	/**
@@ -334,7 +382,7 @@ class Test_Query extends \WP_UnitTestCase {
 	 * @covers ::get_activitypub_object
 	 */
 	public function test_outbox_item_visibility() {
-		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$outbox_item = \current(
 			\get_posts(
 				array(
@@ -364,8 +412,6 @@ class Test_Query extends \WP_UnitTestCase {
 		Query::get_instance()->__destruct();
 		$this->go_to( get_permalink( $outbox_item->ID ) );
 		$this->assertNull( Query::get_instance()->get_activitypub_object() );
-
-		\wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -476,7 +522,9 @@ class Test_Query extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Query::class );
 		$method     = $reflection->getMethod( 'maybe_get_stamp' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$query  = Query::get_instance();
 		$result = $method->invoke( $query );
@@ -508,14 +556,122 @@ class Test_Query extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Query::class );
 		$method     = $reflection->getMethod( 'maybe_get_stamp' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$query  = Query::get_instance();
 		$result = $method->invoke( $query );
 
 		$this->assertFalse( $result, 'Should return false for invalid post author' );
+	}
+
+	/**
+	 * Test should_negotiate_content for author page with permalink as Actor ID.
+	 *
+	 * @covers ::should_negotiate_content
+	 */
+	public function test_should_negotiate_content_author_permalink_as_id() {
+		// Use pretty permalinks so author URL doesn't have ?author= query param.
+		$this->set_permalink_structure( '/%postname%/' );
+
+		// Get user info for author URL.
+		$user       = \get_user_by( 'id', self::$user_id );
+		$author_url = \home_url( '/author/' . $user->user_nicename . '/' );
+
+		// Disable global content negotiation.
+		\update_option( 'activitypub_content_negotiation', '0' );
+
+		// Without the user option, author page should not negotiate.
+		Query::get_instance()->__destruct();
+		$_SERVER['REQUEST_URI'] = $author_url;
+		$this->go_to( $author_url );
+		$this->assertFalse( Query::get_instance()->should_negotiate_content() );
+
+		// Enable permalink as Actor ID for the user.
+		\update_user_option( self::$user_id, 'activitypub_use_permalink_as_id', '1' );
+
+		// Now author page should negotiate content even with global setting disabled.
+		Query::get_instance()->__destruct();
+		$this->go_to( $author_url );
+		$this->assertTrue( Query::get_instance()->should_negotiate_content() );
 
 		// Clean up.
-		\wp_delete_post( $post_id, true );
+		unset( $_SERVER['REQUEST_URI'] );
+		\delete_user_option( self::$user_id, 'activitypub_use_permalink_as_id' );
+		\delete_option( 'activitypub_content_negotiation' );
+	}
+
+	/**
+	 * Test get_activitypub_object method for home page in Actor mode.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_home_page_actor_mode() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$actor_queries = array();
+
+		// Track database queries using the 'query' filter.
+		$query_filter = function ( $query ) use ( &$actor_queries ) {
+			if ( strpos( $query, 'ap_actor' ) !== false ) {
+				$actor_queries[] = $query;
+			}
+			return $query;
+		};
+
+		add_filter( 'query', $query_filter );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/' ) );
+		$object = Query::get_instance()->get_activitypub_object();
+
+		remove_filter( 'query', $query_filter );
+
+		$message = 'Should not query Remote_Actors table for home page.';
+		if ( ! empty( $actor_queries ) ) {
+			$message .= ' Found queries: ' . wp_json_encode( $actor_queries );
+		}
+
+		$this->assertNull( $object, 'Home page should return null, because the Blog user is disabled.' );
+		$this->assertEmpty( $actor_queries, $message );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test get_activitypub_object method for home page in Actor and Blog mode.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_home_page_actor_and_blog_mode() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$actor_queries = array();
+
+		// Track database queries using the 'query' filter.
+		$query_filter = function ( $query ) use ( &$actor_queries ) {
+			if ( strpos( $query, 'ap_actor' ) !== false ) {
+				$actor_queries[] = $query;
+			}
+			return $query;
+		};
+
+		\add_filter( 'query', $query_filter );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/' ) );
+		$object = Query::get_instance()->get_activitypub_object();
+
+		\remove_filter( 'query', $query_filter );
+
+		$message = 'Should not query Remote_Actors table for home page.';
+		if ( ! empty( $actor_queries ) ) {
+			$message .= ' Found queries: ' . wp_json_encode( $actor_queries );
+		}
+
+		$this->assertNotNull( $object, 'Home page should return an object' );
+		$this->assertEmpty( $actor_queries, $message );
+
+		\delete_option( 'activitypub_actor_mode' );
 	}
 }

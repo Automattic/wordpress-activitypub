@@ -261,7 +261,7 @@ class Followers extends \WP_List_Table {
 			$args['s'] = $this->normalize_search_term( \wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		}
 
-		$followers_with_count = Follower_Collection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );
+		$followers_with_count = Follower_Collection::query( $this->user_id, $per_page, $page_num, $args );
 		$followers            = $followers_with_count['followers'];
 		$counter              = $followers_with_count['total'];
 
@@ -283,10 +283,10 @@ class Followers extends \WP_List_Table {
 			$this->items[] = array(
 				'id'         => $follower->ID,
 				'icon'       => object_to_uri( $actor->get_icon() ?? ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg' ),
-				'post_title' => $actor->get_name() ?? $actor->get_preferred_username(),
+				'post_title' => $actor->get_name() ?: $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
-				'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
-				'webfinger'  => Remote_Actors::get_acct( $follower->ID ),
+				'url'        => object_to_uri( $actor->get_url() ?: $actor->get_id() ),
+				'webfinger'  => $actor->get_webfinger(),
 				'identifier' => $actor->get_id(),
 				'modified'   => $follower->post_modified_gmt,
 			);
@@ -299,7 +299,7 @@ class Followers extends \WP_List_Table {
 	 * @return string[]
 	 */
 	public function get_views() {
-		$count = Follower_Collection::count_followers( $this->user_id );
+		$count = Follower_Collection::count( $this->user_id );
 
 		$path = 'users.php?page=activitypub-followers-list';
 		if ( Actors::BLOG_USER_ID === $this->user_id ) {

@@ -34,7 +34,9 @@ class Test_Post extends \WP_UnitTestCase {
 		// Set up reflection method.
 		$reflection              = new \ReflectionClass( Post::class );
 		$this->reflection_method = $reflection->getMethod( 'get_type' );
-		$this->reflection_method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$this->reflection_method->setAccessible( true );
+		}
 	}
 
 	/**
@@ -55,7 +57,7 @@ class Test_Post extends \WP_UnitTestCase {
 	public function test_get_type_returns_configured_type_when_option_set() {
 		update_option( 'activitypub_object_type', 'Article' );
 
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => 'Test content that is longer than the note length limit',
@@ -81,7 +83,7 @@ class Test_Post extends \WP_UnitTestCase {
 	 * @param string $description    Description of the test case.
 	 */
 	public function test_get_type( $post_data, $post_format, $expected_type, $description ) {
-		$post_id = $this->factory->post->create( $post_data );
+		$post_id = self::factory()->post->create( $post_data );
 
 		if ( $post_format ) {
 			set_post_format( $post_id, $post_format );
@@ -110,8 +112,8 @@ class Test_Post extends \WP_UnitTestCase {
 					'post_content' => 'Short content',
 				),
 				null,
-				'Note',
-				'Should return Note for short content',
+				'Article',
+				'Should return Article for short content with title',
 			),
 			'no_title'             => array(
 				array(
@@ -180,7 +182,7 @@ class Test_Post extends \WP_UnitTestCase {
 			)
 		);
 
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => str_repeat( 'Long content. ', 100 ),
@@ -213,7 +215,7 @@ class Test_Post extends \WP_UnitTestCase {
 			)
 		);
 
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => str_repeat( 'Long content. ', 100 ),
@@ -383,7 +385,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_media_from_blocks' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$blocks = parse_blocks( $post->post_content );
 		$result = $method->invoke( $transformer, $blocks, $media );
@@ -411,7 +415,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_attachment' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $transformer );
 
@@ -420,10 +426,10 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
 
-		$result = $method->invoke( $transformer );
+		// Create a new transformer instance to avoid cached attachment result.
+		$transformer = new Post( $post );
+		$result      = $method->invoke( $transformer );
 		$this->assertTrue( (bool) \did_filter( 'activitypub_attachment_ids' ) );
-
-		\wp_delete_post( $post_id );
 	}
 
 	/**
@@ -448,7 +454,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_media_from_blocks' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$blocks = parse_blocks( $post->post_content );
 		$result = $method->invoke( $transformer, $blocks, $media );
@@ -480,7 +488,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_media_from_blocks' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$blocks = parse_blocks( $post->post_content );
 		$result = $method->invoke( $transformer, $blocks, $media );
@@ -498,7 +508,7 @@ class Test_Post extends \WP_UnitTestCase {
 	 * @covers ::get_icon
 	 */
 	public function test_get_icon() {
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => 'Test content',
@@ -512,7 +522,9 @@ class Test_Post extends \WP_UnitTestCase {
 		// Set up reflection method.
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_icon' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Test with featured image.
 		set_post_thumbnail( $post_id, $attachment_id );
@@ -561,10 +573,6 @@ class Test_Post extends \WP_UnitTestCase {
 		set_post_thumbnail( $post_id, 99999 );
 		$icon = $method->invoke( $transformer );
 		$this->assertNull( $icon );
-
-		// Cleanup.
-		wp_delete_post( $post_id, true );
-		wp_delete_attachment( $attachment_id, true );
 	}
 
 	/**
@@ -626,7 +634,7 @@ class Test_Post extends \WP_UnitTestCase {
 	 */
 	public function test_preview_property() {
 		// Create a test post of type "Article".
-		$post = $this->factory->post->create_and_get(
+		$post = self::factory()->post->create_and_get(
 			array(
 				'post_title'   => 'Test Article',
 				'post_content' => str_repeat( 'Long content. ', 100 ),
@@ -644,7 +652,7 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertNotEmpty( $preview['content'] );
 
 		// Create a test post of type "Note" (short content).
-		$note_post = $this->factory->post->create_and_get(
+		$note_post = self::factory()->post->create_and_get(
 			array(
 				'post_title'   => '',
 				'post_content' => 'Short note content',
@@ -740,7 +748,9 @@ class Test_Post extends \WP_UnitTestCase {
 		$object      = new Base_Object();
 		$get_content = new \ReflectionMethod( Post::class, 'transform_object_properties' );
 
-		$get_content->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$get_content->setAccessible( true );
+		}
 
 		$object = $get_content->invoke( new Post( $post ), $object );
 
@@ -786,7 +796,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$object = Post::transform( $post )->to_object();
 
 		// Assert that the reply block was transformed into a mention link.
-		$this->assertStringContainsString( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
+		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
+		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -817,7 +828,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Assert that the reply block was not transformed into a mention link.
-		$this->assertStringContainsString( '<div class="activitypub-reply-block wp-block-activitypub-reply" aria-label="Reply" data-in-reply-to="https://example.com/posts/123"><p><a title="This post is a response to the referenced content." aria-label="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to" target="_blank">&#8620;example.com/posts/123</a></p></div>', $content );
+		// Note: clean_html() strips class/aria-label/data-* from <div> but preserves class/title on <a>.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to" target="_blank">&#8620;example.com/posts/123</a></p></div>', $content );
 	}
 
 	/**
@@ -872,10 +884,12 @@ class Test_Post extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Assert that the first reply block was transformed into a mention link.
-		$this->assertStringContainsString( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
+		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
+		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
 
 		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
-		$this->assertStringContainsString( '<div class="activitypub-reply-block wp-block-activitypub-reply" aria-label="Reply" data-in-reply-to="https://other.site/posts/456"><p><a title="This post is a response to the referenced content." aria-label="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to" target="_blank">&#8620;other.site/posts/456</a></p></div>', $content );
+		// Note: clean_html() strips class/aria-label/data-* from <div> but preserves class/title on <a>.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to" target="_blank">&#8620;other.site/posts/456</a></p></div>', $content );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -1030,6 +1044,164 @@ class Test_Post extends \WP_UnitTestCase {
 			),
 			$policy['canQuote'],
 			'Invalid permission should fall back to anyone (public) policy.'
+		);
+	}
+
+	/**
+	 * Test get_post_content_template with various post types and reply scenarios.
+	 *
+	 * Tests how the template is generated for different post types (Article, Note)
+	 * and reply configurations, as well as option fallback scenarios.
+	 *
+	 * @dataProvider wordpress_post_format_template_provider
+	 * @covers ::get_post_content_template
+	 *
+	 * @param array       $post_data           The post data to create.
+	 * @param string      $expected_template   The expected template string.
+	 * @param string      $object_type         The activitypub_object_type option value.
+	 * @param string|null $custom_post_content The activitypub_custom_post_content option value (null to delete).
+	 * @param string      $description         Description of the test case.
+	 */
+	public function test_get_post_content_template_with_scenarios( $post_data, $expected_template, $object_type, $custom_post_content, $description ) {
+		// Set object type.
+		\update_option( 'activitypub_object_type', $object_type );
+
+		// Set or delete custom post content option.
+		if ( null === $custom_post_content ) {
+			\delete_option( 'activitypub_custom_post_content' );
+		} else {
+			\update_option( 'activitypub_custom_post_content', $custom_post_content );
+		}
+
+		// Mock mentions extraction if the post content contains mention patterns.
+		$content         = $post_data['post_content'] ?? '';
+		$mentions_filter = null;
+		if ( \preg_match( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $content ) ) {
+			$mentions_filter = function ( $mentions, $post_content ) {
+				// Extract all mention patterns from content.
+				\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $post_content, $all_matches );
+				foreach ( $all_matches[0] as $match ) {
+					$mentions[ $match ] = 'https://example.com/' . \ltrim( $match, '@' );
+				}
+				return $mentions;
+			};
+			\add_filter( 'activitypub_extract_mentions', $mentions_filter, 10, 2 );
+		}
+
+		$post = self::factory()->post->create_and_get( $post_data );
+
+		$transformer = new Post( $post );
+		$reflection  = new \ReflectionClass( Post::class );
+		$method      = $reflection->getMethod( 'get_post_content_template' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$template = $method->invoke( $transformer );
+
+		// Clean up mentions filter if it was added.
+		if ( $mentions_filter ) {
+			\remove_filter( 'activitypub_extract_mentions', $mentions_filter );
+		}
+
+		// All wordpress-post-format templates should contain [ap_content].
+		if ( 'wordpress-post-format' === $object_type ) {
+			$this->assertStringContainsString( '[ap_content]', $template, $description . ' - should contain [ap_content]' );
+		}
+
+		$this->assertSame( $expected_template, $template, $description );
+	}
+
+	/**
+	 * Data provider for get_post_content_template tests with various scenarios.
+	 *
+	 * @return array Each test case contains:
+	 *               - post_data: The post data to create
+	 *               - expected_template: The expected template string
+	 *               - object_type: The activitypub_object_type option value
+	 *               - custom_post_content: The activitypub_custom_post_content option value (null to delete)
+	 *               - description: Description of the test case
+	 */
+	public function wordpress_post_format_template_provider() {
+		return array(
+			'Article type'                => array(
+				array(
+					'post_title'   => 'Test Article',
+					'post_content' => str_repeat( 'Long content. ', 100 ),
+					'post_status'  => 'publish',
+				),
+				'[ap_content]',
+				'wordpress-post-format',
+				'[ap_title]\n\n[ap_content]',
+				'wordpress-post-format should override custom template for Article type.',
+			),
+			'Note type without reply'     => array(
+				array(
+					'post_title'   => '',
+					'post_content' => 'Short note',
+					'post_status'  => 'publish',
+				),
+				'[ap_title type="html"][ap_content]',
+				'wordpress-post-format',
+				'[ap_title]\n\n[ap_content]',
+				'wordpress-post-format should add title for Note type without reply.',
+			),
+			'Note type with reply block'  => array(
+				array(
+					'post_title'   => '',
+					'post_content' => '<!-- wp:activitypub/reply {"url":"https://example.com/posts/123"} /-->' . PHP_EOL .
+										'<!-- wp:paragraph --><p>This is a reply note.</p><!-- /wp:paragraph -->',
+					'post_status'  => 'publish',
+				),
+				'[ap_content]',
+				'wordpress-post-format',
+				'[ap_title]\n\n[ap_content]',
+				'wordpress-post-format should not add title for Note type when it is a reply.',
+			),
+			'Note type with mentions'     => array(
+				array(
+					'post_title'   => '',
+					'post_content' => 'Short note mentioning @activitypub.blog@activitypub.blog',
+					'post_status'  => 'publish',
+				),
+				'[ap_content]',
+				'wordpress-post-format',
+				null,
+				'wordpress-post-format should not add title for Note type when it has mentions.',
+			),
+			'fallback_with_false_option'  => array(
+				array(
+					'post_title'   => 'Interaction Policy Test',
+					'post_content' => 'Content',
+					'post_status'  => 'publish',
+				),
+				ACTIVITYPUB_CUSTOM_POST_CONTENT,
+				'Article',
+				null,
+				'False option should fall back to ACTIVITYPUB_CUSTOM_POST_CONTENT constant.',
+			),
+			'uses_custom_option_when_set' => array(
+				array(
+					'post_title'   => 'Interaction Policy Test',
+					'post_content' => 'Content',
+					'post_status'  => 'publish',
+				),
+				'[ap_title]\n\n[ap_content]\n\n[ap_hashtags]',
+				'Article',
+				'[ap_title]\n\n[ap_content]\n\n[ap_hashtags]',
+				'Should use custom template option when set.',
+			),
+			'fallback_with_empty_option'  => array(
+				array(
+					'post_title'   => 'Interaction Policy Test',
+					'post_content' => 'Content',
+					'post_status'  => 'publish',
+				),
+				ACTIVITYPUB_CUSTOM_POST_CONTENT,
+				'Article',
+				'',
+				'Empty activitypub_custom_post_content option should fall back to ACTIVITYPUB_CUSTOM_POST_CONTENT constant.',
+			),
 		);
 	}
 }

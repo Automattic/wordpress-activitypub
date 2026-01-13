@@ -12,7 +12,7 @@ import { RequestUtils } from '@wordpress/e2e-test-utils-playwright';
  * Global setup for ActivityPub E2E tests.
  *
  * @param {import('@playwright/test').FullConfig} config
- * @returns {Promise<void>}
+ * @return {Promise<void>}
  */
 async function globalSetup( config ) {
 	const { storageState, baseURL } = config.projects[ 0 ].use;
@@ -31,7 +31,6 @@ async function globalSetup( config ) {
 
 	// Reset the test environment before running the tests.
 	await Promise.all( [
-		requestUtils.activateTheme( 'twentytwentyfour' ),
 		requestUtils.deleteAllPosts(),
 		requestUtils.deleteAllBlocks(),
 		requestUtils.resetPreferences(),

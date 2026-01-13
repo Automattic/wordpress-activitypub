@@ -318,15 +318,9 @@ class User extends Actor {
 	 * @return string[]|null The endpoints.
 	 */
 	public function get_endpoints() {
-		$endpoints = null;
-
-		if ( \get_option( 'activitypub_shared_inbox' ) ) {
-			$endpoints = array(
-				'sharedInbox' => get_rest_url_by_path( 'inbox' ),
-			);
-		}
-
-		return $endpoints;
+		return array(
+			'sharedInbox' => get_rest_url_by_path( 'inbox' ),
+		);
 	}
 
 	/**
@@ -459,7 +453,6 @@ class User extends Actor {
 			$this->get_alternate_url(),
 		);
 
-		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
 		$also_known_as = array_merge( $also_known_as, \get_user_option( 'activitypub_also_known_as', $this->_id ) ?: array() );
 
 		return array_unique( $also_known_as );

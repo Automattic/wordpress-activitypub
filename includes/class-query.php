@@ -198,6 +198,14 @@ class Query {
 			}
 		}
 
+		// Check Term by ID.
+		if ( ! $queried_object ) {
+			$term_id = \get_query_var( 'term_id' );
+			if ( $term_id ) {
+				$queried_object = \get_term( $term_id );
+			}
+		}
+
 		// Try to get Author by ID.
 		if ( ! $queried_object ) {
 			$url       = $this->get_request_url();
@@ -327,6 +335,10 @@ class Query {
 		}
 
 		if ( \get_option( 'activitypub_content_negotiation', '1' ) ) {
+			$return = true;
+		}
+
+		if ( \is_author() && \get_user_option( 'activitypub_use_permalink_as_id', \get_queried_object_id() ) ) {
 			$return = true;
 		}
 

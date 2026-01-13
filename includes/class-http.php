@@ -53,6 +53,7 @@ class Http {
 			'body'                => $body,
 			'key_id'              => \json_decode( $body )->actor . '#main-key',
 			'private_key'         => Actors::get_private_key( $user_id ),
+			'user_id'             => $user_id,
 		);
 
 		$response = \wp_safe_remote_post( $url, $args );
@@ -234,19 +235,8 @@ class Http {
 			);
 		}
 
-		if ( is_wp_error( $url ) ) {
+		if ( \is_wp_error( $url ) ) {
 			return $url;
-		}
-
-		$transient_key = self::generate_cache_key( $url );
-
-		// Only check the cache if needed.
-		if ( $cached ) {
-			$data = \get_transient( $transient_key );
-
-			if ( $data ) {
-				return $data;
-			}
 		}
 
 		if ( ! \wp_http_validate_url( $url ) ) {
@@ -260,7 +250,7 @@ class Http {
 			);
 		}
 
-		$response = self::get( $url );
+		$response = self::get( $url, $cached );
 
 		if ( \is_wp_error( $response ) ) {
 			return $response;
@@ -279,8 +269,6 @@ class Http {
 				)
 			);
 		}
-
-		\set_transient( $transient_key, $data, WEEK_IN_SECONDS );
 
 		return $data;
 	}

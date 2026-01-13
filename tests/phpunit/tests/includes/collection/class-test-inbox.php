@@ -67,18 +67,17 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$activity_type_meta = \get_post_meta( $inbox_id, '_activitypub_activity_type', true );
 		$this->assertEquals( 'Create', $activity_type_meta );
 
-		// Test _activitypub_activity_actor meta.
-		$activity_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_actor', true );
-		$expected_actor_type = \user_can( $user_id, 'activitypub' ) ? 'user' : 'blog';
-		$this->assertEquals( $expected_actor_type, $activity_actor_meta );
+		// Test _activitypub_user_id meta.
+		$user_id_meta = \get_post_meta( $inbox_id, '_activitypub_user_id', true );
+		$this->assertEquals( $user_id, $user_id_meta );
 
 		// Test _activitypub_activity_remote_actor meta.
 		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
 		$this->assertEquals( 'https://remote.example.com/users/testuser', $remote_actor_meta );
 
-		// Test activitypub_content_visibility meta.
+		// Activities with no recipients are treated as public.
 		$visibility_meta = \get_post_meta( $inbox_id, 'activitypub_content_visibility', true );
-		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility_meta );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $visibility_meta );
 	}
 
 	/**
@@ -180,9 +179,9 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertIsInt( $inbox_id );
 
-		// Verify actor type meta for blog.
-		$activity_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_actor', true );
-		$this->assertEquals( 'blog', $activity_actor_meta );
+		// Verify user_id meta for blog user.
+		$user_id_meta = \get_post_meta( $inbox_id, '_activitypub_user_id', true );
+		$this->assertEquals( 0, $user_id_meta );
 	}
 
 	/**
@@ -221,7 +220,6 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertArrayHasKey( '_activitypub_object_id', $registered_meta );
 		$this->assertArrayHasKey( '_activitypub_activity_type', $registered_meta );
-		$this->assertArrayHasKey( '_activitypub_activity_actor', $registered_meta );
 		$this->assertArrayHasKey( '_activitypub_activity_remote_actor', $registered_meta );
 		$this->assertArrayHasKey( 'activitypub_content_visibility', $registered_meta );
 
@@ -261,5 +259,997 @@ class Test_Inbox extends \WP_UnitTestCase {
 		// Verify activity type is properly capitalized.
 		$activity_type_meta = \get_post_meta( $inbox_id, '_activitypub_activity_type', true );
 		$this->assertEquals( 'Create', $activity_type_meta );
+	}
+
+	/**
+	 * Test adding the same activity for multiple users.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_for_multiple_users() {
+		// Create a test activity that will be received by multiple users.
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/multi-user-test' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/multi-user-test' );
+		$object->set_type( 'Note' );
+		$object->set_content( 'Test content for multiple users' );
+		$activity->set_object( $object );
+
+		// Add activity for first user.
+		$inbox_id_1 = Inbox::add( $activity, 1 );
+		$this->assertIsInt( $inbox_id_1 );
+		$this->assertGreaterThan( 0, $inbox_id_1 );
+
+		// Verify first user is in metadata.
+		$user_ids = \get_post_meta( $inbox_id_1, '_activitypub_user_id', false );
+		$this->assertIsArray( $user_ids );
+		$this->assertContains( '1', $user_ids );
+		$this->assertCount( 1, $user_ids );
+
+		// Add the same activity for second user.
+		$inbox_id_2 = Inbox::add( $activity, 2 );
+		$this->assertEquals( $inbox_id_1, $inbox_id_2, 'Should return the same inbox item ID' );
+
+		// Verify both users are now in metadata.
+		$user_ids = \get_post_meta( $inbox_id_1, '_activitypub_user_id', false );
+		$this->assertIsArray( $user_ids );
+		$this->assertCount( 2, $user_ids );
+		$this->assertContains( '1', $user_ids );
+		$this->assertContains( '2', $user_ids );
+
+		// Add the same activity for third user.
+		$inbox_id_3 = Inbox::add( $activity, 3 );
+		$this->assertEquals( $inbox_id_1, $inbox_id_3, 'Should return the same inbox item ID' );
+
+		// Verify all three users are in metadata.
+		$user_ids = \get_post_meta( $inbox_id_1, '_activitypub_user_id', false );
+		$this->assertIsArray( $user_ids );
+		$this->assertCount( 3, $user_ids );
+		$this->assertContains( '1', $user_ids );
+		$this->assertContains( '2', $user_ids );
+		$this->assertContains( '3', $user_ids );
+
+		// Try adding for user 1 again (should not duplicate).
+		$inbox_id_4 = Inbox::add( $activity, 1 );
+		$this->assertEquals( $inbox_id_1, $inbox_id_4, 'Should return the same inbox item ID' );
+
+		// Verify still only three unique users.
+		$user_ids = \get_post_meta( $inbox_id_1, '_activitypub_user_id', false );
+		$this->assertCount( 3, $user_ids, 'Should not duplicate user_id' );
+	}
+
+	/**
+	 * Test adding activity with array of recipients.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_array_of_recipients() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/array-recipients' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/array-recipients' );
+		$object->set_type( 'Note' );
+		$object->set_content( 'Test content for array of recipients' );
+		$activity->set_object( $object );
+
+		// Add activity with multiple recipients at once.
+		$inbox_id = Inbox::add( $activity, array( 1, 2, 3, 0 ) );
+		$this->assertIsInt( $inbox_id );
+
+		// Verify all recipients are stored.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertIsArray( $recipients );
+		$this->assertCount( 4, $recipients );
+		$this->assertContains( 0, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+		$this->assertContains( 3, $recipients );
+	}
+
+	/**
+	 * Test get_recipients function.
+	 *
+	 * @covers ::get_recipients
+	 */
+	public function test_get_recipients() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/get-recipients' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/get-recipients' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		// Add with multiple recipients.
+		$inbox_id = Inbox::add( $activity, array( 1, 2, 0 ) );
+
+		// Test get_recipients.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertIsArray( $recipients );
+		$this->assertCount( 3, $recipients );
+		$this->assertContains( 0, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+	}
+
+	/**
+	 * Test has_recipient function.
+	 *
+	 * @covers ::has_recipient
+	 */
+	public function test_has_recipient() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/has-recipient' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/has-recipient' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, array( 1, 2 ) );
+
+		// Test has_recipient for existing recipients.
+		$this->assertTrue( Inbox::has_recipient( $inbox_id, 1 ) );
+		$this->assertTrue( Inbox::has_recipient( $inbox_id, 2 ) );
+
+		// Test has_recipient for non-existing recipient.
+		$this->assertFalse( Inbox::has_recipient( $inbox_id, 3 ) );
+		$this->assertFalse( Inbox::has_recipient( $inbox_id, 0 ) );
+	}
+
+	/**
+	 * Test add_recipient function.
+	 *
+	 * @covers ::add_recipient
+	 */
+	public function test_add_recipient() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/add-recipient' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/add-recipient' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		// Add new recipient.
+		$result = Inbox::add_recipient( $inbox_id, 2 );
+		$this->assertTrue( $result );
+		$this->assertTrue( Inbox::has_recipient( $inbox_id, 2 ) );
+
+		// Add blog user (ID 0).
+		$result = Inbox::add_recipient( $inbox_id, 0 );
+		$this->assertTrue( $result );
+		$this->assertTrue( Inbox::has_recipient( $inbox_id, 0 ) );
+
+		// Try adding duplicate recipient.
+		$result = Inbox::add_recipient( $inbox_id, 1 );
+		$this->assertTrue( $result, 'Should return true for duplicate (no-op)' );
+
+		// Verify total count.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertCount( 3, $recipients );
+
+		// Test invalid user ID (negative).
+		$result = Inbox::add_recipient( $inbox_id, -1 );
+		$this->assertFalse( $result, 'Should reject negative user ID' );
+	}
+
+	/**
+	 * Test remove_recipient function.
+	 *
+	 * @covers ::remove_recipient
+	 */
+	public function test_remove_recipient() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/remove-recipient' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/remove-recipient' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, array( 0, 1, 2, 3 ) );
+
+		// Remove a recipient.
+		$result = Inbox::remove_recipient( $inbox_id, 2 );
+		$this->assertTrue( $result );
+		$this->assertFalse( Inbox::has_recipient( $inbox_id, 2 ) );
+
+		// Remove blog user (ID 0).
+		$result = Inbox::remove_recipient( $inbox_id, 0 );
+		$this->assertTrue( $result );
+		$this->assertFalse( Inbox::has_recipient( $inbox_id, 0 ) );
+
+		// Verify remaining recipients.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertCount( 2, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 3, $recipients );
+
+		// Test removing non-existent recipient.
+		$result = Inbox::remove_recipient( $inbox_id, 99 );
+		$this->assertFalse( $result, 'Should return false when removing non-existent recipient' );
+
+		// Test invalid user ID (negative).
+		$result = Inbox::remove_recipient( $inbox_id, -1 );
+		$this->assertFalse( $result, 'Should reject negative user ID' );
+	}
+
+	/**
+	 * Test get_by_guid_and_recipient function.
+	 *
+	 * @covers ::get_by_guid_and_recipient
+	 */
+	public function test_get_by_guid_and_recipient() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/guid-recipient' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/guid-recipient' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, array( 1, 2 ) );
+
+		// Test with valid recipient.
+		$post = Inbox::get_by_guid_and_recipient( 'https://remote.example.com/activities/guid-recipient', 1 );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( $inbox_id, $post->ID );
+
+		// Test with another valid recipient.
+		$post = Inbox::get_by_guid_and_recipient( 'https://remote.example.com/activities/guid-recipient', 2 );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( $inbox_id, $post->ID );
+
+		// Test with non-recipient.
+		$result = Inbox::get_by_guid_and_recipient( 'https://remote.example.com/activities/guid-recipient', 3 );
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertEquals( 'activitypub_inbox_not_recipient', $result->get_error_code() );
+
+		// Test with non-existent GUID.
+		$result = Inbox::get_by_guid_and_recipient( 'https://remote.example.com/activities/non-existent', 1 );
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertEquals( 'activitypub_inbox_item_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * Test adding activity with empty recipients array.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_empty_recipients() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/empty-recipients' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/empty-recipients' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$result = Inbox::add( $activity, array() );
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertEquals( 'activitypub_inbox_no_recipients', $result->get_error_code() );
+	}
+
+	/**
+	 * Test adding activity with duplicate recipients in array.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_duplicate_recipients() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/dup-array' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/dup-array' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		// Add with duplicate recipients in array.
+		$inbox_id = Inbox::add( $activity, array( 1, 2, 1, 3, 2 ) );
+		$this->assertIsInt( $inbox_id );
+
+		// Verify recipients are deduplicated.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertCount( 3, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+		$this->assertContains( 3, $recipients );
+	}
+
+	/**
+	 * Test add_recipients function.
+	 *
+	 * @covers ::add_recipients
+	 */
+	public function test_add_recipients() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/add-recipients' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/add-recipients' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		// Add multiple recipients at once.
+		Inbox::add_recipients( $inbox_id, array( 2, 3, 4 ) );
+
+		// Verify all recipients were added.
+		$recipients = Inbox::get_recipients( $inbox_id );
+		$this->assertCount( 4, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+		$this->assertContains( 3, $recipients );
+		$this->assertContains( 4, $recipients );
+	}
+
+	/**
+	 * Test deduplicate function with no duplicates.
+	 *
+	 * @covers ::deduplicate
+	 */
+	public function test_deduplicate_no_duplicates() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/single-item' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/single-item' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		// Deduplicate should return the same post.
+		$result = Inbox::deduplicate( 'https://remote.example.com/activities/single-item' );
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( $inbox_id, $result->ID );
+	}
+
+	/**
+	 * Test deduplicate function with duplicates.
+	 *
+	 * @covers ::deduplicate
+	 */
+	public function test_deduplicate_with_duplicates() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/duplicate-guid' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/duplicate-guid' );
+		$object->set_type( 'Note' );
+		$activity->set_object( $object );
+
+		// Manually create duplicate inbox posts with same GUID.
+		$inbox_id_1 = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/duplicate-guid',
+			)
+		);
+		\add_post_meta( $inbox_id_1, '_activitypub_user_id', 1 );
+		\add_post_meta( $inbox_id_1, '_activitypub_user_id', 2 );
+
+		$inbox_id_2 = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/duplicate-guid',
+			)
+		);
+		\add_post_meta( $inbox_id_2, '_activitypub_user_id', 3 );
+		\add_post_meta( $inbox_id_2, '_activitypub_user_id', 4 );
+
+		$inbox_id_3 = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/duplicate-guid',
+			)
+		);
+		\add_post_meta( $inbox_id_3, '_activitypub_user_id', 5 );
+
+		// Run deduplication.
+		$result = Inbox::deduplicate( 'https://remote.example.com/activities/duplicate-guid' );
+
+		// Should return the first post.
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( $inbox_id_1, $result->ID );
+
+		// Verify all recipients were merged.
+		$recipients = Inbox::get_recipients( $inbox_id_1 );
+		$this->assertCount( 5, $recipients );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+		$this->assertContains( 3, $recipients );
+		$this->assertContains( 4, $recipients );
+		$this->assertContains( 5, $recipients );
+
+		// Verify duplicates were deleted.
+		$this->assertNull( \get_post( $inbox_id_2 ) );
+		$this->assertNull( \get_post( $inbox_id_3 ) );
+
+		// Verify only one post exists with this GUID.
+		$posts = \get_posts(
+			array(
+				'post_type'      => Inbox::POST_TYPE,
+				'guid'           => 'https://remote.example.com/activities/duplicate-guid',
+				'posts_per_page' => -1,
+			)
+		);
+		$this->assertCount( 1, $posts );
+	}
+
+	/**
+	 * Test deduplicate function with non-existent GUID.
+	 *
+	 * @covers ::deduplicate
+	 */
+	public function test_deduplicate_non_existent() {
+		$result = Inbox::deduplicate( 'https://remote.example.com/activities/non-existent' );
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test that deduplicate only processes posts with matching GUID.
+	 *
+	 * This test verifies that deduplicate() properly filters by GUID and doesn't
+	 * accidentally process all inbox posts.
+	 *
+	 * @covers ::deduplicate
+	 */
+	public function test_deduplicate_only_matches_specific_guid() {
+		$activity1 = new Activity();
+		$activity1->set_id( 'https://remote.example.com/activities/first-activity' );
+		$activity1->set_type( 'Create' );
+		$activity1->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object1 = new Base_Object();
+		$object1->set_id( 'https://remote.example.com/objects/first' );
+		$object1->set_type( 'Note' );
+		$activity1->set_object( $object1 );
+
+		$activity2 = new Activity();
+		$activity2->set_id( 'https://remote.example.com/activities/second-activity' );
+		$activity2->set_type( 'Like' );
+		$activity2->set_actor( 'https://remote.example.com/users/testuser' );
+		$activity2->set_object( 'https://example.com/post/123' );
+
+		// Create multiple posts with GUID 'first-activity' (duplicates).
+		$inbox_id_1a = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity1->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/first-activity',
+			)
+		);
+		\add_post_meta( $inbox_id_1a, '_activitypub_user_id', 1 );
+
+		$inbox_id_1b = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity1->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/first-activity',
+			)
+		);
+		\add_post_meta( $inbox_id_1b, '_activitypub_user_id', 2 );
+
+		$inbox_id_1c = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity1->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/first-activity',
+			)
+		);
+		\add_post_meta( $inbox_id_1c, '_activitypub_user_id', 3 );
+
+		// Create posts with DIFFERENT GUID 'second-activity' (should NOT be touched).
+		$inbox_id_2a = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity2->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/second-activity',
+			)
+		);
+		\add_post_meta( $inbox_id_2a, '_activitypub_user_id', 4 );
+
+		$inbox_id_2b = \wp_insert_post(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode( $activity2->to_array() ),
+				'guid'         => 'https://remote.example.com/activities/second-activity',
+			)
+		);
+		\add_post_meta( $inbox_id_2b, '_activitypub_user_id', 5 );
+
+		// Run deduplication for first-activity only.
+		$result = Inbox::deduplicate( 'https://remote.example.com/activities/first-activity' );
+
+		// Verify correct post was returned.
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( $inbox_id_1a, $result->ID, 'Should return the first (oldest) post with matching GUID' );
+
+		// Verify recipients were merged from duplicates.
+		$recipients = Inbox::get_recipients( $inbox_id_1a );
+		$this->assertCount( 3, $recipients, 'Should have all recipients from first-activity duplicates' );
+		$this->assertContains( 1, $recipients );
+		$this->assertContains( 2, $recipients );
+		$this->assertContains( 3, $recipients );
+
+		// Verify duplicates of first-activity were deleted.
+		$this->assertNull( \get_post( $inbox_id_1b ), 'Duplicate 1b should be deleted' );
+		$this->assertNull( \get_post( $inbox_id_1c ), 'Duplicate 1c should be deleted' );
+
+		// CRITICAL: Verify second-activity posts were NOT touched.
+		$post_2a = \get_post( $inbox_id_2a );
+		$post_2b = \get_post( $inbox_id_2b );
+		$this->assertInstanceOf( 'WP_Post', $post_2a, 'second-activity post 2a should still exist' );
+		$this->assertInstanceOf( 'WP_Post', $post_2b, 'second-activity post 2b should still exist' );
+
+		// Verify second-activity posts still have only their original recipients.
+		$recipients_2a = Inbox::get_recipients( $inbox_id_2a );
+		$recipients_2b = Inbox::get_recipients( $inbox_id_2b );
+		$this->assertCount( 1, $recipients_2a, 'second-activity 2a should have only its original recipient' );
+		$this->assertCount( 1, $recipients_2b, 'second-activity 2b should have only its original recipient' );
+		$this->assertContains( 4, $recipients_2a );
+		$this->assertContains( 5, $recipients_2b );
+
+		// Verify only one post exists with first-activity GUID.
+		// Note: get_posts() doesn't support 'guid' parameter, so we use direct SQL query.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count_first = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				\esc_url( 'https://remote.example.com/activities/first-activity' ),
+				Inbox::POST_TYPE
+			)
+		);
+		$this->assertEquals( 1, $count_first, 'Should have exactly one post with first-activity GUID' );
+
+		// Verify two posts still exist with second-activity GUID.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count_second = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				\esc_url( 'https://remote.example.com/activities/second-activity' ),
+				Inbox::POST_TYPE
+			)
+		);
+		$this->assertEquals( 2, $count_second, 'Should still have two posts with second-activity GUID (not deduplicated)' );
+	}
+
+	/**
+	 * Test adding activity when object is an array.
+	 *
+	 * This test verifies that the inbox can handle activities where get_object()
+	 * returns an array instead of an object, which can happen with certain
+	 * ActivityPub implementations.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_array_object() {
+		// Create an activity with an array as the object.
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/array-object' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		// Set object as an array (this can happen with certain implementations).
+		$activity->set_object(
+			array(
+				'id'      => 'https://remote.example.com/objects/array-test',
+				'type'    => 'Note',
+				'content' => 'Test content',
+			)
+		);
+
+		$user_id = 1;
+
+		// Add activity to inbox - should not throw an error.
+		$inbox_id = Inbox::add( $activity, $user_id );
+
+		$this->assertIsInt( $inbox_id );
+		$this->assertGreaterThan( 0, $inbox_id );
+
+		// Verify the post was created with empty title (since array doesn't have get_name()).
+		$post = \get_post( $inbox_id );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( Inbox::POST_TYPE, $post->post_type );
+
+		// Post title should be "[Create] " (activity type with no object title).
+		$this->assertStringStartsWith( '[Create]', $post->post_title );
+	}
+
+	/**
+	 * Test adding Flag activity with array of URLs as object.
+	 *
+	 * This test verifies that the inbox can handle Flag activities (used for
+	 * reporting content) where the object is an array of URLs, which is a
+	 * real-world scenario from Mastodon moderation reports.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_flag_activity_with_url_array() {
+		// Create a Flag activity similar to moderation reports.
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/flag-report' );
+		$activity->set_type( 'Flag' );
+		$activity->set_actor( 'https://remote.example.com/users/reporter' );
+		$activity->set_content( '' ); // Flag activities often have empty content.
+
+		// Set object as an array of URLs (actor being reported + content being reported).
+		$activity->set_object(
+			array(
+				'https://example.org/users/reported-user',
+				'https://example.org/posts/12345',
+			)
+		);
+
+		$user_id = 1;
+
+		// Add activity to inbox - should not throw an error despite array object.
+		$inbox_id = Inbox::add( $activity, $user_id );
+
+		$this->assertIsInt( $inbox_id );
+		$this->assertGreaterThan( 0, $inbox_id );
+
+		// Verify the post was created.
+		$post = \get_post( $inbox_id );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( Inbox::POST_TYPE, $post->post_type );
+
+		// Post title should be "[Flag] " (activity type with no object title from array).
+		$this->assertStringStartsWith( '[Flag]', $post->post_title );
+	}
+
+	/**
+	 * Test adding activity when object is null.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_null_object() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/null-object' );
+		$activity->set_type( 'Delete' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+		// Don't set any object - it will be null.
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		$this->assertIsInt( $inbox_id );
+		$this->assertGreaterThan( 0, $inbox_id );
+
+		// Post title should be "[Delete] " with no object title.
+		$post = \get_post( $inbox_id );
+		$this->assertStringStartsWith( '[Delete]', $post->post_title );
+	}
+
+	/**
+	 * Test adding activity when object is a string URL.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_string_object() {
+		// Create a post to reference.
+		$post_id  = self::factory()->post->create(
+			array(
+				'post_title'  => 'Referenced Post',
+				'post_status' => 'publish',
+			)
+		);
+		$post_url = \get_permalink( $post_id );
+
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/string-object' );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$activity->set_object( $post_url ); // String URL.
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		$this->assertIsInt( $inbox_id );
+
+		// Post title should include the referenced post title.
+		$post = \get_post( $inbox_id );
+		$this->assertStringContainsString( 'Referenced Post', $post->post_title );
+	}
+
+	/**
+	 * Test adding activity with object that has name property.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_object_name() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/object-name' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/named' );
+		$object->set_type( 'Note' );
+		$object->set_name( 'My Note Title' );
+		$object->set_content( 'This is the content' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		$this->assertIsInt( $inbox_id );
+
+		// Post title should include the object name.
+		$post = \get_post( $inbox_id );
+		$this->assertStringContainsString( 'My Note Title', $post->post_title );
+	}
+
+	/**
+	 * Test adding activity with object that has content but no name.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_activity_with_object_content_no_name() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/object-content' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/content-only' );
+		$object->set_type( 'Note' );
+		$object->set_content( 'This is the content without a name' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		$this->assertIsInt( $inbox_id );
+
+		// Post title should include part of the content (since no name).
+		$post = \get_post( $inbox_id );
+		$this->assertStringContainsString( 'This is the content', $post->post_title );
+	}
+
+	/**
+	 * Test adding Like activity with trailing slash in object URL.
+	 *
+	 * This test verifies that Like activities from Pixelfed and other platforms
+	 * that include trailing slashes in object URLs are stored correctly in the inbox.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_like_activity_with_trailing_slash() {
+		// Create a post to be liked.
+		$post_id        = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Like',
+				'post_content' => 'Test content',
+				'post_status'  => 'publish',
+			)
+		);
+		$post_permalink = \get_permalink( $post_id );
+
+		// Create a Like activity with trailing slash in object URL (as Pixelfed sends).
+		$activity = new Activity();
+		$activity->set_id( 'https://pixelfed.social/users/pfefferle#likes/30434186' );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://pixelfed.social/users/pfefferle' );
+		$activity->set_object( $post_permalink . '/' ); // Add trailing slash.
+
+		$user_id = 1;
+
+		// Add activity to inbox.
+		$inbox_id = Inbox::add( $activity, $user_id );
+
+		$this->assertIsInt( $inbox_id );
+		$this->assertGreaterThan( 0, $inbox_id );
+
+		// Verify the post was created.
+		$post = \get_post( $inbox_id );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( Inbox::POST_TYPE, $post->post_type );
+
+		// Test _activitypub_object_id meta - should preserve the trailing slash as-is.
+		$object_id_meta = \get_post_meta( $inbox_id, '_activitypub_object_id', true );
+		$this->assertEquals( $post_permalink . '/', $object_id_meta );
+
+		// Test _activitypub_activity_type meta.
+		$activity_type_meta = \get_post_meta( $inbox_id, '_activitypub_activity_type', true );
+		$this->assertEquals( 'Like', $activity_type_meta );
+
+		// Test _activitypub_user_id meta.
+		$user_id_meta = \get_post_meta( $inbox_id, '_activitypub_user_id', true );
+		$this->assertEquals( $user_id, $user_id_meta );
+
+		// Test _activitypub_activity_remote_actor meta.
+		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
+		$this->assertEquals( 'https://pixelfed.social/users/pfefferle', $remote_actor_meta );
+	}
+
+	/**
+	 * Test purge method with more than 200 posts.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_more_than_200_posts() {
+		// Create 20 old posts (will be deleted).
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
+			)
+		);
+
+		// Create 5 new posts (will be kept).
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Inbox::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Inbox::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert that 20 old posts were deleted.
+		$this->assertEquals( 20, $deleted );
+
+		// Verify 5 new posts remain.
+		$remaining = \get_posts(
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+		$this->assertCount( 5, $remaining );
+	}
+
+	/**
+	 * Test purge method with 200 or fewer posts.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_200_or_fewer_posts() {
+		// Create 20 old posts.
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		$deleted = Inbox::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+
+		// Assert no posts were deleted (below threshold).
+		$this->assertEquals( 0, $deleted );
+		$this->assertEquals( 20, \wp_count_posts( Inbox::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Test purge method with different retention days.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_with_different_days() {
+		// Create posts older than 60 days but newer than 30 days.
+		self::factory()->post->create_many(
+			10,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-45 days' ) ),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Inbox::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		// Purge with 60 days retention - should not delete.
+		$deleted = Inbox::purge( 60 );
+		$this->assertEquals( 0, $deleted );
+
+		// Purge with 30 days retention - should delete all.
+		$deleted = Inbox::purge( 30 );
+		\wp_cache_delete( \_count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		$this->assertEquals( 10, $deleted );
+	}
+
+	/**
+	 * Test purge returns count of deleted items.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_returns_deleted_count() {
+		// Create 15 old posts.
+		self::factory()->post->create_many(
+			15,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Inbox::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Inbox::purge( 180 );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Should return exact count of deleted posts.
+		$this->assertEquals( 15, $deleted );
 	}
 }

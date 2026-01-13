@@ -1,5 +1,12 @@
-@import '../shared/modal/style';
+@use "../shared/modal/style";
 
+/**
+ * Disable no-descending-specificity: This file uses mutually exclusive style
+ * variations (default/:not(), .is-style-button-only, .is-style-profile).
+ * The :not() selectors intentionally have higher specificity to hide elements
+ * when no variation is active, while each variation re-shows specific elements.
+ */
+/* stylelint-disable no-descending-specificity */
 .activitypub-follow-me-block-wrapper {
 	display: block;
 	margin: 1rem 0;
@@ -75,6 +82,7 @@
 
 	// Style variations - applied to the wrapper
 	&:not(.is-style-button-only):not(.is-style-profile) {
+
 		.activitypub-profile__bio,
 		.activitypub-profile__stats {
 			display: none;
@@ -82,6 +90,7 @@
 	}
 
 	&.is-style-button-only {
+
 		.activitypub-profile {
 			padding: 0;
 		}
@@ -99,12 +108,44 @@
 			display: inline-block;
 			margin: 0;
 		}
+
 		.activitypub-profile__avatar,
 		.activitypub-profile__name,
 		.activitypub-profile__handle,
 		.activitypub-profile__bio,
 		.activitypub-profile__stats {
 			display: none;
+		}
+
+		// Support inner button width settings.
+		// Switch from inline to block layout for percentage widths.
+		// `.has-custom-width` is added by core/button when selected.
+		div.wp-block-button.has-custom-width {
+			display: block;
+			max-width: none;
+
+			.wp-block-button__link {
+				width: 100%;
+				justify-content: center;
+			}
+		}
+
+		// Width class support - match core/button calculations.
+		// These classes are on the inner .wp-block-button element.
+		div.wp-block-button__width-25 {
+			width: calc(25% - (var(--wp--style--block-gap, 0.5em) * 0.75));
+		}
+
+		div.wp-block-button__width-50 {
+			width: calc(50% - (var(--wp--style--block-gap, 0.5em) * 0.5));
+		}
+
+		div.wp-block-button__width-75 {
+			width: calc(75% - (var(--wp--style--block-gap, 0.5em) * 0.25));
+		}
+
+		div.wp-block-button__width-100 {
+			width: 100%;
 		}
 	}
 
@@ -114,6 +155,7 @@
 		overflow: hidden;
 
 		&.has-background {
+
 			.activitypub-profile {
 				padding: 0;
 			}
@@ -181,6 +223,7 @@
 }
 
 .activitypub-dialog {
+
 	&__section {
 		padding: 1.5rem 2rem;
 		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);

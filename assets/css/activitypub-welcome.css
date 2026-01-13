@@ -68,7 +68,7 @@
 	font-size: 16px;
 	color: #646970;
 	margin: 0 0 20px;
-	font-weight: normal;
+	font-weight: 400;
 }
 
 /* Steps Styles */
@@ -90,26 +90,6 @@
 	background-color: #f0f0f1;
 }
 
-.activitypub-step-completed {
-	background-color: #f0f7ee;
-}
-
-.activitypub-step-completed:hover {
-	background-color: #e2f1dc;
-}
-
-.activitypub-step-completed .step-text h3 {
-	margin: 0;
-}
-.activitypub-step-completed .step-text h3::after {
-	content: ".";
-}
-
-.activitypub-step-completed .step-text p,
-.activitypub-step-completed .step-action {
-	display: none;
-}
-
 .step-indicator {
 	margin-right: 15px;
 	flex-shrink: 0;
@@ -122,10 +102,6 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-}
-
-.activitypub-step-completed .step-icon {
-	color: #008a20;
 }
 
 .dashicons-warning {
@@ -159,6 +135,31 @@
 .step-action {
 	flex-shrink: 0;
 	margin-left: 20px;
+}
+
+.activitypub-step-completed {
+	background-color: #f0f7ee;
+}
+
+.activitypub-step-completed:hover {
+	background-color: #e2f1dc;
+}
+
+.activitypub-step-completed .step-text h3 {
+	margin: 0;
+}
+
+.activitypub-step-completed .step-text h3::after {
+	content: ".";
+}
+
+.activitypub-step-completed .step-text p,
+.activitypub-step-completed .step-action {
+	display: none;
+}
+
+.activitypub-step-completed .step-icon {
+	color: #008a20;
 }
 
 .step-action .button {
@@ -213,6 +214,7 @@
 	height: 20px;
 }
 
+/* stylelint-disable-next-line no-descending-specificity */
 .profile-card-header h3 {
 	margin: 0;
 	font-size: 16px;
@@ -223,11 +225,11 @@
 	padding: 15px;
 }
 
-.profile-field {
+.extra-field {
 	margin-bottom: 15px;
 }
 
-.profile-field label {
+.extra-field label {
 	display: block;
 	margin-bottom: 5px;
 	font-weight: 500;
@@ -235,7 +237,7 @@
 	color: #646970;
 }
 
-.profile-field input {
+.extra-field input {
 	width: 100%;
 	padding: 8px;
 	font-size: 13px;
@@ -276,6 +278,7 @@
 
 /* Responsive Adjustments */
 @media screen and (max-width: 782px) {
+
 	.activitypub-welcome-container {
 		margin: 20px;
 		padding: 20px;

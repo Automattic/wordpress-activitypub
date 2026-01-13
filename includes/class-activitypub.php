@@ -9,6 +9,7 @@ namespace Activitypub;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Posts;
 
 /**
  * ActivityPub Class.
@@ -22,8 +23,6 @@ class Activitypub {
 	public static function init() {
 		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
-
-		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
 		\add_action( 'wp_trash_post', array( self::class, 'trash_post' ), 1 );
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
@@ -87,57 +86,9 @@ class Activitypub {
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
 
+		Posts::delete_all();
+
 		Options::delete();
-	}
-
-	/**
-	 * Replaces the default avatar.
-	 *
-	 * @param array             $args        Arguments passed to get_avatar_data(), after processing.
-	 * @param int|string|object $id_or_email A user ID, email address, or comment object.
-	 *
-	 * @return array $args
-	 */
-	public static function pre_get_avatar_data( $args, $id_or_email ) {
-		if (
-			! $id_or_email instanceof \WP_Comment ||
-			! isset( $id_or_email->comment_type ) ||
-			$id_or_email->user_id
-		) {
-			return $args;
-		}
-
-		/**
-		 * Filter allowed comment types for avatars.
-		 *
-		 * @param array $allowed_comment_types Array of allowed comment types.
-		 */
-		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment' ) );
-		if ( ! \in_array( $id_or_email->comment_type ?: 'comment', $allowed_comment_types, true ) ) { // phpcs:ignore Universal.Operators.DisallowShortTernary
-			return $args;
-		}
-
-		// Check if comment has an avatar.
-		$avatar = \get_comment_meta( $id_or_email->comment_ID, 'avatar_url', true );
-
-		if ( $avatar ) {
-			if ( empty( $args['class'] ) ) {
-				$args['class'] = array();
-			} elseif ( \is_string( $args['class'] ) ) {
-				$args['class'] = \explode( ' ', $args['class'] );
-			}
-
-			/** This filter is documented in wp-includes/link-template.php */
-			$args['url']     = \apply_filters( 'get_avatar_url', $avatar, $id_or_email, $args );
-			$args['class'][] = 'avatar';
-			$args['class'][] = 'avatar-activitypub';
-			$args['class'][] = 'avatar-' . (int) $args['size'];
-			$args['class'][] = 'photo';
-			$args['class'][] = 'u-photo';
-			$args['class']   = \array_unique( $args['class'] );
-		}
-
-		return $args;
 	}
 
 	/**
@@ -243,6 +194,7 @@ class Activitypub {
 				'single'            => true,
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
+				'show_in_rest'      => true,
 			)
 		);
 
@@ -274,7 +226,7 @@ class Activitypub {
 				'description'       => 'The user description.',
 				'single'            => true,
 				'default'           => '',
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return wp_kses( $value, 'user_description' );
 				},
 			)
@@ -385,7 +337,7 @@ class Activitypub {
 				'description'       => 'User-specific blocked ActivityPub domains.',
 				'single'            => true,
 				'default'           => array(),
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return \array_unique( \array_map( array( Sanitize::class, 'host_list' ), $value ) );
 				},
 			)
@@ -399,7 +351,7 @@ class Activitypub {
 				'description'       => 'User-specific blocked ActivityPub keywords.',
 				'single'            => true,
 				'default'           => array(),
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return \array_map( 'sanitize_text_field', $value );
 				},
 			)

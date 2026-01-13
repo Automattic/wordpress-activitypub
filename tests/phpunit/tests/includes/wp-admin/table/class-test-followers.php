@@ -42,16 +42,6 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Clean up after each test.
-	 */
-	public function tear_down() {
-		parent::tear_down();
-
-		remove_all_filters( 'pre_http_request' );
-		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
-	}
-
-	/**
 	 * Test column_username with actor having icon object.
 	 *
 	 * @covers ::column_username
@@ -86,7 +76,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 
 		// Add the follower.
-		Follower_Collection::add_follower( get_current_user_id(), $actor_url );
+		Follower_Collection::add( get_current_user_id(), $actor_url );
 
 		// Use the real prepare_items() method.
 		$this->followers_table->prepare_items();
@@ -222,7 +212,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 
 		// Add follower using the actor object.
-		Follower_Collection::add_follower( get_current_user_id(), $actor_data['id'] );
+		Follower_Collection::add( get_current_user_id(), $actor_data['id'] );
 
 		// Prepare items to test normalization.
 		$this->followers_table->prepare_items();

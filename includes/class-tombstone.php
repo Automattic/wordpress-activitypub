@@ -88,17 +88,20 @@ class Tombstone {
 		 */
 		\do_action( 'activitypub_pre_http_is_tombstone', $url );
 
-		$response = \wp_safe_remote_get( $url, array( 'headers' => array( 'Accept' => 'application/activity+json' ) ) );
-		$code     = \wp_remote_retrieve_response_code( $response );
+		$response = Http::get( $url );
 
-		if ( in_array( (int) $code, self::$codes, true ) ) {
+		if ( ! \is_wp_error( $response ) ) {
+			$data = \wp_remote_retrieve_body( $response );
+			$data = \json_decode( $data, true );
+
+			return self::check_array( $data );
+		}
+
+		if ( in_array( (int) $response->get_error_code(), self::$codes, true ) ) {
 			return true;
 		}
 
-		$data = \wp_remote_retrieve_body( $response );
-		$data = \json_decode( $data, true );
-
-		return self::check_array( $data );
+		return false;
 	}
 
 	/**

@@ -7,27 +7,31 @@ import { useOptions } from './use-options';
 /**
  * React hook providing user options for ActivityPub blocks.
  *
- * @param {Object} params
- * @param {boolean} params.withInherit - Whether to include the inherit option.
- * @returns {Array} List of user option objects.
+ * @param {Object}  params
+ * @param {boolean} params.withInherit Whether to include the inherit option.
+ * @return {Array} List of user option objects.
  */
 export function useUserOptions( { withInherit = false } ) {
 	/**
 	 * ActivityPub options.
 	 *
-	 * @type {Object}
-	 * @property {boolean} enabled.users - Whether users are enabled.
-	 * @property {boolean} enabled.blog - Whether the blog user is enabled.
+	 * @type {{enabled: {users: boolean, blog: boolean}, namespace: string}}
 	 */
 	const { enabled, namespace } = useOptions();
 	const [ currentUserCanActivityPub, setCurrentUserCanActivityPub ] = useState( false );
-	const { fetchedUsers, isLoadingUsers } = useSelect( ( select ) => {
-		const { getUsers, getIsResolving } = select( 'core' );
-		return {
-			fetchedUsers: enabled?.users ? getUsers( { capabilities: 'activitypub' } ) : null,
-			isLoadingUsers: enabled?.users ? getIsResolving( 'getUsers', [ { capabilities: 'activitypub' } ] ) : false,
-		};
-	}, [] );
+	const { fetchedUsers, isLoadingUsers } = useSelect(
+		( select ) => {
+			const { getUsers, getIsResolving } = select( 'core' );
+
+			return {
+				fetchedUsers: enabled?.users ? getUsers( { capabilities: 'activitypub' } ) : null,
+				isLoadingUsers: enabled?.users
+					? getIsResolving( 'getUsers', [ { capabilities: 'activitypub' } ] )
+					: false,
+			};
+		},
+		[ enabled?.users ]
+	);
 
 	// Only fetch current user if fetchedUsers is empty and we're not still loading.
 	const currentUser = useSelect(
@@ -49,11 +53,14 @@ export function useUserOptions( { withInherit = false } ) {
 		} )
 			.then( () => setCurrentUserCanActivityPub( true ) )
 			.catch( () => setCurrentUserCanActivityPub( false ) );
-	}, [ fetchedUsers, isLoadingUsers, currentUser ] );
+	}, [ fetchedUsers, isLoadingUsers, currentUser, namespace ] );
 
-	const users =
-		fetchedUsers ||
-		( currentUser && currentUserCanActivityPub ? [ { id: currentUser.id, name: currentUser.name } ] : [] );
+	const users = useMemo(
+		() =>
+			fetchedUsers ||
+			( currentUser && currentUserCanActivityPub ? [ { id: currentUser.id, name: currentUser.name } ] : [] ),
+		[ fetchedUsers, currentUser, currentUserCanActivityPub ]
+	);
 
 	/**
 	 * Memoized computation of user options for block settings.
@@ -89,5 +96,5 @@ export function useUserOptions( { withInherit = false } ) {
 			} );
 			return acc;
 		}, userKeywords );
-	}, [ users ] );
+	}, [ users, enabled?.blog, enabled?.users, fetchedUsers, withInherit ] );
 }

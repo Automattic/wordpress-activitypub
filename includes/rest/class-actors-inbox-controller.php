@@ -8,12 +8,13 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Inbox;
 use Activitypub\Moderation;
 
 use function Activitypub\camel_to_snake_case;
-use function Activitypub\get_context;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\object_to_uri;
 
 /**
  * Actors_Inbox_Controller class.
@@ -86,7 +87,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 						'object' => array(
 							'description'       => 'The object of the activity.',
 							'required'          => true,
-							'validate_callback' => function ( $param, $request, $key ) {
+							'validate_callback' => static function ( $param, $request, $key ) {
 								/**
 								 * Filter the ActivityPub object validation.
 								 *
@@ -103,6 +104,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
+
+		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_create_item' ) );
 	}
 
 	/**
@@ -120,7 +123,6 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		\do_action( 'activitypub_rest_inbox_pre' );
 
 		$response = array(
-			'@context'     => get_context(),
 			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'         => 'OrderedCollection',
@@ -185,8 +187,9 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param int|null           $user_id  The user ID.
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
+			 * @param string             $context  The context of the request.
 			 */
-			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity );
+			\do_action( 'activitypub_inbox', $data, $user_id, $type, $activity, Inbox::CONTEXT_INBOX );
 
 			/**
 			 * ActivityPub inbox action for specific activity types.
@@ -194,8 +197,31 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param array              $data     The data array.
 			 * @param int|null           $user_id  The user ID.
 			 * @param Activity|\WP_Error $activity The Activity object.
+			 * @param string             $context  The context of the request.
 			 */
-			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity );
+			\do_action( 'activitypub_inbox_' . $type, $data, $user_id, $activity, Inbox::CONTEXT_INBOX );
+
+			/**
+			 * Filter to skip inbox storage.
+			 *
+			 * Skip inbox storage for debugging purposes or to reduce load for
+			 * certain Activity-Types, like "Delete".
+			 *
+			 * @param bool  $skip Whether to skip inbox storage.
+			 * @param array $data  The activity data array.
+			 *
+			 * @return bool Whether to skip inbox storage.
+			 */
+			$skip = \apply_filters( 'activitypub_skip_inbox_storage', false, $data );
+
+			if ( ! $skip ) {
+				$activity_id = object_to_uri( $data );
+
+				Inbox::add( $activity, (array) $user_id );
+
+				\wp_clear_scheduled_hook( 'activitypub_inbox_create_item', array( $activity_id ) );
+				\wp_schedule_single_event( time() + 15, 'activitypub_inbox_create_item', array( $activity_id ) );
+			}
 		}
 
 		$response = \rest_ensure_response(
@@ -239,5 +265,52 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		$this->schema = $schema;
 
 		return $this->add_additional_fields_schema( $this->schema );
+	}
+
+	/**
+	 * Process cached inbox activity.
+	 *
+	 * Retrieves all collected user IDs for an activity and processes them together.
+	 *
+	 * @param string $activity_id The activity ID.
+	 */
+	public static function process_create_item( $activity_id ) {
+		// Deduplicate if multiple inbox items were created due to race condition.
+		$inbox_item = Inbox::deduplicate( $activity_id );
+		if ( ! $inbox_item ) {
+			return;
+		}
+
+		$data = \json_decode( $inbox_item->post_content, true );
+		// Reconstruct activity from inbox post.
+		$activity = Activity::init_from_array( $data );
+		$type     = camel_to_snake_case( $activity->get_type() );
+		$context  = Inbox::CONTEXT_INBOX;
+		$user_ids = Inbox::get_recipients( $inbox_item->ID );
+
+		/**
+		 * Fires after any ActivityPub Inbox activity has been handled, regardless of activity type.
+		 *
+		 * This hook is triggered for all activity types processed by the inbox handler.
+		 *
+		 * @param array    $data     The data array.
+		 * @param array    $user_ids The user IDs.
+		 * @param string   $type     The type of the activity.
+		 * @param Activity $activity The Activity object.
+		 * @param int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param string   $context  The context of the request ('inbox' or 'shared_inbox').
+		 */
+		\do_action( 'activitypub_handled_inbox', $data, $user_ids, $type, $activity, $inbox_item->ID, $context );
+
+		/**
+		 * Fires after an ActivityPub Inbox activity has been handled.
+		 *
+		 * @param array    $data     The data array.
+		 * @param array    $user_ids The user IDs.
+		 * @param Activity $activity The Activity object.
+		 * @param int      $result   The ID of the inbox item that was created, or WP_Error if failed.
+		 * @param string   $context  The context of the request ('inbox' or 'shared_inbox').
+		 */
+		\do_action( 'activitypub_handled_inbox_' . $type, $data, $user_ids, $activity, $inbox_item->ID, $context );
 	}
 }

@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 7.5.0
+ * Version: 7.8.3
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -17,7 +17,7 @@
 
 namespace Activitypub;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '7.5.0' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '7.8.3' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -44,6 +44,7 @@ function rest_init() {
 	Rest\Server::init();
 	( new Rest\Actors_Controller() )->register_routes();
 	( new Rest\Actors_Inbox_Controller() )->register_routes();
+	( new Rest\Admin\Actions_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();
 	( new Rest\Comments_Controller() )->register_routes();
@@ -69,6 +70,8 @@ function rest_init() {
  */
 function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Attachments', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Avatars', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
@@ -88,6 +91,11 @@ function plugin_init() {
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
+	}
+
+	// Only load relay if relay mode is enabled.
+	if ( \get_option( 'activitypub_relay_mode', false ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\Relay', 'init' ) );
 	}
 
 	// Load development tools.
@@ -119,6 +127,7 @@ function plugin_admin_init() {
 
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Admin', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Advanced_Settings_Fields', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\App', 'init' ), 0 ); // Before admin bar init.
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Blog_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Health_Check', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );

@@ -102,6 +102,10 @@ class Post {
 			return;
 		}
 
+		if ( is_post_disabled( $post_id ) ) {
+			return;
+		}
+
 		$post = \get_post( $post_id );
 
 		switch ( \current_action() ) {

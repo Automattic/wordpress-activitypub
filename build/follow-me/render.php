@@ -108,7 +108,7 @@ $has_header   = ! empty( $header_image['url'] ) && str_contains( $attributes['cl
 
 $stats = array(
 	'posts'     => $user_id ? count_user_posts( $user_id, 'post', true ) : (int) wp_count_posts()->publish,
-	'followers' => Followers::count_followers( $user_id ),
+	'followers' => Followers::count( $user_id ),
 );
 
 ob_start();

@@ -15,7 +15,6 @@ process.env.STORAGE_STATE_PATH ??= path.join( process.env.WP_ARTIFACTS_PATH, 'st
 const config = defineConfig( {
 	...baseConfig,
 	globalSetup: require.resolve( './config/global-setup.js' ),
-	testDir: './specs',
 	webServer: {
 		...baseConfig.webServer,
 		command: 'npm run env-start',
