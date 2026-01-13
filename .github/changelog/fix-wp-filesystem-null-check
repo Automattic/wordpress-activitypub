@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Check if WP_Filesystem initialized successfully before using it to prevent fatal errors on hosts using FTP-based filesystem.

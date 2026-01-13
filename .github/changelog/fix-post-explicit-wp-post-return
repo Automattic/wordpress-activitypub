@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Actors: avoid PHP warnings when trying to fetch invalid actor.
