@@ -514,9 +514,10 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_get_local_recipients_external_only() {
 		$activity = array(
-			'type' => 'Create',
-			'to'   => array( 'https://external.example.com/user/123' ),
-			'cc'   => array( 'https://another.example.com/user/456' ),
+			'type'   => 'Create',
+			'object' => 'https://external.example.com/post/123',
+			'to'     => array( 'https://external.example.com/user/123' ),
+			'cc'     => array( 'https://another.example.com/user/456' ),
 		);
 
 		// Use reflection to test the private method.
@@ -565,12 +566,13 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_get_local_recipients_with_malformed_urls() {
 		$activity = array(
-			'type' => 'Create',
-			'to'   => array(
+			'type'   => 'Create',
+			'object' => 'https://external.example.com/post/123',
+			'to'     => array(
 				'not-a-valid-url',
 				get_home_url() . '/invalid-actor-path',
 			),
-			'cc'   => array(),
+			'cc'     => array(),
 		);
 
 		// Use reflection to test the private method.
