@@ -514,9 +514,10 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_get_local_recipients_external_only() {
 		$activity = array(
-			'type' => 'Create',
-			'to'   => array( 'https://external.example.com/user/123' ),
-			'cc'   => array( 'https://another.example.com/user/456' ),
+			'type'   => 'Create',
+			'object' => 'https://external.example.com/post/123',
+			'to'     => array( 'https://external.example.com/user/123' ),
+			'cc'     => array( 'https://another.example.com/user/456' ),
 		);
 
 		// Use reflection to test the private method.
@@ -565,12 +566,13 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_get_local_recipients_with_malformed_urls() {
 		$activity = array(
-			'type' => 'Create',
-			'to'   => array(
+			'type'   => 'Create',
+			'object' => 'https://external.example.com/post/123',
+			'to'     => array(
 				'not-a-valid-url',
 				get_home_url() . '/invalid-actor-path',
 			),
-			'cc'   => array(),
+			'cc'     => array(),
 		);
 
 		// Use reflection to test the private method.
@@ -1145,5 +1147,93 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		// Clean up.
 		\delete_option( 'activitypub_actor_mode' );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+	}
+
+	/**
+	 * Test get_local_recipients for Follow activity without audience fields.
+	 *
+	 * Some ActivityPub implementations like Pixelfed do not set audience fields
+	 * (to/cc/bcc) for Follow activities, even when sent to the shared inbox.
+	 * The recipient should be determined from the object field instead.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_follow_without_audience() {
+		// Enable actor mode to allow user actors.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Get actor ID for the test user.
+		$user_actor    = Actors::get_by_id( self::$user_id );
+		$user_actor_id = $user_actor->get_id();
+
+		// Follow activity without any audience fields (to/cc/bcc).
+		// The object field contains the actor being followed.
+		$activity = array(
+			'id'     => 'https://pixelfed.example/follow/123',
+			'type'   => 'Follow',
+			'actor'  => 'https://pixelfed.example/users/remoteuser',
+			'object' => $user_actor_id,
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		// Should return the user from the object field.
+		$this->assertNotEmpty( $result, 'Should return recipient from object field when no audience' );
+		$this->assertContains( self::$user_id, $result, 'Should contain user referenced in object field' );
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test Follow request without audience fields via REST endpoint.
+	 *
+	 * This simulates how Pixelfed sends Follow activities to the shared inbox
+	 * without setting audience fields.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_follow_request_without_audience_via_rest() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Get actor ID for the test user.
+		$user_actor    = Actors::get_by_id( self::$user_id );
+		$user_actor_id = $user_actor->get_id();
+
+		// Set up mock action.
+		$inbox_action = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
+
+		// Follow activity without any audience fields - simulating Pixelfed behavior.
+		$json = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://pixelfed.example/follow/456',
+			'type'     => 'Follow',
+			'actor'    => 'https://pixelfed.example/users/remoteuser',
+			'object'   => $user_actor_id,
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		// Verify the action was triggered for the user.
+		$this->assertGreaterThanOrEqual( 1, $inbox_action->get_call_count(), 'activitypub_inbox hook should be called' );
+
+		// Clean up.
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
+		\delete_option( 'activitypub_actor_mode' );
 	}
 }
