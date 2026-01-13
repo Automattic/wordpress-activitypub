@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed ActivityPub comments being marked as spam by Akismet.

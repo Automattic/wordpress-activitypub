@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed an issue where embedding remote posts could fail when the author's profile was temporarily unavailable.

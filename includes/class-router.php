@@ -276,7 +276,7 @@ class Router {
 			/**
 			 * Filters the taxonomies supported for term redirects.
 			 *
-			 * @since unreleased
+			 * @since 7.8.3
 			 *
 			 * @param array $supported_taxonomies Array of taxonomy names. Default array( 'category', 'post_tag' ).
 			 */

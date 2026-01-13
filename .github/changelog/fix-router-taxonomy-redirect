@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed unwanted 301 redirects on search and posts pages when using Polylang or similar plugins.
