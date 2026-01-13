@@ -247,17 +247,25 @@ function get_rest_url_by_path( $path = '' ) {
  * @return string The URL with an encoded path.
  */
 function encode_url_path( $url ) {
-	$path = \wp_parse_url( $url, PHP_URL_PATH );
+	$parts = \wp_parse_url( $url );
 
-	if ( empty( $path ) ) {
+	if ( false === $parts || empty( $parts['path'] ) ) {
 		return \esc_url_raw( $url );
 	}
 
 	// Encode each path segment to be RFC 3986 compliant.
-	$segments     = explode( '/', $path );
-	$encoded_path = implode( '/', array_map( 'rawurlencode', $segments ) );
+	// Note: explode creates empty strings for leading/trailing slashes, which is intentional.
+	$segments      = explode( '/', $parts['path'] );
+	$parts['path'] = implode( '/', array_map( 'rawurlencode', $segments ) );
 
-	return \esc_url_raw( str_replace( $path, $encoded_path, $url ) );
+	// Rebuild URL from components to avoid str_replace issues with paths in query strings.
+	$scheme = isset( $parts['scheme'] ) ? $parts['scheme'] . '://' : '';
+	$host   = isset( $parts['host'] ) ? $parts['host'] : '';
+	$port   = isset( $parts['port'] ) ? ':' . $parts['port'] : '';
+	$path   = $parts['path'];
+	$query  = isset( $parts['query'] ) ? '?' . $parts['query'] : '';
+
+	return \esc_url_raw( $scheme . $host . $port . $path . $query );
 }
 
 /**
