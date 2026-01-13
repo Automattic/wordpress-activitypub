@@ -1341,6 +1341,41 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_location method with zero coordinates (Equator/Prime Meridian).
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_with_zero_coordinates() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post at Null Island',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata to 0,0 (Null Island - valid coordinates).
+		\update_post_meta( $post_id, 'geo_latitude', '0' );
+		\update_post_meta( $post_id, 'geo_longitude', '0' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertIsArray( $location, 'Location should not be null for coordinates 0,0' );
+		$this->assertSame( 'Place', $location['type'] );
+		$this->assertSame( 0.0, $location['latitude'] );
+		$this->assertSame( 0.0, $location['longitude'] );
+	}
+
+	/**
 	 * Test get_location method with only latitude (missing longitude).
 	 *
 	 * @covers ::get_location

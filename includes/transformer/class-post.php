@@ -727,7 +727,11 @@ class Post extends Base {
 		}
 
 		// Both latitude and longitude are required for a valid location.
-		if ( empty( $meta['geo_latitude'][0] ) || empty( $meta['geo_longitude'][0] ) ) {
+		// Use is_numeric() instead of empty() since 0 is a valid coordinate (Equator/Prime Meridian).
+		$has_latitude  = isset( $meta['geo_latitude'][0] ) && is_numeric( $meta['geo_latitude'][0] );
+		$has_longitude = isset( $meta['geo_longitude'][0] ) && is_numeric( $meta['geo_longitude'][0] );
+
+		if ( ! $has_latitude || ! $has_longitude ) {
 			return null;
 		}
 
