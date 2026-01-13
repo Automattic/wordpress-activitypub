@@ -19,7 +19,6 @@ use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_collection;
 use function Activitypub\is_same_domain;
-use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -409,14 +408,10 @@ class Inbox_Controller extends \WP_REST_Controller {
 
 		// Check for an Actor in the Object field.
 		if ( empty( $user_ids ) ) {
-			$object = object_to_uri( $activity['object'] );
+			$user_id = Actors::get_id_by_resource( $activity['object'] );
 
-			if ( \is_string( $object ) ) {
-				$user_id = Actors::get_id_by_resource( $object );
-
-				if ( ! \is_wp_error( $user_id ) && user_can_activitypub( $user_id ) ) {
-					$user_ids[] = $user_id;
-				}
+			if ( ! \is_wp_error( $user_id ) && user_can_activitypub( $user_id ) ) {
+				$user_ids[] = $user_id;
 			}
 		}
 
