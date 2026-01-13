@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix Follow requests from Pixelfed and other implementations that don't set audience fields.
