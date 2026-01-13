@@ -771,7 +771,7 @@ function url_to_commentid( $url ) {
  *
  * @param array|string $data The ActivityPub object.
  *
- * @return string The URI of the ActivityPub object.
+ * @return string|null The URI of the ActivityPub object.
  */
 function object_to_uri( $data ) {
 	// Check whether it is already simple.

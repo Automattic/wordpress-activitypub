@@ -406,6 +406,15 @@ class Inbox_Controller extends \WP_REST_Controller {
 			$user_ids[] = $user_id;
 		}
 
+		// Check for an Actor in the Object field.
+		if ( empty( $user_ids ) ) {
+			$user_id = Actors::get_id_by_resource( $activity['object'] );
+
+			if ( ! \is_wp_error( $user_id ) && user_can_activitypub( $user_id ) ) {
+				$user_ids[] = $user_id;
+			}
+		}
+
 		return array_unique( array_map( 'intval', $user_ids ) );
 	}
 }
