@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.8.4] - 2026-01-13
+### Fixed
+- Fix Follow requests from Pixelfed and other implementations that don't set audience fields. [#2755]
+
 ## [7.8.3] - 2026-01-12
 ### Security
 - Improved security of the Starter Kit URL import by using wp_safe_remote_get. [#2732]
@@ -1636,6 +1640,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.8.4]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.3...7.8.4
 [7.8.3]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.2...7.8.3
 [7.8.2]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.1...7.8.2
 [7.8.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.0...7.8.1
