@@ -234,6 +234,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 * @return array Mocked response.
 	 */
 	public function mock_activitypub_accessible( $response, $parsed_args, $url ) {
+		unset( $response, $parsed_args, $url );
 		return array(
 			'response' => array(
 				'code'    => 200,
@@ -253,6 +254,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 * @return array Mocked response.
 	 */
 	public function mock_activitypub_blocked( $response, $parsed_args, $url ) {
+		unset( $response, $parsed_args, $url );
 		return array(
 			'response' => array(
 				'code'    => 401,
@@ -272,6 +274,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 * @return array Mocked response.
 	 */
 	public function mock_activitypub_own_error( $response, $parsed_args, $url ) {
+		unset( $response, $parsed_args, $url );
 		return array(
 			'response' => array(
 				'code'    => 401,
@@ -291,6 +294,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 * @return WP_Error Mocked error response.
 	 */
 	public function mock_activitypub_connection_error( $response, $parsed_args, $url ) {
+		unset( $response, $parsed_args, $url );
 		return new WP_Error( 'http_request_failed', 'Connection refused' );
 	}
 
