@@ -25,6 +25,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [FEP-044f: Consent-respecting quote posts](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
 - [FEP-3b86: Activity Intents](https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md)
 - [FEP-8fcf: Followers collection synchronization across servers](https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md)
+- [FEP-ee3a: Exif metadata support](https://codeberg.org/fediverse/fep/src/branch/main/fep/ee3a/fep-ee3a.md)
 
 Partially supported FEPs
 
