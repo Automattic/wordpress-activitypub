@@ -524,10 +524,10 @@ abstract class Base {
 						}
 					}
 
-					// Add EXIF metadata using the Vernissage namespace.
-					$exif = $this->get_exif_data( $id );
-					if ( $exif ) {
-						$image['exif'] = $exif;
+					// Add EXIF metadata using Schema.org exifData property (FEP-ee3a).
+					$exif_data = $this->get_exif_data( $id );
+					if ( $exif_data ) {
+						$image['exifData'] = $exif_data;
 					}
 
 					$attachment = $image;
@@ -598,13 +598,15 @@ abstract class Base {
 	}
 
 	/**
-	 * Get EXIF metadata for an image attachment using the Vernissage namespace.
+	 * Get EXIF metadata for an image attachment using Schema.org exifData property.
 	 *
-	 * @link https://joinvernissage.org/ns#exif
+	 * Returns an array of PropertyValue objects as defined in FEP-ee3a.
+	 *
+	 * @link https://codeberg.org/fediverse/fep/src/branch/main/fep/ee3a/fep-ee3a.md
 	 *
 	 * @param int $attachment_id The attachment ID.
 	 *
-	 * @return array|null EXIF data object or null if no EXIF data available.
+	 * @return array|null Array of PropertyValue objects or null if no EXIF data available.
 	 */
 	protected function get_exif_data( $attachment_id ) {
 		$metadata = \wp_get_attachment_metadata( $attachment_id );
@@ -614,51 +616,78 @@ abstract class Base {
 		}
 
 		$image_meta = $metadata['image_meta'];
-		$exif       = array();
+		$exif_data  = array();
 
-		// Map WordPress image_meta to Vernissage EXIF properties.
+		// Map WordPress image_meta to FEP-ee3a EXIF field names.
 		if ( ! empty( $image_meta['created_timestamp'] ) ) {
-			$exif['createDate'] = \gmdate( 'c', (int) $image_meta['created_timestamp'] );
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'DateTime',
+				'value' => \gmdate( 'Y:m:d H:i:s', (int) $image_meta['created_timestamp'] ),
+			);
 		}
 
 		if ( ! empty( $image_meta['shutter_speed'] ) ) {
 			$shutter_speed = (float) $image_meta['shutter_speed'];
 			// Format shutter speed as a fraction (e.g., "1/100") for speeds faster than 1 second.
 			if ( $shutter_speed > 0 && $shutter_speed < 1 ) {
-				$exif['exposureTime'] = '1/' . \round( 1 / $shutter_speed );
+				$value = '1/' . \round( 1 / $shutter_speed );
 			} elseif ( $shutter_speed >= 1 ) {
-				$exif['exposureTime'] = (string) $shutter_speed;
+				$value = (string) $shutter_speed;
+			}
+			if ( isset( $value ) ) {
+				$exif_data[] = array(
+					'@type' => 'PropertyValue',
+					'name'  => 'ExposureTime',
+					'value' => $value,
+				);
 			}
 		}
 
 		if ( ! empty( $image_meta['aperture'] ) ) {
-			$exif['fNumber'] = 'f/' . (float) $image_meta['aperture'];
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'FNumber',
+				'value' => 'f/' . (float) $image_meta['aperture'],
+			);
 		}
 
 		if ( ! empty( $image_meta['focal_length'] ) ) {
-			$exif['focalLength'] = (string) (float) $image_meta['focal_length'];
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'FocalLength',
+				'value' => (string) (float) $image_meta['focal_length'],
+			);
 		}
 
 		if ( ! empty( $image_meta['iso'] ) ) {
-			$exif['photographicSensitivity'] = (string) (int) $image_meta['iso'];
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'PhotographicSensitivity',
+				'value' => (string) (int) $image_meta['iso'],
+			);
 		}
 
 		if ( ! empty( $image_meta['camera'] ) ) {
-			$exif['model'] = \sanitize_text_field( $image_meta['camera'] );
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'Model',
+				'value' => \sanitize_text_field( $image_meta['camera'] ),
+			);
 		}
 
 		/**
 		 * Filter the EXIF data for an image attachment.
 		 *
-		 * @param array $exif          The EXIF data object for the Vernissage namespace.
+		 * @param array $exif_data     Array of PropertyValue objects for Schema.org exifData.
 		 * @param array $image_meta    The WordPress image_meta array.
 		 * @param int   $attachment_id The attachment ID.
 		 *
-		 * @return array The filtered EXIF data object.
+		 * @return array The filtered EXIF data array.
 		 */
-		$exif = \apply_filters( 'activitypub_image_exif', $exif, $image_meta, $attachment_id );
+		$exif_data = \apply_filters( 'activitypub_image_exif', $exif_data, $image_meta, $attachment_id );
 
-		return ! empty( $exif ) ? $exif : null;
+		return ! empty( $exif_data ) ? $exif_data : null;
 	}
 
 	/**

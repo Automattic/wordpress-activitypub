@@ -1235,11 +1235,11 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_exif_data method returns EXIF data in Vernissage format.
+	 * Test get_exif_data method returns EXIF data in FEP-ee3a format.
 	 *
 	 * @covers \Activitypub\Transformer\Base::get_exif_data
 	 */
-	public function test_get_exif_data_returns_vernissage_format() {
+	public function test_get_exif_data_returns_fep_format() {
 		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
 
 		// Set up mock EXIF data.
@@ -1263,23 +1263,36 @@ class Test_Post extends \WP_UnitTestCase {
 			$method->setAccessible( true );
 		}
 
-		$exif = $method->invoke( $transformer, $attachment_id );
+		$exif_data = $method->invoke( $transformer, $attachment_id );
 
-		$this->assertIsArray( $exif, 'Should return an array.' );
-		$this->assertArrayHasKey( 'createDate', $exif, 'Should contain createDate.' );
-		$this->assertArrayHasKey( 'exposureTime', $exif, 'Should contain exposureTime.' );
-		$this->assertArrayHasKey( 'fNumber', $exif, 'Should contain fNumber.' );
-		$this->assertArrayHasKey( 'focalLength', $exif, 'Should contain focalLength.' );
-		$this->assertArrayHasKey( 'photographicSensitivity', $exif, 'Should contain photographicSensitivity.' );
-		$this->assertArrayHasKey( 'model', $exif, 'Should contain model.' );
+		$this->assertIsArray( $exif_data, 'Should return an array.' );
+		$this->assertCount( 6, $exif_data, 'Should have 6 PropertyValue objects.' );
 
-		// Check value formats.
-		$this->assertSame( '2024-01-01T00:00:00+00:00', $exif['createDate'], 'createDate should be ISO 8601 format.' );
-		$this->assertSame( '1/100', $exif['exposureTime'], 'exposureTime should be fraction format.' );
-		$this->assertSame( 'f/2.8', $exif['fNumber'], 'fNumber should be f/X.X format.' );
-		$this->assertSame( '50', $exif['focalLength'], 'focalLength should be numeric string.' );
-		$this->assertSame( '400', $exif['photographicSensitivity'], 'photographicSensitivity should be string.' );
-		$this->assertSame( 'Canon EOS R5', $exif['model'], 'model should be camera name.' );
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $exif_data as $prop ) {
+			$this->assertArrayHasKey( '@type', $prop, 'Each item should have @type.' );
+			$this->assertSame( 'PropertyValue', $prop['@type'], '@type should be PropertyValue.' );
+			$this->assertArrayHasKey( 'name', $prop, 'Each item should have name.' );
+			$this->assertArrayHasKey( 'value', $prop, 'Each item should have value.' );
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		// Check FEP-ee3a field names and value formats.
+		$this->assertArrayHasKey( 'DateTime', $exif_by_name, 'Should contain DateTime.' );
+		$this->assertArrayHasKey( 'ExposureTime', $exif_by_name, 'Should contain ExposureTime.' );
+		$this->assertArrayHasKey( 'FNumber', $exif_by_name, 'Should contain FNumber.' );
+		$this->assertArrayHasKey( 'FocalLength', $exif_by_name, 'Should contain FocalLength.' );
+		$this->assertArrayHasKey( 'PhotographicSensitivity', $exif_by_name, 'Should contain PhotographicSensitivity.' );
+		$this->assertArrayHasKey( 'Model', $exif_by_name, 'Should contain Model.' );
+
+		// Check value formats per FEP-ee3a.
+		$this->assertSame( '2024:01:01 00:00:00', $exif_by_name['DateTime'], 'DateTime should be EXIF format.' );
+		$this->assertSame( '1/100', $exif_by_name['ExposureTime'], 'ExposureTime should be fraction format.' );
+		$this->assertSame( 'f/2.8', $exif_by_name['FNumber'], 'FNumber should be f/X.X format.' );
+		$this->assertSame( '50', $exif_by_name['FocalLength'], 'FocalLength should be numeric string.' );
+		$this->assertSame( '400', $exif_by_name['PhotographicSensitivity'], 'PhotographicSensitivity should be string.' );
+		$this->assertSame( 'Canon EOS R5', $exif_by_name['Model'], 'Model should be camera name.' );
 
 		\wp_delete_attachment( $attachment_id, true );
 	}
@@ -1308,9 +1321,11 @@ class Test_Post extends \WP_UnitTestCase {
 			$method->setAccessible( true );
 		}
 
-		$exif = $method->invoke( $transformer, $attachment_id );
+		$exif_data = $method->invoke( $transformer, $attachment_id );
 
-		$this->assertSame( '2.5', $exif['exposureTime'], 'Long exposure should be shown as seconds.' );
+		$this->assertCount( 1, $exif_data, 'Should have 1 PropertyValue object.' );
+		$this->assertSame( 'ExposureTime', $exif_data[0]['name'], 'Should be ExposureTime.' );
+		$this->assertSame( '2.5', $exif_data[0]['value'], 'Long exposure should be shown as seconds.' );
 
 		\wp_delete_attachment( $attachment_id, true );
 	}
@@ -1348,11 +1363,20 @@ class Test_Post extends \WP_UnitTestCase {
 		$attachments = $object->get_attachment();
 
 		$this->assertCount( 1, $attachments, 'Should have one attachment.' );
-		$this->assertArrayHasKey( 'exif', $attachments[0], 'Attachment should include exif object.' );
-		$this->assertArrayHasKey( 'photographicSensitivity', $attachments[0]['exif'], 'EXIF should include ISO.' );
-		$this->assertArrayHasKey( 'model', $attachments[0]['exif'], 'EXIF should include camera model.' );
-		$this->assertSame( '800', $attachments[0]['exif']['photographicSensitivity'], 'ISO should be 800.' );
-		$this->assertSame( 'Nikon Z6', $attachments[0]['exif']['model'], 'Camera model should be Nikon Z6.' );
+		$this->assertArrayHasKey( 'exifData', $attachments[0], 'Attachment should include exifData array.' );
+		$this->assertIsArray( $attachments[0]['exifData'], 'exifData should be an array of PropertyValue objects.' );
+		$this->assertCount( 2, $attachments[0]['exifData'], 'Should have 2 PropertyValue objects.' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $attachments[0]['exifData'] as $prop ) {
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		$this->assertArrayHasKey( 'PhotographicSensitivity', $exif_by_name, 'EXIF should include ISO.' );
+		$this->assertArrayHasKey( 'Model', $exif_by_name, 'EXIF should include camera model.' );
+		$this->assertSame( '800', $exif_by_name['PhotographicSensitivity'], 'ISO should be 800.' );
+		$this->assertSame( 'Nikon Z6', $exif_by_name['Model'], 'Camera model should be Nikon Z6.' );
 
 		\wp_delete_attachment( $attachment_id, true );
 	}
@@ -1372,11 +1396,15 @@ class Test_Post extends \WP_UnitTestCase {
 		);
 		\wp_update_attachment_metadata( $attachment_id, $metadata );
 
-		// Add filter to extend EXIF data.
-		$filter = function ( $exif, $image_meta, $id ) use ( $attachment_id ) {
+		// Add filter to extend EXIF data with a Make property.
+		$filter = function ( $exif_data, $image_meta, $id ) use ( $attachment_id ) {
 			$this->assertSame( $attachment_id, $id, 'Filter should receive correct attachment ID.' );
-			$exif['make'] = 'Test Manufacturer';
-			return $exif;
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'Make',
+				'value' => 'Test Manufacturer',
+			);
+			return $exif_data;
 		};
 		\add_filter( 'activitypub_image_exif', $filter, 10, 3 );
 
@@ -1389,10 +1417,18 @@ class Test_Post extends \WP_UnitTestCase {
 			$method->setAccessible( true );
 		}
 
-		$exif = $method->invoke( $transformer, $attachment_id );
+		$exif_data = $method->invoke( $transformer, $attachment_id );
 
-		$this->assertArrayHasKey( 'make', $exif, 'Filter should be able to add EXIF properties.' );
-		$this->assertSame( 'Test Manufacturer', $exif['make'], 'Filter should set make.' );
+		$this->assertCount( 2, $exif_data, 'Should have 2 PropertyValue objects (Model + Make).' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $exif_data as $prop ) {
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		$this->assertArrayHasKey( 'Make', $exif_by_name, 'Filter should be able to add Make property.' );
+		$this->assertSame( 'Test Manufacturer', $exif_by_name['Make'], 'Filter should set Make value.' );
 
 		\remove_filter( 'activitypub_image_exif', $filter );
 		\wp_delete_attachment( $attachment_id, true );
