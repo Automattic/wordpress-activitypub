@@ -122,6 +122,21 @@ function tests_remove_outbox_rest( $args, $post_type ) {
 }
 \tests_add_filter( 'register_post_type_args', 'tests_remove_outbox_rest', 10, 2 );
 
+/**
+ * Disable cron scheduling for add_to_outbox in tests to ensure synchronous execution.
+ *
+ * @param null|bool $pre    Value to return instead of scheduling. Default null.
+ * @param object    $event  The event object.
+ * @return null|bool
+ */
+function tests_disable_add_to_outbox_scheduling( $pre, $event ) {
+	if ( 'activitypub_add_to_outbox' === $event->hook ) {
+		return false;
+	}
+	return $pre;
+}
+\tests_add_filter( 'pre_schedule_event', 'tests_disable_add_to_outbox_scheduling', 10, 2 );
+
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
 require __DIR__ . '/includes/class-activitypub-outbox-testcase.php';
