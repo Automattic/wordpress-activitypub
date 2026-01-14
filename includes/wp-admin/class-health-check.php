@@ -672,7 +672,7 @@ class Health_Check {
 				\sprintf(
 					/* translators: %s: Error message. */
 					\__( 'Could not connect to REST API: %s', 'activitypub' ),
-					$response->get_error_message()
+					\esc_html( $response->get_error_message() )
 				)
 			);
 		}
