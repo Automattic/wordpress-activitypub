@@ -63,11 +63,11 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test post activity scheduling for regular posts.
+	 * Test that unfederated posts do not trigger Delete activity when trashed.
 	 *
 	 * @covers ::triage
 	 */
-	public function test_not_prepare_delete_activity_unfederated_post() {
+	public function test_triage_skip_delete_for_unfederated_post() {
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );

@@ -112,6 +112,11 @@ class Post {
 			return;
 		}
 
+		// Re-validate that the post is still eligible for federation.
+		if ( is_post_disabled( $post ) ) {
+			return;
+		}
+
 		add_to_outbox( $post, $type, $user_id );
 	}
 
@@ -134,6 +139,10 @@ class Post {
 		}
 
 		$post = \get_post( $post_id );
+
+		if ( ! $post instanceof \WP_Post ) {
+			return;
+		}
 
 		switch ( \current_action() ) {
 			case 'add_attachment':
