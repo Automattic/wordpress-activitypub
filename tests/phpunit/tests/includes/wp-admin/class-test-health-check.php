@@ -208,4 +208,175 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertContains( 'Another Plugin', $filtered );
 		$this->assertNotContains( false, $filtered );
 	}
+
+	/**
+	 * Test that REST API accessibility test is registered.
+	 */
+	public function test_rest_api_accessibility_test_registered() {
+		$tests  = array();
+		$result = Health_Check::add_tests( $tests );
+
+		$this->assertArrayHasKey( 'activitypub_test_rest_api_accessibility', $result['direct'] );
+
+		$test = $result['direct']['activitypub_test_rest_api_accessibility'];
+		$this->assertArrayHasKey( 'label', $test );
+		$this->assertArrayHasKey( 'test', $test );
+		$this->assertEquals( array( Health_Check::class, 'test_rest_api_accessibility' ), $test['test'] );
+	}
+
+	/**
+	 * Mock HTTP response for accessible ActivityPub endpoint.
+	 *
+	 * @param mixed  $response    The response.
+	 * @param array  $parsed_args The parsed args.
+	 * @param string $url         The URL.
+	 *
+	 * @return array Mocked response.
+	 */
+	public function mock_activitypub_accessible( $response, $parsed_args, $url ) {
+		return array(
+			'response' => array(
+				'code'    => 200,
+				'message' => 'OK',
+			),
+			'body'     => '{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollection","totalItems":0}',
+		);
+	}
+
+	/**
+	 * Mock HTTP response for blocked ActivityPub endpoint (security plugin).
+	 *
+	 * @param mixed  $response    The response.
+	 * @param array  $parsed_args The parsed args.
+	 * @param string $url         The URL.
+	 *
+	 * @return array Mocked response.
+	 */
+	public function mock_activitypub_blocked( $response, $parsed_args, $url ) {
+		return array(
+			'response' => array(
+				'code'    => 401,
+				'message' => 'Unauthorized',
+			),
+			'body'     => '{"title":"rest_login_required","message":"REST API restricted to authenticated users.","data":{"status":401}}',
+		);
+	}
+
+	/**
+	 * Mock HTTP response for ActivityPub's own error (not a security plugin).
+	 *
+	 * @param mixed  $response    The response.
+	 * @param array  $parsed_args The parsed args.
+	 * @param string $url         The URL.
+	 *
+	 * @return array Mocked response.
+	 */
+	public function mock_activitypub_own_error( $response, $parsed_args, $url ) {
+		return array(
+			'response' => array(
+				'code'    => 401,
+				'message' => 'Unauthorized',
+			),
+			'body'     => '{"title":"activitypub_signature_verification_failed","message":"Signature verification failed."}',
+		);
+	}
+
+	/**
+	 * Mock HTTP response for connection error.
+	 *
+	 * @param mixed  $response    The response.
+	 * @param array  $parsed_args The parsed args.
+	 * @param string $url         The URL.
+	 *
+	 * @return WP_Error Mocked error response.
+	 */
+	public function mock_activitypub_connection_error( $response, $parsed_args, $url ) {
+		return new WP_Error( 'http_request_failed', 'Connection refused' );
+	}
+
+	/**
+	 * Test REST API accessibility when ActivityPub endpoint is accessible.
+	 */
+	public function test_rest_api_accessible() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ), 10, 3 );
+
+		$result = Health_Check::test_rest_api_accessibility();
+
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertEquals( 'REST API is accessible', $result['label'] );
+		$this->assertEquals( 'green', $result['badge']['color'] );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
+	}
+
+	/**
+	 * Test REST API accessibility when endpoint is blocked.
+	 */
+	public function test_rest_api_blocked() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ), 10, 3 );
+
+		$result = Health_Check::test_rest_api_accessibility();
+
+		$this->assertEquals( 'critical', $result['status'] );
+		$this->assertEquals( 'REST API is restricted to authenticated users', $result['label'] );
+		$this->assertEquals( 'red', $result['badge']['color'] );
+		$this->assertStringContainsString( 'security plugin settings', $result['actions'] );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
+	}
+
+	/**
+	 * Test REST API accessibility with connection error.
+	 */
+	public function test_rest_api_connection_error() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_connection_error' ), 10, 3 );
+
+		$result = Health_Check::test_rest_api_accessibility();
+
+		$this->assertEquals( 'critical', $result['status'] );
+		$this->assertStringContainsString( 'Could not connect to REST API', $result['description'] );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_connection_error' ) );
+	}
+
+	/**
+	 * Test is_rest_api_accessible returns true for successful response.
+	 */
+	public function test_is_rest_api_accessible_returns_true() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ), 10, 3 );
+
+		$result = Health_Check::is_rest_api_accessible();
+
+		$this->assertTrue( $result );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
+	}
+
+	/**
+	 * Test is_rest_api_accessible returns WP_Error when blocked by security plugin.
+	 */
+	public function test_is_rest_api_accessible_returns_error_when_blocked() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ), 10, 3 );
+
+		$result = Health_Check::is_rest_api_accessible();
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'rest_api_restricted', $result->get_error_code() );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
+	}
+
+	/**
+	 * Test is_rest_api_accessible ignores ActivityPub's own errors.
+	 */
+	public function test_is_rest_api_accessible_ignores_activitypub_errors() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_own_error' ), 10, 3 );
+
+		$result = Health_Check::is_rest_api_accessible();
+
+		// Should return true because error title starts with 'activitypub_'.
+		$this->assertTrue( $result );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_own_error' ) );
+	}
 }

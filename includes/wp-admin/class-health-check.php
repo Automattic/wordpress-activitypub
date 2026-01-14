@@ -643,45 +643,68 @@ class Health_Check {
 	}
 
 	/**
-	 * Check if REST API is accessible to unauthenticated requests.
+	 * Check if ActivityPub endpoints are accessible to unauthenticated requests.
 	 *
-	 * This checks if a security plugin is blocking all unauthenticated REST API access
-	 * via the `rest_authentication_errors` filter. This is different from AUTHORIZED_FETCH
-	 * which uses HTTP Signature verification on ActivityPub-specific endpoints.
+	 * Makes an actual HTTP request to the ActivityPub inbox endpoint.
+	 * Only reports errors from security plugins (error titles not starting
+	 * with 'activitypub_').
 	 *
 	 * @return bool|\WP_Error True if accessible, WP_Error otherwise.
 	 */
 	public static function is_rest_api_accessible() {
-		// Temporarily remove our own authentication to test what other plugins do.
-		$current_user = \wp_get_current_user();
-		\wp_set_current_user( 0 );
+		// Test the application actor's inbox endpoint (always available).
+		$actor = Actors::get_by_id( Actors::APPLICATION_USER_ID );
+		$url   = $actor->get_inbox();
 
-		/**
-		 * Simulate what happens when an unauthenticated REST API request comes in.
-		 * Security plugins hook into `rest_authentication_errors` to block access.
-		 *
-		 * Pass `null` to indicate no authentication has been performed yet,
-		 * which is what WordPress does for unauthenticated requests.
-		 */
-		$authentication_error = \apply_filters( 'rest_authentication_errors', null );
+		// Make an unauthenticated request.
+		$response = \wp_remote_get(
+			$url,
+			array(
+				'timeout'   => 5,
+				'cookies'   => array(),
+				'sslverify' => false,
+			)
+		);
 
-		// Restore the current user.
-		\wp_set_current_user( $current_user->ID );
-
-		// If a WP_Error is returned, REST API is being blocked.
-		if ( \is_wp_error( $authentication_error ) ) {
+		if ( \is_wp_error( $response ) ) {
 			return new \WP_Error(
-				'rest_api_restricted',
+				'rest_api_not_accessible',
 				\sprintf(
-					/* translators: %s: Error message from the blocking plugin. */
-					\__( 'Error: %s', 'activitypub' ),
-					$authentication_error->get_error_message()
+					/* translators: %s: Error message. */
+					\__( 'Could not connect to REST API: %s', 'activitypub' ),
+					$response->get_error_message()
 				)
 			);
 		}
 
-		// If `true` is returned, someone short-circuited authentication (unusual but possible).
-		// If `null` is returned, no plugin is blocking - this is the expected case.
-		return true;
+		$status_code = \wp_remote_retrieve_response_code( $response );
+
+		// Success - endpoint is accessible.
+		if ( $status_code >= 200 && $status_code < 300 ) {
+			return true;
+		}
+
+		// Error response - check if it's from a security plugin (not our own error).
+		$body  = \wp_remote_retrieve_body( $response );
+		$data  = \json_decode( $body, true );
+		$title = isset( $data['title'] ) ? $data['title'] : '';
+
+		// If the error title starts with 'activitypub_', it's our own error, not a security plugin.
+		if ( \str_starts_with( $title, 'activitypub_' ) ) {
+			return true;
+		}
+
+		// Security plugin is blocking access.
+		$message = isset( $data['message'] ) ? $data['message'] : $body;
+
+		return new \WP_Error(
+			'rest_api_restricted',
+			\sprintf(
+				/* translators: 1: HTTP status code, 2: Response body or error message. */
+				\__( 'HTTP %1$d: %2$s', 'activitypub' ),
+				$status_code,
+				\esc_html( \wp_trim_words( $message, 20 ) )
+			)
+		);
 	}
 }
