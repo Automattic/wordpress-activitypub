@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Only disable blocks for ClassicPress, not when Classic Editor plugin is installed.
