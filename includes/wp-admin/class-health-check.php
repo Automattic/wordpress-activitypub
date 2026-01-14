@@ -114,6 +114,11 @@ class Health_Check {
 			'test'  => array( self::class, 'test_wp_cron' ),
 		);
 
+		$tests['direct']['activitypub_test_rest_api_accessibility'] = array(
+			'label' => \__( 'REST API Accessibility Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_rest_api_accessibility' ),
+		);
+
 		return $tests;
 	}
 
@@ -589,5 +594,94 @@ class Health_Check {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * REST API accessibility test.
+	 *
+	 * Checks if a security plugin is blocking unauthenticated REST API access.
+	 * This is different from AUTHORIZED_FETCH which uses HTTP Signatures.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_rest_api_accessibility() {
+		$result = array(
+			'label'       => \__( 'REST API is accessible', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Your REST API is accessible to remote servers, allowing ActivityPub federation to work properly.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_rest_api_accessibility',
+		);
+
+		$check = self::is_rest_api_accessible();
+
+		if ( true === $check ) {
+			return $result;
+		}
+
+		$result['status']         = 'critical';
+		$result['label']          = \__( 'REST API is restricted to authenticated users', 'activitypub' );
+		$result['badge']['color'] = 'red';
+		$result['description']    = \sprintf(
+			'<p>%s</p><p>%s</p>',
+			\__( 'A plugin or custom code is restricting REST API access to authenticated users only. This prevents remote ActivityPub servers from interacting with your site.', 'activitypub' ),
+			$check->get_error_message()
+		);
+		$result['actions']        = \sprintf(
+			'<p>%s</p>',
+			\__( 'Check your security plugin settings (Wordfence, Disable REST API, Patchstack, Solid Security, etc.) and ensure ActivityPub endpoints are accessible to unauthenticated requests.', 'activitypub' )
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Check if REST API is accessible to unauthenticated requests.
+	 *
+	 * This checks if a security plugin is blocking all unauthenticated REST API access
+	 * via the `rest_authentication_errors` filter. This is different from AUTHORIZED_FETCH
+	 * which uses HTTP Signature verification on ActivityPub-specific endpoints.
+	 *
+	 * @return bool|\WP_Error True if accessible, WP_Error otherwise.
+	 */
+	public static function is_rest_api_accessible() {
+		// Temporarily remove our own authentication to test what other plugins do.
+		$current_user = \wp_get_current_user();
+		\wp_set_current_user( 0 );
+
+		/**
+		 * Simulate what happens when an unauthenticated REST API request comes in.
+		 * Security plugins hook into `rest_authentication_errors` to block access.
+		 *
+		 * Pass `null` to indicate no authentication has been performed yet,
+		 * which is what WordPress does for unauthenticated requests.
+		 */
+		$authentication_error = \apply_filters( 'rest_authentication_errors', null );
+
+		// Restore the current user.
+		\wp_set_current_user( $current_user->ID );
+
+		// If a WP_Error is returned, REST API is being blocked.
+		if ( \is_wp_error( $authentication_error ) ) {
+			return new \WP_Error(
+				'rest_api_restricted',
+				\sprintf(
+					/* translators: %s: Error message from the blocking plugin. */
+					\__( 'Error: %s', 'activitypub' ),
+					$authentication_error->get_error_message()
+				)
+			);
+		}
+
+		// If `true` is returned, someone short-circuited authentication (unusual but possible).
+		// If `null` is returned, no plugin is blocking - this is the expected case.
+		return true;
 	}
 }
