@@ -20,9 +20,12 @@ class Classic_Editor {
 	public static function init() {
 		\add_filter( 'activitypub_attachments_media_markup', array( self::class, 'filter_attachments_media_markup' ), 10, 2 );
 		\add_filter( 'activitypub_attachment_ids', array( self::class, 'filter_attached_media_ids' ), 10, 2 );
-		\add_filter( 'activitypub_site_supports_blocks', '__return_false' );
 		\add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
 		\add_action( 'save_post', array( self::class, 'save_meta_data' ) );
+
+		if ( \function_exists( 'classicpress_version' ) ) {
+			\add_filter( 'activitypub_site_supports_blocks', '__return_false' );
+		}
 	}
 
 	/**
