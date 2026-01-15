@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add location support for posts using WordPress Geodata post meta fields.
