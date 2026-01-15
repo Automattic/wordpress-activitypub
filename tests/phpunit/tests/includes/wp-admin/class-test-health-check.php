@@ -227,14 +227,9 @@ class Test_Health_Check extends WP_UnitTestCase {
 	/**
 	 * Mock HTTP response for accessible ActivityPub endpoint.
 	 *
-	 * @param mixed  $response    The response.
-	 * @param array  $parsed_args The parsed args.
-	 * @param string $url         The URL.
-	 *
 	 * @return array Mocked response.
 	 */
-	public function mock_activitypub_accessible( $response, $parsed_args, $url ) {
-		unset( $response, $parsed_args, $url );
+	public function mock_activitypub_accessible() {
 		return array(
 			'response' => array(
 				'code'    => 200,
@@ -247,14 +242,9 @@ class Test_Health_Check extends WP_UnitTestCase {
 	/**
 	 * Mock HTTP response for blocked ActivityPub endpoint (security plugin).
 	 *
-	 * @param mixed  $response    The response.
-	 * @param array  $parsed_args The parsed args.
-	 * @param string $url         The URL.
-	 *
 	 * @return array Mocked response.
 	 */
-	public function mock_activitypub_blocked( $response, $parsed_args, $url ) {
-		unset( $response, $parsed_args, $url );
+	public function mock_activitypub_blocked() {
 		return array(
 			'response' => array(
 				'code'    => 401,
@@ -267,14 +257,9 @@ class Test_Health_Check extends WP_UnitTestCase {
 	/**
 	 * Mock HTTP response for ActivityPub's own error (not a security plugin).
 	 *
-	 * @param mixed  $response    The response.
-	 * @param array  $parsed_args The parsed args.
-	 * @param string $url         The URL.
-	 *
 	 * @return array Mocked response.
 	 */
-	public function mock_activitypub_own_error( $response, $parsed_args, $url ) {
-		unset( $response, $parsed_args, $url );
+	public function mock_activitypub_own_error() {
 		return array(
 			'response' => array(
 				'code'    => 401,
@@ -287,14 +272,9 @@ class Test_Health_Check extends WP_UnitTestCase {
 	/**
 	 * Mock HTTP response for connection error.
 	 *
-	 * @param mixed  $response    The response.
-	 * @param array  $parsed_args The parsed args.
-	 * @param string $url         The URL.
-	 *
 	 * @return WP_Error Mocked error response.
 	 */
-	public function mock_activitypub_connection_error( $response, $parsed_args, $url ) {
-		unset( $response, $parsed_args, $url );
+	public function mock_activitypub_connection_error() {
 		return new WP_Error( 'http_request_failed', 'Connection refused' );
 	}
 
@@ -302,7 +282,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 * Test REST API accessibility when ActivityPub endpoint is accessible.
 	 */
 	public function test_rest_api_accessible() {
-		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ), 10, 3 );
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
 
 		$result = Health_Check::test_rest_api_accessibility();
 
@@ -317,7 +297,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 * Test REST API accessibility when endpoint is blocked.
 	 */
 	public function test_rest_api_blocked() {
-		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ), 10, 3 );
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
 
 		$result = Health_Check::test_rest_api_accessibility();
 
@@ -333,7 +313,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 * Test REST API accessibility with connection error.
 	 */
 	public function test_rest_api_connection_error() {
-		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_connection_error' ), 10, 3 );
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_connection_error' ) );
 
 		$result = Health_Check::test_rest_api_accessibility();
 
@@ -347,7 +327,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 * Test is_rest_api_accessible returns true for successful response.
 	 */
 	public function test_is_rest_api_accessible_returns_true() {
-		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ), 10, 3 );
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
 
 		$result = Health_Check::is_rest_api_accessible();
 
@@ -360,7 +340,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 * Test is_rest_api_accessible returns WP_Error when blocked by security plugin.
 	 */
 	public function test_is_rest_api_accessible_returns_error_when_blocked() {
-		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ), 10, 3 );
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
 
 		$result = Health_Check::is_rest_api_accessible();
 
@@ -374,7 +354,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 * Test is_rest_api_accessible ignores ActivityPub's own errors.
 	 */
 	public function test_is_rest_api_accessible_ignores_activitypub_errors() {
-		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_own_error' ), 10, 3 );
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_own_error' ) );
 
 		$result = Health_Check::is_rest_api_accessible();
 
