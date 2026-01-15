@@ -114,6 +114,11 @@ class Health_Check {
 			'test'  => array( self::class, 'test_wp_cron' ),
 		);
 
+		$tests['direct']['activitypub_test_rest_api_accessibility'] = array(
+			'label' => \__( 'REST API Accessibility Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_rest_api_accessibility' ),
+		);
+
 		return $tests;
 	}
 
@@ -589,5 +594,116 @@ class Health_Check {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * REST API accessibility test.
+	 *
+	 * Checks if a security plugin is blocking unauthenticated REST API access.
+	 * This is different from AUTHORIZED_FETCH which uses HTTP Signatures.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_rest_api_accessibility() {
+		$result = array(
+			'label'       => \__( 'REST API is accessible', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Your REST API is accessible to remote servers, allowing ActivityPub federation to work properly.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_rest_api_accessibility',
+		);
+
+		$check = self::is_rest_api_accessible();
+
+		if ( true === $check ) {
+			return $result;
+		}
+
+		$result['status']         = 'critical';
+		$result['label']          = \__( 'REST API is restricted to authenticated users', 'activitypub' );
+		$result['badge']['color'] = 'red';
+		$result['description']    = \sprintf(
+			'<p>%s</p><p>%s</p>',
+			\__( 'A plugin or custom code is restricting REST API access to authenticated users only. This prevents remote ActivityPub servers from interacting with your site.', 'activitypub' ),
+			\esc_html( $check->get_error_message() )
+		);
+		$result['actions']        = \sprintf(
+			'<p>%s</p>',
+			\__( 'Check your security plugin settings and ensure ActivityPub endpoints are accessible to unauthenticated requests.', 'activitypub' )
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Check if ActivityPub endpoints are accessible to unauthenticated requests.
+	 *
+	 * Makes an actual HTTP request to the ActivityPub inbox endpoint.
+	 * Only reports errors from security plugins (error titles not starting
+	 * with 'activitypub_').
+	 *
+	 * @return bool|\WP_Error True if accessible, WP_Error otherwise.
+	 */
+	public static function is_rest_api_accessible() {
+		// Test the application actor's inbox endpoint (always available).
+		$actor = Actors::get_by_id( Actors::APPLICATION_USER_ID );
+		$url   = $actor->get_inbox();
+
+		// Make an unauthenticated request.
+		$response = \wp_remote_get(
+			$url,
+			array(
+				'timeout' => 5,
+				'cookies' => array(),
+			)
+		);
+
+		if ( \is_wp_error( $response ) ) {
+			return new \WP_Error(
+				'rest_api_not_accessible',
+				\sprintf(
+					/* translators: %s: Error message. */
+					\__( 'Could not connect to REST API: %s', 'activitypub' ),
+					\esc_html( $response->get_error_message() )
+				)
+			);
+		}
+
+		$status_code = \wp_remote_retrieve_response_code( $response );
+
+		// Success - endpoint is accessible.
+		if ( $status_code >= 200 && $status_code < 300 ) {
+			return true;
+		}
+
+		// Error response - check if it's from a security plugin (not our own error).
+		$body  = \wp_remote_retrieve_body( $response );
+		$data  = \json_decode( $body, true );
+		$title = isset( $data['title'] ) ? $data['title'] : '';
+
+		// If the error title starts with 'activitypub_', it's our own error, not a security plugin.
+		if ( \str_starts_with( $title, 'activitypub_' ) ) {
+			return true;
+		}
+
+		// Security plugin is blocking access.
+		$message = isset( $data['message'] ) ? $data['message'] : $body;
+
+		return new \WP_Error(
+			'rest_api_restricted',
+			\sprintf(
+				/* translators: 1: HTTP status code, 2: Response body or error message. */
+				\__( 'HTTP %1$d: %2$s', 'activitypub' ),
+				$status_code,
+				\esc_html( \wp_trim_words( $message, 20 ) )
+			)
+		);
 	}
 }

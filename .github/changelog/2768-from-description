@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add site health check to detect when security plugins block REST API access.
