@@ -632,11 +632,11 @@ class Health_Check {
 		$result['description']    = \sprintf(
 			'<p>%s</p><p>%s</p>',
 			\__( 'A plugin or custom code is restricting REST API access to authenticated users only. This prevents remote ActivityPub servers from interacting with your site.', 'activitypub' ),
-			$check->get_error_message()
+			\esc_html( $check->get_error_message() )
 		);
 		$result['actions']        = \sprintf(
 			'<p>%s</p>',
-			\__( 'Check your security plugin settings (Wordfence, Disable REST API, Patchstack, Solid Security, etc.) and ensure ActivityPub endpoints are accessible to unauthenticated requests.', 'activitypub' )
+			\__( 'Check your security plugin settings and ensure ActivityPub endpoints are accessible to unauthenticated requests.', 'activitypub' )
 		);
 
 		return $result;
