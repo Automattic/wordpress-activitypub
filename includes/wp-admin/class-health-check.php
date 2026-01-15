@@ -660,9 +660,8 @@ class Health_Check {
 		$response = \wp_remote_get(
 			$url,
 			array(
-				'timeout'   => 5,
-				'cookies'   => array(),
-				'sslverify' => false,
+				'timeout' => 5,
+				'cookies' => array(),
 			)
 		);
 
