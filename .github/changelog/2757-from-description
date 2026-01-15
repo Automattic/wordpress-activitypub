@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix Unicode URL encoding for ActivityPub actor URLs to be RFC 3986 compliant.
