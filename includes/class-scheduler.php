@@ -274,9 +274,9 @@ class Scheduler {
 	 * Schedule the outbox item for federation.
 	 *
 	 * @param int $id     The ID of the outbox item.
-	 * @param int $offset The offset to add to the scheduled time. Default 5 seconds.
+	 * @param int $offset The offset to add to the scheduled time. Default 3 seconds.
 	 */
-	public static function schedule_outbox_activity_for_federation( $id, $offset = 5 ) {
+	public static function schedule_outbox_activity_for_federation( $id, $offset = 3 ) {
 		$hook = 'activitypub_process_outbox';
 		$args = array( $id );
 
