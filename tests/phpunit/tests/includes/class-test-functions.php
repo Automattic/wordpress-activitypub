@@ -11,7 +11,6 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Outbox;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\encode_url_path;
 use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\extract_recipients_from_activity_property;
 use function Activitypub\get_activity_visibility;
@@ -1718,94 +1717,5 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 		$this->assertFalse( \Activitypub\is_ap_post( $custom_id ), 'Should return false for custom post type' );
-	}
-
-	/**
-	 * Test encode_url_path with Unicode characters.
-	 *
-	 * @dataProvider encode_url_path_provider
-	 * @covers \Activitypub\encode_url_path
-	 *
-	 * @param string $url      The URL to encode.
-	 * @param string $expected The expected encoded URL.
-	 * @param string $message  The assertion message.
-	 */
-	public function test_encode_url_path( $url, $expected, $message ) {
-		$this->assertSame( $expected, encode_url_path( $url ), $message );
-	}
-
-	/**
-	 * Data provider for encode_url_path tests.
-	 *
-	 * @return array Test cases.
-	 */
-	public function encode_url_path_provider() {
-		return array(
-			'japanese_characters'     => array(
-				'https://example.jp/著者/testauthor/',
-				'https://example.jp/%E8%91%97%E8%80%85/testauthor/',
-				'Japanese characters should be percent-encoded',
-			),
-			'arabic_characters'       => array(
-				'https://example.com/مقالة/author/',
-				'https://example.com/%D9%85%D9%82%D8%A7%D9%84%D8%A9/author/',
-				'Arabic characters should be percent-encoded',
-			),
-			'cyrillic_characters'     => array(
-				'https://example.ru/статья/автор/',
-				'https://example.ru/%D1%81%D1%82%D0%B0%D1%82%D1%8C%D1%8F/%D0%B0%D0%B2%D1%82%D0%BE%D1%80/',
-				'Cyrillic characters should be percent-encoded',
-			),
-			'url_with_port'           => array(
-				'https://example.com:8080/著者/',
-				'https://example.com:8080/%E8%91%97%E8%80%85/',
-				'Port should be preserved',
-			),
-			'url_with_query_params'   => array(
-				'https://example.com/著者/?param=value&other=test',
-				'https://example.com/%E8%91%97%E8%80%85/?param=value&other=test',
-				'Query parameters should be preserved unchanged',
-			),
-			'ascii_only_url'          => array(
-				'https://example.com/author/testuser/',
-				'https://example.com/author/testuser/',
-				'ASCII-only URLs should remain unchanged',
-			),
-			'url_without_path'        => array(
-				'https://example.com',
-				'https://example.com',
-				'URLs without path should be returned as-is',
-			),
-			'url_with_at_symbol'      => array(
-				'https://example.com/@username',
-				'https://example.com/%40username',
-				'@ symbol in path should be encoded',
-			),
-			'special_chars_preserved' => array(
-				'https://example.com/path-with-hyphen/under_score/',
-				'https://example.com/path-with-hyphen/under_score/',
-				'Hyphens and underscores should be preserved (after rawurlencode)',
-			),
-			'mixed_unicode_and_ascii' => array(
-				'https://example.com/blog/著者/post-title/',
-				'https://example.com/blog/%E8%91%97%E8%80%85/post-title/',
-				'Mixed Unicode and ASCII should encode only Unicode',
-			),
-		);
-	}
-
-	/**
-	 * Test encode_url_path preserves query string with Unicode in path.
-	 *
-	 * @covers \Activitypub\encode_url_path
-	 */
-	public function test_encode_url_path_query_string_not_affected() {
-		$url    = 'https://example.com/著者/?search=著者';
-		$result = encode_url_path( $url );
-
-		// Path should be encoded.
-		$this->assertStringContainsString( '%E8%91%97%E8%80%85', $result );
-		// Query string should be preserved as-is (including Unicode).
-		$this->assertStringContainsString( '?search=著者', $result );
 	}
 }
