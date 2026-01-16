@@ -85,7 +85,8 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Options', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Post_Types', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Router', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
+	// Priority 0 ensures Scheduler hooks are registered before Migration (priority 1) runs.
+	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
 
