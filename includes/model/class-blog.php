@@ -11,7 +11,6 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
-use function Activitypub\encode_url_path;
 use function Activitypub\esc_hashtag;
 use function Activitypub\get_attribution_domains;
 use function Activitypub\get_rest_url_by_path;
@@ -94,7 +93,7 @@ class Blog extends Actor {
 		$permalink = \get_option( 'activitypub_use_permalink_as_id_for_blog', false );
 
 		if ( $permalink ) {
-			return encode_url_path( \home_url( '/@' . $this->get_preferred_username() ) );
+			return \esc_url( \home_url( '/@' . $this->get_preferred_username() ) );
 		}
 
 		return \add_query_arg( 'author', $this->_id, \home_url( '/' ) );
