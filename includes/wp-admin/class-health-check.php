@@ -10,6 +10,7 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Collection\Actors;
 use Activitypub\Http;
 use Activitypub\Sanitize;
+use Activitypub\Scheduler;
 use Activitypub\Webfinger;
 
 use function Activitypub\user_can_activitypub;
@@ -27,6 +28,23 @@ class Health_Check {
 	public static function init() {
 		\add_filter( 'site_status_tests', array( self::class, 'add_tests' ) );
 		\add_filter( 'debug_information', array( self::class, 'debug_information' ) );
+
+		// Ensure schedules are registered when viewing the ActivityPub settings page.
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'ensure_schedules_registered' ) );
+	}
+
+	/**
+	 * Ensure all required ActivityPub schedules are registered.
+	 *
+	 * This is called when the ActivityPub settings page is loaded to
+	 * automatically restore any missing scheduled events.
+	 */
+	public static function ensure_schedules_registered() {
+		$missing_schedules = self::get_missing_schedules();
+
+		if ( ! empty( $missing_schedules ) ) {
+			Scheduler::register_schedules();
+		}
 	}
 
 	/**
@@ -112,6 +130,11 @@ class Health_Check {
 		$tests['direct']['activitypub_test_wp_cron'] = array(
 			'label' => \__( 'WP-Cron Configuration Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_wp_cron' ),
+		);
+
+		$tests['direct']['activitypub_test_scheduled_events'] = array(
+			'label' => \__( 'Scheduled Events Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_scheduled_events' ),
 		);
 
 		$tests['direct']['activitypub_test_rest_api_accessibility'] = array(
@@ -594,6 +617,95 @@ class Health_Check {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Scheduled events test.
+	 *
+	 * Verifies all required ActivityPub scheduled events are registered
+	 * and auto-repairs them if missing.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_scheduled_events() {
+		$result = array(
+			'label'       => \__( 'ActivityPub scheduled events are registered', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'All required ActivityPub scheduled events are properly registered and will run as expected.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_scheduled_events',
+		);
+
+		$missing_schedules = self::get_missing_schedules();
+
+		if ( empty( $missing_schedules ) ) {
+			return $result;
+		}
+
+		// Auto-repair: Register missing schedules.
+		Scheduler::register_schedules();
+
+		// Check again after repair.
+		$still_missing = self::get_missing_schedules();
+
+		if ( empty( $still_missing ) ) {
+			$result['description'] = \sprintf(
+				'<p>%s</p>',
+				\__( 'Some scheduled events were missing but have been automatically restored. All ActivityPub scheduled events are now properly registered.', 'activitypub' )
+			);
+			return $result;
+		}
+
+		// Some schedules could not be restored.
+		$result['status']         = 'critical';
+		$result['label']          = \__( 'Some ActivityPub scheduled events are not registered', 'activitypub' );
+		$result['badge']['color'] = 'red';
+		$result['description']    = \sprintf(
+			'<p>%s</p><p>%s</p>',
+			\__( 'The following scheduled events could not be registered:', 'activitypub' ),
+			'<code>' . \implode( '</code>, <code>', \array_keys( $still_missing ) ) . '</code>'
+		);
+		$result['actions']        = \sprintf(
+			'<p>%s</p>',
+			\__( 'Try deactivating and reactivating the ActivityPub plugin. If the issue persists, check for conflicts with other plugins that may be interfering with WP-Cron.', 'activitypub' )
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Get missing scheduled events.
+	 *
+	 * @return array Associative array of missing hook name => recurrence.
+	 */
+	public static function get_missing_schedules() {
+		$missing = array();
+
+		foreach ( Scheduler::SCHEDULES as $hook => $recurrence ) {
+			// Skip purge schedules if their retention is set to 0 (disabled).
+			if ( 'activitypub_outbox_purge' === $hook && 0 === (int) \get_option( 'activitypub_outbox_purge_days', 180 ) ) {
+				continue;
+			}
+			if ( 'activitypub_inbox_purge' === $hook && 0 === (int) \get_option( 'activitypub_inbox_purge_days', 180 ) ) {
+				continue;
+			}
+			if ( 'activitypub_ap_post_purge' === $hook && 0 === (int) \get_option( 'activitypub_ap_post_purge_days', 30 ) ) {
+				continue;
+			}
+
+			if ( ! \wp_next_scheduled( $hook ) ) {
+				$missing[ $hook ] = $recurrence;
+			}
+		}
+
+		return $missing;
 	}
 
 	/**

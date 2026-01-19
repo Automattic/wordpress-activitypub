@@ -27,6 +27,21 @@ use Activitypub\Scheduler\Post;
 class Scheduler {
 
 	/**
+	 * Scheduled events with their recurrence.
+	 *
+	 * @var array
+	 */
+	const SCHEDULES = array(
+		'activitypub_update_remote_actors'         => 'hourly',
+		'activitypub_cleanup_remote_actors'        => 'daily',
+		'activitypub_reprocess_outbox'             => 'hourly',
+		'activitypub_outbox_purge'                 => 'daily',
+		'activitypub_inbox_purge'                  => 'daily',
+		'activitypub_ap_post_purge'                => 'daily',
+		'activitypub_sync_blocklist_subscriptions' => 'weekly',
+	);
+
+	/**
 	 * Allowed batch callbacks.
 	 *
 	 * @var array
@@ -117,32 +132,10 @@ class Scheduler {
 	 * Schedule all ActivityPub schedules.
 	 */
 	public static function register_schedules() {
-		if ( ! \wp_next_scheduled( 'activitypub_update_remote_actors' ) ) {
-			\wp_schedule_event( time(), 'hourly', 'activitypub_update_remote_actors' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_cleanup_remote_actors' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_reprocess_outbox' ) ) {
-			\wp_schedule_event( time(), 'hourly', 'activitypub_reprocess_outbox' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_inbox_purge' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_ap_post_purge' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_ap_post_purge' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_sync_blocklist_subscriptions' ) ) {
-			\wp_schedule_event( time(), 'weekly', 'activitypub_sync_blocklist_subscriptions' );
+		foreach ( self::SCHEDULES as $hook => $recurrence ) {
+			if ( ! \wp_next_scheduled( $hook ) ) {
+				\wp_schedule_event( time(), $recurrence, $hook );
+			}
 		}
 	}
 
@@ -152,13 +145,9 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function deregister_schedules() {
-		\wp_unschedule_hook( 'activitypub_update_remote_actors' );
-		\wp_unschedule_hook( 'activitypub_cleanup_remote_actors' );
-		\wp_unschedule_hook( 'activitypub_reprocess_outbox' );
-		\wp_unschedule_hook( 'activitypub_outbox_purge' );
-		\wp_unschedule_hook( 'activitypub_inbox_purge' );
-		\wp_unschedule_hook( 'activitypub_ap_post_purge' );
-		\wp_unschedule_hook( 'activitypub_sync_blocklist_subscriptions' );
+		foreach ( array_keys( self::SCHEDULES ) as $hook ) {
+			\wp_unschedule_hook( $hook );
+		}
 	}
 
 	/**
