@@ -708,6 +708,57 @@ class Post extends Base {
 	}
 
 	/**
+	 * Returns the location of the post as a Place object.
+	 *
+	 * Uses WordPress Geodata post meta fields to build the location.
+	 *
+	 * @see https://codex.wordpress.org/Geodata
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-location
+	 *
+	 * @return array|null The Place object or null if no public geodata is available.
+	 */
+	protected function get_location() {
+		$post_id = $this->item->ID;
+		$meta    = \get_post_meta( $post_id );
+
+		// If geo_public exists and is explicitly set to 0, don't share location.
+		if ( isset( $meta['geo_public'] ) && '0' === $meta['geo_public'][0] ) {
+			return null;
+		}
+
+		// Both latitude and longitude are required for a valid location.
+		// Use is_numeric() instead of empty() since 0 is a valid coordinate (Equator/Prime Meridian).
+		$has_latitude  = isset( $meta['geo_latitude'][0] ) && is_numeric( $meta['geo_latitude'][0] );
+		$has_longitude = isset( $meta['geo_longitude'][0] ) && is_numeric( $meta['geo_longitude'][0] );
+
+		if ( ! $has_latitude || ! $has_longitude ) {
+			return null;
+		}
+
+		$place = array(
+			'type'      => 'Place',
+			'latitude'  => (float) $meta['geo_latitude'][0],
+			'longitude' => (float) $meta['geo_longitude'][0],
+		);
+
+		// Add the address/name if available.
+		if ( ! empty( $meta['geo_address'][0] ) ) {
+			$place['name'] = \sanitize_text_field( $meta['geo_address'][0] );
+		}
+
+		/**
+		 * Filter the location Place object for a post.
+		 *
+		 * @param array    $place   The Place object.
+		 * @param \WP_Post $post    The post object.
+		 * @param int      $post_id The post ID.
+		 *
+		 * @return array|null The filtered Place object or null to disable location.
+		 */
+		return \apply_filters( 'activitypub_post_location', $place, $this->item, $post_id );
+	}
+
+	/**
 	 * Helper function to extract the @-Mentions from the post content.
 	 *
 	 * @return array The list of @-Mentions.

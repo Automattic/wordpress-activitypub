@@ -87,9 +87,10 @@ git push --force-with-lease
 
 | Label | Use |
 |-------|-----|
-| `[Type] Bug` | Bug fixes |
-| `[Type] Enhancement` | New features |
-| `[Type] Documentation` | Doc updates |
+| `Bug` | Bug fixes |
+| `Enhancement` | New features |
+| `Documentation` | Doc updates |
+| `Code Quality` | Refactoring, cleanup, etc. |
 | `Skip Changelog` | No changelog needed |
 | `Needs Review` | Ready for review |
 | `In Progress` | Still working |
