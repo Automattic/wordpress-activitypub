@@ -232,7 +232,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 	 */
 	public function test_registration() {
 		// Ed25519 public keys must be exactly 32 bytes.
-		$valid_ed25519_key = \base64_encode( \str_repeat( 'x', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES ) );
+		$valid_ed25519_key = \base64_encode( \str_repeat( 'x', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 
 		$request_data = array(
 			'name'      => 'Test FASP Provider',
@@ -424,6 +424,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
 		$request->set_param( 'identifier', 'trends' );
 		$request->set_param( 'version', '1.0' );
+
 		/*
 		 * Set the verified keyId parameter that would be set by Server::verify_signature().
 		 * Per FASP spec, keyId must be the serverId exchanged during registration.
@@ -479,6 +480,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
 		$request->set_param( 'identifier', 'trends' );
 		$request->set_param( 'version', '1.0' );
+
 		/*
 		 * Set verified keyId to an unknown/unregistered FASP serverId.
 		 * This simulates a request signed by an unknown server.
