@@ -745,4 +745,181 @@ class Test_Signature extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_rfc9421_signature' );
 		\remove_filter( 'pre_http_request', $mock_callback );
 	}
+
+	/**
+	 * Test Ed25519 signature verification via activitypub_pre_get_public_key filter.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_ed25519_signature
+	 */
+	public function test_ed25519_signature_verification() {
+		// Generate Ed25519 keypair.
+		$keypair     = \sodium_crypto_sign_keypair();
+		$public_key  = \sodium_crypto_sign_publickey( $keypair );
+		$private_key = \sodium_crypto_sign_secretkey( $keypair );
+
+		// Create signature base string.
+		$date            = \gmdate( 'D, d M Y H:i:s T' );
+		$created         = \time();
+		$params_string   = \sprintf(
+			'("@method" "@target-uri" "date");created=%d;keyid="test-fasp-server-id"',
+			$created
+		);
+		$signature_base  = "\"@method\": POST\n";
+		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/fasp/capabilities/test/1/activation\n";
+		$signature_base .= "\"date\": $date\n";
+		$signature_base .= "\"@signature-params\": $params_string";
+
+		// Sign with Ed25519.
+		$signature = \sodium_crypto_sign_detached( $signature_base, $private_key );
+
+		// Create signature headers.
+		$signature_input  = "sig=$params_string";
+		$signature_header = 'sig=:' . \base64_encode( $signature ) . ':';
+
+		// Mock the public key retrieval to return Ed25519 key.
+		$mock_ed25519_key = function ( $key, $key_id ) use ( $public_key ) {
+			if ( 'test-fasp-server-id' === $key_id ) {
+				return array(
+					'type' => 'ed25519',
+					'key'  => $public_key,
+				);
+			}
+			return $key;
+		};
+		\add_filter( 'activitypub_pre_get_public_key', $mock_ed25519_key, 10, 2 );
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['HTTPS']          = 'on';
+
+		// Create REST request with Ed25519 signature.
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation' );
+		$request->set_header( 'Date', $date );
+		$request->set_header( 'Host', 'example.org' );
+		$request->set_header( 'Signature-Input', $signature_input );
+		$request->set_header( 'Signature', $signature_header );
+
+		// Verification should succeed.
+		$result = Signature::verify_http_signature( $request );
+		$this->assertTrue( $result, 'Valid Ed25519 signature should verify' );
+
+		\remove_filter( 'activitypub_pre_get_public_key', $mock_ed25519_key );
+	}
+
+	/**
+	 * Test Ed25519 signature verification fails with invalid signature.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_ed25519_signature
+	 */
+	public function test_ed25519_invalid_signature_fails() {
+		// Generate Ed25519 keypair.
+		$keypair    = \sodium_crypto_sign_keypair();
+		$public_key = \sodium_crypto_sign_publickey( $keypair );
+
+		// Create a different keypair to sign with (simulates wrong key).
+		$wrong_keypair    = \sodium_crypto_sign_keypair();
+		$wrong_secret_key = \sodium_crypto_sign_secretkey( $wrong_keypair );
+
+		// Create signature base string.
+		$date            = \gmdate( 'D, d M Y H:i:s T' );
+		$created         = \time();
+		$params_string   = \sprintf(
+			'("@method" "@target-uri" "date");created=%d;keyid="test-fasp-server-id"',
+			$created
+		);
+		$signature_base  = "\"@method\": POST\n";
+		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/fasp/capabilities/test/1/activation\n";
+		$signature_base .= "\"date\": $date\n";
+		$signature_base .= "\"@signature-params\": $params_string";
+
+		// Sign with WRONG key.
+		$signature = \sodium_crypto_sign_detached( $signature_base, $wrong_secret_key );
+
+		// Create signature headers.
+		$signature_input  = "sig=$params_string";
+		$signature_header = 'sig=:' . \base64_encode( $signature ) . ':';
+
+		// Mock the public key retrieval to return the CORRECT public key.
+		$mock_ed25519_key = function ( $key, $key_id ) use ( $public_key ) {
+			if ( 'test-fasp-server-id' === $key_id ) {
+				return array(
+					'type' => 'ed25519',
+					'key'  => $public_key,
+				);
+			}
+			return $key;
+		};
+		\add_filter( 'activitypub_pre_get_public_key', $mock_ed25519_key, 10, 2 );
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['HTTPS']          = 'on';
+
+		// Create REST request with Ed25519 signature (signed with wrong key).
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation' );
+		$request->set_header( 'Date', $date );
+		$request->set_header( 'Host', 'example.org' );
+		$request->set_header( 'Signature-Input', $signature_input );
+		$request->set_header( 'Signature', $signature_header );
+
+		// Verification should fail.
+		$result = Signature::verify_http_signature( $request );
+		$this->assertWPError( $result, 'Invalid Ed25519 signature should fail verification' );
+		$this->assertEquals( 'activitypub_signature', $result->get_error_code() );
+
+		\remove_filter( 'activitypub_pre_get_public_key', $mock_ed25519_key );
+	}
+
+	/**
+	 * Test Ed25519 signature verification fails with invalid key length.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_ed25519_signature
+	 */
+	public function test_ed25519_invalid_key_length_fails() {
+		// Create signature headers with dummy values.
+		$date             = \gmdate( 'D, d M Y H:i:s T' );
+		$created          = \time();
+		$params_string    = \sprintf(
+			'("@method" "@target-uri" "date");created=%d;keyid="test-fasp-server-id"',
+			$created
+		);
+		$signature_input  = "sig=$params_string";
+		$signature_header = 'sig=:' . \base64_encode( \str_repeat( 'x', 64 ) ) . ':'; // 64 bytes for signature.
+
+		// Mock the public key retrieval to return an invalid length key.
+		$mock_invalid_key = function ( $key, $key_id ) {
+			if ( 'test-fasp-server-id' === $key_id ) {
+				return array(
+					'type' => 'ed25519',
+					'key'  => 'too-short', // Invalid key length.
+				);
+			}
+			return $key;
+		};
+		\add_filter( 'activitypub_pre_get_public_key', $mock_invalid_key, 10, 2 );
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['HTTPS']          = 'on';
+
+		// Create REST request.
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation' );
+		$request->set_header( 'Date', $date );
+		$request->set_header( 'Host', 'example.org' );
+		$request->set_header( 'Signature-Input', $signature_input );
+		$request->set_header( 'Signature', $signature_header );
+
+		// Verification should fail due to invalid key length.
+		$result = Signature::verify_http_signature( $request );
+		$this->assertWPError( $result, 'Invalid Ed25519 key length should fail verification' );
+		$this->assertEquals( 'invalid_key_length', $result->get_error_code() );
+
+		\remove_filter( 'activitypub_pre_get_public_key', $mock_invalid_key );
+	}
 }

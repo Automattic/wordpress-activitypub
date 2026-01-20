@@ -485,4 +485,118 @@ class Test_Fasp extends \WP_UnitTestCase {
 
 		remove_all_filters( 'activitypub_fasp_capabilities' );
 	}
+
+	/**
+	 * Test get_registration_by_server_id returns correct registration.
+	 *
+	 * @covers Activitypub\Fasp::get_registration_by_server_id
+	 */
+	public function test_get_registration_by_server_id() {
+		$registration_data = array(
+			'fasp_id'         => 'test-fasp-456',
+			'name'            => 'Test FASP by Server ID',
+			'base_url'        => 'https://fasp.example.com',
+			'server_id'       => 'unique-server-id-789',
+			'fasp_public_key' => 'dGVzdC1wdWJsaWMta2V5',
+			'status'          => 'approved',
+			'requested_at'    => current_time( 'mysql', true ),
+		);
+
+		update_option( 'activitypub_fasp_registrations', array( 'test-fasp-456' => $registration_data ) );
+
+		// Test finding by server_id.
+		$found = Fasp::get_registration_by_server_id( 'unique-server-id-789' );
+		$this->assertNotNull( $found );
+		$this->assertEquals( 'test-fasp-456', $found['fasp_id'] );
+		$this->assertEquals( 'Test FASP by Server ID', $found['name'] );
+
+		// Test not finding unknown server_id.
+		$not_found = Fasp::get_registration_by_server_id( 'unknown-server-id' );
+		$this->assertNull( $not_found );
+	}
+
+	/**
+	 * Test public key filter returns Ed25519 key for approved FASP.
+	 *
+	 * @covers Activitypub\Fasp::get_public_key_for_server_id
+	 */
+	public function test_public_key_filter_returns_ed25519_key() {
+		// Generate a valid Ed25519 keypair for testing.
+		$keypair    = sodium_crypto_sign_keypair();
+		$public_key = sodium_crypto_sign_publickey( $keypair );
+		$key_base64 = base64_encode( $public_key ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+
+		$registration_data = array(
+			'fasp_id'         => 'ed25519-fasp',
+			'name'            => 'Ed25519 Test FASP',
+			'base_url'        => 'https://fasp.example.com',
+			'server_id'       => 'ed25519-server-id',
+			'fasp_public_key' => $key_base64,
+			'status'          => 'approved',
+			'requested_at'    => current_time( 'mysql', true ),
+		);
+
+		update_option( 'activitypub_fasp_registrations', array( 'ed25519-fasp' => $registration_data ) );
+
+		// Ensure filter is registered.
+		Fasp::init();
+
+		// Call the filter directly.
+		$result = Fasp::get_public_key_for_server_id( null, 'ed25519-server-id' );
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'ed25519', $result['type'] );
+		$this->assertEquals( $public_key, $result['key'] );
+	}
+
+	/**
+	 * Test public key filter returns error for unapproved FASP.
+	 *
+	 * @covers Activitypub\Fasp::get_public_key_for_server_id
+	 */
+	public function test_public_key_filter_rejects_unapproved_fasp() {
+		$registration_data = array(
+			'fasp_id'         => 'pending-fasp',
+			'name'            => 'Pending FASP',
+			'base_url'        => 'https://fasp.example.com',
+			'server_id'       => 'pending-server-id',
+			'fasp_public_key' => 'dGVzdC1wdWJsaWMta2V5',
+			'status'          => 'pending', // Not approved.
+			'requested_at'    => current_time( 'mysql', true ),
+		);
+
+		update_option( 'activitypub_fasp_registrations', array( 'pending-fasp' => $registration_data ) );
+
+		$result = Fasp::get_public_key_for_server_id( null, 'pending-server-id' );
+
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertEquals( 'fasp_not_approved', $result->get_error_code() );
+	}
+
+	/**
+	 * Test public key filter returns null for non-FASP keyIds.
+	 *
+	 * @covers Activitypub\Fasp::get_public_key_for_server_id
+	 */
+	public function test_public_key_filter_passes_through_non_fasp_keyids() {
+		// No FASP registrations.
+		delete_option( 'activitypub_fasp_registrations' );
+
+		// Should return null for unknown keyIds, allowing default lookup.
+		$result = Fasp::get_public_key_for_server_id( null, 'https://example.com/users/test#main-key' );
+		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test public key filter doesn't override existing key.
+	 *
+	 * @covers Activitypub\Fasp::get_public_key_for_server_id
+	 */
+	public function test_public_key_filter_respects_existing_key() {
+		$existing_key = 'existing-key-from-another-filter';
+
+		$result = Fasp::get_public_key_for_server_id( $existing_key, 'any-server-id' );
+
+		$this->assertEquals( $existing_key, $result );
+	}
 }
