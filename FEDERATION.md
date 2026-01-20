@@ -9,6 +9,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [HTTP Signatures](https://swicg.github.io/activitypub-http-signature/)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
 - [Interaction Policy](https://docs.gotosocial.org/en/latest/federation/interaction_policy/)
+- [FASP](https://github.com/mastodon/fediverse_auxiliary_service_provider_specifications/) (Fediverse Auxiliary Service Provider)
 
 ## Supported FEPs
 
