@@ -322,6 +322,11 @@ class Http_Message_Signature implements Http_Signature {
 
 		// Handle Ed25519 keys (e.g., from FASP).
 		if ( \is_array( $public_key ) && isset( $public_key['type'] ) && 'ed25519' === $public_key['type'] ) {
+			// Verify alg parameter matches if specified (FASP/RFC-9421 expects alg="ed25519").
+			$alg = \strtolower( $params['alg'] ?? '' );
+			if ( '' !== $alg && 'ed25519' !== $alg ) {
+				return new \WP_Error( 'alg_key_mismatch', 'Algorithm parameter does not match Ed25519 key type.' );
+			}
 			return $this->verify_ed25519_signature( $signature_base, $data['signature'], $public_key['key'] );
 		}
 

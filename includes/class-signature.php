@@ -52,11 +52,11 @@ class Signature {
 	}
 
 	/**
-	 * Verifies the http signatures
+	 * Verifies the http signatures.
 	 *
 	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
 	 *
-	 * @return bool|\WP_Error A boolean or WP_Error.
+	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
 	 */
 	public static function verify_http_signature( $request ) {
 		if ( is_object( $request ) ) { // REST Request object.
