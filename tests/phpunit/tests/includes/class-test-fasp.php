@@ -266,7 +266,9 @@ class Test_Fasp extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test registration with missing fields.
+	 * Test registration with missing fields returns error via REST API.
+	 *
+	 * Validation is handled by REST API args with required => true.
 	 *
 	 * @covers ::handle_registration
 	 */
@@ -281,10 +283,12 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$request->set_header( 'Content-Type', 'application/json' );
 		$request->set_body( wp_json_encode( $request_data ) );
 
-		$response = $this->controller->handle_registration( $request );
+		// Dispatch through REST API to trigger validation.
+		$response = rest_do_request( $request );
 
-		$this->assertInstanceOf( 'WP_Error', $response );
-		$this->assertEquals( 'missing_field', $response->get_error_code() );
+		$this->assertEquals( 400, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertEquals( 'rest_missing_callback_param', $data['code'] );
 	}
 
 	/**
@@ -383,7 +387,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 	/**
 	 * Test capability activation enforces registered public key.
 	 *
-	 * @covers ::handle_capability_activation
+	 * @covers ::enable_capability
 	 */
 	public function test_capability_activation_requires_matching_key() {
 		$key_base64        = 'dGVzdC1wdWJsaWMta2V5';
@@ -415,10 +419,11 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
 		$request->set_param( 'identifier', 'trends' );
 		$request->set_param( 'version', '1.0' );
+		// Use data URI - get_fasp_by_keyid can now look up by public key fingerprint.
 		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="data:application/magic-public-key,' . $key_base64 . '"' );
 		$request->set_header( 'Signature', 'sig=:dummy:' );
 
-		$response = $this->controller->handle_capability_activation( $request );
+		$response = $this->controller->enable_capability( $request );
 
 		$this->assertInstanceOf( 'WP_REST_Response', $response );
 		$this->assertEquals( 204, $response->get_status() );
@@ -430,11 +435,14 @@ class Test_Fasp extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test capability activation rejects mismatched keys.
+	 * Test capability activation rejects requests from unknown FASPs.
 	 *
-	 * @covers ::handle_capability_activation
+	 * When a request comes with a keyid that doesn't match any registered FASP,
+	 * it should be rejected.
+	 *
+	 * @covers ::enable_capability
 	 */
-	public function test_capability_activation_rejects_mismatched_key() {
+	public function test_capability_activation_rejects_unknown_fasp() {
 		$key_base64        = 'dGVzdC1wdWJsaWMta2V5';
 		$registration_data = array(
 			'fasp_id'                     => 'test-fasp-123',
@@ -464,13 +472,14 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
 		$request->set_param( 'identifier', 'trends' );
 		$request->set_param( 'version', '1.0' );
-		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="data:application/magic-public-key,' . base64_encode( 'mismatch-key' ) . '"' );
+		// Use a keyid from an unknown/unregistered FASP.
+		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="https://unknown-fasp.example.com/keys/somekey"' );
 		$request->set_header( 'Signature', 'sig=:dummy:' );
 
-		$response = $this->controller->handle_capability_activation( $request );
+		$response = $this->controller->enable_capability( $request );
 
 		$this->assertInstanceOf( 'WP_Error', $response );
-		$this->assertEquals( 'fasp_key_mismatch', $response->get_error_code() );
+		$this->assertEquals( 'fasp_not_found', $response->get_error_code() );
 
 		remove_all_filters( 'activitypub_fasp_capabilities' );
 	}

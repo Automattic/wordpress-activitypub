@@ -68,7 +68,7 @@ class Fasp {
 		usort(
 			$approved,
 			function ( $a, $b ) {
-				return strcmp( $b['approved_at'] ?? '', $a['approved_at'] ?? '' );
+				return ( $b['approved_at'] ?? '' ) <=> ( $a['approved_at'] ?? '' );
 			}
 		);
 

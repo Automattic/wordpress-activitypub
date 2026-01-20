@@ -126,7 +126,7 @@ array(
 
 ### Testing Registration
 ```bash
-curl -X POST "https://example.com/wp-json/activitypub/1.0/registration" \
+curl -X POST "https://example.com/wp-json/activitypub/1.0/fasp/registration" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Test FASP Provider",
@@ -165,9 +165,9 @@ Run FASP tests (including registration):
 ## Compliance
 
 This implementation follows the FASP registration specification v0.1:
-- ✅ Registration endpoint (`/registration`)
-- ✅ Capability activation endpoints (`/capabilities/{id}/{version}/activation`)
-- ✅ Ed25519 keypair generation
+- ✅ Registration endpoint (`/fasp/registration`)
+- ✅ Capability activation endpoints (`/fasp/capabilities/{id}/{version}/activation`)
+- ✅ RSA keypair reuse (Application actor's existing keypair)
 - ✅ Public key fingerprint verification
 - ✅ Admin interface for registration management
 - ✅ Registration completion URI
