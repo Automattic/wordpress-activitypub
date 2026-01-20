@@ -385,11 +385,13 @@ class Test_Fasp extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test capability activation enforces registered public key.
+	 * Test capability activation with valid serverId.
+	 *
+	 * Per FASP spec, keyId MUST be the serverId exchanged during registration.
 	 *
 	 * @covers ::enable_capability
 	 */
-	public function test_capability_activation_requires_matching_key() {
+	public function test_capability_activation_with_valid_server_id() {
 		$key_base64        = 'dGVzdC1wdWJsaWMta2V5';
 		$registration_data = array(
 			'fasp_id'                     => 'test-fasp-123',
@@ -419,8 +421,8 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
 		$request->set_param( 'identifier', 'trends' );
 		$request->set_param( 'version', '1.0' );
-		// Use data URI - get_fasp_by_keyid can now look up by public key fingerprint.
-		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="data:application/magic-public-key,' . $key_base64 . '"' );
+		// Per FASP spec, keyId must be the serverId exchanged during registration.
+		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="test-server-123"' );
 		$request->set_header( 'Signature', 'sig=:dummy:' );
 
 		$response = $this->controller->enable_capability( $request );
@@ -437,7 +439,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 	/**
 	 * Test capability activation rejects requests from unknown FASPs.
 	 *
-	 * When a request comes with a keyid that doesn't match any registered FASP,
+	 * When a request comes with a serverId that doesn't match any registered FASP,
 	 * it should be rejected.
 	 *
 	 * @covers ::enable_capability
@@ -472,8 +474,8 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
 		$request->set_param( 'identifier', 'trends' );
 		$request->set_param( 'version', '1.0' );
-		// Use a keyid from an unknown/unregistered FASP.
-		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="https://unknown-fasp.example.com/keys/somekey"' );
+		// Use a serverId from an unknown/unregistered FASP.
+		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="unknown-server-456"' );
 		$request->set_header( 'Signature', 'sig=:dummy:' );
 
 		$response = $this->controller->enable_capability( $request );

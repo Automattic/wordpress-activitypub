@@ -8,7 +8,6 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Fasp;
 use Activitypub\Signature\Http_Message_Signature;
 
@@ -336,6 +335,9 @@ class Fasp_Controller extends \WP_REST_Controller {
 	/**
 	 * Validate a capability request and return the validated data.
 	 *
+	 * Per FASP spec, the keyId in the signature MUST be the serverId exchanged during registration.
+	 * Signature verification is handled by the permission callback (Server::verify_signature).
+	 *
 	 * @param \WP_REST_Request $request The REST request.
 	 * @return array|\WP_Error Validated data or error.
 	 */
@@ -343,14 +345,15 @@ class Fasp_Controller extends \WP_REST_Controller {
 		$identifier = $request->get_param( 'identifier' );
 		$version    = $request->get_param( 'version' );
 
-		// Extract keyId from request headers (signature already verified by Server::verify_signature).
+		// Extract keyId (serverId) from request headers.
+		// Signature is already verified by Server::verify_signature permission callback.
 		$headers = $request->get_headers();
 		$keyid   = $this->extract_keyid_from_request( $headers );
 		if ( \is_wp_error( $keyid ) ) {
 			return $keyid;
 		}
 
-		// Look up FASP registration by keyId.
+		// Look up FASP registration by serverId.
 		$fasp_data = $this->get_fasp_by_keyid( $keyid );
 		if ( \is_wp_error( $fasp_data ) ) {
 			return $fasp_data;
@@ -363,11 +366,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 				'FASP registration is not approved',
 				array( 'status' => 403 )
 			);
-		}
-
-		$key_validation = $this->ensure_request_key_matches_registration( $keyid, $fasp_data );
-		if ( \is_wp_error( $key_validation ) ) {
-			return $key_validation;
 		}
 
 		// Check if capability is supported.
@@ -513,35 +511,20 @@ class Fasp_Controller extends \WP_REST_Controller {
 	/**
 	 * Look up FASP registration by keyId.
 	 *
-	 * Supports lookup by:
-	 * - Base URL contained in keyId
-	 * - Server ID contained in keyId
-	 * - FASP ID contained in keyId
-	 * - Public key fingerprint (for data URI keyIds)
+	 * Per FASP spec, the keyId MUST be the identifier exchanged during registration (serverId).
 	 *
-	 * @param string $keyid The keyId from the signature.
+	 * @see https://github.com/mastodon/fediverse_auxiliary_service_provider_specifications/blob/main/general/v0.1/protocol_basics.md
+	 *
+	 * @param string $keyid The keyId from the signature (should be the serverId).
 	 * @return array|\WP_Error FASP data or error.
 	 */
 	private function get_fasp_by_keyid( $keyid ) {
 		$registrations = $this->get_registration_records();
 
-		// First, try to match by URL, server ID, or FASP ID.
-		foreach ( $registrations as $fasp_id => $registration ) {
-			if ( \strpos( $keyid, $registration['base_url'] ) !== false ||
-				\strpos( $keyid, $registration['server_id'] ) !== false ||
-				\strpos( $keyid, $fasp_id ) !== false ) {
+		// Match by server_id (the identifier exchanged during registration).
+		foreach ( $registrations as $registration ) {
+			if ( $keyid === $registration['server_id'] ) {
 				return $registration;
-			}
-		}
-
-		// If keyId is a data URI, try to match by public key fingerprint.
-		$fingerprint = $this->extract_fingerprint_from_data_uri( $keyid );
-		if ( $fingerprint ) {
-			foreach ( $registrations as $registration ) {
-				if ( ! empty( $registration['fasp_public_key_fingerprint'] ) &&
-					\hash_equals( $registration['fasp_public_key_fingerprint'], $fingerprint ) ) {
-					return $registration;
-				}
 			}
 		}
 
@@ -550,33 +533,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 			'FASP not found for provided keyId',
 			array( 'status' => 404 )
 		);
-	}
-
-	/**
-	 * Extract public key fingerprint from a data URI keyId.
-	 *
-	 * @param string $keyid The keyId to extract fingerprint from.
-	 * @return string|null Fingerprint or null if not a data URI.
-	 */
-	private function extract_fingerprint_from_data_uri( $keyid ) {
-		$data_prefixes = array(
-			'data:application/magic-public-key,',
-			'data:application/magic-public-key;base64,',
-			'data:application/magic-public-key+base64,',
-		);
-
-		foreach ( $data_prefixes as $prefix ) {
-			if ( \str_starts_with( $keyid, $prefix ) ) {
-				$encoded = \substr( $keyid, \strlen( $prefix ) );
-				$bytes   = \base64_decode( $encoded, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
-
-				if ( false !== $bytes ) {
-					return \base64_encode( \hash( 'sha256', $bytes, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-				}
-			}
-		}
-
-		return null;
 	}
 
 	/**
@@ -651,110 +607,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 
 		// Store updated capabilities.
 		return \update_option( 'activitypub_fasp_capabilities', $capabilities, false );
-	}
-
-	/**
-	 * Ensure the signing key used in the request matches the registered key.
-	 *
-	 * @param string $keyid        The keyId from the request.
-	 * @param array  $registration The stored registration data.
-	 * @return true|\WP_Error True on success, error otherwise.
-	 */
-	private function ensure_request_key_matches_registration( $keyid, $registration ) {
-		if ( empty( $registration['fasp_public_key'] ) ) {
-			return new \WP_Error(
-				'fasp_registration_missing_key',
-				'FASP registration does not include a public key.',
-				array( 'status' => 500 )
-			);
-		}
-
-		$expected_fingerprint = Fasp::get_public_key_fingerprint( $registration['fasp_public_key'] );
-		$request_fingerprint  = $this->fingerprint_from_keyid( $keyid );
-
-		if ( is_wp_error( $request_fingerprint ) ) {
-			return $request_fingerprint;
-		}
-
-		if ( empty( $request_fingerprint ) ) {
-			return new \WP_Error(
-				'fasp_key_unverified',
-				'Unable to verify signing key for this request.',
-				array( 'status' => 401 )
-			);
-		}
-
-		if ( ! \hash_equals( $expected_fingerprint, $request_fingerprint ) ) {
-			return new \WP_Error(
-				'fasp_key_mismatch',
-				'Signing key does not match registered FASP key.',
-				array( 'status' => 401 )
-			);
-		}
-
-		return true;
-	}
-
-	/**
-	 * Derive a SHA-256 fingerprint for the provided keyId.
-	 *
-	 * @param string $keyid The keyId parameter from the signature.
-	 * @return string|\WP_Error Fingerprint on success, WP_Error on failure.
-	 */
-	private function fingerprint_from_keyid( $keyid ) {
-		$data_prefixes = array(
-			'data:application/magic-public-key,',
-			'data:application/magic-public-key;base64,',
-			'data:application/magic-public-key+base64,',
-		);
-
-		foreach ( $data_prefixes as $prefix ) {
-			if ( \str_starts_with( $keyid, $prefix ) ) {
-				$encoded = \substr( $keyid, \strlen( $prefix ) );
-				$bytes   = \base64_decode( $encoded, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
-
-				if ( false === $bytes ) {
-					return new \WP_Error(
-						'fasp_invalid_keyid',
-						'Malformed data URI public key.',
-						array( 'status' => 400 )
-					);
-				}
-
-				return \base64_encode( \hash( 'sha256', $bytes, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-			}
-		}
-
-		$public_key_resource = Remote_Actors::get_public_key( $keyid );
-		if ( \is_wp_error( $public_key_resource ) ) {
-			return $public_key_resource;
-		}
-
-		$details = \openssl_pkey_get_details( $public_key_resource );
-		if ( empty( $details['key'] ) ) {
-			return new \WP_Error(
-				'fasp_key_details_unavailable',
-				'Unable to read public key details.',
-				array( 'status' => 401 )
-			);
-		}
-
-		$pem = $details['key'];
-
-		// Normalize PEM to raw bytes.
-		$normalized = \preg_replace( '/-----[^-]+-----/', '', $pem );
-		$normalized = \preg_replace( '/\s+/', '', $normalized );
-		$bytes      = \base64_decode( $normalized, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
-
-		if ( false === $bytes ) {
-			return new \WP_Error(
-				'fasp_key_normalization_failed',
-				'Unable to normalize public key for fingerprint comparison.',
-				array( 'status' => 401 )
-			);
-		}
-
-		return \base64_encode( \hash( 'sha256', $bytes, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 	}
 
 	/**
