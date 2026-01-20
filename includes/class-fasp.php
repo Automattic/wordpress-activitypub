@@ -19,7 +19,88 @@ class Fasp {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		// No hooks needed currently.
+		\add_filter( 'activitypub_pre_get_public_key', array( __CLASS__, 'get_public_key_for_server_id' ), 10, 2 );
+	}
+
+	/**
+	 * Provide public key for FASP serverId lookups.
+	 *
+	 * This filter integrates FASP signature verification with the existing
+	 * ActivityPub signature system. When a signature's keyId matches a
+	 * registered FASP's serverId, we return the stored public key.
+	 *
+	 * FASP uses Ed25519 keys, so we return an array with type information
+	 * that the signature verification system can use.
+	 *
+	 * @param resource|string|array|\WP_Error|null $public_key The current public key (null to continue lookup).
+	 * @param string                               $key_id     The key ID from the signature.
+	 * @return resource|string|array|\WP_Error|null The public key or null to continue default lookup.
+	 */
+	public static function get_public_key_for_server_id( $public_key, $key_id ) {
+		// If another filter already provided a key, don't override.
+		if ( null !== $public_key ) {
+			return $public_key;
+		}
+
+		// Try to find a FASP registration matching this serverId.
+		$registration = self::get_registration_by_server_id( $key_id );
+
+		if ( ! $registration ) {
+			return null; // Not a FASP serverId, continue with default lookup.
+		}
+
+		// Check if FASP is approved.
+		if ( 'approved' !== $registration['status'] ) {
+			return new \WP_Error(
+				'fasp_not_approved',
+				'FASP registration is not approved',
+				array( 'status' => 403 )
+			);
+		}
+
+		// Return the stored public key.
+		if ( empty( $registration['fasp_public_key'] ) ) {
+			return new \WP_Error(
+				'fasp_no_public_key',
+				'FASP registration does not have a public key',
+				array( 'status' => 401 )
+			);
+		}
+
+		// FASP uses Ed25519 keys stored as base64.
+		// Decode and return as Ed25519 key array for signature verification.
+		$raw_key = base64_decode( $registration['fasp_public_key'] ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+
+		if ( false === $raw_key ) {
+			return new \WP_Error(
+				'fasp_invalid_key',
+				'FASP public key is not valid base64',
+				array( 'status' => 401 )
+			);
+		}
+
+		return array(
+			'type' => 'ed25519',
+			'key'  => $raw_key,
+		);
+	}
+
+	/**
+	 * Get registration by server ID.
+	 *
+	 * @param string $server_id The server ID from the FASP.
+	 * @return array|null Registration data or null if not found.
+	 */
+	public static function get_registration_by_server_id( $server_id ) {
+		$registrations = self::get_registrations_store();
+
+		foreach ( $registrations as $registration ) {
+			if ( isset( $registration['server_id'] ) && $registration['server_id'] === $server_id ) {
+				return $registration;
+			}
+		}
+
+		return null;
 	}
 
 

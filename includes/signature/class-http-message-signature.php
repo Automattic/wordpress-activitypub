@@ -277,12 +277,6 @@ class Http_Message_Signature implements Http_Signature {
 			return $public_key;
 		}
 
-		// Algorithm verification.
-		$algorithm = $this->verify_algorithm( $params['alg'] ?? '', $public_key );
-		if ( \is_wp_error( $algorithm ) ) {
-			return $algorithm;
-		}
-
 		// Digest verification.
 		$result = $this->verify_content_digest( $headers, $body );
 		if ( \is_wp_error( $result ) ) {
@@ -292,9 +286,59 @@ class Http_Message_Signature implements Http_Signature {
 		$components     = $this->get_component_values( $data['components'], $headers );
 		$signature_base = $this->get_signature_base_string( $components, $params );
 
+		// Handle Ed25519 keys (e.g., from FASP).
+		if ( \is_array( $public_key ) && isset( $public_key['type'] ) && 'ed25519' === $public_key['type'] ) {
+			return $this->verify_ed25519_signature( $signature_base, $data['signature'], $public_key['key'] );
+		}
+
+		// Standard OpenSSL verification for RSA/EC keys.
+		$algorithm = $this->verify_algorithm( $params['alg'] ?? '', $public_key );
+		if ( \is_wp_error( $algorithm ) ) {
+			return $algorithm;
+		}
+
 		$verified = \openssl_verify( $signature_base, $data['signature'], $public_key, $algorithm ) > 0;
 		if ( ! $verified ) {
 			return new \WP_Error( 'activitypub_signature', 'Invalid signature' );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Verify an Ed25519 signature using WordPress's sodium_compat.
+	 *
+	 * @param string $message   The message that was signed.
+	 * @param string $signature The signature to verify.
+	 * @param string $public_key The Ed25519 public key (32 bytes).
+	 * @return bool|\WP_Error True if valid, WP_Error on failure.
+	 */
+	private function verify_ed25519_signature( $message, $signature, $public_key ) {
+		// Ed25519 signatures are 64 bytes.
+		if ( \strlen( $signature ) !== SODIUM_CRYPTO_SIGN_BYTES ) {
+			return new \WP_Error(
+				'invalid_signature_length',
+				\sprintf( 'Invalid Ed25519 signature length: expected %d bytes, got %d', SODIUM_CRYPTO_SIGN_BYTES, \strlen( $signature ) )
+			);
+		}
+
+		// Ed25519 public keys are 32 bytes.
+		if ( \strlen( $public_key ) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES ) {
+			return new \WP_Error(
+				'invalid_key_length',
+				\sprintf( 'Invalid Ed25519 public key length: expected %d bytes, got %d', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES, \strlen( $public_key ) )
+			);
+		}
+
+		try {
+			// Use WordPress's sodium_compat for Ed25519 verification.
+			$verified = \sodium_crypto_sign_verify_detached( $signature, $message, $public_key );
+		} catch ( \Exception $e ) {
+			return new \WP_Error( 'ed25519_verification_failed', 'Ed25519 signature verification failed: ' . $e->getMessage() );
+		}
+
+		if ( ! $verified ) {
+			return new \WP_Error( 'activitypub_signature', 'Invalid Ed25519 signature' );
 		}
 
 		return true;

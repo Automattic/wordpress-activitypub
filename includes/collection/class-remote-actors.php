@@ -633,11 +633,47 @@ class Remote_Actors {
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @param string $key_id The URL to the public key.
+	 * @param string $key_id The key ID (typically a URL to the public key, but can be any identifier).
 	 *
-	 * @return resource|\WP_Error The public key resource or WP_Error.
+	 * @return resource|array|\WP_Error The public key resource, Ed25519 key array, or WP_Error.
 	 */
 	public static function get_public_key( $key_id ) {
+		/**
+		 * Filter to allow custom public key resolution for non-URL key IDs.
+		 *
+		 * This filter allows other protocols (like FASP) to provide public keys
+		 * for key IDs that are not ActivityPub actor URLs.
+		 *
+		 * Return formats:
+		 * - OpenSSL resource: Standard RSA/EC key
+		 * - PEM string: Will be converted to OpenSSL resource
+		 * - Array with 'type' => 'ed25519' and 'key' => raw bytes: Ed25519 key
+		 * - WP_Error: Return error to caller
+		 * - null: Continue with default ActivityPub lookup
+		 *
+		 * @param resource|string|array|\WP_Error|null $public_key The public key.
+		 * @param string                               $key_id     The key ID from the signature.
+		 */
+		$public_key = \apply_filters( 'activitypub_pre_get_public_key', null, $key_id );
+
+		if ( null !== $public_key ) {
+			// If filter returned an Ed25519 key array, pass it through.
+			if ( \is_array( $public_key ) && isset( $public_key['type'] ) && 'ed25519' === $public_key['type'] ) {
+				return $public_key;
+			}
+
+			// If filter returned a PEM string, convert to resource.
+			if ( \is_string( $public_key ) && ! \is_wp_error( $public_key ) ) {
+				$key_resource = \openssl_pkey_get_public( \rtrim( $public_key ) );
+				if ( $key_resource ) {
+					return $key_resource;
+				}
+				return new \WP_Error( 'activitypub_invalid_key', 'Invalid public key format', array( 'status' => 401 ) );
+			}
+
+			return $public_key;
+		}
+
 		$actor = self::get_by_uri( \strip_fragment_from_url( $key_id ) );
 
 		if ( \is_wp_error( $actor ) ) {

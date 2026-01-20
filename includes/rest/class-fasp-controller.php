@@ -509,7 +509,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Look up FASP registration by keyId.
+	 * Look up FASP registration by keyId (serverId).
 	 *
 	 * Per FASP spec, the keyId MUST be the identifier exchanged during registration (serverId).
 	 *
@@ -519,20 +519,17 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 * @return array|\WP_Error FASP data or error.
 	 */
 	private function get_fasp_by_keyid( $keyid ) {
-		$registrations = $this->get_registration_records();
+		$registration = Fasp::get_registration_by_server_id( $keyid );
 
-		// Match by server_id (the identifier exchanged during registration).
-		foreach ( $registrations as $registration ) {
-			if ( $keyid === $registration['server_id'] ) {
-				return $registration;
-			}
+		if ( ! $registration ) {
+			return new \WP_Error(
+				'fasp_not_found',
+				'FASP not found for provided keyId',
+				array( 'status' => 404 )
+			);
 		}
 
-		return new \WP_Error(
-			'fasp_not_found',
-			'FASP not found for provided keyId',
-			array( 'status' => 404 )
-		);
+		return $registration;
 	}
 
 	/**
