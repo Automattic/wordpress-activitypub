@@ -67,8 +67,10 @@ class Fasp {
 			);
 		}
 
-		// FASP uses Ed25519 keys stored as base64.
-		// Decode and return as Ed25519 key array for signature verification.
+		/*
+		 * FASP uses Ed25519 keys stored as base64.
+		 * Decode and return as Ed25519 key array for signature verification.
+		 */
 		$raw_key = base64_decode( $registration['fasp_public_key'] ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 
 		if ( false === $raw_key ) {
