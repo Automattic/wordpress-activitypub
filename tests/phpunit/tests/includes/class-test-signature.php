@@ -5,13 +5,14 @@
  * @package Activitypub
  */
 
-// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Http;
 use Activitypub\Signature;
+use Activitypub\Signature\Http_Message_Signature;
 
 /**
  * Test class for Signature.
@@ -921,5 +922,99 @@ class Test_Signature extends \WP_UnitTestCase {
 		$this->assertEquals( 'invalid_key_length', $result->get_error_code() );
 
 		\remove_filter( 'activitypub_pre_get_public_key', $mock_invalid_key );
+	}
+
+	/**
+	 * Test server Ed25519 keypair generation and retrieval.
+	 *
+	 * @covers Activitypub\Signature::get_server_ed25519_keypair
+	 * @covers Activitypub\Signature::get_server_ed25519_public_key
+	 */
+	public function test_server_ed25519_keypair() {
+		// Clear any existing keypair.
+		\delete_option( 'activitypub_server_ed25519_keypair' );
+
+		// Get keypair should generate one.
+		$keypair = Signature::get_server_ed25519_keypair();
+
+		$this->assertIsArray( $keypair );
+		$this->assertArrayHasKey( 'public', $keypair );
+		$this->assertArrayHasKey( 'private', $keypair );
+
+		// Verify key lengths (Ed25519: 32 bytes public, 64 bytes private).
+		$this->assertEquals( SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES, \strlen( $keypair['public'] ) );
+		$this->assertEquals( SODIUM_CRYPTO_SIGN_SECRETKEYBYTES, \strlen( $keypair['private'] ) );
+
+		// Get public key should return base64.
+		$public_key_b64 = Signature::get_server_ed25519_public_key();
+		$this->assertIsString( $public_key_b64 );
+		$this->assertEquals( $keypair['public'], \base64_decode( $public_key_b64 ) );
+
+		// Subsequent calls should return the same keypair.
+		$keypair2 = Signature::get_server_ed25519_keypair();
+		$this->assertEquals( $keypair['public'], $keypair2['public'] );
+		$this->assertEquals( $keypair['private'], $keypair2['private'] );
+	}
+
+	/**
+	 * Test Ed25519 response signing.
+	 *
+	 * @covers Activitypub\Signature\Http_Message_Signature::sign_response_ed25519
+	 */
+	public function test_ed25519_response_signing() {
+		// Generate keypair.
+		$keypair     = \sodium_crypto_sign_keypair();
+		$public_key  = \sodium_crypto_sign_publickey( $keypair );
+		$private_key = \sodium_crypto_sign_secretkey( $keypair );
+
+		// Create a response.
+		$response = new \WP_REST_Response( array( 'test' => 'data' ), 200 );
+		$content  = \wp_json_encode( array( 'test' => 'data' ) );
+
+		// Add content-digest header.
+		$signature_helper = new Http_Message_Signature();
+		$digest           = $signature_helper->generate_digest( $content );
+		$response->header( 'Content-Digest', $digest );
+
+		// Sign the response.
+		$signature_helper->sign_response_ed25519(
+			$response,
+			$private_key,
+			'test-key-id',
+			'sig'
+		);
+
+		// Verify headers were added.
+		$headers = $response->get_headers();
+		$this->assertArrayHasKey( 'Signature-Input', $headers );
+		$this->assertArrayHasKey( 'Signature', $headers );
+
+		// Verify signature format.
+		$this->assertStringContainsString( 'sig=', $headers['Signature-Input'] );
+		$this->assertStringContainsString( '"@status"', $headers['Signature-Input'] );
+		$this->assertStringContainsString( 'alg="ed25519"', $headers['Signature-Input'] );
+		$this->assertStringContainsString( 'keyid="test-key-id"', $headers['Signature-Input'] );
+		$this->assertStringStartsWith( 'sig=:', $headers['Signature'] );
+
+		// Extract and verify the signature.
+		\preg_match( '/sig=:([^:]+):/', $headers['Signature'], $matches );
+		$signature = \base64_decode( $matches[1] );
+		$this->assertEquals( SODIUM_CRYPTO_SIGN_BYTES, \strlen( $signature ) );
+
+		/*
+		 * Verify the signature is valid by reconstructing the signature base.
+		 * Extract created timestamp from Signature-Input.
+		 */
+		\preg_match( '/created=(\d+)/', $headers['Signature-Input'], $created_matches );
+		$created = $created_matches[1];
+
+		$signature_base  = "\"@status\": 200\n";
+		$signature_base .= "\"content-digest\": {$digest}\n";
+		$signature_base .= "\"@signature-params\": (\"@status\" \"content-digest\");created={$created};keyid=\"test-key-id\";alg=\"ed25519\"";
+
+		$this->assertTrue(
+			\sodium_crypto_sign_verify_detached( $signature, $signature_base, $public_key ),
+			'Ed25519 response signature should be valid'
+		);
 	}
 }

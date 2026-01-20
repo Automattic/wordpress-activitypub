@@ -169,6 +169,39 @@ class Http_Message_Signature implements Http_Signature {
 	}
 
 	/**
+	 * Sign a WP_REST_Response with Ed25519 (RFC-9421 HTTP Message Signatures).
+	 *
+	 * @param \WP_REST_Response $response    The response to sign.
+	 * @param string            $private_key The Ed25519 private key (raw binary, 64 bytes).
+	 * @param string            $key_id      The key ID to use in the signature.
+	 * @param string            $label       Optional signature label (default: 'sig').
+	 *
+	 * @return \WP_REST_Response The response with signature headers added.
+	 */
+	public function sign_response_ed25519( $response, $private_key, $key_id, $label = 'sig' ) {
+		$components  = array(
+			'"@status"'        => (string) $response->get_status(),
+			'"content-digest"' => $response->get_headers()['Content-Digest'] ?? '',
+		);
+		$identifiers = \array_keys( $components );
+
+		$params = array(
+			'created' => \time(),
+			'keyid'   => $key_id,
+			'alg'     => 'ed25519',
+		);
+
+		$signature_base = $this->get_signature_base_string( $components, $params );
+		$signature      = \sodium_crypto_sign_detached( $signature_base, $private_key );
+		$signature      = \base64_encode( $signature ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+
+		$response->header( 'Signature-Input', $label . '=(' . \implode( ' ', $identifiers ) . ')' . $this->get_params_string( $params ) );
+		$response->header( 'Signature', $label . '=:' . $signature . ':' );
+
+		return $response;
+	}
+
+	/**
 	 * Verify the HTTP Signature against a request.
 	 *
 	 * @param array       $headers The HTTP headers.

@@ -7,8 +7,8 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Fasp;
+use Activitypub\Signature;
 use Activitypub\Signature\Http_Message_Signature;
 
 /**
@@ -195,30 +195,29 @@ class Fasp_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Sign the response using HTTP Message Signatures (RFC-9421).
+	 * Sign the response using HTTP Message Signatures (RFC-9421) with Ed25519.
 	 *
-	 * Uses the existing signature infrastructure and Application user's RSA keypair.
+	 * Uses the server's Ed25519 keypair as required by the FASP specification.
 	 *
 	 * @param \WP_REST_Response $response The response to sign.
 	 * @param string            $content  The response content (unused, for future use).
 	 */
 	private function sign_response( $response, $content ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		// Use the Application actor's existing RSA keypair for signing FASP responses.
-		$blog_user_id = Actors::APPLICATION_USER_ID;
-		$private_key  = Actors::get_private_key( $blog_user_id );
-		$actor        = Actors::get_by_id( $blog_user_id );
+		$keypair     = Signature::get_server_ed25519_keypair();
+		$private_key = $keypair['private'];
 
-		if ( ! $private_key || ! $actor ) {
-			return;
-		}
+		/*
+		 * Use the site URL as the key ID for FASP signatures.
+		 * This matches the serverId concept in the FASP spec.
+		 */
+		$key_id = \trailingslashit( \get_home_url() ) . '#fasp-key';
 
-		// Use the Http_Message_Signature helper to sign the response.
 		$signature_helper = new Http_Message_Signature();
-		$signature_helper->sign_response(
+		$signature_helper->sign_response_ed25519(
 			$response,
 			$private_key,
-			$actor->get_id() . '#main-key',
-			'fasp'
+			$key_id,
+			'sig'
 		);
 	}
 
@@ -229,9 +228,8 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error The response or error.
 	 */
 	public function handle_registration( $request ) {
-		// Use the Application user's existing RSA keypair instead of generating new keys.
-		$blog_user_id = Actors::APPLICATION_USER_ID;
-		$public_key   = Actors::get_public_key( $blog_user_id );
+		// Get the server's Ed25519 public key as required by the FASP spec.
+		$public_key = Signature::get_server_ed25519_public_key();
 
 		// Generate unique FASP ID.
 		$fasp_id = $this->generate_unique_id();
@@ -264,7 +262,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		// Generate registration completion URI.
 		$completion_uri = \admin_url( 'admin.php?page=activitypub-fasp-registrations&highlight=' . \rawurlencode( $fasp_id ) );
 
-		// Return successful response with the Application user's RSA public key.
+		// Return successful response with the server's Ed25519 public key.
 		$response_data = array(
 			'faspId'                    => $fasp_id,
 			'publicKey'                 => $public_key,

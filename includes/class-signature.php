@@ -188,6 +188,61 @@ class Signature {
 	}
 
 	/**
+	 * Get the server's Ed25519 keypair, generating if needed.
+	 *
+	 * This keypair is used for server-level signatures (e.g., FASP).
+	 *
+	 * @return array Array with 'public' and 'private' keys (raw binary).
+	 */
+	public static function get_server_ed25519_keypair() {
+		$keypair = \get_option( 'activitypub_server_ed25519_keypair', null );
+
+		if ( null === $keypair || empty( $keypair['public'] ) || empty( $keypair['private'] ) ) {
+			$keypair = self::generate_server_ed25519_keypair();
+		}
+
+		return array(
+			'public'  => \base64_decode( $keypair['public'] ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+			'private' => \base64_decode( $keypair['private'] ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+		);
+	}
+
+	/**
+	 * Get the server's Ed25519 public key (base64 encoded).
+	 *
+	 * @return string Base64-encoded public key.
+	 */
+	public static function get_server_ed25519_public_key() {
+		$keypair = \get_option( 'activitypub_server_ed25519_keypair', null );
+
+		if ( null === $keypair || empty( $keypair['public'] ) ) {
+			$keypair = self::generate_server_ed25519_keypair();
+		}
+
+		return $keypair['public'];
+	}
+
+	/**
+	 * Generate and store a new Ed25519 keypair for the server.
+	 *
+	 * @return array Array with 'public' and 'private' keys (base64 encoded).
+	 */
+	private static function generate_server_ed25519_keypair() {
+		$keypair     = \sodium_crypto_sign_keypair();
+		$public_key  = \sodium_crypto_sign_publickey( $keypair );
+		$private_key = \sodium_crypto_sign_secretkey( $keypair );
+
+		$stored = array(
+			'public'  => \base64_encode( $public_key ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+			'private' => \base64_encode( $private_key ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		);
+
+		\update_option( 'activitypub_server_ed25519_keypair', $stored, false );
+
+		return $stored;
+	}
+
+	/**
 	 * Return the public key for a given user.
 	 *
 	 * @deprecated 7.0.0 Use {@see Actors::get_public_key()}.
