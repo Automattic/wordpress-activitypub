@@ -20,7 +20,10 @@ class Post {
 	 */
 	public static function init() {
 		// Post transitions.
-		\add_action( 'wp_after_insert_post', array( self::class, 'schedule_post_activity' ), 33, 4 );
+		\add_action( 'wp_after_insert_post', array( self::class, 'triage' ), 33, 4 );
+
+		// Async handler for add_to_outbox.
+		\add_action( 'activitypub_add_to_outbox', array( self::class, 'add_to_outbox' ), 10, 3 );
 
 		// Attachment transitions.
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
@@ -29,14 +32,14 @@ class Post {
 	}
 
 	/**
-	 * Handle post updates and determine the appropriate Activity type.
+	 * Triage post transitions and determine the appropriate Activity type.
 	 *
 	 * @param int      $post_id     Post ID.
 	 * @param \WP_Post $post        Post object.
 	 * @param bool     $update      Whether this is an existing post being updated.
 	 * @param \WP_Post $post_before Post object before the update.
 	 */
-	public static function schedule_post_activity( $post_id, $post, $update, $post_before ) {
+	public static function triage( $post_id, $post, $update, $post_before ) {
 		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}
@@ -84,8 +87,37 @@ class Post {
 			$type = 'Create';
 		}
 
-		// Add the post to the outbox.
-		add_to_outbox( $post, $type, $post->post_author );
+		// Schedule async add to outbox to avoid blocking post save.
+		$scheduled = \wp_schedule_single_event( time(), 'activitypub_add_to_outbox', array( $post_id, $type, $post->post_author ) );
+
+		// Fall back to synchronous execution if scheduling fails (e.g., in tests or when cron is disabled).
+		if ( true !== $scheduled ) {
+			add_to_outbox( $post, $type, $post->post_author );
+		}
+	}
+
+	/**
+	 * Async handler for adding a post to the outbox.
+	 *
+	 * This runs asynchronously via WP Cron to avoid blocking the post save process.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $type    Activity type (Create, Update, Delete).
+	 * @param int    $user_id User ID.
+	 */
+	public static function add_to_outbox( $post_id, $type, $user_id ) {
+		$post = \get_post( $post_id );
+
+		if ( ! $post ) {
+			return;
+		}
+
+		// Re-validate that the post is still eligible for federation.
+		if ( is_post_disabled( $post ) ) {
+			return;
+		}
+
+		add_to_outbox( $post, $type, $user_id );
 	}
 
 	/**
@@ -108,19 +140,30 @@ class Post {
 
 		$post = \get_post( $post_id );
 
+		if ( ! $post instanceof \WP_Post ) {
+			return;
+		}
+
 		switch ( \current_action() ) {
 			case 'add_attachment':
-				// Add the post to the outbox.
-				add_to_outbox( $post, 'Create', $post->post_author );
+				$type = 'Create';
 				break;
 			case 'edit_attachment':
-				// Update the post to the outbox.
-				add_to_outbox( $post, 'Update', $post->post_author );
+				$type = 'Update';
 				break;
 			case 'delete_attachment':
-				// Delete the post from the outbox.
-				add_to_outbox( $post, 'Delete', $post->post_author );
+				$type = 'Delete';
 				break;
+			default:
+				return;
+		}
+
+		// Schedule async add to outbox to avoid blocking attachment save.
+		$scheduled = \wp_schedule_single_event( time(), 'activitypub_add_to_outbox', array( $post_id, $type, $post->post_author ) );
+
+		// Fall back to synchronous execution if scheduling fails (e.g., in tests or when cron is disabled).
+		if ( true !== $scheduled ) {
+			add_to_outbox( $post, $type, $post->post_author );
 		}
 	}
 }

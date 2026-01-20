@@ -396,9 +396,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertNotFalse( $scheduled );
 		Scheduler::unlock( $key );
 
-		\remove_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
+		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33 );
 		self::factory()->post->create( array( 'meta_input' => array( 'activitypub_status' => 'federated' ) ) );
-		\add_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33, 3 );
+		\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
 
 		// Test scheduling next batch when callback returns more work.
 		\do_action( 'activitypub_create_post_outbox_items', 1, 0 ); // Small batch size to force multiple batches.
