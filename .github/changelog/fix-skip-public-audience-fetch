@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Skip fetching public audience identifiers like `https://www.w3.org/ns/activitystreams#Public` which are not actual recipients.
