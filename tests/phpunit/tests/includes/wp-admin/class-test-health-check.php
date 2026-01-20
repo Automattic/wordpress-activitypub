@@ -5,6 +5,7 @@
  * @package Activitypub
  */
 
+use Activitypub\Scheduler;
 use Activitypub\WP_Admin\Health_Check;
 
 /**
@@ -362,5 +363,145 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertTrue( $result );
 
 		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_own_error' ) );
+	}
+
+	/**
+	 * Test that scheduled events test is registered.
+	 */
+	public function test_scheduled_events_test_registered() {
+		$tests  = array();
+		$result = Health_Check::add_tests( $tests );
+
+		$this->assertArrayHasKey( 'activitypub_test_scheduled_events', $result['direct'] );
+
+		$test = $result['direct']['activitypub_test_scheduled_events'];
+		$this->assertArrayHasKey( 'label', $test );
+		$this->assertArrayHasKey( 'test', $test );
+		$this->assertEquals( array( Health_Check::class, 'test_scheduled_events' ), $test['test'] );
+	}
+
+	/**
+	 * Test scheduled events health check when all schedules are registered.
+	 */
+	public function test_scheduled_events_all_registered() {
+		// Ensure all schedules are registered.
+		Scheduler::register_schedules();
+
+		$result = Health_Check::test_scheduled_events();
+
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertEquals( 'ActivityPub scheduled events are registered', $result['label'] );
+		$this->assertEquals( 'green', $result['badge']['color'] );
+	}
+
+	/**
+	 * Test scheduled events health check auto-repairs missing schedules.
+	 */
+	public function test_scheduled_events_auto_repair() {
+		// Remove all schedules.
+		Scheduler::deregister_schedules();
+
+		// Verify they are missing.
+		$missing_before = Health_Check::get_missing_schedules();
+		$this->assertNotEmpty( $missing_before );
+
+		// Run the health check (should auto-repair).
+		$result = Health_Check::test_scheduled_events();
+
+		// Should report good status after auto-repair.
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertStringContainsString( 'automatically restored', $result['description'] );
+
+		// Verify schedules are now registered.
+		$missing_after = Health_Check::get_missing_schedules();
+		$this->assertEmpty( $missing_after );
+	}
+
+	/**
+	 * Test get_missing_schedules returns empty when all schedules are registered.
+	 */
+	public function test_get_missing_schedules_none_missing() {
+		// Ensure all schedules are registered.
+		Scheduler::register_schedules();
+
+		$missing = Health_Check::get_missing_schedules();
+
+		$this->assertEmpty( $missing );
+	}
+
+	/**
+	 * Test get_missing_schedules returns missing schedules.
+	 */
+	public function test_get_missing_schedules_some_missing() {
+		// Remove all schedules.
+		Scheduler::deregister_schedules();
+
+		$missing = Health_Check::get_missing_schedules();
+
+		$this->assertNotEmpty( $missing );
+		$this->assertArrayHasKey( 'activitypub_update_remote_actors', $missing );
+		$this->assertArrayHasKey( 'activitypub_cleanup_remote_actors', $missing );
+		$this->assertArrayHasKey( 'activitypub_reprocess_outbox', $missing );
+
+		// Re-register for other tests.
+		Scheduler::register_schedules();
+	}
+
+	/**
+	 * Test ensure_schedules_registered repairs missing schedules.
+	 */
+	public function test_ensure_schedules_registered() {
+		// Remove all schedules.
+		Scheduler::deregister_schedules();
+
+		// Verify they are missing.
+		$missing_before = Health_Check::get_missing_schedules();
+		$this->assertNotEmpty( $missing_before );
+
+		// Call ensure_schedules_registered.
+		Health_Check::ensure_schedules_registered();
+
+		// Verify schedules are now registered.
+		$missing_after = Health_Check::get_missing_schedules();
+		$this->assertEmpty( $missing_after );
+	}
+
+	/**
+	 * Test ensure_schedules_registered does nothing when all schedules exist.
+	 */
+	public function test_ensure_schedules_registered_no_op_when_all_exist() {
+		// Ensure all schedules are registered.
+		Scheduler::register_schedules();
+
+		// Get next scheduled time for a schedule.
+		$before = wp_next_scheduled( 'activitypub_update_remote_actors' );
+
+		// Call ensure_schedules_registered.
+		Health_Check::ensure_schedules_registered();
+
+		// Verify the schedule time hasn't changed (wasn't re-registered).
+		$after = wp_next_scheduled( 'activitypub_update_remote_actors' );
+		$this->assertEquals( $before, $after );
+	}
+
+	/**
+	 * Test Scheduler::SCHEDULES constant contains expected schedules.
+	 */
+	public function test_scheduler_schedules_constant() {
+		$schedules = Scheduler::SCHEDULES;
+
+		$this->assertIsArray( $schedules );
+		$this->assertArrayHasKey( 'activitypub_update_remote_actors', $schedules );
+		$this->assertArrayHasKey( 'activitypub_cleanup_remote_actors', $schedules );
+		$this->assertArrayHasKey( 'activitypub_reprocess_outbox', $schedules );
+		$this->assertArrayHasKey( 'activitypub_outbox_purge', $schedules );
+		$this->assertArrayHasKey( 'activitypub_inbox_purge', $schedules );
+		$this->assertArrayHasKey( 'activitypub_ap_post_purge', $schedules );
+		$this->assertArrayHasKey( 'activitypub_sync_blocklist_subscriptions', $schedules );
+
+		// Verify recurrence values.
+		$this->assertEquals( 'hourly', $schedules['activitypub_update_remote_actors'] );
+		$this->assertEquals( 'daily', $schedules['activitypub_cleanup_remote_actors'] );
+		$this->assertEquals( 'weekly', $schedules['activitypub_sync_blocklist_subscriptions'] );
 	}
 }
