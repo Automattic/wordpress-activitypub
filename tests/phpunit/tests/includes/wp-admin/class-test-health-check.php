@@ -448,29 +448,6 @@ class Test_Health_Check extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_missing_schedules respects disabled purge settings.
-	 */
-	public function test_get_missing_schedules_respects_disabled_purge() {
-		// Remove all schedules.
-		Scheduler::deregister_schedules();
-
-		// Disable outbox purge.
-		update_option( 'activitypub_outbox_purge_days', 0 );
-
-		$missing = Health_Check::get_missing_schedules();
-
-		// Outbox purge should not be in missing list since it's disabled.
-		$this->assertArrayNotHasKey( 'activitypub_outbox_purge', $missing );
-
-		// But other schedules should still be missing.
-		$this->assertArrayHasKey( 'activitypub_update_remote_actors', $missing );
-
-		// Clean up.
-		delete_option( 'activitypub_outbox_purge_days' );
-		Scheduler::register_schedules();
-	}
-
-	/**
 	 * Test ensure_schedules_registered repairs missing schedules.
 	 */
 	public function test_ensure_schedules_registered() {

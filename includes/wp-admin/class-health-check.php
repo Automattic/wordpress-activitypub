@@ -689,17 +689,6 @@ class Health_Check {
 		$missing = array();
 
 		foreach ( Scheduler::SCHEDULES as $hook => $recurrence ) {
-			// Skip purge schedules if their retention is set to 0 (disabled).
-			if ( 'activitypub_outbox_purge' === $hook && 0 === (int) \get_option( 'activitypub_outbox_purge_days', 180 ) ) {
-				continue;
-			}
-			if ( 'activitypub_inbox_purge' === $hook && 0 === (int) \get_option( 'activitypub_inbox_purge_days', 180 ) ) {
-				continue;
-			}
-			if ( 'activitypub_ap_post_purge' === $hook && 0 === (int) \get_option( 'activitypub_ap_post_purge_days', 30 ) ) {
-				continue;
-			}
-
 			if ( ! \wp_next_scheduled( $hook ) ) {
 				$missing[ $hook ] = $recurrence;
 			}
