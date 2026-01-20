@@ -40,14 +40,14 @@ function render_fasp_registration_card( $registration, $status, $highlighted = f
 						<input type="hidden" name="action" value="reject_fasp_registration">
 						<input type="hidden" name="fasp_id" value="<?php echo \esc_attr( $registration['fasp_id'] ); ?>">
 						<input type="hidden" name="_wpnonce" value="<?php echo \esc_attr( $nonce ); ?>">
-						<input type="submit" class="button" value="<?php \esc_attr_e( 'Reject', 'activitypub' ); ?>" onclick="return confirm('<?php \esc_attr_e( 'Are you sure you want to reject this registration?', 'activitypub' ); ?>')">
+						<input type="submit" class="button" value="<?php \esc_attr_e( 'Reject', 'activitypub' ); ?>" onclick="return confirm('<?php echo \esc_js( \__( 'Are you sure you want to reject this registration?', 'activitypub' ) ); ?>')">
 					</form>
 				<?php else : ?>
 					<form method="post" action="<?php echo \esc_url( \admin_url( 'admin-post.php' ) ); ?>" style="display: inline;">
 						<input type="hidden" name="action" value="delete_fasp_registration">
 						<input type="hidden" name="fasp_id" value="<?php echo \esc_attr( $registration['fasp_id'] ); ?>">
 						<input type="hidden" name="_wpnonce" value="<?php echo \esc_attr( $nonce ); ?>">
-						<input type="submit" class="button button-link-delete" value="<?php \esc_attr_e( 'Delete', 'activitypub' ); ?>" onclick="return confirm('<?php \esc_attr_e( 'Are you sure you want to delete this registration?', 'activitypub' ); ?>')">
+						<input type="submit" class="button button-link-delete" value="<?php \esc_attr_e( 'Delete', 'activitypub' ); ?>" onclick="return confirm('<?php echo \esc_js( \__( 'Are you sure you want to delete this registration?', 'activitypub' ) ); ?>')">
 					</form>
 				<?php endif; ?>
 			</div>

@@ -101,7 +101,8 @@ class Test_Signature extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 
-		$this->assertTrue( Signature::verify_http_signature( $request ), "Valid hs2019 signature for curve {$curve} should verify" );
+		$result = Signature::verify_http_signature( $request );
+		$this->assertIsString( $result, "Valid hs2019 signature for curve {$curve} should verify" );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
@@ -199,7 +200,8 @@ class Test_Signature extends \WP_UnitTestCase {
 			);
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
-		$this->assertTrue( Signature::verify_http_signature( $request ), "Valid hs2019 signature for RSA {$bits} bits should verify" );
+		$result = Signature::verify_http_signature( $request );
+		$this->assertIsString( $result, "Valid hs2019 signature for RSA {$bits} bits should verify" );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
@@ -330,7 +332,8 @@ class Test_Signature extends \WP_UnitTestCase {
 		$request->set_body( $args['body'] );
 		$request->set_headers( $args['headers'] );
 
-		$this->assertTrue( Signature::verify_http_signature( $request ) );
+		$result = Signature::verify_http_signature( $request );
+		$this->assertIsString( $result );
 
 		// Create a request with a modified body but the original digest.
 		$request->set_body( '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Modified content."}}' );
@@ -350,7 +353,8 @@ class Test_Signature extends \WP_UnitTestCase {
 			'HTTP_SIGNATURE' => $args['headers']['Signature'],
 		);
 
-		$this->assertTrue( Signature::verify_http_signature( $request ) );
+		$result = Signature::verify_http_signature( $request );
+		$this->assertIsString( $result );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
@@ -409,7 +413,8 @@ class Test_Signature extends \WP_UnitTestCase {
 		$request->set_headers( $args['headers'] );
 
 		// The verification should succeed.
-		$this->assertTrue( Signature::verify_http_signature( $request ) );
+		$result = Signature::verify_http_signature( $request );
+		$this->assertIsString( $result );
 
 		// Create a request with a modified body but the original digest.
 		$request->set_body( '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Modified content."}}' );
@@ -431,7 +436,8 @@ class Test_Signature extends \WP_UnitTestCase {
 		);
 
 		// The verification should succeed.
-		$this->assertTrue( Signature::verify_http_signature( $request ) );
+		$result = Signature::verify_http_signature( $request );
+		$this->assertIsString( $result );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 		\delete_option( 'activitypub_rfc9421_signature' );
@@ -546,7 +552,8 @@ class Test_Signature extends \WP_UnitTestCase {
 		$request->set_header( 'Signature', $signature_header );
 
 		// The verification should succeed.
-		$this->assertTrue( Signature::verify_http_signature( $request ) );
+		$result = Signature::verify_http_signature( $request );
+		$this->assertIsString( $result );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
@@ -651,7 +658,8 @@ class Test_Signature extends \WP_UnitTestCase {
 		$request->set_header( 'Signature', $signature_header );
 
 		// The verification should succeed.
-		$this->assertTrue( Signature::verify_http_signature( $request ) );
+		$result = Signature::verify_http_signature( $request );
+		$this->assertIsString( $result );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
@@ -802,9 +810,10 @@ class Test_Signature extends \WP_UnitTestCase {
 		$request->set_header( 'Signature-Input', $signature_input );
 		$request->set_header( 'Signature', $signature_header );
 
-		// Verification should succeed.
+		// Verification should succeed and return the keyId.
 		$result = Signature::verify_http_signature( $request );
-		$this->assertTrue( $result, 'Valid Ed25519 signature should verify' );
+		$this->assertIsString( $result, 'Valid Ed25519 signature should verify' );
+		$this->assertEquals( 'test-fasp-server-id', $result, 'Verified keyId should match' );
 
 		\remove_filter( 'activitypub_pre_get_public_key', $mock_ed25519_key );
 	}

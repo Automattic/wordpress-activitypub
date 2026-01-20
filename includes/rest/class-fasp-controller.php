@@ -231,18 +231,35 @@ class Fasp_Controller extends \WP_REST_Controller {
 		// Get the server's Ed25519 public key as required by the FASP spec.
 		$public_key = Signature::get_server_ed25519_public_key();
 
-		// Generate unique FASP ID.
-		$fasp_id = $this->generate_unique_id();
-
 		// Parameters are already sanitized via sanitize_callback in register_routes().
 		$fasp_public_key = $request->get_param( 'publicKey' );
+		$server_id       = $request->get_param( 'serverId' );
+
+		// Validate Ed25519 public key format (must be valid base64, 32 bytes when decoded).
+		$validation = $this->validate_ed25519_public_key( $fasp_public_key );
+		if ( \is_wp_error( $validation ) ) {
+			return $validation;
+		}
+
+		// Enforce serverId uniqueness.
+		$existing = Fasp::get_registration_by_server_id( $server_id );
+		if ( $existing ) {
+			return new \WP_Error(
+				'server_id_exists',
+				'A FASP with this serverId is already registered',
+				array( 'status' => 409 )
+			);
+		}
+
+		// Generate unique FASP ID.
+		$fasp_id = $this->generate_unique_id();
 
 		// Store registration request (pending approval).
 		$registration_data = array(
 			'fasp_id'                     => $fasp_id,
 			'name'                        => $request->get_param( 'name' ),
 			'base_url'                    => $request->get_param( 'baseUrl' ),
-			'server_id'                   => $request->get_param( 'serverId' ),
+			'server_id'                   => $server_id,
 			'fasp_public_key'             => $fasp_public_key,
 			'fasp_public_key_fingerprint' => Fasp::get_public_key_fingerprint( $fasp_public_key ),
 			'server_public_key'           => $public_key,
@@ -260,7 +277,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		}
 
 		// Generate registration completion URI.
-		$completion_uri = \admin_url( 'admin.php?page=activitypub-fasp-registrations&highlight=' . \rawurlencode( $fasp_id ) );
+		$completion_uri = \admin_url( 'options-general.php?page=activitypub&tab=fasp-registrations&highlight=' . \rawurlencode( $fasp_id ) );
 
 		// Return successful response with the server's Ed25519 public key.
 		$response_data = array(
@@ -343,12 +360,18 @@ class Fasp_Controller extends \WP_REST_Controller {
 		$identifier = $request->get_param( 'identifier' );
 		$version    = $request->get_param( 'version' );
 
-		// Extract keyId (serverId) from request headers.
-		// Signature is already verified by Server::verify_signature permission callback.
-		$headers = $request->get_headers();
-		$keyid   = $this->extract_keyid_from_request( $headers );
-		if ( \is_wp_error( $keyid ) ) {
-			return $keyid;
+		/*
+		 * Get the verified keyId from the signature verification.
+		 * This is set by Server::verify_signature() and ensures we use the keyId
+		 * from the signature that was actually verified, not just any keyId in headers.
+		 */
+		$keyid = $request->get_param( 'activitypub_verified_keyid' );
+		if ( empty( $keyid ) ) {
+			return new \WP_Error(
+				'missing_verified_keyid',
+				'No verified signature keyId found',
+				array( 'status' => 401 )
+			);
 		}
 
 		// Look up FASP registration by serverId.
@@ -473,40 +496,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Extract keyId from request headers.
-	 *
-	 * @param array $headers The request headers.
-	 * @return string|\WP_Error The keyId or error.
-	 */
-	private function extract_keyid_from_request( $headers ) {
-		// Try RFC-9421 Signature-Input header first.
-		if ( isset( $headers['signature_input'][0] ) ) {
-			if ( \preg_match( '/keyid="([^"]+)"/', $headers['signature_input'][0], $matches ) ) {
-				return $matches[1];
-			}
-		}
-
-		// Try legacy Authorization/Signature header.
-		if ( isset( $headers['signature'][0] ) ) {
-			if ( \preg_match( '/keyId="([^"]+)"/', $headers['signature'][0], $matches ) ) {
-				return $matches[1];
-			}
-		}
-
-		if ( isset( $headers['authorization'][0] ) ) {
-			if ( \preg_match( '/keyId="([^"]+)"/', $headers['authorization'][0], $matches ) ) {
-				return $matches[1];
-			}
-		}
-
-		return new \WP_Error(
-			'missing_keyid',
-			'Missing keyId in signature headers',
-			array( 'status' => 401 )
-		);
-	}
-
-	/**
 	 * Look up FASP registration by keyId (serverId).
 	 *
 	 * Per FASP spec, the keyId MUST be the identifier exchanged during registration (serverId).
@@ -556,7 +545,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 *
 	 * @param string $fasp_id    FASP ID.
 	 * @param string $identifier Capability identifier.
-	 * @param int    $version    Capability version.
+	 * @param string $version    Capability version.
 	 * @return bool True on success, false on failure.
 	 */
 	private function enable_fasp_capability( $fasp_id, $identifier, $version ) {
@@ -584,7 +573,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 *
 	 * @param string $fasp_id    FASP ID.
 	 * @param string $identifier Capability identifier.
-	 * @param int    $version    Capability version.
+	 * @param string $version    Capability version.
 	 * @return bool True on success, false on failure.
 	 */
 	private function disable_fasp_capability( $fasp_id, $identifier, $version ) {
@@ -720,5 +709,38 @@ class Fasp_Controller extends \WP_REST_Controller {
 			),
 			'required'   => array( 'name', 'baseUrl', 'serverId', 'publicKey' ),
 		);
+	}
+
+	/**
+	 * Validate an Ed25519 public key format.
+	 *
+	 * @param string $public_key The base64-encoded public key.
+	 * @return true|\WP_Error True if valid, WP_Error otherwise.
+	 */
+	private function validate_ed25519_public_key( $public_key ) {
+		// Check if valid base64.
+		$decoded = \base64_decode( $public_key, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+		if ( false === $decoded ) {
+			return new \WP_Error(
+				'invalid_public_key',
+				'Public key is not valid base64',
+				array( 'status' => 400 )
+			);
+		}
+
+		// Ed25519 public keys must be exactly 32 bytes.
+		if ( \strlen( $decoded ) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES ) {
+			return new \WP_Error(
+				'invalid_public_key_length',
+				\sprintf(
+					'Invalid Ed25519 public key length: expected %d bytes, got %d',
+					SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES,
+					\strlen( $decoded )
+				),
+				array( 'status' => 400 )
+			);
+		}
+
+		return true;
 	}
 }

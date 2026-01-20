@@ -194,8 +194,8 @@ class Fasp {
 		}
 
 		$registrations[ $fasp_id ]['status']      = 'rejected';
-		$registrations[ $fasp_id ]['approved_at'] = current_time( 'mysql', true );
-		$registrations[ $fasp_id ]['approved_by'] = $user_id;
+		$registrations[ $fasp_id ]['rejected_at'] = current_time( 'mysql', true );
+		$registrations[ $fasp_id ]['rejected_by'] = $user_id;
 
 		return update_option( 'activitypub_fasp_registrations', $registrations, false );
 	}
@@ -266,7 +266,7 @@ class Fasp {
 	 *
 	 * @param string $fasp_id    FASP ID.
 	 * @param string $identifier Capability identifier.
-	 * @param int    $version    Capability version.
+	 * @param string $version    Capability version.
 	 * @return bool True if capability is enabled, false otherwise.
 	 */
 	public static function is_capability_enabled( $fasp_id, $identifier, $version ) {

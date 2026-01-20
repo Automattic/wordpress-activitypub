@@ -231,11 +231,14 @@ class Test_Fasp extends \WP_UnitTestCase {
 	 * @covers ::handle_registration
 	 */
 	public function test_registration() {
+		// Ed25519 public keys must be exactly 32 bytes.
+		$valid_ed25519_key = \base64_encode( \str_repeat( 'x', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES ) );
+
 		$request_data = array(
 			'name'      => 'Test FASP Provider',
 			'baseUrl'   => 'https://fasp.example.com',
 			'serverId'  => 'test-server-123',
-			'publicKey' => 'dGVzdC1wdWJsaWMta2V5',
+			'publicKey' => $valid_ed25519_key,
 		);
 
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/registration' );
@@ -421,9 +424,11 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
 		$request->set_param( 'identifier', 'trends' );
 		$request->set_param( 'version', '1.0' );
-		// Per FASP spec, keyId must be the serverId exchanged during registration.
-		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="test-server-123"' );
-		$request->set_header( 'Signature', 'sig=:dummy:' );
+		/*
+		 * Set the verified keyId parameter that would be set by Server::verify_signature().
+		 * Per FASP spec, keyId must be the serverId exchanged during registration.
+		 */
+		$request->set_param( 'activitypub_verified_keyid', 'test-server-123' );
 
 		$response = $this->controller->enable_capability( $request );
 
@@ -474,9 +479,11 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
 		$request->set_param( 'identifier', 'trends' );
 		$request->set_param( 'version', '1.0' );
-		// Use a serverId from an unknown/unregistered FASP.
-		$request->set_header( 'Signature-Input', 'sig=("@method" "@target-uri");keyid="unknown-server-456"' );
-		$request->set_header( 'Signature', 'sig=:dummy:' );
+		/*
+		 * Set verified keyId to an unknown/unregistered FASP serverId.
+		 * This simulates a request signed by an unknown server.
+		 */
+		$request->set_param( 'activitypub_verified_keyid', 'unknown-server-456' );
 
 		$response = $this->controller->enable_capability( $request );
 

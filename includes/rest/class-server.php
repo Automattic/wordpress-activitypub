@@ -38,6 +38,9 @@ class Server {
 	 * You can use the filter 'activitypub_defer_signature_verification' to defer the signature verification.
 	 * HEAD requests are always bypassed.
 	 *
+	 * On successful signature verification, the verified keyId is stored in the request
+	 * as the 'activitypub_verified_keyid' attribute for use by endpoint callbacks.
+	 *
 	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
 	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 	 *
@@ -69,14 +72,17 @@ class Server {
 
 		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode.
 		if ( 'GET' !== $request->get_method() || use_authorized_fetch() ) {
-			$verified_request = Signature::verify_http_signature( $request );
-			if ( \is_wp_error( $verified_request ) ) {
+			$verified_keyid = Signature::verify_http_signature( $request );
+			if ( \is_wp_error( $verified_keyid ) ) {
 				return new \WP_Error(
 					'activitypub_signature_verification',
-					$verified_request->get_error_message(),
+					$verified_keyid->get_error_message(),
 					array( 'status' => 401 )
 				);
 			}
+
+			// Store the verified keyId in the request for use by endpoint callbacks.
+			$request->set_param( 'activitypub_verified_keyid', $verified_keyid );
 		}
 
 		return true;
