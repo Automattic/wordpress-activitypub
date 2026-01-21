@@ -15,6 +15,14 @@ use function Activitypub\user_can_activitypub;
 class Menu {
 
 	/**
+	 * Initialize the Menu class.
+	 */
+	public static function init() {
+		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
+		\add_action( 'admin_bar_menu', array( self::class, 'admin_bar_menu' ), 100 );
+	}
+
+	/**
 	 * Add admin menu entry.
 	 */
 	public static function admin_menu() {
@@ -90,5 +98,34 @@ class Menu {
 				\esc_url( \admin_url( '/edit.php?post_type=ap_extrafield' ) )
 			);
 		}
+	}
+
+	/**
+	 * Add Social Web item to the admin bar.
+	 *
+	 * @param \WP_Admin_Bar $wp_admin_bar The WP_Admin_Bar instance.
+	 */
+	public static function admin_bar_menu( $wp_admin_bar ) {
+		// Only show if reader UI is enabled and WordPress version supports it.
+		if ( ! \get_option( 'activitypub_reader_ui', '0' ) || \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '<' ) ) {
+			return;
+		}
+
+		// Check user capability based on actor mode.
+		$capability = ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ? 'manage_options' : 'activitypub';
+		if ( ! \current_user_can( $capability ) ) {
+			return;
+		}
+
+		$wp_admin_bar->add_node(
+			array(
+				'id'    => 'activitypub-social-web',
+				'title' => \__( 'Social Web', 'activitypub' ),
+				'href'  => \admin_url( 'admin.php?page=activitypub-social-web' ),
+				'meta'  => array(
+					'title' => \__( 'View your Social Web feed', 'activitypub' ),
+				),
+			)
+		);
 	}
 }
