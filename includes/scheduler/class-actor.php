@@ -160,6 +160,14 @@ class Actor {
 	 * @param int $post_id The post ID.
 	 */
 	public static function schedule_featured_add( $post_id ) {
+		$post = \get_post( $post_id );
+
+		if ( ! $post ) {
+			return;
+		}
+
+		// Also send the profile update for backwards compatibility.
+		self::schedule_profile_update( $post->post_author );
 		self::schedule_featured_update( $post_id, 'Add' );
 	}
 
@@ -169,6 +177,14 @@ class Actor {
 	 * @param int $post_id The post ID.
 	 */
 	public static function schedule_featured_remove( $post_id ) {
+		$post = \get_post( $post_id );
+
+		if ( ! $post ) {
+			return;
+		}
+
+		// Also send the profile update for backwards compatibility.
+		self::schedule_profile_update( $post->post_author );
 		self::schedule_featured_update( $post_id, 'Remove' );
 	}
 
@@ -190,13 +206,8 @@ class Actor {
 			return;
 		}
 
-		$user_id = $post->post_author;
-
-		// Also send the profile update for backwards compatibility.
-		self::schedule_profile_update( $user_id );
-
 		// Get the actor.
-		$actor = Actors::get_by_id( $user_id );
+		$actor = Actors::get_by_id( $post->post_author );
 
 		if ( ! $actor || \is_wp_error( $actor ) ) {
 			return;
@@ -206,10 +217,10 @@ class Actor {
 		$activity = new Activity();
 		$activity->set_type( $activity_type );
 		$activity->set_actor( $actor->get_id() );
-		$activity->set_object( get_post_id( $post->ID ) );
+		$activity->set_object( get_post_id( $post_id ) );
 		$activity->set_target( $actor->get_featured() );
 
-		add_to_outbox( $activity, null, $user_id );
+		add_to_outbox( $activity, null, $post->post_author );
 	}
 
 	/**
