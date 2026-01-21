@@ -168,7 +168,7 @@ class Actor {
 
 		// Also send the profile update for backwards compatibility.
 		self::schedule_profile_update( $post->post_author );
-		self::schedule_featured_update( $post_id, 'Add' );
+		self::schedule_featured_update( $post, 'Add' );
 	}
 
 	/**
@@ -185,7 +185,7 @@ class Actor {
 
 		// Also send the profile update for backwards compatibility.
 		self::schedule_profile_update( $post->post_author );
-		self::schedule_featured_update( $post_id, 'Remove' );
+		self::schedule_featured_update( $post, 'Remove' );
 	}
 
 	/**
@@ -196,16 +196,10 @@ class Actor {
 	 *
 	 * @see https://github.com/Automattic/wordpress-activitypub/issues/2795
 	 *
-	 * @param int    $post_id       The post ID.
-	 * @param string $activity_type The activity type ('Add' or 'Remove').
+	 * @param \WP_Post $post          The post object.
+	 * @param string   $activity_type The activity type ('Add' or 'Remove').
 	 */
-	private static function schedule_featured_update( $post_id, $activity_type ) {
-		$post = \get_post( $post_id );
-
-		if ( ! $post ) {
-			return;
-		}
-
+	private static function schedule_featured_update( $post, $activity_type ) {
 		// Get the actor.
 		$actor = Actors::get_by_id( $post->post_author );
 
@@ -217,7 +211,7 @@ class Actor {
 		$activity = new Activity();
 		$activity->set_type( $activity_type );
 		$activity->set_actor( $actor->get_id() );
-		$activity->set_object( get_post_id( $post_id ) );
+		$activity->set_object( get_post_id( $post->ID ) );
 		$activity->set_target( $actor->get_featured() );
 
 		add_to_outbox( $activity, null, $post->post_author );
