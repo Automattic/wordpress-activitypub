@@ -1193,6 +1193,82 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * Test get_local_recipients skips public audience identifiers without fetching them.
+	 *
+	 * This tests the fix for issue #2793 where public audience identifiers like
+	 * https://www.w3.org/ns/activitystreams#Public were being passed to Http::get_remote_object(),
+	 * causing unnecessary HTTP requests to the W3C namespace URL.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_skips_public_audience_identifiers() {
+		// Enable actor mode to allow user actors.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Track which URLs are being fetched.
+		$fetched_urls = array();
+
+		$track_fetches = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			// Return WP_Error for non-local URLs to simulate failed fetch.
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 10, 2 );
+
+		// Activity with multiple public audience identifiers that should all be skipped.
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/actor/test',
+			'object' => 'https://example.com/post/123',
+			'to'     => array(
+				'https://www.w3.org/ns/activitystreams#Public',
+				'as:Public',
+			),
+			'cc'     => array(
+				'Public',
+				'https://example.com/actor/test/followers',
+			),
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$method->invoke( $this->inbox_controller, $activity );
+
+		// Verify that public audience identifiers were NOT fetched.
+		$this->assertNotContains(
+			'https://www.w3.org/ns/activitystreams#Public',
+			$fetched_urls,
+			'Should NOT fetch https://www.w3.org/ns/activitystreams#Public'
+		);
+		$this->assertNotContains(
+			'as:Public',
+			$fetched_urls,
+			'Should NOT fetch as:Public'
+		);
+		$this->assertNotContains(
+			'Public',
+			$fetched_urls,
+			'Should NOT fetch Public'
+		);
+
+		// Verify that other external URLs ARE still fetched (like the followers collection).
+		$this->assertContains(
+			'https://example.com/actor/test/followers',
+			$fetched_urls,
+			'Should still fetch legitimate external URLs'
+		);
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches );
+	}
+
+	/**
 	 * Test Follow request without audience fields via REST endpoint.
 	 *
 	 * This simulates how Pixelfed sends Follow activities to the shared inbox
