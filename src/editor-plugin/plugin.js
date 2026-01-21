@@ -116,7 +116,6 @@ const EditorPlugin = () => {
 					'activitypub'
 				) }
 				__next40pxDefaultSize
-				__nextHasNoMarginBottom
 			/>
 
 			<RangeControl
@@ -132,7 +131,6 @@ const EditorPlugin = () => {
 					'activitypub'
 				) }
 				__next40pxDefaultSize
-				__nextHasNoMarginBottom
 			/>
 
 			<RadioControl
@@ -193,7 +191,6 @@ const EditorPlugin = () => {
 					setMeta( { ...meta, activitypub_interaction_policy_quote: value } );
 				} }
 				__next40pxDefaultSize
-				__nextHasNoMarginBottom
 			/>
 		</SettingsPanel>
 	);
