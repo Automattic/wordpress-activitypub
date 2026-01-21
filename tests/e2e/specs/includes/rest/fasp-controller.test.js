@@ -5,6 +5,21 @@ import { test, expect } from '@wordpress/e2e-test-utils-playwright';
 import crypto from 'crypto';
 
 /**
+ * Generate a valid Ed25519 public key for testing.
+ * Ed25519 public keys must be exactly 32 bytes.
+ *
+ * @return {string} Base64-encoded 32-byte public key.
+ */
+const generateValidEd25519PublicKey = () => {
+	// Generate a real Ed25519 keypair and extract the raw public key.
+	const { publicKey } = crypto.generateKeyPairSync( 'ed25519' );
+	const rawPublicKey = publicKey.export( { type: 'spki', format: 'der' } );
+	// SPKI format for Ed25519: 12 bytes header + 32 bytes key.
+	const ed25519PublicKeyBytes = rawPublicKey.subarray( 12 );
+	return ed25519PublicKeyBytes.toString( 'base64' );
+};
+
+/**
  * FASP v0.1 Specification Compliance Tests
  *
  * Tests implementation against:
@@ -335,7 +350,7 @@ test.describe( 'FASP v0.1 Specification Compliance', () => {
 				name: 'E2E Test FASP',
 				baseUrl: 'https://fasp.example.com',
 				serverId: `test${ Date.now() }`,
-				publicKey: Buffer.from( 'testpublickey' ).toString( 'base64' ),
+				publicKey: generateValidEd25519PublicKey(),
 			};
 
 			const response = await request.post( restUrl( baseURL, `${ faspBasePath }/registration` ), {
@@ -350,7 +365,7 @@ test.describe( 'FASP v0.1 Specification Compliance', () => {
 				name: 'E2E Test FASP',
 				baseUrl: 'https://fasp.example.com',
 				serverId: `test${ Date.now() }`,
-				publicKey: Buffer.from( 'testpublickey' ).toString( 'base64' ),
+				publicKey: generateValidEd25519PublicKey(),
 			};
 
 			const response = await request.post( restUrl( baseURL, `${ faspBasePath }/registration` ), {
@@ -369,7 +384,7 @@ test.describe( 'FASP v0.1 Specification Compliance', () => {
 				name: 'E2E Test FASP',
 				baseUrl: 'https://fasp.example.com',
 				serverId: `test${ Date.now() }`,
-				publicKey: Buffer.from( 'testpublickey' ).toString( 'base64' ),
+				publicKey: generateValidEd25519PublicKey(),
 			};
 
 			const response = await request.post( restUrl( baseURL, `${ faspBasePath }/registration` ), {
@@ -389,7 +404,7 @@ test.describe( 'FASP v0.1 Specification Compliance', () => {
 				name: 'E2E Test FASP',
 				baseUrl: 'https://fasp.example.com',
 				serverId: `test${ Date.now() }`,
-				publicKey: Buffer.from( 'testpublickey' ).toString( 'base64' ),
+				publicKey: generateValidEd25519PublicKey(),
 			};
 
 			const response = await request.post( restUrl( baseURL, `${ faspBasePath }/registration` ), {
