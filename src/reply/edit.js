@@ -170,7 +170,6 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 						onChange={ ( value ) => setAttributes( { embedPost: value } ) }
 						disabled={ ! isValidEmbed }
 						help={ __( 'Show embedded content from the URL.', 'activitypub' ) }
-						__nextHasNoMarginBottom
 					/>
 				</PanelBody>
 			</InspectorControls>
@@ -186,7 +185,6 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 						onKeyDown={ onKeyDown }
 						ref={ urlInputRef }
 						__next40pxDefaultSize
-						__nextHasNoMarginBottom
 					/>
 				) }
 
