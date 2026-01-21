@@ -120,7 +120,7 @@ class Menu {
 		$wp_admin_bar->add_node(
 			array(
 				'id'    => 'activitypub-social-web',
-				'title' => '⁂ ' . \__( 'Social Web', 'activitypub' ),
+				'title' => \_x( '⁂', 'Fediverse symbol', 'activitypub' ) . ' ' . \__( 'Social Web', 'activitypub' ),
 				'href'  => \admin_url( 'admin.php?page=activitypub-social-web' ),
 				'meta'  => array(
 					'title' => \__( 'View your Social Web feed', 'activitypub' ),
