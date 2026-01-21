@@ -377,6 +377,10 @@ class Inbox_Controller extends \WP_REST_Controller {
 		$recipients = extract_recipients_from_activity( $activity );
 
 		foreach ( $recipients as $recipient ) {
+			// Skip public audience identifiers - they're not actual recipients to fetch.
+			if ( \in_array( $recipient, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS, true ) ) {
+				continue;
+			}
 
 			if ( ! is_same_domain( $recipient ) ) {
 				$collection = Http::get_remote_object( $recipient );
