@@ -30,6 +30,9 @@ class Test_Fasp extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		// Enable FASP feature for tests.
+		update_option( 'activitypub_enable_fasp', '1' );
+
 		// Initialize REST API.
 		global $wp_rest_server;
 		$wp_rest_server = new \WP_REST_Server();
@@ -49,6 +52,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 		parent::tear_down();
 
 		// Clean up options.
+		delete_option( 'activitypub_enable_fasp' );
 		delete_option( 'activitypub_fasp_registrations' );
 		delete_option( 'activitypub_fasp_capabilities' );
 	}

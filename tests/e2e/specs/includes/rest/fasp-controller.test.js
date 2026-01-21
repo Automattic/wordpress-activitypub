@@ -3,6 +3,7 @@
  */
 import { test, expect } from '@wordpress/e2e-test-utils-playwright';
 import crypto from 'crypto';
+import { execSync } from 'child_process';
 
 /**
  * Generate a valid Ed25519 public key for testing.
@@ -18,6 +19,16 @@ const generateValidEd25519PublicKey = () => {
 	const ed25519PublicKeyBytes = rawPublicKey.subarray( 12 );
 	return ed25519PublicKeyBytes.toString( 'base64' );
 };
+
+// Enable FASP feature before running tests.
+test.beforeAll( async () => {
+	execSync( "npx wp-env run tests-cli wp option update activitypub_enable_fasp '1'" );
+} );
+
+// Disable FASP feature after tests complete.
+test.afterAll( async () => {
+	execSync( 'npx wp-env run tests-cli wp option delete activitypub_enable_fasp' );
+} );
 
 /**
  * FASP v0.1 Specification Compliance Tests
