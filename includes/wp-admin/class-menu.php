@@ -117,21 +117,13 @@ class Menu {
 			return;
 		}
 
-		$icon_styles = '<style>
-			#wpadminbar #wp-admin-bar-activitypub-social-web > .ab-item:before {
-				content: "\2042";
-				font: normal 20px/1 sans-serif;
-			}
-		</style>';
-
 		$wp_admin_bar->add_node(
 			array(
 				'id'    => 'activitypub-social-web',
-				'title' => \__( 'Social Web', 'activitypub' ),
+				'title' => '⁂ ' . \__( 'Social Web', 'activitypub' ),
 				'href'  => \admin_url( 'admin.php?page=activitypub-social-web' ),
 				'meta'  => array(
 					'title' => \__( 'View your Social Web feed', 'activitypub' ),
-					'html'  => $icon_styles,
 				),
 			)
 		);
