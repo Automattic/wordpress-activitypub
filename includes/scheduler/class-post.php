@@ -34,7 +34,16 @@ class Post {
 		\add_action( 'edit_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'delete_attachment', array( self::class, 'transition_attachment_status' ) );
 
-		// Sticky post transitions (featured collection).
+		/*
+		 * Sticky post transitions (featured collection).
+		 *
+		 * Note: These hooks run in addition to the legacy sticky hooks in
+		 * Actor scheduler, which send an Update activity when a post becomes
+		 * sticky or is unstuck. This means a sticky/unsticky event will cause both:
+		 * - an Add/Remove activity for the Actor's featured collection (below), and
+		 * - an Update activity (from Actor scheduler).
+		 * The Update activity is kept for backwards compatibility.
+		 */
 		\add_action( 'post_stuck', array( self::class, 'schedule_featured_add' ) );
 		\add_action( 'post_unstuck', array( self::class, 'schedule_featured_remove' ) );
 	}
@@ -205,9 +214,17 @@ class Post {
 	 * @param string $activity_type The activity type ('Add' or 'Remove').
 	 */
 	private static function schedule_featured_update( $post_id, $activity_type ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			return;
+		}
+
 		$post = \get_post( $post_id );
 
 		if ( ! $post ) {
+			return;
+		}
+
+		if ( is_post_disabled( $post ) ) {
 			return;
 		}
 
