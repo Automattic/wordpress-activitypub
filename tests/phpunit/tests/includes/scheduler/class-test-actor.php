@@ -307,30 +307,64 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test that sticky posts are detected.
+	 * Test that sticking a post creates an Add activity for the featured collection.
 	 *
-	 * @covers ::sticky_post_update
+	 * @covers ::schedule_featured_add
+	 * @covers ::schedule_featured_update
 	 */
-	public function test_sticky_post_update() {
+	public function test_sticky_post_creates_add_activity() {
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
-
-		$last_item = $this->get_latest_outbox_item();
-
-		$this->assertNull( $last_item );
+		$actor   = Actors::get_by_id( $user_id );
 
 		$post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
 		\stick_post( $post_id );
 
-		$last_item_stick = $this->get_latest_outbox_item();
+		$last_item = $this->get_latest_outbox_item();
 
-		$this->assertNotNull( $last_item_stick );
+		$this->assertNotNull( $last_item );
 
+		// Verify it's an Add activity.
+		$activity_type = \get_post_meta( $last_item->ID, '_activitypub_activity_type', true );
+		$this->assertEquals( 'Add', $activity_type );
+
+		// Verify the activity content.
+		$activity = \json_decode( $last_item->post_content, true );
+		$this->assertEquals( 'Add', $activity['type'] );
+		$this->assertEquals( $actor->get_id(), $activity['actor'] );
+		$this->assertEquals( \Activitypub\get_post_id( $post_id ), $activity['object'] );
+		$this->assertEquals( $actor->get_featured(), $activity['target'] );
+	}
+
+	/**
+	 * Test that unsticking a post creates a Remove activity for the featured collection.
+	 *
+	 * @covers ::schedule_featured_remove
+	 * @covers ::schedule_featured_update
+	 */
+	public function test_unsticky_post_creates_remove_activity() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$actor   = Actors::get_by_id( $user_id );
+
+		$post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+
+		// First stick, then unstick.
+		\stick_post( $post_id );
 		\unstick_post( $post_id );
 
-		$last_item_unstick = $this->get_latest_outbox_item();
+		$last_item = $this->get_latest_outbox_item();
 
-		$this->assertNotEquals( $last_item_stick->ID, $last_item_unstick->ID );
-		$this->assertEquals( $last_item_stick->post_author, $last_item_unstick->post_author );
+		$this->assertNotNull( $last_item );
+
+		// Verify it's a Remove activity.
+		$activity_type = \get_post_meta( $last_item->ID, '_activitypub_activity_type', true );
+		$this->assertEquals( 'Remove', $activity_type );
+
+		// Verify the activity content.
+		$activity = \json_decode( $last_item->post_content, true );
+		$this->assertEquals( 'Remove', $activity['type'] );
+		$this->assertEquals( $actor->get_id(), $activity['actor'] );
+		$this->assertEquals( \Activitypub\get_post_id( $post_id ), $activity['object'] );
+		$this->assertEquals( $actor->get_featured(), $activity['target'] );
 	}
 
 	/**
