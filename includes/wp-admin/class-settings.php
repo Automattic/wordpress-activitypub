@@ -59,11 +59,13 @@ class Settings {
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php',
 		);
 
-		// Add FASP registrations tab for managing auxiliary service providers.
-		$settings_tabs['fasp-registrations'] = array(
-			'label'    => \__( 'FASP Registrations', 'activitypub' ),
-			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/fasp-registrations.php',
-		);
+		// Add FASP registrations tab for managing auxiliary service providers (only if enabled).
+		if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+			$settings_tabs['fasp-registrations'] = array(
+				'label'    => \__( 'Auxiliary Services', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/fasp-registrations.php',
+			);
+		}
 
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(

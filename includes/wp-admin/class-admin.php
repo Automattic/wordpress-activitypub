@@ -57,9 +57,12 @@ class Admin {
 		\add_action( 'admin_post_delete_actor_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
 		\add_action( 'admin_action_activitypub_confirm_removal', array( self::class, 'handle_bulk_actor_delete_page' ) );
 
-		\add_action( 'admin_post_approve_fasp_registration', array( self::class, 'approve_fasp_registration' ) );
-		\add_action( 'admin_post_reject_fasp_registration', array( self::class, 'reject_fasp_registration' ) );
-		\add_action( 'admin_post_delete_fasp_registration', array( self::class, 'delete_fasp_registration' ) );
+		// Only register FASP admin actions if FASP is enabled.
+		if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+			\add_action( 'admin_post_approve_fasp_registration', array( self::class, 'approve_fasp_registration' ) );
+			\add_action( 'admin_post_reject_fasp_registration', array( self::class, 'reject_fasp_registration' ) );
+			\add_action( 'admin_post_delete_fasp_registration', array( self::class, 'delete_fasp_registration' ) );
+		}
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );

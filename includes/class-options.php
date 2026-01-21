@@ -330,6 +330,16 @@ class Options {
 			)
 		);
 
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_enable_fasp',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable Fediverse Auxiliary Service Providers (FASP) integration.',
+				'default'     => false,
+			)
+		);
+
 		/*
 		 * Options Group: activitypub_blog
 		 */

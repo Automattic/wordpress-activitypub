@@ -98,6 +98,15 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings',
 			array( 'label_for' => 'activitypub_object_type' )
 		);
+
+		\add_settings_field(
+			'activitypub_enable_fasp',
+			\__( 'Auxiliary Services', 'activitypub' ),
+			array( self::class, 'render_fasp_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_enable_fasp' )
+		);
 	}
 
 	/**
@@ -250,6 +259,27 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( 'This is mainly for backwards compatibility. It is not recommended to use the Template Tags, because it might not be supported in future versions.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render FASP (auxiliary services) field.
+	 */
+	public static function render_fasp_field() {
+		$value = \get_option( 'activitypub_enable_fasp', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_enable_fasp" name="activitypub_enable_fasp" value="1" <?php \checked( '1', $value ); ?> />
+				<?php \esc_html_e( 'Enable Fediverse Auxiliary Service Providers (FASP) integration.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Allows external services like moderation tools, search indexers, or content discovery platforms to integrate with your site. When enabled, services can request access which you can approve or reject.', 'activitypub' ); ?>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( '⚠ This feature is experimental and the FASP specification may change. Only enable if you want to test integration with auxiliary Fediverse services.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

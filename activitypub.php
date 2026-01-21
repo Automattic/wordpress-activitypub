@@ -48,7 +48,6 @@ function rest_init() {
 	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();
 	( new Rest\Comments_Controller() )->register_routes();
-	( new Rest\Fasp_Controller() )->register_routes();
 	( new Rest\Followers_Controller() )->register_routes();
 	( new Rest\Following_Controller() )->register_routes();
 	( new Rest\Inbox_Controller() )->register_routes();
@@ -63,6 +62,11 @@ function rest_init() {
 	if ( is_blog_public() ) {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
+
+	// Load FASP endpoints only if enabled.
+	if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+		( new Rest\Fasp_Controller() )->register_routes();
+	}
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 
@@ -76,7 +80,6 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Fasp', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
@@ -99,6 +102,11 @@ function plugin_init() {
 	// Only load relay if relay mode is enabled.
 	if ( \get_option( 'activitypub_relay_mode', false ) ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Relay', 'init' ) );
+	}
+
+	// Only load FASP if enabled.
+	if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\Fasp', 'init' ) );
 	}
 
 	// Load development tools.
