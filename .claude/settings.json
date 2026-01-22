@@ -9,7 +9,8 @@
 			"federation",
 			"test",
 			"release",
-			"integrations"
+			"integrations",
+			"summary"
 		]
 	}
 }

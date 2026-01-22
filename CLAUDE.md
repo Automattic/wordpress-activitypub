@@ -13,6 +13,7 @@ The following skills are available in `.claude/skills/`:
 - **test** — PHPUnit and E2E testing patterns
 - **release** — Version management and release processes
 - **integrations** — Third-party plugin integration patterns
+- **summary** — Summarize the session at its end
 
 **CRITICAL:** After reading a skill, check if a local skill override file exists at `~/.claude/skills/{skill-name}-local/SKILL.md` and apply it too.
 For example, after reading `.claude/skills/dev/SKILL.md`, check for `~/.claude/skills/dev-local/SKILL.md`.
