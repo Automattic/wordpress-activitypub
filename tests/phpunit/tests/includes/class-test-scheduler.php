@@ -396,9 +396,9 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertNotFalse( $scheduled );
 		Scheduler::unlock( $key );
 
-		\remove_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
+		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33 );
 		self::factory()->post->create( array( 'meta_input' => array( 'activitypub_status' => 'federated' ) ) );
-		\add_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33, 3 );
+		\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
 
 		// Test scheduling next batch when callback returns more work.
 		\do_action( 'activitypub_create_post_outbox_items', 1, 0 ); // Small batch size to force multiple batches.
@@ -703,7 +703,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	 * @covers ::purge_ap_posts
 	 */
 	public function test_purge_ap_posts_more_than_200_posts() {
-		// Create 20 posts older than 6 months (will be deleted).
+		// Create 20 posts older than 30 days (will be deleted).
 		self::factory()->post->create_many(
 			20,
 			array(
@@ -713,13 +713,13 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			)
 		);
 
-		// Create 5 posts newer than 6 months (will be kept).
+		// Create 5 posts newer than 30 days (will be kept).
 		self::factory()->post->create_many(
 			5,
 			array(
 				'post_type'   => Posts::POST_TYPE,
 				'post_status' => 'publish',
-				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 week' ) ),
 			)
 		);
 

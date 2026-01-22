@@ -83,6 +83,11 @@ class Interactions {
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 
+		if ( ! $comment_post_id ) {
+			// Not a reply to a post or comment.
+			return false;
+		}
+
 		$comment_data['comment_post_ID'] = $comment_post_id;
 		$comment_data['comment_parent']  = $parent_comment_id ? $parent_comment_id : 0;
 

@@ -12,6 +12,7 @@ import {
 import { Icon, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
+import { useEffect } from '@wordpress/element';
 import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 import { SVG, Path } from '@wordpress/primitives';
@@ -26,6 +27,22 @@ const EditorPlugin = () => {
 	const postType = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 	const postDate = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPost().date, [] );
+
+	// Get the computed default visibility.
+	const defaultVisibility = getDefaultVisibility( meta, postDate );
+
+	// Sync computed default to meta when it differs from stored value.
+	// This ensures the default is persisted even if user doesn't change it.
+	useEffect( () => {
+		const storedVisibility = meta?.activitypub_content_visibility;
+
+		// Only sync if visibility was never set and the default isn't 'public'.
+		// WordPress may return '' (empty string) or undefined for unset meta.
+		// We skip 'public' since it's the implicit default.
+		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
+			setMeta( { ...meta, activitypub_content_visibility: defaultVisibility } );
+		}
+	}, [ defaultVisibility, meta, setMeta ] );
 
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {
@@ -99,7 +116,6 @@ const EditorPlugin = () => {
 					'activitypub'
 				) }
 				__next40pxDefaultSize
-				__nextHasNoMarginBottom
 			/>
 
 			<RangeControl
@@ -115,7 +131,6 @@ const EditorPlugin = () => {
 					'activitypub'
 				) }
 				__next40pxDefaultSize
-				__nextHasNoMarginBottom
 			/>
 
 			<RadioControl
@@ -124,7 +139,7 @@ const EditorPlugin = () => {
 					"This adjusts the visibility of a post in the fediverse, but note that it won't affect how the post appears on the blog.",
 					'activitypub'
 				) }
-				selected={ getDefaultVisibility( meta, postDate ) }
+				selected={ defaultVisibility }
 				options={ [
 					{
 						label: enhancedLabel(
@@ -176,7 +191,6 @@ const EditorPlugin = () => {
 					setMeta( { ...meta, activitypub_interaction_policy_quote: value } );
 				} }
 				__next40pxDefaultSize
-				__nextHasNoMarginBottom
 			/>
 		</SettingsPanel>
 	);

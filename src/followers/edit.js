@@ -187,7 +187,6 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 							options={ filteredUsersOptions }
 							onChange={ setAttributeWithPageReset( 'selectedUser' ) }
 							__next40pxDefaultSize
-							__nextHasNoMarginBottom
 						/>
 					) }
 					<SelectControl
@@ -196,7 +195,6 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						options={ orderOptions }
 						onChange={ setAttributeWithPageReset( 'order' ) }
 						__next40pxDefaultSize
-						__nextHasNoMarginBottom
 					/>
 					<RangeControl
 						label={ __( 'Number of Followers', 'activitypub' ) }
@@ -205,7 +203,6 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						min={ 1 }
 						max={ 10 }
 						__next40pxDefaultSize
-						__nextHasNoMarginBottom
 					/>
 				</PanelBody>
 			</InspectorControls>

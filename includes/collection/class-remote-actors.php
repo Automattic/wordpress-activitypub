@@ -69,7 +69,13 @@ class Remote_Actors {
 	 * @return \WP_Post|null The post object or null on failure.
 	 */
 	public static function get( $id ) {
-		return \get_post( $id );
+		$post = \get_post( $id );
+
+		if ( $post && self::POST_TYPE === $post->post_type ) {
+			return $post;
+		}
+
+		return null;
 	}
 
 	/**
@@ -221,7 +227,16 @@ class Remote_Actors {
 			);
 		}
 
-		return \get_post( $post_id );
+		$post = \get_post( $post_id );
+		if ( ! $post instanceof \WP_Post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return $post;
 	}
 
 	/**
@@ -281,7 +296,16 @@ class Remote_Actors {
 			return $post_id;
 		}
 
-		return \get_post( $post_id );
+		$post = \get_post( $post_id );
+		if ( ! $post instanceof \WP_Post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return $post;
 	}
 
 	/**
@@ -305,7 +329,16 @@ class Remote_Actors {
 		);
 
 		if ( $post_id ) {
-			return \get_post( $post_id );
+			$post = \get_post( $post_id );
+			if ( ! $post instanceof \WP_Post ) {
+				return new \WP_Error(
+					'activitypub_actor_not_found',
+					\__( 'Actor not found', 'activitypub' ),
+					array( 'status' => 404 )
+				);
+			}
+
+			return $post;
 		}
 
 		$profile_uri = Webfinger::resolve( $acct );
@@ -472,6 +505,8 @@ class Remote_Actors {
 
 		if ( \is_wp_error( $actor ) ) {
 			self::add_error( $post->ID, $actor );
+
+			return $actor;
 		}
 
 		if ( ! $actor->get_webfinger() ) {

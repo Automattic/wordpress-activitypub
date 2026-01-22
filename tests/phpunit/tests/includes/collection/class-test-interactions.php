@@ -1208,6 +1208,74 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test add_comment returns false when post ID cannot be determined.
+	 *
+	 * This tests the guard against missing post ID when the inReplyTo
+	 * doesn't resolve to any known post or comment.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_returns_false_when_no_post_id() {
+		$activity = array(
+			'actor'  => 'https://example.com/users/someone',
+			'id'     => 'https://example.com/activities/orphan',
+			'object' => array(
+				'id'        => 'https://example.com/notes/orphan',
+				'content'   => 'This is a reply to nothing',
+				'inReplyTo' => 'https://nonexistent.example.com/post/does-not-exist',
+			),
+		);
+
+		// Mock actor metadata.
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Someone',
+				'preferredUsername' => 'someone',
+				'id'                => 'https://example.com/users/someone',
+				'url'               => 'https://example.com/@someone',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		$result = Interactions::add_comment( $activity );
+
+		$this->assertFalse( $result, 'Should return false when inReplyTo does not resolve to a post or comment' );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+	}
+
+	/**
+	 * Test add_reaction returns false when post ID cannot be determined.
+	 *
+	 * @covers ::add_reaction
+	 */
+	public function test_add_reaction_returns_false_when_no_post_id() {
+		$activity = array(
+			'type'   => 'Like',
+			'actor'  => 'https://example.com/users/liker',
+			'object' => 'https://nonexistent.example.com/post/does-not-exist',
+			'id'     => 'https://example.com/activities/orphan-like',
+		);
+
+		// Mock actor metadata.
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Liker',
+				'preferredUsername' => 'liker',
+				'id'                => 'https://example.com/users/liker',
+				'url'               => 'https://example.com/@liker',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		$result = Interactions::add_reaction( $activity );
+
+		$this->assertFalse( $result, 'Should return false when object does not resolve to a post' );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+	}
+
+	/**
 	 * Test that nested replies work with ap_post.
 	 *
 	 * @covers ::add_comment

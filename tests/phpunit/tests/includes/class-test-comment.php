@@ -173,7 +173,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$comment_autoapproved = \get_comment( $comment_id_autoapproved );
 		$this->assertEquals( '1', $comment_autoapproved->comment_approved );
 
-		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ) );
+		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ), 11 );
 
 		$comment_id_unapproved = \wp_new_comment(
 			array(

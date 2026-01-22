@@ -127,6 +127,98 @@ ENDPRE;
 	}
 
 	/**
+	 * Test that hashtags inside protected HTML elements are not extracted.
+	 *
+	 * This ensures insert_post behavior matches enrich_content_data by skipping
+	 * hashtags inside <a>, <pre>, <code>, <textarea>, and HTML comments.
+	 *
+	 * Note: WordPress strips <style> and <script> tags (but keeps content) via wp_kses,
+	 * so we don't test those here as they're handled differently.
+	 *
+	 * @covers ::insert_post
+	 */
+	public function test_hashtags_in_protected_elements_ignored() {
+		// First, remove the hook to prevent double-processing.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
+
+		$content = '
+			<a href="/issues/1">#linktext</a>
+			<pre>#precode</pre>
+			<code>#inlinecode</code>
+			<!-- #commenttag -->
+			<p>#validtagp</p>
+			<div>#validtagdiv</div>
+			#validtag
+		';
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => $content,
+				'post_author'  => 1,
+			)
+		);
+
+		\Activitypub\Hashtag::insert_post( $post_id, get_post( $post_id ) );
+		$tags = wp_get_post_tags( $post_id, array( 'fields' => 'names' ) );
+
+		// Should contain hashtags from non-protected elements.
+		$this->assertContains( 'validtag', $tags, 'Should extract hashtags outside HTML elements' );
+		$this->assertContains( 'validtagp', $tags, 'Should extract hashtags from <p> tags' );
+		$this->assertContains( 'validtagdiv', $tags, 'Should extract hashtags from <div> tags' );
+
+		// Should NOT contain hashtags from protected elements.
+		$this->assertNotContains( 'linktext', $tags, 'Should not extract hashtags from <a> tags' );
+		$this->assertNotContains( 'precode', $tags, 'Should not extract hashtags from <pre> tags' );
+		$this->assertNotContains( 'inlinecode', $tags, 'Should not extract hashtags from <code> tags' );
+		$this->assertNotContains( 'commenttag', $tags, 'Should not extract hashtags from HTML comments' );
+
+		// Re-add the hook to restore global state for subsequent tests.
+		\add_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ), 10, 2 );
+	}
+
+	/**
+	 * Test that numeric hashtags in links are not extracted.
+	 *
+	 * This is a specific test for issue #2715 where #1, #2 tags were being
+	 * added from content like <a href="#">#1</a>.
+	 *
+	 * @see https://github.com/Automattic/wordpress-activitypub/issues/2715
+	 * @covers ::insert_post
+	 */
+	public function test_numeric_hashtags_in_links_ignored() {
+		// First, remove the hook to prevent double-processing.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
+
+		$content = '
+			<ol>
+				<li><a href="#1">#1</a> First item</li>
+				<li><a href="#2">#2</a> Second item</li>
+			</ol>
+			#validhashtag
+		';
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => $content,
+				'post_author'  => 1,
+			)
+		);
+
+		\Activitypub\Hashtag::insert_post( $post_id, get_post( $post_id ) );
+		$tags = wp_get_post_tags( $post_id, array( 'fields' => 'names' ) );
+
+		// Should contain the valid hashtag.
+		$this->assertContains( 'validhashtag', $tags, 'Should extract valid hashtags' );
+
+		// Should NOT contain numeric hashtags from links.
+		$this->assertNotContains( '1', $tags, 'Should not extract #1 from links' );
+		$this->assertNotContains( '2', $tags, 'Should not extract #2 from links' );
+
+		// Re-add the hook to restore global state for subsequent tests.
+		\add_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ), 10, 2 );
+	}
+
+	/**
 	 * Data provider for hashtag tests.
 	 *
 	 * @return array[] The data.
@@ -176,5 +268,106 @@ ENDPRE;
 				'Should handle quotes in content correctly',
 			),
 		);
+	}
+
+	/**
+	 * Test that hashtag filters are added when the setting is enabled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_adds_filters_when_enabled() {
+		// Remove any existing filters first.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
+		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
+
+		// Enable the hashtag setting.
+		\update_option( 'activitypub_use_hashtags', '1' );
+
+		// Call init.
+		\Activitypub\Hashtag::init();
+
+		// Verify filters were added.
+		$this->assertNotFalse(
+			\has_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) ),
+			'insert_post action should be added when hashtags are enabled'
+		);
+		$this->assertNotFalse(
+			\has_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) ),
+			'the_content filter should be added when hashtags are enabled'
+		);
+		$this->assertNotFalse(
+			\has_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ) ),
+			'filter_activity_object filter should be added when hashtags are enabled'
+		);
+
+		// Clean up.
+		\delete_option( 'activitypub_use_hashtags' );
+	}
+
+	/**
+	 * Test that hashtag filters are not added when the setting is disabled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_does_not_add_filters_when_disabled() {
+		// Remove any existing filters first.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
+		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
+
+		// Disable the hashtag setting (default).
+		\update_option( 'activitypub_use_hashtags', '0' );
+
+		// Call init.
+		\Activitypub\Hashtag::init();
+
+		// Verify filters were NOT added.
+		$this->assertFalse(
+			\has_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) ),
+			'insert_post action should not be added when hashtags are disabled'
+		);
+		$this->assertFalse(
+			\has_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) ),
+			'the_content filter should not be added when hashtags are disabled'
+		);
+		$this->assertFalse(
+			\has_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ) ),
+			'filter_activity_object filter should not be added when hashtags are disabled'
+		);
+
+		// Clean up.
+		\delete_option( 'activitypub_use_hashtags' );
+	}
+
+	/**
+	 * Test that hashtag filters are enabled when the option is the string '1'.
+	 *
+	 * WordPress checkboxes can store values like '1', 1, true, or '0', 0, false, ''.
+	 * The current implementation treats only the string '1' as enabling hashtags,
+	 * and this test verifies that behavior.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_with_string_option_value() {
+		// Remove any existing filters first.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
+		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
+
+		// Test with string '1' (typical checkbox value).
+		\update_option( 'activitypub_use_hashtags', '1' );
+		\Activitypub\Hashtag::init();
+
+		$this->assertNotFalse(
+			\has_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) ),
+			'Hashtag feature should be enabled with string "1"'
+		);
+
+		// Clean up.
+		\remove_action( 'wp_insert_post', array( \Activitypub\Hashtag::class, 'insert_post' ) );
+		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
+		\delete_option( 'activitypub_use_hashtags' );
 	}
 }

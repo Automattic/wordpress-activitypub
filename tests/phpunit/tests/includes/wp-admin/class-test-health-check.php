@@ -5,6 +5,7 @@
  * @package Activitypub
  */
 
+use Activitypub\Scheduler;
 use Activitypub\WP_Admin\Health_Check;
 
 /**
@@ -207,5 +208,300 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertContains( 'Really Simple CAPTCHA', $filtered );
 		$this->assertContains( 'Another Plugin', $filtered );
 		$this->assertNotContains( false, $filtered );
+	}
+
+	/**
+	 * Test that REST API accessibility test is registered.
+	 */
+	public function test_rest_api_accessibility_test_registered() {
+		$tests  = array();
+		$result = Health_Check::add_tests( $tests );
+
+		$this->assertArrayHasKey( 'activitypub_test_rest_api_accessibility', $result['direct'] );
+
+		$test = $result['direct']['activitypub_test_rest_api_accessibility'];
+		$this->assertArrayHasKey( 'label', $test );
+		$this->assertArrayHasKey( 'test', $test );
+		$this->assertEquals( array( Health_Check::class, 'test_rest_api_accessibility' ), $test['test'] );
+	}
+
+	/**
+	 * Mock HTTP response for accessible ActivityPub endpoint.
+	 *
+	 * @return array Mocked response.
+	 */
+	public function mock_activitypub_accessible() {
+		return array(
+			'response' => array(
+				'code'    => 200,
+				'message' => 'OK',
+			),
+			'body'     => '{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollection","totalItems":0}',
+		);
+	}
+
+	/**
+	 * Mock HTTP response for blocked ActivityPub endpoint (security plugin).
+	 *
+	 * @return array Mocked response.
+	 */
+	public function mock_activitypub_blocked() {
+		return array(
+			'response' => array(
+				'code'    => 401,
+				'message' => 'Unauthorized',
+			),
+			'body'     => '{"title":"rest_login_required","message":"REST API restricted to authenticated users.","data":{"status":401}}',
+		);
+	}
+
+	/**
+	 * Mock HTTP response for ActivityPub's own error (not a security plugin).
+	 *
+	 * @return array Mocked response.
+	 */
+	public function mock_activitypub_own_error() {
+		return array(
+			'response' => array(
+				'code'    => 401,
+				'message' => 'Unauthorized',
+			),
+			'body'     => '{"title":"activitypub_signature_verification_failed","message":"Signature verification failed."}',
+		);
+	}
+
+	/**
+	 * Mock HTTP response for connection error.
+	 *
+	 * @return WP_Error Mocked error response.
+	 */
+	public function mock_activitypub_connection_error() {
+		return new WP_Error( 'http_request_failed', 'Connection refused' );
+	}
+
+	/**
+	 * Test REST API accessibility when ActivityPub endpoint is accessible.
+	 */
+	public function test_rest_api_accessible() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
+
+		$result = Health_Check::test_rest_api_accessibility();
+
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertEquals( 'REST API is accessible', $result['label'] );
+		$this->assertEquals( 'green', $result['badge']['color'] );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
+	}
+
+	/**
+	 * Test REST API accessibility when endpoint is blocked.
+	 */
+	public function test_rest_api_blocked() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
+
+		$result = Health_Check::test_rest_api_accessibility();
+
+		$this->assertEquals( 'critical', $result['status'] );
+		$this->assertEquals( 'REST API is restricted to authenticated users', $result['label'] );
+		$this->assertEquals( 'red', $result['badge']['color'] );
+		$this->assertStringContainsString( 'security plugin settings', $result['actions'] );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
+	}
+
+	/**
+	 * Test REST API accessibility with connection error.
+	 */
+	public function test_rest_api_connection_error() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_connection_error' ) );
+
+		$result = Health_Check::test_rest_api_accessibility();
+
+		$this->assertEquals( 'critical', $result['status'] );
+		$this->assertStringContainsString( 'Could not connect to REST API', $result['description'] );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_connection_error' ) );
+	}
+
+	/**
+	 * Test is_rest_api_accessible returns true for successful response.
+	 */
+	public function test_is_rest_api_accessible_returns_true() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
+
+		$result = Health_Check::is_rest_api_accessible();
+
+		$this->assertTrue( $result );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
+	}
+
+	/**
+	 * Test is_rest_api_accessible returns WP_Error when blocked by security plugin.
+	 */
+	public function test_is_rest_api_accessible_returns_error_when_blocked() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
+
+		$result = Health_Check::is_rest_api_accessible();
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'rest_api_restricted', $result->get_error_code() );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
+	}
+
+	/**
+	 * Test is_rest_api_accessible ignores ActivityPub's own errors.
+	 */
+	public function test_is_rest_api_accessible_ignores_activitypub_errors() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_own_error' ) );
+
+		$result = Health_Check::is_rest_api_accessible();
+
+		// Should return true because error title starts with 'activitypub_'.
+		$this->assertTrue( $result );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_own_error' ) );
+	}
+
+	/**
+	 * Test that scheduled events test is registered.
+	 */
+	public function test_scheduled_events_test_registered() {
+		$tests  = array();
+		$result = Health_Check::add_tests( $tests );
+
+		$this->assertArrayHasKey( 'activitypub_test_scheduled_events', $result['direct'] );
+
+		$test = $result['direct']['activitypub_test_scheduled_events'];
+		$this->assertArrayHasKey( 'label', $test );
+		$this->assertArrayHasKey( 'test', $test );
+		$this->assertEquals( array( Health_Check::class, 'test_scheduled_events' ), $test['test'] );
+	}
+
+	/**
+	 * Test scheduled events health check when all schedules are registered.
+	 */
+	public function test_scheduled_events_all_registered() {
+		// Ensure all schedules are registered.
+		Scheduler::register_schedules();
+
+		$result = Health_Check::test_scheduled_events();
+
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertEquals( 'ActivityPub scheduled events are registered', $result['label'] );
+		$this->assertEquals( 'green', $result['badge']['color'] );
+	}
+
+	/**
+	 * Test scheduled events health check auto-repairs missing schedules.
+	 */
+	public function test_scheduled_events_auto_repair() {
+		// Remove all schedules.
+		Scheduler::deregister_schedules();
+
+		// Verify they are missing.
+		$missing_before = Health_Check::get_missing_schedules();
+		$this->assertNotEmpty( $missing_before );
+
+		// Run the health check (should auto-repair).
+		$result = Health_Check::test_scheduled_events();
+
+		// Should report good status after auto-repair.
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertStringContainsString( 'automatically restored', $result['description'] );
+
+		// Verify schedules are now registered.
+		$missing_after = Health_Check::get_missing_schedules();
+		$this->assertEmpty( $missing_after );
+	}
+
+	/**
+	 * Test get_missing_schedules returns empty when all schedules are registered.
+	 */
+	public function test_get_missing_schedules_none_missing() {
+		// Ensure all schedules are registered.
+		Scheduler::register_schedules();
+
+		$missing = Health_Check::get_missing_schedules();
+
+		$this->assertEmpty( $missing );
+	}
+
+	/**
+	 * Test get_missing_schedules returns missing schedules.
+	 */
+	public function test_get_missing_schedules_some_missing() {
+		// Remove all schedules.
+		Scheduler::deregister_schedules();
+
+		$missing = Health_Check::get_missing_schedules();
+
+		$this->assertNotEmpty( $missing );
+		$this->assertArrayHasKey( 'activitypub_update_remote_actors', $missing );
+		$this->assertArrayHasKey( 'activitypub_cleanup_remote_actors', $missing );
+		$this->assertArrayHasKey( 'activitypub_reprocess_outbox', $missing );
+
+		// Re-register for other tests.
+		Scheduler::register_schedules();
+	}
+
+	/**
+	 * Test ensure_schedules_registered repairs missing schedules.
+	 */
+	public function test_ensure_schedules_registered() {
+		// Remove all schedules.
+		Scheduler::deregister_schedules();
+
+		// Verify they are missing.
+		$missing_before = Health_Check::get_missing_schedules();
+		$this->assertNotEmpty( $missing_before );
+
+		// Call ensure_schedules_registered.
+		Health_Check::ensure_schedules_registered();
+
+		// Verify schedules are now registered.
+		$missing_after = Health_Check::get_missing_schedules();
+		$this->assertEmpty( $missing_after );
+	}
+
+	/**
+	 * Test ensure_schedules_registered does nothing when all schedules exist.
+	 */
+	public function test_ensure_schedules_registered_no_op_when_all_exist() {
+		// Ensure all schedules are registered.
+		Scheduler::register_schedules();
+
+		// Get next scheduled time for a schedule.
+		$before = wp_next_scheduled( 'activitypub_update_remote_actors' );
+
+		// Call ensure_schedules_registered.
+		Health_Check::ensure_schedules_registered();
+
+		// Verify the schedule time hasn't changed (wasn't re-registered).
+		$after = wp_next_scheduled( 'activitypub_update_remote_actors' );
+		$this->assertEquals( $before, $after );
+	}
+
+	/**
+	 * Test Scheduler::SCHEDULES constant contains expected schedules.
+	 */
+	public function test_scheduler_schedules_constant() {
+		$schedules = Scheduler::SCHEDULES;
+
+		$this->assertIsArray( $schedules );
+		$this->assertArrayHasKey( 'activitypub_update_remote_actors', $schedules );
+		$this->assertArrayHasKey( 'activitypub_cleanup_remote_actors', $schedules );
+		$this->assertArrayHasKey( 'activitypub_reprocess_outbox', $schedules );
+		$this->assertArrayHasKey( 'activitypub_outbox_purge', $schedules );
+		$this->assertArrayHasKey( 'activitypub_inbox_purge', $schedules );
+		$this->assertArrayHasKey( 'activitypub_ap_post_purge', $schedules );
+		$this->assertArrayHasKey( 'activitypub_sync_blocklist_subscriptions', $schedules );
+
+		// Verify recurrence values.
+		$this->assertEquals( 'hourly', $schedules['activitypub_update_remote_actors'] );
+		$this->assertEquals( 'daily', $schedules['activitypub_cleanup_remote_actors'] );
+		$this->assertEquals( 'weekly', $schedules['activitypub_sync_blocklist_subscriptions'] );
 	}
 }

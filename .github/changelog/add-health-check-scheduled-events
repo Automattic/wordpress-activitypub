@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add health check to verify scheduled events are registered and auto-repair if missing.

@@ -3,13 +3,13 @@
 	"includeCoAuthoredBy": false,
 	"skills": {
 		"allowedSkills": [
-			"activitypub-dev-cycle",
-			"activitypub-php-conventions",
-			"activitypub-pr-workflow",
-			"activitypub-federation",
-			"activitypub-testing",
-			"activitypub-release",
-			"activitypub-integrations"
+			"dev",
+			"code-style",
+			"pr",
+			"federation",
+			"test",
+			"release",
+			"integrations"
 		]
 	}
 }

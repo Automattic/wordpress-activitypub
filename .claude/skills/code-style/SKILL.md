@@ -1,5 +1,5 @@
 ---
-name: activitypub-php-conventions
+name: code-style
 description: PHP coding standards and WordPress patterns for ActivityPub plugin. Use when writing PHP code, creating classes, implementing WordPress hooks, or structuring plugin files.
 ---
 
@@ -157,7 +157,7 @@ $enabled = \is_post_type_enabled( $post_type );
 - `includes/activity/class-follow.php` - Follow activity.
 - `includes/activity/class-undo.php` - Undo activity.
 
-**Integrations (see [Integration Patterns](../activitypub-integrations/SKILL.md)):**
+**Integrations (see [Integration Patterns](../integrations/SKILL.md)):**
 - `integration/class-woocommerce.php` - WooCommerce integration.
 - `integration/class-buddypress.php` - BuddyPress integration.
 - `integration/class-jetpack.php` - Jetpack integration.
