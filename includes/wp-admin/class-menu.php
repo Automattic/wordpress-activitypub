@@ -120,12 +120,21 @@ class Menu {
 		$wp_admin_bar->add_node(
 			array(
 				'id'    => 'activitypub-social-web',
-				'title' => \_x( '⁂', 'Fediverse symbol', 'activitypub' ) . ' ' . \__( 'Social Web', 'activitypub' ),
+				'title' => \__( 'Social Web', 'activitypub' ),
 				'href'  => \admin_url( 'admin.php?page=activitypub-social-web' ),
 				'meta'  => array(
+					'class' => 'activitypub-admin-bar-social-web',
 					'title' => \__( 'View your Social Web feed', 'activitypub' ),
 				),
 			)
+		);
+
+		// Enqueue styles for the admin bar icon.
+		\wp_enqueue_style(
+			'activitypub-admin-bar-styles',
+			\plugins_url( 'assets/css/activitypub-admin-bar.css', ACTIVITYPUB_PLUGIN_FILE ),
+			array(),
+			ACTIVITYPUB_PLUGIN_VERSION
 		);
 	}
 }
