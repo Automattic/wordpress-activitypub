@@ -6,16 +6,22 @@ This project uses AI coding assistant skills to provide contextual guidance for 
 
 The following skills are available in `.claude/skills/`:
 
-- **activitypub-dev-cycle** — Development workflows, testing, linting, and environment setup
-- **activitypub-php-conventions** — PHP coding standards and WordPress patterns
-- **activitypub-pr-workflow** — Pull request creation and review processes
-- **activitypub-federation** — ActivityPub protocol implementation and federation
-- **activitypub-testing** — PHPUnit and E2E testing patterns
-- **activitypub-release** — Version management and release processes
-- **activitypub-integrations** — Third-party plugin integration patterns
+- **dev** — Development workflows, testing, linting, and environment setup
+- **code-style** — PHP coding standards and WordPress patterns
+- **pr** — Pull request creation and review processes
+- **federation** — ActivityPub protocol implementation and federation
+- **test** — PHPUnit and E2E testing patterns
+- **release** — Version management and release processes
+- **integrations** — Third-party plugin integration patterns
 
-**CRITICAL:** After reading a skill, check if a local skill override file exists at `~/.claude/skills/{skill-name}-local/SKILL.md` and apply it too. 
-For example, after reading `.claude/skills/activitypub-dev-cycle/SKILL.md`, check for `~/.claude/skills/activitypub-dev-cycle-local/SKILL.md`.
+### Available Agents
+
+The following agents are available in `.claude/agents/`:
+
+- **summary** — Summarize the session at its end (auto-invoked on goodbye)
+
+**CRITICAL:** After reading a skill, check if a local skill override file exists at `~/.claude/skills/{skill-name}-local/SKILL.md` and apply it too.
+For example, after reading `.claude/skills/dev/SKILL.md`, check for `~/.claude/skills/dev-local/SKILL.md`.
 
 **Local override skills take precedence over project-level skills in case of conflict.**
 
