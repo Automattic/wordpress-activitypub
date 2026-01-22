@@ -9,6 +9,8 @@ namespace Activitypub;
 
 /**
  * Handles custom emoji processing for ActivityPub content.
+ *
+ * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/9098/fep-9098.md FEP-9098: Custom Emojis
  */
 class Emoji {
 
