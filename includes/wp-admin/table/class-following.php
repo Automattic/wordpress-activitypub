@@ -141,6 +141,18 @@ class Following extends \WP_List_Table {
 					break;
 				}
 
+				// Check if already following before making the request.
+				$actor = Remote_Actors::get_by_uri( $profile );
+				if ( ! \is_wp_error( $actor ) ) {
+					$following = \get_post_meta( $actor->ID, Following_Collection::FOLLOWING_META_KEY, false );
+					$pending   = \get_post_meta( $actor->ID, Following_Collection::PENDING_META_KEY, false );
+					if ( \in_array( (string) $this->user_id, $following, true ) || \in_array( (string) $this->user_id, $pending, true ) ) {
+						/* translators: %s: Account profile that is already being followed */
+						\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'You are already following &#8220;%s&#8221;.', 'activitypub' ), \esc_html( $profile ) ), 'info' );
+						break;
+					}
+				}
+
 				$result = follow( $profile, $this->user_id );
 				if ( \is_wp_error( $result ) ) {
 					/* translators: %s: Account profile that could not be followed */
