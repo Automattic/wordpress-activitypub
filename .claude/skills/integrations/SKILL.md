@@ -1,5 +1,5 @@
 ---
-name: activitypub-integrations
+name: integrations
 description: Third-party WordPress plugin integration patterns. Use when adding new integrations, debugging compatibility with other plugins, or working with existing integrations.
 ---
 
@@ -12,7 +12,7 @@ This skill provides guidance on integrating the ActivityPub plugin with other Wo
 ### Integration Location
 All integrations live in the `integration/` directory.
 
-**File naming:** `class-{plugin-name}.php` (following [PHP conventions](../activitypub-php-conventions/SKILL.md))
+**File naming:** `class-{plugin-name}.php` (following [PHP conventions](../code-style/SKILL.md))
 
 ### Available Integrations
 - BuddyPress
