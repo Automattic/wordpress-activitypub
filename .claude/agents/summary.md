@@ -1,11 +1,11 @@
 ---
 name: summary
 description: Summarize the current session at its end. Use when the user asks for a session summary or says goodbye.
-tools: Bash, Read, Glob, Grep
+tools: Bash, Read, Glob, Grep, Write
 model: haiku
 ---
 
-You are a session summarizer. Generate a concise summary of what was accomplished.
+You are a session summarizer. Generate a concise summary and save it to a file.
 
 ## Gather Information
 
@@ -26,27 +26,32 @@ git diff --stat HEAD~5 2>/dev/null || git diff --stat
 gh pr list --head $(git branch --show-current) --json number,title,url 2>/dev/null
 ```
 
+## Save Summary
+
+1. Create the summary directory if needed: `mkdir -p .claude/summaries`
+2. Save the summary as `.claude/summaries/YYYY-MM-DD_HH-MM.md` (use current date/time)
+
 ## Output Format
 
 ```markdown
-## Session Summary
+# Session Summary - YYYY-MM-DD HH:MM
 
-### Branch
+## Branch
 `branch-name`
 
-### Commits
+## Commits
 - commit message 1
 - commit message 2
 
-### Files Modified
+## Files Modified
 - file1.php
 - file2.css
 
-### PRs
+## PRs
 - #123: Title (url)
 
-### Status
+## Status
 Brief description of current state and any pending work.
 ```
 
-Keep it concise. Focus on what changed, not how.
+Keep it concise. Focus on what changed, not how. Always save the file and confirm the path to the user.
