@@ -390,8 +390,6 @@ class Post extends Base {
 		}
 
 		$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
-		$media = $this->filter_unique_attachments( $media );
-		$media = \array_slice( $media, 0, $max_media );
 
 		/**
 		 * Filter the attachment IDs for a post.
@@ -402,6 +400,10 @@ class Post extends Base {
 		 * @return array The filtered attachment IDs.
 		 */
 		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->item );
+
+		// Deduplicate and limit after filter to ensure plugins adding attachments don't cause duplicates.
+		$media = $this->filter_unique_attachments( $media );
+		$media = \array_slice( $media, 0, $max_media );
 
 		$attachments = \array_filter( \array_map( array( $this, 'transform_attachment' ), $media ) );
 

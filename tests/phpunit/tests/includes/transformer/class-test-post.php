@@ -1480,4 +1480,55 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertSame( -0.1278, $location['longitude'] );
 		$this->assertSame( 'London, UK', $location['name'] );
 	}
+
+	/**
+	 * Test that duplicate attachments are filtered after activitypub_attachment_ids filter.
+	 *
+	 * This ensures that when plugins add attachments via the filter (like Classic Editor),
+	 * duplicates are properly removed to prevent the same image appearing multiple times.
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_duplicate_attachments_filtered_after_filter() {
+		// Create an image attachment.
+		$attachment_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$attachment_url = \wp_get_attachment_url( $attachment_id );
+
+		// Create a post with the image as featured image.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Duplicate Image',
+				'post_content' => sprintf( '<p>Test content with image</p><img src="%s" />', $attachment_url ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set the same image as featured image.
+		\set_post_thumbnail( $post_id, $attachment_id );
+
+		// Add a filter that simulates Classic Editor behavior - adding attached images.
+		$filter = function ( $attachments ) use ( $attachment_id ) {
+			// Simulate Classic Editor adding the same attachment again.
+			$attachments[] = array( 'id' => $attachment_id );
+			return $attachments;
+		};
+		\add_filter( 'activitypub_attachment_ids', $filter, 10, 1 );
+
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		// Get the attachments.
+		$attachments = $object->get_attachment();
+
+		// Remove the filter.
+		\remove_filter( 'activitypub_attachment_ids', $filter );
+
+		// Clean up.
+		\delete_post_thumbnail( $post_id );
+		\wp_delete_attachment( $attachment_id, true );
+
+		// There should be only ONE attachment, not duplicates.
+		$this->assertCount( 1, $attachments, 'Duplicate attachments should be filtered out' );
+		$this->assertSame( $attachment_url, $attachments[0]['url'] );
+	}
 }
