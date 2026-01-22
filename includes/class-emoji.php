@@ -129,7 +129,7 @@ class Emoji {
 			array_filter(
 				$data['tag'],
 				function ( $tag ) {
-					return isset( $tag['type'] ) && 'Emoji' === $tag['type'];
+					return is_array( $tag ) && isset( $tag['type'] ) && 'Emoji' === $tag['type'];
 				}
 			)
 		);
@@ -202,7 +202,7 @@ class Emoji {
 		$emoji_data = array();
 
 		foreach ( $data['tag'] as $tag ) {
-			if ( isset( $tag['type'] ) && 'Emoji' === $tag['type'] && ! empty( $tag['name'] ) && ! empty( $tag['icon']['url'] ) ) {
+			if ( is_array( $tag ) && isset( $tag['type'] ) && 'Emoji' === $tag['type'] && ! empty( $tag['name'] ) && ! empty( $tag['icon']['url'] ) ) {
 				$emoji_data[] = array(
 					'url'     => $tag['icon']['url'],
 					'name'    => $tag['name'],
