@@ -154,7 +154,7 @@ class Actor {
 	}
 
 	/**
-	 * Detect sticky posts update.
+	 * Send a profile update when a post's sticky status changes.
 	 *
 	 * @param int $post_id The post ID.
 	 */
