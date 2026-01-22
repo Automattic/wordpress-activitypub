@@ -1,6 +1,6 @@
 ---
 name: summary
-description: Summarize the current session at its end. Use when the user asks for a session summary or says goodbye.
+description: PROACTIVELY summarize when user says goodbye, ends session, thanks for help, says "done", "that's all", or asks for summary. Auto-trigger on farewell messages.
 tools: Bash, Read, Glob, Grep, Write
 model: haiku
 ---
