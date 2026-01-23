@@ -26,11 +26,11 @@ function is_post_disabled( $post ) {
 		return true;
 	}
 
-	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$visibility          = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$is_local_or_private = in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true );
 
 	if (
-		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ||
-		ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ||
+		$is_local_or_private ||
 		! \post_type_supports( $post->post_type, 'activitypub' ) ||
 		'private' === $post->post_status ||
 		! empty( $post->post_password )
@@ -43,7 +43,7 @@ function is_post_disabled( $post ) {
 
 	if (
 		ACTIVITYPUB_OBJECT_STATE_DELETED === $object_state ||
-		( in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true ) && ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_state )
+		( $is_local_or_private && ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_state )
 	) {
 		$disabled = false;
 	}

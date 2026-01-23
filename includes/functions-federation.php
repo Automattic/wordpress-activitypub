@@ -23,18 +23,19 @@ use Activitypub\Transformer\Factory as Transformer_Factory;
  * @param string               $state     The state of the object.
  */
 function set_wp_object_state( $wp_object, $state ) {
-	$meta_key = 'activitypub_status';
+	$meta_key   = 'activitypub_status';
+	$is_deleted = ACTIVITYPUB_OBJECT_STATE_DELETED === $state;
 
 	if ( $wp_object instanceof \WP_Post ) {
 		\update_post_meta( $wp_object->ID, $meta_key, $state );
-		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $state ) {
+		if ( $is_deleted ) {
 			\update_post_meta( $wp_object->ID, 'activitypub_deleted_at', \time() );
 		} else {
 			\delete_post_meta( $wp_object->ID, 'activitypub_deleted_at' );
 		}
 	} elseif ( $wp_object instanceof \WP_Comment ) {
 		\update_comment_meta( $wp_object->comment_ID, $meta_key, $state );
-		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $state ) {
+		if ( $is_deleted ) {
 			\update_comment_meta( $wp_object->comment_ID, 'activitypub_deleted_at', \time() );
 		} else {
 			\delete_comment_meta( $wp_object->comment_ID, 'activitypub_deleted_at' );
