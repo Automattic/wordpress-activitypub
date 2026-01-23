@@ -175,7 +175,6 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 	$state_map = array(
 		'Create' => 'federated',
 		'Update' => 'federated',
-		'Delete' => 'deleted',
 	);
 
 	if ( isset( $state_map[ $activity_type ] ) ) {
