@@ -292,7 +292,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test that changing visibility to local creates a Delete activity for federated posts.
 	 *
-	 * @covers ::handle_visibility_change
+	 * @covers ::triage
 	 */
 	public function test_visibility_change_to_local_creates_delete_activity() {
 		// Create a post (will be federated).
@@ -307,8 +307,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Simulate the post being marked as federated (normally done by dispatcher).
 		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
 
-		// Change visibility to local (do not federate).
+		// Change visibility to local and trigger triage via post update.
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		\wp_update_post( array( 'ID' => $post_id ) );
 
 		// Query for the Delete activity.
 		$outbox_items = \get_posts(
@@ -334,7 +335,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test that changing visibility to private creates a Delete activity for federated posts.
 	 *
-	 * @covers ::handle_visibility_change
+	 * @covers ::triage
 	 */
 	public function test_visibility_change_to_private_creates_delete_activity() {
 		// Create a post (will be federated).
@@ -344,8 +345,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Simulate the post being marked as federated.
 		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
 
-		// Change visibility to private.
+		// Change visibility to private and trigger triage via post update.
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+		\wp_update_post( array( 'ID' => $post_id ) );
 
 		// Query for the Delete activity.
 		$outbox_items = \get_posts(
@@ -371,7 +373,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test that changing visibility does not create Delete activity for unfederated posts.
 	 *
-	 * @covers ::handle_visibility_change
+	 * @covers ::triage
 	 */
 	public function test_visibility_change_no_delete_for_unfederated_post() {
 		// Create a post without federating it.
@@ -383,8 +385,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Ensure the post has no federated status.
 		\delete_post_meta( $post_id, 'activitypub_status' );
 
-		// Change visibility to local.
+		// Change visibility to local and trigger triage via post update.
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		\wp_update_post( array( 'ID' => $post_id ) );
 
 		// Query for any Delete activity.
 		$outbox_items = \get_posts(
