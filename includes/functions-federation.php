@@ -56,12 +56,12 @@ function set_wp_object_state( $wp_object, $state ) {
  * @return string|false The state of the object or false if not found.
  */
 function get_wp_object_state( $wp_object ) {
-	$meta_key = 'activitypub_status';
-
 	if ( $wp_object instanceof \WP_Post ) {
-		return \get_post_meta( $wp_object->ID, $meta_key, true );
+		$meta_type = 'post';
+		$object_id = $wp_object->ID;
 	} elseif ( $wp_object instanceof \WP_Comment ) {
-		return \get_comment_meta( $wp_object->comment_ID, $meta_key, true );
+		$meta_type = 'comment';
+		$object_id = $wp_object->comment_ID;
 	} else {
 		/**
 		 * Allow plugins to get the federation state of a WordPress object.
@@ -71,6 +71,8 @@ function get_wp_object_state( $wp_object ) {
 		 */
 		return \apply_filters( 'activitypub_get_wp_object_state', false, $wp_object );
 	}
+
+	return \get_metadata( $meta_type, $object_id, 'activitypub_status', true );
 }
 
 /**
