@@ -288,4 +288,159 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertEquals( $activitypub_id, $activity['object'] );
 		$this->assertEquals( $actor->get_featured(), $activity['target'] );
 	}
+
+	/**
+	 * Test that changing visibility to local creates a Delete activity for federated posts.
+	 *
+	 * @covers ::handle_visibility_change
+	 */
+	public function test_visibility_change_to_local_creates_delete_activity() {
+		// Create a post (will be federated).
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		// Verify the post was federated (Create activity exists).
+		$create_item = $this->get_latest_outbox_item( $activitypub_id );
+		$this->assertNotNull( $create_item );
+		$this->assertSame( 'Create', \get_post_meta( $create_item->ID, '_activitypub_activity_type', true ) );
+
+		// Simulate the post being marked as federated (normally done by dispatcher).
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Change visibility to local (do not federate).
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		// Query for the Delete activity.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox_items, 'Should create a Delete activity when visibility changes to local' );
+	}
+
+	/**
+	 * Test that changing visibility to private creates a Delete activity for federated posts.
+	 *
+	 * @covers ::handle_visibility_change
+	 */
+	public function test_visibility_change_to_private_creates_delete_activity() {
+		// Create a post (will be federated).
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		// Simulate the post being marked as federated.
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Change visibility to private.
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+
+		// Query for the Delete activity.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox_items, 'Should create a Delete activity when visibility changes to private' );
+	}
+
+	/**
+	 * Test that changing visibility does not create Delete activity for unfederated posts.
+	 *
+	 * @covers ::handle_visibility_change
+	 */
+	public function test_visibility_change_no_delete_for_unfederated_post() {
+		// Create a post without federating it.
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+
+		// Ensure the post has no federated status.
+		\delete_post_meta( $post_id, 'activitypub_status' );
+
+		// Change visibility to local.
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		// Query for any Delete activity.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertEmpty( $outbox_items, 'Should not create a Delete activity for unfederated posts' );
+	}
+
+	/**
+	 * Test that changing visibility to public does not create Delete activity.
+	 *
+	 * @covers ::handle_visibility_change
+	 */
+	public function test_visibility_change_to_public_no_delete_activity() {
+		// Create a post (will be federated).
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		// Simulate the post being marked as federated.
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Change visibility to public (empty string).
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		// Query for any Delete activity.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertEmpty( $outbox_items, 'Should not create a Delete activity when visibility changes to public' );
+	}
 }

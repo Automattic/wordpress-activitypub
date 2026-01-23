@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\get_content_visibility;
 use function Activitypub\get_post_id;
 use function Activitypub\get_wp_object_state;
 use function Activitypub\is_post_disabled;
@@ -87,7 +88,7 @@ class Post {
 				break;
 
 			case 'trash':
-				$type = 'federated' === get_wp_object_state( $post ) ? 'Delete' : false;
+				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === get_wp_object_state( $post ) ? 'Delete' : false;
 				break;
 
 			default:
@@ -99,9 +100,16 @@ class Post {
 			return;
 		}
 
+		$object_status = get_wp_object_state( $post );
+
 		// If the post was not federated before but is an Update activity, it should be a Create activity.
-		if ( get_wp_object_state( $post ) !== 'federated' && 'Update' === $type ) {
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED !== $object_status && 'Update' === $type ) {
 			$type = 'Create';
+		}
+
+		// If the post was federated before but is now local or private, it should be a Delete activity.
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && in_array( get_content_visibility( $post ), array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true ) ) {
+			$type = 'Delete';
 		}
 
 		// Schedule async add to outbox to avoid blocking post save.

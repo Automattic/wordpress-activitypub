@@ -38,6 +38,14 @@ function is_post_disabled( $post ) {
 		$disabled = true;
 	}
 
+	// Check for deleted posts or posts that were local before.
+	if (
+		ACTIVITYPUB_OBJECT_STATE_DELETED === get_wp_object_state( $post ) ||
+		( in_array( get_content_visibility( $post ), array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true ) && ACTIVITYPUB_OBJECT_STATE_FEDERATED === get_wp_object_state( $post ) )
+	) {
+		$disabled = false;
+	}
+
 	/**
 	 * Allow plugins to disable posts for ActivityPub.
 	 *

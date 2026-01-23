@@ -27,8 +27,18 @@ function set_wp_object_state( $wp_object, $state ) {
 
 	if ( $wp_object instanceof \WP_Post ) {
 		\update_post_meta( $wp_object->ID, $meta_key, $state );
+		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $state ) {
+			\update_post_meta( $wp_object->ID, 'activitypub_deleted_at', \time() );
+		} else {
+			\delete_post_meta( $wp_object->ID, 'activitypub_deleted_at' );
+		}
 	} elseif ( $wp_object instanceof \WP_Comment ) {
 		\update_comment_meta( $wp_object->comment_ID, $meta_key, $state );
+		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $state ) {
+			\update_comment_meta( $wp_object->comment_ID, 'activitypub_deleted_at', \time() );
+		} else {
+			\delete_comment_meta( $wp_object->comment_ID, 'activitypub_deleted_at' );
+		}
 	} else {
 		/**
 		 * Allow plugins to mark WordPress objects as federated.
@@ -173,13 +183,14 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity, $user_id, $content_visibility );
 
 	// Update state based on activity.
-	$state_map = array(
-		'Create' => 'federated',
-		'Update' => 'federated',
-	);
+	$object_state = match ( $activity_type ) {
+		'Create', 'Update' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
+		'Delete'           => ACTIVITYPUB_OBJECT_STATE_DELETED,
+		default            => null,
+	};
 
-	if ( isset( $state_map[ $activity_type ] ) ) {
-		set_wp_object_state( $data, $state_map[ $activity_type ] );
+	if ( $object_state ) {
+		set_wp_object_state( $data, $object_state );
 	}
 
 	return $outbox_activity_id;
