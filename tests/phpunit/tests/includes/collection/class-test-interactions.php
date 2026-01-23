@@ -8,6 +8,9 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Interactions;
+use Activitypub\Collection\Remote_Actors;
+
+use function Activitypub\object_id_to_comment;
 
 /**
  * Test class for Activitypub Interactions.
@@ -98,6 +101,34 @@ class Test_Interactions extends \WP_UnitTestCase {
 		parent::set_up();
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( __CLASS__, 'get_remote_metadata_by_actor' ), 0, 2 );
+		\add_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ), 10, 2 );
+	}
+
+	/**
+	 * Tear down each test.
+	 */
+	public function tear_down() {
+		\remove_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ) );
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Mock emoji import to return a local URL.
+	 *
+	 * @param string|false|null $result    The import result.
+	 * @param string            $emoji_url The remote emoji URL.
+	 *
+	 * @return string|false|null Mocked local URL or original result.
+	 */
+	public function mock_emoji_import( $result, $emoji_url ) {
+		if ( false === \strpos( $emoji_url, 'example.com/' ) ) {
+			return $result;
+		}
+
+		$upload_dir = \wp_upload_dir();
+
+		return $upload_dir['baseurl'] . '/activitypub/emoji/example.com/' . \basename( $emoji_url );
 	}
 
 	/**
@@ -155,7 +186,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 				'id'        => $id,
 				'url'       => 'https://example.com/example',
 				'inReplyTo' => self::$post_permalink,
-				'content'   => 'Hello<br />example<p>example</p><img src="https://example.com/image.jpg" />',
+				'content'   => 'Hello<br />example<p>example</p><img src="https://example.com/image.jpg" alt="" />',
 			),
 		);
 	}
@@ -233,6 +264,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$rich_comment_id = Interactions::add_comment( $this->create_test_rich_object() );
 		$rich_comment    = get_comment( $rich_comment_id, ARRAY_A );
 
+		// Non-emoji img tags are stripped. Only local emoji images with class="emoji" are allowed.
 		$this->assertEquals( 'Hello<br />example<p>example</p>', $rich_comment['comment_content'] );
 
 		$rich_comment_array = array(
@@ -270,7 +302,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$object = $this->create_test_object( 'https://example.com/test_convert_object_to_comment_already_exists_rejected' );
 		Interactions::add_comment( $object );
 		$converted = Interactions::add_comment( $object );
-		$this->assertEquals( $converted->get_error_code(), 'comment_duplicate' );
+		$this->assertEquals( 'comment_duplicate', $converted->get_error_code() );
 	}
 
 	/**
@@ -282,7 +314,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$id     = 'https://example.com/test_convert_object_to_comment_reply_to_comment';
 		$object = $this->create_test_object( $id );
 		Interactions::add_comment( $object );
-		$comment = \Activitypub\object_id_to_comment( $id );
+		$comment = object_id_to_comment( $id );
 
 		$object['object']['inReplyTo'] = $id;
 		$object['object']['id']        = 'https://example.com/234';
@@ -315,7 +347,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$id     = 'https://example.com/test_handle_create_basic';
 		$object = $this->create_test_object( $id );
 		Interactions::add_comment( $object );
-		$comment = \Activitypub\object_id_to_comment( $id );
+		$comment = object_id_to_comment( $id );
 		$this->assertInstanceOf( \WP_Comment::class, $comment );
 	}
 
@@ -331,12 +363,12 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$object['object']['url'] = $url;
 
 		Interactions::add_comment( $object );
-		$comment      = \Activitypub\object_id_to_comment( $id );
+		$comment      = object_id_to_comment( $id );
 		$interactions = Interactions::get_by_id( $id );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
 
-		$comment      = \Activitypub\object_id_to_comment( $id );
+		$comment      = object_id_to_comment( $id );
 		$interactions = Interactions::get_by_id( $url );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
@@ -700,6 +732,117 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertFalse( $result, 'Reaction should not be added to disabled post' );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+	}
+
+	/**
+	 * Test emoji replacement in activity_to_comment.
+	 *
+	 * @covers ::activity_to_comment
+	 * @covers \Activitypub\Emoji::replace_custom_emoji
+	 */
+	public function test_activity_to_comment_with_emoji() {
+		$actor_uri = 'http://example.org/users/emoji-user';
+
+		// Create remote actor with emoji data.
+		$actor_data    = array(
+			'id'                => $actor_uri,
+			'type'              => 'Person',
+			'preferredUsername' => 'emoji-user',
+			'name'              => 'Test User :kappa:',
+			'inbox'             => 'http://example.org/users/emoji-user/inbox',
+			'publicKey'         => array(
+				'id'           => $actor_uri . '#main-key',
+				'owner'        => $actor_uri,
+				'publicKeyPem' => "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0\n-----END PUBLIC KEY-----",
+			),
+			'tag'               => array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':kappa:',
+					'icon' => array(
+						'type'      => 'Image',
+						'mediaType' => 'image/png',
+						'url'       => 'https://example.com/files/kappa.png',
+					),
+				),
+			),
+		);
+		$actor_post_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $actor_post_id );
+
+		// Mock actor metadata lookup.
+		$filter = function ( $value, $actor ) use ( $actor_uri, $actor_data ) {
+			if ( $actor === $actor_uri ) {
+				return array_merge( $actor_data, array( 'url' => $actor_uri ) );
+			}
+			return $value;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $filter, 10, 2 );
+
+		$activity = array(
+			'@context' => array(
+				'https://www.w3.org/ns/activitystreams',
+				array(
+					'Emoji' => 'http://joinmastodon.org/ns#Emoji',
+				),
+			),
+			'id'       => 'https://example.com/activities/1',
+			'type'     => 'Note',
+			'content'  => 'Hello world :kappa: and :smile:',
+			'actor'    => $actor_uri,
+			'object'   => array(
+				'id'        => 'https://example.com/objects/1',
+				'content'   => 'Hello world :kappa: and :smile:',
+				'inReplyTo' => self::$post_permalink,
+				'tag'       => array(
+					array(
+						'type' => 'Emoji',
+						'name' => ':kappa:',
+						'icon' => array(
+							'type'      => 'Image',
+							'mediaType' => 'image/png',
+							'url'       => 'https://example.com/files/kappa.png',
+						),
+					),
+					array(
+						'type' => 'Emoji',
+						'name' => ':smile:',
+						'icon' => array(
+							'type'      => 'Image',
+							'mediaType' => 'image/png',
+							'url'       => 'https://example.com/files/smile.png',
+						),
+					),
+				),
+			),
+		);
+
+		$comment_id = Interactions::add_comment( $activity );
+		$comment    = get_comment( $comment_id );
+
+		// Test emoji replacement in comment content (emoji is cached locally).
+		$this->assertStringContainsString( 'kappa.png" alt="kappa" title="kappa" class="emoji"', $comment->comment_content );
+		$this->assertStringContainsString( 'smile.png" alt="smile" title="smile" class="emoji"', $comment->comment_content );
+		$this->assertStringNotContainsString( ':kappa:', $comment->comment_content );
+		$this->assertStringNotContainsString( ':smile:', $comment->comment_content );
+
+		// Test that shortcode is stored in database, not HTML.
+		$this->assertSame( 'Test User :kappa:', $comment->comment_author );
+
+		// Test that comment is linked to remote actor.
+		$remote_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+		$this->assertEquals( $actor_post_id, $remote_actor_id );
+
+		// Test that emoji data is stored on remote actor.
+		$emoji_data = get_post_meta( $actor_post_id, '_activitypub_emoji', true );
+		$this->assertNotEmpty( $emoji_data );
+
+		// Test emoji replacement on display via comment_author filter.
+		$author_with_emoji = get_comment_author( $comment_id );
+		$this->assertStringContainsString( 'kappa.png" alt="kappa" title="kappa" class="emoji"', $author_with_emoji );
+		$this->assertStringNotContainsString( ':kappa:', $author_with_emoji );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $filter, 10 );
 	}
 
 	/**

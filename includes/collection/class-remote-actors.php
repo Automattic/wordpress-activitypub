@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Attachments;
+use Activitypub\Emoji;
 use Activitypub\Http;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -576,7 +577,8 @@ class Remote_Actors {
 		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
 		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
 
-		$actor_json = $actor->to_json();
+		$actor_json  = $actor->to_json();
+		$actor_array = $actor->to_array();
 
 		// Re-add the filters.
 		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
@@ -587,6 +589,10 @@ class Remote_Actors {
 			'_activitypub_inbox' => $inbox,
 			'_activitypub_acct'  => $webfinger,
 		);
+
+		// Add emoji meta if actor has emoji in tags.
+		$emoji_meta = Emoji::prepare_actor_meta( $actor_array );
+		$meta_input = array_merge( $meta_input, $emoji_meta );
 
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),

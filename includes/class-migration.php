@@ -32,6 +32,7 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_create_post_outbox_items', array( self::class, 'create_post_outbox_items' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_create_comment_outbox_items', array( self::class, 'create_comment_outbox_items' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_avatar_to_remote_actors', array( self::class, 'migrate_avatar_to_remote_actors' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_migrate_actor_emoji', array( self::class, 'migrate_actor_emoji' ) );
 	}
 
 	/**
@@ -213,6 +214,10 @@ class Migration {
 		if ( \version_compare( $version_from_db, '7.6.0', '<' ) ) {
 			self::clean_up_inbox();
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
+		}
+
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_emoji' );
 		}
 
 		// Ensure all required cron schedules are registered.
@@ -1151,6 +1156,57 @@ class Migration {
 		if ( count( $comments ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Migrate emoji data from stored actor JSON to post meta.
+	 *
+	 * This migration:
+	 * 1. Finds all remote actor posts without _activitypub_emoji meta
+	 * 2. Extracts emoji from stored JSON in post_content
+	 * 3. Stores as _activitypub_emoji post meta
+	 *
+	 * @param int $batch_size Optional. Number of actors to process per batch. Default 50.
+	 * @param int $offset     Optional. Offset for pagination. Default 0.
+	 * @return array|null Array with batch size if there are more actors to process, null otherwise.
+	 */
+	public static function migrate_actor_emoji( $batch_size = 50, $offset = 0 ) {
+		$actors = \get_posts(
+			array(
+				'post_type'      => Remote_Actors::POST_TYPE,
+				'posts_per_page' => $batch_size,
+				'offset'         => $offset,
+				'post_status'    => 'any',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+			)
+		);
+
+		foreach ( $actors as $actor_post ) {
+			if ( empty( $actor_post->post_content ) ) {
+				continue;
+			}
+
+			$actor_data = \json_decode( $actor_post->post_content, true );
+			if ( ! $actor_data ) {
+				continue;
+			}
+
+			$emoji_meta = Emoji::prepare_actor_meta( $actor_data );
+			if ( ! empty( $emoji_meta['_activitypub_emoji'] ) ) {
+				\update_post_meta( $actor_post->ID, '_activitypub_emoji', $emoji_meta['_activitypub_emoji'] );
+			}
+		}
+
+		// Return batch info if there are more actors to process.
+		if ( count( $actors ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
 			);
 		}
 

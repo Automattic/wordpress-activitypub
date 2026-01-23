@@ -335,6 +335,13 @@ class Admin {
 				ACTIVITYPUB_PLUGIN_VERSION
 			);
 		}
+
+		if ( 'edit-comments.php' === $hook_suffix ) {
+			\wp_add_inline_style(
+				'wp-emoji-styles',
+				'.column-author img.emoji { float: none; }'
+			);
+		}
 	}
 
 	/**
