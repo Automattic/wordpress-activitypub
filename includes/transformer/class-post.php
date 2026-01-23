@@ -7,6 +7,7 @@
 
 namespace Activitypub\Transformer;
 
+use Activitypub\Activity\Base_Object;
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
@@ -20,6 +21,7 @@ use function Activitypub\get_content_visibility;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_enclosures;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_wp_object_state;
 use function Activitypub\is_single_user;
 use function Activitypub\site_supports_blocks;
 
@@ -89,7 +91,13 @@ class Post extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$post   = $this->item;
+		$post = $this->item;
+
+		// Return a Tombstone if the post was soft deleted.
+		if ( 'deleted' === get_wp_object_state( $post ) ) {
+			return $this->to_tombstone();
+		}
+
 		$object = parent::to_object();
 
 		$content_warning = get_content_warning( $post );
@@ -98,6 +106,27 @@ class Post extends Base {
 			$object->set_summary( $content_warning );
 			$object->set_summary_map( null );
 			$object->set_dcterms( array( 'subject' => $content_warning ) );
+		}
+
+		return $object;
+	}
+
+	/**
+	 * Returns a Tombstone object for the post.
+	 *
+	 * @return Base_Object The Tombstone object.
+	 */
+	protected function to_tombstone() {
+		$object = new Base_Object();
+		$object->set_type( 'Tombstone' );
+		$object->set_id( $this->get_id() );
+		$object->set_former_type( $this->get_type() );
+		$object->set_published( $this->get_published() );
+		$object->set_updated( $this->get_updated() );
+
+		$deleted_at = \get_post_meta( $this->item->ID, 'activitypub_deleted_at', true );
+		if ( $deleted_at ) {
+			$object->set_deleted( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $deleted_at ) );
 		}
 
 		return $object;

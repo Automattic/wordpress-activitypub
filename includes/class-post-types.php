@@ -541,7 +541,7 @@ class Post_Types {
 					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',
-							'enum'    => array( 'pending', 'federated', 'failed' ),
+							'enum'    => array( 'pending', 'federated', 'failed', 'deleted' ),
 							'default' => 'pending',
 						);
 
