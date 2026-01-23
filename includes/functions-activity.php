@@ -81,7 +81,9 @@ function extract_recipients_from_activity_property( $property, $data ) {
  *
  * @param array $activity The activity data.
  *
- * @return string The visibility level: 'public', 'private', or 'direct'.
+ * @return string One of ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+ *                ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, or
+ *                ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE.
  */
 function get_activity_visibility( $activity ) {
 	// Set default visibility for specific activity types.
