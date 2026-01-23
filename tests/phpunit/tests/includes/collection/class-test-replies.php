@@ -94,7 +94,7 @@ class Test_Replies extends \WP_UnitTestCase {
 				'comment_content'  => 'Local comment',
 				'comment_approved' => '1',
 				'comment_meta'     => array(
-					'activitypub_status' => 'federated',
+					'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 				),
 			)
 		);

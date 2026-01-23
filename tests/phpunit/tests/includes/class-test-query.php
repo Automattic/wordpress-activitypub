@@ -285,7 +285,7 @@ class Test_Query extends \WP_UnitTestCase {
 				'comment_approved' => 1,
 				'comment_type'     => 'comment',
 				'comment_meta'     => array(
-					'activitypub_status' => 'federated',
+					'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 				),
 			)
 		);
