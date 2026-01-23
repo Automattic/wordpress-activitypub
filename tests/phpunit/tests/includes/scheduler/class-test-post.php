@@ -413,7 +413,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test that changing visibility to public does not create Delete activity.
 	 *
-	 * @covers ::handle_visibility_change
+	 * @covers ::triage
 	 */
 	public function test_visibility_change_to_public_no_delete_activity() {
 		// Create a post (will be federated).
