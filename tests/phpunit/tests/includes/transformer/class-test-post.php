@@ -1531,4 +1531,262 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertCount( 1, $attachments, 'Duplicate attachments should be filtered out' );
 		$this->assertSame( $attachment_url, $attachments[0]['url'] );
 	}
+
+	/**
+	 * Test to_tombstone returns a Tombstone object with correct type.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_returns_tombstone_type() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone',
+				'post_content' => 'Content for tombstone test',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		$this->assertInstanceOf( Base_Object::class, $tombstone );
+		$this->assertSame( 'Tombstone', $tombstone->get_type() );
+	}
+
+	/**
+	 * Test to_tombstone includes the original post ID.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_includes_id() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone ID',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$permalink   = \get_permalink( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		$this->assertSame( $permalink, $tombstone->get_id() );
+	}
+
+	/**
+	 * Test to_tombstone includes formerType from original post.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_includes_former_type() {
+		// Create an Article type post (long content with title).
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Article for Tombstone',
+				'post_content' => str_repeat( 'Long content. ', 100 ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		$this->assertSame( 'Article', $tombstone->get_former_type() );
+	}
+
+	/**
+	 * Test to_tombstone includes formerType for Note.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_includes_former_type_note() {
+		// Create a Note type post (no title).
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => '',
+				'post_content' => 'Short note content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		$this->assertSame( 'Note', $tombstone->get_former_type() );
+	}
+
+	/**
+	 * Test to_tombstone includes deleted timestamp when meta is set.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_includes_deleted_timestamp_when_meta_set() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone Timestamp',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set the deleted timestamp meta.
+		$deleted_time = time();
+		\update_post_meta( $post_id, 'activitypub_deleted_at', $deleted_time );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		$deleted = $tombstone->get_deleted();
+		$this->assertNotNull( $deleted );
+		// Check it's a valid timestamp format.
+		$this->assertMatchesRegularExpression( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $deleted );
+	}
+
+	/**
+	 * Test to_tombstone does not include deleted timestamp without meta.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_no_deleted_timestamp_without_meta() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone No Timestamp',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		// Without the meta, deleted should be null.
+		$this->assertNull( $tombstone->get_deleted() );
+	}
+
+	/**
+	 * Test to_tombstone includes published timestamp in array output.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_includes_published() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone Timestamps',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+		$array       = $tombstone->to_array();
+
+		// Published should be in the array output.
+		$this->assertArrayHasKey( 'published', $array );
+		// Check it's a valid timestamp format.
+		$this->assertMatchesRegularExpression( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $array['published'] );
+	}
+
+	/**
+	 * Test to_tombstone for trashed post preserves cached canonical URL.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_trashed_post_uses_cached_url() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Trash',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post      = get_post( $post_id );
+		$permalink = \get_permalink( $post_id );
+
+		// First transform to cache the URL.
+		$transformer = new Post( $post );
+		$transformer->to_object();
+
+		// Now trash the post.
+		\wp_trash_post( $post_id );
+
+		// Get the trashed post.
+		$trashed_post = get_post( $post_id );
+		$transformer  = new Post( $trashed_post );
+		$tombstone    = $transformer->to_tombstone();
+
+		// The cached URL should be used, not the trashed permalink.
+		$this->assertSame( $permalink, $tombstone->get_id() );
+	}
+
+	/**
+	 * Test to_tombstone to_array output has correct structure.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_to_array_structure() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone Array',
+				'post_content' => str_repeat( 'Long content. ', 100 ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set the deleted timestamp meta to include deleted in output.
+		\update_post_meta( $post_id, 'activitypub_deleted_at', time() );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+		$array       = $tombstone->to_array();
+
+		$this->assertArrayHasKey( '@context', $array );
+		$this->assertArrayHasKey( 'type', $array );
+		$this->assertArrayHasKey( 'id', $array );
+		$this->assertArrayHasKey( 'formerType', $array );
+		$this->assertArrayHasKey( 'deleted', $array );
+
+		$this->assertSame( 'Tombstone', $array['type'] );
+		$this->assertSame( 'Article', $array['formerType'] );
+	}
+
+	/**
+	 * Test to_tombstone to_array without deleted meta.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_to_array_without_deleted() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone Array No Deleted',
+				'post_content' => str_repeat( 'Long content. ', 100 ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+		$array       = $tombstone->to_array();
+
+		$this->assertArrayHasKey( '@context', $array );
+		$this->assertArrayHasKey( 'type', $array );
+		$this->assertArrayHasKey( 'id', $array );
+		$this->assertArrayHasKey( 'formerType', $array );
+		// Without meta, deleted should not be in array.
+		$this->assertArrayNotHasKey( 'deleted', $array );
+
+		$this->assertSame( 'Tombstone', $array['type'] );
+		$this->assertSame( 'Article', $array['formerType'] );
+	}
 }
