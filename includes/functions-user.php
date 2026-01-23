@@ -251,7 +251,7 @@ function get_active_users( $duration = 1 ) {
 		set_transient( $transient_key, $count, DAY_IN_SECONDS );
 	}
 
-	// If 0 authors where active.
+	// If 0 authors were active.
 	if ( 0 === $count ) {
 		return 0;
 	}
