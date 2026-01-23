@@ -38,4 +38,56 @@ class Test_Functions_User extends \WP_UnitTestCase {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		$this->assertFalse( \Activitypub\get_user_id( $user->ID ) );
 	}
+
+	/**
+	 * Test get_total_users function.
+	 *
+	 * @covers \Activitypub\get_total_users
+	 */
+	public function test_get_total_users() {
+		// Create users with activitypub capability.
+		$user1 = self::factory()->user->create_and_get();
+		$user1->add_cap( 'activitypub' );
+
+		$user2 = self::factory()->user->create_and_get();
+		$user2->add_cap( 'activitypub' );
+
+		// Ensure we're not in single user mode.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$total = \Activitypub\get_total_users();
+		$this->assertGreaterThanOrEqual( 2, $total );
+
+		// Test single user mode returns 1.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		$this->assertEquals( 1, \Activitypub\get_total_users() );
+	}
+
+	/**
+	 * Test get_active_users function.
+	 *
+	 * @covers \Activitypub\get_active_users
+	 */
+	public function test_get_active_users() {
+		// Delete transient to ensure fresh count.
+		delete_transient( 'monthly_active_users_1' );
+
+		// Create a user and a recent post.
+		$user_id = self::factory()->user->create();
+		self::factory()->post->create(
+			array(
+				'post_author' => $user_id,
+				'post_status' => 'publish',
+				'post_type'   => 'post',
+			)
+		);
+
+		$active_users = \Activitypub\get_active_users( 1 );
+		$this->assertGreaterThanOrEqual( 1, $active_users );
+
+		// Test with different duration.
+		delete_transient( 'monthly_active_users_6' );
+		$active_users_6_months = \Activitypub\get_active_users( 6 );
+		$this->assertGreaterThanOrEqual( 1, $active_users_6_months );
+	}
 }

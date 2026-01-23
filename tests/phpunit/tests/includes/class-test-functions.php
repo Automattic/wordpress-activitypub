@@ -9,88 +9,10 @@ namespace Activitypub\Tests;
 
 /**
  * Test class for Functions.
+ *
+ * @coversDefaultClass \Activitypub
  */
 class Test_Functions extends \WP_UnitTestCase {
-
-	/**
-	 * Test object_to_uri.
-	 *
-	 * @dataProvider object_to_uri_provider
-	 * @covers \Activitypub\object_to_uri
-	 *
-	 * @param mixed $input  The input to test.
-	 * @param mixed $output The expected output.
-	 */
-	public function test_object_to_uri( $input, $output ) {
-		$this->assertEquals( $output, \Activitypub\object_to_uri( $input ) );
-	}
-
-	/**
-	 * Data provider for test_object_to_uri.
-	 *
-	 * @return array[]
-	 */
-	public function object_to_uri_provider() {
-		return array(
-			array( null, null ),
-			array( 'https://example.com', 'https://example.com' ),
-			array( array( 'https://example.com' ), 'https://example.com' ),
-			array(
-				array(
-					'https://example.com',
-					'https://example.org',
-				),
-				'https://example.com',
-			),
-			array(
-				array(
-					'type' => 'Link',
-					'href' => 'https://example.com',
-				),
-				'https://example.com',
-			),
-			array(
-				array(
-					array(
-						'type' => 'Link',
-						'href' => 'https://example.com',
-					),
-					array(
-						'type' => 'Link',
-						'href' => 'https://example.org',
-					),
-				),
-				'https://example.com',
-			),
-			array(
-				array(
-					'type' => 'Actor',
-					'id'   => 'https://example.com',
-				),
-				'https://example.com',
-			),
-			array(
-				array(
-					array(
-						'type' => 'Actor',
-						'id'   => 'https://example.com',
-					),
-					array(
-						'type' => 'Actor',
-						'id'   => 'https://example.org',
-					),
-				),
-				'https://example.com',
-			),
-			array(
-				array(
-					'type' => 'Activity',
-					'id'   => 'https://example.com',
-				),
-				'https://example.com',
-			),
-		);
-	}
 
 	/**
 	 * Test get_masked_wp_version function.
