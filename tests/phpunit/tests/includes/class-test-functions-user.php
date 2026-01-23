@@ -9,8 +9,6 @@ namespace Activitypub\Tests;
 
 /**
  * Test class for User Functions.
- *
- * @coversDefaultClass \Activitypub
  */
 class Test_Functions_User extends \WP_UnitTestCase {
 

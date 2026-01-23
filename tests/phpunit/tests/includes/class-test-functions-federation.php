@@ -14,8 +14,6 @@ use function Activitypub\add_to_outbox;
 
 /**
  * Test class for Federation Functions.
- *
- * @coversDefaultClass \Activitypub
  */
 class Test_Functions_Federation extends ActivityPub_TestCase_Cache_HTTP {
 

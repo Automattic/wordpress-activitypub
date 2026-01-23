@@ -9,8 +9,6 @@ namespace Activitypub\Tests;
 
 /**
  * Test class for URL Functions.
- *
- * @coversDefaultClass \Activitypub
  */
 class Test_Functions_Url extends \WP_UnitTestCase {
 

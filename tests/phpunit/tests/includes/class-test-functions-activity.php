@@ -13,8 +13,6 @@ use function Activitypub\get_activity_visibility;
 
 /**
  * Test class for Activity Functions.
- *
- * @coversDefaultClass \Activitypub
  */
 class Test_Functions_Activity extends \WP_UnitTestCase {
 

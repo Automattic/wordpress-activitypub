@@ -9,8 +9,6 @@ namespace Activitypub\Tests;
 
 /**
  * Test class for Comment Functions.
- *
- * @coversDefaultClass \Activitypub
  */
 class Test_Functions_Comment extends \WP_UnitTestCase {
 

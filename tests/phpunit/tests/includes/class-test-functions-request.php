@@ -9,8 +9,6 @@ namespace Activitypub\Tests;
 
 /**
  * Test class for Request Functions.
- *
- * @coversDefaultClass \Activitypub
  */
 class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 
