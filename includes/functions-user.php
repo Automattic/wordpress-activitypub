@@ -244,7 +244,7 @@ function get_active_users( $duration = 1 ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$count = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT( DISTINCT post_author ) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date <= DATE_SUB( NOW(), INTERVAL %d MONTH )",
+				"SELECT COUNT( DISTINCT post_author ) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date >= DATE_SUB( NOW(), INTERVAL %d MONTH )",
 				$duration
 			)
 		);
