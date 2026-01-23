@@ -541,8 +541,13 @@ class Post_Types {
 					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',
-							'enum'    => array( 'pending', 'federated', 'failed', 'deleted' ),
-							'default' => 'pending',
+							'enum'    => array(
+								ACTIVITYPUB_OBJECT_STATE_PENDING,
+								ACTIVITYPUB_OBJECT_STATE_FEDERATED,
+								ACTIVITYPUB_OBJECT_STATE_FAILED,
+								ACTIVITYPUB_OBJECT_STATE_DELETED,
+							),
+							'default' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 						);
 
 						if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
