@@ -183,14 +183,14 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity, $user_id, $content_visibility );
 
 	// Update state based on activity.
-	$object_state = match ( $activity_type ) {
-		'Create', 'Update' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
-		'Delete'           => ACTIVITYPUB_OBJECT_STATE_DELETED,
-		default            => null,
-	};
+	$state_map = array(
+		'Create' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
+		'Update' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
+		'Delete' => ACTIVITYPUB_OBJECT_STATE_DELETED,
+	);
 
-	if ( $object_state ) {
-		set_wp_object_state( $data, $object_state );
+	if ( isset( $state_map[ $activity_type ] ) ) {
+		set_wp_object_state( $data, $state_map[ $activity_type ] );
 	}
 
 	return $outbox_activity_id;
