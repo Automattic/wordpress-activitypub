@@ -34,7 +34,7 @@ function set_wp_object_state( $wp_object, $state ) {
 		 *
 		 * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
 		 */
-		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
+		\do_action( 'activitypub_mark_wp_object_as_federated', $wp_object );
 	}
 }
 
