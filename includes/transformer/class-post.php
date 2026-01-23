@@ -94,7 +94,7 @@ class Post extends Base {
 		$post = $this->item;
 
 		// Return a Tombstone if the post was soft deleted.
-		if ( 'deleted' === get_wp_object_state( $post ) ) {
+		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === get_wp_object_state( $post ) ) {
 			return $this->to_tombstone();
 		}
 

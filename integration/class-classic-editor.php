@@ -201,7 +201,7 @@ class Classic_Editor {
 
 		// If post is federated, use public.
 		$status = \get_post_meta( $post->ID, 'activitypub_status', true );
-		if ( 'federated' === $status ) {
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $status ) {
 			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 		}
 
