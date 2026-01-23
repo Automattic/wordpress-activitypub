@@ -67,25 +67,38 @@ class Test_Functions_User extends \WP_UnitTestCase {
 	 * @covers \Activitypub\get_active_users
 	 */
 	public function test_get_active_users() {
-		// Delete transient to ensure fresh count.
-		delete_transient( 'monthly_active_users_1' );
+		// Delete transients to ensure fresh count.
+		\delete_transient( 'monthly_active_users_1' );
+		\delete_transient( 'monthly_active_users_6' );
 
-		// Create a user and a recent post.
-		$user_id = self::factory()->user->create();
+		// Set actor mode to ensure get_total_users() returns correct count.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		// Create a user with activitypub capability and a recent post.
+		$user = self::factory()->user->create_and_get();
+		$user->add_cap( 'activitypub' );
+
 		self::factory()->post->create(
 			array(
-				'post_author' => $user_id,
+				'post_author' => $user->ID,
 				'post_status' => 'publish',
 				'post_type'   => 'post',
 			)
 		);
 
+		// Clear transient again after creating the post.
+		\delete_transient( 'monthly_active_users_1' );
+
 		$active_users = \Activitypub\get_active_users( 1 );
 		$this->assertGreaterThanOrEqual( 1, $active_users );
 
 		// Test with different duration.
-		delete_transient( 'monthly_active_users_6' );
+		\delete_transient( 'monthly_active_users_6' );
 		$active_users_6_months = \Activitypub\get_active_users( 6 );
 		$this->assertGreaterThanOrEqual( 1, $active_users_6_months );
+
+		// Clean up.
+		\delete_transient( 'monthly_active_users_1' );
+		\delete_transient( 'monthly_active_users_6' );
 	}
 }
