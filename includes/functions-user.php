@@ -192,11 +192,8 @@ function is_user_type_disabled( $type ) {
 			$disabled = false;
 			break;
 		default:
-			$disabled = new \WP_Error(
-				'activitypub_wrong_user_type',
-				__( 'Wrong user type', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+			// Treat unknown user types as disabled to ensure a consistent boolean return value.
+			$disabled = true;
 			break;
 	}
 
