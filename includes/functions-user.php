@@ -61,7 +61,7 @@ function count_followers( $user_id ) {
 function url_to_authorid( $url ) {
 	global $wp_rewrite;
 
-	// Check if url hase the same host.
+	// Check if url has the same host.
 	$request_host = \wp_parse_url( $url, \PHP_URL_HOST );
 	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== $request_host && get_option( 'activitypub_old_host' ) !== $request_host ) {
 		return null;
