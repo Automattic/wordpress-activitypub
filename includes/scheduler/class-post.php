@@ -71,8 +71,9 @@ class Post {
 			return;
 		}
 
-		$new_status = get_post_status( $post );
-		$old_status = $post_before ? get_post_status( $post_before ) : null;
+		$new_status    = get_post_status( $post );
+		$old_status    = $post_before ? get_post_status( $post_before ) : null;
+		$object_status = get_wp_object_state( $post );
 
 		switch ( $new_status ) {
 			case 'publish':
@@ -88,7 +89,7 @@ class Post {
 				break;
 
 			case 'trash':
-				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === get_wp_object_state( $post ) ? 'Delete' : false;
+				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status ? 'Delete' : false;
 				break;
 
 			default:
@@ -99,8 +100,6 @@ class Post {
 		if ( empty( $type ) ) {
 			return;
 		}
-
-		$object_status = get_wp_object_state( $post );
 
 		// If the post was not federated before but is an Update activity, it should be a Create activity.
 		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED !== $object_status && 'Update' === $type ) {
