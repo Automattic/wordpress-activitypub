@@ -34,6 +34,8 @@ class Comment {
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
+		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
 	}
 
 	/**
@@ -845,5 +847,54 @@ class Comment {
 		 * @param string[] $post_types Array of post type names to hide comments for.
 		 */
 		return \apply_filters( 'activitypub_hide_comments_for', $post_types );
+	}
+
+	/**
+	 * Render emoji in comment author name.
+	 *
+	 * Replaces emoji shortcodes with img tags on the get_comment_author filter.
+	 * Emoji data is retrieved from the linked remote actor.
+	 *
+	 * @param string $author     The comment author name.
+	 * @param string $comment_id The comment ID as a numeric string.
+	 *
+	 * @return string The comment author name with rendered emoji.
+	 */
+	public static function render_emoji( $author, $comment_id ) {
+		$remote_actor_id = \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+
+		if ( empty( $remote_actor_id ) ) {
+			return $author;
+		}
+
+		$emoji_data = \get_post_meta( $remote_actor_id, '_activitypub_emoji', true );
+
+		if ( empty( $emoji_data ) ) {
+			return $author;
+		}
+
+		return Emoji::replace_from_json( $author, $emoji_data );
+	}
+
+	/**
+	 * Selectively unescape emoji images in comment author.
+	 *
+	 * This runs at priority 20 after WordPress's esc_html() filter on comment_author.
+	 *
+	 * @param string $author The comment author name (already escaped by WordPress).
+	 *
+	 * @return string The comment author name with emoji images unescaped.
+	 */
+	public static function unescape_emoji( $author ) {
+		// Only attempt to unescape if there are emoji images present in the escaped string.
+		if ( false === \strpos( $author, 'class=&quot;emoji&quot;' ) ) {
+			return $author;
+		}
+
+		// Decode entities so we can selectively restore emoji <img> tags.
+		$decoded = \html_entity_decode( $author, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+		// Use strict KSES validation to only allow valid emoji img tags.
+		return \wp_kses( $decoded, Emoji::get_kses_allowed_html() );
 	}
 }
