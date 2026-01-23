@@ -233,7 +233,6 @@ function is_single_user() {
  * @return int The number of active users.
  */
 function get_active_users( $duration = 1 ) {
-
 	$duration      = intval( $duration );
 	$transient_key = sprintf( 'monthly_active_users_%d', $duration );
 	$count         = get_transient( $transient_key );
@@ -264,11 +263,14 @@ function get_active_users( $duration = 1 ) {
 
 	// If blog user is disabled.
 	if ( ! user_can_activitypub( Actors::BLOG_USER_ID ) ) {
-		return (int) $count;
+		$active = (int) $count;
+	} else {
+		// Also count blog user.
+		$active = (int) $count + 1;
 	}
 
-	// Also count blog user.
-	return (int) $count + 1;
+	// Ensure active users doesn't exceed total users.
+	return min( $active, get_total_users() );
 }
 
 /**
