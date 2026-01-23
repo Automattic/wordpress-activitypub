@@ -117,6 +117,9 @@ class Tombstone {
 	public static function exists_local( $url ) {
 		$urls = get_option( 'activitypub_tombstone_urls', array() );
 
+		// Remove ActivityPub-specific query parameters before comparing.
+		$url = \remove_query_arg( array( 'activitypub', 'preview' ), $url );
+
 		return in_array( normalize_url( $url ), $urls, true );
 	}
 
@@ -204,6 +207,10 @@ class Tombstone {
 	 * @return void
 	 */
 	public static function bury( $url ) {
+		if ( ! \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
+			return;
+		}
+
 		$urls   = \get_option( 'activitypub_tombstone_urls', array() );
 		$urls[] = normalize_url( $url );
 		$urls   = \array_unique( $urls );
@@ -221,6 +228,10 @@ class Tombstone {
 	 * @param string $url The URL to remove from the tombstone registry.
 	 */
 	public static function remove( $url ) {
+		if ( ! \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
+			return;
+		}
+
 		$urls = \get_option( 'activitypub_tombstone_urls', array() );
 		$urls = \array_diff( $urls, array( normalize_url( $url ) ) );
 		\update_option( 'activitypub_tombstone_urls', $urls );

@@ -101,8 +101,8 @@ class Post {
 			return;
 		}
 
-		// If the post was not federated before but is an Update activity, it should be a Create activity.
-		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED !== $object_status && 'Update' === $type ) {
+		// If the post was never federated before, it should be a Create activity.
+		if ( empty( $object_status ) && 'Update' === $type ) {
 			$type = 'Create';
 		}
 

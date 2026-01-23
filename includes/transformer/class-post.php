@@ -21,7 +21,6 @@ use function Activitypub\get_content_visibility;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_enclosures;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\get_wp_object_state;
 use function Activitypub\is_single_user;
 use function Activitypub\site_supports_blocks;
 
@@ -91,13 +90,7 @@ class Post extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$post = $this->item;
-
-		// Return a Tombstone if the post was soft deleted.
-		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === get_wp_object_state( $post ) ) {
-			return $this->to_tombstone();
-		}
-
+		$post   = $this->item;
 		$object = parent::to_object();
 
 		$content_warning = get_content_warning( $post );
@@ -116,7 +109,7 @@ class Post extends Base {
 	 *
 	 * @return Base_Object The Tombstone object.
 	 */
-	protected function to_tombstone() {
+	public function to_tombstone() {
 		$object = new Base_Object();
 		$object->set_type( 'Tombstone' );
 		$object->set_id( $this->get_id() );

@@ -539,6 +539,11 @@ class Post_Types {
 					'single'            => true,
 					'show_in_rest'      => true,
 					'sanitize_callback' => static function ( $value ) {
+						// Allow empty values to pass through without setting a default.
+						if ( empty( $value ) ) {
+							return '';
+						}
+
 						$schema = array(
 							'type'    => 'string',
 							'enum'    => array(
@@ -547,7 +552,7 @@ class Post_Types {
 								ACTIVITYPUB_OBJECT_STATE_FAILED,
 								ACTIVITYPUB_OBJECT_STATE_DELETED,
 							),
-							'default' => ACTIVITYPUB_OBJECT_STATE_PENDING,
+							'default' => '',
 						);
 
 						if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {

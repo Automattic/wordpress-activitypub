@@ -5,9 +5,33 @@
  * @package Activitypub
  */
 
-$object = new \Activitypub\Activity\Base_Object();
-$object->set_id( \Activitypub\Query::get_instance()->get_request_url() );
-$object->set_type( 'Tombstone' );
+use Activitypub\Activity\Base_Object;
+use Activitypub\Query;
+use Activitypub\Transformer\Factory;
+
+$query          = Query::get_instance();
+$queried_object = $query->get_queried_object();
+$object         = null;
+
+// For soft-deleted posts, use the transformer to create a full Tombstone.
+if ( $queried_object ) {
+	/**
+	 * The transformer for the queried object.
+	 *
+	 * @var \Activitypub\Transformer\Post|\WP_Error $transformer
+	 */
+	$transformer = Factory::get_transformer( $queried_object );
+	if ( $transformer && ! \is_wp_error( $transformer ) ) {
+		$object = $transformer->to_tombstone();
+	}
+}
+
+// Fallback for permanently deleted posts.
+if ( ! $object ) {
+	$object = new Base_Object();
+	$object->set_id( $query->get_request_url() );
+	$object->set_type( 'Tombstone' );
+}
 
 /**
  * Fires before an ActivityPub object is generated and sent to the client.

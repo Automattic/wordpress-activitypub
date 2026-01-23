@@ -38,7 +38,11 @@ function is_post_disabled( $post ) {
 		$disabled = true;
 	}
 
-	// Check for deleted posts or posts that were federated but are now local/private.
+	/*
+	 * Check for posts that need special handling.
+	 * Federated posts changed to local/private need Delete activity.
+	 * Deleted posts restored to public need Create activity.
+	 */
 	$object_state = get_wp_object_state( $post );
 
 	if (
