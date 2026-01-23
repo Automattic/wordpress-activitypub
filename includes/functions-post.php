@@ -38,10 +38,12 @@ function is_post_disabled( $post ) {
 		$disabled = true;
 	}
 
-	// Check for deleted posts or posts that were local before.
+	// Check for deleted posts or posts that were federated but are now local/private.
+	$object_state = get_wp_object_state( $post );
+
 	if (
-		ACTIVITYPUB_OBJECT_STATE_DELETED === get_wp_object_state( $post ) ||
-		( in_array( get_content_visibility( $post ), array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true ) && ACTIVITYPUB_OBJECT_STATE_FEDERATED === get_wp_object_state( $post ) )
+		ACTIVITYPUB_OBJECT_STATE_DELETED === $object_state ||
+		( in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true ) && ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_state )
 	) {
 		$disabled = false;
 	}
