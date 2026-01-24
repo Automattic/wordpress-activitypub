@@ -27,8 +27,15 @@ namespace Activitypub;
 
 require_once __DIR__ . '/includes/class-autoloader.php';
 require_once __DIR__ . '/includes/compat.php';
-require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/constants.php';
+require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/functions-activity.php';
+require_once __DIR__ . '/includes/functions-comment.php';
+require_once __DIR__ . '/includes/functions-federation.php';
+require_once __DIR__ . '/includes/functions-post.php';
+require_once __DIR__ . '/includes/functions-request.php';
+require_once __DIR__ . '/includes/functions-url.php';
+require_once __DIR__ . '/includes/functions-user.php';
 require_once __DIR__ . '/integration/load.php';
 
 Autoloader::register_path( __NAMESPACE__, __DIR__ . '/includes' );

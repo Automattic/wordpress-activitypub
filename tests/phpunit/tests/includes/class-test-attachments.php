@@ -32,6 +32,13 @@ class Test_Attachments extends \WP_UnitTestCase {
 	protected static $author_id;
 
 	/**
+	 * Emoji test directory path.
+	 *
+	 * @var string
+	 */
+	protected static $emoji_dir;
+
+	/**
 	 * Set up before class.
 	 */
 	public static function set_up_before_class() {
@@ -51,6 +58,25 @@ class Test_Attachments extends \WP_UnitTestCase {
 				'post_author'  => self::$author_id,
 			)
 		);
+
+		// Create emoji test directory.
+		$upload_dir      = \wp_upload_dir();
+		self::$emoji_dir = $upload_dir['basedir'] . Attachments::$emoji_dir;
+		\wp_mkdir_p( self::$emoji_dir );
+	}
+
+	/**
+	 * Clean up after all tests.
+	 */
+	public static function tear_down_after_class() {
+		global $wp_filesystem;
+		\WP_Filesystem();
+
+		if ( $wp_filesystem->is_dir( self::$emoji_dir ) ) {
+			$wp_filesystem->rmdir( self::$emoji_dir, true );
+		}
+
+		parent::tear_down_after_class();
 	}
 
 	/**
@@ -1203,5 +1229,210 @@ class Test_Attachments extends \WP_UnitTestCase {
 		global $wp_filesystem;
 		\WP_Filesystem();
 		$wp_filesystem->rmdir( $fake_dir );
+	}
+
+	/**
+	 * Test emoji import caches file and returns local URL.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_caches_file() {
+		$emoji_url = 'https://example.com/emoji/kappa.png';
+		$result    = Attachments::import_emoji( $emoji_url );
+
+		$this->assertNotFalse( $result );
+		$this->assertStringContainsString( '/activitypub/emoji/', $result );
+		$this->assertStringContainsString( 'kappa.png', $result );
+	}
+
+	/**
+	 * Test emoji import returns cached URL when no updated timestamp provided.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_uses_cache_without_updated() {
+		$emoji_url = 'https://example.com/emoji/smile.png';
+
+		// First import.
+		$first_result = Attachments::import_emoji( $emoji_url );
+		$this->assertNotFalse( $first_result );
+
+		// Second import without updated timestamp - should use cache.
+		$second_result = Attachments::import_emoji( $emoji_url );
+		$this->assertEquals( $first_result, $second_result );
+	}
+
+	/**
+	 * Test emoji import uses cache when updated timestamp is older than cached file.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_uses_cache_when_updated_is_older() {
+		$emoji_url = 'https://example.com/emoji/old.png';
+
+		// First import.
+		$first_result = Attachments::import_emoji( $emoji_url );
+		$this->assertNotFalse( $first_result );
+
+		// Second import with old updated timestamp - should use cache.
+		$old_timestamp = '2020-01-01T00:00:00Z';
+		$second_result = Attachments::import_emoji( $emoji_url, $old_timestamp );
+		$this->assertEquals( $first_result, $second_result );
+	}
+
+	/**
+	 * Test emoji import re-downloads when updated timestamp is newer than cached file.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_redownloads_when_updated_is_newer() {
+		$emoji_url = 'https://example.com/emoji/new.png';
+
+		// First import.
+		$first_result = Attachments::import_emoji( $emoji_url );
+		$this->assertNotFalse( $first_result );
+
+		// Get the cached file path and modify its timestamp to be old.
+		$upload_dir = \wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/activitypub/emoji/example.com/new.png';
+		$this->assertTrue( \file_exists( $file_path ), 'Cached file should exist' );
+
+		// Set file modification time to the past.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Direct touch() needed for test timestamp manipulation.
+		\touch( $file_path, \strtotime( '2020-01-01' ) );
+
+		// Track if download was attempted.
+		$download_attempted = false;
+		$track_download     = function ( $response, $parsed_args, $url ) use ( &$download_attempted, $emoji_url ) {
+			if ( $url === $emoji_url ) {
+				$download_attempted = true;
+			}
+			return $response;
+		};
+		\add_filter( 'pre_http_request', $track_download, 5, 3 );
+
+		// Import with newer updated timestamp - should re-download.
+		$new_timestamp = '2025-01-01T00:00:00Z';
+		$second_result = Attachments::import_emoji( $emoji_url, $new_timestamp );
+
+		\remove_filter( 'pre_http_request', $track_download, 5 );
+
+		$this->assertNotFalse( $second_result );
+		$this->assertTrue( $download_attempted, 'Should have attempted to re-download the emoji' );
+	}
+
+	/**
+	 * Test emoji import returns false for invalid URL.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_returns_false_for_invalid_url() {
+		$this->assertFalse( Attachments::import_emoji( '' ) );
+		$this->assertFalse( Attachments::import_emoji( 'not-a-url' ) );
+	}
+
+	/**
+	 * Test emoji import returns false when download fails.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_returns_false_on_download_failure() {
+		$emoji_url = 'https://example.com/emoji/download-fail.png';
+
+		// Mock a failed HTTP request.
+		$fail_download = function () {
+			return new \WP_Error( 'http_request_failed', 'Connection failed' );
+		};
+		\add_filter( 'pre_http_request', $fail_download );
+
+		$result = Attachments::import_emoji( $emoji_url );
+
+		\remove_filter( 'pre_http_request', $fail_download );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Call private get_emoji_url method via reflection.
+	 *
+	 * @param string $emoji_url The emoji URL.
+	 * @return string|false The local URL or false.
+	 */
+	private function call_get_emoji_url( $emoji_url ) {
+		$method = new \ReflectionMethod( Attachments::class, 'get_emoji_url' );
+		$method->setAccessible( true );
+
+		return $method->invoke( null, $emoji_url );
+	}
+
+	/**
+	 * Test that glob metacharacters in emoji URLs don't match unintended files.
+	 *
+	 * Without sanitization, glob patterns could match unintended files:
+	 * - '[abc].*' would match files starting with a, b, or c
+	 * - '*.*' would match all files
+	 * - '?.*' would match any single-character filename
+	 *
+	 * With sanitization, these metacharacters are removed.
+	 *
+	 * @covers ::get_emoji_url
+	 * @dataProvider data_glob_metacharacter_urls
+	 *
+	 * @param string   $malicious_filename Filename containing glob metacharacters.
+	 * @param string[] $files_to_create    Files that would match the unsanitized pattern.
+	 */
+	public function test_get_emoji_url_sanitizes_glob_metacharacters( $malicious_filename, $files_to_create ) {
+		global $wp_filesystem;
+		\WP_Filesystem();
+
+		$domain_dir = self::$emoji_dir . 'glob-test.example.com';
+		$wp_filesystem->mkdir( $domain_dir, FS_CHMOD_DIR );
+
+		// Create files that would match the unsanitized glob pattern.
+		foreach ( $files_to_create as $filename ) {
+			$wp_filesystem->put_contents( $domain_dir . '/' . $filename, 'test' );
+		}
+
+		// URL with glob metacharacters.
+		$url    = 'https://glob-test.example.com/emoji/' . $malicious_filename;
+		$result = $this->call_get_emoji_url( $url );
+
+		// Should NOT match any files because metacharacters are sanitized.
+		$this->assertFalse( $result, sprintf( 'Glob pattern "%s" should not match existing files', $malicious_filename ) );
+	}
+
+	/**
+	 * Data provider for glob metacharacter tests.
+	 *
+	 * @return array Test cases: [malicious_filename, files_that_would_match_if_not_sanitized].
+	 */
+	public function data_glob_metacharacter_urls() {
+		return array(
+			'brackets'      => array( '[abc].png', array( 'a.png', 'b.png', 'c.png' ) ),
+			'asterisk'      => array( 'test*.png', array( 'test1.png', 'test2.png', 'testing.png' ) ),
+			'question_mark' => array( 'tes?.png', array( 'test.png', 'tess.png', 'tesx.png' ) ),
+			'curly_braces'  => array( '{foo,bar}.png', array( 'foo.png', 'bar.png' ) ),
+		);
+	}
+
+	/**
+	 * Test that get_emoji_url finds cached files for normal URLs.
+	 *
+	 * @covers ::get_emoji_url
+	 */
+	public function test_get_emoji_url_finds_cached_file() {
+		global $wp_filesystem;
+		\WP_Filesystem();
+
+		$domain_dir = self::$emoji_dir . 'cache-test.example.com';
+		$wp_filesystem->mkdir( $domain_dir, FS_CHMOD_DIR );
+		$wp_filesystem->put_contents( $domain_dir . '/normal-emoji.png', 'test' );
+
+		// Normal URL should find the cached file.
+		$url    = 'https://cache-test.example.com/emoji/normal-emoji.png';
+		$result = $this->call_get_emoji_url( $url );
+
+		$this->assertNotFalse( $result );
+		$this->assertStringContainsString( 'normal-emoji.png', $result );
 	}
 }
