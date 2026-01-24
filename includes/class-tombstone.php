@@ -117,9 +117,6 @@ class Tombstone {
 	public static function exists_local( $url ) {
 		$urls = get_option( 'activitypub_tombstone_urls', array() );
 
-		// Remove ActivityPub-specific query parameters before comparing.
-		$url = \remove_query_arg( array( 'activitypub', 'preview' ), $url );
-
 		return in_array( normalize_url( $url ), $urls, true );
 	}
 
