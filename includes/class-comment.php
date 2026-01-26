@@ -79,13 +79,20 @@ class Comment {
 
 		// Logged-in user without ActivityPub capability - show warning instead of reply link.
 		if ( \is_user_logged_in() ) {
-			$message = \__( 'Your account cannot federate replies. Please ask your administrator to enable ActivityPub for your account.', 'activitypub' );
+			$author = \esc_html( $comment->comment_author );
+
+			$message = sprintf(
+				/* translators: %s: comment author name */
+				\__( '%s is on the Fediverse. To reply to them, ask your administrator to enable ActivityPub for your account.', 'activitypub' ),
+				$author
+			);
 
 			// Add link to users page if current user can edit users.
 			if ( \current_user_can( 'edit_users' ) ) {
 				$message = sprintf(
-					/* translators: %s: URL to the users management page */
-					\__( 'Your account cannot federate replies. <a href="%s">Enable ActivityPub for your account</a> to reply to fediverse comments.', 'activitypub' ),
+					/* translators: 1: comment author name, 2: URL to the users management page */
+					\__( '%1$s is on the Fediverse. To reply to them, <a href="%2$s">enable ActivityPub for your account</a>.', 'activitypub' ),
+					$author,
 					\esc_url( \admin_url( 'users.php' ) )
 				);
 			}

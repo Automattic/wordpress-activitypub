@@ -1339,9 +1339,9 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Should NOT contain the original link.
 		$this->assertStringNotContainsString( $original, $result, 'Should not include the original reply link.' );
 
-		// Should contain the warning.
+		// Should contain the warning with the comment author's name.
 		$this->assertStringContainsString( 'activitypub-reply-warning', $result, 'Should include the warning class.' );
-		$this->assertStringContainsString( 'cannot federate replies', $result, 'Should include warning text.' );
+		$this->assertStringContainsString( 'Fediverse User is on the Fediverse', $result, 'Should include author name and fediverse mention.' );
 		$this->assertStringContainsString( 'ask your administrator', $result, 'Should ask to contact administrator.' );
 
 		\wp_set_current_user( 0 );
