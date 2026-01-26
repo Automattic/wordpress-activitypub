@@ -55,11 +55,17 @@ class Comment {
 		 * Check against supported comment types.
 		 * Only federate registered ActivityPub comment types and standard WordPress comments.
 		 */
+		$comment_type = $comment->comment_type;
+		if ( '' === $comment_type ) {
+			// Be backwards compatible with comments that have an empty type by treating them as standard comments.
+			$comment_type = 'comment';
+		}
+
 		$allowed_types   = Comment_Utils::get_comment_type_slugs();
 		$allowed_types[] = 'comment'; // Add core WordPress comment types.
 
 		// Check if comment type is in allowed list.
-		if ( ! in_array( $comment->comment_type, $allowed_types, true ) ) {
+		if ( ! in_array( $comment_type, $allowed_types, true ) ) {
 			return;
 		}
 
