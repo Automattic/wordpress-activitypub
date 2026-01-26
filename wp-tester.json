@@ -1,6 +1,7 @@
 {
 	"$schema": "https://raw.githubusercontent.com/bgrgicak/wp-tester/trunk/packages/config/src/schema.json",
 	"projectType": "plugin",
+	"projectVFSPath": "/wordpress/wp-content/plugins/activitypub",
 	"environments": [
 		{
 			"name": "PHP 7.4 + WP 6.5",
@@ -13,13 +14,12 @@
 			"wp": [ "latest" ]
 		},
 		{
-			"name": "PHP 8.3 + WP latest",
-			"php": [ "8.3" ],
+			"name": "PHP 8.4 + WP latest",
+			"php": [ "8.4" ],
 			"wp": [ "latest" ]
 		}
 	],
 	"tests": {
-		"plugin": "activitypub",
 		"wp": true,
 		"phpunit": {
 			"phpunitPath": "vendor/bin/phpunit",

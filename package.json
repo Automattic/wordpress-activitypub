@@ -77,7 +77,7 @@
 		"@wordpress/url": "^4.34.0",
 		"@wordpress/viewport": "^6.32.0",
 		"@wordpress/views": "^1.5.0",
-		"@wp-tester/cli": "^0.1.1",
+		"@wp-tester/cli": "^0.1.2",
 		"classnames": "^2.3.2",
 		"clsx": "^2.1.1",
 		"prettier": "npm:wp-prettier@^3.0.3"
