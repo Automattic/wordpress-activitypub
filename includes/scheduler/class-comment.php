@@ -57,6 +57,7 @@ class Comment {
 		 */
 		$allowed_types   = Comment_Utils::get_comment_type_slugs();
 		$allowed_types[] = 'comment'; // Add core WordPress comment types.
+		$allowed_types[] = '';        // Be backwards compatible with comments that have an empty type.
 
 		// Check if comment type is in allowed list.
 		if ( ! in_array( $comment->comment_type, $allowed_types, true ) ) {
