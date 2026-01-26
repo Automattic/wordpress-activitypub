@@ -403,14 +403,14 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	 */
 	public function data_provider_extract_recipients() {
 		return array(
-			'simple_string_recipient'            => array(
+			'simple_string_recipient'                 => array(
 				'data'      => array(
 					'to' => 'https://example.com/users/alice',
 				),
 				'attribute' => 'to',
 				'expected'  => array( 'https://example.com/users/alice' ),
 			),
-			'array_of_recipients'                => array(
+			'array_of_recipients'                     => array(
 				'data'      => array(
 					'to' => array(
 						'https://example.com/users/alice',
@@ -423,7 +423,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 					'https://example.com/users/bob',
 				),
 			),
-			'object_recipients_with_id'          => array(
+			'object_recipients_with_id'               => array(
 				'data'      => array(
 					'cc' => array(
 						array( 'id' => 'https://example.com/users/charlie' ),
@@ -436,7 +436,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 					'https://example.com/users/diana',
 				),
 			),
-			'mixed_recipients'                   => array(
+			'mixed_recipients'                        => array(
 				'data'      => array(
 					'bcc' => array(
 						'https://example.com/users/eve',
@@ -449,7 +449,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 					'https://example.com/users/frank',
 				),
 			),
-			'recipients_in_object'               => array(
+			'recipients_in_object'                    => array(
 				'data'      => array(
 					'object' => array(
 						'to' => 'https://example.com/users/grace',
@@ -458,7 +458,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 				'attribute' => 'to',
 				'expected'  => array( 'https://example.com/users/grace' ),
 			),
-			'recipients_in_both_main_and_object' => array(
+			'recipients_in_both_main_and_object'      => array(
 				'data'      => array(
 					'to'     => 'https://example.com/users/henry',
 					'object' => array(
@@ -470,7 +470,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 					'https://example.com/users/henry',
 				),
 			),
-			'duplicate_recipients'               => array(
+			'duplicate_recipients'                    => array(
 				'data'      => array(
 					'to' => array(
 						'https://example.com/users/jack',
@@ -480,19 +480,19 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 				'attribute' => 'to',
 				'expected'  => array( 'https://example.com/users/jack' ), // Should be unique.
 			),
-			'no_recipients'                      => array(
+			'no_recipients'                           => array(
 				'data'      => array(
 					'cc' => array(),
 				),
 				'attribute' => 'to', // Different attribute.
 				'expected'  => array(),
 			),
-			'empty_data'                         => array(
+			'empty_data'                              => array(
 				'data'      => array(),
 				'attribute' => 'to',
 				'expected'  => array(),
 			),
-			'object_with_id'                     => array(
+			'object_with_id'                          => array(
 				'data'      => array(
 					'to' => array(
 						array(
@@ -507,7 +507,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 					'https://example.com/users/kate',
 				), // Should be ignored.
 			),
-			'public_recipients'                  => array(
+			'public_recipients'                       => array(
 				'data'      => array(
 					'to' => array(
 						'https://www.w3.org/ns/activitystreams#Public',
@@ -520,12 +520,68 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 					'https://example.com/users/liam',
 				),
 			),
-			'audience_attribute'                 => array(
+			'audience_attribute'                      => array(
 				'data'      => array(
 					'audience' => 'https://example.com/groups/followers',
 				),
 				'attribute' => 'audience',
 				'expected'  => array( 'https://example.com/groups/followers' ),
+			),
+			'recipients_in_instrument_to'             => array(
+				'data'      => array(
+					'type'       => 'QuoteRequest',
+					'actor'      => 'https://example.com/users/alice',
+					'object'     => 'https://example.org/posts/123',
+					'instrument' => array(
+						'type' => 'Note',
+						'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					),
+				),
+				'attribute' => 'to',
+				'expected'  => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			),
+			'recipients_in_instrument_cc'             => array(
+				'data'      => array(
+					'type'       => 'QuoteRequest',
+					'actor'      => 'https://example.com/users/alice',
+					'object'     => 'https://example.org/posts/123',
+					'instrument' => array(
+						'type' => 'Note',
+						'cc'   => array( 'https://example.com/users/alice/followers' ),
+					),
+				),
+				'attribute' => 'cc',
+				'expected'  => array( 'https://example.com/users/alice/followers' ),
+			),
+			'activity_level_takes_precedence_over_instrument' => array(
+				'data'      => array(
+					'type'       => 'QuoteRequest',
+					'actor'      => 'https://example.com/users/alice',
+					'object'     => 'https://example.org/posts/123',
+					'to'         => array( 'https://example.org/users/bob' ),
+					'instrument' => array(
+						'type' => 'Note',
+						'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					),
+				),
+				'attribute' => 'to',
+				'expected'  => array( 'https://example.org/users/bob' ),
+			),
+			'object_takes_precedence_over_instrument' => array(
+				'data'      => array(
+					'type'       => 'QuoteRequest',
+					'actor'      => 'https://example.com/users/alice',
+					'object'     => array(
+						'id' => 'https://example.org/posts/123',
+						'to' => array( 'https://example.org/users/charlie' ),
+					),
+					'instrument' => array(
+						'type' => 'Note',
+						'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					),
+				),
+				'attribute' => 'to',
+				'expected'  => array( 'https://example.org/users/charlie' ),
 			),
 		);
 	}
@@ -843,5 +899,84 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 		);
 
 		$this->assertFalse( \Activitypub\is_quote_activity( $activity ) );
+	}
+
+	/**
+	 * Test that extract_recipients_from_activity correctly extracts recipients
+	 * from a QuoteRequest activity where addressing is only in the instrument
+	 * (the Note being quoted), matching how Mastodon sends QuoteRequests.
+	 *
+	 * @covers \Activitypub\extract_recipients_from_activity
+	 * @covers \Activitypub\extract_recipients_from_activity_property
+	 */
+	public function test_extract_recipients_from_quote_request_with_instrument() {
+		// QuoteRequest activities have addressing in the instrument (the quoting Note),
+		// not at the activity level. This matches how Mastodon sends QuoteRequests.
+		$quote_request = array(
+			'@context'   => array(
+				'https://www.w3.org/ns/activitystreams',
+				array(
+					'toot'         => 'http://joinmastodon.org/ns#',
+					'QuoteRequest' => 'toot:QuoteRequest',
+				),
+			),
+			'id'         => 'https://remote.example.com/users/alice/quote_requests/123',
+			'type'       => 'QuoteRequest',
+			'object'     => 'https://example.org/posts/456',
+			'actor'      => 'https://remote.example.com/users/alice',
+			'instrument' => array(
+				'id'           => 'https://remote.example.com/users/alice/statuses/789',
+				'type'         => 'Note',
+				'published'    => '2025-01-14T09:26:53Z',
+				'url'          => 'https://remote.example.com/@alice/789',
+				'attributedTo' => 'https://remote.example.com/users/alice',
+				'to'           => array(
+					'https://www.w3.org/ns/activitystreams#Public',
+				),
+				'cc'           => array(
+					'https://remote.example.com/users/alice/followers',
+				),
+				'content'      => '<p>A quote post</p>',
+				'quote'        => 'https://example.org/posts/456',
+			),
+		);
+
+		$recipients = extract_recipients_from_activity( $quote_request );
+
+		// Should extract recipients from instrument since activity level has none.
+		$this->assertContains(
+			'https://www.w3.org/ns/activitystreams#Public',
+			$recipients,
+			'Should extract public recipient from instrument.to'
+		);
+		$this->assertContains(
+			'https://remote.example.com/users/alice/followers',
+			$recipients,
+			'Should extract followers from instrument.cc'
+		);
+	}
+
+	/**
+	 * Test that QuoteRequest with no addressing at activity level but
+	 * with addressing in instrument can be detected as public.
+	 *
+	 * @covers \Activitypub\is_activity_public
+	 */
+	public function test_quote_request_is_public_via_instrument() {
+		$quote_request = array(
+			'type'       => 'QuoteRequest',
+			'object'     => 'https://example.org/posts/123',
+			'actor'      => 'https://example.com/users/alice',
+			'instrument' => array(
+				'type' => 'Note',
+				'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'cc'   => array( 'https://example.com/users/alice/followers' ),
+			),
+		);
+
+		$this->assertTrue(
+			\Activitypub\is_activity_public( $quote_request ),
+			'QuoteRequest should be detected as public when instrument.to contains public identifier'
+		);
 	}
 }
