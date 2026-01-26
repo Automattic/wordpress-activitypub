@@ -57,6 +57,9 @@ function extract_recipients_from_activity( $data ) {
 /**
  * Extract recipient URLs from a specific property of an Activity object.
  *
+ * Checks the activity level first, then falls back to the object property,
+ * and finally checks the instrument property (used by QuoteRequest activities).
+ *
  * @param string $property The property to extract recipients from (e.g., 'to', 'cc').
  * @param array  $data     The Activity object as array.
  *
@@ -69,6 +72,9 @@ function extract_recipients_from_activity_property( $property, $data ) {
 		$recipients = $data[ $property ];
 	} elseif ( ! empty( $data['object'][ $property ] ) ) {
 		$recipients = $data['object'][ $property ];
+	} elseif ( ! empty( $data['instrument'][ $property ] ) ) {
+		// QuoteRequest activities have addressing in the instrument (the quoting Note).
+		$recipients = $data['instrument'][ $property ];
 	}
 
 	$recipients = \array_map( '\Activitypub\object_to_uri', (array) $recipients );
