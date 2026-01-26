@@ -61,8 +61,10 @@ class Comment {
 	/**
 	 * Filter the comment reply link.
 	 *
-	 * We don't want to show the comment reply link for federated comments
-	 * if the user is disabled for federation.
+	 * Handles three cases for replies to fediverse comments:
+	 * 1. User can federate → show normal reply link
+	 * 2. User is logged in but can't federate → show warning (no reply link)
+	 * 3. User is not logged in → show remote reply block
 	 *
 	 * @param string      $link    The HTML markup for the comment reply link.
 	 * @param array       $args    An array of arguments overriding the defaults.
@@ -73,6 +75,40 @@ class Comment {
 	public static function comment_reply_link( $link, $args, $comment ) {
 		if ( self::are_comments_allowed( $comment ) ) {
 			return $link;
+		}
+
+		// Logged-in user without ActivityPub capability - show warning instead of reply link.
+		if ( \is_user_logged_in() ) {
+			$author = \esc_html( $comment->comment_author );
+
+			$message = sprintf(
+				/* translators: %s: comment author name */
+				\__( '%s is on the Fediverse. To reply to them, ask your administrator to enable ActivityPub for your account.', 'activitypub' ),
+				$author
+			);
+
+			// Add link to users page if current user can edit users.
+			if ( \current_user_can( 'edit_users' ) ) {
+				$message = sprintf(
+					/* translators: 1: comment author name, 2: URL to the users management page */
+					\__( '%1$s is on the Fediverse. To reply to them, <a href="%2$s">enable ActivityPub for your account</a>.', 'activitypub' ),
+					$author,
+					\esc_url( \admin_url( 'users.php' ) )
+				);
+			}
+
+			$warning = sprintf(
+				'<p class="activitypub-reply-warning"><em>%s</em></p>',
+				\wp_kses( $message, array( 'a' => array( 'href' => array() ) ) )
+			);
+
+			/**
+			 * Filters the warning message shown to logged-in users without ActivityPub capability.
+			 *
+			 * @param string      $warning The warning HTML markup.
+			 * @param \WP_Comment $comment The comment being replied to.
+			 */
+			return \apply_filters( 'activitypub_federation_warning', $warning, $comment );
 		}
 
 		if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( 'activitypub/remote-reply' ) ) {
@@ -116,11 +152,12 @@ class Comment {
 			return false;
 		}
 
-		if ( is_single_user() && \user_can( $current_user, 'publish_posts' ) ) {
-			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
+		if ( is_single_user() && \user_can( $current_user, 'activitypub' ) ) {
+			// On a single user site, comments by users with the `activitypub` capability will be federated as the blog user.
 			$current_user = Actors::BLOG_USER_ID;
 		}
 
+		// User is not allowed to federate comments.
 		return user_can_activitypub( $current_user );
 	}
 
@@ -221,7 +258,7 @@ class Comment {
 		}
 
 		if ( is_single_user() && \user_can( $user_id, 'activitypub' ) ) {
-			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
+			// On a single user site, comments by users with the `activitypub` capability will be federated as the blog user.
 			$user_id = Actors::BLOG_USER_ID;
 		}
 
