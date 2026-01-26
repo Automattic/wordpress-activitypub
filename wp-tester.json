@@ -1,29 +1,30 @@
 {
 	"$schema": "https://raw.githubusercontent.com/bgrgicak/wp-tester/trunk/packages/config/src/schema.json",
 	"projectType": "plugin",
-	"projectVFSPath": "/wordpress/wp-content/plugins/activitypub",
 	"environments": [
 		{
 			"name": "PHP 7.4 + WP 6.5",
 			"php": [ "7.4" ],
-			"wp": [ "6.5" ],
-			"blueprint": "./.wordpress-org/blueprints/blueprint.json"
+			"wp": [ "6.5" ]
 		},
 		{
 			"name": "PHP 8.2 + WP latest",
 			"php": [ "8.2" ],
-			"wp": [ "latest" ],
-			"blueprint": "./.wordpress-org/blueprints/blueprint.json"
+			"wp": [ "latest" ]
 		},
 		{
 			"name": "PHP 8.3 + WP latest",
 			"php": [ "8.3" ],
-			"wp": [ "latest" ],
-			"blueprint": "./.wordpress-org/blueprints/blueprint.json"
+			"wp": [ "latest" ]
 		}
 	],
 	"tests": {
 		"plugin": "activitypub",
-		"wp": true
+		"wp": true,
+		"phpunit": {
+			"phpunitPath": "vendor/bin/phpunit",
+			"configPath": "phpunit.xml.dist",
+			"testMode": "unit"
+		}
 	}
 }

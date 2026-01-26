@@ -37,3 +37,4 @@ tsconfig.json
 tests
 vendor
 webpack.config.js
+wp-tester.json
