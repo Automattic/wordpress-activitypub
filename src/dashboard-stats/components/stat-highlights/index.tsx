@@ -4,6 +4,29 @@ import type { Comparison, CommentType } from '../../types';
 interface Props {
 	comparison: Comparison | null;
 	commentTypes: Record< string, CommentType > | null;
+	userId: number | null;
+}
+
+/**
+ * Get the admin URL for a stat type.
+ *
+ * @param {string}      type   The stat type (followers, posts, etc.).
+ * @param {number|null} userId The user ID (0 for blog, > 0 for user).
+ * @return {string|null} The admin URL or null if no link.
+ */
+function getStatUrl( type: string, userId: number | null ): string | null {
+	switch ( type ) {
+		case 'followers':
+			// Blog uses settings page, users use the followers list.
+			return userId === 0
+				? 'options-general.php?page=activitypub&tab=followers'
+				: 'users.php?page=activitypub-followers-list';
+		case 'posts':
+			return 'edit.php';
+		default:
+			// Likes, reposts, comments filter by comment type.
+			return `edit-comments.php?comment_type=${ type }`;
+	}
 }
 
 /**
@@ -14,8 +37,9 @@ interface Props {
  * @param {Props} props              Component props.
  * @param {Props} props.comparison   Comparison data with current vs previous values.
  * @param {Props} props.commentTypes Available comment types configuration.
+ * @param {Props} props.userId       The selected user/actor ID.
  */
-export default function StatHighlights( { comparison, commentTypes }: Props ) {
+export default function StatHighlights( { comparison, commentTypes, userId }: Props ) {
 	if ( ! comparison ) {
 		return null;
 	}
@@ -55,11 +79,17 @@ export default function StatHighlights( { comparison, commentTypes }: Props ) {
 		<div className="activitypub-stats-highlights">
 			<h3 className="activitypub-stats-period">{ __( 'This month vs. last year', 'activitypub' ) }</h3>
 			<div className="activitypub-stats-grid">
-				{ stats.map( ( stat ) => (
-					<div key={ stat.key } className="activitypub-stat-item" data-type={ stat.key }>
-						<span className="stat-content">
+				{ stats.map( ( stat ) => {
+					const url = getStatUrl( stat.key, userId );
+					const content = (
+						<>
 							<span className="stat-value">{ stat.value.toLocaleString() }</span>{ ' ' }
 							<span className="stat-label">{ stat.label }</span>
+						</>
+					);
+					return (
+						<div key={ stat.key } className="activitypub-stat-item" data-type={ stat.key }>
+							{ url ? <a href={ url }>{ content }</a> : <span>{ content }</span> }
 							{ stat.change !== 0 && ' ' }
 							{ stat.change !== 0 && (
 								<span className={ `stat-change ${ stat.change > 0 ? 'positive' : 'negative' }` }>
@@ -67,9 +97,9 @@ export default function StatHighlights( { comparison, commentTypes }: Props ) {
 									{ stat.change.toLocaleString() })
 								</span>
 							) }
-						</span>
-					</div>
-				) ) }
+						</div>
+					);
+				} ) }
 			</div>
 		</div>
 	);

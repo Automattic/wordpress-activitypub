@@ -130,7 +130,11 @@ export default function StatsWidget() {
 				</div>
 			) : stats ? (
 				<>
-					<StatHighlights comparison={ stats.comparison } commentTypes={ stats.comment_types } />
+					<StatHighlights
+						comparison={ stats.comparison }
+						commentTypes={ stats.comment_types }
+						userId={ selectedActor }
+					/>
 					<LineChart monthly={ stats.monthly } commentTypes={ stats.comment_types } />
 					<TopSupporter multiplicator={ stats.stats?.top_multiplicator } />
 					<TopPosts posts={ stats.stats?.top_posts } />
