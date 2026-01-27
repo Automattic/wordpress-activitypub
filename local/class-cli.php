@@ -12,7 +12,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Comment;
-use Activitypub\Scheduler\Statistics as Statistics_Scheduler;
 use Activitypub\Statistics;
 
 use function Activitypub\camel_to_snake_case;
@@ -244,7 +243,7 @@ class Cli extends \WP_CLI_Command {
 	}
 
 	/**
-	 * Manage statistics demo data.
+	 * Manage statistics data.
 	 *
 	 * ## OPTIONS
 	 *
@@ -270,9 +269,6 @@ class Cli extends \WP_CLI_Command {
 	 * [--force]
 	 * : Force recollection even if stats already exist.
 	 *
-	 * [--no-email]
-	 * : Skip sending email when compiling annual stats.
-	 *
 	 * ## EXAMPLES
 	 *
 	 *     # Populate demo stats for the blog
@@ -290,10 +286,10 @@ class Cli extends \WP_CLI_Command {
 	 *     # Collect stats for a specific month (force recollect)
 	 *     $ wp activitypub stats collect --year=2024 --month=6 --force
 	 *
-	 *     # Compile annual stats without sending email
-	 *     $ wp activitypub stats compile --year=2024 --no-email
+	 *     # Compile annual stats
+	 *     $ wp activitypub stats compile --year=2024
 	 *
-	 * @synopsis <action> [--user_id=<user_id>] [--year=<year>] [--month=<month>] [--force] [--no-email]
+	 * @synopsis <action> [--user_id=<user_id>] [--year=<year>] [--month=<month>] [--force]
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments.
@@ -318,7 +314,7 @@ class Cli extends \WP_CLI_Command {
 				break;
 
 			case 'collect':
-				$results = Statistics_Scheduler::trigger_monthly_collection( $user_id, $year, $month, $force );
+				$results = $this->collect_monthly_stats( $user_id, $year, $month, $force );
 				$count   = count( $results );
 				$y       = $year ?? gmdate( 'Y' );
 				$m       = $month ?? gmdate( 'n' );
@@ -326,17 +322,64 @@ class Cli extends \WP_CLI_Command {
 				break;
 
 			case 'compile':
-				$send_email = ! isset( $assoc_args['no-email'] );
-				$results    = Statistics_Scheduler::trigger_annual_compilation( $user_id, $year, $send_email );
-				$count      = count( $results );
-				$y          = $year ?? ( gmdate( 'Y' ) - 1 );
-				$email_msg  = $send_email ? ' (emails sent)' : ' (no emails)';
-				\WP_CLI::success( "Annual stats compiled for {$count} user(s) ({$y}){$email_msg}." );
+				$results = $this->compile_annual_stats( $user_id, $year );
+				$count   = count( $results );
+				$y       = $year ?? ( gmdate( 'Y' ) - 1 );
+				\WP_CLI::success( "Annual stats compiled for {$count} user(s) ({$y})." );
 				break;
 
 			default:
 				\WP_CLI::error( 'Unknown action. Use "populate", "clear", "collect", or "compile".' );
 		}
+	}
+
+	/**
+	 * Collect monthly statistics.
+	 *
+	 * @param int|null $user_id The user ID or null for all users.
+	 * @param int|null $year    The year.
+	 * @param int|null $month   The month.
+	 * @param bool     $force   Force recollection even if stats exist.
+	 *
+	 * @return array Results per user.
+	 */
+	private function collect_monthly_stats( $user_id, $year, $month, $force ) {
+		$year  = $year ?? (int) gmdate( 'Y' );
+		$month = $month ?? (int) gmdate( 'n' );
+
+		$user_ids = $user_id ? array( $user_id ) : Statistics::get_active_user_ids();
+		$results  = array();
+
+		foreach ( $user_ids as $uid ) {
+			if ( $force ) {
+				$option_name = Statistics::get_monthly_option_name( $uid, $year, $month );
+				\delete_option( $option_name );
+			}
+			$results[ $uid ] = Statistics::collect_monthly_stats( $uid, $year, $month );
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Compile annual statistics.
+	 *
+	 * @param int|null $user_id The user ID or null for all users.
+	 * @param int|null $year    The year.
+	 *
+	 * @return array Results per user.
+	 */
+	private function compile_annual_stats( $user_id, $year ) {
+		$year = $year ?? ( (int) gmdate( 'Y' ) - 1 );
+
+		$user_ids = $user_id ? array( $user_id ) : Statistics::get_active_user_ids();
+		$results  = array();
+
+		foreach ( $user_ids as $uid ) {
+			$results[ $uid ] = Statistics::compile_annual_summary( $uid, $year );
+		}
+
+		return $results;
 	}
 
 	/**

@@ -130,37 +130,6 @@ class Statistics {
 	}
 
 	/**
-	 * Delete monthly statistics for a user.
-	 *
-	 * Useful for recollecting stale data or clearing incorrect entries.
-	 *
-	 * @param int $user_id The user ID.
-	 * @param int $year    The year.
-	 * @param int $month   The month.
-	 *
-	 * @return bool True on success, false on failure.
-	 */
-	public static function delete_monthly_stats( $user_id, $year, $month ) {
-		return \delete_option( self::get_monthly_option_name( $user_id, $year, $month ) );
-	}
-
-	/**
-	 * Recollect monthly statistics for a user.
-	 *
-	 * Deletes existing stats and collects fresh data.
-	 *
-	 * @param int $user_id The user ID.
-	 * @param int $year    The year.
-	 * @param int $month   The month.
-	 *
-	 * @return array The newly collected stats.
-	 */
-	public static function recollect_monthly_stats( $user_id, $year, $month ) {
-		self::delete_monthly_stats( $user_id, $year, $month );
-		return self::collect_monthly_stats( $user_id, $year, $month );
-	}
-
-	/**
 	 * Collect monthly statistics for a user.
 	 *
 	 * @param int $user_id The user ID.
