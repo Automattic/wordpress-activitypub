@@ -1,5 +1,5 @@
 ---
-name: activitypub-release
+name: release
 description: Version management and release processes using Jetpack Changelogger. Use when creating releases, managing changelogs, bumping versions, or preparing patch releases.
 ---
 
@@ -107,7 +107,7 @@ Changelogs are managed automatically through the PR workflow:
 
 **Never mention AI tools or coding assistants in changelog messages.**
 
-See [PR Workflow - Changelog](../activitypub-pr-workflow/SKILL.md#changelog-management) for complete changelog requirements.
+See [PR Workflow - Changelog](../pr/SKILL.md#changelog-management) for complete changelog requirements.
 
 ## Version Numbering
 

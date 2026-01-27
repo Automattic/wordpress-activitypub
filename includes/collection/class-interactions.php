@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Comment;
+use Activitypub\Emoji;
 use Activitypub\Webfinger;
 use WP_Comment_Query;
 
@@ -82,6 +83,11 @@ class Interactions {
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 
+		if ( ! $comment_post_id ) {
+			// Not a reply to a post or comment.
+			return false;
+		}
+
 		$comment_data['comment_post_ID'] = $comment_post_id;
 		$comment_data['comment_parent']  = $parent_comment_id ? $parent_comment_id : 0;
 
@@ -109,6 +115,7 @@ class Interactions {
 		// Found a local comment id.
 		$comment_data['comment_author']  = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 		$comment_data['comment_content'] = \addslashes( $activity['object']['content'] );
+		$comment_data                    = Emoji::prepare_comment_data( $comment_data, $activity );
 
 		return self::persist( $comment_data, self::UPDATE );
 	}
@@ -311,6 +318,12 @@ class Interactions {
 			$allowed_tags['p'] = array();
 		}
 
+		// Add `img` for custom emoji support with strict validation.
+		$emoji_html = Emoji::get_kses_allowed_html();
+		if ( ! array_key_exists( 'img', $allowed_tags ) ) {
+			$allowed_tags['img'] = $emoji_html['img'];
+		}
+
 		return $allowed_tags;
 	}
 
@@ -386,7 +399,7 @@ class Interactions {
 			$comment_data['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
 		}
 
-		return $comment_data;
+		return Emoji::prepare_comment_data( $comment_data, $activity );
 	}
 
 	/**

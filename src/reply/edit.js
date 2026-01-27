@@ -19,7 +19,7 @@ const HELP_TEXT = {
 	checking: () => (
 		<>
 			<Spinner />
-			{ ' ' + __( 'Checking URL...', 'activitypub' ) }
+			{ ' ' + __( 'Checking URL…', 'activitypub' ) }
 		</>
 	),
 	valid: __( 'The author will be notified of your response.', 'activitypub' ),
@@ -29,11 +29,11 @@ const HELP_TEXT = {
 /**
  * Edit component for the ActivityPub Reply block.
  *
- * @param {Object} props - Component props.
- * @param {Object} props.attributes - Block attributes.
- * @param {Function} props.setAttributes - Function to update block attributes.
- * @param {string} props.clientId - Block client ID.
- * @param {boolean} props.isSelected - Whether the block is selected.
+ * @param {Object}   props               Component props.
+ * @param {Object}   props.attributes    Block attributes.
+ * @param {Function} props.setAttributes Function to update block attributes.
+ * @param {string}   props.clientId      Block client ID.
+ * @param {boolean}  props.isSelected    Whether the block is selected.
  */
 export default function Edit( { attributes, setAttributes, clientId, isSelected } ) {
 	const { url = '', embedPost = false } = attributes;
@@ -103,13 +103,13 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 					 *
 					 * @typedef {Object} OEmbedResponse
 					 * @property {string} [provider_name] The name of the oEmbed provider.
-					 * @property {string} [html] The HTML content to embed.
-					 * @property {string} [title] The title of the embedded content.
-					 * @property {string} [author_name] The author of the embedded content.
-					 * @property {string} [author_url] The URL of the author.
-					 * @property {number} [width] The width of the embedded content.
-					 * @property {number} [height] The height of the embedded content.
-					 * @property {string} [type] The type of the embedded content (rich, video, photo).
+					 * @property {string} [html]          The HTML content to embed.
+					 * @property {string} [title]         The title of the embedded content.
+					 * @property {string} [author_name]   The author of the embedded content.
+					 * @property {string} [author_url]    The URL of the author.
+					 * @property {number} [width]         The width of the embedded content.
+					 * @property {number} [height]        The height of the embedded content.
+					 * @property {string} [type]          The type of the embedded content (rich, video, photo).
 					 */
 					const response = await apiFetch( {
 						path: addQueryArgs( '/oembed/1.0/proxy', {
@@ -126,6 +126,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 						setIsValidEmbed( false );
 					}
 				} catch ( error ) {
+					// eslint-disable-next-line no-console -- Log error for debugging.
 					console.log( 'Could not fetch embed:', error );
 					setAttributes( { isValidActivityPub: false } );
 					setIsValidEmbed( false );
@@ -137,7 +138,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 				setIsCheckingEmbed( false );
 			}
 		},
-		[ embedPost, setAttributes ]
+		[ setAttributes, setIsValidEmbed, setIsCheckingEmbed ]
 	);
 
 	// Debounce the URL check to avoid too many requests.
@@ -148,7 +149,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 		if ( url ) {
 			debouncedCheckUrl( url );
 		}
-	}, [ url ] );
+	}, [ url, debouncedCheckUrl ] );
 
 	const onKeyDown = ( event ) => {
 		if ( event.key === 'Enter' ) {
@@ -169,11 +170,11 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 						onChange={ ( value ) => setAttributes( { embedPost: value } ) }
 						disabled={ ! isValidEmbed }
 						help={ __( 'Show embedded content from the URL.', 'activitypub' ) }
-						__nextHasNoMarginBottom
 					/>
 				</PanelBody>
 			</InspectorControls>
 
+			{ /* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- Block wrapper, keyboard handled by inner TextControl */ }
 			<div onClick={ focusInput } { ...useBlockProps() }>
 				{ isSelected && (
 					<TextControl
@@ -184,13 +185,13 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 						onKeyDown={ onKeyDown }
 						ref={ urlInputRef }
 						__next40pxDefaultSize
-						__nextHasNoMarginBottom
 					/>
 				) }
 
 				{ showEmbed && <div { ...innerBlocksProps } /> }
 
 				{ url && ! showEmbed && ! isSelected && (
+					/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- Preview wrapper, clicking focuses input */
 					<div
 						className="activitypub-reply-block-editor__preview"
 						contentEditable={ false }

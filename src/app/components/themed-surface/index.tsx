@@ -25,6 +25,10 @@ interface ThemedSurfaceProps {
  *
  * Wraps content in a themed surface with light background.
  * Uses wpds design tokens that are provided by ThemeProvider context.
+ *
+ * @param props           Component props.
+ * @param props.className Additional CSS class name.
+ * @param props.children  Content to render inside the surface.
  */
 export default function ThemedSurface( { className, children }: ThemedSurfaceProps ): ReactNode {
 	return <div className={ clsx( 'themed-surface', className ) }>{ children }</div>;

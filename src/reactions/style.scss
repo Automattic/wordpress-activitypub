@@ -1,4 +1,4 @@
-@use '../shared/modal/style';
+@use "../shared/modal/style";
 
 .wp-block-activitypub-reactions {
 	margin-top: 2rem;
@@ -30,6 +30,7 @@
 
 		// When content overflows, switch to space-between.
 		&:has(.reaction-avatars:not(:empty)) {
+
 			@media (max-width: 782px) {
 				justify-content: space-between;
 			}
@@ -54,6 +55,7 @@
 					margin-right: 0;
 				}
 
+				/* stylelint-disable-next-line no-descending-specificity */
 				&:hover {
 					z-index: 2;
 					transform: translateY(-2px);
@@ -76,8 +78,9 @@
 			-moz-force-broken-image-icon: 1;
 			border-radius: 50%;
 			border: 0.5px solid var(--wp--preset--color--contrast, rgba(255, 255, 255, 0.8));
-			box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border
-			0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
+			box-shadow:
+				0 0 0 0.5px rgba(255, 255, 255, 0.8),
+				0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
 			transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 			will-change: transform;
 
@@ -100,19 +103,19 @@
 			flex: 0 0 auto;
 			padding: 0.25rem 0.5rem;
 			font-size: var(--wp--preset--font-size--small, 0.875rem);
-			color: currentColor;
+			color: currentcolor;
 			transition: background-color 0.2s ease;
 			white-space: nowrap;
 			text-decoration: none;
 
 			&:hover {
 				background-color: rgba(0, 0, 0, 0.05);
-				color: currentColor;
+				color: currentcolor;
 			}
 
 			&:focus:not(:disabled) {
 				box-shadow: none;
-				outline: 1px solid currentColor;
+				outline: 1px solid currentcolor;
 				outline-offset: 2px;
 			}
 		}
@@ -136,6 +139,8 @@
 			margin-bottom: 0;
 		}
 
+		// Different context than .reaction-avatars li a
+		/* stylelint-disable no-descending-specificity */
 		a {
 			box-shadow: none;
 			display: flex;
@@ -151,6 +156,7 @@
 				background-color: rgba(0, 0, 0, 0.03);
 			}
 		}
+		/* stylelint-enable no-descending-specificity */
 
 		img {
 			box-shadow: none;
@@ -166,7 +172,7 @@
 	}
 }
 
-.components-popover__content {
+.activitypub-popover .components-popover__content {
 	width: auto;
 	max-width: min-content;
 	min-width: 250px;
@@ -177,6 +183,7 @@
 
 /* Compact display style - inline buttons without avatars */
 .wp-block-activitypub-reactions.is-style-compact {
+
 	.wp-block-heading {
 		margin-bottom: 0.5em;
 	}
@@ -188,6 +195,7 @@
 		display: inline-flex;
 	}
 
+	/* stylelint-disable-next-line no-descending-specificity */
 	.reaction-group {
 		width: auto;
 		margin: 0;

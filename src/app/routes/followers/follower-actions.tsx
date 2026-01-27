@@ -23,6 +23,8 @@ const namespace = 'activitypub/1.0'; // Standard ActivityPub REST API namespace
 
 /**
  * Delete follower action handler.
+ *
+ * @param items Array of actors to remove as followers.
  */
 export async function deleteFollower( items: Actor[] ): Promise< void > {
 	try {
@@ -50,6 +52,8 @@ export async function deleteFollower( items: Actor[] ): Promise< void > {
 
 /**
  * Block actor action handler.
+ *
+ * @param items Array of actors to block.
  */
 export async function blockActor( items: Actor[] ): Promise< void > {
 	try {
@@ -79,6 +83,8 @@ export async function blockActor( items: Actor[] ): Promise< void > {
 
 /**
  * Follow back action handler.
+ *
+ * @param items Array of actors to follow back.
  */
 export async function follow( items: Actor[] ): Promise< void > {
 	try {

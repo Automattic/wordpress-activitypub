@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Attachments;
+use Activitypub\Emoji;
 use Activitypub\Http;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -68,7 +69,13 @@ class Remote_Actors {
 	 * @return \WP_Post|null The post object or null on failure.
 	 */
 	public static function get( $id ) {
-		return \get_post( $id );
+		$post = \get_post( $id );
+
+		if ( $post && self::POST_TYPE === $post->post_type ) {
+			return $post;
+		}
+
+		return null;
 	}
 
 	/**
@@ -220,7 +227,16 @@ class Remote_Actors {
 			);
 		}
 
-		return \get_post( $post_id );
+		$post = \get_post( $post_id );
+		if ( ! $post instanceof \WP_Post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return $post;
 	}
 
 	/**
@@ -280,7 +296,16 @@ class Remote_Actors {
 			return $post_id;
 		}
 
-		return \get_post( $post_id );
+		$post = \get_post( $post_id );
+		if ( ! $post instanceof \WP_Post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return $post;
 	}
 
 	/**
@@ -304,7 +329,16 @@ class Remote_Actors {
 		);
 
 		if ( $post_id ) {
-			return \get_post( $post_id );
+			$post = \get_post( $post_id );
+			if ( ! $post instanceof \WP_Post ) {
+				return new \WP_Error(
+					'activitypub_actor_not_found',
+					\__( 'Actor not found', 'activitypub' ),
+					array( 'status' => 404 )
+				);
+			}
+
+			return $post;
 		}
 
 		$profile_uri = Webfinger::resolve( $acct );
@@ -471,6 +505,8 @@ class Remote_Actors {
 
 		if ( \is_wp_error( $actor ) ) {
 			self::add_error( $post->ID, $actor );
+
+			return $actor;
 		}
 
 		if ( ! $actor->get_webfinger() ) {
@@ -541,7 +577,8 @@ class Remote_Actors {
 		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
 		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
 
-		$actor_json = $actor->to_json();
+		$actor_json  = $actor->to_json();
+		$actor_array = $actor->to_array();
 
 		// Re-add the filters.
 		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
@@ -552,6 +589,10 @@ class Remote_Actors {
 			'_activitypub_inbox' => $inbox,
 			'_activitypub_acct'  => $webfinger,
 		);
+
+		// Add emoji meta if actor has emoji in tags.
+		$emoji_meta = Emoji::prepare_actor_meta( $actor_array );
+		$meta_input = array_merge( $meta_input, $emoji_meta );
 
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),

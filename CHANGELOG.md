@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.8.5] - 2026-01-14
+### Fixed
+- Only disable blocks for ClassicPress, not when Classic Editor plugin is installed. [#2765]
+
+## [7.8.4] - 2026-01-13
+### Fixed
+- Fix Follow requests from Pixelfed and other implementations that don't set audience fields. [#2755]
+
+## [7.8.3] - 2026-01-12
+### Security
+- Improved security of the Starter Kit URL import by using wp_safe_remote_get. [#2732]
+
+### Added
+- Force content negotiation on author pages when using permalink as Actor ID. [#2745]
+
+### Fixed
+- Actors: avoid PHP warnings when trying to fetch invalid actor. [#2722]
+- Add ClassicPress compatibility by detecting it and disabling block support. [#2752]
+- Check if WP_Filesystem initialized successfully before using it to prevent fatal errors on hosts using FTP-based filesystem. [#2728]
+- Fixed ActivityPub comments being marked as spam by Akismet. [#2740]
+- Fixed an issue where embedding remote posts could fail when the author's profile was temporarily unavailable. [#2681]
+- Fixed flaky test for purge_ap_posts due to date boundary condition with -1 month [#2724]
+- Fixed inconsistent default value for the hashtag setting on new installations. [#2726]
+- Fixed reactions popover styles affecting other WordPress popovers. [#2733]
+- Fixed unwanted 301 redirects on search and posts pages when using Polylang or similar plugins. [#2734]
+- Fixed unwanted tags being created from hashtags inside links and other protected HTML elements. [#2727]
+- Fixed visibility setting not being saved correctly in block editor and classic editor. [#2737]
+
+## [7.8.2] - 2025-12-21
+### Fixed
+- Fix error when receiving replies to non-existent posts. [#2673]
+- Fix fatal error when displaying posts with mentions of invalid remote actors. [#2676]
+
+## [7.8.1] - 2025-12-18
+### Added
+- Hide comments from specific post types in the WordPress admin comments list. [#2669]
+
+### Fixed
+- Prevent comment email notifications for ap_post. [#2667]
+- Prevent post creation when Reader is deactivated. [#2666]
+
 ## [7.8.0] - 2025-12-17
 ### Added
 - Add blocklist subscriptions for automatic weekly synchronization of remote blocklists. [#2590]
@@ -1603,6 +1644,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.8.5]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.4...7.8.5
+[7.8.4]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.3...7.8.4
+[7.8.3]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.2...7.8.3
+[7.8.2]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.1...7.8.2
+[7.8.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.0...7.8.1
 [7.8.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.7.1...7.8.0
 [7.7.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.7.0...7.7.1
 [7.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.6.1...7.7.0

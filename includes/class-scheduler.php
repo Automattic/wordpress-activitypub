@@ -28,6 +28,21 @@ use Activitypub\Scheduler\Statistics;
 class Scheduler {
 
 	/**
+	 * Scheduled events with their recurrence.
+	 *
+	 * @var array
+	 */
+	const SCHEDULES = array(
+		'activitypub_update_remote_actors'         => 'hourly',
+		'activitypub_cleanup_remote_actors'        => 'daily',
+		'activitypub_reprocess_outbox'             => 'hourly',
+		'activitypub_outbox_purge'                 => 'daily',
+		'activitypub_inbox_purge'                  => 'daily',
+		'activitypub_ap_post_purge'                => 'daily',
+		'activitypub_sync_blocklist_subscriptions' => 'weekly',
+	);
+
+	/**
 	 * Allowed batch callbacks.
 	 *
 	 * @var array
@@ -143,32 +158,10 @@ class Scheduler {
 	 * Schedule all ActivityPub schedules.
 	 */
 	public static function register_schedules() {
-		if ( ! \wp_next_scheduled( 'activitypub_update_remote_actors' ) ) {
-			\wp_schedule_event( time(), 'hourly', 'activitypub_update_remote_actors' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_cleanup_remote_actors' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_reprocess_outbox' ) ) {
-			\wp_schedule_event( time(), 'hourly', 'activitypub_reprocess_outbox' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_inbox_purge' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_ap_post_purge' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_ap_post_purge' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_sync_blocklist_subscriptions' ) ) {
-			\wp_schedule_event( time(), 'weekly', 'activitypub_sync_blocklist_subscriptions' );
+		foreach ( self::SCHEDULES as $hook => $recurrence ) {
+			if ( ! \wp_next_scheduled( $hook ) ) {
+				\wp_schedule_event( time(), $recurrence, $hook );
+			}
 		}
 
 		// Schedule monthly stats collection for the 1st of each month.
@@ -178,10 +171,10 @@ class Scheduler {
 			\wp_schedule_event( $next_first, 'monthly', 'activitypub_collect_monthly_stats' );
 		}
 
-		// Schedule annual stats compilation for January 1st.
+		// Schedule annual stats compilation for December 1st (wrapped notification).
 		if ( ! \wp_next_scheduled( 'activitypub_compile_annual_stats' ) ) {
-			$next_year = self::get_next_january_first();
-			\wp_schedule_event( $next_year, 'yearly', 'activitypub_compile_annual_stats' );
+			$next_december = self::get_next_december_first();
+			\wp_schedule_event( $next_december, 'yearly', 'activitypub_compile_annual_stats' );
 		}
 	}
 
@@ -191,13 +184,11 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function deregister_schedules() {
-		\wp_unschedule_hook( 'activitypub_update_remote_actors' );
-		\wp_unschedule_hook( 'activitypub_cleanup_remote_actors' );
-		\wp_unschedule_hook( 'activitypub_reprocess_outbox' );
-		\wp_unschedule_hook( 'activitypub_outbox_purge' );
-		\wp_unschedule_hook( 'activitypub_inbox_purge' );
-		\wp_unschedule_hook( 'activitypub_ap_post_purge' );
-		\wp_unschedule_hook( 'activitypub_sync_blocklist_subscriptions' );
+		foreach ( array_keys( self::SCHEDULES ) as $hook ) {
+			\wp_unschedule_hook( $hook );
+		}
+
+		// Statistics schedules.
 		\wp_unschedule_hook( 'activitypub_collect_monthly_stats' );
 		\wp_unschedule_hook( 'activitypub_compile_annual_stats' );
 	}
@@ -215,18 +206,21 @@ class Scheduler {
 	}
 
 	/**
-	 * Get the next January 1st timestamp.
+	 * Get the next December 1st timestamp for wrapped notification.
 	 *
-	 * @return int Unix timestamp of next January 1st at 3:00 AM.
+	 * @return int Unix timestamp of next December 1st at 3:00 AM.
 	 */
-	private static function get_next_january_first() {
-		$now  = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
-		$year = (int) \gmdate( 'Y', $now );
+	private static function get_next_december_first() {
+		$now   = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$year  = (int) \gmdate( 'Y', $now );
+		$month = (int) \gmdate( 'n', $now );
 
-		// If we're past January 1st, schedule for next year.
-		$jan_first = \strtotime( sprintf( '%d-01-01 03:00:00', $year + 1 ) );
+		// If we're past December 1st, schedule for next year.
+		if ( $month >= 12 ) {
+			++$year;
+		}
 
-		return $jan_first;
+		return \strtotime( sprintf( '%d-12-01 03:00:00', $year ) );
 	}
 
 	/**
@@ -342,9 +336,9 @@ class Scheduler {
 	 * Schedule the outbox item for federation.
 	 *
 	 * @param int $id     The ID of the outbox item.
-	 * @param int $offset The offset to add to the scheduled time.
+	 * @param int $offset The offset to add to the scheduled time. Default 3 seconds.
 	 */
-	public static function schedule_outbox_activity_for_federation( $id, $offset = 0 ) {
+	public static function schedule_outbox_activity_for_federation( $id, $offset = 3 ) {
 		$hook = 'activitypub_process_outbox';
 		$args = array( $id );
 

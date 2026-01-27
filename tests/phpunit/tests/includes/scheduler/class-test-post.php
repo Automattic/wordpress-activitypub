@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Scheduler;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Scheduler\Post;
 
 /**
@@ -51,9 +52,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test post activity scheduling for regular posts.
 	 *
-	 * @covers ::schedule_post_activity
+	 * @covers ::triage
 	 */
-	public function test_schedule_post_activity_regular_post() {
+	public function test_triage_regular_post() {
 		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
@@ -63,15 +64,15 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test post activity scheduling for regular posts.
+	 * Test that unfederated posts do not trigger Delete activity when trashed.
 	 *
-	 * @covers ::schedule_post_activity
+	 * @covers ::triage
 	 */
-	public function test_not_schedule_delete_activity_unfederated_post() {
-		\remove_action( 'wp_after_insert_post', array( Post::class, 'schedule_post_activity' ), 33 );
+	public function test_triage_skip_delete_for_unfederated_post() {
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
-		\add_action( 'wp_after_insert_post', array( Post::class, 'schedule_post_activity' ), 33, 4 );
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
 
 		// Trash the post.
 		\wp_delete_post( $post_id );
@@ -83,7 +84,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * Test that publishing a post schedules a Create activity.
 	 *
 	 * @ticket https://github.com/Automattic/wordpress-activitypub/pull/1408
-	 * @covers ::schedule_post_activity
+	 * @covers ::triage
 	 */
 	public function test_activity_type_on_publish() {
 		$post_id        = self::factory()->post->create(
@@ -104,9 +105,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test post activity scheduling during bulk edits.
 	 *
-	 * @covers ::schedule_post_activity
+	 * @covers ::triage
 	 */
-	public function test_schedule_post_activity_bulk_edit() {
+	public function test_triage_bulk_edit() {
 		wp_set_current_user( self::$user_id );
 		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
@@ -194,5 +195,97 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
 		$this->assertNull( $this->get_latest_outbox_item( $activitypub_id ) );
+	}
+
+	/**
+	 * Test that sticking a post creates an Add activity for the featured collection.
+	 *
+	 * @covers ::schedule_featured_add
+	 * @covers ::schedule_featured_update
+	 */
+	public function test_sticky_post_creates_add_activity() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$actor   = Actors::get_by_id( $user_id );
+
+		$post_id        = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$activitypub_id = \Activitypub\get_post_id( $post_id );
+
+		\stick_post( $post_id );
+
+		// Query for the Add activity by object ID and activity type.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Add',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox_items );
+
+		$last_item = $outbox_items[0];
+
+		// Verify the activity content.
+		$activity = \json_decode( $last_item->post_content, true );
+		$this->assertEquals( 'Add', $activity['type'] );
+		$this->assertEquals( $actor->get_id(), $activity['actor'] );
+		$this->assertEquals( $activitypub_id, $activity['object'] );
+		$this->assertEquals( $actor->get_featured(), $activity['target'] );
+	}
+
+	/**
+	 * Test that unsticking a post creates a Remove activity for the featured collection.
+	 *
+	 * @covers ::schedule_featured_remove
+	 * @covers ::schedule_featured_update
+	 */
+	public function test_unsticky_post_creates_remove_activity() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$actor   = Actors::get_by_id( $user_id );
+
+		$post_id        = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$activitypub_id = \Activitypub\get_post_id( $post_id );
+
+		// First stick, then unstick.
+		\stick_post( $post_id );
+		\unstick_post( $post_id );
+
+		// Query for the Remove activity by object ID and activity type.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Remove',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox_items );
+
+		$last_item = $outbox_items[0];
+
+		// Verify the activity content.
+		$activity = \json_decode( $last_item->post_content, true );
+		$this->assertEquals( 'Remove', $activity['type'] );
+		$this->assertEquals( $actor->get_id(), $activity['actor'] );
+		$this->assertEquals( $activitypub_id, $activity['object'] );
+		$this->assertEquals( $actor->get_featured(), $activity['target'] );
 	}
 }

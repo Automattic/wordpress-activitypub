@@ -36,6 +36,13 @@ class Attachments {
 	public static $actors_dir = '/activitypub/actors/';
 
 	/**
+	 * Directory for storing emoji files (organized by domain).
+	 *
+	 * @var string
+	 */
+	public static $emoji_dir = '/activitypub/emoji/';
+
+	/**
 	 * Maximum width for imported images.
 	 *
 	 * @var int
@@ -67,10 +74,15 @@ class Attachments {
 			return;
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		\WP_Filesystem();
 		global $wp_filesystem;
+		if ( ! $wp_filesystem ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			\WP_Filesystem();
+		}
+
+		if ( ! $wp_filesystem ) {
+			return;
+		}
 
 		$activitypub_dir = self::get_storage_paths( $post_id, 'post' )['basedir'];
 
@@ -160,6 +172,102 @@ class Attachments {
 	}
 
 	/**
+	 * Import a remote emoji image locally.
+	 *
+	 * Downloads the emoji image and stores it organized by source domain.
+	 * If the emoji is already cached and not stale, returns the existing local URL.
+	 *
+	 * @param string      $emoji_url The remote emoji URL.
+	 * @param string|null $updated   Optional. The remote emoji's updated timestamp (ISO 8601).
+	 *                               If provided and newer than cached version, re-downloads.
+	 *
+	 * @return string|false The local emoji URL on success, false on failure.
+	 */
+	public static function import_emoji( $emoji_url, $updated = null ) {
+		if ( empty( $emoji_url ) || ! \filter_var( $emoji_url, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		/**
+		 * Filters the result of emoji import before processing.
+		 *
+		 * Allows short-circuiting the emoji import, useful for testing.
+		 *
+		 * @param string|false|null $result    The import result. Return a URL string to short-circuit,
+		 *                                     false to indicate failure, or null to proceed normally.
+		 * @param string            $emoji_url The remote emoji URL being imported.
+		 * @param string|null       $updated   The remote emoji's updated timestamp.
+		 */
+		$pre_import = \apply_filters( 'activitypub_pre_import_emoji', null, $emoji_url, $updated );
+		if ( null !== $pre_import ) {
+			return $pre_import;
+		}
+
+		// Check if already cached.
+		$cached_url = self::get_emoji_url( $emoji_url );
+		if ( $cached_url ) {
+			// If no updated timestamp provided, use cached version.
+			if ( ! $updated ) {
+				return $cached_url;
+			}
+
+			// Compare timestamps - re-download if remote is newer.
+			$paths       = self::get_emoji_storage_paths( $emoji_url );
+			$url_path    = \wp_parse_url( $emoji_url, PHP_URL_PATH );
+			$file_stem   = \sanitize_file_name( \pathinfo( $url_path, PATHINFO_FILENAME ) );
+			$matches     = \glob( $paths['basedir'] . '/' . $file_stem . '.*' );
+			$file_path   = ( $matches && \is_file( $matches[0] ) ) ? $matches[0] : null;
+			$local_time  = $file_path ? \filemtime( $file_path ) : 0;
+			$remote_time = \strtotime( $updated );
+
+			if ( $remote_time && $local_time >= $remote_time ) {
+				return $cached_url;
+			}
+		}
+
+		if ( ! \function_exists( 'download_url' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		// Download the emoji.
+		$tmp_file = \download_url( $emoji_url, 10 ); // 10 second timeout for emoji downloads.
+		if ( \is_wp_error( $tmp_file ) ) {
+			return false;
+		}
+
+		if ( ! \wp_get_image_mime( $tmp_file ) ) {
+			\wp_delete_file( $tmp_file );
+			return false;
+		}
+
+		// Get storage paths for this emoji.
+		$paths = self::get_emoji_storage_paths( $emoji_url );
+
+		// Create directory if it doesn't exist.
+		if ( ! \wp_mkdir_p( $paths['basedir'] ) ) {
+			\wp_delete_file( $tmp_file );
+			return false;
+		}
+
+		// Generate filename from URL path (consistent with get_emoji_url lookup).
+		$url_path  = \wp_parse_url( $emoji_url, PHP_URL_PATH );
+		$file_name = \sanitize_file_name( \basename( $url_path ) );
+		$file_path = $paths['basedir'] . '/' . $file_name;
+
+		// Initialize filesystem.
+		\WP_Filesystem();
+		global $wp_filesystem;
+
+		// Move file to destination (overwrite if exists).
+		if ( ! $wp_filesystem->move( $tmp_file, $file_path, true ) ) {
+			\wp_delete_file( $tmp_file );
+			return false;
+		}
+
+		return $paths['baseurl'] . '/' . $file_name;
+	}
+
+	/**
 	 * Import attachments as direct files for any object type.
 	 *
 	 * Saves files directly to uploads/activitypub/{type}/{id}/ without creating
@@ -240,6 +348,65 @@ class Attachments {
 			'basedir' => $upload_dir['basedir'] . $sub_dir . $object_id,
 			'baseurl' => $upload_dir['baseurl'] . $sub_dir . $object_id,
 		);
+	}
+
+	/**
+	 * Get storage paths for an emoji based on its source URL.
+	 *
+	 * Organizes emoji by source domain: /activitypub/emoji/{domain}/
+	 *
+	 * @param string $emoji_url The emoji source URL.
+	 *
+	 * @return array {
+	 *     Storage paths for the emoji.
+	 *
+	 *     @type string $basedir Base directory path.
+	 *     @type string $baseurl Base URL.
+	 * }
+	 */
+	private static function get_emoji_storage_paths( $emoji_url ) {
+		$upload_dir = \wp_upload_dir();
+		$domain     = \wp_parse_url( $emoji_url, PHP_URL_HOST );
+		$domain     = \sanitize_file_name( $domain );
+
+		return array(
+			'basedir' => $upload_dir['basedir'] . self::$emoji_dir . $domain,
+			'baseurl' => $upload_dir['baseurl'] . self::$emoji_dir . $domain,
+		);
+	}
+
+	/**
+	 * Get the local URL for a cached emoji.
+	 *
+	 * @param string $emoji_url The remote emoji URL.
+	 *
+	 * @return string|false The local URL if cached, false otherwise.
+	 */
+	private static function get_emoji_url( $emoji_url ) {
+		if ( empty( $emoji_url ) || ! \filter_var( $emoji_url, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		$paths = self::get_emoji_storage_paths( $emoji_url );
+
+		// Check if directory exists.
+		if ( ! \is_dir( $paths['basedir'] ) ) {
+			return false;
+		}
+
+		// Get the expected filename base from the URL.
+		$url_path  = \wp_parse_url( $emoji_url, PHP_URL_PATH );
+		$url_name  = \pathinfo( $url_path, PATHINFO_FILENAME );
+		$file_name = \sanitize_file_name( $url_name );
+
+		// Look for file with any extension (original or webp after optimization).
+		$files = \glob( $paths['basedir'] . '/' . $file_name . '.*' );
+
+		if ( ! empty( $files ) ) {
+			return $paths['baseurl'] . '/' . \basename( $files[0] );
+		}
+
+		return false;
 	}
 
 	/**
@@ -455,8 +622,14 @@ class Attachments {
 		}
 
 		// Initialize filesystem.
-		\WP_Filesystem();
 		global $wp_filesystem;
+		if ( ! $wp_filesystem ) {
+			\WP_Filesystem();
+		}
+
+		if ( ! $wp_filesystem ) {
+			return new \WP_Error( 'filesystem_error', \__( 'Could not initialize filesystem.', 'activitypub' ) );
+		}
 
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
@@ -589,8 +762,14 @@ class Attachments {
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
 		// Initialize filesystem if needed.
-		\WP_Filesystem();
 		global $wp_filesystem;
+		if ( ! $wp_filesystem ) {
+			\WP_Filesystem();
+		}
+
+		if ( ! $wp_filesystem ) {
+			return new \WP_Error( 'filesystem_error', \__( 'Could not initialize filesystem.', 'activitypub' ) );
+		}
 
 		// Make sure file name is unique.
 		$counter = 1;
@@ -1032,10 +1211,15 @@ class Attachments {
 			return;
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		\WP_Filesystem();
 		global $wp_filesystem;
+		if ( ! $wp_filesystem ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			\WP_Filesystem();
+		}
+
+		if ( ! $wp_filesystem ) {
+			return;
+		}
 
 		$activitypub_dir = self::get_storage_paths( $actor_id, 'actor' )['basedir'];
 

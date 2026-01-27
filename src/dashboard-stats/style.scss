@@ -169,6 +169,7 @@
 
 // Top posts section.
 .activitypub-stats-top-posts {
+
 	h4 {
 		margin: 0 0 8px;
 		font-size: 13px;
@@ -182,18 +183,7 @@
 		list-style: none;
 	}
 
-	li {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 8px 0;
-		border-bottom: 1px solid #f0f0f1;
-
-		&:last-child {
-			border-bottom: 0;
-		}
-	}
-
+	/* stylelint-disable-next-line no-descending-specificity */
 	a {
 		flex: 1;
 		overflow: hidden;
@@ -206,6 +196,18 @@
 		&:hover {
 			text-decoration: underline;
 			color: #135e96;
+		}
+	}
+
+	li {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 8px 0;
+		border-bottom: 1px solid #f0f0f1;
+
+		&:last-child {
+			border-bottom: 0;
 		}
 	}
 

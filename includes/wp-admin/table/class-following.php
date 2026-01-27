@@ -141,6 +141,22 @@ class Following extends \WP_List_Table {
 					break;
 				}
 
+				// Check if already following before making the request.
+				$actor = Remote_Actors::get_by_uri( $profile );
+				if ( ! \is_wp_error( $actor ) ) {
+					$following = \get_post_meta( $actor->ID, Following_Collection::FOLLOWING_META_KEY, false );
+					$pending   = \get_post_meta( $actor->ID, Following_Collection::PENDING_META_KEY, false );
+					if ( \in_array( (string) $this->user_id, $following, true ) ) {
+						/* translators: %s: Account profile that is already being followed */
+						\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'You are already following &#8220;%s&#8221;.', 'activitypub' ), \esc_html( $profile ) ), 'info' );
+						break;
+					} elseif ( \in_array( (string) $this->user_id, $pending, true ) ) {
+						/* translators: %s: Account profile that has a pending follow request */
+						\add_settings_error( 'activitypub', 'followed', \sprintf( \__( 'You already have a pending follow request for &#8220;%s&#8221;.', 'activitypub' ), \esc_html( $profile ) ), 'info' );
+						break;
+					}
+				}
+
 				$result = follow( $profile, $this->user_id );
 				if ( \is_wp_error( $result ) ) {
 					/* translators: %s: Account profile that could not be followed */
@@ -166,34 +182,6 @@ class Following extends \WP_List_Table {
 	 */
 	public function process_admin_notices() {
 		\settings_errors( 'activitypub' );
-	}
-
-	/**
-	 * Get columns.
-	 *
-	 * @return array
-	 */
-	public function get_columns() {
-		return array(
-			'cb'         => '<input type="checkbox" />',
-			'username'   => \__( 'Username', 'activitypub' ),
-			'post_title' => \__( 'Name', 'activitypub' ),
-			'webfinger'  => \__( 'Profile', 'activitypub' ),
-			'modified'   => \__( 'Last updated', 'activitypub' ),
-		);
-	}
-
-	/**
-	 * Returns sortable columns.
-	 *
-	 * @return array
-	 */
-	public function get_sortable_columns() {
-		return array(
-			'username'   => array( 'username', true ),
-			'post_title' => array( 'post_title', true ),
-			'modified'   => array( 'modified', false ),
-		);
 	}
 
 	/**
@@ -340,20 +328,6 @@ class Following extends \WP_List_Table {
 		return array(
 			'delete' => \__( 'Unfollow', 'activitypub' ),
 		);
-	}
-
-	/**
-	 * Column default.
-	 *
-	 * @param array  $item        Item.
-	 * @param string $column_name Column name.
-	 * @return string
-	 */
-	public function column_default( $item, $column_name ) {
-		if ( ! array_key_exists( $column_name, $item ) ) {
-			return \esc_html__( 'None', 'activitypub' );
-		}
-		return \esc_html( $item[ $column_name ] );
 	}
 
 	/**

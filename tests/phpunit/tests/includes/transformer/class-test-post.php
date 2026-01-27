@@ -1204,4 +1204,331 @@ class Test_Post extends \WP_UnitTestCase {
 			),
 		);
 	}
+
+	/**
+	 * Test get_location method with public geodata.
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_with_public_geodata() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata.
+		\update_post_meta( $post_id, 'geo_latitude', '52.5200' );
+		\update_post_meta( $post_id, 'geo_longitude', '13.4050' );
+		\update_post_meta( $post_id, 'geo_address', 'Berlin, Germany' );
+		\update_post_meta( $post_id, 'geo_public', '1' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertIsArray( $location );
+		$this->assertSame( 'Place', $location['type'] );
+		$this->assertSame( 52.52, $location['latitude'] );
+		$this->assertSame( 13.405, $location['longitude'] );
+		$this->assertSame( 'Berlin, Germany', $location['name'] );
+	}
+
+	/**
+	 * Test get_location method without geo_public set (defaults to public).
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_without_geo_public_defaults_public() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata without geo_public.
+		\update_post_meta( $post_id, 'geo_latitude', '48.8566' );
+		\update_post_meta( $post_id, 'geo_longitude', '2.3522' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertIsArray( $location );
+		$this->assertSame( 'Place', $location['type'] );
+		$this->assertSame( 48.8566, $location['latitude'] );
+		$this->assertSame( 2.3522, $location['longitude'] );
+		$this->assertArrayNotHasKey( 'name', $location );
+	}
+
+	/**
+	 * Test get_location method with private geodata (geo_public = 0).
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_with_private_geodata() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Private Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata as private.
+		\update_post_meta( $post_id, 'geo_latitude', '40.7128' );
+		\update_post_meta( $post_id, 'geo_longitude', '-74.0060' );
+		\update_post_meta( $post_id, 'geo_public', '0' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertNull( $location, 'Location should be null when geo_public is 0.' );
+	}
+
+	/**
+	 * Test get_location method without geodata.
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_without_geodata() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post without Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertNull( $location, 'Location should be null when no geodata is present.' );
+	}
+
+	/**
+	 * Test get_location method with zero coordinates (Equator/Prime Meridian).
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_with_zero_coordinates() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post at Null Island',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata to 0,0 (Null Island - valid coordinates).
+		\update_post_meta( $post_id, 'geo_latitude', '0' );
+		\update_post_meta( $post_id, 'geo_longitude', '0' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertIsArray( $location, 'Location should not be null for coordinates 0,0' );
+		$this->assertSame( 'Place', $location['type'] );
+		$this->assertSame( 0.0, $location['latitude'] );
+		$this->assertSame( 0.0, $location['longitude'] );
+	}
+
+	/**
+	 * Test get_location method with only latitude (missing longitude).
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_with_incomplete_geodata() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Incomplete Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set only latitude.
+		\update_post_meta( $post_id, 'geo_latitude', '51.5074' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertNull( $location, 'Location should be null when longitude is missing.' );
+	}
+
+	/**
+	 * Test get_location filter.
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_filter() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Location Filter',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata.
+		\update_post_meta( $post_id, 'geo_latitude', '35.6762' );
+		\update_post_meta( $post_id, 'geo_longitude', '139.6503' );
+
+		// Add a filter to modify the location.
+		$filter = function ( $place ) {
+			$place['name']     = 'Tokyo, Japan';
+			$place['altitude'] = 40;
+			return $place;
+		};
+		\add_filter( 'activitypub_post_location', $filter, 10, 3 );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertIsArray( $location );
+		$this->assertSame( 'Tokyo, Japan', $location['name'] );
+		$this->assertSame( 40, $location['altitude'] );
+
+		\remove_filter( 'activitypub_post_location', $filter );
+	}
+
+	/**
+	 * Test that location is included in to_object output.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_location_in_to_object() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata.
+		\update_post_meta( $post_id, 'geo_latitude', '51.5074' );
+		\update_post_meta( $post_id, 'geo_longitude', '-0.1278' );
+		\update_post_meta( $post_id, 'geo_address', 'London, UK' );
+
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		$location = $object->get_location();
+
+		$this->assertIsArray( $location );
+		$this->assertSame( 'Place', $location['type'] );
+		$this->assertSame( 51.5074, $location['latitude'] );
+		$this->assertSame( -0.1278, $location['longitude'] );
+		$this->assertSame( 'London, UK', $location['name'] );
+	}
+
+	/**
+	 * Test that duplicate attachments are filtered after activitypub_attachment_ids filter.
+	 *
+	 * This ensures that when plugins add attachments via the filter (like Classic Editor),
+	 * duplicates are properly removed to prevent the same image appearing multiple times.
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_duplicate_attachments_filtered_after_filter() {
+		// Create an image attachment.
+		$attachment_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$attachment_url = \wp_get_attachment_url( $attachment_id );
+
+		// Create a post with the image as featured image.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Duplicate Image',
+				'post_content' => sprintf( '<p>Test content with image</p><img src="%s" />', $attachment_url ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set the same image as featured image.
+		\set_post_thumbnail( $post_id, $attachment_id );
+
+		// Add a filter that simulates Classic Editor behavior - adding attached images.
+		$filter = function ( $attachments ) use ( $attachment_id ) {
+			// Simulate Classic Editor adding the same attachment again.
+			$attachments[] = array( 'id' => $attachment_id );
+			return $attachments;
+		};
+		\add_filter( 'activitypub_attachment_ids', $filter, 10, 1 );
+
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		// Get the attachments.
+		$attachments = $object->get_attachment();
+
+		// Remove the filter.
+		\remove_filter( 'activitypub_attachment_ids', $filter );
+
+		// Clean up.
+		\delete_post_thumbnail( $post_id );
+		\wp_delete_attachment( $attachment_id, true );
+
+		// There should be only ONE attachment, not duplicates.
+		$this->assertCount( 1, $attachments, 'Duplicate attachments should be filtered out' );
+		$this->assertSame( $attachment_url, $attachments[0]['url'] );
+	}
 }

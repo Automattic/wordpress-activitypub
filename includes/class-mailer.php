@@ -8,7 +8,6 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Posts;
 
 /**
  * Mailer Class.
@@ -172,6 +171,14 @@ class Mailer {
 		}
 
 		$actor = self::normalize_actor( $actor );
+
+		// Replace emoji in actor name and summary.
+		if ( ! empty( $actor['name'] ) ) {
+			$actor['name'] = Emoji::replace_for_actor( $actor['name'], $actor['url'] );
+		}
+		if ( ! empty( $actor['summary'] ) ) {
+			$actor['summary'] = Emoji::replace_for_actor( $actor['summary'], $actor['url'] );
+		}
 
 		$template_args = array_merge(
 			$actor,
@@ -463,11 +470,6 @@ class Mailer {
 			return $maybe_notify;
 		}
 
-		// Only prevent if the create_posts option is enabled.
-		if ( '1' !== \get_option( 'activitypub_create_posts', false ) ) {
-			return $maybe_notify;
-		}
-
 		$comment = \get_comment( $comment_id );
 		if ( ! $comment ) {
 			return $maybe_notify;
@@ -479,7 +481,7 @@ class Mailer {
 		}
 
 		// Prevent notifications for comments on ap_post.
-		if ( Posts::POST_TYPE === $post->post_type ) {
+		if ( is_ap_post( $post ) ) {
 			return false;
 		}
 

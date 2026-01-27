@@ -8,7 +8,7 @@ test.describe( 'ActivityPub Replies Collection REST API', () => {
 	let testPostId;
 	let repliesEndpoint;
 
-	test.beforeAll( async ( { requestUtils } ) => {
+	test.beforeAll( async () => {
 		// Use the default test user and a sample post
 		testUserId = 1;
 		testPostId = 1; // Assuming a post exists

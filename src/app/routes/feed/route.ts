@@ -13,8 +13,8 @@ import type { RouteConfig, RouteLoaderContext } from '../../router/types';
 export const route: RouteConfig = {
 	/**
 	 * Show inspector only when a post is selected (postId in search params)
-	 * @param root0
-	 * @param root0.search
+	 * @param context        Route loader context.
+	 * @param context.search URL search parameters.
 	 */
 	inspector: ( { search }: RouteLoaderContext ): boolean => !! search.postId,
 };
