@@ -60,6 +60,7 @@ export default function StatHighlights( { comparison, commentTypes }: Props ) {
 						<span className="stat-content">
 							<span className="stat-value">{ stat.value.toLocaleString() }</span>{ ' ' }
 							<span className="stat-label">{ stat.label }</span>
+							{ stat.change !== 0 && ' ' }
 							{ stat.change !== 0 && (
 								<span className={ `stat-change ${ stat.change > 0 ? 'positive' : 'negative' }` }>
 									({ stat.change > 0 ? '+' : '' }
