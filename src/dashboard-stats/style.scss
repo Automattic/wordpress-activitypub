@@ -1,13 +1,13 @@
 // ActivityPub Dashboard Stats Widget
-// Styled to match WordPress core dashboard widgets.
+// Styled to match WordPress core dashboard widgets exactly.
 
 .activitypub-stats-widget {
 	// Match WordPress dashboard postbox inner padding.
 	margin: -6px -12px -12px;
 
-	// Shared h3 style - matches WordPress dashboard heading pattern.
+	// Match #dashboard-widgets h3 styling.
 	h3 {
-		margin: 0 0 8px;
+		margin: 0 12px 8px;
 		padding: 0;
 		font-size: 14px;
 		font-weight: 400;
@@ -41,45 +41,49 @@
 	margin: 0;
 }
 
-// Main stats section - matches #dashboard_right_now .main style.
-.activitypub-stats-main {
-	padding: 0 12px 11px;
-}
-
-// Highlights section - matches "At a Glance" style.
+// Highlights section - matches #dashboard_right_now .main exactly.
 .activitypub-stats-highlights {
-	padding: 12px;
+	padding: 0 12px 11px;
+
+	h3 {
+		margin-left: 0;
+		margin-right: 0;
+	}
 }
 
 .activitypub-stats-grid {
-	display: flex;
-	flex-wrap: wrap;
 	margin: 0;
+	display: inline-block;
+	width: 100%;
 }
 
+// Match #dashboard_right_now li styling exactly.
 .activitypub-stat-item {
 	width: 50%;
-	box-sizing: border-box;
-	padding: 0 0 10px;
-	display: flex;
-	align-items: baseline;
+	float: left;
+	margin-bottom: 10px;
 
-	// Dashicon-style icon placeholder.
+	// Match #dashboard_right_now li a:before exactly.
 	&::before {
-		color: #82878c;
+		content: "\f159";
+		color: #646970;
 		font: 400 20px/1 dashicons, sans-serif;
-		padding-right: 5px;
+		padding: 0 5px 0 0;
+		display: inline-block;
+		position: relative;
+		vertical-align: top;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
+		text-decoration: none;
 	}
 
-	// Icon mappings.
+	// Icon mappings - same as WordPress dashboard icons.
 	&[data-type="followers"]::before {
 		content: "\f307"; // groups icon.
 	}
 
 	&[data-type="posts"]::before {
-		content: "\f109"; // post icon.
+		content: "\f109"; // admin-post icon.
 	}
 
 	&[data-type="likes"]::before,
@@ -94,28 +98,23 @@
 
 	&[data-type="comments"]::before,
 	&[data-type="comment"]::before {
-		content: "\f101"; // comment icon.
+		content: "\f101"; // admin-comments icon.
 	}
 
 	&[data-type="engagement"]::before {
-		content: "\f239"; // chart icon.
+		content: "\f239"; // chart-area icon.
 	}
 
 	.stat-content {
 		display: inline;
+		vertical-align: top;
 	}
 
 	.stat-value {
 		font-weight: 600;
-		color: #50575e;
-	}
-
-	.stat-label {
-		color: #50575e;
 	}
 
 	.stat-change {
-		font-size: 12px;
 		color: #646970;
 
 		&.positive {
@@ -128,27 +127,34 @@
 	}
 }
 
-// Sub-section style - matches #dashboard_right_now .sub.
+// Sub-section style - matches #dashboard_right_now .sub exactly.
 .activitypub-stats-sub {
+	color: #50575e;
 	background: #f6f7f7;
 	border-top: 1px solid #f0f0f1;
 	padding: 10px 12px 6px;
-	color: #50575e;
-}
-
-// Chart section.
-.activitypub-stats-chart {
-	border-top: 1px solid #f0f0f1;
 
 	h3 {
-		margin: 0;
-		padding: 12px 12px 8px;
+		color: #50575e;
+		margin-left: 0;
+		margin-right: 0;
+	}
+}
+
+// Chart section - matches .activity-block pattern.
+.activitypub-stats-chart {
+	border-bottom: 1px solid #f0f0f1;
+	margin: 0 -12px 6px;
+	padding: 8px 12px 4px;
+
+	h3 {
+		margin-left: 0;
+		margin-right: 0;
 	}
 }
 
 .activitypub-chart-container {
-	padding: 0 12px 12px;
-	background: #f6f7f7;
+	padding: 8px 0;
 }
 
 .activitypub-line-chart {
@@ -166,9 +172,9 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: 12px;
-	margin-top: 10px;
-	padding-top: 10px;
-	border-top: 1px solid #dcdcde;
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid #f0f0f1;
 }
 
 .activitypub-legend-item {
@@ -185,14 +191,16 @@
 	}
 }
 
-// Top supporter section - matches activity block style.
+// Top supporter section - matches .activity-block pattern.
 .activitypub-stats-multiplicator {
-	border-top: 1px solid #f0f0f1;
-	margin: 0;
-	padding: 12px;
+	border-bottom: 1px solid #f0f0f1;
+	margin: 0 -12px 6px;
+	padding: 8px 12px 4px;
 
 	h3 {
-		margin: 0 0 4px;
+		margin-left: 0;
+		margin-right: 0;
+		margin-bottom: 4px;
 	}
 
 	p {
@@ -213,10 +221,21 @@
 	}
 }
 
-// Top posts section - matches activity widget style.
+// Top posts section - matches .activity-block pattern.
 .activitypub-stats-top-posts {
-	padding: 12px;
-	border-top: 1px solid #f0f0f1;
+	border-bottom: 1px solid #f0f0f1;
+	margin: 0 -12px 6px;
+	padding: 8px 12px 4px;
+
+	&:last-child {
+		border-bottom: none;
+		margin-bottom: 0;
+	}
+
+	h3 {
+		margin-left: 0;
+		margin-right: 0;
+	}
 
 	ul {
 		margin: 0;
