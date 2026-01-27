@@ -122,6 +122,62 @@ class Admin {
 			</div>
 			<?php
 		}
+
+		// Handle FASP admin notices.
+		self::process_fasp_admin_notices();
+	}
+
+	/**
+	 * Process FASP admin action notices.
+	 *
+	 * Registers settings errors based on query parameters from FASP admin actions.
+	 */
+	private static function process_fasp_admin_notices() {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		$page = isset( $_GET['page'] ) ? \sanitize_text_field( \wp_unslash( $_GET['page'] ) ) : '';
+		$tab  = isset( $_GET['tab'] ) ? \sanitize_text_field( \wp_unslash( $_GET['tab'] ) ) : '';
+
+		// Only process on FASP registrations tab.
+		if ( 'activitypub' !== $page || 'fasp-registrations' !== $tab ) {
+			return;
+		}
+
+		if ( isset( $_GET['approved'] ) && '1' === $_GET['approved'] ) {
+			\add_settings_error(
+				'activitypub_fasp',
+				'fasp_approved',
+				\__( 'Service approved successfully. It can now integrate with your site.', 'activitypub' ),
+				'success'
+			);
+		}
+
+		if ( isset( $_GET['rejected'] ) && '1' === $_GET['rejected'] ) {
+			\add_settings_error(
+				'activitypub_fasp',
+				'fasp_rejected',
+				\__( 'Service request rejected.', 'activitypub' ),
+				'success'
+			);
+		}
+
+		if ( isset( $_GET['deleted'] ) && '1' === $_GET['deleted'] ) {
+			\add_settings_error(
+				'activitypub_fasp',
+				'fasp_deleted',
+				\__( 'Service disconnected successfully.', 'activitypub' ),
+				'success'
+			);
+		}
+
+		if ( isset( $_GET['error'] ) && '1' === $_GET['error'] ) {
+			\add_settings_error(
+				'activitypub_fasp',
+				'fasp_error',
+				\__( 'An error occurred while processing your request. Please try again.', 'activitypub' ),
+				'error'
+			);
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
 
 	/**

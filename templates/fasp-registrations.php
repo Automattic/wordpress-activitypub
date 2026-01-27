@@ -12,39 +12,11 @@ use Activitypub\Fasp;
 $pending_registrations  = Fasp::get_pending_registrations();
 $approved_registrations = Fasp::get_approved_registrations();
 $highlighted_id         = isset( $_GET['highlight'] ) ? \sanitize_text_field( \wp_unslash( $_GET['highlight'] ) ) : '';
-
-// Admin action feedback.
-$approved  = isset( $_GET['approved'] ) && '1' === $_GET['approved'];
-$rejected  = isset( $_GET['rejected'] ) && '1' === $_GET['rejected'];
-$deleted   = isset( $_GET['deleted'] ) && '1' === $_GET['deleted'];
-$has_error = isset( $_GET['error'] ) && '1' === $_GET['error'];
 ?>
 
 <hr class="wp-header-end">
 
-<?php if ( $approved ) : ?>
-	<div class="notice notice-success is-dismissible">
-		<p><?php \esc_html_e( 'Service approved successfully. It can now integrate with your site.', 'activitypub' ); ?></p>
-	</div>
-<?php endif; ?>
-
-<?php if ( $rejected ) : ?>
-	<div class="notice notice-success is-dismissible">
-		<p><?php \esc_html_e( 'Service request rejected.', 'activitypub' ); ?></p>
-	</div>
-<?php endif; ?>
-
-<?php if ( $deleted ) : ?>
-	<div class="notice notice-success is-dismissible">
-		<p><?php \esc_html_e( 'Service disconnected successfully.', 'activitypub' ); ?></p>
-	</div>
-<?php endif; ?>
-
-<?php if ( $has_error ) : ?>
-	<div class="notice notice-error is-dismissible">
-		<p><?php \esc_html_e( 'An error occurred while processing your request. Please try again.', 'activitypub' ); ?></p>
-	</div>
-<?php endif; ?>
+<?php \settings_errors( 'activitypub_fasp' ); ?>
 
 <div class="activitypub-settings activitypub-settings-page hide-if-no-js">
 	<p class="description">
