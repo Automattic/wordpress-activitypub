@@ -53,7 +53,7 @@ export default function StatHighlights( { comparison, commentTypes }: Props ) {
 
 	return (
 		<div className="activitypub-stats-highlights">
-			<p className="activitypub-stats-period">{ __( 'This month vs. last year', 'activitypub' ) }</p>
+			<h3 className="activitypub-stats-period">{ __( 'This month vs. last year', 'activitypub' ) }</h3>
 			<div className="activitypub-stats-grid">
 				{ stats.map( ( stat ) => (
 					<div key={ stat.key } className="activitypub-stat-item" data-type={ stat.key }>
