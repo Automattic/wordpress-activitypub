@@ -193,11 +193,10 @@
 	}
 }
 
-// Top supporter section - matches .activity-block pattern.
+// Top supporter section.
 .activitypub-stats-multiplicator {
-	border-bottom: 1px solid #f0f0f1;
-	margin: 0 -12px 6px;
-	padding: 8px 12px 4px;
+	border-top: 1px solid #f0f0f1;
+	padding: 12px;
 
 	h3 {
 		margin-left: 0;
@@ -223,16 +222,10 @@
 	}
 }
 
-// Top posts section - matches .activity-block pattern.
+// Top posts section.
 .activitypub-stats-top-posts {
-	border-bottom: 1px solid #f0f0f1;
-	margin: 0 -12px 6px;
-	padding: 8px 12px 4px;
-
-	&:last-child {
-		border-bottom: none;
-		margin-bottom: 0;
-	}
+	border-top: 1px solid #f0f0f1;
+	padding: 12px;
 
 	h3 {
 		margin-left: 0;
