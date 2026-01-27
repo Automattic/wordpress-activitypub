@@ -499,8 +499,8 @@ class Mailer {
 
 		switch ( $template ) {
 			case 'annual-wrapped':
-				/* translators: 1: Blog name, 2: Year */
 				return \sprintf(
+					/* translators: 1: Blog name, 2: Year */
 					\__( '[%1$s] Your %2$d Fediverse Year in Review', 'activitypub' ),
 					$blogname,
 					$args['year'] ?? \gmdate( 'Y' )
