@@ -105,7 +105,6 @@ class Fasp {
 		return null;
 	}
 
-
 	/**
 	 * Get all pending registration requests.
 	 *
@@ -290,6 +289,49 @@ class Fasp {
 		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
 
 		return isset( $capabilities[ $capability_key ] ) && $capabilities[ $capability_key ]['enabled'];
+	}
+
+	/**
+	 * Enable a capability for a FASP.
+	 *
+	 * @param string $fasp_id    FASP ID.
+	 * @param string $identifier Capability identifier.
+	 * @param string $version    Capability version.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function enable_capability( $fasp_id, $identifier, $version ) {
+		$capabilities   = self::get_capabilities_store();
+		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
+
+		$capabilities[ $capability_key ] = array(
+			'fasp_id'    => $fasp_id,
+			'identifier' => $identifier,
+			'version'    => $version,
+			'enabled'    => true,
+			'updated_at' => \current_time( 'mysql', true ),
+		);
+
+		return \update_option( 'activitypub_fasp_capabilities', $capabilities, false );
+	}
+
+	/**
+	 * Disable a capability for a FASP.
+	 *
+	 * @param string $fasp_id    FASP ID.
+	 * @param string $identifier Capability identifier.
+	 * @param string $version    Capability version.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function disable_capability( $fasp_id, $identifier, $version ) {
+		$capabilities   = self::get_capabilities_store();
+		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
+
+		if ( isset( $capabilities[ $capability_key ] ) ) {
+			$capabilities[ $capability_key ]['enabled']    = false;
+			$capabilities[ $capability_key ]['updated_at'] = \current_time( 'mysql', true );
+		}
+
+		return \update_option( 'activitypub_fasp_capabilities', $capabilities, false );
 	}
 
 	/**

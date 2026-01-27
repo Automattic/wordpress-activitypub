@@ -72,8 +72,9 @@ class Fasp_Controller extends \WP_REST_Controller {
 							'required'          => true,
 							'type'              => 'string',
 							'format'            => 'uri',
-							'description'       => 'The base URL of the FASP.',
+							'description'       => 'The base URL of the FASP (must be HTTPS).',
 							'sanitize_callback' => 'esc_url_raw',
+							'validate_callback' => array( $this, 'validate_https_url' ),
 						),
 						'serverId'  => array(
 							'required'          => true,
@@ -300,7 +301,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 			return $validation;
 		}
 
-		$result = $this->enable_fasp_capability(
+		$result = Fasp::enable_capability(
 			$validation['fasp_id'],
 			$validation['identifier'],
 			$validation['version']
@@ -329,7 +330,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 			return $validation;
 		}
 
-		$result = $this->disable_fasp_capability(
+		$result = Fasp::disable_capability(
 			$validation['fasp_id'],
 			$validation['identifier'],
 			$validation['version']
@@ -474,79 +475,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Enable a capability for a FASP.
-	 *
-	 * @param string $fasp_id    FASP ID.
-	 * @param string $identifier Capability identifier.
-	 * @param string $version    Capability version.
-	 * @return bool True on success, false on failure.
-	 */
-	private function enable_fasp_capability( $fasp_id, $identifier, $version ) {
-		// Get existing capabilities.
-		$capabilities = $this->get_capability_records();
-
-		// Create capability key.
-		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
-
-		// Enable capability.
-		$capabilities[ $capability_key ] = array(
-			'fasp_id'    => $fasp_id,
-			'identifier' => $identifier,
-			'version'    => $version,
-			'enabled'    => true,
-			'updated_at' => current_time( 'mysql', true ),
-		);
-
-		// Store updated capabilities.
-		return \update_option( 'activitypub_fasp_capabilities', $capabilities, false );
-	}
-
-	/**
-	 * Disable a capability for a FASP.
-	 *
-	 * @param string $fasp_id    FASP ID.
-	 * @param string $identifier Capability identifier.
-	 * @param string $version    Capability version.
-	 * @return bool True on success, false on failure.
-	 */
-	private function disable_fasp_capability( $fasp_id, $identifier, $version ) {
-		// Get existing capabilities.
-		$capabilities = $this->get_capability_records();
-
-		// Create capability key.
-		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
-
-		// Disable capability.
-		if ( isset( $capabilities[ $capability_key ] ) ) {
-			$capabilities[ $capability_key ]['enabled']    = false;
-			$capabilities[ $capability_key ]['updated_at'] = current_time( 'mysql', true );
-		}
-
-		// Store updated capabilities.
-		return \update_option( 'activitypub_fasp_capabilities', $capabilities, false );
-	}
-
-	/**
-	 * Retrieve stored capability assignments, ensuring the option exists and is non-autoloaded.
-	 *
-	 * @return array
-	 */
-	private function get_capability_records() {
-		$capabilities = \get_option( 'activitypub_fasp_capabilities', null );
-
-		if ( null === $capabilities ) {
-			\add_option( 'activitypub_fasp_capabilities', array(), '', 'no' );
-			return array();
-		}
-
-		if ( ! is_array( $capabilities ) ) {
-			return array();
-		}
-
-		return $capabilities;
-	}
-
-	/**
 	 * Get the schema for provider info endpoint.
 	 *
 	 * @return array The schema.
@@ -670,6 +598,30 @@ class Fasp_Controller extends \WP_REST_Controller {
 					SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES,
 					\strlen( $decoded )
 				),
+				array( 'status' => 400 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Validate that a URL uses HTTPS scheme.
+	 *
+	 * FASP providers should use HTTPS for security.
+	 *
+	 * @param string           $url     The URL to validate.
+	 * @param \WP_REST_Request $request The request object.
+	 * @param string           $param   The parameter name.
+	 * @return true|\WP_Error True if valid, WP_Error otherwise.
+	 */
+	public function validate_https_url( $url, $request, $param ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$scheme = \wp_parse_url( $url, \PHP_URL_SCHEME );
+
+		if ( 'https' !== $scheme ) {
+			return new \WP_Error(
+				'invalid_url_scheme',
+				\__( 'The base URL must use HTTPS.', 'activitypub' ),
 				array( 'status' => 400 )
 			);
 		}
