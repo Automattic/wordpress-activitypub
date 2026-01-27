@@ -22,13 +22,6 @@ use Activitypub\Comment;
 class Statistics {
 
 	/**
-	 * Initialize the class, registering WordPress hooks.
-	 */
-	public static function init() {
-		// Statistics class currently has no hooks to register.
-	}
-
-	/**
 	 * Option prefix for statistics storage.
 	 *
 	 * @var string
