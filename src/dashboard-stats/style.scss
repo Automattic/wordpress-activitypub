@@ -61,14 +61,15 @@
 	box-sizing: border-box;
 	padding: 4px 0;
 	display: flex;
-	align-items: baseline;
+	align-items: flex-start;
 
 	// Dashicon-style icon placeholder.
 	&::before {
 		color: #646970;
 		font: 400 20px/1 dashicons, sans-serif;
-		padding-right: 5px;
-		vertical-align: top;
+		margin-right: 5px;
+		margin-top: 1px;
+		flex-shrink: 0;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 	}
@@ -102,27 +103,22 @@
 	}
 
 	.stat-content {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: baseline;
-		gap: 4px;
+		display: inline;
+		line-height: 1.4;
 	}
 
 	.stat-value {
-		font-size: 14px;
 		font-weight: 600;
 		color: #2c3338;
 	}
 
 	.stat-label {
-		font-size: 14px;
 		color: #2c3338;
 	}
 
 	.stat-change {
 		font-size: 12px;
 		color: #646970;
-		margin-left: 4px;
 
 		&.positive {
 			color: #00a32a;
@@ -141,13 +137,14 @@
 	padding: 12px;
 }
 
-// Chart section.
+// Chart section - full width background.
 .activitypub-stats-chart {
-	padding: 12px;
 	border-top: 1px solid #f0f0f1;
+	background: #f6f7f7;
 
 	h4 {
-		margin: 0 0 12px;
+		margin: 0;
+		padding: 12px 12px 0;
 		font-size: 13px;
 		font-weight: 600;
 		color: #1d2327;
@@ -155,8 +152,6 @@
 }
 
 .activitypub-chart-container {
-	background: #f6f7f7;
-	border-radius: 2px;
 	padding: 12px;
 }
 
