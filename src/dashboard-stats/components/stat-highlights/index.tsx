@@ -10,6 +10,10 @@ interface Props {
  * Stat Highlights Component.
  *
  * Displays key statistics with month-over-month comparison.
+ *
+ * @param {Props} props              Component props.
+ * @param {Props} props.comparison   Comparison data with current vs previous values.
+ * @param {Props} props.commentTypes Available comment types configuration.
  */
 export default function StatHighlights( { comparison, commentTypes }: Props ) {
 	if ( ! comparison ) {
@@ -52,15 +56,17 @@ export default function StatHighlights( { comparison, commentTypes }: Props ) {
 			<p className="activitypub-stats-period">{ __( 'This month vs. last year', 'activitypub' ) }</p>
 			<div className="activitypub-stats-grid">
 				{ stats.map( ( stat ) => (
-					<div key={ stat.key } className="activitypub-stat-item">
-						<span className="stat-value">{ stat.value.toLocaleString() }</span>
-						<span className="stat-label">{ stat.label }</span>
-						{ stat.change !== 0 && (
-							<span className={ `stat-change ${ stat.change > 0 ? 'positive' : 'negative' }` }>
-								{ stat.change > 0 ? '+' : '' }
-								{ stat.change.toLocaleString() }
-							</span>
-						) }
+					<div key={ stat.key } className="activitypub-stat-item" data-type={ stat.key }>
+						<span className="stat-content">
+							<span className="stat-value">{ stat.value.toLocaleString() }</span>
+							<span className="stat-label">{ stat.label }</span>
+							{ stat.change !== 0 && (
+								<span className={ `stat-change ${ stat.change > 0 ? 'positive' : 'negative' }` }>
+									({ stat.change > 0 ? '+' : '' }
+									{ stat.change.toLocaleString() })
+								</span>
+							) }
+						</span>
 					</div>
 				) ) }
 			</div>

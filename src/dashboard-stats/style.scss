@@ -1,74 +1,128 @@
+// ActivityPub Dashboard Stats Widget
+// Styled to match WordPress core dashboard widgets.
+
 .activitypub-stats-widget {
-	position: relative;
+	// Match WordPress dashboard postbox inner padding.
+	margin: -6px -12px -12px;
 }
 
 .activitypub-stats-header {
-	margin-bottom: 16px;
+	padding: 0 12px 12px;
+	border-bottom: 1px solid #f0f0f1;
 
 	.components-select-control {
 		margin: 0;
+	}
+
+	.components-base-control__field {
+		margin-bottom: 0;
 	}
 }
 
 .activitypub-stats-loading {
 	display: flex;
 	justify-content: center;
-	padding: 32px;
+	padding: 24px 12px;
 }
 
 .activitypub-stats-empty {
-	color: #757575;
+	color: #646970;
 	text-align: center;
-	padding: 24px;
+	padding: 24px 12px;
+	margin: 0;
 }
 
-// Highlights section.
+// Main stats section - matches #dashboard_right_now .main style.
+.activitypub-stats-main {
+	padding: 12px;
+}
+
+// Highlights section - matches "At a Glance" style.
 .activitypub-stats-highlights {
-	margin-bottom: 20px;
+	padding: 0 12px 8px;
 }
 
 .activitypub-stats-period {
 	font-size: 11px;
-	color: #757575;
-	margin: 0 0 12px;
+	color: #646970;
+	margin: 0 0 8px;
 	text-transform: uppercase;
-	letter-spacing: 0.3px;
+	font-weight: 500;
 }
 
 .activitypub-stats-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-	gap: 12px;
+	display: flex;
+	flex-wrap: wrap;
+	margin: 0;
 }
 
 .activitypub-stat-item {
-	text-align: center;
-	padding: 12px 8px;
-	background: #f6f7f7;
-	border-radius: 4px;
+	width: 50%;
+	box-sizing: border-box;
+	padding: 4px 0;
+	display: flex;
+	align-items: baseline;
+
+	// Dashicon-style icon placeholder.
+	&::before {
+		color: #646970;
+		font: 400 20px/1 dashicons, sans-serif;
+		padding-right: 5px;
+		vertical-align: top;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+
+	// Icon mappings.
+	&[data-type="followers"]::before {
+		content: "\f307"; // groups icon.
+	}
+
+	&[data-type="posts"]::before {
+		content: "\f109"; // post icon.
+	}
+
+	&[data-type="likes"]::before,
+	&[data-type="like"]::before {
+		content: "\f155"; // star-filled icon.
+	}
+
+	&[data-type="reposts"]::before,
+	&[data-type="repost"]::before {
+		content: "\f488"; // share icon.
+	}
+
+	&[data-type="comments"]::before,
+	&[data-type="comment"]::before {
+		content: "\f101"; // comment icon.
+	}
+
+	&[data-type="engagement"]::before {
+		content: "\f239"; // chart icon.
+	}
+
+	.stat-content {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 4px;
+	}
 
 	.stat-value {
-		display: block;
-		font-size: 24px;
+		font-size: 14px;
 		font-weight: 600;
-		color: #1d2327;
-		line-height: 1.2;
+		color: #2c3338;
 	}
 
 	.stat-label {
-		display: block;
-		font-size: 11px;
-		color: #757575;
-		margin-top: 4px;
-		text-transform: uppercase;
-		letter-spacing: 0.3px;
+		font-size: 14px;
+		color: #2c3338;
 	}
 
 	.stat-change {
-		display: inline-block;
 		font-size: 12px;
-		margin-top: 4px;
-		color: #757575;
+		color: #646970;
+		margin-left: 4px;
 
 		&.positive {
 			color: #00a32a;
@@ -80,9 +134,17 @@
 	}
 }
 
+// Sub-section style - matches #dashboard_right_now .sub.
+.activitypub-stats-sub {
+	background: #f6f7f7;
+	border-top: 1px solid #f0f0f1;
+	padding: 12px;
+}
+
 // Chart section.
 .activitypub-stats-chart {
-	margin-bottom: 20px;
+	padding: 12px;
+	border-top: 1px solid #f0f0f1;
 
 	h4 {
 		margin: 0 0 12px;
@@ -94,7 +156,7 @@
 
 .activitypub-chart-container {
 	background: #f6f7f7;
-	border-radius: 4px;
+	border-radius: 2px;
 	padding: 12px;
 }
 
@@ -105,56 +167,55 @@
 
 	.chart-label {
 		font-size: 10px;
-		fill: #757575;
+		fill: #646970;
 	}
 }
 
 .activitypub-chart-legend {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16px;
-	margin-top: 12px;
-	padding-top: 12px;
-	border-top: 1px solid #e0e0e0;
+	gap: 12px;
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid #dcdcde;
 }
 
 .activitypub-legend-item {
 	display: flex;
 	align-items: center;
-	font-size: 12px;
+	font-size: 11px;
 	color: #50575e;
 
 	.legend-color {
 		width: 12px;
 		height: 3px;
-		border-radius: 2px;
+		border-radius: 1px;
 		margin-right: 6px;
 	}
 }
 
-// Top supporter section.
+// Top supporter section - matches WordPress notice style.
 .activitypub-stats-multiplicator {
-	margin-bottom: 16px;
+	margin: 0;
 	padding: 12px;
-	background: #fef3cd;
-	border-radius: 4px;
-	border-left: 4px solid #f0c33c;
+	background: #f6f7f7;
+	border-top: 1px solid #f0f0f1;
+	border-left: 4px solid #72aee6;
 
 	h4 {
-		margin: 0 0 8px;
-		font-size: 11px;
+		margin: 0 0 4px;
+		font-size: 13px;
 		font-weight: 600;
-		color: #856404;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
+		color: #1d2327;
 	}
 
 	p {
 		margin: 0;
 		font-size: 13px;
-		color: #1d2327;
+		color: #50575e;
 	}
 
+	/* stylelint-disable-next-line no-descending-specificity */
 	a {
 		text-decoration: none;
 		font-weight: 500;
@@ -167,8 +228,10 @@
 	}
 }
 
-// Top posts section.
+// Top posts section - matches activity widget style.
 .activitypub-stats-top-posts {
+	padding: 12px;
+	border-top: 1px solid #f0f0f1;
 
 	h4 {
 		margin: 0 0 8px;
@@ -181,6 +244,21 @@
 		margin: 0;
 		padding: 0;
 		list-style: none;
+		background: #f6f7f7;
+		border-radius: 2px;
+	}
+
+	li {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 8px 10px;
+		color: #2c3338;
+	}
+
+	/* stylelint-disable-next-line no-descending-specificity */
+	li + li {
+		border-top: 1px solid #f0f0f1;
 	}
 
 	/* stylelint-disable-next-line no-descending-specificity */
@@ -190,7 +268,7 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		text-decoration: none;
-		margin-right: 12px;
+		margin-right: 10px;
 		color: #2271b1;
 
 		&:hover {
@@ -199,21 +277,18 @@
 		}
 	}
 
-	li {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 8px 0;
-		border-bottom: 1px solid #f0f0f1;
-
-		&:last-child {
-			border-bottom: 0;
-		}
-	}
-
 	.engagement-count {
 		font-size: 12px;
-		color: #757575;
+		color: #646970;
 		white-space: nowrap;
+	}
+}
+
+// Responsive adjustments.
+
+@media screen and (max-width: 782px) {
+
+	.activitypub-stat-item {
+		width: 100%;
 	}
 }
