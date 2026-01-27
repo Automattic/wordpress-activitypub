@@ -53,16 +53,22 @@ class Statistics {
 	}
 
 	/**
-	 * Compile annual statistics and send emails.
+	 * Compile annual statistics and send notifications.
 	 *
-	 * This runs on January 1st and compiles stats for the previous year.
+	 * This runs on December 1st and compiles stats for the current year
+	 * (through November), giving users time to share their "wrapped" stats
+	 * before year-end.
+	 *
+	 * @todo Create a shareable landing page instead of just sending an email.
+	 *       The email should link to a public page where stats can be viewed
+	 *       and shared. Consider adding a summary image generator.
 	 */
 	public static function compile_and_send_annual_stats() {
 		$user_ids = Statistics_Collector::get_active_user_ids();
 
-		// Get previous year.
+		// Get current year (we're running in December, compiling Jan-Nov stats).
 		$now  = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
-		$year = (int) \gmdate( 'Y', $now ) - 1;
+		$year = (int) \gmdate( 'Y', $now );
 
 		foreach ( $user_ids as $user_id ) {
 			$summary = Statistics_Collector::compile_annual_summary( $user_id, $year );
