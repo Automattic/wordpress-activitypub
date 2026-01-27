@@ -55,20 +55,22 @@ export default function StatHighlights( {
 	const stats: Array< { key: string; label: string; value: number; change: number } > = [];
 
 	// Add user followers if available (from user-specific stats).
+	// Note: This shows new followers gained this month, not total followers.
 	if ( canUseUserActor && userComparison?.followers ) {
 		stats.push( {
 			key: 'followers-user',
-			label: __( 'Followers', 'activitypub' ),
+			label: __( 'New Followers', 'activitypub' ),
 			value: userComparison.followers.current ?? 0,
 			change: userComparison.followers.change ?? 0,
 		} );
 	}
 
 	// Add blog followers if available (from blog-specific stats).
+	// Note: This shows new followers gained this month, not total followers.
 	if ( canUseBlogActor && blogComparison?.followers ) {
 		stats.push( {
 			key: 'followers-blog',
-			label: __( 'Followers (Blog)', 'activitypub' ),
+			label: __( 'New Followers (Blog)', 'activitypub' ),
 			value: blogComparison.followers.current ?? 0,
 			change: blogComparison.followers.change ?? 0,
 		} );

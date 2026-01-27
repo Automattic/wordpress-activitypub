@@ -219,8 +219,8 @@ class Migration {
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_emoji' );
-			// Backfill historical statistics data.
-			\wp_schedule_single_event( \time(), 'activitypub_backfill_statistics' );
+			// Backfill historical statistics data (delay to avoid load immediately after upgrade).
+			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS, 'activitypub_backfill_statistics' );
 		}
 
 		// Ensure all required cron schedules are registered.

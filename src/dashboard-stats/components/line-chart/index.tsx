@@ -18,12 +18,28 @@ const WP_DEFAULT_COLORS = [
 ];
 
 /**
+ * Simple string hash function for deterministic color assignment.
+ * Uses djb2 algorithm for consistent results across page loads.
+ * @param str The string to hash.
+ */
+function hashString( str: string ): number {
+	let hash = 5381;
+	for ( let i = 0; i < str.length; i++ ) {
+		// eslint-disable-next-line no-bitwise -- djb2 hash algorithm requires XOR.
+		hash = ( hash * 33 ) ^ str.charCodeAt( i );
+	}
+	return Math.abs( hash );
+}
+
+/**
  * Get CSS variable with fallback to hex value.
  * Uses CSS var() with fallback for best compatibility.
- * @param index
+ * Color assignment is deterministic based on type slug hash.
+ * @param typeSlug The comment type slug for deterministic color.
  */
-function getColor( index: number ): string {
-	const color = WP_DEFAULT_COLORS[ index % WP_DEFAULT_COLORS.length ];
+function getColorForType( typeSlug: string ): string {
+	const index = hashString( typeSlug ) % WP_DEFAULT_COLORS.length;
+	const color = WP_DEFAULT_COLORS[ index ];
 	return `var(--wp--preset--color--${ color.slug }, ${ color.hex })`;
 }
 
@@ -123,8 +139,8 @@ export default function LineChart( { monthly, commentTypes }: Props ) {
 	];
 
 	if ( commentTypes ) {
-		Object.entries( commentTypes ).forEach( ( [ slug, type ], index ) => {
-			legendItems.push( { key: slug, label: type.label, color: getColor( index ) } );
+		Object.entries( commentTypes ).forEach( ( [ slug, type ] ) => {
+			legendItems.push( { key: slug, label: type.label, color: getColorForType( slug ) } );
 		} );
 	}
 
@@ -132,7 +148,15 @@ export default function LineChart( { monthly, commentTypes }: Props ) {
 		<div className="activitypub-stats-chart">
 			<h3>{ __( 'Engagement Over Time', 'activitypub' ) }</h3>
 			<div className="activitypub-chart-container">
-				<svg viewBox={ `0 0 ${ width } ${ height }` } className="activitypub-line-chart">
+				<svg
+					viewBox={ `0 0 ${ width } ${ height }` }
+					className="activitypub-line-chart"
+					role="img"
+					aria-labelledby="activitypub-chart-title"
+				>
+					<title id="activitypub-chart-title">
+						{ __( 'Line chart showing engagement trends over the past 12 months', 'activitypub' ) }
+					</title>
 					<defs>
 						<linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
 							<stop offset="0%" stopColor={ engagementColor } stopOpacity={ 0.3 } />
@@ -157,12 +181,12 @@ export default function LineChart( { monthly, commentTypes }: Props ) {
 					<path d={ areaPath } fill="url(#areaGradient)" />
 
 					{ /* Lines for each engagement type */ }
-					{ typeKeys.map( ( type, index ) => (
+					{ typeKeys.map( ( type ) => (
 						<path
 							key={ type }
 							d={ createLinePath( type ) }
 							fill="none"
-							stroke={ getColor( index ) }
+							stroke={ getColorForType( type ) }
 							strokeWidth="2"
 							strokeOpacity="0.7"
 						/>

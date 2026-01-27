@@ -19,7 +19,16 @@ export default function TopSupporter( { multiplicator }: Props ) {
 		<div className="activitypub-stats-multiplicator">
 			<h3>{ __( 'Top Supporter', 'activitypub' ) }</h3>
 			<p>
-				<a href={ multiplicator.url } target="_blank" rel="noopener noreferrer">
+				<a
+					href={ multiplicator.url }
+					target="_blank"
+					rel="noopener noreferrer"
+					aria-label={ sprintf(
+						/* translators: %s: supporter name */
+						__( '%s (opens in a new tab)', 'activitypub' ),
+						multiplicator.name
+					) }
+				>
 					{ multiplicator.name }
 				</a>{ ' ' }
 				{ sprintf(
