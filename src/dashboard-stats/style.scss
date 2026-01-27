@@ -143,8 +143,7 @@
 
 // Chart section - matches .activity-block pattern.
 .activitypub-stats-chart {
-	border-bottom: 1px solid #f0f0f1;
-	margin: 0 -12px 6px;
+	border-top: 1px solid #f0f0f1;
 	padding: 8px 12px 4px;
 
 	h3 {
@@ -154,7 +153,9 @@
 }
 
 .activitypub-chart-container {
-	padding: 8px 0;
+	border-bottom: 1px solid #f0f0f1;
+	margin: 0 -12px 6px;
+	padding: 8px 12px;
 }
 
 .activitypub-line-chart {
