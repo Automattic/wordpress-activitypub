@@ -1,8 +1,3 @@
-export interface Actor {
-	id: number;
-	label: string;
-}
-
 export interface StatComparison {
 	current: number;
 	change: number;

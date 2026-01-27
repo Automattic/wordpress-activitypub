@@ -1,26 +1,33 @@
 import { __ } from '@wordpress/i18n';
 import type { Comparison, CommentType } from '../../types';
 
+interface FollowerCounts {
+	user: number | null;
+	blog: number | null;
+}
+
 interface Props {
 	comparison: Comparison | null;
 	commentTypes: Record< string, CommentType > | null;
-	userId: number | null;
+	followerCounts: FollowerCounts;
+	canUseUserActor: boolean;
+	canUseBlogActor: boolean;
 }
 
 /**
  * Get the admin URL for a stat type.
  *
- * @param {string}      type   The stat type (followers, posts, etc.).
- * @param {number|null} userId The user ID (0 for blog, > 0 for user).
+ * @param {string}  type   The stat type (followers, posts, etc.).
+ * @param {boolean} isBlog Whether this is for the blog actor.
  * @return {string|null} The admin URL or null if no link.
  */
-function getStatUrl( type: string, userId: number | null ): string | null {
+function getStatUrl( type: string, isBlog: boolean = false ): string | null {
 	switch ( type ) {
 		case 'followers':
-			// Blog uses settings page, users use the followers list.
-			return userId === 0
-				? 'options-general.php?page=activitypub&tab=followers'
-				: 'users.php?page=activitypub-followers-list';
+		case 'followers-user':
+			return 'users.php?page=activitypub-followers-list';
+		case 'followers-blog':
+			return 'options-general.php?page=activitypub&tab=followers';
 		case 'posts':
 			return 'edit.php';
 		default:
@@ -33,32 +40,56 @@ function getStatUrl( type: string, userId: number | null ): string | null {
  * Stat Highlights Component.
  *
  * Displays key statistics with month-over-month comparison.
+ * Shows follower counts for both user and blog actors if available.
  *
- * @param {Props} props              Component props.
- * @param {Props} props.comparison   Comparison data with current vs previous values.
- * @param {Props} props.commentTypes Available comment types configuration.
- * @param {Props} props.userId       The selected user/actor ID.
+ * @param {Props} props                 Component props.
+ * @param {Props} props.comparison      Comparison data with current vs previous values.
+ * @param {Props} props.commentTypes    Available comment types configuration.
+ * @param {Props} props.followerCounts  Follower counts for user and blog.
+ * @param {Props} props.canUseUserActor Whether user actor is available.
+ * @param {Props} props.canUseBlogActor Whether blog actor is available.
  */
-export default function StatHighlights( { comparison, commentTypes, userId }: Props ) {
+export default function StatHighlights( {
+	comparison,
+	commentTypes,
+	followerCounts,
+	canUseUserActor,
+	canUseBlogActor,
+}: Props ) {
 	if ( ! comparison ) {
 		return null;
 	}
 
-	// Build stats array dynamically from comparison data and comment types.
-	const stats = [
-		{
-			key: 'followers',
-			label: __( 'Followers', 'activitypub' ),
-			value: comparison.followers?.current ?? 0,
+	// Build stats array dynamically.
+	const stats: Array< { key: string; label: string; value: number; change: number } > = [];
+
+	// Add user followers if available.
+	if ( canUseUserActor && followerCounts.user !== null ) {
+		stats.push( {
+			key: 'followers-user',
+			label: __( 'Your Followers', 'activitypub' ),
+			value: followerCounts.user,
 			change: comparison.followers?.change ?? 0,
-		},
-		{
-			key: 'posts',
-			label: __( 'Posts', 'activitypub' ),
-			value: comparison.posts?.current ?? 0,
-			change: comparison.posts?.change ?? 0,
-		},
-	];
+		} );
+	}
+
+	// Add blog followers if available.
+	if ( canUseBlogActor && followerCounts.blog !== null ) {
+		stats.push( {
+			key: 'followers-blog',
+			label: __( 'Blog Followers', 'activitypub' ),
+			value: followerCounts.blog,
+			change: 0, // Blog followers change tracked separately.
+		} );
+	}
+
+	// Add posts.
+	stats.push( {
+		key: 'posts',
+		label: __( 'Posts', 'activitypub' ),
+		value: comparison.posts?.current ?? 0,
+		change: comparison.posts?.change ?? 0,
+	} );
 
 	// Add engagement types dynamically from comment types.
 	if ( commentTypes ) {
@@ -80,7 +111,7 @@ export default function StatHighlights( { comparison, commentTypes, userId }: Pr
 			<h3 className="activitypub-stats-period">{ __( 'This month vs. last year', 'activitypub' ) }</h3>
 			<div className="activitypub-stats-grid">
 				{ stats.map( ( stat ) => {
-					const url = getStatUrl( stat.key, userId );
+					const url = getStatUrl( stat.key );
 					const content = (
 						<>
 							<span className="stat-value">{ stat.value.toLocaleString() }</span>{ ' ' }
@@ -88,7 +119,11 @@ export default function StatHighlights( { comparison, commentTypes, userId }: Pr
 						</>
 					);
 					return (
-						<div key={ stat.key } className="activitypub-stat-item" data-type={ stat.key }>
+						<div
+							key={ stat.key }
+							className="activitypub-stat-item"
+							data-type={ stat.key.replace( '-user', '' ).replace( '-blog', '' ) }
+						>
 							{ url ? <a href={ url }>{ content }</a> : <span>{ content }</span> }
 							{ stat.change !== 0 && ' ' }
 							{ stat.change !== 0 && (

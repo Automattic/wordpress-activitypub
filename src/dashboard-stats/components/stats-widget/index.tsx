@@ -2,13 +2,13 @@ import apiFetch from '@wordpress/api-fetch';
 import { useState, useEffect } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
-import { SelectControl, Spinner } from '@wordpress/components';
+import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import StatHighlights from '../stat-highlights';
 import LineChart from '../line-chart';
 import TopSupporter from '../top-supporter';
 import TopPosts from '../top-posts';
-import type { Actor, StatsResponse } from '../../types';
+import type { StatsResponse } from '../../types';
 
 // Actor mode constants matching PHP definitions.
 const ACTOR_MODE = 'actor';
@@ -18,8 +18,15 @@ const ACTOR_AND_BLOG_MODE = 'actor_blog';
 // Blog user ID constant matching PHP.
 const BLOG_USER_ID = 0;
 
+interface FollowerCounts {
+	user: number | null;
+	blog: number | null;
+}
+
 /**
  * Stats Widget Component.
+ *
+ * Displays global engagement stats and follower counts for available actors.
  */
 export default function StatsWidget() {
 	const { currentUser, actorMode, hasUserCap, hasBlogCap, isResolving } = useSelect(
@@ -48,60 +55,61 @@ export default function StatsWidget() {
 
 	// User can use their actor if user mode is enabled AND they have the capability.
 	const userModeEnabled: boolean = actorMode === ACTOR_MODE || actorMode === ACTOR_AND_BLOG_MODE;
-	const canUseUserActor: boolean = userModeEnabled && hasUserCap;
+	const canUseUserActor: boolean = userModeEnabled && hasUserCap && !! currentUser?.id;
 
 	// User can use the blog actor if blog mode is enabled AND they have the capability.
 	const blogModeEnabled: boolean = actorMode === BLOG_MODE || actorMode === ACTOR_AND_BLOG_MODE;
 	const canUseBlogActor: boolean = blogModeEnabled && hasBlogCap;
 
-	// Build actors list based on capabilities.
-	const actors: Actor[] = [];
-	if ( canUseUserActor && currentUser?.id ) {
-		actors.push( {
-			id: currentUser.id,
-			label: __( 'Your Stats', 'activitypub' ),
-		} );
-	}
-	if ( canUseBlogActor ) {
-		actors.push( {
-			id: BLOG_USER_ID,
-			label: __( 'Blog Stats', 'activitypub' ),
-		} );
-	}
-
-	const [ selectedActor, setSelectedActor ] = useState< number | null >( null );
 	const [ stats, setStats ] = useState< StatsResponse | null >( null );
+	const [ followerCounts, setFollowerCounts ] = useState< FollowerCounts >( { user: null, blog: null } );
 	const [ isLoading, setIsLoading ] = useState( true );
 
-	// Set initial selected actor when actors are determined.
+	// Load stats - engagement is global, so we fetch from blog endpoint.
 	useEffect( () => {
-		if ( actors.length > 0 && selectedActor === null ) {
-			setSelectedActor( actors[ 0 ].id );
-		}
-	}, [ actors, selectedActor ] );
-
-	// Load stats when actor changes.
-	useEffect( () => {
-		if ( selectedActor === null ) {
-			setIsLoading( false );
+		if ( isResolving ) {
 			return;
 		}
 
 		setIsLoading( true );
 
-		apiFetch< StatsResponse >( { path: `/activitypub/1.0/stats/${ selectedActor }` } )
-			.then( ( data ) => setStats( data ) )
-			.catch( () => setStats( null ) )
-			.finally( () => setIsLoading( false ) );
-	}, [ selectedActor ] );
+		// Fetch global stats (from blog endpoint).
+		const statsPromise = apiFetch< StatsResponse >( {
+			path: `/activitypub/1.0/stats/${ BLOG_USER_ID }`,
+		} ).catch( () => null );
 
-	const actorOptions = actors.map( ( actor ) => ( {
-		label: actor.label,
-		value: actor.id,
-	} ) );
+		// Fetch user follower count if available.
+		const userFollowersPromise =
+			canUseUserActor && currentUser?.id
+				? apiFetch< StatsResponse >( {
+						path: `/activitypub/1.0/stats/${ currentUser.id }`,
+				  } )
+						.then( ( data ) => data?.comparison?.followers?.current ?? null )
+						.catch( () => null )
+				: Promise.resolve( null );
+
+		// Fetch blog follower count if available.
+		const blogFollowersPromise = canUseBlogActor
+			? apiFetch< StatsResponse >( {
+					path: `/activitypub/1.0/stats/${ BLOG_USER_ID }`,
+			  } )
+					.then( ( data ) => data?.comparison?.followers?.current ?? null )
+					.catch( () => null )
+			: Promise.resolve( null );
+
+		Promise.all( [ statsPromise, userFollowersPromise, blogFollowersPromise ] )
+			.then( ( [ statsData, userFollowers, blogFollowers ] ) => {
+				setStats( statsData );
+				setFollowerCounts( {
+					user: userFollowers,
+					blog: blogFollowers,
+				} );
+			} )
+			.finally( () => setIsLoading( false ) );
+	}, [ isResolving, canUseUserActor, canUseBlogActor, currentUser?.id ] );
 
 	// Show loading while resolving user data.
-	if ( isResolving ) {
+	if ( isResolving || isLoading ) {
 		return (
 			<div className="activitypub-stats-widget">
 				<div className="activitypub-stats-loading">
@@ -111,37 +119,26 @@ export default function StatsWidget() {
 		);
 	}
 
+	if ( ! stats ) {
+		return (
+			<div className="activitypub-stats-widget">
+				<p className="activitypub-stats-empty">{ __( 'No statistics available yet.', 'activitypub' ) }</p>
+			</div>
+		);
+	}
+
 	return (
 		<div className="activitypub-stats-widget">
-			{ actors.length > 1 && selectedActor !== null && (
-				<div className="activitypub-stats-header">
-					<SelectControl
-						value={ selectedActor }
-						options={ actorOptions }
-						onChange={ ( value ) => setSelectedActor( parseInt( String( value ), 10 ) ) }
-						__nextHasNoMarginBottom
-					/>
-				</div>
-			) }
-
-			{ isLoading ? (
-				<div className="activitypub-stats-loading">
-					<Spinner />
-				</div>
-			) : stats ? (
-				<>
-					<StatHighlights
-						comparison={ stats.comparison }
-						commentTypes={ stats.comment_types }
-						userId={ selectedActor }
-					/>
-					<LineChart monthly={ stats.monthly } commentTypes={ stats.comment_types } />
-					<TopSupporter multiplicator={ stats.stats?.top_multiplicator } />
-					<TopPosts posts={ stats.stats?.top_posts } />
-				</>
-			) : (
-				<p className="activitypub-stats-empty">{ __( 'No statistics available yet.', 'activitypub' ) }</p>
-			) }
+			<StatHighlights
+				comparison={ stats.comparison }
+				commentTypes={ stats.comment_types }
+				followerCounts={ followerCounts }
+				canUseUserActor={ canUseUserActor }
+				canUseBlogActor={ canUseBlogActor }
+			/>
+			<LineChart monthly={ stats.monthly } commentTypes={ stats.comment_types } />
+			<TopSupporter multiplicator={ stats.stats?.top_multiplicator } />
+			<TopPosts posts={ stats.stats?.top_posts } />
 		</div>
 	);
 }
