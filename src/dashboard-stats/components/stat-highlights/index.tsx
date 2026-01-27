@@ -1,15 +1,9 @@
 import { __ } from '@wordpress/i18n';
 import type { Comparison, CommentType } from '../../types';
 
-interface FollowerCounts {
-	user: number | null;
-	blog: number | null;
-}
-
 interface Props {
 	comparison: Comparison | null;
 	commentTypes: Record< string, CommentType > | null;
-	followerCounts: FollowerCounts;
 	canUseUserActor: boolean;
 	canUseBlogActor: boolean;
 }
@@ -39,46 +33,45 @@ function getStatUrl( type: string ): string | null {
  * Stat Highlights Component.
  *
  * Displays key statistics with month-over-month comparison.
- * Shows follower counts for both user and blog actors if available.
+ * Shows follower change and engagement stats for available actors.
  *
  * @param {Props} props                 Component props.
  * @param {Props} props.comparison      Comparison data with current vs previous values.
  * @param {Props} props.commentTypes    Available comment types configuration.
- * @param {Props} props.followerCounts  Follower counts for user and blog.
  * @param {Props} props.canUseUserActor Whether user actor is available.
  * @param {Props} props.canUseBlogActor Whether blog actor is available.
  */
-export default function StatHighlights( {
-	comparison,
-	commentTypes,
-	followerCounts,
-	canUseUserActor,
-	canUseBlogActor,
-}: Props ) {
+export default function StatHighlights( { comparison, commentTypes, canUseUserActor, canUseBlogActor }: Props ) {
 	if ( ! comparison ) {
 		return null;
 	}
 
 	// Build stats array dynamically.
-	const stats: Array< { key: string; label: string; value: number; change: number } > = [];
+	// isChangeOnly: true means the value IS the change (for followers).
+	const stats: Array< { key: string; label: string; value: number; change: number; isChangeOnly?: boolean } > = [];
 
-	// Add user followers if available.
-	if ( canUseUserActor && followerCounts.user !== null ) {
+	// Add user followers change if available.
+	if ( canUseUserActor && comparison.followers ) {
+		const change = comparison.followers.change ?? 0;
 		stats.push( {
 			key: 'followers-user',
 			label: __( 'Followers', 'activitypub' ),
-			value: followerCounts.user,
-			change: comparison.followers?.change ?? 0,
+			value: change,
+			change,
+			isChangeOnly: true,
 		} );
 	}
 
-	// Add blog followers if available.
-	if ( canUseBlogActor && followerCounts.blog !== null ) {
+	// Add blog followers change if available.
+	if ( canUseBlogActor && comparison.followers ) {
+		// TODO: Track blog followers separately when we have blog-specific comparison.
+		const change = comparison.followers.change ?? 0;
 		stats.push( {
 			key: 'followers-blog',
 			label: __( 'Followers (Blog)', 'activitypub' ),
-			value: followerCounts.blog,
-			change: 0, // Blog followers change tracked separately.
+			value: change,
+			change,
+			isChangeOnly: true,
 		} );
 	}
 
@@ -111,11 +104,18 @@ export default function StatHighlights( {
 			<ul>
 				{ stats.map( ( stat ) => {
 					const url = getStatUrl( stat.key );
+					// For change-only stats (followers), show with +/- prefix.
+					const displayValue = stat.isChangeOnly
+						? `${ stat.change >= 0 ? '+' : '' }${ stat.change.toLocaleString() }`
+						: stat.value.toLocaleString();
 					const content = (
 						<>
-							{ stat.value.toLocaleString() } { stat.label }
+							{ displayValue } { stat.label }
 						</>
 					);
+					// For change-only stats, apply color class to the link/span.
+					const changeClass =
+						stat.isChangeOnly && stat.change !== 0 ? ` ${ stat.change > 0 ? 'positive' : 'negative' }` : '';
 					return (
 						<li
 							key={ stat.key }
@@ -123,9 +123,15 @@ export default function StatHighlights( {
 								.replace( '-user', '' )
 								.replace( '-blog', '' ) }-count` }
 						>
-							{ url ? <a href={ url }>{ content }</a> : <span>{ content }</span> }
-							{ stat.change !== 0 && ' ' }
-							{ stat.change !== 0 && (
+							{ url ? (
+								<a href={ url } className={ changeClass.trim() }>
+									{ content }
+								</a>
+							) : (
+								<span className={ changeClass.trim() }>{ content }</span>
+							) }
+							{ ! stat.isChangeOnly && stat.change !== 0 && ' ' }
+							{ ! stat.isChangeOnly && stat.change !== 0 && (
 								<span className={ `stat-change ${ stat.change > 0 ? 'positive' : 'negative' }` }>
 									({ stat.change > 0 ? '+' : '' }
 									{ stat.change.toLocaleString() })

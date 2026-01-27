@@ -18,11 +18,6 @@ const ACTOR_AND_BLOG_MODE = 'actor_blog';
 // Blog user ID constant matching PHP.
 const BLOG_USER_ID = 0;
 
-interface FollowerCounts {
-	user: number | null;
-	blog: number | null;
-}
-
 /**
  * Stats Widget Component.
  *
@@ -62,7 +57,6 @@ export default function StatsWidget() {
 	const canUseBlogActor: boolean = blogModeEnabled && hasBlogCap;
 
 	const [ stats, setStats ] = useState< StatsResponse | null >( null );
-	const [ followerCounts, setFollowerCounts ] = useState< FollowerCounts >( { user: null, blog: null } );
 	const [ isLoading, setIsLoading ] = useState( true );
 
 	// Load stats - engagement is global, so we fetch from blog endpoint.
@@ -74,39 +68,13 @@ export default function StatsWidget() {
 		setIsLoading( true );
 
 		// Fetch global stats (from blog endpoint).
-		const statsPromise = apiFetch< StatsResponse >( {
+		apiFetch< StatsResponse >( {
 			path: `/activitypub/1.0/stats/${ BLOG_USER_ID }`,
-		} ).catch( () => null );
-
-		// Fetch user follower count if available.
-		const userFollowersPromise =
-			canUseUserActor && currentUser?.id
-				? apiFetch< StatsResponse >( {
-						path: `/activitypub/1.0/stats/${ currentUser.id }`,
-				  } )
-						.then( ( data ) => data?.comparison?.followers?.current ?? null )
-						.catch( () => null )
-				: Promise.resolve( null );
-
-		// Fetch blog follower count if available.
-		const blogFollowersPromise = canUseBlogActor
-			? apiFetch< StatsResponse >( {
-					path: `/activitypub/1.0/stats/${ BLOG_USER_ID }`,
-			  } )
-					.then( ( data ) => data?.comparison?.followers?.current ?? null )
-					.catch( () => null )
-			: Promise.resolve( null );
-
-		Promise.all( [ statsPromise, userFollowersPromise, blogFollowersPromise ] )
-			.then( ( [ statsData, userFollowers, blogFollowers ] ) => {
-				setStats( statsData );
-				setFollowerCounts( {
-					user: userFollowers,
-					blog: blogFollowers,
-				} );
-			} )
+		} )
+			.then( ( data ) => setStats( data ) )
+			.catch( () => setStats( null ) )
 			.finally( () => setIsLoading( false ) );
-	}, [ isResolving, canUseUserActor, canUseBlogActor, currentUser?.id ] );
+	}, [ isResolving ] );
 
 	// Show loading while resolving user data.
 	if ( isResolving || isLoading ) {
@@ -132,7 +100,6 @@ export default function StatsWidget() {
 			<StatHighlights
 				comparison={ stats.comparison }
 				commentTypes={ stats.comment_types }
-				followerCounts={ followerCounts }
 				canUseUserActor={ canUseUserActor }
 				canUseBlogActor={ canUseBlogActor }
 			/>

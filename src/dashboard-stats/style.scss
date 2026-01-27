@@ -101,6 +101,17 @@
 			color: #d63638;
 		}
 	}
+
+	// Color classes for change-only stats (followers).
+	li a.positive,
+	li > span.positive {
+		color: #00a32a;
+	}
+
+	li a.negative,
+	li > span.negative {
+		color: #d63638;
+	}
 }
 
 // Sub-section style - matches #dashboard_right_now .sub exactly.
