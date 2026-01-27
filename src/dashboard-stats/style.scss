@@ -4,6 +4,15 @@
 .activitypub-stats-widget {
 	// Match WordPress dashboard postbox inner padding.
 	margin: -6px -12px -12px;
+
+	// Shared h3 style - matches WordPress dashboard heading pattern.
+	h3 {
+		margin: 0 0 8px;
+		padding: 0;
+		font-size: 14px;
+		font-weight: 400;
+		color: #1d2327;
+	}
 }
 
 .activitypub-stats-header {
@@ -34,19 +43,12 @@
 
 // Main stats section - matches #dashboard_right_now .main style.
 .activitypub-stats-main {
-	padding: 12px;
+	padding: 0 12px 11px;
 }
 
 // Highlights section - matches "At a Glance" style.
 .activitypub-stats-highlights {
-	padding: 0 12px 8px;
-}
-
-.activitypub-stats-period {
-	margin: 0 0 8px;
-	font-size: 13px;
-	font-weight: 600;
-	color: #1d2327;
+	padding: 12px;
 }
 
 .activitypub-stats-grid {
@@ -58,17 +60,15 @@
 .activitypub-stat-item {
 	width: 50%;
 	box-sizing: border-box;
-	padding: 4px 0;
+	padding: 0 0 10px;
 	display: flex;
-	align-items: flex-start;
+	align-items: baseline;
 
 	// Dashicon-style icon placeholder.
 	&::before {
-		color: #646970;
+		color: #82878c;
 		font: 400 20px/1 dashicons, sans-serif;
-		margin-right: 5px;
-		margin-top: 1px;
-		flex-shrink: 0;
+		padding-right: 5px;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 	}
@@ -103,16 +103,15 @@
 
 	.stat-content {
 		display: inline;
-		line-height: 1.4;
 	}
 
 	.stat-value {
 		font-weight: 600;
-		color: #2c3338;
+		color: #50575e;
 	}
 
 	.stat-label {
-		color: #2c3338;
+		color: #50575e;
 	}
 
 	.stat-change {
@@ -133,24 +132,22 @@
 .activitypub-stats-sub {
 	background: #f6f7f7;
 	border-top: 1px solid #f0f0f1;
-	padding: 12px;
+	padding: 10px 12px 6px;
+	color: #50575e;
 }
 
-// Chart section - full width background.
+// Chart section.
 .activitypub-stats-chart {
 	border-top: 1px solid #f0f0f1;
 
 	h3 {
 		margin: 0;
-		padding: 12px;
-		font-size: 13px;
-		font-weight: 600;
-		color: #1d2327;
+		padding: 12px 12px 8px;
 	}
 }
 
 .activitypub-chart-container {
-	padding: 12px;
+	padding: 0 12px 12px;
 	background: #f6f7f7;
 }
 
@@ -188,31 +185,25 @@
 	}
 }
 
-// Top supporter section - matches WordPress notice style.
+// Top supporter section - matches activity block style.
 .activitypub-stats-multiplicator {
+	border-top: 1px solid #f0f0f1;
 	margin: 0;
 	padding: 12px;
-	background: #f6f7f7;
-	border-top: 1px solid #f0f0f1;
-	border-left: 4px solid #72aee6;
 
 	h3 {
 		margin: 0 0 4px;
-		font-size: 13px;
-		font-weight: 600;
-		color: #1d2327;
 	}
 
 	p {
 		margin: 0;
-		font-size: 13px;
 		color: #50575e;
 	}
 
 	/* stylelint-disable-next-line no-descending-specificity */
 	a {
 		text-decoration: none;
-		font-weight: 500;
+		font-weight: 600;
 		color: #2271b1;
 
 		&:hover {
@@ -227,32 +218,18 @@
 	padding: 12px;
 	border-top: 1px solid #f0f0f1;
 
-	h3 {
-		margin: 0 0 8px;
-		font-size: 13px;
-		font-weight: 600;
-		color: #1d2327;
-	}
-
 	ul {
 		margin: 0;
 		padding: 0;
 		list-style: none;
-		background: #f6f7f7;
-		border-radius: 2px;
 	}
 
 	li {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 8px 10px;
-		color: #2c3338;
-	}
-
-	/* stylelint-disable-next-line no-descending-specificity */
-	li + li {
-		border-top: 1px solid #f0f0f1;
+		padding: 4px 0;
+		color: #50575e;
 	}
 
 	/* stylelint-disable-next-line no-descending-specificity */
