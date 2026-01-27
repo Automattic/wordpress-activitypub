@@ -47,31 +47,26 @@ export default function StatHighlights( { comparison, commentTypes, canUseUserAc
 	}
 
 	// Build stats array dynamically.
-	// isChangeOnly: true means the value IS the change (for followers).
-	const stats: Array< { key: string; label: string; value: number; change: number; isChangeOnly?: boolean } > = [];
+	const stats: Array< { key: string; label: string; value: number; change: number } > = [];
 
-	// Add user followers change if available.
+	// Add user followers if available.
 	if ( canUseUserActor && comparison.followers ) {
-		const change = comparison.followers.change ?? 0;
 		stats.push( {
 			key: 'followers-user',
 			label: __( 'Followers', 'activitypub' ),
-			value: change,
-			change,
-			isChangeOnly: true,
+			value: comparison.followers.current ?? 0,
+			change: comparison.followers.change ?? 0,
 		} );
 	}
 
-	// Add blog followers change if available.
+	// Add blog followers if available.
 	if ( canUseBlogActor && comparison.followers ) {
 		// TODO: Track blog followers separately when we have blog-specific comparison.
-		const change = comparison.followers.change ?? 0;
 		stats.push( {
 			key: 'followers-blog',
 			label: __( 'Followers (Blog)', 'activitypub' ),
-			value: change,
-			change,
-			isChangeOnly: true,
+			value: comparison.followers.current ?? 0,
+			change: comparison.followers.change ?? 0,
 		} );
 	}
 
@@ -104,18 +99,11 @@ export default function StatHighlights( { comparison, commentTypes, canUseUserAc
 			<ul>
 				{ stats.map( ( stat ) => {
 					const url = getStatUrl( stat.key );
-					// For change-only stats (followers), show with +/- prefix.
-					const displayValue = stat.isChangeOnly
-						? `${ stat.change >= 0 ? '+' : '' }${ stat.change.toLocaleString() }`
-						: stat.value.toLocaleString();
 					const content = (
 						<>
-							{ displayValue } { stat.label }
+							{ stat.value.toLocaleString() } { stat.label }
 						</>
 					);
-					// For change-only stats, apply color class to the link/span.
-					const changeClass =
-						stat.isChangeOnly && stat.change !== 0 ? ` ${ stat.change > 0 ? 'positive' : 'negative' }` : '';
 					return (
 						<li
 							key={ stat.key }
@@ -123,15 +111,9 @@ export default function StatHighlights( { comparison, commentTypes, canUseUserAc
 								.replace( '-user', '' )
 								.replace( '-blog', '' ) }-count` }
 						>
-							{ url ? (
-								<a href={ url } className={ changeClass.trim() }>
-									{ content }
-								</a>
-							) : (
-								<span className={ changeClass.trim() }>{ content }</span>
-							) }
-							{ ! stat.isChangeOnly && stat.change !== 0 && ' ' }
-							{ ! stat.isChangeOnly && stat.change !== 0 && (
+							{ url ? <a href={ url }>{ content }</a> : <span>{ content }</span> }
+							{ stat.change !== 0 && ' ' }
+							{ stat.change !== 0 && (
 								<span className={ `stat-change ${ stat.change > 0 ? 'positive' : 'negative' }` }>
 									({ stat.change > 0 ? '+' : '' }
 									{ stat.change.toLocaleString() })
