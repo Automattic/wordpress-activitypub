@@ -67,7 +67,7 @@ export default function StatHighlights( {
 	if ( canUseUserActor && followerCounts.user !== null ) {
 		stats.push( {
 			key: 'followers-user',
-			label: __( 'Your Followers', 'activitypub' ),
+			label: __( 'Followers', 'activitypub' ),
 			value: followerCounts.user,
 			change: comparison.followers?.change ?? 0,
 		} );
@@ -77,7 +77,7 @@ export default function StatHighlights( {
 	if ( canUseBlogActor && followerCounts.blog !== null ) {
 		stats.push( {
 			key: 'followers-blog',
-			label: __( 'Blog Followers', 'activitypub' ),
+			label: __( 'Followers (Blog)', 'activitypub' ),
 			value: followerCounts.blog,
 			change: 0, // Blog followers change tracked separately.
 		} );
