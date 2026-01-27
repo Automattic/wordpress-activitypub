@@ -569,30 +569,10 @@ class Statistics {
 	/**
 	 * Get all active user IDs that have ActivityPub enabled.
 	 *
-	 * @return array Array of user IDs including BLOG_USER_ID if enabled.
+	 * @return int[] Array of user IDs including BLOG_USER_ID if enabled.
 	 */
 	public static function get_active_user_ids() {
-		$user_ids = array();
-
-		// Check if blog actor is enabled.
-		$actor_mode = \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-		if ( \in_array( $actor_mode, array( ACTIVITYPUB_BLOG_MODE, ACTIVITYPUB_ACTOR_AND_BLOG_MODE ), true ) ) {
-			$user_ids[] = Actors::BLOG_USER_ID;
-		}
-
-		// Get users with ActivityPub enabled.
-		if ( \in_array( $actor_mode, array( ACTIVITYPUB_ACTOR_MODE, ACTIVITYPUB_ACTOR_AND_BLOG_MODE ), true ) ) {
-			$users = \get_users(
-				array(
-					'capability__in' => array( 'activitypub' ),
-					'fields'         => 'ID',
-				)
-			);
-
-			$user_ids = \array_merge( $user_ids, $users );
-		}
-
-		return $user_ids;
+		return Actors::get_all_ids();
 	}
 
 	/**
