@@ -130,6 +130,37 @@ class Statistics {
 	}
 
 	/**
+	 * Delete monthly statistics for a user.
+	 *
+	 * Useful for recollecting stale data or clearing incorrect entries.
+	 *
+	 * @param int $user_id The user ID.
+	 * @param int $year    The year.
+	 * @param int $month   The month.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function delete_monthly_stats( $user_id, $year, $month ) {
+		return \delete_option( self::get_monthly_option_name( $user_id, $year, $month ) );
+	}
+
+	/**
+	 * Recollect monthly statistics for a user.
+	 *
+	 * Deletes existing stats and collects fresh data.
+	 *
+	 * @param int $user_id The user ID.
+	 * @param int $year    The year.
+	 * @param int $month   The month.
+	 *
+	 * @return array The newly collected stats.
+	 */
+	public static function recollect_monthly_stats( $user_id, $year, $month ) {
+		self::delete_monthly_stats( $user_id, $year, $month );
+		return self::collect_monthly_stats( $user_id, $year, $month );
+	}
+
+	/**
 	 * Collect monthly statistics for a user.
 	 *
 	 * @param int $user_id The user ID.
@@ -586,7 +617,7 @@ class Statistics {
 	/**
 	 * Get statistics for the current period.
 	 *
-	 * Uses stored monthly stats if available, otherwise queries live data.
+	 * Always queries live data for the current period to include recent engagement.
 	 *
 	 * @param int    $user_id The user ID.
 	 * @param string $period  The period ('month', 'year', 'all').
@@ -594,26 +625,7 @@ class Statistics {
 	 * @return array The statistics.
 	 */
 	public static function get_current_stats( $user_id, $period = 'month' ) {
-		$now           = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
-		$current_year  = (int) \gmdate( 'Y', $now );
-		$current_month = (int) \gmdate( 'n', $now );
-
-		// For monthly period, check for stored stats first.
-		if ( 'month' === $period ) {
-			$stored_stats = self::get_monthly_stats( $user_id, $current_year, $current_month );
-
-			if ( $stored_stats ) {
-				return array(
-					'posts_count'       => $stored_stats['posts_count'] ?? 0,
-					'followers_total'   => $stored_stats['followers_total'] ?? self::get_follower_count( $user_id ),
-					'top_posts'         => $stored_stats['top_posts'] ?? array(),
-					'top_multiplicator' => $stored_stats['top_multiplicator'] ?? null,
-					'period'            => $period,
-					'start'             => \gmdate( 'Y-m-01 00:00:00', $now ),
-					'end'               => \gmdate( 'Y-m-t 23:59:59', $now ),
-				);
-			}
-		}
+		$now = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
 
 		switch ( $period ) {
 			case 'year':
@@ -725,8 +737,15 @@ class Statistics {
 	 * @return array Month data with posts_count, engagement, and type counts.
 	 */
 	private static function get_month_data( $user_id, $year, $month, $comment_types ) {
-		// Check for stored monthly stats first.
-		$stored_stats = self::get_monthly_stats( $user_id, $year, $month );
+		$now           = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$current_year  = (int) \gmdate( 'Y', $now );
+		$current_month = (int) \gmdate( 'n', $now );
+
+		// Always query live for the current month to include recent engagement.
+		$is_current_month = ( $year === $current_year && $month === $current_month );
+
+		// Check for stored monthly stats first (but not for current month).
+		$stored_stats = $is_current_month ? false : self::get_monthly_stats( $user_id, $year, $month );
 
 		if ( $stored_stats ) {
 			// Use stored data.
@@ -783,7 +802,7 @@ class Statistics {
 	/**
 	 * Get period-over-period comparison (current month vs previous month).
 	 *
-	 * Uses stored monthly stats if available, otherwise queries live data.
+	 * Always queries live data for current month, uses stored stats for previous month.
 	 *
 	 * @param int $user_id The user ID.
 	 *
@@ -793,8 +812,6 @@ class Statistics {
 		$now = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
 
 		// Current month date range.
-		$current_year  = (int) \gmdate( 'Y', $now );
-		$current_month = (int) \gmdate( 'n', $now );
 		$current_start = \gmdate( 'Y-m-01 00:00:00', $now );
 		$current_end   = \gmdate( 'Y-m-t 23:59:59', $now );
 
@@ -805,18 +822,12 @@ class Statistics {
 		$prev_start     = \gmdate( 'Y-m-01 00:00:00', $prev_timestamp );
 		$prev_end       = \gmdate( 'Y-m-t 23:59:59', $prev_timestamp );
 
-		// Check for stored stats.
-		$current_stats = self::get_monthly_stats( $user_id, $current_year, $current_month );
-		$prev_stats    = self::get_monthly_stats( $user_id, $prev_year, $prev_month );
+		// Check for stored stats (only for previous month - current month is always live).
+		$prev_stats = self::get_monthly_stats( $user_id, $prev_year, $prev_month );
 
-		// Get current month data (from stored stats or live query).
-		if ( $current_stats ) {
-			$current_posts     = $current_stats['posts_count'] ?? 0;
-			$current_followers = $current_stats['followers_count'] ?? Followers::count_in_range( $user_id, $current_start, $current_end );
-		} else {
-			$current_posts     = self::count_federated_posts_in_range( $user_id, $current_start, $current_end );
-			$current_followers = Followers::count_in_range( $user_id, $current_start, $current_end );
-		}
+		// Always query live for current month to include recent engagement.
+		$current_posts     = self::count_federated_posts_in_range( $user_id, $current_start, $current_end );
+		$current_followers = Followers::count_in_range( $user_id, $current_start, $current_end );
 
 		// Get previous month data (from stored stats or live query).
 		if ( $prev_stats ) {
@@ -841,12 +852,10 @@ class Statistics {
 		// Add comparison for each registered comment type dynamically.
 		$comment_types = Comment::get_comment_type_slugs();
 		foreach ( $comment_types as $type ) {
-			if ( $current_stats ) {
-				$current_count = $current_stats[ $type . '_count' ] ?? 0;
-			} else {
-				$current_count = self::count_engagement_in_range( $user_id, $current_start, $current_end, $type );
-			}
+			// Always query live for current month.
+			$current_count = self::count_engagement_in_range( $user_id, $current_start, $current_end, $type );
 
+			// Use stored stats for previous month if available.
 			if ( $prev_stats ) {
 				$prev_count = $prev_stats[ $type . '_count' ] ?? 0;
 			} else {
@@ -897,6 +906,7 @@ class Statistics {
 	 * Backfill historical statistics for all active users.
 	 *
 	 * This method processes statistics in batches to avoid timeouts.
+	 * It only collects stats for completed months (not the current month).
 	 *
 	 * @param int $batch_size Optional. Number of months to process per batch. Default 12.
 	 * @param int $user_index Optional. The current user index being processed. Default 0.
@@ -913,8 +923,9 @@ class Statistics {
 		}
 
 		$user_id       = $user_ids[ $user_index ];
-		$current_year  = (int) \gmdate( 'Y' );
-		$current_month = (int) \gmdate( 'n' );
+		$now           = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$current_year  = (int) \gmdate( 'Y', $now );
+		$current_month = (int) \gmdate( 'n', $now );
 
 		// Determine the earliest year with data if not set.
 		if ( 0 === $year ) {
@@ -934,8 +945,9 @@ class Statistics {
 
 		// Process months for this user.
 		while ( $months_processed < $batch_size ) {
-			// Check if we've gone past the current month.
-			if ( $year > $current_year || ( $year === $current_year && $month > $current_month ) ) {
+			// Skip the current month - it's still in progress and should always be queried live.
+			// Only process completed months (before the current month).
+			if ( $year > $current_year || ( $year === $current_year && $month >= $current_month ) ) {
 				// Move to next user.
 				return array(
 					'batch_size' => $batch_size,

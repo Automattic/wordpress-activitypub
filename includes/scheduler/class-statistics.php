@@ -131,10 +131,11 @@ class Statistics {
 	 * @param int|null $user_id Optional. Specific user ID or null for all users.
 	 * @param int|null $year    Optional. Year to collect stats for.
 	 * @param int|null $month   Optional. Month to collect stats for.
+	 * @param bool     $force   Optional. Force recollection even if stats exist. Default false.
 	 *
 	 * @return array Array of collected stats per user.
 	 */
-	public static function trigger_monthly_collection( $user_id = null, $year = null, $month = null ) {
+	public static function trigger_monthly_collection( $user_id = null, $year = null, $month = null, $force = false ) {
 		$now = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
 
 		if ( null === $year ) {
@@ -149,7 +150,11 @@ class Statistics {
 		$results  = array();
 
 		foreach ( $user_ids as $uid ) {
-			$results[ $uid ] = Statistics_Collector::collect_monthly_stats( $uid, $year, $month );
+			if ( $force ) {
+				$results[ $uid ] = Statistics_Collector::recollect_monthly_stats( $uid, $year, $month );
+			} else {
+				$results[ $uid ] = Statistics_Collector::collect_monthly_stats( $uid, $year, $month );
+			}
 		}
 
 		return $results;
