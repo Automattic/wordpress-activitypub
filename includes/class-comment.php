@@ -34,6 +34,8 @@ class Comment {
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
+		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
 	}
 
 	/**
@@ -59,8 +61,10 @@ class Comment {
 	/**
 	 * Filter the comment reply link.
 	 *
-	 * We don't want to show the comment reply link for federated comments
-	 * if the user is disabled for federation.
+	 * Handles three cases for replies to fediverse comments:
+	 * 1. User can federate → show normal reply link
+	 * 2. User is logged in but can't federate → show warning (no reply link)
+	 * 3. User is not logged in → show remote reply block
 	 *
 	 * @param string      $link    The HTML markup for the comment reply link.
 	 * @param array       $args    An array of arguments overriding the defaults.
@@ -71,6 +75,40 @@ class Comment {
 	public static function comment_reply_link( $link, $args, $comment ) {
 		if ( self::are_comments_allowed( $comment ) ) {
 			return $link;
+		}
+
+		// Logged-in user without ActivityPub capability - show warning instead of reply link.
+		if ( \is_user_logged_in() ) {
+			$author = \esc_html( $comment->comment_author );
+
+			$message = sprintf(
+				/* translators: %s: comment author name */
+				\__( '%s is on the Fediverse. To reply to them, ask your administrator to enable ActivityPub for your account.', 'activitypub' ),
+				$author
+			);
+
+			// Add link to users page if current user can edit users.
+			if ( \current_user_can( 'edit_users' ) ) {
+				$message = sprintf(
+					/* translators: 1: comment author name, 2: URL to the users management page */
+					\__( '%1$s is on the Fediverse. To reply to them, <a href="%2$s">enable ActivityPub for your account</a>.', 'activitypub' ),
+					$author,
+					\esc_url( \admin_url( 'users.php' ) )
+				);
+			}
+
+			$warning = sprintf(
+				'<p class="activitypub-reply-warning"><em>%s</em></p>',
+				\wp_kses( $message, array( 'a' => array( 'href' => array() ) ) )
+			);
+
+			/**
+			 * Filters the warning message shown to logged-in users without ActivityPub capability.
+			 *
+			 * @param string      $warning The warning HTML markup.
+			 * @param \WP_Comment $comment The comment being replied to.
+			 */
+			return \apply_filters( 'activitypub_federation_warning', $warning, $comment );
 		}
 
 		if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( 'activitypub/remote-reply' ) ) {
@@ -114,11 +152,12 @@ class Comment {
 			return false;
 		}
 
-		if ( is_single_user() && \user_can( $current_user, 'publish_posts' ) ) {
-			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
+		if ( is_single_user() && \user_can( $current_user, 'activitypub' ) ) {
+			// On a single user site, comments by users with the `activitypub` capability will be federated as the blog user.
 			$current_user = Actors::BLOG_USER_ID;
 		}
 
+		// User is not allowed to federate comments.
 		return user_can_activitypub( $current_user );
 	}
 
@@ -219,7 +258,7 @@ class Comment {
 		}
 
 		if ( is_single_user() && \user_can( $user_id, 'activitypub' ) ) {
-			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
+			// On a single user site, comments by users with the `activitypub` capability will be federated as the blog user.
 			$user_id = Actors::BLOG_USER_ID;
 		}
 
@@ -845,5 +884,54 @@ class Comment {
 		 * @param string[] $post_types Array of post type names to hide comments for.
 		 */
 		return \apply_filters( 'activitypub_hide_comments_for', $post_types );
+	}
+
+	/**
+	 * Render emoji in comment author name.
+	 *
+	 * Replaces emoji shortcodes with img tags on the get_comment_author filter.
+	 * Emoji data is retrieved from the linked remote actor.
+	 *
+	 * @param string $author     The comment author name.
+	 * @param string $comment_id The comment ID as a numeric string.
+	 *
+	 * @return string The comment author name with rendered emoji.
+	 */
+	public static function render_emoji( $author, $comment_id ) {
+		$remote_actor_id = \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+
+		if ( empty( $remote_actor_id ) ) {
+			return $author;
+		}
+
+		$emoji_data = \get_post_meta( $remote_actor_id, '_activitypub_emoji', true );
+
+		if ( empty( $emoji_data ) ) {
+			return $author;
+		}
+
+		return Emoji::replace_from_json( $author, $emoji_data );
+	}
+
+	/**
+	 * Selectively unescape emoji images in comment author.
+	 *
+	 * This runs at priority 20 after WordPress's esc_html() filter on comment_author.
+	 *
+	 * @param string $author The comment author name (already escaped by WordPress).
+	 *
+	 * @return string The comment author name with emoji images unescaped.
+	 */
+	public static function unescape_emoji( $author ) {
+		// Only attempt to unescape if there are emoji images present in the escaped string.
+		if ( false === \strpos( $author, 'class=&quot;emoji&quot;' ) ) {
+			return $author;
+		}
+
+		// Decode entities so we can selectively restore emoji <img> tags.
+		$decoded = \html_entity_decode( $author, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+		// Use strict KSES validation to only allow valid emoji img tags.
+		return \wp_kses( $decoded, Emoji::get_kses_allowed_html() );
 	}
 }

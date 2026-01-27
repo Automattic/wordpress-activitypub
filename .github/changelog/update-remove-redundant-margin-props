@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Remove redundant __nextHasNoMarginBottom props now that @wordpress/components 32.0.0 defaults to true.

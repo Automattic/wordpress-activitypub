@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Show informational notice when trying to follow an already-followed account.

@@ -1,5 +1,5 @@
 ---
-name: activitypub-pr-workflow
+name: pr
 description: INVOKE THIS SKILL before creating any PR to ensure compliance with branch naming, changelog requirements, and reviewer assignment.
 ---
 
@@ -46,7 +46,7 @@ composer changelog:add
 git add . && git commit -m "Add changelog entry" && git push
 ```
 
-See [activitypub-release](../activitypub-release/SKILL.md) for complete changelog details.
+See [release](../release/SKILL.md) for complete changelog details.
 
 ## Workflow
 
@@ -65,7 +65,7 @@ npm run env-test      # Run tests
 npm run build         # If assets changed
 ```
 
-See [activitypub-dev-cycle](../activitypub-dev-cycle/SKILL.md) for complete commands.
+See [dev](../dev/SKILL.md) for complete commands.
 
 ### Keep Branch Updated
 ```bash

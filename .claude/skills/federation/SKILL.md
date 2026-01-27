@@ -1,5 +1,5 @@
 ---
-name: activitypub-federation
+name: federation
 description: ActivityPub protocol specification and federation concepts. Use when working with ActivityPub activities, understanding federation mechanics, implementing protocol features, or debugging federation issues.
 ---
 
@@ -9,7 +9,7 @@ This skill provides understanding of the ActivityPub protocol specification and 
 
 **For supported features and compatibility:** See [FEDERATION.md](../../../FEDERATION.md) for the complete list of implemented FEPs, supported standards, and federation compatibility details.
 
-**For implementation details:** See [PHP Conventions](../activitypub-php-conventions/SKILL.md) for transformers, handlers, and PHP code patterns.
+**For implementation details:** See [PHP Conventions](../code-style/SKILL.md) for transformers, handlers, and PHP code patterns.
 
 ## Core Concepts
 
@@ -273,8 +273,8 @@ This plugin implements:
 - **Handlers**: Process incoming activities
 
 For implementation details, see:
-- [PHP Conventions](../activitypub-php-conventions/SKILL.md) for code structure
-- [Integration Guide](../activitypub-integrations/SKILL.md) for extending
+- [PHP Conventions](../code-style/SKILL.md) for code structure
+- [Integration Guide](../integrations/SKILL.md) for extending
 
 ### Testing Federation
 

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix older comments with empty type not being federated.

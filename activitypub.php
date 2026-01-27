@@ -27,8 +27,15 @@ namespace Activitypub;
 
 require_once __DIR__ . '/includes/class-autoloader.php';
 require_once __DIR__ . '/includes/compat.php';
-require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/constants.php';
+require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/functions-activity.php';
+require_once __DIR__ . '/includes/functions-comment.php';
+require_once __DIR__ . '/includes/functions-federation.php';
+require_once __DIR__ . '/includes/functions-post.php';
+require_once __DIR__ . '/includes/functions-request.php';
+require_once __DIR__ . '/includes/functions-url.php';
+require_once __DIR__ . '/includes/functions-user.php';
 require_once __DIR__ . '/integration/load.php';
 
 Autoloader::register_path( __NAMESPACE__, __DIR__ . '/includes' );
@@ -134,7 +141,7 @@ function plugin_admin_init() {
 	// Screen Options and Menus are set before `admin_init`.
 	\add_action( 'init', array( __NAMESPACE__ . '\WP_Admin\Heartbeat', 'init' ), 9 ); // Before script loader.
 	\add_filter( 'init', array( __NAMESPACE__ . '\WP_Admin\Screen_Options', 'init' ) );
-	\add_action( 'admin_menu', array( __NAMESPACE__ . '\WP_Admin\Menu', 'admin_menu' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\WP_Admin\Menu', 'init' ) );
 
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Admin', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Advanced_Settings_Fields', 'init' ) );
