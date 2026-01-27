@@ -244,10 +244,17 @@ class Statistics {
 		}
 
 		// Build summary with dynamic comment type counts.
+		// Calculate followers_start: total at start of first month (total minus gained that month).
+		// Monthly stats store: followers_count (gained this month), followers_total (total at end of month).
+		$followers_start = 0;
+		if ( $first_month_stats ) {
+			$followers_start = ( $first_month_stats['followers_total'] ?? 0 ) - ( $first_month_stats['followers_count'] ?? 0 );
+		}
+
 		$summary = array(
 			'posts_count'          => $totals['posts_count'],
 			'most_active_month'    => $most_active_month,
-			'followers_start'      => $first_month_stats ? ( $first_month_stats['followers_total'] ?? 0 ) - ( $first_month_stats['followers_gained'] ?? 0 ) + ( $first_month_stats['followers_lost'] ?? 0 ) : 0,
+			'followers_start'      => $followers_start,
 			'followers_end'        => $last_month_stats ? ( $last_month_stats['followers_total'] ?? 0 ) : self::get_follower_count( $user_id ),
 			'followers_net_change' => 0,
 			'top_multiplicator'    => $top_multiplicator,
@@ -361,8 +368,8 @@ class Statistics {
 		if ( $type ) {
 			$type_clause = $wpdb->prepare( ' AND c.comment_type = %s', $type );
 		} else {
-			// Get all registered ActivityPub comment types dynamically.
-			$comment_types = Comment::get_comment_type_slugs();
+			// Get all comment types tracked in statistics (includes federated comments via filter).
+			$comment_types = \array_keys( self::get_comment_types_for_stats() );
 			if ( ! empty( $comment_types ) ) {
 				$placeholders_types = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
 				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
@@ -439,7 +446,7 @@ class Statistics {
 
 		$placeholders_types = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
 
-		// Get engagement counts per post.
+		// Get engagement counts per post (only engagement within the date range).
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -454,10 +461,12 @@ class Statistics {
 				AND cm.meta_key = 'protocol'
 				AND cm.meta_value = 'activitypub'
 				AND c.comment_type IN ({$placeholders_types})
+				AND c.comment_date_gmt >= %s
+				AND c.comment_date_gmt <= %s
 				GROUP BY c.comment_post_ID
 				ORDER BY engagement_count DESC
 				LIMIT %d",
-				\array_merge( $post_ids, $comment_types, array( $limit ) )
+				\array_merge( $post_ids, $comment_types, array( $start, $end, $limit ) )
 			),
 			ARRAY_A
 		);
@@ -776,8 +785,8 @@ class Statistics {
 			),
 		);
 
-		// Add comparison for each registered comment type dynamically.
-		$comment_types = Comment::get_comment_type_slugs();
+		// Add comparison for each comment type tracked in statistics (includes federated comments).
+		$comment_types = \array_keys( self::get_comment_types_for_stats() );
 		foreach ( $comment_types as $type ) {
 			// Always query live for current month.
 			$current_count = self::count_engagement_in_range( $user_id, $current_start, $current_end, $type );

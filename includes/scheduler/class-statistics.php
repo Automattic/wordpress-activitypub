@@ -98,12 +98,19 @@ class Statistics {
 		}
 
 		// Don't send email if there's no activity.
-		if (
-			empty( $summary['posts_count'] ) &&
-			empty( $summary['likes_count'] ) &&
-			empty( $summary['reposts_count'] ) &&
-			empty( $summary['comments_count'] )
-		) {
+		// Check posts and all registered comment types dynamically.
+		$has_activity = ! empty( $summary['posts_count'] );
+		if ( ! $has_activity ) {
+			$comment_types = \array_keys( Statistics_Collector::get_comment_types_for_stats() );
+			foreach ( $comment_types as $type ) {
+				if ( ! empty( $summary[ $type . '_count' ] ) ) {
+					$has_activity = true;
+					break;
+				}
+			}
+		}
+
+		if ( ! $has_activity ) {
 			return;
 		}
 

@@ -211,16 +211,18 @@ class Scheduler {
 	 * @return int Unix timestamp of next December 1st at 3:00 AM.
 	 */
 	private static function get_next_december_first() {
-		$now   = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
-		$year  = (int) \gmdate( 'Y', $now );
-		$month = (int) \gmdate( 'n', $now );
+		$now  = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$year = (int) \gmdate( 'Y', $now );
 
-		// If we're past December 1st, schedule for next year.
-		if ( $month >= 12 ) {
-			++$year;
+		// Get December 1st 3:00 AM for this year.
+		$this_year_dec_first = \strtotime( sprintf( '%d-12-01 03:00:00', $year ) );
+
+		// If we're already past this year's December 1st, schedule for next year.
+		if ( $now >= $this_year_dec_first ) {
+			return \strtotime( sprintf( '%d-12-01 03:00:00', $year + 1 ) );
 		}
 
-		return \strtotime( sprintf( '%d-12-01 03:00:00', $year ) );
+		return $this_year_dec_first;
 	}
 
 	/**

@@ -69,10 +69,12 @@ export default function StatsWidget() {
 
 		setIsLoading( true );
 
-		// Fetch blog stats (global engagement data).
-		const blogStatsPromise = apiFetch< StatsResponse >( {
-			path: `/activitypub/1.0/stats/${ BLOG_USER_ID }`,
-		} ).catch( () => null );
+		// Fetch blog stats (global engagement data) - only if user has blog capability.
+		const blogStatsPromise = canUseBlogActor
+			? apiFetch< StatsResponse >( {
+					path: `/activitypub/1.0/stats/${ BLOG_USER_ID }`,
+			  } ).catch( () => null )
+			: Promise.resolve( null );
 
 		// Fetch user-specific stats if user actor is available.
 		const userStatsPromise =
@@ -84,12 +86,13 @@ export default function StatsWidget() {
 
 		Promise.all( [ blogStatsPromise, userStatsPromise ] )
 			.then( ( [ blogData, userData ] ) => {
-				setStats( blogData );
+				// Use blog stats as primary if available, otherwise fall back to user stats.
+				setStats( blogData ?? userData );
 				setBlogStats( blogData );
 				setUserStats( userData );
 			} )
 			.finally( () => setIsLoading( false ) );
-	}, [ isResolving, canUseUserActor, currentUser?.id ] );
+	}, [ isResolving, canUseUserActor, canUseBlogActor, currentUser?.id ] );
 
 	// Show loading while resolving user data.
 	if ( isResolving || isLoading ) {
