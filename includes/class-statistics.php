@@ -664,38 +664,6 @@ class Statistics {
 	}
 
 	/**
-	 * Get monthly breakdown for the current year (for graphs).
-	 *
-	 * Uses stored monthly stats if available, otherwise queries live data.
-	 *
-	 * @param int $user_id The user ID.
-	 * @param int $year    Optional. The year. Defaults to current year.
-	 *
-	 * @return array Array of monthly stats with month number as key.
-	 */
-	public static function get_yearly_monthly_breakdown( $user_id, $year = null ) {
-		if ( ! $year ) {
-			$year = (int) \gmdate( 'Y' );
-		}
-
-		$current_month = (int) \gmdate( 'n' );
-		$current_year  = (int) \gmdate( 'Y' );
-		$months        = array();
-
-		// Get all comment types tracked in stats (includes federated comments via filter).
-		$comment_types = \array_keys( self::get_comment_types_for_stats() );
-
-		// Only go up to current month if we're in the current year.
-		$max_month = ( $year === $current_year ) ? $current_month : 12;
-
-		for ( $month = 1; $month <= $max_month; $month++ ) {
-			$months[ $month ] = self::get_month_data( $user_id, $year, $month, $comment_types );
-		}
-
-		return $months;
-	}
-
-	/**
 	 * Get rolling monthly breakdown (last X months).
 	 *
 	 * Returns stats for the last X months, crossing year boundaries as needed.
@@ -784,19 +752,6 @@ class Statistics {
 		}
 
 		return $month_data;
-	}
-
-	/**
-	 * Get year-over-year comparison for current month.
-	 *
-	 * @deprecated Use get_period_comparison() instead.
-	 *
-	 * @param int $user_id The user ID.
-	 *
-	 * @return array Comparison data.
-	 */
-	public static function get_year_comparison( $user_id ) {
-		return self::get_period_comparison( $user_id );
 	}
 
 	/**
