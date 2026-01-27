@@ -97,7 +97,6 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Statistics', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
