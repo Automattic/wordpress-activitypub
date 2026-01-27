@@ -3,6 +3,8 @@ import type { Comparison, CommentType } from '../../types';
 
 interface Props {
 	comparison: Comparison | null;
+	userComparison: Comparison | null;
+	blogComparison: Comparison | null;
 	commentTypes: Record< string, CommentType > | null;
 	canUseUserActor: boolean;
 	canUseBlogActor: boolean;
@@ -35,13 +37,16 @@ function getStatUrl( type: string ): string | null {
  * Displays key statistics with month-over-month comparison.
  * Shows follower change and engagement stats for available actors.
  *
- * @param {Props} props                 Component props.
- * @param {Props} props.comparison      Comparison data with current vs previous values.
- * @param {Props} props.commentTypes    Available comment types configuration.
- * @param {Props} props.canUseUserActor Whether user actor is available.
- * @param {Props} props.canUseBlogActor Whether blog actor is available.
+ * @param {Props} props Component props.
  */
-export default function StatHighlights( { comparison, commentTypes, canUseUserActor, canUseBlogActor }: Props ) {
+export default function StatHighlights( {
+	comparison,
+	userComparison,
+	blogComparison,
+	commentTypes,
+	canUseUserActor,
+	canUseBlogActor,
+}: Props ) {
 	if ( ! comparison ) {
 		return null;
 	}
@@ -49,24 +54,23 @@ export default function StatHighlights( { comparison, commentTypes, canUseUserAc
 	// Build stats array dynamically.
 	const stats: Array< { key: string; label: string; value: number; change: number } > = [];
 
-	// Add user followers if available.
-	if ( canUseUserActor && comparison.followers ) {
+	// Add user followers if available (from user-specific stats).
+	if ( canUseUserActor && userComparison?.followers ) {
 		stats.push( {
 			key: 'followers-user',
 			label: __( 'Followers', 'activitypub' ),
-			value: comparison.followers.current ?? 0,
-			change: comparison.followers.change ?? 0,
+			value: userComparison.followers.current ?? 0,
+			change: userComparison.followers.change ?? 0,
 		} );
 	}
 
-	// Add blog followers if available.
-	if ( canUseBlogActor && comparison.followers ) {
-		// TODO: Track blog followers separately when we have blog-specific comparison.
+	// Add blog followers if available (from blog-specific stats).
+	if ( canUseBlogActor && blogComparison?.followers ) {
 		stats.push( {
 			key: 'followers-blog',
 			label: __( 'Followers (Blog)', 'activitypub' ),
-			value: comparison.followers.current ?? 0,
-			change: comparison.followers.change ?? 0,
+			value: blogComparison.followers.current ?? 0,
+			change: blogComparison.followers.change ?? 0,
 		} );
 	}
 

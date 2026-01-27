@@ -57,9 +57,11 @@ export default function StatsWidget() {
 	const canUseBlogActor: boolean = blogModeEnabled && hasBlogCap;
 
 	const [ stats, setStats ] = useState< StatsResponse | null >( null );
+	const [ userStats, setUserStats ] = useState< StatsResponse | null >( null );
+	const [ blogStats, setBlogStats ] = useState< StatsResponse | null >( null );
 	const [ isLoading, setIsLoading ] = useState( true );
 
-	// Load stats - engagement is global, so we fetch from blog endpoint.
+	// Load stats for blog (global engagement) and separate follower stats per actor.
 	useEffect( () => {
 		if ( isResolving ) {
 			return;
@@ -67,14 +69,27 @@ export default function StatsWidget() {
 
 		setIsLoading( true );
 
-		// Fetch global stats (from blog endpoint).
-		apiFetch< StatsResponse >( {
+		// Fetch blog stats (global engagement data).
+		const blogStatsPromise = apiFetch< StatsResponse >( {
 			path: `/activitypub/1.0/stats/${ BLOG_USER_ID }`,
-		} )
-			.then( ( data ) => setStats( data ) )
-			.catch( () => setStats( null ) )
+		} ).catch( () => null );
+
+		// Fetch user-specific stats if user actor is available.
+		const userStatsPromise =
+			canUseUserActor && currentUser?.id
+				? apiFetch< StatsResponse >( {
+						path: `/activitypub/1.0/stats/${ currentUser.id }`,
+				  } ).catch( () => null )
+				: Promise.resolve( null );
+
+		Promise.all( [ blogStatsPromise, userStatsPromise ] )
+			.then( ( [ blogData, userData ] ) => {
+				setStats( blogData );
+				setBlogStats( blogData );
+				setUserStats( userData );
+			} )
 			.finally( () => setIsLoading( false ) );
-	}, [ isResolving ] );
+	}, [ isResolving, canUseUserActor, currentUser?.id ] );
 
 	// Show loading while resolving user data.
 	if ( isResolving || isLoading ) {
@@ -99,6 +114,8 @@ export default function StatsWidget() {
 		<div className="activitypub-stats-widget">
 			<StatHighlights
 				comparison={ stats.comparison }
+				userComparison={ userStats?.comparison ?? null }
+				blogComparison={ blogStats?.comparison ?? null }
 				commentTypes={ stats.comment_types }
 				canUseUserActor={ canUseUserActor }
 				canUseBlogActor={ canUseBlogActor }

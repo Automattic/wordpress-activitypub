@@ -142,22 +142,13 @@ class Statistics {
 		$start = \gmdate( 'Y-m-d 00:00:00', \strtotime( sprintf( '%d-%02d-01', $year, $month ) ) );
 		$end   = \gmdate( 'Y-m-d 23:59:59', \strtotime( 'last day of ' . sprintf( '%d-%02d', $year, $month ) ) );
 
-		// Get previous month's follower count for comparison.
-		$prev_month = $month - 1;
-		$prev_year  = $year;
-		if ( $prev_month < 1 ) {
-			$prev_month = 12;
-			--$prev_year;
-		}
-		$prev_stats        = self::get_monthly_stats( $user_id, $prev_year, $prev_month );
-		$prev_followers    = $prev_stats ? $prev_stats['followers_total'] : 0;
-		$current_followers = self::get_follower_count( $user_id );
+		// Count new followers gained this month (by post_date in followers table).
+		$followers_count = Followers::count_in_range( $user_id, $start, $end );
 
 		$stats = array(
 			'posts_count'       => self::count_federated_posts_in_range( $user_id, $start, $end ),
-			'followers_gained'  => \max( 0, $current_followers - $prev_followers ),
-			'followers_lost'    => \max( 0, $prev_followers - $current_followers ),
-			'followers_total'   => $current_followers,
+			'followers_count'   => $followers_count,
+			'followers_total'   => self::get_follower_count( $user_id ),
 			'top_posts'         => self::get_top_posts( $user_id, $start, $end, 5 ),
 			'top_multiplicator' => self::get_top_multiplicator( $user_id, $start, $end ),
 			'collected_at'      => \gmdate( 'Y-m-d H:i:s' ),
@@ -801,33 +792,40 @@ class Statistics {
 	public static function get_period_comparison( $user_id ) {
 		$now = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
 
-		// Current month.
+		// Current month date range.
 		$current_year  = (int) \gmdate( 'Y', $now );
 		$current_month = (int) \gmdate( 'n', $now );
+		$current_start = \gmdate( 'Y-m-01 00:00:00', $now );
+		$current_end   = \gmdate( 'Y-m-t 23:59:59', $now );
 
 		// Previous month (handles year boundary).
 		$prev_timestamp = \strtotime( '-1 month', $now );
 		$prev_year      = (int) \gmdate( 'Y', $prev_timestamp );
 		$prev_month     = (int) \gmdate( 'n', $prev_timestamp );
+		$prev_start     = \gmdate( 'Y-m-01 00:00:00', $prev_timestamp );
+		$prev_end       = \gmdate( 'Y-m-t 23:59:59', $prev_timestamp );
 
-		// Check for stored stats first.
+		// Check for stored stats.
 		$current_stats = self::get_monthly_stats( $user_id, $current_year, $current_month );
 		$prev_stats    = self::get_monthly_stats( $user_id, $prev_year, $prev_month );
 
+		// Get current month data (from stored stats or live query).
 		if ( $current_stats ) {
-			// Use stored data.
 			$current_posts     = $current_stats['posts_count'] ?? 0;
-			$current_followers = $current_stats['followers_total'] ?? self::get_follower_count( $user_id );
+			$current_followers = $current_stats['followers_count'] ?? Followers::count_in_range( $user_id, $current_start, $current_end );
 		} else {
-			// Query live data.
-			$current_start     = \gmdate( 'Y-m-01 00:00:00', $now );
-			$current_end       = \gmdate( 'Y-m-t 23:59:59', $now );
 			$current_posts     = self::count_federated_posts_in_range( $user_id, $current_start, $current_end );
-			$current_followers = self::get_follower_count( $user_id );
+			$current_followers = Followers::count_in_range( $user_id, $current_start, $current_end );
 		}
 
-		$prev_posts     = $prev_stats ? ( $prev_stats['posts_count'] ?? 0 ) : 0;
-		$prev_followers = $prev_stats ? ( $prev_stats['followers_total'] ?? 0 ) : 0;
+		// Get previous month data (from stored stats or live query).
+		if ( $prev_stats ) {
+			$prev_posts     = $prev_stats['posts_count'] ?? 0;
+			$prev_followers = $prev_stats['followers_count'] ?? 0;
+		} else {
+			$prev_posts     = self::count_federated_posts_in_range( $user_id, $prev_start, $prev_end );
+			$prev_followers = Followers::count_in_range( $user_id, $prev_start, $prev_end );
+		}
 
 		$comparison = array(
 			'posts'     => array(
@@ -836,21 +834,23 @@ class Statistics {
 			),
 			'followers' => array(
 				'current' => $current_followers,
-				'change'  => $prev_followers > 0 ? $current_followers - $prev_followers : 0,
+				'change'  => $current_followers - $prev_followers,
 			),
 		);
 
 		// Add comparison for each registered comment type dynamically.
 		$comment_types = Comment::get_comment_type_slugs();
 		foreach ( $comment_types as $type ) {
-			$current_count = $current_stats ? ( $current_stats[ $type . '_count' ] ?? 0 ) : 0;
-			$prev_count    = $prev_stats ? ( $prev_stats[ $type . '_count' ] ?? 0 ) : 0;
-
-			// If no stored stats, query live data.
-			if ( ! $current_stats ) {
-				$current_start = \gmdate( 'Y-m-01 00:00:00', $now );
-				$current_end   = \gmdate( 'Y-m-t 23:59:59', $now );
+			if ( $current_stats ) {
+				$current_count = $current_stats[ $type . '_count' ] ?? 0;
+			} else {
 				$current_count = self::count_engagement_in_range( $user_id, $current_start, $current_end, $type );
+			}
+
+			if ( $prev_stats ) {
+				$prev_count = $prev_stats[ $type . '_count' ] ?? 0;
+			} else {
+				$prev_count = self::count_engagement_in_range( $user_id, $prev_start, $prev_end, $type );
 			}
 
 			$comparison[ $type ] = array(
