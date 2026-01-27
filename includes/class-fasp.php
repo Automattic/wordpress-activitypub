@@ -231,6 +231,22 @@ class Fasp {
 	}
 
 	/**
+	 * Store a new registration request.
+	 *
+	 * @param array $data Registration data including fasp_id.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function store_registration( $data ) {
+		$registrations = self::get_registrations_store();
+
+		// Add new registration.
+		$registrations[ $data['fasp_id'] ] = $data;
+
+		// Store updated registrations without autoloading.
+		return update_option( 'activitypub_fasp_registrations', $registrations, false );
+	}
+
+	/**
 	 * Generate public key fingerprint.
 	 *
 	 * @param string $public_key Base64 encoded public key.

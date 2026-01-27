@@ -217,7 +217,8 @@ test.describe( 'FASP v0.1 Specification Compliance', () => {
 					expect( typeof policy.language ).toBe( 'string' );
 
 					expect( () => new URL( policy.url ) ).not.toThrow();
-					expect( policy.language ).toMatch( /^[a-z]{2}(-[A-Z]{2})?$/ );
+					// WordPress locales use underscores (e.g., en_US), but BCP 47 uses hyphens (e.g., en-US).
+					expect( policy.language ).toMatch( /^[a-z]{2}([_-][A-Za-z]{2,})?$/ );
 				}
 			}
 		} );

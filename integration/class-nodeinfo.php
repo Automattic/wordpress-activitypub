@@ -83,7 +83,11 @@ class Nodeinfo {
 
 		$nodeinfo['metadata']['federation']    = array( 'enabled' => true );
 		$nodeinfo['metadata']['staffAccounts'] = self::get_staff();
-		$nodeinfo['metadata']['faspBaseUrl']   = get_rest_url_by_path( 'fasp' );
+
+		// Only expose FASP base URL when the feature is enabled.
+		if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+			$nodeinfo['metadata']['faspBaseUrl'] = get_rest_url_by_path( 'fasp' );
+		}
 
 		return $nodeinfo;
 	}

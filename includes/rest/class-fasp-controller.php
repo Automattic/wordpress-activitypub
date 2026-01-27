@@ -189,7 +189,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		$response->header( 'Content-Digest', $digest );
 
 		// Sign the response.
-		$this->sign_response( $response, $content );
+		$this->sign_response( $response );
 
 		return $response;
 	}
@@ -200,9 +200,8 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 * Uses the server's Ed25519 keypair as required by the FASP specification.
 	 *
 	 * @param \WP_REST_Response $response The response to sign.
-	 * @param string            $content  The response content (unused, for future use).
 	 */
-	private function sign_response( $response, $content ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	private function sign_response( $response ) {
 		$keypair     = Signature::get_server_ed25519_keypair();
 		$private_key = $keypair['private'];
 
@@ -267,7 +266,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 			'requested_at'                => \current_time( 'mysql', true ),
 		);
 
-		$result = $this->store_registration_request( $registration_data );
+		$result = Fasp::store_registration( $registration_data );
 		if ( ! $result ) {
 			return new \WP_Error(
 				'storage_failed',
@@ -427,72 +426,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 */
 	private function generate_unique_id() {
 		return \wp_generate_password( 12, false );
-	}
-
-	/**
-	 * Store registration request using WordPress options.
-	 *
-	 * @param array $data Registration data.
-	 * @return bool True on success, false on failure.
-	 */
-	private function store_registration_request( $data ) {
-		$registrations = $this->get_registration_records();
-
-		// Add new registration.
-		$registrations[ $data['fasp_id'] ] = $data;
-
-		// Store updated registrations without autoloading.
-		return \update_option( 'activitypub_fasp_registrations', $registrations, false );
-	}
-
-	/**
-	 * Get existing registration records, ensuring the option exists and is sanitized.
-	 *
-	 * @return array Registration records.
-	 */
-	private function get_registration_records() {
-		$registrations = \get_option( 'activitypub_fasp_registrations', null );
-
-		if ( null === $registrations ) {
-			\add_option( 'activitypub_fasp_registrations', array(), '', 'no' );
-			return array();
-		}
-
-		if ( ! is_array( $registrations ) ) {
-			$registrations = array();
-		}
-
-		return $this->sanitize_registration_records( $registrations );
-	}
-
-	/**
-	 * Remove sensitive data from stored registrations.
-	 *
-	 * @param array $registrations Registration records.
-	 * @return array Sanitized registration records.
-	 */
-	private function sanitize_registration_records( array $registrations ) {
-		$modified = false;
-
-		foreach ( $registrations as $fasp_id => $registration ) {
-			if ( isset( $registration['server_private_key'] ) ) {
-				unset( $registration['server_private_key'] );
-				$registrations[ $fasp_id ] = $registration;
-				$modified                  = true;
-			}
-
-			if ( isset( $registration['fasp_public_key'] ) && empty( $registration['fasp_public_key_fingerprint'] ) ) {
-				$registration['fasp_public_key_fingerprint'] = Fasp::get_public_key_fingerprint( $registration['fasp_public_key'] );
-				$registrations[ $fasp_id ]                   = $registration;
-				$modified                                    = true;
-			}
-		}
-
-		if ( $modified ) {
-			\update_option( 'activitypub_fasp_registrations', $registrations, false );
-		}
-
-		return $registrations;
 	}
 
 	/**
