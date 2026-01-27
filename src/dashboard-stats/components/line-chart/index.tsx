@@ -20,6 +20,7 @@ const WP_DEFAULT_COLORS = [
 /**
  * Get CSS variable with fallback to hex value.
  * Uses CSS var() with fallback for best compatibility.
+ * @param index
  */
 function getColor( index: number ): string {
 	const color = WP_DEFAULT_COLORS[ index % WP_DEFAULT_COLORS.length ];
@@ -37,6 +38,9 @@ function getEngagementColor(): string {
  * Line Chart Component.
  *
  * Renders an SVG line chart for monthly engagement data.
+ * @param root0
+ * @param root0.monthly
+ * @param root0.commentTypes
  */
 export default function LineChart( { monthly, commentTypes }: Props ) {
 	if ( ! monthly?.length ) {
@@ -126,7 +130,7 @@ export default function LineChart( { monthly, commentTypes }: Props ) {
 
 	return (
 		<div className="activitypub-stats-chart">
-			<h4>{ __( 'Engagement Over Time', 'activitypub' ) }</h4>
+			<h3>{ __( 'Engagement Over Time', 'activitypub' ) }</h3>
 			<div className="activitypub-chart-container">
 				<svg viewBox={ `0 0 ${ width } ${ height }` } className="activitypub-line-chart">
 					<defs>

@@ -140,11 +140,10 @@
 // Chart section - full width background.
 .activitypub-stats-chart {
 	border-top: 1px solid #f0f0f1;
-	background: #f6f7f7;
 
-	h4 {
+	h3 {
 		margin: 0;
-		padding: 12px 12px 0;
+		padding: 12px;
 		font-size: 13px;
 		font-weight: 600;
 		color: #1d2327;
@@ -153,6 +152,7 @@
 
 .activitypub-chart-container {
 	padding: 12px;
+	background: #f6f7f7;
 }
 
 .activitypub-line-chart {
@@ -197,7 +197,7 @@
 	border-top: 1px solid #f0f0f1;
 	border-left: 4px solid #72aee6;
 
-	h4 {
+	h3 {
 		margin: 0 0 4px;
 		font-size: 13px;
 		font-weight: 600;
@@ -228,7 +228,7 @@
 	padding: 12px;
 	border-top: 1px solid #f0f0f1;
 
-	h4 {
+	h3 {
 		margin: 0 0 8px;
 		font-size: 13px;
 		font-weight: 600;

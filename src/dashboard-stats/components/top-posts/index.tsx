@@ -7,6 +7,8 @@ interface Props {
 
 /**
  * Top Posts Component.
+ * @param root0
+ * @param root0.posts
  */
 export default function TopPosts( { posts }: Props ) {
 	if ( ! posts?.length ) {
@@ -15,7 +17,7 @@ export default function TopPosts( { posts }: Props ) {
 
 	return (
 		<div className="activitypub-stats-top-posts">
-			<h4>{ __( 'Top Posts', 'activitypub' ) }</h4>
+			<h3>{ __( 'Top Posts', 'activitypub' ) }</h3>
 			<ul>
 				{ posts.map( ( post ) => (
 					<li key={ post.post_id }>

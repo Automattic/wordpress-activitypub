@@ -7,6 +7,8 @@ interface Props {
 
 /**
  * Top Supporter Component.
+ * @param root0
+ * @param root0.multiplicator
  */
 export default function TopSupporter( { multiplicator }: Props ) {
 	if ( ! multiplicator?.name ) {
@@ -15,7 +17,7 @@ export default function TopSupporter( { multiplicator }: Props ) {
 
 	return (
 		<div className="activitypub-stats-multiplicator">
-			<h4>{ __( 'Top Supporter', 'activitypub' ) }</h4>
+			<h3>{ __( 'Top Supporter', 'activitypub' ) }</h3>
 			<p>
 				<a href={ multiplicator.url } target="_blank" rel="noopener noreferrer">
 					{ multiplicator.name }
