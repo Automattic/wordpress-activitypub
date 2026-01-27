@@ -53,7 +53,7 @@
 
 	// Match #dashboard_right_now li a:before exactly.
 	li a::before,
-	li > span::before {
+	li > span:not(.stat-change)::before {
 		content: "\f159";
 		color: #646970;
 		font: 400 20px/1 dashicons, sans-serif;
@@ -67,28 +67,26 @@
 	}
 
 	// Icon mappings - same as WordPress dashboard icons.
-	.activitypub-followers-count a::before,
-	.activitypub-followers-count > span::before {
+	.activitypub-followers-count a::before {
 		content: "\f307"; // groups icon.
 	}
 
-	.activitypub-posts-count a::before,
-	.activitypub-posts-count > span::before {
+	.activitypub-posts-count a::before {
 		content: "\f109"; // admin-post icon.
 	}
 
 	.activitypub-like-count a::before,
-	.activitypub-like-count > span::before {
+	.activitypub-likes-count a::before {
 		content: "\f155"; // star-filled icon.
 	}
 
 	.activitypub-repost-count a::before,
-	.activitypub-repost-count > span::before {
+	.activitypub-reposts-count a::before {
 		content: "\f488"; // share icon.
 	}
 
 	.activitypub-comment-count a::before,
-	.activitypub-comment-count > span::before {
+	.activitypub-comments-count a::before {
 		content: "\f101"; // admin-comments icon.
 	}
 
