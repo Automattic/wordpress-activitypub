@@ -337,11 +337,12 @@ class Statistics {
 	public static function count_engagement_in_range( $user_id, $start, $end, $type = null ) {
 		global $wpdb;
 
-		// Get post IDs for the user.
+		// Get post IDs for the user (all supported post types).
 		$post_args = array(
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'post_status'    => 'publish',
+			'post_type'      => \get_option( 'activitypub_support_post_types', array( 'post' ) ),
 		);
 
 		if ( Actors::BLOG_USER_ID !== $user_id ) {
@@ -408,6 +409,7 @@ class Statistics {
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'post_status'    => 'publish',
+			'post_type'      => \get_option( 'activitypub_support_post_types', array( 'post' ) ),
 			'date_query'     => array(
 				array(
 					'after'     => $start,
@@ -493,6 +495,7 @@ class Statistics {
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'post_status'    => 'publish',
+			'post_type'      => \get_option( 'activitypub_support_post_types', array( 'post' ) ),
 		);
 
 		if ( Actors::BLOG_USER_ID !== $user_id ) {
@@ -917,11 +920,12 @@ class Statistics {
 	private static function get_earliest_data_year( $user_id ) {
 		global $wpdb;
 
-		// Get post IDs for the user.
+		// Get post IDs for the user (all supported post types).
 		$post_args = array(
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'post_status'    => 'publish',
+			'post_type'      => \get_option( 'activitypub_support_post_types', array( 'post' ) ),
 		);
 
 		if ( Actors::BLOG_USER_ID !== $user_id ) {
