@@ -12,6 +12,7 @@ export interface Comparison {
 
 export interface MonthData {
 	month: number;
+	year?: number;
 	posts_count: number;
 	engagement: number;
 	// Dynamic keys for engagement type counts (like_count, repost_count, quote_count, etc.)

@@ -17,11 +17,10 @@ interface Props {
 /**
  * Get the admin URL for a stat type.
  *
- * @param {string}  type   The stat type (followers, posts, etc.).
- * @param {boolean} isBlog Whether this is for the blog actor.
+ * @param {string} type The stat type (followers, posts, etc.).
  * @return {string|null} The admin URL or null if no link.
  */
-function getStatUrl( type: string, isBlog: boolean = false ): string | null {
+function getStatUrl( type: string ): string | null {
 	switch ( type ) {
 		case 'followers':
 		case 'followers-user':
@@ -108,7 +107,7 @@ export default function StatHighlights( {
 
 	return (
 		<div className="activitypub-stats-highlights main">
-			<h3>{ __( 'This month vs. last year', 'activitypub' ) }</h3>
+			<h3>{ __( 'This month vs. last month', 'activitypub' ) }</h3>
 			<ul>
 				{ stats.map( ( stat ) => {
 					const url = getStatUrl( stat.key );

@@ -96,8 +96,8 @@ class Statistics_Controller extends \WP_REST_Controller {
 		$user_id = $request->get_param( 'user_id' );
 
 		$stats         = Statistics::get_current_stats( $user_id, 'month' );
-		$comparison    = Statistics::get_year_comparison( $user_id );
-		$monthly_data  = Statistics::get_yearly_monthly_breakdown( $user_id );
+		$comparison    = Statistics::get_period_comparison( $user_id );
+		$monthly_data  = Statistics::get_rolling_monthly_breakdown( $user_id );
 		$comment_types = Statistics::get_comment_types_for_stats();
 
 		$response = array(

@@ -686,69 +686,133 @@ class Statistics {
 		$max_month = ( $year === $current_year ) ? $current_month : 12;
 
 		for ( $month = 1; $month <= $max_month; $month++ ) {
-			// Check for stored monthly stats first.
-			$stored_stats = self::get_monthly_stats( $user_id, $year, $month );
-
-			if ( $stored_stats ) {
-				// Use stored data.
-				$engagement = 0;
-				foreach ( $comment_types as $type ) {
-					$engagement += $stored_stats[ $type . '_count' ] ?? 0;
-				}
-
-				$month_data = array(
-					'month'       => $month,
-					'posts_count' => $stored_stats['posts_count'] ?? 0,
-					'engagement'  => $engagement,
-				);
-
-				// Add counts for each comment type from stored stats.
-				foreach ( $comment_types as $type ) {
-					$month_data[ $type . '_count' ] = $stored_stats[ $type . '_count' ] ?? 0;
-				}
-			} else {
-				// Query live data.
-				$start = \gmdate( 'Y-m-d 00:00:00', \strtotime( sprintf( '%d-%02d-01', $year, $month ) ) );
-				$end   = \gmdate( 'Y-m-d 23:59:59', \strtotime( 'last day of ' . sprintf( '%d-%02d', $year, $month ) ) );
-
-				$engagement = self::count_engagement_in_range( $user_id, $start, $end );
-
-				$month_data = array(
-					'month'       => $month,
-					'posts_count' => self::count_federated_posts_in_range( $user_id, $start, $end ),
-					'engagement'  => $engagement,
-				);
-
-				// Add counts for each comment type tracked in stats.
-				foreach ( $comment_types as $type ) {
-					$month_data[ $type . '_count' ] = self::count_engagement_in_range( $user_id, $start, $end, $type );
-				}
-			}
-
-			$months[ $month ] = $month_data;
+			$months[ $month ] = self::get_month_data( $user_id, $year, $month, $comment_types );
 		}
 
 		return $months;
 	}
 
 	/**
+	 * Get rolling monthly breakdown (last X months).
+	 *
+	 * Returns stats for the last X months, crossing year boundaries as needed.
+	 *
+	 * @param int $user_id     The user ID.
+	 * @param int $num_months  Optional. Number of months to return. Defaults to 12.
+	 *
+	 * @return array Array of monthly stats ordered chronologically.
+	 */
+	public static function get_rolling_monthly_breakdown( $user_id, $num_months = 12 ) {
+		$now           = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$months        = array();
+		$comment_types = \array_keys( self::get_comment_types_for_stats() );
+
+		// Start from (num_months - 1) months ago and go to current month.
+		for ( $i = $num_months - 1; $i >= 0; $i-- ) {
+			$timestamp = \strtotime( "-{$i} months", $now );
+			$year      = (int) \gmdate( 'Y', $timestamp );
+			$month     = (int) \gmdate( 'n', $timestamp );
+
+			$month_data          = self::get_month_data( $user_id, $year, $month, $comment_types );
+			$month_data['year']  = $year;
+			$month_data['month'] = $month;
+
+			$months[] = $month_data;
+		}
+
+		return $months;
+	}
+
+	/**
+	 * Get data for a single month.
+	 *
+	 * @param int   $user_id       The user ID.
+	 * @param int   $year          The year.
+	 * @param int   $month         The month.
+	 * @param array $comment_types Array of comment type slugs.
+	 *
+	 * @return array Month data with posts_count, engagement, and type counts.
+	 */
+	private static function get_month_data( $user_id, $year, $month, $comment_types ) {
+		// Check for stored monthly stats first.
+		$stored_stats = self::get_monthly_stats( $user_id, $year, $month );
+
+		if ( $stored_stats ) {
+			// Use stored data.
+			$engagement = 0;
+			foreach ( $comment_types as $type ) {
+				$engagement += $stored_stats[ $type . '_count' ] ?? 0;
+			}
+
+			$month_data = array(
+				'month'       => $month,
+				'posts_count' => $stored_stats['posts_count'] ?? 0,
+				'engagement'  => $engagement,
+			);
+
+			// Add counts for each comment type from stored stats.
+			foreach ( $comment_types as $type ) {
+				$month_data[ $type . '_count' ] = $stored_stats[ $type . '_count' ] ?? 0;
+			}
+		} else {
+			// Query live data.
+			$start = \gmdate( 'Y-m-d 00:00:00', \strtotime( sprintf( '%d-%02d-01', $year, $month ) ) );
+			$end   = \gmdate( 'Y-m-d 23:59:59', \strtotime( 'last day of ' . sprintf( '%d-%02d', $year, $month ) ) );
+
+			$engagement = self::count_engagement_in_range( $user_id, $start, $end );
+
+			$month_data = array(
+				'month'       => $month,
+				'posts_count' => self::count_federated_posts_in_range( $user_id, $start, $end ),
+				'engagement'  => $engagement,
+			);
+
+			// Add counts for each comment type tracked in stats.
+			foreach ( $comment_types as $type ) {
+				$month_data[ $type . '_count' ] = self::count_engagement_in_range( $user_id, $start, $end, $type );
+			}
+		}
+
+		return $month_data;
+	}
+
+	/**
 	 * Get year-over-year comparison for current month.
+	 *
+	 * @deprecated Use get_period_comparison() instead.
+	 *
+	 * @param int $user_id The user ID.
+	 *
+	 * @return array Comparison data.
+	 */
+	public static function get_year_comparison( $user_id ) {
+		return self::get_period_comparison( $user_id );
+	}
+
+	/**
+	 * Get period-over-period comparison (current month vs previous month).
 	 *
 	 * Uses stored monthly stats if available, otherwise queries live data.
 	 *
 	 * @param int $user_id The user ID.
 	 *
-	 * @return array Comparison data with current values and changes from last year.
+	 * @return array Comparison data with current values and changes from previous month.
 	 */
-	public static function get_year_comparison( $user_id ) {
-		$now           = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+	public static function get_period_comparison( $user_id ) {
+		$now = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+
+		// Current month.
 		$current_year  = (int) \gmdate( 'Y', $now );
 		$current_month = (int) \gmdate( 'n', $now );
-		$last_year     = $current_year - 1;
+
+		// Previous month (handles year boundary).
+		$prev_timestamp = \strtotime( '-1 month', $now );
+		$prev_year      = (int) \gmdate( 'Y', $prev_timestamp );
+		$prev_month     = (int) \gmdate( 'n', $prev_timestamp );
 
 		// Check for stored stats first.
-		$current_stats   = self::get_monthly_stats( $user_id, $current_year, $current_month );
-		$last_year_stats = self::get_monthly_stats( $user_id, $last_year, $current_month );
+		$current_stats = self::get_monthly_stats( $user_id, $current_year, $current_month );
+		$prev_stats    = self::get_monthly_stats( $user_id, $prev_year, $prev_month );
 
 		if ( $current_stats ) {
 			// Use stored data.
@@ -756,23 +820,23 @@ class Statistics {
 			$current_followers = $current_stats['followers_total'] ?? self::get_follower_count( $user_id );
 		} else {
 			// Query live data.
-			$this_year_start   = \gmdate( 'Y-m-01 00:00:00', $now );
-			$this_year_end     = \gmdate( 'Y-m-t 23:59:59', $now );
-			$current_posts     = self::count_federated_posts_in_range( $user_id, $this_year_start, $this_year_end );
+			$current_start     = \gmdate( 'Y-m-01 00:00:00', $now );
+			$current_end       = \gmdate( 'Y-m-t 23:59:59', $now );
+			$current_posts     = self::count_federated_posts_in_range( $user_id, $current_start, $current_end );
 			$current_followers = self::get_follower_count( $user_id );
 		}
 
-		$last_posts     = $last_year_stats ? ( $last_year_stats['posts_count'] ?? 0 ) : 0;
-		$last_followers = $last_year_stats ? ( $last_year_stats['followers_total'] ?? 0 ) : 0;
+		$prev_posts     = $prev_stats ? ( $prev_stats['posts_count'] ?? 0 ) : 0;
+		$prev_followers = $prev_stats ? ( $prev_stats['followers_total'] ?? 0 ) : 0;
 
 		$comparison = array(
 			'posts'     => array(
 				'current' => $current_posts,
-				'change'  => $current_posts - $last_posts,
+				'change'  => $current_posts - $prev_posts,
 			),
 			'followers' => array(
 				'current' => $current_followers,
-				'change'  => $last_followers > 0 ? $current_followers - $last_followers : 0,
+				'change'  => $prev_followers > 0 ? $current_followers - $prev_followers : 0,
 			),
 		);
 
@@ -780,18 +844,18 @@ class Statistics {
 		$comment_types = Comment::get_comment_type_slugs();
 		foreach ( $comment_types as $type ) {
 			$current_count = $current_stats ? ( $current_stats[ $type . '_count' ] ?? 0 ) : 0;
-			$last_count    = $last_year_stats ? ( $last_year_stats[ $type . '_count' ] ?? 0 ) : 0;
+			$prev_count    = $prev_stats ? ( $prev_stats[ $type . '_count' ] ?? 0 ) : 0;
 
 			// If no stored stats, query live data.
 			if ( ! $current_stats ) {
-				$this_year_start = \gmdate( 'Y-m-01 00:00:00', $now );
-				$this_year_end   = \gmdate( 'Y-m-t 23:59:59', $now );
-				$current_count   = self::count_engagement_in_range( $user_id, $this_year_start, $this_year_end, $type );
+				$current_start = \gmdate( 'Y-m-01 00:00:00', $now );
+				$current_end   = \gmdate( 'Y-m-t 23:59:59', $now );
+				$current_count = self::count_engagement_in_range( $user_id, $current_start, $current_end, $type );
 			}
 
 			$comparison[ $type ] = array(
 				'current' => $current_count,
-				'change'  => $current_count - $last_count,
+				'change'  => $current_count - $prev_count,
 			);
 		}
 
