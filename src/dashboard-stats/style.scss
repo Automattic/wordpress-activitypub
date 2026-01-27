@@ -15,19 +15,6 @@
 	}
 }
 
-.activitypub-stats-header {
-	padding: 0 12px 12px;
-	border-bottom: 1px solid #f0f0f1;
-
-	.components-select-control {
-		margin: 0;
-	}
-
-	.components-base-control__field {
-		margin-bottom: 0;
-	}
-}
-
 .activitypub-stats-loading {
 	display: flex;
 	justify-content: center;
@@ -49,22 +36,24 @@
 		margin-left: 0;
 		margin-right: 0;
 	}
-}
 
-.activitypub-stats-grid {
-	margin: 0;
-	display: inline-block;
-	width: 100%;
-}
+	// Match #dashboard_right_now ul exactly.
+	ul {
+		margin: 0;
+		display: inline-block;
+		width: 100%;
+	}
 
-// Match #dashboard_right_now li styling exactly.
-.activitypub-stat-item {
-	width: 50%;
-	float: left;
-	margin-bottom: 10px;
+	// Match #dashboard_right_now li exactly.
+	li {
+		width: 50%;
+		float: left;
+		margin-bottom: 10px;
+	}
 
 	// Match #dashboard_right_now li a:before exactly.
-	&::before {
+	li a::before,
+	li > span::before {
 		content: "\f159";
 		color: #646970;
 		font: 400 20px/1 dashicons, sans-serif;
@@ -78,40 +67,29 @@
 	}
 
 	// Icon mappings - same as WordPress dashboard icons.
-	&[data-type="followers"]::before {
+	.activitypub-followers-count a::before,
+	.activitypub-followers-count > span::before {
 		content: "\f307"; // groups icon.
 	}
 
-	&[data-type="posts"]::before {
+	.activitypub-posts-count a::before,
+	.activitypub-posts-count > span::before {
 		content: "\f109"; // admin-post icon.
 	}
 
-	&[data-type="likes"]::before,
-	&[data-type="like"]::before {
+	.activitypub-like-count a::before,
+	.activitypub-like-count > span::before {
 		content: "\f155"; // star-filled icon.
 	}
 
-	&[data-type="reposts"]::before,
-	&[data-type="repost"]::before {
+	.activitypub-repost-count a::before,
+	.activitypub-repost-count > span::before {
 		content: "\f488"; // share icon.
 	}
 
-	&[data-type="comments"]::before,
-	&[data-type="comment"]::before {
+	.activitypub-comment-count a::before,
+	.activitypub-comment-count > span::before {
 		content: "\f101"; // admin-comments icon.
-	}
-
-	&[data-type="engagement"]::before {
-		content: "\f239"; // chart-area icon.
-	}
-
-	.stat-content {
-		display: inline;
-		vertical-align: top;
-	}
-
-	.stat-value {
-		font-weight: 600;
 	}
 
 	.stat-change {
@@ -141,7 +119,7 @@
 	}
 }
 
-// Chart section - matches .activity-block pattern.
+// Chart section.
 .activitypub-stats-chart {
 	border-top: 1px solid #f0f0f1;
 	padding: 8px 12px 4px;
@@ -273,7 +251,7 @@
 
 @media screen and (max-width: 782px) {
 
-	.activitypub-stat-item {
+	.activitypub-stats-highlights li {
 		width: 100%;
 	}
 }

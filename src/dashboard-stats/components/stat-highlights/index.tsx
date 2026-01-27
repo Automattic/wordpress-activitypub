@@ -107,22 +107,22 @@ export default function StatHighlights( {
 	}
 
 	return (
-		<div className="activitypub-stats-highlights">
-			<h3 className="activitypub-stats-period">{ __( 'This month vs. last year', 'activitypub' ) }</h3>
-			<div className="activitypub-stats-grid">
+		<div className="activitypub-stats-highlights main">
+			<h3>{ __( 'This month vs. last year', 'activitypub' ) }</h3>
+			<ul>
 				{ stats.map( ( stat ) => {
 					const url = getStatUrl( stat.key );
 					const content = (
 						<>
-							<span className="stat-value">{ stat.value.toLocaleString() }</span>{ ' ' }
-							<span className="stat-label">{ stat.label }</span>
+							{ stat.value.toLocaleString() } { stat.label }
 						</>
 					);
 					return (
-						<div
+						<li
 							key={ stat.key }
-							className="activitypub-stat-item"
-							data-type={ stat.key.replace( '-user', '' ).replace( '-blog', '' ) }
+							className={ `activitypub-${ stat.key
+								.replace( '-user', '' )
+								.replace( '-blog', '' ) }-count` }
 						>
 							{ url ? <a href={ url }>{ content }</a> : <span>{ content }</span> }
 							{ stat.change !== 0 && ' ' }
@@ -132,10 +132,10 @@ export default function StatHighlights( {
 									{ stat.change.toLocaleString() })
 								</span>
 							) }
-						</div>
+						</li>
 					);
 				} ) }
-			</div>
+			</ul>
 		</div>
 	);
 }
