@@ -25,24 +25,7 @@ class Statistics {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_filter( 'activitypub_stats_comment_types', array( self::class, 'add_federated_comments_type' ) );
-	}
-
-	/**
-	 * Add federated comments to the statistics comment types.
-	 *
-	 * @param array $types The comment types array.
-	 *
-	 * @return array The modified comment types array.
-	 */
-	public static function add_federated_comments_type( $types ) {
-		$types['comment'] = array(
-			'slug'     => 'comment',
-			'label'    => \__( 'Comments', 'activitypub' ),
-			'singular' => \__( 'Comment', 'activitypub' ),
-		);
-
-		return $types;
+		// Statistics class currently has no hooks to register.
 	}
 
 	/**
@@ -807,11 +790,18 @@ class Statistics {
 			);
 		}
 
+		// Add federated comments (replies) which use the standard 'comment' type.
+		$result['comment'] = array(
+			'slug'     => 'comment',
+			'label'    => \__( 'Comments', 'activitypub' ),
+			'singular' => \__( 'Comment', 'activitypub' ),
+		);
+
 		/**
 		 * Filter the comment types tracked in statistics.
 		 *
-		 * Allows adding additional comment types (like federated comments)
-		 * to be tracked in the statistics dashboard.
+		 * Allows adding additional comment types to be tracked
+		 * in the statistics dashboard.
 		 *
 		 * @param array $result Array of comment type data with slug, label, and singular.
 		 */
