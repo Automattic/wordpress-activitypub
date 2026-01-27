@@ -12,6 +12,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Comment;
+use Activitypub\Scheduler\Statistics as Statistics_Scheduler;
 use Activitypub\Statistics;
 
 use function Activitypub\camel_to_snake_case;
@@ -248,15 +249,29 @@ class Cli extends \WP_CLI_Command {
 	 * ## OPTIONS
 	 *
 	 * <action>
-	 * : The action to perform. Either `populate` or `clear`.
+	 * : The action to perform.
 	 * ---
 	 * options:
 	 *   - populate
 	 *   - clear
+	 *   - collect
+	 *   - compile
 	 * ---
 	 *
 	 * [--user_id=<user_id>]
-	 * : The user ID to populate/clear data for. Defaults to blog user (0).
+	 * : The user ID to operate on. Defaults to blog user (0).
+	 *
+	 * [--year=<year>]
+	 * : The year to collect/compile stats for. Defaults to current year.
+	 *
+	 * [--month=<month>]
+	 * : The month to collect stats for (1-12). Defaults to current month.
+	 *
+	 * [--force]
+	 * : Force recollection even if stats already exist.
+	 *
+	 * [--no-email]
+	 * : Skip sending email when compiling annual stats.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -269,25 +284,58 @@ class Cli extends \WP_CLI_Command {
 	 *     # Clear demo stats for the blog
 	 *     $ wp activitypub stats clear
 	 *
-	 * @synopsis <action> [--user_id=<user_id>]
+	 *     # Collect real stats for current month
+	 *     $ wp activitypub stats collect
+	 *
+	 *     # Collect stats for a specific month (force recollect)
+	 *     $ wp activitypub stats collect --year=2024 --month=6 --force
+	 *
+	 *     # Compile annual stats without sending email
+	 *     $ wp activitypub stats compile --year=2024 --no-email
+	 *
+	 * @synopsis <action> [--user_id=<user_id>] [--year=<year>] [--month=<month>] [--force] [--no-email]
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments.
 	 */
 	public function stats( $args, $assoc_args = array() ) {
-		$user_id = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : Actors::BLOG_USER_ID;
+		$user_id = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;
+		$year    = isset( $assoc_args['year'] ) ? (int) $assoc_args['year'] : null;
+		$month   = isset( $assoc_args['month'] ) ? (int) $assoc_args['month'] : null;
+		$force   = isset( $assoc_args['force'] );
 
 		switch ( $args[0] ) {
 			case 'populate':
-				$this->populate_demo_stats( $user_id );
-				\WP_CLI::success( "Demo statistics populated for user ID: {$user_id}" );
+				$target_user = $user_id ?? Actors::BLOG_USER_ID;
+				$this->populate_demo_stats( $target_user );
+				\WP_CLI::success( "Demo statistics populated for user ID: {$target_user}" );
 				break;
+
 			case 'clear':
-				$this->clear_demo_stats( $user_id );
-				\WP_CLI::success( "Demo statistics cleared for user ID: {$user_id}" );
+				$target_user = $user_id ?? Actors::BLOG_USER_ID;
+				$this->clear_demo_stats( $target_user );
+				\WP_CLI::success( "Demo statistics cleared for user ID: {$target_user}" );
 				break;
+
+			case 'collect':
+				$results = Statistics_Scheduler::trigger_monthly_collection( $user_id, $year, $month, $force );
+				$count   = count( $results );
+				$y       = $year ?? gmdate( 'Y' );
+				$m       = $month ?? gmdate( 'n' );
+				\WP_CLI::success( "Monthly stats collected for {$count} user(s) ({$y}-{$m})." );
+				break;
+
+			case 'compile':
+				$send_email = ! isset( $assoc_args['no-email'] );
+				$results    = Statistics_Scheduler::trigger_annual_compilation( $user_id, $year, $send_email );
+				$count      = count( $results );
+				$y          = $year ?? ( gmdate( 'Y' ) - 1 );
+				$email_msg  = $send_email ? ' (emails sent)' : ' (no emails)';
+				\WP_CLI::success( "Annual stats compiled for {$count} user(s) ({$y}){$email_msg}." );
+				break;
+
 			default:
-				\WP_CLI::error( 'Unknown action. Use "populate" or "clear".' );
+				\WP_CLI::error( 'Unknown action. Use "populate", "clear", "collect", or "compile".' );
 		}
 	}
 
