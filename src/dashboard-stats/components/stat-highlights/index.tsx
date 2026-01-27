@@ -58,7 +58,7 @@ export default function StatHighlights( { comparison, commentTypes }: Props ) {
 				{ stats.map( ( stat ) => (
 					<div key={ stat.key } className="activitypub-stat-item" data-type={ stat.key }>
 						<span className="stat-content">
-							<span className="stat-value">{ stat.value.toLocaleString() }</span>
+							<span className="stat-value">{ stat.value.toLocaleString() }</span>{ ' ' }
 							<span className="stat-label">{ stat.label }</span>
 							{ stat.change !== 0 && (
 								<span className={ `stat-change ${ stat.change > 0 ? 'positive' : 'negative' }` }>
