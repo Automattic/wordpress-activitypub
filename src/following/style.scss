@@ -4,7 +4,7 @@ button {
 	border: none;
 }
 
-.wp-block-activitypub-followers {
+.wp-block-activitypub-following {
 	margin: 16px 0;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 
@@ -22,13 +22,13 @@ button {
 }
 
 // Card style variation
-.wp-block-activitypub-followers.is-style-card:not(.block-editor-block-list__block) {
+.wp-block-activitypub-following.is-style-card:not(.block-editor-block-list__block) {
 
 	@include actor-list-card-style;
 }
 
 // Compact style variation - mutually exclusive with .is-style-card
-.wp-block-activitypub-followers.is-style-compact {
+.wp-block-activitypub-following.is-style-compact {
 
 	@include actor-list-compact-style;
 }

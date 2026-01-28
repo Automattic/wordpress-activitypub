@@ -84,6 +84,7 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/following' );
 		// Register reactions block, conditionally removing facepile style if avatars are disabled.
 		$reactions_args = array();
 		if ( ! \get_option( 'show_avatars', true ) ) {
@@ -284,6 +285,90 @@ class Blocks {
 					<?php echo $args['content']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				</div>
 			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Renders an actor list component that can be used by different blocks.
+	 *
+	 * @param array $args Arguments for the actor list.
+	 */
+	public static function render_actor_list( $args = array() ) {
+		$defaults = array(
+			'show_avatars'    => true,
+			'show_pagination' => true,
+			'total'           => 0,
+			'per_page'        => 10,
+			'nav_label'       => __( 'Actor navigation', 'activitypub' ),
+		);
+
+		$args = \wp_parse_args( $args, $defaults );
+		?>
+
+		<div class="activitypub-actor-list-container">
+			<ul class="activitypub-actor-list">
+				<template data-wp-each="context.items">
+					<li class="activitypub-actor-item">
+						<a data-wp-bind--href="context.item.url"
+							class="activitypub-actor-link"
+							target="_blank"
+							rel="external noreferrer noopener"
+							data-wp-bind--title="context.item.handle">
+
+							<?php if ( $args['show_avatars'] ) : ?>
+							<img
+								data-wp-bind--src="context.item.icon.url"
+								data-wp-on--error="callbacks.setDefaultAvatar"
+								src=""
+								alt=""
+								class="activitypub-actor-avatar"
+								width="48"
+								height="48"
+							>
+							<?php endif; ?>
+
+							<div class="activitypub-actor-info">
+								<span class="activitypub-actor-name" data-wp-text="context.item.name"></span>
+								<span class="activitypub-actor-handle" data-wp-text="context.item.handle"></span>
+							</div>
+
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" class="external-link-icon" aria-hidden="true" focusable="false" fill="currentColor">
+								<path d="M18.2 17c0 .7-.6 1.2-1.2 1.2H7c-.7 0-1.2-.6-1.2-1.2V7c0-.7.6-1.2 1.2-1.2h3.2V4.2H7C5.5 4.2 4.2 5.5 4.2 7v10c0 1.5 1.2 2.8 2.8 2.8h10c1.5 0 2.8-1.2 2.8-2.8v-3.6h-1.5V17zM14.9 3v1.5h3.7l-6.4 6.4 1.1 1.1 6.4-6.4v3.7h1.5V3h-6.3z"></path>
+							</svg>
+						</a>
+					</li>
+				</template>
+			</ul>
+
+			<?php if ( $args['show_pagination'] && $args['total'] > $args['per_page'] ) : ?>
+			<nav class="activitypub-actor-list-pagination" role="navigation">
+				<h1 class="screen-reader-text"><?php echo \esc_html( $args['nav_label'] ); ?></h1>
+				<a
+					class="pagination-previous"
+					data-wp-on-async--click="actions.previousPage"
+					data-wp-bind--aria-disabled="state.disablePreviousLink"
+					aria-label="<?php \esc_attr_e( 'Previous page', 'activitypub' ); ?>"
+				>
+					<?php \esc_html_e( 'Previous', 'activitypub' ); ?>
+				</a>
+
+				<div class="pagination-info" data-wp-text="state.paginationText"></div>
+
+				<a
+					class="pagination-next"
+					data-wp-on-async--click="actions.nextPage"
+					data-wp-bind--aria-disabled="state.disableNextLink"
+					aria-label="<?php \esc_attr_e( 'Next page', 'activitypub' ); ?>"
+				>
+					<?php \esc_html_e( 'Next', 'activitypub' ); ?>
+				</a>
+			</nav>
+
+			<div class="activitypub-actor-list-loading" data-wp-bind--aria-hidden="!context.isLoading">
+				<div class="loading-spinner"></div>
+			</div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

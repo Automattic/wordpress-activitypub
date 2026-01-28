@@ -24,7 +24,7 @@ const { apiFetch, url } = window.wp;
  * @property {string}  userId    The user ID for which to fetch actors.
  */
 
-const { actions } = store( 'activitypub/followers', {
+const { actions } = store( 'activitypub/following', {
 	/**
 	 * @typedef {Object} state
 	 * @property {Function} paginationText      Get the pagination text.
@@ -64,9 +64,9 @@ const { actions } = store( 'activitypub/followers', {
 	},
 	actions: {
 		/**
-		 * Fetch followers for the current page.
+		 * Fetch following for the current page.
 		 *
-		 * @return {Promise<void>} Promise that resolves when followers are fetched.
+		 * @return {Promise<void>} Promise that resolves when following are fetched.
 		 */
 		async fetchItems() {
 			const context = getContext();
@@ -78,7 +78,7 @@ const { actions } = store( 'activitypub/followers', {
 			try {
 				// Build the API path and parameters.
 				const { namespace } = getConfig();
-				const path = url.addQueryArgs( `/${ namespace }/actors/${ userId }/followers`, {
+				const path = url.addQueryArgs( `/${ namespace }/actors/${ userId }/following`, {
 					context: 'full',
 					per_page: perPage,
 					order,
@@ -100,7 +100,7 @@ const { actions } = store( 'activitypub/followers', {
 				context.pages = Math.ceil( totalItems / perPage );
 			} catch ( error ) {
 				// eslint-disable-next-line no-console -- Log error for debugging.
-				console.error( 'Error fetching followers:', error );
+				console.error( 'Error fetching following:', error );
 			} finally {
 				// Clear loading state.
 				context.isLoading = false;
