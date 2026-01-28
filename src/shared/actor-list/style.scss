@@ -117,20 +117,36 @@
 			justify-self: center;
 		}
 
+		// Fallback button-link styles for frontend.
+		.button-link {
+			background: none;
+			border: 0;
+			border-radius: 0;
+			box-shadow: none;
+			color: inherit;
+			cursor: pointer;
+			font-family: inherit;
+			font-size: inherit;
+			font-weight: inherit;
+			line-height: inherit;
+			margin: 0;
+			padding: 0;
+			text-align: inherit;
+			text-decoration: underline;
+
+			&:hover,
+			&:focus {
+				color: inherit;
+			}
+		}
+
 		.pagination-previous,
 		.pagination-next {
-			// Reset button styles to look like links.
-			background: none;
-			border: none; // Twenty Fifteen.
 			box-shadow: none; // Twenty Sixteen.
-			color: inherit;
-			font: inherit;
-			cursor: pointer;
 			font-size: 90%;
-			display: inline-block;
 			padding: 8px 0;
 			min-width: 60px;
-			text-align: inherit;
+			text-decoration: none;
 
 			&:hover,
 			&:focus {

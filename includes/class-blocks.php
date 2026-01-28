@@ -347,7 +347,7 @@ class Blocks {
 				<h1 class="screen-reader-text"><?php echo \esc_html( $args['nav_label'] ); ?></h1>
 				<button
 					type="button"
-					class="pagination-previous"
+					class="button-link pagination-previous"
 					data-wp-on-async--click="actions.previousPage"
 					data-wp-bind--aria-disabled="state.disablePreviousLink"
 					data-wp-bind--disabled="state.disablePreviousLink"
@@ -360,7 +360,7 @@ class Blocks {
 
 				<button
 					type="button"
-					class="pagination-next"
+					class="button-link pagination-next"
 					data-wp-on-async--click="actions.nextPage"
 					data-wp-bind--aria-disabled="state.disableNextLink"
 					data-wp-bind--disabled="state.disableNextLink"
