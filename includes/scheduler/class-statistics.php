@@ -127,6 +127,6 @@ class Statistics {
 			$args['most_active_month_name'] = \date_i18n( 'F', \strtotime( sprintf( '%d-%02d-01', $year, $summary['most_active_month'] ) ) );
 		}
 
-		Mailer::send( $user_id, 'annual_wrapped', $args );
+		Mailer::send( $user_id, 'annual-wrapped', $args );
 	}
 }
