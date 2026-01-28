@@ -23,13 +23,19 @@ export function Pagination( { page, pages, setPage, navLabel = __( 'Navigation',
 			<h1 className="screen-reader-text">{ navLabel }</h1>
 			{ /* eslint-disable-next-line jsx-a11y/anchor-is-valid -- Using anchor for visual consistency with frontend pagination */ }
 			<a
-				href="#pagination"
+				role="button"
+				tabIndex={ 0 }
 				className="pagination-previous"
 				aria-disabled={ disablePreviousLink }
 				aria-label={ __( 'Previous page', 'activitypub' ) }
-				onClick={ ( event ) => {
-					event.preventDefault();
+				onClick={ () => {
 					if ( ! disablePreviousLink ) {
+						setPage( page - 1 );
+					}
+				} }
+				onKeyDown={ ( event ) => {
+					if ( ! disablePreviousLink && ( event.key === 'Enter' || event.key === ' ' ) ) {
+						event.preventDefault();
 						setPage( page - 1 );
 					}
 				} }
@@ -41,13 +47,19 @@ export function Pagination( { page, pages, setPage, navLabel = __( 'Navigation',
 
 			{ /* eslint-disable-next-line jsx-a11y/anchor-is-valid -- Using anchor for visual consistency with frontend pagination */ }
 			<a
-				href="#pagination"
+				role="button"
+				tabIndex={ 0 }
 				className="pagination-next"
 				aria-disabled={ disableNextLink }
 				aria-label={ __( 'Next page', 'activitypub' ) }
-				onClick={ ( event ) => {
-					event.preventDefault();
+				onClick={ () => {
 					if ( ! disableNextLink ) {
+						setPage( page + 1 );
+					}
+				} }
+				onKeyDown={ ( event ) => {
+					if ( ! disableNextLink && ( event.key === 'Enter' || event.key === ' ' ) ) {
+						event.preventDefault();
 						setPage( page + 1 );
 					}
 				} }
