@@ -94,7 +94,7 @@ export function createActorListStore( storeName ) {
 
 					// Update the context with the new items.
 					context.items = orderedItems.map( ( actor ) => ( {
-						handle: '@' + actor.preferredUsername,
+						handle: '@' + actor.webfinger,
 						icon: actor.icon,
 						name: actor.name || actor.preferredUsername,
 						url: validateUrl( actor.url || actor.id ),

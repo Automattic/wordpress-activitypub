@@ -3,15 +3,15 @@ import { useOptions } from '../use-options';
 /**
  * Component to display a single actor (follower/following).
  *
- * @param {Object} props                   The component props.
- * @param {string} props.name              The name of the actor.
- * @param {Object} props.icon              The icon of the actor.
- * @param {string} props.url               The URL of the actor.
- * @param {string} props.preferredUsername The preferred username of the actor.
+ * @param {Object} props           The component props.
+ * @param {string} props.name      The name of the actor.
+ * @param {Object} props.icon      The icon of the actor.
+ * @param {string} props.url       The URL of the actor.
+ * @param {string} props.webfinger The webfinger of the actor.
  * @return {JSX.Element} The actor component.
  */
-export function ActorItem( { name, icon, url, preferredUsername } ) {
-	const handle = `@${ preferredUsername }`;
+export function ActorItem( { name, icon, url, webfinger } ) {
+	const handle = `@${ webfinger }`;
 	const { defaultAvatarUrl, showAvatars } = useOptions();
 	const avatar = icon?.url || defaultAvatarUrl;
 

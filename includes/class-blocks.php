@@ -241,13 +241,12 @@ class Blocks {
 		// Prepare items data for the Interactivity API context.
 		$prepared_items = \array_map(
 			static function ( $item ) {
-				$actor    = \Activitypub\Collection\Remote_Actors::get_actor( $item );
-				$username = $actor->get_preferred_username();
+				$actor = \Activitypub\Collection\Remote_Actors::get_actor( $item );
 
 				return array(
-					'handle' => '@' . $username,
+					'handle' => '@' . $actor->get_webfinger(),
 					'icon'   => $actor->get_icon(),
-					'name'   => $actor->get_name() ?: $username,
+					'name'   => $actor->get_name() ?: $actor->get_preferred_username(),
 					'url'    => object_to_uri( $actor->get_url() ) ?: $actor->get_id(),
 				);
 			},
