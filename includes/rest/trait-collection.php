@@ -37,7 +37,8 @@ trait Collection {
 	 */
 	public function prepare_collection_response( $response, $request ) {
 		$page      = $request->get_param( 'page' );
-		$max_pages = \max( 1, \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) ) );
+		$per_page  = \max( 1, \absint( $request->get_param( 'per_page' ) ) );
+		$max_pages = \max( 1, \ceil( $response['totalItems'] / $per_page ) );
 
 		if ( $page > $max_pages ) {
 			return new \WP_Error(

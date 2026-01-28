@@ -247,11 +247,14 @@ class Blocks {
 			static function ( $item ) {
 				$actor = \Activitypub\Collection\Remote_Actors::get_actor( $item );
 
+				// Restrict URLs to http/https schemes to prevent XSS via javascript: URIs.
+				$url = object_to_uri( $actor->get_url() ) ?: $actor->get_id();
+
 				return array(
 					'handle' => '@' . $actor->get_webfinger(),
 					'icon'   => $actor->get_icon(),
 					'name'   => $actor->get_name() ?: $actor->get_preferred_username(),
-					'url'    => \esc_url( object_to_uri( $actor->get_url() ) ?: $actor->get_id() ),
+					'url'    => \esc_url( $url, array( 'http', 'https' ) ),
 				);
 			},
 			$items
@@ -437,9 +440,9 @@ class Blocks {
 
 		$args = \wp_parse_args( $args, $defaults );
 
-		// Sanitize numeric values.
+		// Sanitize numeric values, ensuring per_page is at least 1 to avoid division by zero.
 		$args['total']    = \absint( $args['total'] );
-		$args['per_page'] = \absint( $args['per_page'] );
+		$args['per_page'] = \max( 1, \absint( $args['per_page'] ) );
 		?>
 
 		<div class="activitypub-actor-list-container">

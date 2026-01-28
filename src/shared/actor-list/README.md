@@ -108,9 +108,24 @@ Blocks::render_actor_list(
 
 ## Frontend (view.js)
 
-The frontend uses the WordPress Interactivity API. Each block has its own simple view.js - there's no shared store because the logic is straightforward and tightly coupled to specific endpoints.
+The frontend uses the WordPress Interactivity API with a shared store factory.
 
-## Example: Creating a Following Block
+### Shared Store
+
+Use `createActorListStore()` to register a store for your block:
+
+```js
+import { createActorListStore } from '../shared/actor-list/store';
+
+createActorListStore( 'activitypub/your-block' );
+```
+
+The store provides:
+- **State**: `paginationText`, `disablePreviousLink`, `disableNextLink`
+- **Actions**: `fetchItems()`, `previousPage()`, `nextPage()`
+- **Callbacks**: `setDefaultAvatar()`
+
+## Example: Creating a New Actor List Block
 
 1. **edit.js** - Use the shared components:
 ```jsx
@@ -120,9 +135,9 @@ import { ActorList } from '../shared/actor-list';
     selectedUser={ selectedUser }
     perPage={ perPage }
     order={ order }
-    endpoint="following"
-    emptyMessage={ __( 'Not following anyone.', 'activitypub' ) }
-    navLabel={ __( 'Following navigation', 'activitypub' ) }
+    endpoint="your-endpoint"
+    emptyMessage={ __( 'No actors found.', 'activitypub' ) }
+    navLabel={ __( 'Actor navigation', 'activitypub' ) }
 />
 ```
 
@@ -133,7 +148,12 @@ import { ActorList } from '../shared/actor-list';
 
 3. **render.php** - Use the PHP helper:
 ```php
-Blocks::render_actor_list( array( ... ) );
+Blocks::render_actor_list_block( 'your-endpoint', $attributes, $block, $content );
 ```
 
-4. **view.js** - Simple Interactivity API store (copy from followers and change endpoint)
+4. **view.js** - Use the shared store factory:
+```js
+import { createActorListStore } from '../shared/actor-list/store';
+
+createActorListStore( 'activitypub/your-block' );
+```
