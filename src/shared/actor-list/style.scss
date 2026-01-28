@@ -119,18 +119,29 @@
 
 		.pagination-previous,
 		.pagination-next {
+			// Reset button styles to look like links.
+			background: none;
 			border: none; // Twenty Fifteen.
 			box-shadow: none; // Twenty Sixteen.
+			color: inherit;
+			font: inherit;
 			cursor: pointer;
 			font-size: 90%;
 			display: inline-block;
 			padding: 8px 0;
 			min-width: 60px;
+			text-align: inherit;
+
+			&:hover,
+			&:focus {
+				text-decoration: underline;
+			}
 
 			&[hidden] {
 				display: none !important;
 			}
 
+			&:disabled,
 			&[aria-disabled="true"] {
 				opacity: 0.3;
 				cursor: not-allowed;
@@ -139,6 +150,7 @@
 			}
 		}
 
+		/* stylelint-disable-next-line no-descending-specificity */
 		.pagination-previous {
 			justify-self: start;
 			padding-right: 8px;
@@ -148,6 +160,7 @@
 			}
 		}
 
+		/* stylelint-disable-next-line no-descending-specificity */
 		.pagination-next {
 			justify-self: end;
 			padding-left: 8px;
