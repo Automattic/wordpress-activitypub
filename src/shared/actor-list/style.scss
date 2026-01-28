@@ -62,11 +62,15 @@
 		/* stylelint-disable-next-line max-line-length */
 		background-color: var(--wp--preset--color--subtle-background, var(--wp--preset--color--accent-2, var(--wp--preset--color--tertiary, var(--wp--preset--color--secondary, #f0f0f0))));
 		box-shadow: none; // Twenty Seventeen.
-		outline: none;
 
 		.external-link-icon {
 			opacity: 1;
 		}
+	}
+
+	.activitypub-actor-link:focus-visible {
+		outline: 2px solid var(--wp--preset--color--primary, #0073aa);
+		outline-offset: 2px;
 	}
 
 	.activitypub-actor-avatar {

@@ -304,6 +304,10 @@ class Blocks {
 		);
 
 		$args = \wp_parse_args( $args, $defaults );
+
+		// Sanitize numeric values.
+		$args['total']    = \absint( $args['total'] );
+		$args['per_page'] = \absint( $args['per_page'] );
 		?>
 
 		<div class="activitypub-actor-list-container">

@@ -7,6 +7,21 @@ import { store, getContext, getConfig } from '@wordpress/interactivity';
 const { apiFetch, url } = window.wp;
 
 /**
+ * Validates a URL to ensure it uses a safe scheme (http/https).
+ *
+ * @param {string} urlString The URL to validate.
+ * @return {string} The validated URL or empty string if invalid.
+ */
+function validateUrl( urlString ) {
+	try {
+		const parsed = new URL( urlString );
+		return [ 'http:', 'https:' ].includes( parsed.protocol ) ? urlString : '';
+	} catch {
+		return '';
+	}
+}
+
+/**
  * @typedef {Object} config
  * @property {string} defaultAvatarUrl Default avatar URL.
  * @property {string} namespace        ActivityPub REST Namespace.
@@ -70,7 +85,7 @@ const { actions } = store( 'activitypub/followers', {
 		 */
 		async fetchItems() {
 			const context = getContext();
-			const { userId, page, per_page: perPage, order } = context;
+			const { userId, page, perPage, order } = context;
 
 			// Set loading state.
 			context.isLoading = true;
@@ -93,7 +108,7 @@ const { actions } = store( 'activitypub/followers', {
 					handle: '@' + actor.preferredUsername,
 					icon: actor.icon,
 					name: actor.name || actor.preferredUsername,
-					url: actor.url || actor.id,
+					url: validateUrl( actor.url || actor.id ),
 				} ) );
 
 				context.total = totalItems;
