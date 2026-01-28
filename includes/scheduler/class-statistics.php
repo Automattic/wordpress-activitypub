@@ -127,6 +127,13 @@ class Statistics {
 			$args['most_active_month_name'] = \date_i18n( 'F', \strtotime( sprintf( '%d-%02d-01', $year, $summary['most_active_month'] ) ) );
 		}
 
-		Mailer::send( $user_id, 'annual-wrapped', $args );
+		$subject = \sprintf(
+			/* translators: 1: Blog name, 2: Year */
+			\__( '[%1$s] Your %2$d Fediverse Year in Review', 'activitypub' ),
+			\esc_html( \get_option( 'blogname' ) ),
+			$year
+		);
+
+		Mailer::send( $user_id, $subject, 'annual-wrapped', $args );
 	}
 }

@@ -431,12 +431,13 @@ class Mailer {
 	 * Send a templated email to a user.
 	 *
 	 * @param int    $user_id  The user ID (or BLOG_USER_ID for blog actor).
+	 * @param string $subject  The email subject.
 	 * @param string $template The template name (without path/extension).
 	 * @param array  $args     Template arguments.
 	 *
 	 * @return bool True if email was sent, false otherwise.
 	 */
-	public static function send( $user_id, $template, $args = array() ) {
+	public static function send( $user_id, $subject, $template, $args = array() ) {
 		// Get the recipient email address.
 		if ( $user_id > Actors::BLOG_USER_ID ) {
 			$user = \get_userdata( $user_id );
@@ -447,9 +448,6 @@ class Mailer {
 		} else {
 			$email = \get_option( 'admin_email' );
 		}
-
-		// Build subject based on template type.
-		$subject = self::get_email_subject( $template, $args );
 
 		// Load the HTML template.
 		$template_file = ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/' . $template . '.php';
@@ -484,31 +482,6 @@ class Mailer {
 		\remove_action( 'phpmailer_init', $alt_function );
 
 		return $result;
-	}
-
-	/**
-	 * Get the email subject for a template.
-	 *
-	 * @param string $template The template name.
-	 * @param array  $args     Template arguments.
-	 *
-	 * @return string The email subject.
-	 */
-	private static function get_email_subject( $template, $args ) {
-		$blogname = \esc_html( \get_option( 'blogname' ) );
-
-		switch ( $template ) {
-			case 'annual-wrapped':
-				return \sprintf(
-					/* translators: 1: Blog name, 2: Year */
-					\__( '[%1$s] Your %2$d Fediverse Year in Review', 'activitypub' ),
-					$blogname,
-					$args['year'] ?? \gmdate( 'Y' )
-				);
-			default:
-				/* translators: %s: Blog name */
-				return \sprintf( \__( '[%s] ActivityPub Notification', 'activitypub' ), $blogname );
-		}
 	}
 
 	/**
