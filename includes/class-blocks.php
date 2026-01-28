@@ -182,6 +182,135 @@ class Blocks {
 	}
 
 	/**
+	 * Render an actor list block (followers or following).
+	 *
+	 * @param string    $endpoint   The endpoint type ('followers' or 'following').
+	 * @param array     $attributes Block attributes.
+	 * @param \WP_Block $block      Block instance.
+	 * @param string    $content    Block content.
+	 *
+	 * @return string|void The HTML to render, or void to render nothing.
+	 */
+	public static function render_actor_list_block( $endpoint, $attributes, $block, $content ) {
+		if ( is_activitypub_request() || \is_feed() ) {
+			return;
+		}
+
+		$attributes = \wp_parse_args( $attributes );
+		$block_name = 'followers' === $endpoint ? __( 'Followers', 'activitypub' ) : __( 'Following', 'activitypub' );
+
+		if ( empty( $content ) ) {
+			// Fallback for v1.0.0 blocks.
+			/* translators: %s: Block type (Followers or Following) */
+			$_title  = $attributes['title'] ?? \sprintf( __( 'Fediverse %s', 'activitypub' ), $block_name );
+			$content = '<h3 class="wp-block-heading">' . \esc_html( $_title ) . '</h3>';
+			unset( $attributes['title'], $attributes['className'] );
+		} else {
+			$content = \implode( PHP_EOL, \wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
+		}
+
+		$user_id = self::get_user_id( $attributes['selectedUser'] );
+		if ( \is_null( $user_id ) ) {
+			/* translators: %s: Block type (Followers or Following) */
+			return \sprintf( '<!-- %s block: `inherit` mode does not display on this type of page -->', $block_name );
+		}
+
+		$user = Actors::get_by_id( $user_id );
+		if ( \is_wp_error( $user ) ) {
+			/* translators: 1: Block type (Followers or Following), 2: User ID */
+			return \sprintf( '<!-- %1$s block: `%2$s` not an active ActivityPub user -->', $block_name, $user_id );
+		}
+
+		if ( ! Actors::show_social_graph( $user_id ) ) {
+			/* translators: %s: Block type (Followers or Following) */
+			return \sprintf( '<!-- %s block: social graph is hidden for this user -->', $block_name );
+		}
+
+		$_per_page     = \max( 1, \absint( $attributes['per_page'] ) );
+		$_show_avatars = (bool) \get_option( 'show_avatars' );
+
+		// Query the appropriate collection.
+		if ( 'followers' === $endpoint ) {
+			$data  = \Activitypub\Collection\Followers::query( $user_id, $_per_page );
+			$items = $data['followers'];
+		} else {
+			$data  = \Activitypub\Collection\Following::query( $user_id, $_per_page );
+			$items = $data['following'];
+		}
+
+		// Prepare items data for the Interactivity API context.
+		$prepared_items = \array_map(
+			static function ( $item ) {
+				$actor    = \Activitypub\Collection\Remote_Actors::get_actor( $item );
+				$username = $actor->get_preferred_username();
+
+				return array(
+					'handle' => '@' . $username,
+					'icon'   => $actor->get_icon(),
+					'name'   => $actor->get_name() ?: $username,
+					'url'    => object_to_uri( $actor->get_url() ) ?: $actor->get_id(),
+				);
+			},
+			$items
+		);
+
+		$store_name = 'activitypub/' . $endpoint;
+
+		// Set up the Interactivity API config.
+		\wp_interactivity_config(
+			$store_name,
+			array(
+				'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+				'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
+			)
+		);
+
+		// Set initial context data.
+		$context = array(
+			'items'     => $prepared_items,
+			'isLoading' => false,
+			'order'     => $attributes['order'],
+			'page'      => 1,
+			'pages'     => \ceil( $data['total'] / $_per_page ),
+			'perPage'   => $_per_page,
+			'total'     => $data['total'],
+			'userId'    => $user_id,
+			'endpoint'  => $endpoint,
+		);
+
+		// Get block wrapper attributes with the data-wp-interactive attribute.
+		$wrapper_attributes = \get_block_wrapper_attributes(
+			array(
+				'id'                  => \wp_unique_id( 'activitypub-' . $endpoint . '-block-' ),
+				'data-wp-interactive' => $store_name,
+				'data-wp-context'     => \wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
+			)
+		);
+
+		/* translators: %s: Block type (Followers or Following) */
+		$nav_label = \sprintf( __( '%s navigation', 'activitypub' ), $block_name );
+
+		\ob_start();
+		?>
+		<div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
+			<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+
+			<?php
+			self::render_actor_list(
+				array(
+					'show_avatars' => $_show_avatars,
+					'total'        => $data['total'],
+					'per_page'     => $_per_page,
+					'nav_label'    => $nav_label,
+				)
+			);
+			?>
+		</div>
+		<?php
+		return \ob_get_clean();
+	}
+
+	/**
 	 * Render the reply block.
 	 *
 	 * @param array $attrs The block attributes.
