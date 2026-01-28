@@ -49,7 +49,7 @@ if ( ! Actors::show_social_graph( $user_id ) ) {
 	return '<!-- Following block: social graph is hidden for this user -->';
 }
 
-$_per_page      = absint( $attributes['per_page'] );
+$_per_page      = max( 1, absint( $attributes['per_page'] ) );
 $_show_avatars  = (bool) \get_option( 'show_avatars' );
 $following_data = Following::query( $user_id, $_per_page );
 

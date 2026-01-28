@@ -310,7 +310,8 @@ class Blocks {
 			<ul class="activitypub-actor-list">
 				<template data-wp-each="context.items">
 					<li class="activitypub-actor-item">
-						<a data-wp-bind--href="context.item.url"
+						<a href="#"
+							data-wp-bind--href="context.item.url"
 							class="activitypub-actor-link"
 							target="_blank"
 							rel="external noreferrer noopener"
@@ -344,25 +345,29 @@ class Blocks {
 			<?php if ( $args['show_pagination'] && $args['total'] > $args['per_page'] ) : ?>
 			<nav class="activitypub-actor-list-pagination" role="navigation">
 				<h1 class="screen-reader-text"><?php echo \esc_html( $args['nav_label'] ); ?></h1>
-				<a
+				<button
+					type="button"
 					class="pagination-previous"
 					data-wp-on-async--click="actions.previousPage"
 					data-wp-bind--aria-disabled="state.disablePreviousLink"
+					data-wp-bind--disabled="state.disablePreviousLink"
 					aria-label="<?php \esc_attr_e( 'Previous page', 'activitypub' ); ?>"
 				>
 					<?php \esc_html_e( 'Previous', 'activitypub' ); ?>
-				</a>
+				</button>
 
 				<div class="pagination-info" data-wp-text="state.paginationText"></div>
 
-				<a
+				<button
+					type="button"
 					class="pagination-next"
 					data-wp-on-async--click="actions.nextPage"
 					data-wp-bind--aria-disabled="state.disableNextLink"
+					data-wp-bind--disabled="state.disableNextLink"
 					aria-label="<?php \esc_attr_e( 'Next page', 'activitypub' ); ?>"
 				>
 					<?php \esc_html_e( 'Next', 'activitypub' ); ?>
-				</a>
+				</button>
 			</nav>
 
 			<div class="activitypub-actor-list-loading" data-wp-bind--aria-hidden="!context.isLoading">
