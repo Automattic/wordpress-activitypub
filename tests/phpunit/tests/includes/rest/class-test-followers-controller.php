@@ -148,19 +148,20 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
-		$request->set_param( 'page', 2 );
+		$request->set_param( 'page', 1 );
 		$request->set_param( 'per_page', 10 );
 		$response = rest_get_server()->dispatch( $request );
 
 		$data = $response->get_data();
 
-		// Test pagination properties (only present when there are followers).
-		if ( ! empty( $data['orderedItems'] ) || ( isset( $data['totalItems'] ) && $data['totalItems'] > 0 ) ) {
+		// Pagination properties are only present when there are items.
+		if ( ! empty( $data['orderedItems'] ) ) {
 			$this->assertArrayHasKey( 'first', $data );
 			$this->assertArrayHasKey( 'last', $data );
 			$this->assertStringContainsString( 'page=1', $data['first'] );
 			$this->assertIsString( $data['last'] );
 
+			// Test invalid page returns error (only when collection has items).
 			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
 			$request->set_param( 'page', 100 );
 			$request->set_param( 'per_page', 10 );
@@ -168,7 +169,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 
 			$this->assertErrorResponse( 'rest_post_invalid_page_number', $response, 400 );
 		} else {
-			// Empty collections skip pagination metadata.
+			// Empty collections skip pagination metadata and don't error on invalid pages.
 			$this->assertArrayNotHasKey( 'first', $data );
 			$this->assertArrayNotHasKey( 'last', $data );
 		}
