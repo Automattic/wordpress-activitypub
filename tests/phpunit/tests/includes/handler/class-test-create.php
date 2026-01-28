@@ -7,9 +7,12 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Posts;
 use Activitypub\Handler\Create;
 use Activitypub\Post_Types;
+use Activitypub\Tombstone;
 
 /**
  * Test class for Create Handler.
@@ -585,5 +588,203 @@ class Test_Create extends \WP_UnitTestCase {
 		);
 
 		$this->assertEmpty( $found );
+	}
+
+	/**
+	 * Test maybe_unbury removes URL from tombstone registry for Create activity.
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_maybe_unbury_removes_url_for_create_activity() {
+		$object_url = 'https://example.com/posts/unbury-create-' . time();
+
+		// First, bury the URL.
+		Tombstone::bury( $object_url );
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Create a mock activity object.
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_object( $object );
+
+		// Trigger maybe_unbury.
+		Create::maybe_unbury( 1, $activity );
+
+		// Verify URL was removed from tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+	}
+
+	/**
+	 * Test maybe_unbury removes URL from tombstone registry for Update activity.
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_maybe_unbury_removes_url_for_update_activity() {
+		$object_url = 'https://example.com/posts/unbury-update-' . time();
+
+		// First, bury the URL.
+		Tombstone::bury( $object_url );
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Create a mock activity object.
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		$activity = new Activity();
+		$activity->set_type( 'Update' );
+		$activity->set_object( $object );
+
+		// Trigger maybe_unbury.
+		Create::maybe_unbury( 1, $activity );
+
+		// Verify URL was removed from tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+	}
+
+	/**
+	 * Test maybe_unbury ignores non-Create/Update activities.
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_maybe_unbury_ignores_other_activities() {
+		$object_url = 'https://example.com/posts/unbury-ignore-' . time();
+
+		// First, bury the URL.
+		Tombstone::bury( $object_url );
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Create a mock activity object.
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		// Test with Delete activity.
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		$activity->set_object( $object );
+
+		Create::maybe_unbury( 1, $activity );
+
+		// URL should still be in tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Test with Announce activity.
+		$activity->set_type( 'Announce' );
+		Create::maybe_unbury( 1, $activity );
+
+		// URL should still be in tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Test maybe_unbury handles activity with null object.
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_maybe_unbury_handles_null_object() {
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		// Object is null/not set.
+
+		// This should not throw any errors.
+		Create::maybe_unbury( 1, $activity );
+
+		// Just verify no exception was thrown.
+		$this->assertTrue( true );
+	}
+
+	/**
+	 * Test maybe_unbury removes both ID and URL when they differ.
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_maybe_unbury_removes_both_id_and_url() {
+		$object_id  = 'https://example.com/posts/id-unbury-' . time();
+		$object_url = 'https://example.com/@user/posts/url-unbury-' . time();
+
+		// Bury both URLs.
+		Tombstone::bury( $object_id );
+		Tombstone::bury( $object_url );
+		$this->assertTrue( Tombstone::exists_local( $object_id ) );
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		$object = new Base_Object();
+		$object->set_id( $object_id );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_object( $object );
+
+		Create::maybe_unbury( 1, $activity );
+
+		// Both ID and URL should be removed from tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_id ) );
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+	}
+
+	/**
+	 * Test soft delete to re-federate lifecycle.
+	 *
+	 * This tests the complete cycle of:
+	 * 1. Burying a URL when Delete activity is sent (soft delete)
+	 * 2. Unburying the URL when Create/Update activity is sent (re-federate)
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_soft_delete_refederate_lifecycle() {
+		$object_url = 'https://example.com/posts/lifecycle-' . time();
+
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		// Step 1: Simulate soft delete (Delete activity sent).
+		$delete_activity = new Activity();
+		$delete_activity->set_type( 'Delete' );
+		$delete_activity->set_object( $object );
+
+		\Activitypub\Handler\Delete::maybe_bury( 1, $delete_activity );
+
+		// URL should be in tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_url ), 'URL should be tombstoned after Delete' );
+
+		// Step 2: Simulate re-federation (Update activity sent).
+		$update_activity = new Activity();
+		$update_activity->set_type( 'Update' );
+		$update_activity->set_object( $object );
+
+		Create::maybe_unbury( 2, $update_activity );
+
+		// URL should be removed from tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ), 'URL should not be tombstoned after Update' );
+
+		// Step 3: Soft delete again.
+		\Activitypub\Handler\Delete::maybe_bury( 3, $delete_activity );
+		$this->assertTrue( Tombstone::exists_local( $object_url ), 'URL should be tombstoned again after second Delete' );
+
+		// Step 4: Re-federate with Create.
+		$create_activity = new Activity();
+		$create_activity->set_type( 'Create' );
+		$create_activity->set_object( $object );
+
+		Create::maybe_unbury( 4, $create_activity );
+		$this->assertFalse( Tombstone::exists_local( $object_url ), 'URL should not be tombstoned after Create' );
+
+		// Clean up.
+		\delete_option( 'activitypub_tombstone_urls' );
 	}
 }

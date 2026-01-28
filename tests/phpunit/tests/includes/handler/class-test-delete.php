@@ -7,7 +7,10 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Handler\Delete;
+use Activitypub\Tombstone;
 
 /**
  * Test class for Delete handler.
@@ -508,5 +511,137 @@ class Test_Delete extends \WP_UnitTestCase {
 			'url'  => $actor,
 			'id'   => $actor,
 		);
+	}
+
+	/**
+	 * Test maybe_bury adds URL to tombstone registry for Delete activity with object.
+	 *
+	 * @covers ::maybe_bury
+	 */
+	public function test_maybe_bury_adds_url_for_delete_activity() {
+		$object_url = 'https://example.com/posts/bury-test-' . time();
+
+		// Create a mock activity object.
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		$activity->set_object( $object );
+
+		// Verify URL is not in tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+
+		// Trigger maybe_bury.
+		Delete::maybe_bury( 1, $activity );
+
+		// Verify URL was added to tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Test maybe_bury handles Delete activity with string object.
+	 *
+	 * @covers ::maybe_bury
+	 */
+	public function test_maybe_bury_handles_string_object() {
+		$object_url = 'https://example.com/posts/string-object-' . time();
+
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		$activity->set_object( $object_url );
+
+		// Verify URL is not in tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+
+		// Trigger maybe_bury.
+		Delete::maybe_bury( 1, $activity );
+
+		// Verify URL was added to tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Test maybe_bury ignores non-Delete activities.
+	 *
+	 * @covers ::maybe_bury
+	 */
+	public function test_maybe_bury_ignores_non_delete_activities() {
+		$object_url = 'https://example.com/posts/non-delete-' . time();
+
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		// Test with Create activity.
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_object( $object );
+
+		Delete::maybe_bury( 1, $activity );
+
+		// URL should NOT be in tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+
+		// Test with Update activity.
+		$activity->set_type( 'Update' );
+		Delete::maybe_bury( 1, $activity );
+
+		// URL should still NOT be in tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+	}
+
+	/**
+	 * Test maybe_bury handles Delete activity with null object.
+	 *
+	 * @covers ::maybe_bury
+	 */
+	public function test_maybe_bury_handles_null_object() {
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		// Object is null/not set.
+
+		// This should not throw any errors.
+		Delete::maybe_bury( 1, $activity );
+
+		// Just verify no exception was thrown.
+		$this->assertTrue( true );
+	}
+
+	/**
+	 * Test maybe_bury buries both ID and URL when they differ.
+	 *
+	 * @covers ::maybe_bury
+	 */
+	public function test_maybe_bury_buries_both_id_and_url() {
+		$object_id  = 'https://example.com/posts/id-' . time();
+		$object_url = 'https://example.com/@user/posts/url-' . time();
+
+		$object = new Base_Object();
+		$object->set_id( $object_id );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		$activity->set_object( $object );
+
+		Delete::maybe_bury( 1, $activity );
+
+		// Both ID and URL should be in tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_id ) );
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_tombstone_urls' );
 	}
 }

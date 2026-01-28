@@ -260,7 +260,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'pending',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 					),
 				),
 				'expected' => array(
@@ -332,7 +332,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'pending',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 					),
 				),
 				'expected'       => array(
@@ -349,7 +349,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'federated',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 					),
 				),
 				'comment'        => array(
@@ -359,7 +359,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'pending',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 					),
 				),
 				'expected'       => array(
@@ -416,7 +416,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'federated',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 					),
 				),
 				'comment'        => array(

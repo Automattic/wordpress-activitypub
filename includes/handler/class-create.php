@@ -9,6 +9,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Posts;
+use Activitypub\Tombstone;
 
 use function Activitypub\get_activity_visibility;
 use function Activitypub\is_activity_reply;
@@ -26,6 +27,7 @@ class Create {
 	public static function init() {
 		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'handle_create' ), 10, 3 );
 		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'maybe_unbury' ), 10, 2 );
 	}
 
 	/**
@@ -149,5 +151,28 @@ class Create {
 		}
 
 		return $valid;
+	}
+
+	/**
+	 * Remove a URL from the tombstone registry when a Create or Update activity is sent.
+	 *
+	 * This handles the case where a post was soft-deleted (visibility changed to local/private)
+	 * and then later changed back to public. The Create/Update activity indicates the post is being
+	 * re-federated, so we remove it from the tombstone registry.
+	 *
+	 * @param int                            $outbox_id The ID of the outbox activity.
+	 * @param \Activitypub\Activity\Activity $activity  The Activity object.
+	 */
+	public static function maybe_unbury( $outbox_id, $activity ) {
+		if ( ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {
+			return;
+		}
+
+		$object = $activity->get_object();
+
+		if ( $object ) {
+			Tombstone::remove( $object->get_id() );
+			Tombstone::remove( $object->get_url() );
+		}
 	}
 }
