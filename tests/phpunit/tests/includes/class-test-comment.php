@@ -260,7 +260,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'pending',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 					),
 				),
 				'expected' => array(
@@ -332,7 +332,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'pending',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 					),
 				),
 				'expected'       => array(
@@ -349,7 +349,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'federated',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 					),
 				),
 				'comment'        => array(
@@ -359,7 +359,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'pending',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 					),
 				),
 				'expected'       => array(
@@ -416,7 +416,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'federated',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 					),
 				),
 				'comment'        => array(
@@ -1281,5 +1281,141 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Clean up.
 		\set_current_screen( 'front' );
 		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * Test comment_reply_link for local comments.
+	 *
+	 * @covers ::comment_reply_link
+	 */
+	public function test_comment_reply_link_local_comment() {
+		$post_id = self::factory()->post->create();
+
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_content' => 'This is a local comment.',
+				'comment_author'  => 'Local User',
+			)
+		);
+
+		$comment  = \get_comment( $comment_id );
+		$original = '<a href="#">Reply</a>';
+		$result   = Comment::comment_reply_link( $original, array(), $comment );
+
+		$this->assertSame( $original, $result, 'Local comments should return the original reply link unchanged.' );
+	}
+
+	/**
+	 * Test comment_reply_link for fediverse comment with logged-in user without ActivityPub capability.
+	 *
+	 * @covers ::comment_reply_link
+	 */
+	public function test_comment_reply_link_fediverse_comment_user_without_capability() {
+		$post_id = self::factory()->post->create();
+
+		// Create a fediverse comment (received via ActivityPub).
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_content'      => 'This is a fediverse comment.',
+				'comment_author'       => 'Fediverse User',
+				'comment_author_url'   => 'https://mastodon.social/@user',
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// Create a user without ActivityPub capability.
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $user_id );
+
+		$comment  = \get_comment( $comment_id );
+		$original = '<a href="#">Reply</a>';
+		$result   = Comment::comment_reply_link( $original, array(), $comment );
+
+		// Should NOT contain the original link.
+		$this->assertStringNotContainsString( $original, $result, 'Should not include the original reply link.' );
+
+		// Should contain the warning with the comment author's name.
+		$this->assertStringContainsString( 'activitypub-reply-warning', $result, 'Should include the warning class.' );
+		$this->assertStringContainsString( 'Fediverse User is on the Fediverse', $result, 'Should include author name and fediverse mention.' );
+		$this->assertStringContainsString( 'ask your administrator', $result, 'Should ask to contact administrator.' );
+
+		\wp_set_current_user( 0 );
+	}
+
+	/**
+	 * Test comment_reply_link for fediverse comment with user who can ActivityPub.
+	 *
+	 * @covers ::comment_reply_link
+	 */
+	public function test_comment_reply_link_fediverse_comment_user_with_capability() {
+		$post_id = self::factory()->post->create();
+
+		// Create a fediverse comment (received via ActivityPub).
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_content'      => 'This is a fediverse comment.',
+				'comment_author'       => 'Fediverse User',
+				'comment_author_url'   => 'https://mastodon.social/@user',
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// Create a user with ActivityPub capability (editor role has publish_posts).
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\wp_set_current_user( $user_id );
+
+		$comment  = \get_comment( $comment_id );
+		$original = '<a href="#">Reply</a>';
+		$result   = Comment::comment_reply_link( $original, array(), $comment );
+
+		// Should return the original link unchanged.
+		$this->assertSame( $original, $result, 'Users with ActivityPub capability should get the original reply link.' );
+
+		\wp_set_current_user( 0 );
+	}
+
+	/**
+	 * Test comment_reply_link for fediverse comment with no logged-in user.
+	 *
+	 * @covers ::comment_reply_link
+	 */
+	public function test_comment_reply_link_fediverse_comment_not_logged_in() {
+		$post_id = self::factory()->post->create();
+
+		// Create a fediverse comment (received via ActivityPub).
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_content'      => 'This is a fediverse comment.',
+				'comment_author'       => 'Fediverse User',
+				'comment_author_url'   => 'https://mastodon.social/@user',
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// Ensure no user is logged in.
+		\wp_set_current_user( 0 );
+
+		$comment  = \get_comment( $comment_id );
+		$original = '<a href="#">Reply</a>';
+		$result   = Comment::comment_reply_link( $original, array(), $comment );
+
+		// Should NOT contain the original link (remote reply block is shown instead).
+		$this->assertStringNotContainsString( $original, $result, 'Non-logged-in users should not see the original reply link.' );
+
+		// Should contain the remote reply block.
+		$this->assertStringContainsString( 'activitypub-remote-reply', $result, 'Should show remote reply block for non-logged-in users.' );
 	}
 }

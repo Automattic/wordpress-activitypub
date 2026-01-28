@@ -7,6 +7,7 @@
 
 namespace Activitypub\Transformer;
 
+use Activitypub\Activity\Base_Object;
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
@@ -98,6 +99,27 @@ class Post extends Base {
 			$object->set_summary( $content_warning );
 			$object->set_summary_map( null );
 			$object->set_dcterms( array( 'subject' => $content_warning ) );
+		}
+
+		return $object;
+	}
+
+	/**
+	 * Returns a Tombstone object for the post.
+	 *
+	 * @return Base_Object The Tombstone object.
+	 */
+	public function to_tombstone() {
+		$object = new Base_Object();
+		$object->set_type( 'Tombstone' );
+		$object->set_id( $this->get_id() );
+		$object->set_former_type( $this->get_type() );
+		$object->set_published( $this->get_published() );
+		$object->set_updated( $this->get_updated() );
+
+		$deleted_at = \get_post_meta( $this->item->ID, 'activitypub_deleted_at', true );
+		if ( $deleted_at ) {
+			$object->set_deleted( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $deleted_at ) );
 		}
 
 		return $object;
@@ -390,8 +412,6 @@ class Post extends Base {
 		}
 
 		$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
-		$media = $this->filter_unique_attachments( $media );
-		$media = \array_slice( $media, 0, $max_media );
 
 		/**
 		 * Filter the attachment IDs for a post.
@@ -402,6 +422,10 @@ class Post extends Base {
 		 * @return array The filtered attachment IDs.
 		 */
 		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->item );
+
+		// Deduplicate and limit after filter to ensure plugins adding attachments don't cause duplicates.
+		$media = $this->filter_unique_attachments( $media );
+		$media = \array_slice( $media, 0, $max_media );
 
 		$attachments = \array_filter( \array_map( array( $this, 'transform_attachment' ), $media ) );
 
@@ -705,6 +729,57 @@ class Post extends Base {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Returns the location of the post as a Place object.
+	 *
+	 * Uses WordPress Geodata post meta fields to build the location.
+	 *
+	 * @see https://codex.wordpress.org/Geodata
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-location
+	 *
+	 * @return array|null The Place object or null if no public geodata is available.
+	 */
+	protected function get_location() {
+		$post_id = $this->item->ID;
+		$meta    = \get_post_meta( $post_id );
+
+		// If geo_public exists and is explicitly set to 0, don't share location.
+		if ( isset( $meta['geo_public'] ) && '0' === $meta['geo_public'][0] ) {
+			return null;
+		}
+
+		// Both latitude and longitude are required for a valid location.
+		// Use is_numeric() instead of empty() since 0 is a valid coordinate (Equator/Prime Meridian).
+		$has_latitude  = isset( $meta['geo_latitude'][0] ) && is_numeric( $meta['geo_latitude'][0] );
+		$has_longitude = isset( $meta['geo_longitude'][0] ) && is_numeric( $meta['geo_longitude'][0] );
+
+		if ( ! $has_latitude || ! $has_longitude ) {
+			return null;
+		}
+
+		$place = array(
+			'type'      => 'Place',
+			'latitude'  => (float) $meta['geo_latitude'][0],
+			'longitude' => (float) $meta['geo_longitude'][0],
+		);
+
+		// Add the address/name if available.
+		if ( ! empty( $meta['geo_address'][0] ) ) {
+			$place['name'] = \sanitize_text_field( $meta['geo_address'][0] );
+		}
+
+		/**
+		 * Filter the location Place object for a post.
+		 *
+		 * @param array    $place   The Place object.
+		 * @param \WP_Post $post    The post object.
+		 * @param int      $post_id The post ID.
+		 *
+		 * @return array|null The filtered Place object or null to disable location.
+		 */
+		return \apply_filters( 'activitypub_post_location', $place, $this->item, $post_id );
 	}
 
 	/**

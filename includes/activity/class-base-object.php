@@ -9,6 +9,8 @@
 
 namespace Activitypub\Activity;
 
+use Activitypub\Activity\Extended_Object\Place;
+
 /**
  * Base_Object is an implementation of one of the
  * Activity Streams Core Types.
@@ -21,47 +23,49 @@ namespace Activitypub\Activity;
  *
  * @see https://www.w3.org/TR/activitystreams-core/#object
  *
- * @method array|string|null    get_attachment()         Gets the attachment property of the object.
- * @method array|string|null    get_attributed_to()      Gets the entity attributed as the original author.
- * @method string|null          get_audience()           Gets the total population of entities for which the object can be considered relevant.
- * @method string[]|string|null get_bcc()                Gets the private secondary audience of the object.
- * @method string[]|string|null get_bto()                Gets the private primary audience of the object.
- * @method string[]|string|null get_cc()                 Gets the secondary recipients of the object.
- * @method string|null          get_content()            Gets the content property of the object.
- * @method string[]|null        get_content_map()        Gets the content map property of the object.
- * @method string|null          get_context()            Gets the context within which the object exists.
- * @method array|null           get_dcterms()            Gets the Dublin Core terms property of the object.
- * @method string|null          get_duration()           Gets the duration property of time-bound resources.
- * @method string|null          get_end_time()           Gets the date and time describing the ending time of the object.
- * @method string|null          get_generator()          Gets the entity that generated the object.
- * @method string[]|null        get_icon()               Gets the icon property of the object.
- * @method string|null          get_id()                 Gets the object's unique global identifier.
- * @method string[]|null        get_image()              Gets the image property of the object.
- * @method string[]|string|null get_in_reply_to()        Gets the objects this object is in reply to.
- * @method array|null           get_interaction_policy() Gets the interaction policy property of the object.
- * @method array|null           get_likes()              Gets the collection of likes for this object.
- * @method array|string|null    get_location()           Gets the physical or logical locations associated with the object.
- * @method string|null          get_media_type()         Gets the MIME media type of the content property.
- * @method string|null          get_name()               Gets the natural language name of the object.
- * @method string[]|null        get_name_map()           Gets the name map property of the object.
- * @method string|null          get_preview()            Gets the entity that provides a preview of this object.
- * @method string|null          get_published()          Gets the date and time the object was published in ISO 8601 format.
- * @method string|null          get_quote()              Gets the quote property of the object (FEP-044f).
- * @method string|null          get_quote_url()          Gets the quoteUrl property of the object.
- * @method string|null          get_quote_uri()          Gets the quoteUri property of the object.
- * @method string|null          get__misskey_quote()     Gets the _misskey_quote property of the object.
- * @method string|array|null    get_replies()            Gets the collection of responses to this object.
- * @method bool|null            get_sensitive()          Gets the sensitive property of the object.
- * @method array|null           get_shares()             Gets the collection of shares for this object.
- * @method array|null           get_source()             Gets the source property indicating content markup derivation.
- * @method string|null          get_start_time()         Gets the date and time describing the starting time of the object.
- * @method string|null          get_summary()            Gets the natural language summary of the object.
- * @method string[]|null        get_summary_map()        Gets the summary map property of the object.
- * @method array[]|null         get_tag()                Gets the tag property of the object.
- * @method string[]|string|null get_to()                 Gets the primary recipients of the object.
- * @method string               get_type()               Gets the type of the object.
- * @method string|null          get_updated()            Gets the date and time the object was updated in ISO 8601 format.
- * @method string|null          get_url()                Gets the URL of the object.
+ * @method array|string|null       get_attachment()         Gets the attachment property of the object.
+ * @method array|string|null       get_attributed_to()      Gets the entity attributed as the original author.
+ * @method string|null             get_audience()           Gets the total population of entities for which the object can be considered relevant.
+ * @method string[]|string|null    get_bcc()                Gets the private secondary audience of the object.
+ * @method string[]|string|null    get_bto()                Gets the private primary audience of the object.
+ * @method string[]|string|null    get_cc()                 Gets the secondary recipients of the object.
+ * @method string|null             get_content()            Gets the content property of the object.
+ * @method string[]|null           get_content_map()        Gets the content map property of the object.
+ * @method string|null             get_context()            Gets the context within which the object exists.
+ * @method array|null              get_dcterms()            Gets the Dublin Core terms property of the object.
+ * @method string|null             get_duration()           Gets the duration property of time-bound resources.
+ * @method string|null             get_end_time()           Gets the date and time describing the ending time of the object.
+ * @method string|null             get_generator()          Gets the entity that generated the object.
+ * @method string[]|null           get_icon()               Gets the icon property of the object.
+ * @method string|null             get_id()                 Gets the object's unique global identifier.
+ * @method string[]|null           get_image()              Gets the image property of the object.
+ * @method string[]|string|null    get_in_reply_to()        Gets the objects this object is in reply to.
+ * @method array|null              get_interaction_policy() Gets the interaction policy property of the object.
+ * @method array|null              get_likes()              Gets the collection of likes for this object.
+ * @method array|string|null|Place get_location()           Gets the physical or logical locations associated with the object.
+ * @method string|null             get_media_type()         Gets the MIME media type of the content property.
+ * @method string|null             get_name()               Gets the natural language name of the object.
+ * @method string[]|null           get_name_map()           Gets the name map property of the object.
+ * @method string|null             get_preview()            Gets the entity that provides a preview of this object.
+ * @method string|null             get_published()          Gets the date and time the object was published in ISO 8601 format.
+ * @method string|null             get_quote()              Gets the quote property of the object (FEP-044f).
+ * @method string|null             get_quote_url()          Gets the quoteUrl property of the object.
+ * @method string|null             get_quote_uri()          Gets the quoteUri property of the object.
+ * @method string|null             get__misskey_quote()     Gets the _misskey_quote property of the object.
+ * @method string|array|null       get_replies()            Gets the collection of responses to this object.
+ * @method bool|null               get_sensitive()          Gets the sensitive property of the object.
+ * @method array|null              get_shares()             Gets the collection of shares for this object.
+ * @method array|null              get_source()             Gets the source property indicating content markup derivation.
+ * @method string|null             get_start_time()         Gets the date and time describing the starting time of the object.
+ * @method string|null             get_summary()            Gets the natural language summary of the object.
+ * @method string[]|null           get_summary_map()        Gets the summary map property of the object.
+ * @method array[]|null            get_tag()                Gets the tag property of the object.
+ * @method string[]|string|null    get_to()                 Gets the primary recipients of the object.
+ * @method string                  get_type()               Gets the type of the object.
+ * @method string|null             get_updated()            Gets the date and time the object was updated in ISO 8601 format.
+ * @method string|null             get_url()                Gets the URL of the object.
+ * @method string|null             get_former_type()        Gets the former type of a Tombstone object.
+ * @method string|null             get_deleted()            Gets the date and time the object was deleted in ISO 8601 format.
  *
  * @method string|string[] add_cc( string|array $cc ) Adds one or more entities to the secondary audience of the object.
  * @method string|string[] add_to( string|array $to ) Adds one or more entities to the primary audience of the object.
@@ -85,7 +89,7 @@ namespace Activitypub\Activity;
  * @method Base_Object set_in_reply_to( string|string[] $in_reply_to ) Sets the is in reply to property of the object.
  * @method Base_Object set_interaction_policy( array|null $policy )    Sets the interaction policy property of the object.
  * @method Base_Object set_likes( array $likes )                       Sets the collection of likes for this object.
- * @method Base_Object set_location( array|string $location )          Sets the physical or logical locations associated with the object.
+ * @method Base_Object set_location( array|string|Place $location )    Sets the physical or logical locations associated with the object.
  * @method Base_Object set_media_type( string $media_type )            Sets the MIME media type of the content property.
  * @method Base_Object set_name( string $name )                        Sets the natural language name of the object.
  * @method Base_Object set_name_map( array|null $name_map )            Sets the name map property of the object.
@@ -107,6 +111,8 @@ namespace Activitypub\Activity;
  * @method Base_Object set_type( string $type )                        Sets the type of the object.
  * @method Base_Object set_updated( string $updated )                  Sets the date and time the object was updated in ISO 8601 format.
  * @method Base_Object set_url( string $url )                          Sets the URL of the object.
+ * @method Base_Object set_former_type( string $former_type )          Sets the former type of a Tombstone object.
+ * @method Base_Object set_deleted( string $deleted )                  Sets the date and time the object was deleted in ISO 8601 format.
  */
 class Base_Object extends Generic_Object {
 	/**
@@ -262,6 +268,25 @@ class Base_Object extends Generic_Object {
 	protected $content_map;
 
 	/**
+	 * The date and time at which the object was deleted.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-deleted
+	 *
+	 * @var string|null
+	 */
+	protected $deleted;
+
+	/**
+	 * The former type of the object. Used in Tombstone objects to
+	 * indicate the type of the object prior to deletion.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-formertype
+	 *
+	 * @var string|null
+	 */
+	protected $former_type;
+
+	/**
 	 * A simple, human-readable, plain-text name for the object.
 	 * HTML markup MUST NOT be included.
 	 *
@@ -339,7 +364,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-location
 	 *
-	 * @var string|null
+	 * @var string|null|Place
 	 */
 	protected $location;
 

@@ -285,7 +285,7 @@ class Test_Query extends \WP_UnitTestCase {
 				'comment_approved' => 1,
 				'comment_type'     => 'comment',
 				'comment_meta'     => array(
-					'activitypub_status' => 'federated',
+					'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 				),
 			)
 		);
@@ -365,7 +365,10 @@ class Test_Query extends \WP_UnitTestCase {
 		$this->go_to( get_permalink( self::$post_id ) );
 		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
 
+		// Remove federated status so the LOCAL visibility test works correctly.
+		// Posts that were federated but are now LOCAL are still accessible for Delete activities.
 		Query::get_instance()->__destruct();
+		delete_post_meta( self::$post_id, 'activitypub_status' );
 		add_post_meta( self::$post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 		$this->go_to( get_permalink( self::$post_id ) );
 		$this->assertNull( Query::get_instance()->get_activitypub_object() );

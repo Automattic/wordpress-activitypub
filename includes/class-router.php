@@ -83,13 +83,17 @@ class Router {
 			return $template;
 		}
 
+		$activitypub_object = Query::get_instance()->get_activitypub_object();
+
 		if ( Tombstone::exists_local( Query::get_instance()->get_request_url() ) ) {
-			\status_header( 410 );
+			// Set 410 Gone for permanently deleted posts, 200 OK for soft-deleted.
+			if ( ! $activitypub_object ) {
+				\status_header( 410 );
+			}
 			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
 		}
 
 		$activitypub_template = false;
-		$activitypub_object   = Query::get_instance()->get_activitypub_object();
 
 		if ( $activitypub_object ) {
 			if ( \get_query_var( 'preview' ) ) {

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Skip fetching public audience identifiers which are not actual recipients.

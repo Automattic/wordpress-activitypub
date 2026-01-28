@@ -30,8 +30,6 @@ class ActivityPub_Outbox_TestCase extends \WP_UnitTestCase {
 
 		// Add activitypub capability to the user.
 		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
-
-		\add_filter( 'pre_schedule_event', '__return_false' );
 	}
 
 	/**
@@ -40,7 +38,6 @@ class ActivityPub_Outbox_TestCase extends \WP_UnitTestCase {
 	public static function tear_down_after_class() {
 		\delete_option( 'activitypub_actor_mode' );
 		\wp_delete_user( self::$user_id );
-		\remove_filter( 'pre_schedule_event', '__return_false' );
 
 		parent::tear_down_after_class();
 	}

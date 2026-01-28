@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix quote requests from Mastodon not being received.

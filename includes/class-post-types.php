@@ -539,10 +539,20 @@ class Post_Types {
 					'single'            => true,
 					'show_in_rest'      => true,
 					'sanitize_callback' => static function ( $value ) {
+						// Allow empty values to pass through without setting a default.
+						if ( empty( $value ) ) {
+							return '';
+						}
+
 						$schema = array(
 							'type'    => 'string',
-							'enum'    => array( 'pending', 'federated', 'failed' ),
-							'default' => 'pending',
+							'enum'    => array(
+								ACTIVITYPUB_OBJECT_STATE_PENDING,
+								ACTIVITYPUB_OBJECT_STATE_FEDERATED,
+								ACTIVITYPUB_OBJECT_STATE_FAILED,
+								ACTIVITYPUB_OBJECT_STATE_DELETED,
+							),
+							'default' => '',
 						);
 
 						if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {

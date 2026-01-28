@@ -41,7 +41,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			require_once AP_TESTS_DIR . '/data/mocks/class-jetpack.php';
 		}
 
-		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
+		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33 );
 		\remove_action( 'transition_comment_status', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity' ), 20 );
 		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
 
@@ -50,7 +50,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			3,
 			array(
 				'post_author' => 1,
-				'meta_input'  => array( 'activitypub_status' => 'federated' ),
+				'meta_input'  => array( 'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED ),
 			)
 		);
 
@@ -61,7 +61,7 @@ class Test_Migration extends \WP_UnitTestCase {
 				'post_status'  => 'publish',
 				'post_type'    => 'post',
 				'post_date'    => '2020-01-01 00:00:00',
-				'meta_input'   => array( 'activitypub_status' => 'federated' ),
+				'meta_input'   => array( 'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED ),
 			)
 		);
 		self::factory()->post->update_object( $modified_post_id, array( 'post_content' => 'Test post 2 updated' ) );
@@ -96,7 +96,7 @@ class Test_Migration extends \WP_UnitTestCase {
 				'comment_approved' => '1',
 			)
 		);
-		\add_comment_meta( self::$fixtures['comment'], 'activitypub_status', 'federated' );
+		\add_comment_meta( self::$fixtures['comment'], 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
 	}
 
 	/**
@@ -1322,6 +1322,154 @@ class Test_Migration extends \WP_UnitTestCase {
 		foreach ( $comment_ids as $comment_id ) {
 			$stored_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
 			$this->assertEquals( $remote_actor_id, $stored_actor_id );
+		}
+	}
+
+	/**
+	 * Test migrate_actor_emoji extracts emoji from actor post_content.
+	 *
+	 * @covers ::migrate_actor_emoji
+	 */
+	public function test_migrate_actor_emoji() {
+		// Create a remote actor with emoji in their data.
+		$actor_data = array(
+			'id'                => 'https://example.com/users/emojiuser',
+			'type'              => 'Person',
+			'preferredUsername' => 'emojiuser',
+			'name'              => 'Emoji :kappa: User',
+			'inbox'             => 'https://example.com/inbox',
+			'tag'               => array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':kappa:',
+					'icon' => array(
+						'type'      => 'Image',
+						'mediaType' => 'image/png',
+						'url'       => 'https://example.com/emoji/kappa.png',
+					),
+				),
+				array(
+					'type' => 'Emoji',
+					'name' => ':smile:',
+					'icon' => array(
+						'type'      => 'Image',
+						'mediaType' => 'image/png',
+						'url'       => 'https://example.com/emoji/smile.png',
+					),
+				),
+			),
+		);
+
+		$actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $actor_id );
+
+		// Delete emoji meta to simulate pre-migration state.
+		\delete_post_meta( $actor_id, '_activitypub_emoji' );
+		$this->assertEmpty( \get_post_meta( $actor_id, '_activitypub_emoji', true ) );
+
+		// Run the migration.
+		$result = Migration::migrate_actor_emoji();
+
+		// Migration should complete (no more batches).
+		$this->assertNull( $result );
+
+		// Verify emoji meta was populated.
+		$emoji_meta = \get_post_meta( $actor_id, '_activitypub_emoji', true );
+		$this->assertNotEmpty( $emoji_meta );
+
+		// Decode and verify the emoji data.
+		$emoji_tags = \json_decode( $emoji_meta, true );
+		$this->assertIsArray( $emoji_tags );
+		$this->assertCount( 2, $emoji_tags );
+
+		// Verify first emoji.
+		$this->assertEquals( 'Emoji', $emoji_tags[0]['type'] );
+		$this->assertEquals( ':kappa:', $emoji_tags[0]['name'] );
+		$this->assertEquals( 'https://example.com/emoji/kappa.png', $emoji_tags[0]['icon']['url'] );
+	}
+
+	/**
+	 * Test migrate_actor_emoji skips actors without emoji.
+	 *
+	 * @covers ::migrate_actor_emoji
+	 */
+	public function test_migrate_actor_emoji_no_emoji() {
+		// Create a remote actor without emoji.
+		$actor_data = array(
+			'id'                => 'https://example.com/users/noemoji',
+			'type'              => 'Person',
+			'preferredUsername' => 'noemoji',
+			'name'              => 'No Emoji User',
+			'inbox'             => 'https://example.com/inbox',
+		);
+
+		$actor_id = Remote_Actors::upsert( $actor_data );
+		$this->assertIsInt( $actor_id );
+
+		// Run the migration.
+		$result = Migration::migrate_actor_emoji();
+
+		// Migration should complete.
+		$this->assertNull( $result );
+
+		// Verify no emoji meta was added (actors without emoji don't get meta).
+		$emoji_meta = \get_post_meta( $actor_id, '_activitypub_emoji', true );
+		$this->assertEmpty( $emoji_meta );
+	}
+
+	/**
+	 * Test migrate_actor_emoji batching.
+	 *
+	 * @covers ::migrate_actor_emoji
+	 */
+	public function test_migrate_actor_emoji_batching() {
+		// Create 3 remote actors with emoji.
+		$actor_ids = array();
+		for ( $i = 1; $i <= 3; $i++ ) {
+			$actor_data = array(
+				'id'                => "https://example.com/users/batchemojiuser{$i}",
+				'type'              => 'Person',
+				'preferredUsername' => "batchemojiuser{$i}",
+				'name'              => "Batch Emoji User {$i}",
+				'inbox'             => 'https://example.com/inbox',
+				'tag'               => array(
+					array(
+						'type' => 'Emoji',
+						'name' => ":emoji{$i}:",
+						'icon' => array(
+							'type' => 'Image',
+							'url'  => "https://example.com/emoji/emoji{$i}.png",
+						),
+					),
+				),
+			);
+
+			$actor_ids[] = Remote_Actors::upsert( $actor_data );
+		}
+
+		// Delete emoji meta to simulate pre-migration state.
+		foreach ( $actor_ids as $actor_id ) {
+			\delete_post_meta( $actor_id, '_activitypub_emoji' );
+		}
+
+		// Run first batch with size 2.
+		$result = Migration::migrate_actor_emoji( 2, 0 );
+
+		// Should return batch info indicating more actors to process.
+		$this->assertIsArray( $result );
+		$this->assertEquals( 2, $result['batch_size'] );
+		$this->assertEquals( 2, $result['offset'] );
+
+		// Run second batch.
+		$result = Migration::migrate_actor_emoji( 2, 2 );
+
+		// Should complete (return null).
+		$this->assertNull( $result );
+
+		// Verify all actors with emoji got their meta populated.
+		foreach ( $actor_ids as $actor_id ) {
+			$emoji_meta = \get_post_meta( $actor_id, '_activitypub_emoji', true );
+			$this->assertNotEmpty( $emoji_meta, "Actor {$actor_id} should have emoji meta" );
 		}
 	}
 }

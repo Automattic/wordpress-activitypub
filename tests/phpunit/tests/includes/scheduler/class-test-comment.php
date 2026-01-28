@@ -176,7 +176,7 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				'user_id'          => self::$user_id,
 				'comment_approved' => 1,
 				'comment_meta'     => array(
-					'activitypub_status' => 'federated',
+					'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 				),
 			)
 		);
