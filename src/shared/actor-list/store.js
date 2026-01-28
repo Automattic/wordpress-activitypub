@@ -7,21 +7,6 @@ import { store, getContext, getConfig } from '@wordpress/interactivity';
 const { apiFetch, url } = window.wp;
 
 /**
- * Validates a URL to ensure it uses a safe scheme (http/https).
- *
- * @param {string} urlString The URL to validate.
- * @return {string} The validated URL or empty string if invalid.
- */
-function validateUrl( urlString ) {
-	try {
-		const parsed = new URL( urlString );
-		return [ 'http:', 'https:' ].includes( parsed.protocol ) ? urlString : '';
-	} catch {
-		return '';
-	}
-}
-
-/**
  * Creates and registers an Interactivity API store for actor lists.
  *
  * @param {string} storeName The name of the store (e.g., 'activitypub/followers').
@@ -97,7 +82,7 @@ export function createActorListStore( storeName ) {
 						handle: '@' + actor.webfinger,
 						icon: actor.icon,
 						name: actor.name || actor.preferredUsername,
-						url: validateUrl( actor.url || actor.id ),
+						url: actor.url || actor.id,
 					} ) );
 
 					context.total = totalItems;

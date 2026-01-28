@@ -251,7 +251,7 @@ class Blocks {
 					'handle' => '@' . $actor->get_webfinger(),
 					'icon'   => $actor->get_icon(),
 					'name'   => $actor->get_name() ?: $actor->get_preferred_username(),
-					'url'    => object_to_uri( $actor->get_url() ) ?: $actor->get_id(),
+					'url'    => \esc_url( object_to_uri( $actor->get_url() ) ?: $actor->get_id() ),
 				);
 			},
 			$items
