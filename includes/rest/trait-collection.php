@@ -36,6 +36,11 @@ trait Collection {
 	 * @return array|\WP_Error The response array with navigation links or WP_Error on invalid page.
 	 */
 	public function prepare_collection_response( $response, $request ) {
+		if ( empty( $response['items'] ) && empty( $response['orderedItems'] ) ) {
+			// No items on this page, return early.
+			return $response;
+		}
+
 		$page      = $request->get_param( 'page' );
 		$max_pages = \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) );
 
