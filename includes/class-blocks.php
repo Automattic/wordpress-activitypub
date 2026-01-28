@@ -193,7 +193,7 @@ class Blocks {
 	 */
 	public static function render_actor_list_block( $endpoint, $attributes, $block, $content ) {
 		if ( is_activitypub_request() || \is_feed() ) {
-			return;
+			return '';
 		}
 
 		$attributes = \wp_parse_args( $attributes );
