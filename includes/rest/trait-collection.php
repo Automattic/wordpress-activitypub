@@ -37,7 +37,7 @@ trait Collection {
 	 */
 	public function prepare_collection_response( $response, $request ) {
 		if ( empty( $response['items'] ) && empty( $response['orderedItems'] ) ) {
-			// No items on this page, return early.
+			// Skip pagination metadata when items are intentionally hidden or collection is empty.
 			return $response;
 		}
 
