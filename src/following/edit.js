@@ -1,4 +1,4 @@
-import { SelectControl, RangeControl, PanelBody, Notice } from '@wordpress/components';
+import { SelectControl, RangeControl, PanelBody, Notice, ExternalLink } from '@wordpress/components';
 import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
@@ -205,7 +205,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 				</PanelBody>
 			</InspectorControls>
 
-			<div className={ 'wp-block-activitypub-following ' + className }>
+			<div className={ `wp-block-activitypub-following ${ className }` }>
 				<InnerBlocks
 					template={ TEMPLATE }
 					allowedBlocks={ [ 'core/heading' ] }
@@ -223,8 +223,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 										'activitypub'
 									),
 									{
-										/* eslint-disable-next-line jsx-a11y/anchor-has-content -- Content provided by createInterpolateElement */
-										a: <a href={ settingsUrl } target="_blank" rel="noopener noreferrer" />,
+										a: <ExternalLink href={ settingsUrl } />,
 									}
 							  )
 							: __(
