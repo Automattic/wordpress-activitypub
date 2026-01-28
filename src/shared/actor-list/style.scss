@@ -117,29 +117,6 @@
 			justify-self: center;
 		}
 
-		// Fallback button-link styles for frontend.
-		.button-link {
-			background: none;
-			border: 0;
-			border-radius: 0;
-			box-shadow: none;
-			color: inherit;
-			cursor: pointer;
-			font-family: inherit;
-			font-size: inherit;
-			font-weight: inherit;
-			line-height: inherit;
-			margin: 0;
-			padding: 0;
-			text-align: inherit;
-			text-decoration: underline;
-
-			&:hover,
-			&:focus {
-				color: inherit;
-			}
-		}
-
 		.pagination-previous,
 		.pagination-next {
 			box-shadow: none; // Twenty Sixteen.
@@ -157,7 +134,6 @@
 				display: none !important;
 			}
 
-			&:disabled,
 			&[aria-disabled="true"] {
 				opacity: 0.3;
 				cursor: not-allowed;

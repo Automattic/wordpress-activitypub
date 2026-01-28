@@ -345,29 +345,29 @@ class Blocks {
 			<?php if ( $args['show_pagination'] && $args['total'] > $args['per_page'] ) : ?>
 			<nav class="activitypub-actor-list-pagination" role="navigation">
 				<h1 class="screen-reader-text"><?php echo \esc_html( $args['nav_label'] ); ?></h1>
-				<button
-					type="button"
-					class="button-link pagination-previous"
+				<a
+					href="#"
+					role="button"
+					class="pagination-previous"
 					data-wp-on-async--click="actions.previousPage"
 					data-wp-bind--aria-disabled="state.disablePreviousLink"
-					data-wp-bind--disabled="state.disablePreviousLink"
 					aria-label="<?php \esc_attr_e( 'Previous page', 'activitypub' ); ?>"
 				>
 					<?php \esc_html_e( 'Previous', 'activitypub' ); ?>
-				</button>
+				</a>
 
 				<div class="pagination-info" data-wp-text="state.paginationText"></div>
 
-				<button
-					type="button"
-					class="button-link pagination-next"
+				<a
+					href="#"
+					role="button"
+					class="pagination-next"
 					data-wp-on-async--click="actions.nextPage"
 					data-wp-bind--aria-disabled="state.disableNextLink"
-					data-wp-bind--disabled="state.disableNextLink"
 					aria-label="<?php \esc_attr_e( 'Next page', 'activitypub' ); ?>"
 				>
 					<?php \esc_html_e( 'Next', 'activitypub' ); ?>
-				</button>
+				</a>
 			</nav>
 
 			<div class="activitypub-actor-list-loading" data-wp-bind--aria-hidden="!context.isLoading">
