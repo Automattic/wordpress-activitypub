@@ -36,17 +36,6 @@ trait Collection {
 	 * @return array|\WP_Error The response array with navigation links or WP_Error on invalid page.
 	 */
 	public function prepare_collection_response( $response, $request ) {
-		// Set the JSON-LD context if not already set (required for valid ActivityStreams).
-		if ( empty( $response['@context'] ) ) {
-			// Ensure the context is the first element in the response.
-			$response = array( '@context' => $this->json_ld_context ) + $response;
-		}
-
-		if ( empty( $response['items'] ) && empty( $response['orderedItems'] ) ) {
-			// Skip pagination metadata when items are intentionally hidden or collection is empty.
-			return $response;
-		}
-
 		$page      = $request->get_param( 'page' );
 		$max_pages = \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) );
 
@@ -56,6 +45,17 @@ trait Collection {
 				'The page number requested is larger than the number of pages available.',
 				array( 'status' => 400 )
 			);
+		}
+
+		// Set the JSON-LD context if not already set.
+		if ( empty( $response['@context'] ) ) {
+			// Ensure the context is the first element in the response.
+			$response = array( '@context' => $this->json_ld_context ) + $response;
+		}
+
+		if ( empty( $response['items'] ) && empty( $response['orderedItems'] ) ) {
+			// Skip pagination metadata when items are intentionally hidden or collection is empty.
+			return $response;
 		}
 
 		$response['id']    = \add_query_arg( $request->get_query_params(), $response['id'] );

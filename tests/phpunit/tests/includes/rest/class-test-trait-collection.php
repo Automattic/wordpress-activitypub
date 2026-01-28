@@ -199,7 +199,6 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 	 */
 	public function test_prepare_collection_response_empty_collection() {
 		$request = new \WP_REST_Request();
-		$request->set_param( 'page', 1 );
 		$request->set_param( 'per_page', 10 );
 
 		$response = array(
@@ -215,6 +214,7 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 		$this->assertIsArray( $result );
 		$this->assertArrayNotHasKey( 'first', $result );
 		$this->assertArrayNotHasKey( 'last', $result );
+		$this->assertArrayHasKey( '@context', $result );
 	}
 
 	/**
