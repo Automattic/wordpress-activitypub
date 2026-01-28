@@ -174,17 +174,24 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 
 		$data = $response->get_data();
 
-		// Test pagination properties.
-		$this->assertArrayHasKey( 'first', $data );
-		$this->assertArrayHasKey( 'last', $data );
-		$this->assertStringContainsString( 'page=1', $data['first'] );
-		$this->assertIsString( $data['last'] );
+		// Test pagination properties (only present when there are following).
+		if ( ! empty( $data['orderedItems'] ) || ( isset( $data['totalItems'] ) && $data['totalItems'] > 0 ) ) {
+			$this->assertArrayHasKey( 'first', $data );
+			$this->assertArrayHasKey( 'last', $data );
+			$this->assertStringContainsString( 'page=1', $data['first'] );
+			$this->assertIsString( $data['last'] );
 
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
-		$request->set_param( 'page', 100 );
-		$response = rest_get_server()->dispatch( $request );
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+			$request->set_param( 'page', 100 );
+			$request->set_param( 'per_page', 10 );
+			$response = rest_get_server()->dispatch( $request );
 
-		$this->assertErrorResponse( 'rest_post_invalid_page_number', $response, 400 );
+			$this->assertErrorResponse( 'rest_post_invalid_page_number', $response, 400 );
+		} else {
+			// Empty collections skip pagination metadata.
+			$this->assertArrayNotHasKey( 'first', $data );
+			$this->assertArrayNotHasKey( 'last', $data );
+		}
 
 		\delete_option( 'activitypub_actor_mode' );
 	}
