@@ -1,4 +1,4 @@
-import { SelectControl, RangeControl, PanelBody, Notice } from '@wordpress/components';
+import { SelectControl, RangeControl, PanelBody, Notice, ExternalLink } from '@wordpress/components';
 import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
@@ -168,8 +168,8 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 			'core/heading',
 			{
 				level: 3,
-				placeholder: __( 'Fediverse Followers', 'activitypub' ),
-				content: __( 'Fediverse Followers', 'activitypub' ),
+				placeholder: __( 'Fediverse Following', 'activitypub' ),
+				content: __( 'Fediverse Following', 'activitypub' ),
 			},
 		],
 	];
@@ -177,7 +177,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	return (
 		<div { ...blockProps }>
 			<InspectorControls key="setting">
-				<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
+				<PanelBody title={ __( 'Following Options', 'activitypub' ) }>
 					{ filteredUsersOptions.length > 1 && (
 						<SelectControl
 							label={ __( 'Select User', 'activitypub' ) }
@@ -195,7 +195,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						__next40pxDefaultSize
 					/>
 					<RangeControl
-						label={ __( 'Number of Followers', 'activitypub' ) }
+						label={ __( 'Number of Following', 'activitypub' ) }
 						value={ perPage }
 						onChange={ setAttributeWithPageReset( 'per_page' ) }
 						min={ 1 }
@@ -205,7 +205,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 				</PanelBody>
 			</InspectorControls>
 
-			<div className={ 'wp-block-activitypub-followers ' + className }>
+			<div className={ `wp-block-activitypub-following ${ className }` }>
 				<InnerBlocks
 					template={ TEMPLATE }
 					allowedBlocks={ [ 'core/heading' ] }
@@ -219,16 +219,15 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 							? createInterpolateElement(
 									/* translators: <a> is a link to the profile settings page. */
 									__(
-										'The selected user has their social graph hidden. This block will not display followers on the frontend. <a>Edit privacy settings</a>',
+										'The selected user has their social graph hidden. This block will not display following on the frontend. <a>Edit privacy settings</a>',
 										'activitypub'
 									),
 									{
-										/* eslint-disable-next-line jsx-a11y/anchor-has-content -- Content provided by createInterpolateElement */
-										a: <a href={ settingsUrl } target="_blank" rel="noopener noreferrer" />,
+										a: <ExternalLink href={ settingsUrl } />,
 									}
 							  )
 							: __(
-									'The selected user has their social graph hidden. This block will not display followers on the frontend.',
+									'The selected user has their social graph hidden. This block will not display following on the frontend.',
 									'activitypub'
 							  ) }
 					</Notice>
@@ -239,16 +238,16 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						selectedUser={ authorId }
 						perPage={ perPage }
 						order={ order }
-						endpoint="followers"
+						endpoint="following"
 						page={ page }
 						setPage={ setPage }
-						emptyMessage={ __( 'No followers found.', 'activitypub' ) }
-						navLabel={ __( 'Follower navigation', 'activitypub' ) }
+						emptyMessage={ __( 'Not following anyone yet.', 'activitypub' ) }
+						navLabel={ __( 'Following navigation', 'activitypub' ) }
 					/>
 				) }
 
 				{ ! showHiddenNotice && selectedUser === 'inherit' && ! authorId && (
-					<InheritModeBlockFallback name={ __( 'Followers', 'activitypub' ) } />
+					<InheritModeBlockFallback name={ __( 'Following', 'activitypub' ) } />
 				) }
 
 				{ ! showHiddenNotice && selectedUser !== 'inherit' && (
@@ -256,11 +255,11 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						selectedUser={ selectedUser }
 						perPage={ perPage }
 						order={ order }
-						endpoint="followers"
+						endpoint="following"
 						page={ page }
 						setPage={ setPage }
-						emptyMessage={ __( 'No followers found.', 'activitypub' ) }
-						navLabel={ __( 'Follower navigation', 'activitypub' ) }
+						emptyMessage={ __( 'Not following anyone yet.', 'activitypub' ) }
+						navLabel={ __( 'Following navigation', 'activitypub' ) }
 					/>
 				) }
 			</div>

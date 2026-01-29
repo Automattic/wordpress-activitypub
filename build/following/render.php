@@ -1,6 +1,6 @@
 <?php
 /**
- * Server-side rendering of the followers block.
+ * Server-side rendering of the following block.
  *
  * @package Activitypub
  */
@@ -17,4 +17,4 @@ $block = $block ?? null;
 $content = $content ?? '';
 
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Output is escaped in render method.
-echo Blocks::render_actor_list_block( 'followers', $attributes, $block, $content );
+echo Blocks::render_actor_list_block( 'following', $attributes, $block, $content );
