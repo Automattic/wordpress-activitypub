@@ -807,9 +807,11 @@ class Admin {
 			ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-delete-confirmation.php',
 			false,
 			array(
-				'type'      => 'users',
-				'items'     => $users,
-				'send_back' => $send_back,
+				'type'         => 'users',
+				'items'        => $users,
+				'send_back'    => $send_back,
+				'checked'      => false,
+				'cancel_label' => \__( 'Skip', 'activitypub' ),
 			)
 		);
 		exit;
