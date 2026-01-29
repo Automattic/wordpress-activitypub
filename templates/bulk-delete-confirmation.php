@@ -8,11 +8,22 @@
  */
 
 /* @var array $args Template arguments. */
-$args = wp_parse_args( $args ?? array() );
+$args = wp_parse_args(
+	$args ?? array(),
+	array(
+		'type'         => 'posts',
+		'items'        => array(),
+		'send_back'    => '',
+		'checked'      => true,
+		'cancel_label' => __( 'Cancel', 'activitypub' ),
+	)
+);
 
-$item_type = $args['type'] ?? 'posts';
-$item_ids  = $args['items'] ?? array();
-$send_back = $args['send_back'] ?? '';
+$item_type    = $args['type'];
+$item_ids     = $args['items'];
+$send_back    = $args['send_back'];
+$checked      = $args['checked'];
+$cancel_label = $args['cancel_label'];
 
 // Validate items - redirect back with notice if empty.
 if ( empty( $item_ids ) ) {
@@ -86,7 +97,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 			<thead>
 				<tr>
 					<td class="manage-column column-cb check-column">
-						<input type="checkbox" id="cb-select-all" checked />
+						<input type="checkbox" id="cb-select-all"<?php echo $checked ? ' checked' : ''; ?> />
 					</td>
 					<?php foreach ( $columns as $column_key => $column_label ) : ?>
 						<th scope="col" class="manage-column column-<?php echo esc_attr( $column_key ); ?>">
@@ -99,7 +110,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 				<?php foreach ( $items as $item ) : ?>
 					<tr>
 						<th scope="row" class="check-column">
-							<input type="checkbox" name="<?php echo esc_attr( $input_name ); ?>" value="<?php echo esc_attr( $item->ID ); ?>" checked />
+							<input type="checkbox" name="<?php echo esc_attr( $input_name ); ?>" value="<?php echo esc_attr( $item->ID ); ?>"<?php echo $checked ? ' checked' : ''; ?> />
 							<?php if ( $hidden_name ) : ?>
 								<input type="hidden" name="<?php echo esc_attr( $hidden_name ); ?>" value="<?php echo esc_attr( $item->ID ); ?>" />
 							<?php endif; ?>
@@ -128,7 +139,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 
 		<p class="submit">
 			<?php submit_button( __( 'Delete from Fediverse', 'activitypub' ), 'primary', 'submit', false ); ?>
-			<a href="<?php echo esc_url( $send_back ); ?>" class="button"><?php esc_html_e( 'Cancel', 'activitypub' ); ?></a>
+			<a href="<?php echo esc_url( $send_back ); ?>" class="button"><?php echo esc_html( $cancel_label ); ?></a>
 		</p>
 	</form>
 </div>
