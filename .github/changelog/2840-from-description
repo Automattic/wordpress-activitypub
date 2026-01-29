@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add bulk and row action to soft delete posts from the Fediverse.
