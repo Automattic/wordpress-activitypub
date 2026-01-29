@@ -24,7 +24,13 @@ module.exports = {
 		},
 		{
 			// Test files use Jest globals and @jest-environment directive.
-			files: [ '**/__tests__/**/*.{js,ts,tsx}', '**/*.test.{js,ts,tsx}', 'tests/e2e/**/*.js' ],
+			files: [
+				'**/__tests__/**/*.{js,ts,tsx}',
+				'**/*.test.{js,ts,tsx}',
+				'tests/e2e/**/*.js',
+				'__mocks__/**/*.js',
+				'jest.setup.js',
+			],
 			env: {
 				jest: true,
 			},

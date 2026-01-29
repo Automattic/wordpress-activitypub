@@ -190,6 +190,22 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 		$this->assertInstanceOf( \WP_Error::class, $result );
 		$this->assertEquals( 'rest_post_invalid_page_number', $result->get_error_code() );
 		$this->assertEquals( 400, $result->get_error_data()['status'] );
+
+		// Empty collection with page 1 should return valid response (not an error).
+		$request->set_param( 'page', 1 );
+		$response['totalItems'] = 0;
+
+		$result = $this->instance->prepare_collection_response( $response, $request );
+		$this->assertIsArray( $result );
+		$this->assertEquals( 0, $result['totalItems'] );
+
+		// Empty collection with page 2 should return error.
+		$request->set_param( 'page', 2 );
+
+		$result = $this->instance->prepare_collection_response( $response, $request );
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertEquals( 'rest_post_invalid_page_number', $result->get_error_code() );
+		$this->assertEquals( 400, $result->get_error_data()['status'] );
 	}
 
 	/**

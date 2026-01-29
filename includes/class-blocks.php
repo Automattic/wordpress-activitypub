@@ -84,6 +84,11 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
+
+		// Only register the Following block if the Following feature is enabled.
+		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
+			\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/following' );
+		}
 		// Register reactions block, conditionally removing facepile style if avatars are disabled.
 		$reactions_args = array();
 		if ( ! \get_option( 'show_avatars', true ) ) {
@@ -178,6 +183,137 @@ class Blocks {
 
 		// We won't properly account for some conditions, like tag archives.
 		return null;
+	}
+
+	/**
+	 * Render an actor list block (followers or following).
+	 *
+	 * @param string    $endpoint   The endpoint type ('followers' or 'following').
+	 * @param array     $attributes Block attributes.
+	 * @param \WP_Block $block      Block instance.
+	 * @param string    $content    Block content.
+	 *
+	 * @return string|void The HTML to render, or void to render nothing.
+	 */
+	public static function render_actor_list_block( $endpoint, $attributes, $block, $content ) {
+		if ( is_activitypub_request() || \is_feed() ) {
+			return '';
+		}
+
+		$attributes = \wp_parse_args( $attributes );
+		$block_name = 'followers' === $endpoint ? __( 'Followers', 'activitypub' ) : __( 'Following', 'activitypub' );
+
+		if ( empty( $content ) ) {
+			// Fallback for v1.0.0 blocks.
+			/* translators: %s: Block type (Followers or Following) */
+			$_title  = $attributes['title'] ?? \sprintf( __( 'Fediverse %s', 'activitypub' ), $block_name );
+			$content = '<h3 class="wp-block-heading">' . \esc_html( $_title ) . '</h3>';
+			unset( $attributes['title'], $attributes['className'] );
+		} else {
+			$content = \implode( PHP_EOL, \wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
+		}
+
+		$user_id = self::get_user_id( $attributes['selectedUser'] );
+		if ( \is_null( $user_id ) ) {
+			/* translators: %s: Block type (Followers or Following) */
+			return \sprintf( '<!-- %s block: `inherit` mode does not display on this type of page -->', $block_name );
+		}
+
+		$user = Actors::get_by_id( $user_id );
+		if ( \is_wp_error( $user ) ) {
+			/* translators: 1: Block type (Followers or Following), 2: User ID */
+			return \sprintf( '<!-- %1$s block: `%2$s` not an active ActivityPub user -->', $block_name, $user_id );
+		}
+
+		if ( ! Actors::show_social_graph( $user_id ) ) {
+			/* translators: %s: Block type (Followers or Following) */
+			return \sprintf( '<!-- %s block: social graph is hidden for this user -->', $block_name );
+		}
+
+		$_per_page     = \max( 1, \absint( $attributes['per_page'] ) );
+		$_show_avatars = (bool) \get_option( 'show_avatars' );
+
+		// Query the appropriate collection.
+		if ( 'followers' === $endpoint ) {
+			$data  = \Activitypub\Collection\Followers::query( $user_id, $_per_page );
+			$items = $data['followers'];
+		} else {
+			$data  = \Activitypub\Collection\Following::query( $user_id, $_per_page );
+			$items = $data['following'];
+		}
+
+		// Prepare items data for the Interactivity API context.
+		$prepared_items = \array_map(
+			static function ( $item ) {
+				$actor = \Activitypub\Collection\Remote_Actors::get_actor( $item );
+
+				// Restrict URLs to http/https schemes to prevent XSS via javascript: URIs.
+				$url = object_to_uri( $actor->get_url() ) ?: $actor->get_id();
+
+				return array(
+					'handle' => '@' . $actor->get_webfinger(),
+					'icon'   => $actor->get_icon(),
+					'name'   => $actor->get_name() ?: $actor->get_preferred_username(),
+					'url'    => \esc_url( $url, array( 'http', 'https' ) ),
+				);
+			},
+			$items
+		);
+
+		$store_name = 'activitypub/' . $endpoint;
+
+		// Set up the Interactivity API config.
+		\wp_interactivity_config(
+			$store_name,
+			array(
+				'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+				'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
+			)
+		);
+
+		// Set initial context data.
+		$context = array(
+			'items'     => $prepared_items,
+			'isLoading' => false,
+			'order'     => $attributes['order'],
+			'page'      => 1,
+			'pages'     => \ceil( $data['total'] / $_per_page ),
+			'perPage'   => $_per_page,
+			'total'     => $data['total'],
+			'userId'    => $user_id,
+			'endpoint'  => $endpoint,
+		);
+
+		// Get block wrapper attributes with the data-wp-interactive attribute.
+		$wrapper_attributes = \get_block_wrapper_attributes(
+			array(
+				'id'                  => \wp_unique_id( 'activitypub-' . $endpoint . '-block-' ),
+				'data-wp-interactive' => $store_name,
+				'data-wp-context'     => \wp_json_encode( $context, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ),
+			)
+		);
+
+		/* translators: %s: Block type (Followers or Following) */
+		$nav_label = \sprintf( __( '%s navigation', 'activitypub' ), $block_name );
+
+		\ob_start();
+		?>
+		<div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
+			<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+
+			<?php
+			self::render_actor_list(
+				array(
+					'show_avatars' => $_show_avatars,
+					'total'        => $data['total'],
+					'per_page'     => $_per_page,
+					'nav_label'    => $nav_label,
+				)
+			);
+			?>
+		</div>
+		<?php
+		return \ob_get_clean();
 	}
 
 	/**
@@ -284,6 +420,99 @@ class Blocks {
 					<?php echo $args['content']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				</div>
 			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Renders an actor list component that can be used by different blocks.
+	 *
+	 * @param array $args Arguments for the actor list.
+	 */
+	public static function render_actor_list( $args = array() ) {
+		$defaults = array(
+			'show_avatars'    => true,
+			'show_pagination' => true,
+			'total'           => 0,
+			'per_page'        => 10,
+			'nav_label'       => __( 'Actor navigation', 'activitypub' ),
+		);
+
+		$args = \wp_parse_args( $args, $defaults );
+
+		// Sanitize numeric values, ensuring per_page is at least 1 to avoid division by zero.
+		$args['total']    = \absint( $args['total'] );
+		$args['per_page'] = \max( 1, \absint( $args['per_page'] ) );
+		?>
+
+		<div class="activitypub-actor-list-container">
+			<ul class="activitypub-actor-list">
+				<template data-wp-each="context.items">
+					<li class="activitypub-actor-item">
+						<a href="#"
+							data-wp-bind--href="context.item.url"
+							class="activitypub-actor-link"
+							target="_blank"
+							rel="external noreferrer noopener"
+							data-wp-bind--title="context.item.handle">
+
+							<?php if ( $args['show_avatars'] ) : ?>
+							<img
+								data-wp-bind--src="context.item.icon.url"
+								data-wp-on--error="callbacks.setDefaultAvatar"
+								src=""
+								alt=""
+								class="activitypub-actor-avatar"
+								width="48"
+								height="48"
+							>
+							<?php endif; ?>
+
+							<div class="activitypub-actor-info">
+								<span class="activitypub-actor-name" data-wp-text="context.item.name"></span>
+								<span class="activitypub-actor-handle" data-wp-text="context.item.handle"></span>
+							</div>
+
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" class="external-link-icon" aria-hidden="true" focusable="false" fill="currentColor">
+								<path d="M18.2 17c0 .7-.6 1.2-1.2 1.2H7c-.7 0-1.2-.6-1.2-1.2V7c0-.7.6-1.2 1.2-1.2h3.2V4.2H7C5.5 4.2 4.2 5.5 4.2 7v10c0 1.5 1.2 2.8 2.8 2.8h10c1.5 0 2.8-1.2 2.8-2.8v-3.6h-1.5V17zM14.9 3v1.5h3.7l-6.4 6.4 1.1 1.1 6.4-6.4v3.7h1.5V3h-6.3z"></path>
+							</svg>
+						</a>
+					</li>
+				</template>
+			</ul>
+
+			<?php if ( $args['show_pagination'] && $args['total'] > $args['per_page'] ) : ?>
+			<nav class="activitypub-actor-list-pagination" role="navigation">
+				<h1 class="screen-reader-text"><?php echo \esc_html( $args['nav_label'] ); ?></h1>
+				<a
+					href="#"
+					role="button"
+					class="pagination-previous"
+					data-wp-on-async--click="actions.previousPage"
+					data-wp-bind--aria-disabled="state.disablePreviousLink"
+					aria-label="<?php \esc_attr_e( 'Previous page', 'activitypub' ); ?>"
+				>
+					<?php \esc_html_e( 'Previous', 'activitypub' ); ?>
+				</a>
+
+				<div class="pagination-info" data-wp-text="state.paginationText"></div>
+
+				<a
+					href="#"
+					role="button"
+					class="pagination-next"
+					data-wp-on-async--click="actions.nextPage"
+					data-wp-bind--aria-disabled="state.disableNextLink"
+					aria-label="<?php \esc_attr_e( 'Next page', 'activitypub' ); ?>"
+				>
+					<?php \esc_html_e( 'Next', 'activitypub' ); ?>
+				</a>
+			</nav>
+
+			<div class="activitypub-actor-list-loading" data-wp-bind--aria-hidden="!context.isLoading">
+				<div class="loading-spinner"></div>
+			</div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
