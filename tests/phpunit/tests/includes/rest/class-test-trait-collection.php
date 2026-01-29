@@ -177,11 +177,12 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 		$request->set_param( 'page', 5 );
 		$request->set_param( 'per_page', 10 );
 
+		// Use non-empty items to test pagination logic (empty items trigger early return).
 		$response = array(
 			'type'       => 'Collection',
 			'id'         => 'https://example.org/collection',
 			'totalItems' => 25,
-			'items'      => array(),
+			'items'      => array( 'item1', 'item2' ),
 		);
 
 		$result = $this->instance->prepare_collection_response( $response, $request );
@@ -205,6 +206,31 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 		$this->assertInstanceOf( \WP_Error::class, $result );
 		$this->assertEquals( 'rest_post_invalid_page_number', $result->get_error_code() );
 		$this->assertEquals( 400, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test that empty collections skip pagination and return early.
+	 *
+	 * @covers ::prepare_collection_response
+	 */
+	public function test_prepare_collection_response_empty_collection() {
+		$request = new \WP_REST_Request();
+		$request->set_param( 'per_page', 10 );
+
+		$response = array(
+			'type'       => 'Collection',
+			'id'         => 'https://example.org/collection',
+			'totalItems' => 0,
+			'items'      => array(),
+		);
+
+		$result = $this->instance->prepare_collection_response( $response, $request );
+
+		// Empty collections return early without pagination metadata.
+		$this->assertIsArray( $result );
+		$this->assertArrayNotHasKey( 'first', $result );
+		$this->assertArrayNotHasKey( 'last', $result );
+		$this->assertArrayHasKey( '@context', $result );
 	}
 
 	/**
