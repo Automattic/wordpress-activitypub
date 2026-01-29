@@ -54,6 +54,11 @@ trait Collection {
 			$response = array( '@context' => $this->json_ld_context ) + $response;
 		}
 
+		if ( empty( $response['items'] ) && empty( $response['orderedItems'] ) ) {
+			// Skip pagination metadata when items are intentionally hidden or collection is empty.
+			return $response;
+		}
+
 		$response['id']    = \add_query_arg( $request->get_query_params(), $response['id'] );
 		$response['first'] = \add_query_arg( 'page', 1, $response['id'] );
 		$response['last']  = \add_query_arg( 'page', $max_pages, $response['id'] );

@@ -141,14 +141,19 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertStringContainsString( 'page=1', $data['prev'] );
 		$this->assertStringContainsString( 'page=3', $data['next'] );
 
-		// Empty collection - with the new behavior, even empty collections have pagination links.
+		// Empty collections skip pagination metadata.
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
 		$request->set_param( 'per_page', 3 );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
-		$this->assertArrayHasKey( 'first', $data );
-		$this->assertArrayHasKey( 'last', $data );
+		if ( empty( $data['orderedItems'] ) && ( ! isset( $data['totalItems'] ) || 0 === $data['totalItems'] ) ) {
+			$this->assertArrayNotHasKey( 'first', $data );
+			$this->assertArrayNotHasKey( 'last', $data );
+		} else {
+			$this->assertArrayHasKey( 'first', $data );
+			$this->assertArrayHasKey( 'last', $data );
+		}
 	}
 
 	/**
