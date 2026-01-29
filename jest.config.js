@@ -4,12 +4,12 @@ module.exports = {
 	...defaultConfig,
 	testMatch: [ '**/tests/js/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)' ],
 	testPathIgnorePatterns: [
+		'/build/',
 		'/node_modules/',
 		'/tests/e2e/',
+		'/tests/js/__mocks__/',
 		'/tests/phpunit/',
 		'/vendor/',
-		'/build/',
-		'/tests/js/__mocks__/',
 	],
 	setupFilesAfterEnv: [ '<rootDir>/jest.setup.js' ],
 	moduleNameMapper: {
