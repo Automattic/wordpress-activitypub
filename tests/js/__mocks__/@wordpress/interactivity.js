@@ -1,3 +1,4 @@
+/* global jest */
 /**
  * Mock for @wordpress/interactivity
  *
