@@ -231,6 +231,9 @@ class Test_Options extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Options::register_settings
 	 */
 	public function test_default_quote_policy_sanitizes_invalid_values() {
+		// Register settings to enable sanitize callback (admin_init/rest_api_init don't fire in tests).
+		\Activitypub\Options::register_settings();
+
 		// Test invalid value gets sanitized to default.
 		\update_option( 'activitypub_default_quote_policy', 'invalid_value' );
 		$this->assertEquals( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, \get_option( 'activitypub_default_quote_policy' ) );
