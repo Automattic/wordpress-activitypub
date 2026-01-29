@@ -1068,6 +1068,8 @@ class Admin {
 			// Send Delete activity.
 			$result = add_to_outbox( $post, 'Delete', $post->post_author );
 			if ( $result ) {
+				// Set visibility to private to prevent re-federation.
+				\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 				++$deleted_count;
 			}
 		}
@@ -1111,6 +1113,11 @@ class Admin {
 
 		// Send Delete activity.
 		$result = add_to_outbox( $post, 'Delete', $post->post_author );
+
+		// Set visibility to private to prevent re-federation.
+		if ( $result ) {
+			\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+		}
 
 		// Build redirect URL.
 		$send_back = \admin_url( 'edit.php' );
