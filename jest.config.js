@@ -9,7 +9,7 @@ module.exports = {
 		'/tests/phpunit/',
 		'/vendor/',
 		'/build/',
-		'/__mocks__/',
+		'/tests/js/__mocks__/',
 	],
 	setupFilesAfterEnv: [ '<rootDir>/jest.setup.js' ],
 	moduleNameMapper: {
