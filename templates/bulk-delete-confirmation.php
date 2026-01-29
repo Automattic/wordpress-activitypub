@@ -145,8 +145,8 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 </div>
 <script>
 document.getElementById('cb-select-all').addEventListener('change', function() {
-	var checkboxes = document.querySelectorAll('input[name="<?php echo esc_js( $input_name ); ?>"]');
-	for (var i = 0; i < checkboxes.length; i++) {
+	const checkboxes = document.querySelectorAll('input[name="<?php echo esc_js( $input_name ); ?>"]');
+	for (let i = 0; i < checkboxes.length; i++) {
 		checkboxes[i].checked = this.checked;
 	}
 });
