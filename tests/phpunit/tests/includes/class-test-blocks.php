@@ -816,7 +816,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 */
 	public function test_render_reply_block_embed_uses_proper_width() {
 		// Create a post to embed.
-		$post_id = self::factory()->post->create(
+		$post_id  = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Embed Post',
 				'post_content' => 'Test content for embedding.',
@@ -858,11 +858,11 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 */
 	public function test_render_reply_block_embed_respects_content_width() {
 		// Set a custom content_width.
-		$original_content_width    = isset( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : null;
+		$original_content_width   = isset( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : null;
 		$GLOBALS['content_width'] = 800;
 
 		// Create a post to embed.
-		$post_id = self::factory()->post->create(
+		$post_id  = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Content Width Post',
 				'post_content' => 'Test content.',
