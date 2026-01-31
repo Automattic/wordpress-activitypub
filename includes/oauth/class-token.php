@@ -111,6 +111,7 @@ class Token {
 	public static function validate( $token ) {
 		$hash = self::hash_token( $token );
 
+		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Token lookup by hash is necessary.
 		$posts = \get_posts(
 			array(
 				'post_type'   => self::POST_TYPE,
@@ -120,6 +121,7 @@ class Token {
 				'numberposts' => 1,
 			)
 		);
+		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 
 		if ( empty( $posts ) ) {
 			return new \WP_Error(

@@ -476,16 +476,16 @@ class Outbox_Controller extends \WP_REST_Controller {
 	/**
 	 * Wrap a bare object in a Create activity.
 	 *
-	 * @param array $object The object data.
-	 * @param mixed $user   The user/actor.
+	 * @param array $object_data The object data.
+	 * @param mixed $user        The user/actor.
 	 * @return array The wrapped Create activity.
 	 */
-	private function wrap_in_create( $object, $user ) {
+	private function wrap_in_create( $object_data, $user ) {
 		// Copy addressing from object to activity.
 		$addressing = array();
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $field ) {
-			if ( ! empty( $object[ $field ] ) ) {
-				$addressing[ $field ] = $object[ $field ];
+			if ( ! empty( $object_data[ $field ] ) ) {
+				$addressing[ $field ] = $object_data[ $field ];
 			}
 		}
 
@@ -494,7 +494,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 				'@context' => Base_Object::JSON_LD_CONTEXT,
 				'type'     => 'Create',
 				'actor'    => $user->get_id(),
-				'object'   => $object,
+				'object'   => $object_data,
 			),
 			$addressing
 		);

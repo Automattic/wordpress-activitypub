@@ -129,6 +129,7 @@ class Client {
 	 * @return Client|\WP_Error The client or error.
 	 */
 	public static function get( $client_id ) {
+		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Client lookup by ID is necessary.
 		$posts = \get_posts(
 			array(
 				'post_type'   => self::POST_TYPE,
@@ -138,6 +139,7 @@ class Client {
 				'numberposts' => 1,
 			)
 		);
+		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 
 		if ( empty( $posts ) ) {
 			return new \WP_Error(
@@ -325,6 +327,7 @@ class Client {
 		}
 
 		// Delete all tokens for this client.
+		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Token cleanup by client ID is necessary.
 		$tokens = \get_posts(
 			array(
 				'post_type'   => Token::POST_TYPE,
@@ -334,6 +337,7 @@ class Client {
 				'fields'      => 'ids',
 			)
 		);
+		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 
 		foreach ( $tokens as $token_id ) {
 			\wp_delete_post( $token_id, true );

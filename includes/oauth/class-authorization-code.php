@@ -250,6 +250,7 @@ class Authorization_Code {
 	 */
 	public static function compute_code_challenge( $code_verifier ) {
 		$hash = hash( 'sha256', $code_verifier, true );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Required for PKCE BASE64URL encoding per RFC 7636.
 		return rtrim( strtr( base64_encode( $hash ), '+/', '-_' ), '=' );
 	}
 
