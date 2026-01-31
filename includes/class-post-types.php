@@ -15,6 +15,10 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\OAuth\Authorization_Code;
+use Activitypub\OAuth\Client;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Token;
 
 /**
  * Post Types class.
@@ -30,6 +34,7 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_post_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_extra_fields_post_types' ), 11 );
 		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
+		\add_action( 'init', array( self::class, 'register_oauth_post_types' ), 11 );
 
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_actor_rest_field' ) );
@@ -454,6 +459,273 @@ class Post_Types {
 		 * Fires after ActivityPub custom post types have been registered.
 		 */
 		\do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Register OAuth 2.0 post types for C2S support.
+	 *
+	 * Registers post types for OAuth tokens, clients, and authorization codes.
+	 */
+	public static function register_oauth_post_types() {
+		// OAuth Tokens post type.
+		\register_post_type(
+			Token::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'OAuth Tokens', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'OAuth Token', 'post_type single name', 'activitypub' ),
+				),
+				'public'              => false,
+				'show_in_rest'        => false,
+				'hierarchical'        => false,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'delete_with_user'    => true,
+				'can_export'          => false,
+				'supports'            => array( 'author', 'custom-fields' ),
+				'exclude_from_search' => true,
+			)
+		);
+
+		// OAuth Token meta.
+		\register_post_meta(
+			Token::POST_TYPE,
+			'_activitypub_access_token_hash',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'SHA-256 hash of the access token.',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Token::POST_TYPE,
+			'_activitypub_refresh_token_hash',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'SHA-256 hash of the refresh token.',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Token::POST_TYPE,
+			'_activitypub_client_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The OAuth client ID associated with this token.',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Token::POST_TYPE,
+			'_activitypub_scopes',
+			array(
+				'type'              => 'array',
+				'single'            => true,
+				'description'       => 'Granted OAuth scopes.',
+				'sanitize_callback' => array( Scope::class, 'sanitize' ),
+			)
+		);
+
+		\register_post_meta(
+			Token::POST_TYPE,
+			'_activitypub_expires_at',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'Unix timestamp when the access token expires.',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		// OAuth Clients post type.
+		\register_post_type(
+			Client::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'OAuth Clients', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'OAuth Client', 'post_type single name', 'activitypub' ),
+				),
+				'public'              => false,
+				'show_in_rest'        => false,
+				'hierarchical'        => false,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'delete_with_user'    => false,
+				'can_export'          => true,
+				'supports'            => array( 'title', 'editor', 'custom-fields' ),
+				'exclude_from_search' => true,
+			)
+		);
+
+		// OAuth Client meta.
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_client_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'Unique OAuth client identifier (UUID).',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_client_secret_hash',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'SHA-256 hash of the client secret (null for public clients).',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_redirect_uris',
+			array(
+				'type'              => 'array',
+				'single'            => true,
+				'description'       => 'Allowed redirect URIs for this client.',
+				'sanitize_callback' => static function ( $value ) {
+					if ( ! is_array( $value ) ) {
+						return array();
+					}
+					return array_map( 'sanitize_url', $value );
+				},
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_allowed_scopes',
+			array(
+				'type'              => 'array',
+				'single'            => true,
+				'description'       => 'Allowed OAuth scopes for this client.',
+				'sanitize_callback' => array( Scope::class, 'sanitize' ),
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_is_public',
+			array(
+				'type'              => 'boolean',
+				'single'            => true,
+				'description'       => 'Whether this is a public client (PKCE-only, no secret).',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default'           => true,
+			)
+		);
+
+		// OAuth Authorization Codes post type.
+		\register_post_type(
+			Authorization_Code::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'OAuth Codes', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'OAuth Code', 'post_type single name', 'activitypub' ),
+				),
+				'public'              => false,
+				'show_in_rest'        => false,
+				'hierarchical'        => false,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'delete_with_user'    => true,
+				'can_export'          => false,
+				'supports'            => array( 'author', 'custom-fields' ),
+				'exclude_from_search' => true,
+			)
+		);
+
+		// OAuth Authorization Code meta.
+		\register_post_meta(
+			Authorization_Code::POST_TYPE,
+			'_activitypub_code_hash',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'SHA-256 hash of the authorization code.',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Authorization_Code::POST_TYPE,
+			'_activitypub_client_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The OAuth client ID that requested this code.',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Authorization_Code::POST_TYPE,
+			'_activitypub_redirect_uri',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The redirect URI used for this authorization.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Authorization_Code::POST_TYPE,
+			'_activitypub_scopes',
+			array(
+				'type'              => 'array',
+				'single'            => true,
+				'description'       => 'Requested OAuth scopes.',
+				'sanitize_callback' => array( Scope::class, 'sanitize' ),
+			)
+		);
+
+		\register_post_meta(
+			Authorization_Code::POST_TYPE,
+			'_activitypub_code_challenge',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'PKCE code challenge.',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Authorization_Code::POST_TYPE,
+			'_activitypub_code_challenge_method',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'PKCE code challenge method (S256 or plain).',
+				'sanitize_callback' => static function ( $value ) {
+					$allowed = array( 'S256', 'plain' );
+					return in_array( $value, $allowed, true ) ? $value : 'S256';
+				},
+				'default'           => 'S256',
+			)
+		);
+
+		\register_post_meta(
+			Authorization_Code::POST_TYPE,
+			'_activitypub_expires_at',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'Unix timestamp when the authorization code expires (10 minutes).',
+				'sanitize_callback' => 'absint',
+			)
+		);
 	}
 
 	/**

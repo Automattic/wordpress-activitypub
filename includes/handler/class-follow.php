@@ -10,6 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\add_to_outbox;
@@ -24,6 +25,7 @@ class Follow {
 	public static function init() {
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow' ), 10, 2 );
 		\add_action( 'activitypub_handled_follow', array( self::class, 'queue_accept' ), 10, 4 );
+		\add_action( 'activitypub_handled_outbox_follow', array( self::class, 'handle_outbox_follow' ), 10, 4 );
 	}
 
 	/**
@@ -147,5 +149,53 @@ class Follow {
 		$activity->set_to( array( $origin_activity['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+	}
+
+	/**
+	 * Handle outbox "Follow" activities (C2S).
+	 *
+	 * Adds the target actor to the user's following list (pending until accepted).
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_follow( $data, $user_id, $activity, $outbox_id ) {
+		$object = $data['object'] ?? '';
+
+		// The object should be the actor URL to follow.
+		if ( empty( $object ) || ! \is_string( $object ) ) {
+			return;
+		}
+
+		// Fetch or create the remote actor.
+		$remote_actor = Remote_Actors::fetch_by_uri( $object );
+
+		if ( \is_wp_error( $remote_actor ) ) {
+			return;
+		}
+
+		// Check if already following.
+		$all_meta  = \get_post_meta( $remote_actor->ID );
+		$following = $all_meta[ Following::FOLLOWING_META_KEY ] ?? array();
+		$pending   = $all_meta[ Following::PENDING_META_KEY ] ?? array();
+
+		if ( \in_array( (string) $user_id, $following, true ) || \in_array( (string) $user_id, $pending, true ) ) {
+			return;
+		}
+
+		// Add to pending following.
+		\add_post_meta( $remote_actor->ID, Following::PENDING_META_KEY, (string) $user_id );
+
+		/**
+		 * Fires after a Follow activity has been sent via C2S.
+		 *
+		 * @param int      $remote_actor_id The remote actor post ID.
+		 * @param array    $data            The activity data.
+		 * @param int      $user_id         The user ID.
+		 * @param int      $outbox_id       The outbox post ID.
+		 */
+		\do_action( 'activitypub_outbox_follow_sent', $remote_actor->ID, $data, $user_id, $outbox_id );
 	}
 }

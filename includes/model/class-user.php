@@ -317,9 +317,17 @@ class User extends Actor {
 	 * @return string[]|null The endpoints.
 	 */
 	public function get_endpoints() {
-		return array(
+		$endpoints = array(
 			'sharedInbox' => get_rest_url_by_path( 'inbox' ),
 		);
+
+		// Add OAuth endpoints if C2S is enabled.
+		if ( \get_option( 'activitypub_enable_c2s', false ) ) {
+			$endpoints['oauthAuthorizationEndpoint'] = get_rest_url_by_path( 'oauth/authorize' );
+			$endpoints['oauthTokenEndpoint']         = get_rest_url_by_path( 'oauth/token' );
+		}
+
+		return $endpoints;
 	}
 
 	/**

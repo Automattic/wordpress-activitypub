@@ -7,10 +7,15 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server as OAuth_Server;
 
+use function Activitypub\add_to_outbox;
+use function Activitypub\camel_to_snake_case;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 
@@ -72,6 +77,11 @@ class Outbox_Controller extends \WP_REST_Controller {
 							'maximum'     => 100,
 						),
 					),
+				),
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'create_item' ),
+					'permission_callback' => array( $this, 'create_item_permissions_check' ),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
 			)
@@ -316,5 +326,202 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$response['totalItems'] = (int) $posts->found_posts + (int) $comments->found_comments;
 
 		return $response;
+	}
+
+	/**
+	 * Permission check for creating items (C2S).
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
+	 */
+	public function create_item_permissions_check( \WP_REST_Request $request ) {
+		// Check if C2S is enabled.
+		if ( ! OAuth_Server::is_c2s_enabled() ) {
+			return new \WP_Error(
+				'activitypub_c2s_disabled',
+				\__( 'Client-to-Server (C2S) support is not enabled.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		// Must be authenticated via OAuth with 'write' scope.
+		$permission = OAuth_Server::check_oauth_permission( $request, Scope::WRITE );
+		if ( \is_wp_error( $permission ) ) {
+			return $permission;
+		}
+
+		// Token user must match actor in URL.
+		$user_id = $request->get_param( 'user_id' );
+		$token   = OAuth_Server::get_current_token();
+
+		if ( ! $token || $token->get_user_id() !== $user_id ) {
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You can only post to your own outbox.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Create an item in the outbox (C2S).
+	 *
+	 * Follows the same pattern as the Inbox controller:
+	 * 1. Store the activity in the outbox
+	 * 2. Trigger action hooks for handlers to process
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error on failure.
+	 */
+	public function create_item( \WP_REST_Request $request ) {
+		$user_id = $request->get_param( 'user_id' );
+		$user    = Actors::get_by_id( $user_id );
+		$data    = $request->get_json_params();
+
+		if ( empty( $data ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_request',
+				\__( 'Request body must be a valid ActivityPub object or activity.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Determine if this is an Activity or a bare Object.
+		$type        = $data['type'] ?? '';
+		$is_activity = in_array( $type, Activity::TYPES, true );
+
+		// If it's a bare object, wrap it in a Create activity.
+		if ( ! $is_activity ) {
+			$data = $this->wrap_in_create( $data, $user );
+		}
+
+		$activity_type = camel_to_snake_case( $data['type'] ?? '' );
+
+		// Determine visibility from addressing.
+		$visibility = $this->determine_visibility( $data );
+
+		// Add to outbox - this handles storage and triggers federation.
+		$outbox_id = add_to_outbox( $data, null, $user_id, $visibility );
+
+		if ( ! $outbox_id || \is_wp_error( $outbox_id ) ) {
+			return new \WP_Error(
+				'activitypub_outbox_error',
+				\__( 'Failed to add activity to outbox.', 'activitypub' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		// Get the stored activity for hooks.
+		$activity = Outbox::get_activity( $outbox_id );
+
+		/**
+		 * Fires for each outbox activity.
+		 *
+		 * @param array                          $data     The activity data array.
+		 * @param int                            $user_id  The user ID.
+		 * @param string                         $type     The activity type (snake_case).
+		 * @param \Activitypub\Activity\Activity $activity The Activity object.
+		 */
+		\do_action( 'activitypub_outbox', $data, $user_id, $activity_type, $activity );
+
+		/**
+		 * Fires for specific outbox activity types.
+		 *
+		 * The dynamic portion of the hook name, `$activity_type`, refers to the
+		 * activity type in snake_case (e.g., 'create', 'update', 'delete', 'like').
+		 *
+		 * @param array                          $data     The activity data array.
+		 * @param int                            $user_id  The user ID.
+		 * @param \Activitypub\Activity\Activity $activity The Activity object.
+		 */
+		\do_action( 'activitypub_outbox_' . $activity_type, $data, $user_id, $activity );
+
+		/**
+		 * Fires after an outbox activity has been stored.
+		 *
+		 * @param array                          $data       The activity data array.
+		 * @param int                            $user_id    The user ID.
+		 * @param string                         $type       The activity type (snake_case).
+		 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+		 * @param int                            $outbox_id  The outbox post ID.
+		 */
+		\do_action( 'activitypub_handled_outbox', $data, $user_id, $activity_type, $activity, $outbox_id );
+
+		/**
+		 * Fires after a specific outbox activity type has been stored.
+		 *
+		 * @param array                          $data       The activity data array.
+		 * @param int                            $user_id    The user ID.
+		 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+		 * @param int                            $outbox_id  The outbox post ID.
+		 */
+		\do_action( 'activitypub_handled_outbox_' . $activity_type, $data, $user_id, $activity, $outbox_id );
+
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
+
+		$result = $activity->to_array( false );
+
+		// Return 201 Created with Location header.
+		$response = new \WP_REST_Response( $result, 201 );
+		$response->header( 'Location', $result['id'] ?? \get_the_guid( $outbox_id ) );
+		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
+
+		return $response;
+	}
+
+	/**
+	 * Wrap a bare object in a Create activity.
+	 *
+	 * @param array $object The object data.
+	 * @param mixed $user   The user/actor.
+	 * @return array The wrapped Create activity.
+	 */
+	private function wrap_in_create( $object, $user ) {
+		// Copy addressing from object to activity.
+		$addressing = array();
+		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $field ) {
+			if ( ! empty( $object[ $field ] ) ) {
+				$addressing[ $field ] = $object[ $field ];
+			}
+		}
+
+		return array_merge(
+			array(
+				'@context' => Base_Object::JSON_LD_CONTEXT,
+				'type'     => 'Create',
+				'actor'    => $user->get_id(),
+				'object'   => $object,
+			),
+			$addressing
+		);
+	}
+
+	/**
+	 * Determine content visibility from activity addressing.
+	 *
+	 * @param array $activity The activity data.
+	 * @return string Visibility constant.
+	 */
+	private function determine_visibility( $activity ) {
+		$public = 'https://www.w3.org/ns/activitystreams#Public';
+		$to     = (array) ( $activity['to'] ?? array() );
+		$cc     = (array) ( $activity['cc'] ?? array() );
+
+		// Check if public.
+		if ( in_array( $public, $to, true ) ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+		}
+
+		// Check if unlisted (public in cc).
+		if ( in_array( $public, $cc, true ) ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
+		}
+
+		// Private (no public addressing).
+		return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 	}
 }

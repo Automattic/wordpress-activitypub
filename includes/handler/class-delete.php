@@ -23,6 +23,7 @@ class Delete {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
+		\add_action( 'activitypub_handled_outbox_delete', array( self::class, 'handle_outbox_delete' ), 10, 4 );
 		\add_filter( 'activitypub_skip_inbox_storage', array( self::class, 'skip_inbox_storage' ), 10, 2 );
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
 		\add_action( 'activitypub_delete_remote_actor_interactions', array( self::class, 'delete_interactions' ) );
@@ -352,5 +353,55 @@ class Delete {
 			Tombstone::bury( $object->get_id() );
 			Tombstone::bury( $object->get_url() );
 		}
+	}
+
+	/**
+	 * Handle outbox "Delete" activities (C2S).
+	 *
+	 * Deletes a WordPress post.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_delete( $data, $user_id, $activity, $outbox_id ) {
+		$object = $data['object'] ?? '';
+
+		// Get the object ID (can be a string URL or an object with an id).
+		$object_id = object_to_uri( $object );
+
+		if ( empty( $object_id ) ) {
+			return;
+		}
+
+		// Find the post by its ActivityPub ID.
+		$post = Posts::get_by_guid( $object_id );
+
+		if ( ! $post instanceof \WP_Post ) {
+			return;
+		}
+
+		// Verify the user owns this post.
+		if ( (int) $post->post_author !== $user_id && $user_id > 0 ) {
+			return;
+		}
+
+		// Trash the post (use wp_delete_post with false to move to trash).
+		$result = \wp_trash_post( $post->ID );
+
+		if ( ! $result ) {
+			return;
+		}
+
+		/**
+		 * Fires after a post has been deleted from a C2S Delete activity.
+		 *
+		 * @param int   $post_id    The deleted post ID.
+		 * @param array $data       The activity data.
+		 * @param int   $user_id    The user ID.
+		 * @param int   $outbox_id  The outbox post ID.
+		 */
+		\do_action( 'activitypub_outbox_deleted_post', $post->ID, $data, $user_id, $outbox_id );
 	}
 }

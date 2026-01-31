@@ -26,6 +26,7 @@ class Create {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'handle_create' ), 10, 3 );
+		\add_action( 'activitypub_handled_outbox_create', array( self::class, 'handle_outbox_create' ), 10, 4 );
 		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'maybe_unbury' ), 10, 2 );
 	}
@@ -62,6 +63,72 @@ class Create {
 		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The WP_Comment object of the created comment, or null if creation failed.
 		 */
 		\do_action( 'activitypub_handled_create', $activity, (array) $user_ids, $success, $result );
+	}
+
+	/**
+	 * Handle outbox "Create" activities (C2S).
+	 *
+	 * Creates a WordPress post from the ActivityPub object.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_create( $data, $user_id, $activity, $outbox_id ) {
+		$object = $data['object'] ?? array();
+
+		if ( ! is_array( $object ) ) {
+			return;
+		}
+
+		$type = $object['type'] ?? '';
+
+		// Only handle Note and Article types.
+		if ( ! in_array( $type, array( 'Note', 'Article' ), true ) ) {
+			return;
+		}
+
+		$content = $object['content'] ?? '';
+		$name    = $object['name'] ?? '';
+		$summary = $object['summary'] ?? '';
+
+		// Use name as title for Articles, or generate from content for Notes.
+		$title = $name;
+		if ( empty( $title ) && ! empty( $content ) ) {
+			$title = \wp_trim_words( \wp_strip_all_tags( $content ), 10, '...' );
+		}
+
+		// Determine visibility.
+		$visibility = \get_post_meta( $outbox_id, 'activitypub_content_visibility', true );
+
+		$post_data = array(
+			'post_author'  => $user_id > 0 ? $user_id : 0,
+			'post_title'   => $title,
+			'post_content' => $content,
+			'post_excerpt' => $summary,
+			'post_status'  => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ? 'private' : 'publish',
+			'post_type'    => 'post',
+			'meta_input'   => array(
+				'activitypub_content_visibility' => $visibility,
+			),
+		);
+
+		$post_id = \wp_insert_post( $post_data, true );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return;
+		}
+
+		/**
+		 * Fires after a post has been created from a C2S Create activity.
+		 *
+		 * @param int   $post_id   The created post ID.
+		 * @param array $data      The activity data.
+		 * @param int   $user_id   The user ID.
+		 * @param int   $outbox_id The outbox post ID.
+		 */
+		\do_action( 'activitypub_outbox_created_post', $post_id, $data, $user_id, $outbox_id );
 	}
 
 	/**

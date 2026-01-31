@@ -7,7 +7,9 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox as Inbox_Collection;
+use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\object_to_uri;
 
@@ -20,6 +22,7 @@ class Undo {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_undo' ), 10, 2 );
+		\add_action( 'activitypub_handled_outbox_undo', array( self::class, 'handle_outbox_undo' ), 10, 4 );
 		\add_action( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
@@ -81,5 +84,58 @@ class Undo {
 		}
 
 		return $valid;
+	}
+
+	/**
+	 * Handle outbox "Undo" activities (C2S).
+	 *
+	 * Handles Undo Follow (unfollow) activities.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_undo( $data, $user_id, $activity, $outbox_id ) {
+		$object = $data['object'] ?? array();
+
+		if ( ! \is_array( $object ) ) {
+			return;
+		}
+
+		$type = $object['type'] ?? '';
+
+		// Only handle Undo Follow for now.
+		if ( 'Follow' !== $type ) {
+			return;
+		}
+
+		// Get the target actor from the original Follow activity.
+		$target = $object['object'] ?? '';
+
+		if ( empty( $target ) || ! \is_string( $target ) ) {
+			return;
+		}
+
+		// Get the remote actor.
+		$remote_actor = Remote_Actors::get_by_uri( $target );
+
+		if ( \is_wp_error( $remote_actor ) ) {
+			return;
+		}
+
+		// Remove following relationship.
+		\delete_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, $user_id );
+		\delete_post_meta( $remote_actor->ID, Following::PENDING_META_KEY, $user_id );
+
+		/**
+		 * Fires after an Undo Follow activity has been sent via C2S.
+		 *
+		 * @param int   $remote_actor_id The remote actor post ID.
+		 * @param array $data            The activity data.
+		 * @param int   $user_id         The user ID.
+		 * @param int   $outbox_id       The outbox post ID.
+		 */
+		\do_action( 'activitypub_outbox_undo_follow_sent', $remote_actor->ID, $data, $user_id, $outbox_id );
 	}
 }

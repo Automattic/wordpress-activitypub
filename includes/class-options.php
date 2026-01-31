@@ -330,6 +330,16 @@ class Options {
 			)
 		);
 
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_enable_c2s',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable Client-to-Server (C2S) support for third-party ActivityPub clients.',
+				'default'     => false,
+			)
+		);
+
 		/*
 		 * Options Group: activitypub_blog
 		 */

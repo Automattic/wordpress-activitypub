@@ -23,6 +23,7 @@ class Update {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_handled_inbox_update', array( self::class, 'handle_update' ), 10, 3 );
+		\add_action( 'activitypub_handled_outbox_update', array( self::class, 'handle_outbox_update' ), 10, 4 );
 	}
 
 	/**
@@ -145,5 +146,81 @@ class Update {
 		 * @param array         $actor    Remote actor meta data.
 		 */
 		\do_action( 'activitypub_handled_update', $activity, (array) $user_ids, $state, $actor );
+	}
+
+	/**
+	 * Handle outbox "Update" activities (C2S).
+	 *
+	 * Updates a WordPress post from the ActivityPub object.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_update( $data, $user_id, $activity, $outbox_id ) {
+		$object = $data['object'] ?? array();
+
+		if ( ! \is_array( $object ) ) {
+			return;
+		}
+
+		$type = $object['type'] ?? '';
+
+		// Only handle Note and Article types.
+		if ( ! \in_array( $type, array( 'Note', 'Article' ), true ) ) {
+			return;
+		}
+
+		$object_id = $object['id'] ?? '';
+
+		if ( empty( $object_id ) ) {
+			return;
+		}
+
+		// Find the post by its ActivityPub ID.
+		$post = Posts::get_by_guid( $object_id );
+
+		if ( ! $post instanceof \WP_Post ) {
+			return;
+		}
+
+		// Verify the user owns this post.
+		if ( (int) $post->post_author !== $user_id && $user_id > 0 ) {
+			return;
+		}
+
+		$content = $object['content'] ?? '';
+		$name    = $object['name'] ?? '';
+		$summary = $object['summary'] ?? '';
+
+		// Use name as title for Articles, or generate from content for Notes.
+		$title = $name;
+		if ( empty( $title ) && ! empty( $content ) ) {
+			$title = \wp_trim_words( \wp_strip_all_tags( $content ), 10, '...' );
+		}
+
+		$post_data = array(
+			'ID'           => $post->ID,
+			'post_title'   => $title,
+			'post_content' => $content,
+			'post_excerpt' => $summary,
+		);
+
+		$post_id = \wp_update_post( $post_data, true );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return;
+		}
+
+		/**
+		 * Fires after a post has been updated from a C2S Update activity.
+		 *
+		 * @param int   $post_id    The updated post ID.
+		 * @param array $data       The activity data.
+		 * @param int   $user_id    The user ID.
+		 * @param int   $outbox_id  The outbox post ID.
+		 */
+		\do_action( 'activitypub_outbox_updated_post', $post_id, $data, $user_id, $outbox_id );
 	}
 }

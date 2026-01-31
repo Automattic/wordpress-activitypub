@@ -69,6 +69,10 @@ function rest_init() {
 	if ( is_blog_public() ) {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
+
+	// Load OAuth endpoints if C2S is enabled.
+	OAuth\Server::init();
+	( new Rest\OAuth_Controller() )->register_routes();
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 
