@@ -25,6 +25,7 @@ class Announce {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_announce', array( self::class, 'handle_announce' ), 10, 3 );
+		\add_action( 'activitypub_handled_outbox_announce', array( self::class, 'handle_outbox_announce' ), 10, 4 );
 	}
 
 	/**
@@ -129,5 +130,33 @@ class Announce {
 		 * @param array|string|int|\WP_Error|false $result   The WP_Comment object of the created announce/repost comment, or null if creation failed.
 		 */
 		\do_action( 'activitypub_handled_announce', $activity, (array) $user_ids, $success, $result );
+	}
+
+	/**
+	 * Handle outbox "Announce" activities (C2S).
+	 *
+	 * Records an announce/boost from the local user on remote content.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_announce( $data, $user_id, $activity, $outbox_id ) {
+		$object_url = object_to_uri( $data['object'] ?? '' );
+
+		if ( empty( $object_url ) ) {
+			return;
+		}
+
+		/**
+		 * Fires after an Announce activity has been sent via C2S.
+		 *
+		 * @param string $object_url The URL of the announced object.
+		 * @param array  $data       The activity data.
+		 * @param int    $user_id    The user ID.
+		 * @param int    $outbox_id  The outbox post ID.
+		 */
+		\do_action( 'activitypub_outbox_announce_sent', $object_url, $data, $user_id, $outbox_id );
 	}
 }

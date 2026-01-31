@@ -21,6 +21,7 @@ class Like {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_like', array( self::class, 'handle_like' ), 10, 2 );
+		\add_action( 'activitypub_handled_outbox_like', array( self::class, 'handle_outbox_like' ), 10, 4 );
 		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 	}
 
@@ -63,6 +64,34 @@ class Like {
 		 * @param array|false|int|string|\WP_Comment|\WP_Error $result   The WP_Comment object of the created like comment, or null if creation failed.
 		 */
 		\do_action( 'activitypub_handled_like', $like, (array) $user_ids, $success, $result );
+	}
+
+	/**
+	 * Handle outbox "Like" activities (C2S).
+	 *
+	 * Records a like from the local user on remote content.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_like( $data, $user_id, $activity, $outbox_id ) {
+		$object_url = object_to_uri( $data['object'] ?? '' );
+
+		if ( empty( $object_url ) ) {
+			return;
+		}
+
+		/**
+		 * Fires after a Like activity has been sent via C2S.
+		 *
+		 * @param string $object_url The URL of the liked object.
+		 * @param array  $data       The activity data.
+		 * @param int    $user_id    The user ID.
+		 * @param int    $outbox_id  The outbox post ID.
+		 */
+		\do_action( 'activitypub_outbox_like_sent', $object_url, $data, $user_id, $outbox_id );
 	}
 
 	/**
