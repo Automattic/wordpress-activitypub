@@ -843,7 +843,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$query    = new \WP_Comment_Query();
 		$comments = $query->query(
 			array(
-				'post_id' => $ost_id,
+				'post_id' => $post_id,
 				'type__not_in' => 'comment'
 			)
 		);
