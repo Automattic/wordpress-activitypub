@@ -388,6 +388,12 @@ class Outbox_Controller extends \WP_REST_Controller {
 			);
 		}
 
+		// Validate ownership - ensure submitted actor matches authenticated user.
+		$ownership_validation = $this->validate_ownership( $data, $user );
+		if ( \is_wp_error( $ownership_validation ) ) {
+			return $ownership_validation;
+		}
+
 		// Determine if this is an Activity or a bare Object.
 		$type        = $data['type'] ?? '';
 		$is_activity = in_array( $type, Activity::TYPES, true );
@@ -498,6 +504,54 @@ class Outbox_Controller extends \WP_REST_Controller {
 			),
 			$addressing
 		);
+	}
+
+	/**
+	 * Validate that activity actor matches the authenticated user.
+	 *
+	 * Ensures clients cannot submit activities with mismatched actor data.
+	 *
+	 * @param array                        $data The activity or object data.
+	 * @param \Activitypub\Model\User|null $user The authenticated user.
+	 * @return true|\WP_Error True if valid, WP_Error otherwise.
+	 */
+	private function validate_ownership( $data, $user ) {
+		if ( ! $user ) {
+			return new \WP_Error(
+				'activitypub_invalid_user',
+				\__( 'Invalid user.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$user_actor_id = $user->get_id();
+
+		// Check activity actor if present.
+		if ( ! empty( $data['actor'] ) ) {
+			$actor_id = object_to_uri( $data['actor'] );
+			if ( $actor_id && $actor_id !== $user_actor_id ) {
+				return new \WP_Error(
+					'activitypub_actor_mismatch',
+					\__( 'Activity actor does not match authenticated user.', 'activitypub' ),
+					array( 'status' => 403 )
+				);
+			}
+		}
+
+		// Check object.attributedTo if present.
+		$object = $data['object'] ?? $data;
+		if ( is_array( $object ) && ! empty( $object['attributedTo'] ) ) {
+			$attributed_to = object_to_uri( $object['attributedTo'] );
+			if ( $attributed_to && $attributed_to !== $user_actor_id ) {
+				return new \WP_Error(
+					'activitypub_attribution_mismatch',
+					\__( 'Object attributedTo does not match authenticated user.', 'activitypub' ),
+					array( 'status' => 403 )
+				);
+			}
+		}
+
+		return true;
 	}
 
 	/**
