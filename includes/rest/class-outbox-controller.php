@@ -334,7 +334,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
-	public function create_item_permissions_check( \WP_REST_Request $request ) {
+	public function create_item_permissions_check( $request ) {
 		// Check if C2S is enabled.
 		if ( ! OAuth_Server::is_c2s_enabled() ) {
 			return new \WP_Error(
