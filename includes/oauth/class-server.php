@@ -242,14 +242,176 @@ class Server {
 			'authorization_endpoint'                => $base_url . 'oauth/authorize',
 			'token_endpoint'                        => $base_url . 'oauth/token',
 			'revocation_endpoint'                   => $base_url . 'oauth/revoke',
+			'introspection_endpoint'                => $base_url . 'oauth/introspect',
 			'registration_endpoint'                 => $base_url . 'oauth/clients',
 			'scopes_supported'                      => Scope::ALL,
 			'response_types_supported'              => array( 'code' ),
 			'response_modes_supported'              => array( 'query' ),
 			'grant_types_supported'                 => array( 'authorization_code', 'refresh_token' ),
 			'token_endpoint_auth_methods_supported' => array( 'none', 'client_secret_post' ),
+			'introspection_endpoint_auth_methods_supported' => array( 'none' ),
 			'code_challenge_methods_supported'      => array( 'S256', 'plain' ),
 			'service_documentation'                 => 'https://github.com/swicg/activitypub-api',
 		);
+	}
+
+	/**
+	 * Handle OAuth authorization consent page via wp-login.php.
+	 *
+	 * This is triggered by wp-login.php?action=activitypub_authorize
+	 */
+	public static function login_form_authorize() {
+		// Require user to be logged in.
+		if ( ! \is_user_logged_in() ) {
+			\auth_redirect();
+		}
+
+		// Check if C2S is enabled.
+		if ( ! self::is_c2s_enabled() ) {
+			\wp_die(
+				\esc_html__( 'Client-to-Server (C2S) support is not enabled.', 'activitypub' ),
+				\esc_html__( 'Authorization Error', 'activitypub' ),
+				array( 'response' => 403 )
+			);
+		}
+
+		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
+
+		if ( 'GET' === $request_method ) {
+			self::render_authorize_form();
+		} elseif ( 'POST' === $request_method ) {
+			self::process_authorize_form();
+		}
+
+		exit;
+	}
+
+	/**
+	 * Render the OAuth authorization consent form.
+	 */
+	private static function render_authorize_form() {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Initial form display, nonce checked on POST.
+		$client_id             = isset( $_GET['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_GET['client_id'] ) ) : '';
+		$redirect_uri          = isset( $_GET['redirect_uri'] ) ? \esc_url_raw( \wp_unslash( $_GET['redirect_uri'] ) ) : '';
+		$scope                 = isset( $_GET['scope'] ) ? \sanitize_text_field( \wp_unslash( $_GET['scope'] ) ) : '';
+		$state                 = isset( $_GET['state'] ) ? \sanitize_text_field( \wp_unslash( $_GET['state'] ) ) : '';
+		$code_challenge        = isset( $_GET['code_challenge'] ) ? \sanitize_text_field( \wp_unslash( $_GET['code_challenge'] ) ) : '';
+		$code_challenge_method = isset( $_GET['code_challenge_method'] ) ? \sanitize_text_field( \wp_unslash( $_GET['code_challenge_method'] ) ) : 'S256';
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		// Validate client.
+		$client = Client::get( $client_id );
+		if ( \is_wp_error( $client ) ) {
+			\wp_die(
+				\esc_html( $client->get_error_message() ),
+				\esc_html__( 'Authorization Error', 'activitypub' ),
+				array( 'response' => 404 )
+			);
+		}
+
+		// Validate redirect URI.
+		if ( ! $client->is_valid_redirect_uri( $redirect_uri ) ) {
+			\wp_die(
+				\esc_html__( 'Invalid redirect URI for this client.', 'activitypub' ),
+				\esc_html__( 'Authorization Error', 'activitypub' ),
+				array( 'response' => 400 )
+			);
+		}
+
+		// These variables are used in the template.
+		$current_user = \wp_get_current_user(); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$scopes       = Scope::validate( Scope::parse( $scope ) ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$client_name  = $client->get_name(); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+
+		// Build form action URL.
+		// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$form_url = \add_query_arg(
+			array(
+				'action'                => 'activitypub_authorize',
+				'client_id'             => $client_id,
+				'redirect_uri'          => $redirect_uri,
+				'scope'                 => $scope,
+				'state'                 => $state,
+				'code_challenge'        => $code_challenge,
+				'code_challenge_method' => $code_challenge_method,
+			),
+			\wp_login_url()
+		);
+
+		// Include the template.
+		include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-authorize.php';
+	}
+
+	/**
+	 * Process the OAuth authorization consent form submission.
+	 */
+	private static function process_authorize_form() {
+		// Verify nonce.
+		if ( ! isset( $_POST['_wpnonce'] ) || ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ), 'activitypub_oauth_authorize' ) ) {
+			\wp_die(
+				\esc_html__( 'Security check failed. Please try again.', 'activitypub' ),
+				\esc_html__( 'Authorization Error', 'activitypub' ),
+				array( 'response' => 403 )
+			);
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified above.
+		$client_id             = isset( $_POST['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['client_id'] ) ) : '';
+		$redirect_uri          = isset( $_POST['redirect_uri'] ) ? \esc_url_raw( \wp_unslash( $_POST['redirect_uri'] ) ) : '';
+		$scope                 = isset( $_POST['scope'] ) ? \sanitize_text_field( \wp_unslash( $_POST['scope'] ) ) : '';
+		$state                 = isset( $_POST['state'] ) ? \sanitize_text_field( \wp_unslash( $_POST['state'] ) ) : '';
+		$code_challenge        = isset( $_POST['code_challenge'] ) ? \sanitize_text_field( \wp_unslash( $_POST['code_challenge'] ) ) : '';
+		$code_challenge_method = isset( $_POST['code_challenge_method'] ) ? \sanitize_text_field( \wp_unslash( $_POST['code_challenge_method'] ) ) : 'S256';
+		$approve               = isset( $_POST['approve'] );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		// User denied authorization.
+		if ( ! $approve ) {
+			$error_url = \add_query_arg(
+				array(
+					'error'             => 'access_denied',
+					'error_description' => \rawurlencode( 'The user denied the authorization request.' ),
+					'state'             => $state,
+				),
+				$redirect_uri
+			);
+			\wp_safe_redirect( $error_url );
+			exit;
+		}
+
+		// Create authorization code.
+		$scopes = Scope::validate( Scope::parse( $scope ) );
+		$code   = Authorization_Code::create(
+			\get_current_user_id(),
+			$client_id,
+			$redirect_uri,
+			$scopes,
+			$code_challenge,
+			$code_challenge_method
+		);
+
+		if ( \is_wp_error( $code ) ) {
+			$error_url = \add_query_arg(
+				array(
+					'error'             => 'server_error',
+					'error_description' => \rawurlencode( $code->get_error_message() ),
+					'state'             => $state,
+				),
+				$redirect_uri
+			);
+			\wp_safe_redirect( $error_url );
+			exit;
+		}
+
+		// Redirect to client with authorization code.
+		$success_url = \add_query_arg(
+			array(
+				'code'  => $code,
+				'state' => $state,
+			),
+			$redirect_uri
+		);
+		\wp_redirect( $success_url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Redirecting to external client.
+		exit;
 	}
 }

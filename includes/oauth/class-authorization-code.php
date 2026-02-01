@@ -10,44 +10,19 @@ namespace Activitypub\OAuth;
 /**
  * Authorization_Code class for managing OAuth 2.0 authorization codes.
  *
- * Authorization codes are short-lived (10 minutes) and support PKCE.
+ * Authorization codes are short-lived (10 minutes) and stored as transients.
+ * This is more efficient than CPT for temporary data.
  */
 class Authorization_Code {
 	/**
-	 * Post type for OAuth authorization codes.
+	 * Transient prefix for authorization codes.
 	 */
-	const POST_TYPE = 'ap_oauth_code';
-
-	/**
-	 * Post status for pending (unused) codes.
-	 */
-	const STATUS_PENDING = 'pending';
-
-	/**
-	 * Post status for used codes.
-	 */
-	const STATUS_USED = 'draft';
+	const TRANSIENT_PREFIX = 'activitypub_oauth_code_';
 
 	/**
 	 * Authorization code expiration in seconds (10 minutes).
 	 */
 	const EXPIRATION = 600;
-
-	/**
-	 * The post ID of the authorization code.
-	 *
-	 * @var int
-	 */
-	private $post_id;
-
-	/**
-	 * Constructor.
-	 *
-	 * @param int $post_id The post ID of the authorization code.
-	 */
-	public function __construct( $post_id ) {
-		$this->post_id = $post_id;
-	}
 
 	/**
 	 * Create a new authorization code.
@@ -88,34 +63,33 @@ class Authorization_Code {
 
 		// Generate the code.
 		$code       = self::generate_code();
+		$code_hash  = self::hash_code( $code );
 		$expires_at = time() + self::EXPIRATION;
 
-		// Create the authorization code post.
-		$post_id = \wp_insert_post(
-			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => self::STATUS_PENDING,
-				'post_author' => $user_id,
-				'post_title'  => sprintf(
-					/* translators: %1$s: client ID */
-					\__( 'Auth code for %1$s', 'activitypub' ),
-					$client_id
-				),
-				'meta_input'  => array(
-					'_activitypub_code_hash'             => Token::hash_token( $code ),
-					'_activitypub_client_id'             => $client_id,
-					'_activitypub_redirect_uri'          => $redirect_uri,
-					'_activitypub_scopes'                => $filtered_scopes,
-					'_activitypub_code_challenge'        => $code_challenge,
-					'_activitypub_code_challenge_method' => $code_challenge_method,
-					'_activitypub_expires_at'            => $expires_at,
-				),
-			),
-			true
+		// Store code data in transient.
+		$code_data = array(
+			'user_id'               => $user_id,
+			'client_id'             => $client_id,
+			'redirect_uri'          => $redirect_uri,
+			'scopes'                => $filtered_scopes,
+			'code_challenge'        => $code_challenge,
+			'code_challenge_method' => $code_challenge_method,
+			'expires_at'            => $expires_at,
+			'created_at'            => time(),
 		);
 
-		if ( \is_wp_error( $post_id ) ) {
-			return $post_id;
+		$stored = \set_transient(
+			self::TRANSIENT_PREFIX . $code_hash,
+			$code_data,
+			self::EXPIRATION
+		);
+
+		if ( ! $stored ) {
+			return new \WP_Error(
+				'activitypub_code_storage_failed',
+				\__( 'Failed to store authorization code.', 'activitypub' ),
+				array( 'status' => 500 )
+			);
 		}
 
 		return $code;
@@ -131,49 +105,23 @@ class Authorization_Code {
 	 * @return array|\WP_Error Token data or error.
 	 */
 	public static function exchange( $code, $client_id, $redirect_uri, $code_verifier ) {
-		$hash = Token::hash_token( $code );
+		$code_hash = self::hash_code( $code );
+		$transient = self::TRANSIENT_PREFIX . $code_hash;
+		$code_data = \get_transient( $transient );
 
-		// Find the authorization code.
-		$posts = \get_posts(
-			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => self::STATUS_PENDING,
-				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					'relation' => 'AND',
-					array(
-						'key'   => '_activitypub_code_hash',
-						'value' => $hash,
-					),
-					array(
-						'key'   => '_activitypub_client_id',
-						'value' => $client_id,
-					),
-				),
-				'numberposts' => 1,
-			)
-		);
-
-		if ( empty( $posts ) ) {
+		if ( false === $code_data ) {
 			return new \WP_Error(
 				'activitypub_invalid_code',
-				\__( 'Invalid authorization code.', 'activitypub' ),
+				\__( 'Invalid or expired authorization code.', 'activitypub' ),
 				array( 'status' => 400 )
 			);
 		}
 
-		$post = $posts[0];
+		// Immediately delete the code (single use).
+		\delete_transient( $transient );
 
-		// Check expiration.
-		$expires_at = (int) \get_post_meta( $post->ID, '_activitypub_expires_at', true );
-		if ( $expires_at < time() ) {
-			// Mark as used to prevent further attempts.
-			\wp_update_post(
-				array(
-					'ID'          => $post->ID,
-					'post_status' => self::STATUS_USED,
-				)
-			);
-
+		// Check expiration (belt and suspenders - transient should auto-expire).
+		if ( isset( $code_data['expires_at'] ) && $code_data['expires_at'] < time() ) {
 			return new \WP_Error(
 				'activitypub_code_expired',
 				\__( 'Authorization code has expired.', 'activitypub' ),
@@ -181,9 +129,17 @@ class Authorization_Code {
 			);
 		}
 
+		// Verify client ID matches.
+		if ( $code_data['client_id'] !== $client_id ) {
+			return new \WP_Error(
+				'activitypub_client_mismatch',
+				\__( 'Client ID does not match.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		// Verify redirect URI matches.
-		$stored_redirect_uri = \get_post_meta( $post->ID, '_activitypub_redirect_uri', true );
-		if ( $redirect_uri !== $stored_redirect_uri ) {
+		if ( $code_data['redirect_uri'] !== $redirect_uri ) {
 			return new \WP_Error(
 				'activitypub_redirect_uri_mismatch',
 				\__( 'Redirect URI does not match.', 'activitypub' ),
@@ -192,8 +148,8 @@ class Authorization_Code {
 		}
 
 		// Verify PKCE.
-		$code_challenge        = \get_post_meta( $post->ID, '_activitypub_code_challenge', true );
-		$code_challenge_method = \get_post_meta( $post->ID, '_activitypub_code_challenge_method', true ) ?: 'S256';
+		$code_challenge        = $code_data['code_challenge'] ?? '';
+		$code_challenge_method = $code_data['code_challenge_method'] ?? 'S256';
 
 		if ( ! self::verify_pkce( $code_verifier, $code_challenge, $code_challenge_method ) ) {
 			return new \WP_Error(
@@ -203,20 +159,12 @@ class Authorization_Code {
 			);
 		}
 
-		// Mark the code as used (single use).
-		\wp_update_post(
-			array(
-				'ID'          => $post->ID,
-				'post_status' => self::STATUS_USED,
-			)
-		);
-
-		// Get the user and scopes.
-		$user_id = $post->post_author;
-		$scopes  = \get_post_meta( $post->ID, '_activitypub_scopes', true );
-
 		// Create and return the tokens.
-		return Token::create( $user_id, $client_id, $scopes );
+		return Token::create(
+			$code_data['user_id'],
+			$client_id,
+			$code_data['scopes']
+		);
 	}
 
 	/**
@@ -260,12 +208,23 @@ class Authorization_Code {
 	 * @return string The authorization code.
 	 */
 	public static function generate_code() {
-		return Token::generate_token( 32 );
+		return bin2hex( random_bytes( 32 ) );
+	}
+
+	/**
+	 * Hash an authorization code for storage lookup.
+	 *
+	 * @param string $code The authorization code.
+	 * @return string The SHA-256 hash.
+	 */
+	public static function hash_code( $code ) {
+		return hash( 'sha256', $code );
 	}
 
 	/**
 	 * Clean up expired authorization codes.
 	 *
+	 * Note: Transients auto-expire, but this cleans up any orphaned ones.
 	 * Should be called periodically via cron.
 	 *
 	 * @return int Number of codes deleted.
@@ -273,25 +232,18 @@ class Authorization_Code {
 	public static function cleanup() {
 		global $wpdb;
 
-		$expired_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// Clean up expired transients with our prefix.
+		// Transients should auto-expire, but this catches edge cases.
+		$count = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"SELECT p.ID FROM {$wpdb->posts} p
-				INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-				WHERE p.post_type = %s
-				AND pm.meta_key = '_activitypub_expires_at'
-				AND pm.meta_value < %d",
-				self::POST_TYPE,
-				time()
+				"DELETE FROM {$wpdb->options}
+				WHERE option_name LIKE %s
+				AND option_name LIKE %s",
+				$wpdb->esc_like( '_transient_' . self::TRANSIENT_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . self::TRANSIENT_PREFIX ) . '%'
 			)
 		);
 
-		$count = 0;
-		foreach ( $expired_ids as $post_id ) {
-			if ( \wp_delete_post( $post_id, true ) ) {
-				++$count;
-			}
-		}
-
-		return $count;
+		return $count ? (int) ( $count / 2 ) : 0; // Each transient has 2 rows.
 	}
 }

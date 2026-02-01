@@ -403,6 +403,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$data = $this->wrap_in_create( $data, $user );
 		}
 
+		// Ensure the object has an ID (required for outbox storage).
+		$data = $this->ensure_object_id( $data, $user );
+
 		$activity_type = camel_to_snake_case( $data['type'] ?? '' );
 
 		// Determine visibility from addressing.
@@ -577,5 +580,42 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		// Private (no public addressing).
 		return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
+	}
+
+	/**
+	 * Ensure the activity object has an ID.
+	 *
+	 * For C2S activities, clients may not provide object IDs.
+	 * The server must generate them.
+	 *
+	 * @param array                        $data The activity data.
+	 * @param \Activitypub\Model\User|null $user The authenticated user.
+	 * @return array The activity data with object ID ensured.
+	 */
+	private function ensure_object_id( $data, $user ) {
+		// Check if there's an embedded object that needs an ID.
+		if ( ! isset( $data['object'] ) || ! is_array( $data['object'] ) ) {
+			return $data;
+		}
+
+		$object = &$data['object'];
+
+		// Generate ID if missing.
+		if ( empty( $object['id'] ) ) {
+			$uuid         = \wp_generate_uuid4();
+			$object['id'] = get_rest_url_by_path( 'objects/' . $uuid );
+		}
+
+		// Set attributedTo if missing.
+		if ( empty( $object['attributedTo'] ) && $user ) {
+			$object['attributedTo'] = $user->get_id();
+		}
+
+		// Set published if missing.
+		if ( empty( $object['published'] ) ) {
+			$object['published'] = \gmdate( 'Y-m-d\TH:i:s\Z' );
+		}
+
+		return $data;
 	}
 }

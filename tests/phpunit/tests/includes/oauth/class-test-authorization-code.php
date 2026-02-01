@@ -387,7 +387,7 @@ class Test_Authorization_Code extends \WP_UnitTestCase {
 		);
 
 		$this->assertInstanceOf( \WP_Error::class, $result );
-		$this->assertEquals( 'activitypub_invalid_code', $result->get_error_code() );
+		$this->assertEquals( 'activitypub_client_mismatch', $result->get_error_code() );
 	}
 
 	/**

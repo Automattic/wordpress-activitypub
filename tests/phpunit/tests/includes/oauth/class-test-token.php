@@ -270,7 +270,7 @@ class Test_Token extends \WP_UnitTestCase {
 		$result   = Token::refresh( $original['refresh_token'], 'wrong_client_id' );
 
 		$this->assertInstanceOf( \WP_Error::class, $result );
-		$this->assertEquals( 'activitypub_invalid_refresh_token', $result->get_error_code() );
+		$this->assertEquals( 'activitypub_client_mismatch', $result->get_error_code() );
 	}
 
 	/**

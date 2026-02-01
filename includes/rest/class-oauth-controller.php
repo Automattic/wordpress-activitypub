@@ -114,6 +114,31 @@ class OAuth_Controller extends \WP_REST_Controller {
 			)
 		);
 
+		// Token introspection endpoint (RFC 7662).
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/introspect',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'introspect' ),
+					'permission_callback' => '__return_true',
+					'args'                => array(
+						'token'           => array(
+							'description' => 'The token to introspect.',
+							'type'        => 'string',
+							'required'    => true,
+						),
+						'token_type_hint' => array(
+							'description' => 'Hint about the token type.',
+							'type'        => 'string',
+							'enum'        => array( 'access_token', 'refresh_token' ),
+						),
+					),
+				),
+			)
+		);
+
 		// Dynamic client registration (RFC 7591).
 		\register_rest_route(
 			$this->namespace,
@@ -169,7 +194,7 @@ class OAuth_Controller extends \WP_REST_Controller {
 	/**
 	 * Handle authorization request (GET /oauth/authorize).
 	 *
-	 * Displays authorization page or redirects to WP login.
+	 * Validates request parameters and redirects to wp-admin consent page.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return \WP_REST_Response|\WP_Error
@@ -226,34 +251,27 @@ class OAuth_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// If user is not logged in, redirect to login page.
-		if ( ! \is_user_logged_in() ) {
-			$login_url = \wp_login_url( $request->get_uri() );
-			return new \WP_REST_Response(
-				null,
-				302,
-				array( 'Location' => $login_url )
-			);
-		}
-
-		// User is logged in - display consent page.
-		$scopes = Scope::validate( Scope::parse( $scope ) );
-		$user   = \wp_get_current_user();
-		$nonce  = \wp_create_nonce( 'activitypub_oauth_authorize' );
-
-		// Build consent page HTML.
-		$html = $this->render_consent_page(
-			$client,
-			$scopes,
-			$user,
-			$request->get_params(),
-			$nonce
+		// Redirect to wp-login.php with action=activitypub_authorize.
+		// This uses WordPress's login_form_{action} hook for proper cookie auth.
+		$login_url = \wp_login_url();
+		$login_url = \add_query_arg(
+			array(
+				'action'                => 'activitypub_authorize',
+				'client_id'             => $client_id,
+				'redirect_uri'          => $redirect_uri,
+				'response_type'         => $response_type,
+				'scope'                 => $scope,
+				'state'                 => $state,
+				'code_challenge'        => $code_challenge,
+				'code_challenge_method' => $request->get_param( 'code_challenge_method' ) ?: 'S256',
+			),
+			$login_url
 		);
 
 		return new \WP_REST_Response(
-			$html,
-			200,
-			array( 'Content-Type' => 'text/html; charset=' . \get_option( 'blog_charset' ) )
+			null,
+			302,
+			array( 'Location' => $login_url )
 		);
 	}
 
@@ -465,6 +483,23 @@ class OAuth_Controller extends \WP_REST_Controller {
 		Token::revoke( $token );
 
 		return new \WP_REST_Response( null, 200 );
+	}
+
+	/**
+	 * Handle token introspection (POST /oauth/introspect).
+	 *
+	 * Implements RFC 7662 Token Introspection.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return \WP_REST_Response
+	 */
+	public function introspect( \WP_REST_Request $request ) {
+		$token = $request->get_param( 'token' );
+
+		// Introspect the token.
+		$response = Token::introspect( $token );
+
+		return new \WP_REST_Response( $response, 200 );
 	}
 
 	/**

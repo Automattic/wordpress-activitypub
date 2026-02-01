@@ -70,8 +70,7 @@ function rest_init() {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
 
-	// Load OAuth endpoints if C2S is enabled.
-	OAuth\Server::init();
+	// Load OAuth REST endpoints.
 	( new Rest\OAuth_Controller() )->register_routes();
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
@@ -100,6 +99,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
@@ -177,3 +177,6 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		)
 	);
 }
+
+// Register OAuth login form handler early (before wp-login.php processes).
+\add_action( 'login_form_activitypub_authorize', array( __NAMESPACE__ . '\OAuth\Server', 'login_form_authorize' ) );

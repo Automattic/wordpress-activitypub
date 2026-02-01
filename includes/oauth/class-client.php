@@ -125,6 +125,9 @@ class Client {
 	/**
 	 * Get client by client_id.
 	 *
+	 * Supports auto-discovery: if client_id is a URL and not found locally,
+	 * fetches the Client ID Metadata Document (CIMD) and auto-registers.
+	 *
 	 * @param string $client_id The client ID.
 	 * @return Client|\WP_Error The client or error.
 	 */
@@ -141,15 +144,198 @@ class Client {
 		);
 		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 
-		if ( empty( $posts ) ) {
+		if ( ! empty( $posts ) ) {
+			return new self( $posts[0]->ID );
+		}
+
+		// If client_id is a URL, try auto-discovery.
+		if ( filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+			return self::discover_and_register( $client_id );
+		}
+
+		return new \WP_Error(
+			'activitypub_client_not_found',
+			\__( 'OAuth client not found.', 'activitypub' ),
+			array( 'status' => 404 )
+		);
+	}
+
+	/**
+	 * Discover client metadata from URL and auto-register.
+	 *
+	 * Fetches the Client ID Metadata Document (CIMD) from the client_id URL.
+	 *
+	 * @param string $client_id The client ID URL.
+	 * @return Client|\WP_Error The client or error.
+	 */
+	private static function discover_and_register( $client_id ) {
+		$metadata = self::fetch_client_metadata( $client_id );
+
+		if ( \is_wp_error( $metadata ) ) {
+			return $metadata;
+		}
+
+		// Validate client_id matches.
+		if ( ! empty( $metadata['client_id'] ) && $metadata['client_id'] !== $client_id ) {
 			return new \WP_Error(
-				'activitypub_client_not_found',
-				\__( 'OAuth client not found.', 'activitypub' ),
-				array( 'status' => 404 )
+				'activitypub_client_id_mismatch',
+				\__( 'Client ID in metadata does not match request.', 'activitypub' ),
+				array( 'status' => 400 )
 			);
 		}
 
-		return new self( $posts[0]->ID );
+		// Get redirect URIs from metadata or derive from client_id origin.
+		$redirect_uris = array();
+		if ( ! empty( $metadata['redirect_uris'] ) && is_array( $metadata['redirect_uris'] ) ) {
+			$redirect_uris = $metadata['redirect_uris'];
+		}
+
+		// Register the discovered client.
+		$name = ! empty( $metadata['client_name'] ) ? $metadata['client_name'] : $client_id;
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_type'    => self::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_title'   => $name,
+				'post_content' => '',
+				'meta_input'   => array(
+					'_activitypub_client_id'          => $client_id,
+					'_activitypub_client_secret_hash' => '', // Public client.
+					'_activitypub_redirect_uris'      => array_map( 'sanitize_url', $redirect_uris ),
+					'_activitypub_allowed_scopes'     => Scope::ALL,
+					'_activitypub_is_public'          => true,
+					'_activitypub_discovered'         => true,
+					'_activitypub_logo_uri'           => ! empty( $metadata['logo_uri'] ) ? \sanitize_url( $metadata['logo_uri'] ) : '',
+					'_activitypub_client_uri'         => ! empty( $metadata['client_uri'] ) ? \sanitize_url( $metadata['client_uri'] ) : '',
+				),
+			),
+			true
+		);
+
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		return new self( $post_id );
+	}
+
+	/**
+	 * Fetch client metadata from URL.
+	 *
+	 * Supports both CIMD JSON format and ActivityPub Application objects.
+	 *
+	 * @param string $url The client ID URL to fetch.
+	 * @return array|\WP_Error Metadata array or error.
+	 */
+	private static function fetch_client_metadata( $url ) {
+		$response = \wp_safe_remote_get(
+			$url,
+			array(
+				'timeout'     => 10,
+				'headers'     => array(
+					'Accept' => 'application/json, application/ld+json, application/activity+json',
+				),
+				'redirection' => 3,
+			)
+		);
+
+		if ( \is_wp_error( $response ) ) {
+			return new \WP_Error(
+				'activitypub_client_fetch_failed',
+				\__( 'Failed to fetch client metadata.', 'activitypub' ),
+				array( 'status' => 502 )
+			);
+		}
+
+		$code = \wp_remote_retrieve_response_code( $response );
+		if ( 200 !== $code ) {
+			return new \WP_Error(
+				'activitypub_client_fetch_failed',
+				/* translators: %d: HTTP status code */
+				sprintf( \__( 'Client metadata returned HTTP %d.', 'activitypub' ), $code ),
+				array( 'status' => 502 )
+			);
+		}
+
+		$body = \wp_remote_retrieve_body( $response );
+		$data = \json_decode( $body, true );
+
+		if ( ! is_array( $data ) ) {
+			return new \WP_Error(
+				'activitypub_client_invalid_metadata',
+				\__( 'Invalid client metadata format.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Normalize ActivityPub Application format to CIMD format.
+		return self::normalize_client_metadata( $data, $url );
+	}
+
+	/**
+	 * Normalize client metadata from various formats to standard format.
+	 *
+	 * Supports:
+	 * - CIMD (Client ID Metadata Document)
+	 * - ActivityPub Application objects
+	 *
+	 * @param array  $data The raw metadata.
+	 * @param string $url  The client ID URL.
+	 * @return array Normalized metadata.
+	 */
+	private static function normalize_client_metadata( $data, $url ) {
+		$metadata = array(
+			'client_id'     => $url,
+			'client_name'   => '',
+			'redirect_uris' => array(),
+			'logo_uri'      => '',
+			'client_uri'    => '',
+		);
+
+		// CIMD format fields.
+		if ( ! empty( $data['client_id'] ) ) {
+			$metadata['client_id'] = $data['client_id'];
+		}
+		if ( ! empty( $data['client_name'] ) ) {
+			$metadata['client_name'] = $data['client_name'];
+		}
+		if ( ! empty( $data['redirect_uris'] ) ) {
+			$metadata['redirect_uris'] = (array) $data['redirect_uris'];
+		}
+		if ( ! empty( $data['logo_uri'] ) ) {
+			$metadata['logo_uri'] = $data['logo_uri'];
+		}
+		if ( ! empty( $data['client_uri'] ) ) {
+			$metadata['client_uri'] = $data['client_uri'];
+		}
+
+		// ActivityPub Application format fields.
+		if ( ! empty( $data['type'] ) && 'Application' === $data['type'] ) {
+			if ( ! empty( $data['id'] ) ) {
+				$metadata['client_id'] = $data['id'];
+			}
+			if ( ! empty( $data['name'] ) ) {
+				$metadata['client_name'] = $data['name'];
+			}
+			// Handle redirectURI (singular) as used by ap CLI.
+			if ( ! empty( $data['redirectURI'] ) ) {
+				$metadata['redirect_uris'] = (array) $data['redirectURI'];
+			}
+			// Handle icon object.
+			if ( ! empty( $data['icon'] ) ) {
+				if ( is_string( $data['icon'] ) ) {
+					$metadata['logo_uri'] = $data['icon'];
+				} elseif ( is_array( $data['icon'] ) && ! empty( $data['icon']['url'] ) ) {
+					$metadata['logo_uri'] = $data['icon']['url'];
+				}
+			}
+			if ( ! empty( $data['url'] ) ) {
+				$metadata['client_uri'] = is_array( $data['url'] ) ? $data['url'][0] : $data['url'];
+			}
+		}
+
+		return $metadata;
 	}
 
 	/**
@@ -184,14 +370,31 @@ class Client {
 	/**
 	 * Check if redirect URI is valid for this client.
 	 *
+	 * If explicit redirect_uris are registered, requires exact match.
+	 * For auto-discovered clients without redirect_uris, uses same-origin policy.
+	 *
 	 * @param string $redirect_uri The redirect URI to validate.
 	 * @return bool True if valid.
 	 */
 	public function is_valid_redirect_uri( $redirect_uri ) {
 		$allowed_uris = $this->get_redirect_uris();
 
-		// Exact match required.
-		return in_array( $redirect_uri, $allowed_uris, true );
+		// If explicit redirect URIs are registered, require exact match.
+		if ( ! empty( $allowed_uris ) ) {
+			return in_array( $redirect_uri, $allowed_uris, true );
+		}
+
+		// For auto-discovered clients without redirect_uris, use same-origin policy.
+		// The redirect_uri must be on the same host as the client_id.
+		$client_id = $this->get_client_id();
+		if ( filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+			$client_host   = \wp_parse_url( $client_id, PHP_URL_HOST );
+			$redirect_host = \wp_parse_url( $redirect_uri, PHP_URL_HOST );
+
+			return $client_host === $redirect_host;
+		}
+
+		return false;
 	}
 
 	/**
@@ -241,6 +444,33 @@ class Client {
 	public function get_allowed_scopes() {
 		$scopes = \get_post_meta( $this->post_id, '_activitypub_allowed_scopes', true );
 		return is_array( $scopes ) ? $scopes : Scope::ALL;
+	}
+
+	/**
+	 * Get client logo URI.
+	 *
+	 * @return string The logo URI or empty string.
+	 */
+	public function get_logo_uri() {
+		return \get_post_meta( $this->post_id, '_activitypub_logo_uri', true ) ?: '';
+	}
+
+	/**
+	 * Get client URI (homepage).
+	 *
+	 * @return string The client URI or empty string.
+	 */
+	public function get_client_uri() {
+		return \get_post_meta( $this->post_id, '_activitypub_client_uri', true ) ?: '';
+	}
+
+	/**
+	 * Check if this client was auto-discovered.
+	 *
+	 * @return bool True if discovered.
+	 */
+	public function is_discovered() {
+		return (bool) \get_post_meta( $this->post_id, '_activitypub_discovered', true );
 	}
 
 	/**
@@ -326,22 +556,8 @@ class Client {
 			return false;
 		}
 
-		// Delete all tokens for this client.
-		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Token cleanup by client ID is necessary.
-		$tokens = \get_posts(
-			array(
-				'post_type'   => Token::POST_TYPE,
-				'meta_key'    => '_activitypub_client_id',
-				'meta_value'  => $client_id,
-				'numberposts' => -1,
-				'fields'      => 'ids',
-			)
-		);
-		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-
-		foreach ( $tokens as $token_id ) {
-			\wp_delete_post( $token_id, true );
-		}
+		// Delete all tokens for this client (tokens are stored in user meta).
+		Token::revoke_for_client( $client_id );
 
 		// Delete the client.
 		return (bool) \wp_delete_post( $client->post_id, true );

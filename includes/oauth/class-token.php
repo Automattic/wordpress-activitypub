@@ -10,23 +10,19 @@ namespace Activitypub\OAuth;
 /**
  * Token class for managing OAuth 2.0 access and refresh tokens.
  *
- * Tokens are stored as Custom Post Types with hashed values for security.
+ * Tokens are stored as user metadata with hashed values for security.
+ * This follows the IndieAuth pattern for efficient token management.
  */
 class Token {
 	/**
-	 * Post type for OAuth tokens.
+	 * User meta key prefix for OAuth tokens.
 	 */
-	const POST_TYPE = 'ap_oauth_token';
+	const META_PREFIX = '_activitypub_oauth_token_';
 
 	/**
-	 * Post status for active tokens.
+	 * Option key for tracking users with tokens (for cleanup).
 	 */
-	const STATUS_ACTIVE = 'publish';
-
-	/**
-	 * Post status for revoked tokens.
-	 */
-	const STATUS_REVOKED = 'draft';
+	const USERS_OPTION = 'activitypub_oauth_token_users';
 
 	/**
 	 * Default access token expiration in seconds (1 hour).
@@ -34,19 +30,42 @@ class Token {
 	const DEFAULT_EXPIRATION = 3600;
 
 	/**
-	 * The post ID of the token.
+	 * Refresh token expiration in seconds (30 days).
+	 */
+	const REFRESH_EXPIRATION = 2592000;
+
+	/**
+	 * The token data array.
+	 *
+	 * @var array
+	 */
+	private $data;
+
+	/**
+	 * The user ID this token belongs to.
 	 *
 	 * @var int
 	 */
-	private $post_id;
+	private $user_id;
+
+	/**
+	 * The token key (hash) used for storage.
+	 *
+	 * @var string
+	 */
+	private $token_key;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param int $post_id The post ID of the token.
+	 * @param int    $user_id   The user ID.
+	 * @param string $token_key The token key (hash).
+	 * @param array  $data      The token data.
 	 */
-	public function __construct( $post_id ) {
-		$this->post_id = $post_id;
+	public function __construct( $user_id, $token_key, $data ) {
+		$this->user_id   = $user_id;
+		$this->token_key = $token_key;
+		$this->data      = $data;
 	}
 
 	/**
@@ -63,35 +82,36 @@ class Token {
 		$access_token  = self::generate_token();
 		$refresh_token = self::generate_token();
 
-		// Calculate expiration.
-		$expires_at = time() + $expires;
+		// Calculate expirations.
+		$access_expires_at  = time() + $expires;
+		$refresh_expires_at = time() + self::REFRESH_EXPIRATION;
 
-		// Create the token post.
-		$post_id = \wp_insert_post(
-			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => self::STATUS_ACTIVE,
-				'post_author' => $user_id,
-				'post_title'  => sprintf(
-					/* translators: %1$s: client ID, %2$s: user login */
-					\__( 'Token for %1$s (%2$s)', 'activitypub' ),
-					$client_id,
-					\get_userdata( $user_id )->user_login ?? $user_id
-				),
-				'meta_input'  => array(
-					'_activitypub_access_token_hash'  => self::hash_token( $access_token ),
-					'_activitypub_refresh_token_hash' => self::hash_token( $refresh_token ),
-					'_activitypub_client_id'          => $client_id,
-					'_activitypub_scopes'             => Scope::validate( $scopes ),
-					'_activitypub_expires_at'         => $expires_at,
-				),
-			),
-			true
+		// Create token data.
+		$token_data = array(
+			'access_token_hash'  => self::hash_token( $access_token ),
+			'refresh_token_hash' => self::hash_token( $refresh_token ),
+			'client_id'          => $client_id,
+			'scopes'             => Scope::validate( $scopes ),
+			'expires_at'         => $access_expires_at,
+			'refresh_expires_at' => $refresh_expires_at,
+			'created_at'         => time(),
+			'last_used_at'       => null,
 		);
 
-		if ( \is_wp_error( $post_id ) ) {
-			return $post_id;
+		// Store in user meta with access token hash as key.
+		$meta_key = self::META_PREFIX . self::hash_token( $access_token );
+		$result   = \update_user_meta( $user_id, $meta_key, $token_data );
+
+		if ( false === $result ) {
+			return new \WP_Error(
+				'activitypub_token_storage_failed',
+				\__( 'Failed to store access token.', 'activitypub' ),
+				array( 'status' => 500 )
+			);
 		}
+
+		// Track user for cleanup.
+		self::track_user( $user_id );
 
 		return array(
 			'access_token'  => $access_token,
@@ -109,40 +129,43 @@ class Token {
 	 * @return Token|\WP_Error The token object or error.
 	 */
 	public static function validate( $token ) {
-		$hash = self::hash_token( $token );
+		$token_hash = self::hash_token( $token );
+		$meta_key   = self::META_PREFIX . $token_hash;
 
-		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Token lookup by hash is necessary.
-		$posts = \get_posts(
-			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => self::STATUS_ACTIVE,
-				'meta_key'    => '_activitypub_access_token_hash',
-				'meta_value'  => $hash,
-				'numberposts' => 1,
-			)
+		// Search for the token across all users with tokens.
+		$users = self::get_tracked_users();
+
+		foreach ( $users as $user_id ) {
+			$token_data = \get_user_meta( $user_id, $meta_key, true );
+
+			if ( ! empty( $token_data ) && is_array( $token_data ) ) {
+				// Verify hash matches.
+				if ( isset( $token_data['access_token_hash'] ) &&
+					hash_equals( $token_data['access_token_hash'], $token_hash ) ) {
+
+					// Check expiration.
+					if ( isset( $token_data['expires_at'] ) && $token_data['expires_at'] < time() ) {
+						return new \WP_Error(
+							'activitypub_token_expired',
+							\__( 'Access token has expired.', 'activitypub' ),
+							array( 'status' => 401 )
+						);
+					}
+
+					// Update last used timestamp.
+					$token_data['last_used_at'] = time();
+					\update_user_meta( $user_id, $meta_key, $token_data );
+
+					return new self( $user_id, $token_hash, $token_data );
+				}
+			}
+		}
+
+		return new \WP_Error(
+			'activitypub_invalid_token',
+			\__( 'Invalid access token.', 'activitypub' ),
+			array( 'status' => 401 )
 		);
-		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-
-		if ( empty( $posts ) ) {
-			return new \WP_Error(
-				'activitypub_invalid_token',
-				\__( 'Invalid or expired access token.', 'activitypub' ),
-				array( 'status' => 401 )
-			);
-		}
-
-		$post       = $posts[0];
-		$expires_at = (int) \get_post_meta( $post->ID, '_activitypub_expires_at', true );
-
-		if ( $expires_at < time() ) {
-			return new \WP_Error(
-				'activitypub_token_expired',
-				\__( 'Access token has expired.', 'activitypub' ),
-				array( 'status' => 401 )
-			);
-		}
-
-		return new self( $post->ID );
 	}
 
 	/**
@@ -153,95 +176,104 @@ class Token {
 	 * @return array|\WP_Error New token data or error.
 	 */
 	public static function refresh( $refresh_token, $client_id ) {
-		$hash = self::hash_token( $refresh_token );
+		$refresh_hash = self::hash_token( $refresh_token );
+		$users        = self::get_tracked_users();
 
-		$posts = \get_posts(
-			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => self::STATUS_ACTIVE,
-				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					'relation' => 'AND',
-					array(
-						'key'   => '_activitypub_refresh_token_hash',
-						'value' => $hash,
-					),
-					array(
-						'key'   => '_activitypub_client_id',
-						'value' => $client_id,
-					),
-				),
-				'numberposts' => 1,
-			)
-		);
+		foreach ( $users as $user_id ) {
+			// Get all token meta for this user.
+			$all_meta = \get_user_meta( $user_id );
 
-		if ( empty( $posts ) ) {
-			return new \WP_Error(
-				'activitypub_invalid_refresh_token',
-				\__( 'Invalid refresh token.', 'activitypub' ),
-				array( 'status' => 401 )
-			);
+			foreach ( $all_meta as $meta_key => $meta_values ) {
+				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
+					continue;
+				}
+
+				$token_data = maybe_unserialize( $meta_values[0] );
+
+				if ( ! is_array( $token_data ) ) {
+					continue;
+				}
+
+				// Check if this is our refresh token.
+				if ( isset( $token_data['refresh_token_hash'] ) &&
+					hash_equals( $token_data['refresh_token_hash'], $refresh_hash ) ) {
+
+					// Verify client ID matches.
+					if ( $token_data['client_id'] !== $client_id ) {
+						return new \WP_Error(
+							'activitypub_client_mismatch',
+							\__( 'Client ID does not match.', 'activitypub' ),
+							array( 'status' => 400 )
+						);
+					}
+
+					// Check refresh token expiration.
+					if ( isset( $token_data['refresh_expires_at'] ) &&
+						$token_data['refresh_expires_at'] < time() ) {
+						// Delete the expired token.
+						\delete_user_meta( $user_id, $meta_key );
+
+						return new \WP_Error(
+							'activitypub_refresh_token_expired',
+							\__( 'Refresh token has expired.', 'activitypub' ),
+							array( 'status' => 401 )
+						);
+					}
+
+					// Delete the old token.
+					\delete_user_meta( $user_id, $meta_key );
+
+					// Create a new token.
+					return self::create( $user_id, $client_id, $token_data['scopes'] );
+				}
+			}
 		}
 
-		$post = $posts[0];
-
-		// Get existing data.
-		$user_id = $post->post_author;
-		$scopes  = \get_post_meta( $post->ID, '_activitypub_scopes', true );
-
-		// Revoke the old token.
-		\wp_update_post(
-			array(
-				'ID'          => $post->ID,
-				'post_status' => self::STATUS_REVOKED,
-			)
+		return new \WP_Error(
+			'activitypub_invalid_refresh_token',
+			\__( 'Invalid refresh token.', 'activitypub' ),
+			array( 'status' => 401 )
 		);
-
-		// Create a new token.
-		return self::create( $user_id, $client_id, $scopes );
 	}
 
 	/**
 	 * Revoke a token.
 	 *
 	 * @param string $token The token to revoke (access or refresh).
-	 * @return bool True on success.
+	 * @return bool True on success (always returns true per RFC 7009).
 	 */
 	public static function revoke( $token ) {
-		$hash = self::hash_token( $token );
+		$token_hash = self::hash_token( $token );
+		$users      = self::get_tracked_users();
 
-		// Check both access and refresh token hashes.
-		$posts = \get_posts(
-			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => self::STATUS_ACTIVE,
-				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					'relation' => 'OR',
-					array(
-						'key'   => '_activitypub_access_token_hash',
-						'value' => $hash,
-					),
-					array(
-						'key'   => '_activitypub_refresh_token_hash',
-						'value' => $hash,
-					),
-				),
-				'numberposts' => 1,
-			)
-		);
+		foreach ( $users as $user_id ) {
+			$all_meta = \get_user_meta( $user_id );
 
-		if ( empty( $posts ) ) {
-			// Token doesn't exist or already revoked - that's fine per RFC 7009.
-			return true;
+			foreach ( $all_meta as $meta_key => $meta_values ) {
+				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
+					continue;
+				}
+
+				$token_data = maybe_unserialize( $meta_values[0] );
+
+				if ( ! is_array( $token_data ) ) {
+					continue;
+				}
+
+				// Check both access and refresh token hashes.
+				if ( ( isset( $token_data['access_token_hash'] ) &&
+						hash_equals( $token_data['access_token_hash'], $token_hash ) ) ||
+					( isset( $token_data['refresh_token_hash'] ) &&
+						hash_equals( $token_data['refresh_token_hash'], $token_hash ) ) ) {
+
+					\delete_user_meta( $user_id, $meta_key );
+					return true;
+				}
+			}
 		}
 
-		$result = \wp_update_post(
-			array(
-				'ID'          => $posts[0]->ID,
-				'post_status' => self::STATUS_REVOKED,
-			)
-		);
-
-		return ! \is_wp_error( $result );
+		// Token doesn't exist or already revoked - that's fine per RFC 7009.
+		return true;
 	}
 
 	/**
@@ -251,29 +283,93 @@ class Token {
 	 * @return int Number of tokens revoked.
 	 */
 	public static function revoke_all_for_user( $user_id ) {
-		$posts = \get_posts(
-			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => self::STATUS_ACTIVE,
-				'author'      => $user_id,
-				'numberposts' => -1,
-			)
-		);
+		$all_meta = \get_user_meta( $user_id );
+		$count    = 0;
 
-		$count = 0;
-		foreach ( $posts as $post ) {
-			$result = \wp_update_post(
-				array(
-					'ID'          => $post->ID,
-					'post_status' => self::STATUS_REVOKED,
-				)
-			);
-			if ( ! \is_wp_error( $result ) ) {
+		foreach ( $all_meta as $meta_key => $meta_values ) {
+			if ( 0 === strpos( $meta_key, self::META_PREFIX ) ) {
+				\delete_user_meta( $user_id, $meta_key );
 				++$count;
 			}
 		}
 
+		// Remove user from tracking if no more tokens.
+		if ( $count > 0 ) {
+			self::untrack_user( $user_id );
+		}
+
 		return $count;
+	}
+
+	/**
+	 * Revoke all tokens for a specific client.
+	 *
+	 * @param string $client_id OAuth client ID.
+	 * @return int Number of tokens revoked.
+	 */
+	public static function revoke_for_client( $client_id ) {
+		$users = self::get_tracked_users();
+		$count = 0;
+
+		foreach ( $users as $user_id ) {
+			$all_meta    = \get_user_meta( $user_id );
+			$user_tokens = 0;
+
+			foreach ( $all_meta as $meta_key => $meta_values ) {
+				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
+					continue;
+				}
+
+				$token_data = maybe_unserialize( $meta_values[0] );
+
+				if ( ! is_array( $token_data ) ) {
+					continue;
+				}
+
+				// Check if this token belongs to the client.
+				if ( isset( $token_data['client_id'] ) && $token_data['client_id'] === $client_id ) {
+					\delete_user_meta( $user_id, $meta_key );
+					++$count;
+				} else {
+					++$user_tokens;
+				}
+			}
+
+			// Untrack user if no more tokens.
+			if ( 0 === $user_tokens ) {
+				self::untrack_user( $user_id );
+			}
+		}
+
+		return $count;
+	}
+
+	/**
+	 * Get all tokens for a user.
+	 *
+	 * @param int $user_id WordPress user ID.
+	 * @return array Array of token data.
+	 */
+	public static function get_all_for_user( $user_id ) {
+		$all_meta = \get_user_meta( $user_id );
+		$tokens   = array();
+
+		foreach ( $all_meta as $meta_key => $meta_values ) {
+			if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
+				continue;
+			}
+
+			$token_data = maybe_unserialize( $meta_values[0] );
+
+			if ( is_array( $token_data ) ) {
+				// Don't expose hashes.
+				unset( $token_data['access_token_hash'], $token_data['refresh_token_hash'] );
+				$token_data['meta_key'] = $meta_key;
+				$tokens[]               = $token_data;
+			}
+		}
+
+		return $tokens;
 	}
 
 	/**
@@ -293,8 +389,7 @@ class Token {
 	 * @return int The WordPress user ID.
 	 */
 	public function get_user_id() {
-		$post = \get_post( $this->post_id );
-		return $post ? (int) $post->post_author : 0;
+		return $this->user_id;
 	}
 
 	/**
@@ -303,7 +398,7 @@ class Token {
 	 * @return string The OAuth client ID.
 	 */
 	public function get_client_id() {
-		return \get_post_meta( $this->post_id, '_activitypub_client_id', true );
+		return $this->data['client_id'] ?? '';
 	}
 
 	/**
@@ -312,8 +407,7 @@ class Token {
 	 * @return array The granted scopes.
 	 */
 	public function get_scopes() {
-		$scopes = \get_post_meta( $this->post_id, '_activitypub_scopes', true );
-		return is_array( $scopes ) ? $scopes : array();
+		return $this->data['scopes'] ?? array();
 	}
 
 	/**
@@ -322,7 +416,7 @@ class Token {
 	 * @return int Unix timestamp.
 	 */
 	public function get_expires_at() {
-		return (int) \get_post_meta( $this->post_id, '_activitypub_expires_at', true );
+		return $this->data['expires_at'] ?? 0;
 	}
 
 	/**
@@ -332,6 +426,24 @@ class Token {
 	 */
 	public function is_expired() {
 		return $this->get_expires_at() < time();
+	}
+
+	/**
+	 * Get the creation timestamp.
+	 *
+	 * @return int Unix timestamp.
+	 */
+	public function get_created_at() {
+		return $this->data['created_at'] ?? 0;
+	}
+
+	/**
+	 * Get the last used timestamp.
+	 *
+	 * @return int|null Unix timestamp or null if never used.
+	 */
+	public function get_last_used_at() {
+		return $this->data['last_used_at'] ?? null;
 	}
 
 	/**
@@ -355,6 +467,43 @@ class Token {
 	}
 
 	/**
+	 * Track a user as having tokens.
+	 *
+	 * @param int $user_id The user ID.
+	 */
+	private static function track_user( $user_id ) {
+		$users = self::get_tracked_users();
+		if ( ! in_array( $user_id, $users, true ) ) {
+			$users[] = $user_id;
+			\update_option( self::USERS_OPTION, $users, false );
+		}
+	}
+
+	/**
+	 * Untrack a user (when they have no more tokens).
+	 *
+	 * @param int $user_id The user ID.
+	 */
+	private static function untrack_user( $user_id ) {
+		$users = self::get_tracked_users();
+		$key   = array_search( $user_id, $users, true );
+		if ( false !== $key ) {
+			unset( $users[ $key ] );
+			\update_option( self::USERS_OPTION, array_values( $users ), false );
+		}
+	}
+
+	/**
+	 * Get all tracked users with tokens.
+	 *
+	 * @return array User IDs.
+	 */
+	private static function get_tracked_users() {
+		$users = \get_option( self::USERS_OPTION, array() );
+		return is_array( $users ) ? $users : array();
+	}
+
+	/**
 	 * Clean up expired tokens.
 	 *
 	 * Should be called periodically via cron.
@@ -362,27 +511,74 @@ class Token {
 	 * @return int Number of tokens deleted.
 	 */
 	public static function cleanup_expired() {
-		global $wpdb;
-
-		$expired_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->prepare(
-				"SELECT p.ID FROM {$wpdb->posts} p
-				INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-				WHERE p.post_type = %s
-				AND pm.meta_key = '_activitypub_expires_at'
-				AND pm.meta_value < %d",
-				self::POST_TYPE,
-				time() - DAY_IN_SECONDS // Grace period of 1 day.
-			)
-		);
-
+		$users = self::get_tracked_users();
 		$count = 0;
-		foreach ( $expired_ids as $post_id ) {
-			if ( \wp_delete_post( $post_id, true ) ) {
-				++$count;
+
+		foreach ( $users as $user_id ) {
+			$all_meta    = \get_user_meta( $user_id );
+			$user_tokens = 0;
+
+			foreach ( $all_meta as $meta_key => $meta_values ) {
+				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
+					continue;
+				}
+
+				$token_data = maybe_unserialize( $meta_values[0] );
+
+				if ( ! is_array( $token_data ) ) {
+					\delete_user_meta( $user_id, $meta_key );
+					++$count;
+					continue;
+				}
+
+				// Check if both access and refresh tokens are expired.
+				$access_expired  = isset( $token_data['expires_at'] ) &&
+					$token_data['expires_at'] < time() - DAY_IN_SECONDS;
+				$refresh_expired = isset( $token_data['refresh_expires_at'] ) &&
+					$token_data['refresh_expires_at'] < time();
+
+				if ( $access_expired && $refresh_expired ) {
+					\delete_user_meta( $user_id, $meta_key );
+					++$count;
+				} else {
+					++$user_tokens;
+				}
+			}
+
+			// Untrack user if no more tokens.
+			if ( 0 === $user_tokens ) {
+				self::untrack_user( $user_id );
 			}
 		}
 
 		return $count;
+	}
+
+	/**
+	 * Introspect a token (RFC 7662).
+	 *
+	 * @param string $token The token to introspect.
+	 * @return array Token introspection response.
+	 */
+	public static function introspect( $token ) {
+		$validated = self::validate( $token );
+
+		if ( \is_wp_error( $validated ) ) {
+			// Return inactive for invalid/expired tokens.
+			return array( 'active' => false );
+		}
+
+		$user = \get_userdata( $validated->get_user_id() );
+
+		return array(
+			'active'     => true,
+			'scope'      => Scope::to_string( $validated->get_scopes() ),
+			'client_id'  => $validated->get_client_id(),
+			'username'   => $user ? $user->user_login : null,
+			'token_type' => 'Bearer',
+			'exp'        => $validated->get_expires_at(),
+			'iat'        => $validated->get_created_at(),
+			'sub'        => (string) $validated->get_user_id(),
+		);
 	}
 }
