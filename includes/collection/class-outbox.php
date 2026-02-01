@@ -191,6 +191,37 @@ class Outbox {
 	}
 
 	/**
+	 * Get an outbox item by object ID and activity type.
+	 *
+	 * @param string $object_id     The ActivityPub object ID.
+	 * @param string $activity_type The activity type (Create, Update, etc.).
+	 *
+	 * @return \WP_Post|null The outbox item or null if not found.
+	 */
+	public static function get_by_object_id( $object_id, $activity_type ) {
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => 1,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $object_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => $activity_type,
+					),
+				),
+			)
+		);
+
+		return ! empty( $outbox_items ) ? $outbox_items[0] : null;
+	}
+
+	/**
 	 * Get an outbox item by its GUID.
 	 *
 	 * @param string $guid The GUID of the outbox item.

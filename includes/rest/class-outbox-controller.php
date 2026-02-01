@@ -410,7 +410,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 * Filters the activity to add to outbox.
 		 *
 		 * Handlers can process the activity and return:
-		 * - int: The outbox post ID (handler called add_to_outbox)
+		 * - WP_Post: A WordPress post was created (scheduler adds to outbox)
 		 * - WP_Error: Stop processing and return error
 		 * - Other: No handler processed the activity (fallback to default)
 		 *
@@ -424,17 +424,19 @@ class Outbox_Controller extends \WP_REST_Controller {
 			return $result;
 		}
 
-		// If handler returned an outbox ID, use it.
-		if ( \is_int( $result ) ) {
-			$outbox_id = $result;
+		// If handler returned a WP_Post, the scheduler already added it to outbox.
+		if ( $result instanceof \WP_Post ) {
+			$object_id     = \Activitypub\get_post_id( $result->ID );
+			$activity_type = \ucfirst( $data['type'] ?? 'Create' );
+			$outbox_item   = Outbox::get_by_object_id( $object_id, $activity_type );
 		} else {
-			// Default handling.
-			$data      = \is_array( $result ) ? $result : $data;
-			$data      = $this->ensure_object_id( $data, $user );
-			$outbox_id = add_to_outbox( $data, null, $user_id, $visibility );
+			// Default handling for raw activities.
+			$data        = \is_array( $result ) ? $result : $data;
+			$data        = $this->ensure_object_id( $data, $user );
+			$outbox_item = \get_post( add_to_outbox( $data, null, $user_id, $visibility ) );
 		}
 
-		if ( ! $outbox_id || \is_wp_error( $outbox_id ) ) {
+		if ( ! $outbox_item ) {
 			return new \WP_Error(
 				'activitypub_outbox_error',
 				\__( 'Failed to add activity to outbox.', 'activitypub' ),
@@ -443,7 +445,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		}
 
 		// Get the stored activity.
-		$activity = Outbox::get_activity( $outbox_id );
+		$activity = Outbox::get_activity( $outbox_item );
 
 		if ( \is_wp_error( $activity ) ) {
 			return $activity;
@@ -453,7 +455,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		// Return 201 Created with Location header.
 		$response = new \WP_REST_Response( $result, 201 );
-		$response->header( 'Location', $result['id'] ?? \get_the_guid( $outbox_id ) );
+		$response->header( 'Location', $result['id'] ?? $outbox_item->guid );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;

@@ -11,7 +11,6 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Posts;
 use Activitypub\Tombstone;
 
-use function Activitypub\add_to_outbox;
 use function Activitypub\get_activity_visibility;
 use function Activitypub\get_content_visibility;
 use function Activitypub\is_activity_reply;
@@ -175,13 +174,13 @@ class Create {
 	/**
 	 * Handle outgoing post from local actor.
 	 *
-	 * Creates a WordPress post and adds to outbox for federation.
+	 * Creates a WordPress post. The scheduler will add it to the outbox.
 	 *
 	 * @param array       $activity   The activity data.
 	 * @param int         $user_id    The local user ID.
 	 * @param string|null $visibility Content visibility.
 	 *
-	 * @return int|\WP_Error The outbox ID on success, WP_Error on failure.
+	 * @return \WP_Post|\WP_Error The created post on success, WP_Error on failure.
 	 */
 	private static function outgoing_post( $activity, $user_id, $visibility ) {
 		$object = $activity['object'] ?? array();
@@ -210,8 +209,6 @@ class Create {
 			'post_type'    => 'post',
 			'meta_input'   => array(
 				'activitypub_content_visibility' => $visibility,
-				// Mark the post as federated to prevent the scheduler from also adding it to outbox.
-				'activitypub_status'             => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 			),
 		);
 
@@ -233,8 +230,7 @@ class Create {
 		 */
 		\do_action( 'activitypub_outbox_created_post', $post_id, $activity, $user_id, $visibility );
 
-		// Add to outbox and return the outbox ID.
-		return add_to_outbox( $post, 'Create', $user_id, $visibility );
+		return $post;
 	}
 
 	/**
