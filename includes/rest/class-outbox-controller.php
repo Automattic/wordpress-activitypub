@@ -375,7 +375,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error on failure.
 	 */
-	public function create_item( \WP_REST_Request $request ) {
+	public function create_item( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 		$user    = Actors::get_by_id( $user_id );
 		$data    = $request->get_json_params();
