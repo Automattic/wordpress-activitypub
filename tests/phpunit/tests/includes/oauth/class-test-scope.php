@@ -18,8 +18,6 @@ class Test_Scope extends \WP_UnitTestCase {
 
 	/**
 	 * Test that all scope constants are defined.
-	 *
-	 * @covers ::ALL
 	 */
 	public function test_scope_constants_defined() {
 		$this->assertEquals( 'read', Scope::READ );
@@ -31,8 +29,6 @@ class Test_Scope extends \WP_UnitTestCase {
 
 	/**
 	 * Test ALL constant contains all scopes.
-	 *
-	 * @covers ::ALL
 	 */
 	public function test_all_scopes_constant() {
 		$this->assertContains( Scope::READ, Scope::ALL );
