@@ -23,18 +23,18 @@ class Follow {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow' ), 10, 2 );
+		\add_action( 'activitypub_inbox_follow', array( self::class, 'incoming' ), 10, 2 );
 		\add_action( 'activitypub_handled_follow', array( self::class, 'queue_accept' ), 10, 4 );
-		\add_action( 'activitypub_handled_outbox_follow', array( self::class, 'handle_outbox_follow' ), 10, 4 );
+		\add_action( 'activitypub_handled_outbox_follow', array( self::class, 'outgoing' ), 10, 4 );
 	}
 
 	/**
-	 * Handle "Follow" requests.
+	 * Handle incoming "Follow" requests from remote actors.
 	 *
 	 * @param array     $activity The activity object.
 	 * @param int|int[] $user_ids The user ID(s).
 	 */
-	public static function handle_follow( $activity, $user_ids ) {
+	public static function incoming( $activity, $user_ids ) {
 		// Extract the user ID (follow requests are always for a single user).
 		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 
@@ -152,7 +152,7 @@ class Follow {
 	}
 
 	/**
-	 * Handle outbox "Follow" activities (C2S).
+	 * Handle outgoing "Follow" activities from local actors.
 	 *
 	 * Adds the target actor to the user's following list (pending until accepted).
 	 *
@@ -161,7 +161,7 @@ class Follow {
 	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
 	 * @param int                            $outbox_id  The outbox post ID.
 	 */
-	public static function handle_outbox_follow( $data, $user_id, $activity, $outbox_id ) {
+	public static function outgoing( $data, $user_id, $activity, $outbox_id ) {
 		$object = $data['object'] ?? '';
 
 		// The object should be the actor URL to follow.
@@ -189,13 +189,43 @@ class Follow {
 		\add_post_meta( $remote_actor->ID, Following::PENDING_META_KEY, (string) $user_id );
 
 		/**
-		 * Fires after a Follow activity has been sent via C2S.
+		 * Fires after an outgoing Follow activity has been processed.
 		 *
-		 * @param int      $remote_actor_id The remote actor post ID.
-		 * @param array    $data            The activity data.
-		 * @param int      $user_id         The user ID.
-		 * @param int      $outbox_id       The outbox post ID.
+		 * @param int   $remote_actor_id The remote actor post ID.
+		 * @param array $data            The activity data.
+		 * @param int   $user_id         The user ID.
+		 * @param int   $outbox_id       The outbox post ID.
 		 */
 		\do_action( 'activitypub_outbox_follow_sent', $remote_actor->ID, $data, $user_id, $outbox_id );
+	}
+
+	/**
+	 * Handle "Follow" requests.
+	 *
+	 * @deprecated unreleased Use Follow::incoming() instead.
+	 *
+	 * @param array     $activity The activity object.
+	 * @param int|int[] $user_ids The user ID(s).
+	 */
+	public static function handle_follow( $activity, $user_ids ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Follow::incoming()' );
+
+		return self::incoming( $activity, $user_ids );
+	}
+
+	/**
+	 * Handle outbox "Follow" activities.
+	 *
+	 * @deprecated unreleased Use Follow::outgoing() instead.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_follow( $data, $user_id, $activity, $outbox_id ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Follow::outgoing()' );
+
+		return self::outgoing( $data, $user_id, $activity, $outbox_id );
 	}
 }

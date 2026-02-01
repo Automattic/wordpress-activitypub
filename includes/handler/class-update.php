@@ -22,18 +22,18 @@ class Update {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_handled_inbox_update', array( self::class, 'handle_update' ), 10, 3 );
-		\add_action( 'activitypub_handled_outbox_update', array( self::class, 'handle_outbox_update' ), 10, 4 );
+		\add_action( 'activitypub_handled_inbox_update', array( self::class, 'incoming' ), 10, 3 );
+		\add_action( 'activitypub_handled_outbox_update', array( self::class, 'outgoing' ), 10, 4 );
 	}
 
 	/**
-	 * Handle "Update" requests.
+	 * Handle incoming "Update" requests from remote actors.
 	 *
 	 * @param array                          $activity        The Activity object.
 	 * @param int[]                          $user_ids        The user IDs. Always null for Update activities.
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
-	public static function handle_update( $activity, $user_ids, $activity_object ) {
+	public static function incoming( $activity, $user_ids, $activity_object ) {
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
@@ -105,7 +105,7 @@ class Update {
 
 		// There is no object to update, try to trigger create instead.
 		if ( ! $updated ) {
-			return Create::handle_create( $activity, $user_ids, $activity_object );
+			return Create::incoming( $activity, $user_ids, $activity_object );
 		}
 
 		$success = ( $result && ! \is_wp_error( $result ) );
@@ -149,7 +149,7 @@ class Update {
 	}
 
 	/**
-	 * Handle outbox "Update" activities (C2S).
+	 * Handle outgoing "Update" activities from local actors.
 	 *
 	 * Updates a WordPress post from the ActivityPub object.
 	 *
@@ -158,7 +158,7 @@ class Update {
 	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
 	 * @param int                            $outbox_id  The outbox post ID.
 	 */
-	public static function handle_outbox_update( $data, $user_id, $activity, $outbox_id ) {
+	public static function outgoing( $data, $user_id, $activity, $outbox_id ) {
 		$object = $data['object'] ?? array();
 
 		if ( ! \is_array( $object ) ) {
@@ -214,7 +214,7 @@ class Update {
 		}
 
 		/**
-		 * Fires after a post has been updated from a C2S Update activity.
+		 * Fires after a post has been updated from an outgoing Update activity.
 		 *
 		 * @param int   $post_id    The updated post ID.
 		 * @param array $data       The activity data.
@@ -222,5 +222,36 @@ class Update {
 		 * @param int   $outbox_id  The outbox post ID.
 		 */
 		\do_action( 'activitypub_outbox_updated_post', $post_id, $data, $user_id, $outbox_id );
+	}
+
+	/**
+	 * Handle "Update" requests.
+	 *
+	 * @deprecated unreleased Use Update::incoming() instead.
+	 *
+	 * @param array                          $activity        The Activity object.
+	 * @param int[]                          $user_ids        The user IDs.
+	 * @param \Activitypub\Activity\Activity $activity_object The activity object.
+	 */
+	public static function handle_update( $activity, $user_ids, $activity_object ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Update::incoming()' );
+
+		return self::incoming( $activity, $user_ids, $activity_object );
+	}
+
+	/**
+	 * Handle outbox "Update" activities.
+	 *
+	 * @deprecated unreleased Use Update::outgoing() instead.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_update( $data, $user_id, $activity, $outbox_id ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Update::outgoing()' );
+
+		return self::outgoing( $data, $user_id, $activity, $outbox_id );
 	}
 }

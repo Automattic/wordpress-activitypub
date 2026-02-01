@@ -15,7 +15,6 @@ use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\camel_to_snake_case;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 
@@ -366,11 +365,10 @@ class Outbox_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Create an item in the outbox (C2S).
+	 * Create an item in the outbox.
 	 *
-	 * Follows the same pattern as the Inbox controller:
-	 * 1. Store the activity in the outbox
-	 * 2. Trigger action hooks for handlers to process
+	 * Fires handlers via filter to process the activity. Handlers are responsible
+	 * for calling add_to_outbox() and returning the outbox_id.
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error on failure.
@@ -403,16 +401,38 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$data = $this->wrap_in_create( $data, $user );
 		}
 
-		// Ensure the object has an ID (required for outbox storage).
-		$data = $this->ensure_object_id( $data, $user );
-
-		$activity_type = camel_to_snake_case( $data['type'] ?? '' );
-
 		// Determine visibility from addressing.
 		$visibility = $this->determine_visibility( $data );
 
-		// Add to outbox - this handles storage and triggers federation.
-		$outbox_id = add_to_outbox( $data, null, $user_id, $visibility );
+		$type = \strtolower( $data['type'] ?? 'create' );
+
+		/**
+		 * Filters the activity to add to outbox.
+		 *
+		 * Handlers can process the activity and return:
+		 * - int: The outbox post ID (handler called add_to_outbox)
+		 * - WP_Error: Stop processing and return error
+		 * - Other: No handler processed the activity (fallback to default)
+		 *
+		 * @param array  $data       The activity data.
+		 * @param int    $user_id    The user ID.
+		 * @param string $visibility Content visibility.
+		 */
+		$result = \apply_filters( 'activitypub_outbox_' . $type, $data, $user_id, $visibility );
+
+		if ( \is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		// If handler returned an outbox ID, use it.
+		if ( \is_int( $result ) ) {
+			$outbox_id = $result;
+		} else {
+			// Default handling.
+			$data      = \is_array( $result ) ? $result : $data;
+			$data      = $this->ensure_object_id( $data, $user );
+			$outbox_id = add_to_outbox( $data, null, $user_id, $visibility );
+		}
 
 		if ( ! $outbox_id || \is_wp_error( $outbox_id ) ) {
 			return new \WP_Error(
@@ -422,51 +442,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// Get the stored activity for hooks.
+		// Get the stored activity.
 		$activity = Outbox::get_activity( $outbox_id );
-
-		/**
-		 * Fires for each outbox activity.
-		 *
-		 * @param array                          $data     The activity data array.
-		 * @param int                            $user_id  The user ID.
-		 * @param string                         $type     The activity type (snake_case).
-		 * @param \Activitypub\Activity\Activity $activity The Activity object.
-		 */
-		\do_action( 'activitypub_outbox', $data, $user_id, $activity_type, $activity );
-
-		/**
-		 * Fires for specific outbox activity types.
-		 *
-		 * The dynamic portion of the hook name, `$activity_type`, refers to the
-		 * activity type in snake_case (e.g., 'create', 'update', 'delete', 'like').
-		 *
-		 * @param array                          $data     The activity data array.
-		 * @param int                            $user_id  The user ID.
-		 * @param \Activitypub\Activity\Activity $activity The Activity object.
-		 */
-		\do_action( 'activitypub_outbox_' . $activity_type, $data, $user_id, $activity );
-
-		/**
-		 * Fires after an outbox activity has been stored.
-		 *
-		 * @param array                          $data       The activity data array.
-		 * @param int                            $user_id    The user ID.
-		 * @param string                         $type       The activity type (snake_case).
-		 * @param \Activitypub\Activity\Activity $activity   The Activity object.
-		 * @param int                            $outbox_id  The outbox post ID.
-		 */
-		\do_action( 'activitypub_handled_outbox', $data, $user_id, $activity_type, $activity, $outbox_id );
-
-		/**
-		 * Fires after a specific outbox activity type has been stored.
-		 *
-		 * @param array                          $data       The activity data array.
-		 * @param int                            $user_id    The user ID.
-		 * @param \Activitypub\Activity\Activity $activity   The Activity object.
-		 * @param int                            $outbox_id  The outbox post ID.
-		 */
-		\do_action( 'activitypub_handled_outbox_' . $activity_type, $data, $user_id, $activity, $outbox_id );
 
 		if ( \is_wp_error( $activity ) ) {
 			return $activity;

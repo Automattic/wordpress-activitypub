@@ -24,18 +24,18 @@ class Announce {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_announce', array( self::class, 'handle_announce' ), 10, 3 );
-		\add_action( 'activitypub_handled_outbox_announce', array( self::class, 'handle_outbox_announce' ), 10, 4 );
+		\add_action( 'activitypub_inbox_announce', array( self::class, 'incoming' ), 10, 3 );
+		\add_action( 'activitypub_handled_outbox_announce', array( self::class, 'outgoing' ), 10, 4 );
 	}
 
 	/**
-	 * Handles "Announce" requests.
+	 * Handle incoming "Announce" requests from remote actors.
 	 *
 	 * @param array                          $announcement The activity-object.
 	 * @param int|int[]                      $user_ids     The id(s) of the local blog-user(s).
 	 * @param \Activitypub\Activity\Activity $activity     The activity object.
 	 */
-	public static function handle_announce( $announcement, $user_ids, $activity = null ) {
+	public static function incoming( $announcement, $user_ids, $activity = null ) {
 		// Check if Activity is public or not.
 		if ( ! is_activity_public( $announcement ) ) {
 			// @todo maybe send email
@@ -133,7 +133,7 @@ class Announce {
 	}
 
 	/**
-	 * Handle outbox "Announce" activities (C2S).
+	 * Handle outgoing "Announce" activities from local actors.
 	 *
 	 * Records an announce/boost from the local user on remote content.
 	 *
@@ -142,7 +142,7 @@ class Announce {
 	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
 	 * @param int                            $outbox_id  The outbox post ID.
 	 */
-	public static function handle_outbox_announce( $data, $user_id, $activity, $outbox_id ) {
+	public static function outgoing( $data, $user_id, $activity, $outbox_id ) {
 		$object_url = object_to_uri( $data['object'] ?? '' );
 
 		if ( empty( $object_url ) ) {
@@ -150,7 +150,7 @@ class Announce {
 		}
 
 		/**
-		 * Fires after an Announce activity has been sent via C2S.
+		 * Fires after an outgoing Announce activity has been processed.
 		 *
 		 * @param string $object_url The URL of the announced object.
 		 * @param array  $data       The activity data.
@@ -158,5 +158,36 @@ class Announce {
 		 * @param int    $outbox_id  The outbox post ID.
 		 */
 		\do_action( 'activitypub_outbox_announce_sent', $object_url, $data, $user_id, $outbox_id );
+	}
+
+	/**
+	 * Handle "Announce" requests.
+	 *
+	 * @deprecated unreleased Use Announce::incoming() instead.
+	 *
+	 * @param array                          $announcement The activity-object.
+	 * @param int|int[]                      $user_ids     The id(s) of the local blog-user(s).
+	 * @param \Activitypub\Activity\Activity $activity     The activity object.
+	 */
+	public static function handle_announce( $announcement, $user_ids, $activity = null ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Announce::incoming()' );
+
+		return self::incoming( $announcement, $user_ids, $activity );
+	}
+
+	/**
+	 * Handle outbox "Announce" activities.
+	 *
+	 * @deprecated unreleased Use Announce::outgoing() instead.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_announce( $data, $user_id, $activity, $outbox_id ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Announce::outgoing()' );
+
+		return self::outgoing( $data, $user_id, $activity, $outbox_id );
 	}
 }

@@ -22,8 +22,8 @@ class Delete {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
-		\add_action( 'activitypub_handled_outbox_delete', array( self::class, 'handle_outbox_delete' ), 10, 4 );
+		\add_action( 'activitypub_inbox_delete', array( self::class, 'incoming' ), 10, 2 );
+		\add_action( 'activitypub_handled_outbox_delete', array( self::class, 'outgoing' ), 10, 4 );
 		\add_filter( 'activitypub_skip_inbox_storage', array( self::class, 'skip_inbox_storage' ), 10, 2 );
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
 		\add_action( 'activitypub_delete_remote_actor_interactions', array( self::class, 'delete_interactions' ) );
@@ -34,12 +34,12 @@ class Delete {
 	}
 
 	/**
-	 * Handles "Delete" requests.
+	 * Handle incoming "Delete" requests from remote actors.
 	 *
 	 * @param array     $activity The delete activity.
 	 * @param int|int[] $user_ids The local user ID(s).
 	 */
-	public static function handle_delete( $activity, $user_ids ) {
+	public static function incoming( $activity, $user_ids ) {
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
@@ -356,7 +356,7 @@ class Delete {
 	}
 
 	/**
-	 * Handle outbox "Delete" activities (C2S).
+	 * Handle outgoing "Delete" activities from local actors.
 	 *
 	 * Deletes a WordPress post.
 	 *
@@ -365,7 +365,7 @@ class Delete {
 	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
 	 * @param int                            $outbox_id  The outbox post ID.
 	 */
-	public static function handle_outbox_delete( $data, $user_id, $activity, $outbox_id ) {
+	public static function outgoing( $data, $user_id, $activity, $outbox_id ) {
 		$object = $data['object'] ?? '';
 
 		// Get the object ID (can be a string URL or an object with an id).
@@ -395,7 +395,7 @@ class Delete {
 		}
 
 		/**
-		 * Fires after a post has been deleted from a C2S Delete activity.
+		 * Fires after a post has been deleted from an outgoing Delete activity.
 		 *
 		 * @param int   $post_id    The deleted post ID.
 		 * @param array $data       The activity data.
@@ -403,5 +403,35 @@ class Delete {
 		 * @param int   $outbox_id  The outbox post ID.
 		 */
 		\do_action( 'activitypub_outbox_deleted_post', $post->ID, $data, $user_id, $outbox_id );
+	}
+
+	/**
+	 * Handle "Delete" requests.
+	 *
+	 * @deprecated unreleased Use Delete::incoming() instead.
+	 *
+	 * @param array     $activity The delete activity.
+	 * @param int|int[] $user_ids The local user ID(s).
+	 */
+	public static function handle_delete( $activity, $user_ids ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Delete::incoming()' );
+
+		return self::incoming( $activity, $user_ids );
+	}
+
+	/**
+	 * Handle outbox "Delete" activities.
+	 *
+	 * @deprecated unreleased Use Delete::outgoing() instead.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_delete( $data, $user_id, $activity, $outbox_id ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Delete::outgoing()' );
+
+		return self::outgoing( $data, $user_id, $activity, $outbox_id );
 	}
 }

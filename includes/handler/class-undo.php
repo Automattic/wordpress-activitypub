@@ -21,18 +21,18 @@ class Undo {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_undo' ), 10, 2 );
-		\add_action( 'activitypub_handled_outbox_undo', array( self::class, 'handle_outbox_undo' ), 10, 4 );
+		\add_action( 'activitypub_inbox_undo', array( self::class, 'incoming' ), 10, 2 );
+		\add_action( 'activitypub_handled_outbox_undo', array( self::class, 'outgoing' ), 10, 4 );
 		\add_action( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
-	 * Handle "Unfollow" requests.
+	 * Handle incoming "Undo" requests from remote actors.
 	 *
 	 * @param array          $activity The JSON "Undo" Activity.
 	 * @param int|int[]|null $user_ids The user ID(s).
 	 */
-	public static function handle_undo( $activity, $user_ids ) {
+	public static function incoming( $activity, $user_ids ) {
 		$success = false;
 		$result  = Inbox_Collection::undo( object_to_uri( $activity['object'] ) );
 
@@ -87,7 +87,7 @@ class Undo {
 	}
 
 	/**
-	 * Handle outbox "Undo" activities (C2S).
+	 * Handle outgoing "Undo" activities from local actors.
 	 *
 	 * Handles Undo Follow (unfollow) activities.
 	 *
@@ -96,7 +96,7 @@ class Undo {
 	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
 	 * @param int                            $outbox_id  The outbox post ID.
 	 */
-	public static function handle_outbox_undo( $data, $user_id, $activity, $outbox_id ) {
+	public static function outgoing( $data, $user_id, $activity, $outbox_id ) {
 		$object = $data['object'] ?? array();
 
 		if ( ! \is_array( $object ) ) {
@@ -129,7 +129,7 @@ class Undo {
 		\delete_post_meta( $remote_actor->ID, Following::PENDING_META_KEY, $user_id );
 
 		/**
-		 * Fires after an Undo Follow activity has been sent via C2S.
+		 * Fires after an outgoing Undo Follow activity has been processed.
 		 *
 		 * @param int   $remote_actor_id The remote actor post ID.
 		 * @param array $data            The activity data.
@@ -137,5 +137,35 @@ class Undo {
 		 * @param int   $outbox_id       The outbox post ID.
 		 */
 		\do_action( 'activitypub_outbox_undo_follow_sent', $remote_actor->ID, $data, $user_id, $outbox_id );
+	}
+
+	/**
+	 * Handle "Undo" requests.
+	 *
+	 * @deprecated unreleased Use Undo::incoming() instead.
+	 *
+	 * @param array          $activity The JSON "Undo" Activity.
+	 * @param int|int[]|null $user_ids The user ID(s).
+	 */
+	public static function handle_undo( $activity, $user_ids ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Undo::incoming()' );
+
+		return self::incoming( $activity, $user_ids );
+	}
+
+	/**
+	 * Handle outbox "Undo" activities.
+	 *
+	 * @deprecated unreleased Use Undo::outgoing() instead.
+	 *
+	 * @param array                          $data       The activity data array.
+	 * @param int                            $user_id    The user ID.
+	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
+	 * @param int                            $outbox_id  The outbox post ID.
+	 */
+	public static function handle_outbox_undo( $data, $user_id, $activity, $outbox_id ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Undo::outgoing()' );
+
+		return self::outgoing( $data, $user_id, $activity, $outbox_id );
 	}
 }
