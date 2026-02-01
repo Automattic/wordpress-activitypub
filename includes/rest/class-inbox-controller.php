@@ -242,7 +242,8 @@ class Inbox_Controller extends \WP_REST_Controller {
 		}
 
 		// Verify the token belongs to the requested user.
-		$token = OAuth_Server::get_current_token();
+		$token   = OAuth_Server::get_current_token();
+		$user_id = absint( $user_id );
 
 		if ( ! $token || $token->get_user_id() !== $user_id ) {
 			return new \WP_Error(

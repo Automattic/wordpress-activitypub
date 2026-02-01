@@ -17,6 +17,7 @@ use Activitypub\OAuth\Server as OAuth_Server;
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\object_to_uri;
 
 /**
  * ActivityPub Outbox Controller.
@@ -350,7 +351,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		}
 
 		// Token user must match actor in URL.
-		$user_id = $request->get_param( 'user_id' );
+		$user_id = absint( $request->get_param( 'user_id' ) );
 		$token   = OAuth_Server::get_current_token();
 
 		if ( ! $token || $token->get_user_id() !== $user_id ) {

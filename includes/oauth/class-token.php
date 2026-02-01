@@ -364,7 +364,7 @@ class Token {
 			if ( is_array( $token_data ) ) {
 				// Don't expose hashes.
 				unset( $token_data['access_token_hash'], $token_data['refresh_token_hash'] );
-				$token_data['meta_key'] = $meta_key;
+				$token_data['meta_key'] = $meta_key; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Not a DB query, just array key.
 				$tokens[]               = $token_data;
 			}
 		}

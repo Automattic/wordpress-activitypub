@@ -4,18 +4,20 @@
  *
  * @package Activitypub
  *
- * Variables available:
- * @var WP_User $current_user   The current logged-in user.
- * @var array   $scopes         Array of requested scopes.
- * @var string  $client_id      The client ID.
- * @var string  $client_name    The client name.
- * @var string  $redirect_uri   The redirect URI.
- * @var string  $state          The state parameter.
- * @var string  $code_challenge The PKCE code challenge.
+ * Variables available (passed via include from class-server.php):
+ * @var WP_User $current_user          The current logged-in user.
+ * @var array   $scopes                Array of requested scopes.
+ * @var string  $client_id             The client ID.
+ * @var string  $client_name           The client name.
+ * @var string  $redirect_uri          The redirect URI.
+ * @var string  $state                 The state parameter.
+ * @var string  $code_challenge        The PKCE code challenge.
  * @var string  $code_challenge_method The PKCE method.
- * @var string  $form_url       The form action URL.
- * @var string  $scope          The original scope string.
+ * @var string  $form_url              The form action URL.
+ * @var string  $scope                 The original scope string.
  */
+
+// phpcs:disable VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable -- Variables passed via include.
 
 use Activitypub\OAuth\Scope;
 

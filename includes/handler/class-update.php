@@ -179,7 +179,14 @@ class Update {
 		}
 
 		// Find the post by its ActivityPub ID.
-		$post = Posts::get_by_guid( $object_id );
+		// First try to find a local post by permalink (for C2S-created posts).
+		$post_id = \url_to_postid( $object_id );
+		$post    = $post_id ? \get_post( $post_id ) : null;
+
+		// Fall back to Posts collection for remote posts (ap_post type).
+		if ( ! $post instanceof \WP_Post ) {
+			$post = Posts::get_by_guid( $object_id );
+		}
 
 		if ( ! $post instanceof \WP_Post ) {
 			return;

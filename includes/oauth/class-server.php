@@ -48,11 +48,21 @@ class Server {
 			return $result;
 		}
 
+		// If a previous auth filter returned an error, respect it.
+		if ( \is_wp_error( $result ) ) {
+			return $result;
+		}
+
 		// Check for Bearer token.
 		$token = self::get_bearer_token();
 
 		if ( ! $token ) {
 			// No Bearer token present - let other auth methods handle it.
+			return $result;
+		}
+
+		// Only process OAuth if C2S is enabled.
+		if ( ! self::is_c2s_enabled() ) {
 			return $result;
 		}
 
