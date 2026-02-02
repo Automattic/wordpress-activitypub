@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add bot account option for blog and user profiles. When enabled, the profile displays with a "BOT" badge on Mastodon and other Fediverse platforms.
