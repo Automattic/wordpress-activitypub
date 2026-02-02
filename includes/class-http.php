@@ -98,7 +98,6 @@ class Http {
 	 * @param bool|int $cached Optional. Whether the result should be cached, or its duration. Default false.
 	 * @param array    $args   Optional. Additional arguments to customize the request.
 	 *                         - 'headers': Array of headers to override defaults.
-	 *                         - 'signed': Whether to sign the request. Default true.
 	 *
 	 * @return array|\WP_Error The GET Response or a WP_Error.
 	 */
@@ -151,23 +150,17 @@ class Http {
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
 			'user-agent'          => "$user_agent; ActivityPub",
-			'signed'              => true,
 			'headers'             => array(
 				'Accept'       => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
 				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
+			'key_id'              => Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key',
+			'private_key'         => Actors::get_private_key( Actors::APPLICATION_USER_ID ),
 		);
 
 		$args            = \wp_parse_args( $args, $defaults );
 		$args['headers'] = \wp_parse_args( $args['headers'], $defaults['headers'] );
-
-		// Add HTTP signatures if requested.
-		if ( $args['signed'] ) {
-			$args['key_id']      = Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key';
-			$args['private_key'] = Actors::get_private_key( Actors::APPLICATION_USER_ID );
-		}
-		unset( $args['signed'] );
 
 		$response = \wp_safe_remote_get( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );

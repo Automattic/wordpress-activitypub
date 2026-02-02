@@ -214,7 +214,6 @@ class Webfinger {
 			WEEK_IN_SECONDS,
 			array(
 				'headers' => array( 'Accept' => 'application/jrd+json' ),
-				'signed'  => false,
 			)
 		);
 
