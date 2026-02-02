@@ -200,14 +200,7 @@ class Webfinger {
 			return $identifier_and_host;
 		}
 
-		$transient_key = self::generate_cache_key( $uri );
-
 		list( $identifier, $host ) = $identifier_and_host;
-
-		$data = \get_transient( $transient_key );
-		if ( $data ) {
-			return $data;
-		}
 
 		$webfinger_url = sprintf(
 			'https://%s/.well-known/webfinger?resource=%s',
@@ -215,46 +208,23 @@ class Webfinger {
 			\rawurlencode( $identifier )
 		);
 
-		$response = \wp_safe_remote_get(
+		// Use Http::get() which handles all caching (success and errors).
+		$response = Http::get(
 			$webfinger_url,
+			WEEK_IN_SECONDS,
 			array(
 				'headers' => array( 'Accept' => 'application/jrd+json' ),
+				'signed'  => false,
 			)
 		);
 
-		if ( \is_wp_error( $response ) || \wp_remote_retrieve_response_code( $response ) >= 400 ) {
-			/*
-			 * Cache failures to prevent repeated timeout waits.
-			 * - Timeouts and 5xx errors: 1 minute (server may recover quickly).
-			 * - 4xx errors: 15 minutes (client errors are more permanent).
-			 */
-			$response_code = \wp_remote_retrieve_response_code( $response );
-			if ( \is_wp_error( $response ) || $response_code >= 500 ) {
-				$cache_duration = MINUTE_IN_SECONDS;
-			} else {
-				$cache_duration = 15 * MINUTE_IN_SECONDS;
-			}
-
-			$error = new \WP_Error(
-				'webfinger_url_not_accessible',
-				__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
-				array(
-					'status' => 400,
-					'data'   => $webfinger_url,
-				)
-			);
-
-			\set_transient( $transient_key, $error, $cache_duration );
-
-			return $error;
+		if ( \is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		$body = \wp_remote_retrieve_body( $response );
-		$data = \json_decode( $body, true );
 
-		\set_transient( $transient_key, $data, WEEK_IN_SECONDS );
-
-		return $data;
+		return \json_decode( $body, true );
 	}
 
 	/**
