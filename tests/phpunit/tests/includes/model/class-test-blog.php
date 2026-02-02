@@ -136,11 +136,17 @@ class Test_Blog extends \WP_UnitTestCase {
 	public function test_relay_mode_precedence_over_bot() {
 		$blog = new Blog();
 
-		// Enable both relay mode and bot mode.
+		// Enable relay mode only (bot off).
 		\update_option( 'activitypub_relay_mode', true );
+		\update_option( 'activitypub_blog_is_bot', '0' );
+
+		// Type should be Service from relay mode alone.
+		$this->assertSame( 'Service', $blog->get_type() );
+
+		// Enable both relay mode and bot mode.
 		\update_option( 'activitypub_blog_is_bot', '1' );
 
-		// Type should be Service (both result in Service, but relay is checked first).
+		// Type should still be Service (both result in Service, but relay is checked first).
 		$this->assertSame( 'Service', $blog->get_type() );
 
 		// Disable relay mode, bot should still keep it as Service.
