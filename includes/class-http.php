@@ -176,19 +176,17 @@ class Http {
 			$response = new \WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
 
 			/*
-			 * Cache errors to prevent repeated timeout waits.
+			 * Always cache errors to prevent repeated timeout waits.
 			 * - Timeouts and 5xx errors: 1 minute (server may recover quickly).
 			 * - 4xx errors: 15 minutes (client errors are more permanent).
 			 */
-			if ( $cached ) {
-				if ( $code >= 500 || 0 === $code ) {
-					$cache_duration = MINUTE_IN_SECONDS;
-				} else {
-					$cache_duration = 15 * MINUTE_IN_SECONDS;
-				}
-
-				\set_transient( $transient_key, $response, $cache_duration );
+			if ( $code >= 500 || 0 === $code ) {
+				$cache_duration = MINUTE_IN_SECONDS;
+			} else {
+				$cache_duration = 15 * MINUTE_IN_SECONDS;
 			}
+
+			\set_transient( $transient_key, $response, $cache_duration );
 
 			return $response;
 		}
@@ -201,13 +199,12 @@ class Http {
 		 */
 		\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
-		if ( $cached ) {
-			$cache_duration = $cached;
-			if ( ! is_int( $cache_duration ) ) {
-				$cache_duration = HOUR_IN_SECONDS;
-			}
-			\set_transient( $transient_key, $response, $cache_duration );
+		// Always cache successful responses.
+		$cache_duration = $cached;
+		if ( ! is_int( $cache_duration ) ) {
+			$cache_duration = HOUR_IN_SECONDS;
 		}
+		\set_transient( $transient_key, $response, $cache_duration );
 
 		return $response;
 	}
