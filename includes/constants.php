@@ -94,3 +94,13 @@ define(
 		'Public', // For backwards compatibility.
 	)
 );
+
+/*
+ * HTTP error codes that indicate temporary/retriable failures.
+ *
+ * These errors suggest the server may recover quickly, so they get
+ * shorter cache durations and qualify for automatic retries.
+ *
+ * @see https://github.com/tfredrich/RestApiTutorial.com/blob/master/content/advanced/responses/retries.md
+ */
+define( 'ACTIVITYPUB_RETRY_ERROR_CODES', array( 408, 429, 500, 502, 503, 504 ) );

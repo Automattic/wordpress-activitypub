@@ -95,13 +95,24 @@ class Http {
 	 * Send a GET Request with the needed HTTP Headers.
 	 *
 	 * @param string   $url    The URL endpoint.
-	 * @param bool|int $cached Optional. Whether the result should be cached, or its duration. Default false.
 	 * @param array    $args   Optional. Additional arguments to customize the request.
 	 *                         - 'headers': Array of headers to override defaults.
+	 * @param bool|int $cached Optional. Whether to return cached results, or cache duration. Default false.
 	 *
 	 * @return array|\WP_Error The GET Response or a WP_Error.
 	 */
-	public static function get( $url, $cached = false, $args = array() ) {
+	public static function get( $url, $args = array(), $cached = false ) {
+		// Backward compatibility: if $args is boolean/int, it's the old $cached parameter.
+		if ( ! \is_array( $args ) ) {
+			\_doing_it_wrong(
+				__METHOD__,
+				\esc_html__( 'The $cached parameter should now be passed as the third argument.', 'activitypub' ),
+				'5.1.0'
+			);
+			$cached = $args;
+			$args   = array();
+		}
+
 		/**
 		 * Fires before an HTTP GET request is made.
 		 *
@@ -170,10 +181,10 @@ class Http {
 
 			/*
 			 * Always cache errors to prevent repeated timeout waits.
-			 * - Timeouts and 5xx errors: 1 minute (server may recover quickly).
-			 * - 4xx errors: 15 minutes (client errors are more permanent).
+			 * - Retriable errors (timeouts, 5xx): 1 minute (server may recover quickly).
+			 * - Other errors (4xx): 15 minutes (client errors are more permanent).
 			 */
-			if ( $code >= 500 || 0 === $code ) {
+			if ( \in_array( $code, ACTIVITYPUB_RETRY_ERROR_CODES, true ) || 0 === $code ) {
 				$cache_duration = MINUTE_IN_SECONDS;
 			} else {
 				$cache_duration = 15 * MINUTE_IN_SECONDS;
@@ -278,7 +289,7 @@ class Http {
 			);
 		}
 
-		$response = self::get( $url, $cached );
+		$response = self::get( $url, array(), $cached );
 
 		if ( \is_wp_error( $response ) ) {
 			return $response;

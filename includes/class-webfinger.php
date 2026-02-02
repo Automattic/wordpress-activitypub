@@ -211,10 +211,8 @@ class Webfinger {
 		// Use Http::get() which handles all caching (success and errors).
 		$response = Http::get(
 			$webfinger_url,
-			WEEK_IN_SECONDS,
-			array(
-				'headers' => array( 'Accept' => 'application/jrd+json' ),
-			)
+			array( 'headers' => array( 'Accept' => 'application/jrd+json' ) ),
+			WEEK_IN_SECONDS
 		);
 
 		if ( \is_wp_error( $response ) ) {
