@@ -107,7 +107,7 @@ class Http {
 			\_doing_it_wrong(
 				__METHOD__,
 				\esc_html__( 'The $cached parameter should now be passed as the third argument.', 'activitypub' ),
-				'5.1.0'
+				'unreleased'
 			);
 			$cached = $args;
 			$args   = array();
